@@ -22,6 +22,12 @@ Historical projection pages are still addressable for prior seasons, including 2
 
 A public 2022 research repository contains retained provider-specific QB projection files for CBS, ESPN, NFL, and Yahoo, plus a FantasyPros 2021 RB distribution artifact. Repository commit history shows the files were present in 2022, which makes this a useful modern point-in-time recovery lead. Coverage is incomplete, so it is evidence for acquisition and adapter testing rather than a sufficient full benchmark on its own.
 
+### FantasyDataPros 2023 retained projections
+
+A public FantasyDataPros course-data repository retains a dated **FantasyPros 2023 preseason full-stat projection file** named `01-Fantasy Pros Projections - (2023.08.17).csv`. The artifact includes player/team/position plus passing attempts, completions, passing yards, passing touchdowns, interceptions, rushing attempts/yards/touchdowns, receptions, receiving yards/touchdowns, and fumbles lost. This is exactly the raw-stat shape NEXT-2 prefers because league fantasy points can be derived later from canonical league rules rather than inherited from a provider scoring system.
+
+The repository README states that its course datasets are free to use, but upstream FantasyPros data rights remain a separate governance question. Treat the artifact as a strong **private-research acquisition candidate** and point-in-time/schema proof; do not assume that the upstream table may be redistributed or commercialized merely because the teaching repository is public.
+
 ### ffanalytics / FantasyFootballAnalytics
 
 The modern ffanalytics project supports seasonal and weekly scraping from multiple projection sources including CBS, ESPN, FantasyPros, FantasySharks, FFToday, NumberFire, FantasyFootballNerd, NFL, RTSports, and WalterFootball. Its maintainers explicitly note that historical periods cannot simply be recreated by running today's scraper with an old year/week. This confirms the need to recover retained snapshots, archives, commit history, or provider-supported historical queries instead of backdating live data.
