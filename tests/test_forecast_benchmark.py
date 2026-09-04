@@ -57,3 +57,35 @@ def test_benchmark_learns_weights_on_training_and_scores_held_out_test() -> None
     assert len(result.equal_weight_performance) == 1
     assert len(result.challenger_performance) == 1
     assert result.challenger_performance[0].root_mean_squared_error < result.equal_weight_performance[0].root_mean_squared_error
+    assert {row.source: row.coverage_rate for row in result.source_coverage} == {
+        "source:a": 1.0,
+        "source:b": 1.0,
+    }
+
+
+def test_benchmark_reports_partial_source_coverage() -> None:
+    train_time = datetime(2025, 8, 20, tzinfo=UTC)
+    test_time = datetime(2026, 8, 20, tzinfo=UTC)
+
+    training = (
+        _obs("train-1", "source:a", 100.0, train_time),
+        _obs("train-1", "source:b", 110.0, train_time),
+    )
+    training_outcomes = (_outcome("train-1", 105.0),)
+
+    test = (
+        _obs("test-1", "source:a", 150.0, test_time),
+        _obs("test-2", "source:a", 170.0, test_time),
+        _obs("test-1", "source:b", 160.0, test_time),
+    )
+    test_outcomes = (_outcome("test-1", 155.0), _outcome("test-2", 175.0))
+
+    result = run_multi_source_benchmark(training, training_outcomes, test, test_outcomes)
+    coverage = {row.source: row for row in result.source_coverage}
+
+    assert coverage["source:a"].matched_players == 2
+    assert coverage["source:a"].eligible_players == 2
+    assert coverage["source:a"].coverage_rate == 1.0
+    assert coverage["source:b"].matched_players == 1
+    assert coverage["source:b"].eligible_players == 2
+    assert coverage["source:b"].coverage_rate == 0.5
