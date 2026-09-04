@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 
 from fsffl.state.models import Position
@@ -11,8 +12,22 @@ from .models import ForecastHorizon, ForecastObservation
 
 
 @dataclass(frozen=True)
+class SourceCoverage:
+    source: str
+    position: Position
+    horizon: ForecastHorizon
+    matched_players: int
+    eligible_players: int
+
+    @property
+    def coverage_rate(self) -> float:
+        return self.matched_players / self.eligible_players if self.eligible_players else 0.0
+
+
+@dataclass(frozen=True)
 class BenchmarkResult:
     source_performance: tuple[SourcePerformance, ...]
+    source_coverage: tuple[SourceCoverage, ...]
     uncertainty_calibration: tuple[UncertaintyCalibration, ...]
     equal_weight_performance: tuple[SourcePerformance, ...]
     challenger_performance: tuple[SourcePerformance, ...]
@@ -23,6 +38,38 @@ def _cohorts(
     observations: tuple[ForecastObservation, ...],
 ) -> tuple[tuple[Position, ForecastHorizon], ...]:
     return tuple(sorted({(item.position, item.horizon) for item in observations}))
+
+
+def _source_coverage(
+    observations: tuple[ForecastObservation, ...],
+    outcomes: tuple[HistoricalOutcome, ...],
+) -> tuple[SourceCoverage, ...]:
+    eligible: dict[tuple[Position, ForecastHorizon], set[str]] = defaultdict(set)
+    for outcome in outcomes:
+        eligible[(outcome.position, outcome.horizon)].add(outcome.player_id)
+
+    matched: dict[tuple[str, Position, ForecastHorizon], set[str]] = defaultdict(set)
+    for observation in observations:
+        cohort = (observation.position, observation.horizon)
+        if observation.player_id in eligible.get(cohort, set()):
+            matched[(observation.source, observation.position, observation.horizon)].add(
+                observation.player_id
+            )
+
+    rows: list[SourceCoverage] = []
+    for (source, position, horizon), players in matched.items():
+        cohort_eligible = eligible[(position, horizon)]
+        rows.append(
+            SourceCoverage(
+                source=source,
+                position=position,
+                horizon=horizon,
+                matched_players=len(players),
+                eligible_players=len(cohort_eligible),
+            )
+        )
+
+    return tuple(sorted(rows, key=lambda item: (item.position, item.horizon, item.source)))
 
 
 def run_multi_source_benchmark(
@@ -43,6 +90,7 @@ def run_multi_source_benchmark(
         training_observations, training_outcomes
     )
     source_performance = evaluate_historical_forecasts(test_observations, test_outcomes)
+    source_coverage = _source_coverage(test_observations, test_outcomes)
     uncertainty = evaluate_uncertainty_calibration(test_observations, test_outcomes)
 
     equal = equal_weight_ensemble(test_observations)
@@ -80,6 +128,7 @@ def run_multi_source_benchmark(
 
     return BenchmarkResult(
         source_performance=source_performance,
+        source_coverage=source_coverage,
         uncertainty_calibration=uncertainty,
         equal_weight_performance=equal_performance,
         challenger_performance=challenger_performance,
