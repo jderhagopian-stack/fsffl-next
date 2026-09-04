@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
 from math import sqrt
 
-from fsffl.state.models import Position
+from fsffl.state.models import FrozenModel, Position
 
-from .backtest import HistoricalOutcome
+from .backtest import RealizedOutcome, _outcome_map, outcome_for_observation
 from .models import ForecastHorizon, ForecastObservation
 
 
-@dataclass(frozen=True)
-class UncertaintyCalibration:
+class UncertaintyCalibration(FrozenModel):
     source: str
     position: Position
     horizon: ForecastHorizon
@@ -22,29 +20,25 @@ class UncertaintyCalibration:
 
 def evaluate_uncertainty_calibration(
     observations: tuple[ForecastObservation, ...],
-    outcomes: tuple[HistoricalOutcome, ...],
+    outcomes: tuple[RealizedOutcome, ...],
 ) -> tuple[UncertaintyCalibration, ...]:
     """Measure whether stated forecast uncertainty matches realized error.
 
-    This reports diagnostics only. It does not silently rescale any provider or
-    production forecast. Promotion of any calibration adjustment must be an
-    explicit, separately validated decision.
+    Exact player/position/metric/period identity is required. This reports
+    diagnostics only and never silently rescales provider or production forecasts.
     """
 
-    outcome_map = {
-        (item.player_id, item.position, item.horizon): item.actual for item in outcomes
-    }
+    mapped_outcomes = _outcome_map(outcomes)
     grouped: dict[
         tuple[str, Position, ForecastHorizon],
         list[tuple[float | None, bool | None]],
     ] = defaultdict(list)
 
     for observation in observations:
-        actual = outcome_map.get(
-            (observation.player_id, observation.position, observation.horizon)
-        )
-        if actual is None:
+        outcome = outcome_for_observation(observation, mapped_outcomes)
+        if outcome is None:
             continue
+        actual = outcome.actual
 
         standardized_sq: float | None = None
         if observation.distribution.stddev > 0:
@@ -52,8 +46,15 @@ def evaluate_uncertainty_calibration(
             standardized_sq = (error / observation.distribution.stddev) ** 2
 
         coverage: bool | None = None
-        if observation.distribution.p10 is not None and observation.distribution.p90 is not None:
-            coverage = observation.distribution.p10 <= actual <= observation.distribution.p90
+        if (
+            observation.distribution.p10 is not None
+            and observation.distribution.p90 is not None
+        ):
+            coverage = (
+                observation.distribution.p10
+                <= actual
+                <= observation.distribution.p90
+            )
 
         grouped[(observation.source, observation.position, observation.horizon)].append(
             (standardized_sq, coverage)
@@ -70,12 +71,18 @@ def evaluate_uncertainty_calibration(
                 horizon=horizon,
                 sample_size=len(rows),
                 standardized_rmse=(
-                    sqrt(sum(standardized) / len(standardized)) if standardized else None
+                    sqrt(sum(standardized) / len(standardized))
+                    if standardized
+                    else None
                 ),
                 p10_p90_coverage=(
-                    sum(1 for value in covered if value) / len(covered) if covered else None
+                    sum(1 for value in covered if value) / len(covered)
+                    if covered
+                    else None
                 ),
             )
         )
 
-    return tuple(sorted(results, key=lambda item: (item.position, item.horizon, item.source)))
+    return tuple(
+        sorted(results, key=lambda item: (item.position, item.horizon, item.source))
+    )
