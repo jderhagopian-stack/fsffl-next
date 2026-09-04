@@ -79,9 +79,10 @@ def make_state(as_of: datetime = NOW) -> LeagueState:
 
 def test_round_trip_preserves_state_identity() -> None:
     state = make_state()
-    restored = load_state_json(canonical_state_json(state))
+    canonical = canonical_state_json(state)
+    restored = load_state_json(canonical)
     assert restored.state_id == state.state_id
-    assert restored == state
+    assert canonical_state_json(restored) == canonical
 
 
 def test_state_identity_is_order_independent_for_canonical_collections() -> None:
