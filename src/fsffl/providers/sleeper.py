@@ -74,18 +74,17 @@ class SleeperNormalizer:
         league_external_id = str(bundle.league["league_id"])
         league_id = f"sleeper:{league_external_id}"
         settings = bundle.league.get("settings", {})
-        roster_positions = bundle.league.get("roster_positions", [])
+        roster_positions = list(bundle.league.get("roster_positions", []))
         scoring_settings = bundle.league.get("scoring_settings", {})
 
+        starter_slots = [
+            self._slot_map[str(raw_slot)]
+            for raw_slot in roster_positions
+            if str(raw_slot) in self._slot_map
+        ]
         lineup_counts: dict[RosterSlot, int] = {}
-        bench_count = 0
-        for raw_slot in roster_positions:
-            if raw_slot == "BN":
-                bench_count += 1
-                continue
-            slot = self._slot_map.get(str(raw_slot))
-            if slot is not None:
-                lineup_counts[slot] = lineup_counts.get(slot, 0) + 1
+        for slot in starter_slots:
+            lineup_counts[slot] = lineup_counts.get(slot, 0) + 1
 
         lineup = tuple(
             LineupRequirement(slot=slot, count=count)
@@ -96,8 +95,9 @@ class SleeperNormalizer:
             for stat, points in sorted(scoring_settings.items())
             if isinstance(points, (int, float))
         )
-        roster_size = int(settings.get("roster_size") or len(roster_positions) or max(bench_count, 1))
+        roster_size = int(settings.get("roster_size") or len(roster_positions) or 1)
         team_count = int(settings.get("num_teams") or len(bundle.rosters) or 2)
+        faab_budget = int(settings.get("waiver_budget") or 0)
 
         league = League(
             league_id=league_id,
@@ -116,7 +116,9 @@ class SleeperNormalizer:
         )
 
         user_names = {
-            str(user.get("user_id")): str(user.get("display_name") or user.get("username") or user.get("user_id"))
+            str(user.get("user_id")): str(
+                user.get("display_name") or user.get("username") or user.get("user_id")
+            )
             for user in bundle.users
             if user.get("user_id") is not None
         }
@@ -139,9 +141,15 @@ class SleeperNormalizer:
                     provider_refs=(ProviderRef(provider="sleeper", external_id=str(roster_id)),),
                 )
             )
-            starters = set(str(pid) for pid in (roster.get("starters") or []) if pid)
-            reserve = set(str(pid) for pid in (roster.get("reserve") or []) if pid)
-            taxi = set(str(pid) for pid in (roster.get("taxi") or []) if pid)
+
+            raw_starters = [str(pid) for pid in (roster.get("starters") or []) if pid]
+            starter_slot_by_player = {
+                pid: starter_slots[index]
+                for index, pid in enumerate(raw_starters)
+                if index < len(starter_slots)
+            }
+            reserve = {str(pid) for pid in (roster.get("reserve") or []) if pid}
+            taxi = {str(pid) for pid in (roster.get("taxi") or []) if pid}
             entries: list[RosterEntry] = []
             for pid_raw in roster.get("players") or []:
                 pid = str(pid_raw)
@@ -150,16 +158,19 @@ class SleeperNormalizer:
                     slot = RosterSlot.TAXI
                 elif pid in reserve:
                     slot = RosterSlot.IR
-                elif pid in starters:
-                    slot = RosterSlot.FLEX
+                elif pid in starter_slot_by_player:
+                    slot = starter_slot_by_player[pid]
                 else:
                     slot = RosterSlot.BENCH
                 entries.append(RosterEntry(player_id=f"sleeper:player:{pid}", slot=slot))
+
+            used_faab = int((roster.get("settings") or {}).get("waiver_budget_used") or 0)
+            current_faab = max(faab_budget - used_faab, 0) if faab_budget else 0
             team_states.append(
                 TeamState(
                     team_id=team_id,
                     roster=tuple(entries),
-                    faab_balance=int((roster.get("settings") or {}).get("waiver_budget_used", 0)),
+                    faab_balance=current_faab,
                 )
             )
 
@@ -179,7 +190,11 @@ class SleeperNormalizer:
             if position is None:
                 continue
             player_id = f"sleeper:player:{external_id}"
-            full_name = str(raw.get("full_name") or " ".join(filter(None, [raw.get("first_name"), raw.get("last_name")])) or external_id)
+            full_name = str(
+                raw.get("full_name")
+                or " ".join(filter(None, [raw.get("first_name"), raw.get("last_name")]))
+                or external_id
+            )
             nfl_team = raw.get("team")
             players.append(
                 Player(
@@ -204,7 +219,13 @@ class SleeperNormalizer:
 
         valid_player_ids = {player.player_id for player in players}
         team_states = [
-            state.model_copy(update={"roster": tuple(entry for entry in state.roster if entry.player_id in valid_player_ids)})
+            state.model_copy(
+                update={
+                    "roster": tuple(
+                        entry for entry in state.roster if entry.player_id in valid_player_ids
+                    )
+                }
+            )
             for state in team_states
         ]
 
@@ -224,7 +245,9 @@ class SleeperNormalizer:
                             original_team_id=original_team_id,
                         )
                     )
-                    pick_ownership.append(PickOwnership(pick_id=pick_id, owner_team_id=original_team_id))
+                    pick_ownership.append(
+                        PickOwnership(pick_id=pick_id, owner_team_id=original_team_id)
+                    )
 
         ownership_by_pick = {entry.pick_id: entry.owner_team_id for entry in pick_ownership}
         for trade in bundle.traded_picks:
