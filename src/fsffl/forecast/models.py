@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from fsffl.state.models import FrozenModel, Position, Provenance
 
@@ -35,6 +35,14 @@ class ForecastDistribution(FrozenModel):
     p50: float | None = None
     p90: float | None = None
 
+    @model_validator(mode="after")
+    def validate_quantiles(self) -> "ForecastDistribution":
+        supplied = [self.p10, self.p50, self.p90]
+        concrete = [value for value in supplied if value is not None]
+        if concrete != sorted(concrete):
+            raise ValueError("forecast quantiles must be ordered p10 <= p50 <= p90")
+        return self
+
 
 class ForecastObservation(FrozenModel):
     player_id: str
@@ -56,6 +64,21 @@ class ForecastObservation(FrozenModel):
             raise ValueError("forecast timestamps must be timezone-aware")
         return value
 
+    @field_validator("player_id", "source", "model_version")
+    @classmethod
+    def require_nonempty_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("forecast identifiers cannot be empty")
+        return value
+
+    @model_validator(mode="after")
+    def validate_point_in_time_semantics(self) -> "ForecastObservation":
+        if self.period_end <= self.period_start:
+            raise ValueError("forecast period_end must be after period_start")
+        if self.provenance.effective_at > self.as_of:
+            raise ValueError("forecast evidence cannot postdate observation as_of")
+        return self
+
 
 class ForecastBundle(FrozenModel):
     player_id: str
@@ -69,3 +92,12 @@ class ForecastBundle(FrozenModel):
         if value.tzinfo is None:
             raise ValueError("as_of must be timezone-aware")
         return value
+
+    @model_validator(mode="after")
+    def validate_bundle_consistency(self) -> "ForecastBundle":
+        for observation in self.observations:
+            if observation.player_id != self.player_id:
+                raise ValueError("bundle observations must match bundle player_id")
+            if observation.as_of != self.as_of:
+                raise ValueError("bundle observations must match bundle as_of")
+        return self
