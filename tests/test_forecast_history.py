@@ -24,7 +24,11 @@ def _observation(*, as_of: datetime, mean: float) -> ForecastObservation:
         source="provider:test",
         model_version="1",
         as_of=as_of,
-        provenance=Provenance(source="provider:test"),
+        provenance=Provenance(
+            source="provider:test",
+            retrieved_at=as_of,
+            effective_at=as_of,
+        ),
     )
 
 
