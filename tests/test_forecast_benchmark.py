@@ -131,7 +131,10 @@ def test_benchmark_reports_partial_source_coverage() -> None:
 def test_benchmark_does_not_count_wrong_metric_as_coverage() -> None:
     train_time = datetime(2025, 8, 20, tzinfo=UTC)
     test_time = datetime(2026, 8, 20, tzinfo=UTC)
-    training = (_obs("train-1", "source:a", 100.0, train_time),)
+    training = (
+        _obs("train-1", "source:a", 100.0, train_time),
+        _obs("train-1", "source:b", 110.0, train_time),
+    )
     training_outcomes = (_outcome("train-1", 105.0),)
 
     test = (
