@@ -2,90 +2,77 @@
 
 ## Purpose
 
-Identify projection sources that can support honest point-in-time historical evaluation without making FSFFL NEXT dependent on one commercial provider or on data we cannot lawfully retain or redistribute.
+Identify sources that can support honest point-in-time historical forecast evaluation without making FSFFL NEXT dependent on one provider or on data we cannot lawfully retain or redistribute.
 
 ## Screening criteria
 
-Every candidate source is evaluated on:
-
-1. **Point-in-time recoverability** — can we tell what the source projected at the time, rather than only what it projects now?
-2. **Coverage** — QB/RB/WR/TE, season/weekly/rest-of-season, and enough seasons to evaluate stability.
-3. **Granularity** — underlying football stats are preferred to only one fantasy-point total because FSFFL supports arbitrary league scoring.
-4. **Historical outcome matchability** — player IDs and periods can be aligned to actual NFL results without hindsight leakage.
-5. **Update timestamp quality** — the source exposes or can preserve when a projection became available.
-6. **Licensing / redistribution** — raw provider data may be usable for private research but still inappropriate to commit or redistribute publicly.
-7. **Replaceability** — provider-specific logic stays in adapters; no source becomes model authority.
-8. **Commercial-path safety** — terms must be reviewed before any later commercial launch even if private personal research use is acceptable today.
+Every candidate is evaluated on point-in-time recoverability, QB/RB/WR/TE and horizon coverage, stat granularity, player/period matchability, timestamp quality, licensing/redistribution, replaceability, and commercial-path safety.
 
 ## Candidate source notes
 
+### nflverse / nflreadpy
+
+**Primary role:** realized outcomes and player identity backbone.
+
+This remains the strongest open-data path for scoring historical forecasts and normalizing player identifiers. Dataset-specific rights still need to be checked before retained or redistributed data is committed.
+
+Status: **APPROVED RESEARCH PATH for outcomes/identity, subject to dataset-specific verification.**
+
+### DynastyProcess / FantasyPros ECR archive
+
+The `load_ff_rankings(type="all")` path maps to DynastyProcess `db_fpecr`. Current nflreadr documentation describes it as a full archive of FantasyPros expert-consensus rankings, with weekly archives available since 2019. The published data dictionary includes `scrape_date`, ECR, ranking standard deviation, best/worst expert rank, player identifiers, position, and related ranking metadata.
+
+This is important point-in-time evidence, but it is **ranking/ECR evidence, not raw statistical projection evidence**. It should therefore be used as a ranking comparator or separate market/consensus signal and must not be forced into the raw-stat forecast schema or counted as an independent projection model vote.
+
+Status: **VERIFIED HISTORICAL RANKING/ECR CANDIDATE; not a raw projection source.**
+
+Upstream FantasyPros data rights remain separate from the DynastyProcess repository license, so redistribution/commercial use still require review.
+
 ### Razzball
 
-Useful candidate for current and archived preseason/weekly/ROS projection research. Public pages document free preseason projections and date-stamped update behavior. Their model exposes many underlying stat components and describes historical backtesting of components.
+Useful candidate for actual preseason, weekly, and rest-of-season projection research because its public products expose underlying football-stat projections rather than only ranks. Historical completeness, archive timestamp quality, and terms still need verification before it enters the scored cohort.
 
-Status: **INVESTIGATE / candidate adapter**.
+Status: **PRIORITY RAW-PROJECTION INVESTIGATION.**
 
-Do not assume historical completeness or redistribution permission from public accessibility alone. Archive availability and terms need explicit review before using a large retained corpus or commercializing.
+### FantasyPros direct
 
-### FantasyPros
+Useful candidate for current or licensed projection access and as an aggregate comparator. Historical/bulk access and downstream rights should be treated as provider-license questions. Because FantasyPros aggregates other sources, it cannot automatically be treated as statistically independent from component providers.
 
-Useful as an aggregate/comparison source. Public documentation says NFL weekly projections aggregate several third-party sources. Their API exposes NFL projections and historical season parameters, but API access and downstream usage rights need to be treated as licensed-provider questions rather than as open data.
+Status: **REQUIRES ACCESS / TERMS REVIEW.**
 
-Status: **INVESTIGATE / licensed-or-research candidate**.
+## Research architecture decision
 
-Because FantasyPros itself aggregates other projections, it must not be treated as statistically independent from every underlying source when ensemble weights are calibrated.
+Ranking evidence and statistical projection evidence remain distinct.
 
-### nflverse / ffverse ecosystem
+A historical ECR/ranking archive can be highly useful for ranking accuracy, consensus comparison, and later market/behavioral research, but it cannot be converted into invented passing/rushing/receiving projections or treated as a direct substitute for a provider that actually forecast those statistics.
 
-Strong candidate for open historical outcomes, player-ID mapping, and some historical fantasy ranking/projection datasets. The nflreadpy ffverse loader explicitly exposes draft, weekly, and historical rankings/projections sourced from the DynastyProcess/ffverse ecosystem.
-
-Status: **PRIORITY INVESTIGATION for historical research backbone**.
-
-Need dataset-specific license/provenance review before deciding what can be stored in this public repository. Outcome data and open identifier infrastructure should be separated from any third-party projection data with different terms.
+The raw forecast benchmark therefore continues to require multiple genuine projection sources.
 
 ## Data-acquisition design
 
-Historical projection research should use this flow:
+Every genuine projection source uses the same path:
 
-**Discover source → verify timestamp semantics → verify terms/license → acquire snapshot → preserve source metadata → normalize behind adapter → match to actual outcomes → evaluate → retain only what policy permits.**
+**Discover source → verify timestamp semantics → verify terms/license → acquire dated artifact → preserve source metadata → normalize behind adapter → match to actual outcomes → split chronologically → evaluate through the common benchmark.**
 
-A webpage that exists today is not automatically proof of what was knowable on an earlier date. For point-in-time testing, FSFFL must have a dated historical artifact, provider-supported historical query, archived snapshot, or another defensible availability record.
+A current webpage is never proof of what was knowable historically. Historical inputs require a dated artifact, provider-supported historical query, archived snapshot, or another defensible availability record.
 
 ## Storage policy
 
-The public FSFFL NEXT repository should contain:
-
-- source adapters;
-- schemas;
-- evaluation code;
-- synthetic test fixtures;
-- source/licensing registry metadata;
-- reproducible instructions where allowed.
-
-It should not automatically contain copied historical provider projection tables. Raw or derived retained datasets should live in a separate data store governed by source terms and redistribution rights.
+The public repository may contain adapters, schemas, evaluation code, synthetic fixtures, source-governance metadata, and reproducible instructions where permitted. Copied provider datasets do not automatically belong in the public repository; retained research data must follow source-specific rights.
 
 ## Statistical safeguards
 
-Historical weighting must account for:
+Historical weighting must account for correlated sources, missing-player bias, survivorship bias, position/horizon sample size, preseason versus in-season timing, scoring effects, repeated player-season observations, source update timing, and uncertainty in estimated source skill.
 
-- correlated sources / aggregators;
-- missing-player bias;
-- survivorship bias;
-- position and horizon sample size;
-- preseason vs in-season information differences;
-- scoring-format effects;
-- source update timing;
-- repeated observations of the same player/season;
-- uncertainty in estimated source skill.
+No provider receives permanent weight because of reputation.
 
-No provider receives a permanent weight because of reputation. Weights are estimates with uncertainty and can change as evidence accumulates.
+## Immediate execution order
 
-## Near-term execution order
+1. Keep nflverse as the realized-outcome and identity backbone.
+2. Treat DynastyProcess/FantasyPros `db_fpecr` as a separate historical ranking/ECR comparator, not a raw projection source.
+3. Prioritize acquisition of several genuine raw projection sources, beginning with defensible Razzball archives and FantasyPros direct/licensed historical access where available.
+4. Search for additional historical stat-projection archives in parallel rather than serially.
+5. As soon as 3-5 genuine sources have sufficient overlapping point-in-time coverage, run them through the existing held-out multi-source benchmark together.
+6. Add additional providers later through adapters without redesigning the benchmark.
 
-1. Use nflverse/ffverse as the first open-data research path for outcomes, IDs, and any genuinely historical projection/ranking snapshots it exposes.
-2. Build provider-agnostic historical snapshot ingestion around the existing forecast contracts.
-3. Add a source registry that records licensing/research/redistribution status separately from predictive quality.
-4. Prototype Razzball and FantasyPros adapters only after timestamp and usage semantics are clear.
-5. Run the first source-comparison study on whichever historical sources pass the point-in-time and licensing gates.
-
-This source shortlist is provisional. Predictive quality will be decided by historical tests, not by this research note.
+The objective remains a broad first benchmark quickly, followed by evidence-driven refinement rather than an open-ended provider-by-provider research project.
