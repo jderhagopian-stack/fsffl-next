@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from math import sqrt
 
+from fsffl.state.models import Provenance
+
 from .models import ForecastDistribution, ForecastObservation
 
 
@@ -53,14 +55,13 @@ def _build_ensemble_observation(
     )
     variance = max(0.0, second_moment - mean**2)
 
-    def weighted_quantile(name: str) -> float | None:
-        values = [getattr(item.distribution, name) for item in items]
-        if any(value is None for value in values):
-            return None
-        return sum(
-            active[item.source] * float(getattr(item.distribution, name))
-            for item in items
-        )
+    component_sources = ",".join(sorted(item.source for item in items))
+    provenance = Provenance(
+        source=f"{source}[{component_sources}]",
+        retrieved_at=max(item.provenance.retrieved_at for item in items),
+        effective_at=max(item.provenance.effective_at for item in items),
+        source_version=model_version,
+    )
 
     return ForecastObservation(
         player_id=first.player_id,
@@ -72,14 +73,15 @@ def _build_ensemble_observation(
         distribution=ForecastDistribution(
             mean=mean,
             stddev=sqrt(variance),
-            p10=weighted_quantile("p10"),
-            p50=weighted_quantile("p50"),
-            p90=weighted_quantile("p90"),
+            # Quantiles are intentionally omitted here. Averaging provider
+            # quantiles is inconsistent with the pooled mixture variance.
+            # NEXT-2 will only add ensemble intervals after empirical
+            # calibration establishes a coherent construction.
         ),
         source=source,
         model_version=model_version,
         as_of=first.as_of,
-        provenance=first.provenance,
+        provenance=provenance,
     )
 
 
