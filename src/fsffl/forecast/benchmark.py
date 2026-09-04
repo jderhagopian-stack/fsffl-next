@@ -5,7 +5,12 @@ from dataclasses import dataclass
 
 from fsffl.state.models import Position
 
-from .backtest import HistoricalOutcome, SourcePerformance, challenger_inverse_rmse_weights, evaluate_historical_forecasts
+from .backtest import (
+    RealizedOutcome,
+    SourcePerformance,
+    challenger_inverse_rmse_weights,
+    evaluate_historical_forecasts,
+)
 from .calibration import UncertaintyCalibration, evaluate_uncertainty_calibration
 from .ensemble import equal_weight_ensemble, weighted_ensemble
 from .models import ForecastHorizon, ForecastObservation
@@ -16,12 +21,22 @@ class SourceCoverage:
     source: str
     position: Position
     horizon: ForecastHorizon
-    matched_players: int
-    eligible_players: int
+    matched_targets: int
+    eligible_targets: int
 
     @property
     def coverage_rate(self) -> float:
-        return self.matched_players / self.eligible_players if self.eligible_players else 0.0
+        return self.matched_targets / self.eligible_targets if self.eligible_targets else 0.0
+
+    @property
+    def matched_players(self) -> int:
+        """Compatibility alias; coverage is now counted by exact evaluation target."""
+        return self.matched_targets
+
+    @property
+    def eligible_players(self) -> int:
+        """Compatibility alias; coverage is now counted by exact evaluation target."""
+        return self.eligible_targets
 
 
 @dataclass(frozen=True)
@@ -42,41 +57,72 @@ def _cohorts(
 
 def _source_coverage(
     observations: tuple[ForecastObservation, ...],
-    outcomes: tuple[HistoricalOutcome, ...],
+    outcomes: tuple[RealizedOutcome, ...],
 ) -> tuple[SourceCoverage, ...]:
-    eligible: dict[tuple[Position, ForecastHorizon], set[str]] = defaultdict(set)
-    for outcome in outcomes:
-        eligible[(outcome.position, outcome.horizon)].add(outcome.player_id)
+    """Report exact target coverage, including sources with zero valid matches.
 
-    matched: dict[tuple[str, Position, ForecastHorizon], set[str]] = defaultdict(set)
+    Eligibility is defined from realized targets whose metric/period appears in the
+    benchmark cohort. A player projected for the wrong metric or period no longer
+    counts as covered merely because the player name matches.
+    """
+    outcome_by_identity = {outcome.identity: outcome for outcome in outcomes}
+    if len(outcome_by_identity) != len(outcomes):
+        raise ValueError("duplicate realized outcome identities are not allowed")
+
+    cohort_shapes: dict[
+        tuple[Position, ForecastHorizon], set[tuple[object, object, object]]
+    ] = defaultdict(set)
+    sources_by_cohort: dict[tuple[Position, ForecastHorizon], set[str]] = defaultdict(set)
     for observation in observations:
         cohort = (observation.position, observation.horizon)
-        if observation.player_id in eligible.get(cohort, set()):
-            matched[(observation.source, observation.position, observation.horizon)].add(
-                observation.player_id
-            )
+        cohort_shapes[cohort].add(
+            (observation.metric, observation.period_start, observation.period_end)
+        )
+        sources_by_cohort[cohort].add(observation.source)
+
+    eligible: dict[tuple[Position, ForecastHorizon], set[tuple[object, ...]]] = defaultdict(set)
+    for cohort, shapes in cohort_shapes.items():
+        position, _ = cohort
+        for outcome in outcomes:
+            shape = (outcome.metric, outcome.period_start, outcome.period_end)
+            if outcome.position == position and shape in shapes:
+                eligible[cohort].add(outcome.identity)
+
+    matched: dict[tuple[str, Position, ForecastHorizon], set[tuple[object, ...]]] = defaultdict(set)
+    for observation in observations:
+        cohort = (observation.position, observation.horizon)
+        identity = (
+            observation.player_id,
+            observation.position,
+            observation.metric,
+            observation.period_start,
+            observation.period_end,
+        )
+        if identity in eligible.get(cohort, set()):
+            matched[(observation.source, *cohort)].add(identity)
 
     rows: list[SourceCoverage] = []
-    for (source, position, horizon), players in matched.items():
-        cohort_eligible = eligible[(position, horizon)]
-        rows.append(
-            SourceCoverage(
-                source=source,
-                position=position,
-                horizon=horizon,
-                matched_players=len(players),
-                eligible_players=len(cohort_eligible),
+    for (position, horizon), sources in sources_by_cohort.items():
+        cohort_eligible = eligible.get((position, horizon), set())
+        for source in sources:
+            rows.append(
+                SourceCoverage(
+                    source=source,
+                    position=position,
+                    horizon=horizon,
+                    matched_targets=len(matched.get((source, position, horizon), set())),
+                    eligible_targets=len(cohort_eligible),
+                )
             )
-        )
 
     return tuple(sorted(rows, key=lambda item: (item.position, item.horizon, item.source)))
 
 
 def run_multi_source_benchmark(
     training_observations: tuple[ForecastObservation, ...],
-    training_outcomes: tuple[HistoricalOutcome, ...],
+    training_outcomes: tuple[RealizedOutcome, ...],
     test_observations: tuple[ForecastObservation, ...],
-    test_outcomes: tuple[HistoricalOutcome, ...],
+    test_outcomes: tuple[RealizedOutcome, ...],
 ) -> BenchmarkResult:
     """Run one held-out benchmark across every supplied projection source.
 
