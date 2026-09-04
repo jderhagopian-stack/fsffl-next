@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 
 from pydantic import field_validator, model_validator
@@ -23,24 +24,20 @@ class HistoricalProjectionSnapshot(FrozenModel):
     position: Position
     horizon: ForecastHorizon
     metric: ForecastMetric
-    period_start: object
-    period_end: object
+    period_start: datetime
+    period_end: datetime
     mean: float
     stddev: float = 0.0
     p10: float | None = None
     p50: float | None = None
     p90: float | None = None
-    issued_at: object
-    retrieved_at: object
+    issued_at: datetime
+    retrieved_at: datetime
     source_version: str | None = None
 
     @field_validator("period_start", "period_end", "issued_at", "retrieved_at")
     @classmethod
-    def require_aware_datetime(cls, value: object) -> object:
-        from datetime import datetime
-
-        if not isinstance(value, datetime):
-            raise TypeError("historical projection timestamps must be datetimes")
+    def require_aware_datetime(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
             raise ValueError("historical projection timestamps must be timezone-aware")
         return value
