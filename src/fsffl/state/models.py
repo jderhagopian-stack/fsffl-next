@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from hashlib import sha256
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -224,17 +223,27 @@ class LeagueState(FrozenModel):
         player_ids = {player.player_id for player in self.players}
         pick_ids = {pick.pick_id for pick in self.draft_picks}
 
+        if len(team_ids) != len(self.teams):
+            raise ValueError("team_id values must be unique")
+        if len(player_ids) != len(self.players):
+            raise ValueError("player_id values must be unique")
+        if len(pick_ids) != len(self.draft_picks):
+            raise ValueError("pick_id values must be unique")
         if any(team.league_id != self.league.league_id for team in self.teams):
             raise ValueError("all teams must belong to the league")
-        if {state.team_id for state in self.team_states} != team_ids:
+        if {state.team_id for state in self.team_states} != team_ids or len(self.team_states) != len(team_ids):
             raise ValueError("team_states must contain exactly one state for each team")
-        if {state.player_id for state in self.player_states} != player_ids:
+        if {state.player_id for state in self.player_states} != player_ids or len(self.player_states) != len(player_ids):
             raise ValueError("player_states must contain exactly one state for each player")
         if any(entry.player_id not in player_ids for state in self.team_states for entry in state.roster):
             raise ValueError("roster contains unknown player")
         roster_ids = [entry.player_id for state in self.team_states for entry in state.roster]
         if len(roster_ids) != len(set(roster_ids)):
             raise ValueError("a player may not be rostered by multiple teams")
+        if any(pick.league_id != self.league.league_id for pick in self.draft_picks):
+            raise ValueError("all draft picks must belong to the league")
+        if any(pick.original_team_id not in team_ids for pick in self.draft_picks):
+            raise ValueError("draft pick references unknown original team")
         if any(ownership.pick_id not in pick_ids for ownership in self.pick_ownership):
             raise ValueError("pick ownership references unknown pick")
         if any(ownership.owner_team_id not in team_ids for ownership in self.pick_ownership):
@@ -244,8 +253,12 @@ class LeagueState(FrozenModel):
         return self
 
     def canonical_json(self) -> str:
-        return self.model_dump_json(exclude_none=False, by_alias=True)
+        from .serialization import canonical_state_json
+
+        return canonical_state_json(self)
 
     @property
     def state_id(self) -> str:
-        return sha256(self.canonical_json().encode("utf-8")).hexdigest()
+        from .serialization import deterministic_state_id
+
+        return deterministic_state_id(self)
