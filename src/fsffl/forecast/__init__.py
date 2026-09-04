@@ -1,3 +1,4 @@
+from .backtest import RealizedOutcome
 from .ensemble import equal_weight_ensemble
 from .evaluation import ForecastScore, score_point_forecast
 from .models import (
@@ -15,6 +16,7 @@ __all__ = [
     "ForecastMetric",
     "ForecastObservation",
     "ForecastScore",
+    "RealizedOutcome",
     "equal_weight_ensemble",
     "score_point_forecast",
 ]
