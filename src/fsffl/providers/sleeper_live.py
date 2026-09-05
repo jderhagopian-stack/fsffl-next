@@ -23,6 +23,7 @@ class SleeperLiveSource:
 
     provider_name = "sleeper"
     base_url = "https://api.sleeper.app/v1"
+    schedule_base_url = "https://api.sleeper.app"
 
     def __init__(
         self,
@@ -43,6 +44,7 @@ class SleeperLiveSource:
             raise ValueError("live Sleeper clock must return a timezone-aware datetime")
 
         league_payload = self._get(f"/league/{league_id}")
+        season = int(league_payload.get("season")) if league_payload.get("season") else None
         payload = {
             "league": league_payload,
             "users": self._get(f"/league/{league_id}/users"),
@@ -50,6 +52,7 @@ class SleeperLiveSource:
             "players": self._get("/players/nfl"),
             "traded_picks": self._get(f"/league/{league_id}/traded_picks"),
             "matchups": self._regular_season_matchups(league_id, league_payload),
+            "nfl_schedule": self._nfl_regular_season_schedule(season),
         }
         return ProviderSnapshot(
             provider_name=self.provider_name,
@@ -89,6 +92,13 @@ class SleeperLiveSource:
             str(week): self._get(f"/league/{league_id}/matchups/{week}")
             for week in range(1, playoff_week_start)
         }
+
+    def _nfl_regular_season_schedule(self, season: int | None) -> Any:
+        if season is None:
+            return []
+        return self._http_get_json(
+            f"{self.schedule_base_url}/schedule/nfl/regular/{season}"
+        )
 
     def _get(self, path: str) -> Any:
         return self._http_get_json(f"{self.base_url}{path}")
