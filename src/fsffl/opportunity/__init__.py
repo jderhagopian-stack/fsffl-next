@@ -28,6 +28,12 @@ from .ordering import (
     dominates,
     pareto_front,
 )
+from .shopping import (
+    ShopCounterpartyUniverse,
+    ShopRequest,
+    ShopUniverse,
+    build_shop_universe,
+)
 from .trade_evaluation import candidate_from_trade_evaluation
 from .trade_pairs import (
     TradePairGenerationResult,
@@ -66,6 +72,9 @@ __all__ = [
     "OpportunityKind",
     "OpportunityObjective",
     "OrderedOpportunityPoint",
+    "ShopCounterpartyUniverse",
+    "ShopRequest",
+    "ShopUniverse",
     "TeamTradeInventory",
     "TradePackageSeed",
     "TradePairGenerationResult",
@@ -76,6 +85,7 @@ __all__ = [
     "WaiverMove",
     "apply_waiver_move",
     "authority_tier",
+    "build_shop_universe",
     "build_team_trade_inventory",
     "candidate_from_trade_evaluation",
     "canonical_frontier_point_id",
