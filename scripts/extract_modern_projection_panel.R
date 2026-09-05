@@ -30,6 +30,20 @@ pick_col <- function(df, candidates, required = TRUE) {
   NULL
 }
 
+rbind_fill <- function(frames) {
+  all_names <- unique(unlist(lapply(frames, names), use.names = FALSE))
+  frames <- lapply(frames, function(d) {
+    missing <- setdiff(all_names, names(d))
+    if (length(missing)) {
+      for (nm in missing) d[[nm]] <- NA
+    }
+    d[, all_names, drop = FALSE]
+  })
+  out <- do.call(rbind, frames)
+  rownames(out) <- NULL
+  out
+}
+
 load_one_projection_year <- function(path, season) {
   env <- new.env(parent = emptyenv())
   loaded <- load(path, envir = env)
@@ -45,14 +59,12 @@ load_one_projection_year <- function(path, season) {
     d$position_fsffl <- pos
     d
   })
-  panel <- do.call(rbind, rows)
-  rownames(panel) <- NULL
-  panel
+  rbind_fill(rows)
 }
 
 p24 <- load_one_projection_year(paths[["proj2024"]], 2024L)
 p25 <- load_one_projection_year(paths[["proj2025"]], 2025L)
-proj <- rbind(p24, p25)
+proj <- rbind_fill(list(p24, p25))
 
 # Projection schema used by Fantasy Football Analytics historical objects.
 id_col <- pick_col(proj, c("id", "mfl_id", "player_id"))
@@ -110,6 +122,7 @@ projection <- data.frame(
   player = if (!is.null(player_col)) as.character(proj[[player_col]]) else NA_character_,
   stringsAsFactors = FALSE
 )
+projection$position <- ifelse(is.na(projection$position) | projection$position == "", as.character(proj$position_fsffl), projection$position)
 projection <- projection[projection$position %in% c("QB", "RB", "WR", "TE") & !is.na(projection$projected), , drop = FALSE]
 
 panel <- merge(projection, actual[, c("season", "mfl_id_key", "actual", "player_actual", "position_actual")], by = c("season", "mfl_id_key"), all.x = TRUE)
