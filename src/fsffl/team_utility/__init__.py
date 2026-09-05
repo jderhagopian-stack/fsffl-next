@@ -1,3 +1,4 @@
+from .assembly import assemble_team_utility_vector
 from .competitive_state import (
     CompetitiveStatePolicy,
     classify_calculated_competitive_state,
@@ -53,6 +54,7 @@ __all__ = [
     "TeamScoringDistribution",
     "TeamUncertaintyMethod",
     "TeamUtilityVector",
+    "assemble_team_utility_vector",
     "build_roster_resilience",
     "build_team_scoring_distribution",
     "classify_calculated_competitive_state",
