@@ -45,7 +45,7 @@ Implemented:
 - independent before/after TeamUtilityVector comparison for both teams;
 - competitive, resilience, and asset-portfolio channels remain separate;
 - team identity and incompatible scale/concept checks fail closed;
-- no master score or recommendation.
+- no master score.
 
 ### Slice 3 — transaction economics
 
@@ -55,11 +55,13 @@ Implemented:
 - expected package means may aggregate on compatible scales;
 - package uncertainty is not fabricated without an authoritative covariance model;
 - missing economic evidence is explicit rather than treated as zero;
+- complete-evidence received-minus-sent market and intrinsic net deltas;
+- partial economic evidence cannot emit a misleading partial net;
 - FAAB remains unevaluated until governed conversion evidence exists.
 
 ### Slice 4 — bilateral decision contract
 
-Implemented foundation:
+Implemented:
 
 - directional assessment for authoritative team-consequence channels;
 - uniform gain, uniform loss, mixed, neutral, and incomplete side shapes;
@@ -72,7 +74,14 @@ Materiality is separate and explicit:
 - competitive/resilience materiality policy has no hidden defaults;
 - economic materiality is tied to one explicit NEXT-3 ValueScale/version;
 - thresholds require provenance, evidence-through date, and versioning;
+- material assessments reject future policy evidence and incompatible value scales;
 - current tests use synthetic thresholds only and do not establish production authority.
+
+Owner strategy remains separate:
+
+- explicit owner-posture overlay is attached beside calculated consequences;
+- changing WIN_NOW / BALANCED / RETOOL / REBUILD does not rewrite calculated outputs;
+- v1 does not use unvalidated posture weights to resolve mixed evidence.
 
 ### Slice 5 — acceptance / negotiation evidence
 
@@ -82,9 +91,22 @@ Implemented contracts, not an empirical probability model:
 - explicit future-leakage protection;
 - acceptance probability estimate contract with uncertainty interval and lifecycle status;
 - explicit `NOT_ESTIMATED` state so missing calibration cannot become a fabricated prior;
+- non-probabilistic negotiation feasibility shape distinguishes mutual-gain candidates, counterparty-dominated, mixed, incomplete, and neutral proposals;
+- counterparty domination is visible even without an acceptance probability;
 - acceptance remains separate from franchise utility and decision shape.
 
-The empirical acceptance model remains future work and must be calibrated from admissible point-in-time league/market/history evidence before promotion.
+The empirical acceptance model remains future calibration work and must use admissible point-in-time league/market/history evidence before promotion.
+
+### Slice 6 — conservative disposition
+
+Implemented:
+
+- SUPPORT / DECLINE / COUNTER_OR_REVIEW / NO_CLEAR_ADVANTAGE / INSUFFICIENT_EVIDENCE contract for a given proposal;
+- requires explicit material assessment rather than hidden thresholds;
+- missing required channels withhold action;
+- mixed material gains and losses require counter/review;
+- a focal-team gain does not auto-support a counterparty-dominated proposal;
+- owner posture is recorded but strategic tie-breaking remains unapplied until governed.
 
 ## Anti-double-counting rule
 
@@ -104,20 +126,22 @@ NEXT-5 must pass:
 - structural ownership/state mutation tests;
 - bilateral symmetry/integrity tests;
 - channel-separation tests;
-- obvious sanity cases such as rejecting economically absurd one-sided exchanges without relying on arbitrary master scores;
+- obvious one-sided, mutual-gain, mixed, neutral, and incomplete sanity cases without a master score;
 - point-in-time/future-leakage tests;
+- authority/import-boundary tests;
 - exact-head CI;
 - eventually realistic league adversarial cases through the shared runtime path.
 
 Historical or empirical calibration should be batched where possible. Lack of perfect evidence must not erase a real effect: use bounded, versioned, future-updatable provisional behavior only where justified.
 
-## Remaining NEXT-5 work
+## Remaining empirical work, not hidden architecture work
 
-1. Integrate governed materiality policy into a richer decision view without making synthetic test thresholds authoritative.
-2. Add explicit owner-posture overlay that changes preference interpretation but never calculated consequences.
-3. Build the empirical acceptance/negotiation challenger from admissible point-in-time evidence; keep non-authoritative until promotion criteria pass.
-4. Add obvious bilateral sanity cases and anti-double-counting/authority import guard.
-5. Complete NEXT-5 exit review, exact-head CI, and merge.
+1. Calibrate and promote production materiality thresholds instead of inventing them for completeness.
+2. Build and validate an acceptance/negotiation probability challenger from admissible point-in-time evidence.
+3. Derive any strategic mixed-trade resolution policy empirically before allowing owner posture to change an automatic disposition.
+4. Run the integrated real-league adversarial/beta pass when a networked runtime is available.
+
+These gaps remain explicit. NEXT-6 may consume unknown/provisional states but may not silently convert them into positive action authority.
 
 ## Downstream boundary
 
