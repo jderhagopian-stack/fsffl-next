@@ -1,5 +1,6 @@
 from .lineup import marginal_lineup_impact, optimize_team_lineup
 from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
+from .scoring import TeamUncertaintyMethod, build_team_scoring_distribution
 from .simulation import (
     RegularSeasonSimulationInput,
     RegularSeasonSimulationResult,
@@ -20,6 +21,8 @@ __all__ = [
     "ScoringDistributionKind",
     "TeamCompetitiveOutcome",
     "TeamScoringDistribution",
+    "TeamUncertaintyMethod",
+    "build_team_scoring_distribution",
     "marginal_lineup_impact",
     "optimize_team_lineup",
     "simulate_regular_season",
