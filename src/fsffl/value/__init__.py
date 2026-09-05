@@ -33,6 +33,7 @@ from .models import (
 )
 from .pick import PickOutcome, PickOutcomeSet, estimate_pick_value
 from .source_batch import MarketSourceBatchResult, build_market_calibration_panel_batch
+from .source_catalog import next3_market_source_registry_v1
 from .source_registry import (
     MarketSignalKind,
     MarketSourceDefinition,
@@ -98,5 +99,6 @@ __all__ = [
     "estimate_pick_value",
     "estimate_transaction_price",
     "fit_market_context_calibration",
+    "next3_market_source_registry_v1",
     "normalize_sleeper_one_for_one_trades",
 ]
