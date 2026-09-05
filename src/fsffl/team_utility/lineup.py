@@ -20,6 +20,17 @@ _STARTER_ELIGIBILITY: dict[RosterSlot, frozenset[Position]] = {
     RosterSlot.DST: frozenset({Position.DST}),
 }
 
+_PRESENTATION_SLOT_PRIORITY = {
+    RosterSlot.QB: 0,
+    RosterSlot.RB: 1,
+    RosterSlot.WR: 2,
+    RosterSlot.TE: 3,
+    RosterSlot.K: 4,
+    RosterSlot.DST: 5,
+    RosterSlot.FLEX: 6,
+    RosterSlot.SUPERFLEX: 7,
+}
+
 
 def optimize_team_lineup(
     league_state: LeagueState,
@@ -37,9 +48,9 @@ def optimize_team_lineup(
     players are unavailable. Missing forecasts are surfaced rather than imputed.
 
     Equal-point optimal lineups use a deterministic, points-neutral secondary
-    ordering: earlier/narrower canonical lineup slots receive the stronger eligible
-    player. This keeps QB/RB/WR/TE depth-chart presentation intuitive without
-    changing the set of starters or the optimized expected-points total.
+    ordering: natural position slots are filled before FLEX/SUPERFLEX, and within
+    a repeated slot the stronger player receives the lower slot index. This keeps
+    presentation intuitive without changing the starter set or optimized points.
     """
 
     if as_of.tzinfo is None:
@@ -87,11 +98,24 @@ def optimize_team_lineup(
     if not slots:
         raise ValueError("league has no supported starting lineup slots")
 
+    presentation_positions = tuple(
+        sorted(
+            range(len(slots)),
+            key=lambda position: (
+                _PRESENTATION_SLOT_PRIORITY[slots[position][0]],
+                slots[position][1],
+                position,
+            ),
+        )
+    )
+
+    def secondary_key(slot_points: tuple[float, ...]) -> tuple[float, ...]:
+        return tuple(slot_points[position] for position in presentation_positions)
+
     # Dynamic programming over used lineup-slot bitmasks. Each state keeps the
-    # authoritative points total plus a secondary vector of points by canonical
-    # slot order. The vector is consulted only when totals are exactly equal, so
-    # it cannot alter lineup value; it merely makes equivalent assignments read
-    # like a normal depth chart (QB1 in QB, strongest WR in WR1, flex later, etc.).
+    # authoritative points total plus a points vector by actual slot. The vector
+    # is consulted only when totals are exactly equal, using the explicit human
+    # presentation order above. It therefore cannot alter lineup value.
     empty_slot_points = tuple(float("-inf") for _ in slots)
     states: dict[int, tuple[float, tuple[float, ...], tuple[tuple[int, str], ...]]] = {
         0: (0.0, empty_slot_points, ())
@@ -121,8 +145,10 @@ def optimize_team_lineup(
                     continue
                 score_better = candidate[0] > prior[0] + 1e-12
                 score_equal = abs(candidate[0] - prior[0]) <= 1e-12
-                secondary_better = candidate[1] > prior[1]
-                stable_id_tiebreak = candidate[1] == prior[1] and candidate[2] < prior[2]
+                candidate_secondary = secondary_key(candidate[1])
+                prior_secondary = secondary_key(prior[1])
+                secondary_better = candidate_secondary > prior_secondary
+                stable_id_tiebreak = candidate_secondary == prior_secondary and candidate[2] < prior[2]
                 if score_better or (score_equal and (secondary_better or stable_id_tiebreak)):
                     next_states[new_mask] = candidate
         states = next_states
