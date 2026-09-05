@@ -40,6 +40,8 @@ def test_sleeper_live_acquires_only_configured_regular_season_weeks() -> None:
             return []
         if "/league/123/matchups/" in url:
             return []
+        if url.endswith("/schedule/nfl/regular/2026"):
+            return []
         raise AssertionError(url)
 
     snapshot = SleeperLiveSource(http_get_json=get_json, clock=lambda: NOW).fetch_latest(
@@ -50,6 +52,7 @@ def test_sleeper_live_acquires_only_configured_regular_season_weeks() -> None:
     assert len(matchup_urls) == 14
     assert matchup_urls[0].endswith("/matchups/1")
     assert matchup_urls[-1].endswith("/matchups/14")
+    assert requested[-1].endswith("/schedule/nfl/regular/2026")
 
 
 def test_sleeper_schedule_normalizes_to_canonical_team_ids_and_points() -> None:
