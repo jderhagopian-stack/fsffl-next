@@ -32,6 +32,7 @@ from .models import (
     comparable_values,
 )
 from .pick import PickOutcome, PickOutcomeSet, estimate_pick_value
+from .source_batch import MarketSourceBatchResult, build_market_calibration_panel_batch
 from .source_registry import (
     MarketSignalKind,
     MarketSourceDefinition,
@@ -57,6 +58,7 @@ __all__ = [
     "MarketObservation",
     "MarketPriceEstimate",
     "MarketSignalKind",
+    "MarketSourceBatchResult",
     "MarketSourceBenchmarkResult",
     "MarketSourceDefinition",
     "MarketSourceRegistry",
@@ -72,6 +74,7 @@ __all__ = [
     "ValueScale",
     "apply_market_context",
     "benchmark_market_sources_against_transactions",
+    "build_market_calibration_panel_batch",
     "comparable_values",
     "estimate_intrinsic_player_value",
     "estimate_market_price",
