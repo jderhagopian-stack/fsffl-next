@@ -6,6 +6,7 @@ from fsffl.product.dashboard import build_league_metric_chart
 
 
 CONTEXT = AnalyticsContext(
+    schema_version="1",
     league_id="l1",
     league_state_id="s1",
     as_of=datetime(2026, 9, 5, tzinfo=UTC),
