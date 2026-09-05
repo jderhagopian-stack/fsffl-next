@@ -40,7 +40,7 @@ class IntelligenceRuntimeStatus(FrozenModel):
     league_id: str
     league_state_id: str
     stages: tuple[IntelligenceStageStatus, ...]
-    status_model_version: str = "next8-intelligence-status-v1"
+    status_model_version: str = "next8-intelligence-status-v2"
 
 
 def _state_only_context(
@@ -59,17 +59,14 @@ def _state_only_context(
         league_state_id=league_state.state_id,
         as_of=league_state.as_of,
         generated_at=generated,
-        lineage=(
-            ModelLineageEntry(component="state", model_version=league_state.schema_version),
-        ),
+        lineage=(ModelLineageEntry(component="state", model_version=league_state.schema_version),),
         warnings=(
             AnalyticsWarning(
                 kind=AnalyticsWarningKind.MISSING_EVIDENCE,
                 code="live_intelligence_not_enriched",
                 message=(
-                    "Canonical league state is loaded. Forecast, value, team-utility, "
-                    "simulation, trade-decision, and opportunity evidence will attach "
-                    "through the production runtime as their governed inputs become available."
+                    "Canonical league state is loaded. Forecast, value, team-utility, simulation, "
+                    "trade-decision, and opportunity evidence attach through the production runtime."
                 ),
                 source_component="product-runtime",
             ),
@@ -82,15 +79,9 @@ def build_state_only_team_views(
     *,
     generated_at: datetime | None = None,
 ) -> tuple[TeamAnalyticsView, ...]:
-    """Build one shared-context NEXT-7 view per team without inventing evidence."""
-
     context = _state_only_context(league_state, generated_at=generated_at)
     return tuple(
-        build_team_analytics_view(
-            league_state,
-            context=context,
-            team_id=team.team_id,
-        )
+        build_team_analytics_view(league_state, context=context, team_id=team.team_id)
         for team in sorted(league_state.teams, key=lambda item: item.team_id)
     )
 
@@ -100,21 +91,17 @@ def build_state_only_league_view(
     *,
     generated_at: datetime | None = None,
 ) -> LeagueAnalyticsView:
-    """Expose immediately available league analytics from canonical state only.
-
-    This is a production orchestration bridge, not a valuation or forecasting
-    fallback. Metrics that require downstream evidence remain explicitly missing.
-    """
-
     team_views = build_state_only_team_views(league_state, generated_at=generated_at)
-    context = team_views[0].context if team_views else _state_only_context(
-        league_state,
-        generated_at=generated_at,
-    )
+    context = team_views[0].context if team_views else _state_only_context(league_state, generated_at=generated_at)
     return build_league_analytics_view(context=context, team_views=team_views)
 
 
-def state_first_runtime_status(league_state: LeagueState) -> IntelligenceRuntimeStatus:
+def state_first_runtime_status(
+    league_state: LeagueState,
+    *,
+    forecast_ready: bool = False,
+    forecast_message: str | None = None,
+) -> IntelligenceRuntimeStatus:
     return IntelligenceRuntimeStatus(
         league_id=league_state.league.league_id,
         league_state_id=league_state.state_id,
@@ -126,8 +113,15 @@ def state_first_runtime_status(league_state: LeagueState) -> IntelligenceRuntime
             ),
             IntelligenceStageStatus(
                 stage=IntelligenceStage.FORECAST,
-                readiness=StageReadiness.WAITING_FOR_INPUT,
-                message="Production live projection-provider evidence has not yet been attached.",
+                readiness=StageReadiness.READY if forecast_ready else StageReadiness.WAITING_FOR_INPUT,
+                message=(
+                    forecast_message
+                    or (
+                        "Authoritative multi-provider NEXT-2 forecast evidence is loaded."
+                        if forecast_ready
+                        else "Authoritative multi-provider live forecast evidence has not yet been attached."
+                    )
+                ),
             ),
             IntelligenceStageStatus(
                 stage=IntelligenceStage.VALUE,
@@ -142,7 +136,11 @@ def state_first_runtime_status(league_state: LeagueState) -> IntelligenceRuntime
             IntelligenceStageStatus(
                 stage=IntelligenceStage.ANALYTICS,
                 readiness=StageReadiness.READY,
-                message="State-derived NEXT-7 league/team views are available; enriched metrics remain missing.",
+                message=(
+                    "NEXT-7 state and forecast views are available; value/simulation metrics remain missing."
+                    if forecast_ready
+                    else "State-derived NEXT-7 league/team views are available; enriched metrics remain missing."
+                ),
             ),
             IntelligenceStageStatus(
                 stage=IntelligenceStage.TRADE_DECISION,
