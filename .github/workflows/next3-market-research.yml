@@ -1,0 +1,62 @@
+name: NEXT-3 Market Research
+
+on:
+  push:
+    branches:
+      - next-3-value
+    paths:
+      - 'scripts/build_next3_research_crosswalk.py'
+      - 'scripts/build_next3_market_panel.py'
+      - 'src/fsffl/value/**'
+      - '.github/workflows/next3-market-research.yml'
+  workflow_dispatch:
+
+jobs:
+  build-market-panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install project
+        run: pip install -e .
+      - name: Build research identity crosswalk
+        run: |
+          mkdir -p .artifacts/next3
+          python scripts/build_next3_research_crosswalk.py \
+            --output .artifacts/next3/research_crosswalk.csv
+      - name: Build concurrent three-source market panel
+        run: |
+          python scripts/build_next3_market_panel.py \
+            --crosswalk .artifacts/next3/research_crosswalk.csv \
+            --output .artifacts/next3/market_panel.json \
+            --format-context-id dynasty:sf:12:half \
+            --num-qbs 2 \
+            --num-teams 12 \
+            --ppr 0.5
+      - name: Summarize artifact
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+
+          panel = json.loads(Path('.artifacts/next3/market_panel.json').read_text())
+          observations = panel['observations']
+          counts = Counter(row['source_id'] for row in observations)
+          print('NEXT-3 market panel observations:', len(observations))
+          print('By source:', dict(sorted(counts.items())))
+          print('Panel as_of:', panel['as_of'])
+          PY
+      - name: Upload research artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: next3-market-research-${{ github.sha }}
+          path: |
+            .artifacts/next3/market_panel.json
+            .artifacts/next3/research_crosswalk.csv
+          retention-days: 7
