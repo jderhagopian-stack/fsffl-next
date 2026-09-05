@@ -32,6 +32,8 @@ NEXT-5 may consume AUTHORITATIVE and PROVISIONAL_GOVERNED NEXT-4 outputs. It mus
 | Scalar franchise-utility mapping | PROVISIONAL_GOVERNED / ABSENT | No arbitrary blended score; future mapping requires evidence | No, provided downstream consumes structured vector/deltas |
 | Team state assembly | AUTHORITATIVE | Orchestrates State + Forecast + Value + Simulation without rewriting upstream authority | No |
 | Before/after scenario deltas | AUTHORITATIVE | Structured competitive/resilience/economic deltas; no recommendation logic | No |
+| Generic runtime sanity harness | AUTHORITATIVE_ORCHESTRATION | League-wide runner consumes canonical state + explicit Forecast/Schedule/Policy inputs; no league-specific logic or hidden defaults | No |
+| Runtime Sleeper acquisition support | AUTHORITATIVE_DATA_BOUNDARY | Live provider payload acquisition remains upstream of canonical normalization and refuses historical masquerading | No |
 | Controlled sanity invariants | AUTHORITATIVE_VALIDATION | Superflex depth, lineup monotonicity, simulation reproducibility, scoring monotonicity, posture separation | No |
 | Real-league adversarial sanity pass | PENDING | Use a real canonical league state after controlled suite; diagnostic only | **Yes — final validation gate** |
 | Authority / anti-double-counting audit | COMPLETE | Explicit audit + automated downstream import guard | No |
@@ -49,16 +51,27 @@ Automated CI sanity cases currently verify:
 - raising a team's scoring mean improves expected wins and playoff/first-place probability under controlled identical conditions;
 - owner strategic posture cannot alter calculated team state;
 - scenario comparisons preserve channel separation and reject incompatible economic scales;
-- team assembly fails closed when a calculated-state classification is requested without an explicit governed policy.
+- team assembly fails closed when a calculated-state classification is requested without an explicit governed policy;
+- the generic league sanity runner evaluates every team through the same authoritative path;
+- the runtime runner is reproducible for identical inputs and rejects future policy evidence.
+
+## Runtime validation path
+
+The generic runtime path is now complete:
+
+**runtime league id -> SleeperLiveSource -> canonical NEXT-1 LeagueState -> explicit NEXT-2 forecasts + schedule + policy -> NEXT-4 lineup/scoring/simulation/utility -> structured diagnostic result**
+
+The league identifier and fetched provider payload are runtime data and are not committed to git. See `next-4-runtime-sanity.md`.
 
 ## Remaining required closeout actions
 
-1. Complete real-league adversarial sanity evaluation using canonical league state and current admissible forecast inputs.
+1. Execute the real-league adversarial sanity evaluation using the runtime harness, canonical league state, and current admissible forecast inputs.
 2. Review a small set of pre-registered realistic cases with knowledgeable human judgment before revealing outputs where useful.
 3. Repair only generalizable defects; do not encode one league's preferences as universal coefficients.
-4. Re-run exact-head CI after any repairs.
-5. Review PR #6 changed-file scope for accidental Trade/Search/Analytics/Presentation logic.
-6. Update PR description and merge only when no unexplained severe contradiction remains.
+4. Re-run exact-head CI after any repairs or final closeout edits.
+5. Merge PR #6 only when no unexplained severe contradiction remains.
+
+The PR changed-file scope and authority boundaries have already been reviewed and are clean; reporting remains in NEXT-7 and trade/search logic remains downstream.
 
 ## Non-blocking future improvements
 
@@ -66,4 +79,4 @@ See `next-4-future-improvements.md`. Key items include calibrated player covaria
 
 ## Exit conclusion
 
-NEXT-4 architecture and controlled behavior are substantially complete. The only current blocking validation gate is the realistic league adversarial pass plus any generalizable repair it reveals. There is no need to delay NEXT-5 for open-ended refinement of explicitly governed provisional assumptions once that gate is satisfied.
+NEXT-4 architecture, orchestration, and controlled behavior are substantially complete. The only current blocking validation gate is the realistic league adversarial pass plus any generalizable repair it reveals. There is no need to delay NEXT-5 for open-ended refinement of explicitly governed provisional assumptions once that gate is satisfied.
