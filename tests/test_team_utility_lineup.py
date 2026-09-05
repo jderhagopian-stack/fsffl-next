@@ -21,7 +21,11 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
-from fsffl.team_utility import marginal_lineup_impact, optimize_team_lineup
+from fsffl.team_utility import (
+    build_team_scoring_distribution,
+    marginal_lineup_impact,
+    optimize_team_lineup,
+)
 
 
 AS_OF = datetime(2026, 9, 5, 15, 0, tzinfo=UTC)
@@ -149,3 +153,17 @@ def test_missing_forecast_is_surfaced_not_imputed() -> None:
     )
 
     assert result.missing_forecast_player_ids == ("te1",)
+
+
+def test_team_scoring_distribution_combines_only_optimized_starters() -> None:
+    result = build_team_scoring_distribution(
+        league_state(),
+        forecasts(),
+        team_id="team:1",
+        as_of=AS_OF,
+        horizon=ForecastHorizon.SEASON,
+    )
+
+    assert result.mean_points == 99.0
+    assert result.stddev_points == 2.0
+    assert "independent_player_variance" in result.model_version
