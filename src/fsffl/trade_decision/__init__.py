@@ -16,6 +16,12 @@ from .decision import (
     assess_side_direction,
     classify_bilateral_trade_decision,
 )
+from .disposition import (
+    TradeDecisionDisposition,
+    TradeDisposition,
+    TradeDispositionEvidence,
+    decide_trade_disposition,
+)
 from .economic_net import (
     BilateralTradeEconomicNet,
     EconomicNetStatus,
@@ -89,6 +95,9 @@ __all__ = [
     "StrategicSideContext",
     "StrategicTradeContext",
     "TradeAcceptanceView",
+    "TradeDecisionDisposition",
+    "TradeDisposition",
+    "TradeDispositionEvidence",
     "TradeLeg",
     "TradeLegEconomicNet",
     "TradeLegEconomics",
@@ -104,6 +113,7 @@ __all__ = [
     "classify_bilateral_trade_decision",
     "classify_negative_delta",
     "classify_positive_delta",
+    "decide_trade_disposition",
     "evaluate_bilateral_trade_deltas",
     "summarize_bilateral_trade_economics",
 ]
