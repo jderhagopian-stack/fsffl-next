@@ -39,6 +39,12 @@ Public FantasyDataPros course-data repositories retain dated FantasyPros full-st
 
 These artifacts materially strengthen the modern recovery path because they show that dated preseason stat projections were being retained in the target calibration period, not merely that providers had current projection pages. Upstream FantasyPros data rights remain a separate governance question; use these as private-research acquisition candidates and point-in-time/schema evidence unless broader rights are verified.
 
+### FFToday historical projection pages
+
+Historical FFToday season projection pages have now been directly recovered for **2024** and **2025**. The 2024 pages identify the season explicitly and show an update date of **2024-09-02**; the 2025 pages identify the season explicitly and show preseason update dates including **2025-06-19**, **2025-07-10**, **2025-07-24**, **2025-08-07**, and **2025-08-31**. The pages expose raw position-relevant fields such as passing completions/attempts/yards/TD/INT, rushing attempts/yards/TD, receptions/receiving yards/TD, plus fantasy points.
+
+This is the strongest modern recovery path so far because the provider itself exposes season-specific historical pages with explicit update dates and raw stat projections. Rights and automated acquisition terms still require review before retained data is committed or commercialized, but 2024 and 2025 are no longer merely leads: the historical projection artifacts themselves are recoverable and usable for schema/point-in-time adapter work.
+
 ### ffanalytics / FantasyFootballAnalytics
 
 The modern ffanalytics project supports seasonal and weekly scraping from multiple projection sources including CBS, ESPN, FantasyPros, FantasySharks, FFToday, NumberFire, FantasyFootballNerd, NFL, RTSports, and WalterFootball. Its maintainers explicitly note that historical periods cannot simply be recreated by running today's scraper with an old year/week. This confirms the need to recover retained snapshots, archives, commit history, or provider-supported historical queries instead of backdating live data.
@@ -54,12 +60,12 @@ This matrix tracks what has actually been recovered or credibly located so far. 
 | Source | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | FantasyPros raw stats | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | RECOVERED | RECOVERED | NOT_YET_FOUND | NOT_YET_FOUND |
+| FFToday raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | RECOVERED | RECOVERED |
 | NFL Fantasy raw stats | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | LEAD |
 | CBS raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
 | ESPN raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
 | Yahoo raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
 | Razzball raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND |
-| FFToday raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
 
 `RECOVERED` here means the artifact itself has been located with a season/date identity strong enough to proceed to schema and rights review. It does not by itself grant redistribution or commercial rights.
 
