@@ -77,9 +77,9 @@ This supports the robust equal-median method as the default market baseline. It 
 | Intrinsic/pick provisional policy | COMPLETE | `next-3-provisional-calibration-policy.md` forbids hidden fallback/substitution and defines updateable governed behavior |
 | Authority / anti-double-counting audit | COMPLETE | `next-3-authority-audit.md` assigns each effect to one home; automated import-boundary regression prevents Value from importing downstream authority |
 | Source-lineage operationalization | COMPLETE | v1 governed source catalog plus lineage-aware vote collapse and regression tests |
-| Final PR scope review | PENDING_FINAL_HEAD | Confirm changed files contain only NEXT-3 Value, research scripts/workflow, tests and documentation; no downstream team-utility/presentation authority |
+| Final PR scope review | COMPLETE | PR #4 changes are confined to `src/fsffl/value`, NEXT-3 research scripts/workflow, Value documentation, and Value tests; no downstream team-utility, Decision, Simulation, Search, Analytics or presentation implementation is changed |
 | Final CI and market research workflow | PENDING_FINAL_HEAD | Must be green on exact final PR head |
-| Merge | PENDING | Merge only after the two final-head checks above pass |
+| Merge | PENDING | Merge only after final-head validation passes |
 
 ## Non-blocking future refinement
 
@@ -95,6 +95,6 @@ The following work should continue after NEXT-3 without delaying NEXT-4:
 
 ## Exit conclusion
 
-There are **no NOT_READY concepts on a path NEXT-4 must consume**. Remaining empirical work concerns parameter maturity, not missing authority or architecture. NEXT-3 is ready to close once the exact final branch head passes scope review, CI and the reproducible market-research workflow.
+There are **no NOT_READY concepts on a path NEXT-4 must consume**. Remaining empirical work concerns parameter maturity, not missing authority or architecture. NEXT-3 is ready to close once the exact final branch head passes CI and the reproducible market-research workflow.
 
 Empirical parameters remain versioned and updateable by design rather than frozen at the NEXT-3 merge date.
