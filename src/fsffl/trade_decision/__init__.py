@@ -37,6 +37,11 @@ from .evaluation import (
     TradeSideEvaluation,
     evaluate_bilateral_trade_deltas,
 )
+from .feasibility import (
+    NegotiationFeasibilityShape,
+    TradeNegotiationFeasibility,
+    assess_negotiation_feasibility,
+)
 from .material_assessment import (
     BilateralMaterialAssessment,
     SideMaterialAssessment,
@@ -77,6 +82,7 @@ __all__ = [
     "ExpectedPackageValue",
     "MaterialityDirection",
     "MissingEconomicEvidence",
+    "NegotiationFeasibilityShape",
     "SideDecisionShape",
     "SideDirectionalAssessment",
     "SideMaterialAssessment",
@@ -86,9 +92,11 @@ __all__ = [
     "TradeLeg",
     "TradeLegEconomicNet",
     "TradeLegEconomics",
+    "TradeNegotiationFeasibility",
     "TradeSideEvaluation",
     "apply_bilateral_trade",
     "assess_bilateral_materiality",
+    "assess_negotiation_feasibility",
     "assess_side_direction",
     "attach_owner_strategy",
     "build_unestimated_acceptance_view",
