@@ -19,10 +19,10 @@ class CareerTransitionEvidence(FrozenModel):
     carries attrition separately so dynasty value is not smuggled into the
     football forecast.
 
-    `conditional_multiplier_stddev` represents observed dispersion in the
-    development/decline multiplier itself. Keeping that uncertainty separate from
-    the base forecast prevents long-horizon forecasts from becoming falsely
-    precise as career transitions are rolled forward.
+    `conditional_multiplier_stddev` represents observed player-to-player
+    transition dispersion while `conditional_multiplier_standard_error` captures
+    uncertainty in the cohort estimate itself. Keeping both separate prevents
+    long-horizon forecasts from becoming falsely precise when evidence is weak.
     """
 
     position: Position
@@ -31,6 +31,7 @@ class CareerTransitionEvidence(FrozenModel):
     age_years: float | None = Field(default=None, ge=0)
     experience_years: int | None = Field(default=None, ge=0)
     is_rookie_cohort: bool | None = None
+    prior_production_quartile: int | None = Field(default=None, ge=1, le=4)
     sample_size: Annotated[int, Field(ge=1)]
     survivor_sample_size: Annotated[int, Field(ge=0)] = 0
     conditional_production_multiplier: Annotated[float, Field(ge=0)]
@@ -81,25 +82,29 @@ def apply_career_transition(
     The result is an unconditional outcome distribution. A player who does not
     survive the modeled football state contributes zero production. Conditional
     on survival, the transition multiplier is itself treated as uncertain using
-    its empirically observed dispersion. This is a two-state mixture calculation
-    and does not apply dynasty value, market price, roster fit, or competitive-
-    window logic.
+    both observed cohort dispersion and estimation error. This is a two-state
+    mixture calculation and does not apply dynasty value, market price, roster
+    fit, or competitive-window logic.
     """
 
     multiplier_mean = evidence.conditional_production_multiplier
-    multiplier_variance = evidence.conditional_multiplier_stddev**2
+    multiplier_variance = (
+        evidence.conditional_multiplier_stddev**2
+        + evidence.conditional_multiplier_standard_error**2
+    )
 
     base_second_moment = distribution.stddev**2 + distribution.mean**2
     multiplier_second_moment = multiplier_variance + multiplier_mean**2
 
     active_mean = distribution.mean * multiplier_mean
     # For independent X (base production) and M (career transition),
-    # E[(XM)^2] = E[X^2]E[M^2]. This propagates transition dispersion without
-    # inventing an arbitrary long-horizon uncertainty multiplier.
+    # E[(XM)^2] = E[X^2]E[M^2]. This propagates transition dispersion and
+    # estimation uncertainty without inventing a long-horizon uncertainty
+    # multiplier.
     active_second_moment = base_second_moment * multiplier_second_moment
 
-    # Retained for explicitly calibrated forecast-error inflation that is
-    # distinct from dispersion in the career multiplier itself.
+    # Retained only for an explicitly calibrated forecast-error inflation term
+    # that is distinct from dispersion in the career multiplier itself.
     if evidence.conditional_stddev_multiplier != 1.0:
         active_variance = max(0.0, active_second_moment - active_mean**2)
         active_variance *= evidence.conditional_stddev_multiplier**2
@@ -123,7 +128,8 @@ def build_multi_year_forecast(
     """Roll an annual football forecast forward through calibrated transitions.
 
     No fallback coefficients exist here by design. Callers must provide the
-    evidence table selected for the player's point-in-time age/experience state.
+    evidence table selected for the player's point-in-time age/experience/
+    production state.
     """
 
     current = base_distribution
