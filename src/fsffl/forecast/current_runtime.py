@@ -63,14 +63,7 @@ def build_current_live_forecasts(
     clock: Clock | None = None,
     minimum_independent_sources: int = 2,
 ) -> LiveForecastRuntimeResult:
-    """Build current authoritative FSFFL forecasts from independent live evidence.
-
-    Acquisition happens before the shared FSFFL evaluation cutoff is established.
-    This matters for sources such as CBS whose retrieval time is the earliest
-    demonstrable evidence timestamp. Provider failures are isolated when enough
-    independent evidence remains. Only the normalized NEXT-2 ensemble and its
-    league-scored derivative leave this service as authoritative forecasts.
-    """
+    """Build current authoritative FSFFL forecasts from independent live evidence."""
 
     active_fetchers = fetchers or default_current_projection_fetchers()
     if len({item.source_id for item in active_fetchers}) != len(active_fetchers):
@@ -115,6 +108,14 @@ def build_current_live_forecasts(
             continue
         batches.append(LiveForecastSourceBatch(source_id=source_id, observations=observations))
         successful.append(source_id)
+
+    if len(batches) < minimum_independent_sources:
+        detail = "; ".join(sorted(failed)) if failed else "no provider-specific failure details"
+        raise ValueError(
+            "authoritative live ensemble requires at least "
+            f"{minimum_independent_sources} independent sources; found {len(batches)}; "
+            f"successful={sorted(successful)}; failures={detail}"
+        )
 
     raw_ensemble, coverage = build_authoritative_live_ensemble(
         tuple(batches),
