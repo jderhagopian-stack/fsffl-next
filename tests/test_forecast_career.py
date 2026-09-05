@@ -11,14 +11,25 @@ from fsffl.forecast.models import ForecastDistribution
 from fsffl.state.models import Position
 
 
-def evidence(*, multiplier: float = 1.0, survival: float = 1.0, stddev_multiplier: float = 1.0) -> CareerTransitionEvidence:
+def evidence(
+    *,
+    multiplier: float = 1.0,
+    survival: float = 1.0,
+    stddev_multiplier: float = 1.0,
+    multiplier_stddev: float = 0.0,
+    multiplier_standard_error: float = 0.0,
+) -> CareerTransitionEvidence:
     return CareerTransitionEvidence(
         position=Position.RB,
         age_years=26.0,
         experience_years=4,
+        prior_production_quartile=4,
         sample_size=250,
+        survivor_sample_size=200,
         conditional_production_multiplier=multiplier,
         survival_probability=survival,
+        conditional_multiplier_stddev=multiplier_stddev,
+        conditional_multiplier_standard_error=multiplier_standard_error,
         conditional_stddev_multiplier=stddev_multiplier,
         model_version="career-transition-test-v1",
         evidence_through_season=2025,
@@ -40,6 +51,23 @@ def test_career_transition_separates_survival_from_conditional_production() -> N
     assert result.p10 is None
     assert result.p50 is None
     assert result.p90 is None
+
+
+def test_empirical_multiplier_uncertainty_widens_long_horizon_distribution() -> None:
+    base = ForecastDistribution(mean=200.0, stddev=40.0)
+    precise = apply_career_transition(base, evidence(multiplier=0.9, survival=0.8))
+    uncertain = apply_career_transition(
+        base,
+        evidence(
+            multiplier=0.9,
+            survival=0.8,
+            multiplier_stddev=0.10,
+            multiplier_standard_error=0.05,
+        ),
+    )
+
+    assert isclose(precise.mean, uncertain.mean)
+    assert uncertain.stddev > precise.stddev
 
 
 def test_multi_year_forecast_requires_explicit_evidence_and_accumulates_transitions() -> None:
@@ -70,5 +98,15 @@ def test_transition_validation_rejects_unbounded_or_unidentified_inputs() -> Non
             conditional_production_multiplier=1.0,
             survival_probability=1.0,
             model_version=" ",
+            evidence_through_season=2025,
+        )
+    with pytest.raises(ValueError):
+        CareerTransitionEvidence(
+            position=Position.WR,
+            prior_production_quartile=5,
+            sample_size=1,
+            conditional_production_multiplier=1.0,
+            survival_probability=0.0,
+            model_version="test",
             evidence_through_season=2025,
         )
