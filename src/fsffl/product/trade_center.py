@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from pydantic import model_validator
+from datetime import datetime
+
+from pydantic import field_validator, model_validator
 
 from fsffl.state.models import Asset, FrozenModel
+from fsffl.trade_decision.models import BilateralTradeProposal, TradeLeg
 
 
 class TradeDraftSide(FrozenModel):
@@ -40,9 +43,11 @@ class TradeDraft(FrozenModel):
             raise ValueError("focal draft side must match focal_team_id")
         if self.counterparty_side.team_id != self.counterparty_team_id:
             raise ValueError("counterparty draft side must match counterparty_team_id")
-        if not self.focal_side.assets and not self.counterparty_side.assets:
-            raise ValueError("trade draft cannot be empty on both sides")
         return self
+
+    @property
+    def ready_to_submit(self) -> bool:
+        return bool(self.focal_side.assets and self.counterparty_side.assets)
 
 
 def add_asset_to_draft(
@@ -79,3 +84,23 @@ def remove_asset_from_draft(
         side = TradeDraftSide(team_id=team_id, assets=remaining)
         return draft.model_copy(update={"counterparty_side": side})
     raise ValueError("asset can only be removed from one of the trade draft teams")
+
+
+def submit_trade_draft(
+    draft: TradeDraft,
+    *,
+    as_of: datetime,
+    proposal_id: str | None = None,
+) -> BilateralTradeProposal:
+    """Convert product-only draft state into the authoritative NEXT-5 proposal contract."""
+
+    if as_of.tzinfo is None:
+        raise ValueError("trade proposal as_of must be timezone-aware")
+    if not draft.ready_to_submit:
+        raise ValueError("trade draft requires at least one asset from each team before submission")
+    return BilateralTradeProposal(
+        proposal_id=proposal_id or draft.draft_id,
+        as_of=as_of,
+        side_a=TradeLeg(team_id=draft.focal_team_id, sends=draft.focal_side.assets),
+        side_b=TradeLeg(team_id=draft.counterparty_team_id, sends=draft.counterparty_side.assets),
+    )
