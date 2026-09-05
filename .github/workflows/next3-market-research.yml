@@ -10,6 +10,7 @@ on:
       - 'scripts/build_next3_statsguy_history.py'
       - 'scripts/build_next3_dynastyprocess_history.py'
       - 'scripts/benchmark_next3_market_sources.py'
+      - 'scripts/benchmark_next3_historical_ensemble.py'
       - 'src/fsffl/value/**'
       - '.github/workflows/next3-market-research.yml'
   workflow_dispatch:
@@ -30,59 +31,58 @@ jobs:
       - name: Build research identity crosswalk
         run: |
           mkdir -p .artifacts/next3
-          python scripts/build_next3_research_crosswalk.py \
-            --output .artifacts/next3/research_crosswalk.csv
+          python scripts/build_next3_research_crosswalk.py --output .artifacts/next3/research_crosswalk.csv
       - name: Build concurrent four-source market panel
         run: |
           python scripts/build_next3_market_panel.py \
             --crosswalk .artifacts/next3/research_crosswalk.csv \
             --output .artifacts/next3/market_panel.json \
-            --format-context-id dynasty:sf:12:half \
-            --num-qbs 2 \
-            --num-teams 12 \
-            --ppr 0.5
+            --format-context-id dynasty:sf:12:half --num-qbs 2 --num-teams 12 --ppr 0.5
       - name: Build weekly Stats Guy historical panel
         run: |
           python scripts/build_next3_statsguy_history.py \
             --crosswalk .artifacts/next3/research_crosswalk.csv \
             --output .artifacts/next3/statsguy_history.json \
-            --start-date 2025-09-01 \
-            --step-days 7 \
-            --format sf_dynasty \
-            --format-context-id dynasty:sf
+            --start-date 2025-09-01 --step-days 7 --format sf_dynasty --format-context-id dynasty:sf
       - name: Clone DynastyProcess history
-        run: |
-          git clone --filter=blob:none --no-checkout https://github.com/dynastyprocess/data.git .artifacts/next3/dynastyprocess-data
+        run: git clone --filter=blob:none --no-checkout https://github.com/dynastyprocess/data.git .artifacts/next3/dynastyprocess-data
       - name: Build DynastyProcess historical panel
         run: |
           python scripts/build_next3_dynastyprocess_history.py \
             --dynastyprocess-repo .artifacts/next3/dynastyprocess-data \
             --crosswalk .artifacts/next3/research_crosswalk.csv \
             --output .artifacts/next3/dynastyprocess_history.json \
-            --start-date 2025-09-01 \
-            --end-date 2026-08-31
+            --start-date 2025-09-01 --end-date 2026-08-31
       - name: Benchmark source agreement
         run: |
           python scripts/benchmark_next3_market_sources.py \
             --panel .artifacts/next3/market_panel.json \
             --output .artifacts/next3/source_benchmark.json
+      - name: Run chronological ensemble challenger
+        run: |
+          python scripts/benchmark_next3_historical_ensemble.py \
+            --history-a .artifacts/next3/statsguy_history.json \
+            --history-b .artifacts/next3/dynastyprocess_history.json \
+            --output .artifacts/next3/historical_ensemble_benchmark.json \
+            --horizon-days 28 --max-snapshot-age-days 14 --min-overlap 100
       - name: Summarize artifact
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-
           panel = json.loads(Path('.artifacts/next3/market_panel.json').read_text())
-          statsguy = json.loads(Path('.artifacts/next3/statsguy_history.json').read_text())
-          dynastyprocess = json.loads(Path('.artifacts/next3/dynastyprocess_history.json').read_text())
+          sg = json.loads(Path('.artifacts/next3/statsguy_history.json').read_text())
+          dp = json.loads(Path('.artifacts/next3/dynastyprocess_history.json').read_text())
           benchmark = json.loads(Path('.artifacts/next3/source_benchmark.json').read_text())
-          sg_dates = sorted({row['observed_at'][:10] for row in statsguy['observations']})
-          dp_dates = sorted({row['observed_at'][:10] for row in dynastyprocess['observations']})
+          ensemble = json.loads(Path('.artifacts/next3/historical_ensemble_benchmark.json').read_text())
+          sg_dates = sorted({row['observed_at'][:10] for row in sg['observations']})
+          dp_dates = sorted({row['observed_at'][:10] for row in dp['observations']})
           print('NEXT-3 market panel observations:', len(panel['observations']))
           print('By source:', benchmark['source_observation_counts'])
-          print('Panel as_of:', panel['as_of'])
-          print('Stats Guy history snapshots:', len(sg_dates), 'observations=', len(statsguy['observations']), 'first=', sg_dates[0], 'last=', sg_dates[-1])
-          print('DynastyProcess history snapshots:', len(dp_dates), 'observations=', len(dynastyprocess['observations']), 'first=', dp_dates[0], 'last=', dp_dates[-1])
+          print('Stats Guy history:', len(sg_dates), 'snapshots', len(sg['observations']), 'observations')
+          print('DynastyProcess history:', len(dp_dates), 'snapshots', len(dp['observations']), 'observations')
+          print('Chronological ensemble:', ensemble['pooled'])
+          print('Best diagnostic candidate:', ensemble['best_diagnostic_candidate'])
           for pair in benchmark['pairwise_exact']:
               print('Exact pairwise:', pair)
           for pair in benchmark['pairwise_family']:
@@ -98,4 +98,5 @@ jobs:
             .artifacts/next3/source_benchmark.json
             .artifacts/next3/statsguy_history.json
             .artifacts/next3/dynastyprocess_history.json
+            .artifacts/next3/historical_ensemble_benchmark.json
           retention-days: 7
