@@ -13,11 +13,16 @@ from .html_tables import HtmlTableParser, normalize_cell, numeric
 HtmlGetter = Callable[[str], str]
 Clock = Callable[[], datetime]
 _POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
+_NFL_TEAMS = {
+    "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB",
+    "HOU", "IND", "JAC", "JAX", "KC", "LAC", "LAR", "LV", "MIA", "MIN", "NE", "NO", "NYG",
+    "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS", "WSH",
+}
 
 
 class CBSLiveProjectionSource:
     provider_name = "cbs"
-    source_version = "cbs-season-projections-html-v3"
+    source_version = "cbs-season-projections-html-v4"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -66,6 +71,10 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[Curren
                 output.append(row)
         if output:
             return tuple(output)
+
+    text_rows = _rows_from_text_parts(parser.text_parts, provider=provider, position=position)
+    if text_rows:
+        return text_rows
     raise ValueError(f"CBS {position.value} projection table was not found")
 
 
@@ -152,6 +161,112 @@ def _row_from_cells(*, provider: str, position: Position, headers: list[str], ce
     )
 
 
+def _required_numeric_tail(position: Position) -> int:
+    if position == Position.QB:
+        return 15
+    if position in {Position.RB, Position.WR}:
+        return 14
+    if position == Position.TE:
+        return 10
+    raise ValueError(f"unsupported CBS position: {position.value}")
+
+
+def _row_from_text_tail(
+    *, provider: str, position: Position, name: str, team: str, tail: list[str]
+) -> CurrentProjectionRow | None:
+    try:
+        if position == Position.QB and len(tail) >= 15:
+            stats = {
+                "pass_yd": numeric(tail[3]),
+                "pass_td": numeric(tail[5]),
+                "pass_int": numeric(tail[6]),
+                "rush_yd": numeric(tail[9]),
+                "rush_td": numeric(tail[11]),
+                "fum_lost": numeric(tail[12]),
+            }
+        elif position == Position.RB and len(tail) >= 14:
+            stats = {
+                "rush_yd": numeric(tail[2]),
+                "rush_td": numeric(tail[4]),
+                "rec": numeric(tail[6]),
+                "rec_yd": numeric(tail[7]),
+                "rec_td": numeric(tail[10]),
+                "fum_lost": numeric(tail[11]),
+            }
+        elif position == Position.WR and len(tail) >= 14:
+            stats = {
+                "rec": numeric(tail[2]),
+                "rec_yd": numeric(tail[3]),
+                "rec_td": numeric(tail[6]),
+                "rush_yd": numeric(tail[8]),
+                "rush_td": numeric(tail[10]),
+                "fum_lost": numeric(tail[11]),
+            }
+        elif position == Position.TE and len(tail) >= 10:
+            stats = {
+                "rec": numeric(tail[2]),
+                "rec_yd": numeric(tail[3]),
+                "rec_td": numeric(tail[6]),
+                "rush_yd": 0.0,
+                "rush_td": 0.0,
+                "fum_lost": numeric(tail[7]),
+            }
+        else:
+            return None
+    except (ValueError, IndexError):
+        return None
+    canonical_team = "JAX" if team == "JAC" else "WAS" if team == "WSH" else team
+    return CurrentProjectionRow(
+        provider=provider,
+        external_id=f"{position.value}:{canonical_team}:{name}",
+        player_name=name,
+        position=position,
+        nfl_team=canonical_team,
+        stats=stats,
+    )
+
+
+def _rows_from_text_parts(
+    parts: list[str], *, provider: str, position: Position
+) -> tuple[CurrentProjectionRow, ...]:
+    """Parse CBS's hosted text-grid shape when the projection grid is not a normal HTML table."""
+
+    required = _required_numeric_tail(position)
+    output: list[CurrentProjectionRow] = []
+    pos = position.value
+    for index in range(1, len(parts) - 1):
+        if normalize_cell(parts[index]).upper() != pos:
+            continue
+        team = normalize_cell(parts[index + 1]).upper()
+        if team not in _NFL_TEAMS:
+            continue
+        name = normalize_cell(parts[index - 1])
+        if not name or re.fullmatch(r"[\d.,\-]+", name):
+            continue
+        numeric_tail: list[str] = []
+        cursor = index + 2
+        while cursor < len(parts) and len(numeric_tail) < required:
+            token = normalize_cell(parts[cursor])
+            try:
+                numeric(token)
+            except ValueError:
+                break
+            numeric_tail.append(token)
+            cursor += 1
+        if len(numeric_tail) != required:
+            continue
+        row = _row_from_text_tail(
+            provider=provider,
+            position=position,
+            name=name,
+            team=team,
+            tail=numeric_tail,
+        )
+        if row is not None:
+            output.append(row)
+    return tuple(output)
+
+
 def _default_get_text(url: str) -> str:
     if not url.startswith("https://www.cbssports.com/fantasy/football/stats/"):
         raise ValueError("CBS live source only permits fixed fantasy projection URLs")
@@ -162,6 +277,7 @@ def _default_get_text(url: str) -> str:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Cache-Control": "no-cache",
+            "Referer": "https://www.cbssports.com/fantasy/football/",
         },
     )
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider URL
