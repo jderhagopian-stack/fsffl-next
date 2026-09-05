@@ -91,12 +91,12 @@ def test_private_shell_requires_credentials_when_enabled(monkeypatch) -> None:
     assert "FSFFL NEXT" in response.text
 
 
-def test_chart_endpoint_fails_explicitly_without_analytics(monkeypatch) -> None:
+def test_chart_endpoint_requires_loaded_league_without_external_analytics(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     client = TestClient(create_app())
     response = client.get("/api/league/chart?metric=expected_wins")
     assert response.status_code == 409
-    assert "League analytics are not available" in response.json()["detail"]
+    assert "No league is loaded" in response.json()["detail"]
 
 
 def test_chart_endpoint_renders_next7_metric_view(monkeypatch) -> None:
@@ -137,6 +137,32 @@ def test_connect_sleeper_loads_canonical_state_without_network(monkeypatch) -> N
     assert payload["league_name"] == "Beta League"
     assert [team["display_name"] for team in payload["teams"]] == ["Alpha", "Beta"]
     assert payload["state_id"]
+
+
+def test_loaded_state_immediately_exposes_state_derived_league_chart(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    client = TestClient(create_app(state_loader=lambda _: _canonical_state()))
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    response = client.get("/api/league/chart?metric=draft_pick_count")
+    assert response.status_code == 200
+    payload = response.json()
+    assert [point["label"] for point in payload["series"][0]["points"]] == ["Alpha", "Beta"]
+    assert [point["y"] for point in payload["series"][0]["points"]] == [0.0, 0.0]
+    assert "state" in payload["source_model_versions"] or payload["source_model_versions"]
+
+
+def test_runtime_status_names_ready_and_waiting_stages(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    client = TestClient(create_app(state_loader=lambda _: _canonical_state()))
+    assert client.get("/api/intelligence/status").status_code == 409
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    payload = client.get("/api/intelligence/status").json()
+    readiness = {item["stage"]: item["readiness"] for item in payload["stages"]}
+    assert readiness["state"] == "ready"
+    assert readiness["analytics"] == "ready"
+    assert readiness["forecast"] == "waiting_for_input"
+    assert readiness["value"] == "waiting_for_input"
+    assert readiness["team_utility"] == "waiting_for_input"
 
 
 def test_select_team_requires_loaded_league_and_valid_team(monkeypatch) -> None:
