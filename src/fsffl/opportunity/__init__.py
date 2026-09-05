@@ -44,6 +44,12 @@ from .trade_universe import (
     enumerate_counterparties,
     enumerate_trade_packages,
 )
+from .waiver import (
+    WaiverCandidateUniverse,
+    WaiverMove,
+    apply_waiver_move,
+    enumerate_waiver_moves,
+)
 
 __all__ = [
     "ActionAuthority",
@@ -66,6 +72,9 @@ __all__ = [
     "TradePairSearchPolicy",
     "TradeProposalSeed",
     "TradeSearchBounds",
+    "WaiverCandidateUniverse",
+    "WaiverMove",
+    "apply_waiver_move",
     "authority_tier",
     "build_team_trade_inventory",
     "candidate_from_trade_evaluation",
@@ -75,6 +84,7 @@ __all__ = [
     "dominates",
     "enumerate_counterparties",
     "enumerate_trade_packages",
+    "enumerate_waiver_moves",
     "expand_adjacent_packages",
     "explore_negotiation_frontier",
     "generate_bilateral_trade_proposals",
