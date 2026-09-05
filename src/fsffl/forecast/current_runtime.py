@@ -65,28 +65,43 @@ def build_current_live_forecasts(
 ) -> LiveForecastRuntimeResult:
     """Build current authoritative FSFFL forecasts from independent live evidence.
 
-    Provider acquisition errors are reported and do not fail the entire run when
-    enough independent evidence remains. Provider rows are never returned as the
-    authoritative product forecast: only normalized NEXT-2 ensemble output and the
-    league-scored derivative leave this service.
+    Acquisition happens before the shared FSFFL evaluation cutoff is established.
+    This matters for sources such as CBS whose retrieval time is the earliest
+    demonstrable evidence timestamp. Provider failures are isolated when enough
+    independent evidence remains. Only the normalized NEXT-2 ensemble and its
+    league-scored derivative leave this service as authoritative forecasts.
     """
 
-    now = (clock or (lambda: datetime.now(UTC)))()
-    if now.tzinfo is None:
-        raise ValueError("current forecast runtime clock must be timezone-aware")
-    evaluation_as_of = now.astimezone(UTC)
     active_fetchers = fetchers or default_current_projection_fetchers()
     if len({item.source_id for item in active_fetchers}) != len(active_fetchers):
         raise ValueError("current projection fetcher ids must be unique")
 
-    batches: list[LiveForecastSourceBatch] = []
-    successful: list[str] = []
+    snapshots: list[tuple[str, CurrentProjectionSnapshot]] = []
     failed: list[str] = []
     for fetcher in active_fetchers:
         try:
             snapshot = fetcher.fetch(league_state.league.season)
             if snapshot.provider != fetcher.source_id:
                 raise ValueError("current projection fetcher returned wrong provider id")
+            snapshots.append((fetcher.source_id, snapshot))
+        except Exception as exc:
+            failed.append(f"{fetcher.source_id}: {type(exc).__name__}: {exc}")
+
+    cutoff = (clock or (lambda: datetime.now(UTC)))()
+    if cutoff.tzinfo is None:
+        raise ValueError("current forecast runtime clock must be timezone-aware")
+    evaluation_as_of = cutoff.astimezone(UTC)
+    if snapshots:
+        evaluation_as_of = max(
+            evaluation_as_of,
+            *(snapshot.captured_at.astimezone(UTC) for _, snapshot in snapshots),
+            *(snapshot.effective_at.astimezone(UTC) for _, snapshot in snapshots),
+        )
+
+    batches: list[LiveForecastSourceBatch] = []
+    successful: list[str] = []
+    for source_id, snapshot in snapshots:
+        try:
             observations = normalize_current_projection_snapshot(
                 snapshot,
                 league_state=league_state,
@@ -96,10 +111,10 @@ def build_current_live_forecasts(
             if not observations:
                 raise ValueError("provider produced no canonical player observations")
         except Exception as exc:
-            failed.append(f"{fetcher.source_id}: {type(exc).__name__}: {exc}")
+            failed.append(f"{source_id}: {type(exc).__name__}: {exc}")
             continue
-        batches.append(LiveForecastSourceBatch(source_id=fetcher.source_id, observations=observations))
-        successful.append(fetcher.source_id)
+        batches.append(LiveForecastSourceBatch(source_id=source_id, observations=observations))
+        successful.append(source_id)
 
     raw_ensemble, coverage = build_authoritative_live_ensemble(
         tuple(batches),
