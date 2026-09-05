@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import secrets
 from pathlib import Path
@@ -35,6 +36,7 @@ from .trade_center_view import build_trade_center_browser_view, resolve_owned_as
 
 _STATIC_DIR = Path(__file__).with_name("static")
 _security = HTTPBasic(auto_error=False)
+_logger = logging.getLogger("fsffl.product.forecast")
 LeagueViewProvider = Callable[[], LeagueAnalyticsView | None]
 StateLoader = Callable[[str], LeagueState]
 TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, object]]
@@ -198,6 +200,12 @@ def create_app(
             refreshed_state = state_loader(_sleeper_external_id(runtime.league_state))
             store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
         except Exception as exc:
+            _logger.warning(
+                "FSFFL forecast refresh failed league=%s team=%s error=%s",
+                runtime.league_state.league.league_id,
+                runtime.selected_team_id,
+                exc,
+            )
             raise HTTPException(status_code=502, detail=f"Unable to refresh FSFFL forecasts: {exc}") from exc
         return {
             **_runtime_context_payload(store, user_id),
