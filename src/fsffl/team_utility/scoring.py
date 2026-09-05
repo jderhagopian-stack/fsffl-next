@@ -26,16 +26,15 @@ def build_team_scoring_distribution(
     team_id: str,
     as_of: datetime,
     horizon: ForecastHorizon,
+    allow_unfilled_slots: bool = False,
     uncertainty_method: TeamUncertaintyMethod = TeamUncertaintyMethod.INDEPENDENT_PLAYER_VARIANCE,
-    model_version: str = "next4-team-scoring-v1",
+    model_version: str = "next4-team-scoring-v2",
 ) -> TeamScoringDistribution:
     """Build a team scoring distribution from the optimized starting lineup.
 
     Mean scoring is derived from authoritative NEXT-2 fantasy-point forecasts.
-    The v1 uncertainty combination is explicitly independent-player variance,
-    because NEXT-2 currently exposes marginal player distributions rather than
-    a governed joint covariance model. This assumption is visible and replaceable;
-    it is not a hidden correlation coefficient.
+    Explicit unfilled lineup slots, when allowed by the caller, contribute zero
+    mean and zero variance; they are roster-state consequences, not imputed players.
     """
 
     if uncertainty_method != TeamUncertaintyMethod.INDEPENDENT_PLAYER_VARIANCE:
@@ -47,6 +46,7 @@ def build_team_scoring_distribution(
         team_id=team_id,
         as_of=as_of,
         horizon=horizon,
+        allow_unfilled_slots=allow_unfilled_slots,
     )
 
     starter_ids = {assignment.player_id for assignment in lineup.assignments}
@@ -68,12 +68,13 @@ def build_team_scoring_distribution(
 
     mean_points = sum(latest[player_id].distribution.mean for player_id in starter_ids)
     variance = sum(latest[player_id].distribution.stddev**2 for player_id in starter_ids)
+    suffix = ":explicit_unfilled_zero" if lineup.unfilled_slots else ""
 
     return TeamScoringDistribution(
         team_id=team_id,
         mean_points=mean_points,
         stddev_points=sqrt(variance),
-        model_version=f"{model_version}:{uncertainty_method.value}",
+        model_version=f"{model_version}:{uncertainty_method.value}{suffix}",
     )
 
 
@@ -84,21 +85,11 @@ def build_weekly_team_scoring_distribution(
     team_id: str,
     as_of: datetime,
     regular_season_game_count: int,
+    allow_unfilled_slots: bool = False,
     decomposition: WeeklyScoringDecomposition = WeeklyScoringDecomposition.INDEPENDENT_EQUAL_WEEK,
-    model_version: str = "next4-weekly-team-scoring-v1",
+    model_version: str = "next4-weekly-team-scoring-v2",
 ) -> TeamScoringDistribution:
-    """Decompose calibrated season scoring evidence into a weekly distribution.
-
-    This is an explicit PROVISIONAL_GOVERNED bridge until richer weekly forecast
-    primitives and empirical weekly covariance are available. Under the current
-    independent/equal-week assumption, weekly mean is season_mean / N and weekly
-    standard deviation is season_stddev / sqrt(N). Summing N independent weeks
-    therefore reconstructs the authoritative season mean and variance exactly.
-
-    No additional volatility coefficient is introduced, and raw provider
-    disagreement is not treated as simulation-grade uncertainty; the input season
-    forecasts are expected to have already passed NEXT-2 empirical calibration.
-    """
+    """Decompose calibrated season scoring evidence into a weekly distribution."""
 
     if decomposition != WeeklyScoringDecomposition.INDEPENDENT_EQUAL_WEEK:
         raise ValueError("unsupported weekly scoring decomposition")
@@ -111,6 +102,7 @@ def build_weekly_team_scoring_distribution(
         team_id=team_id,
         as_of=as_of,
         horizon=ForecastHorizon.SEASON,
+        allow_unfilled_slots=allow_unfilled_slots,
         model_version=f"{model_version}:season_input",
     )
     return TeamScoringDistribution(
