@@ -29,8 +29,19 @@ def test_live_sleeper_source_acquires_provider_payloads_without_model_logic() ->
     assert snapshot.provider_name == "sleeper"
     assert snapshot.league_external_id == "league123"
     assert snapshot.captured_at == NOW
-    assert set(snapshot.payload) == {"league", "users", "rosters", "players", "traded_picks"}
+    assert set(snapshot.payload) == {
+        "league",
+        "users",
+        "rosters",
+        "players",
+        "traded_picks",
+        "matchups",
+    }
+    assert snapshot.payload["matchups"] == {}
+    # A provider payload with no playoff_week_start carries no provable regular-
+    # season horizon, so acquisition fails closed rather than guessing weeks.
     assert len(seen) == 5
+    assert not any("/matchups/" in url for url in seen)
 
 
 def test_live_source_refuses_to_masquerade_as_historical_evidence() -> None:
