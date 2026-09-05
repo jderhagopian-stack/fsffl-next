@@ -1,0 +1,61 @@
+name: NEXT-2 Career Calibration
+
+on:
+  push:
+    branches:
+      - next-2-forecast-engine
+    paths:
+      - "scripts/extract_career_transition_panel.R"
+      - "scripts/run_career_calibration.py"
+      - ".github/workflows/next2-career-calibration.yml"
+      - "src/fsffl/forecast/career.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Extract historical career transition panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Inspect transition panel
+        run: |
+          python - <<'PY'
+          import csv
+          from collections import Counter
+          from pathlib import Path
+
+          path = Path("artifacts/next2-career/career_transition_panel.csv")
+          with path.open(newline="", encoding="utf-8") as handle:
+              rows = list(csv.DictReader(handle))
+          if not rows:
+              raise SystemExit("career transition panel is empty")
+          print("rows", len(rows))
+          print("seasons", min(int(r["season"]) for r in rows), max(int(r["season"]) for r in rows))
+          print("positions", Counter(r["position"] for r in rows))
+          print("known_age", sum(bool(r["age_years"]) for r in rows))
+          print("rookies", sum(r["is_rookie_cohort"] == "TRUE" for r in rows))
+          PY
+      - name: Run career calibration
+        if: ${{ hashFiles('scripts/run_career_calibration.py') != '' }}
+        run: python scripts/run_career_calibration.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next2-career-calibration
+          path: |
+            artifacts/next2-career/career_transition_panel.csv
+            artifacts/next2-career/career_transition_coverage.csv
+            artifacts/next2-career/career_transition_evidence.csv
+            artifacts/next2-career/career_calibration_report.md
+          if-no-files-found: warn
+          retention-days: 14
