@@ -71,11 +71,10 @@ def estimate_market_price(
 ) -> MarketPriceEstimate:
     """Build a transparent point-in-time market baseline.
 
-    No source reliability weights or recency coefficients are hidden here. The
-    caller supplies the admissible evidence window; this function rejects future
-    observations, incompatible scales, duplicate source snapshots, and thin
-    source coverage. Median is the robust default comparator. Evidence-derived
-    source weighting can challenge this baseline later.
+    No source reliability weights or recency coefficients are hidden here. For
+    each source, only the latest admissible snapshot at or before `as_of` gets a
+    vote. Median is the robust default comparator. Evidence-derived source
+    weighting can challenge this baseline later.
     """
 
     if as_of.tzinfo is None:
@@ -95,23 +94,37 @@ def estimate_market_price(
     if incompatible:
         raise ValueError("market observations on incompatible scales must be converted explicitly")
 
-    # A source may not cast multiple votes for the same retained snapshot.
-    snapshot_keys = [
-        (observation.source, observation.observed_at, observation.source_version)
-        for observation in eligible
-    ]
-    if len(snapshot_keys) != len(set(snapshot_keys)):
-        raise ValueError("duplicate market source snapshot detected")
+    snapshot_values: dict[tuple[str, datetime, str | None], float] = {}
+    for observation in eligible:
+        key = (observation.source, observation.observed_at, observation.source_version)
+        prior = snapshot_values.get(key)
+        if prior is not None and prior != observation.value:
+            raise ValueError("conflicting duplicate market source snapshot detected")
+        snapshot_values[key] = observation.value
 
-    sources = tuple(sorted({observation.source for observation in eligible}))
+    # Retaining more historical snapshots from one provider must not grant that
+    # provider more votes. Use its latest point-in-time observation only.
+    latest_by_source: dict[str, MarketObservation] = {}
+    for observation in eligible:
+        current = latest_by_source.get(observation.source)
+        if current is None or observation.observed_at > current.observed_at:
+            latest_by_source[observation.source] = observation
+
+    selected = tuple(latest_by_source[source] for source in sorted(latest_by_source))
+    sources = tuple(observation.source for observation in selected)
     if len(sources) < minimum_sources:
         raise ValueError(
             f"market estimate has {len(sources)} independent sources; requires {minimum_sources}"
         )
 
-    values = sorted(observation.value for observation in eligible)
+    values = sorted(observation.value for observation in selected)
     center = median(values) if method == MarketBaselineMethod.MEDIAN else mean(values)
-    variance = mean((value - center) ** 2 for value in values) if len(values) > 1 else 0.0
+    arithmetic_mean = mean(values)
+    variance = (
+        mean((value - arithmetic_mean) ** 2 for value in values)
+        if len(values) > 1
+        else 0.0
+    )
 
     return MarketPriceEstimate(
         asset_id=asset_id,
