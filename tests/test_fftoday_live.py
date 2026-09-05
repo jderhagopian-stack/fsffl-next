@@ -24,3 +24,31 @@ def test_fftoday_live_parses_qb_and_position_pages() -> None:
     lamar = next(row for row in snapshot.rows if row.player_name == "Lamar Jackson")
     assert lamar.stats["pass_yd"] == 3704
     assert lamar.stats["rush_yd"] == 646
+
+
+def test_fftoday_live_parses_hosted_text_grid_when_no_html_table_is_present() -> None:
+    pages = {
+        "PosID=10": """<html><body><h1>Quarterback Projections: 2026</h1><div>Regular Season, Updated: 9/3/2026</div><div>Player</div><div>Tm</div><div>Bye</div><a>Lamar Jackson</a><span>BAL</span><span>13</span><span>304</span><span>475</span><span>3,704</span><span>26</span><span>8</span><span>127</span><span>646</span><span>3</span><span>334.8</span></body></html>""",
+        "PosID=20": """<html><body><div>Running Back Projections: 2026</div><div>Updated: 9/3/2026</div><a>Bijan Robinson</a><span>ATL</span><span>11</span><span>280</span><span>1,402</span><span>9</span><span>84</span><span>707</span><span>3</span><span>324.9</span></body></html>""",
+        "PosID=30": """<html><body><div>Wide Receiver Projections: 2026</div><div>Updated: 9/3/2026</div><a>Drake London</a><span>ATL</span><span>11</span><span>99</span><span>1,312</span><span>7</span><span>0</span><span>0</span><span>0</span><span>222.7</span></body></html>""",
+        "PosID=40": """<html><body><div>Tight End Projections: 2026</div><div>Updated: 9/3/2026</div><a>Kyle Pitts</a><span>ATL</span><span>11</span><span>80</span><span>900</span><span>6</span><span>166</span></body></html>""",
+    }
+
+    def getter(url: str) -> str:
+        return next(html for marker, html in pages.items() if marker in url)
+
+    snapshot = FFTodayLiveProjectionSource(
+        http_get_text=getter,
+        clock=lambda: datetime(2026, 9, 5, tzinfo=UTC),
+    ).fetch_latest(season=2026)
+
+    assert len(snapshot.rows) == 4
+    lamar = next(row for row in snapshot.rows if row.player_name == "Lamar Jackson")
+    assert lamar.stats["pass_yd"] == 3704
+    bijan = next(row for row in snapshot.rows if row.player_name == "Bijan Robinson")
+    assert bijan.stats["rec"] == 84
+    london = next(row for row in snapshot.rows if row.player_name == "Drake London")
+    assert london.stats["rush_yd"] == 0
+    pitts = next(row for row in snapshot.rows if row.player_name == "Kyle Pitts")
+    assert pitts.stats["rec_yd"] == 900
+    assert pitts.stats["rush_yd"] == 0
