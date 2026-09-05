@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fsffl.forecast.current_runtime import NamedCurrentProjectionFetcher, build_current_live_forecasts
 from fsffl.forecast.models import ForecastMetric
@@ -37,11 +37,11 @@ def state() -> LeagueState:
     )
 
 
-def snapshot(provider: str, yards: float) -> CurrentProjectionSnapshot:
+def snapshot(provider: str, yards: float, *, captured_at: datetime = NOW) -> CurrentProjectionSnapshot:
     return CurrentProjectionSnapshot(
         provider=provider,
-        captured_at=NOW,
-        effective_at=datetime(2026, 9, 4, 12, tzinfo=UTC),
+        captured_at=captured_at,
+        effective_at=(captured_at if provider == "cbs" else datetime(2026, 9, 4, 12, tzinfo=UTC)),
         rows=(CurrentProjectionRow(provider=provider, external_id=provider, player_name="Lamar Jackson", position=Position.QB, nfl_team="BAL", stats={"pass_yd": yards, "pass_td": 30.0, "pass_int": 10.0, "rush_yd": 800.0, "rush_td": 5.0}),),
         source_version=f"{provider}-v1",
         usage_class="beta-personal-research-requires-commercial-review",
@@ -61,3 +61,14 @@ def test_current_runtime_ensembles_before_league_scoring() -> None:
     assert len(result.fantasy_point_forecasts) == 1
     assert result.fantasy_point_forecasts[0].source == "fsffl:live_league_scored"
     assert result.fantasy_point_forecasts[0].distribution.mean == 374.0
+
+
+def test_runtime_cutoff_advances_past_provider_retrieval_timestamp() -> None:
+    captured_after_initial_clock = NOW + timedelta(seconds=2)
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0, captured_at=captured_after_initial_clock)),
+    )
+    result = build_current_live_forecasts(state(), fetchers=fetchers, clock=lambda: NOW)
+    assert result.evaluation_as_of == captured_after_initial_clock
+    assert result.successful_source_ids == ("cbs", "fftoday")
