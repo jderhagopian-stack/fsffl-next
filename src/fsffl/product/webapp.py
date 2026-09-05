@@ -16,6 +16,7 @@ from fsffl.state.models import FrozenModel, LeagueState
 from .dashboard import build_league_metric_chart
 from .runtime import PrivateBetaRuntimeStore, default_sleeper_state_loader
 from .team_page import build_state_only_team_view
+from .trade_center_view import build_trade_center_browser_view
 
 
 _STATIC_DIR = Path(__file__).with_name("static")
@@ -132,6 +133,18 @@ def create_app(
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
         return build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id).model_dump(mode="json")
+
+    @application.get("/api/trade-center/browser")
+    def trade_center_browser(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if runtime.selected_team_id is None:
+            raise HTTPException(status_code=409, detail="No managed team is selected")
+        return build_trade_center_browser_view(
+            runtime.league_state,
+            focal_team_id=runtime.selected_team_id,
+        ).model_dump(mode="json")
 
     @application.get("/api/league/chart")
     def league_chart(metric: LeagueMetric, _: str = Depends(require_beta_user)) -> dict[str, object]:
