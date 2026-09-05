@@ -131,6 +131,23 @@ class PlayerState(FrozenModel):
         return value
 
 
+class NflTeamBye(FrozenModel):
+    """Canonical scheduled NFL bye-week fact for one team and season."""
+
+    season: Annotated[int, Field(ge=2000)]
+    nfl_team: str
+    week: Annotated[int, Field(ge=1, le=18)]
+    provenance: Provenance
+
+    @field_validator("nfl_team")
+    @classmethod
+    def normalize_team(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("nfl_team cannot be blank")
+        return normalized
+
+
 class DraftPick(FrozenModel):
     pick_id: str
     league_id: str
@@ -237,6 +254,7 @@ class LeagueState(FrozenModel):
     draft_picks: tuple[DraftPick, ...] = ()
     pick_ownership: tuple[PickOwnership, ...] = ()
     matchups: tuple[LeagueMatchup, ...] = ()
+    nfl_team_byes: tuple[NflTeamBye, ...] = ()
     provenance: tuple[Provenance, ...] = ()
 
     @field_validator("as_of")
@@ -294,6 +312,11 @@ class LeagueState(FrozenModel):
                 if key in seen_week_team:
                     raise ValueError("a team may appear only once per matchup week")
                 seen_week_team.add(key)
+        bye_keys = [(bye.season, bye.nfl_team) for bye in self.nfl_team_byes]
+        if len(bye_keys) != len(set(bye_keys)):
+            raise ValueError("an NFL team may have only one bye week per season")
+        if any(bye.season != self.league.season for bye in self.nfl_team_byes):
+            raise ValueError("NFL bye state must match league season")
         return self
 
     def canonical_json(self) -> str:
