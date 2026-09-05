@@ -30,6 +30,37 @@ pick_col <- function(df, candidates, required = TRUE) {
   NULL
 }
 
+coalesce_character <- function(df, candidates, required = TRUE) {
+  hit <- candidates[candidates %in% names(df)]
+  if (!length(hit)) {
+    if (required) stop("Missing expected columns. Tried: ", paste(candidates, collapse = ", "), "; available: ", paste(names(df), collapse = ", "))
+    return(rep(NA_character_, nrow(df)))
+  }
+  out <- rep(NA_character_, nrow(df))
+  for (nm in hit) {
+    values <- as.character(df[[nm]])
+    usable <- !is.na(values) & nzchar(trimws(values))
+    fill <- (is.na(out) | !nzchar(trimws(out))) & usable
+    out[fill] <- values[fill]
+  }
+  out
+}
+
+coalesce_numeric <- function(df, candidates, required = TRUE) {
+  hit <- candidates[candidates %in% names(df)]
+  if (!length(hit)) {
+    if (required) stop("Missing expected numeric columns. Tried: ", paste(candidates, collapse = ", "), "; available: ", paste(names(df), collapse = ", "))
+    return(rep(NA_real_, nrow(df)))
+  }
+  out <- rep(NA_real_, nrow(df))
+  for (nm in hit) {
+    values <- suppressWarnings(as.numeric(df[[nm]]))
+    fill <- is.na(out) & !is.na(values)
+    out[fill] <- values[fill]
+  }
+  out
+}
+
 rbind_fill <- function(frames) {
   all_names <- unique(unlist(lapply(frames, names), use.names = FALSE))
   frames <- lapply(frames, function(d) {
@@ -66,12 +97,13 @@ p24 <- load_one_projection_year(paths[["proj2024"]], 2024L)
 p25 <- load_one_projection_year(paths[["proj2025"]], 2025L)
 proj <- rbind_fill(list(p24, p25))
 
-# Projection schema used by Fantasy Football Analytics historical objects.
-id_col <- pick_col(proj, c("id", "mfl_id", "player_id"))
-source_col <- pick_col(proj, c("data_src", "source"))
-points_col <- pick_col(proj, c("raw_points", "fantasyPoints", "points"))
-player_col <- pick_col(proj, c("player", "name", "player_name"), required = FALSE)
-pos_col <- pick_col(proj, c("pos", "position", "position_fsffl"), required = FALSE)
+# Historical objects are position-specific and can carry identifiers in different columns.
+# Coalesce row by row rather than selecting one sparse column for the entire bound table.
+projection_ids <- coalesce_character(proj, c("mfl_id", "id", "player_id"))
+projection_sources <- coalesce_character(proj, c("data_src", "source"))
+projection_points <- coalesce_numeric(proj, c("raw_points", "fantasyPoints", "points"))
+projection_players <- coalesce_character(proj, c("player", "name", "player_name"), required = FALSE)
+projection_positions <- coalesce_character(proj, c("pos", "position", "position_fsffl"), required = FALSE)
 
 # Load realized season outcomes and player identifier crosswalk.
 stats_env <- new.env(parent = emptyenv())
@@ -99,7 +131,9 @@ ids_mfl_col <- pick_col(ids, c("mfl_id", "id"))
 
 cross <- ids[, c(ids_gsis_col, ids_mfl_col), drop = FALSE]
 names(cross) <- c("gsis_id_key", "mfl_id_key")
-cross <- cross[!is.na(cross$gsis_id_key) & !is.na(cross$mfl_id_key), , drop = FALSE]
+cross$gsis_id_key <- as.character(cross$gsis_id_key)
+cross$mfl_id_key <- as.character(cross$mfl_id_key)
+cross <- cross[!is.na(cross$gsis_id_key) & nzchar(trimws(cross$gsis_id_key)) & !is.na(cross$mfl_id_key) & nzchar(trimws(cross$mfl_id_key)), , drop = FALSE]
 cross <- cross[!duplicated(cross$gsis_id_key), , drop = FALSE]
 
 actual <- data.frame(
@@ -112,18 +146,25 @@ actual$position_actual <- if (!is.null(stats_pos_col)) as.character(stats[[stats
 actual$player_actual <- if (!is.null(stats_name_col)) as.character(stats[[stats_name_col]]) else NA_character_
 actual <- actual[actual$season %in% c(2024L, 2025L), , drop = FALSE]
 actual <- merge(actual, cross, by = "gsis_id_key", all.x = TRUE)
+actual <- actual[!is.na(actual$mfl_id_key) & nzchar(trimws(actual$mfl_id_key)), , drop = FALSE]
 
 projection <- data.frame(
   season = as.integer(proj$season),
-  mfl_id_key = as.character(proj[[id_col]]),
-  source = as.character(proj[[source_col]]),
-  projected = as.numeric(proj[[points_col]]),
-  position = if (!is.null(pos_col)) as.character(proj[[pos_col]]) else as.character(proj$position_fsffl),
-  player = if (!is.null(player_col)) as.character(proj[[player_col]]) else NA_character_,
+  mfl_id_key = projection_ids,
+  source = projection_sources,
+  projected = projection_points,
+  position = projection_positions,
+  player = projection_players,
   stringsAsFactors = FALSE
 )
 projection$position <- ifelse(is.na(projection$position) | projection$position == "", as.character(proj$position_fsffl), projection$position)
-projection <- projection[projection$position %in% c("QB", "RB", "WR", "TE") & !is.na(projection$projected), , drop = FALSE]
+projection <- projection[
+  projection$position %in% c("QB", "RB", "WR", "TE") &
+    !is.na(projection$projected) &
+    !is.na(projection$mfl_id_key) & nzchar(trimws(projection$mfl_id_key)) &
+    !is.na(projection$source) & nzchar(trimws(projection$source)),
+  , drop = FALSE
+]
 
 panel <- merge(projection, actual[, c("season", "mfl_id_key", "actual", "player_actual", "position_actual")], by = c("season", "mfl_id_key"), all.x = TRUE)
 panel$player <- ifelse(is.na(panel$player) | panel$player == "", panel$player_actual, panel$player)
@@ -150,6 +191,7 @@ write.csv(coverage, file.path(out_dir, "source_coverage.csv"), row.names = FALSE
 
 cat("Projection rows:", nrow(projection), "\n")
 cat("Matched benchmark rows:", nrow(panel), "\n")
+cat("Unmatched projection rows:", nrow(projection) - sum(!is.na(panel$actual)), "\n")
 cat("Sources:", paste(sort(unique(panel$source)), collapse = ", "), "\n")
 cat("Seasons:", paste(sort(unique(panel$season)), collapse = ", "), "\n")
 cat("Positions:", paste(sort(unique(panel$position)), collapse = ", "), "\n")
