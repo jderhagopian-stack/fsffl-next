@@ -16,6 +16,7 @@ from .scenario import (
 from .scoring import (
     TeamUncertaintyMethod,
     WeeklyScoringDecomposition,
+    build_bye_aware_weekly_team_scoring_distribution,
     build_team_scoring_distribution,
     build_weekly_team_scoring_distribution,
 )
@@ -26,6 +27,7 @@ from .simulation import (
     ScoringDistributionKind,
     TeamCompetitiveOutcome,
     TeamScoringDistribution,
+    WeeklyTeamScoringDistribution,
     build_regular_season_simulation_input,
     regular_season_game_counts,
     scheduled_matchups_from_league_state,
@@ -63,7 +65,9 @@ __all__ = [
     "TeamUncertaintyMethod",
     "TeamUtilityVector",
     "WeeklyScoringDecomposition",
+    "WeeklyTeamScoringDistribution",
     "assemble_team_utility_vector",
+    "build_bye_aware_weekly_team_scoring_distribution",
     "build_regular_season_simulation_input",
     "build_roster_resilience",
     "build_team_scoring_distribution",
