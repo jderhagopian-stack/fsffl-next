@@ -56,6 +56,12 @@ from .waiver import (
     apply_waiver_move,
     enumerate_waiver_moves,
 )
+from .waiver_evaluation import (
+    WaiverMaterialAssessment,
+    WaiverOpportunityDisposition,
+    assess_waiver_materiality,
+    candidate_from_waiver_evaluation,
+)
 
 __all__ = [
     "ActionAuthority",
@@ -82,12 +88,16 @@ __all__ = [
     "TradeProposalSeed",
     "TradeSearchBounds",
     "WaiverCandidateUniverse",
+    "WaiverMaterialAssessment",
     "WaiverMove",
+    "WaiverOpportunityDisposition",
     "apply_waiver_move",
+    "assess_waiver_materiality",
     "authority_tier",
     "build_shop_universe",
     "build_team_trade_inventory",
     "candidate_from_trade_evaluation",
+    "candidate_from_waiver_evaluation",
     "canonical_frontier_point_id",
     "canonical_package_id",
     "derive_action_authority",
