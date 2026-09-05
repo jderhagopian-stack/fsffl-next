@@ -37,6 +37,11 @@ from .evaluation import (
     TradeSideEvaluation,
     evaluate_bilateral_trade_deltas,
 )
+from .material_assessment import (
+    BilateralMaterialAssessment,
+    SideMaterialAssessment,
+    assess_bilateral_materiality,
+)
 from .materiality import (
     CompetitiveMaterialityPolicy,
     EconomicMaterialityPolicy,
@@ -56,6 +61,7 @@ __all__ = [
     "AcceptanceProbabilityEstimate",
     "AppliedTradeScenario",
     "BilateralDecisionShape",
+    "BilateralMaterialAssessment",
     "BilateralTradeDecision",
     "BilateralTradeEconomicNet",
     "BilateralTradeEconomics",
@@ -73,6 +79,7 @@ __all__ = [
     "MissingEconomicEvidence",
     "SideDecisionShape",
     "SideDirectionalAssessment",
+    "SideMaterialAssessment",
     "StrategicSideContext",
     "StrategicTradeContext",
     "TradeAcceptanceView",
@@ -81,6 +88,7 @@ __all__ = [
     "TradeLegEconomics",
     "TradeSideEvaluation",
     "apply_bilateral_trade",
+    "assess_bilateral_materiality",
     "assess_side_direction",
     "attach_owner_strategy",
     "build_unestimated_acceptance_view",
