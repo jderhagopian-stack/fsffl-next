@@ -86,4 +86,4 @@ def test_refresh_forecasts_marks_forecast_ready_and_enriches_my_team(monkeypatch
     fantasy = next(item for item in player["forecasts"] if item["metric"] == "fantasy_points")
     assert fantasy["source"] == "fsffl:live_league_scored"
     assert fantasy["distribution"]["mean"] == 350.0
-    assert team["context"]["warnings"][0]["code"] == "team_value_utility_not_enriched"
+    assert team["context"]["warnings"][0]["code"] == "value_simulation_not_enriched"
