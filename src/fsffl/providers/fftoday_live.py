@@ -28,7 +28,7 @@ _NFL_TEAMS = {
 
 class FFTodayLiveProjectionSource:
     provider_name = "fftoday"
-    source_version = "fftoday-season-projections-html-v3"
+    source_version = "fftoday-season-projections-html-v4"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -63,7 +63,7 @@ class FFTodayLiveProjectionSource:
     def _url(*, season: int, pos_id: str) -> str:
         return (
             "https://www.fftoday.com/rankings/playerproj.php"
-            f"?PosID={pos_id}&Season={season}&order_by=FFPts&sort_order=DESC"
+            f"?LeagueID=&PosID={pos_id}&Season={season}&order_by=FFPts&sort_order=DESC"
         )
 
 
@@ -108,6 +108,10 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[
                 output.append(row)
         if output:
             return tuple(output), effective
+
+    text_rows = _rows_from_text_parts(parser.text_parts, provider=provider, position=position)
+    if text_rows:
+        return text_rows, effective
     raise ValueError(f"FFToday {position.value} projection table was not found")
 
 
@@ -171,13 +175,21 @@ def _row_from_relative_cells(*, provider: str, position: Position, cells: list[s
                 "rec_yd": numeric(tail[5]),
                 "rec_td": numeric(tail[6]),
             }
-        elif position in {Position.WR, Position.TE} and len(tail) >= 8:
+        elif position == Position.WR and len(tail) >= 8:
             stats = {
                 "rec": numeric(tail[1]),
                 "rec_yd": numeric(tail[2]),
                 "rec_td": numeric(tail[3]),
                 "rush_yd": numeric(tail[5]),
                 "rush_td": numeric(tail[6]),
+            }
+        elif position == Position.TE and len(tail) >= 5:
+            stats = {
+                "rec": numeric(tail[1]),
+                "rec_yd": numeric(tail[2]),
+                "rec_td": numeric(tail[3]),
+                "rush_yd": 0.0,
+                "rush_td": 0.0,
             }
         else:
             return None
@@ -191,6 +203,58 @@ def _row_from_relative_cells(*, provider: str, position: Position, cells: list[s
         nfl_team=team,
         stats=stats,
     )
+
+
+def _required_numeric_tail(position: Position) -> int:
+    if position == Position.QB:
+        return 10
+    if position in {Position.RB, Position.WR}:
+        return 8
+    if position == Position.TE:
+        return 5
+    raise ValueError(f"unsupported FFToday position: {position.value}")
+
+
+def _rows_from_text_parts(
+    parts: list[str], *, provider: str, position: Position
+) -> tuple[CurrentProjectionRow, ...]:
+    """Fallback for hosted FFToday responses whose projection grid is not emitted as a normal HTML table.
+
+    FFToday's server-rendered page still emits player name, team, and the documented numeric
+    projection columns in sequence. This parser is intentionally provider-local and only accepts
+    rows with the exact position-specific numeric shape, so unrelated page text cannot become
+    forecast evidence.
+    """
+
+    required = _required_numeric_tail(position)
+    output: list[CurrentProjectionRow] = []
+    for index, raw in enumerate(parts):
+        team_token = normalize_cell(raw).upper()
+        if team_token not in _NFL_TEAMS or index == 0:
+            continue
+        name = _clean_name(normalize_cell(parts[index - 1]))
+        if not name or re.fullmatch(r"[\d.,\-]+", name):
+            continue
+        numeric_tail: list[str] = []
+        cursor = index + 1
+        while cursor < len(parts) and len(numeric_tail) < required:
+            token = normalize_cell(parts[cursor])
+            try:
+                numeric(token)
+            except ValueError:
+                break
+            numeric_tail.append(token)
+            cursor += 1
+        if len(numeric_tail) != required:
+            continue
+        row = _row_from_relative_cells(
+            provider=provider,
+            position=position,
+            cells=[name, team_token, *numeric_tail],
+        )
+        if row is not None:
+            output.append(row)
+    return tuple(output)
 
 
 def _row_from_headers(
