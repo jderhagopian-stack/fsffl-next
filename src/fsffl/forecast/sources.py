@@ -123,25 +123,45 @@ def first_benchmark_source_registry() -> ForecastSourceRegistry:
         ),
         ForecastSourceRecord(
             source_id="dynastyprocess_fantasypros_archive",
-            source_name="DynastyProcess archived FantasyPros-derived fantasy data",
-            roles=(SourceRole.PROJECTION, SourceRole.AGGREGATE, SourceRole.RANKING),
+            source_name="DynastyProcess archived FantasyPros-derived ECR/ranking data",
+            roles=(SourceRole.AGGREGATE, SourceRole.RANKING),
             access_status=AccessStatus.INVESTIGATE,
             historical_availability=HistoricalAvailability.ARCHIVED,
             timestamp_semantics=(
-                "Repository history can provide conservative availability timestamps for "
-                "committed snapshots; upstream issue/update time must not be inferred earlier."
+                "Repository history and scrape_date provide historical ranking availability; "
+                "this archive must not be converted into raw statistical projections."
             ),
             redistribution_status=RightsStatus.REQUIRES_REVIEW,
             commercial_use_status=RightsStatus.REQUIRES_REVIEW,
             access_method="DynastyProcess data repository and Git history",
             terms_reference="https://github.com/dynastyprocess/data",
             independence_notes=(
-                "FantasyPros-derived aggregate is correlated with component projection sources "
-                "and must not be treated as an independent vote."
+                "FantasyPros ECR is aggregate ranking evidence correlated with component sources "
+                "and is not an independent raw projection vote."
             ),
             evidence_notes=(
-                "Repository is open source, but upstream FantasyPros data rights are a separate "
-                "question. Treat as research candidate until exact artifact terms are verified."
+                "db_fpecr is historical FantasyPros ECR/ranking data with scrape_date, not raw "
+                "pass/rush/receive statistical projections. Upstream FantasyPros rights remain separate."
+            ),
+        ),
+        ForecastSourceRecord(
+            source_id="fftoday",
+            source_name="FFToday fantasy football projections",
+            roles=(SourceRole.PROJECTION,),
+            access_status=AccessStatus.INVESTIGATE,
+            historical_availability=HistoricalAvailability.ARCHIVED,
+            timestamp_semantics=(
+                "Historical season projection pages expose season-specific raw stat projections "
+                "with explicit page update dates; use only dated retained pages/snapshots."
+            ),
+            redistribution_status=RightsStatus.REQUIRES_REVIEW,
+            commercial_use_status=RightsStatus.REQUIRES_REVIEW,
+            access_method="historical FFToday projection pages",
+            terms_reference="https://www.fftoday.com/",
+            independence_notes="Treat as an original projection source unless evidence shows model overlap.",
+            evidence_notes=(
+                "Verified 2024 and 2025 regular-season projection pages expose raw passing, rushing, "
+                "receiving and fantasy-point fields with explicit preseason update dates."
             ),
         ),
         ForecastSourceRecord(
@@ -172,7 +192,7 @@ def first_benchmark_source_registry() -> ForecastSourceRegistry:
             ),
             redistribution_status=RightsStatus.REQUIRES_REVIEW,
             commercial_use_status=RightsStatus.REQUIRES_REVIEW,
-            access_method="FantasyPros API / licensed access",
+            access_method="FantasyPros API / licensed access / retained dated artifacts",
             independence_notes=(
                 "Consensus may contain sources also supplied separately to FSFFL; dependency "
                 "must be accounted for during ensemble calibration."
