@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import datetime
 
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import LeagueState, Position, RosterSlot
 
-from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
+from .models import (
+    LineupAssignment,
+    MarginalLineupImpact,
+    OptimizedTeamLineup,
+    UnfilledLineupSlot,
+)
 
 
 _STARTER_ELIGIBILITY: dict[RosterSlot, frozenset[Position]] = {
@@ -40,17 +44,19 @@ def optimize_team_lineup(
     as_of: datetime,
     horizon: ForecastHorizon,
     excluded_player_ids: frozenset[str] = frozenset(),
-    model_version: str = "next4-lineup-v2",
+    allow_unfilled_slots: bool = False,
+    model_version: str = "next4-lineup-v3",
 ) -> OptimizedTeamLineup:
     """Maximize expected fantasy points under the league's actual lineup rules.
 
-    NEXT-4 uses the team's real roster and the league's canonical rules. Taxi/IR
-    players are unavailable. Missing forecasts are surfaced rather than imputed.
+    NEXT-4 uses the real roster and canonical league rules. Taxi/IR players are
+    unavailable. Missing forecasts are surfaced rather than silently imputed.
 
-    Equal-point optimal lineups use a deterministic, points-neutral secondary
-    ordering: natural position slots are filled before FLEX/SUPERFLEX, and within
-    a repeated slot the stronger player receives the lower slot index. This keeps
-    presentation intuitive without changing the starter set or optimized points.
+    By default every required slot must be filled. Simulation may explicitly set
+    ``allow_unfilled_slots=True`` for a roster that genuinely lacks enough legal
+    active players. In that mode the optimizer first maximizes the number of
+    legally filled slots, then expected points; any remaining required slots are
+    represented explicitly at zero points rather than fabricated with a player.
     """
 
     if as_of.tzinfo is None:
@@ -77,9 +83,7 @@ def optimize_team_lineup(
     for observation in forecasts:
         if observation.metric != ForecastMetric.FANTASY_POINTS or observation.horizon != horizon:
             continue
-        if observation.as_of > as_of:
-            continue
-        if observation.player_id not in active_roster_ids:
+        if observation.as_of > as_of or observation.player_id not in active_roster_ids:
             continue
         current = latest_forecast.get(observation.player_id)
         if current is None or observation.as_of > current.as_of:
@@ -94,7 +98,6 @@ def optimize_team_lineup(
             continue
         for slot_index in range(1, requirement.count + 1):
             slots.append((requirement.slot, slot_index))
-
     if not slots:
         raise ValueError("league has no supported starting lineup slots")
 
@@ -112,10 +115,6 @@ def optimize_team_lineup(
     def secondary_key(slot_points: tuple[float, ...]) -> tuple[float, ...]:
         return tuple(slot_points[position] for position in presentation_positions)
 
-    # Dynamic programming over used lineup-slot bitmasks. Each state keeps the
-    # authoritative points total plus a points vector by actual slot. The vector
-    # is consulted only when totals are exactly equal, using the explicit human
-    # presentation order above. It therefore cannot alter lineup value.
     empty_slot_points = tuple(float("-inf") for _ in slots)
     states: dict[int, tuple[float, tuple[float, ...], tuple[tuple[int, str], ...]]] = {
         0: (0.0, empty_slot_points, ())
@@ -127,9 +126,7 @@ def optimize_team_lineup(
         for mask, (score, slot_points, assignments) in states.items():
             for slot_position, (slot, _) in enumerate(slots):
                 bit = 1 << slot_position
-                if mask & bit:
-                    continue
-                if player.position not in _STARTER_ELIGIBILITY[slot]:
+                if mask & bit or player.position not in _STARTER_ELIGIBILITY[slot]:
                     continue
                 new_mask = mask | bit
                 next_slot_points = list(slot_points)
@@ -154,10 +151,25 @@ def optimize_team_lineup(
         states = next_states
 
     full_mask = (1 << len(slots)) - 1
-    if full_mask not in states:
-        raise ValueError("team cannot fill every required lineup slot from eligible forecasted players")
+    if full_mask in states:
+        chosen_mask = full_mask
+    elif allow_unfilled_slots:
+        chosen_mask = max(
+            states,
+            key=lambda mask: (
+                mask.bit_count(),
+                states[mask][0],
+                secondary_key(states[mask][1]),
+                tuple(-item[0] for item in states[mask][2]),
+            ),
+        )
+    else:
+        detail = f"missing_forecasts={missing}" if missing else "roster positional coverage is insufficient"
+        raise ValueError(
+            f"team {team_id} cannot fill every required lineup slot from eligible forecasted players; {detail}"
+        )
 
-    expected_points, _, chosen = states[full_mask]
+    expected_points, _, chosen = states[chosen_mask]
     chosen_by_slot = {slot_position: player_id for slot_position, player_id in chosen}
     assignments = tuple(
         LineupAssignment(
@@ -168,6 +180,12 @@ def optimize_team_lineup(
             expected_points=latest_forecast[chosen_by_slot[position]].distribution.mean,
         )
         for position, (slot, slot_index) in enumerate(slots)
+        if position in chosen_by_slot
+    )
+    unfilled_slots = tuple(
+        UnfilledLineupSlot(slot=slot, slot_index=slot_index)
+        for position, (slot, slot_index) in enumerate(slots)
+        if position not in chosen_by_slot
     )
     starter_ids = {assignment.player_id for assignment in assignments}
     bench_ids = tuple(sorted(set(candidate_ids) - starter_ids))
@@ -181,6 +199,7 @@ def optimize_team_lineup(
         bench_player_ids=bench_ids,
         unavailable_player_ids=tuple(sorted(unavailable)),
         missing_forecast_player_ids=tuple(missing),
+        unfilled_slots=unfilled_slots,
         model_version=model_version,
     )
 
