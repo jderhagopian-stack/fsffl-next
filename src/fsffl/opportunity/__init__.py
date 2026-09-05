@@ -29,6 +29,12 @@ from .ordering import (
     pareto_front,
 )
 from .trade_evaluation import candidate_from_trade_evaluation
+from .trade_pairs import (
+    TradePairGenerationResult,
+    TradePairSearchPolicy,
+    TradeProposalSeed,
+    generate_bilateral_trade_proposals,
+)
 from .trade_universe import (
     TeamTradeInventory,
     TradePackageSeed,
@@ -56,6 +62,9 @@ __all__ = [
     "OrderedOpportunityPoint",
     "TeamTradeInventory",
     "TradePackageSeed",
+    "TradePairGenerationResult",
+    "TradePairSearchPolicy",
+    "TradeProposalSeed",
     "TradeSearchBounds",
     "authority_tier",
     "build_team_trade_inventory",
@@ -68,6 +77,7 @@ __all__ = [
     "enumerate_trade_packages",
     "expand_adjacent_packages",
     "explore_negotiation_frontier",
+    "generate_bilateral_trade_proposals",
     "make_frontier_point",
     "pareto_front",
 ]
