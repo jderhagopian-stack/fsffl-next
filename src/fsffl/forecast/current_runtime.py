@@ -7,6 +7,7 @@ from typing import Callable
 from fsffl.providers.cbs_live import CBSLiveProjectionSource
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource
+from fsffl.providers.nfl_fantasy_live import NFLFantasyLiveProjectionSource
 from fsffl.providers.razzball_live import RazzballLiveProjectionSource
 from fsffl.state.models import FrozenModel, LeagueState
 
@@ -40,6 +41,7 @@ def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher
     razzball = RazzballLiveProjectionSource()
     fftoday = FFTodayLiveProjectionSource()
     cbs = CBSLiveProjectionSource()
+    nfl_fantasy = NFLFantasyLiveProjectionSource()
     return (
         NamedCurrentProjectionFetcher(
             source_id="razzball",
@@ -52,6 +54,10 @@ def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher
         NamedCurrentProjectionFetcher(
             source_id="cbs",
             fetch=lambda season: cbs.fetch_latest(season=season),
+        ),
+        NamedCurrentProjectionFetcher(
+            source_id="nfl_fantasy",
+            fetch=lambda season: nfl_fantasy.fetch_latest(season=season),
         ),
     )
 
