@@ -4,6 +4,7 @@ from .competitive_state import (
     classify_calculated_competitive_state,
 )
 from .lineup import marginal_lineup_impact, optimize_team_lineup
+from .live_runtime import LiveLeagueSimulationEvidence, run_live_league_simulation
 from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
 from .resilience import build_roster_resilience
 from .scenario import (
@@ -47,6 +48,7 @@ __all__ = [
     "CompetitiveStatePolicy",
     "FranchiseAssetPortfolio",
     "LineupAssignment",
+    "LiveLeagueSimulationEvidence",
     "MarginalLineupImpact",
     "OptimizedTeamLineup",
     "OwnerStrategicPosture",
@@ -73,6 +75,7 @@ __all__ = [
     "marginal_lineup_impact",
     "optimize_team_lineup",
     "regular_season_game_counts",
+    "run_live_league_simulation",
     "scheduled_matchups_from_league_state",
     "simulate_regular_season",
 ]
