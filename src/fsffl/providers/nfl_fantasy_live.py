@@ -22,11 +22,12 @@ _POSITION_IDS = {
 }
 _PAGE_SIZE = 25
 _MAX_PAGES = 12
+_PROJECTED_POINTS_SORT_ID = "29"
 
 
 class NFLFantasyLiveProjectionSource:
     provider_name = "nfl_fantasy"
-    source_version = "nfl-fantasy-season-projections-html-v2"
+    source_version = "nfl-fantasy-season-projections-html-v3"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -67,9 +68,11 @@ class NFLFantasyLiveProjectionSource:
 
     @staticmethod
     def _url(*, season: int, position_id: str, offset: int) -> str:
+        # NFL Fantasy's hosted research endpoint uses numeric stat-column ids for sorting.
+        # `29` is the season projected-points column on the current projection grid.
         return (
             "https://fantasy.nfl.com/research/projections"
-            f"?offset={offset}&position={position_id}&sort=projectedPts"
+            f"?offset={offset}&position={position_id}&sort={_PROJECTED_POINTS_SORT_ID}"
             f"&statCategory=projectedStats&statSeason={season}"
             "&statType=seasonProjectedStats"
         )
@@ -155,6 +158,7 @@ def _default_get_text(url: str) -> str:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
             "Cache-Control": "no-cache",
+            "Referer": "https://fantasy.nfl.com/",
         },
     )
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider URL
