@@ -10,6 +10,7 @@ from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 def _league_view() -> LeagueAnalyticsView:
     context = AnalyticsContext(
+        schema_version="1",
         league_id="l1",
         league_state_id="s1",
         as_of=datetime(2026, 9, 5, tzinfo=UTC),
@@ -137,3 +138,16 @@ def test_select_team_requires_loaded_league_and_valid_team(monkeypatch) -> None:
     good = client.post("/api/select-team", json={"team_id": "a"})
     assert good.status_code == 200
     assert good.json()["team_id"] == "a"
+
+
+def test_my_team_exposes_state_only_view_with_missing_evidence_warning(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    client = TestClient(create_app(state_loader=lambda _: _canonical_state()))
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    client.post("/api/select-team", json={"team_id": "a"})
+    response = client.get("/api/my-team")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["team_id"] == "a"
+    assert payload["display_name"] == "Alpha"
+    assert payload["context"]["warnings"][0]["code"] == "team_runtime_not_enriched"
