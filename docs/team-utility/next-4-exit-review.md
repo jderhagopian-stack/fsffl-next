@@ -35,7 +35,7 @@ NEXT-5 may consume AUTHORITATIVE and PROVISIONAL_GOVERNED NEXT-4 outputs. It mus
 | Generic runtime sanity harness | AUTHORITATIVE_ORCHESTRATION | League-wide runner consumes canonical state + explicit Forecast/Schedule/Policy inputs; no league-specific logic or hidden defaults | No |
 | Runtime Sleeper acquisition support | AUTHORITATIVE_DATA_BOUNDARY | Live provider payload acquisition remains upstream of canonical normalization and refuses historical masquerading | No |
 | Controlled sanity invariants | AUTHORITATIVE_VALIDATION | Superflex depth, lineup monotonicity, simulation reproducibility, scoring monotonicity, posture separation | No |
-| Real-league adversarial sanity pass | PENDING | Use a real canonical league state after controlled suite; diagnostic only | **Yes — final validation gate** |
+| Real-league adversarial sanity pass | DEFERRED_VALIDATION | Use a real canonical league state when a networked runtime is available; diagnostic and regression-generating, not universal calibration truth | No |
 | Authority / anti-double-counting audit | COMPLETE | Explicit audit + automated downstream import guard | No |
 | Bilateral trade evaluation | OUT_OF_SCOPE | NEXT-5 Trade Decision | No |
 | Search / package balancing | OUT_OF_SCOPE | Search/Optimization | No |
@@ -57,26 +57,27 @@ Automated CI sanity cases currently verify:
 
 ## Runtime validation path
 
-The generic runtime path is now complete:
+The generic runtime path is complete:
 
 **runtime league id -> SleeperLiveSource -> canonical NEXT-1 LeagueState -> explicit NEXT-2 forecasts + schedule + policy -> NEXT-4 lineup/scoring/simulation/utility -> structured diagnostic result**
 
 The league identifier and fetched provider payload are runtime data and are not committed to git. See `next-4-runtime-sanity.md`.
 
-## Remaining required closeout actions
+## Deferred real-league validation
+
+The real-league adversarial pass remains a required tracked validation task, but it is no longer an architectural completion gate for NEXT-4. When a networked execution environment is available:
 
 1. Execute the real-league adversarial sanity evaluation using the runtime harness, canonical league state, and current admissible forecast inputs.
 2. Review a small set of pre-registered realistic cases with knowledgeable human judgment before revealing outputs where useful.
 3. Repair only generalizable defects; do not encode one league's preferences as universal coefficients.
-4. Re-run exact-head CI after any repairs or final closeout edits.
-5. Merge PR #6 only when no unexplained severe contradiction remains.
+4. Add any discovered generalizable failures to the permanent regression suite.
 
-The PR changed-file scope and authority boundaries have already been reviewed and are clean; reporting remains in NEXT-7 and trade/search logic remains downstream.
+The PR changed-file scope and authority boundaries have been reviewed and are clean; reporting remains in NEXT-7 and trade/search logic remains downstream.
 
 ## Non-blocking future improvements
 
-See `next-4-future-improvements.md`. Key items include calibrated player covariance, richer weekly scoring distributions, injury pathways, simulation caching/delta computation, empirical competitive-state thresholds, deeper resilience metrics, and historical point-in-time backtesting.
+See `next-4-future-improvements.md`. Key items include calibrated player covariance, richer weekly scoring distributions, injury pathways, simulation caching/delta computation, empirical competitive-state thresholds, deeper resilience metrics, historical point-in-time backtesting, and the deferred real-league adversarial pass.
 
 ## Exit conclusion
 
-NEXT-4 architecture, orchestration, and controlled behavior are substantially complete. The only current blocking validation gate is the realistic league adversarial pass plus any generalizable repair it reveals. There is no need to delay NEXT-5 for open-ended refinement of explicitly governed provisional assumptions once that gate is satisfied.
+NEXT-4 architecture, orchestration, authority boundaries, and controlled behavior are complete enough to merge and serve as the authoritative upstream foundation for NEXT-5. Governed provisional assumptions remain explicit and future-updatable. The real-league adversarial pass is preserved as deferred validation and must generate regression coverage for any generalizable defect it reveals.
