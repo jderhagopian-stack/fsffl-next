@@ -69,7 +69,7 @@ def _evaluation(a: TeamScenarioDelta, b: TeamScenarioDelta) -> BilateralTradeEva
     )
 
 
-def test_mutual_gain_requires_no_observed_worsening() -> None:
+def test_mutual_gain_requires_complete_no_worsening_evidence() -> None:
     result = classify_bilateral_trade_decision(
         _evaluation(
             _delta(
@@ -144,11 +144,9 @@ def test_missing_channels_do_not_masquerade_as_mutual_gain() -> None:
     )
 
     assert result.side_a.expected_wins == Direction.IMPROVES
-    assert result.side_a.shape == SideDecisionShape.UNIFORM_GAIN
-    assert result.side_b.shape == SideDecisionShape.UNIFORM_GAIN
-    # The side shape is directional over observed evidence, but bilateral promotion
-    # is still descriptive only; later recommendation logic must inspect completeness.
-    assert result.shape == BilateralDecisionShape.MUTUAL_GAIN
+    assert result.side_a.shape == SideDecisionShape.INCOMPLETE
+    assert result.side_b.shape == SideDecisionShape.INCOMPLETE
+    assert result.shape == BilateralDecisionShape.MIXED_OR_INCOMPLETE
 
 
 def test_resilience_metrics_use_correct_directionality() -> None:
