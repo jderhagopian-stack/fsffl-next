@@ -30,6 +30,17 @@ from .opportunity import (
     rank_trade_partners,
 )
 from .report import LeagueReportData, render_league_report_markdown
+from .service import (
+    AnalyticsCacheKey,
+    AnalyticsNotFoundError,
+    AnalyticsQuery,
+    AnalyticsResourceKind,
+    AnalyticsResponse,
+    InMemoryAnalyticsRepository,
+    ReadOnlyAnalyticsRepository,
+    ReadOnlyAnalyticsService,
+    analytics_cache_key,
+)
 from .team import (
     DraftPickAnalyticsRow,
     PlayerAnalyticsRow,
@@ -38,11 +49,17 @@ from .team import (
 )
 
 __all__ = [
+    "AnalyticsCacheKey",
     "AnalyticsContext",
+    "AnalyticsNotFoundError",
+    "AnalyticsQuery",
+    "AnalyticsResourceKind",
+    "AnalyticsResponse",
     "AnalyticsWarning",
     "AnalyticsWarningKind",
     "CandidateReasonCount",
     "DraftPickAnalyticsRow",
+    "InMemoryAnalyticsRepository",
     "LeagueAnalyticsView",
     "LeagueMetric",
     "LeagueMetricRanking",
@@ -55,12 +72,15 @@ __all__ = [
     "PlayerAnalyticsRow",
     "RankedMetricRow",
     "RankedTradePartner",
+    "ReadOnlyAnalyticsRepository",
+    "ReadOnlyAnalyticsService",
     "TeamAnalyticsView",
     "TradeOpportunityAnalyticsRecord",
     "TradePartnerAnalyticsRow",
     "TradePartnerAnalyticsView",
     "TradePartnerMetric",
     "TradePartnerRanking",
+    "analytics_cache_key",
     "build_league_analytics_view",
     "build_opportunity_analytics_view",
     "build_team_analytics_view",
