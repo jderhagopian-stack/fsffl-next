@@ -5,6 +5,7 @@ from .market import (
     MarketObservation,
     estimate_market_price,
 )
+from .market_context import MarketContextCalibration, apply_market_context
 from .models import (
     AssetValueProfile,
     ForecastValueInput,
@@ -27,6 +28,7 @@ __all__ = [
     "ForecastValueMapping",
     "IntrinsicDynastyValueEstimate",
     "MarketBaselineMethod",
+    "MarketContextCalibration",
     "MarketEvidenceKind",
     "MarketObservation",
     "MarketPriceEstimate",
@@ -39,6 +41,7 @@ __all__ = [
     "ValueAssetKind",
     "ValueDistribution",
     "ValueScale",
+    "apply_market_context",
     "comparable_values",
     "estimate_intrinsic_player_value",
     "estimate_market_price",
