@@ -12,7 +12,10 @@ HTML_BY_POSITION = {
 
 
 def test_nfl_fantasy_live_parses_raw_projection_stats() -> None:
+    requested_urls: list[str] = []
+
     def getter(url: str) -> str:
+        requested_urls.append(url)
         return next(html for marker, html in HTML_BY_POSITION.items() if marker in url)
 
     source = NFLFantasyLiveProjectionSource(
@@ -22,6 +25,9 @@ def test_nfl_fantasy_live_parses_raw_projection_stats() -> None:
     snapshot = source.fetch_latest(season=2026)
     assert snapshot.provider == "nfl_fantasy"
     assert len(snapshot.rows) == 4
+    assert all("sort=29" in url for url in requested_urls)
+    assert all("statSeason=2026" in url for url in requested_urls)
+    assert all("statType=seasonProjectedStats" in url for url in requested_urls)
     lamar = next(row for row in snapshot.rows if row.player_name == "Lamar Jackson")
     assert lamar.stats["pass_yd"] == 3704
     assert lamar.stats["rush_yd"] == 646
