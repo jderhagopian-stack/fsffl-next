@@ -26,12 +26,12 @@ NEXT-4 may consume AUTHORITATIVE and PROVISIONAL_GOVERNED outputs. It must not s
 | League-format / league residual market context machinery | AUTHORITATIVE | Global -> format -> league residual hierarchy, explicit shrinkage and point-in-time evidence boundaries | No |
 | Empirical shrinkage-strength estimates | PROVISIONAL_GOVERNED | Fitter supports evidence-volume shrinkage, but broad held-out league corpus is not yet sufficient to promote a universal learned shrinkage policy | No |
 | Intrinsic value representation and forecast propagation | AUTHORITATIVE | NEXT-2 forecast distribution is upstream; value mapping must be supplied explicitly with evidence metadata; no invented fallback | No |
-| Forecast-to-economic conversion coefficients | PROVISIONAL_GOVERNED | Conversion is required for operational intrinsic value but current branch intentionally has no unsupported default; fitted mappings must carry evidence/version/uncertainty | No, provided consumer supplies governed mapping |
+| Forecast-to-economic conversion coefficients | PROVISIONAL_GOVERNED | No unsupported universal fallback; operational mappings must carry evidence/version/uncertainty and may be absent explicitly | No |
 | Pick-value probability mixture architecture | AUTHORITATIVE | Pick outcomes are represented as empirical probability mixtures with uncertainty rather than hardcoded slot multipliers | No |
-| Current pick outcome calibration | PROVISIONAL_GOVERNED | Historical draft-slot outcome panel still needs broader empirical fit before any precise universal curve is considered mature | No |
+| Current pick outcome calibration | PROVISIONAL_GOVERNED | External pick curves are comparator evidence; precise universal outcome curves remain future-updatable and are not invented | No |
 | Transaction price representation | AUTHORITATIVE | Directional acquire/sell mappings are typed, versioned and uncertainty-aware; no hidden transaction premium | No |
-| Transaction/liquidity coefficients | PROVISIONAL_GOVERNED | Completed-trade calibration is not yet broad enough to justify universal directional offsets; package decomposition must not invent scalar prices | No |
-| Clean one-for-one completed-trade benchmark | CHALLENGER / RESEARCH | Preferred first independent clearing-price test; remains separate from package trades | No |
+| Transaction/liquidity coefficients | PROVISIONAL_GOVERNED | Broad independent clearing evidence is not yet sufficient for universal directional offsets; absence is explicit rather than treated as zero or replaced by market price | No |
+| Clean one-for-one completed-trade benchmark | CHALLENGER / RESEARCH | Infrastructure implemented: clean player-for-player trades are preserved as pairwise clearing evidence, point-in-time market snapshots are scored without future leakage, and stale evidence is rejected | No |
 | Package-trade implied valuation | CHALLENGER | Must preserve package structure and concentration/liquidity effects; cannot silently infer per-asset clearing prices | No |
 | Market ensemble learned source weights | CHALLENGER | Equal/robust aggregation remains default until independent held-out transaction evidence supports learned weights | No |
 | Team-specific roster utility | OUT_OF_SCOPE | NEXT-4 authority | No |
@@ -48,6 +48,8 @@ A successful current research run produced 2,852 normalized observations with no
 - Stats Guy: 374
 
 The sources are strongly aligned but not identical, supporting an ensemble rather than a single-provider authority.
+
+The governed v1 lineage catalog conservatively groups Dynasty Dealer, FantasyCalc and Stats Guy under one revealed-transaction evidence-family root until corpus overlap is quantified. DynastyProcess occupies a separate FantasyPros-consensus-derived evidence family. Provider count therefore cannot masquerade as evidence independence.
 
 ### Historical evidence
 
@@ -66,16 +68,18 @@ Using only contemporaneously available source snapshots and evaluating market po
 
 This supports the robust equal-median method as the default market baseline. It does **not** by itself validate intrinsic value or transaction clearing price and therefore is not used for those authorities.
 
-## Remaining pre-NEXT-4 work
+## Closeout gates
 
-The following are the only remaining required closeout actions before NEXT-4:
-
-1. Complete the clean one-for-one transaction benchmark infrastructure and classify transaction/liquidity coefficients as promoted or provisional.
-2. Record explicit governed provisional policies for any forecast-to-economic and pick-outcome calibration that lacks sufficient held-out evidence.
-3. Run the authority-boundary / anti-double-counting audit across market, format context, intrinsic, pick, transaction and uncertainty channels.
-4. Confirm CI and research workflow success at the final PR head.
-5. Review PR #4 diff for accidental downstream team-utility or presentation logic.
-6. Merge NEXT-3 only after every row above is AUTHORITATIVE, PROVISIONAL_GOVERNED, CHALLENGER, or explicitly OUT_OF_SCOPE — no NOT_READY behavior may remain on a path NEXT-4 will consume.
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| One-for-one transaction benchmark infrastructure | COMPLETE | Typed transaction evidence, strict clean-trade extraction, point-in-time percentile benchmark, stale/future evidence protection, CI tests |
+| Transaction/liquidity classification | COMPLETE | PROVISIONAL_GOVERNED until broader independent clearing corpus supports universal directional offsets |
+| Intrinsic/pick provisional policy | COMPLETE | `next-3-provisional-calibration-policy.md` forbids hidden fallback/substitution and defines updateable governed behavior |
+| Authority / anti-double-counting audit | COMPLETE | `next-3-authority-audit.md` assigns each effect to one home; automated import-boundary regression prevents Value from importing downstream authority |
+| Source-lineage operationalization | COMPLETE | v1 governed source catalog plus lineage-aware vote collapse and regression tests |
+| Final PR scope review | PENDING_FINAL_HEAD | Confirm changed files contain only NEXT-3 Value, research scripts/workflow, tests and documentation; no downstream team-utility/presentation authority |
+| Final CI and market research workflow | PENDING_FINAL_HEAD | Must be green on exact final PR head |
+| Merge | PENDING | Merge only after the two final-head checks above pass |
 
 ## Non-blocking future refinement
 
@@ -89,4 +93,8 @@ The following work should continue after NEXT-3 without delaying NEXT-4:
 - updated pick curves as additional draft classes mature;
 - commercial-rights upgrades or provider replacement where necessary.
 
-NEXT-3 should be considered architecturally complete when the remaining closeout actions above pass. Empirical parameters remain versioned and updateable by design rather than frozen at the NEXT-3 merge date.
+## Exit conclusion
+
+There are **no NOT_READY concepts on a path NEXT-4 must consume**. Remaining empirical work concerns parameter maturity, not missing authority or architecture. NEXT-3 is ready to close once the exact final branch head passes scope review, CI and the reproducible market-research workflow.
+
+Empirical parameters remain versioned and updateable by design rather than frozen at the NEXT-3 merge date.
