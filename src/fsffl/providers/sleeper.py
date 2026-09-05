@@ -7,6 +7,7 @@ from typing import Any, Mapping, Sequence
 from fsffl.state.models import (
     DraftPick,
     League,
+    LeagueMatchup,
     LeagueRules,
     LeagueState,
     LineupRequirement,
@@ -32,6 +33,7 @@ class SleeperPayloadBundle:
     rosters: Sequence[Mapping[str, Any]]
     players: Mapping[str, Mapping[str, Any]]
     traded_picks: Sequence[Mapping[str, Any]] = ()
+    matchups: Mapping[str, Sequence[Mapping[str, Any]]] | None = None
     retrieved_at: datetime | None = None
 
 
@@ -76,6 +78,18 @@ class SleeperNormalizer:
             return None
         return age if age >= 0 else None
 
+    @staticmethod
+    def _points(row: Mapping[str, Any]) -> float | None:
+        raw = row.get("custom_points")
+        if raw is None:
+            raw = row.get("points")
+        if raw is None or isinstance(raw, bool):
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
     def normalize(self, bundle: SleeperPayloadBundle, *, as_of: datetime) -> LeagueState:
         if as_of.tzinfo is None:
             raise ValueError("as_of must be timezone-aware")
@@ -110,6 +124,8 @@ class SleeperNormalizer:
         roster_size = int(settings.get("roster_size") or len(roster_positions) or 1)
         team_count = int(settings.get("num_teams") or len(bundle.rosters) or 2)
         faab_budget = int(settings.get("waiver_budget") or 0)
+        raw_playoff_teams = settings.get("playoff_teams")
+        playoff_team_count = int(raw_playoff_teams) if raw_playoff_teams else None
 
         league = League(
             league_id=league_id,
@@ -121,6 +137,7 @@ class SleeperNormalizer:
                 taxi_size=int(settings.get("taxi_slots") or 0),
                 ir_size=int(settings.get("reserve_slots") or 0),
                 rookie_draft_rounds=int(settings.get("draft_rounds") or 0),
+                playoff_team_count=playoff_team_count,
                 lineup=lineup,
                 scoring=scoring,
             ),
@@ -192,6 +209,63 @@ class SleeperNormalizer:
             effective_at=as_of,
             provider_ref=ProviderRef(provider="sleeper", external_id=league_external_id),
         )
+
+        canonical_matchups: list[LeagueMatchup] = []
+        for week_text, rows in sorted(
+            (bundle.matchups or {}).items(),
+            key=lambda item: int(item[0]),
+        ):
+            try:
+                week = int(week_text)
+            except (TypeError, ValueError):
+                continue
+            grouped: dict[str, list[Mapping[str, Any]]] = {}
+            for row in rows:
+                matchup_id = row.get("matchup_id")
+                roster_id = row.get("roster_id")
+                if matchup_id is None or roster_id is None:
+                    continue
+                grouped.setdefault(str(matchup_id), []).append(row)
+
+            for matchup_id, pair in sorted(grouped.items()):
+                if len(pair) != 2:
+                    continue
+                resolved: list[tuple[str, Mapping[str, Any]]] = []
+                for row in pair:
+                    try:
+                        roster_id = int(row["roster_id"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    team_id = roster_id_to_team_id.get(roster_id)
+                    if team_id is not None:
+                        resolved.append((team_id, row))
+                if len(resolved) != 2:
+                    continue
+                resolved.sort(key=lambda item: item[0])
+                (team_a_id, row_a), (team_b_id, row_b) = resolved
+                points_a = self._points(row_a)
+                points_b = self._points(row_b)
+                if (points_a is None) != (points_b is None):
+                    points_a = None
+                    points_b = None
+                canonical_matchups.append(
+                    LeagueMatchup(
+                        week=week,
+                        team_a_id=team_a_id,
+                        team_b_id=team_b_id,
+                        team_a_points=points_a,
+                        team_b_points=points_b,
+                        provenance=Provenance(
+                            source="sleeper:matchups",
+                            retrieved_at=retrieved_at,
+                            effective_at=as_of,
+                            provider_ref=ProviderRef(
+                                provider="sleeper",
+                                external_id=f"{league_external_id}:week:{week}:matchup:{matchup_id}",
+                            ),
+                        ),
+                    )
+                )
 
         players: list[Player] = []
         player_states: list[PlayerState] = []
@@ -289,5 +363,11 @@ class SleeperNormalizer:
             player_states=tuple(player_states),
             draft_picks=tuple(draft_picks),
             pick_ownership=tuple(pick_ownership),
+            matchups=tuple(
+                sorted(
+                    canonical_matchups,
+                    key=lambda item: (item.week, item.team_a_id, item.team_b_id),
+                )
+            ),
             provenance=(provenance,),
         )
