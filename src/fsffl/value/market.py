@@ -16,6 +16,7 @@ from .models import (
     ValueDistribution,
     ValueScale,
 )
+from .source_registry import MarketSourceRegistry, MarketSourceStatus
 
 
 class MarketEvidenceKind(StrEnum):
@@ -68,13 +69,18 @@ def estimate_market_price(
     model_version: str,
     method: MarketBaselineMethod = MarketBaselineMethod.MEDIAN,
     minimum_sources: Annotated[int, Field(ge=1)] = 1,
+    source_registry: MarketSourceRegistry | None = None,
 ) -> MarketPriceEstimate:
     """Build a transparent point-in-time market baseline.
 
-    No source reliability weights or recency coefficients are hidden here. For
-    each source, only the latest admissible snapshot at or before `as_of` gets a
-    vote. Median is the robust default comparator. Evidence-derived source
-    weighting can challenge this baseline later.
+    For each provider, only the latest admissible snapshot at or before ``as_of``
+    is eligible. Median is the empirically supported robust default. If a governed
+    source registry is supplied, derivative providers with the same ultimate
+    evidence roots are collapsed to one independent vote. Partially overlapping
+    lineage fails closed because there is no defensible automatic allocation of
+    fractional votes.
+
+    No source reliability weights or recency coefficients are hidden here.
     """
 
     if as_of.tzinfo is None:
@@ -112,12 +118,15 @@ def estimate_market_price(
 
     selected = tuple(latest_by_source[source] for source in sorted(latest_by_source))
     sources = tuple(observation.source for observation in selected)
-    if len(sources) < minimum_sources:
+
+    independent_values = _independent_source_values(selected, source_registry)
+    if len(independent_values) < minimum_sources:
         raise ValueError(
-            f"market estimate has {len(sources)} independent sources; requires {minimum_sources}"
+            f"market estimate has {len(independent_values)} independent sources; "
+            f"requires {minimum_sources}"
         )
 
-    values = sorted(observation.value for observation in selected)
+    values = sorted(independent_values)
     center = median(values) if method == MarketBaselineMethod.MEDIAN else mean(values)
     arithmetic_mean = mean(values)
     variance = (
@@ -142,6 +151,41 @@ def estimate_market_price(
         model_version=model_version,
         evidence_sources=sources,
     )
+
+
+def _independent_source_values(
+    selected: tuple[MarketObservation, ...],
+    source_registry: MarketSourceRegistry | None,
+) -> list[float]:
+    if source_registry is None:
+        return [observation.value for observation in selected]
+
+    definitions = {source.source_id: source for source in source_registry.sources}
+    grouped: dict[tuple[str, ...], list[float]] = {}
+    root_sets: list[frozenset[str]] = []
+
+    for observation in selected:
+        definition = definitions.get(observation.source)
+        if definition is None:
+            raise ValueError(f"market source missing from registry: {observation.source}")
+        if definition.status != MarketSourceStatus.ELIGIBLE:
+            raise ValueError(f"market source is not eligible for authority: {observation.source}")
+
+        roots = source_registry.independent_roots(observation.source)
+        root_set = frozenset(roots)
+        for prior in root_sets:
+            if prior != root_set and prior.intersection(root_set):
+                raise ValueError(
+                    "market source lineage partially overlaps; explicit evidence allocation required"
+                )
+        if root_set not in root_sets:
+            root_sets.append(root_set)
+        grouped.setdefault(roots, []).append(observation.value)
+
+    # Multiple provider transforms of the exact same underlying evidence roots
+    # receive one vote, represented robustly by their median rather than by an
+    # arbitrary provider preference.
+    return [median(values) for _, values in sorted(grouped.items())]
 
 
 def _empirical_quantile(values: list[float], probability: float) -> float:
