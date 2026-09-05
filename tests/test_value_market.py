@@ -3,8 +3,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from fsffl.value import (
+    DataRightsClass,
     MarketEvidenceKind,
     MarketObservation,
+    MarketSignalKind,
+    MarketSourceDefinition,
+    MarketSourceRegistry,
+    MarketSourceStatus,
     ValueAssetKind,
     ValueScale,
     estimate_market_price,
@@ -34,6 +39,17 @@ def observation(
     )
 
 
+def source(source_id: str, *, parents: tuple[str, ...] = ()) -> MarketSourceDefinition:
+    return MarketSourceDefinition(
+        source_id=source_id,
+        display_name=source_id,
+        signal_kind=MarketSignalKind.MARKET_INDEX,
+        rights_class=DataRightsClass.RUNTIME_ONLY,
+        status=MarketSourceStatus.ELIGIBLE,
+        parent_source_ids=parents,
+    )
+
+
 def test_market_baseline_uses_latest_point_in_time_snapshot_per_source() -> None:
     result = estimate_market_price(
         (
@@ -54,6 +70,62 @@ def test_market_baseline_uses_latest_point_in_time_snapshot_per_source() -> None
     assert result.distribution.mean == 100.0
     assert result.evidence_sources == ("a", "b", "c")
     assert result.distribution.p50 == 100.0
+
+
+def test_market_baseline_collapses_derivative_sources_to_one_vote() -> None:
+    registry = MarketSourceRegistry(
+        sources=(
+            source("root"),
+            source("derived-a", parents=("root",)),
+            source("derived-b", parents=("root",)),
+            source("independent"),
+        ),
+        registry_version="v1",
+    )
+    result = estimate_market_price(
+        (
+            observation("derived-a", 80.0),
+            observation("derived-b", 100.0),
+            observation("independent", 120.0),
+        ),
+        asset_id="player:1",
+        asset_kind=ValueAssetKind.PLAYER,
+        scale=SCALE,
+        as_of=AS_OF,
+        market_context_id="sf-half-ppr",
+        model_version="market-baseline-v2",
+        minimum_sources=2,
+        source_registry=registry,
+    )
+
+    # The two derivative transforms share one evidence root and therefore first
+    # collapse to a 90-point root vote. That root and the independent 120-point
+    # source then receive equal authority in the robust baseline.
+    assert result.distribution.mean == 105.0
+    assert result.evidence_sources == ("derived-a", "derived-b", "independent")
+
+
+def test_market_baseline_rejects_partially_overlapping_lineage() -> None:
+    registry = MarketSourceRegistry(
+        sources=(
+            source("root-a"),
+            source("root-b"),
+            source("mixed", parents=("root-a", "root-b")),
+            source("a-only", parents=("root-a",)),
+        ),
+        registry_version="v1",
+    )
+    with pytest.raises(ValueError, match="partially overlaps"):
+        estimate_market_price(
+            (observation("mixed", 100.0), observation("a-only", 110.0)),
+            asset_id="player:1",
+            asset_kind=ValueAssetKind.PLAYER,
+            scale=SCALE,
+            as_of=AS_OF,
+            market_context_id="sf-half-ppr",
+            model_version="market-baseline-v2",
+            source_registry=registry,
+        )
 
 
 def test_market_baseline_rejects_future_information() -> None:
