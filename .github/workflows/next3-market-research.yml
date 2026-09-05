@@ -55,8 +55,10 @@ jobs:
           print('NEXT-3 market panel observations:', len(panel['observations']))
           print('By source:', benchmark['source_observation_counts'])
           print('Panel as_of:', panel['as_of'])
-          for pair in benchmark['pairwise']:
-              print('Pairwise:', pair)
+          for pair in benchmark['pairwise_exact']:
+              print('Exact pairwise:', pair)
+          for pair in benchmark['pairwise_family']:
+              print('Family pairwise:', pair)
           PY
       - name: Upload research artifacts
         uses: actions/upload-artifact@v4
