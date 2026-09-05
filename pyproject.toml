@@ -15,6 +15,12 @@ dependencies = [
 dev = [
   "pytest>=8,<9",
 ]
+web = [
+  "fastapi[standard]>=0.115,<1",
+]
+
+[tool.fastapi]
+entrypoint = "fsffl.product.webapp:app"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
