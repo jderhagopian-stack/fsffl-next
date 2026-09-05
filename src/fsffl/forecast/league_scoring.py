@@ -23,7 +23,7 @@ class ScoringCoverage(FrozenModel):
 
 
 # Canonical Sleeper scoring keys whose effects are exactly linear in the raw
-# NEXT-2 forecast metrics.  This table is a provider-key translation only; the
+# NEXT-2 forecast metrics. This table translates provider stat names only; the
 # actual coefficient always comes from LeagueRules.scoring.
 _SLEEPER_LINEAR_RULES: dict[str, ForecastMetric] = {
     "pass_yd": ForecastMetric.PASS_YARDS,
@@ -36,23 +36,19 @@ _SLEEPER_LINEAR_RULES: dict[str, ForecastMetric] = {
     "rec_td": ForecastMetric.REC_TD,
 }
 
-# Sleeper may retain scoring settings for positions that are not in the league's
-# starting lineup. They do not affect offensive player scoring and should not
-# block an offensive forecast transformation when those lineup positions do not
-# exist. This is intentionally narrow and prefix-based rather than a general
-# "ignore unknown rules" escape hatch.
+# These settings are unambiguously team-defense or kicker scoring. They may be
+# ignored for the offensive forecast bridge only when the corresponding starting
+# position is absent. Return scoring and fumble-recovery scoring are deliberately
+# NOT in this list because offensive skill players can realize those events.
 _DST_PREFIXES = (
     "blk_kick",
     "def_",
     "def_st_",
     "ff",
-    "fum_rec",
-    "fum_rec_td",
     "int",
     "pts_allow_",
     "safe",
     "sack",
-    "st_",
     "tkl_loss",
 )
 _KICKER_PREFIXES = ("fgm", "fgmiss", "xpm", "xpmiss")
