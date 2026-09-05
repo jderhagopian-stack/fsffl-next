@@ -89,16 +89,17 @@ def _shape(directions: tuple[Direction, ...]) -> SideDecisionShape:
     if not available:
         return SideDecisionShape.INCOMPLETE
 
+    has_missing = len(available) != len(directions)
     has_gain = Direction.IMPROVES in available
     has_loss = Direction.WORSENS in available
     if has_gain and has_loss:
         return SideDecisionShape.MIXED
+    if has_missing:
+        return SideDecisionShape.INCOMPLETE
     if has_gain:
         return SideDecisionShape.UNIFORM_GAIN
     if has_loss:
         return SideDecisionShape.UNIFORM_LOSS
-    if len(available) != len(directions):
-        return SideDecisionShape.INCOMPLETE
     return SideDecisionShape.NEUTRAL
 
 
@@ -172,10 +173,11 @@ def classify_bilateral_trade_decision(
 ) -> BilateralTradeDecision:
     """Classify bilateral outcome shape without scalar utility or thresholds.
 
-    The classifier is intentionally exact and descriptive. It does not interpret
-    Monte Carlo noise as materiality, estimate acceptance, recommend action, or
-    weight one channel against another. Materiality/tolerance policy, if later
-    required, must be separately governed rather than hidden here.
+    The classifier is intentionally exact and descriptive. Missing channels fail
+    closed rather than promoting a trade to a uniform or mutual gain. It does not
+    interpret Monte Carlo noise as materiality, estimate acceptance, recommend
+    action, or weight one channel against another. Any later materiality policy
+    must be separately governed rather than hidden here.
     """
 
     if not model_version.strip():
