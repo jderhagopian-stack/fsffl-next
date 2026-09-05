@@ -8,7 +8,7 @@ from typing import Annotated
 
 from pydantic import Field, model_validator
 
-from fsffl.state.models import FrozenModel
+from fsffl.state.models import FrozenModel, LeagueState
 
 
 class ScoringDistributionKind(StrEnum):
@@ -98,6 +98,71 @@ class RegularSeasonSimulationResult(FrozenModel):
     simulation_count: Annotated[int, Field(ge=1)]
     seed: int
     model_version: str
+
+
+def scheduled_matchups_from_league_state(
+    league_state: LeagueState,
+) -> tuple[ScheduledMatchup, ...]:
+    """Expose canonical State schedule to Simulation without provider semantics.
+
+    ``home``/``away`` are stable simulation labels only. The current v1 simulator
+    has no home-field adjustment, so canonical team_a/team_b orientation cannot
+    change competitive probabilities.
+    """
+
+    if not league_state.matchups:
+        raise ValueError("canonical league state has no regular-season schedule")
+    return tuple(
+        ScheduledMatchup(
+            week=matchup.week,
+            home_team_id=matchup.team_a_id,
+            away_team_id=matchup.team_b_id,
+        )
+        for matchup in league_state.matchups
+    )
+
+
+def regular_season_game_counts(
+    league_state: LeagueState,
+) -> dict[str, int]:
+    """Count scheduled regular-season games per canonical team."""
+
+    schedule = scheduled_matchups_from_league_state(league_state)
+    counts = {team.team_id: 0 for team in league_state.teams}
+    for matchup in schedule:
+        counts[matchup.home_team_id] += 1
+        counts[matchup.away_team_id] += 1
+    if any(count < 1 for count in counts.values()):
+        missing = sorted(team_id for team_id, count in counts.items() if count < 1)
+        raise ValueError(f"regular-season schedule missing teams: {missing}")
+    return counts
+
+
+def build_regular_season_simulation_input(
+    league_state: LeagueState,
+    *,
+    scoring: tuple[TeamScoringDistribution, ...],
+    simulation_count: int = 50_000,
+    seed: int = 20260905,
+    model_version: str = "next4-live-regular-season-v1",
+) -> RegularSeasonSimulationInput:
+    """Build simulation input only from canonical schedule/rules plus scoring.
+
+    Playoff size and matchups must already exist in State authority. Simulation
+    fails closed rather than inventing either product rule.
+    """
+
+    playoff_team_count = league_state.league.rules.playoff_team_count
+    if playoff_team_count is None:
+        raise ValueError("canonical league rules do not define playoff_team_count")
+    return RegularSeasonSimulationInput(
+        scoring=scoring,
+        schedule=scheduled_matchups_from_league_state(league_state),
+        playoff_team_count=playoff_team_count,
+        simulation_count=simulation_count,
+        seed=seed,
+        model_version=model_version,
+    )
 
 
 def simulate_regular_season(
