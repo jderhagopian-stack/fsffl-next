@@ -13,7 +13,12 @@ from .scenario import (
     TeamScenarioDelta,
     compare_team_utility_vectors,
 )
-from .scoring import TeamUncertaintyMethod, build_team_scoring_distribution
+from .scoring import (
+    TeamUncertaintyMethod,
+    WeeklyScoringDecomposition,
+    build_team_scoring_distribution,
+    build_weekly_team_scoring_distribution,
+)
 from .simulation import (
     RegularSeasonSimulationInput,
     RegularSeasonSimulationResult,
@@ -21,6 +26,9 @@ from .simulation import (
     ScoringDistributionKind,
     TeamCompetitiveOutcome,
     TeamScoringDistribution,
+    build_regular_season_simulation_input,
+    regular_season_game_counts,
+    scheduled_matchups_from_league_state,
     simulate_regular_season,
 )
 from .utility import (
@@ -54,12 +62,17 @@ __all__ = [
     "TeamScoringDistribution",
     "TeamUncertaintyMethod",
     "TeamUtilityVector",
+    "WeeklyScoringDecomposition",
     "assemble_team_utility_vector",
+    "build_regular_season_simulation_input",
     "build_roster_resilience",
     "build_team_scoring_distribution",
+    "build_weekly_team_scoring_distribution",
     "classify_calculated_competitive_state",
     "compare_team_utility_vectors",
     "marginal_lineup_impact",
     "optimize_team_lineup",
+    "regular_season_game_counts",
+    "scheduled_matchups_from_league_state",
     "simulate_regular_season",
 ]
