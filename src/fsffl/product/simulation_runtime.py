@@ -14,7 +14,7 @@ from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
     RegularSeasonSimulationResult,
-    TeamUtilityVector,
+    assemble_team_utility_vector,
     build_regular_season_simulation_input,
     build_weekly_team_scoring_distribution,
     optimize_team_lineup,
@@ -44,8 +44,9 @@ def build_live_simulation_analytics(
     """Run the governed Forecast -> NEXT-4 Simulation -> NEXT-7 path.
 
     Product orchestration supplies canonical inputs and stores outputs. It does
-    not calculate wins, playoff probabilities, lineup value, or forecast
-    uncertainty itself. Missing schedule/rules/lineup evidence fails closed.
+    not calculate wins, playoff probabilities, lineup value, forecast
+    uncertainty or roster resilience itself. Missing schedule/rules/lineup
+    evidence fails closed.
     """
 
     if any(item.as_of > league_state.as_of for item in forecasts):
@@ -102,13 +103,14 @@ def build_live_simulation_analytics(
                 model_version="next4-weekly-team-scoring-v1:independent_equal_week",
             ),
             ModelLineageEntry(component="simulation", model_version=simulation.model_version),
+            ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v1"),
         ),
         warnings=(
             AnalyticsWarning(
                 kind=AnalyticsWarningKind.MISSING_EVIDENCE,
                 code="value_not_enriched",
                 message=(
-                    "Authoritative NEXT-2 forecasts and NEXT-4 competitive simulation are attached. "
+                    "Authoritative NEXT-2 forecasts and NEXT-4 competitive simulation/team consequences are attached. "
                     "NEXT-3 dynasty value and downstream trade/opportunity evidence remain pending."
                 ),
                 source_component="product-runtime",
@@ -122,6 +124,15 @@ def build_live_simulation_analytics(
                 ),
                 source_component="team-utility",
             ),
+            AnalyticsWarning(
+                kind=AnalyticsWarningKind.MISSING_EVIDENCE,
+                code="competitive_state_policy_not_attached",
+                message=(
+                    "Simulation outcomes are authoritative; contender/rebuilding classification remains unknown "
+                    "until an explicit governed competitive-state policy is attached."
+                ),
+                source_component="team-utility",
+            ),
         ),
     )
 
@@ -132,11 +143,14 @@ def build_live_simulation_analytics(
             team_id=team.team_id,
             forecasts=forecasts,
             optimized_lineup=lineups[team.team_id],
-            utility=TeamUtilityVector(
+            utility=assemble_team_utility_vector(
+                league_state,
+                forecasts,
                 team_id=team.team_id,
                 as_of=league_state.as_of,
+                horizon=ForecastHorizon.SEASON,
                 competitive_outcome=outcomes[team.team_id],
-                model_version="next4-live-competitive-vector-v1",
+                model_version="next4-live-team-utility-v1",
             ),
         )
         for team in sorted(league_state.teams, key=lambda item: item.team_id)
