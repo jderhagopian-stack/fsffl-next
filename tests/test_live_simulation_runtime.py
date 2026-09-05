@@ -13,6 +13,7 @@ from fsffl.state.models import (
     LeagueRules,
     LeagueState,
     LineupRequirement,
+    NflTeamBye,
     Player,
     PlayerState,
     Position,
@@ -53,16 +54,20 @@ def _state() -> LeagueState:
             TeamState(team_id="b", roster=(RosterEntry(player_id="pb", slot=RosterSlot.QB),)),
         ),
         players=(
-            Player(player_id="pa", full_name="A QB", position=Position.QB),
-            Player(player_id="pb", full_name="B QB", position=Position.QB),
+            Player(player_id="pa", full_name="A QB", position=Position.QB, nfl_team="NE"),
+            Player(player_id="pb", full_name="B QB", position=Position.QB, nfl_team="NYJ"),
         ),
         player_states=(
-            PlayerState(player_id="pa", as_of=AS_OF, provenance=PROVENANCE),
-            PlayerState(player_id="pb", as_of=AS_OF, provenance=PROVENANCE),
+            PlayerState(player_id="pa", as_of=AS_OF, nfl_team="NE", provenance=PROVENANCE),
+            PlayerState(player_id="pb", as_of=AS_OF, nfl_team="NYJ", provenance=PROVENANCE),
         ),
         matchups=tuple(
             LeagueMatchup(week=week, team_a_id="a", team_b_id="b", provenance=PROVENANCE)
             for week in range(1, 5)
+        ),
+        nfl_team_byes=(
+            NflTeamBye(season=2026, nfl_team="NE", week=5, provenance=PROVENANCE),
+            NflTeamBye(season=2026, nfl_team="NYJ", week=6, provenance=PROVENANCE),
         ),
     )
 
@@ -104,4 +109,5 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     assert rows["a"].optimized_expected_points == 400.0
     assert rows["a"].expected_wins > rows["b"].expected_wins
     assert rows["a"].playoff_probability > rows["b"].playoff_probability
+    assert "bye-aware-weekly-lineups" in result.simulation_result.model_version
     assert any(warning.code == "weekly_scoring_decomposition_provisional" for warning in result.league_view.context.warnings)
