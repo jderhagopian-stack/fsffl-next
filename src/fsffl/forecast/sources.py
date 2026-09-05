@@ -160,8 +160,28 @@ def first_benchmark_source_registry() -> ForecastSourceRegistry:
             terms_reference="https://www.fftoday.com/",
             independence_notes="Treat as an original projection source unless evidence shows model overlap.",
             evidence_notes=(
-                "Verified 2024 and 2025 regular-season projection pages expose raw passing, rushing, "
-                "receiving and fantasy-point fields with explicit preseason update dates."
+                "Verified modern historical pages expose raw passing, rushing, receiving and fantasy-point "
+                "fields, including 2021, 2023, 2024 and 2025 season projection pages."
+            ),
+        ),
+        ForecastSourceRecord(
+            source_id="espn_mike_clay",
+            source_name="ESPN Mike Clay fantasy football projections",
+            roles=(SourceRole.PROJECTION,),
+            access_status=AccessStatus.INVESTIGATE,
+            historical_availability=HistoricalAvailability.ARCHIVED,
+            timestamp_semantics=(
+                "Use season-specific ESPN draft-guide projection pages or retained downloadable projection "
+                "guides whose publication/availability predates the relevant season outcomes."
+            ),
+            redistribution_status=RightsStatus.REQUIRES_REVIEW,
+            commercial_use_status=RightsStatus.REQUIRES_REVIEW,
+            access_method="ESPN historical draft-guide projection pages / downloadable projection guides",
+            terms_reference="https://www.espn.com/fantasy/football/",
+            independence_notes="Original ESPN projection model; evaluate overlap only if evidence supports it.",
+            evidence_notes=(
+                "Verified ESPN draft guides explicitly link Mike Clay's sortable player projections for "
+                "2020, 2021, 2022, 2023, 2024 and 2025. Exact table extraction and rights remain to be cleared."
             ),
         ),
         ForecastSourceRecord(
@@ -193,11 +213,15 @@ def first_benchmark_source_registry() -> ForecastSourceRegistry:
             redistribution_status=RightsStatus.REQUIRES_REVIEW,
             commercial_use_status=RightsStatus.REQUIRES_REVIEW,
             access_method="FantasyPros API / licensed access / retained dated artifacts",
+            terms_reference="https://api.fantasypros.com/v2/docs",
             independence_notes=(
                 "Consensus may contain sources also supplied separately to FSFFL; dependency "
                 "must be accounted for during ensemble calibration."
             ),
-            evidence_notes="API access and downstream data rights must be verified separately.",
+            evidence_notes=(
+                "NFL projections endpoint is season-addressable and documents week=0 for preseason projections; "
+                "historical season access and downstream data rights must be verified separately."
+            ),
         ),
     )
     return ForecastSourceRegistry(records)
