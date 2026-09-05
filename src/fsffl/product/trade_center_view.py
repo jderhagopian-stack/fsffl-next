@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import model_validator
 
-from fsffl.state.models import FrozenModel, LeagueState, RosterSlot
+from fsffl.state.models import Asset, FrozenModel, LeagueState, PickAsset, PlayerAsset, RosterSlot
 
 
 class TradeAssetOption(FrozenModel):
@@ -110,3 +110,22 @@ def build_trade_center_browser_view(
         counterparties=counterparties,
         state_id=league_state.state_id,
     )
+
+
+def resolve_owned_asset_ref(
+    league_state: LeagueState,
+    *,
+    team_id: str,
+    asset_ref: str,
+) -> Asset:
+    """Resolve one submitted UI asset ref against current canonical ownership."""
+
+    browser = _team_browser(league_state, team_id)
+    option = next((item for item in browser.assets if item.asset_ref == asset_ref), None)
+    if option is None:
+        raise ValueError("submitted asset is not currently owned by the specified team")
+    if option.asset_kind == "player" and option.player_id is not None:
+        return PlayerAsset(player_id=option.player_id)
+    if option.asset_kind == "pick" and option.pick_id is not None:
+        return PickAsset(pick_id=option.pick_id)
+    raise ValueError("unsupported trade asset option")
