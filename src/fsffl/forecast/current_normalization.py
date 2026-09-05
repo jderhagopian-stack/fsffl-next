@@ -4,7 +4,8 @@ import re
 import unicodedata
 from datetime import UTC, datetime
 
-from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
+from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
+from fsffl.providers.razzball_live import RazzballProjectionSnapshot
 from fsffl.state.models import LeagueState, Player, Position, Provenance, ProviderRef
 
 from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
@@ -25,6 +26,17 @@ _STAT_METRICS: dict[str, ForecastMetric] = {
     "rec": ForecastMetric.RECEPTIONS,
     "rec_yd": ForecastMetric.REC_YARDS,
     "rec_td": ForecastMetric.REC_TD,
+}
+
+_RAZZBALL_COLUMNS: dict[str, str] = {
+    "Pass Yds": "pass_yd",
+    "Pass TD": "pass_td",
+    "Int": "pass_int",
+    "Rush Yds": "rush_yd",
+    "Run TD": "rush_td",
+    "Rec": "rec",
+    "Rec Yds": "rec_yd",
+    "Rec TD": "rec_td",
 }
 
 
@@ -60,6 +72,55 @@ def _player_indexes(league_state: LeagueState) -> tuple[
         exact.setdefault((name, player.position, team), []).append(player)
         loose.setdefault((name, player.position), []).append(player)
     return exact, loose
+
+
+def _float_or_none(value: str | None) -> float | None:
+    raw = (value or "").replace(",", "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def current_snapshot_from_razzball(snapshot: RazzballProjectionSnapshot) -> CurrentProjectionSnapshot:
+    """Convert the Razzball acquisition shape into the shared current-row contract."""
+
+    position_map = {"QB": Position.QB, "RB": Position.RB, "WR": Position.WR, "TE": Position.TE}
+    rows: list[CurrentProjectionRow] = []
+    for raw in snapshot.rows:
+        position_text = (raw.get("Pos") or "").upper().strip()
+        position = position_map.get(position_text)
+        name = (raw.get("Name") or "").strip()
+        team = (raw.get("Team") or "").upper().strip()
+        if position is None or not name or not team:
+            continue
+        stats: dict[str, float] = {}
+        for column, canonical_stat in _RAZZBALL_COLUMNS.items():
+            value = _float_or_none(raw.get(column))
+            if value is not None:
+                stats[canonical_stat] = value
+        if not stats:
+            continue
+        rows.append(
+            CurrentProjectionRow(
+                provider=snapshot.provider_name,
+                external_id=f"{position.value}:{team}:{_normalize_name(name)}",
+                player_name=name,
+                position=position,
+                nfl_team=team,
+                stats=stats,
+            )
+        )
+    return CurrentProjectionSnapshot(
+        provider=snapshot.provider_name,
+        captured_at=snapshot.captured_at,
+        effective_at=snapshot.effective_at,
+        rows=tuple(rows),
+        source_version=snapshot.source_version,
+        usage_class=snapshot.usage_class,
+    )
 
 
 def normalize_current_projection_snapshot(
