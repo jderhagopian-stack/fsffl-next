@@ -20,6 +20,7 @@ class OneForOneTradeObservation(FrozenModel):
 
     transaction_id: str
     league_id: str
+    format_context_id: str
     completed_at: datetime
     roster_a_id: int = Field(ge=1)
     roster_b_id: int = Field(ge=1)
@@ -38,8 +39,9 @@ class OneForOneTradeObservation(FrozenModel):
 
     @model_validator(mode="after")
     def validate_trade(self) -> "OneForOneTradeObservation":
-        if not self.transaction_id.strip() or not self.league_id.strip():
-            raise ValueError("transaction identifiers cannot be blank")
+        required = (self.transaction_id, self.league_id, self.format_context_id)
+        if any(not value.strip() for value in required):
+            raise ValueError("transaction identifiers and format context cannot be blank")
         if not self.asset_a_id.strip() or not self.asset_b_id.strip():
             raise ValueError("trade asset ids cannot be blank")
         if self.asset_a_id == self.asset_b_id:
@@ -67,6 +69,7 @@ def normalize_sleeper_one_for_one_trades(
     json_text: str,
     *,
     league_id: str,
+    format_context_id: str,
     asset_id_by_sleeper_id: Mapping[str, str],
     as_of: datetime,
     rights_class: DataRightsClass = DataRightsClass.RESEARCH_ONLY,
@@ -80,8 +83,8 @@ def normalize_sleeper_one_for_one_trades(
     not decomposed into unsupported per-asset prices.
     """
 
-    if not league_id.strip():
-        raise ValueError("league_id cannot be blank")
+    if not league_id.strip() or not format_context_id.strip():
+        raise ValueError("league_id and format_context_id cannot be blank")
     if as_of.tzinfo is None:
         raise ValueError("as_of must be timezone-aware")
 
@@ -173,6 +176,7 @@ def normalize_sleeper_one_for_one_trades(
             OneForOneTradeObservation(
                 transaction_id=transaction_id,
                 league_id=league_id,
+                format_context_id=format_context_id,
                 completed_at=completed_at,
                 roster_a_id=roster_a,
                 roster_b_id=roster_b,
