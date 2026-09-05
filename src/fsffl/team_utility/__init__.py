@@ -10,18 +10,32 @@ from .simulation import (
     TeamScoringDistribution,
     simulate_regular_season,
 )
+from .utility import (
+    CalculatedCompetitiveState,
+    FranchiseAssetPortfolio,
+    OwnerStrategicPosture,
+    RosterResilience,
+    StrategicTeamView,
+    TeamUtilityVector,
+)
 
 __all__ = [
+    "CalculatedCompetitiveState",
+    "FranchiseAssetPortfolio",
     "LineupAssignment",
     "MarginalLineupImpact",
     "OptimizedTeamLineup",
+    "OwnerStrategicPosture",
     "RegularSeasonSimulationInput",
     "RegularSeasonSimulationResult",
+    "RosterResilience",
     "ScheduledMatchup",
     "ScoringDistributionKind",
+    "StrategicTeamView",
     "TeamCompetitiveOutcome",
     "TeamScoringDistribution",
     "TeamUncertaintyMethod",
+    "TeamUtilityVector",
     "build_team_scoring_distribution",
     "marginal_lineup_impact",
     "optimize_team_lineup",
