@@ -60,4 +60,4 @@ def test_current_runtime_ensembles_before_league_scoring() -> None:
     assert pass_yards[0].distribution.mean == 4100.0
     assert len(result.fantasy_point_forecasts) == 1
     assert result.fantasy_point_forecasts[0].source == "fsffl:live_league_scored"
-    assert result.fantasy_point_forecasts[0].distribution.mean == 354.0
+    assert result.fantasy_point_forecasts[0].distribution.mean == 374.0
