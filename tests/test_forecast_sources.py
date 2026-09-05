@@ -52,19 +52,31 @@ def test_first_benchmark_cohort_is_conservative_about_provider_rights() -> None:
     assert ids == {
         "nflverse_outcomes",
         "dynastyprocess_fantasypros_archive",
+        "fftoday",
         "razzball",
         "fantasypros",
     }
     assert registry.get("nflverse_outcomes").access_status == AccessStatus.APPROVED_RESEARCH
-    assert (
-        registry.get("dynastyprocess_fantasypros_archive").access_status
-        == AccessStatus.INVESTIGATE
-    )
+    assert registry.get("dynastyprocess_fantasypros_archive").access_status == AccessStatus.INVESTIGATE
     assert registry.get("fantasypros").commercial_use_status == RightsStatus.REQUIRES_REVIEW
     assert registry.get("razzball").redistribution_status == RightsStatus.REQUIRES_REVIEW
+    assert registry.get("fftoday").historical_availability == HistoricalAvailability.ARCHIVED
 
 
 def test_outcome_backbone_is_not_treated_as_projection_vote() -> None:
     record = first_benchmark_source_registry().get("nflverse_outcomes")
     assert SourceRole.OUTCOME in record.roles
     assert SourceRole.PROJECTION not in record.roles
+
+
+def test_dynastyprocess_fpecr_is_ranking_evidence_not_raw_projection_vote() -> None:
+    record = first_benchmark_source_registry().get("dynastyprocess_fantasypros_archive")
+    assert SourceRole.RANKING in record.roles
+    assert SourceRole.AGGREGATE in record.roles
+    assert SourceRole.PROJECTION not in record.roles
+
+
+def test_fftoday_is_governed_as_projection_candidate() -> None:
+    record = first_benchmark_source_registry().get("fftoday")
+    assert record.roles == (SourceRole.PROJECTION,)
+    assert record.access_status == AccessStatus.INVESTIGATE
