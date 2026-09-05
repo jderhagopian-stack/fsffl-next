@@ -24,47 +24,67 @@ NEXT-5 owns bilateral transaction evaluation. It does **not** own broad candidat
 3. **Bilateral consequence evaluation** — consume NEXT-4 scenario outputs for both franchises.
 4. **Economic interpretation** — compare typed NEXT-3 transaction/market/intrinsic evidence without collapsing incompatible value concepts or scales.
 5. **Decision evidence** — represent whether a transaction improves, harms, or trades off different authoritative channels for each side.
-6. **Negotiation/acceptance evidence** — eventually estimate plausibility from market/league/history evidence while remaining distinct from franchise utility.
+6. **Negotiation/acceptance evidence** — estimate plausibility from market/league/history evidence while remaining distinct from franchise utility.
 
-## First implementation slices
+## Implemented slices
 
 ### Slice 1 — transaction contracts and scenario integrity
 
-- immutable transaction proposal types;
-- explicit giver/receiver asset ownership validation;
-- canonical player/pick transfer application;
-- no impossible duplicate ownership;
-- no mutation of source LeagueState;
-- point-in-time/future-leakage checks;
-- no recommendation language.
+Implemented:
+
+- immutable bilateral proposal and leg contracts using canonical NEXT asset types;
+- player, pick, and FAAB ownership validation against one pre-trade snapshot;
+- immutable canonical before/after state construction;
+- incoming players placed on BENCH so NEXT-4 remains authoritative for optimized role;
+- future-state, duplicate-asset, impossible-ownership, FAAB, and source-immutability tests.
 
 ### Slice 2 — bilateral NEXT-4 deltas
 
-- evaluate before/after TeamUtilityVector for both sides;
-- preserve competitive, resilience, and economic channels separately;
-- expose direction and magnitude of deltas without a master score;
-- fail closed when required upstream evidence is absent or incompatible.
+Implemented:
+
+- independent before/after TeamUtilityVector comparison for both teams;
+- competitive, resilience, and asset-portfolio channels remain separate;
+- team identity and incompatible scale/concept checks fail closed;
+- no master score or recommendation.
 
 ### Slice 3 — transaction economics
 
-- consume NEXT-3 typed market/intrinsic/transaction evidence;
-- preserve scale/concept compatibility;
-- distinguish franchise utility from market price and likely transaction price;
-- avoid generic consolidation, QB, contender, or scarcity bonuses unless a real effect is empirically justified and has one authoritative home.
+Implemented:
+
+- separate market, intrinsic, acquisition-price, and sale-price package summaries;
+- expected package means may aggregate on compatible scales;
+- package uncertainty is not fabricated without an authoritative covariance model;
+- missing economic evidence is explicit rather than treated as zero;
+- FAAB remains unevaluated until governed conversion evidence exists.
 
 ### Slice 4 — bilateral decision contract
 
-- identify Pareto-improving, mixed-tradeoff, and clearly dominated outcomes by authoritative channel;
-- calculated team state remains separate from owner strategic posture;
-- owner posture may later affect decision preference explicitly without rewriting calculated consequences;
-- no candidate search or package balancing.
+Implemented foundation:
+
+- directional assessment for authoritative team-consequence channels;
+- uniform gain, uniform loss, mixed, neutral, and incomplete side shapes;
+- bilateral mutual-gain / one-sided / mixed-or-incomplete classification;
+- missing channels fail closed and cannot promote a trade to mutual gain;
+- no scalar weighting across wins, resilience, and dynasty economics.
+
+Materiality is separate and explicit:
+
+- competitive/resilience materiality policy has no hidden defaults;
+- economic materiality is tied to one explicit NEXT-3 ValueScale/version;
+- thresholds require provenance, evidence-through date, and versioning;
+- current tests use synthetic thresholds only and do not establish production authority.
 
 ### Slice 5 — acceptance / negotiation evidence
 
-- build a separately typed acceptance or market-feasibility estimate from point-in-time league/market/history evidence;
-- utility and acceptance must never be conflated;
-- low evidence must widen uncertainty rather than silently produce confidence;
-- challenger/provisional behavior governed explicitly.
+Implemented contracts, not an empirical probability model:
+
+- typed point-in-time acceptance evidence items and evidence sets;
+- explicit future-leakage protection;
+- acceptance probability estimate contract with uncertainty interval and lifecycle status;
+- explicit `NOT_ESTIMATED` state so missing calibration cannot become a fabricated prior;
+- acceptance remains separate from franchise utility and decision shape.
+
+The empirical acceptance model remains future work and must be calibrated from admissible point-in-time league/market/history evidence before promotion.
 
 ## Anti-double-counting rule
 
@@ -90,6 +110,14 @@ NEXT-5 must pass:
 - eventually realistic league adversarial cases through the shared runtime path.
 
 Historical or empirical calibration should be batched where possible. Lack of perfect evidence must not erase a real effect: use bounded, versioned, future-updatable provisional behavior only where justified.
+
+## Remaining NEXT-5 work
+
+1. Integrate governed materiality policy into a richer decision view without making synthetic test thresholds authoritative.
+2. Add explicit owner-posture overlay that changes preference interpretation but never calculated consequences.
+3. Build the empirical acceptance/negotiation challenger from admissible point-in-time evidence; keep non-authoritative until promotion criteria pass.
+4. Add obvious bilateral sanity cases and anti-double-counting/authority import guard.
+5. Complete NEXT-5 exit review, exact-head CI, and merge.
 
 ## Downstream boundary
 
