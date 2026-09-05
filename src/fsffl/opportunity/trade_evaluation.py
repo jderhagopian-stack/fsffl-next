@@ -4,11 +4,12 @@ from fsffl.trade_decision import (
     AcceptanceModelStatus,
     NegotiationFeasibilityShape,
     TradeAcceptanceView,
+    TradeDecisionDisposition,
+    TradeDisposition,
     TradeNegotiationFeasibility,
 )
 
 from .models import (
-    ActionAuthority,
     CandidateReason,
     DiscoveryStatus,
     EvidenceCompleteness,
@@ -23,6 +24,7 @@ def _candidate_reasons(
     *,
     evidence_completeness: EvidenceCompleteness,
     acceptance: TradeAcceptanceView | None,
+    disposition: TradeDecisionDisposition | None,
 ) -> tuple[CandidateReason, ...]:
     reasons: list[CandidateReason] = []
 
@@ -37,6 +39,11 @@ def _candidate_reasons(
     if acceptance is None or acceptance.status == AcceptanceModelStatus.NOT_ESTIMATED:
         reasons.append(CandidateReason.UNKNOWN_ACCEPTANCE)
 
+    if disposition is None:
+        reasons.append(CandidateReason.MATERIALITY_NOT_EVALUATED)
+    elif disposition.disposition != TradeDisposition.SUPPORT:
+        reasons.append(CandidateReason.FOCAL_DISPOSITION_BLOCKS_ACTION)
+
     return tuple(dict.fromkeys(reasons))
 
 
@@ -49,14 +56,16 @@ def candidate_from_trade_evaluation(
     feasibility: TradeNegotiationFeasibility,
     evidence_completeness: EvidenceCompleteness,
     acceptance: TradeAcceptanceView | None = None,
+    disposition: TradeDecisionDisposition | None = None,
     search_model_version: str = "next6-trade-evaluation-v1",
 ) -> OpportunityCandidate:
     """Convert authoritative NEXT-5 outputs into NEXT-6 lifecycle authority.
 
-    This function does not reinterpret team utility, economics, or acceptance.
-    It translates explicit NEXT-5 uncertainty/feasibility states into search-level
-    discovery and action authority so theoretical candidates remain visible without
-    becoming recommendations by accident.
+    Search cannot infer that a realistic deal is desirable for the focal team.
+    Actionable promotion therefore requires a NEXT-5 SUPPORT disposition in addition
+    to complete evidence and non-blocking acceptance/feasibility. If materiality has
+    not been evaluated, the candidate may remain visible for market testing but
+    cannot become actionable.
     """
 
     if feasibility.focal_team_id != focal_team_id:
@@ -66,11 +75,19 @@ def candidate_from_trade_evaluation(
             raise ValueError("acceptance must match feasibility proposal")
         if acceptance.accepting_team_id != feasibility.counterparty_team_id:
             raise ValueError("acceptance must describe feasibility counterparty")
+    if disposition is not None:
+        if disposition.proposal_id != feasibility.proposal_id:
+            raise ValueError("disposition must match feasibility proposal")
+        if disposition.evidence.focal_team_id != focal_team_id:
+            raise ValueError("disposition must describe opportunity focal team")
+        if disposition.evidence.counterparty_team_id != feasibility.counterparty_team_id:
+            raise ValueError("disposition counterparty must match feasibility counterparty")
 
     reasons = _candidate_reasons(
         feasibility,
         evidence_completeness=evidence_completeness,
         acceptance=acceptance,
+        disposition=disposition,
     )
     discovery_status = DiscoveryStatus.EVALUATED
     authority = derive_action_authority(
