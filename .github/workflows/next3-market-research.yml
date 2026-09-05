@@ -7,6 +7,7 @@ on:
     paths:
       - 'scripts/build_next3_research_crosswalk.py'
       - 'scripts/build_next3_market_panel.py'
+      - 'scripts/benchmark_next3_market_sources.py'
       - 'src/fsffl/value/**'
       - '.github/workflows/next3-market-research.yml'
   workflow_dispatch:
@@ -38,19 +39,24 @@ jobs:
             --num-qbs 2 \
             --num-teams 12 \
             --ppr 0.5
+      - name: Benchmark source agreement
+        run: |
+          python scripts/benchmark_next3_market_sources.py \
+            --panel .artifacts/next3/market_panel.json \
+            --output .artifacts/next3/source_benchmark.json
       - name: Summarize artifact
         run: |
           python - <<'PY'
           import json
-          from collections import Counter
           from pathlib import Path
 
           panel = json.loads(Path('.artifacts/next3/market_panel.json').read_text())
-          observations = panel['observations']
-          counts = Counter(row['source_id'] for row in observations)
-          print('NEXT-3 market panel observations:', len(observations))
-          print('By source:', dict(sorted(counts.items())))
+          benchmark = json.loads(Path('.artifacts/next3/source_benchmark.json').read_text())
+          print('NEXT-3 market panel observations:', len(panel['observations']))
+          print('By source:', benchmark['source_observation_counts'])
           print('Panel as_of:', panel['as_of'])
+          for pair in benchmark['pairwise']:
+              print('Pairwise:', pair)
           PY
       - name: Upload research artifacts
         uses: actions/upload-artifact@v4
@@ -59,4 +65,5 @@ jobs:
           path: |
             .artifacts/next3/market_panel.json
             .artifacts/next3/research_crosswalk.csv
+            .artifacts/next3/source_benchmark.json
           retention-days: 7
