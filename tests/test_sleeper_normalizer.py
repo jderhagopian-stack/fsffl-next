@@ -46,9 +46,9 @@ def bundle() -> SleeperPayloadBundle:
             },
         ],
         players={
-            "p1": {"full_name": "Quarterback One", "position": "QB", "team": "AAA", "status": "active"},
-            "p2": {"full_name": "Runner Two", "position": "RB", "team": "BBB", "status": "active"},
-            "p3": {"full_name": "Quarterback Three", "position": "QB", "team": "CCC", "status": "active"},
+            "p1": {"full_name": "Quarterback One", "position": "QB", "team": "AAA", "status": "active", "age": 27},
+            "p2": {"full_name": "Runner Two", "position": "RB", "team": "BBB", "status": "active", "age": "24.5"},
+            "p3": {"full_name": "Quarterback Three", "position": "QB", "team": "CCC", "status": "active", "age": "unknown"},
             "p4": {"full_name": "Receiver Four", "position": "WR", "team": "DDD", "status": "active"},
         },
         traded_picks=[{"season": "2027", "round": 1, "roster_id": 1, "owner_id": 2}],
@@ -70,6 +70,15 @@ def test_normalizer_returns_provider_neutral_state() -> None:
     slots = {entry.player_id: entry.slot for entry in alpha.roster}
     assert slots["sleeper:player:p1"] == RosterSlot.QB
     assert slots["sleeper:player:p2"] == RosterSlot.RB
+
+
+def test_explicit_player_age_is_preserved_without_guessing() -> None:
+    state = SleeperNormalizer().normalize(bundle(), as_of=AS_OF)
+    ages = {item.player_id: item.age_years for item in state.player_states}
+    assert ages["sleeper:player:p1"] == 27.0
+    assert ages["sleeper:player:p2"] == 24.5
+    assert ages["sleeper:player:p3"] is None
+    assert ages["sleeper:player:p4"] is None
 
 
 def test_traded_pick_ownership_is_normalized() -> None:
