@@ -15,6 +15,7 @@ def _league_view() -> LeagueAnalyticsView:
         league_state_id="s1",
         as_of=datetime(2026, 9, 5, tzinfo=UTC),
         generated_at=datetime(2026, 9, 5, 1, tzinfo=UTC),
+        lineage=(),
     )
     return LeagueAnalyticsView(
         context=context,
@@ -53,7 +54,10 @@ def _canonical_state() -> LeagueState:
         league=league,
         as_of=as_of,
         teams=teams,
-        team_states=(TeamState(team_id="a"), TeamState(team_id="b")),
+        team_states=(
+            TeamState(team_id="a", roster=()),
+            TeamState(team_id="b", roster=()),
+        ),
         players=(),
         player_states=(),
     )
