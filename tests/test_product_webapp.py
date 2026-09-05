@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import hashlib
 
 from fastapi.testclient import TestClient
 
@@ -63,10 +64,17 @@ def _canonical_state() -> LeagueState:
     )
 
 
-def test_health_is_available_without_beta_auth(monkeypatch) -> None:
+def _set_beta_auth(monkeypatch, password: str = "secret") -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "1")
     monkeypatch.setenv("FSFFL_BETA_USERNAME", "jimmy")
-    monkeypatch.setenv("FSFFL_BETA_PASSWORD", "secret")
+    monkeypatch.setenv(
+        "FSFFL_BETA_PASSWORD_SHA256",
+        hashlib.sha256(password.encode("utf-8")).hexdigest(),
+    )
+
+
+def test_health_is_available_without_beta_auth(monkeypatch) -> None:
+    _set_beta_auth(monkeypatch)
     client = TestClient(create_app())
     response = client.get("/health")
     assert response.status_code == 200
@@ -74,11 +82,10 @@ def test_health_is_available_without_beta_auth(monkeypatch) -> None:
 
 
 def test_private_shell_requires_credentials_when_enabled(monkeypatch) -> None:
-    monkeypatch.setenv("FSFFL_BETA_AUTH", "1")
-    monkeypatch.setenv("FSFFL_BETA_USERNAME", "jimmy")
-    monkeypatch.setenv("FSFFL_BETA_PASSWORD", "secret")
+    _set_beta_auth(monkeypatch)
     client = TestClient(create_app())
     assert client.get("/").status_code == 401
+    assert client.get("/", auth=("jimmy", "wrong")).status_code == 401
     response = client.get("/", auth=("jimmy", "secret"))
     assert response.status_code == 200
     assert "FSFFL NEXT" in response.text
