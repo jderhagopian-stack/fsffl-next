@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime, time
 from typing import Mapping
 
 from pydantic import Field
@@ -29,9 +29,10 @@ def normalize_statsguy_rankings(
 ) -> StatsGuyImportResult:
     """Normalize Stats Guy Fantasy rankings into NEXT-3 market evidence.
 
-    The documented API is Sleeper-ID keyed and returns an ``asOf`` timestamp for
-    the calculation snapshot. NEXT still requires an explicit research/canonical
-    crosswalk rather than promoting a provider identifier into core identity.
+    Current responses expose a full ``asOf`` timestamp. Historical responses may
+    expose only a snapshot date. Date-only snapshots are conservatively treated
+    as available at the end of that UTC day so historical research never assumes
+    intraday availability that the provider does not document.
     """
     if not format_context_id.strip():
         raise ValueError("format_context_id cannot be blank")
@@ -86,7 +87,15 @@ def normalize_statsguy_rankings(
 
 
 def _parse_timestamp(value: str) -> datetime:
-    normalized = value.strip().replace("Z", "+00:00")
+    raw = value.strip()
+    if len(raw) == 10:
+        try:
+            day = datetime.strptime(raw, "%Y-%m-%d").date()
+        except ValueError as exc:
+            raise ValueError("Stats Guy asOf must be ISO-8601") from exc
+        return datetime.combine(day, time.max, tzinfo=UTC)
+
+    normalized = raw.replace("Z", "+00:00")
     try:
         timestamp = datetime.fromisoformat(normalized)
     except ValueError as exc:
