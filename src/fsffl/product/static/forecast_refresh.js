@@ -8,7 +8,9 @@ function setForecastRefreshMessage(message){
 }
 
 async function maybeRefreshFsfflForecasts(){
-  if(fsfflForecastRefreshInFlight||!state?.context?.league_id||!state?.context?.team_id)return;
+  // Forecast evidence is league-wide. Managed-team selection is intentionally
+  // not a prerequisite; team choice only scopes downstream team/product views.
+  if(fsfflForecastRefreshInFlight||!state?.context?.league_id)return;
   if(state.context.forecast_ready)return;
   const stateId=state.context.state_id||'loaded';
   const now=Date.now();
