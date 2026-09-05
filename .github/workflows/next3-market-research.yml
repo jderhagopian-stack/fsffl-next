@@ -12,6 +12,7 @@ on:
       - 'scripts/benchmark_next3_market_sources.py'
       - 'scripts/benchmark_next3_historical_ensemble.py'
       - 'src/fsffl/value/**'
+      - 'docs/value/**'
       - '.github/workflows/next3-market-research.yml'
   workflow_dispatch:
 
