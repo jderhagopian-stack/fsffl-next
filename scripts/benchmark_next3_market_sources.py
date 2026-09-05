@@ -43,6 +43,77 @@ def _percentile_ranks(values: dict[str, float]) -> dict[str, float]:
     return {asset_id: (rank - 1.0) / (n - 1.0) for asset_id, rank in ranks.items()}
 
 
+def _context_family(context: str) -> str:
+    """Map exact contexts to broader research cohorts without erasing specificity.
+
+    This is deliberately conservative. Superflex and generic 2QB evidence may be
+    compared in the broad dynasty QB-premium family, but exact-context reporting
+    remains separate and authoritative callers still receive the original context.
+    """
+    normalized = context.strip().lower()
+    if normalized == "dynasty:2qb" or ":sf:" in normalized or normalized.endswith(":sf"):
+        return "dynasty:qb-premium"
+    if normalized == "dynasty:1qb" or ":1qb:" in normalized or normalized.endswith(":1qb"):
+        return "dynasty:1qb"
+    return context
+
+
+def _pairwise(rows_by_source: dict[str, dict[str, float]], *, context_label: str, level: str) -> list[dict]:
+    pairs: list[dict] = []
+    sources = sorted(rows_by_source)
+    for i, source_a in enumerate(sources):
+        for source_b in sources[i + 1 :]:
+            values_a = rows_by_source[source_a]
+            values_b = rows_by_source[source_b]
+            overlap = sorted(set(values_a) & set(values_b))
+            if not overlap:
+                continue
+            overlap_a = {asset: values_a[asset] for asset in overlap}
+            overlap_b = {asset: values_b[asset] for asset in overlap}
+            rank_a = _rank_map(overlap_a)
+            rank_b = _rank_map(overlap_b)
+            spearman = _pearson([rank_a[a] for a in overlap], [rank_b[a] for a in overlap])
+            pct_a = _percentile_ranks(overlap_a)
+            pct_b = _percentile_ranks(overlap_b)
+            percentile_mae = mean(abs(pct_a[a] - pct_b[a]) for a in overlap)
+            pairs.append(
+                {
+                    "comparison_level": level,
+                    "context_id": context_label,
+                    "source_a": source_a,
+                    "source_b": source_b,
+                    "overlap": len(overlap),
+                    "spearman_rank_correlation": spearman,
+                    "percentile_rank_mae": percentile_mae,
+                }
+            )
+    return pairs
+
+
+def _consensus(rows_by_source: dict[str, dict[str, float]], *, context_label: str, level: str) -> list[dict]:
+    percentile_by_source = {
+        source: _percentile_ranks(values) for source, values in rows_by_source.items()
+    }
+    assets = sorted({asset for values in percentile_by_source.values() for asset in values})
+    consensus: list[dict] = []
+    for asset_id in assets:
+        votes = [values[asset_id] for values in percentile_by_source.values() if asset_id in values]
+        if len(votes) < 2:
+            continue
+        consensus.append(
+            {
+                "comparison_level": level,
+                "context_id": context_label,
+                "asset_id": asset_id,
+                "source_count": len(votes),
+                "median_percentile": median(votes),
+                "mean_percentile": mean(votes),
+                "disagreement_range": max(votes) - min(votes),
+            }
+        )
+    return consensus
+
+
 def benchmark(panel: dict) -> dict:
     latest: dict[tuple[str, str, str], tuple[str, float]] = {}
     source_counts: dict[str, int] = defaultdict(int)
@@ -66,67 +137,62 @@ def benchmark(panel: dict) -> dict:
         by_source_context[(source_id, context)][asset_id] = value
         source_counts[source_id] += 1
 
-    pairs: list[dict] = []
-    keys = sorted(by_source_context)
-    for i, (source_a, context_a) in enumerate(keys):
-        for source_b, context_b in keys[i + 1 :]:
-            if context_a != context_b:
-                continue
-            values_a = by_source_context[(source_a, context_a)]
-            values_b = by_source_context[(source_b, context_b)]
-            overlap = sorted(set(values_a) & set(values_b))
-            if not overlap:
-                continue
-            rank_a = _rank_map({asset: values_a[asset] for asset in overlap})
-            rank_b = _rank_map({asset: values_b[asset] for asset in overlap})
-            spearman = _pearson([rank_a[a] for a in overlap], [rank_b[a] for a in overlap])
-            pct_a = _percentile_ranks({asset: values_a[asset] for asset in overlap})
-            pct_b = _percentile_ranks({asset: values_b[asset] for asset in overlap})
-            percentile_mae = mean(abs(pct_a[a] - pct_b[a]) for a in overlap)
-            pairs.append(
-                {
-                    "source_a": source_a,
-                    "source_b": source_b,
-                    "format_context_id": context_a,
-                    "overlap": len(overlap),
-                    "spearman_rank_correlation": spearman,
-                    "percentile_rank_mae": percentile_mae,
-                }
-            )
-
-    consensus: list[dict] = []
-    contexts = sorted({context for _, context in by_source_context})
-    for context in contexts:
-        percentile_by_source = {
-            source: _percentile_ranks(values)
+    exact_pairs: list[dict] = []
+    exact_consensus: list[dict] = []
+    exact_contexts = sorted({context for _, context in by_source_context})
+    for context in exact_contexts:
+        rows_by_source = {
+            source: values
             for (source, ctx), values in by_source_context.items()
             if ctx == context
         }
-        assets = sorted({asset for values in percentile_by_source.values() for asset in values})
-        for asset_id in assets:
-            votes = [values[asset_id] for values in percentile_by_source.values() if asset_id in values]
-            if len(votes) < 2:
-                continue
-            consensus.append(
-                {
-                    "format_context_id": context,
-                    "asset_id": asset_id,
-                    "source_count": len(votes),
-                    "median_percentile": median(votes),
-                    "disagreement_range": max(votes) - min(votes),
-                }
-            )
+        exact_pairs.extend(_pairwise(rows_by_source, context_label=context, level="exact"))
+        exact_consensus.extend(_consensus(rows_by_source, context_label=context, level="exact"))
 
-    consensus.sort(key=lambda row: (-row["disagreement_range"], row["asset_id"]))
+    by_family_source: dict[tuple[str, str], dict[str, float]] = defaultdict(dict)
+    exact_contexts_by_family_source: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for (source, context), values in by_source_context.items():
+        family = _context_family(context)
+        key = (family, source)
+        exact_contexts_by_family_source[key].add(context)
+        if by_family_source[key]:
+            raise ValueError(
+                f"source {source!r} contributes multiple exact contexts to family {family!r}; "
+                "an explicit within-source pooling policy is required"
+            )
+        by_family_source[key] = values
+
+    family_pairs: list[dict] = []
+    family_consensus: list[dict] = []
+    families = sorted({family for family, _ in by_family_source})
+    for family in families:
+        rows_by_source = {
+            source: values
+            for (fam, source), values in by_family_source.items()
+            if fam == family
+        }
+        family_pairs.extend(_pairwise(rows_by_source, context_label=family, level="family"))
+        family_consensus.extend(_consensus(rows_by_source, context_label=family, level="family"))
+
+    consensus = exact_consensus + family_consensus
+    consensus.sort(key=lambda row: (-row["disagreement_range"], row["asset_id"], row["comparison_level"]))
     return {
         "panel_version": panel.get("panel_version"),
         "as_of": panel.get("as_of"),
         "source_observation_counts": dict(sorted(source_counts.items())),
-        "pairwise": pairs,
+        "pairwise_exact": exact_pairs,
+        "pairwise_family": family_pairs,
         "largest_consensus_disagreements": consensus[:100],
+        "context_family_policy": {
+            "dynasty:2qb": "dynasty:qb-premium",
+            "dynasty:*:sf:*": "dynasty:qb-premium",
+            "dynasty:1qb": "dynasty:1qb",
+        },
         "notes": (
-            "Diagnostic only. Pairwise rank agreement and percentile differences compare source behavior; "
-            "they do not establish predictive superiority or production authority."
+            "Diagnostic only. Exact-format comparisons remain separate from broader family comparisons. "
+            "Family comparisons allow broader priors such as generic 2QB evidence to be studied alongside "
+            "specific Superflex evidence without declaring the contexts identical. Rank agreement and "
+            "consensus challengers do not establish predictive superiority or production authority."
         ),
     }
 
@@ -144,13 +210,15 @@ def main() -> None:
 
     print("NEXT-3 source benchmark")
     print("source_counts=", result["source_observation_counts"])
-    for pair in result["pairwise"]:
+    for pair in result["pairwise_exact"] + result["pairwise_family"]:
         print(
             "pair=",
             pair["source_a"],
             pair["source_b"],
+            "level=",
+            pair["comparison_level"],
             "context=",
-            pair["format_context_id"],
+            pair["context_id"],
             "overlap=",
             pair["overlap"],
             "spearman=",
