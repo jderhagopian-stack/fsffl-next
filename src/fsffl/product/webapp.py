@@ -3,15 +3,21 @@ from __future__ import annotations
 import os
 import secrets
 from pathlib import Path
+from typing import Callable
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
+from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
+
+from .dashboard import build_league_metric_chart
+
 
 _STATIC_DIR = Path(__file__).with_name("static")
 _security = HTTPBasic(auto_error=False)
+LeagueViewProvider = Callable[[], LeagueAnalyticsView | None]
 
 
 def _beta_auth_enabled() -> bool:
@@ -49,7 +55,7 @@ def require_beta_user(
     return expected_username
 
 
-def create_app() -> FastAPI:
+def create_app(*, league_view_provider: LeagueViewProvider | None = None) -> FastAPI:
     application = FastAPI(
         title="FSFFL NEXT Private Beta",
         version="next8-beta-v1",
@@ -69,15 +75,27 @@ def create_app() -> FastAPI:
 
     @application.get("/api/product-context")
     def product_context(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
-        # Runtime league/team selection will replace these nulls. The endpoint is
-        # intentionally identity/context-only and contains no model calculation.
+        view = league_view_provider() if league_view_provider is not None else None
         return {
             "user_id": user_id,
-            "league_id": None,
+            "league_id": view.context.league_id if view is not None else None,
             "team_id": None,
-            "state_id": None,
+            "state_id": view.context.league_state_id if view is not None else None,
+            "evidence_as_of": view.context.as_of.isoformat() if view is not None else None,
             "product_version": "next8-product-v1",
         }
+
+    @application.get("/api/league/chart")
+    def league_chart(
+        metric: LeagueMetric,
+        _: str = Depends(require_beta_user),
+    ) -> dict[str, object]:
+        if league_view_provider is None:
+            raise HTTPException(status_code=409, detail="No league analytics provider is configured")
+        view = league_view_provider()
+        if view is None:
+            raise HTTPException(status_code=409, detail="No league analytics are loaded")
+        return build_league_metric_chart(view, metric=metric).model_dump(mode="json")
 
     return application
 
