@@ -30,6 +30,13 @@ from .evaluation import (
     TradeSideEvaluation,
     evaluate_bilateral_trade_deltas,
 )
+from .materiality import (
+    CompetitiveMaterialityPolicy,
+    EconomicMaterialityPolicy,
+    MaterialityDirection,
+    classify_negative_delta,
+    classify_positive_delta,
+)
 from .models import BilateralTradeProposal, TradeLeg
 from .scenario import AppliedTradeScenario, apply_bilateral_trade
 
@@ -45,10 +52,13 @@ __all__ = [
     "BilateralTradeEconomics",
     "BilateralTradeEvaluation",
     "BilateralTradeProposal",
+    "CompetitiveMaterialityPolicy",
     "Direction",
     "EconomicConcept",
     "EconomicFlow",
+    "EconomicMaterialityPolicy",
     "ExpectedPackageValue",
+    "MaterialityDirection",
     "MissingEconomicEvidence",
     "SideDecisionShape",
     "SideDirectionalAssessment",
@@ -60,6 +70,8 @@ __all__ = [
     "assess_side_direction",
     "build_unestimated_acceptance_view",
     "classify_bilateral_trade_decision",
+    "classify_negative_delta",
+    "classify_positive_delta",
     "evaluate_bilateral_trade_deltas",
     "summarize_bilateral_trade_economics",
 ]
