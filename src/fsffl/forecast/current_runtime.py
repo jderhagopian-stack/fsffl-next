@@ -15,6 +15,7 @@ from .current_normalization import current_snapshot_from_razzball, normalize_cur
 from .league_scoring import derive_league_fantasy_point_forecasts
 from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_authoritative_live_ensemble
 from .models import ForecastObservation
+from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
 
 
 CurrentSnapshotFetcher = Callable[[int], CurrentProjectionSnapshot]
@@ -34,7 +35,7 @@ class LiveForecastRuntimeResult(FrozenModel):
     successful_source_ids: tuple[str, ...]
     failed_sources: tuple[str, ...]
     evaluation_as_of: datetime
-    model_version: str = "next2-current-runtime-v1"
+    model_version: str = "next2-current-runtime-v2"
 
 
 def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher, ...]:
@@ -127,12 +128,13 @@ def build_current_live_forecasts(
         tuple(batches),
         minimum_independent_sources=minimum_independent_sources,
     )
-    fantasy_points = derive_league_fantasy_point_forecasts(
+    league_scored = derive_league_fantasy_point_forecasts(
         raw_ensemble,
         rules=league_state.league.rules,
         source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v1",
+        model_version="next2-current-runtime-v2",
     )
+    fantasy_points = apply_empirical_season_fantasy_point_uncertainty(league_scored)
     return LiveForecastRuntimeResult(
         raw_ensemble=raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
