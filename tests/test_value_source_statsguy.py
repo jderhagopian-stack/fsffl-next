@@ -28,6 +28,21 @@ def test_normalizes_statsguy_rankings_with_snapshot_time():
     assert row.rights_class == DataRightsClass.RUNTIME_ONLY
 
 
+def test_statsguy_date_only_history_is_available_at_end_of_utc_day():
+    payload = '''
+    {
+      "asOf": "2025-09-08",
+      "rankings": [{"id": "7564", "value": 9000}]
+    }
+    '''
+    result = normalize_statsguy_rankings(
+        payload,
+        asset_id_by_sleeper_id={"7564": "research:sleeper:7564"},
+        format_context_id="dynasty:sf",
+    )
+    assert result.observations[0].observed_at.isoformat() == "2025-09-08T23:59:59.999999+00:00"
+
+
 def test_statsguy_counts_unmapped_rows():
     payload = '''
     {
