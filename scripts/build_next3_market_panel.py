@@ -12,6 +12,7 @@ from fsffl.value.sources import (
     normalize_dynastydealer_values,
     normalize_dynastyprocess_values,
     normalize_fantasycalc_values,
+    normalize_statsguy_rankings,
 )
 
 
@@ -20,6 +21,7 @@ DEFAULT_DYNASTYPROCESS_URL = (
 )
 DEFAULT_DYNASTYDEALER_URL = "https://www.dynastydealer.com/api/player-values"
 DEFAULT_FANTASYCALC_URL = "https://api.fantasycalc.com/values/current"
+DEFAULT_STATSGUY_URL = "https://api.statsguyfantasy.com/api/v1/rankings"
 
 
 def _load_crosswalk(path: Path) -> tuple[dict[str, str], dict[str, str]]:
@@ -65,13 +67,17 @@ def main() -> None:
     parser.add_argument("--dynastyprocess-url", default=DEFAULT_DYNASTYPROCESS_URL)
     parser.add_argument("--dynastydealer-url", default=DEFAULT_DYNASTYDEALER_URL)
     parser.add_argument("--fantasycalc-url", default=DEFAULT_FANTASYCALC_URL)
-    parser.add_argument("--panel-version", default="next3-market-panel-v2")
+    parser.add_argument("--statsguy-url", default=DEFAULT_STATSGUY_URL)
+    parser.add_argument("--panel-version", default="next3-market-panel-v3")
     args = parser.parse_args()
 
     fp_crosswalk, sleeper_crosswalk = _load_crosswalk(args.crosswalk)
     acquisition_time = datetime.now(UTC)
 
     fantasycalc_url = f"{args.fantasycalc_url}?{urlencode({'isDynasty': 'true', 'numQbs': args.num_qbs, 'numTeams': args.num_teams, 'ppr': args.ppr})}"
+    statsguy_format = "sf_dynasty" if args.num_qbs == 2 else "non_sf_dynasty"
+    statsguy_context = "dynasty:sf" if args.num_qbs == 2 else "dynasty:1qb"
+    statsguy_url = f"{args.statsguy_url}?{urlencode({'format': statsguy_format, 'limit': 1000})}"
 
     def load_dynastyprocess():
         return normalize_dynastyprocess_values(
@@ -97,15 +103,24 @@ def main() -> None:
             provenance_uri=fantasycalc_url,
         ).observations
 
+    def load_statsguy():
+        return normalize_statsguy_rankings(
+            _download_text(statsguy_url),
+            asset_id_by_sleeper_id=sleeper_crosswalk,
+            format_context_id=statsguy_context,
+            provenance_uri=statsguy_url,
+        ).observations
+
     batch = build_market_calibration_panel_batch(
         {
             "dynastyprocess_market_values": load_dynastyprocess,
             "dynastydealer_market_values": load_dynastydealer,
             "fantasycalc_market_values": load_fantasycalc,
+            "statsguy_market_values": load_statsguy,
         },
         as_of=acquisition_time,
         panel_version=args.panel_version,
-        max_workers=3,
+        max_workers=4,
     )
     if not batch.panel.observations:
         raise RuntimeError("multi-source market import produced no observations")
