@@ -29,6 +29,7 @@ from .runtime import (
     default_live_forecast_loader,
     default_sleeper_state_loader,
 )
+from .simulation_runtime import LiveSimulationAnalyticsResult, build_live_simulation_analytics
 from .team_page import build_forecast_team_view, build_state_only_team_view
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
@@ -40,6 +41,7 @@ _logger = logging.getLogger("fsffl.product.forecast")
 LeagueViewProvider = Callable[[], LeagueAnalyticsView | None]
 StateLoader = Callable[[str], LeagueState]
 TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, object]]
+SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
 
 
 class ConnectSleeperLeagueRequest(FrozenModel):
@@ -89,6 +91,7 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
     runtime = store.get(user_id)
     league_state = runtime.league_state
     evidence = runtime.forecast_evidence
+    simulation = runtime.simulation_analytics
     return {
         "user_id": user_id,
         "league_id": league_state.league.league_id if league_state is not None else None,
@@ -99,6 +102,8 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "teams": ([{"team_id": team.team_id, "display_name": team.display_name} for team in league_state.teams] if league_state is not None else []),
         "forecast_ready": evidence is not None and bool(evidence.league_scored_forecasts),
         "forecast_sources": list(evidence.successful_source_ids) if evidence is not None else [],
+        "simulation_ready": simulation is not None,
+        "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
         "product_version": "next8-product-v1",
     }
 
@@ -125,12 +130,25 @@ def _forecast_lineup_result(runtime):
     )
 
 
+def _default_simulation_loader(
+    league_state: LeagueState,
+    evidence: LiveForecastEvidence,
+) -> LiveSimulationAnalyticsResult:
+    return build_live_simulation_analytics(
+        league_state,
+        forecasts=evidence.league_scored_forecasts,
+        forecast_model_version=evidence.model_version,
+        simulation_count=50_000,
+    )
+
+
 def create_app(
     *,
     league_view_provider: LeagueViewProvider | None = None,
     runtime_store: PrivateBetaRuntimeStore | None = None,
     state_loader: StateLoader = default_sleeper_state_loader,
     forecast_loader: LiveForecastLoader = default_live_forecast_loader,
+    simulation_loader: SimulationLoader = _default_simulation_loader,
     trade_evaluator: TradeEvaluator | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
@@ -164,11 +182,20 @@ def create_app(
         message = None
         if evidence is not None:
             message = "Authoritative NEXT-2 ensemble loaded from independent sources: " + ", ".join(evidence.successful_source_ids) + "."
-        return state_first_runtime_status(
+        payload = state_first_runtime_status(
             runtime.league_state,
             forecast_ready=evidence is not None and bool(evidence.league_scored_forecasts),
             forecast_message=message,
         ).model_dump(mode="json")
+        if runtime.simulation_analytics is not None:
+            for stage in payload["stages"]:
+                if stage["stage"] == "team_utility":
+                    stage["readiness"] = "ready"
+                    stage["message"] = "NEXT-4 50,000-run competitive simulation is attached from calibrated forecast evidence."
+                elif stage["stage"] == "analytics":
+                    stage["readiness"] = "ready"
+                    stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
+        return payload
 
     @application.post("/api/connect/sleeper")
     def connect_sleeper(request: ConnectSleeperLeagueRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -207,6 +234,22 @@ def create_app(
                 exc,
             )
             raise HTTPException(status_code=502, detail=f"Unable to refresh FSFFL forecasts: {exc}") from exc
+
+        simulation_failure = None
+        if evidence.uncertainty_ready:
+            try:
+                simulation = simulation_loader(refreshed_state, evidence)
+                store.set_simulation_analytics(user_id, simulation)
+            except Exception as exc:
+                simulation_failure = f"{type(exc).__name__}: {exc}"
+                _logger.warning(
+                    "FSFFL simulation enrichment unavailable league=%s error=%s",
+                    refreshed_state.league.league_id,
+                    exc,
+                )
+
+        current = store.get(user_id)
+        simulation = current.simulation_analytics
         return {
             **_runtime_context_payload(store, user_id),
             "successful_sources": list(evidence.successful_source_ids),
@@ -214,6 +257,9 @@ def create_app(
             "ensemble_groups": len(evidence.raw_forecasts),
             "league_scored_players": len(evidence.league_scored_forecasts),
             "uncertainty_ready": evidence.uncertainty_ready,
+            "simulation_ready": simulation is not None,
+            "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
+            "simulation_failure": simulation_failure,
         }
 
     @application.get("/api/my-team")
@@ -223,6 +269,13 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
+        if runtime.simulation_analytics is not None:
+            view = next(
+                item
+                for item in runtime.simulation_analytics.team_views
+                if item.team_id == runtime.selected_team_id
+            )
+            return view.model_dump(mode="json")
         lineup_result = _forecast_lineup_result(runtime)
         if lineup_result is not None:
             view = next(item for item in lineup_result.team_views if item.team_id == runtime.selected_team_id)
@@ -280,8 +333,11 @@ def create_app(
             runtime = store.get(user_id)
             if runtime.league_state is None:
                 raise HTTPException(status_code=409, detail="No league is loaded")
-            lineup_result = _forecast_lineup_result(runtime)
-            view = lineup_result.league_view if lineup_result is not None else build_state_only_league_view(runtime.league_state)
+            if runtime.simulation_analytics is not None:
+                view = runtime.simulation_analytics.league_view
+            else:
+                lineup_result = _forecast_lineup_result(runtime)
+                view = lineup_result.league_view if lineup_result is not None else build_state_only_league_view(runtime.league_state)
         return build_league_metric_chart(view, metric=metric).model_dump(mode="json")
 
     return application
