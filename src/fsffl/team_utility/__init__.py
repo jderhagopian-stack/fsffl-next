@@ -1,3 +1,7 @@
+from .competitive_state import (
+    CompetitiveStatePolicy,
+    classify_calculated_competitive_state,
+)
 from .lineup import marginal_lineup_impact, optimize_team_lineup
 from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
 from .scoring import TeamUncertaintyMethod, build_team_scoring_distribution
@@ -21,6 +25,7 @@ from .utility import (
 
 __all__ = [
     "CalculatedCompetitiveState",
+    "CompetitiveStatePolicy",
     "FranchiseAssetPortfolio",
     "LineupAssignment",
     "MarginalLineupImpact",
@@ -37,6 +42,7 @@ __all__ = [
     "TeamUncertaintyMethod",
     "TeamUtilityVector",
     "build_team_scoring_distribution",
+    "classify_calculated_competitive_state",
     "marginal_lineup_impact",
     "optimize_team_lineup",
     "simulate_regular_season",
