@@ -16,7 +16,11 @@ from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 
 from .dashboard import build_league_metric_chart
-from .intelligence_runtime import build_state_only_league_view, state_first_runtime_status
+from .intelligence_runtime import (
+    build_forecast_lineup_analytics,
+    build_state_only_league_view,
+    state_first_runtime_status,
+)
 from .runtime import (
     LiveForecastEvidence,
     LiveForecastLoader,
@@ -107,6 +111,18 @@ def _sleeper_external_id(league_state: LeagueState) -> str:
     raise ValueError("loaded league does not expose a Sleeper external id")
 
 
+def _forecast_lineup_result(runtime):
+    evidence = runtime.forecast_evidence
+    if runtime.league_state is None or evidence is None or not evidence.league_scored_forecasts:
+        return None
+    forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
+    return build_forecast_lineup_analytics(
+        runtime.league_state,
+        forecasts=forecasts,
+        forecast_model_version=evidence.model_version,
+    )
+
+
 def create_app(
     *,
     league_view_provider: LeagueViewProvider | None = None,
@@ -145,11 +161,7 @@ def create_app(
         evidence = runtime.forecast_evidence
         message = None
         if evidence is not None:
-            message = (
-                "Authoritative NEXT-2 ensemble loaded from independent sources: "
-                + ", ".join(evidence.successful_source_ids)
-                + "."
-            )
+            message = "Authoritative NEXT-2 ensemble loaded from independent sources: " + ", ".join(evidence.successful_source_ids) + "."
         return state_first_runtime_status(
             runtime.league_state,
             forecast_ready=evidence is not None and bool(evidence.league_scored_forecasts),
@@ -183,9 +195,6 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         try:
             evidence: LiveForecastEvidence = forecast_loader(runtime.league_state)
-            # Forecast evidence is acquired after the original state snapshot. Re-load
-            # Sleeper once acquisition completes so the analytics PIT cutoff is at or
-            # after the forecast evidence being attached.
             refreshed_state = state_loader(_sleeper_external_id(runtime.league_state))
             store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
         except Exception as exc:
@@ -206,6 +215,10 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
+        lineup_result = _forecast_lineup_result(runtime)
+        if lineup_result is not None:
+            view = next(item for item in lineup_result.team_views if item.team_id == runtime.selected_team_id)
+            return view.model_dump(mode="json")
         if runtime.forecast_evidence is not None:
             evidence = runtime.forecast_evidence
             forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
@@ -259,7 +272,8 @@ def create_app(
             runtime = store.get(user_id)
             if runtime.league_state is None:
                 raise HTTPException(status_code=409, detail="No league is loaded")
-            view = build_state_only_league_view(runtime.league_state)
+            lineup_result = _forecast_lineup_result(runtime)
+            view = lineup_result.league_view if lineup_result is not None else build_state_only_league_view(runtime.league_state)
         return build_league_metric_chart(view, metric=metric).model_dump(mode="json")
 
     return application
