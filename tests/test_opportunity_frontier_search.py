@@ -15,6 +15,7 @@ from fsffl.opportunity.trade_universe import (
     TradePackageSeed,
     TradeSearchBounds,
     canonical_package_id,
+    enumerate_trade_packages,
 )
 from fsffl.state.models import PlayerAsset
 
@@ -61,7 +62,6 @@ def test_frontier_search_continues_after_diagnostic_seed() -> None:
 
     def evaluator(point):
         visited.append(point.point_id)
-        # Deliberately mark the seed bad. Search must still explore its neighbor.
         authority = (
             ActionAuthority.DIAGNOSTIC_ONLY
             if point.point_id == seed.point_id
@@ -150,3 +150,40 @@ def test_frontier_search_is_reproducible() -> None:
     assert [item.point.point_id for item in first.evaluated] == [
         item.point.point_id for item in second.evaluated
     ]
+
+
+def test_bounded_frontier_can_recover_entire_small_package_cross_product() -> None:
+    a1 = PlayerAsset(player_id="a1")
+    a2 = PlayerAsset(player_id="a2")
+    b1 = PlayerAsset(player_id="b1")
+    b2 = PlayerAsset(player_id="b2")
+    focal_inventory = TeamTradeInventory(team_id="a", assets=(a1, a2))
+    counterparty_inventory = TeamTradeInventory(team_id="b", assets=(b1, b2))
+    bounds = TradeSearchBounds(max_assets_per_side=2)
+
+    focal_packages = enumerate_trade_packages(focal_inventory, bounds=bounds)
+    counterparty_packages = enumerate_trade_packages(counterparty_inventory, bounds=bounds)
+    expected_ids = {
+        f"{focal.canonical_id}=>{counterparty.canonical_id}"
+        for focal in focal_packages
+        for counterparty in counterparty_packages
+    }
+    assert len(expected_ids) == 9
+
+    seed = make_frontier_point(_seed("a", a1), _seed("b", b1))
+    result = explore_negotiation_frontier(
+        seed,
+        focal_inventory=focal_inventory,
+        counterparty_inventory=counterparty_inventory,
+        bounds=bounds,
+        evaluator=lambda point: _candidate(
+            point.point_id,
+            "a",
+            ActionAuthority.MARKET_TEST_ONLY,
+        ),
+        policy=FrontierSearchPolicy(max_depth=4, max_evaluations=100),
+    )
+
+    observed_ids = {item.point.point_id for item in result.evaluated}
+    assert observed_ids == expected_ids
+    assert result.exhausted
