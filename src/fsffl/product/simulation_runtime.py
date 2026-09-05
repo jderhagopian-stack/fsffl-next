@@ -114,7 +114,7 @@ def build_live_simulation_analytics(
                 source_component="product-runtime",
             ),
             AnalyticsWarning(
-                kind=AnalyticsWarningKind.PROVISIONAL_ASSUMPTION,
+                kind=AnalyticsWarningKind.PROVISIONAL,
                 code="weekly_scoring_decomposition_provisional",
                 message=(
                     "Weekly scoring uses the governed independent equal-week decomposition of calibrated "
