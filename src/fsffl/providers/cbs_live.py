@@ -17,7 +17,7 @@ _POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
 
 class CBSLiveProjectionSource:
     provider_name = "cbs"
-    source_version = "cbs-season-projections-html-v2"
+    source_version = "cbs-season-projections-html-v3"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -51,7 +51,7 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[Curren
     parser = HtmlTableParser()
     parser.feed(html)
     for table in parser.tables:
-        header_index = next((i for i, row in enumerate(table) if any(normalize_cell(cell).startswith("Player") for cell in row)), None)
+        header_index = next((i for i, row in enumerate(table) if any(normalize_cell(cell).lower().startswith("player") for cell in row)), None)
         if header_index is None:
             continue
         headers = [normalize_cell(cell).upper() for cell in table[header_index]]
@@ -155,6 +155,17 @@ def _row_from_cells(*, provider: str, position: Position, headers: list[str], ce
 def _default_get_text(url: str) -> str:
     if not url.startswith("https://www.cbssports.com/fantasy/football/stats/"):
         raise ValueError("CBS live source only permits fixed fantasy projection URLs")
-    request = Request(url, headers={"User-Agent": "fsffl-next/0.1 (+private-beta projection research)"})
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "no-cache",
+        },
+    )
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider URL
-        return response.read().decode("utf-8", errors="replace")
+        text = response.read().decode("utf-8", errors="replace")
+    if "Projections Fantasy Football" not in text and "projection" not in text.lower():
+        raise ValueError("CBS hosted response did not contain projection content")
+    return text
