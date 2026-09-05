@@ -29,6 +29,7 @@ from .opportunity import (
     build_trade_partner_analytics_view,
     rank_trade_partners,
 )
+from .report import LeagueReportData, render_league_report_markdown
 from .team import (
     DraftPickAnalyticsRow,
     PlayerAnalyticsRow,
@@ -45,6 +46,7 @@ __all__ = [
     "LeagueAnalyticsView",
     "LeagueMetric",
     "LeagueMetricRanking",
+    "LeagueReportData",
     "LeagueTeamAnalyticsRow",
     "MetricDirection",
     "ModelLineageEntry",
@@ -66,4 +68,5 @@ __all__ = [
     "canonical_analytics_json",
     "rank_league_metric",
     "rank_trade_partners",
+    "render_league_report_markdown",
 ]
