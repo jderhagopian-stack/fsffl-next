@@ -7,21 +7,8 @@ from fsffl.forecast.league_scoring import (
     classify_scoring_coverage,
     derive_league_fantasy_point_forecasts,
 )
-from fsffl.forecast.models import (
-    ForecastDistribution,
-    ForecastHorizon,
-    ForecastMetric,
-    ForecastObservation,
-)
-from fsffl.state.models import (
-    LeagueRules,
-    LineupRequirement,
-    Position,
-    Provenance,
-    RosterSlot,
-    ScoringRule,
-)
-
+from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
+from fsffl.state.models import LeagueRules, LineupRequirement, Position, Provenance, RosterSlot, ScoringRule
 
 AS_OF = datetime(2026, 9, 5, tzinfo=UTC)
 END = datetime(2027, 1, 10, tzinfo=UTC)
@@ -100,19 +87,21 @@ def test_custom_league_coefficients_come_from_rules_not_provider_defaults() -> N
     assert result[0].distribution.mean == pytest.approx(320.0)
 
 
-def test_unsupported_offensive_rule_fails_closed() -> None:
+def test_fumbles_lost_is_an_exact_supported_metric() -> None:
     rules = _rules(
         ScoringRule(stat="rec", points=0.5),
         ScoringRule(stat="fum_lost", points=-2.0),
     )
     coverage = classify_scoring_coverage(rules)
-    assert coverage.status == ScoringCoverageStatus.INCOMPLETE
-    assert coverage.unsupported_rule_stats == ("fum_lost",)
-    with pytest.raises(ValueError, match="fum_lost"):
-        derive_league_fantasy_point_forecasts(
-            (_observation(ForecastMetric.RECEPTIONS, 80.0),),
-            rules=rules,
-        )
+    assert coverage.status == ScoringCoverageStatus.COMPLETE
+    result = derive_league_fantasy_point_forecasts(
+        (
+            _observation(ForecastMetric.RECEPTIONS, 80.0),
+            _observation(ForecastMetric.FUMBLES_LOST, 2.0, 0.5),
+        ),
+        rules=rules,
+    )
+    assert result[0].distribution.mean == pytest.approx(36.0)
 
 
 def test_dst_and_kicker_rules_can_be_ignored_only_when_positions_are_absent() -> None:
@@ -127,11 +116,31 @@ def test_dst_and_kicker_rules_can_be_ignored_only_when_positions_are_absent() ->
     assert set(coverage.ignored_non_lineup_rule_stats) == {"fgm_50p", "pts_allow_0", "sack"}
 
 
-def test_return_and_fumble_recovery_scoring_is_not_silently_ignored() -> None:
+def test_two_point_and_rare_player_scoring_is_explicitly_provisional() -> None:
     rules = _rules(
+        ScoringRule(stat="rec_td", points=6.0),
+        ScoringRule(stat="rec_2pt", points=2.0),
         ScoringRule(stat="st_td", points=6.0),
         ScoringRule(stat="fum_rec_td", points=6.0),
     )
     coverage = classify_scoring_coverage(rules)
+    assert coverage.status == ScoringCoverageStatus.PROVISIONAL
+    assert set(coverage.provisional_residual_rule_stats) == {"rec_2pt", "st_td", "fum_rec_td"}
+    result = derive_league_fantasy_point_forecasts(
+        (_observation(ForecastMetric.REC_TD, 8.0, 2.0),),
+        rules=rules,
+    )
+    assert result[0].distribution.mean > 48.0
+    assert "bounded_provisional_residual_v1" in result[0].model_version
+
+
+def test_truly_unknown_offensive_rule_still_fails_closed() -> None:
+    rules = _rules(
+        ScoringRule(stat="rec", points=0.5),
+        ScoringRule(stat="mystery_bonus", points=3.0),
+    )
+    coverage = classify_scoring_coverage(rules)
     assert coverage.status == ScoringCoverageStatus.INCOMPLETE
-    assert set(coverage.unsupported_rule_stats) == {"fum_rec_td", "st_td"}
+    assert coverage.unsupported_rule_stats == ("mystery_bonus",)
+    with pytest.raises(ValueError, match="mystery_bonus"):
+        derive_league_fantasy_point_forecasts((_observation(ForecastMetric.RECEPTIONS, 80.0),), rules=rules)
