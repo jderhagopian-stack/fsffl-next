@@ -19,6 +19,7 @@ from .models import (
     comparable_values,
 )
 from .pick import PickOutcome, PickOutcomeSet, estimate_pick_value
+from .transaction import TransactionPriceMapping, estimate_transaction_price
 
 __all__ = [
     "AssetValueProfile",
@@ -34,6 +35,7 @@ __all__ = [
     "PickValueEstimate",
     "TransactionDirection",
     "TransactionPriceEstimate",
+    "TransactionPriceMapping",
     "ValueAssetKind",
     "ValueDistribution",
     "ValueScale",
@@ -41,4 +43,5 @@ __all__ = [
     "estimate_intrinsic_player_value",
     "estimate_market_price",
     "estimate_pick_value",
+    "estimate_transaction_price",
 ]
