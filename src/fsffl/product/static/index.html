@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>FSFFL NEXT</title>
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-mark">FN</div>
+        <div>
+          <div class="brand-name">FSFFL NEXT</div>
+          <div class="brand-subtitle">Private Beta</div>
+        </div>
+      </div>
+
+      <nav id="primary-nav" class="nav-list">
+        <button class="nav-item active" data-route="league"><span>League</span></button>
+        <button class="nav-item locked" data-route="my_team"><span>My Team</span><small>Select team</small></button>
+        <button class="nav-item locked" data-route="trade_center"><span>Trade Center</span><small>Select team</small></button>
+        <button class="nav-item locked" data-route="opportunities"><span>Opportunities</span><small>Select team</small></button>
+        <button class="nav-item" data-route="analytics"><span>Analytics</span></button>
+        <button class="nav-item" data-route="reports"><span>Reports</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="evidence-pill"><span class="dot"></span><span id="evidence-label">No league loaded</span></div>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button id="mobile-menu" class="mobile-menu" aria-label="Open navigation">☰</button>
+        <div class="context-controls">
+          <label>
+            <span>League</span>
+            <select id="league-select" aria-label="League">
+              <option value="">Connect league</option>
+            </select>
+          </label>
+          <label>
+            <span>Managing</span>
+            <select id="team-select" aria-label="Managed team" disabled>
+              <option value="">Select team</option>
+            </select>
+          </label>
+        </div>
+        <div class="topbar-actions">
+          <div class="status-chip">Private</div>
+          <button class="icon-button" title="Model evidence">i</button>
+        </div>
+      </header>
+
+      <section id="screen" class="screen" aria-live="polite">
+        <div class="hero-row">
+          <div>
+            <p class="eyebrow">League Intelligence</p>
+            <h1>See the league. Find the edge.</h1>
+            <p class="lead">Connect a league to activate current rosters, forecasts, team utility, trade intelligence, opportunities, and reports.</p>
+          </div>
+          <div class="hero-actions">
+            <button id="connect-button" class="primary-button">Connect Sleeper League</button>
+            <button class="secondary-button" data-route-link="trade_center">Open Trade Center</button>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">Calculated state</span>
+            <strong>—</strong>
+            <small>Loads from NEXT-4</small>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Expected wins</span>
+            <strong>—</strong>
+            <small>50k simulation-ready</small>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Playoff probability</span>
+            <strong>—</strong>
+            <small>Authoritative simulation output</small>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Opportunity status</span>
+            <strong>—</strong>
+            <small>Actionable / market-test / diagnostic</small>
+          </article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">League comparison</p>
+                <h2>Expected wins</h2>
+              </div>
+              <select id="metric-select" aria-label="League metric">
+                <option value="expected_wins">Expected wins</option>
+                <option value="playoff_probability">Playoff probability</option>
+                <option value="optimized_expected_points">Projected scoring</option>
+                <option value="asset_portfolio_mean">Dynasty asset value</option>
+                <option value="draft_pick_count">Draft capital</option>
+              </select>
+            </div>
+            <div id="league-chart" class="chart-empty">
+              <div class="chart-placeholder-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <p>League data will render here as an interactive comparison chart.</p>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Opportunity Engine</p>
+                <h2>Best paths</h2>
+              </div>
+              <button class="text-button" data-route-link="opportunities">View all</button>
+            </div>
+            <div class="empty-list">
+              <div class="opportunity-skeleton"><span></span><span></span></div>
+              <div class="opportunity-skeleton"><span></span><span></span></div>
+              <div class="opportunity-skeleton"><span></span><span></span></div>
+              <p>Connect a league and select your team to run NEXT-6.</p>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel roster-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">My Team</p>
+              <h2>Projected lineup</h2>
+            </div>
+            <button class="text-button" data-route-link="my_team">Open full roster</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Role</th><th>Player</th><th>Pos</th><th>Age</th><th>Projection</th><th>Dynasty value</th><th>Team impact</th></tr></thead>
+              <tbody><tr class="empty-row"><td colspan="7">No team selected.</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
