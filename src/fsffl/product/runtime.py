@@ -12,6 +12,8 @@ from fsffl.providers.sleeper_live import SleeperLiveSource
 from fsffl.providers.sleeper_snapshot import SleeperSnapshotNormalizer
 from fsffl.state.models import LeagueState
 
+from .simulation_runtime import LiveSimulationAnalyticsResult
+
 
 LiveStateLoader = Callable[[str], LeagueState]
 _logger = logging.getLogger("fsffl.product.forecast")
@@ -79,6 +81,7 @@ class UserRuntimeContext:
     league_state: LeagueState | None = None
     selected_team_id: str | None = None
     forecast_evidence: LiveForecastEvidence | None = None
+    simulation_analytics: LiveSimulationAnalyticsResult | None = None
 
 
 class PrivateBetaRuntimeStore:
@@ -131,6 +134,30 @@ class PrivateBetaRuntimeStore:
                 league_state=league_state,
                 selected_team_id=selected,
                 forecast_evidence=evidence,
+                simulation_analytics=None,
+            )
+            self._contexts[user_id] = updated
+            return updated
+
+    def set_simulation_analytics(
+        self,
+        user_id: str,
+        result: LiveSimulationAnalyticsResult,
+    ) -> UserRuntimeContext:
+        """Attach NEXT-4/NEXT-7 simulation output without rewriting its authority."""
+
+        with self._lock:
+            current = self.get(user_id)
+            if current.league_state is None or current.forecast_evidence is None:
+                raise ValueError("cannot attach simulation before league and forecast evidence")
+            if result.league_view.context.league_state_id != current.league_state.state_id:
+                raise ValueError("simulation analytics must match current LeagueState")
+            updated = UserRuntimeContext(
+                user_id=user_id,
+                league_state=current.league_state,
+                selected_team_id=current.selected_team_id,
+                forecast_evidence=current.forecast_evidence,
+                simulation_analytics=result,
             )
             self._contexts[user_id] = updated
             return updated
@@ -150,6 +177,7 @@ class PrivateBetaRuntimeStore:
                 league_state=current.league_state,
                 selected_team_id=team_id,
                 forecast_evidence=current.forecast_evidence,
+                simulation_analytics=current.simulation_analytics,
             )
             self._contexts[user_id] = updated
             return updated
