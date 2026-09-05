@@ -13,6 +13,7 @@ from .market import (
     estimate_market_price,
 )
 from .market_context import MarketContextCalibration, apply_market_context
+from .market_context_fit import MarketContextFitPolicy, fit_market_context_calibration
 from .models import (
     AssetValueProfile,
     ForecastValueInput,
@@ -41,6 +42,7 @@ __all__ = [
     "IntrinsicDynastyValueEstimate",
     "MarketBaselineMethod",
     "MarketContextCalibration",
+    "MarketContextFitPolicy",
     "MarketEvidenceKind",
     "MarketObservation",
     "MarketPriceEstimate",
@@ -59,4 +61,5 @@ __all__ = [
     "estimate_market_price",
     "estimate_pick_value",
     "estimate_transaction_price",
+    "fit_market_context_calibration",
 ]
