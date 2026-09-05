@@ -127,6 +127,90 @@ def test_optimizer_handles_flex_and_superflex_jointly() -> None:
     assert by_slot[(RosterSlot.SUPERFLEX, 1)] == "qb2"
 
 
+def test_equal_point_assignment_prefers_stronger_players_in_primary_slots() -> None:
+    state = league_state()
+    result = optimize_team_lineup(
+        state,
+        forecasts(),
+        team_id="team:1",
+        as_of=AS_OF,
+        horizon=ForecastHorizon.SEASON,
+    )
+
+    by_slot = {(item.slot, item.slot_index): item.player_id for item in result.assignments}
+    # Both QBs are starters either way, so this is a presentation-neutral tiebreak:
+    # the stronger QB occupies the canonical QB slot and the other QB occupies SF.
+    assert by_slot[(RosterSlot.QB, 1)] == "qb1"
+    assert by_slot[(RosterSlot.SUPERFLEX, 1)] == "qb2"
+    assert result.expected_points == 99.0
+
+
+def test_primary_slot_indices_are_sorted_by_projected_strength_without_changing_total() -> None:
+    players = (
+        player("qb1", Position.QB),
+        player("qb2", Position.QB),
+        player("wr1", Position.WR),
+        player("wr2", Position.WR),
+        player("wr3", Position.WR),
+        player("wr4", Position.WR),
+    )
+    state = LeagueState(
+        league=League(
+            league_id="league:slots",
+            name="Slot Test",
+            season=2026,
+            rules=LeagueRules(
+                team_count=2,
+                roster_size=6,
+                lineup=(
+                    LineupRequirement(slot=RosterSlot.QB, count=1),
+                    LineupRequirement(slot=RosterSlot.WR, count=3),
+                    LineupRequirement(slot=RosterSlot.FLEX, count=1),
+                    LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
+                ),
+                scoring=(),
+            ),
+        ),
+        as_of=AS_OF,
+        teams=(
+            Team(team_id="team:1", league_id="league:slots", display_name="One"),
+            Team(team_id="team:2", league_id="league:slots", display_name="Two"),
+        ),
+        team_states=(
+            TeamState(
+                team_id="team:1",
+                roster=tuple(RosterEntry(player_id=item.player_id, slot=RosterSlot.BENCH) for item in players),
+            ),
+            TeamState(team_id="team:2", roster=()),
+        ),
+        players=players,
+        player_states=tuple(
+            PlayerState(player_id=item.player_id, as_of=AS_OF, status=PlayerStatus.ACTIVE, provenance=PROVENANCE)
+            for item in players
+        ),
+    )
+    projections = (
+        forecast("qb1", Position.QB, 30.0),
+        forecast("qb2", Position.QB, 20.0),
+        forecast("wr1", Position.WR, 28.0),
+        forecast("wr2", Position.WR, 26.0),
+        forecast("wr3", Position.WR, 24.0),
+        forecast("wr4", Position.WR, 22.0),
+    )
+
+    result = optimize_team_lineup(
+        state, projections, team_id="team:1", as_of=AS_OF, horizon=ForecastHorizon.SEASON
+    )
+    by_slot = {(item.slot, item.slot_index): item.player_id for item in result.assignments}
+    assert by_slot[(RosterSlot.QB, 1)] == "qb1"
+    assert by_slot[(RosterSlot.WR, 1)] == "wr1"
+    assert by_slot[(RosterSlot.WR, 2)] == "wr2"
+    assert by_slot[(RosterSlot.WR, 3)] == "wr3"
+    assert by_slot[(RosterSlot.FLEX, 1)] == "wr4"
+    assert by_slot[(RosterSlot.SUPERFLEX, 1)] == "qb2"
+    assert result.expected_points == 150.0
+
+
 def test_marginal_impact_uses_actual_roster_replacement() -> None:
     result = marginal_lineup_impact(
         league_state(),
