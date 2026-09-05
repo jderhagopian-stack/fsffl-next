@@ -19,6 +19,7 @@ _POSITION_IDS = {
     Position.WR: "30",
     Position.TE: "40",
 }
+_MAX_PAGES = 12
 _NFL_TEAMS = {
     "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB",
     "HOU", "IND", "JAC", "JAX", "KC", "LAC", "LAR", "LV", "MIA", "MIN", "NE", "NO", "NYG",
@@ -28,7 +29,7 @@ _NFL_TEAMS = {
 
 class FFTodayLiveProjectionSource:
     provider_name = "fftoday"
-    source_version = "fftoday-season-projections-html-v4"
+    source_version = "fftoday-season-projections-html-v5"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -42,10 +43,24 @@ class FFTodayLiveProjectionSource:
         rows: list[CurrentProjectionRow] = []
         effective: datetime | None = None
         for position, pos_id in _POSITION_IDS.items():
-            html = self._http_get_text(self._url(season=season, pos_id=pos_id))
-            parsed_rows, updated = _parse_page(html, provider=self.provider_name, position=position)
-            rows.extend(parsed_rows)
-            effective = updated if effective is None else max(effective, updated)
+            position_rows: list[CurrentProjectionRow] = []
+            seen_external_ids: set[str] = set()
+            for page in range(_MAX_PAGES):
+                html = self._http_get_text(self._url(season=season, pos_id=pos_id, page=page))
+                parsed_rows, updated, has_next = _parse_page(
+                    html,
+                    provider=self.provider_name,
+                    position=position,
+                )
+                for row in parsed_rows:
+                    if row.external_id in seen_external_ids:
+                        continue
+                    seen_external_ids.add(row.external_id)
+                    position_rows.append(row)
+                effective = updated if effective is None else max(effective, updated)
+                if not has_next:
+                    break
+            rows.extend(position_rows)
         if not rows or effective is None:
             raise ValueError("FFToday returned no current projections")
         if effective > captured:
@@ -60,17 +75,22 @@ class FFTodayLiveProjectionSource:
         )
 
     @staticmethod
-    def _url(*, season: int, pos_id: str) -> str:
+    def _url(*, season: int, pos_id: str, page: int = 0) -> str:
+        if page < 0:
+            raise ValueError("FFToday page must be non-negative")
+        page_param = "" if page == 0 else f"&cur_page={page}"
         return (
             "https://www.fftoday.com/rankings/playerproj.php"
-            f"?LeagueID=&PosID={pos_id}&Season={season}&order_by=FFPts&sort_order=DESC"
+            f"?LeagueID=&PosID={pos_id}&Season={season}{page_param}&order_by=FFPts&sort_order=DESC"
         )
 
 
 _UPDATED_RE = re.compile(r"Updated:\s*(\d{1,2})/(\d{1,2})/(\d{4})", re.IGNORECASE)
 
 
-def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[CurrentProjectionRow, ...], datetime]:
+def _parse_page(
+    html: str, *, provider: str, position: Position
+) -> tuple[tuple[CurrentProjectionRow, ...], datetime, bool]:
     parser = HtmlTableParser()
     parser.feed(html)
     page_text = " ".join(parser.text_parts)
@@ -79,6 +99,7 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[
         raise ValueError("FFToday projection update date was not found")
     month, day, year = (int(value) for value in match.groups())
     effective = datetime(year, month, day, 12, 0, tzinfo=UTC)
+    has_next = bool(re.search(r"\bNext\s+Page\b", page_text, re.IGNORECASE))
 
     for table in parser.tables:
         header_index = next(
@@ -107,11 +128,11 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[
             if row is not None:
                 output.append(row)
         if output:
-            return tuple(output), effective
+            return tuple(output), effective, has_next
 
     text_rows = _rows_from_text_parts(parser.text_parts, provider=provider, position=position)
     if text_rows:
-        return text_rows, effective
+        return text_rows, effective, has_next
     raise ValueError(f"FFToday {position.value} projection table was not found")
 
 
