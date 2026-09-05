@@ -1,21 +1,51 @@
 let fsfflForecastRefreshInFlight=false;
 let fsfflForecastAttemptedState=null;
 let fsfflForecastRetryAt=0;
+let fsfflSimulationPollUntil=0;
 
 function setForecastRefreshMessage(message){
   const summary=document.querySelector('#runtime-status-summary');
   if(summary)summary.textContent=message;
 }
 
+async function pollExistingSimulation(){
+  if(!state?.context?.league_id||Date.now()>fsfflSimulationPollUntil)return false;
+  try{
+    const payload=await api('/api/product-context');
+    state.context=payload;
+    state.intelligence=null;
+    applyContext();
+    if(payload.simulation_ready){
+      fsfflForecastRetryAt=Number.POSITIVE_INFINITY;
+      fsfflSimulationPollUntil=0;
+      setForecastRefreshMessage('FSFFL simulation ready.');
+      return true;
+    }
+    if(payload.forecast_ready){
+      setForecastRefreshMessage('Forecasts ready. 50,000-run simulation is still finishing on the server…');
+      return false;
+    }
+  }catch(error){
+    console.error('Unable to poll FSFFL simulation status',error);
+  }
+  return false;
+}
+
 async function maybeRefreshFsfflForecasts(){
   // Forecast evidence is league-wide. Managed-team selection is intentionally
   // not a prerequisite; team choice only scopes downstream team/product views.
-  // A refresh is not complete until both forecast evidence and simulation are
-  // ready. This lets the beta recover after a reload/network interruption that
-  // occurs after NEXT-2 is stored but before the 50,000-run NEXT-4 simulation is
-  // attached.
+  // Mobile browsers can drop a long-running HTTP request before the 50,000-run
+  // simulation finishes. After such an interruption, poll the existing server
+  // work instead of launching a second state/forecast refresh that could make the
+  // first simulation stale against a newer immutable LeagueState.
   if(fsfflForecastRefreshInFlight||!state?.context?.league_id)return;
   if(state.context.forecast_ready&&state.context.simulation_ready)return;
+
+  if(fsfflSimulationPollUntil>Date.now()){
+    await pollExistingSimulation();
+    return;
+  }
+
   const stateId=state.context.state_id||'loaded';
   const now=Date.now();
   if(fsfflForecastAttemptedState===stateId&&now<fsfflForecastRetryAt)return;
@@ -34,16 +64,20 @@ async function maybeRefreshFsfflForecasts(){
     applyContext();
     if(payload.simulation_ready){
       fsfflForecastRetryAt=Number.POSITIVE_INFINITY;
+      fsfflSimulationPollUntil=0;
     }else{
-      // Forecast evidence may be valid even when a state-generation race makes
-      // a simulation result stale. Retry against the current canonical state.
-      fsfflForecastRetryAt=Date.now()+5000;
-      setForecastRefreshMessage('Forecasts ready. Simulation will retry against the current league state…');
+      fsfflSimulationPollUntil=Date.now()+180000;
+      fsfflForecastRetryAt=fsfflSimulationPollUntil;
+      setForecastRefreshMessage('Forecasts ready. 50,000-run simulation is finishing on the server…');
     }
   }catch(error){
     console.error('Unable to refresh FSFFL forecasts',error);
-    fsfflForecastRetryAt=Date.now()+30000;
-    setForecastRefreshMessage(`Intelligence refresh interrupted: ${error.message}. Retrying automatically…`);
+    // A mobile/network timeout does not prove the server-side simulation failed.
+    // Give the original request up to three minutes to finish and attach before
+    // permitting another full refresh against a newer canonical state.
+    fsfflSimulationPollUntil=Date.now()+180000;
+    fsfflForecastRetryAt=fsfflSimulationPollUntil;
+    setForecastRefreshMessage(`Connection interrupted (${error.message}). Checking the existing simulation instead of restarting it…`);
   }finally{
     fsfflForecastRefreshInFlight=false;
   }
