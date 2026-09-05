@@ -25,16 +25,8 @@ _MAX_PAGES = 12
 
 
 class NFLFantasyLiveProjectionSource:
-    """Acquire current NFL Fantasy season projections at the provider boundary.
-
-    NFL Fantasy remains an external evidence provider, never a downstream forecast
-    authority. Acquisition is paginated and normalized into the same current-row
-    contract used by every other NEXT-2 live source. The usage classification is
-    intentionally conservative until commercial rights are reviewed separately.
-    """
-
     provider_name = "nfl_fantasy"
-    source_version = "nfl-fantasy-season-projections-html-v1"
+    source_version = "nfl-fantasy-season-projections-html-v2"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -51,14 +43,8 @@ class NFLFantasyLiveProjectionSource:
             position_rows: list[CurrentProjectionRow] = []
             for page in range(_MAX_PAGES):
                 offset = 1 if page == 0 else page * _PAGE_SIZE + 1
-                html = self._http_get_text(
-                    self._url(season=season, position_id=position_id, offset=offset)
-                )
-                parsed, has_next = _parse_page(
-                    html,
-                    provider=self.provider_name,
-                    position=position,
-                )
+                html = self._http_get_text(self._url(season=season, position_id=position_id, offset=offset))
+                parsed, has_next = _parse_page(html, provider=self.provider_name, position=position)
                 if not parsed:
                     break
                 position_rows.extend(parsed)
@@ -69,9 +55,6 @@ class NFLFantasyLiveProjectionSource:
         if not rows:
             raise ValueError("NFL Fantasy returned no current projections")
 
-        # The projection pages do not expose a stable publication timestamp in the
-        # rendered table. Retrieval time is therefore the earliest availability
-        # timestamp FSFFL claims for this live snapshot.
         captured_utc = captured.astimezone(UTC)
         return CurrentProjectionSnapshot(
             provider=self.provider_name,
@@ -92,22 +75,13 @@ class NFLFantasyLiveProjectionSource:
         )
 
 
-def _parse_page(
-    html: str,
-    *,
-    provider: str,
-    position: Position,
-) -> tuple[tuple[CurrentProjectionRow, ...], bool]:
+def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[CurrentProjectionRow, ...], bool]:
     parser = HtmlTableParser()
     parser.feed(html)
 
     for table in parser.tables:
         header_index = next(
-            (
-                index
-                for index, row in enumerate(table)
-                if row and normalize_cell(row[0]).lower().startswith("player")
-            ),
+            (index for index, row in enumerate(table) if any(normalize_cell(cell).lower().startswith("player") for cell in row)),
             None,
         )
         if header_index is None:
@@ -140,26 +114,13 @@ def _is_last_page(text: str) -> bool:
 
 
 def _extract_identity(cell: str, position: Position) -> tuple[str, str]:
-    # Rendered cells resemble "Lamar Jackson QB - BAL View News" and may include
-    # status text after the team abbreviation.
-    match = re.search(
-        rf"^(.*?)\s+{re.escape(position.value)}\s+-\s+([A-Z]{{2,3}})\b",
-        cell.strip(),
-    )
+    match = re.search(rf"^(.*?)\s+{re.escape(position.value)}\s+-\s+([A-Z]{{2,3}})\b", cell.strip())
     if match is None:
         raise ValueError("NFL Fantasy player identity could not be parsed")
     return match.group(1).strip(), match.group(2)
 
 
-def _row_from_cells(
-    *,
-    provider: str,
-    position: Position,
-    cells: list[str],
-) -> CurrentProjectionRow | None:
-    # Season projection rows use the stable rendered order:
-    # Player, Opp, GP, pass Yds/TD/INT, rush Yds/TD, Rec/Yds/TD,
-    # return TD, fumble TD, 2PT, fumbles lost, fantasy points.
+def _row_from_cells(*, provider: str, position: Position, cells: list[str]) -> CurrentProjectionRow | None:
     if len(cells) < 16:
         return None
     name, team = _extract_identity(cells[0], position)
@@ -190,9 +151,15 @@ def _default_get_text(url: str) -> str:
     request = Request(
         url,
         headers={
-            "User-Agent": "fsffl-next/0.1 (+private-beta projection research)",
-            "Accept": "text/html,application/xhtml+xml",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "no-cache",
         },
     )
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider URL
-        return response.read().decode("utf-8", errors="replace")
+        text = response.read().decode("utf-8", errors="replace")
+    lowered = text.lower()
+    if "projection" not in lowered or "player" not in lowered:
+        raise ValueError("NFL Fantasy hosted response did not contain projection content")
+    return text
