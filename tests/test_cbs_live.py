@@ -30,3 +30,32 @@ def test_cbs_live_parses_current_position_pages() -> None:
     bijan = next(row for row in snapshot.rows if row.player_name == "Bijan Robinson")
     assert bijan.stats["rec"] == 71
     assert bijan.stats["fum_lost"] == 2
+
+
+def test_cbs_live_parses_hosted_text_grid_when_no_html_table_is_present() -> None:
+    pages = {
+        "/QB/": """<html><body><h1>2026 Projections Fantasy Football Quarterback Stats</h1><a>J. Jackson</a><span>QB</span><span>BAL</span><a>Lamar Jackson</a><span>QB</span><span>BAL</span><span>17</span><span>405</span><span>268</span><span>3,364</span><span>197.9</span><span>33</span><span>11</span><span>107.7</span><span>107</span><span>604</span><span>5.6</span><span>3</span><span>4</span><span>362</span><span>21.3</span></body></html>""",
+        "/RB/": """<html><body><h1>2026 Projections Fantasy Football Running Back Stats</h1><a>B. Robinson</a><span>RB</span><span>ATL</span><a>Bijan Robinson</a><span>RB</span><span>ATL</span><span>17</span><span>291</span><span>1,400</span><span>4.8</span><span>9</span><span>91</span><span>71</span><span>701</span><span>41.2</span><span>9.9</span><span>4</span><span>2</span><span>269</span><span>15.8</span></body></html>""",
+        "/WR/": """<html><body><h1>2026 Projections Fantasy Football Wide Receiver Stats</h1><a>D. London</a><span>WR</span><span>ATL</span><a>Drake London</a><span>WR</span><span>ATL</span><span>17</span><span>153</span><span>94</span><span>1,257</span><span>73.9</span><span>13.4</span><span>12</span><span>0</span><span>0</span><span>0.0</span><span>0</span><span>1</span><span>187</span><span>11.0</span></body></html>""",
+        "/TE/": """<html><body><h1>2026 Projections Fantasy Football Tight End Stats</h1><a>K. Pitts</a><span>TE</span><span>ATL</span><a>Kyle Pitts</a><span>TE</span><span>ATL</span><span>17</span><span>103</span><span>74</span><span>822</span><span>48.4</span><span>11.1</span><span>6</span><span>0</span><span>109</span><span>6.4</span></body></html>""",
+    }
+
+    def getter(url: str) -> str:
+        return next(html for marker, html in pages.items() if marker in url)
+
+    snapshot = CBSLiveProjectionSource(
+        http_get_text=getter,
+        clock=lambda: datetime(2026, 9, 5, tzinfo=UTC),
+    ).fetch_latest(season=2026)
+
+    assert len(snapshot.rows) == 4
+    lamar = next(row for row in snapshot.rows if row.player_name == "Lamar Jackson")
+    assert lamar.stats["pass_yd"] == 3364
+    assert lamar.stats["fum_lost"] == 4
+    bijan = next(row for row in snapshot.rows if row.player_name == "Bijan Robinson")
+    assert bijan.stats["rec_yd"] == 701
+    london = next(row for row in snapshot.rows if row.player_name == "Drake London")
+    assert london.stats["rec_td"] == 12
+    pitts = next(row for row in snapshot.rows if row.player_name == "Kyle Pitts")
+    assert pitts.stats["rec_yd"] == 822
+    assert pitts.stats["rush_yd"] == 0
