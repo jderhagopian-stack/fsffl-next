@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
 from pathlib import Path
@@ -46,21 +47,32 @@ def _beta_auth_enabled() -> bool:
     return os.getenv("FSFFL_BETA_AUTH", "0").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _password_digest(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
 def require_beta_user(
     credentials: HTTPBasicCredentials | None = Depends(_security),
 ) -> str:
-    """Protect the private beta when FSFFL_BETA_AUTH is enabled."""
+    """Protect the private beta when FSFFL_BETA_AUTH is enabled.
+
+    Hosted environments store only a one-way SHA-256 digest of the beta password,
+    never the plaintext credential.
+    """
 
     if not _beta_auth_enabled():
         return "local-beta-user"
     expected_username = os.getenv("FSFFL_BETA_USERNAME")
-    expected_password = os.getenv("FSFFL_BETA_PASSWORD")
-    if not expected_username or not expected_password:
+    expected_password_sha256 = os.getenv("FSFFL_BETA_PASSWORD_SHA256")
+    if not expected_username or not expected_password_sha256:
         raise RuntimeError("beta auth is enabled but runtime credentials are not configured")
     valid = (
         credentials is not None
         and secrets.compare_digest(credentials.username, expected_username)
-        and secrets.compare_digest(credentials.password, expected_password)
+        and secrets.compare_digest(
+            _password_digest(credentials.password),
+            expected_password_sha256.lower(),
+        )
     )
     if not valid:
         raise HTTPException(
