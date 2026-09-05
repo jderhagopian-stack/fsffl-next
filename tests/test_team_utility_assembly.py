@@ -28,7 +28,7 @@ AS_OF = datetime(2026, 9, 5, 16, 0, tzinfo=UTC)
 PROV = Provenance(source="test", retrieved_at=AS_OF, effective_at=AS_OF)
 
 
-def test_assembly_derives_resilience_and_classifies_supplied_simulation() -> None:
+def _state_and_forecasts() -> tuple[LeagueState, tuple[ForecastObservation, ...]]:
     players = (
         Player(player_id="qb1", full_name="QB1", position=Position.QB),
         Player(player_id="qb2", full_name="QB2", position=Position.QB),
@@ -87,7 +87,11 @@ def test_assembly_derives_resilience_and_classifies_supplied_simulation() -> Non
         )
         for player_id, points in (("qb1", 300.0), ("qb2", 200.0))
     )
-    outcome = TeamCompetitiveOutcome(
+    return state, forecasts
+
+
+def _outcome() -> TeamCompetitiveOutcome:
+    return TeamCompetitiveOutcome(
         team_id="team:1",
         expected_wins=9.0,
         wins_stddev=1.5,
@@ -96,6 +100,11 @@ def test_assembly_derives_resilience_and_classifies_supplied_simulation() -> Non
         simulation_count=50_000,
         simulation_model_version="sim-v1",
     )
+
+
+def test_assembly_derives_resilience_and_classifies_supplied_simulation() -> None:
+    state, forecasts = _state_and_forecasts()
+    outcome = _outcome()
     policy = CompetitiveStatePolicy(
         developing_playoff_min=0.20,
         competitive_playoff_min=0.45,
@@ -122,26 +131,44 @@ def test_assembly_derives_resilience_and_classifies_supplied_simulation() -> Non
     assert result.competitive_outcome is outcome
 
 
-def test_assembly_rejects_partial_competitive_state_inputs() -> None:
-    # Contract-level check: classification must never occur from a hidden default policy.
+def test_assembly_allows_simulation_without_inventing_state_classification() -> None:
+    state, forecasts = _state_and_forecasts()
+    outcome = _outcome()
+
+    result = assemble_team_utility_vector(
+        state,
+        forecasts,
+        team_id="team:1",
+        as_of=AS_OF,
+        horizon=ForecastHorizon.SEASON,
+        competitive_outcome=outcome,
+    )
+
+    assert result.competitive_outcome is outcome
+    assert result.calculated_competitive_state == CalculatedCompetitiveState.UNKNOWN
+
+
+def test_assembly_rejects_policy_without_simulation_outcome() -> None:
+    state, forecasts = _state_and_forecasts()
+    policy = CompetitiveStatePolicy(
+        developing_playoff_min=0.20,
+        competitive_playoff_min=0.45,
+        contender_playoff_min=0.65,
+        contender_first_place_min=0.15,
+        model_version="state-policy-v1",
+        evidence_through=AS_OF,
+        provenance="test policy",
+    )
     try:
         assemble_team_utility_vector(
-            LeagueState.model_construct(as_of=AS_OF),
-            (),
+            state,
+            forecasts,
             team_id="team:1",
             as_of=AS_OF,
             horizon=ForecastHorizon.SEASON,
-            competitive_outcome=TeamCompetitiveOutcome(
-                team_id="team:1",
-                expected_wins=0.0,
-                wins_stddev=0.0,
-                playoff_probability=0.0,
-                first_place_probability=0.0,
-                simulation_count=1,
-                simulation_model_version="sim-v1",
-            ),
+            competitive_state_policy=policy,
         )
     except ValueError as exc:
-        assert "supplied together" in str(exc)
+        assert "requires a supplied competitive outcome" in str(exc)
     else:
-        raise AssertionError("expected partial competitive-state inputs to fail closed")
+        raise AssertionError("expected policy without simulation outcome to fail closed")
