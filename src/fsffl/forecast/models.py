@@ -26,6 +26,7 @@ class ForecastMetric(StrEnum):
     RECEPTIONS = "receptions"
     REC_YARDS = "rec_yards"
     REC_TD = "rec_td"
+    FUMBLES_LOST = "fumbles_lost"
 
 
 class ForecastDistribution(FrozenModel):
