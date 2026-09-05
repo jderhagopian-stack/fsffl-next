@@ -1,30 +1,37 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import StrEnum
 from math import sqrt
 
-from fsffl.state.models import FrozenModel, LeagueRules, Provenance, RosterSlot
+from fsffl.state.models import FrozenModel, LeagueRules, Position, Provenance, RosterSlot
 
 from .models import ForecastDistribution, ForecastMetric, ForecastObservation
 
 
 class ScoringCoverageStatus(StrEnum):
     COMPLETE = "complete"
+    PROVISIONAL = "provisional"
     INCOMPLETE = "incomplete"
 
 
 class ScoringCoverage(FrozenModel):
     status: ScoringCoverageStatus
     supported_rule_stats: tuple[str, ...]
+    provisional_residual_rule_stats: tuple[str, ...] = ()
     unsupported_rule_stats: tuple[str, ...]
     ignored_non_lineup_rule_stats: tuple[str, ...]
-    model_version: str = "next2-league-scoring-bridge-v1"
+    model_version: str = "next2-league-scoring-bridge-v2"
 
 
-# Canonical Sleeper scoring keys whose effects are exactly linear in the raw
-# NEXT-2 forecast metrics. This table translates provider stat names only; the
-# actual coefficient always comes from LeagueRules.scoring.
+@dataclass(frozen=True)
+class ProvisionalResidualPrior:
+    mean_events: float
+    stddev_events: float
+    eligible_positions: frozenset[Position] | None = None
+
+
 _SLEEPER_LINEAR_RULES: dict[str, ForecastMetric] = {
     "pass_yd": ForecastMetric.PASS_YARDS,
     "pass_td": ForecastMetric.PASS_TD,
@@ -34,12 +41,30 @@ _SLEEPER_LINEAR_RULES: dict[str, ForecastMetric] = {
     "rec": ForecastMetric.RECEPTIONS,
     "rec_yd": ForecastMetric.REC_YARDS,
     "rec_td": ForecastMetric.REC_TD,
+    "fum_lost": ForecastMetric.FUMBLES_LOST,
 }
 
-# These settings are unambiguously team-defense or kicker scoring. They may be
-# ignored for the offensive forecast bridge only when the corresponding starting
-# position is absent. Return scoring and fumble-recovery scoring are deliberately
-# NOT in this list because offensive skill players can realize those events.
+_TWO_POINT_RULES: dict[str, ForecastMetric] = {
+    "pass_2pt": ForecastMetric.PASS_TD,
+    "rush_2pt": ForecastMetric.RUSH_TD,
+    "rec_2pt": ForecastMetric.REC_TD,
+}
+
+# Explicit bounded beta priors for very rare player-scoring events that current
+# vetted projection sources do not expose. These are deliberately tiny and live
+# in Forecast, not Presentation. They are provisional, versioned, and intended to
+# be replaced by empirical PIT historical rates. They keep known effects from
+# disappearing while avoiding a hard pipeline failure over immaterial tail events.
+_SKILL = frozenset({Position.RB, Position.WR, Position.TE})
+_RARE_EVENT_PRIORS: dict[str, ProvisionalResidualPrior] = {
+    "fum_rec": ProvisionalResidualPrior(mean_events=0.03, stddev_events=0.08),
+    "fum_rec_td": ProvisionalResidualPrior(mean_events=0.003, stddev_events=0.02),
+    "st_ff": ProvisionalResidualPrior(mean_events=0.005, stddev_events=0.03, eligible_positions=_SKILL),
+    "st_fum_rec": ProvisionalResidualPrior(mean_events=0.005, stddev_events=0.03, eligible_positions=_SKILL),
+    "st_td": ProvisionalResidualPrior(mean_events=0.02, stddev_events=0.10, eligible_positions=_SKILL),
+}
+_TWO_POINT_CONVERSION_PER_TD_PRIOR = 0.025
+
 _DST_PREFIXES = (
     "blk_kick",
     "def_",
@@ -59,15 +84,8 @@ def _has_lineup_slot(rules: LeagueRules, slot: RosterSlot) -> bool:
 
 
 def classify_scoring_coverage(rules: LeagueRules) -> ScoringCoverage:
-    """Classify whether raw NEXT-2 offensive stats can reproduce league scoring.
-
-    Any nonzero offensive scoring rule that cannot be represented by the current
-    raw forecast metrics is explicit and blocks a COMPLETE result. Nothing is
-    silently dropped. K/DST-only settings may be ignored only when that position
-    is absent from the starting lineup.
-    """
-
     supported: list[str] = []
+    provisional: list[str] = []
     unsupported: list[str] = []
     ignored: list[str] = []
     has_dst = _has_lineup_slot(rules, RosterSlot.DST)
@@ -80,6 +98,9 @@ def classify_scoring_coverage(rules: LeagueRules) -> ScoringCoverage:
         if stat in _SLEEPER_LINEAR_RULES:
             supported.append(stat)
             continue
+        if stat in _TWO_POINT_RULES or stat in _RARE_EVENT_PRIORS:
+            provisional.append(stat)
+            continue
         if not has_dst and stat.startswith(_DST_PREFIXES):
             ignored.append(stat)
             continue
@@ -88,16 +109,53 @@ def classify_scoring_coverage(rules: LeagueRules) -> ScoringCoverage:
             continue
         unsupported.append(stat)
 
+    if unsupported:
+        status = ScoringCoverageStatus.INCOMPLETE
+    elif provisional:
+        status = ScoringCoverageStatus.PROVISIONAL
+    else:
+        status = ScoringCoverageStatus.COMPLETE
     return ScoringCoverage(
-        status=(
-            ScoringCoverageStatus.COMPLETE
-            if not unsupported
-            else ScoringCoverageStatus.INCOMPLETE
-        ),
+        status=status,
         supported_rule_stats=tuple(sorted(supported)),
+        provisional_residual_rule_stats=tuple(sorted(provisional)),
         unsupported_rule_stats=tuple(sorted(unsupported)),
         ignored_non_lineup_rule_stats=tuple(sorted(ignored)),
     )
+
+
+def _provisional_residual(
+    *,
+    position: Position,
+    by_metric: dict[ForecastMetric, ForecastObservation],
+    rules: LeagueRules,
+) -> tuple[float, float, tuple[str, ...]]:
+    mean_points = 0.0
+    variance_points = 0.0
+    applied: list[str] = []
+    for rule in rules.scoring:
+        if rule.points == 0:
+            continue
+        stat = rule.stat
+        td_metric = _TWO_POINT_RULES.get(stat)
+        if td_metric is not None:
+            td = by_metric.get(td_metric)
+            if td is None:
+                continue
+            expected_events = max(0.0, td.distribution.mean) * _TWO_POINT_CONVERSION_PER_TD_PRIOR
+            mean_points += rule.points * expected_events
+            variance_points += (rule.points ** 2) * max(expected_events, 0.0)
+            applied.append(stat)
+            continue
+        prior = _RARE_EVENT_PRIORS.get(stat)
+        if prior is None:
+            continue
+        if prior.eligible_positions is not None and position not in prior.eligible_positions:
+            continue
+        mean_points += rule.points * prior.mean_events
+        variance_points += (rule.points * prior.stddev_events) ** 2
+        applied.append(stat)
+    return mean_points, variance_points, tuple(sorted(applied))
 
 
 def derive_league_fantasy_point_forecasts(
@@ -105,19 +163,10 @@ def derive_league_fantasy_point_forecasts(
     *,
     rules: LeagueRules,
     source: str = "fsffl:league_scored",
-    model_version: str = "next2-league-scoring-bridge-v1",
+    model_version: str = "next2-league-scoring-bridge-v2",
 ) -> tuple[ForecastObservation, ...]:
-    """Convert raw-stat forecasts into league-scored fantasy-point forecasts.
-
-    Means use the league's exact canonical scoring coefficients. For uncertainty,
-    v1 combines raw-stat marginal variances under an explicit independent-metric
-    assumption; this is visible in the model version and can be replaced by a
-    calibrated covariance model later. Unsupported nonzero scoring rules fail
-    closed instead of producing a deceptively precise fantasy-point forecast.
-    """
-
     coverage = classify_scoring_coverage(rules)
-    if coverage.status != ScoringCoverageStatus.COMPLETE:
+    if coverage.status == ScoringCoverageStatus.INCOMPLETE:
         raise ValueError(
             "league scoring cannot be reproduced from current raw forecast metrics; "
             f"unsupported rules: {list(coverage.unsupported_rule_stats)}"
@@ -157,10 +206,14 @@ def derive_league_fantasy_point_forecasts(
             continue
         first = items[0]
         mean = sum(coefficient * item.distribution.mean for _, coefficient, item in active)
-        variance = sum(
-            (coefficient * item.distribution.stddev) ** 2
-            for _, coefficient, item in active
+        variance = sum((coefficient * item.distribution.stddev) ** 2 for _, coefficient, item in active)
+        residual_mean, residual_variance, applied_residuals = _provisional_residual(
+            position=first.position,
+            by_metric=by_metric,
+            rules=rules,
         )
+        mean += residual_mean
+        variance += residual_variance
         effective = max(item.provenance.effective_at for _, _, item in active)
         retrieved = max(item.provenance.retrieved_at for _, _, item in active)
         provenance = Provenance(
@@ -169,6 +222,9 @@ def derive_league_fantasy_point_forecasts(
             effective_at=effective,
             source_version=model_version,
         )
+        suffix = ":independent_metric_variance"
+        if applied_residuals:
+            suffix += ":bounded_provisional_residual_v1"
         output.append(
             ForecastObservation(
                 player_id=first.player_id,
@@ -177,25 +233,12 @@ def derive_league_fantasy_point_forecasts(
                 metric=ForecastMetric.FANTASY_POINTS,
                 period_start=first.period_start,
                 period_end=first.period_end,
-                distribution=ForecastDistribution(
-                    mean=mean,
-                    stddev=sqrt(max(variance, 0.0)),
-                ),
+                distribution=ForecastDistribution(mean=mean, stddev=sqrt(max(variance, 0.0))),
                 source=source,
-                model_version=f"{model_version}:independent_metric_variance",
+                model_version=f"{model_version}{suffix}",
                 as_of=first.as_of,
                 provenance=provenance,
             )
         )
 
-    return tuple(
-        sorted(
-            output,
-            key=lambda item: (
-                item.player_id,
-                item.horizon.value,
-                item.period_start,
-                item.source,
-            ),
-        )
-    )
+    return tuple(sorted(output, key=lambda item: (item.player_id, item.horizon.value, item.period_start, item.source)))
