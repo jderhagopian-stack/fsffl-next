@@ -10,10 +10,8 @@ from fsffl.state.models import Position
 from .current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
 from .html_tables import HtmlTableParser, normalize_cell, numeric
 
-
 HtmlGetter = Callable[[str], str]
 Clock = Callable[[], datetime]
-
 
 _POSITION_IDS = {
     Position.QB: "10",
@@ -25,7 +23,7 @@ _POSITION_IDS = {
 
 class FFTodayLiveProjectionSource:
     provider_name = "fftoday"
-    source_version = "fftoday-season-projections-html-v1"
+    source_version = "fftoday-season-projections-html-v2"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -39,8 +37,7 @@ class FFTodayLiveProjectionSource:
         rows: list[CurrentProjectionRow] = []
         effective: datetime | None = None
         for position, pos_id in _POSITION_IDS.items():
-            url = self._url(season=season, pos_id=pos_id)
-            html = self._http_get_text(url)
+            html = self._http_get_text(self._url(season=season, pos_id=pos_id))
             parsed_rows, updated = _parse_page(html, provider=self.provider_name, position=position)
             rows.extend(parsed_rows)
             effective = updated if effective is None else max(effective, updated)
@@ -80,16 +77,27 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[
 
     for table in parser.tables:
         header_index = next(
-            (index for index, row in enumerate(table) if any(normalize_cell(cell) == "Player" for cell in row)),
+            (
+                index
+                for index, row in enumerate(table)
+                if any(normalize_cell(cell).lower().startswith("player") for cell in row)
+                and any(normalize_cell(cell).lower() == "tm" for cell in row)
+            ),
             None,
         )
         if header_index is None:
             continue
+        headers = [normalize_cell(cell) for cell in table[header_index]]
         output: list[CurrentProjectionRow] = []
         for cells in table[header_index + 1 :]:
             values = [normalize_cell(cell) for cell in cells]
             try:
-                row = _row_from_cells(provider=provider, position=position, cells=values)
+                row = _row_from_headers(
+                    provider=provider,
+                    position=position,
+                    headers=headers,
+                    cells=values,
+                )
             except (ValueError, IndexError):
                 continue
             if row is not None:
@@ -106,47 +114,75 @@ def _clean_name(value: str) -> str:
     return value.strip()
 
 
-def _row_from_cells(*, provider: str, position: Position, cells: list[str]) -> CurrentProjectionRow | None:
-    # FFToday tables expose player, team and bye first, followed by position-specific raw stats.
-    if len(cells) < 7:
+def _header_index(headers: list[str], predicate) -> int:
+    for index, header in enumerate(headers):
+        if predicate(header.strip().lower()):
+            return index
+    raise ValueError("required FFToday header missing")
+
+
+def _matching_indices(headers: list[str], label: str) -> list[int]:
+    label = label.lower()
+    return [i for i, header in enumerate(headers) if header.strip().lower() == label]
+
+
+def _value(cells: list[str], indexes: list[int], occurrence: int = 0, default: float | None = None) -> float:
+    if occurrence >= len(indexes) or indexes[occurrence] >= len(cells):
+        if default is not None:
+            return default
+        raise ValueError("required FFToday projection column missing")
+    return numeric(cells[indexes[occurrence]])
+
+
+def _row_from_headers(
+    *,
+    provider: str,
+    position: Position,
+    headers: list[str],
+    cells: list[str],
+) -> CurrentProjectionRow | None:
+    player_i = _header_index(headers, lambda value: value.startswith("player"))
+    team_i = _header_index(headers, lambda value: value == "tm")
+    if player_i >= len(cells) or team_i >= len(cells):
         return None
-    name = _clean_name(cells[0])
-    team = cells[1].upper()
+    name = _clean_name(cells[player_i])
+    team = cells[team_i].upper().strip()
     if not name or len(team) not in {2, 3}:
         return None
-    stats: dict[str, float]
+
+    yds = _matching_indices(headers, "yds")
+    td = _matching_indices(headers, "td")
+    att = _matching_indices(headers, "att")
+    rec = _matching_indices(headers, "rec")
+    ints = _matching_indices(headers, "int")
+
     if position == Position.QB:
-        if len(cells) < 12:
-            return None
         stats = {
-            "pass_yd": numeric(cells[5]),
-            "pass_td": numeric(cells[6]),
-            "pass_int": numeric(cells[7]),
-            "rush_yd": numeric(cells[9]),
-            "rush_td": numeric(cells[10]),
+            "pass_yd": _value(cells, yds, 0),
+            "pass_td": _value(cells, td, 0),
+            "pass_int": _value(cells, ints, 0),
+            "rush_yd": _value(cells, yds, 1),
+            "rush_td": _value(cells, td, 1),
         }
     elif position == Position.RB:
-        if len(cells) < 10:
-            return None
         stats = {
-            "rush_yd": numeric(cells[4]),
-            "rush_td": numeric(cells[5]),
-            "rec": numeric(cells[6]),
-            "rec_yd": numeric(cells[7]),
-            "rec_td": numeric(cells[8]),
+            "rush_yd": _value(cells, yds, 0),
+            "rush_td": _value(cells, td, 0),
+            "rec": _value(cells, rec, 0),
+            "rec_yd": _value(cells, yds, 1),
+            "rec_td": _value(cells, td, 1),
         }
     elif position in {Position.WR, Position.TE}:
-        if len(cells) < 10:
-            return None
         stats = {
-            "rec": numeric(cells[3]),
-            "rec_yd": numeric(cells[4]),
-            "rec_td": numeric(cells[5]),
-            "rush_yd": numeric(cells[7]),
-            "rush_td": numeric(cells[8]),
+            "rec": _value(cells, rec, 0),
+            "rec_yd": _value(cells, yds, 0),
+            "rec_td": _value(cells, td, 0),
+            "rush_yd": _value(cells, yds, 1, 0.0),
+            "rush_td": _value(cells, td, 1, 0.0),
         }
     else:
         return None
+
     return CurrentProjectionRow(
         provider=provider,
         external_id=f"{position.value}:{team}:{name}",
