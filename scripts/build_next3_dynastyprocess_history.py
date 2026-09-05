@@ -60,14 +60,24 @@ def main() -> None:
         raise RuntimeError("no DynastyProcess values.csv history found")
 
     by_snapshot_date = {}
+    skipped_schema_commits = 0
     for commit in commits:
         csv_text = _run_git(args.dynastyprocess_repo, "show", f"{commit}:{VALUES_PATH}")
-        normalized = normalize_dynastyprocess_values(
-            csv_text,
-            asset_id_by_fp_id=crosswalk,
-            source_version=commit,
-            provenance_uri=f"git:dynastyprocess/data@{commit}:{VALUES_PATH}",
-        )
+        try:
+            normalized = normalize_dynastyprocess_values(
+                csv_text,
+                asset_id_by_fp_id=crosswalk,
+                source_version=commit,
+                provenance_uri=f"git:dynastyprocess/data@{commit}:{VALUES_PATH}",
+            )
+        except ValueError as exc:
+            # Older DynastyProcess snapshots predate the provider-id fields needed
+            # for a defensible canonical crosswalk. They are unusable evidence for
+            # NEXT-3 and must be skipped rather than guessed or name-matched.
+            if "schema missing required columns" not in str(exc):
+                raise
+            skipped_schema_commits += 1
+            continue
         if not normalized.observations:
             continue
         snapshot_date = max(row.observed_at for row in normalized.observations).date()
@@ -98,6 +108,7 @@ def main() -> None:
     print(
         "built DynastyProcess history panel: "
         f"snapshots={len(by_snapshot_date)} observations={len(observations)} "
+        f"skipped_schema_commits={skipped_schema_commits} "
         f"first={min(by_snapshot_date)} last={max(by_snapshot_date)}"
     )
 
