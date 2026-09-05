@@ -11,7 +11,9 @@ from fsffl.analytics.models import (
     ModelLineageEntry,
 )
 from fsffl.analytics.team import TeamAnalyticsView, build_team_analytics_view
+from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.team_utility.lineup import optimize_team_lineup
 
 
 class IntelligenceStage(StrEnum):
@@ -43,22 +45,32 @@ class IntelligenceRuntimeStatus(FrozenModel):
     status_model_version: str = "next8-intelligence-status-v2"
 
 
+class ForecastLineupAnalyticsResult(FrozenModel):
+    league_view: LeagueAnalyticsView
+    team_views: tuple[TeamAnalyticsView, ...]
+    unavailable_team_ids: tuple[str, ...] = ()
+    unavailable_reasons: tuple[str, ...] = ()
+    model_version: str = "next8-forecast-lineup-analytics-v1"
+
+
+def _generated_at(league_state: LeagueState, generated_at: datetime | None) -> datetime:
+    generated = generated_at or datetime.now(UTC)
+    if generated.tzinfo is None:
+        raise ValueError("generated_at must be timezone-aware")
+    return max(generated, league_state.as_of)
+
+
 def _state_only_context(
     league_state: LeagueState,
     *,
     generated_at: datetime | None = None,
 ) -> AnalyticsContext:
-    generated = generated_at or datetime.now(UTC)
-    if generated.tzinfo is None:
-        raise ValueError("generated_at must be timezone-aware")
-    if generated < league_state.as_of:
-        generated = league_state.as_of
     return AnalyticsContext(
         schema_version="1",
         league_id=league_state.league.league_id,
         league_state_id=league_state.state_id,
         as_of=league_state.as_of,
-        generated_at=generated,
+        generated_at=_generated_at(league_state, generated_at),
         lineage=(ModelLineageEntry(component="state", model_version=league_state.schema_version),),
         warnings=(
             AnalyticsWarning(
@@ -96,6 +108,80 @@ def build_state_only_league_view(
     return build_league_analytics_view(context=context, team_views=team_views)
 
 
+def build_forecast_lineup_analytics(
+    league_state: LeagueState,
+    *,
+    forecasts: tuple[ForecastObservation, ...],
+    forecast_model_version: str,
+    generated_at: datetime | None = None,
+) -> ForecastLineupAnalyticsResult:
+    """Attach NEXT-2 forecasts and NEXT-4 optimized lineups to NEXT-7 analytics.
+
+    This is deliberately not full Team Utility authority. It exposes only the
+    forecast-driven lineup result already owned by NEXT-4. Teams whose legal
+    lineup cannot be filled from multi-source forecast evidence remain missing;
+    product orchestration never imputes a player forecast to make the chart whole.
+    """
+
+    if any(item.as_of > league_state.as_of for item in forecasts):
+        raise ValueError("forecast evidence cannot postdate LeagueState")
+    context = AnalyticsContext(
+        schema_version="1",
+        league_id=league_state.league.league_id,
+        league_state_id=league_state.state_id,
+        as_of=league_state.as_of,
+        generated_at=_generated_at(league_state, generated_at),
+        lineage=(
+            ModelLineageEntry(component="state", model_version=league_state.schema_version),
+            ModelLineageEntry(component="forecast", model_version=forecast_model_version),
+            ModelLineageEntry(component="lineup", model_version="next4-lineup-v1"),
+        ),
+        warnings=(
+            AnalyticsWarning(
+                kind=AnalyticsWarningKind.MISSING_EVIDENCE,
+                code="value_simulation_not_enriched",
+                message=(
+                    "Authoritative forecasts and forecast-supported optimized lineups are attached where "
+                    "multi-source player coverage is sufficient. Value, simulation and full team utility remain pending."
+                ),
+                source_component="product-runtime",
+            ),
+        ),
+    )
+    team_views: list[TeamAnalyticsView] = []
+    unavailable_ids: list[str] = []
+    reasons: list[str] = []
+    for team in sorted(league_state.teams, key=lambda item: item.team_id):
+        lineup = None
+        try:
+            lineup = optimize_team_lineup(
+                league_state,
+                forecasts,
+                team_id=team.team_id,
+                as_of=league_state.as_of,
+                horizon=ForecastHorizon.SEASON,
+            )
+        except ValueError as exc:
+            unavailable_ids.append(team.team_id)
+            reasons.append(f"{team.team_id}: {exc}")
+        team_views.append(
+            build_team_analytics_view(
+                league_state,
+                context=context,
+                team_id=team.team_id,
+                forecasts=forecasts,
+                optimized_lineup=lineup,
+            )
+        )
+    views = tuple(team_views)
+    return ForecastLineupAnalyticsResult(
+        league_view=build_league_analytics_view(context=context, team_views=views),
+        team_views=views,
+        unavailable_team_ids=tuple(unavailable_ids),
+        unavailable_reasons=tuple(reasons),
+    )
+
+
 def state_first_runtime_status(
     league_state: LeagueState,
     *,
@@ -131,7 +217,7 @@ def state_first_runtime_status(
             IntelligenceStageStatus(
                 stage=IntelligenceStage.TEAM_UTILITY,
                 readiness=StageReadiness.WAITING_FOR_INPUT,
-                message="Lineup, simulation, and team utility are waiting for forecast/value inputs.",
+                message="Lineup may be available, but simulation and full team utility still require governed forecast/value evidence.",
             ),
             IntelligenceStageStatus(
                 stage=IntelligenceStage.ANALYTICS,
