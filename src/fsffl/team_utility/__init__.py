@@ -4,6 +4,7 @@ from .competitive_state import (
 )
 from .lineup import marginal_lineup_impact, optimize_team_lineup
 from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
+from .resilience import build_roster_resilience
 from .scoring import TeamUncertaintyMethod, build_team_scoring_distribution
 from .simulation import (
     RegularSeasonSimulationInput,
@@ -41,6 +42,7 @@ __all__ = [
     "TeamScoringDistribution",
     "TeamUncertaintyMethod",
     "TeamUtilityVector",
+    "build_roster_resilience",
     "build_team_scoring_distribution",
     "classify_calculated_competitive_state",
     "marginal_lineup_impact",
