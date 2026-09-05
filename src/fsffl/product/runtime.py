@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from threading import RLock
 from typing import Callable
@@ -13,6 +14,7 @@ from fsffl.state.models import LeagueState
 
 
 LiveStateLoader = Callable[[str], LeagueState]
+_logger = logging.getLogger("fsffl.product.forecast")
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,13 @@ def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvide
     """
 
     result = build_current_live_forecasts(league_state)
+    _logger.info(
+        "FSFFL live forecast sources successful=%s failures=%s raw_groups=%s scored_players=%s",
+        list(result.successful_source_ids),
+        list(result.failed_sources),
+        len(result.raw_ensemble),
+        len(result.fantasy_point_forecasts),
+    )
     uncertainty_ready = bool(result.fantasy_point_forecasts) and all(
         observation.distribution.stddev > 0
         for observation in result.fantasy_point_forecasts
