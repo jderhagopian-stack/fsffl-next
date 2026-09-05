@@ -17,8 +17,14 @@ from fsffl.trade_decision.models import BilateralTradeProposal
 
 from .dashboard import build_league_metric_chart
 from .intelligence_runtime import build_state_only_league_view, state_first_runtime_status
-from .runtime import PrivateBetaRuntimeStore, default_sleeper_state_loader
-from .team_page import build_state_only_team_view
+from .runtime import (
+    LiveForecastEvidence,
+    LiveForecastLoader,
+    PrivateBetaRuntimeStore,
+    default_live_forecast_loader,
+    default_sleeper_state_loader,
+)
+from .team_page import build_forecast_team_view, build_state_only_team_view
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
 
@@ -52,15 +58,7 @@ def _password_digest(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
-def require_beta_user(
-    credentials: HTTPBasicCredentials | None = Depends(_security),
-) -> str:
-    """Protect the private beta when FSFFL_BETA_AUTH is enabled.
-
-    Hosted environments store only a one-way SHA-256 digest of the beta password,
-    never the plaintext credential.
-    """
-
+def require_beta_user(credentials: HTTPBasicCredentials | None = Depends(_security)) -> str:
     if not _beta_auth_enabled():
         return "local-beta-user"
     expected_username = os.getenv("FSFFL_BETA_USERNAME")
@@ -70,10 +68,7 @@ def require_beta_user(
     valid = (
         credentials is not None
         and secrets.compare_digest(credentials.username, expected_username)
-        and secrets.compare_digest(
-            _password_digest(credentials.password),
-            expected_password_sha256.lower(),
-        )
+        and secrets.compare_digest(_password_digest(credentials.password), expected_password_sha256.lower())
     )
     if not valid:
         raise HTTPException(
@@ -87,6 +82,7 @@ def require_beta_user(
 def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> dict[str, object]:
     runtime = store.get(user_id)
     league_state = runtime.league_state
+    evidence = runtime.forecast_evidence
     return {
         "user_id": user_id,
         "league_id": league_state.league.league_id if league_state is not None else None,
@@ -95,8 +91,20 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "state_id": league_state.state_id if league_state is not None else None,
         "evidence_as_of": league_state.as_of.isoformat() if league_state is not None else None,
         "teams": ([{"team_id": team.team_id, "display_name": team.display_name} for team in league_state.teams] if league_state is not None else []),
+        "forecast_ready": evidence is not None and bool(evidence.league_scored_forecasts),
+        "forecast_sources": list(evidence.successful_source_ids) if evidence is not None else [],
         "product_version": "next8-product-v1",
     }
+
+
+def _sleeper_external_id(league_state: LeagueState) -> str:
+    for ref in league_state.league.provider_refs:
+        if ref.provider == "sleeper":
+            return ref.external_id
+    prefix = "sleeper:"
+    if league_state.league.league_id.startswith(prefix):
+        return league_state.league.league_id[len(prefix):]
+    raise ValueError("loaded league does not expose a Sleeper external id")
 
 
 def create_app(
@@ -104,6 +112,7 @@ def create_app(
     league_view_provider: LeagueViewProvider | None = None,
     runtime_store: PrivateBetaRuntimeStore | None = None,
     state_loader: StateLoader = default_sleeper_state_loader,
+    forecast_loader: LiveForecastLoader = default_live_forecast_loader,
     trade_evaluator: TradeEvaluator | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
@@ -133,7 +142,19 @@ def create_app(
         runtime = store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
-        return state_first_runtime_status(runtime.league_state).model_dump(mode="json")
+        evidence = runtime.forecast_evidence
+        message = None
+        if evidence is not None:
+            message = (
+                "Authoritative NEXT-2 ensemble loaded from independent sources: "
+                + ", ".join(evidence.successful_source_ids)
+                + "."
+            )
+        return state_first_runtime_status(
+            runtime.league_state,
+            forecast_ready=evidence is not None and bool(evidence.league_scored_forecasts),
+            forecast_message=message,
+        ).model_dump(mode="json")
 
     @application.post("/api/connect/sleeper")
     def connect_sleeper(request: ConnectSleeperLeagueRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -155,6 +176,29 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return _runtime_context_payload(store, user_id)
 
+    @application.post("/api/intelligence/refresh-forecasts")
+    def refresh_forecasts(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        try:
+            evidence: LiveForecastEvidence = forecast_loader(runtime.league_state)
+            # Forecast evidence is acquired after the original state snapshot. Re-load
+            # Sleeper once acquisition completes so the analytics PIT cutoff is at or
+            # after the forecast evidence being attached.
+            refreshed_state = state_loader(_sleeper_external_id(runtime.league_state))
+            store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Unable to refresh FSFFL forecasts: {exc}") from exc
+        return {
+            **_runtime_context_payload(store, user_id),
+            "successful_sources": list(evidence.successful_source_ids),
+            "failed_sources": list(evidence.failed_sources),
+            "ensemble_groups": len(evidence.raw_forecasts),
+            "league_scored_players": len(evidence.league_scored_forecasts),
+            "uncertainty_ready": evidence.uncertainty_ready,
+        }
+
     @application.get("/api/my-team")
     def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
@@ -162,6 +206,15 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
+        if runtime.forecast_evidence is not None:
+            evidence = runtime.forecast_evidence
+            forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
+            return build_forecast_team_view(
+                runtime.league_state,
+                team_id=runtime.selected_team_id,
+                forecasts=forecasts,
+                forecast_model_version=evidence.model_version,
+            ).model_dump(mode="json")
         return build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id).model_dump(mode="json")
 
     @application.get("/api/trade-center/browser")
@@ -183,14 +236,8 @@ def create_app(
         if request.counterparty_team_id == runtime.selected_team_id:
             raise HTTPException(status_code=422, detail="Trade counterparty must be a different team")
         try:
-            focal_assets = tuple(
-                resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref)
-                for ref in request.focal_asset_refs
-            )
-            counterparty_assets = tuple(
-                resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref)
-                for ref in request.counterparty_asset_refs
-            )
+            focal_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref) for ref in request.focal_asset_refs)
+            counterparty_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref) for ref in request.counterparty_asset_refs)
             draft = TradeDraft(
                 draft_id=f"product:{runtime.league_state.state_id}:{runtime.selected_team_id}:{request.counterparty_team_id}",
                 focal_team_id=runtime.selected_team_id,
