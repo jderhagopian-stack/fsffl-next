@@ -18,6 +18,17 @@ class EconomicConcept(StrEnum):
     SALE_PRICE = "sale_price"
 
 
+class EconomicFlow(StrEnum):
+    SENT = "sent"
+    RECEIVED = "received"
+
+
+class MissingEconomicEvidence(FrozenModel):
+    asset_id: str
+    concept: EconomicConcept
+    flow: EconomicFlow
+
+
 class ExpectedPackageValue(FrozenModel):
     """Expected package value for one explicit NEXT-3 concept and scale.
 
@@ -50,6 +61,7 @@ class TradeLegEconomics(FrozenModel):
     received_market: ExpectedPackageValue | None = None
     received_intrinsic: ExpectedPackageValue | None = None
     received_acquisition_price: ExpectedPackageValue | None = None
+    missing_evidence: tuple[MissingEconomicEvidence, ...] = ()
 
 
 class BilateralTradeEconomics(FrozenModel):
@@ -74,7 +86,7 @@ def _asset_id(asset: Asset) -> str:
         return asset.pick_id
     if isinstance(asset, FaabAsset):
         # FAAB is amount-bearing rather than identity-bearing. NEXT-3 may later
-        # provide a governed FAAB conversion; until then missing evidence remains visible.
+        # provide a governed conversion model; until then missing evidence is explicit.
         return f"faab:{asset.amount}"
     raise TypeError("unsupported trade asset")
 
@@ -96,7 +108,7 @@ def _summarize_package(
     profiles: Mapping[str, AssetValueProfile],
     *,
     concept: EconomicConcept,
-) -> ExpectedPackageValue | None:
+) -> tuple[ExpectedPackageValue | None, tuple[str, ...]]:
     included: list[str] = []
     missing: list[str] = []
     means: list[float] = []
@@ -123,15 +135,18 @@ def _summarize_package(
         versions.add(estimate.model_version)
 
     if not included:
-        return None
+        return None, tuple(missing)
     assert scale is not None
-    return ExpectedPackageValue(
-        concept=concept,
-        mean_value=sum(means),
-        scale=scale,
-        included_asset_ids=tuple(included),
-        missing_asset_ids=tuple(missing),
-        model_versions=tuple(sorted(versions)),
+    return (
+        ExpectedPackageValue(
+            concept=concept,
+            mean_value=sum(means),
+            scale=scale,
+            included_asset_ids=tuple(included),
+            missing_asset_ids=tuple(missing),
+            model_versions=tuple(sorted(versions)),
+        ),
+        tuple(missing),
     )
 
 
@@ -140,18 +155,48 @@ def _leg_economics(
     receives: TradeLeg,
     profiles: Mapping[str, AssetValueProfile],
 ) -> TradeLegEconomics:
+    sent_market, sent_market_missing = _summarize_package(
+        leg.sends, profiles, concept=EconomicConcept.MARKET_PRICE
+    )
+    sent_intrinsic, sent_intrinsic_missing = _summarize_package(
+        leg.sends, profiles, concept=EconomicConcept.INTRINSIC_VALUE
+    )
+    sent_sale, sent_sale_missing = _summarize_package(
+        leg.sends, profiles, concept=EconomicConcept.SALE_PRICE
+    )
+    received_market, received_market_missing = _summarize_package(
+        receives.sends, profiles, concept=EconomicConcept.MARKET_PRICE
+    )
+    received_intrinsic, received_intrinsic_missing = _summarize_package(
+        receives.sends, profiles, concept=EconomicConcept.INTRINSIC_VALUE
+    )
+    received_acquisition, received_acquisition_missing = _summarize_package(
+        receives.sends, profiles, concept=EconomicConcept.ACQUISITION_PRICE
+    )
+
+    missing: list[MissingEconomicEvidence] = []
+    for concept, flow, asset_ids in (
+        (EconomicConcept.MARKET_PRICE, EconomicFlow.SENT, sent_market_missing),
+        (EconomicConcept.INTRINSIC_VALUE, EconomicFlow.SENT, sent_intrinsic_missing),
+        (EconomicConcept.SALE_PRICE, EconomicFlow.SENT, sent_sale_missing),
+        (EconomicConcept.MARKET_PRICE, EconomicFlow.RECEIVED, received_market_missing),
+        (EconomicConcept.INTRINSIC_VALUE, EconomicFlow.RECEIVED, received_intrinsic_missing),
+        (EconomicConcept.ACQUISITION_PRICE, EconomicFlow.RECEIVED, received_acquisition_missing),
+    ):
+        missing.extend(
+            MissingEconomicEvidence(asset_id=asset_id, concept=concept, flow=flow)
+            for asset_id in asset_ids
+        )
+
     return TradeLegEconomics(
         team_id=leg.team_id,
-        sent_market=_summarize_package(leg.sends, profiles, concept=EconomicConcept.MARKET_PRICE),
-        sent_intrinsic=_summarize_package(leg.sends, profiles, concept=EconomicConcept.INTRINSIC_VALUE),
-        sent_sale_price=_summarize_package(leg.sends, profiles, concept=EconomicConcept.SALE_PRICE),
-        received_market=_summarize_package(receives.sends, profiles, concept=EconomicConcept.MARKET_PRICE),
-        received_intrinsic=_summarize_package(receives.sends, profiles, concept=EconomicConcept.INTRINSIC_VALUE),
-        received_acquisition_price=_summarize_package(
-            receives.sends,
-            profiles,
-            concept=EconomicConcept.ACQUISITION_PRICE,
-        ),
+        sent_market=sent_market,
+        sent_intrinsic=sent_intrinsic,
+        sent_sale_price=sent_sale,
+        received_market=received_market,
+        received_intrinsic=received_intrinsic,
+        received_acquisition_price=received_acquisition,
+        missing_evidence=tuple(missing),
     )
 
 
