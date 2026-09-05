@@ -64,6 +64,18 @@ class SleeperNormalizer:
         "DEF": Position.DST,
     }
 
+    @staticmethod
+    def _age_years(raw_age: Any) -> float | None:
+        """Preserve explicit provider age without inferring or backfilling it."""
+
+        if isinstance(raw_age, bool) or raw_age is None:
+            return None
+        try:
+            age = float(raw_age)
+        except (TypeError, ValueError):
+            return None
+        return age if age >= 0 else None
+
     def normalize(self, bundle: SleeperPayloadBundle, *, as_of: datetime) -> LeagueState:
         if as_of.tzinfo is None:
             raise ValueError("as_of must be timezone-aware")
@@ -211,6 +223,7 @@ class SleeperNormalizer:
                 PlayerState(
                     player_id=player_id,
                     as_of=as_of,
+                    age_years=self._age_years(raw.get("age")),
                     nfl_team=str(nfl_team) if nfl_team else None,
                     status=status,
                     provenance=provenance,
