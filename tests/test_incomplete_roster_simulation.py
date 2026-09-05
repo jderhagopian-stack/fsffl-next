@@ -17,6 +17,7 @@ from fsffl.state.models import (
     LeagueRules,
     LeagueState,
     LineupRequirement,
+    NflTeamBye,
     Player,
     PlayerState,
     Position,
@@ -46,10 +47,10 @@ def _state() -> LeagueState:
         ),
     )
     players = (
-        Player(player_id="a1", full_name="A One", position=Position.QB),
-        Player(player_id="a2", full_name="A Two", position=Position.QB),
-        Player(player_id="thin1", full_name="Thin QB", position=Position.QB),
-        Player(player_id="taxi1", full_name="Taxi QB", position=Position.QB),
+        Player(player_id="a1", full_name="A One", position=Position.QB, nfl_team="NE"),
+        Player(player_id="a2", full_name="A Two", position=Position.QB, nfl_team="NYJ"),
+        Player(player_id="thin1", full_name="Thin QB", position=Position.QB, nfl_team="BUF"),
+        Player(player_id="taxi1", full_name="Taxi QB", position=Position.QB, nfl_team="MIA"),
     )
     return LeagueState(
         league=league,
@@ -76,7 +77,12 @@ def _state() -> LeagueState:
         ),
         players=players,
         player_states=tuple(
-            PlayerState(player_id=player.player_id, as_of=AS_OF, provenance=PROV)
+            PlayerState(
+                player_id=player.player_id,
+                as_of=AS_OF,
+                nfl_team=player.nfl_team,
+                provenance=PROV,
+            )
             for player in players
         ),
         matchups=tuple(
@@ -87,6 +93,12 @@ def _state() -> LeagueState:
                 provenance=PROV,
             )
             for week in range(1, 5)
+        ),
+        nfl_team_byes=(
+            NflTeamBye(season=2026, nfl_team="NE", week=5, provenance=PROV),
+            NflTeamBye(season=2026, nfl_team="NYJ", week=6, provenance=PROV),
+            NflTeamBye(season=2026, nfl_team="BUF", week=7, provenance=PROV),
+            NflTeamBye(season=2026, nfl_team="MIA", week=8, provenance=PROV),
         ),
     )
 
