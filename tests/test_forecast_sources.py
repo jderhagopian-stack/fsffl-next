@@ -53,6 +53,7 @@ def test_first_benchmark_cohort_is_conservative_about_provider_rights() -> None:
         "nflverse_outcomes",
         "dynastyprocess_fantasypros_archive",
         "fftoday",
+        "espn_mike_clay",
         "razzball",
         "fantasypros",
     }
@@ -61,6 +62,7 @@ def test_first_benchmark_cohort_is_conservative_about_provider_rights() -> None:
     assert registry.get("fantasypros").commercial_use_status == RightsStatus.REQUIRES_REVIEW
     assert registry.get("razzball").redistribution_status == RightsStatus.REQUIRES_REVIEW
     assert registry.get("fftoday").historical_availability == HistoricalAvailability.ARCHIVED
+    assert registry.get("espn_mike_clay").historical_availability == HistoricalAvailability.ARCHIVED
 
 
 def test_outcome_backbone_is_not_treated_as_projection_vote() -> None:
@@ -78,5 +80,11 @@ def test_dynastyprocess_fpecr_is_ranking_evidence_not_raw_projection_vote() -> N
 
 def test_fftoday_is_governed_as_projection_candidate() -> None:
     record = first_benchmark_source_registry().get("fftoday")
+    assert record.roles == (SourceRole.PROJECTION,)
+    assert record.access_status == AccessStatus.INVESTIGATE
+
+
+def test_espn_mike_clay_is_governed_as_projection_candidate() -> None:
+    record = first_benchmark_source_registry().get("espn_mike_clay")
     assert record.roles == (SourceRole.PROJECTION,)
     assert record.access_status == AccessStatus.INVESTIGATE
