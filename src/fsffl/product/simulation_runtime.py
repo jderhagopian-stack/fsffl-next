@@ -20,10 +20,9 @@ from fsffl.team_utility import (
     RegularSeasonSimulationResult,
     TeamUtilityVector,
     assemble_team_utility_vector,
+    build_bye_aware_weekly_team_scoring_distribution,
     build_regular_season_simulation_input,
-    build_weekly_team_scoring_distribution,
     optimize_team_lineup,
-    regular_season_game_counts,
     simulate_regular_season,
 )
 
@@ -34,7 +33,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     league_view: LeagueAnalyticsView
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
-    model_version: str = "next8-live-simulation-analytics-v2"
+    model_version: str = "next8-live-simulation-analytics-v3"
 
 
 def build_live_simulation_analytics(
@@ -46,16 +45,19 @@ def build_live_simulation_analytics(
     seed: int = 20260905,
     generated_at: datetime | None = None,
 ) -> LiveSimulationAnalyticsResult:
-    """Run Forecast -> NEXT-4 Simulation -> NEXT-7 for a real dynasty league.
+    """Run Forecast -> week-specific NEXT-4 Simulation -> NEXT-7.
 
-    Rare missing active-player forecasts receive a conservative governed NEXT-2
-    position-floor fallback before NEXT-4. A roster that still cannot legally fill
-    every required slot is simulated with explicit zero-point unfilled slots.
-    Neither condition is allowed to block league-wide competitive outcomes.
+    Canonical NFL bye state is consumed from State authority. NEXT-4 re-optimizes
+    every fantasy roster for every scheduled fantasy week after excluding players
+    whose NFL team is on bye. Season distributions are decomposed to equal active
+    NFL-game distributions as an explicit provisional bridge until authoritative
+    NEXT-2 weekly forecasts are available.
     """
 
     if any(item.as_of > league_state.as_of for item in forecasts):
         raise ValueError("simulation forecast evidence cannot postdate LeagueState")
+    if not league_state.nfl_team_byes:
+        raise ValueError("canonical NFL bye-week state is required for live simulation")
     generated = generated_at or datetime.now(UTC)
     if generated.tzinfo is None:
         raise ValueError("generated_at must be timezone-aware")
@@ -73,10 +75,14 @@ def build_live_simulation_analytics(
         if item.source == PROVISIONAL_POSITION_FLOOR_SOURCE
     }
 
-    game_counts = regular_season_game_counts(league_state)
+    fantasy_weeks = tuple(sorted({matchup.week for matchup in league_state.matchups}))
+    if not fantasy_weeks:
+        raise ValueError("canonical fantasy regular-season schedule is required")
+
     lineups = {}
-    scoring = []
+    weekly_scoring = []
     incomplete_team_names: list[str] = []
+    bye_week_unfilled: list[str] = []
     for team in sorted(league_state.teams, key=lambda item: item.team_id):
         lineup = optimize_team_lineup(
             league_state,
@@ -92,23 +98,25 @@ def build_live_simulation_analytics(
                 f"{item.slot.value}{item.slot_index}" for item in lineup.unfilled_slots
             )
             incomplete_team_names.append(f"{team.display_name} ({slots})")
-        scoring.append(
-            build_weekly_team_scoring_distribution(
+
+        for week in fantasy_weeks:
+            week_distribution = build_bye_aware_weekly_team_scoring_distribution(
                 league_state,
                 effective_forecasts,
                 team_id=team.team_id,
+                week=week,
                 as_of=league_state.as_of,
-                regular_season_game_count=game_counts[team.team_id],
-                allow_unfilled_slots=True,
             )
-        )
+            weekly_scoring.append(week_distribution)
+            if "explicit_unfilled_zero" in week_distribution.model_version and not lineup.unfilled_slots:
+                bye_week_unfilled.append(f"{team.display_name} W{week}")
 
     request = build_regular_season_simulation_input(
         league_state,
-        scoring=tuple(scoring),
+        weekly_scoring=tuple(weekly_scoring),
         simulation_count=simulation_count,
         seed=seed,
-        model_version="next4-live-regular-season-v2",
+        model_version="next4-live-regular-season-v3:bye-aware-weekly-lineups",
     )
     simulation = simulate_regular_season(request)
     outcomes = {item.team_id: item for item in simulation.outcomes}
@@ -127,8 +135,9 @@ def build_live_simulation_analytics(
             kind=AnalyticsWarningKind.PROVISIONAL,
             code="weekly_scoring_decomposition_provisional",
             message=(
-                "Weekly scoring uses the governed independent equal-week decomposition of calibrated "
-                "season uncertainty until empirical weekly/covariance evidence is promoted."
+                "Simulation is bye-aware and re-optimizes each roster for each fantasy week. Player season "
+                "distributions are currently decomposed into equal active-NFL-game distributions until "
+                "authoritative empirical NEXT-2 weekly forecasts are promoted."
             ),
             source_component="team-utility",
         ),
@@ -167,6 +176,19 @@ def build_live_simulation_analytics(
                 source_component="team-utility",
             )
         )
+    if bye_week_unfilled:
+        warnings.append(
+            AnalyticsWarning(
+                kind=AnalyticsWarningKind.PROVISIONAL,
+                code="bye_week_unfilled_lineup_slots",
+                message=(
+                    "Bye-week availability leaves at least one legal starter slot unfilled for: "
+                    + "; ".join(bye_week_unfilled)
+                    + ". Those week-specific slots contribute zero points."
+                ),
+                source_component="team-utility",
+            )
+        )
 
     context = AnalyticsContext(
         schema_version="1",
@@ -177,13 +199,13 @@ def build_live_simulation_analytics(
         lineage=(
             ModelLineageEntry(component="state", model_version=league_state.schema_version),
             ModelLineageEntry(component="forecast", model_version=forecast_model_version),
-            ModelLineageEntry(component="lineup", model_version="next4-lineup-v3"),
+            ModelLineageEntry(component="lineup", model_version="next4-lineup-v3:bye-aware"),
             ModelLineageEntry(
                 component="team_scoring",
-                model_version="next4-weekly-team-scoring-v2:independent_equal_week",
+                model_version="next4-weekly-team-scoring-v3:bye_aware_equal_active_game",
             ),
             ModelLineageEntry(component="simulation", model_version=simulation.model_version),
-            ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v2"),
+            ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v3"),
         ),
         warnings=tuple(warnings),
     )
@@ -198,16 +220,16 @@ def build_live_simulation_analytics(
                 as_of=league_state.as_of,
                 horizon=ForecastHorizon.SEASON,
                 competitive_outcome=outcomes[team.team_id],
-                model_version="next4-live-team-utility-v2",
+                model_version="next4-live-team-utility-v3",
             )
-        except ValueError as exc:
+        except ValueError:
             if not lineups[team.team_id].unfilled_slots:
                 raise
             utility = TeamUtilityVector(
                 team_id=team.team_id,
                 as_of=league_state.as_of,
                 competitive_outcome=outcomes[team.team_id],
-                model_version="next4-live-team-utility-v2:resilience_unavailable_incomplete_roster",
+                model_version="next4-live-team-utility-v3:resilience_unavailable_incomplete_roster",
             )
         team_views.append(
             build_team_analytics_view(
