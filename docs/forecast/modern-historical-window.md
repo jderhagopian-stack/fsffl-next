@@ -12,6 +12,17 @@ This window gives NEXT-2 seven modern NFL seasons and is more representative of 
 
 The benchmark should retain older seasons for stability checks, but model-selection and production-weight promotion should emphasize recent held-out performance rather than treating every historical season as equally informative.
 
+## Acquisition operating model
+
+Historical acquisition is now managed as a **source x season recovery matrix**, not as a series of provider-specific research projects. For each candidate provider and each season from 2019 through 2025, classify the cell as:
+
+- `RECOVERED`: dated historical projection artifact/query verified;
+- `LEAD`: credible retained/archive lead exists but point-in-time/schema/rights work remains;
+- `NOT_YET_FOUND`: no defensible artifact recovered yet; this is not evidence that the projection never existed;
+- `UNUSABLE`: a concrete reason prevents that source-season artifact from being used.
+
+The acquisition sweep should be broad first and deep second. Do not spend excessive time perfecting one provider while obvious modern gaps remain elsewhere. Once at least three genuine projection sources have defensible overlapping modern history and useful player/position coverage, run the first benchmark immediately and continue filling the matrix incrementally.
+
 ## Current modern evidence recovered
 
 ### NFL Fantasy
@@ -22,11 +33,11 @@ Historical projection pages are still addressable for prior seasons, including 2
 
 A public 2022 research repository contains retained provider-specific QB projection files for CBS, ESPN, NFL, and Yahoo, plus a FantasyPros 2021 RB distribution artifact. Repository commit history shows the files were present in 2022, which makes this a useful modern point-in-time recovery lead. Coverage is incomplete, so it is evidence for acquisition and adapter testing rather than a sufficient full benchmark on its own.
 
-### FantasyDataPros 2023 retained projections
+### FantasyDataPros retained projections
 
-A public FantasyDataPros course-data repository retains a dated **FantasyPros 2023 preseason full-stat projection file** named `01-Fantasy Pros Projections - (2023.08.17).csv`. The artifact includes player/team/position plus passing attempts, completions, passing yards, passing touchdowns, interceptions, rushing attempts/yards/touchdowns, receptions, receiving yards/touchdowns, and fumbles lost. This is exactly the raw-stat shape NEXT-2 prefers because league fantasy points can be derived later from canonical league rules rather than inherited from a provider scoring system.
+Public FantasyDataPros course-data repositories retain dated FantasyPros full-stat projection artifacts, including a **2022 preseason projection file dated 2022-08-25** and a **2023 preseason projection file dated 2023-08-17**. The 2023 artifact has been inspected directly and includes player/team/position plus passing attempts, completions, passing yards, passing touchdowns, interceptions, rushing attempts/yards/touchdowns, receptions, receiving yards/touchdowns, and fumbles lost. This is the raw-stat shape NEXT-2 prefers because league fantasy points can be derived later from canonical league rules rather than inherited from a provider scoring system.
 
-The repository README states that its course datasets are free to use, but upstream FantasyPros data rights remain a separate governance question. Treat the artifact as a strong **private-research acquisition candidate** and point-in-time/schema proof; do not assume that the upstream table may be redistributed or commercialized merely because the teaching repository is public.
+These artifacts materially strengthen the modern recovery path because they show that dated preseason stat projections were being retained in the target calibration period, not merely that providers had current projection pages. Upstream FantasyPros data rights remain a separate governance question; use these as private-research acquisition candidates and point-in-time/schema evidence unless broader rights are verified.
 
 ### ffanalytics / FantasyFootballAnalytics
 
@@ -35,6 +46,22 @@ The modern ffanalytics project supports seasonal and weekly scraping from multip
 ### Older FantasyFootballAnalytics archive
 
 The retained 2012-2014 files confirm that multiple providers historically published comparable raw stat projections. They are useful for architecture validation, but they are supplemental to the 2019-2025 priority window.
+
+## Working recovery matrix
+
+This matrix tracks what has actually been recovered or credibly located so far. It is intentionally conservative: a provider is not marked recovered merely because it undoubtedly published projections that season.
+
+| Source | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| FantasyPros raw stats | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | RECOVERED | RECOVERED | NOT_YET_FOUND | NOT_YET_FOUND |
+| NFL Fantasy raw stats | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | LEAD |
+| CBS raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
+| ESPN raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
+| Yahoo raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
+| Razzball raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | LEAD | NOT_YET_FOUND |
+| FFToday raw stats | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND | NOT_YET_FOUND |
+
+`RECOVERED` here means the artifact itself has been located with a season/date identity strong enough to proceed to schema and rights review. It does not by itself grant redistribution or commercial rights.
 
 ## Acquisition objective
 
