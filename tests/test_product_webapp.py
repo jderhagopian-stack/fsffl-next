@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueTeamAnalyticsRow
 from fsffl.analytics.models import AnalyticsContext
 from fsffl.product.webapp import create_app
+from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 
 def _league_view() -> LeagueAnalyticsView:
@@ -35,6 +36,28 @@ def _league_view() -> LeagueAnalyticsView:
     )
 
 
+def _canonical_state() -> LeagueState:
+    as_of = datetime(2026, 9, 5, tzinfo=UTC)
+    league = League(
+        league_id="sleeper:123",
+        name="Beta League",
+        season=2026,
+        rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
+    )
+    teams = (
+        Team(team_id="a", league_id=league.league_id, display_name="Alpha"),
+        Team(team_id="b", league_id=league.league_id, display_name="Beta"),
+    )
+    return LeagueState(
+        league=league,
+        as_of=as_of,
+        teams=teams,
+        team_states=(TeamState(team_id="a"), TeamState(team_id="b")),
+        players=(),
+        player_states=(),
+    )
+
+
 def test_health_is_available_without_beta_auth(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "1")
     monkeypatch.setenv("FSFFL_BETA_USERNAME", "jimmy")
@@ -56,12 +79,12 @@ def test_private_shell_requires_credentials_when_enabled(monkeypatch) -> None:
     assert "FSFFL NEXT" in response.text
 
 
-def test_chart_endpoint_fails_explicitly_without_loaded_league(monkeypatch) -> None:
+def test_chart_endpoint_fails_explicitly_without_analytics(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     client = TestClient(create_app())
     response = client.get("/api/league/chart?metric=expected_wins")
     assert response.status_code == 409
-    assert "No league analytics provider" in response.json()["detail"]
+    assert "League analytics are not available" in response.json()["detail"]
 
 
 def test_chart_endpoint_renders_next7_metric_view(monkeypatch) -> None:
@@ -76,10 +99,41 @@ def test_chart_endpoint_renders_next7_metric_view(monkeypatch) -> None:
     assert [point["y"] for point in payload["series"][0]["points"]] == [9.0, 7.0]
 
 
-def test_product_context_reflects_loaded_state(monkeypatch) -> None:
+def test_product_context_reflects_loaded_analytics_state(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     view = _league_view()
     client = TestClient(create_app(league_view_provider=lambda: view))
     payload = client.get("/api/product-context").json()
     assert payload["league_id"] == "l1"
     assert payload["state_id"] == "s1"
+
+
+def test_connect_sleeper_loads_canonical_state_without_network(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    calls: list[str] = []
+
+    def loader(league_id: str) -> LeagueState:
+        calls.append(league_id)
+        return _canonical_state()
+
+    client = TestClient(create_app(state_loader=loader))
+    response = client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert calls == ["123"]
+    assert payload["league_id"] == "sleeper:123"
+    assert payload["league_name"] == "Beta League"
+    assert [team["display_name"] for team in payload["teams"]] == ["Alpha", "Beta"]
+    assert payload["state_id"]
+
+
+def test_select_team_requires_loaded_league_and_valid_team(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    client = TestClient(create_app(state_loader=lambda _: _canonical_state()))
+    assert client.post("/api/select-team", json={"team_id": "a"}).status_code == 422
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    bad = client.post("/api/select-team", json={"team_id": "not-there"})
+    assert bad.status_code == 422
+    good = client.post("/api/select-team", json={"team_id": "a"})
+    assert good.status_code == 200
+    assert good.json()["team_id"] == "a"
