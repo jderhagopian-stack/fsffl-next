@@ -10,17 +10,14 @@ from fsffl.state.models import Position
 from .current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
 from .html_tables import HtmlTableParser, normalize_cell, numeric
 
-
 HtmlGetter = Callable[[str], str]
 Clock = Callable[[], datetime]
-
-
 _POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
 
 
 class CBSLiveProjectionSource:
     provider_name = "cbs"
-    source_version = "cbs-season-projections-html-v1"
+    source_version = "cbs-season-projections-html-v2"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -33,13 +30,9 @@ class CBSLiveProjectionSource:
             raise ValueError("live CBS clock must be timezone-aware")
         rows: list[CurrentProjectionRow] = []
         for position in _POSITIONS:
-            url = self._url(season=season, position=position)
-            rows.extend(_parse_page(self._http_get_text(url), provider=self.provider_name, position=position))
+            rows.extend(_parse_page(self._http_get_text(self._url(season=season, position=position)), provider=self.provider_name, position=position))
         if not rows:
             raise ValueError("CBS returned no current projections")
-        # CBS current projection pages do not consistently expose an explicit
-        # publication/update timestamp. Retrieval time is therefore the earliest
-        # demonstrable availability time FSFFL may claim for this live snapshot.
         return CurrentProjectionSnapshot(
             provider=self.provider_name,
             captured_at=captured.astimezone(UTC),
@@ -51,27 +44,22 @@ class CBSLiveProjectionSource:
 
     @staticmethod
     def _url(*, season: int, position: Position) -> str:
-        return (
-            "https://www.cbssports.com/fantasy/football/stats/"
-            f"{position.value}/{season}/season/projections/nonppr/"
-        )
+        return f"https://www.cbssports.com/fantasy/football/stats/{position.value}/{season}/season/projections/nonppr/"
 
 
 def _parse_page(html: str, *, provider: str, position: Position) -> tuple[CurrentProjectionRow, ...]:
     parser = HtmlTableParser()
     parser.feed(html)
     for table in parser.tables:
-        header_index = next(
-            (index for index, row in enumerate(table) if any(normalize_cell(cell).startswith("Player") for cell in row)),
-            None,
-        )
+        header_index = next((i for i, row in enumerate(table) if any(normalize_cell(cell).startswith("Player") for cell in row)), None)
         if header_index is None:
             continue
+        headers = [normalize_cell(cell).upper() for cell in table[header_index]]
         output: list[CurrentProjectionRow] = []
-        for cells in table[header_index + 1 :]:
+        for cells in table[header_index + 1:]:
             values = [normalize_cell(cell) for cell in cells]
             try:
-                row = _row_from_cells(provider=provider, position=position, cells=values)
+                row = _row_from_cells(provider=provider, position=position, headers=headers, cells=values)
             except (ValueError, IndexError):
                 continue
             if row is not None:
@@ -82,12 +70,7 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[Curren
 
 
 def _extract_identity(cell: str, position: Position) -> tuple[str, str]:
-    # CBS player cells commonly contain both a short display name and the full
-    # identity, e.g. "J. Gibbs RB DET Jahmyr Gibbs RB DET". Capture the full
-    # identity between the first and final position/team markers.
-    pattern = re.compile(
-        rf"^.*?\b{re.escape(position.value)}\s+([A-Z]{{2,3}})\s+(.+?)\s+{re.escape(position.value)}\s+\1$"
-    )
+    pattern = re.compile(rf"^.*?\b{re.escape(position.value)}\s+([A-Z]{{2,3}})\s+(.+?)\s+{re.escape(position.value)}\s+\1$")
     match = pattern.match(cell.strip())
     if match:
         team, name = match.groups()
@@ -98,55 +81,67 @@ def _extract_identity(cell: str, position: Position) -> tuple[str, str]:
     raise ValueError("CBS player identity could not be parsed")
 
 
-def _row_from_cells(*, provider: str, position: Position, cells: list[str]) -> CurrentProjectionRow | None:
+def _indices(headers: list[str], label: str) -> list[int]:
+    return [i for i, value in enumerate(headers) if value == label]
+
+
+def _at(cells: list[str], indexes: list[int], occurrence: int = 0, default: float | None = None) -> float:
+    if len(indexes) <= occurrence:
+        if default is not None:
+            return default
+        raise ValueError("required CBS projection column missing")
+    return numeric(cells[indexes[occurrence]])
+
+
+def _row_from_cells(*, provider: str, position: Position, headers: list[str], cells: list[str]) -> CurrentProjectionRow | None:
     if len(cells) < 8:
         return None
     name, team = _extract_identity(cells[0], position)
-    stats: dict[str, float]
+    yds = _indices(headers, "YDS")
+    td = _indices(headers, "TD")
+    fl = _indices(headers, "FL")
+    rec = _indices(headers, "REC")
+    interceptions = _indices(headers, "INT")
+
     if position == Position.QB:
-        # Player, GP, CMP, ATT, YDS, TD, INT, ... rushing ATT/YDS/TD ...
-        if len(cells) < 14:
-            return None
         stats = {
-            "pass_yd": numeric(cells[4]),
-            "pass_td": numeric(cells[5]),
-            "pass_int": numeric(cells[6]),
-            "rush_yd": numeric(cells[9]),
-            "rush_td": numeric(cells[11]),
+            "pass_yd": _at(cells, yds, 0),
+            "pass_td": _at(cells, td, 0),
+            "pass_int": _at(cells, interceptions, 0),
+            "rush_yd": _at(cells, yds, 1),
+            "rush_td": _at(cells, td, 1),
+            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     elif position == Position.RB:
-        # Player, GP, rush ATT/YDS/AVG/TD, TGT, REC, rec YDS/YDSG/AVG/TD, ...
-        if len(cells) < 13:
-            return None
         stats = {
-            "rush_yd": numeric(cells[3]),
-            "rush_td": numeric(cells[5]),
-            "rec": numeric(cells[7]),
-            "rec_yd": numeric(cells[8]),
-            "rec_td": numeric(cells[11]),
+            "rush_yd": _at(cells, yds, 0),
+            "rush_td": _at(cells, td, 0),
+            "rec": _at(cells, rec, 0),
+            "rec_yd": _at(cells, yds, 1),
+            "rec_td": _at(cells, td, 1),
+            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     elif position == Position.WR:
-        if len(cells) < 13:
-            return None
         stats = {
-            "rec": numeric(cells[3]),
-            "rec_yd": numeric(cells[4]),
-            "rec_td": numeric(cells[7]),
-            "rush_yd": numeric(cells[9]),
-            "rush_td": numeric(cells[11]),
+            "rec": _at(cells, rec, 0),
+            "rec_yd": _at(cells, yds, 0),
+            "rec_td": _at(cells, td, 0),
+            "rush_yd": _at(cells, yds, 1, 0.0),
+            "rush_td": _at(cells, td, 1, 0.0),
+            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     elif position == Position.TE:
-        if len(cells) < 8:
-            return None
         stats = {
-            "rec": numeric(cells[3]),
-            "rec_yd": numeric(cells[4]),
-            "rec_td": numeric(cells[7]),
+            "rec": _at(cells, rec, 0),
+            "rec_yd": _at(cells, yds, 0),
+            "rec_td": _at(cells, td, 0),
             "rush_yd": 0.0,
             "rush_td": 0.0,
+            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     else:
         return None
+
     return CurrentProjectionRow(
         provider=provider,
         external_id=f"{position.value}:{team}:{name}",
