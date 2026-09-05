@@ -1,20 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from threading import RLock
 from typing import Callable
 
-from fsffl.forecast.adapters.razzball import ProjectionCoverageReport, normalize_razzball_snapshot
-from fsffl.forecast.league_scoring import (
-    ScoringCoverage,
-    ScoringCoverageStatus,
-    classify_scoring_coverage,
-    derive_league_fantasy_point_forecasts,
-)
+from fsffl.forecast.current_runtime import LiveForecastRuntimeResult, build_current_live_forecasts
 from fsffl.forecast.models import ForecastObservation
 from fsffl.providers.acquisition import ProviderBackedStateService
-from fsffl.providers.razzball_live import RazzballLiveProjectionSource
 from fsffl.providers.sleeper_live import SleeperLiveSource
 from fsffl.providers.sleeper_snapshot import SleeperSnapshotNormalizer
 from fsffl.state.models import LeagueState
@@ -25,12 +17,15 @@ LiveStateLoader = Callable[[str], LeagueState]
 
 @dataclass(frozen=True)
 class LiveForecastEvidence:
+    """Product-runtime handle to authoritative NEXT-2 current forecast output."""
+
     raw_forecasts: tuple[ForecastObservation, ...]
     league_scored_forecasts: tuple[ForecastObservation, ...]
-    provider_coverage: ProjectionCoverageReport
-    scoring_coverage: ScoringCoverage
+    successful_source_ids: tuple[str, ...]
+    failed_sources: tuple[str, ...]
     uncertainty_ready: bool
-    model_version: str = "next8-live-forecast-evidence-v1"
+    runtime_result: LiveForecastRuntimeResult
+    model_version: str = "next8-live-forecast-evidence-v2"
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
@@ -47,41 +42,25 @@ def default_sleeper_state_loader(league_external_id: str) -> LeagueState:
 
 
 def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvidence:
-    """Acquire and normalize current beta projection evidence for a loaded league.
+    """Run the governed multi-provider NEXT-2 current forecast runtime.
 
-    Razzball is a replaceable private-beta/personal-research provider. Its raw
-    provider fantasy-point columns are not used. Raw stats are resolved against
-    canonical player identities and scored from canonical league rules.
+    No single provider output is promoted as an FSFFL forecast. The returned raw
+    forecasts are the authoritative equal-weight ensemble after per-player source
+    coverage gates. League-scored forecasts are derived only after that ensemble.
     """
 
-    snapshot = RazzballLiveProjectionSource().fetch_latest()
-    period_end = datetime(league_state.league.season + 1, 2, 15, tzinfo=UTC)
-    raw_forecasts, provider_coverage = normalize_razzball_snapshot(
-        snapshot,
-        league_state=league_state,
-        period_end=period_end,
-    )
-    scoring_coverage = classify_scoring_coverage(league_state.league.rules)
-    scored: tuple[ForecastObservation, ...] = ()
-    if scoring_coverage.status == ScoringCoverageStatus.COMPLETE:
-        scored = derive_league_fantasy_point_forecasts(
-            raw_forecasts,
-            rules=league_state.league.rules,
-        )
-
-    # Current live provider rows are point estimates. A single provider therefore
-    # does not yet establish simulation-grade marginal uncertainty. NEXT-4 remains
-    # blocked until calibrated uncertainty or independent provider disagreement is
-    # attached; projected means can still be displayed transparently.
-    uncertainty_ready = bool(scored) and all(
-        observation.distribution.stddev > 0 for observation in scored
+    result = build_current_live_forecasts(league_state)
+    uncertainty_ready = bool(result.fantasy_point_forecasts) and all(
+        observation.distribution.stddev > 0
+        for observation in result.fantasy_point_forecasts
     )
     return LiveForecastEvidence(
-        raw_forecasts=raw_forecasts,
-        league_scored_forecasts=scored,
-        provider_coverage=provider_coverage,
-        scoring_coverage=scoring_coverage,
+        raw_forecasts=result.raw_ensemble,
+        league_scored_forecasts=result.fantasy_point_forecasts,
+        successful_source_ids=result.successful_source_ids,
+        failed_sources=result.failed_sources,
         uncertainty_ready=uncertainty_ready,
+        runtime_result=result,
     )
 
 
@@ -96,9 +75,9 @@ class UserRuntimeContext:
 class PrivateBetaRuntimeStore:
     """Small in-memory runtime store for the single-user/private beta.
 
-    Canonical league state and projection evidence live in process memory only.
-    They are not written to the repository. A durable multi-user store can replace
-    this interface later.
+    Canonical league state and model evidence live in process memory only. They
+    are not written to the repository. A durable multi-user store can replace this
+    interface later without changing model or presentation authority.
     """
 
     def __init__(self) -> None:
@@ -121,15 +100,27 @@ class PrivateBetaRuntimeStore:
         self,
         user_id: str,
         evidence: LiveForecastEvidence,
+        *,
+        refreshed_league_state: LeagueState | None = None,
     ) -> UserRuntimeContext:
+        """Attach NEXT-2 evidence, optionally advancing state past evidence cutoff."""
+
         with self._lock:
             current = self.get(user_id)
-            if current.league_state is None:
+            league_state = refreshed_league_state or current.league_state
+            if league_state is None:
                 raise ValueError("cannot attach forecasts before a league is loaded")
+            forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
+            if any(item.as_of > league_state.as_of for item in forecasts):
+                raise ValueError("forecast evidence cannot postdate canonical league state")
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
             updated = UserRuntimeContext(
                 user_id=user_id,
-                league_state=current.league_state,
-                selected_team_id=current.selected_team_id,
+                league_state=league_state,
+                selected_team_id=selected,
                 forecast_evidence=evidence,
             )
             self._contexts[user_id] = updated
