@@ -43,6 +43,8 @@ class CandidateReason(StrEnum):
     INVALID_OWNERSHIP = "invalid_ownership"
     OUTSIDE_SEARCH_BOUNDS = "outside_search_bounds"
     ECONOMIC_SCALE_MISMATCH = "economic_scale_mismatch"
+    MATERIALITY_NOT_EVALUATED = "materiality_not_evaluated"
+    FOCAL_DISPOSITION_BLOCKS_ACTION = "focal_disposition_blocks_action"
     REDUNDANT = "redundant"
     DOMINATED = "dominated"
 
@@ -86,6 +88,8 @@ class OpportunityCandidate(FrozenModel):
                 CandidateReason.INCOMPLETE_EVIDENCE,
                 CandidateReason.INVALID_OWNERSHIP,
                 CandidateReason.ECONOMIC_SCALE_MISMATCH,
+                CandidateReason.MATERIALITY_NOT_EVALUATED,
+                CandidateReason.FOCAL_DISPOSITION_BLOCKS_ACTION,
             }
             if blocking.intersection(self.reasons):
                 raise ValueError("blocking reasons cannot coexist with actionable authority")
@@ -105,9 +109,9 @@ def derive_action_authority(
     """Conservatively derive promotion authority from explicit candidate state.
 
     Search discovery is intentionally broader than action authority. Unknown
-    acceptance may permit a market-test candidate but never automatic action.
-    Counterparty domination, structural invalidity, and incomplete evidence remain
-    diagnostic-only at most.
+    acceptance or missing materiality may permit a market-test candidate but never
+    automatic action. Counterparty domination, adverse focal disposition,
+    structural invalidity, and incomplete evidence remain diagnostic-only at most.
     """
 
     if discovery_status in {DiscoveryStatus.PRUNED, DiscoveryStatus.REJECTED}:
@@ -119,11 +123,16 @@ def derive_action_authority(
         CandidateReason.INCOMPLETE_EVIDENCE,
         CandidateReason.INVALID_OWNERSHIP,
         CandidateReason.ECONOMIC_SCALE_MISMATCH,
+        CandidateReason.FOCAL_DISPOSITION_BLOCKS_ACTION,
     }
     if reason_set.intersection(hard_blocks):
         return ActionAuthority.DIAGNOSTIC_ONLY
 
-    if CandidateReason.UNKNOWN_ACCEPTANCE in reason_set:
+    soft_market_test_blocks = {
+        CandidateReason.UNKNOWN_ACCEPTANCE,
+        CandidateReason.MATERIALITY_NOT_EVALUATED,
+    }
+    if reason_set.intersection(soft_market_test_blocks):
         return (
             ActionAuthority.MARKET_TEST_ONLY
             if allow_market_test_when_acceptance_unknown
