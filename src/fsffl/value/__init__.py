@@ -28,6 +28,12 @@ from .models import (
     comparable_values,
 )
 from .pick import PickOutcome, PickOutcomeSet, estimate_pick_value
+from .source_registry import (
+    MarketSignalKind,
+    MarketSourceDefinition,
+    MarketSourceRegistry,
+    MarketSourceStatus,
+)
 from .transaction import TransactionPriceMapping, estimate_transaction_price
 
 __all__ = [
@@ -46,6 +52,10 @@ __all__ = [
     "MarketEvidenceKind",
     "MarketObservation",
     "MarketPriceEstimate",
+    "MarketSignalKind",
+    "MarketSourceDefinition",
+    "MarketSourceRegistry",
+    "MarketSourceStatus",
     "PickOutcome",
     "PickOutcomeSet",
     "PickValueEstimate",
