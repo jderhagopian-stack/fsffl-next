@@ -40,6 +40,12 @@ If reproducible point-in-time snapshots are retained in the future, they belong 
 
 The CLI emits the structured `Next4LeagueSanityResult` as JSON.
 
+## Expected execution environments
+
+The harness is designed for any networked runtime that can install FSFFL NEXT and reach the configured provider endpoints, including a developer machine, Codex environment, CI/research worker with runtime parameters, or a future FSFFL application/backend service.
+
+The model code does not require GitHub to store the league data. GitHub remains source control; live league state is operational/runtime data.
+
 ## Fail-closed behavior
 
 The harness deliberately does not:
