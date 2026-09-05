@@ -16,6 +16,7 @@ from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 
 from .dashboard import build_league_metric_chart
+from .intelligence_runtime import build_state_only_league_view, state_first_runtime_status
 from .runtime import PrivateBetaRuntimeStore, default_sleeper_state_loader
 from .team_page import build_state_only_team_view
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
@@ -127,6 +128,13 @@ def create_app(
             return runtime_payload
         return {**runtime_payload, "league_id": view.context.league_id, "state_id": view.context.league_state_id, "evidence_as_of": view.context.as_of.isoformat()}
 
+    @application.get("/api/intelligence/status")
+    def intelligence_status(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        return state_first_runtime_status(runtime.league_state).model_dump(mode="json")
+
     @application.post("/api/connect/sleeper")
     def connect_sleeper(request: ConnectSleeperLeagueRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         league_external_id = request.league_external_id.strip()
@@ -198,12 +206,13 @@ def create_app(
         return trade_evaluator(runtime.league_state, proposal, runtime.selected_team_id)
 
     @application.get("/api/league/chart")
-    def league_chart(metric: LeagueMetric, _: str = Depends(require_beta_user)) -> dict[str, object]:
-        if league_view_provider is None:
-            raise HTTPException(status_code=409, detail="League analytics are not available yet")
-        view = league_view_provider()
+    def league_chart(metric: LeagueMetric, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        view = league_view_provider() if league_view_provider is not None else None
         if view is None:
-            raise HTTPException(status_code=409, detail="League analytics are not loaded")
+            runtime = store.get(user_id)
+            if runtime.league_state is None:
+                raise HTTPException(status_code=409, detail="No league is loaded")
+            view = build_state_only_league_view(runtime.league_state)
         return build_league_metric_chart(view, metric=metric).model_dump(mode="json")
 
     return application
