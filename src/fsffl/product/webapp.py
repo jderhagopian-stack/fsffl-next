@@ -12,17 +12,20 @@ from fastapi.staticfiles import StaticFiles
 
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.trade_decision.models import BilateralTradeProposal
 
 from .dashboard import build_league_metric_chart
 from .runtime import PrivateBetaRuntimeStore, default_sleeper_state_loader
 from .team_page import build_state_only_team_view
-from .trade_center_view import build_trade_center_browser_view
+from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
+from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
 
 
 _STATIC_DIR = Path(__file__).with_name("static")
 _security = HTTPBasic(auto_error=False)
 LeagueViewProvider = Callable[[], LeagueAnalyticsView | None]
 StateLoader = Callable[[str], LeagueState]
+TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, object]]
 
 
 class ConnectSleeperLeagueRequest(FrozenModel):
@@ -31,6 +34,12 @@ class ConnectSleeperLeagueRequest(FrozenModel):
 
 class SelectTeamRequest(FrozenModel):
     team_id: str
+
+
+class AnalyzeTradeRequest(FrozenModel):
+    counterparty_team_id: str
+    focal_asset_refs: tuple[str, ...]
+    counterparty_asset_refs: tuple[str, ...]
 
 
 def _beta_auth_enabled() -> bool:
@@ -82,6 +91,7 @@ def create_app(
     league_view_provider: LeagueViewProvider | None = None,
     runtime_store: PrivateBetaRuntimeStore | None = None,
     state_loader: StateLoader = default_sleeper_state_loader,
+    trade_evaluator: TradeEvaluator | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
@@ -141,10 +151,39 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
-        return build_trade_center_browser_view(
-            runtime.league_state,
-            focal_team_id=runtime.selected_team_id,
-        ).model_dump(mode="json")
+        return build_trade_center_browser_view(runtime.league_state, focal_team_id=runtime.selected_team_id).model_dump(mode="json")
+
+    @application.post("/api/trade-center/analyze")
+    def analyze_trade(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if runtime.selected_team_id is None:
+            raise HTTPException(status_code=409, detail="No managed team is selected")
+        if request.counterparty_team_id == runtime.selected_team_id:
+            raise HTTPException(status_code=422, detail="Trade counterparty must be a different team")
+        try:
+            focal_assets = tuple(
+                resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref)
+                for ref in request.focal_asset_refs
+            )
+            counterparty_assets = tuple(
+                resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref)
+                for ref in request.counterparty_asset_refs
+            )
+            draft = TradeDraft(
+                draft_id=f"product:{runtime.league_state.state_id}:{runtime.selected_team_id}:{request.counterparty_team_id}",
+                focal_team_id=runtime.selected_team_id,
+                counterparty_team_id=request.counterparty_team_id,
+                focal_side=TradeDraftSide(team_id=runtime.selected_team_id, assets=focal_assets),
+                counterparty_side=TradeDraftSide(team_id=request.counterparty_team_id, assets=counterparty_assets),
+            )
+            proposal = submit_trade_draft(draft, as_of=runtime.league_state.as_of)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if trade_evaluator is None:
+            raise HTTPException(status_code=409, detail="Trade analysis runtime is not configured yet")
+        return trade_evaluator(runtime.league_state, proposal, runtime.selected_team_id)
 
     @application.get("/api/league/chart")
     def league_chart(metric: LeagueMetric, _: str = Depends(require_beta_user)) -> dict[str, object]:
