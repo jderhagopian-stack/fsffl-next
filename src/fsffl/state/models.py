@@ -70,8 +70,15 @@ class LeagueRules(FrozenModel):
     taxi_size: Annotated[int, Field(ge=0)] = 0
     ir_size: Annotated[int, Field(ge=0)] = 0
     rookie_draft_rounds: Annotated[int, Field(ge=0)] = 0
+    playoff_team_count: Annotated[int, Field(ge=1)] | None = None
     lineup: tuple[LineupRequirement, ...]
     scoring: tuple[ScoringRule, ...]
+
+    @model_validator(mode="after")
+    def validate_playoff_count(self) -> "LeagueRules":
+        if self.playoff_team_count is not None and self.playoff_team_count > self.team_count:
+            raise ValueError("playoff_team_count cannot exceed team_count")
+        return self
 
 
 class League(FrozenModel):
@@ -173,6 +180,27 @@ class TeamState(FrozenModel):
         return self
 
 
+class LeagueMatchup(FrozenModel):
+    """Canonical point-in-time fantasy-league matchup state."""
+
+    week: Annotated[int, Field(ge=1)]
+    team_a_id: str
+    team_b_id: str
+    team_a_points: float | None = None
+    team_b_points: float | None = None
+    provenance: Provenance
+
+    @model_validator(mode="after")
+    def validate_matchup(self) -> "LeagueMatchup":
+        if not self.team_a_id.strip() or not self.team_b_id.strip():
+            raise ValueError("matchup team ids cannot be blank")
+        if self.team_a_id == self.team_b_id:
+            raise ValueError("a team cannot play itself")
+        if (self.team_a_points is None) != (self.team_b_points is None):
+            raise ValueError("matchup points must be present for both teams or neither")
+        return self
+
+
 class TransactionSide(FrozenModel):
     team_id: str
     assets: tuple[Asset, ...]
@@ -208,6 +236,7 @@ class LeagueState(FrozenModel):
     player_states: tuple[PlayerState, ...]
     draft_picks: tuple[DraftPick, ...] = ()
     pick_ownership: tuple[PickOwnership, ...] = ()
+    matchups: tuple[LeagueMatchup, ...] = ()
     provenance: tuple[Provenance, ...] = ()
 
     @field_validator("as_of")
@@ -250,6 +279,21 @@ class LeagueState(FrozenModel):
             raise ValueError("pick ownership references unknown team")
         if len({ownership.pick_id for ownership in self.pick_ownership}) != len(self.pick_ownership):
             raise ValueError("a draft pick may have only one owner")
+        if any(matchup.team_a_id not in team_ids or matchup.team_b_id not in team_ids for matchup in self.matchups):
+            raise ValueError("matchup references unknown team")
+        matchup_keys = [
+            (matchup.week, *sorted((matchup.team_a_id, matchup.team_b_id)))
+            for matchup in self.matchups
+        ]
+        if len(matchup_keys) != len(set(matchup_keys)):
+            raise ValueError("duplicate matchup in same week")
+        seen_week_team: set[tuple[int, str]] = set()
+        for matchup in self.matchups:
+            for team_id in (matchup.team_a_id, matchup.team_b_id):
+                key = (matchup.week, team_id)
+                if key in seen_week_team:
+                    raise ValueError("a team may appear only once per matchup week")
+                seen_week_team.add(key)
         return self
 
     def canonical_json(self) -> str:
