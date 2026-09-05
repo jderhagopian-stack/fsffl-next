@@ -29,12 +29,17 @@ def optimize_team_lineup(
     as_of: datetime,
     horizon: ForecastHorizon,
     excluded_player_ids: frozenset[str] = frozenset(),
-    model_version: str = "next4-lineup-v1",
+    model_version: str = "next4-lineup-v2",
 ) -> OptimizedTeamLineup:
     """Maximize expected fantasy points under the league's actual lineup rules.
 
     NEXT-4 uses the team's real roster and the league's canonical rules. Taxi/IR
     players are unavailable. Missing forecasts are surfaced rather than imputed.
+
+    Equal-point optimal lineups use a deterministic, points-neutral secondary
+    ordering: earlier/narrower canonical lineup slots receive the stronger eligible
+    player. This keeps QB/RB/WR/TE depth-chart presentation intuitive without
+    changing the set of starters or the optimized expected-points total.
     """
 
     if as_of.tzinfo is None:
@@ -82,15 +87,20 @@ def optimize_team_lineup(
     if not slots:
         raise ValueError("league has no supported starting lineup slots")
 
-    # Dynamic programming over used lineup-slot bitmasks. Each player may be
-    # assigned to at most one eligible slot. This is exact for the small lineup
-    # sizes typical of fantasy leagues and avoids greedy FLEX/SUPERFLEX mistakes.
-    states: dict[int, tuple[float, tuple[tuple[int, str], ...]]] = {0: (0.0, ())}
+    # Dynamic programming over used lineup-slot bitmasks. Each state keeps the
+    # authoritative points total plus a secondary vector of points by canonical
+    # slot order. The vector is consulted only when totals are exactly equal, so
+    # it cannot alter lineup value; it merely makes equivalent assignments read
+    # like a normal depth chart (QB1 in QB, strongest WR in WR1, flex later, etc.).
+    empty_slot_points = tuple(float("-inf") for _ in slots)
+    states: dict[int, tuple[float, tuple[float, ...], tuple[tuple[int, str], ...]]] = {
+        0: (0.0, empty_slot_points, ())
+    }
     for player_id in candidate_ids:
         player = players_by_id[player_id]
         points = latest_forecast[player_id].distribution.mean
         next_states = dict(states)
-        for mask, (score, assignments) in states.items():
+        for mask, (score, slot_points, assignments) in states.items():
             for slot_position, (slot, _) in enumerate(slots):
                 bit = 1 << slot_position
                 if mask & bit:
@@ -98,11 +108,22 @@ def optimize_team_lineup(
                 if player.position not in _STARTER_ELIGIBILITY[slot]:
                     continue
                 new_mask = mask | bit
-                candidate = (score + points, assignments + ((slot_position, player_id),))
+                next_slot_points = list(slot_points)
+                next_slot_points[slot_position] = points
+                candidate = (
+                    score + points,
+                    tuple(next_slot_points),
+                    assignments + ((slot_position, player_id),),
+                )
                 prior = next_states.get(new_mask)
-                if prior is None or candidate[0] > prior[0] + 1e-12 or (
-                    abs(candidate[0] - prior[0]) <= 1e-12 and candidate[1] < prior[1]
-                ):
+                if prior is None:
+                    next_states[new_mask] = candidate
+                    continue
+                score_better = candidate[0] > prior[0] + 1e-12
+                score_equal = abs(candidate[0] - prior[0]) <= 1e-12
+                secondary_better = candidate[1] > prior[1]
+                stable_id_tiebreak = candidate[1] == prior[1] and candidate[2] < prior[2]
+                if score_better or (score_equal and (secondary_better or stable_id_tiebreak)):
                     next_states[new_mask] = candidate
         states = next_states
 
@@ -110,7 +131,7 @@ def optimize_team_lineup(
     if full_mask not in states:
         raise ValueError("team cannot fill every required lineup slot from eligible forecasted players")
 
-    expected_points, chosen = states[full_mask]
+    expected_points, _, chosen = states[full_mask]
     chosen_by_slot = {slot_position: player_id for slot_position, player_id in chosen}
     assignments = tuple(
         LineupAssignment(
