@@ -12,7 +12,7 @@ def test_live_sleeper_source_acquires_provider_payloads_without_model_logic() ->
     def fake_get(url: str):
         seen.append(url)
         if url.endswith("/league/league123"):
-            return {"league_id": "league123"}
+            return {"league_id": "league123", "season": "2026"}
         if url.endswith("/league/league123/users"):
             return [{"user_id": "u1"}]
         if url.endswith("/league/league123/rosters"):
@@ -21,6 +21,8 @@ def test_live_sleeper_source_acquires_provider_payloads_without_model_logic() ->
             return {"p1": {"player_id": "p1"}}
         if url.endswith("/league/league123/traded_picks"):
             return []
+        if url.endswith("/schedule/nfl/regular/2026"):
+            return [{"week": 1, "home": "NYJ", "away": "BUF"}]
         raise AssertionError(url)
 
     source = SleeperLiveSource(http_get_json=fake_get, clock=lambda: NOW)
@@ -36,11 +38,13 @@ def test_live_sleeper_source_acquires_provider_payloads_without_model_logic() ->
         "players",
         "traded_picks",
         "matchups",
+        "nfl_schedule",
     }
     assert snapshot.payload["matchups"] == {}
-    # A provider payload with no playoff_week_start carries no provable regular-
-    # season horizon, so acquisition fails closed rather than guessing weeks.
-    assert len(seen) == 5
+    assert snapshot.payload["nfl_schedule"] == [{"week": 1, "home": "NYJ", "away": "BUF"}]
+    # A league with no playoff_week_start makes no fantasy-matchup calls, but the
+    # factual NFL schedule remains independent league-wide State evidence.
+    assert len(seen) == 6
     assert not any("/matchups/" in url for url in seen)
 
 
