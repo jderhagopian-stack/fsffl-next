@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from fsffl.state.models import FrozenModel
 
@@ -21,7 +21,7 @@ class ProductRequest(FrozenModel):
     context: ProductContext
     route: ProductRoute
     action: ProductAction | None = None
-    payload: dict[str, Any] = {}
+    payload: dict[str, Any] = Field(default_factory=dict)
     product_api_version: str = "next8-web-adapter-v1"
 
     @model_validator(mode="after")
