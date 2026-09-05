@@ -5,6 +5,12 @@ from .frontier import (
     expand_adjacent_packages,
     make_frontier_point,
 )
+from .frontier_search import (
+    EvaluatedFrontierPoint,
+    FrontierSearchPolicy,
+    FrontierSearchResult,
+    explore_negotiation_frontier,
+)
 from .models import (
     ActionAuthority,
     CandidateReason,
@@ -38,8 +44,11 @@ __all__ = [
     "BilateralFrontierPoint",
     "CandidateReason",
     "DiscoveryStatus",
+    "EvaluatedFrontierPoint",
     "EvidenceCompleteness",
     "FrontierNeighbor",
+    "FrontierSearchPolicy",
+    "FrontierSearchResult",
     "ObjectiveDirection",
     "OpportunityCandidate",
     "OpportunityKind",
@@ -58,6 +67,7 @@ __all__ = [
     "enumerate_counterparties",
     "enumerate_trade_packages",
     "expand_adjacent_packages",
+    "explore_negotiation_frontier",
     "make_frontier_point",
     "pareto_front",
 ]
