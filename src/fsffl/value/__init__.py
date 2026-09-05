@@ -12,6 +12,10 @@ from .market import (
     MarketObservation,
     estimate_market_price,
 )
+from .market_benchmark import (
+    MarketSourceBenchmarkResult,
+    benchmark_market_sources_against_transactions,
+)
 from .market_context import MarketContextCalibration, apply_market_context
 from .market_context_fit import MarketContextFitPolicy, fit_market_context_calibration
 from .models import (
@@ -53,6 +57,7 @@ __all__ = [
     "MarketObservation",
     "MarketPriceEstimate",
     "MarketSignalKind",
+    "MarketSourceBenchmarkResult",
     "MarketSourceDefinition",
     "MarketSourceRegistry",
     "MarketSourceStatus",
@@ -66,6 +71,7 @@ __all__ = [
     "ValueDistribution",
     "ValueScale",
     "apply_market_context",
+    "benchmark_market_sources_against_transactions",
     "comparable_values",
     "estimate_intrinsic_player_value",
     "estimate_market_price",
