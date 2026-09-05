@@ -5,6 +5,13 @@ from .competitive_state import (
 from .lineup import marginal_lineup_impact, optimize_team_lineup
 from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
 from .resilience import build_roster_resilience
+from .scenario import (
+    AssetPortfolioDelta,
+    CompetitiveOutcomeDelta,
+    RosterResilienceDelta,
+    TeamScenarioDelta,
+    compare_team_utility_vectors,
+)
 from .scoring import TeamUncertaintyMethod, build_team_scoring_distribution
 from .simulation import (
     RegularSeasonSimulationInput,
@@ -25,7 +32,9 @@ from .utility import (
 )
 
 __all__ = [
+    "AssetPortfolioDelta",
     "CalculatedCompetitiveState",
+    "CompetitiveOutcomeDelta",
     "CompetitiveStatePolicy",
     "FranchiseAssetPortfolio",
     "LineupAssignment",
@@ -35,16 +44,19 @@ __all__ = [
     "RegularSeasonSimulationInput",
     "RegularSeasonSimulationResult",
     "RosterResilience",
+    "RosterResilienceDelta",
     "ScheduledMatchup",
     "ScoringDistributionKind",
     "StrategicTeamView",
     "TeamCompetitiveOutcome",
+    "TeamScenarioDelta",
     "TeamScoringDistribution",
     "TeamUncertaintyMethod",
     "TeamUtilityVector",
     "build_roster_resilience",
     "build_team_scoring_distribution",
     "classify_calculated_competitive_state",
+    "compare_team_utility_vectors",
     "marginal_lineup_impact",
     "optimize_team_lineup",
     "simulate_regular_season",
