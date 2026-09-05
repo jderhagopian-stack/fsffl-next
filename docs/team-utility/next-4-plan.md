@@ -32,8 +32,10 @@ After the lineup/replacement foundation passes tests:
 - derive competitive-state outputs (expected wins, playoff/title probability, fragility);
 - add team-specific franchise utility as a distinct typed output;
 - add explicit calculated-state vs owner-strategy contracts;
-- produce a reproducible Team Utility Report for every team in a league;
-- run sanity calibration before NEXT-4 exit review.
+- add reusable structured scenario/before-after outputs for downstream Decision/Search consumers;
+- run controlled and real-league sanity validation before NEXT-4 exit review.
+
+Reports, analytics views, tables, charts and presentation belong to NEXT-7 Analytics/API and downstream presentation layers. NEXT-4 exposes structured authoritative outputs only.
 
 ## Anti-double-counting rule
 
