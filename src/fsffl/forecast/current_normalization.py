@@ -26,6 +26,7 @@ _STAT_METRICS: dict[str, ForecastMetric] = {
     "rec": ForecastMetric.RECEPTIONS,
     "rec_yd": ForecastMetric.REC_YARDS,
     "rec_td": ForecastMetric.REC_TD,
+    "fum_lost": ForecastMetric.FUMBLES_LOST,
 }
 
 _RAZZBALL_COLUMNS: dict[str, str] = {
@@ -37,6 +38,7 @@ _RAZZBALL_COLUMNS: dict[str, str] = {
     "Rec": "rec",
     "Rec Yds": "rec_yd",
     "Rec TD": "rec_td",
+    "Fum Lst": "fum_lost",
 }
 
 
