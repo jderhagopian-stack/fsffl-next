@@ -39,6 +39,7 @@ from .materiality import (
 )
 from .models import BilateralTradeProposal, TradeLeg
 from .scenario import AppliedTradeScenario, apply_bilateral_trade
+from .strategy import StrategicSideContext, StrategicTradeContext, attach_owner_strategy
 
 __all__ = [
     "AcceptanceEvidenceItem",
@@ -62,12 +63,15 @@ __all__ = [
     "MissingEconomicEvidence",
     "SideDecisionShape",
     "SideDirectionalAssessment",
+    "StrategicSideContext",
+    "StrategicTradeContext",
     "TradeAcceptanceView",
     "TradeLeg",
     "TradeLegEconomics",
     "TradeSideEvaluation",
     "apply_bilateral_trade",
     "assess_side_direction",
+    "attach_owner_strategy",
     "build_unestimated_acceptance_view",
     "classify_bilateral_trade_decision",
     "classify_negative_delta",
