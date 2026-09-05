@@ -19,11 +19,16 @@ _POSITION_IDS = {
     Position.WR: "30",
     Position.TE: "40",
 }
+_NFL_TEAMS = {
+    "ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB",
+    "HOU", "IND", "JAC", "JAX", "KC", "LAC", "LAR", "LV", "MIA", "MIN", "NE", "NO", "NYG",
+    "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS", "WSH",
+}
 
 
 class FFTodayLiveProjectionSource:
     provider_name = "fftoday"
-    source_version = "fftoday-season-projections-html-v2"
+    source_version = "fftoday-season-projections-html-v3"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -81,7 +86,6 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[
                 index
                 for index, row in enumerate(table)
                 if any(normalize_cell(cell).lower().startswith("player") for cell in row)
-                and any(normalize_cell(cell).lower() == "tm" for cell in row)
             ),
             None,
         )
@@ -99,7 +103,7 @@ def _parse_page(html: str, *, provider: str, position: Position) -> tuple[tuple[
                     cells=values,
                 )
             except (ValueError, IndexError):
-                continue
+                row = _row_from_relative_cells(provider=provider, position=position, cells=values)
             if row is not None:
                 output.append(row)
         if output:
@@ -134,6 +138,61 @@ def _value(cells: list[str], indexes: list[int], occurrence: int = 0, default: f
     return numeric(cells[indexes[occurrence]])
 
 
+def _identity_from_cells(cells: list[str]) -> tuple[str, str, int] | None:
+    for i, cell in enumerate(cells):
+        token = cell.upper().strip()
+        if token in _NFL_TEAMS and i > 0:
+            name = _clean_name(cells[i - 1])
+            if name and not re.fullmatch(r"[\d.\-]+", name):
+                return name, ("JAX" if token == "JAC" else "WAS" if token == "WSH" else token), i
+    return None
+
+
+def _row_from_relative_cells(*, provider: str, position: Position, cells: list[str]) -> CurrentProjectionRow | None:
+    identity = _identity_from_cells(cells)
+    if identity is None:
+        return None
+    name, team, team_i = identity
+    tail = cells[team_i + 1 :]
+    try:
+        if position == Position.QB and len(tail) >= 10:
+            stats = {
+                "pass_yd": numeric(tail[3]),
+                "pass_td": numeric(tail[4]),
+                "pass_int": numeric(tail[5]),
+                "rush_yd": numeric(tail[7]),
+                "rush_td": numeric(tail[8]),
+            }
+        elif position == Position.RB and len(tail) >= 8:
+            stats = {
+                "rush_yd": numeric(tail[2]),
+                "rush_td": numeric(tail[3]),
+                "rec": numeric(tail[4]),
+                "rec_yd": numeric(tail[5]),
+                "rec_td": numeric(tail[6]),
+            }
+        elif position in {Position.WR, Position.TE} and len(tail) >= 8:
+            stats = {
+                "rec": numeric(tail[1]),
+                "rec_yd": numeric(tail[2]),
+                "rec_td": numeric(tail[3]),
+                "rush_yd": numeric(tail[5]),
+                "rush_td": numeric(tail[6]),
+            }
+        else:
+            return None
+    except (ValueError, IndexError):
+        return None
+    return CurrentProjectionRow(
+        provider=provider,
+        external_id=f"{position.value}:{team}:{name}",
+        player_name=name,
+        position=position,
+        nfl_team=team,
+        stats=stats,
+    )
+
+
 def _row_from_headers(
     *,
     provider: str,
@@ -142,17 +201,23 @@ def _row_from_headers(
     cells: list[str],
 ) -> CurrentProjectionRow | None:
     player_i = _header_index(headers, lambda value: value.startswith("player"))
-    team_i = _header_index(headers, lambda value: value == "tm")
+    team_candidates = [i for i, header in enumerate(headers) if header.strip().lower() == "tm"]
+    if not team_candidates:
+        return _row_from_relative_cells(provider=provider, position=position, cells=cells)
+    team_i = team_candidates[0]
     if player_i >= len(cells) or team_i >= len(cells):
         return None
     name = _clean_name(cells[player_i])
     team = cells[team_i].upper().strip()
-    if not name or len(team) not in {2, 3}:
-        return None
+    if team == "JAC":
+        team = "JAX"
+    elif team == "WSH":
+        team = "WAS"
+    if not name or team not in _NFL_TEAMS:
+        return _row_from_relative_cells(provider=provider, position=position, cells=cells)
 
     yds = _matching_indices(headers, "yds")
     td = _matching_indices(headers, "td")
-    att = _matching_indices(headers, "att")
     rec = _matching_indices(headers, "rec")
     ints = _matching_indices(headers, "int")
 
@@ -196,6 +261,17 @@ def _row_from_headers(
 def _default_get_text(url: str) -> str:
     if not url.startswith("https://www.fftoday.com/rankings/playerproj.php?"):
         raise ValueError("FFToday live source only permits fixed projection URLs")
-    request = Request(url, headers={"User-Agent": "fsffl-next/0.1 (+private-beta projection research)"})
+    request = Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/128.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "no-cache",
+        },
+    )
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider URL
-        return response.read().decode("utf-8", errors="replace")
+        text = response.read().decode("utf-8", errors="replace")
+    if "Projections" not in text or "Updated:" not in text:
+        raise ValueError("FFToday hosted response did not contain projection content")
+    return text
