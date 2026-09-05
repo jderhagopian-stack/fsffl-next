@@ -54,17 +54,25 @@
             </div>
           </div>
 
+          <article id="runtime-status" class="panel runtime-status-panel" hidden>
+            <div class="panel-header">
+              <div><p class="eyebrow">Live intelligence pipeline</p><h2 id="runtime-status-title">League state loaded</h2></div>
+              <span id="runtime-status-summary" class="status-chip">Checking…</span>
+            </div>
+            <div id="runtime-stage-grid" class="runtime-stage-grid"></div>
+          </article>
+
           <div class="metric-grid">
-            <article class="metric-card"><span class="metric-label">Calculated state</span><strong>—</strong><small>Loads from NEXT-4</small></article>
-            <article class="metric-card"><span class="metric-label">Expected wins</span><strong>—</strong><small>50k simulation-ready</small></article>
-            <article class="metric-card"><span class="metric-label">Playoff probability</span><strong>—</strong><small>Authoritative simulation output</small></article>
-            <article class="metric-card"><span class="metric-label">Opportunity status</span><strong>—</strong><small>Actionable / market-test / diagnostic</small></article>
+            <article class="metric-card"><span class="metric-label">Calculated state</span><strong id="calculated-state-value">—</strong><small id="calculated-state-note">Waiting for NEXT-4</small></article>
+            <article class="metric-card"><span class="metric-label">Expected wins</span><strong id="expected-wins-value">—</strong><small id="expected-wins-note">Waiting for simulation evidence</small></article>
+            <article class="metric-card"><span class="metric-label">Playoff probability</span><strong id="playoff-value">—</strong><small id="playoff-note">Waiting for simulation evidence</small></article>
+            <article class="metric-card"><span class="metric-label">Opportunity status</span><strong id="opportunity-value">—</strong><small id="opportunity-note">Waiting for Trade Decision evidence</small></article>
           </div>
 
           <div class="dashboard-grid">
             <article class="panel chart-panel">
               <div class="panel-header">
-                <div><p class="eyebrow">League comparison</p><h2>Expected wins</h2></div>
+                <div><p class="eyebrow">League comparison</p><h2 id="league-chart-title">Expected wins</h2></div>
                 <select id="metric-select" aria-label="League metric">
                   <option value="expected_wins">Expected wins</option>
                   <option value="playoff_probability">Playoff probability</option>
@@ -78,12 +86,12 @@
 
             <article class="panel">
               <div class="panel-header"><div><p class="eyebrow">Opportunity Engine</p><h2>Best paths</h2></div><button class="text-button" data-route-link="opportunities">View all</button></div>
-              <div class="empty-list"><div class="opportunity-skeleton"><span></span><span></span></div><div class="opportunity-skeleton"><span></span><span></span></div><div class="opportunity-skeleton"><span></span><span></span></div><p>Connect a league and select your team to run NEXT-6.</p></div>
+              <div class="empty-list"><div class="opportunity-skeleton"><span></span><span></span></div><div class="opportunity-skeleton"><span></span><span></span></div><div class="opportunity-skeleton"><span></span><span></span></div><p id="opportunity-empty-copy">Connect a league and select your team to run NEXT-6.</p></div>
             </article>
           </div>
 
           <article class="panel roster-panel">
-            <div class="panel-header"><div><p class="eyebrow">My Team</p><h2>Projected lineup</h2></div><button class="text-button" data-route-link="my_team">Open full roster</button></div>
+            <div class="panel-header"><div><p class="eyebrow">My Team</p><h2>Current roster</h2></div><button class="text-button" data-route-link="my_team">Open full roster</button></div>
             <div class="table-wrap">
               <table><thead><tr><th>Role</th><th>Player</th><th>Pos</th><th>Age</th><th>Projection</th><th>Dynasty value</th><th>Team impact</th></tr></thead><tbody><tr class="empty-row"><td colspan="7">No team selected.</td></tr></tbody></table>
             </div>
@@ -123,7 +131,7 @@
 
           <article class="panel trade-analysis-panel">
             <div class="panel-header"><div><p class="eyebrow">Bilateral analysis</p><h2>What changes for each franchise</h2></div><button id="explore-price" class="text-button" disabled>Explore price frontier</button></div>
-            <div id="trade-analysis-empty" class="trade-analysis-empty">Submit a complete draft to load NEXT-5 consequences, economics, feasibility, disposition, and acceptance evidence.</div>
+            <div id="trade-analysis-empty" class="trade-analysis-empty">Select assets now. Authoritative bilateral analysis will activate when forecast/value/team-utility evidence is attached to the hosted runtime.</div>
           </article>
         </div>
 
