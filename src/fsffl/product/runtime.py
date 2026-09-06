@@ -11,6 +11,7 @@ from fsffl.providers.acquisition import ProviderBackedStateService
 from fsffl.providers.sleeper_live import SleeperLiveSource
 from fsffl.providers.sleeper_snapshot import SleeperSnapshotNormalizer
 from fsffl.state.models import LeagueState
+from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult, build_current_market_values
 
 from .simulation_runtime import LiveSimulationAnalyticsResult
 
@@ -33,6 +34,7 @@ class LiveForecastEvidence:
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
+LiveValueLoader = Callable[[LeagueState], CurrentMarketValueRuntimeResult]
 
 
 def default_sleeper_state_loader(league_external_id: str) -> LeagueState:
@@ -75,6 +77,12 @@ def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvide
     )
 
 
+def default_live_value_loader(league_state: LeagueState) -> CurrentMarketValueRuntimeResult:
+    """Run the governed NEXT-3 current market-value runtime."""
+
+    return build_current_market_values(league_state)
+
+
 @dataclass(frozen=True)
 class UserRuntimeContext:
     user_id: str
@@ -82,6 +90,7 @@ class UserRuntimeContext:
     selected_team_id: str | None = None
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
+    value_evidence: CurrentMarketValueRuntimeResult | None = None
 
 
 class PrivateBetaRuntimeStore:
@@ -135,6 +144,7 @@ class PrivateBetaRuntimeStore:
                 selected_team_id=selected,
                 forecast_evidence=evidence,
                 simulation_analytics=None,
+                value_evidence=None,
             )
             self._contexts[user_id] = updated
             return updated
@@ -158,6 +168,31 @@ class PrivateBetaRuntimeStore:
                 selected_team_id=current.selected_team_id,
                 forecast_evidence=current.forecast_evidence,
                 simulation_analytics=result,
+                value_evidence=current.value_evidence,
+            )
+            self._contexts[user_id] = updated
+            return updated
+
+    def set_value_evidence(
+        self,
+        user_id: str,
+        result: CurrentMarketValueRuntimeResult,
+    ) -> UserRuntimeContext:
+        """Attach NEXT-3 Value output only to the exact canonical state it values."""
+
+        with self._lock:
+            current = self.get(user_id)
+            if current.league_state is None:
+                raise ValueError("cannot attach Value evidence before a league is loaded")
+            if result.league_state_id != current.league_state.state_id:
+                raise ValueError("Value evidence must match current LeagueState")
+            updated = UserRuntimeContext(
+                user_id=user_id,
+                league_state=current.league_state,
+                selected_team_id=current.selected_team_id,
+                forecast_evidence=current.forecast_evidence,
+                simulation_analytics=current.simulation_analytics,
+                value_evidence=result,
             )
             self._contexts[user_id] = updated
             return updated
@@ -178,6 +213,7 @@ class PrivateBetaRuntimeStore:
                 selected_team_id=team_id,
                 forecast_evidence=current.forecast_evidence,
                 simulation_analytics=current.simulation_analytics,
+                value_evidence=current.value_evidence,
             )
             self._contexts[user_id] = updated
             return updated
