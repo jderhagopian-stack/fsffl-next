@@ -1,7 +1,11 @@
 from datetime import UTC, datetime
 
 from fsffl.value.calibration import CalibrationEvidenceKind, CalibrationObservation, DataRightsClass
-from fsffl.value.cardinal import characterize_native_magnitudes, preserve_native_market_magnitudes
+from fsffl.value.cardinal import (
+    build_provisional_fsffl_values,
+    characterize_native_magnitudes,
+    preserve_native_market_magnitudes,
+)
 
 
 NOW = datetime(2026, 9, 6, 12, 0, tzinfo=UTC)
@@ -64,3 +68,24 @@ def test_native_scale_characterization_preserves_magnitude_shape() -> None:
     assert summary.median == 5000
     assert summary.maximum == 10000
     assert summary.top_to_median_ratio == 2.0
+
+
+def test_provisional_fsffl_value_is_explicit_challenger_and_never_cross_source_composite() -> None:
+    preserved = preserve_native_market_magnitudes(
+        (
+            _row("dynastydealer_market_values", "p1", 8740),
+            _row("fantasycalc_market_values", "p1", 7100),
+            _row("statsguy_market_values", "p1", 92),
+            _row("fantasycalc_market_values", "p2", 6400),
+        )
+    )
+
+    scores = build_provisional_fsffl_values(preserved)
+
+    assert len(scores) == 1
+    assert scores[0].asset_id == "p1"
+    assert scores[0].score == 8740
+    assert scores[0].status == "challenger"
+    assert scores[0].reference_source_id == "dynastydealer_market_values"
+    assert scores[0].reference_scale_id == "dynastydealer-current-value"
+    assert scores[0].model_version == "next3-provisional-shadow-value-v1"
