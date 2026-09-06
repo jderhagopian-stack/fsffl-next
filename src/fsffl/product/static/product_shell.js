@@ -12,7 +12,7 @@ const fsfflProductRoutes=[
 ];
 
 const fsfflProductSurfaceCopy={
-  players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Value and separate market-position evidence.'],
+  players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Value and separate market-position evidence, without creating a second valuation path.'],
   league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings, tiles and charts will expose team strength, projected scoring, expected wins, playoff odds, roster construction, positional strength, asset value and pick inventory from authoritative Analytics outputs.'],
   what_if:['Alternate History / What-If','Change one thing. Re-run the consequences.','Counterfactual scenarios will create a changed point-in-time State and then reuse Forecast, Value, Decision and Simulation authority to show what would have changed.'],
   simulator:['Simulator','Test the future before acting.','Scenario controls will expose governed NEXT-4 competitive outcomes for lineup, roster, injury and transaction scenarios. Expensive simulation work will remain server-owned, reusable and cacheable.'],
