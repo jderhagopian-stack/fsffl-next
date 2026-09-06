@@ -8,7 +8,8 @@ def test_home_leads_with_user_tasks_not_pipeline_internals() -> None:
         "Compare the League",
         "Browse Players & Assets",
         "Analyze a Trade",
-        "Explore Analytics",
+        "Find Opportunities",
+        "Open Analytics Terminal",
         "Open Reports",
     ):
         assert label in source
