@@ -17,6 +17,12 @@ _NATIVE_SCALE_BY_SOURCE = {
     "statsguy_market_values": "statsguy-dynasty-value",
 }
 
+# Shadow-product reference only. This does NOT promote Dynasty Dealer to Value
+# authority or define the final FSFFL scale. It gives Presentation a stable
+# cardinal-shaped number while empirical calibration continues.
+_PROVISIONAL_REFERENCE_SOURCE_ID = "dynastydealer_market_values"
+_PROVISIONAL_REFERENCE_SCALE_ID = "dynastydealer-current-value"
+
 
 class NativeMarketMagnitudeObservation(FrozenModel):
     """Provider-native market magnitude retained for cardinal-scale research.
@@ -68,6 +74,40 @@ class NativeMagnitudeSourceSummary(FrozenModel):
     top_to_median_ratio: float | None
 
 
+class ProvisionalFSFFLValueScore(FrozenModel):
+    """Non-authoritative shadow score for UI/product-contract testing only.
+
+    The score currently mirrors one explicit provider-native cardinal reference
+    scale. It MUST NOT be consumed by Decision or Search and MUST NOT be treated
+    as the final 0-10,000 FSFFL scale. Its purpose is to let Presentation exercise
+    the future cardinal-value contract while empirical mapping research continues.
+    """
+
+    asset_id: str
+    score: float
+    status: str = "challenger"
+    model_version: str = "next3-provisional-shadow-value-v1"
+    reference_source_id: str = _PROVISIONAL_REFERENCE_SOURCE_ID
+    reference_scale_id: str = _PROVISIONAL_REFERENCE_SCALE_ID
+    observed_at: datetime
+    market_context_id: str
+
+    @field_validator("observed_at")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("provisional FSFFL Value timestamp must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def require_shadow_contract(self) -> "ProvisionalFSFFLValueScore":
+        if self.status != "challenger":
+            raise ValueError("provisional FSFFL Value must remain challenger")
+        if not self.asset_id.strip() or not self.market_context_id.strip():
+            raise ValueError("provisional FSFFL Value identifiers cannot be blank")
+        return self
+
+
 def preserve_native_market_magnitudes(
     observations: tuple[CalibrationObservation, ...],
 ) -> tuple[NativeMarketMagnitudeObservation, ...]:
@@ -103,6 +143,33 @@ def preserve_native_market_magnitudes(
             )
         )
     return tuple(retained)
+
+
+def build_provisional_fsffl_values(
+    observations: tuple[NativeMarketMagnitudeObservation, ...],
+) -> tuple[ProvisionalFSFFLValueScore, ...]:
+    """Expose a clearly labeled shadow cardinal contract for UI testing.
+
+    No cross-provider arithmetic occurs here. Until the empirical common-scale
+    mapping is validated, only the designated reference source is surfaced.
+    This deliberately favors honest incompleteness over inventing a composite.
+    """
+
+    reference_rows = [
+        row
+        for row in observations
+        if row.source_id == _PROVISIONAL_REFERENCE_SOURCE_ID
+        and row.native_scale_id == _PROVISIONAL_REFERENCE_SCALE_ID
+    ]
+    return tuple(
+        ProvisionalFSFFLValueScore(
+            asset_id=row.asset_id,
+            score=row.value,
+            observed_at=row.observed_at,
+            market_context_id=row.market_context_id,
+        )
+        for row in sorted(reference_rows, key=lambda item: item.asset_id)
+    )
 
 
 def characterize_native_magnitudes(
