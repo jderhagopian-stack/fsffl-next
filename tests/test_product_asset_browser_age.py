@@ -12,7 +12,7 @@ def test_shared_asset_browser_exposes_age_from_state_only() -> None:
 
 def test_players_assets_renders_and_sorts_canonical_age_without_derivation() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
-    assert "age:asset.age_years??null" in source
+    assert "age:analyticsPlayer?.age_years??asset.age_years??null" in source
     assert "explorerSortButton('Age','age'" in source
     assert "explorerAge(row.age)" in source
     assert "Age / ownership / roster slot:</strong> canonical point-in-time State" in source
