@@ -28,6 +28,6 @@ def test_my_team_is_a_real_product_surface_and_mobile_first() -> None:
     assert "ensureMyTeamScript" in shell
     assert "renderFsfflMyTeam" in shell
     for destination in ("trade_center", "league_comparison", "analytics", "what_if"):
-        assert f'data-my-team-route=\\"{destination}\\"' in source
+        assert f'data-my-team-route="{destination}"' in source
     assert "@media(max-width:760px)" in source
     assert "@media(max-width:460px)" in source
