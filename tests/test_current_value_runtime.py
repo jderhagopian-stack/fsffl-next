@@ -113,12 +113,18 @@ def test_current_market_runtime_uses_governed_lineage_and_cardinal_authority(mon
             {"id": "s3", "value": 1100},
         ],
     }
-    statsguy_picks = {
-        "valuesAsOf": {"sf_dynasty": now.isoformat()},
-        "picks": [
-            {"id": "pick:2027:1", "year": 2027, "round": 1, "value": {"sf_dynasty": 3100}},
-            {"id": "pick:2027:1:early", "year": 2027, "round": 1, "variant": "early", "value": {"sf_dynasty": 4100}},
-        ],
+    statsguy_trade_evaluation = {
+        "asOf": now.isoformat(),
+        "sideA": {
+            "assets": [
+                {"id": "pick:2027:1", "type": "pick", "found": True, "value": 3100},
+            ]
+        },
+        "sideB": {
+            "assets": [
+                {"id": "s1", "type": "player", "found": True, "value": 8740},
+            ]
+        },
     }
 
     def fake_download(url: str) -> str:
@@ -126,13 +132,19 @@ def test_current_market_runtime_uses_governed_lineage_and_cardinal_authority(mon
             return json.dumps(dealer)
         if "fantasycalc" in url:
             return json.dumps(calc)
-        if url.endswith("/picks"):
-            return json.dumps(statsguy_picks)
         if "statsguy" in url:
             return json.dumps(statsguy)
         raise AssertionError(url)
 
+    def fake_post(url: str, payload: dict[str, object]) -> str:
+        assert url.endswith("/trades/evaluate")
+        assert payload["format"] == "sf_dynasty"
+        assert payload["sideA"] == ["pick:2027:1"]
+        assert payload["sideB"] == ["s1"]
+        return json.dumps(statsguy_trade_evaluation)
+
     monkeypatch.setattr("fsffl.value.current_runtime._download_text", fake_download)
+    monkeypatch.setattr("fsffl.value.current_runtime._post_json_text", fake_post)
     result = build_current_market_values(league_state)
 
     assert result.league_state_id == league_state.state_id
