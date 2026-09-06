@@ -123,6 +123,13 @@ def test_current_market_runtime_uses_governed_lineage_and_surfaces_missing_cross
         "statsguy_market_values",
     }
     assert "dynastyprocess_market_values" in result.failed_sources
+
+    native = {(item.source_id, item.asset_id): item for item in result.native_magnitude_observations}
+    assert native[("dynastydealer_market_values", "p1")].value == 9000
+    assert native[("fantasycalc_market_values", "p1")].value == 10000
+    assert native[("statsguy_market_values", "p1")].value == 100
+    assert native[("dynastydealer_market_values", "p1")].native_scale_id == "dynastydealer-current-value"
+
     estimates = {item.asset_id: item for item in result.estimates}
     assert estimates["p1"].distribution.mean == 1.0
     assert estimates["p2"].distribution.mean == 0.5
