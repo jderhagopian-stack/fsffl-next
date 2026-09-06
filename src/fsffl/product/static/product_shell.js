@@ -12,13 +12,25 @@ const fsfflProductRoutes=[
 ];
 
 const fsfflProductSurfaceCopy={
-  players_assets:['Players & Assets','Search the entire league market.','A sortable, searchable asset explorer will combine authoritative FSFFL Value, market percentile, projections, age, position, roster ownership and other governed evidence without creating a second valuation path.'],
+  players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Value and separate market-position evidence.'],
   league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings, tiles and charts will expose team strength, projected scoring, expected wins, playoff odds, roster construction, positional strength, asset value and pick inventory from authoritative Analytics outputs.'],
   what_if:['Alternate History / What-If','Change one thing. Re-run the consequences.','Counterfactual scenarios will create a changed point-in-time State and then reuse Forecast, Value, Decision and Simulation authority to show what would have changed.'],
   simulator:['Simulator','Test the future before acting.','Scenario controls will expose governed NEXT-4 competitive outcomes for lineup, roster, injury and transaction scenarios. Expensive simulation work will remain server-owned, reusable and cacheable.'],
-  analytics:['Analytics Explorer','Explore every governed signal.','Sortable and searchable league, team, player and pick information will expose descriptive Analytics views with drilldowns into authoritative evidence and provenance.'],
+  analytics:['Analytics Explorer','Compare the whole league without hunting for answers.','Search and sort authoritative team-level outputs from State, Forecast, Value and Simulation.'],
   reports:['Reports','Decision intelligence, explained clearly.','Polished reports will render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
+
+function renderProductSurface(route){
+  const copy=fsfflProductSurfaceCopy[route];
+  if(!copy)return;
+  const eyebrow=document.querySelector('#generic-eyebrow');
+  const title=document.querySelector('#generic-title');
+  const body=document.querySelector('#generic-copy');
+  if(eyebrow)eyebrow.textContent=copy[0];
+  if(title)title.textContent=copy[1];
+  if(body)body.textContent=copy[2];
+  if(typeof window.renderFsfflExplorer==='function'&&(route==='players_assets'||route==='analytics'))window.renderFsfflExplorer(route);
+}
 
 function rebuildProductNavigation(){
   const nav=document.querySelector('#primary-nav');
@@ -35,15 +47,6 @@ function rebuildProductNavigation(){
     button.addEventListener('click',()=>{
       if(button.classList.contains('locked'))return;
       if(typeof setRoute==='function')setRoute(item.route);
-      if(fsfflProductSurfaceCopy[item.route]){
-        const copy=fsfflProductSurfaceCopy[item.route];
-        const eyebrow=document.querySelector('#generic-eyebrow');
-        const title=document.querySelector('#generic-title');
-        const body=document.querySelector('#generic-copy');
-        if(eyebrow)eyebrow.textContent=copy[0];
-        if(title)title.textContent=copy[1];
-        if(body)body.textContent=copy[2];
-      }
     });
     nav.appendChild(button);
   });
@@ -51,15 +54,9 @@ function rebuildProductNavigation(){
 
 function productRouteAwareSetRoute(route){
   if(!fsfflProductSurfaceCopy[route])return;
-  const copy=fsfflProductSurfaceCopy[route];
   document.querySelectorAll('.route-screen').forEach(item=>item.hidden=item.id!=='generic-screen');
   document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.route===route));
-  const eyebrow=document.querySelector('#generic-eyebrow');
-  const title=document.querySelector('#generic-title');
-  const body=document.querySelector('#generic-copy');
-  if(eyebrow)eyebrow.textContent=copy[0];
-  if(title)title.textContent=copy[1];
-  if(body)body.textContent=copy[2];
+  renderProductSurface(route);
 }
 
 const originalSetRoute=typeof setRoute==='function'?setRoute:null;
