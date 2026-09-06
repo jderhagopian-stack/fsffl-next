@@ -16,6 +16,7 @@ _TEAM_ALIASES = {
     "WSH": "WAS",
     "LA": "LAR",
 }
+_NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
 
 _STAT_METRICS: dict[str, ForecastMetric] = {
     "pass_yd": ForecastMetric.PASS_YARDS,
@@ -54,7 +55,10 @@ def canonical_season_window(season: int) -> tuple[datetime, datetime]:
 def _normalize_name(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
     ascii_text = "".join(char for char in normalized if not unicodedata.combining(char))
-    return re.sub(r"[^a-z0-9]+", "", ascii_text.lower())
+    parts = re.findall(r"[a-z0-9]+", ascii_text.lower())
+    while parts and parts[-1] in _NAME_SUFFIXES:
+        parts.pop()
+    return "".join(parts)
 
 
 def _normalize_team(value: str | None) -> str:
