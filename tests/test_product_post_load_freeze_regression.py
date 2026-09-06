@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+import re
 
 import pytest
 
@@ -16,7 +17,7 @@ def test_runtime_polish_does_not_observe_its_own_character_mutations() -> None:
 
 def test_core_beta_assets_are_versioned_to_break_mobile_cache() -> None:
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
-    for asset in (
+    assets = (
         "app.css",
         "explorer.css",
         "app.js",
@@ -25,8 +26,13 @@ def test_core_beta_assets_are_versioned_to_break_mobile_cache() -> None:
         "product_polish.js",
         "explorer.js",
         "product_shell.js",
-    ):
-        assert f"/static/{asset}?v=20260906-freeze1" in html
+    )
+    versions = []
+    for asset in assets:
+        match = re.search(rf"/static/{re.escape(asset)}\?v=([^\"']+)", html)
+        assert match is not None, f"{asset} must carry an explicit cache-busting version"
+        versions.append(match.group(1))
+    assert len(set(versions)) == 1, "core beta assets must use one coherent deployment version"
 
 
 def test_sleeper_live_retries_a_partial_roster_payload_once() -> None:
