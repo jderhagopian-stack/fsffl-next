@@ -24,6 +24,7 @@ from .intelligence_runtime import (
     build_state_only_league_view,
     state_first_runtime_status,
 )
+from .opportunity_workspace import build_opportunity_workspace
 from .runtime import (
     LiveForecastEvidence,
     LiveForecastLoader,
@@ -502,6 +503,14 @@ def create_app(
             "source_level": source_level,
             "team_views": [view.model_dump(mode="json") for view in enriched],
         }
+
+    @application.get("/api/opportunities/workspace")
+    def opportunity_workspace(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        try:
+            return build_opportunity_workspace(runtime)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @application.get("/api/trade-center/browser")
     def trade_center_browser(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
