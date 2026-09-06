@@ -8,6 +8,7 @@ from fsffl.forecast.models import (
     ForecastMetric,
     ForecastObservation,
 )
+from fsffl.forecast.weekly_volatility import FSFFL_2023_2025_WEEKLY_VOLATILITY
 from fsffl.state.models import (
     League,
     LeagueMatchup,
@@ -104,7 +105,7 @@ def _state() -> LeagueState:
     )
 
 
-def test_week_specific_lineup_replaces_player_on_bye() -> None:
+def test_week_specific_lineup_replaces_player_on_bye_and_uses_weekly_volatility() -> None:
     state = _state()
     forecasts = (
         _forecast("starter", 340.0, 68.0),
@@ -127,9 +128,26 @@ def test_week_specific_lineup_replaces_player_on_bye() -> None:
         as_of=AS_OF,
     )
 
+    qb_cv = FSFFL_2023_2025_WEEKLY_VOLATILITY.coefficient_of_variation(Position.QB)
     assert bye_week.mean_points == pytest.approx(170.0 / 17.0)
     assert normal_week.mean_points == pytest.approx(340.0 / 17.0)
-    assert bye_week.stddev_points == pytest.approx(51.0 / (17.0**0.5))
-    assert normal_week.stddev_points == pytest.approx(68.0 / (17.0**0.5))
-    assert "bye_aware_equal_active_game" in bye_week.model_version
+    assert bye_week.stddev_points == pytest.approx((170.0 / 17.0) * qb_cv)
+    assert normal_week.stddev_points == pytest.approx((340.0 / 17.0) * qb_cv)
+    assert "bye_aware_empirical_weekly_volatility" in bye_week.model_version
     assert normal_week.mean_points > bye_week.mean_points
+
+    # Season forecast-error uncertainty must no longer leak into weekly scoring
+    # variance.  Changing only the season stddev cannot change weekly stddev.
+    wider_season_uncertainty = (
+        _forecast("starter", 340.0, 340.0),
+        _forecast("bench", 170.0, 170.0),
+        _forecast("opp", 255.0, 255.0),
+    )
+    same_week = build_bye_aware_weekly_team_scoring_distribution(
+        state,
+        wider_season_uncertainty,
+        team_id="a",
+        week=6,
+        as_of=AS_OF,
+    )
+    assert same_week.stddev_points == pytest.approx(normal_week.stddev_points)
