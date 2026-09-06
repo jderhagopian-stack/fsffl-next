@@ -28,7 +28,12 @@ jobs:
             --output /tmp/fsffl-cardinal/crosswalk.csv
       - name: Clone DynastyProcess history source
         run: |
-          git clone --quiet https://github.com/dynastyprocess/data.git /tmp/dynastyprocess-data
+          git clone --quiet \
+            --filter=blob:none \
+            --no-checkout \
+            --shallow-since=2025-08-01 \
+            https://github.com/dynastyprocess/data.git \
+            /tmp/dynastyprocess-data
       - name: Build DynastyProcess point-in-time history
         run: |
           python scripts/build_next3_dynastyprocess_history.py \
