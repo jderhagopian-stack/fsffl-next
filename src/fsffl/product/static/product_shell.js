@@ -18,11 +18,12 @@ const fsfflProductSurfaceCopy={
   what_if:['Alternate History / What-If','Change one thing. Re-run the consequences.','Counterfactual scenarios will create a changed point-in-time State and then reuse Forecast, Value, Decision and Simulation authority to show what would have changed.'],
   simulator:['Simulator','Test the future before acting.','Scenario controls will expose governed NEXT-4 competitive outcomes for lineup, roster, injury and transaction scenarios. Expensive simulation work will remain server-owned, reusable and cacheable.'],
   analytics:['Analytics Explorer','Compare the whole league without hunting for answers.','Search and sort authoritative team-level outputs from State, Forecast, Value and Simulation.'],
-  reports:['Reports','Decision intelligence, explained clearly.','Polished reports will render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
+  reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
+let reportsScriptPromise=null;
 function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseSetter){
   if(typeof window[existingName]==='function')return Promise.resolve();
   const existing=promiseGetter();if(existing)return existing;
@@ -31,6 +32,7 @@ function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseS
 }
 function ensureLeagueComparisonScript(){return lazyProductScript('renderFsfflLeagueComparison','/static/league_comparison.js','Unable to load League Comparison presentation module',()=>leagueComparisonScriptPromise,value=>leagueComparisonScriptPromise=value)}
 function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/static/my_team_dashboard.js','Unable to load My Team presentation module',()=>myTeamScriptPromise,value=>myTeamScriptPromise=value)}
+function ensureReportsScript(){return lazyProductScript('renderFsfflReports','/static/reports.js','Unable to load Reports presentation module',()=>reportsScriptPromise,value=>reportsScriptPromise=value)}
 
 function productSurfaceError(label,error){const panel=document.querySelector('#generic-screen .panel');if(panel)panel.innerHTML=`<p class="eyebrow">${label}</p><h2>Unable to load this view.</h2><p class="lead">${String(error.message||error)}</p>`}
 function renderProductSurface(route){
@@ -40,6 +42,7 @@ function renderProductSurface(route){
   if(route==='my_team')ensureMyTeamScript().then(()=>window.renderFsfflMyTeam?.()).catch(error=>productSurfaceError('My Team',error));
   if(typeof window.renderFsfflExplorer==='function'&&(route==='players_assets'||route==='analytics'))window.renderFsfflExplorer(route);
   if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>productSurfaceError('League Comparison',error));
+  if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error));
 }
 
 function rebuildProductNavigation(){
