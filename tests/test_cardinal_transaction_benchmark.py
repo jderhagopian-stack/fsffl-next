@@ -30,10 +30,12 @@ def _trade(a: str, b: str, when: datetime) -> OneForOneTradeObservation:
     return OneForOneTradeObservation(
         transaction_id=f"trade:{a}:{b}:{when.date()}",
         league_id="league-1",
+        format_context_id=CONTEXT,
         completed_at=when,
+        roster_a_id=1,
+        roster_b_id=2,
         asset_a_id=a,
         asset_b_id=b,
-        source_id="sleeper",
     )
 
 
