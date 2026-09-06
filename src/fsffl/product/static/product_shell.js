@@ -1,0 +1,81 @@
+const fsfflProductRoutes=[
+  {route:'league',label:'Home'},
+  {route:'my_team',label:'My Team',teamScoped:true},
+  {route:'players_assets',label:'Players & Assets'},
+  {route:'league_comparison',label:'League Comparison'},
+  {route:'trade_center',label:'Trade Center',teamScoped:true},
+  {route:'opportunities',label:'Opportunities',teamScoped:true},
+  {route:'what_if',label:'What-If',teamScoped:true},
+  {route:'simulator',label:'Simulator'},
+  {route:'analytics',label:'Analytics Explorer'},
+  {route:'reports',label:'Reports'}
+];
+
+const fsfflProductSurfaceCopy={
+  players_assets:['Players & Assets','Search the entire league market.','A sortable, searchable asset explorer will combine authoritative FSFFL Value, market percentile, projections, age, position, roster ownership and other governed evidence without creating a second valuation path.'],
+  league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings, tiles and charts will expose team strength, projected scoring, expected wins, playoff odds, roster construction, positional strength, asset value and pick inventory from authoritative Analytics outputs.'],
+  what_if:['Alternate History / What-If','Change one thing. Re-run the consequences.','Counterfactual scenarios will create a changed point-in-time State and then reuse Forecast, Value, Decision and Simulation authority to show what would have changed.'],
+  simulator:['Simulator','Test the future before acting.','Scenario controls will expose governed NEXT-4 competitive outcomes for lineup, roster, injury and transaction scenarios. Expensive simulation work will remain server-owned, reusable and cacheable.'],
+  analytics:['Analytics Explorer','Explore every governed signal.','Sortable and searchable league, team, player and pick information will expose descriptive Analytics views with drilldowns into authoritative evidence and provenance.'],
+  reports:['Reports','Decision intelligence, explained clearly.','Polished reports will render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
+};
+
+function rebuildProductNavigation(){
+  const nav=document.querySelector('#primary-nav');
+  if(!nav)return;
+  nav.innerHTML='';
+  const hasTeam=Boolean(window.state?.context?.team_id||state?.context?.team_id);
+  fsfflProductRoutes.forEach(item=>{
+    const button=document.createElement('button');
+    button.className='nav-item';
+    button.dataset.route=item.route;
+    if(item.route===(window.state?.route||state?.route))button.classList.add('active');
+    if(item.teamScoped&&!hasTeam)button.classList.add('locked');
+    button.innerHTML=`<span>${item.label}</span>${item.teamScoped&&!hasTeam?'<small>Select team</small>':''}`;
+    button.addEventListener('click',()=>{
+      if(button.classList.contains('locked'))return;
+      if(typeof setRoute==='function')setRoute(item.route);
+      if(fsfflProductSurfaceCopy[item.route]){
+        const copy=fsfflProductSurfaceCopy[item.route];
+        const eyebrow=document.querySelector('#generic-eyebrow');
+        const title=document.querySelector('#generic-title');
+        const body=document.querySelector('#generic-copy');
+        if(eyebrow)eyebrow.textContent=copy[0];
+        if(title)title.textContent=copy[1];
+        if(body)body.textContent=copy[2];
+      }
+    });
+    nav.appendChild(button);
+  });
+}
+
+function productRouteAwareSetRoute(route){
+  if(!fsfflProductSurfaceCopy[route])return;
+  const copy=fsfflProductSurfaceCopy[route];
+  document.querySelectorAll('.route-screen').forEach(item=>item.hidden=item.id!=='generic-screen');
+  document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.route===route));
+  const eyebrow=document.querySelector('#generic-eyebrow');
+  const title=document.querySelector('#generic-title');
+  const body=document.querySelector('#generic-copy');
+  if(eyebrow)eyebrow.textContent=copy[0];
+  if(title)title.textContent=copy[1];
+  if(body)body.textContent=copy[2];
+}
+
+const originalSetRoute=typeof setRoute==='function'?setRoute:null;
+if(originalSetRoute){
+  window.setRoute=function(route){
+    if(fsfflProductSurfaceCopy[route]){
+      if(typeof state!=='undefined')state.route=route;
+      productRouteAwareSetRoute(route);
+      document.querySelector('.sidebar')?.classList.remove('open');
+      return;
+    }
+    return originalSetRoute(route);
+  };
+  setRoute=window.setRoute;
+}
+
+window.addEventListener('load',rebuildProductNavigation);
+window.addEventListener('fsffl:product-context-updated',rebuildProductNavigation);
+setTimeout(rebuildProductNavigation,0);
