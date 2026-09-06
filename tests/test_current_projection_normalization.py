@@ -89,6 +89,36 @@ def test_current_sources_share_common_season_identity_for_ensemble() -> None:
     assert ensemble[0].distribution.stddev > 0
 
 
+def test_common_name_suffix_difference_resolves_same_canonical_player() -> None:
+    state = _state()
+    snapshot = CurrentProjectionSnapshot(
+        provider="cbs",
+        captured_at=datetime(2026, 9, 5, 19, tzinfo=UTC),
+        effective_at=datetime(2026, 9, 5, 18, tzinfo=UTC),
+        rows=(
+            CurrentProjectionRow(
+                provider="cbs",
+                external_id="cbs:lamar-jr",
+                player_name="Lamar Jackson Jr.",
+                position=Position.QB,
+                nfl_team="BAL",
+                stats={"pass_yd": 4100.0},
+            ),
+        ),
+        source_version="cbs-v1",
+        usage_class="beta-personal-research-requires-commercial-review",
+    )
+    observations = normalize_current_projection_snapshot(
+        snapshot,
+        league_state=state,
+        season=2026,
+        evaluation_as_of=datetime(2026, 9, 5, 20, tzinfo=UTC),
+    )
+    assert len(observations) == 1
+    assert observations[0].player_id == "p1"
+    assert observations[0].metric == ForecastMetric.PASS_YARDS
+
+
 def test_ambiguous_or_unmatched_identity_is_not_guessed() -> None:
     state = _state()
     snapshot = CurrentProjectionSnapshot(
