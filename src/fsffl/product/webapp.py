@@ -401,6 +401,13 @@ def create_app(
                 }
                 for estimate in evidence.estimates
             ],
+            "provisional_fsffl_values": [
+                {
+                    **score.model_dump(mode="json"),
+                    "display_name": player_names.get(score.asset_id, score.asset_id),
+                }
+                for score in evidence.provisional_fsffl_values
+            ],
         }
 
     @application.get("/api/my-team")
