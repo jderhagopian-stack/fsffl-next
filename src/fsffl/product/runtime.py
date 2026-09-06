@@ -30,7 +30,7 @@ class LiveForecastEvidence:
     failed_sources: tuple[str, ...]
     uncertainty_ready: bool
     runtime_result: LiveForecastRuntimeResult
-    model_version: str = "next8-live-forecast-evidence-v2"
+    model_version: str = "next8-live-forecast-evidence-v3"
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
@@ -52,16 +52,18 @@ def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvide
 
     No single provider output is promoted as an FSFFL forecast. The returned raw
     forecasts are the authoritative equal-weight ensemble after per-player source
-    coverage gates. League-scored forecasts are derived only after that ensemble.
+    coverage gates. League-scored forecasts include the preserved full NFL-season
+    horizon plus the derived league-specific fantasy regular-season horizon.
     """
 
     result = build_current_live_forecasts(league_state)
     _logger.info(
-        "FSFFL live forecast sources successful=%s failures=%s raw_groups=%s scored_players=%s",
+        "FSFFL live forecast sources successful=%s failures=%s raw_groups=%s scored_players=%s regular_season_players=%s",
         list(result.successful_source_ids),
         list(result.failed_sources),
         len(result.raw_ensemble),
         len(result.fantasy_point_forecasts),
+        len(result.fantasy_regular_season_forecasts),
     )
     uncertainty_ready = bool(result.fantasy_point_forecasts) and all(
         observation.distribution.stddev > 0
@@ -69,7 +71,9 @@ def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvide
     )
     return LiveForecastEvidence(
         raw_forecasts=result.raw_ensemble,
-        league_scored_forecasts=result.fantasy_point_forecasts,
+        league_scored_forecasts=(
+            result.fantasy_point_forecasts + result.fantasy_regular_season_forecasts
+        ),
         successful_source_ids=result.successful_source_ids,
         failed_sources=result.failed_sources,
         uncertainty_ready=uncertainty_ready,
