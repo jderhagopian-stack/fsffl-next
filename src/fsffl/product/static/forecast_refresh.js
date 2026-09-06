@@ -2,6 +2,7 @@ let fsfflJobStartInFlight=false;
 let fsfflCurrentJobId=null;
 let fsfflJobStateId=null;
 let fsfflSettledStateId=null;
+let fsfflSessionStartedJobId=null;
 
 function setForecastRefreshMessage(message){
   const title=document.querySelector('#runtime-status-title');
@@ -16,6 +17,38 @@ function phaseMessage(payload){
 
 function intelligencePipelineReady(context){
   return Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
+}
+
+function ensureIntelligenceRefreshButton(){
+  const header=document.querySelector('#runtime-status .panel-header');
+  if(!header)return null;
+  let button=document.querySelector('#refresh-intelligence');
+  if(button)return button;
+  button=document.createElement('button');
+  button.id='refresh-intelligence';
+  button.type='button';
+  button.className='secondary-button';
+  button.textContent='Refresh Intelligence';
+  button.hidden=true;
+  button.addEventListener('click',manualIntelligenceRefresh);
+  header.appendChild(button);
+  return button;
+}
+
+function reflectCorePipelineStatus(context,{running=false}={}){
+  const button=ensureIntelligenceRefreshButton();
+  const summary=document.querySelector('#runtime-status-summary');
+  if(!context?.league_id){
+    if(button)button.hidden=true;
+    return;
+  }
+  const readyCount=[context.forecast_ready,context.simulation_ready,context.value_ready].filter(Boolean).length;
+  const ready=intelligencePipelineReady(context);
+  if(summary)summary.textContent=ready?'Core intelligence ready':`${readyCount}/3 core stages ready`;
+  if(button){
+    button.hidden=ready||running;
+    button.disabled=running||fsfflJobStartInFlight;
+  }
 }
 
 function reflectAuthoritativeValueReadiness(context){
@@ -47,22 +80,29 @@ async function refreshVisibleEvidenceIfAdvanced(previousContext,payload){
   state.context=context;
   state.intelligence=null;
   applyContext();
-  setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
+  setTimeout(()=>{
+    reflectAuthoritativeValueReadiness(context);
+    reflectCorePipelineStatus(context,{running:Boolean(fsfflCurrentJobId)});
+  },0);
 }
 
 async function settleCompletedJob(){
   const context=await api('/api/product-context');
   state.context=context;
   state.intelligence=null;
-  fsfflSettledStateId=context.state_id||null;
   fsfflCurrentJobId=null;
   fsfflJobStateId=null;
+  fsfflSessionStartedJobId=null;
+  fsfflSettledStateId=context.state_id||null;
   applyContext();
-  setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
-  if(context.value_ready){
-    setForecastRefreshMessage('Intelligence refresh complete.');
+  setTimeout(()=>{
+    reflectAuthoritativeValueReadiness(context);
+    reflectCorePipelineStatus(context);
+  },0);
+  if(intelligencePipelineReady(context)){
+    setForecastRefreshMessage('Core intelligence is ready.');
   }else{
-    setForecastRefreshMessage('Forecast and simulation are ready; Value finished without an authoritative estimate set.');
+    setForecastRefreshMessage('Core intelligence is incomplete. Refresh to retry missing forecast, simulation, or Value evidence.');
   }
 }
 
@@ -70,7 +110,18 @@ function settleFailedJob(payload){
   fsfflSettledStateId=state?.context?.state_id||fsfflJobStateId||null;
   fsfflCurrentJobId=null;
   fsfflJobStateId=null;
+  fsfflSessionStartedJobId=null;
   setForecastRefreshMessage(phaseMessage(payload));
+  reflectCorePipelineStatus(state.context);
+}
+
+async function manualIntelligenceRefresh(){
+  if(!state?.context?.league_id||fsfflJobStartInFlight)return;
+  fsfflSettledStateId=null;
+  fsfflCurrentJobId=null;
+  fsfflJobStateId=null;
+  fsfflSessionStartedJobId=null;
+  await maybeStartIntelligenceJob({manual:true});
 }
 
 async function pollIntelligenceJob(){
@@ -85,6 +136,7 @@ async function pollIntelligenceJob(){
     await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
     setForecastRefreshMessage(phaseMessage(payload));
     reflectAuthoritativeValueReadiness(state.context);
+    reflectCorePipelineStatus(state.context,{running:payload.status==='queued'||payload.status==='running'});
 
     if(payload.status==='completed'){
       await settleCompletedJob();
@@ -96,64 +148,102 @@ async function pollIntelligenceJob(){
       settleFailedJob(payload);
       return;
     }
-
-    if(payload.status==='queued'||payload.status==='running')return;
-
-    await maybeStartIntelligenceJob();
   }catch(error){
     console.error('Unable to poll FSFFL intelligence job',error);
     setForecastRefreshMessage(`Unable to check server job status (${error.message}). Retrying…`);
+    reflectCorePipelineStatus(state.context);
   }
 }
 
-async function maybeStartIntelligenceJob(){
+async function maybeStartIntelligenceJob({manual=false}={}){
   if(fsfflJobStartInFlight||!state?.context?.league_id)return;
-  if(intelligencePipelineReady(state.context))return;
+  if(intelligencePipelineReady(state.context)){
+    reflectCorePipelineStatus(state.context);
+    return;
+  }
 
   const stateId=state.context.state_id||'loaded';
-  if(fsfflSettledStateId&&fsfflSettledStateId===stateId)return;
+  if(!manual&&fsfflSettledStateId&&fsfflSettledStateId===stateId){
+    reflectCorePipelineStatus(state.context);
+    return;
+  }
   if(fsfflCurrentJobId&&fsfflJobStateId===stateId)return;
 
   fsfflJobStartInFlight=true;
   fsfflSettledStateId=null;
   setForecastRefreshMessage('Starting server-side intelligence refresh…');
+  reflectCorePipelineStatus(state.context,{running:true});
   try{
     const payload=await api('/api/intelligence/jobs',{method:'POST'});
     fsfflCurrentJobId=payload.job_id||null;
+    fsfflSessionStartedJobId=payload.job_id||null;
     fsfflJobStateId=payload.league_state_id||stateId;
     setForecastRefreshMessage(phaseMessage(payload));
   }catch(error){
     console.error('Unable to start FSFFL intelligence job',error);
-    setForecastRefreshMessage(`Unable to start intelligence refresh (${error.message}). Retrying…`);
+    fsfflSettledStateId=stateId;
+    setForecastRefreshMessage(`Unable to start intelligence refresh (${error.message}). Use Refresh Intelligence to retry.`);
   }finally{
     fsfflJobStartInFlight=false;
+    reflectCorePipelineStatus(state.context,{running:Boolean(fsfflCurrentJobId)});
   }
 }
 
 async function maintainFsfflIntelligence(){
   if(!state?.context?.league_id)return;
   reflectAuthoritativeValueReadiness(state.context);
-  if(intelligencePipelineReady(state.context))return;
-  if(fsfflSettledStateId&&fsfflSettledStateId===state.context.state_id)return;
+  if(intelligencePipelineReady(state.context)){
+    reflectCorePipelineStatus(state.context);
+    return;
+  }
+  if(fsfflSettledStateId&&fsfflSettledStateId===state.context.state_id){
+    reflectCorePipelineStatus(state.context);
+    return;
+  }
   if(fsfflCurrentJobId){
     await pollIntelligenceJob();
     return;
   }
+
   try{
     const previousContext=state.context;
     const payload=await api('/api/intelligence/jobs/current');
     state.context={...state.context,...payload};
-    if(payload.job_id){
+    await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
+
+    if(payload.job_id&&(payload.status==='queued'||payload.status==='running')){
       fsfflCurrentJobId=payload.job_id;
       fsfflJobStateId=payload.league_state_id||null;
-      await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
       setForecastRefreshMessage(phaseMessage(payload));
-      reflectAuthoritativeValueReadiness(state.context);
-      if(payload.status==='completed'){
+      reflectCorePipelineStatus(state.context,{running:true});
+      return;
+    }
+
+    if(payload.job_id&&payload.status==='completed'){
+      if(intelligencePipelineReady(state.context)){
         await settleCompletedJob();
-      }else if(payload.status==='failed'){
-        settleFailedJob(payload);
+        return;
       }
+      if(fsfflSessionStartedJobId===payload.job_id){
+        await settleCompletedJob();
+        return;
+      }
+      // A completed job discovered after the current state is already partial must
+      // not suppress a fresh enrichment attempt for this browser session.
+      fsfflCurrentJobId=null;
+      fsfflJobStateId=null;
+      await maybeStartIntelligenceJob();
+      return;
+    }
+
+    if(payload.job_id&&payload.status==='failed'){
+      if(fsfflSessionStartedJobId===payload.job_id){
+        settleFailedJob(payload);
+        return;
+      }
+      fsfflCurrentJobId=null;
+      fsfflJobStateId=null;
+      await maybeStartIntelligenceJob();
       return;
     }
   }catch(error){
@@ -163,4 +253,7 @@ async function maintainFsfflIntelligence(){
 }
 
 setInterval(maintainFsfflIntelligence,2500);
-window.addEventListener('load',maintainFsfflIntelligence);
+window.addEventListener('load',()=>{
+  ensureIntelligenceRefreshButton();
+  maintainFsfflIntelligence();
+});
