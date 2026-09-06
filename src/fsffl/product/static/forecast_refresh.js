@@ -2,10 +2,27 @@ let fsfflForecastRefreshInFlight=false;
 let fsfflForecastAttemptedState=null;
 let fsfflForecastRetryAt=0;
 let fsfflSimulationPollUntil=0;
+let fsfflLastSimulationReady=null;
 
 function setForecastRefreshMessage(message){
   const summary=document.querySelector('#runtime-status-summary');
   if(summary)summary.textContent=message;
+}
+
+function reconcileSimulationRuntimeState(){
+  // The private beta store is intentionally in-memory. A Render/runtime restart
+  // can therefore make server-side simulation evidence disappear while an open
+  // browser still remembers that the same immutable LeagueState already finished.
+  // In that exact transition, clear only the client retry bookkeeping so the
+  // authoritative server workflow can be started again. This does not weaken the
+  // server's state-id guard and does not create a second model authority.
+  const simulationReady=Boolean(state?.context?.simulation_ready);
+  if(fsfflLastSimulationReady===true&&!simulationReady){
+    fsfflForecastAttemptedState=null;
+    fsfflForecastRetryAt=0;
+    fsfflSimulationPollUntil=0;
+  }
+  fsfflLastSimulationReady=simulationReady;
 }
 
 async function pollExistingSimulation(){
@@ -15,6 +32,7 @@ async function pollExistingSimulation(){
     state.context=payload;
     state.intelligence=null;
     applyContext();
+    reconcileSimulationRuntimeState();
     if(payload.simulation_ready){
       fsfflForecastRetryAt=Number.POSITIVE_INFINITY;
       fsfflSimulationPollUntil=0;
@@ -39,6 +57,7 @@ async function maybeRefreshFsfflForecasts(){
   // work instead of launching a second state/forecast refresh that could make the
   // first simulation stale against a newer immutable LeagueState.
   if(fsfflForecastRefreshInFlight||!state?.context?.league_id)return;
+  reconcileSimulationRuntimeState();
   if(state.context.forecast_ready&&state.context.simulation_ready)return;
 
   if(fsfflSimulationPollUntil>Date.now()){
@@ -62,6 +81,7 @@ async function maybeRefreshFsfflForecasts(){
     state.context=payload;
     state.intelligence=null;
     applyContext();
+    reconcileSimulationRuntimeState();
     if(payload.simulation_ready){
       fsfflForecastRetryAt=Number.POSITIVE_INFINITY;
       fsfflSimulationPollUntil=0;
