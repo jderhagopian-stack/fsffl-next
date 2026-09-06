@@ -126,7 +126,7 @@ function sideAnalysisMarkup(result,teamId){
 function renderTradeAnalysis(result){
   const panel=qs('#trade-analysis-empty');if(!panel)return;
   const focalId=result.focal_team_id,counterpartyId=result.counterparty_team_id;
-  const competitiveReady=Boolean(result.availability?.competitive_outcomes),acceptanceReady=Boolean(result.availability?.acceptance_probability);
+  const competitiveReady=Boolean(result.availability?.competitive_outcomes);
   const decisionShape=result.decision?.shape?tradeDirectionText(result.decision.shape):'incomplete';
   const warnings=(result.warnings||[]).map(item=>`<li>${escapeHtml(item)}</li>`).join('');
   panel.innerHTML=`<div style="width:100%;text-align:left">
@@ -134,7 +134,7 @@ function renderTradeAnalysis(result){
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">${sideAnalysisMarkup(result,focalId)}${sideAnalysisMarkup(result,counterpartyId)}</div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px">
       <div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Competitive impact</span><strong style="display:block;margin:5px 0">${competitiveReady?'Ready':'Not simulated yet'}</strong><small style="color:var(--muted)">Win, playoff and first-place deltas require the changed roster to run through NEXT-4 Simulation authority.</small></div>
-      <div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Acceptance probability</span><strong style="display:block;margin:5px 0">${acceptanceReady?'Ready':'Not estimated'}</strong><small style="color:var(--muted)">No calibrated acceptance probability is invented when behavioral evidence is not attached.</small></div>
+      <div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Acceptance probability</span><strong style="display:block;margin:5px 0">Not estimated</strong><small style="color:var(--muted)">The presentation layer does not consume or estimate acceptance authority. Behavioral evidence will be attached through a governed Decision/API contract when ready.</small></div>
     </div>
     ${warnings?`<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--accent)">Evidence & limitations</summary><ul style="color:var(--muted);font-size:12px;line-height:1.5;padding-left:18px">${warnings}</ul></details>`:''}
     <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Provisional FSFFL Value shown in the builder is not used in this analysis.</p>
