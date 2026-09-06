@@ -109,5 +109,9 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     assert rows["a"].optimized_expected_points == 400.0
     assert rows["a"].expected_wins > rows["b"].expected_wins
     assert rows["a"].playoff_probability > rows["b"].playoff_probability
-    assert "bye-aware-weekly-lineups" in result.simulation_result.model_version
-    assert any(warning.code == "weekly_scoring_decomposition_provisional" for warning in result.league_view.context.warnings)
+    assert "empirical-weekly-volatility" in result.simulation_result.model_version
+    assert any(warning.code == "weekly_mean_decomposition_provisional" for warning in result.league_view.context.warnings)
+    assert any(
+        entry.component == "weekly_volatility" and "next2-weekly-volatility" in entry.model_version
+        for entry in result.league_view.context.lineage
+    )
