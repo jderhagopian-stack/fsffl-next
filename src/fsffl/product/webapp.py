@@ -16,6 +16,7 @@ from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 
+from .background_jobs import IntelligenceJob, IntelligenceJobCoordinator, IntelligenceJobPhase
 from .dashboard import build_league_metric_chart
 from .intelligence_runtime import (
     build_forecast_lineup_analytics,
@@ -108,6 +109,30 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
     }
 
 
+def _job_payload(job: IntelligenceJob | None) -> dict[str, object]:
+    if job is None:
+        return {
+            "job_id": None,
+            "status": "idle",
+            "phase": "idle",
+            "message": "No intelligence refresh is running.",
+            "error": None,
+            "league_state_id": None,
+            "created_at": None,
+            "updated_at": None,
+        }
+    return {
+        "job_id": job.job_id,
+        "status": job.status.value,
+        "phase": job.phase.value,
+        "message": job.message,
+        "error": job.error,
+        "league_state_id": job.league_state_id,
+        "created_at": job.created_at.isoformat(),
+        "updated_at": job.updated_at.isoformat(),
+    }
+
+
 def _sleeper_external_id(league_state: LeagueState) -> str:
     for ref in league_state.league.provider_refs:
         if ref.provider == "sleeper":
@@ -153,6 +178,7 @@ def create_app(
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
+    jobs = IntelligenceJobCoordinator(max_workers=2)
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
     @application.get("/health")
@@ -195,6 +221,7 @@ def create_app(
                 elif stage["stage"] == "analytics":
                     stage["readiness"] = "ready"
                     stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
+        payload["job"] = _job_payload(jobs.current(user_id))
         return payload
 
     @application.post("/api/connect/sleeper")
@@ -216,6 +243,38 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return _runtime_context_payload(store, user_id)
+
+    @application.post("/api/intelligence/jobs")
+    def start_intelligence_job(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        initial_state = runtime.league_state
+        initial_state_id = initial_state.state_id
+
+        def work(progress) -> None:
+            progress(IntelligenceJobPhase.BUILDING_FORECASTS, "Building governed multi-source projections.")
+            evidence: LiveForecastEvidence = forecast_loader(initial_state)
+
+            progress(IntelligenceJobPhase.REFRESHING_STATE, "Refreshing canonical Sleeper state at the evidence cutoff.")
+            refreshed_state = state_loader(_sleeper_external_id(initial_state))
+            store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
+
+            if not evidence.uncertainty_ready:
+                raise ValueError("forecast uncertainty is not ready for authoritative simulation")
+
+            progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running 50,000 governed NEXT-4 season simulations.")
+            simulation = simulation_loader(refreshed_state, evidence)
+
+            progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching simulation results to the current canonical league state.")
+            store.set_simulation_analytics(user_id, simulation)
+
+        job = jobs.start(user_id=user_id, league_state_id=initial_state_id, work=work)
+        return {**_job_payload(job), **_runtime_context_payload(store, user_id)}
+
+    @application.get("/api/intelligence/jobs/current")
+    def current_intelligence_job(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        return {**_job_payload(jobs.current(user_id)), **_runtime_context_payload(store, user_id)}
 
     @application.post("/api/intelligence/refresh-forecasts")
     def refresh_forecasts(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
