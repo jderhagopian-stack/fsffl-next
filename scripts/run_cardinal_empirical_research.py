@@ -3,10 +3,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
-from statistics import median
 from urllib.request import Request, urlopen
 
 from fsffl.value.calibration import CalibrationPanel
@@ -87,9 +85,6 @@ def _sleeper_one_for_one_history(
     seen_transactions: set[str] = set()
     for league_id, season in _league_chain(current_league_id, minimum_season=minimum_season):
         rows_by_id: dict[str, dict] = {}
-        # Sleeper associates completed transactions with a scoring round. Pulling
-        # rounds 0..18 captures offseason/preseason and regular-season activity;
-        # transaction ids are deduplicated before normalization.
         for round_number in range(0, 19):
             try:
                 payload = json.loads(
@@ -137,8 +132,11 @@ def _benchmark_mapping(pairs, *, label: str, holdout_fraction: float) -> dict[st
     holdout_start = _holdout_start(pairs, holdout_fraction)
     training, holdout = split_cardinal_pairs(pairs, holdout_start=holdout_start)
     rows = []
-    transforms = []
-    for kind in (CardinalTransformKind.AFFINE, CardinalTransformKind.LOG_AFFINE):
+    for kind in (
+        CardinalTransformKind.AFFINE,
+        CardinalTransformKind.LOG_AFFINE,
+        CardinalTransformKind.PIECEWISE_QUANTILE,
+    ):
         transform = fit_cardinal_transform(
             training,
             kind=kind,
@@ -146,7 +144,6 @@ def _benchmark_mapping(pairs, *, label: str, holdout_fraction: float) -> dict[st
             model_version=f"next3-cardinal-empirical-{label}-{kind.value}-v1",
         )
         benchmark = benchmark_cardinal_transform(transform, holdout)
-        transforms.append(transform)
         rows.append(
             {
                 "kind": kind.value,
@@ -157,6 +154,7 @@ def _benchmark_mapping(pairs, *, label: str, holdout_fraction: float) -> dict[st
                 "mean_signed_error": benchmark.mean_signed_error,
                 "intercept": transform.intercept,
                 "slope": transform.slope,
+                "anchors": [list(anchor) for anchor in transform.anchors],
             }
         )
     rows.sort(key=lambda item: (item["mae"], item["rmse"]))
@@ -174,8 +172,6 @@ def _latest_snapshot_summary(
     if not observations:
         return {}
     latest_at = max(row.observed_at for row in observations)
-    # Exact latest timestamps can differ slightly inside a provider response. Use
-    # the latest calendar date to characterize one coherent recent cross-section.
     latest_day = latest_at.date()
     values = sorted(row.value for row in observations if row.observed_at.date() == latest_day)
     if not values:
@@ -279,6 +275,7 @@ def main() -> None:
         max_snapshot_age_days=args.max_target_age_days,
     )
 
+    trade_dates = [trade.completed_at.isoformat() for trade in trades]
     report = {
         "status": "challenger_research_only",
         "generated_at": datetime.now(UTC).isoformat(),
@@ -314,6 +311,7 @@ def main() -> None:
         ],
         "one_for_one_trade_benchmark": native_trade_benchmark.model_dump(mode="json"),
         "one_for_one_trade_count": len(trades),
+        "one_for_one_trade_dates": trade_dates,
         "notes": [
             "All scale mappings are challenger research only; no production Value authority is changed.",
             "Chronological holdout is used for transformation comparison; future market evidence is excluded.",
@@ -329,7 +327,7 @@ def main() -> None:
     print(f"statsguy observations={len(statsguy)}")
     print(f"dynastyprocess observations={len(dynastyprocess)}")
     print(f"fresh overlap sg->dp={len(sg_to_dp_pairs)} dp->sg={len(dp_to_sg_pairs)}")
-    print(f"clean one-for-one trades={len(trades)}")
+    print(f"clean one-for-one trades={len(trades)} dates={trade_dates}")
     for mapping in report["mapping_benchmarks"]:
         best = mapping["candidate_results"][0]
         print(
