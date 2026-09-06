@@ -149,3 +149,12 @@ class BehavioralIntelligenceStore:
                 (league_family_id, league_external_id),
             ).fetchone()
         return bool(row and row[0])
+
+    def complete_league_ids(self) -> frozenset[str]:
+        """Sleeper league ids whose immutable historical scan is already cached."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT league_external_id FROM behavior_seasons WHERE complete = 1"
+            ).fetchall()
+        return frozenset(str(row[0]) for row in rows)
