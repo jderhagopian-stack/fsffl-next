@@ -21,6 +21,7 @@ class IntelligenceJobPhase(StrEnum):
     BUILDING_FORECASTS = "building_forecasts"
     REFRESHING_STATE = "refreshing_state"
     RUNNING_SIMULATION = "running_simulation"
+    BUILDING_VALUES = "building_values"
     ATTACHING_RESULTS = "attaching_results"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -44,12 +45,12 @@ JobWork = Callable[[ProgressCallback], None]
 
 
 class IntelligenceJobCoordinator:
-    """Own beta background execution without owning forecast/simulation math.
+    """Own beta background execution without owning forecast/simulation/value math.
 
     This is intentionally an in-process coordinator for the private beta. Browser
     lifetime is decoupled from work lifetime, while the model layers remain
-    authoritative for forecast and simulation outputs. A durable queue can later
-    replace this interface without changing those model authorities.
+    authoritative for forecast, simulation and Value outputs. A durable queue can
+    later replace this interface without changing those model authorities.
     """
 
     def __init__(self, *, max_workers: int = 2) -> None:
@@ -147,5 +148,5 @@ class IntelligenceJobCoordinator:
             job_id,
             status=IntelligenceJobStatus.COMPLETED,
             phase=IntelligenceJobPhase.COMPLETED,
-            message="Forecasts and simulation are ready.",
+            message="Forecasts, simulation and current Value evidence are ready.",
         )
