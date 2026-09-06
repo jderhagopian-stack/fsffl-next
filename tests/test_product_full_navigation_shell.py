@@ -29,7 +29,7 @@ def test_full_product_navigation_shell_is_exposed() -> None:
         "Opportunities",
         "What-If",
         "Simulator",
-        "Analytics Explorer",
+        "Analytics Terminal",
         "Reports",
     ):
         assert f"label:'{label}'" in source
