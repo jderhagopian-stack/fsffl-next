@@ -19,10 +19,10 @@ def test_accessibility_layer_respects_touch_and_reduced_motion() -> None:
     assert "Swipe horizontally for more" in source
 
 
-def test_product_shell_loads_accessibility_without_business_logic() -> None:
+def test_accessibility_helper_is_not_auto_injected_during_touch_regression_isolation() -> None:
     shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
     source = Path("src/fsffl/product/static/accessibility.js").read_text(encoding="utf-8")
-    assert "ensureAccessibilityScript" in shell
-    assert "installFsfflAccessibility" in shell
+    assert "ensureAccessibilityScript" not in shell
+    assert "installFsfflAccessibility" not in shell
     for forbidden in ("expected_wins", "playoff_probability", "fsffl_cardinal_values", "acceptance_probability"):
         assert forbidden not in source
