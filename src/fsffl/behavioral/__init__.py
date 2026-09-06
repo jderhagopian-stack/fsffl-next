@@ -12,6 +12,7 @@ from .models import (
     OwnerBehaviorProfile,
 )
 from .profiles import build_owner_behavior_profiles
+from .service import BehavioralIntelligenceService, BehavioralSyncResult
 from .sleeper_history import SleeperBehaviorHistorySource, SleeperLeagueHistory
 from .store import BehavioralIntelligenceStore
 
@@ -24,5 +25,7 @@ __all__ = [
     "SleeperBehaviorHistorySource",
     "SleeperLeagueHistory",
     "BehavioralIntelligenceStore",
+    "BehavioralIntelligenceService",
+    "BehavioralSyncResult",
     "build_owner_behavior_profiles",
 ]
