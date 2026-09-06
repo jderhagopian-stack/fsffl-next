@@ -37,7 +37,7 @@ def test_players_assets_prefers_fantasy_regular_season_projection() -> None:
     assert "Reg-season projection" in source
 
 
-def test_analytics_explorer_organizes_backend_metrics_without_recalculating_authority() -> None:
+def test_legacy_explorer_metrics_remain_read_only_until_terminal_replaces_them() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
     for metric in (
         "expected_wins",
@@ -69,7 +69,7 @@ def test_explorer_does_not_derive_fsffl_value_or_action_authority() -> None:
     assert "opportunity_score" not in source
 
 
-def test_explorer_is_loaded_and_has_mobile_specific_styles() -> None:
+def test_explorer_is_loaded_for_players_assets_and_has_mobile_specific_styles() -> None:
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     css = Path("src/fsffl/product/static/explorer.css").read_text(encoding="utf-8")
     shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
@@ -78,4 +78,5 @@ def test_explorer_is_loaded_and_has_mobile_specific_styles() -> None:
     assert html.index("explorer.js") < html.index("product_shell.js")
     assert "max-width:700px" in css
     assert "renderFsfflExplorer" in shell
-    assert "route==='players_assets'||route==='analytics'" in shell
+    assert "route==='players_assets'&&typeof window.renderFsfflExplorer" in shell
+    assert "route==='analytics')ensureAnalyticsTerminalScript" in shell
