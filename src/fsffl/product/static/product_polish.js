@@ -31,6 +31,10 @@ function coreIntelligenceReady(context){
   return Boolean(context?.league_id&&context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
 }
 
+function setTextIfChanged(node,value){
+  if(node&&node.textContent!==value)node.textContent=value;
+}
+
 function presentRuntimeCapabilities(){
   const context=state?.context;
   if(!context?.league_id)return;
@@ -38,8 +42,8 @@ function presentRuntimeCapabilities(){
   const title=document.querySelector('#runtime-status-title');
   const grid=document.querySelector('#runtime-stage-grid');
   if(coreIntelligenceReady(context)){
-    if(summary)summary.textContent='Core ready';
-    if(title&&/ready/i.test(title.textContent||''))title.textContent='Core intelligence is ready.';
+    setTextIfChanged(summary,'Core ready');
+    if(title&&/ready/i.test(title.textContent||''))setTextIfChanged(title,'Core intelligence is ready.');
   }
   if(!grid)return;
   [...grid.querySelectorAll('.runtime-stage')].forEach(node=>{
@@ -47,12 +51,13 @@ function presentRuntimeCapabilities(){
     if(label==='trade decision'||label==='opportunity'){
       node.classList.add('capability-next');
       const mark=node.querySelector('.runtime-stage-mark');
-      if(mark)mark.textContent='→';
+      setTextIfChanged(mark,'→');
       const detail=node.querySelector('small');
       if(detail){
-        detail.textContent=label==='trade decision'
+        const nextText=label==='trade decision'
           ?'Decision capability is being connected to the product; it is not a missing core-intelligence prerequisite.'
           :'Opportunity discovery activates downstream of the completed Trade Decision product connection.';
+        setTextIfChanged(detail,nextText);
       }
     }
   });
@@ -178,7 +183,7 @@ function installProductPolish(){
   presentRuntimeCapabilities();
   const observer=new MutationObserver(()=>presentRuntimeCapabilities());
   const grid=document.querySelector('#runtime-stage-grid');
-  if(grid)observer.observe(grid,{childList:true,subtree:true,characterData:true});
+  if(grid)observer.observe(grid,{childList:true});
   setInterval(presentRuntimeCapabilities,2000);
 }
 
