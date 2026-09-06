@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from enum import StrEnum
 from math import sqrt
 from random import Random
@@ -186,68 +185,100 @@ def build_regular_season_simulation_input(
 def simulate_regular_season(
     request: RegularSeasonSimulationInput,
 ) -> RegularSeasonSimulationResult:
-    """Simulate regular-season competitive outcomes only."""
+    """Simulate regular-season competitive outcomes only.
+
+    The Monte Carlo semantics are unchanged, but the hot loop uses precompiled
+    integer team indexes and primitive scoring tuples. This avoids millions of
+    repeated dictionary lookups, Pydantic attribute reads, temporary mappings,
+    and set allocations during a 50,000-run production simulation. RNG call order,
+    standings tiebreaks, seed behavior, and output contracts remain unchanged.
+    """
 
     by_team = {item.team_id: item for item in request.scoring}
     by_week_team = {(item.week, item.team_id): item for item in request.weekly_scoring}
     team_ids = tuple(sorted(set(by_team) | {item.team_id for item in request.weekly_scoring}))
-    rng = Random(request.seed)
+    team_index = {team_id: index for index, team_id in enumerate(team_ids)}
+    team_count = len(team_ids)
 
-    wins_sum = defaultdict(float)
-    wins_sq_sum = defaultdict(float)
-    playoff_count = defaultdict(int)
-    first_count = defaultdict(int)
+    # Compile every scheduled game once. Tuple shape:
+    # (home_index, away_index, home_mean, home_stddev, away_mean, away_stddev)
+    compiled_schedule: list[tuple[int, int, float, float, float, float]] = []
+    weekly = bool(by_week_team)
+    for matchup in request.schedule:
+        if weekly:
+            home_dist = by_week_team[(matchup.week, matchup.home_team_id)]
+            away_dist = by_week_team[(matchup.week, matchup.away_team_id)]
+        else:
+            home_dist = by_team[matchup.home_team_id]
+            away_dist = by_team[matchup.away_team_id]
+        if home_dist.distribution_kind != ScoringDistributionKind.NORMAL:
+            raise ValueError("unsupported scoring distribution kind")
+        if away_dist.distribution_kind != ScoringDistributionKind.NORMAL:
+            raise ValueError("unsupported scoring distribution kind")
+        compiled_schedule.append(
+            (
+                team_index[matchup.home_team_id],
+                team_index[matchup.away_team_id],
+                home_dist.mean_points,
+                home_dist.stddev_points,
+                away_dist.mean_points,
+                away_dist.stddev_points,
+            )
+        )
+
+    rng = Random(request.seed)
+    gauss = rng.gauss
+    wins_sum = [0.0] * team_count
+    wins_sq_sum = [0.0] * team_count
+    playoff_count = [0] * team_count
+    first_count = [0] * team_count
+    ranking_indexes = tuple(range(team_count))
+    playoff_team_count = request.playoff_team_count
 
     for _ in range(request.simulation_count):
-        wins = {team_id: 0.0 for team_id in team_ids}
-        points_for = {team_id: 0.0 for team_id in team_ids}
+        wins = [0.0] * team_count
+        points_for = [0.0] * team_count
 
-        for matchup in request.schedule:
-            if by_week_team:
-                home_dist = by_week_team[(matchup.week, matchup.home_team_id)]
-                away_dist = by_week_team[(matchup.week, matchup.away_team_id)]
-            else:
-                home_dist = by_team[matchup.home_team_id]
-                away_dist = by_team[matchup.away_team_id]
-            home = _sample_points(home_dist, rng)
-            away = _sample_points(away_dist, rng)
-            points_for[matchup.home_team_id] += home
-            points_for[matchup.away_team_id] += away
+        for home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev in compiled_schedule:
+            home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
+            away = away_mean if away_stddev == 0 else gauss(away_mean, away_stddev)
+            if home < 0.0:
+                home = 0.0
+            if away < 0.0:
+                away = 0.0
+            points_for[home_idx] += home
+            points_for[away_idx] += away
             if home > away:
-                wins[matchup.home_team_id] += 1.0
+                wins[home_idx] += 1.0
             elif away > home:
-                wins[matchup.away_team_id] += 1.0
+                wins[away_idx] += 1.0
             else:
-                wins[matchup.home_team_id] += 0.5
-                wins[matchup.away_team_id] += 0.5
+                wins[home_idx] += 0.5
+                wins[away_idx] += 0.5
 
         standings = sorted(
-            team_ids,
-            key=lambda team_id: (-wins[team_id], -points_for[team_id], team_id),
+            ranking_indexes,
+            key=lambda index: (-wins[index], -points_for[index], team_ids[index]),
         )
-        playoff_teams = set(standings[: request.playoff_team_count])
-        first_team = standings[0]
-
-        for team_id in team_ids:
-            value = wins[team_id]
-            wins_sum[team_id] += value
-            wins_sq_sum[team_id] += value * value
-            if team_id in playoff_teams:
-                playoff_count[team_id] += 1
-        first_count[first_team] += 1
+        first_count[standings[0]] += 1
+        for index in standings[:playoff_team_count]:
+            playoff_count[index] += 1
+        for index, value in enumerate(wins):
+            wins_sum[index] += value
+            wins_sq_sum[index] += value * value
 
     outcomes: list[TeamCompetitiveOutcome] = []
     n = request.simulation_count
-    for team_id in team_ids:
-        expected = wins_sum[team_id] / n
-        variance = max(0.0, wins_sq_sum[team_id] / n - expected * expected)
+    for index, team_id in enumerate(team_ids):
+        expected = wins_sum[index] / n
+        variance = max(0.0, wins_sq_sum[index] / n - expected * expected)
         outcomes.append(
             TeamCompetitiveOutcome(
                 team_id=team_id,
                 expected_wins=expected,
                 wins_stddev=sqrt(variance),
-                playoff_probability=playoff_count[team_id] / n,
-                first_place_probability=first_count[team_id] / n,
+                playoff_probability=playoff_count[index] / n,
+                first_place_probability=first_count[index] / n,
                 simulation_count=n,
                 simulation_model_version=request.model_version,
             )
@@ -262,6 +293,7 @@ def simulate_regular_season(
 
 
 def _sample_points(distribution, rng: Random) -> float:
+    """Reference sampler retained for callers/tests outside the optimized loop."""
     if distribution.distribution_kind != ScoringDistributionKind.NORMAL:
         raise ValueError("unsupported scoring distribution kind")
     if distribution.stddev_points == 0:
