@@ -242,7 +242,7 @@ def build_live_simulation_analytics(
                 league_state,
                 context=context,
                 team_id=team.team_id,
-                forecasts=effective_forecasts,
+                forecasts=forecasts,
                 optimized_lineup=lineups[team.team_id],
                 utility=utility,
             )
