@@ -14,14 +14,14 @@ const fsfflProductRoutes=[
 const fsfflProductSurfaceCopy={
   my_team:['My Team','Your franchise command center.','See competitive outlook, optimized lineup, roster depth, draft picks, authoritative FSFFL Value and supporting evidence in one place.'],
   players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Value and separate market-position evidence, without creating a second valuation path.'],
-  league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings, tiles and charts expose projected scoring, expected wins, playoff odds, market portfolio and pick inventory from authoritative Analytics outputs.'],
+  league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings, tiles and charts expose regular-season projected scoring, expected wins, playoff odds, market portfolio and pick inventory from authoritative Analytics outputs.'],
   what_if:['Alternate History / What-If','Change one thing. Re-run the consequences.','Counterfactual scenarios will create a changed point-in-time State and then reuse Forecast, Value, Decision and Simulation authority to show what would have changed.'],
   simulator:['Simulator','Test the future before acting.','Scenario controls will expose governed NEXT-4 competitive outcomes for lineup, roster, injury and transaction scenarios. Expensive simulation work will remain server-owned, reusable and cacheable.'],
   analytics:['Analytics Explorer','Compare the whole league without hunting for answers.','Search and sort authoritative team-level outputs from State, Forecast, Value and Simulation.'],
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260906-touch4';
+const fsfflStaticVersion='20260906-regseason1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
@@ -33,8 +33,17 @@ function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/sta
 function ensureReportsScript(){return lazyProductScript('renderFsfflReports','/static/reports.js','Unable to load Reports presentation module',()=>reportsScriptPromise,value=>reportsScriptPromise=value)}
 function ensureHomeScript(){return lazyProductScript('installFsfflHomeExperience','/static/home_dashboard.js','Unable to load Home presentation module',()=>homeScriptPromise,value=>homeScriptPromise=value)}
 
+function fsfflDisplayedProjectionObservation(player){const observations=player?.forecasts||[];return observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='fantasy_regular_season')||observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='season')||observations.find(item=>item.metric==='fantasy_points')||null}
+window.fsfflDisplayedProjectionObservation=fsfflDisplayedProjectionObservation;
+function installProjectionPresentation(){
+  if(typeof playerProjection==='function')playerProjection=function(player){const obs=fsfflDisplayedProjectionObservation(player);return obs?.distribution?fmtNumber(obs.distribution.mean,1):'—'};
+  if(typeof explorerPlayerProjection==='function')explorerPlayerProjection=function(player){const obs=fsfflDisplayedProjectionObservation(player);return typeof obs?.distribution?.mean==='number'?obs.distribution.mean:null};
+  if(typeof myTeamProjection==='function')myTeamProjection=function(player){const obs=fsfflDisplayedProjectionObservation(player);return typeof obs?.distribution?.mean==='number'?obs.distribution.mean.toFixed(1):'—'};
+  document.querySelectorAll('th').forEach(th=>{if(th.textContent.trim()==='Projection')th.textContent='Reg-season projection';if(th.textContent.trim()==='Projected scoring')th.textContent='Reg-season scoring'});
+}
+
 function productSurfaceError(label,error){const panel=document.querySelector('#generic-screen .panel');if(panel)panel.innerHTML=`<p class="eyebrow">${label}</p><h2>Unable to load this view.</h2><p class="lead">${String(error.message||error)}</p>`}
-function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];if(!copy)return;const eyebrow=document.querySelector('#generic-eyebrow'),title=document.querySelector('#generic-title'),body=document.querySelector('#generic-copy');if(eyebrow)eyebrow.textContent=copy[0];if(title)title.textContent=copy[1];if(body)body.textContent=copy[2];if(route==='my_team')ensureMyTeamScript().then(()=>window.renderFsfflMyTeam?.()).catch(error=>productSurfaceError('My Team',error));if(typeof window.renderFsfflExplorer==='function'&&(route==='players_assets'||route==='analytics'))window.renderFsfflExplorer(route);if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>productSurfaceError('League Comparison',error));if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error))}
+function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];if(!copy)return;const eyebrow=document.querySelector('#generic-eyebrow'),title=document.querySelector('#generic-title'),body=document.querySelector('#generic-copy');if(eyebrow)eyebrow.textContent=copy[0];if(title)title.textContent=copy[1];if(body)body.textContent=copy[2];if(route==='my_team')ensureMyTeamScript().then(()=>{installProjectionPresentation();window.renderFsfflMyTeam?.();setTimeout(installProjectionPresentation,0)}).catch(error=>productSurfaceError('My Team',error));if(typeof window.renderFsfflExplorer==='function'&&(route==='players_assets'||route==='analytics')){installProjectionPresentation();window.renderFsfflExplorer(route);setTimeout(installProjectionPresentation,0)}if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>productSurfaceError('League Comparison',error));if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error))}
 function rebuildProductNavigation(){const nav=document.querySelector('#primary-nav');if(!nav)return;nav.innerHTML='';const hasTeam=Boolean(state?.context?.team_id);fsfflProductRoutes.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='nav-item';button.dataset.route=item.route;if(item.route===state?.route)button.classList.add('active');if(item.teamScoped&&!hasTeam)button.classList.add('locked');button.innerHTML=`<span>${item.label}</span>${item.teamScoped&&!hasTeam?'<small>Select team</small>':''}`;button.addEventListener('click',event=>{event.preventDefault();if(button.classList.contains('locked'))return;if(typeof setRoute==='function')setRoute(item.route)});nav.appendChild(button)})}
 function productRouteAwareSetRoute(route){if(!fsfflProductSurfaceCopy[route])return;document.querySelectorAll('.route-screen').forEach(item=>item.hidden=item.id!=='generic-screen');document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.route===route));renderProductSurface(route)}
 
@@ -58,12 +67,12 @@ function renderMobileRecoveryControls(){
 }
 
 const originalSetRoute=typeof setRoute==='function'?setRoute:null;
-if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();return}const result=originalSetRoute(route);if(route==='league')ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{});if(route==='trade_center'&&typeof loadTradeCenter==='function')setTimeout(loadTradeCenter,0);renderMobileRecoveryControls();return result};setRoute=window.setRoute}
+if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();installProjectionPresentation();return}const result=originalSetRoute(route);if(route==='league')ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{});if(route==='trade_center'&&typeof loadTradeCenter==='function')setTimeout(loadTradeCenter,0);renderMobileRecoveryControls();installProjectionPresentation();return result};setRoute=window.setRoute}
 
 const originalApplyContext=typeof applyContext==='function'?applyContext:null;
-if(originalApplyContext){applyContext=function(){const result=originalApplyContext();window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();return result}}
+if(originalApplyContext){applyContext=function(){const result=originalApplyContext();window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();installProjectionPresentation();return result}}
 
 injectMobileTouchFix();
-window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});
-window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls()});
-setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls()},0);
+window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();installProjectionPresentation();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});
+window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls();installProjectionPresentation()});
+setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls();installProjectionPresentation()},0);
