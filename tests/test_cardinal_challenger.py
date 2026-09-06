@@ -87,6 +87,46 @@ def test_affine_challenger_recovers_cardinal_spacing_and_scores_later_holdout() 
     assert result.root_mean_squared_error == pytest.approx(0.0)
 
 
+def test_piecewise_challenger_preserves_non_linear_spacing_better_than_affine() -> None:
+    training = tuple(
+        _pair(
+            float((index % 10) + 1),
+            float(((index % 10) + 1) ** 2),
+            BASE + timedelta(days=index + 1),
+            f"train-{index}",
+        )
+        for index in range(30)
+    )
+    holdout = tuple(
+        _pair(
+            float((index % 10) + 1),
+            float(((index % 10) + 1) ** 2),
+            BASE + timedelta(days=31 + index),
+            f"holdout-{index}",
+        )
+        for index in range(10)
+    )
+    fitted_at = BASE + timedelta(days=31)
+    piecewise = fit_cardinal_transform(
+        training,
+        kind=CardinalTransformKind.PIECEWISE_QUANTILE,
+        fitted_at=fitted_at,
+        model_version="piecewise-test-v1",
+    )
+    affine = fit_cardinal_transform(
+        training,
+        kind=CardinalTransformKind.AFFINE,
+        fitted_at=fitted_at,
+        model_version="affine-test-v1",
+    )
+
+    piecewise_result = benchmark_cardinal_transform(piecewise, holdout)
+    affine_result = benchmark_cardinal_transform(affine, holdout)
+
+    assert len(piecewise.anchors) >= 3
+    assert piecewise_result.mean_absolute_error < affine_result.mean_absolute_error
+
+
 def test_benchmark_rejects_training_period_rows_as_holdout() -> None:
     training = (
         _pair(10, 25, BASE + timedelta(days=1), "p1"),
