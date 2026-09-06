@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -8,6 +9,9 @@ from threading import RLock
 from time import monotonic
 from typing import Callable
 from uuid import uuid4
+
+
+_logger = logging.getLogger("fsffl.product.performance")
 
 
 class IntelligenceJobStatus(StrEnum):
@@ -162,6 +166,21 @@ class IntelligenceJobCoordinator:
             self._jobs[job_id] = updated
             return updated
 
+    def _log_final_timing(self, job: IntelligenceJob) -> None:
+        phase_text = " ".join(
+            f"{timing.phase.value}={timing.elapsed_seconds:.3f}s"
+            for timing in job.phase_timings
+        )
+        _logger.info(
+            "FSFFL intelligence refresh timing job=%s user=%s league_state=%s status=%s total=%.3fs %s",
+            job.job_id,
+            job.user_id,
+            job.league_state_id,
+            job.status.value,
+            job.total_elapsed_seconds or 0.0,
+            phase_text,
+        )
+
     def _run(self, job_id: str, work: JobWork) -> None:
         self._update(
             job_id,
@@ -181,18 +200,20 @@ class IntelligenceJobCoordinator:
         try:
             work(progress)
         except Exception as exc:
-            self._update(
+            failed = self._update(
                 job_id,
                 status=IntelligenceJobStatus.FAILED,
                 phase=IntelligenceJobPhase.FAILED,
                 message="Intelligence refresh failed.",
                 error=f"{type(exc).__name__}: {exc}",
             )
+            self._log_final_timing(failed)
             return
 
-        self._update(
+        completed = self._update(
             job_id,
             status=IntelligenceJobStatus.COMPLETED,
             phase=IntelligenceJobPhase.COMPLETED,
             message="Forecasts, simulation and current Value evidence are ready.",
         )
+        self._log_final_timing(completed)
