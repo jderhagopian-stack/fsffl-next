@@ -7,6 +7,7 @@ import pytest
 
 from fsffl.product.runtime import PrivateBetaRuntimeStore
 from fsffl.state.models import (
+    DraftPick,
     League,
     LeagueRules,
     LeagueState,
@@ -24,6 +25,7 @@ from fsffl.state.models import (
     TeamState,
 )
 from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult, build_current_market_values
+from fsffl.value.models import ValueAssetKind
 
 
 def _state(*, as_of: datetime) -> LeagueState:
@@ -46,6 +48,7 @@ def _state(*, as_of: datetime) -> LeagueState:
             rules=LeagueRules(
                 team_count=2,
                 roster_size=2,
+                rookie_draft_rounds=3,
                 lineup=(
                     LineupRequirement(slot=RosterSlot.QB, count=1),
                     LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
@@ -73,11 +76,20 @@ def _state(*, as_of: datetime) -> LeagueState:
             )
             for player in players
         ),
+        draft_picks=(
+            DraftPick(
+                pick_id="canonical-2027-r1-t1",
+                league_id=league_id,
+                season=2027,
+                round=1,
+                original_team_id="t1",
+            ),
+        ),
         provenance=(provenance,),
     )
 
 
-def test_current_market_runtime_uses_governed_lineage_and_surfaces_missing_crosswalk(monkeypatch) -> None:
+def test_current_market_runtime_uses_governed_lineage_and_cardinal_authority(monkeypatch) -> None:
     now = datetime.now(UTC)
     league_state = _state(as_of=now)
 
@@ -96,9 +108,16 @@ def test_current_market_runtime_uses_governed_lineage_and_surfaces_missing_cross
     statsguy = {
         "asOf": now.isoformat(),
         "rankings": [
-            {"id": "s1", "value": 100},
-            {"id": "s2", "value": 50},
-            {"id": "s3", "value": 10},
+            {"id": "s1", "value": 8740},
+            {"id": "s2", "value": 4200},
+            {"id": "s3", "value": 1100},
+        ],
+    }
+    statsguy_picks = {
+        "valuesAsOf": {"sf_dynasty": now.isoformat()},
+        "picks": [
+            {"id": "pick:2027:1", "year": 2027, "round": 1, "value": {"sf_dynasty": 3100}},
+            {"id": "pick:2027:1:early", "year": 2027, "round": 1, "variant": "early", "value": {"sf_dynasty": 4100}},
         ],
     }
 
@@ -107,6 +126,8 @@ def test_current_market_runtime_uses_governed_lineage_and_surfaces_missing_cross
             return json.dumps(dealer)
         if "fantasycalc" in url:
             return json.dumps(calc)
+        if url.endswith("/picks"):
+            return json.dumps(statsguy_picks)
         if "statsguy" in url:
             return json.dumps(statsguy)
         raise AssertionError(url)
@@ -117,25 +138,32 @@ def test_current_market_runtime_uses_governed_lineage_and_surfaces_missing_cross
     assert result.league_state_id == league_state.state_id
     assert result.valued_roster_player_count == 3
     assert result.coverage == 1.0
+    assert result.cardinal_player_coverage == 1.0
     assert set(result.successful_source_ids) == {
         "dynastydealer_market_values",
         "fantasycalc_market_values",
         "statsguy_market_values",
     }
     assert "dynastyprocess_market_values" in result.failed_sources
+    assert "statsguy_pick_values" not in result.failed_sources
 
     native = {(item.source_id, item.asset_id): item for item in result.native_magnitude_observations}
     assert native[("dynastydealer_market_values", "p1")].value == 9000
     assert native[("fantasycalc_market_values", "p1")].value == 10000
-    assert native[("statsguy_market_values", "p1")].value == 100
+    assert native[("statsguy_market_values", "p1")].value == 8740
     assert native[("dynastydealer_market_values", "p1")].native_scale_id == "dynastydealer-current-value"
 
     provisional = {item.asset_id: item for item in result.provisional_fsffl_values}
     assert provisional["p1"].score == 9000
-    assert provisional["p2"].score == 6000
-    assert provisional["p3"].score == 3000
     assert provisional["p1"].status == "challenger"
-    assert provisional["p1"].model_version == "next3-provisional-shadow-value-v1"
+
+    cardinal = {item.asset_id: item for item in result.fsffl_cardinal_values}
+    assert cardinal["p1"].score == 8740
+    assert cardinal["p1"].authority_status == "authoritative_market_cardinal"
+    assert cardinal["p1"].asset_kind == ValueAssetKind.PLAYER
+    assert cardinal["canonical-2027-r1-t1"].score == 3100
+    assert cardinal["canonical-2027-r1-t1"].asset_kind == ValueAssetKind.PICK
+    assert cardinal["canonical-2027-r1-t1"].slot_certainty == "generic_unknown_slot"
 
     estimates = {item.asset_id: item for item in result.estimates}
     assert estimates["p1"].distribution.mean == 1.0
