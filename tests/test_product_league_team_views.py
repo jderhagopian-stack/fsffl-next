@@ -25,7 +25,7 @@ def test_players_assets_consumes_backend_projection_and_role_evidence() -> None:
     assert "projected_starter" in source
     assert "projected_lineup_slot" in source
     assert "explorerPlayerProjection" in source
-    assert "explorerSortButton('Projection','projection'" in source
+    assert "explorerSortButton('Reg-season projection','projection'" in source
     assert "explorerSortButton('Projected role','projected_role'" in source
     assert "the browser does not optimize a lineup" in source
     assert "api('/api/select-team'" not in source
