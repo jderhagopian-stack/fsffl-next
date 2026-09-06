@@ -14,6 +14,29 @@ def test_players_assets_explorer_consumes_existing_authoritative_endpoints() -> 
     assert "All teams" in source
 
 
+def test_players_assets_filter_state_survives_sort_redraw() -> None:
+    source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
+    assert "assetFilters:{query:'',type:'',position:'',owner:'',role:''}" in source
+    assert "function captureAssetFilters()" in source
+    assert "const filters=fsfflExplorerState.assetFilters" in source
+    assert "search.value=filters.query" in source
+    assert "type.value=filters.type" in source
+    assert "position.value=filters.position" in source
+    assert "owner.value=filters.owner" in source
+    assert "role.value=filters.role" in source
+    assert "renderPlayersAssetsExplorer(values)" in source
+
+
+def test_players_assets_prefers_fantasy_regular_season_projection() -> None:
+    source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
+    regular = "item.horizon==='fantasy_regular_season'"
+    season = "item.horizon==='season'"
+    assert regular in source
+    assert season in source
+    assert source.index(regular) < source.index(season)
+    assert "Reg-season projection" in source
+
+
 def test_analytics_explorer_organizes_backend_metrics_without_recalculating_authority() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
     for metric in (
@@ -27,6 +50,13 @@ def test_analytics_explorer_organizes_backend_metrics_without_recalculating_auth
     assert "/api/league/chart?metric=" in source
     assert "Compare the league without hunting for answers" in source
     assert "this screen only organizes them" in source
+
+
+def test_analytics_search_state_survives_sort_redraw() -> None:
+    source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
+    assert "teamQuery:''" in source
+    assert "fsfflExplorerState.teamQuery=event.target.value" in source
+    assert "search.value=fsfflExplorerState.teamQuery" in source
 
 
 def test_explorer_does_not_derive_fsffl_value_or_action_authority() -> None:
