@@ -1,10 +1,11 @@
 let fsfflJobStartInFlight=false;
 let fsfflCurrentJobId=null;
 let fsfflJobStateId=null;
+let fsfflSettledStateId=null;
 
 function setForecastRefreshMessage(message){
-  const summary=document.querySelector('#runtime-status-summary');
-  if(summary)summary.textContent=message;
+  const title=document.querySelector('#runtime-status-title');
+  if(title)title.textContent=message;
 }
 
 function phaseMessage(payload){
@@ -22,7 +23,7 @@ function reflectAuthoritativeValueReadiness(context){
   document.querySelectorAll('#runtime-stage-grid .runtime-stage').forEach(node=>{
     const label=node.querySelector('strong')?.textContent?.trim().toLowerCase();
     if(label!=='value')return;
-    node.classList.remove('pending','blocked','unavailable');
+    node.classList.remove('pending','blocked','unavailable','waiting_for_input','not_configured');
     node.classList.add('ready');
     const mark=node.querySelector('.runtime-stage-mark');
     if(mark)mark.textContent='✓';
@@ -49,6 +50,29 @@ async function refreshVisibleEvidenceIfAdvanced(previousContext,payload){
   setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
 }
 
+async function settleCompletedJob(){
+  const context=await api('/api/product-context');
+  state.context=context;
+  state.intelligence=null;
+  fsfflSettledStateId=context.state_id||null;
+  fsfflCurrentJobId=null;
+  fsfflJobStateId=null;
+  applyContext();
+  setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
+  if(context.value_ready){
+    setForecastRefreshMessage('Intelligence refresh complete.');
+  }else{
+    setForecastRefreshMessage('Forecast and simulation are ready; Value finished without an authoritative estimate set.');
+  }
+}
+
+function settleFailedJob(payload){
+  fsfflSettledStateId=state?.context?.state_id||fsfflJobStateId||null;
+  fsfflCurrentJobId=null;
+  fsfflJobStateId=null;
+  setForecastRefreshMessage(phaseMessage(payload));
+}
+
 async function pollIntelligenceJob(){
   if(!state?.context?.league_id)return;
   try{
@@ -63,17 +87,13 @@ async function pollIntelligenceJob(){
     reflectAuthoritativeValueReadiness(state.context);
 
     if(payload.status==='completed'){
-      const context=await api('/api/product-context');
-      state.context=context;
-      state.intelligence=null;
-      applyContext();
-      setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
-      setForecastRefreshMessage('Forecasts, 50,000-run simulation, and NEXT-3 market values are ready.');
+      await settleCompletedJob();
       return;
     }
 
     if(payload.status==='failed'){
       console.error('FSFFL intelligence job failed',payload.error);
+      settleFailedJob(payload);
       return;
     }
 
@@ -91,9 +111,11 @@ async function maybeStartIntelligenceJob(){
   if(intelligencePipelineReady(state.context))return;
 
   const stateId=state.context.state_id||'loaded';
+  if(fsfflSettledStateId&&fsfflSettledStateId===stateId)return;
   if(fsfflCurrentJobId&&fsfflJobStateId===stateId)return;
 
   fsfflJobStartInFlight=true;
+  fsfflSettledStateId=null;
   setForecastRefreshMessage('Starting server-side intelligence refresh…');
   try{
     const payload=await api('/api/intelligence/jobs',{method:'POST'});
@@ -112,6 +134,7 @@ async function maintainFsfflIntelligence(){
   if(!state?.context?.league_id)return;
   reflectAuthoritativeValueReadiness(state.context);
   if(intelligencePipelineReady(state.context))return;
+  if(fsfflSettledStateId&&fsfflSettledStateId===state.context.state_id)return;
   if(fsfflCurrentJobId){
     await pollIntelligenceJob();
     return;
@@ -127,11 +150,9 @@ async function maintainFsfflIntelligence(){
       setForecastRefreshMessage(phaseMessage(payload));
       reflectAuthoritativeValueReadiness(state.context);
       if(payload.status==='completed'){
-        const context=await api('/api/product-context');
-        state.context=context;
-        state.intelligence=null;
-        applyContext();
-        setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
+        await settleCompletedJob();
+      }else if(payload.status==='failed'){
+        settleFailedJob(payload);
       }
       return;
     }
