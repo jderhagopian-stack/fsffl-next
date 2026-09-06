@@ -20,4 +20,6 @@ def test_job_progress_is_rendered_from_server_authoritative_status() -> None:
     source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
     assert "phaseMessage(payload)" in source
     assert "payload.status==='queued'||payload.status==='running'" in source
-    assert "Forecasts and 50,000-run simulation are ready." in source
+    assert "refreshVisibleEvidenceIfAdvanced" in source
+    assert "intelligencePipelineReady" in source
+    assert "Forecasts, 50,000-run simulation, and NEXT-3 market values are ready." in source
