@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 from urllib.request import Request, urlopen
 
 from .acquisition import ProviderSnapshot
@@ -45,10 +45,11 @@ class SleeperLiveSource:
 
         league_payload = self._get(f"/league/{league_id}")
         season = int(league_payload.get("season")) if league_payload.get("season") else None
+        rosters = self._complete_rosters(league_id, league_payload)
         payload = {
             "league": league_payload,
             "users": self._get(f"/league/{league_id}/users"),
-            "rosters": self._get(f"/league/{league_id}/rosters"),
+            "rosters": rosters,
             "players": self._get("/players/nfl"),
             "traded_picks": self._get(f"/league/{league_id}/traded_picks"),
             "matchups": self._regular_season_matchups(league_id, league_payload),
@@ -72,6 +73,39 @@ class SleeperLiveSource:
         if as_of.tzinfo is None:
             raise ValueError("as_of must be timezone-aware")
         return None
+
+    def _complete_rosters(
+        self,
+        league_id: str,
+        league_payload: Mapping[str, Any],
+    ) -> Any:
+        path = f"/league/{league_id}/rosters"
+        rosters = self._get(path)
+        settings = league_payload.get("settings") or {}
+        raw_expected = settings.get("num_teams")
+        try:
+            expected = int(raw_expected) if raw_expected not in (None, "", 0) else 0
+        except (TypeError, ValueError):
+            expected = 0
+        if expected <= 0:
+            return rosters
+
+        def roster_count(value: Any) -> int:
+            if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+                return -1
+            return len(value)
+
+        if roster_count(rosters) == expected:
+            return rosters
+        # A transient/partial provider response must not silently become canonical
+        # State. Retry once, then fail closed with an explicit count mismatch.
+        rosters = self._get(path)
+        actual = roster_count(rosters)
+        if actual != expected:
+            raise ValueError(
+                f"Sleeper roster payload incomplete: expected {expected} teams, received {actual}"
+            )
+        return rosters
 
     def _regular_season_matchups(
         self,
