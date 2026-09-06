@@ -10,7 +10,12 @@ from urllib.request import Request, urlopen
 from fsffl.state.models import LeagueState, RosterSlot
 
 from .calibration import CalibrationObservation
-from .cardinal import NativeMarketMagnitudeObservation, preserve_native_market_magnitudes
+from .cardinal import (
+    NativeMarketMagnitudeObservation,
+    ProvisionalFSFFLValueScore,
+    build_provisional_fsffl_values,
+    preserve_native_market_magnitudes,
+)
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
 from .models import MarketPriceEstimate, ValueAssetKind, ValueScale
 from .source_batch import build_market_calibration_panel_batch
@@ -42,6 +47,7 @@ class CurrentMarketValueRuntimeResult:
     valued_roster_player_count: int
     market_context_id: str
     native_magnitude_observations: tuple[NativeMarketMagnitudeObservation, ...] = ()
+    provisional_fsffl_values: tuple[ProvisionalFSFFLValueScore, ...] = ()
     model_version: str = "next3-current-market-runtime-v1"
 
     @property
@@ -79,8 +85,6 @@ def _format_inputs(league_state: LeagueState) -> tuple[int, int, float, str]:
         if rule.stat.strip().lower() in {"rec", "reception", "receptions"}:
             ppr = float(rule.points)
             break
-    # Provider APIs support the common 0/0.5/1 PPR cohorts. Fail closed rather
-    # than silently snapping unusual league scoring to a neighboring format.
     if ppr not in {0.0, 0.5, 1.0}:
         raise ValueError(f"unsupported live market PPR cohort: {ppr}")
     context = f"dynasty:{league_state.league.rules.team_count}t:{'sf' if superflex else '1qb'}:{ppr:g}ppr"
@@ -129,8 +133,8 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
 
     Provider-native numeric scales are retained as typed challenger evidence and
     then converted to within-source percentiles for the current authoritative
-    market baseline. The governed source registry collapses providers that share
-    one evidence-family root so correlated feeds cannot double-vote.
+    market baseline. A separately typed provisional FSFFL shadow score is also
+    emitted for UI testing only; it is not Decision/Search authority.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -182,6 +186,7 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         raise RuntimeError("current governed market sources produced no usable observations")
 
     native_magnitude_observations = preserve_native_market_magnitudes(batch.panel.observations)
+    provisional_fsffl_values = build_provisional_fsffl_values(native_magnitude_observations)
 
     market_observations: list[MarketObservation] = []
     for source_id, values in _latest_source_values(batch.panel.observations).items():
@@ -233,9 +238,6 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     valued = roster_player_ids.intersection({estimate.asset_id for estimate in estimates})
     failures = list(batch.failed_source_ids)
     errors = dict(batch.errors_by_source_id)
-    # DynastyProcess requires an explicit FantasyPros->canonical crosswalk that
-    # current Sleeper State does not presently carry. Surface that absence rather
-    # than name-matching or silently treating the source as empty evidence.
     failures.append("dynastyprocess_market_values")
     errors["dynastyprocess_market_values"] = "IdentityCrosswalkUnavailable: current State lacks explicit FantasyPros ids"
 
@@ -249,4 +251,5 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         valued_roster_player_count=len(valued),
         market_context_id=context,
         native_magnitude_observations=native_magnitude_observations,
+        provisional_fsffl_values=provisional_fsffl_values,
     )
