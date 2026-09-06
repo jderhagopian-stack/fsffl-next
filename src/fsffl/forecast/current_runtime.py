@@ -32,11 +32,11 @@ class NamedCurrentProjectionFetcher:
 class LiveForecastRuntimeResult(FrozenModel):
     raw_ensemble: tuple[ForecastObservation, ...]
     fantasy_point_forecasts: tuple[ForecastObservation, ...]
-    fantasy_regular_season_forecasts: tuple[ForecastObservation, ...] = ()
     coverage: LiveEnsembleCoverage
     successful_source_ids: tuple[str, ...]
     failed_sources: tuple[str, ...]
     evaluation_as_of: datetime
+    fantasy_regular_season_forecasts: tuple[ForecastObservation, ...] = ()
     model_version: str = "next2-current-runtime-v3"
 
 
@@ -137,9 +137,10 @@ def build_current_live_forecasts(
         model_version="next2-current-runtime-v3",
     )
     fantasy_points = apply_empirical_season_fantasy_point_uncertainty(league_scored)
-    fantasy_regular_season = derive_fantasy_regular_season_forecasts(
-        league_state,
-        fantasy_points,
+    fantasy_regular_season = (
+        derive_fantasy_regular_season_forecasts(league_state, fantasy_points)
+        if league_state.matchups
+        else ()
     )
     return LiveForecastRuntimeResult(
         raw_ensemble=raw_ensemble,
