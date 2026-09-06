@@ -10,7 +10,8 @@ def test_partial_pipeline_exposes_one_refresh_action() -> None:
     assert "Refresh Intelligence" in source
     assert "manualIntelligenceRefresh" in source
     assert "intelligencePipelineReady(context)" in source
-    assert "3 core stages ready" in source
+    assert "ensureIntelligenceRefreshButton" in source
+    assert "#runtime-status-summary" not in source
 
 
 def test_historical_completed_job_cannot_settle_partial_current_state() -> None:
@@ -25,7 +26,8 @@ def test_historical_completed_job_cannot_settle_partial_current_state() -> None:
 def test_completed_partial_session_stops_auto_loop_and_offers_retry() -> None:
     source = _source()
     assert "fsfflSettledStateId=context.state_id||null" in source
-    assert "Core intelligence is incomplete. Refresh to retry" in source
+    assert "Core intelligence is incomplete. Use Refresh Intelligence to retry" in source
+    assert "Value finished without an authoritative estimate set." in source
     assert "button.hidden=ready||running" in source
 
 
