@@ -13,6 +13,7 @@ class TradeAssetOption(FrozenModel):
     player_id: str | None = None
     pick_id: str | None = None
     roster_slot: RosterSlot | None = None
+    age_years: float | None = None
 
     @model_validator(mode="after")
     def validate_asset(self) -> "TradeAssetOption":
@@ -22,6 +23,8 @@ class TradeAssetOption(FrozenModel):
             raise ValueError("player trade option requires player_id")
         if self.asset_kind == "pick" and self.pick_id is None:
             raise ValueError("pick trade option requires pick_id")
+        if self.asset_kind != "player" and self.age_years is not None:
+            raise ValueError("only player trade options may expose age")
         return self
 
 
@@ -36,7 +39,7 @@ class TradeCenterBrowserView(FrozenModel):
     focal_team: TeamTradeBrowser
     counterparties: tuple[TeamTradeBrowser, ...]
     state_id: str
-    product_version: str = "next8-trade-browser-v1"
+    product_version: str = "next8-trade-browser-v2:player-state-age"
 
 
 def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
@@ -46,11 +49,13 @@ def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
         raise ValueError("unknown team_id")
 
     players_by_id = {player.player_id: player for player in league_state.players}
+    player_states_by_id = {state.player_id: state for state in league_state.player_states}
     assets: list[TradeAssetOption] = []
     for entry in team_state.roster:
         player = players_by_id.get(entry.player_id)
         if player is None:
             continue
+        player_state = player_states_by_id.get(player.player_id)
         assets.append(
             TradeAssetOption(
                 asset_ref=f"player:{player.player_id}",
@@ -59,6 +64,7 @@ def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
                 detail=player.position.value,
                 player_id=player.player_id,
                 roster_slot=entry.slot,
+                age_years=player_state.age_years if player_state is not None else None,
             )
         )
 
@@ -97,7 +103,12 @@ def build_trade_center_browser_view(
     *,
     focal_team_id: str,
 ) -> TradeCenterBrowserView:
-    """Expose only canonically owned assets for visual trade drafting."""
+    """Expose canonically owned assets and descriptive State metadata for drafting.
+
+    This view does not calculate Value, forecasts, lineup optimization, decision
+    utility, or action authority. Player age is copied from canonical point-in-time
+    State so product surfaces can share one ownership-aware asset catalog.
+    """
 
     focal = _team_browser(league_state, focal_team_id)
     counterparties = tuple(
