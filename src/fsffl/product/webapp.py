@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
+from fsffl.value.models import AssetValueProfile
 
 from .background_jobs import IntelligenceJob, IntelligenceJobCoordinator, IntelligenceJobPhase
 from .dashboard import build_league_metric_chart
@@ -161,6 +162,28 @@ def _forecast_lineup_result(runtime):
     )
 
 
+def _attach_live_value_profiles(view, value_evidence):
+    if value_evidence is None or not value_evidence.estimates:
+        return view
+    profiles = {
+        estimate.asset_id: AssetValueProfile(
+            asset_id=estimate.asset_id,
+            asset_kind=estimate.asset_kind,
+            market_price=estimate,
+        )
+        for estimate in value_evidence.estimates
+    }
+    players = tuple(
+        row.model_copy(update={"value_profile": profiles.get(row.player_id)})
+        for row in view.players
+    )
+    draft_picks = tuple(
+        row.model_copy(update={"value_profile": profiles.get(row.pick.pick_id)})
+        for row in view.draft_picks
+    )
+    return view.model_copy(update={"players": players, "draft_picks": draft_picks})
+
+
 def _default_simulation_loader(
     league_state: LeagueState,
     evidence: LiveForecastEvidence,
@@ -220,15 +243,19 @@ def create_app(
             forecast_ready=evidence is not None and bool(evidence.league_scored_forecasts),
             forecast_message=message,
         ).model_dump(mode="json")
-        if runtime.simulation_analytics is not None:
-            for stage in payload["stages"]:
+        value_ready = runtime.value_evidence is not None and bool(runtime.value_evidence.estimates)
+        for stage in payload["stages"]:
+            if stage["stage"] == "value" and value_ready:
+                stage["readiness"] = "ready"
+                stage["message"] = "Governed NEXT-3 current market values are attached from authoritative market evidence."
+            if runtime.simulation_analytics is not None:
                 if stage["stage"] == "team_utility":
                     stage["readiness"] = "ready"
                     stage["message"] = "NEXT-4 50,000-run competitive simulation is attached from calibrated forecast evidence."
                 elif stage["stage"] == "analytics":
                     stage["readiness"] = "ready"
                     stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
-        payload["value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.estimates)
+        payload["value_ready"] = value_ready
         payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
         payload["job"] = _job_payload(jobs.current(user_id))
         return payload
@@ -389,21 +416,23 @@ def create_app(
                 for item in runtime.simulation_analytics.team_views
                 if item.team_id == runtime.selected_team_id
             )
-            return view.model_dump(mode="json")
+            return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
         lineup_result = _forecast_lineup_result(runtime)
         if lineup_result is not None:
             view = next(item for item in lineup_result.team_views if item.team_id == runtime.selected_team_id)
-            return view.model_dump(mode="json")
+            return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
         if runtime.forecast_evidence is not None:
             evidence = runtime.forecast_evidence
             forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
-            return build_forecast_team_view(
+            view = build_forecast_team_view(
                 runtime.league_state,
                 team_id=runtime.selected_team_id,
                 forecasts=forecasts,
                 forecast_model_version=evidence.model_version,
-            ).model_dump(mode="json")
-        return build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id).model_dump(mode="json")
+            )
+            return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
+        view = build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id)
+        return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
 
     @application.get("/api/trade-center/browser")
     def trade_center_browser(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
