@@ -35,6 +35,7 @@ from .runtime import (
 )
 from .simulation_runtime import LiveSimulationAnalyticsResult, build_live_simulation_analytics
 from .team_page import build_forecast_team_view, build_state_only_team_view
+from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
 
@@ -472,9 +473,16 @@ def create_app(
             proposal = submit_trade_draft(draft, as_of=runtime.league_state.as_of)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        if trade_evaluator is None:
-            raise HTTPException(status_code=409, detail="Trade analysis runtime is not configured yet")
-        return trade_evaluator(runtime.league_state, proposal, runtime.selected_team_id)
+        if trade_evaluator is not None:
+            return trade_evaluator(runtime.league_state, proposal, runtime.selected_team_id)
+        try:
+            return build_private_beta_trade_analysis(
+                runtime,
+                proposal,
+                focal_team_id=runtime.selected_team_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @application.get("/api/league/chart")
     def league_chart(metric: LeagueMetric, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
