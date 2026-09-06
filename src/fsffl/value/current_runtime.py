@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -17,7 +18,7 @@ from .cardinal import (
 )
 from .cardinal_authority import (
     FSFFLCardinalValueScore,
-    build_authoritative_pick_cardinal_scores,
+    build_authoritative_pick_scores_from_trade_evaluation,
     build_authoritative_player_cardinal_scores,
 )
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
@@ -33,7 +34,7 @@ from .sources import (
 DYNASTYDEALER_URL = "https://www.dynastydealer.com/api/player-values"
 FANTASYCALC_URL = "https://api.fantasycalc.com/values/current"
 STATSGUY_URL = "https://api.statsguyfantasy.com/api/v1/rankings"
-STATSGUY_PICKS_URL = "https://api.statsguyfantasy.com/api/v1/picks"
+STATSGUY_TRADE_EVALUATE_URL = "https://api.statsguyfantasy.com/api/v1/trades/evaluate"
 MARKET_PERCENTILE_SCALE = ValueScale(
     scale_id="dynasty-market-percentile",
     version="next3-v1",
@@ -77,6 +78,21 @@ class CurrentMarketValueRuntimeResult:
 def _download_text(url: str) -> str:
     request = Request(url, headers={"User-Agent": "fsffl-next-private-beta/0.1"})
     with urlopen(request, timeout=30) as response:  # noqa: S310 - governed fixed source URLs
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset)
+
+
+def _post_json_text(url: str, payload: dict[str, object]) -> str:
+    request = Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "User-Agent": "fsffl-next-private-beta/0.1",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    with urlopen(request, timeout=30) as response:  # noqa: S310 - governed fixed source URL
         charset = response.headers.get_content_charset() or "utf-8"
         return response.read().decode(charset)
 
@@ -145,6 +161,41 @@ def _percentiles(values: dict[str, float]) -> dict[str, float]:
     return result
 
 
+def _current_generic_pick_cardinal_scores(
+    league_state: LeagueState,
+    *,
+    statsguy_format: str,
+    market_context_id: str,
+    retrieved_at: datetime,
+    sleeper_crosswalk: dict[str, str],
+) -> tuple[FSFFLCardinalValueScore, ...]:
+    if not league_state.draft_picks:
+        return ()
+    generic_ids = sorted(
+        {f"pick:{pick.season}:{pick.round}" for pick in league_state.draft_picks}
+    )
+    if len(generic_ids) > 20:
+        raise ValueError("current cardinal pick resolver supports at most 20 unique season-round ids")
+    # The trade-evaluation API explicitly accepts bare round-only IDs as generic
+    # unknown-slot picks. A real player is used only as the inert opposite side;
+    # its value is ignored. This avoids inventing early/mid/late slot assumptions.
+    anchor_sleeper_id = next(iter(sorted(sleeper_crosswalk)))
+    evaluation = _post_json_text(
+        STATSGUY_TRADE_EVALUATE_URL,
+        {
+            "format": statsguy_format,
+            "sideA": generic_ids,
+            "sideB": [anchor_sleeper_id],
+        },
+    )
+    return build_authoritative_pick_scores_from_trade_evaluation(
+        evaluation,
+        draft_picks=league_state.draft_picks,
+        market_context_id=market_context_id,
+        retrieved_at=retrieved_at,
+    )
+
+
 def build_current_market_values(league_state: LeagueState) -> CurrentMarketValueRuntimeResult:
     """Acquire current governed NEXT-3 market evidence and typed Value outputs.
 
@@ -204,22 +255,19 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         raise RuntimeError("current governed market sources produced no usable observations")
 
     native_magnitude_observations = preserve_native_market_magnitudes(batch.panel.observations)
-    # Kept temporarily for backwards-compatible private-beta rendering while UI
-    # migrates to fsffl_cardinal_values. It remains explicitly challenger-only.
     provisional_fsffl_values = build_provisional_fsffl_values(native_magnitude_observations)
     cardinal_values = list(build_authoritative_player_cardinal_scores(native_magnitude_observations))
 
     failures = list(batch.failed_source_ids)
     errors = dict(batch.errors_by_source_id)
     try:
-        pick_payload = _download_text(STATSGUY_PICKS_URL)
         cardinal_values.extend(
-            build_authoritative_pick_cardinal_scores(
-                pick_payload,
-                draft_picks=league_state.draft_picks,
-                format_key=statsguy_format,
+            _current_generic_pick_cardinal_scores(
+                league_state,
+                statsguy_format=statsguy_format,
                 market_context_id=context,
                 retrieved_at=acquisition_time,
+                sleeper_crosswalk=sleeper_crosswalk,
             )
         )
     except Exception as exc:
