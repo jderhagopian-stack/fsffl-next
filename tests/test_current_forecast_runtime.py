@@ -61,6 +61,7 @@ def test_current_runtime_ensembles_before_league_scoring() -> None:
     assert len(result.fantasy_point_forecasts) == 1
     assert result.fantasy_point_forecasts[0].source == "fsffl:live_league_scored"
     assert result.fantasy_point_forecasts[0].distribution.mean == 374.0
+    assert result.fantasy_regular_season_forecasts == ()
     # Provider disagreement alone would yield only a few fantasy points of
     # dispersion here. The live runtime must instead expose the empirical
     # historical-error calibration required for downstream simulation.
