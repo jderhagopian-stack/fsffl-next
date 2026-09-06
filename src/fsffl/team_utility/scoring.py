@@ -9,6 +9,7 @@ from fsffl.forecast.weekly_volatility import active_game_distribution
 from fsffl.state.models import LeagueState
 
 from .lineup import optimize_team_lineup
+from .models import OptimizedTeamLineup
 from .simulation import TeamScoringDistribution, WeeklyTeamScoringDistribution
 
 
@@ -113,6 +114,144 @@ def build_weekly_team_scoring_distribution(
     )
 
 
+def _weekly_distribution_from_lineup(
+    lineup: OptimizedTeamLineup,
+    *,
+    week: int,
+    latest: dict[str, ForecastObservation],
+    model_version: str,
+) -> WeeklyTeamScoringDistribution:
+    starter_ids = {assignment.player_id for assignment in lineup.assignments}
+    missing = starter_ids - set(latest)
+    if missing:
+        raise ValueError(f"weekly optimized starter forecast evidence missing: {sorted(missing)}")
+
+    mean_points = 0.0
+    variance = 0.0
+    for player_id in starter_ids:
+        observation = latest[player_id]
+        mean, stddev = active_game_distribution(
+            season_mean=observation.distribution.mean,
+            position=observation.position,
+            games_per_team=_NFL_REGULAR_SEASON_GAMES_PER_TEAM,
+        )
+        mean_points += mean
+        variance += stddev**2
+
+    suffix = ":explicit_unfilled_zero" if lineup.unfilled_slots else ""
+    return WeeklyTeamScoringDistribution(
+        week=week,
+        team_id=lineup.team_id,
+        mean_points=mean_points,
+        stddev_points=sqrt(variance),
+        model_version=(
+            f"{model_version}:"
+            f"{WeeklyScoringDecomposition.BYE_AWARE_EMPIRICAL_WEEKLY_VOLATILITY.value}:"
+            f"{TeamUncertaintyMethod.INDEPENDENT_PLAYER_VARIANCE.value}{suffix}"
+        ),
+    )
+
+
+def build_bye_aware_weekly_team_scoring_panel(
+    league_state: LeagueState,
+    forecasts: tuple[ForecastObservation, ...],
+    *,
+    team_ids: tuple[str, ...],
+    weeks: tuple[int, ...],
+    as_of: datetime,
+    baseline_lineups: dict[str, OptimizedTeamLineup] | None = None,
+    model_version: str = "next4-weekly-team-scoring-v4",
+) -> tuple[WeeklyTeamScoringDistribution, ...]:
+    """Build a full league/week scoring panel while reusing identical lineup work.
+
+    The old live runtime rebuilt player/forecast indexes and re-ran the lineup
+    optimizer once for every team-week pair. Most team-weeks have no rostered
+    player on bye, and some bye weeks produce the same exclusion set. This panel
+    resolves canonical bye availability once, caches lineups by
+    ``(team_id, excluded_player_ids)``, and reuses caller-supplied baseline lineups
+    when no owned player is on bye. Output semantics are identical to calling the
+    single-week builder independently for every pair.
+    """
+
+    if as_of.tzinfo is None:
+        raise ValueError("as_of must be timezone-aware")
+    if not league_state.nfl_team_byes:
+        raise ValueError("canonical NFL bye-week state is unavailable")
+    if any(not 1 <= week <= 18 for week in weeks):
+        raise ValueError("week must be within the NFL regular season")
+
+    known_team_ids = {team.team_id for team in league_state.teams}
+    unknown = sorted(set(team_ids) - known_team_ids)
+    if unknown:
+        raise ValueError(f"unknown team_id values: {unknown}")
+
+    players_by_id = {player.player_id: player for player in league_state.players}
+    team_state_by_id = {item.team_id: item for item in league_state.team_states}
+    roster_ids_by_team = {
+        team_id: frozenset(entry.player_id for entry in team_state_by_id[team_id].roster)
+        for team_id in team_ids
+    }
+    all_roster_ids = set().union(*(set(ids) for ids in roster_ids_by_team.values())) if team_ids else set()
+    latest = _latest_fantasy_point_forecasts(
+        forecasts,
+        player_ids=all_roster_ids,
+        as_of=as_of,
+        horizon=ForecastHorizon.SEASON,
+    )
+
+    bye_teams_by_week: dict[int, frozenset[str]] = {}
+    for week in weeks:
+        bye_teams_by_week[week] = frozenset(
+            item.nfl_team
+            for item in league_state.nfl_team_byes
+            if item.season == league_state.league.season and item.week == week
+        )
+
+    cache: dict[tuple[str, frozenset[str]], OptimizedTeamLineup] = {}
+    if baseline_lineups:
+        for team_id, lineup in baseline_lineups.items():
+            if team_id in roster_ids_by_team:
+                cache[(team_id, frozenset())] = lineup
+
+    rows: list[WeeklyTeamScoringDistribution] = []
+    for team_id in team_ids:
+        roster_ids = roster_ids_by_team[team_id]
+        for week in weeks:
+            bye_teams = bye_teams_by_week[week]
+            excluded = frozenset(
+                player_id
+                for player_id in roster_ids
+                if (
+                    (player := players_by_id.get(player_id)) is not None
+                    and player.nfl_team is not None
+                    and player.nfl_team.upper() in bye_teams
+                )
+            )
+            key = (team_id, excluded)
+            lineup = cache.get(key)
+            if lineup is None:
+                lineup = optimize_team_lineup(
+                    league_state,
+                    forecasts,
+                    team_id=team_id,
+                    as_of=as_of,
+                    horizon=ForecastHorizon.SEASON,
+                    excluded_player_ids=excluded,
+                    allow_unfilled_slots=True,
+                    model_version="next4-lineup-v3:bye-aware",
+                )
+                cache[key] = lineup
+            rows.append(
+                _weekly_distribution_from_lineup(
+                    lineup,
+                    week=week,
+                    latest=latest,
+                    model_version=model_version,
+                )
+            )
+    return tuple(rows)
+
+
 def build_bye_aware_weekly_team_scoring_distribution(
     league_state: LeagueState,
     forecasts: tuple[ForecastObservation, ...],
@@ -122,78 +261,16 @@ def build_bye_aware_weekly_team_scoring_distribution(
     as_of: datetime,
     model_version: str = "next4-weekly-team-scoring-v4",
 ) -> WeeklyTeamScoringDistribution:
-    """Build a week-specific team distribution from Forecast + canonical bye State.
+    """Build one week-specific team distribution from Forecast + canonical bye State."""
 
-    Player season means are converted to equal active-game means because direct
-    NEXT-2 weekly provider means are not promoted yet.  Crucially, weekly
-    performance variance is *not* derived from season forecast uncertainty.
-    Forecast authority supplies an independently calibrated empirical weekly
-    volatility distribution for each starter.  The lineup is re-optimized after
-    excluding players whose canonical NFL team is on bye.
-    """
-
-    if not 1 <= week <= 18:
-        raise ValueError("week must be within the NFL regular season")
-    if not league_state.nfl_team_byes:
-        raise ValueError("canonical NFL bye-week state is unavailable")
-
-    bye_teams = {
-        item.nfl_team
-        for item in league_state.nfl_team_byes
-        if item.season == league_state.league.season and item.week == week
-    }
-    players_by_id = {player.player_id: player for player in league_state.players}
-    excluded = frozenset(
-        player_id
-        for player_id, player in players_by_id.items()
-        if player.nfl_team is not None and player.nfl_team.upper() in bye_teams
-    )
-
-    lineup = optimize_team_lineup(
+    return build_bye_aware_weekly_team_scoring_panel(
         league_state,
         forecasts,
-        team_id=team_id,
+        team_ids=(team_id,),
+        weeks=(week,),
         as_of=as_of,
-        horizon=ForecastHorizon.SEASON,
-        excluded_player_ids=excluded,
-        allow_unfilled_slots=True,
-        model_version="next4-lineup-v3:bye-aware",
-    )
-    starter_ids = {assignment.player_id for assignment in lineup.assignments}
-    latest = _latest_fantasy_point_forecasts(
-        forecasts,
-        player_ids=starter_ids,
-        as_of=as_of,
-        horizon=ForecastHorizon.SEASON,
-    )
-    missing = starter_ids - set(latest)
-    if missing:
-        raise ValueError(f"weekly optimized starter forecast evidence missing: {sorted(missing)}")
-
-    weekly_players = []
-    for player_id in starter_ids:
-        observation = latest[player_id]
-        mean, stddev = active_game_distribution(
-            season_mean=observation.distribution.mean,
-            position=observation.position,
-            games_per_team=_NFL_REGULAR_SEASON_GAMES_PER_TEAM,
-        )
-        weekly_players.append((mean, stddev))
-
-    mean_points = sum(mean for mean, _ in weekly_players)
-    variance = sum(stddev**2 for _, stddev in weekly_players)
-    suffix = ":explicit_unfilled_zero" if lineup.unfilled_slots else ""
-    return WeeklyTeamScoringDistribution(
-        week=week,
-        team_id=team_id,
-        mean_points=mean_points,
-        stddev_points=sqrt(variance),
-        model_version=(
-            f"{model_version}:"
-            f"{WeeklyScoringDecomposition.BYE_AWARE_EMPIRICAL_WEEKLY_VOLATILITY.value}:"
-            f"{TeamUncertaintyMethod.INDEPENDENT_PLAYER_VARIANCE.value}{suffix}"
-        ),
-    )
+        model_version=model_version,
+    )[0]
 
 
 def _latest_fantasy_point_forecasts(
