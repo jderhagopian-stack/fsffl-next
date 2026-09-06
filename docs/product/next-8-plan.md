@@ -255,6 +255,34 @@ Sleeper -> State -> Forecast -> Value -> Team Utility/Simulation -> Trade Decisi
 
 Any generalizable failure becomes an upstream regression in its authoritative layer rather than a UI patch.
 
+## Future workstream — Runtime Performance / Commercial Readiness
+
+Correctness and fidelity remain primary, but commercial interaction latency must be materially lower than the private-beta runtime. Performance work must improve execution architecture rather than silently weaken model quality.
+
+Planned capabilities:
+
+- **Precomputed league baselines:** recompute expensive league-wide forecast/simulation artifacts when authoritative State or Forecast evidence changes, rather than waiting for a user to open a page.
+- **Deterministic result caching:** cache expensive outputs by authoritative inputs such as `LeagueState.state_id`, forecast/model version, simulation version, and relevant governed configuration so identical work is reused safely.
+- **Background job architecture:** move expensive simulations, refreshes, report builds, and future optimization/search workloads off request/response threads. Product APIs should return promptly and expose job/readiness state while work continues.
+- **Incremental / delta simulation:** for nearby scenarios such as a trade, waiver addition, roster move, or lineup change, reuse the baseline season simulation and recompute only the mathematically affected components where valid.
+- **Interactive preview tier with authoritative refinement:** permit a clearly labeled faster estimate for immediate UX when useful, followed by the full authoritative result. Preview results must never silently replace or redefine production authority.
+- **Simulation engine profiling and optimization:** profile the actual runtime hotspots before optimizing; vectorize, batch, parallelize, or otherwise improve computation where mathematically equivalent.
+- **Week-specific forecast and lineup caches:** cache reusable weekly player distributions and lineup-optimization results keyed to State/Forecast evidence so repeated team and matchup evaluation does not recompute unchanged work.
+- **Shared league-result reuse:** one authoritative league baseline should support League, My Team, Trade Center, Opportunity, Analytics, and Reports views instead of each surface causing independent recomputation.
+- **Selective invalidation:** when only one authoritative input changes, invalidate only dependent cached artifacts rather than clearing the whole pipeline.
+- **Latency observability:** record end-to-end and per-stage runtimes, cache-hit rates, queue delay, simulation duration, and provider latency so performance regressions are measurable.
+- **Commercial latency targets:** define explicit service-level targets for common interactions before commercial launch, including initial league load, dashboard navigation, trade evaluation, opportunity retrieval, and authoritative refinement.
+
+Guardrails:
+
+- do not reduce the default authoritative Monte Carlo sample merely to make the UI appear faster;
+- do not move model calculations into frontend code;
+- do not permit caches to outlive their authoritative State/evidence lineage;
+- do not use stale results without explicit evidence/version labeling;
+- do not create a second fast model that becomes de facto authority without validation and promotion.
+
+This workstream should move ahead of commercial launch and should begin early enough that runtime architecture does not become a late-stage retrofit.
+
 ## First implementation target
 
 Build typed product-shell contracts and navigation/context rules first, then build the thin web adapter and frontend shell on top of them.
