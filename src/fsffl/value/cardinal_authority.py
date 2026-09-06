@@ -105,6 +105,33 @@ def build_authoritative_player_cardinal_scores(
     )
 
 
+def _scores_from_generic_pick_values(
+    generic_by_id: dict[str, float],
+    *,
+    draft_picks: tuple[DraftPick, ...],
+    market_context_id: str,
+    as_of: datetime,
+) -> tuple[FSFFLCardinalValueScore, ...]:
+    result: list[FSFFLCardinalValueScore] = []
+    for pick in sorted(draft_picks, key=lambda item: (item.season, item.round, item.pick_id)):
+        provider_id = f"pick:{pick.season}:{pick.round}"
+        value = generic_by_id.get(provider_id)
+        if value is None:
+            continue
+        result.append(
+            FSFFLCardinalValueScore(
+                asset_id=pick.pick_id,
+                asset_kind=ValueAssetKind.PICK,
+                score=value,
+                as_of=as_of,
+                market_context_id=market_context_id,
+                source_asset_id=provider_id,
+                slot_certainty="generic_unknown_slot",
+            )
+        )
+    return tuple(result)
+
+
 def build_authoritative_pick_cardinal_scores(
     json_text: str,
     *,
@@ -113,12 +140,7 @@ def build_authoritative_pick_cardinal_scores(
     market_context_id: str,
     retrieved_at: datetime,
 ) -> tuple[FSFFLCardinalValueScore, ...]:
-    """Attach generic unknown-slot rookie-pick values on the player score axis.
-
-    Canonical NEXT future picks know season/round but not their eventual slot.
-    Therefore v1 intentionally selects the provider's bare round-only pick id.
-    Early/mid/late and slot-specific values are not guessed from owner strength.
-    """
+    """Parse generic round-only values when they are present in GET /picks."""
 
     if retrieved_at.tzinfo is None:
         raise ValueError("pick cardinal retrieval timestamp must be timezone-aware")
@@ -148,21 +170,57 @@ def build_authoritative_pick_cardinal_scores(
             continue
         generic_by_id[provider_id] = float(value_map[format_key])
 
-    result: list[FSFFLCardinalValueScore] = []
-    for pick in sorted(draft_picks, key=lambda item: (item.season, item.round, item.pick_id)):
-        provider_id = f"pick:{pick.season}:{pick.round}"
-        value = generic_by_id.get(provider_id)
-        if value is None:
+    return _scores_from_generic_pick_values(
+        generic_by_id,
+        draft_picks=draft_picks,
+        market_context_id=market_context_id,
+        as_of=as_of,
+    )
+
+
+def build_authoritative_pick_scores_from_trade_evaluation(
+    json_text: str,
+    *,
+    draft_picks: tuple[DraftPick, ...],
+    market_context_id: str,
+    retrieved_at: datetime,
+) -> tuple[FSFFLCardinalValueScore, ...]:
+    """Parse bare round-only pick values from Stats Guy trade evaluation.
+
+    The public API explicitly defines ``pick:YEAR:ROUND`` as a generic unknown-slot
+    pick. Using that identifier is more truthful than substituting an early/mid/late
+    variant when canonical State does not know the future slot.
+    """
+
+    if retrieved_at.tzinfo is None:
+        raise ValueError("pick cardinal retrieval timestamp must be timezone-aware")
+    payload = json.loads(json_text)
+    if not isinstance(payload, dict):
+        raise ValueError("Stats Guy trade evaluation payload must be an object")
+    as_of_raw = payload.get("asOf")
+    as_of = retrieved_at
+    if as_of_raw:
+        as_of = datetime.fromisoformat(str(as_of_raw).replace("Z", "+00:00"))
+        if as_of.tzinfo is None:
+            raise ValueError("Stats Guy trade evaluation asOf must be timezone-aware")
+
+    generic_by_id: dict[str, float] = {}
+    for side_name in ("sideA", "sideB"):
+        side = payload.get(side_name) or {}
+        assets = side.get("assets") if isinstance(side, dict) else None
+        if not isinstance(assets, list):
             continue
-        result.append(
-            FSFFLCardinalValueScore(
-                asset_id=pick.pick_id,
-                asset_kind=ValueAssetKind.PICK,
-                score=value,
-                as_of=as_of,
-                market_context_id=market_context_id,
-                source_asset_id=provider_id,
-                slot_certainty="generic_unknown_slot",
-            )
-        )
-    return tuple(result)
+        for row in assets:
+            if not isinstance(row, dict) or row.get("type") != "pick" or not row.get("found"):
+                continue
+            provider_id = str(row.get("id") or "").strip()
+            if provider_id.count(":") != 2:
+                continue
+            generic_by_id[provider_id] = float(row["value"])
+
+    return _scores_from_generic_pick_values(
+        generic_by_id,
+        draft_picks=draft_picks,
+        market_context_id=market_context_id,
+        as_of=as_of,
+    )
