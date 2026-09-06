@@ -26,8 +26,10 @@ from .intelligence_runtime import (
 from .runtime import (
     LiveForecastEvidence,
     LiveForecastLoader,
+    LiveValueLoader,
     PrivateBetaRuntimeStore,
     default_live_forecast_loader,
+    default_live_value_loader,
     default_sleeper_state_loader,
 )
 from .simulation_runtime import LiveSimulationAnalyticsResult, build_live_simulation_analytics
@@ -93,6 +95,7 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
     league_state = runtime.league_state
     evidence = runtime.forecast_evidence
     simulation = runtime.simulation_analytics
+    value_evidence = runtime.value_evidence
     return {
         "user_id": user_id,
         "league_id": league_state.league.league_id if league_state is not None else None,
@@ -105,6 +108,9 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "forecast_sources": list(evidence.successful_source_ids) if evidence is not None else [],
         "simulation_ready": simulation is not None,
         "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
+        "value_ready": value_evidence is not None and bool(value_evidence.estimates),
+        "value_sources": list(value_evidence.successful_source_ids) if value_evidence is not None else [],
+        "value_coverage": value_evidence.coverage if value_evidence is not None else None,
         "product_version": "next8-product-v1",
     }
 
@@ -174,6 +180,7 @@ def create_app(
     state_loader: StateLoader = default_sleeper_state_loader,
     forecast_loader: LiveForecastLoader = default_live_forecast_loader,
     simulation_loader: SimulationLoader = _default_simulation_loader,
+    value_loader: LiveValueLoader = default_live_value_loader,
     trade_evaluator: TradeEvaluator | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
@@ -221,6 +228,8 @@ def create_app(
                 elif stage["stage"] == "analytics":
                     stage["readiness"] = "ready"
                     stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
+        payload["value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.estimates)
+        payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
         payload["job"] = _job_payload(jobs.current(user_id))
         return payload
 
@@ -265,9 +274,13 @@ def create_app(
 
             progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running 50,000 governed NEXT-4 season simulations.")
             simulation = simulation_loader(refreshed_state, evidence)
-
-            progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching simulation results to the current canonical league state.")
             store.set_simulation_analytics(user_id, simulation)
+
+            progress(IntelligenceJobPhase.BUILDING_VALUES, "Building governed NEXT-3 current market values.")
+            values = value_loader(refreshed_state)
+
+            progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching simulation and Value results to the current canonical league state.")
+            store.set_value_evidence(user_id, values)
 
         job = jobs.start(user_id=user_id, league_state_id=initial_state_id, work=work)
         return {**_job_payload(job), **_runtime_context_payload(store, user_id)}
@@ -295,6 +308,7 @@ def create_app(
             raise HTTPException(status_code=502, detail=f"Unable to refresh FSFFL forecasts: {exc}") from exc
 
         simulation_failure = None
+        value_failure = None
         if evidence.uncertainty_ready:
             try:
                 simulation = simulation_loader(refreshed_state, evidence)
@@ -306,9 +320,20 @@ def create_app(
                     refreshed_state.league.league_id,
                     exc,
                 )
+        try:
+            values = value_loader(refreshed_state)
+            store.set_value_evidence(user_id, values)
+        except Exception as exc:
+            value_failure = f"{type(exc).__name__}: {exc}"
+            _logger.warning(
+                "FSFFL Value enrichment unavailable league=%s error=%s",
+                refreshed_state.league.league_id,
+                exc,
+            )
 
         current = store.get(user_id)
         simulation = current.simulation_analytics
+        values = current.value_evidence
         return {
             **_runtime_context_payload(store, user_id),
             "successful_sources": list(evidence.successful_source_ids),
@@ -319,6 +344,36 @@ def create_app(
             "simulation_ready": simulation is not None,
             "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
             "simulation_failure": simulation_failure,
+            "value_ready": values is not None and bool(values.estimates),
+            "value_failure": value_failure,
+        }
+
+    @application.get("/api/values")
+    def current_values(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        evidence = runtime.value_evidence
+        if evidence is None:
+            raise HTTPException(status_code=409, detail="Current NEXT-3 Value evidence is not loaded")
+        player_names = {player.player_id: player.full_name for player in runtime.league_state.players}
+        return {
+            "league_state_id": evidence.league_state_id,
+            "market_context_id": evidence.market_context_id,
+            "model_version": evidence.model_version,
+            "successful_sources": list(evidence.successful_source_ids),
+            "failed_sources": list(evidence.failed_sources),
+            "source_errors": evidence.errors_by_source_id,
+            "roster_player_count": evidence.roster_player_count,
+            "valued_roster_player_count": evidence.valued_roster_player_count,
+            "coverage": evidence.coverage,
+            "estimates": [
+                {
+                    **estimate.model_dump(mode="json"),
+                    "display_name": player_names.get(estimate.asset_id, estimate.asset_id),
+                }
+                for estimate in evidence.estimates
+            ],
         }
 
     @application.get("/api/my-team")
