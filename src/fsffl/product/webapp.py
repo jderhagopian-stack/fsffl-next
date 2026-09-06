@@ -81,7 +81,7 @@ def require_beta_user(credentials: HTTPBasicCredentials | None = Depends(_securi
     valid = (
         credentials is not None
         and secrets.compare_digest(credentials.username, expected_username)
-        and secrets.compare_digest(_password_digest(credentials.password), expected_password_sha256.lower())
+        and secrets.compare_digest(_password_digest(password=credentials.password), expected_password_sha256.lower())
     )
     if not valid:
         raise HTTPException(
@@ -113,6 +113,8 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "value_ready": value_evidence is not None and bool(value_evidence.estimates),
         "value_sources": list(value_evidence.successful_source_ids) if value_evidence is not None else [],
         "value_coverage": value_evidence.coverage if value_evidence is not None else None,
+        "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
+        "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
         "product_version": "next8-product-v1",
     }
 
@@ -258,6 +260,8 @@ def create_app(
                     stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
         payload["value_ready"] = value_ready
         payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
+        payload["cardinal_value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.fsffl_cardinal_values)
+        payload["cardinal_value_coverage"] = runtime.value_evidence.cardinal_player_coverage if runtime.value_evidence is not None else None
         payload["job"] = _job_payload(jobs.current(user_id))
         return payload
 
@@ -395,12 +399,20 @@ def create_app(
             "roster_player_count": evidence.roster_player_count,
             "valued_roster_player_count": evidence.valued_roster_player_count,
             "coverage": evidence.coverage,
+            "cardinal_player_coverage": evidence.cardinal_player_coverage,
             "estimates": [
                 {
                     **estimate.model_dump(mode="json"),
                     "display_name": player_names.get(estimate.asset_id, estimate.asset_id),
                 }
                 for estimate in evidence.estimates
+            ],
+            "fsffl_cardinal_values": [
+                {
+                    **score.model_dump(mode="json"),
+                    "display_name": player_names.get(score.asset_id, score.asset_id),
+                }
+                for score in evidence.fsffl_cardinal_values
             ],
             "provisional_fsffl_values": [
                 {
