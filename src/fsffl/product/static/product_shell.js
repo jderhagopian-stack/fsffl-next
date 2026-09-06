@@ -21,11 +21,12 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260906-touch2';
+const fsfflStaticVersion='20260906-touch3';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
 let homeScriptPromise=null;
+function injectMobileTouchFix(){if(document.querySelector('link[data-fsffl-touch-fix]'))return;const link=document.createElement('link');link.rel='stylesheet';link.dataset.fsfflTouchFix='true';link.href=`/static/mobile_touch_fix.css?v=${fsfflStaticVersion}`;document.head.appendChild(link)}
 function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseSetter){if(typeof window[existingName]==='function')return Promise.resolve();const existing=promiseGetter();if(existing)return existing;const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`${path}?v=${fsfflStaticVersion}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error(errorMessage));document.head.appendChild(script)});promiseSetter(promise);return promise}
 function ensureLeagueComparisonScript(){return lazyProductScript('renderFsfflLeagueComparison','/static/league_comparison.js','Unable to load League Comparison presentation module',()=>leagueComparisonScriptPromise,value=>leagueComparisonScriptPromise=value)}
 function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/static/my_team_dashboard.js','Unable to load My Team presentation module',()=>myTeamScriptPromise,value=>myTeamScriptPromise=value)}
@@ -39,4 +40,5 @@ function productRouteAwareSetRoute(route){if(!fsfflProductSurfaceCopy[route])ret
 
 const originalSetRoute=typeof setRoute==='function'?setRoute:null;
 if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');return}const result=originalSetRoute(route);if(route==='league')ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{});return result};setRoute=window.setRoute}
-window.addEventListener('load',()=>{rebuildProductNavigation();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});window.addEventListener('fsffl:product-context-updated',rebuildProductNavigation);setTimeout(rebuildProductNavigation,0);
+injectMobileTouchFix();
+window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});window.addEventListener('fsffl:product-context-updated',rebuildProductNavigation);setTimeout(rebuildProductNavigation,0);
