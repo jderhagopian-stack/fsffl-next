@@ -35,20 +35,13 @@ function ensureIntelligenceRefreshButton(){
   return button;
 }
 
-function reflectCorePipelineStatus(context,{running=false}={}){
+function reflectRefreshAction(context,{running=false}={}){
   const button=ensureIntelligenceRefreshButton();
-  const summary=document.querySelector('#runtime-status-summary');
-  if(!context?.league_id){
-    if(button)button.hidden=true;
-    return;
-  }
-  const readyCount=[context.forecast_ready,context.simulation_ready,context.value_ready].filter(Boolean).length;
+  if(!button)return;
+  if(!context?.league_id){button.hidden=true;return}
   const ready=intelligencePipelineReady(context);
-  if(summary)summary.textContent=ready?'Core intelligence ready':`${readyCount}/3 core stages ready`;
-  if(button){
-    button.hidden=ready||running;
-    button.disabled=running||fsfflJobStartInFlight;
-  }
+  button.hidden=ready||running;
+  button.disabled=running||fsfflJobStartInFlight;
 }
 
 function reflectAuthoritativeValueReadiness(context){
@@ -82,7 +75,7 @@ async function refreshVisibleEvidenceIfAdvanced(previousContext,payload){
   applyContext();
   setTimeout(()=>{
     reflectAuthoritativeValueReadiness(context);
-    reflectCorePipelineStatus(context,{running:Boolean(fsfflCurrentJobId)});
+    reflectRefreshAction(context,{running:Boolean(fsfflCurrentJobId)});
   },0);
 }
 
@@ -97,12 +90,14 @@ async function settleCompletedJob(){
   applyContext();
   setTimeout(()=>{
     reflectAuthoritativeValueReadiness(context);
-    reflectCorePipelineStatus(context);
+    reflectRefreshAction(context);
   },0);
   if(intelligencePipelineReady(context)){
     setForecastRefreshMessage('Core intelligence is ready.');
+  }else if(context.forecast_ready&&context.simulation_ready&&!context.value_ready){
+    setForecastRefreshMessage('Forecast and simulation are ready; Value finished without an authoritative estimate set. Refresh Intelligence to retry.');
   }else{
-    setForecastRefreshMessage('Core intelligence is incomplete. Refresh to retry missing forecast, simulation, or Value evidence.');
+    setForecastRefreshMessage('Core intelligence is incomplete. Use Refresh Intelligence to retry the missing governed evidence.');
   }
 }
 
@@ -112,7 +107,7 @@ function settleFailedJob(payload){
   fsfflJobStateId=null;
   fsfflSessionStartedJobId=null;
   setForecastRefreshMessage(phaseMessage(payload));
-  reflectCorePipelineStatus(state.context);
+  reflectRefreshAction(state.context);
 }
 
 async function manualIntelligenceRefresh(){
@@ -136,7 +131,7 @@ async function pollIntelligenceJob(){
     await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
     setForecastRefreshMessage(phaseMessage(payload));
     reflectAuthoritativeValueReadiness(state.context);
-    reflectCorePipelineStatus(state.context,{running:payload.status==='queued'||payload.status==='running'});
+    reflectRefreshAction(state.context,{running:payload.status==='queued'||payload.status==='running'});
 
     if(payload.status==='completed'){
       await settleCompletedJob();
@@ -151,20 +146,20 @@ async function pollIntelligenceJob(){
   }catch(error){
     console.error('Unable to poll FSFFL intelligence job',error);
     setForecastRefreshMessage(`Unable to check server job status (${error.message}). Retrying…`);
-    reflectCorePipelineStatus(state.context);
+    reflectRefreshAction(state.context);
   }
 }
 
 async function maybeStartIntelligenceJob({manual=false}={}){
   if(fsfflJobStartInFlight||!state?.context?.league_id)return;
   if(intelligencePipelineReady(state.context)){
-    reflectCorePipelineStatus(state.context);
+    reflectRefreshAction(state.context);
     return;
   }
 
   const stateId=state.context.state_id||'loaded';
   if(!manual&&fsfflSettledStateId&&fsfflSettledStateId===stateId){
-    reflectCorePipelineStatus(state.context);
+    reflectRefreshAction(state.context);
     return;
   }
   if(fsfflCurrentJobId&&fsfflJobStateId===stateId)return;
@@ -172,7 +167,7 @@ async function maybeStartIntelligenceJob({manual=false}={}){
   fsfflJobStartInFlight=true;
   fsfflSettledStateId=null;
   setForecastRefreshMessage('Starting server-side intelligence refresh…');
-  reflectCorePipelineStatus(state.context,{running:true});
+  reflectRefreshAction(state.context,{running:true});
   try{
     const payload=await api('/api/intelligence/jobs',{method:'POST'});
     fsfflCurrentJobId=payload.job_id||null;
@@ -185,7 +180,7 @@ async function maybeStartIntelligenceJob({manual=false}={}){
     setForecastRefreshMessage(`Unable to start intelligence refresh (${error.message}). Use Refresh Intelligence to retry.`);
   }finally{
     fsfflJobStartInFlight=false;
-    reflectCorePipelineStatus(state.context,{running:Boolean(fsfflCurrentJobId)});
+    reflectRefreshAction(state.context,{running:Boolean(fsfflCurrentJobId)});
   }
 }
 
@@ -193,11 +188,11 @@ async function maintainFsfflIntelligence(){
   if(!state?.context?.league_id)return;
   reflectAuthoritativeValueReadiness(state.context);
   if(intelligencePipelineReady(state.context)){
-    reflectCorePipelineStatus(state.context);
+    reflectRefreshAction(state.context);
     return;
   }
   if(fsfflSettledStateId&&fsfflSettledStateId===state.context.state_id){
-    reflectCorePipelineStatus(state.context);
+    reflectRefreshAction(state.context);
     return;
   }
   if(fsfflCurrentJobId){
@@ -215,7 +210,7 @@ async function maintainFsfflIntelligence(){
       fsfflCurrentJobId=payload.job_id;
       fsfflJobStateId=payload.league_state_id||null;
       setForecastRefreshMessage(phaseMessage(payload));
-      reflectCorePipelineStatus(state.context,{running:true});
+      reflectRefreshAction(state.context,{running:true});
       return;
     }
 
