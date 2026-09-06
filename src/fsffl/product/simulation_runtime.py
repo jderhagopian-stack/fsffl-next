@@ -20,7 +20,7 @@ from fsffl.team_utility import (
     RegularSeasonSimulationResult,
     TeamUtilityVector,
     assemble_team_utility_vector,
-    build_bye_aware_weekly_team_scoring_distribution,
+    build_bye_aware_weekly_team_scoring_panel,
     build_regular_season_simulation_input,
     optimize_team_lineup,
     simulate_regular_season,
@@ -48,11 +48,11 @@ def build_live_simulation_analytics(
     """Run Forecast -> week-specific NEXT-4 Simulation -> NEXT-7.
 
     Canonical NFL bye state is consumed from State authority. NEXT-4 re-optimizes
-    every fantasy roster for every scheduled fantasy week after excluding players
-    whose NFL team is on bye. Season forecast means are still decomposed to equal
-    active-NFL-game means as a provisional bridge, but ordinary weekly scoring
-    variance now comes from an independently calibrated NEXT-2 weekly-volatility
-    model rather than full-season forecast uncertainty.
+    every fantasy roster when canonical weekly availability actually changes.
+    Identical no-bye/identical-bye lineup states are reused rather than recomputed.
+    Season forecast means are still decomposed to equal active-NFL-game means as
+    a provisional bridge, while weekly scoring variance comes from the independently
+    calibrated NEXT-2 weekly-volatility model.
     """
 
     if any(item.as_of > league_state.as_of for item in forecasts):
@@ -80,11 +80,10 @@ def build_live_simulation_analytics(
     if not fantasy_weeks:
         raise ValueError("canonical fantasy regular-season schedule is required")
 
+    ordered_teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
     lineups = {}
-    weekly_scoring = []
     incomplete_team_names: list[str] = []
-    bye_week_unfilled: list[str] = []
-    for team in sorted(league_state.teams, key=lambda item: item.team_id):
+    for team in ordered_teams:
         lineup = optimize_team_lineup(
             league_state,
             effective_forecasts,
@@ -100,21 +99,25 @@ def build_live_simulation_analytics(
             )
             incomplete_team_names.append(f"{team.display_name} ({slots})")
 
-        for week in fantasy_weeks:
-            week_distribution = build_bye_aware_weekly_team_scoring_distribution(
-                league_state,
-                effective_forecasts,
-                team_id=team.team_id,
-                week=week,
-                as_of=league_state.as_of,
-            )
-            weekly_scoring.append(week_distribution)
-            if "explicit_unfilled_zero" in week_distribution.model_version and not lineup.unfilled_slots:
-                bye_week_unfilled.append(f"{team.display_name} W{week}")
+    weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
+        league_state,
+        effective_forecasts,
+        team_ids=tuple(team.team_id for team in ordered_teams),
+        weeks=fantasy_weeks,
+        as_of=league_state.as_of,
+        baseline_lineups=lineups,
+    )
+    team_names = {team.team_id: team.display_name for team in ordered_teams}
+    bye_week_unfilled = [
+        f"{team_names[row.team_id]} W{row.week}"
+        for row in weekly_scoring
+        if "explicit_unfilled_zero" in row.model_version
+        and not lineups[row.team_id].unfilled_slots
+    ]
 
     request = build_regular_season_simulation_input(
         league_state,
-        weekly_scoring=tuple(weekly_scoring),
+        weekly_scoring=weekly_scoring,
         simulation_count=simulation_count,
         seed=seed,
         model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
@@ -136,10 +139,11 @@ def build_live_simulation_analytics(
             kind=AnalyticsWarningKind.PROVISIONAL,
             code="weekly_mean_decomposition_provisional",
             message=(
-                "Simulation is bye-aware and re-optimizes each roster for each fantasy week. Player season means "
-                "are currently converted to equal active-NFL-game means until direct multi-source weekly NEXT-2 "
-                "forecast means are promoted. Weekly scoring volatility is independently calibrated from actual "
-                "historical weekly outcomes and is not derived from season forecast uncertainty."
+                "Simulation is bye-aware and re-optimizes each roster whenever weekly availability changes. "
+                "Identical availability states reuse the same optimized lineup. Player season means are currently "
+                "converted to equal active-NFL-game means until direct multi-source weekly NEXT-2 forecast means "
+                "are promoted. Weekly scoring volatility is independently calibrated from actual historical weekly "
+                "outcomes and is not derived from season forecast uncertainty."
             ),
             source_component="forecast",
         ),
@@ -217,7 +221,7 @@ def build_live_simulation_analytics(
     )
 
     team_views: list[TeamAnalyticsView] = []
-    for team in sorted(league_state.teams, key=lambda item: item.team_id):
+    for team in ordered_teams:
         try:
             utility = assemble_team_utility_vector(
                 league_state,
