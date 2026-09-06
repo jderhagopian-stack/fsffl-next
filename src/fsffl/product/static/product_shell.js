@@ -21,7 +21,7 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260906-touch3';
+const fsfflStaticVersion='20260906-touch4';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
@@ -38,7 +38,32 @@ function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];i
 function rebuildProductNavigation(){const nav=document.querySelector('#primary-nav');if(!nav)return;nav.innerHTML='';const hasTeam=Boolean(state?.context?.team_id);fsfflProductRoutes.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='nav-item';button.dataset.route=item.route;if(item.route===state?.route)button.classList.add('active');if(item.teamScoped&&!hasTeam)button.classList.add('locked');button.innerHTML=`<span>${item.label}</span>${item.teamScoped&&!hasTeam?'<small>Select team</small>':''}`;button.addEventListener('click',event=>{event.preventDefault();if(button.classList.contains('locked'))return;if(typeof setRoute==='function')setRoute(item.route)});nav.appendChild(button)})}
 function productRouteAwareSetRoute(route){if(!fsfflProductSurfaceCopy[route])return;document.querySelectorAll('.route-screen').forEach(item=>item.hidden=item.id!=='generic-screen');document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.route===route));renderProductSurface(route)}
 
+function renderMobileRecoveryControls(){
+  const topbar=document.querySelector('.topbar');
+  const leagueScreen=document.querySelector('#league-screen');
+  if(!topbar||!leagueScreen)return;
+  let nav=document.querySelector('#mobile-direct-nav');
+  if(!nav){nav=document.createElement('nav');nav.id='mobile-direct-nav';nav.className='mobile-direct-nav';nav.setAttribute('aria-label','Quick section navigation');topbar.insertAdjacentElement('afterend',nav)}
+  nav.innerHTML='';
+  fsfflProductRoutes.filter(item=>['league','my_team','players_assets','league_comparison','trade_center','analytics','reports'].includes(item.route)).forEach(item=>{
+    const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.directRoute=item.route;const locked=item.teamScoped&&!state?.context?.team_id;button.disabled=locked;button.addEventListener('click',()=>{if(!button.disabled)setRoute(item.route)});nav.appendChild(button)
+  });
+
+  let chooser=document.querySelector('#mobile-team-chooser');
+  if(!state?.context?.league_id||state?.context?.team_id){chooser?.remove();return}
+  if(!chooser){chooser=document.createElement('section');chooser.id='mobile-team-chooser';chooser.className='panel mobile-team-chooser';const hero=leagueScreen.querySelector('.hero-row');hero?.insertAdjacentElement('afterend',chooser)}
+  chooser.innerHTML='<p class="eyebrow">Choose your team</p><h2>Select the franchise you manage</h2><p class="lead">Use these buttons if the Managing dropdown is unreliable on your phone.</p><div class="mobile-team-grid"></div>';
+  const grid=chooser.querySelector('.mobile-team-grid');
+  (state.context.teams||[]).forEach(team=>{const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent=team.display_name;button.addEventListener('click',async()=>{button.disabled=true;try{await selectTeam(team.team_id)}finally{button.disabled=false;renderMobileRecoveryControls();rebuildProductNavigation()}});grid.appendChild(button)})
+}
+
 const originalSetRoute=typeof setRoute==='function'?setRoute:null;
-if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');return}const result=originalSetRoute(route);if(route==='league')ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{});return result};setRoute=window.setRoute}
+if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();return}const result=originalSetRoute(route);if(route==='league')ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{});renderMobileRecoveryControls();return result};setRoute=window.setRoute}
+
+const originalApplyContext=typeof applyContext==='function'?applyContext:null;
+if(originalApplyContext){applyContext=function(){const result=originalApplyContext();window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();return result}}
+
 injectMobileTouchFix();
-window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});window.addEventListener('fsffl:product-context-updated',rebuildProductNavigation);setTimeout(rebuildProductNavigation,0);
+window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});
+window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls()});
+setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls()},0);
