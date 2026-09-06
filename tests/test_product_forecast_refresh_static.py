@@ -15,3 +15,12 @@ def test_mobile_timeout_polls_existing_simulation_before_full_retry() -> None:
     assert "'/api/product-context'" in source
     assert "fsfflSimulationPollUntil=Date.now()+180000" in source
     assert "Checking the existing simulation instead of restarting it" in source
+
+
+def test_runtime_restart_clears_stale_completed_attempt_without_weakening_server_guard() -> None:
+    source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
+    assert "reconcileSimulationRuntimeState" in source
+    assert "fsfflLastSimulationReady===true&&!simulationReady" in source
+    assert "fsfflForecastAttemptedState=null" in source
+    assert "fsfflForecastRetryAt=0" in source
+    assert "fsfflSimulationPollUntil=0" in source
