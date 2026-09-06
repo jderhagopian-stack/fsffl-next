@@ -12,6 +12,7 @@ const fsfflProductRoutes=[
 ];
 
 const fsfflProductSurfaceCopy={
+  my_team:['My Team','Your franchise command center.','See competitive outlook, optimized lineup, roster depth, draft picks, authoritative FSFFL Value and supporting evidence in one place.'],
   players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Value and separate market-position evidence, without creating a second valuation path.'],
   league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings, tiles and charts expose projected scoring, expected wins, playoff odds, market portfolio and pick inventory from authoritative Analytics outputs.'],
   what_if:['Alternate History / What-If','Change one thing. Re-run the consequences.','Counterfactual scenarios will create a changed point-in-time State and then reuse Forecast, Value, Decision and Simulation authority to show what would have changed.'],
@@ -44,6 +45,7 @@ function renderProductSurface(route){
   if(eyebrow)eyebrow.textContent=copy[0];
   if(title)title.textContent=copy[1];
   if(body)body.textContent=copy[2];
+  if(route==='my_team'&&typeof window.renderFsfflMyTeam==='function')window.renderFsfflMyTeam();
   if(typeof window.renderFsfflExplorer==='function'&&(route==='players_assets'||route==='analytics'))window.renderFsfflExplorer(route);
   if(route==='league_comparison'){
     ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>{
