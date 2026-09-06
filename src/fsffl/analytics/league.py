@@ -4,6 +4,7 @@ from enum import StrEnum
 
 from pydantic import model_validator
 
+from fsffl.forecast.models import ForecastHorizon, ForecastMetric
 from fsffl.state.models import FrozenModel
 from fsffl.team_utility.utility import CalculatedCompetitiveState
 from fsffl.value.models import ValueScale
@@ -97,6 +98,44 @@ class LeagueMetricRanking(FrozenModel):
     ranking_model_version: str = "next7-named-metric-ranking-v1"
 
 
+def _optimized_regular_season_points(view: TeamAnalyticsView) -> float | None:
+    """Prefer the league-specific Forecast horizon for projected scoring.
+
+    The lineup assignment remains owned by Team Utility. Analytics only joins the
+    authoritative starter ids to the authoritative fantasy-regular-season player
+    forecasts. Older/replayed views with no such horizon retain their existing
+    lineup total for backward compatibility.
+    """
+
+    lineup = view.optimized_lineup
+    if lineup is None:
+        return None
+    starter_ids = {assignment.player_id for assignment in lineup.assignments}
+    if not starter_ids:
+        return 0.0
+
+    latest: dict[str, object] = {}
+    any_regular_season = False
+    for row in view.players:
+        if row.player_id not in starter_ids:
+            continue
+        for observation in row.forecasts:
+            if observation.metric != ForecastMetric.FANTASY_POINTS:
+                continue
+            if observation.horizon != ForecastHorizon.FANTASY_REGULAR_SEASON:
+                continue
+            any_regular_season = True
+            current = latest.get(row.player_id)
+            if current is None or observation.as_of > current.as_of:
+                latest[row.player_id] = observation
+
+    if not any_regular_season:
+        return lineup.expected_points
+    if set(latest) != starter_ids:
+        return None
+    return sum(observation.distribution.mean for observation in latest.values())
+
+
 def _row_from_team(view: TeamAnalyticsView) -> LeagueTeamAnalyticsRow:
     utility = view.utility
     outcome = utility.competitive_outcome if utility is not None else None
@@ -107,9 +146,7 @@ def _row_from_team(view: TeamAnalyticsView) -> LeagueTeamAnalyticsRow:
         display_name=view.display_name,
         player_count=len(view.players),
         draft_pick_count=len(view.draft_picks),
-        optimized_expected_points=(
-            view.optimized_lineup.expected_points if view.optimized_lineup is not None else None
-        ),
+        optimized_expected_points=_optimized_regular_season_points(view),
         expected_wins=outcome.expected_wins if outcome is not None else None,
         playoff_probability=outcome.playoff_probability if outcome is not None else None,
         first_place_probability=outcome.first_place_probability if outcome is not None else None,

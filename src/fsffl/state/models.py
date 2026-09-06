@@ -70,8 +70,15 @@ class LeagueRules(FrozenModel):
     taxi_size: Annotated[int, Field(ge=0)] = 0
     ir_size: Annotated[int, Field(ge=0)] = 0
     rookie_draft_rounds: Annotated[int, Field(ge=0)] = 0
+    playoff_team_count: Annotated[int, Field(ge=1)] | None = None
     lineup: tuple[LineupRequirement, ...]
     scoring: tuple[ScoringRule, ...]
+
+    @model_validator(mode="after")
+    def validate_playoff_count(self) -> "LeagueRules":
+        if self.playoff_team_count is not None and self.playoff_team_count > self.team_count:
+            raise ValueError("playoff_team_count cannot exceed team_count")
+        return self
 
 
 class League(FrozenModel):
@@ -124,6 +131,23 @@ class PlayerState(FrozenModel):
         return value
 
 
+class NflTeamBye(FrozenModel):
+    """Canonical scheduled NFL bye-week fact for one team and season."""
+
+    season: Annotated[int, Field(ge=2000)]
+    nfl_team: str
+    week: Annotated[int, Field(ge=1, le=18)]
+    provenance: Provenance
+
+    @field_validator("nfl_team")
+    @classmethod
+    def normalize_team(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if not normalized:
+            raise ValueError("nfl_team cannot be blank")
+        return normalized
+
+
 class DraftPick(FrozenModel):
     pick_id: str
     league_id: str
@@ -173,6 +197,27 @@ class TeamState(FrozenModel):
         return self
 
 
+class LeagueMatchup(FrozenModel):
+    """Canonical point-in-time fantasy-league matchup state."""
+
+    week: Annotated[int, Field(ge=1)]
+    team_a_id: str
+    team_b_id: str
+    team_a_points: float | None = None
+    team_b_points: float | None = None
+    provenance: Provenance
+
+    @model_validator(mode="after")
+    def validate_matchup(self) -> "LeagueMatchup":
+        if not self.team_a_id.strip() or not self.team_b_id.strip():
+            raise ValueError("matchup team ids cannot be blank")
+        if self.team_a_id == self.team_b_id:
+            raise ValueError("a team cannot play itself")
+        if (self.team_a_points is None) != (self.team_b_points is None):
+            raise ValueError("matchup points must be present for both teams or neither")
+        return self
+
+
 class TransactionSide(FrozenModel):
     team_id: str
     assets: tuple[Asset, ...]
@@ -208,6 +253,8 @@ class LeagueState(FrozenModel):
     player_states: tuple[PlayerState, ...]
     draft_picks: tuple[DraftPick, ...] = ()
     pick_ownership: tuple[PickOwnership, ...] = ()
+    matchups: tuple[LeagueMatchup, ...] = ()
+    nfl_team_byes: tuple[NflTeamBye, ...] = ()
     provenance: tuple[Provenance, ...] = ()
 
     @field_validator("as_of")
@@ -250,6 +297,26 @@ class LeagueState(FrozenModel):
             raise ValueError("pick ownership references unknown team")
         if len({ownership.pick_id for ownership in self.pick_ownership}) != len(self.pick_ownership):
             raise ValueError("a draft pick may have only one owner")
+        if any(matchup.team_a_id not in team_ids or matchup.team_b_id not in team_ids for matchup in self.matchups):
+            raise ValueError("matchup references unknown team")
+        matchup_keys = [
+            (matchup.week, *sorted((matchup.team_a_id, matchup.team_b_id)))
+            for matchup in self.matchups
+        ]
+        if len(matchup_keys) != len(set(matchup_keys)):
+            raise ValueError("duplicate matchup in same week")
+        seen_week_team: set[tuple[int, str]] = set()
+        for matchup in self.matchups:
+            for team_id in (matchup.team_a_id, matchup.team_b_id):
+                key = (matchup.week, team_id)
+                if key in seen_week_team:
+                    raise ValueError("a team may appear only once per matchup week")
+                seen_week_team.add(key)
+        bye_keys = [(bye.season, bye.nfl_team) for bye in self.nfl_team_byes]
+        if len(bye_keys) != len(set(bye_keys)):
+            raise ValueError("an NFL team may have only one bye week per season")
+        if any(bye.season != self.league.season for bye in self.nfl_team_byes):
+            raise ValueError("NFL bye state must match league season")
         return self
 
     def canonical_json(self) -> str:

@@ -12,6 +12,7 @@ from fsffl.state.models import FrozenModel, Position, Provenance
 class ForecastHorizon(StrEnum):
     WEEK = "week"
     REST_OF_SEASON = "rest_of_season"
+    FANTASY_REGULAR_SEASON = "fantasy_regular_season"
     SEASON = "season"
     MULTI_YEAR = "multi_year"
 
@@ -26,6 +27,7 @@ class ForecastMetric(StrEnum):
     RECEPTIONS = "receptions"
     REC_YARDS = "rec_yards"
     REC_TD = "rec_td"
+    FUMBLES_LOST = "fumbles_lost"
 
 
 class ForecastDistribution(FrozenModel):

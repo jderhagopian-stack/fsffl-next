@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>FSFFL NEXT</title>
+  <link rel="stylesheet" href="/static/app.css?v=20260906-explorer2" />
+  <link rel="stylesheet" href="/static/explorer.css?v=20260906-explorer2" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-mark">FN</div>
+        <div>
+          <div class="brand-name">FSFFL NEXT</div>
+          <div class="brand-subtitle">Private Beta</div>
+        </div>
+      </div>
+      <nav id="primary-nav" class="nav-list">
+        <button class="nav-item active" data-route="league"><span>League</span></button>
+        <button class="nav-item locked" data-route="my_team"><span>My Team</span><small>Select team</small></button>
+        <button class="nav-item locked" data-route="trade_center"><span>Trade Center</span><small>Select team</small></button>
+        <button class="nav-item locked" data-route="opportunities"><span>Opportunities</span><small>Select team</small></button>
+        <button class="nav-item" data-route="analytics"><span>Analytics</span></button>
+        <button class="nav-item" data-route="reports"><span>Reports</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="evidence-pill"><span class="dot"></span><span id="evidence-label">No league loaded</span></div>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button id="mobile-menu" class="mobile-menu" aria-label="Open navigation">☰</button>
+        <div class="context-controls">
+          <label><span>League</span><select id="league-select" aria-label="League"><option value="">Connect league</option></select></label>
+          <label><span>Managing</span><select id="team-select" aria-label="Managed team" disabled><option value="">Select team</option></select></label>
+        </div>
+        <div class="topbar-actions"><div class="status-chip">Private</div><button class="icon-button" title="Model evidence">i</button></div>
+      </header>
+
+      <section id="screen" class="screen" aria-live="polite">
+        <div id="league-screen" class="route-screen">
+          <div class="hero-row">
+            <div>
+              <p class="eyebrow">League Intelligence</p>
+              <h1>See the league. Find the edge.</h1>
+              <p class="lead">Connect a league to activate current rosters, forecasts, team utility, trade intelligence, opportunities, and reports.</p>
+            </div>
+            <div class="hero-actions">
+              <button id="connect-button" class="primary-button">Connect Sleeper League</button>
+              <button class="secondary-button" data-route-link="trade_center">Open Trade Center</button>
+            </div>
+          </div>
+
+          <article id="runtime-status" class="panel runtime-status-panel" hidden>
+            <div class="panel-header">
+              <div><p class="eyebrow">Live intelligence pipeline</p><h2 id="runtime-status-title">League state loaded</h2></div>
+              <span id="runtime-status-summary" class="status-chip">Checking…</span>
+            </div>
+            <div id="runtime-stage-grid" class="runtime-stage-grid"></div>
+          </article>
+
+          <div class="metric-grid">
+            <article class="metric-card"><span class="metric-label">Calculated state</span><strong id="calculated-state-value">—</strong><small id="calculated-state-note">Waiting for NEXT-4</small></article>
+            <article class="metric-card"><span class="metric-label">Expected wins</span><strong id="expected-wins-value">—</strong><small id="expected-wins-note">Waiting for simulation evidence</small></article>
+            <article class="metric-card"><span class="metric-label">Playoff probability</span><strong id="playoff-value">—</strong><small id="playoff-note">Waiting for simulation evidence</small></article>
+            <article class="metric-card"><span class="metric-label">Opportunity status</span><strong id="opportunity-value">—</strong><small id="opportunity-note">Waiting for Trade Decision evidence</small></article>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="panel chart-panel">
+              <div class="panel-header">
+                <div><p class="eyebrow">League comparison</p><h2 id="league-chart-title">Expected wins</h2></div>
+                <select id="metric-select" aria-label="League metric">
+                  <option value="expected_wins">Expected wins</option>
+                  <option value="playoff_probability">Playoff probability</option>
+                  <option value="optimized_expected_points">Regular-season projected scoring</option>
+                  <option value="asset_portfolio_mean">Market percentile portfolio</option>
+                  <option value="draft_pick_count">Pick inventory</option>
+                </select>
+              </div>
+              <div id="league-chart" class="chart-empty"><div class="chart-placeholder-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div><p>League data will render here as an interactive comparison chart.</p></div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header"><div><p class="eyebrow">Opportunity Engine</p><h2>Best paths</h2></div><button class="text-button" data-route-link="opportunities">View all</button></div>
+              <div class="empty-list"><div class="opportunity-skeleton"><span></span><span></span></div><div class="opportunity-skeleton"><span></span><span></span></div><div class="opportunity-skeleton"><span></span><span></span></div><p id="opportunity-empty-copy">Connect a league and select your team to run NEXT-6.</p></div>
+            </article>
+          </div>
+
+          <article class="panel roster-panel">
+            <div class="panel-header"><div><p class="eyebrow">My Team</p><h2>Current roster</h2></div><button class="text-button" data-route-link="my_team">Open full roster</button></div>
+            <p class="lead"><strong>FSFFL Value uses the authoritative NEXT-3 market-cardinal score.</strong> Market percentile remains a separate governed market-position measure.</p>
+            <div class="table-wrap">
+              <table><thead><tr><th>Role</th><th>Player</th><th>Pos</th><th>Age</th><th>Reg-season projection</th><th>FSFFL Value</th><th>Market percentile</th><th>Projected lineup</th></tr></thead><tbody><tr class="empty-row"><td colspan="8">No team selected.</td></tr></tbody></table>
+            </div>
+          </article>
+        </div>
+
+        <div id="trade-center-screen" class="route-screen" hidden>
+          <div class="hero-row trade-hero">
+            <div>
+              <p class="eyebrow">Trade Center</p>
+              <h1>Build the deal. See both sides.</h1>
+              <p class="lead">Draft a package visually. FSFFL NEXT evaluates it only after you submit it to the authoritative Trade Decision pipeline.</p>
+            </div>
+            <div class="hero-actions"><button id="clear-trade" class="secondary-button">Clear draft</button><button id="analyze-trade" class="primary-button" disabled>Analyze Trade</button></div>
+          </div>
+
+          <div class="panel trade-counterparty-row">
+            <label><span class="metric-label">Trade with</span><select id="counterparty-select" aria-label="Trade counterparty"><option value="">Choose a team</option></select></label>
+            <div id="trade-state-label" class="evidence-pill"><span class="dot"></span><span>Canonical ownership only</span></div>
+          </div>
+
+          <div class="trade-builder-grid">
+            <article class="panel trade-side">
+              <div class="panel-header"><div><p class="eyebrow">Your side</p><h2 id="focal-trade-team">My Team</h2></div><span class="trade-count" id="focal-count">0 selected</span></div>
+              <div class="trade-draft" id="focal-draft"><p class="trade-empty">Tap assets below to add them.</p></div>
+              <div class="asset-search"><input id="focal-asset-filter" type="search" placeholder="Filter players or picks" /></div>
+              <div id="focal-assets" class="asset-list"><p class="trade-empty">Select a managed team first.</p></div>
+            </article>
+
+            <article class="panel trade-side">
+              <div class="panel-header"><div><p class="eyebrow">Their side</p><h2 id="counterparty-trade-team">Counterparty</h2></div><span class="trade-count" id="counterparty-count">0 selected</span></div>
+              <div class="trade-draft" id="counterparty-draft"><p class="trade-empty">Choose a team, then tap assets.</p></div>
+              <div class="asset-search"><input id="counterparty-asset-filter" type="search" placeholder="Filter players or picks" /></div>
+              <div id="counterparty-assets" class="asset-list"><p class="trade-empty">No counterparty selected.</p></div>
+            </article>
+          </div>
+
+          <article class="panel trade-analysis-panel">
+            <div class="panel-header"><div><p class="eyebrow">Bilateral analysis</p><h2>What changes for each franchise</h2></div><button id="explore-price" class="text-button" disabled>Explore price frontier</button></div>
+            <div id="trade-analysis-empty" class="trade-analysis-empty">Select assets now. Authoritative bilateral analysis will activate when forecast/value/team-utility evidence is attached to the hosted runtime.</div>
+          </article>
+        </div>
+
+        <div id="generic-screen" class="route-screen" hidden>
+          <article class="panel"><p class="eyebrow" id="generic-eyebrow">FSFFL NEXT</p><h2 id="generic-title">Coming into focus</h2><p class="lead" id="generic-copy">This product surface is being wired to its authoritative NEXT-7 view.</p></article>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js?v=20260906-explorer2" defer></script>
+  <script src="/static/trade_center.js?v=20260906-explorer2" defer></script>
+  <script src="/static/forecast_refresh.js?v=20260906-explorer2" defer></script>
+  <script src="/static/product_polish.js?v=20260906-explorer2" defer></script>
+  <script src="/static/explorer.js?v=20260906-explorer2" defer></script>
+  <script src="/static/product_shell.js?v=20260906-explorer2" defer></script>
+</body>
+</html>

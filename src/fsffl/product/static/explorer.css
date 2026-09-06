@@ -1,0 +1,26 @@
+.explorer-controls input,.explorer-controls select,#analytics-search{min-height:42px;max-width:100%;width:100%}
+.explorer-sort{padding:0;text-align:left;white-space:nowrap}
+#generic-screen .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#generic-screen table{min-width:760px}
+#generic-screen details p{line-height:1.55}
+@media (max-width:700px){
+  .explorer-controls{grid-template-columns:1fr 1fr!important}
+  .explorer-controls input{grid-column:1/-1}
+  #generic-screen .panel{padding:14px}
+  #generic-screen table{min-width:720px}
+}
+@media (max-width:430px){
+  .explorer-controls{grid-template-columns:1fr!important}
+  .explorer-controls input{grid-column:auto}
+}
+
+/* Mobile shell hit-testing repair. Closed fixed navigation must not intercept taps,
+ * and native iOS selects should not live inside a horizontally scrolling wrapper. */
+@media (max-width:980px){
+  .sidebar{pointer-events:none}
+  .sidebar.open{pointer-events:auto}
+  .mobile-menu{position:relative;z-index:31;pointer-events:auto}
+  .context-controls{overflow:visible;max-width:none}
+  .context-controls select{pointer-events:auto;touch-action:auto}
+  .topbar{isolation:isolate}
+}
