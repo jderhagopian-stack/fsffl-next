@@ -7,8 +7,8 @@ TRADE_CLIENT = (ROOT / "src/fsffl/product/static/trade_center.js").read_text()
 
 
 def test_trade_center_client_is_loaded_after_core_app() -> None:
-    assert '<script src="/static/app.js" defer></script>' in INDEX
-    assert '<script src="/static/trade_center.js" defer></script>' in INDEX
+    assert '/static/app.js?v=' in INDEX
+    assert '/static/trade_center.js?v=' in INDEX
     assert INDEX.index('/static/app.js') < INDEX.index('/static/trade_center.js')
 
 
