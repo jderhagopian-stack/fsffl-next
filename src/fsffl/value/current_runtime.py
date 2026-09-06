@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from fsffl.state.models import LeagueState, RosterSlot
 
 from .calibration import CalibrationObservation
+from .cardinal import NativeMarketMagnitudeObservation, preserve_native_market_magnitudes
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
 from .models import MarketPriceEstimate, ValueAssetKind, ValueScale
 from .source_batch import build_market_calibration_panel_batch
@@ -40,6 +41,7 @@ class CurrentMarketValueRuntimeResult:
     roster_player_count: int
     valued_roster_player_count: int
     market_context_id: str
+    native_magnitude_observations: tuple[NativeMarketMagnitudeObservation, ...] = ()
     model_version: str = "next3-current-market-runtime-v1"
 
     @property
@@ -125,10 +127,10 @@ def _percentiles(values: dict[str, float]) -> dict[str, float]:
 def build_current_market_values(league_state: LeagueState) -> CurrentMarketValueRuntimeResult:
     """Acquire current governed NEXT-3 market evidence and build typed estimates.
 
-    Provider-native numeric scales are converted to within-source percentiles
-    before aggregation, matching the empirically validated NEXT-3 robust market
-    baseline unit. The governed source registry then collapses providers that
-    share one evidence-family root so correlated feeds cannot double-vote.
+    Provider-native numeric scales are retained as typed challenger evidence and
+    then converted to within-source percentiles for the current authoritative
+    market baseline. The governed source registry collapses providers that share
+    one evidence-family root so correlated feeds cannot double-vote.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -178,6 +180,8 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     )
     if not batch.panel.observations:
         raise RuntimeError("current governed market sources produced no usable observations")
+
+    native_magnitude_observations = preserve_native_market_magnitudes(batch.panel.observations)
 
     market_observations: list[MarketObservation] = []
     for source_id, values in _latest_source_values(batch.panel.observations).items():
@@ -244,4 +248,5 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         roster_player_count=len(roster_player_ids),
         valued_roster_player_count=len(valued),
         market_context_id=context,
+        native_magnitude_observations=native_magnitude_observations,
     )
