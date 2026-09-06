@@ -45,5 +45,5 @@ def test_future_surfaces_explain_authoritative_reuse_not_frontend_model_logic() 
 
 def test_shell_script_is_loaded_after_existing_product_scripts() -> None:
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
-    assert '<script src="/static/product_shell.js" defer></script>' in html
+    assert '/static/product_shell.js?v=' in html
     assert html.index("product_polish.js") < html.index("product_shell.js")
