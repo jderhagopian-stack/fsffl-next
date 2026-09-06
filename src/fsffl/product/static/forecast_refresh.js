@@ -17,6 +17,23 @@ function intelligencePipelineReady(context){
   return Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
 }
 
+function reflectAuthoritativeValueReadiness(context){
+  if(!context?.value_ready)return;
+  document.querySelectorAll('#runtime-stage-grid .runtime-stage').forEach(node=>{
+    const label=node.querySelector('strong')?.textContent?.trim().toLowerCase();
+    if(label!=='value')return;
+    node.classList.remove('pending','blocked','unavailable');
+    node.classList.add('ready');
+    const mark=node.querySelector('.runtime-stage-mark');
+    if(mark)mark.textContent='✓';
+    const detail=node.querySelector('small');
+    if(detail){
+      const coverage=typeof context.value_coverage==='number'?` (${(context.value_coverage*100).toFixed(1)}% roster coverage)`:'';
+      detail.textContent=`Governed NEXT-3 current market values are attached${coverage}.`;
+    }
+  });
+}
+
 async function refreshVisibleEvidenceIfAdvanced(previousContext,payload){
   const advanced=(
     (!previousContext?.forecast_ready&&payload.forecast_ready)||
@@ -29,6 +46,7 @@ async function refreshVisibleEvidenceIfAdvanced(previousContext,payload){
   state.context=context;
   state.intelligence=null;
   applyContext();
+  setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
 }
 
 async function pollIntelligenceJob(){
@@ -42,12 +60,14 @@ async function pollIntelligenceJob(){
 
     await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
     setForecastRefreshMessage(phaseMessage(payload));
+    reflectAuthoritativeValueReadiness(state.context);
 
     if(payload.status==='completed'){
       const context=await api('/api/product-context');
       state.context=context;
       state.intelligence=null;
       applyContext();
+      setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
       setForecastRefreshMessage('Forecasts, 50,000-run simulation, and NEXT-3 market values are ready.');
       return;
     }
@@ -90,6 +110,7 @@ async function maybeStartIntelligenceJob(){
 
 async function maintainFsfflIntelligence(){
   if(!state?.context?.league_id)return;
+  reflectAuthoritativeValueReadiness(state.context);
   if(intelligencePipelineReady(state.context))return;
   if(fsfflCurrentJobId){
     await pollIntelligenceJob();
@@ -104,11 +125,13 @@ async function maintainFsfflIntelligence(){
       fsfflJobStateId=payload.league_state_id||null;
       await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
       setForecastRefreshMessage(phaseMessage(payload));
+      reflectAuthoritativeValueReadiness(state.context);
       if(payload.status==='completed'){
         const context=await api('/api/product-context');
         state.context=context;
         state.intelligence=null;
         applyContext();
+        setTimeout(()=>reflectAuthoritativeValueReadiness(context),0);
       }
       return;
     }
