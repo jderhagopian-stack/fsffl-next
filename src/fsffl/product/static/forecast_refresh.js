@@ -13,13 +13,34 @@ function phaseMessage(payload){
   return 'Checking intelligence refresh status…';
 }
 
+function intelligencePipelineReady(context){
+  return Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
+}
+
+async function refreshVisibleEvidenceIfAdvanced(previousContext,payload){
+  const advanced=(
+    (!previousContext?.forecast_ready&&payload.forecast_ready)||
+    (!previousContext?.simulation_ready&&payload.simulation_ready)||
+    (!previousContext?.value_ready&&payload.value_ready)
+  );
+  if(!advanced)return;
+
+  const context=await api('/api/product-context');
+  state.context=context;
+  state.intelligence=null;
+  applyContext();
+}
+
 async function pollIntelligenceJob(){
   if(!state?.context?.league_id)return;
   try{
+    const previousContext=state.context;
     const payload=await api('/api/intelligence/jobs/current');
     state.context={...state.context,...payload};
     fsfflCurrentJobId=payload.job_id||null;
     fsfflJobStateId=payload.league_state_id||null;
+
+    await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
     setForecastRefreshMessage(phaseMessage(payload));
 
     if(payload.status==='completed'){
@@ -27,7 +48,7 @@ async function pollIntelligenceJob(){
       state.context=context;
       state.intelligence=null;
       applyContext();
-      setForecastRefreshMessage('Forecasts and 50,000-run simulation are ready.');
+      setForecastRefreshMessage('Forecasts, 50,000-run simulation, and NEXT-3 market values are ready.');
       return;
     }
 
@@ -47,7 +68,7 @@ async function pollIntelligenceJob(){
 
 async function maybeStartIntelligenceJob(){
   if(fsfflJobStartInFlight||!state?.context?.league_id)return;
-  if(state.context.forecast_ready&&state.context.simulation_ready)return;
+  if(intelligencePipelineReady(state.context))return;
 
   const stateId=state.context.state_id||'loaded';
   if(fsfflCurrentJobId&&fsfflJobStateId===stateId)return;
@@ -69,16 +90,19 @@ async function maybeStartIntelligenceJob(){
 
 async function maintainFsfflIntelligence(){
   if(!state?.context?.league_id)return;
-  if(state.context.forecast_ready&&state.context.simulation_ready)return;
+  if(intelligencePipelineReady(state.context))return;
   if(fsfflCurrentJobId){
     await pollIntelligenceJob();
     return;
   }
   try{
+    const previousContext=state.context;
     const payload=await api('/api/intelligence/jobs/current');
+    state.context={...state.context,...payload};
     if(payload.job_id){
       fsfflCurrentJobId=payload.job_id;
       fsfflJobStateId=payload.league_state_id||null;
+      await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
       setForecastRefreshMessage(phaseMessage(payload));
       if(payload.status==='completed'){
         const context=await api('/api/product-context');
