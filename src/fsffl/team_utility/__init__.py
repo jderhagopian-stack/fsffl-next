@@ -17,6 +17,7 @@ from .scoring import (
     TeamUncertaintyMethod,
     WeeklyScoringDecomposition,
     build_bye_aware_weekly_team_scoring_distribution,
+    build_bye_aware_weekly_team_scoring_panel,
     build_team_scoring_distribution,
     build_weekly_team_scoring_distribution,
 )
@@ -68,6 +69,7 @@ __all__ = [
     "WeeklyTeamScoringDistribution",
     "assemble_team_utility_vector",
     "build_bye_aware_weekly_team_scoring_distribution",
+    "build_bye_aware_weekly_team_scoring_panel",
     "build_regular_season_simulation_input",
     "build_roster_resilience",
     "build_team_scoring_distribution",
