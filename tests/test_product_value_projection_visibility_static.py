@@ -24,7 +24,13 @@ def test_simulation_floor_forecasts_do_not_masquerade_as_direct_player_projectio
 
 def test_market_percentile_and_age_precision_are_presented_truthfully() -> None:
     source = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
+    html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     assert "estimate.scale?.scale_id==='dynasty-market-percentile'" in source
     assert "estimate.distribution.mean*100" in source
     assert "function fmtAge" in source
     assert "Number.isInteger(value)?value.toFixed(0):value.toFixed(1)" in source
+    assert "<th>Market percentile</th>" in html
+    assert "Market percentile portfolio" in html
+    assert "<th>Dynasty value</th>" not in html
+    assert ">Draft capital<" not in html
+    assert "Pick inventory" in html
