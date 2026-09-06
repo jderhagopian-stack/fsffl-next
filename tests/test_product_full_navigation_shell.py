@@ -43,6 +43,12 @@ def test_future_surfaces_explain_authoritative_reuse_not_frontend_model_logic() 
     assert "second valuation path" in source
 
 
+def test_trade_center_route_loads_browser_after_dynamic_navigation() -> None:
+    source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    assert "route==='trade_center'" in source
+    assert "setTimeout(loadTradeCenter,0)" in source
+
+
 def test_shell_script_is_loaded_after_existing_product_scripts() -> None:
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     assert '/static/product_shell.js?v=' in html
