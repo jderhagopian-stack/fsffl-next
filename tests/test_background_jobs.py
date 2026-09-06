@@ -1,12 +1,29 @@
 from __future__ import annotations
 
 from threading import Event
+from time import monotonic, sleep
 
 from fsffl.product.background_jobs import (
     IntelligenceJobCoordinator,
     IntelligenceJobPhase,
     IntelligenceJobStatus,
 )
+
+
+def _wait_for_status(
+    coordinator: IntelligenceJobCoordinator,
+    *,
+    user_id: str,
+    status: IntelligenceJobStatus,
+    timeout: float = 2.0,
+):
+    deadline = monotonic() + timeout
+    while monotonic() < deadline:
+        current = coordinator.current(user_id)
+        if current is not None and current.status == status:
+            return current
+        sleep(0.01)
+    return coordinator.current(user_id)
 
 
 def test_background_job_runs_independently_and_reports_progress() -> None:
@@ -29,11 +46,11 @@ def test_background_job_runs_independently_and_reports_progress() -> None:
     assert running.phase == IntelligenceJobPhase.RUNNING_SIMULATION
 
     release.set()
-    for _ in range(200):
-        current = coordinator.current("u1")
-        if current is not None and current.status == IntelligenceJobStatus.COMPLETED:
-            break
-    current = coordinator.current("u1")
+    current = _wait_for_status(
+        coordinator,
+        user_id="u1",
+        status=IntelligenceJobStatus.COMPLETED,
+    )
     assert current is not None
     assert current.status == IntelligenceJobStatus.COMPLETED
     assert current.phase == IntelligenceJobPhase.COMPLETED
@@ -68,11 +85,11 @@ def test_job_failure_is_persisted_for_polling_client() -> None:
     coordinator.start(user_id="u1", league_state_id="state-1", work=work)
     assert finished.wait(timeout=2)
 
-    for _ in range(200):
-        current = coordinator.current("u1")
-        if current is not None and current.status == IntelligenceJobStatus.FAILED:
-            break
-    current = coordinator.current("u1")
+    current = _wait_for_status(
+        coordinator,
+        user_id="u1",
+        status=IntelligenceJobStatus.FAILED,
+    )
     assert current is not None
     assert current.status == IntelligenceJobStatus.FAILED
     assert current.phase == IntelligenceJobPhase.FAILED
