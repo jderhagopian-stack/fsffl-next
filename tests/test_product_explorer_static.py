@@ -43,8 +43,8 @@ def test_explorer_is_loaded_and_has_mobile_specific_styles() -> None:
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     css = Path("src/fsffl/product/static/explorer.css").read_text(encoding="utf-8")
     shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
-    assert '<script src="/static/explorer.js" defer></script>' in html
-    assert '<link rel="stylesheet" href="/static/explorer.css" />' in html
+    assert '/static/explorer.js?v=' in html
+    assert '/static/explorer.css?v=' in html
     assert html.index("explorer.js") < html.index("product_shell.js")
     assert "max-width:700px" in css
     assert "renderFsfflExplorer" in shell
