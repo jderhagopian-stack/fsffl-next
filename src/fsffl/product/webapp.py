@@ -454,6 +454,55 @@ def create_app(
         view = build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id)
         return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
 
+    @application.get("/api/league/team-views")
+    def league_team_views(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        """Expose league-wide read-only Analytics team views without changing user context."""
+
+        runtime = store.get(user_id)
+        league_state = runtime.league_state
+        if league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+
+        source_level: str
+        if runtime.simulation_analytics is not None:
+            views = runtime.simulation_analytics.team_views
+            source_level = "simulation_analytics"
+        else:
+            lineup_result = _forecast_lineup_result(runtime)
+            if lineup_result is not None:
+                views = lineup_result.team_views
+                source_level = "forecast_lineup_analytics"
+            elif runtime.forecast_evidence is not None:
+                evidence = runtime.forecast_evidence
+                forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
+                views = tuple(
+                    build_forecast_team_view(
+                        league_state,
+                        team_id=team.team_id,
+                        forecasts=forecasts,
+                        forecast_model_version=evidence.model_version,
+                    )
+                    for team in sorted(league_state.teams, key=lambda item: item.team_id)
+                )
+                source_level = "forecast_team_views"
+            else:
+                views = tuple(
+                    build_state_only_team_view(league_state, team_id=team.team_id)
+                    for team in sorted(league_state.teams, key=lambda item: item.team_id)
+                )
+                source_level = "state_only"
+
+        enriched = tuple(
+            _attach_live_value_profiles(view, runtime.value_evidence)
+            for view in views
+        )
+        return {
+            "league_state_id": league_state.state_id,
+            "as_of": league_state.as_of.isoformat(),
+            "source_level": source_level,
+            "team_views": [view.model_dump(mode="json") for view in enriched],
+        }
+
     @application.get("/api/trade-center/browser")
     def trade_center_browser(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
