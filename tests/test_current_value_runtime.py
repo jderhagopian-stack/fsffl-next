@@ -130,6 +130,13 @@ def test_current_market_runtime_uses_governed_lineage_and_surfaces_missing_cross
     assert native[("statsguy_market_values", "p1")].value == 100
     assert native[("dynastydealer_market_values", "p1")].native_scale_id == "dynastydealer-current-value"
 
+    provisional = {item.asset_id: item for item in result.provisional_fsffl_values}
+    assert provisional["p1"].score == 9000
+    assert provisional["p2"].score == 6000
+    assert provisional["p3"].score == 3000
+    assert provisional["p1"].status == "challenger"
+    assert provisional["p1"].model_version == "next3-provisional-shadow-value-v1"
+
     estimates = {item.asset_id: item for item in result.estimates}
     assert estimates["p1"].distribution.mean == 1.0
     assert estimates["p2"].distribution.mean == 0.5
