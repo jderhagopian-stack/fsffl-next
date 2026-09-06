@@ -25,7 +25,11 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
-from fsffl.team_utility import build_bye_aware_weekly_team_scoring_distribution
+from fsffl.team_utility import (
+    build_bye_aware_weekly_team_scoring_distribution,
+    build_bye_aware_weekly_team_scoring_panel,
+    optimize_team_lineup,
+)
 
 
 AS_OF = datetime(2026, 9, 5, 22, tzinfo=UTC)
@@ -137,7 +141,7 @@ def test_week_specific_lineup_replaces_player_on_bye_and_uses_weekly_volatility(
     assert normal_week.mean_points > bye_week.mean_points
 
     # Season forecast-error uncertainty must no longer leak into weekly scoring
-    # variance.  Changing only the season stddev cannot change weekly stddev.
+    # variance. Changing only the season stddev cannot change weekly stddev.
     wider_season_uncertainty = (
         _forecast("starter", 340.0, 340.0),
         _forecast("bench", 170.0, 170.0),
@@ -151,3 +155,43 @@ def test_week_specific_lineup_replaces_player_on_bye_and_uses_weekly_volatility(
         as_of=AS_OF,
     )
     assert same_week.stddev_points == pytest.approx(normal_week.stddev_points)
+
+
+def test_batched_weekly_panel_matches_independent_builds_and_reuses_baseline() -> None:
+    state = _state()
+    forecasts = (
+        _forecast("starter", 340.0, 68.0),
+        _forecast("bench", 170.0, 51.0),
+        _forecast("opp", 255.0, 60.0),
+    )
+    baseline = {
+        team_id: optimize_team_lineup(
+            state,
+            forecasts,
+            team_id=team_id,
+            as_of=AS_OF,
+            horizon=ForecastHorizon.SEASON,
+            allow_unfilled_slots=True,
+        )
+        for team_id in ("a", "b")
+    }
+    panel = build_bye_aware_weekly_team_scoring_panel(
+        state,
+        forecasts,
+        team_ids=("a", "b"),
+        weeks=(5, 6),
+        as_of=AS_OF,
+        baseline_lineups=baseline,
+    )
+    independent = tuple(
+        build_bye_aware_weekly_team_scoring_distribution(
+            state,
+            forecasts,
+            team_id=team_id,
+            week=week,
+            as_of=AS_OF,
+        )
+        for team_id in ("a", "b")
+        for week in (5, 6)
+    )
+    assert panel == independent
