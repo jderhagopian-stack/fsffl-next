@@ -5,6 +5,7 @@ from enum import StrEnum
 from math import sqrt
 
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
+from fsffl.forecast.weekly_volatility import active_game_distribution
 from fsffl.state.models import LeagueState
 
 from .lineup import optimize_team_lineup
@@ -18,6 +19,7 @@ class TeamUncertaintyMethod(StrEnum):
 class WeeklyScoringDecomposition(StrEnum):
     INDEPENDENT_EQUAL_WEEK = "independent_equal_week"
     BYE_AWARE_EQUAL_ACTIVE_GAME = "bye_aware_equal_active_game"
+    BYE_AWARE_EMPIRICAL_WEEKLY_VOLATILITY = "bye_aware_empirical_weekly_volatility"
 
 
 # STATIC_RULE_DEFINED for the current NFL schedule format. This is not a fitted
@@ -118,15 +120,16 @@ def build_bye_aware_weekly_team_scoring_distribution(
     team_id: str,
     week: int,
     as_of: datetime,
-    model_version: str = "next4-weekly-team-scoring-v3",
+    model_version: str = "next4-weekly-team-scoring-v4",
 ) -> WeeklyTeamScoringDistribution:
-    """Build the actual week-specific lineup distribution from canonical bye state.
+    """Build a week-specific team distribution from Forecast + canonical bye State.
 
-    Season player distributions are decomposed into equal active-NFL-game
-    distributions, then the lineup is re-optimized after excluding players whose
-    canonical NFL team is on bye in the requested fantasy week. This is an
-    explicit PROVISIONAL_GOVERNED bridge until authoritative NEXT-2 weekly
-    forecasts are available. It does not reuse the old fantasy-season/N divisor.
+    Player season means are converted to equal active-game means because direct
+    NEXT-2 weekly provider means are not promoted yet.  Crucially, weekly
+    performance variance is *not* derived from season forecast uncertainty.
+    Forecast authority supplies an independently calibrated empirical weekly
+    volatility distribution for each starter.  The lineup is re-optimized after
+    excluding players whose canonical NFL team is on bye.
     """
 
     if not 1 <= week <= 18:
@@ -167,14 +170,18 @@ def build_bye_aware_weekly_team_scoring_distribution(
     if missing:
         raise ValueError(f"weekly optimized starter forecast evidence missing: {sorted(missing)}")
 
-    mean_points = sum(
-        latest[player_id].distribution.mean / _NFL_REGULAR_SEASON_GAMES_PER_TEAM
-        for player_id in starter_ids
-    )
-    variance = sum(
-        (latest[player_id].distribution.stddev**2) / _NFL_REGULAR_SEASON_GAMES_PER_TEAM
-        for player_id in starter_ids
-    )
+    weekly_players = []
+    for player_id in starter_ids:
+        observation = latest[player_id]
+        mean, stddev = active_game_distribution(
+            season_mean=observation.distribution.mean,
+            position=observation.position,
+            games_per_team=_NFL_REGULAR_SEASON_GAMES_PER_TEAM,
+        )
+        weekly_players.append((mean, stddev))
+
+    mean_points = sum(mean for mean, _ in weekly_players)
+    variance = sum(stddev**2 for _, stddev in weekly_players)
     suffix = ":explicit_unfilled_zero" if lineup.unfilled_slots else ""
     return WeeklyTeamScoringDistribution(
         week=week,
@@ -182,7 +189,8 @@ def build_bye_aware_weekly_team_scoring_distribution(
         mean_points=mean_points,
         stddev_points=sqrt(variance),
         model_version=(
-            f"{model_version}:{WeeklyScoringDecomposition.BYE_AWARE_EQUAL_ACTIVE_GAME.value}:"
+            f"{model_version}:"
+            f"{WeeklyScoringDecomposition.BYE_AWARE_EMPIRICAL_WEEKLY_VOLATILITY.value}:"
             f"{TeamUncertaintyMethod.INDEPENDENT_PLAYER_VARIANCE.value}{suffix}"
         ),
     )
