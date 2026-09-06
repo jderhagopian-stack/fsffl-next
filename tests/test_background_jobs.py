@@ -94,3 +94,39 @@ def test_job_failure_is_persisted_for_polling_client() -> None:
     assert current.status == IntelligenceJobStatus.FAILED
     assert current.phase == IntelligenceJobPhase.FAILED
     assert current.error == "ValueError: boom"
+    assert current.total_elapsed_seconds is not None
+    assert current.total_elapsed_seconds >= 0.0
+    assert current.phase_timings
+
+
+def test_completed_job_records_each_runtime_phase_and_total_elapsed_time() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1)
+
+    def work(progress) -> None:
+        sleep(0.01)
+        progress(IntelligenceJobPhase.REFRESHING_STATE, "Refreshing state")
+        sleep(0.01)
+        progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running simulation")
+        sleep(0.01)
+        progress(IntelligenceJobPhase.BUILDING_VALUES, "Building values")
+        sleep(0.01)
+        progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching results")
+        sleep(0.01)
+
+    coordinator.start(user_id="u1", league_state_id="state-1", work=work)
+    current = _wait_for_status(
+        coordinator,
+        user_id="u1",
+        status=IntelligenceJobStatus.COMPLETED,
+    )
+    assert current is not None
+    assert current.total_elapsed_seconds is not None
+    assert current.total_elapsed_seconds >= 0.04
+    assert [timing.phase for timing in current.phase_timings] == [
+        IntelligenceJobPhase.BUILDING_FORECASTS,
+        IntelligenceJobPhase.REFRESHING_STATE,
+        IntelligenceJobPhase.RUNNING_SIMULATION,
+        IntelligenceJobPhase.BUILDING_VALUES,
+        IntelligenceJobPhase.ATTACHING_RESULTS,
+    ]
+    assert all(timing.elapsed_seconds > 0.0 for timing in current.phase_timings)
