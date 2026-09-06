@@ -33,7 +33,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     league_view: LeagueAnalyticsView
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
-    model_version: str = "next8-live-simulation-analytics-v3"
+    model_version: str = "next8-live-simulation-analytics-v4"
 
 
 def build_live_simulation_analytics(
@@ -49,9 +49,10 @@ def build_live_simulation_analytics(
 
     Canonical NFL bye state is consumed from State authority. NEXT-4 re-optimizes
     every fantasy roster for every scheduled fantasy week after excluding players
-    whose NFL team is on bye. Season distributions are decomposed to equal active
-    NFL-game distributions as an explicit provisional bridge until authoritative
-    NEXT-2 weekly forecasts are available.
+    whose NFL team is on bye. Season forecast means are still decomposed to equal
+    active-NFL-game means as a provisional bridge, but ordinary weekly scoring
+    variance now comes from an independently calibrated NEXT-2 weekly-volatility
+    model rather than full-season forecast uncertainty.
     """
 
     if any(item.as_of > league_state.as_of for item in forecasts):
@@ -116,7 +117,7 @@ def build_live_simulation_analytics(
         weekly_scoring=tuple(weekly_scoring),
         simulation_count=simulation_count,
         seed=seed,
-        model_version="next4-live-regular-season-v3:bye-aware-weekly-lineups",
+        model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
     )
     simulation = simulate_regular_season(request)
     outcomes = {item.team_id: item for item in simulation.outcomes}
@@ -133,13 +134,14 @@ def build_live_simulation_analytics(
         ),
         AnalyticsWarning(
             kind=AnalyticsWarningKind.PROVISIONAL,
-            code="weekly_scoring_decomposition_provisional",
+            code="weekly_mean_decomposition_provisional",
             message=(
-                "Simulation is bye-aware and re-optimizes each roster for each fantasy week. Player season "
-                "distributions are currently decomposed into equal active-NFL-game distributions until "
-                "authoritative empirical NEXT-2 weekly forecasts are promoted."
+                "Simulation is bye-aware and re-optimizes each roster for each fantasy week. Player season means "
+                "are currently converted to equal active-NFL-game means until direct multi-source weekly NEXT-2 "
+                "forecast means are promoted. Weekly scoring volatility is independently calibrated from actual "
+                "historical weekly outcomes and is not derived from season forecast uncertainty."
             ),
-            source_component="team-utility",
+            source_component="forecast",
         ),
         AnalyticsWarning(
             kind=AnalyticsWarningKind.MISSING_EVIDENCE,
@@ -201,8 +203,12 @@ def build_live_simulation_analytics(
             ModelLineageEntry(component="forecast", model_version=forecast_model_version),
             ModelLineageEntry(component="lineup", model_version="next4-lineup-v3:bye-aware"),
             ModelLineageEntry(
+                component="weekly_volatility",
+                model_version="next2-weekly-volatility-v1:2023-2025-position-cv",
+            ),
+            ModelLineageEntry(
                 component="team_scoring",
-                model_version="next4-weekly-team-scoring-v3:bye_aware_equal_active_game",
+                model_version="next4-weekly-team-scoring-v4:bye_aware_empirical_weekly_volatility",
             ),
             ModelLineageEntry(component="simulation", model_version=simulation.model_version),
             ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v3"),
