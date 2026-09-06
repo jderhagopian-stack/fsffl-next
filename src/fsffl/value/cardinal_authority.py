@@ -82,7 +82,8 @@ def build_authoritative_player_cardinal_scores(
     """Promote direct Stats Guy player evidence onto the governed FSFFL axis.
 
     The reference source already uses the selected 0-10,000 trade-derived axis,
-    so no percentile rescaling or cross-provider arithmetic occurs here.
+    so no percentile rescaling, clipping, or cross-provider arithmetic occurs.
+    Out-of-scale evidence fails validation rather than being silently transformed.
     """
 
     rows = [
@@ -95,7 +96,7 @@ def build_authoritative_player_cardinal_scores(
         FSFFLCardinalValueScore(
             asset_id=row.asset_id,
             asset_kind=ValueAssetKind.PLAYER,
-            score=min(10000.0, max(0.0, row.value)),
+            score=row.value,
             as_of=row.observed_at,
             market_context_id=row.market_context_id,
             source_asset_id=row.asset_id,
@@ -157,7 +158,7 @@ def build_authoritative_pick_cardinal_scores(
             FSFFLCardinalValueScore(
                 asset_id=pick.pick_id,
                 asset_kind=ValueAssetKind.PICK,
-                score=min(10000.0, max(0.0, value)),
+                score=value,
                 as_of=as_of,
                 market_context_id=market_context_id,
                 source_asset_id=provider_id,
