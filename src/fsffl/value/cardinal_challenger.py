@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import StrEnum
 from math import log1p, sqrt
-from statistics import mean
+from statistics import mean, median
 
 from pydantic import field_validator, model_validator
 
@@ -16,6 +16,7 @@ from .cardinal import NativeMarketMagnitudeObservation
 class CardinalTransformKind(StrEnum):
     AFFINE = "affine"
     LOG_AFFINE = "log_affine"
+    PIECEWISE_QUANTILE = "piecewise_quantile"
 
 
 class CardinalCalibrationPair(FrozenModel):
@@ -75,6 +76,7 @@ class CardinalScaleTransform(FrozenModel):
     kind: CardinalTransformKind
     intercept: float
     slope: float
+    anchors: tuple[tuple[float, float], ...] = ()
     model_version: str
     fitted_at: datetime
     evidence_through: datetime
@@ -104,9 +106,21 @@ class CardinalScaleTransform(FrozenModel):
         )
         if any(not value.strip() for value in required):
             raise ValueError("cardinal transform identifiers cannot be blank")
+        if self.kind == CardinalTransformKind.PIECEWISE_QUANTILE:
+            if len(self.anchors) < 3:
+                raise ValueError("piecewise cardinal challenger requires at least 3 anchors")
+            for left, right in zip(self.anchors, self.anchors[1:], strict=False):
+                if right[0] <= left[0]:
+                    raise ValueError("piecewise cardinal anchor x-values must be strictly increasing")
+                if right[1] < left[1]:
+                    raise ValueError("piecewise cardinal anchor y-values must be monotone")
+        elif self.anchors:
+            raise ValueError("non-piecewise cardinal transforms cannot carry anchors")
         return self
 
     def apply(self, value: float) -> float:
+        if self.kind == CardinalTransformKind.PIECEWISE_QUANTILE:
+            return _piecewise_apply(value, self.anchors)
         feature = _feature(value, self.kind)
         return self.intercept + self.slope * feature
 
@@ -172,11 +186,11 @@ def fit_cardinal_transform(
     fitted_at: datetime,
     model_version: str,
 ) -> CardinalScaleTransform:
-    """Fit one monotone challenger using ordinary least squares.
+    """Fit one monotone challenger without future evidence.
 
-    This is research infrastructure, not promotion logic. Competing transforms
-    must be compared on chronological holdout evidence before any common scale is
-    considered authoritative.
+    Affine/log-affine use ordinary least squares. Piecewise-quantile uses robust
+    equal-count bins and monotone median anchors so non-linear spacing can compete
+    without giving Presentation or downstream Decision code valuation authority.
     """
 
     if fitted_at.tzinfo is None:
@@ -192,17 +206,23 @@ def fit_cardinal_transform(
     if any(row.source_observed_at > fitted_at or row.target_observed_at > fitted_at for row in pairs):
         raise ValueError("cardinal transform fit cannot use future evidence")
 
-    xs = [_feature(row.native_value, kind) for row in pairs]
-    ys = [row.target_value for row in pairs]
-    x_bar = mean(xs)
-    y_bar = mean(ys)
-    denominator = sum((x - x_bar) ** 2 for x in xs)
-    if denominator <= 0:
-        raise ValueError("cardinal transform fit requires variation in native values")
-    slope = sum((x - x_bar) * (y - y_bar) for x, y in zip(xs, ys, strict=True)) / denominator
-    if slope <= 0:
-        raise ValueError("fitted cardinal transform is not monotone increasing")
-    intercept = y_bar - slope * x_bar
+    anchors: tuple[tuple[float, float], ...] = ()
+    if kind == CardinalTransformKind.PIECEWISE_QUANTILE:
+        anchors = _fit_piecewise_anchors(pairs)
+        intercept = 0.0
+        slope = 1.0
+    else:
+        xs = [_feature(row.native_value, kind) for row in pairs]
+        ys = [row.target_value for row in pairs]
+        x_bar = mean(xs)
+        y_bar = mean(ys)
+        denominator = sum((x - x_bar) ** 2 for x in xs)
+        if denominator <= 0:
+            raise ValueError("cardinal transform fit requires variation in native values")
+        slope = sum((x - x_bar) * (y - y_bar) for x, y in zip(xs, ys, strict=True)) / denominator
+        if slope <= 0:
+            raise ValueError("fitted cardinal transform is not monotone increasing")
+        intercept = y_bar - slope * x_bar
 
     source_id, native_scale_id = next(iter(source_keys))
     target_source_id, target_scale_id = next(iter(target_keys))
@@ -214,6 +234,7 @@ def fit_cardinal_transform(
         kind=kind,
         intercept=intercept,
         slope=slope,
+        anchors=anchors,
         model_version=model_version,
         fitted_at=fitted_at,
         evidence_through=max(max(row.source_observed_at, row.target_observed_at) for row in pairs),
@@ -262,6 +283,72 @@ def benchmark_cardinal_transform(
 def _feature(value: float, kind: CardinalTransformKind) -> float:
     if kind == CardinalTransformKind.AFFINE:
         return value
+    if kind != CardinalTransformKind.LOG_AFFINE:
+        raise ValueError("feature transform is only defined for affine/log-affine challengers")
     if value <= -1:
         raise ValueError("log-affine cardinal transform requires native values greater than -1")
     return log1p(value)
+
+
+def _fit_piecewise_anchors(
+    pairs: tuple[CardinalCalibrationPair, ...],
+    *,
+    bin_count: int = 10,
+) -> tuple[tuple[float, float], ...]:
+    ordered = sorted(pairs, key=lambda row: (row.native_value, row.target_value, row.asset_id))
+    effective_bins = min(bin_count, max(3, len(ordered) // 25))
+    if effective_bins < 3:
+        effective_bins = 3
+
+    raw_anchors: list[tuple[float, float]] = []
+    for index in range(effective_bins):
+        start = round(index * len(ordered) / effective_bins)
+        end = round((index + 1) * len(ordered) / effective_bins)
+        bucket = ordered[start:end]
+        if not bucket:
+            continue
+        raw_anchors.append(
+            (
+                float(median(row.native_value for row in bucket)),
+                float(median(row.target_value for row in bucket)),
+            )
+        )
+
+    collapsed: list[tuple[float, list[float]]] = []
+    for x_value, y_value in raw_anchors:
+        if collapsed and x_value == collapsed[-1][0]:
+            collapsed[-1][1].append(y_value)
+        else:
+            collapsed.append((x_value, [y_value]))
+    if len(collapsed) < 3:
+        raise ValueError("piecewise cardinal fit requires at least 3 distinct native anchors")
+
+    anchors: list[tuple[float, float]] = []
+    previous_y: float | None = None
+    for x_value, y_values in collapsed:
+        y_value = float(median(y_values))
+        if previous_y is not None and y_value < previous_y:
+            y_value = previous_y
+        anchors.append((x_value, y_value))
+        previous_y = y_value
+    return tuple(anchors)
+
+
+def _piecewise_apply(value: float, anchors: tuple[tuple[float, float], ...]) -> float:
+    if len(anchors) < 2:
+        raise ValueError("piecewise cardinal transform requires anchors")
+    if value <= anchors[0][0]:
+        left, right = anchors[0], anchors[1]
+    elif value >= anchors[-1][0]:
+        left, right = anchors[-2], anchors[-1]
+    else:
+        left, right = anchors[0], anchors[1]
+        for candidate_left, candidate_right in zip(anchors, anchors[1:], strict=False):
+            if candidate_left[0] <= value <= candidate_right[0]:
+                left, right = candidate_left, candidate_right
+                break
+    width = right[0] - left[0]
+    if width <= 0:
+        raise ValueError("piecewise cardinal anchors must have increasing x-values")
+    fraction = (value - left[0]) / width
+    return left[1] + fraction * (right[1] - left[1])
