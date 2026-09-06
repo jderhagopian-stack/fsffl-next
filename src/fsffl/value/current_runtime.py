@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from statistics import median
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -15,6 +14,11 @@ from .cardinal import (
     ProvisionalFSFFLValueScore,
     build_provisional_fsffl_values,
     preserve_native_market_magnitudes,
+)
+from .cardinal_authority import (
+    FSFFLCardinalValueScore,
+    build_authoritative_pick_cardinal_scores,
+    build_authoritative_player_cardinal_scores,
 )
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
 from .models import MarketPriceEstimate, ValueAssetKind, ValueScale
@@ -29,6 +33,7 @@ from .sources import (
 DYNASTYDEALER_URL = "https://www.dynastydealer.com/api/player-values"
 FANTASYCALC_URL = "https://api.fantasycalc.com/values/current"
 STATSGUY_URL = "https://api.statsguyfantasy.com/api/v1/rankings"
+STATSGUY_PICKS_URL = "https://api.statsguyfantasy.com/api/v1/picks"
 MARKET_PERCENTILE_SCALE = ValueScale(
     scale_id="dynasty-market-percentile",
     version="next3-v1",
@@ -48,13 +53,25 @@ class CurrentMarketValueRuntimeResult:
     market_context_id: str
     native_magnitude_observations: tuple[NativeMarketMagnitudeObservation, ...] = ()
     provisional_fsffl_values: tuple[ProvisionalFSFFLValueScore, ...] = ()
-    model_version: str = "next3-current-market-runtime-v1"
+    fsffl_cardinal_values: tuple[FSFFLCardinalValueScore, ...] = ()
+    model_version: str = "next3-current-market-runtime-v2"
 
     @property
     def coverage(self) -> float:
         if self.roster_player_count == 0:
             return 0.0
         return self.valued_roster_player_count / self.roster_player_count
+
+    @property
+    def cardinal_player_coverage(self) -> float:
+        if self.roster_player_count == 0:
+            return 0.0
+        player_ids = {
+            row.asset_id
+            for row in self.fsffl_cardinal_values
+            if row.asset_kind == ValueAssetKind.PLAYER
+        }
+        return min(1.0, len(player_ids) / self.roster_player_count)
 
 
 def _download_text(url: str) -> str:
@@ -120,7 +137,7 @@ def _percentiles(values: dict[str, float]) -> dict[str, float]:
         end = index + 1
         while end < len(ordered) and ordered[end][1] == ordered[index][1]:
             end += 1
-        average_zero_based_rank = ((index + end - 1) / 2.0)
+        average_zero_based_rank = (index + end - 1) / 2.0
         percentile = average_zero_based_rank / (len(ordered) - 1)
         for offset in range(index, end):
             result[ordered[offset][0]] = percentile
@@ -129,12 +146,13 @@ def _percentiles(values: dict[str, float]) -> dict[str, float]:
 
 
 def build_current_market_values(league_state: LeagueState) -> CurrentMarketValueRuntimeResult:
-    """Acquire current governed NEXT-3 market evidence and build typed estimates.
+    """Acquire current governed NEXT-3 market evidence and typed Value outputs.
 
-    Provider-native numeric scales are retained as typed challenger evidence and
-    then converted to within-source percentiles for the current authoritative
-    market baseline. A separately typed provisional FSFFL shadow score is also
-    emitted for UI testing only; it is not Decision/Search authority.
+    Market Percentile remains the authoritative relative market-position measure.
+    Provider-native magnitudes are retained for audit/research. The promoted
+    FSFFL Cardinal Market Score uses the empirically validated Stats Guy reference
+    axis for players and generic unknown-slot rookie picks; it remains distinct
+    from intrinsic dynasty value and downstream Decision utility.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -186,7 +204,27 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         raise RuntimeError("current governed market sources produced no usable observations")
 
     native_magnitude_observations = preserve_native_market_magnitudes(batch.panel.observations)
+    # Kept temporarily for backwards-compatible private-beta rendering while UI
+    # migrates to fsffl_cardinal_values. It remains explicitly challenger-only.
     provisional_fsffl_values = build_provisional_fsffl_values(native_magnitude_observations)
+    cardinal_values = list(build_authoritative_player_cardinal_scores(native_magnitude_observations))
+
+    failures = list(batch.failed_source_ids)
+    errors = dict(batch.errors_by_source_id)
+    try:
+        pick_payload = _download_text(STATSGUY_PICKS_URL)
+        cardinal_values.extend(
+            build_authoritative_pick_cardinal_scores(
+                pick_payload,
+                draft_picks=league_state.draft_picks,
+                format_key=statsguy_format,
+                market_context_id=context,
+                retrieved_at=acquisition_time,
+            )
+        )
+    except Exception as exc:
+        failures.append("statsguy_pick_values")
+        errors["statsguy_pick_values"] = f"{type(exc).__name__}: {exc}"
 
     market_observations: list[MarketObservation] = []
     for source_id, values in _latest_source_values(batch.panel.observations).items():
@@ -222,7 +260,7 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
                     scale=MARKET_PERCENTILE_SCALE,
                     as_of=acquisition_time,
                     market_context_id=context,
-                    model_version="next3-current-market-runtime-v1",
+                    model_version="next3-current-market-runtime-v2",
                     minimum_sources=1,
                     source_registry=registry,
                 )
@@ -236,8 +274,6 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         for entry in team_state.roster
     }
     valued = roster_player_ids.intersection({estimate.asset_id for estimate in estimates})
-    failures = list(batch.failed_source_ids)
-    errors = dict(batch.errors_by_source_id)
     failures.append("dynastyprocess_market_values")
     errors["dynastyprocess_market_values"] = "IdentityCrosswalkUnavailable: current State lacks explicit FantasyPros ids"
 
@@ -252,4 +288,5 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         market_context_id=context,
         native_magnitude_observations=native_magnitude_observations,
         provisional_fsffl_values=provisional_fsffl_values,
+        fsffl_cardinal_values=tuple(sorted(cardinal_values, key=lambda item: (item.asset_kind.value, item.asset_id))),
     )
