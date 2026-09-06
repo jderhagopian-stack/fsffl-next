@@ -1,26 +1,23 @@
 from pathlib import Path
 
 
-def test_forecast_refresh_is_league_scoped_not_team_scoped() -> None:
+def test_intelligence_refresh_is_league_scoped_not_team_scoped() -> None:
     source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
-    guard = "if(fsfflForecastRefreshInFlight||!state?.context?.league_id)return;"
-    assert guard in source
+    assert "!state?.context?.league_id" in source
     assert "!state?.context?.team_id" not in source
-    assert "'/api/intelligence/refresh-forecasts'" in source
+    assert "'/api/intelligence/jobs'" in source
 
 
-def test_mobile_timeout_polls_existing_simulation_before_full_retry() -> None:
+def test_mobile_client_polls_server_owned_job_instead_of_holding_long_request() -> None:
     source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
-    assert "pollExistingSimulation" in source
-    assert "'/api/product-context'" in source
-    assert "fsfflSimulationPollUntil=Date.now()+180000" in source
-    assert "Checking the existing simulation instead of restarting it" in source
+    assert "pollIntelligenceJob" in source
+    assert "'/api/intelligence/jobs/current'" in source
+    assert "'/api/intelligence/refresh-forecasts'" not in source
+    assert "setInterval(maintainFsfflIntelligence,2500)" in source
 
 
-def test_runtime_restart_clears_stale_completed_attempt_without_weakening_server_guard() -> None:
+def test_job_progress_is_rendered_from_server_authoritative_status() -> None:
     source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
-    assert "reconcileSimulationRuntimeState" in source
-    assert "fsfflLastSimulationReady===true&&!simulationReady" in source
-    assert "fsfflForecastAttemptedState=null" in source
-    assert "fsfflForecastRetryAt=0" in source
-    assert "fsfflSimulationPollUntil=0" in source
+    assert "phaseMessage(payload)" in source
+    assert "payload.status==='queued'||payload.status==='running'" in source
+    assert "Forecasts and 50,000-run simulation are ready." in source
