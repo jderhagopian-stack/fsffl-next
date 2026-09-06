@@ -33,7 +33,10 @@ def test_sleeper_live_acquires_only_configured_regular_season_weeks() -> None:
         if url.endswith("/league/123/users"):
             return []
         if url.endswith("/league/123/rosters"):
-            return []
+            return [
+                {"roster_id": 1, "owner_id": "u1", "players": [], "starters": []},
+                {"roster_id": 2, "owner_id": "u2", "players": [], "starters": []},
+            ]
         if url.endswith("/players/nfl"):
             return {}
         if url.endswith("/league/123/traded_picks"):
