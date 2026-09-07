@@ -39,6 +39,19 @@ def test_simulator_transport_envelope_reuses_hosted_governed_endpoint() -> None:
     assert "acceptance_probability" not in ui
 
 
+def test_simulator_compares_only_server_returned_scenarios_without_new_score() -> None:
+    ui = UI.read_text(encoding="utf-8")
+    assert "retainSimulatorScenario" in ui
+    assert "history.slice(0,4)" in ui
+    assert "Scenario comparison" in ui
+    assert "server-returned deltas" in ui
+    assert "browser does not create a winner score" in ui
+    assert "no cross-scenario composite" in ui
+    assert "team_delta?.competitive" in ui
+    assert "composite_score" not in ui
+    assert "master_score" not in ui
+
+
 def test_simulator_is_first_class_team_scoped_product_route() -> None:
     shell = SHELL.read_text(encoding="utf-8")
     index = INDEX.read_text(encoding="utf-8")
