@@ -11,8 +11,8 @@ def test_waiver_action_runtime_joins_existing_authorities() -> None:
     assert "live_bounded_materiality_policy" in source
     assert "assess_waiver_materiality" in source
     assert "candidate_from_waiver_evaluation" in source
+    assert '"authority": {\n            **comparison["authority"],' in source
     assert '"market_value": "NEXT-3 Value authoritative Cardinal score"' in source
-    assert '"competitive_outcomes": "NEXT-4 Simulation"' in source
     assert '"waiver_action": "NEXT-6 Opportunity candidate authority"' in source
 
 
