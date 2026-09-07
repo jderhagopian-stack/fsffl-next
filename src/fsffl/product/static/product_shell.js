@@ -22,7 +22,7 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260907-behavior1';
+const fsfflStaticVersion='20260907-display2';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
@@ -38,17 +38,36 @@ function ensureHomeScript(){return lazyProductScript('installFsfflHomeExperience
 function ensureOpportunitiesScript(){return lazyProductScript('renderFsfflOpportunities','/static/opportunities.js','Unable to load Opportunity Engine presentation module',()=>opportunitiesScriptPromise,value=>opportunitiesScriptPromise=value)}
 function ensureAnalyticsTerminalScript(){return lazyProductScript('renderFsfflAnalyticsTerminal','/static/analytics_terminal.js','Unable to load Analytics Terminal presentation module',()=>analyticsTerminalScriptPromise,value=>analyticsTerminalScriptPromise=value)}
 
-function fsfflDisplayedProjectionObservation(player){const observations=player?.forecasts||[];return observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='fantasy_regular_season')||observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='season')||observations.find(item=>item.metric==='fantasy_points')||null}
+function fsfflDisplayedProjectionObservation(player){const observations=player?.forecasts||[];return observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='season')||observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='fantasy_regular_season')||observations.find(item=>item.metric==='fantasy_points')||null}
 window.fsfflDisplayedProjectionObservation=fsfflDisplayedProjectionObservation;
+function fsfflExplorerMissingForSort(value,key){if(value==null)return true;if(typeof value==='number'){if(!Number.isFinite(value))return true;if(value===0&&['value','market_percentile','projection'].includes(key))return true}return value===''}
+function installExplorerSortSemantics(){
+  if(typeof explorerSorted!=='function')return;
+  explorerSorted=function(rows,sort){return[...rows].sort((a,b)=>{const av=a[sort.key],bv=b[sort.key],am=fsfflExplorerMissingForSort(av,sort.key),bm=fsfflExplorerMissingForSort(bv,sort.key);if(am&&bm)return 0;if(am)return 1;if(bm)return-1;const result=explorerCompare(av,bv);return sort.direction==='asc'?result:-result})};
+}
 function installProjectionPresentation(){
   if(typeof playerProjection==='function')playerProjection=function(player){const obs=fsfflDisplayedProjectionObservation(player);return obs?.distribution?fmtNumber(obs.distribution.mean,1):'—'};
   if(typeof explorerPlayerProjection==='function')explorerPlayerProjection=function(player){const obs=fsfflDisplayedProjectionObservation(player);return typeof obs?.distribution?.mean==='number'?obs.distribution.mean:null};
   if(typeof myTeamProjection==='function')myTeamProjection=function(player){const obs=fsfflDisplayedProjectionObservation(player);return typeof obs?.distribution?.mean==='number'?obs.distribution.mean.toFixed(1):'—'};
-  document.querySelectorAll('th').forEach(th=>{if(th.textContent.trim()==='Projection')th.textContent='Reg-season projection';if(th.textContent.trim()==='Projected scoring')th.textContent='Reg-season scoring'});
+  document.querySelectorAll('th').forEach(th=>{const label=th.textContent.trim();if(label==='Projection'||label==='Reg-season projection')th.textContent='NFL season projection';if(label==='Projected scoring')th.textContent='Reg-season scoring'});
+}
+function presentDownstreamReadiness(){
+  const context=state?.context;
+  const coreReady=Boolean(context?.league_id&&context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
+  if(!coreReady)return;
+  document.querySelectorAll('.runtime-stage').forEach(node=>{
+    const label=node.querySelector('strong')?.textContent?.trim().toLowerCase();
+    if(label!=='trade decision'&&label!=='opportunity')return;
+    node.classList.remove('waiting_for_input','not_configured','capability-next');node.classList.add('ready');
+    const mark=node.querySelector('.runtime-stage-mark');if(mark)mark.textContent='✓';
+    const detail=node.querySelector('small');if(detail)detail.textContent=label==='trade decision'?'Trade Decision is available for submitted deals using the current authoritative evidence.':'Opportunity discovery is available as a downstream consumer of current Value and Trade Decision evidence.';
+  });
+  const opportunityValue=document.querySelector('#opportunity-value');if(opportunityValue)opportunityValue.textContent='Ready';
+  const opportunityNote=document.querySelector('#opportunity-note');if(opportunityNote)opportunityNote.textContent='Open Opportunities to run the current Search workspace.';
 }
 
 function productSurfaceError(label,error){const panel=document.querySelector('#generic-screen .panel');if(panel)panel.innerHTML=`<p class="eyebrow">${label}</p><h2>Unable to load this view.</h2><p class="lead">${String(error.message||error)}</p>`}
-function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];if(!copy)return;const eyebrow=document.querySelector('#generic-eyebrow'),title=document.querySelector('#generic-title'),body=document.querySelector('#generic-copy');if(eyebrow)eyebrow.textContent=copy[0];if(title)title.textContent=copy[1];if(body)body.textContent=copy[2];if(route==='my_team')ensureMyTeamScript().then(()=>{installProjectionPresentation();window.renderFsfflMyTeam?.();setTimeout(installProjectionPresentation,0)}).catch(error=>productSurfaceError('My Team',error));if(route==='players_assets'&&typeof window.renderFsfflExplorer==='function'){installProjectionPresentation();window.renderFsfflExplorer(route);setTimeout(installProjectionPresentation,0)}if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>productSurfaceError('League Comparison',error));if(route==='opportunities')ensureOpportunitiesScript().then(()=>window.renderFsfflOpportunities?.()).catch(error=>productSurfaceError('Opportunity Engine',error));if(route==='analytics')ensureAnalyticsTerminalScript().then(()=>window.renderFsfflAnalyticsTerminal?.()).catch(error=>productSurfaceError('Analytics Terminal',error));if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error))}
+function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];if(!copy)return;const eyebrow=document.querySelector('#generic-eyebrow'),title=document.querySelector('#generic-title'),body=document.querySelector('#generic-copy');if(eyebrow)eyebrow.textContent=copy[0];if(title)title.textContent=copy[1];if(body)body.textContent=copy[2];if(route==='my_team')ensureMyTeamScript().then(()=>{installProjectionPresentation();window.renderFsfflMyTeam?.();setTimeout(installProjectionPresentation,0)}).catch(error=>productSurfaceError('My Team',error));if(route==='players_assets'&&typeof window.renderFsfflExplorer==='function'){installExplorerSortSemantics();installProjectionPresentation();window.renderFsfflExplorer(route);setTimeout(()=>{installProjectionPresentation();installExplorerSortSemantics()},0)}if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>productSurfaceError('League Comparison',error));if(route==='opportunities')ensureOpportunitiesScript().then(()=>window.renderFsfflOpportunities?.()).catch(error=>productSurfaceError('Opportunity Engine',error));if(route==='analytics')ensureAnalyticsTerminalScript().then(()=>window.renderFsfflAnalyticsTerminal?.()).catch(error=>productSurfaceError('Analytics Terminal',error));if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error))}
 function rebuildProductNavigation(){const nav=document.querySelector('#primary-nav');if(!nav)return;nav.innerHTML='';const hasTeam=Boolean(state?.context?.team_id);fsfflProductRoutes.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='nav-item';button.dataset.route=item.route;if(item.route===state?.route)button.classList.add('active');if(item.teamScoped&&!hasTeam)button.classList.add('locked');button.innerHTML=`<span>${item.label}</span>${item.teamScoped&&!hasTeam?'<small>Select team</small>':''}`;button.addEventListener('click',event=>{event.preventDefault();if(button.classList.contains('locked'))return;if(typeof setRoute==='function')setRoute(item.route)});nav.appendChild(button)})}
 function productRouteAwareSetRoute(route){if(!fsfflProductSurfaceCopy[route])return;document.querySelectorAll('.route-screen').forEach(item=>item.hidden=item.id!=='generic-screen');document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.route===route));renderProductSurface(route)}
 
@@ -71,13 +90,15 @@ function renderMobileRecoveryControls(){
   (state.context.teams||[]).forEach(team=>{const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent=team.display_name;button.addEventListener('click',async()=>{button.disabled=true;try{await selectTeam(team.team_id)}finally{button.disabled=false;renderMobileRecoveryControls();rebuildProductNavigation()}});grid.appendChild(button)})
 }
 
+const originalRenderRuntimeStatus=typeof renderRuntimeStatus==='function'?renderRuntimeStatus:null;
+if(originalRenderRuntimeStatus){renderRuntimeStatus=function(){const result=originalRenderRuntimeStatus();presentDownstreamReadiness();return result}}
 const originalSetRoute=typeof setRoute==='function'?setRoute:null;
-if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();installProjectionPresentation();return}const result=originalSetRoute(route);if(route==='league')ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{});if(route==='trade_center'&&typeof loadTradeCenter==='function')setTimeout(loadTradeCenter,0);renderMobileRecoveryControls();installProjectionPresentation();return result};setRoute=window.setRoute}
+if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return}const result=originalSetRoute(route);if(route==='league')ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{});if(route==='trade_center'&&typeof loadTradeCenter==='function')setTimeout(loadTradeCenter,0);renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result};setRoute=window.setRoute}
 
 const originalApplyContext=typeof applyContext==='function'?applyContext:null;
-if(originalApplyContext){applyContext=function(){const result=originalApplyContext();window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();installProjectionPresentation();return result}}
+if(originalApplyContext){applyContext=function(){const result=originalApplyContext();window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result}}
 
 injectMobileTouchFix();
-window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();installProjectionPresentation();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});
-window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls();installProjectionPresentation()});
-setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls();installProjectionPresentation()},0);
+window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});
+window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()});
+setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()},0);
