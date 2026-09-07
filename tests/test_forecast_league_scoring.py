@@ -87,6 +87,29 @@ def test_custom_league_coefficients_come_from_rules_not_provider_defaults() -> N
     assert result[0].distribution.mean == pytest.approx(320.0)
 
 
+def test_full_season_qb_scoring_is_not_silently_scaled_to_fantasy_schedule() -> None:
+    rules = _rules(
+        ScoringRule(stat="pass_yd", points=0.04),
+        ScoringRule(stat="pass_td", points=4.0),
+        ScoringRule(stat="pass_int", points=-2.0),
+        ScoringRule(stat="rush_yd", points=0.1),
+        ScoringRule(stat="rush_td", points=6.0),
+    )
+    result = derive_league_fantasy_point_forecasts(
+        (
+            _observation(ForecastMetric.PASS_YARDS, 3935.0),
+            _observation(ForecastMetric.PASS_TD, 27.2),
+            _observation(ForecastMetric.INTERCEPTIONS, 12.3),
+            _observation(ForecastMetric.RUSH_YARDS, 658.6),
+            _observation(ForecastMetric.RUSH_TD, 13.1),
+        ),
+        rules=rules,
+    )
+    assert result[0].horizon == ForecastHorizon.SEASON
+    assert result[0].distribution.mean == pytest.approx(386.06)
+    assert result[0].distribution.mean > 300.0
+
+
 def test_fumbles_lost_is_an_exact_supported_metric() -> None:
     rules = _rules(
         ScoringRule(stat="rec", points=0.5),
