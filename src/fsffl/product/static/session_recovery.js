@@ -47,12 +47,39 @@ function fsfflFocalEconomicNet(result){
   const net=result?.economic_net;if(!net)return null;
   return [net.side_a,net.side_b].find(side=>side?.team_id===result.focal_team_id)||null;
 }
+function fsfflFocalRosterAdjustedNet(result){
+  const net=result?.roster_adjusted_market_net;if(!net)return null;
+  return [net.side_a,net.side_b].find(side=>side?.team_id===result.focal_team_id)||null;
+}
+function fsfflFocalRosterResolution(result){
+  return (result?.roster_legality||[]).find(item=>item?.team_id===result.focal_team_id)||null;
+}
 
 function fsfflTradeNetMarkup(result){
+  const adjusted=fsfflFocalRosterAdjustedNet(result);
+  if(adjusted?.status==='complete'&&typeof adjusted.roster_adjusted_market_delta==='number'){
+    const value=adjusted.roster_adjusted_market_delta,sign=value>0?'+':'';
+    const raw=typeof adjusted.raw_trade_market_delta==='number'?fmtFsfflValue(adjusted.raw_trade_market_delta):'—';
+    const cut=typeof adjusted.mandatory_cut_market_cost==='number'?fmtFsfflValue(adjusted.mandatory_cut_market_cost):'—';
+    return `<strong>${sign}${fmtFsfflValue(value)}</strong><small>Raw trade ${raw} · mandatory cut cost ${cut}</small>`;
+  }
   const side=fsfflFocalEconomicNet(result),market=side?.market;
   if(!market||market.status!=='complete'||typeof market.mean_delta!=='number')return '<strong>—</strong><small>Complete comparable market evidence is not available.</small>';
   const sign=market.mean_delta>0?'+':'';
-  return `<strong>${sign}${fmtFsfflValue(market.mean_delta)}</strong><small>Received ${fmtFsfflValue(market.received_mean)} · sent ${fmtFsfflValue(market.sent_mean)}</small>`;
+  return `<strong>${sign}${fmtFsfflValue(market.mean_delta)}</strong><small>Raw received-minus-sent Value; cut cost is incomplete.</small>`;
+}
+
+function fsfflRosterImpactMarkup(result){
+  const resolution=fsfflFocalRosterResolution(result);
+  if(!resolution)return '<strong>—</strong><small>Roster legality evidence unavailable.</small>';
+  const count=Number(resolution.required_cut_count||0);
+  if(!count)return '<strong>No cuts</strong><small>The post-trade active roster remains within the league limit.</small>';
+  const names=(resolution.cuts||[]).map(cut=>{
+    const option=[...(tradeUiState.browser?.focal_team?.assets||[]),...(currentCounterparty()?.assets||[])].find(item=>item.player_id===cut.player_id);
+    return option?.label||cut.player_id;
+  });
+  const cost=typeof resolution.cut_market_value_total==='number'?` · ${fmtFsfflValue(resolution.cut_market_value_total)} Value removed`:' · cut Value incomplete';
+  return `<strong>${count} mandatory cut${count===1?'':'s'}</strong><small>${escapeHtml(names.join(', ')||'Resolved by NEXT-5')}${escapeHtml(cost)}</small>`;
 }
 
 function fsfflTradeDecisionHeading(result){
@@ -68,29 +95,19 @@ function fsfflTradeDecisionCopy(result){
   if(result?.disposition?.disposition)return 'This is the governed NEXT-5 disposition for the managed team.';
   const gaps=[];
   if(!result?.availability?.competitive_outcomes)gaps.push('competitive simulation');
-  if(!result?.availability?.mandatory_cut_cost)gaps.push('mandatory cut cost');
-  if(!result?.availability?.package_concentration_premium)gaps.push('elite-asset/package premium');
-  return `The fast analysis is useful, but FSFFL will not invent an accept/reject call before ${gaps.join(', ')} ${gaps.length===1?'is':'are'} attached.`;
-}
-
-function fsfflTradePlayerDelta(){
-  if(typeof tradeUiState==='undefined')return null;
-  const focal=tradeSideTeam('focal'),counter=tradeSideTeam('counterparty');
-  if(!focal||!counter)return null;
-  const countPlayers=(team,selected)=>[...selected].map(ref=>team.assets.find(item=>item.asset_ref===ref)).filter(item=>item?.asset_kind==='player').length;
-  const sent=countPlayers(focal,tradeUiState.focalSelected),received=countPlayers(counter,tradeUiState.counterpartySelected);
-  return received-sent;
+  if(!result?.availability?.mandatory_cut_cost)gaps.push('complete cut cost');
+  if(!result?.availability?.package_concentration_premium)gaps.push('consolidation evidence');
+  if(!gaps.length)return 'The governed decision inputs are attached; final disposition is being resolved by NEXT-5.';
+  return `FSFFL will not invent an accept/reject call before ${gaps.join(', ')} ${gaps.length===1?'is':'are'} attached.`;
 }
 
 function fsfflUpgradeTradePresentation(result){
   const panel=qs('#trade-analysis-empty');if(!panel)return;
   const existing=panel.firstElementChild;if(!existing)return;
-  const playerDelta=fsfflTradePlayerDelta();
-  const rosterCopy=playerDelta===null?'Roster-space effect unavailable.':playerDelta>0?`Net +${playerDelta} rostered player${playerDelta===1?'':'s'}. Mandatory cut selection/cost is not yet applied.`:playerDelta<0?`Net ${playerDelta} rostered players; the deal creates roster space.`:'No net change in rostered-player count from the selected player assets.';
   const summary=document.createElement('div');
   summary.className='fsffl-trade-decision-summary';
   summary.style.cssText='border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;background:#0a1120;text-align:left';
-  summary.innerHTML=`<p class="eyebrow">Decision summary</p><h2 style="margin:0 0 6px">${escapeHtml(fsfflTradeDecisionHeading(result))}</h2><p style="color:var(--muted);margin:0 0 14px;line-height:1.5">${escapeHtml(fsfflTradeDecisionCopy(result))}</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Market value change</span>${fsfflTradeNetMarkup(result)}</div><div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Roster-space effect</span><strong>${playerDelta===null?'—':playerDelta>0?`+${playerDelta}`:String(playerDelta)}</strong><small>${escapeHtml(rosterCopy)}</small></div><div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Competitive impact</span><strong>Run simulation</strong><small>Expected wins, playoff odds and true championship odds belong to Simulation authority.</small></div><div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Package premium</span><strong>Pending governed attachment</strong><small>FSFFL will not treat several lesser assets as automatically equivalent to one elite asset.</small></div></div>`;
+  summary.innerHTML=`<p class="eyebrow">Decision summary</p><h2 style="margin:0 0 6px">${escapeHtml(fsfflTradeDecisionHeading(result))}</h2><p style="color:var(--muted);margin:0 0 14px;line-height:1.5">${escapeHtml(fsfflTradeDecisionCopy(result))}</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Overall market Value</span>${fsfflTradeNetMarkup(result)}</div><div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Roster consequences</span>${fsfflRosterImpactMarkup(result)}</div><div id="fsffl-competitive-summary" style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Competitive impact</span><strong>Run simulation</strong><small>Expected wins, playoff odds and championship odds belong to Simulation authority.</small></div><div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Consolidation effect</span><strong>${result?.availability?.package_concentration_premium?'Attached':'Deriving from roster utility'}</strong><small>No arbitrary multiplier: FSFFL evaluates the actual legal roster, lineup, cut cost and competitive effect of the package.</small></div></div>`;
   const details=document.createElement('details');
   details.style.cssText='margin-top:12px;border-top:1px solid var(--line);padding-top:12px';
   const detailsSummary=document.createElement('summary');
