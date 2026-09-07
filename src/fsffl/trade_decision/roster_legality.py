@@ -4,9 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Mapping
 
-from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.state.models import FrozenModel, LeagueState, RosterSlot, TeamState
-from fsffl.team_utility import optimize_team_lineup
 
 
 class RosterLegalityStatus(StrEnum):
@@ -29,7 +27,7 @@ class TeamRosterLegalityResolution(FrozenModel):
     cuts: tuple[MandatoryRosterCut, ...] = ()
     cut_market_value_total: float | None = None
     status: RosterLegalityStatus
-    model_version: str = "next5-mandatory-roster-cuts-v1"
+    model_version: str = "next5-mandatory-roster-cuts-v2"
 
 
 @dataclass(frozen=True)
@@ -46,49 +44,27 @@ def _active_entries(team_state: TeamState):
     )
 
 
-def _projected_starters(
-    league_state: LeagueState,
-    forecasts: tuple[ForecastObservation, ...],
-    *,
-    team_id: str,
-) -> frozenset[str]:
-    if not forecasts:
-        return frozenset()
-    try:
-        lineup = optimize_team_lineup(
-            league_state,
-            forecasts,
-            team_id=team_id,
-            as_of=league_state.as_of,
-            horizon=ForecastHorizon.SEASON,
-            allow_unfilled_slots=True,
-            model_version="next5-mandatory-roster-cuts-v1:lineup",
-        )
-    except ValueError:
-        return frozenset()
-    return frozenset(assignment.player_id for assignment in lineup.assignments)
-
-
 def resolve_mandatory_roster_cuts(
     league_state: LeagueState,
     *,
-    forecasts: tuple[ForecastObservation, ...] = (),
+    protected_player_ids_by_team: Mapping[str, frozenset[str]] | None = None,
     market_values: Mapping[str, float] | None = None,
 ) -> ResolvedRosterState:
-    """Make post-transaction active rosters legal using explicit upstream evidence.
+    """Make post-transaction active rosters legal using upstream evidence.
 
-    Roster-size legality is structural Decision authority. When a transaction leaves
-    an active roster above the canonical league limit, projected non-starters are
-    cut before projected starters. Within each group, the lowest known authoritative
-    market Value is cut first. Unknown-value players are preserved behind known-value
-    candidates where possible and are surfaced as incomplete cut-cost evidence.
+    NEXT-5 owns the structural fact that an oversized active roster cannot survive
+    a transaction unchanged. Team Utility may supply projected starter ids as a
+    protected set; Value may supply authoritative market evidence. Decision does
+    not import or recompute Forecast/lineup logic itself.
 
-    This policy does not invent a package premium or utility coefficient. It simply
-    prevents downstream Trade/Simulation analysis from treating impossible extra
-    roster spots as free assets.
+    Non-protected players are cut before protected players. Within each group the
+    lowest known market Value is cut first. Unknown-value players are preserved
+    behind known-value candidates where possible and any unknown cut cost remains
+    explicit rather than being treated as zero.
     """
 
     values = market_values or {}
+    protected = protected_player_ids_by_team or {}
     roster_limit = league_state.league.rules.roster_size
     team_state_map = {state.team_id: state for state in league_state.team_states}
     resolutions: list[TeamRosterLegalityResolution] = []
@@ -109,16 +85,12 @@ def resolve_mandatory_roster_cuts(
             )
             continue
 
-        starter_ids = _projected_starters(
-            league_state,
-            forecasts,
-            team_id=team.team_id,
-        )
+        protected_ids = protected.get(team.team_id, frozenset())
 
         def cut_rank(entry) -> tuple[int, int, float, str]:
             value = values.get(entry.player_id)
             return (
-                1 if entry.player_id in starter_ids else 0,
+                1 if entry.player_id in protected_ids else 0,
                 1 if value is None else 0,
                 float("inf") if value is None else float(value),
                 entry.player_id,
@@ -131,7 +103,7 @@ def resolve_mandatory_roster_cuts(
             MandatoryRosterCut(
                 player_id=entry.player_id,
                 market_value=values.get(entry.player_id),
-                was_projected_starter=entry.player_id in starter_ids,
+                was_projected_starter=entry.player_id in protected_ids,
             )
             for entry in chosen
         )
