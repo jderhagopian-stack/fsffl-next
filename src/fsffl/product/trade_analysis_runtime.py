@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from fsffl.behavioral.models import OwnerBehaviorProfile
 from fsffl.forecast.models import ForecastHorizon
 from fsffl.team_utility import TeamUtilityVector, assemble_team_utility_vector
 from fsffl.trade_decision import (
     apply_bilateral_trade,
+    bind_owner_behavior_evidence,
     classify_bilateral_trade_decision,
     evaluate_bilateral_trade_deltas,
     summarize_bilateral_trade_economics,
@@ -51,15 +53,15 @@ def build_private_beta_trade_analysis(
     proposal: BilateralTradeProposal,
     *,
     focal_team_id: str,
+    counterparty_behavior_profile: OwnerBehaviorProfile | None = None,
 ) -> dict[str, object]:
     """Build a read-only NEXT-8 view from authoritative upstream contracts.
 
-    This adapter is intentionally conservative. It applies the proposal through
-    NEXT-5 transaction-state authority, compares NEXT-4 roster-resilience
-    consequences when forecast evidence exists, and binds governed NEXT-3 market
-    evidence through the existing trade-economics contract. It does not use the
-    provisional cardinal FSFFL Value challenger, invent a trade grade, estimate
-    acceptance, or approximate competitive win impact outside Simulation.
+    The adapter applies NEXT-5 state-transition authority, compares NEXT-4 roster
+    consequences when forecast evidence exists, binds governed NEXT-3 market
+    evidence, and may attach a descriptive owner Behavioral profile through the
+    existing NEXT-5 acceptance/negotiation evidence contract. It never turns that
+    profile into an acceptance percentage, trade grade, or market Value change.
     """
 
     league_state = runtime.league_state
@@ -142,13 +144,22 @@ def build_private_beta_trade_analysis(
             "Governed market-economic context is waiting for current NEXT-3 market evidence."
         )
 
+    behavioral_view = None
+    if counterparty_behavior_profile is not None:
+        behavioral_view = bind_owner_behavior_evidence(
+            proposal,
+            accepting_team_id=counterparty_team_id,
+            profile=counterparty_behavior_profile,
+        )
+    else:
+        warnings.append(
+            "Owner Behavioral Intelligence is still building or no current owner profile is mapped for this counterparty."
+        )
+
     # Current live simulation describes the baseline league. A changed roster must
     # be re-simulated through NEXT-4 before we may claim post-trade win/playoff deltas.
     warnings.append(
         "Competitive win/playoff impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority."
-    )
-    warnings.append(
-        "Acceptance probability is not estimated; no calibrated acceptance model is attached to this product runtime yet."
     )
 
     return {
@@ -160,10 +171,12 @@ def build_private_beta_trade_analysis(
         "evaluation": evaluation.model_dump(mode="json") if evaluation is not None else None,
         "decision": decision.model_dump(mode="json") if decision is not None else None,
         "economics": economics.model_dump(mode="json") if economics is not None else None,
+        "behavioral_context": behavioral_view.model_dump(mode="json") if behavioral_view is not None else None,
         "availability": {
             "roster_consequences": roster_consequences_ready,
             "market_economics": economics is not None,
             "competitive_outcomes": False,
+            "behavioral_evidence": behavioral_view is not None,
             "acceptance_probability": False,
             "provisional_fsffl_value_used_for_decision": False,
         },
