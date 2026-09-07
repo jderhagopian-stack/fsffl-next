@@ -7,12 +7,12 @@ import pytest
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
 
-def test_runtime_polish_does_not_observe_its_own_character_mutations() -> None:
+def test_runtime_polish_has_no_self_observing_status_loop() -> None:
     source = Path("src/fsffl/product/static/product_polish.js").read_text(encoding="utf-8")
     assert "setTextIfChanged" in source
-    assert "observer.observe(grid,{childList:true})" in source
-    assert "characterData:true" not in source
-    assert "subtree:true" not in source
+    assert "MutationObserver" not in source
+    assert "observer.observe" not in source
+    assert "setInterval(presentRuntimeCapabilities" not in source
 
 
 def test_core_beta_assets_are_versioned_to_break_mobile_cache() -> None:
