@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from pydantic import model_validator
 
-from fsffl.forecast.models import ForecastObservation
+from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import DraftPick, FrozenModel, LeagueState, Position, RosterSlot
 from fsffl.team_utility.models import OptimizedTeamLineup
 from fsffl.team_utility.utility import OwnerStrategicPosture, TeamUtilityVector
@@ -22,6 +22,7 @@ class PlayerAnalyticsRow(FrozenModel):
     projected_starter: bool = False
     projected_lineup_slot: RosterSlot | None = None
     forecasts: tuple[ForecastObservation, ...] = ()
+    season_fantasy_points_projection: float | None = None
     value_profile: AssetValueProfile | None = None
 
     @model_validator(mode="after")
@@ -57,7 +58,7 @@ class TeamAnalyticsView(FrozenModel):
     optimized_lineup: OptimizedTeamLineup | None = None
     utility: TeamUtilityVector | None = None
     owner_posture: OwnerStrategicPosture | None = None
-    view_model_version: str = "next7-team-view-v1"
+    view_model_version: str = "next7-team-view-v2"
 
     @model_validator(mode="after")
     def validate_view(self) -> "TeamAnalyticsView":
@@ -72,6 +73,33 @@ class TeamAnalyticsView(FrozenModel):
         return self
 
 
+def _season_fantasy_points_projection(observations: tuple[ForecastObservation, ...]) -> float | None:
+    """Return the authoritative full-NFL-season fantasy-point mean for display.
+
+    Player-facing analytics must never silently substitute the shorter fantasy
+    regular-season horizon. If full-season evidence is absent, expose missing data
+    rather than scaling or falling back in Presentation.
+    """
+
+    candidates = tuple(
+        observation
+        for observation in observations
+        if observation.metric == ForecastMetric.FANTASY_POINTS
+        and observation.horizon == ForecastHorizon.SEASON
+    )
+    if not candidates:
+        return None
+    # Current Forecast authority produces one governed league-scored season total
+    # per player. The deterministic sort keeps the read-only contract stable if a
+    # future evidence bundle temporarily contains more than one season observation.
+    selected = sorted(
+        candidates,
+        key=lambda item: (item.as_of, item.model_version, item.source),
+        reverse=True,
+    )[0]
+    return selected.distribution.mean
+
+
 def build_team_analytics_view(
     league_state: LeagueState,
     *,
@@ -82,7 +110,7 @@ def build_team_analytics_view(
     optimized_lineup: OptimizedTeamLineup | None = None,
     utility: TeamUtilityVector | None = None,
     owner_posture: OwnerStrategicPosture | None = None,
-    view_model_version: str = "next7-team-view-v1",
+    view_model_version: str = "next7-team-view-v2",
 ) -> TeamAnalyticsView:
     """Join authoritative team evidence into a read-only analytics view."""
 
@@ -149,6 +177,7 @@ def build_team_analytics_view(
                 projected_starter=projected_slot is not None,
                 projected_lineup_slot=projected_slot,
                 forecasts=observations,
+                season_fantasy_points_projection=_season_fantasy_points_projection(observations),
                 value_profile=profiles.get(player.player_id),
             )
         )
