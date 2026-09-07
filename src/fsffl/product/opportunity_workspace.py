@@ -3,16 +3,127 @@ from __future__ import annotations
 from itertools import product
 
 from .runtime import UserRuntimeContext
-from .trade_center_view import build_trade_center_browser_view
+from .trade_analysis_runtime import build_private_beta_trade_analysis
+from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
+from .trade_center_view import (
+    build_trade_center_browser_view,
+    resolve_owned_asset_ref,
+)
 
 
-def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit: int = 120) -> dict[str, object]:
+def _evaluate_structural_trade(
+    runtime: UserRuntimeContext,
+    row: dict[str, object],
+) -> dict[str, object]:
+    """Attach NEXT-5 bilateral evidence to one already-generated search row.
+
+    The product adapter does not reinterpret Decision output and does not promote
+    action authority. This is an enrichment pass over Search candidates so the UI
+    can distinguish merely market-near packages from packages whose current roster
+    consequences have actually been evaluated by NEXT-5.
+    """
+
+    league_state = runtime.league_state
+    focal_team_id = runtime.selected_team_id
+    if league_state is None or focal_team_id is None:
+        return row
+
+    counterparty_team_id = str(row["counterparty_team_id"])
+    send = row.get("send") or []
+    receive = row.get("receive") or []
+    if not send or not receive:
+        return row
+
+    focal_assets = tuple(
+        resolve_owned_asset_ref(
+            league_state,
+            team_id=focal_team_id,
+            asset_ref=str(item["asset_ref"]),
+        )
+        for item in send
+    )
+    counterparty_assets = tuple(
+        resolve_owned_asset_ref(
+            league_state,
+            team_id=counterparty_team_id,
+            asset_ref=str(item["asset_ref"]),
+        )
+        for item in receive
+    )
+    draft = TradeDraft(
+        draft_id=(
+            f"opportunity:{league_state.state_id}:{focal_team_id}:"
+            f"{counterparty_team_id}:{send[0]['asset_ref']}:{receive[0]['asset_ref']}"
+        ),
+        focal_team_id=focal_team_id,
+        counterparty_team_id=counterparty_team_id,
+        focal_side=TradeDraftSide(team_id=focal_team_id, assets=focal_assets),
+        counterparty_side=TradeDraftSide(
+            team_id=counterparty_team_id,
+            assets=counterparty_assets,
+        ),
+    )
+    proposal = submit_trade_draft(draft, as_of=league_state.as_of)
+    analysis = build_private_beta_trade_analysis(
+        runtime,
+        proposal,
+        focal_team_id=focal_team_id,
+    )
+
+    decision = analysis.get("decision") or {}
+    side_a = decision.get("side_a") or {}
+    side_b = decision.get("side_b") or {}
+    focal_side = side_a if side_a.get("team_id") == focal_team_id else side_b
+    counterparty_side = (
+        side_a if side_a.get("team_id") == counterparty_team_id else side_b
+    )
+
+    evaluation = analysis.get("evaluation") or {}
+    eval_a = evaluation.get("side_a") or {}
+    eval_b = evaluation.get("side_b") or {}
+    focal_eval = eval_a if eval_a.get("team_id") == focal_team_id else eval_b
+    counterparty_eval = (
+        eval_a if eval_a.get("team_id") == counterparty_team_id else eval_b
+    )
+
+    return {
+        **row,
+        "bilateral_decision_evaluated": decision != {},
+        "decision_shape": decision.get("shape"),
+        "focal_decision_shape": focal_side.get("shape"),
+        "counterparty_decision_shape": counterparty_side.get("shape"),
+        "focal_roster_delta": (focal_eval.get("delta") or {}).get("resilience"),
+        "counterparty_roster_delta": (
+            counterparty_eval.get("delta") or {}
+        ).get("resilience"),
+        "behavioral_evidence_attached": bool(
+            (analysis.get("availability") or {}).get("behavioral_evidence")
+        ),
+        "post_trade_simulation_attached": bool(
+            (analysis.get("availability") or {}).get("competitive_outcomes")
+        ),
+        "explanation": (
+            "Market-comparable structural trade test enriched with the current "
+            "NEXT-5 bilateral roster-consequence view. It remains diagnostic until "
+            "materiality, Behavioral evidence, and changed-state competitive outcomes "
+            "support stronger authority."
+        ),
+    }
+
+
+def build_opportunity_workspace(
+    runtime: UserRuntimeContext,
+    *,
+    candidate_limit: int = 120,
+    bilateral_evaluation_limit: int = 24,
+) -> dict[str, object]:
     """Build a read-only private-beta Opportunity workspace.
 
     Search may consume authoritative Value to order structural candidates, but it
-    does not grant action authority. Until acceptance/materiality and changed-state
-    competitive evidence are attached, trade rows remain diagnostic market tests.
-    The retired provisional Value challenger is deliberately excluded.
+    does not grant action authority. The highest market-near rows are enriched with
+    the existing NEXT-5 bilateral Decision adapter under an explicit product compute
+    budget. Unknown acceptance/materiality and changed-state simulation remain
+    blockers. The retired provisional Value challenger is deliberately excluded.
     """
 
     league_state = runtime.league_state
@@ -22,7 +133,10 @@ def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit:
     if focal_team_id is None:
         raise ValueError("No managed team is selected")
 
-    browser = build_trade_center_browser_view(league_state, focal_team_id=focal_team_id)
+    browser = build_trade_center_browser_view(
+        league_state,
+        focal_team_id=focal_team_id,
+    )
     values = runtime.value_evidence
     cardinal = {
         row.asset_id: row
@@ -36,7 +150,10 @@ def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit:
 
     candidates: list[dict[str, object]] = []
     for counterparty in browser.counterparties:
-        for focal_asset, target_asset in product(browser.focal_team.assets, counterparty.assets):
+        for focal_asset, target_asset in product(
+            browser.focal_team.assets,
+            counterparty.assets,
+        ):
             focal_value = option_value(focal_asset)
             target_value = option_value(target_asset)
             if focal_value is None or target_value is None:
@@ -66,8 +183,15 @@ def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit:
                         }
                     ],
                     "search_distance": abs(target_value - focal_value),
-                    "reasons": ["unknown_acceptance", "materiality_not_evaluated"],
-                    "explanation": "Market-comparable structural trade test. Decision and acceptance evidence are not yet complete enough to recommend action.",
+                    "reasons": [
+                        "unknown_acceptance",
+                        "materiality_not_evaluated",
+                    ],
+                    "bilateral_decision_evaluated": False,
+                    "explanation": (
+                        "Market-comparable structural trade test. Decision and "
+                        "acceptance evidence are not yet complete enough to recommend action."
+                    ),
                 }
             )
 
@@ -79,7 +203,21 @@ def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit:
         )
     )
     total_candidate_count = len(candidates)
-    candidates = candidates[: max(candidate_limit, 0)]
+    returned = candidates[: max(candidate_limit, 0)]
+
+    evaluate_count = min(
+        max(bilateral_evaluation_limit, 0),
+        len(returned),
+    )
+    for index in range(evaluate_count):
+        try:
+            returned[index] = _evaluate_structural_trade(runtime, returned[index])
+        except ValueError as exc:
+            returned[index] = {
+                **returned[index],
+                "bilateral_decision_evaluated": False,
+                "decision_error": str(exc),
+            }
 
     rostered_ids = {
         entry.player_id
@@ -103,7 +241,10 @@ def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit:
                 "status": player_state.status.value if player_state is not None else "unknown",
                 "fsffl_value": value_row.score if value_row is not None else None,
                 "action_authority": "diagnostic_only",
-                "explanation": "Currently unowned in canonical State. Availability is descriptive; add/drop materiality has not yet been evaluated.",
+                "explanation": (
+                    "Currently unowned in canonical State. Availability is descriptive; "
+                    "add/drop materiality has not yet been evaluated."
+                ),
             }
         )
     available_players.sort(
@@ -121,10 +262,14 @@ def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit:
         "focal_team_name": browser.focal_team.display_name,
         "trade_discovery": {
             "candidate_count": total_candidate_count,
-            "returned_count": len(candidates),
-            "truncated": total_candidate_count > len(candidates),
+            "returned_count": len(returned),
+            "truncated": total_candidate_count > len(returned),
             "ordering": "authoritative_cardinal_market_distance",
-            "candidates": candidates,
+            "bilateral_evaluated_count": sum(
+                1 for row in returned if row.get("bilateral_decision_evaluated")
+            ),
+            "bilateral_evaluation_limit": bilateral_evaluation_limit,
+            "candidates": returned,
         },
         "available_players": {
             "count": len(available_players),
@@ -133,14 +278,15 @@ def build_opportunity_workspace(runtime: UserRuntimeContext, *, candidate_limit:
         "capabilities": {
             "structural_trade_discovery": True,
             "authoritative_value_ordering": values is not None and bool(cardinal),
-            "bilateral_decision_evaluation": False,
+            "bilateral_decision_evaluation": evaluate_count > 0,
             "behavioral_acceptance": False,
             "waiver_materiality": False,
             "post_transaction_simulation": False,
         },
         "authority": {
-            "search_role": "candidate_generation_and_ordering_only",
+            "search_role": "candidate_generation_ordering_and_decision_enrichment",
             "recommendation_authority": False,
             "provisional_value_used": False,
+            "bilateral_evaluation_budget_is_product_compute_policy": True,
         },
     }
