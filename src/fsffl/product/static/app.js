@@ -36,7 +36,7 @@ function fmtPercent(value,digits=1){return typeof value==='number'?`${(value*100
 function fmtAge(value){if(typeof value!=='number')return'—';return Number.isInteger(value)?value.toFixed(0):value.toFixed(1)}
 function fmtFsfflValue(value){if(typeof value!=='number')return'—';return value.toLocaleString(undefined,{maximumFractionDigits:Number.isInteger(value)?0:1})}
 function escapeHtml(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
-function playerProjection(player){const obs=(player.forecasts||[]).find(item=>item.metric==='fantasy_points');return obs?.distribution?fmtNumber(obs.distribution.mean,1):'—'}
+function playerProjection(player){const observations=player?.forecasts||[];const obs=observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='season')||observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='fantasy_regular_season')||observations.find(item=>item.metric==='fantasy_points');return obs?.distribution?fmtNumber(obs.distribution.mean,1):'—'}
 function playerMarketPercentile(player){const estimate=player.value_profile?.market_price;if(!estimate?.distribution)return'—';if(estimate.scale?.scale_id==='dynasty-market-percentile')return`${fmtNumber(estimate.distribution.mean*100,1)} pct`;return'—'}
 function provisionalScoreFor(assetId){return(state.valueCatalog?.provisional_fsffl_values||[]).find(item=>item.asset_id===assetId)||null}
 const provisionalValueExplanation='Provisional FSFFL Value is currently exposed for private-beta product testing. Calibration and validation are still in progress. Do not use this number to evaluate player or trade sanity yet.';
