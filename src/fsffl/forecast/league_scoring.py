@@ -22,7 +22,7 @@ class ScoringCoverage(FrozenModel):
     provisional_residual_rule_stats: tuple[str, ...] = ()
     unsupported_rule_stats: tuple[str, ...]
     ignored_non_lineup_rule_stats: tuple[str, ...]
-    model_version: str = "next2-league-scoring-bridge-v2"
+    model_version: str = "next2-league-scoring-bridge-v3"
 
 
 @dataclass(frozen=True)
@@ -49,6 +49,16 @@ _TWO_POINT_RULES: dict[str, ForecastMetric] = {
     "rush_2pt": ForecastMetric.RUSH_TD,
     "rec_2pt": ForecastMetric.REC_TD,
 }
+
+# A scored fantasy-points observation is authoritative only when every material
+# component in each active player domain is present. Without this guard a QB can
+# retain pass/rush yards while TD metrics fall below ensemble coverage and still
+# be mislabeled as a complete full-season fantasy projection.
+_MATERIAL_SCORING_DOMAINS: tuple[frozenset[ForecastMetric], ...] = (
+    frozenset({ForecastMetric.PASS_YARDS, ForecastMetric.PASS_TD, ForecastMetric.INTERCEPTIONS}),
+    frozenset({ForecastMetric.RUSH_YARDS, ForecastMetric.RUSH_TD}),
+    frozenset({ForecastMetric.RECEPTIONS, ForecastMetric.REC_YARDS, ForecastMetric.REC_TD}),
+)
 
 # Explicit bounded beta priors for very rare player-scoring events that current
 # vetted projection sources do not expose. These are deliberately tiny and live
@@ -124,6 +134,28 @@ def classify_scoring_coverage(rules: LeagueRules) -> ScoringCoverage:
     )
 
 
+def _missing_material_scored_metrics(
+    *,
+    by_metric: dict[ForecastMetric, ForecastObservation],
+    coefficient_by_metric: dict[ForecastMetric, float],
+) -> tuple[ForecastMetric, ...]:
+    missing: set[ForecastMetric] = set()
+    for domain in _MATERIAL_SCORING_DOMAINS:
+        configured = {
+            metric
+            for metric in domain
+            if coefficient_by_metric.get(metric, 0.0) != 0.0
+        }
+        if not configured:
+            continue
+        # A domain is relevant to this player only when at least one raw forecast
+        # observation from that domain exists. This avoids requiring passing stats
+        # for ordinary RB/WR/TE projections while still preventing partial domains.
+        if any(metric in by_metric for metric in domain):
+            missing.update(configured.difference(by_metric))
+    return tuple(sorted(missing, key=lambda metric: metric.value))
+
+
 def _provisional_residual(
     *,
     position: Position,
@@ -163,7 +195,7 @@ def derive_league_fantasy_point_forecasts(
     *,
     rules: LeagueRules,
     source: str = "fsffl:league_scored",
-    model_version: str = "next2-league-scoring-bridge-v2",
+    model_version: str = "next2-league-scoring-bridge-v3",
 ) -> tuple[ForecastObservation, ...]:
     coverage = classify_scoring_coverage(rules)
     if coverage.status == ScoringCoverageStatus.INCOMPLETE:
@@ -197,6 +229,14 @@ def derive_league_fantasy_point_forecasts(
     output: list[ForecastObservation] = []
     for items in grouped.values():
         by_metric = {item.metric: item for item in items}
+        if _missing_material_scored_metrics(
+            by_metric=by_metric,
+            coefficient_by_metric=coefficient_by_metric,
+        ):
+            # Missing material scoring evidence must not be interpreted as zero.
+            # Fail closed for this player/horizon rather than publishing a partial
+            # total under the authoritative fantasy-points metric.
+            continue
         active = [
             (metric, coefficient, by_metric[metric])
             for metric, coefficient in coefficient_by_metric.items()
