@@ -31,6 +31,6 @@ def test_opportunity_discovery_shows_behavior_as_context_not_search_authority() 
     source = (ROOT / "src/fsffl/product/static/opportunities.js").read_text()
     assert "/api/behavioral/profiles" in source
     assert "Owner history" in source
-    assert "context only" in source
-    assert "does not rewrite market Value" in source
-    assert "Decision materiality pending" in source
+    assert "Owner history does not rewrite Value" in source
+    assert "create an acceptance percentage" in source
+    assert "acceptance is unestimated" in source
