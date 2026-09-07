@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 from statistics import mean, median
 
 from pydantic import Field
@@ -14,7 +14,7 @@ from .package_transaction_evidence import MultiAssetTradeObservation, PackageAss
 
 class OneForManyPackageObservation(FrozenModel):
     transaction_id: str
-    completed_at: object
+    completed_at: datetime
     singleton_roster_id: int = Field(ge=1)
     package_roster_id: int = Field(ge=1)
     singleton_asset_id: str
@@ -60,10 +60,10 @@ def _latest_values_before(
     *,
     source_id: str,
     market_context_id: str,
-    completed_at,
+    completed_at: datetime,
     max_age: timedelta,
 ) -> dict[str, float]:
-    latest: dict[str, tuple[object, float]] = {}
+    latest: dict[str, tuple[datetime, float]] = {}
     for row in history:
         if row.source_id != source_id or row.market_context_id != market_context_id:
             continue
