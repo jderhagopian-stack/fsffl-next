@@ -13,6 +13,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
+from fsffl.opportunity import WaiverMove
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
@@ -42,6 +43,7 @@ from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
+from .waiver_action_runtime import build_actionable_waiver_comparison
 
 
 _STATIC_DIR = Path(__file__).with_name("static")
@@ -65,6 +67,11 @@ class AnalyzeTradeRequest(FrozenModel):
     counterparty_team_id: str
     focal_asset_refs: tuple[str, ...]
     counterparty_asset_refs: tuple[str, ...]
+
+
+class EvaluateWaiverRequest(FrozenModel):
+    add_player_id: str
+    drop_player_id: str | None = None
 
 
 def _beta_auth_enabled() -> bool:
@@ -588,6 +595,27 @@ def create_app(
         runtime = store.get(user_id)
         try:
             return build_opportunity_workspace(runtime)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @application.post("/api/opportunities/waiver")
+    def evaluate_waiver(request: EvaluateWaiverRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if runtime.selected_team_id is None:
+            raise HTTPException(status_code=409, detail="No managed team is selected")
+        move = WaiverMove(
+            focal_team_id=runtime.selected_team_id,
+            add_player_id=request.add_player_id,
+            drop_player_id=request.drop_player_id,
+        )
+        try:
+            return build_actionable_waiver_comparison(
+                runtime,
+                move,
+                simulation_loader=simulation_loader,
+            )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
