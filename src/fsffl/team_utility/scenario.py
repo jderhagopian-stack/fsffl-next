@@ -13,6 +13,7 @@ class CompetitiveOutcomeDelta(FrozenModel):
     expected_wins: float | None = None
     playoff_probability: float | None = None
     first_place_probability: float | None = None
+    championship_probability: float | None = None
 
 
 class RosterResilienceDelta(FrozenModel):
@@ -28,12 +29,7 @@ class AssetPortfolioDelta(FrozenModel):
 
 
 class TeamScenarioDelta(FrozenModel):
-    """Structured before/after consequence comparison for one team.
-
-    This object does not decide whether a move is good, recommend a trade, or
-    combine channels into a scalar score. It only records differences between
-    two authoritative NEXT-4 team-utility states.
-    """
+    """Structured before/after consequence comparison for one team."""
 
     team_id: str
     baseline_as_of: datetime
@@ -63,7 +59,7 @@ def compare_team_utility_vectors(
     baseline: TeamUtilityVector,
     scenario: TeamUtilityVector,
     *,
-    model_version: str = "next4-scenario-delta-v1",
+    model_version: str = "next4-scenario-delta-v2",
 ) -> TeamScenarioDelta:
     """Compare two team-utility states without collapsing distinct channels."""
 
@@ -86,6 +82,10 @@ def compare_team_utility_vectors(
             first_place_probability=(
                 scenario.competitive_outcome.first_place_probability
                 - baseline.competitive_outcome.first_place_probability
+            ),
+            championship_probability=(
+                scenario.competitive_outcome.championship_probability
+                - baseline.competitive_outcome.championship_probability
             ),
         )
 
