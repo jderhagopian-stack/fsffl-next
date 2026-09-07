@@ -38,6 +38,7 @@ def test_trade_center_renders_bilateral_analysis_instead_of_raw_json() -> None:
     assert "function renderTradeAnalysis(result)" in source
     assert "Bilateral consequence view" in source
     assert "Competitive impact" in source
-    assert "Acceptance probability" in source
-    assert "Provisional FSFFL Value shown in the builder is not used in this analysis." in source
+    assert "Behavioral plausibility" in source
+    assert "Descriptive evidence only" in source
+    assert "Authoritative FSFFL Value is market context" in source
     assert "JSON.stringify(result,null,2)" not in source
