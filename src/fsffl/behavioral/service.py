@@ -19,6 +19,7 @@ class BehavioralSyncResult:
     inserted_event_count: int
     reused_historical_league_ids: tuple[str, ...]
     scanned_league_ids: tuple[str, ...]
+    current_owner_by_roster: tuple[tuple[int, str], ...]
     profiles: tuple[OwnerBehaviorProfile, ...]
 
 
@@ -58,7 +59,6 @@ class BehavioralIntelligenceService:
         # All non-current leagues in a Sleeper family are immutable historical
         # seasons. Once scanned successfully they can be reused on every later
         # login; only the current league is rescanned for new transactions.
-        scanned_ids = {event.league_external_id for event in history.events}
         current = history.current_league_external_id
         for league_id in history.league_chain:
             if league_id == current or league_id in completed:
@@ -89,5 +89,6 @@ class BehavioralIntelligenceService:
             inserted_event_count=inserted,
             reused_historical_league_ids=reused,
             scanned_league_ids=scanned,
+            current_owner_by_roster=history.current_owner_by_roster,
             profiles=profiles,
         )
