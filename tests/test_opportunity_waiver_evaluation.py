@@ -20,11 +20,12 @@ AS_OF = datetime(2026, 9, 5, tzinfo=UTC)
 SCALE = ValueScale(scale_id="fsffl", version="1", unit_label="points")
 
 
-def _competitive_policy(*, evidence_through=AS_OF) -> CompetitiveMaterialityPolicy:
+def _competitive_policy(*, evidence_through=AS_OF, championship_threshold=0.005) -> CompetitiveMaterialityPolicy:
     return CompetitiveMaterialityPolicy(
         expected_wins_abs=0.05,
         playoff_probability_abs=0.01,
         first_place_probability_abs=0.005,
+        championship_probability_abs=championship_threshold,
         lineup_drop_abs=0.25,
         model_version="competitive-policy-test",
         evidence_through=evidence_through,
@@ -42,7 +43,7 @@ def _economic_policy(scale=SCALE) -> EconomicMaterialityPolicy:
     )
 
 
-def _delta(*, wins=0.2, playoff=0.03, first=0.01, fragility=-0.5, value=25.0):
+def _delta(*, wins=0.2, playoff=0.03, first=0.01, championship=0.01, fragility=-0.5, value=25.0):
     return TeamScenarioDelta(
         team_id="a",
         baseline_as_of=AS_OF,
@@ -51,6 +52,7 @@ def _delta(*, wins=0.2, playoff=0.03, first=0.01, fragility=-0.5, value=25.0):
             expected_wins=wins,
             playoff_probability=playoff,
             first_place_probability=first,
+            championship_probability=championship,
         ),
         resilience=RosterResilienceDelta(
             largest_single_player_lineup_drop=fragility,
@@ -83,7 +85,33 @@ def test_uniform_material_gain_can_support_actionable_waiver() -> None:
     )
 
     assert assessment.disposition == WaiverOpportunityDisposition.SUPPORT
+    assert assessment.championship_probability.value == "material_gain"
     assert candidate.action_authority == ActionAuthority.ACTIONABLE
+
+
+def test_first_place_is_diagnostic_not_action_authority() -> None:
+    assessment = assess_waiver_materiality(
+        _delta(first=-0.5, championship=0.01),
+        as_of=AS_OF,
+        competitive_policy=_competitive_policy(),
+        economic_policy=_economic_policy(),
+        economic_scale=SCALE,
+    )
+    assert assessment.first_place_probability.value == "material_loss"
+    assert assessment.championship_probability.value == "material_gain"
+    assert assessment.disposition == WaiverOpportunityDisposition.SUPPORT
+
+
+def test_missing_championship_policy_withholds_waiver_action() -> None:
+    assessment = assess_waiver_materiality(
+        _delta(),
+        as_of=AS_OF,
+        competitive_policy=_competitive_policy(championship_threshold=None),
+        economic_policy=_economic_policy(),
+        economic_scale=SCALE,
+    )
+    assert assessment.championship_probability.value == "unavailable"
+    assert assessment.disposition == WaiverOpportunityDisposition.INSUFFICIENT_EVIDENCE
 
 
 def test_mixed_waiver_tradeoff_stays_review_only() -> None:
