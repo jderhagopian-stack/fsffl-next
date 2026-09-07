@@ -62,6 +62,13 @@ from .materiality import (
     classify_positive_delta,
 )
 from .models import BilateralTradeProposal, TradeLeg
+from .roster_legality import (
+    MandatoryRosterCut,
+    ResolvedRosterState,
+    RosterLegalityStatus,
+    TeamRosterLegalityResolution,
+    resolve_mandatory_roster_cuts,
+)
 from .scenario import AppliedTradeScenario, apply_bilateral_trade
 from .strategy import StrategicSideContext, StrategicTradeContext, attach_owner_strategy
 
@@ -87,14 +94,18 @@ __all__ = [
     "EconomicNetStatus",
     "ExpectedEconomicNetDelta",
     "ExpectedPackageValue",
+    "MandatoryRosterCut",
     "MaterialityDirection",
     "MissingEconomicEvidence",
     "NegotiationFeasibilityShape",
+    "ResolvedRosterState",
+    "RosterLegalityStatus",
     "SideDecisionShape",
     "SideDirectionalAssessment",
     "SideMaterialAssessment",
     "StrategicSideContext",
     "StrategicTradeContext",
+    "TeamRosterLegalityResolution",
     "TradeAcceptanceView",
     "TradeDecisionDisposition",
     "TradeDisposition",
@@ -117,5 +128,6 @@ __all__ = [
     "classify_positive_delta",
     "decide_trade_disposition",
     "evaluate_bilateral_trade_deltas",
+    "resolve_mandatory_roster_cuts",
     "summarize_bilateral_trade_economics",
 ]
