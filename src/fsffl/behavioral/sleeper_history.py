@@ -18,6 +18,7 @@ class SleeperLeagueHistory:
     league_family_id: str
     current_league_external_id: str
     league_chain: tuple[str, ...]
+    current_owner_by_roster: tuple[tuple[int, str], ...]
     events: tuple[OwnerBehaviorEvent, ...]
 
 
@@ -64,6 +65,7 @@ class SleeperBehaviorHistorySource:
         if not oldest:
             raise ValueError("Sleeper league history is missing league_id")
         family_id = f"sleeper-family:{oldest}"
+        current_owner_by_roster = self._owner_by_roster(current)
         events: list[OwnerBehaviorEvent] = []
         for league in reversed(chain_payloads):
             external_id = str(league.get("league_id") or "").strip()
@@ -74,6 +76,7 @@ class SleeperBehaviorHistorySource:
                     family_id,
                     league,
                     player_positions=player_positions or {},
+                    owner_by_roster=(current_owner_by_roster if external_id == current else None),
                 )
             )
 
@@ -81,19 +84,12 @@ class SleeperBehaviorHistorySource:
             league_family_id=family_id,
             current_league_external_id=current,
             league_chain=tuple(str(row.get("league_id")) for row in reversed(chain_payloads)),
+            current_owner_by_roster=tuple(sorted(current_owner_by_roster.items())),
             events=tuple(sorted(events, key=lambda item: (item.occurred_at, item.event_id))),
         )
 
-    def _league_events(
-        self,
-        family_id: str,
-        league: Mapping[str, Any],
-        *,
-        player_positions: Mapping[str, str],
-    ) -> list[OwnerBehaviorEvent]:
-        external_id = str(league["league_id"])
-        season = int(league["season"])
-        rosters = self._get(f"/league/{external_id}/rosters")
+    def _owner_by_roster(self, league_external_id: str) -> dict[int, str]:
+        rosters = self._get(f"/league/{league_external_id}/rosters")
         if not isinstance(rosters, Sequence) or isinstance(rosters, (str, bytes)):
             raise ValueError("Sleeper historical rosters must be a sequence")
         owner_by_roster: dict[int, str] = {}
@@ -105,6 +101,19 @@ class SleeperBehaviorHistorySource:
             if owner is None or roster_id is None:
                 continue
             owner_by_roster[int(roster_id)] = str(owner)
+        return owner_by_roster
+
+    def _league_events(
+        self,
+        family_id: str,
+        league: Mapping[str, Any],
+        *,
+        player_positions: Mapping[str, str],
+        owner_by_roster: Mapping[int, str] | None = None,
+    ) -> list[OwnerBehaviorEvent]:
+        external_id = str(league["league_id"])
+        season = int(league["season"])
+        owner_map = dict(owner_by_roster) if owner_by_roster is not None else self._owner_by_roster(external_id)
 
         # Sleeper exposes transactions by week. Fetching them independently keeps
         # the expensive first build parallelizable; completed historical seasons
@@ -157,7 +166,7 @@ class SleeperBehaviorHistorySource:
                     roster_ids = tuple(sorted(involved))
 
                 for roster_id in roster_ids:
-                    owner_id = owner_by_roster.get(roster_id)
+                    owner_id = owner_map.get(roster_id)
                     if owner_id is None:
                         continue
                     acquired: list[BehavioralAsset] = []
@@ -222,9 +231,9 @@ class SleeperBehaviorHistorySource:
                     counterparties = tuple(
                         sorted(
                             {
-                                owner_by_roster[other]
+                                owner_map[other]
                                 for other in roster_ids
-                                if other != roster_id and other in owner_by_roster
+                                if other != roster_id and other in owner_map
                             }
                         )
                     )
