@@ -13,6 +13,9 @@ from fsffl.value.historical_pick_evidence import (
 from fsffl.value.models import ValueDistribution, ValueScale
 
 
+SCALE = ValueScale(scale_id="test-dynasty", version="1", unit_label="test units")
+
+
 def _rules(team_count=10, rounds=4):
     return LeagueRules(
         team_count=team_count,
@@ -39,7 +42,7 @@ def _frozen(slot, mean, *, season=2025, available_at=None):
         round=2,
         slot_in_round=slot,
         value=ValueDistribution(mean=mean, stddev=5),
-        scale=ValueScale.FSFFL,
+        scale=SCALE,
         available_at=available_at or datetime(2025, 6, 1, tzinfo=UTC),
         model_version=f"frozen-{season}",
         provenance=f"frozen draft evidence {season}",
