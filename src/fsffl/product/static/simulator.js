@@ -1,4 +1,4 @@
-const fsfflSimulatorState={selected:new Set(),team:null,result:null,loading:false};
+const fsfflSimulatorState={selected:new Set(),team:null,result:null,history:[],loading:false};
 
 function simulatorFmtNumber(value,digits=2){
   if(typeof value!=='number'||!Number.isFinite(value))return'—';
@@ -19,14 +19,21 @@ function simulatorToggle(playerId){
 function simulatorMetricCard(label,value,note=''){
   return `<div class="metric-card"><span class="metric-label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${note?`<small>${escapeHtml(note)}</small>`:''}</div>`;
 }
+function simulatorScenarioLabel(result){return (result?.player_names||result?.players?.map(item=>item.player_name)||[]).join(' + ')||'Availability stress test'}
+function retainSimulatorScenario(result){
+  if(!result||result.error||!result.state_id_after)return;
+  const history=fsfflSimulatorState.history.filter(item=>item.state_id_after!==result.state_id_after);
+  history.unshift(result);
+  fsfflSimulatorState.history=history.slice(0,4);
+}
 function simulatorScenarioResult(result){
   if(!result)return'';
   const competitive=result.team_delta?.competitive||{};
   const resilience=result.team_delta?.resilience||{};
-  const names=(result.player_names||result.players?.map(item=>item.player_name)||[]).join(', ');
+  const names=simulatorScenarioLabel(result);
   const cacheLabel=result.scenario_cache_hit?'Exact scenario reused':'Fresh scenario run';
   return `<article class="panel" style="margin-top:16px">
-    <div class="panel-header"><div><p class="eyebrow">Scenario result</p><h2>${escapeHtml(names||'Availability stress test')}</h2><p class="lead">Compared with the current authoritative baseline.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="status-chip">${escapeHtml(cacheLabel)}</span><span class="status-chip">${Number(result.scenario_simulation_count||0).toLocaleString()} simulations</span></div></div>
+    <div class="panel-header"><div><p class="eyebrow">Scenario result</p><h2>${escapeHtml(names)}</h2><p class="lead">Compared with the current authoritative baseline.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="status-chip">${escapeHtml(cacheLabel)}</span><span class="status-chip">${Number(result.scenario_simulation_count||0).toLocaleString()} simulations</span></div></div>
     <div class="metric-grid">
       ${simulatorMetricCard('Expected wins',simulatorFmtNumber(competitive.expected_wins,2),'Scenario minus baseline')}
       ${simulatorMetricCard('Playoff odds',simulatorFmtPctPoint(competitive.playoff_probability),'Scenario minus baseline')}
@@ -37,6 +44,11 @@ function simulatorScenarioResult(result){
     <p style="color:var(--muted);font-size:12px;margin:12px 0 0">Ownership and FSFFL Value remain unchanged. State owns the hypothetical availability change; NEXT-4 Simulation owns competitive outcomes. Cache reuse is exact-result performance reuse only.</p>
   </article>`;
 }
+function simulatorComparisonTable(){
+  const history=fsfflSimulatorState.history;
+  if(!history.length)return'';
+  return `<article class="panel" style="margin-top:16px"><div class="panel-header"><div><p class="eyebrow">Scenario comparison</p><h2>Compare recent stress tests</h2><p class="lead">These are the server-returned deltas for up to four exact scenarios. The browser does not create a winner score.</p></div><button type="button" id="clear-simulator-history" class="text-button">Clear</button></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Scenario</th><th>Expected wins</th><th>Playoff odds</th><th>Championship odds</th><th>State after</th><th>Run</th></tr></thead><tbody>${history.map(result=>{const competitive=result.team_delta?.competitive||{};return `<tr><td>${escapeHtml(simulatorScenarioLabel(result))}</td><td>${escapeHtml(simulatorFmtNumber(competitive.expected_wins,2))}</td><td>${escapeHtml(simulatorFmtPctPoint(competitive.playoff_probability))}</td><td>${escapeHtml(simulatorFmtPctPoint(competitive.championship_probability))}</td><td>${escapeHtml(result.calculated_state_after||'—')}</td><td>${escapeHtml(result.scenario_cache_hit?'Reused exact result':'Fresh 50k')}</td></tr>`}).join('')}</tbody></table></div><p style="color:var(--muted);font-size:11px;margin:10px 0 0">Presentation only: no cross-scenario composite, recommendation, Value change, or probability is calculated in the browser.</p></article>`;
+}
 async function runFsfflSimulator(){
   const playerIds=[...fsfflSimulatorState.selected];
   if(!playerIds.length||fsfflSimulatorState.loading)return;
@@ -44,11 +56,12 @@ async function runFsfflSimulator(){
   try{
     const envelope=`simulator:${playerIds.join(',')}`;
     fsfflSimulatorState.result=await api('/api/what-if/player-unavailable',{method:'POST',body:JSON.stringify({player_id:envelope})});
+    retainSimulatorScenario(fsfflSimulatorState.result);
   }catch(error){fsfflSimulatorState.result={error:error.message}}
   finally{fsfflSimulatorState.loading=false;renderFsfflSimulator()}
 }
 async function loadFsfflSimulator(){
-  if(!state?.context?.team_id){fsfflSimulatorState.team=null;renderFsfflSimulator();return}
+  if(!state?.context?.team_id){fsfflSimulatorState.team=null;fsfflSimulatorState.history=[];renderFsfflSimulator();return}
   try{fsfflSimulatorState.team=await api('/api/my-team')}catch(_error){fsfflSimulatorState.team=null}
   renderFsfflSimulator();
 }
@@ -62,8 +75,9 @@ function renderFsfflSimulator(){
   panel.innerHTML=`<p class="eyebrow">Simulator</p><h2>Stress-test multiple roster losses.</h2><p class="lead">Choose one or more active-roster players to make unavailable simultaneously. FSFFL creates one hypothetical State and runs the exact scenario through authoritative 50,000-run Simulation.</p>
     <div class="panel" style="margin-top:16px"><div class="panel-header"><div><strong>Players unavailable in scenario</strong><p style="color:var(--muted);font-size:12px;margin:5px 0 0">${selected.size} selected</p></div><button id="run-simulator" class="primary-button" ${!selected.size||fsfflSimulatorState.loading?'disabled':''}>${fsfflSimulatorState.loading?'Simulating…':'Run scenario'}</button></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:14px">${players.map(row=>`<button type="button" class="asset-option${selected.has(row.player_id)?' selected':''}" data-sim-player="${escapeHtml(row.player_id)}"><span><strong>${escapeHtml(row.display_name||row.player_name||row.player_id)}</strong><small>${escapeHtml(row.position||'')} · ${escapeHtml(row.roster_slot||'active')}</small></span></button>`).join('')}</div></div>
-    ${result?.error?`<div class="chart-empty" style="margin-top:14px"><p>Simulator is unavailable: ${escapeHtml(result.error)}</p></div>`:simulatorScenarioResult(result)}`;
+    ${result?.error?`<div class="chart-empty" style="margin-top:14px"><p>Simulator is unavailable: ${escapeHtml(result.error)}</p></div>`:simulatorScenarioResult(result)}${simulatorComparisonTable()}`;
   panel.querySelectorAll('[data-sim-player]').forEach(button=>button.addEventListener('click',()=>simulatorToggle(button.dataset.simPlayer)));
   panel.querySelector('#run-simulator')?.addEventListener('click',runFsfflSimulator);
+  panel.querySelector('#clear-simulator-history')?.addEventListener('click',()=>{fsfflSimulatorState.history=[];renderFsfflSimulator()});
 }
 window.renderFsfflSimulator=function(){renderFsfflSimulator();if(state?.context?.team_id&&!fsfflSimulatorState.team)loadFsfflSimulator()};
