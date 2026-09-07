@@ -45,7 +45,11 @@ def test_reports_are_presentation_only_and_mobile_responsive() -> None:
     assert "ensureReportsScript" in shell
     assert "renderFsfflReports" in shell
     assert "master score" in source
-    assert ".reduce(" not in source
+    assert "Starter age is descriptive presentation math, not a utility input or team grade." in source
+    assert "Power ranking order is expected wins only" in source
+    assert "No report-only coefficient, blend, or subjective adjustment" in source
+    assert "master_score" not in source
+    assert "composite_score" not in source
     assert "acceptance_probability" not in source
     assert "@media(max-width:760px)" in source
     assert "@media(max-width:460px)" in source
