@@ -6,6 +6,7 @@ from pathlib import Path
 
 TRADE_DECISION_ROOT = Path(__file__).resolve().parents[1] / "src" / "fsffl" / "trade_decision"
 ALLOWED_FSFFL_DEPENDENCIES = {
+    "fsffl.behavioral",
     "fsffl.trade_decision",
     "fsffl.state",
     "fsffl.team_utility",
@@ -34,7 +35,7 @@ def test_trade_decision_depends_only_on_authoritative_upstream_layers() -> None:
                     violations.append(f"{relative}: {name}")
 
     assert violations == [], (
-        "NEXT-5 Trade Decision may consume only State, Value, Team Utility, and its "
-        "own authority; downstream Search/Analytics/Presentation imports found: "
-        + ", ".join(violations)
+        "NEXT-5 Trade Decision may consume only Behavioral evidence, State, Value, "
+        "Team Utility, and its own authority; downstream Search/Analytics/Presentation "
+        "imports found: " + ", ".join(violations)
     )
