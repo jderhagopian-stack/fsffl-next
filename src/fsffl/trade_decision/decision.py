@@ -110,23 +110,21 @@ def assess_side_direction(side: TradeSideEvaluation) -> SideDirectionalAssessmen
     first_place_probability = _positive(competitive.first_place_probability if competitive else None)
     championship_probability = _positive(competitive.championship_probability if competitive else None)
     asset_portfolio_mean = _positive(delta.asset_portfolio.mean_value if delta.asset_portfolio else None)
-    largest_single_player_lineup_drop = _negative(
-        resilience.largest_single_player_lineup_drop if resilience else None
-    )
+    largest_single_player_lineup_drop = _negative(resilience.largest_single_player_lineup_drop if resilience else None)
     bench_forecasted_count = _positive(resilience.bench_forecasted_count if resilience else None)
     unavailable_count = _negative(resilience.unavailable_count if resilience else None)
     missing_forecast_count = _negative(resilience.missing_forecast_count if resilience else None)
-    directions = (
+    legacy_directions = (
         expected_wins,
         playoff_probability,
         first_place_probability,
-        championship_probability,
         asset_portfolio_mean,
         largest_single_player_lineup_drop,
         bench_forecasted_count,
         unavailable_count,
         missing_forecast_count,
     )
+    shape_directions = legacy_directions + ((championship_probability,) if championship_probability != Direction.UNAVAILABLE else ())
     return SideDirectionalAssessment(
         team_id=side.team_id,
         expected_wins=expected_wins,
@@ -138,7 +136,7 @@ def assess_side_direction(side: TradeSideEvaluation) -> SideDirectionalAssessmen
         bench_forecasted_count=bench_forecasted_count,
         unavailable_count=unavailable_count,
         missing_forecast_count=missing_forecast_count,
-        shape=_shape(directions),
+        shape=_shape(shape_directions),
     )
 
 
@@ -154,19 +152,9 @@ def _bilateral_shape(side_a, side_b) -> BilateralDecisionShape:
     return BilateralDecisionShape.MIXED_OR_INCOMPLETE
 
 
-def classify_bilateral_trade_decision(
-    evaluation: BilateralTradeEvaluation,
-    *,
-    model_version: str = "next5-bilateral-decision-v2",
-) -> BilateralTradeDecision:
+def classify_bilateral_trade_decision(evaluation: BilateralTradeEvaluation, *, model_version: str = "next5-bilateral-decision-v2") -> BilateralTradeDecision:
     if not model_version.strip():
         raise ValueError("model_version cannot be blank")
     side_a = assess_side_direction(evaluation.side_a)
     side_b = assess_side_direction(evaluation.side_b)
-    return BilateralTradeDecision(
-        proposal_id=evaluation.proposal_id,
-        side_a=side_a,
-        side_b=side_b,
-        shape=_bilateral_shape(side_a, side_b),
-        model_version=model_version,
-    )
+    return BilateralTradeDecision(proposal_id=evaluation.proposal_id, side_a=side_a, side_b=side_b, shape=_bilateral_shape(side_a, side_b), model_version=model_version)
