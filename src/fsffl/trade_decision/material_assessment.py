@@ -23,6 +23,7 @@ class SideMaterialAssessment(FrozenModel):
     largest_single_player_lineup_drop: MaterialityDirection
     market_value: MaterialityDirection
     intrinsic_value: MaterialityDirection
+    championship_probability: MaterialityDirection = MaterialityDirection.UNAVAILABLE
 
 
 class BilateralMaterialAssessment(FrozenModel):
@@ -31,7 +32,7 @@ class BilateralMaterialAssessment(FrozenModel):
     side_b: SideMaterialAssessment
     competitive_policy_version: str
     economic_policy_version: str
-    model_version: str = "next5-material-assessment-v1"
+    model_version: str = "next5-material-assessment-v2"
 
     @model_validator(mode="after")
     def validate_assessment(self) -> "BilateralMaterialAssessment":
@@ -50,6 +51,16 @@ def _economic_direction(net, policy: EconomicMaterialityPolicy) -> MaterialityDi
     if net.scale != policy.scale:
         raise ValueError("economic materiality policy scale must match economic net scale/version")
     return classify_positive_delta(net.mean_delta, absolute_threshold=policy.mean_value_abs)
+
+
+def _championship_direction(
+    value: float | None,
+    policy: CompetitiveMaterialityPolicy,
+) -> MaterialityDirection:
+    threshold = policy.championship_probability_abs
+    if threshold is None:
+        return MaterialityDirection.UNAVAILABLE
+    return classify_positive_delta(value, absolute_threshold=threshold)
 
 
 def _side_assessment(
@@ -77,6 +88,10 @@ def _side_assessment(
             competitive.first_place_probability if competitive else None,
             absolute_threshold=competitive_policy.first_place_probability_abs,
         ),
+        championship_probability=_championship_direction(
+            competitive.championship_probability if competitive else None,
+            competitive_policy,
+        ),
         largest_single_player_lineup_drop=classify_negative_delta(
             resilience.largest_single_player_lineup_drop if resilience else None,
             absolute_threshold=competitive_policy.lineup_drop_abs,
@@ -92,13 +107,14 @@ def assess_bilateral_materiality(
     *,
     competitive_policy: CompetitiveMaterialityPolicy,
     economic_policy: EconomicMaterialityPolicy,
-    model_version: str = "next5-material-assessment-v1",
+    model_version: str = "next5-material-assessment-v2",
 ) -> BilateralMaterialAssessment:
     """Apply explicit, versioned materiality policies to bilateral deltas.
 
-    The function does not choose thresholds, combine channels, infer owner intent,
-    estimate acceptance, or recommend action. Policy evidence dates may not postdate
-    the trade scenario cutoff.
+    Championship probability is the action-facing postseason outcome. Regular-
+    season first-place probability remains available as diagnostic evidence but is
+    no longer the title proxy used by disposition. This function does not choose
+    thresholds, infer owner intent, estimate acceptance, or recommend action.
     """
 
     if evaluation.proposal_id != economic_net.proposal_id:
