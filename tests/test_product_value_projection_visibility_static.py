@@ -36,12 +36,25 @@ def test_market_percentile_and_age_precision_are_presented_truthfully() -> None:
     assert "Pick inventory" in html
 
 
+def _assert_season_precedes_fantasy_regular_season(source: str) -> None:
+    season = "item.horizon==='season'"
+    fantasy = "item.horizon==='fantasy_regular_season'"
+    assert season in source
+    assert fantasy in source
+    assert source.index(season) < source.index(fantasy)
+
+
 def test_player_display_prefers_full_nfl_season_without_changing_simulation_horizon() -> None:
     shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    app = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
+    explorer = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
+    my_team = Path("src/fsffl/product/static/my_team_dashboard.js").read_text(encoding="utf-8")
     simulation = Path("src/fsffl/product/simulation_runtime.py").read_text(encoding="utf-8")
-    assert "item.horizon==='season'" in shell
-    assert shell.index("item.horizon==='season'") < shell.index("item.horizon==='fantasy_regular_season'")
+    for source in (shell, app, explorer, my_team):
+        _assert_season_precedes_fantasy_regular_season(source)
     assert "NFL season projection" in shell
+    assert "NFL season projection" in explorer
+    assert "NFL season projection" in my_team
     assert "weeks=fantasy_weeks" in simulation
     assert "build_regular_season_simulation_input" in simulation
 
