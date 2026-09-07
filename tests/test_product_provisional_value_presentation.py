@@ -55,5 +55,5 @@ def test_trade_report_is_human_first_and_mobile_stacks() -> None:
 def test_core_readiness_does_not_present_downstream_capabilities_as_failed_prerequisites() -> None:
     polish = Path("src/fsffl/product/static/product_polish.js").read_text(encoding="utf-8")
     assert "Core ready" in polish
-    assert "not a missing core-intelligence prerequisite" in polish
-    assert "Opportunity discovery activates downstream" in polish
+    assert "Decision capability is connected to the product" in polish
+    assert "Opportunity discovery is live as a downstream consumer" in polish
