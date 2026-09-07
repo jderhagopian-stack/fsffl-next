@@ -29,7 +29,7 @@ def test_trade_center_consumes_descriptive_counterparty_behavior() -> None:
 def test_opportunity_discovery_shows_behavior_as_context_not_search_authority() -> None:
     source = (ROOT / "src/fsffl/product/static/opportunities.js").read_text()
     assert "/api/behavioral/profiles" in source
-    assert "Observed owner behavior" in source
+    assert "Owner history" in source
     assert "context only" in source
     assert "does not rewrite market Value" in source
     assert "Decision materiality pending" in source
