@@ -6,11 +6,12 @@ from fsffl.state.models import LeagueState, RosterSlot
 from fsffl.team_utility import compare_team_utility_vectors
 
 from .runtime import LiveForecastEvidence
+from .scenario_cache import run_cached_scenario_simulation
 from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-player-unavailable-what-if-v1"
+_PRODUCT_MODEL_VERSION = "next8-player-unavailable-what-if-v2:scenario-cache"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -32,6 +33,7 @@ def build_player_unavailable_scenario(
     selected player is moved from the active roster to IR for the scenario so the
     existing NEXT-4 lineup and Simulation authorities naturally exclude him. No
     forecast, Value, utility or probability is recalculated in Product code.
+    Exact repeated changed States may reuse the prior authoritative Simulation.
     """
 
     league_state = runtime.league_state
@@ -69,7 +71,11 @@ def build_player_unavailable_scenario(
             )
         }
     )
-    changed = simulation_loader(changed_state, forecast_evidence)
+    changed, cache_hit = run_cached_scenario_simulation(
+        changed_state,
+        forecast_evidence,
+        simulation_loader=simulation_loader,
+    )
     baseline_utility = _utility_for_team(baseline, team_id)
     changed_utility = _utility_for_team(changed, team_id)
     delta = compare_team_utility_vectors(
@@ -88,6 +94,7 @@ def build_player_unavailable_scenario(
         "state_id_after": changed_state.state_id,
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
+        "scenario_cache_hit": cache_hit,
         "team_delta": delta.model_dump(mode="json"),
         "calculated_state_before": baseline_utility.calculated_competitive_state.value,
         "calculated_state_after": changed_utility.calculated_competitive_state.value,
@@ -96,6 +103,7 @@ def build_player_unavailable_scenario(
             "forecast": "NEXT-2 Forecast unchanged",
             "competitive_outcomes": "NEXT-4 Simulation",
             "scenario_delta": "NEXT-4 Team Utility",
+            "scenario_cache": "performance-only exact-result reuse",
             "value": "unchanged; ownership is preserved",
             "presentation_calculation": False,
         },
