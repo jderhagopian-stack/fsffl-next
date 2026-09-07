@@ -39,7 +39,7 @@ class TradeDecisionDisposition(FrozenModel):
     material_assessment_model_version: str
     negotiation_model_version: str
     strategic_context_model_version: str
-    model_version: str = "next5-trade-disposition-v1"
+    model_version: str = "next5-trade-disposition-v2"
 
     @model_validator(mode="after")
     def validate_disposition(self) -> "TradeDecisionDisposition":
@@ -55,10 +55,13 @@ class TradeDecisionDisposition(FrozenModel):
         return self
 
 
+# Action-facing competitive channels use actual postseason championship odds.
+# first_place_probability remains a diagnostic Simulation output but is not a
+# title proxy in the disposition contract.
 _METRICS = (
     "expected_wins",
     "playoff_probability",
-    "first_place_probability",
+    "championship_probability",
     "largest_single_player_lineup_drop",
     "market_value",
     "intrinsic_value",
@@ -105,14 +108,14 @@ def decide_trade_disposition(
     strategic_context: StrategicTradeContext,
     *,
     focal_team_id: str,
-    model_version: str = "next5-trade-disposition-v1",
+    model_version: str = "next5-trade-disposition-v2",
 ) -> TradeDecisionDisposition:
     """Produce a conservative disposition from explicit, material evidence.
 
-    No scalar score is used. Any unavailable required channel yields insufficient
-    evidence. Material gains plus material losses remain mixed and require review
-    or a future governed strategic-resolution policy. Owner posture is recorded
-    but does not silently resolve mixed evidence in v1.
+    No scalar master score is used. Any unavailable required channel yields
+    insufficient evidence. Material gains plus material losses remain mixed and
+    require counter/review; owner posture is recorded but cannot silently rewrite
+    calculated consequences.
     """
 
     if not model_version.strip():
