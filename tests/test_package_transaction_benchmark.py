@@ -27,9 +27,9 @@ def _value(asset_id: str, value: float, observed_at: datetime) -> NativeMarketMa
     )
 
 
-def _leg(asset_id: str, roster_id: int) -> PackageAssetLeg:
+def _leg(asset_id: str, roster_id: int, *, kind: PackageAssetKind = PackageAssetKind.PLAYER) -> PackageAssetLeg:
     return PackageAssetLeg(
-        asset_kind=PackageAssetKind.PLAYER,
+        asset_kind=kind,
         receiving_roster_id=roster_id,
         canonical_asset_id=asset_id,
         source_asset_id=asset_id,
@@ -63,8 +63,49 @@ def test_one_for_many_benchmark_uses_only_prior_fresh_market_values() -> None:
     row = result.observations[0]
     assert row.singleton_market_value == 6000
     assert row.package_market_value == 6600
+    assert row.package_player_count == 2
+    assert row.package_pick_count == 0
+    assert row.package_composition == "2p"
     assert round(row.package_value_premium_ratio, 6) == 0.1
     assert round(row.package_largest_asset_share, 6) == round(4000 / 6600, 6)
+    assert result.by_composition[0].package_composition == "2p"
+
+
+def test_player_plus_pick_package_is_retained_as_one_composition_aware_observation() -> None:
+    completed = datetime(2026, 8, 20, 12, tzinfo=UTC)
+    trade = MultiAssetTradeObservation(
+        transaction_id="t-player-pick",
+        league_id="l1",
+        format_context_id=CONTEXT,
+        completed_at=completed,
+        side_a=PackageTradeSide(roster_id=1, received=(_leg("elite", 1),)),
+        side_b=PackageTradeSide(
+            roster_id=2,
+            received=(
+                _leg("young-player", 2),
+                _leg("pick:2027:R1:mid", 2, kind=PackageAssetKind.PICK),
+            ),
+        ),
+    )
+    history = (
+        _value("elite", 7000, completed - timedelta(days=1)),
+        _value("young-player", 4300, completed - timedelta(days=1)),
+        _value("pick:2027:R1:mid", 3400, completed - timedelta(days=1)),
+    )
+    result = benchmark_one_for_many_package_premium(
+        (trade,),
+        history,
+        source_id=SOURCE,
+        market_context_id=CONTEXT,
+    )
+    assert result.evaluated_trades == 1
+    row = result.observations[0]
+    assert row.package_player_count == 1
+    assert row.package_pick_count == 1
+    assert row.package_composition == "1p+1pick"
+    assert row.package_market_value == 7700
+    assert round(row.package_value_premium_ratio, 6) == 0.1
+    assert result.by_composition[0].package_composition == "1p+1pick"
 
 
 def test_stale_or_unmapped_package_evidence_is_not_forced_into_estimate() -> None:
