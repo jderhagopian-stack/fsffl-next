@@ -55,12 +55,43 @@ function presentRuntimeCapabilities(){
       const detail=node.querySelector('small');
       if(detail){
         const nextText=label==='trade decision'
-          ?'Decision capability is being connected to the product; it is not a missing core-intelligence prerequisite.'
-          :'Opportunity discovery activates downstream of the completed Trade Decision product connection.';
+          ?'Decision capability is connected to the product; changed-state simulation and Behavioral evidence continue to deepen the result.'
+          :'Opportunity discovery is live as a downstream consumer of authoritative evidence.';
         setTextIfChanged(detail,nextText);
       }
     }
   });
+}
+
+let fsfflTradeBehavior={status:'idle',profiles:[]};
+function tradeBehaviorProfile(teamId){return(fsfflTradeBehavior?.profiles||[]).find(row=>row.current_team_id===teamId)||null}
+function topBehaviorEntry(counts){const entries=Object.entries(counts||{}).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));return entries[0]||null}
+function tradeBehaviorNarrative(teamId){
+  const profile=tradeBehaviorProfile(teamId);
+  if(!profile)return fsfflTradeBehavior?.status==='running'?'Historical owner profile is still building in the background.':'No current owner profile is mapped for this franchise yet.';
+  const pieces=[`${profile.trade_count||0} completed trade(s) across ${(profile.seasons_observed||[]).length||1} observed season(s).`];
+  if(profile.trade_count){
+    const shapes=[['consolidation',profile.consolidation_trade_count||0],['diversification',profile.diversification_trade_count||0],['balanced',profile.balanced_trade_count||0]].sort((a,b)=>b[1]-a[1]);
+    if(shapes[0][1])pieces.push(`Most common observed package shape: ${shapes[0][0]} (${shapes[0][1]} trade(s)).`);
+  }
+  const position=topBehaviorEntry(profile.acquired_positions);
+  if(position)pieces.push(`Most frequently acquired position in recorded transactions: ${position[0]} (${position[1]} player(s)).`);
+  if((profile.acquired_pick_count||0)||(profile.disposed_pick_count||0))pieces.push(`Draft picks: ${profile.acquired_pick_count||0} acquired, ${profile.disposed_pick_count||0} sent.`);
+  return pieces.join(' ');
+}
+function renderTradeBehaviorContext(){
+  const row=document.querySelector('.trade-counterparty-row');
+  if(!row)return;
+  let panel=document.querySelector('#trade-behavior-context');
+  if(!panel){panel=document.createElement('div');panel.id='trade-behavior-context';panel.className='panel trade-behavior-context';row.insertAdjacentElement('afterend',panel)}
+  if(!tradeUiState?.counterpartyTeamId){panel.innerHTML='<p class="eyebrow">Behavioral Intelligence</p><strong>Choose a trade partner</strong><p>Select another franchise to see its observed transaction history beside the trade builder.</p>';return}
+  const profile=tradeBehaviorProfile(tradeUiState.counterpartyTeamId);
+  panel.innerHTML=`<div><p class="eyebrow">Behavioral Intelligence</p><strong>${escapeHtml(currentCounterparty()?.display_name||'Trade partner')}</strong><p>${escapeHtml(tradeBehaviorNarrative(tradeUiState.counterpartyTeamId))}</p></div><div class="behavior-authority"><span class="status-chip">${escapeHtml(fsfflTradeBehavior?.status||'unavailable')}</span><small>Observed history informs negotiation context. It does not change market Value or imply an acceptance percentage.</small></div>`;
+}
+async function loadTradeBehavior(){
+  if(!state?.context?.league_id)return;
+  try{fsfflTradeBehavior=await api('/api/behavioral/profiles')}catch(_error){fsfflTradeBehavior={status:'unavailable',profiles:[]}}
+  renderTradeBehaviorContext();
 }
 
 function selectedTradeAssets(side){
@@ -136,7 +167,7 @@ renderTradeAnalysis=function(result){
     </div>
     <section class="human-trade-next">
       <div><strong>Competitive impact</strong><span>${competitiveReady?'Simulation evidence attached':'Post-trade simulation not connected yet'}</span><small>${competitiveReady?'The changed roster has simulation-backed competitive evidence.':'Expected wins, playoff odds and first-place odds will appear here once the changed roster is run through NEXT-4 Simulation authority.'}</small></div>
-      <div><strong>Behavioral plausibility</strong><span>Not estimated yet</span><small>Acceptance and negotiation behavior will appear only from a governed Decision/API contract.</small></div>
+      <div><strong>Behavioral context</strong><span>${tradeBehaviorProfile(counterpartyId)?'Owner history attached':(fsfflTradeBehavior?.status==='running'?'Building owner history':'History unavailable')}</span><small>${escapeHtml(tradeBehaviorNarrative(counterpartyId))} This is descriptive evidence, not an acceptance percentage.</small></div>
     </section>
     <details class="technical-evidence"><summary>Technical evidence & limitations</summary>
       <div class="technical-evidence-grid">${sideAnalysisMarkup(result,focalId)}${sideAnalysisMarkup(result,counterpartyId)}</div>
@@ -169,6 +200,9 @@ function installProductPolish(){
     .human-trade-next>div{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
     .human-trade-next span{font-weight:700}
     .human-trade-next small{color:var(--muted);line-height:1.45}
+    .trade-behavior-context{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-top:-8px}
+    .trade-behavior-context p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+    .behavior-authority{display:flex;flex-direction:column;gap:6px;align-items:flex-end;max-width:360px}.behavior-authority small{color:var(--muted);text-align:right;line-height:1.4}
     .technical-evidence{margin-top:14px;color:var(--muted)}
     .technical-evidence summary{cursor:pointer;color:var(--accent);padding:8px 0}
     .technical-evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:10px}
@@ -177,14 +211,17 @@ function installProductPolish(){
       .human-trade-summary-grid,.human-trade-next,.technical-evidence-grid{grid-template-columns:1fr}
       .human-trade-side{padding:14px}
       .human-trade-package{grid-template-columns:64px minmax(0,1fr)}
+      .trade-behavior-context{display:block}.behavior-authority{align-items:flex-start;max-width:none;margin-top:10px}.behavior-authority small{text-align:left}
     }
   `;
   document.head.appendChild(style);
   presentRuntimeCapabilities();
-  const observer=new MutationObserver(()=>presentRuntimeCapabilities());
-  const grid=document.querySelector('#runtime-stage-grid');
-  if(grid)observer.observe(grid,{childList:true});
-  setInterval(presentRuntimeCapabilities,2000);
+  renderTradeBehaviorContext();
 }
+
+const originalChooseTradeCounterparty=typeof chooseTradeCounterparty==='function'?chooseTradeCounterparty:null;
+if(originalChooseTradeCounterparty){chooseTradeCounterparty=function(teamId){const result=originalChooseTradeCounterparty(teamId);renderTradeBehaviorContext();return result}}
+const originalLoadTradeCenterForBehavior=typeof loadTradeCenter==='function'?loadTradeCenter:null;
+if(originalLoadTradeCenterForBehavior){loadTradeCenter=async function(){const result=await originalLoadTradeCenterForBehavior();await loadTradeBehavior();return result}}
 
 window.addEventListener('load',installProductPolish);
