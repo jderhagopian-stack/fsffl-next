@@ -42,6 +42,7 @@ from .team_page import build_forecast_team_view, build_state_only_team_view
 from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
+from .trade_opportunity_runtime import build_trade_opportunity_evaluation
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
 from .waiver_action_runtime import build_actionable_waiver_comparison
 
@@ -208,6 +209,45 @@ def _default_simulation_loader(
         forecast_model_version=evidence.model_version,
         simulation_count=50_000,
     )
+
+
+def _proposal_from_request(runtime, request: AnalyzeTradeRequest, *, draft_prefix: str) -> BilateralTradeProposal:
+    if runtime.league_state is None:
+        raise ValueError("No league is loaded")
+    if runtime.selected_team_id is None:
+        raise ValueError("No managed team is selected")
+    if request.counterparty_team_id == runtime.selected_team_id:
+        raise ValueError("Trade counterparty must be a different team")
+    focal_assets = tuple(
+        resolve_owned_asset_ref(
+            runtime.league_state,
+            team_id=runtime.selected_team_id,
+            asset_ref=ref,
+        )
+        for ref in request.focal_asset_refs
+    )
+    counterparty_assets = tuple(
+        resolve_owned_asset_ref(
+            runtime.league_state,
+            team_id=request.counterparty_team_id,
+            asset_ref=ref,
+        )
+        for ref in request.counterparty_asset_refs
+    )
+    draft = TradeDraft(
+        draft_id=(
+            f"{draft_prefix}:{runtime.league_state.state_id}:"
+            f"{runtime.selected_team_id}:{request.counterparty_team_id}"
+        ),
+        focal_team_id=runtime.selected_team_id,
+        counterparty_team_id=request.counterparty_team_id,
+        focal_side=TradeDraftSide(team_id=runtime.selected_team_id, assets=focal_assets),
+        counterparty_side=TradeDraftSide(
+            team_id=request.counterparty_team_id,
+            assets=counterparty_assets,
+        ),
+    )
+    return submit_trade_draft(draft, as_of=runtime.league_state.as_of)
 
 
 def create_app(
@@ -619,6 +659,24 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
+    @application.post("/api/opportunities/trade")
+    def evaluate_trade_opportunity(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        try:
+            proposal = _proposal_from_request(
+                runtime,
+                request,
+                draft_prefix="opportunity-trade",
+            )
+            return build_trade_opportunity_evaluation(
+                runtime,
+                proposal,
+                focal_team_id=runtime.selected_team_id,
+                simulation_loader=simulation_loader,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
     @application.get("/api/trade-center/browser")
     def trade_center_browser(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
@@ -635,19 +693,8 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
-        if request.counterparty_team_id == runtime.selected_team_id:
-            raise HTTPException(status_code=422, detail="Trade counterparty must be a different team")
         try:
-            focal_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref) for ref in request.focal_asset_refs)
-            counterparty_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref) for ref in request.counterparty_asset_refs)
-            draft = TradeDraft(
-                draft_id=f"product:{runtime.league_state.state_id}:{runtime.selected_team_id}:{request.counterparty_team_id}",
-                focal_team_id=runtime.selected_team_id,
-                counterparty_team_id=request.counterparty_team_id,
-                focal_side=TradeDraftSide(team_id=runtime.selected_team_id, assets=focal_assets),
-                counterparty_side=TradeDraftSide(team_id=request.counterparty_team_id, assets=counterparty_assets),
-            )
-            proposal = submit_trade_draft(draft, as_of=runtime.league_state.as_of)
+            proposal = _proposal_from_request(runtime, request, draft_prefix="product")
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if trade_evaluator is not None:
@@ -664,23 +711,12 @@ def create_app(
     @application.post("/api/trade-center/frontier")
     def explore_trade_frontier(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
-        if runtime.league_state is None:
-            raise HTTPException(status_code=409, detail="No league is loaded")
-        if runtime.selected_team_id is None:
-            raise HTTPException(status_code=409, detail="No managed team is selected")
-        if request.counterparty_team_id == runtime.selected_team_id:
-            raise HTTPException(status_code=422, detail="Trade counterparty must be a different team")
         try:
-            focal_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref) for ref in request.focal_asset_refs)
-            counterparty_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref) for ref in request.counterparty_asset_refs)
-            draft = TradeDraft(
-                draft_id=f"product-frontier:{runtime.league_state.state_id}:{runtime.selected_team_id}:{request.counterparty_team_id}",
-                focal_team_id=runtime.selected_team_id,
-                counterparty_team_id=request.counterparty_team_id,
-                focal_side=TradeDraftSide(team_id=runtime.selected_team_id, assets=focal_assets),
-                counterparty_side=TradeDraftSide(team_id=request.counterparty_team_id, assets=counterparty_assets),
+            proposal = _proposal_from_request(
+                runtime,
+                request,
+                draft_prefix="product-frontier",
             )
-            proposal = submit_trade_draft(draft, as_of=runtime.league_state.as_of)
             return build_negotiation_frontier(
                 runtime,
                 proposal,
@@ -692,23 +728,12 @@ def create_app(
     @application.post("/api/trade-center/simulate")
     def simulate_trade(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
-        if runtime.league_state is None:
-            raise HTTPException(status_code=409, detail="No league is loaded")
-        if runtime.selected_team_id is None:
-            raise HTTPException(status_code=409, detail="No managed team is selected")
-        if request.counterparty_team_id == runtime.selected_team_id:
-            raise HTTPException(status_code=422, detail="Trade counterparty must be a different team")
         try:
-            focal_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref) for ref in request.focal_asset_refs)
-            counterparty_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref) for ref in request.counterparty_asset_refs)
-            draft = TradeDraft(
-                draft_id=f"product-simulation:{runtime.league_state.state_id}:{runtime.selected_team_id}:{request.counterparty_team_id}",
-                focal_team_id=runtime.selected_team_id,
-                counterparty_team_id=request.counterparty_team_id,
-                focal_side=TradeDraftSide(team_id=runtime.selected_team_id, assets=focal_assets),
-                counterparty_side=TradeDraftSide(team_id=request.counterparty_team_id, assets=counterparty_assets),
+            proposal = _proposal_from_request(
+                runtime,
+                request,
+                draft_prefix="product-simulation",
             )
-            proposal = submit_trade_draft(draft, as_of=runtime.league_state.as_of)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         try:
