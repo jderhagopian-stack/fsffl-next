@@ -35,6 +35,46 @@ class BehavioralRuntimeRecord:
 
 
 BehavioralWork = Callable[[LeagueState, str], BehavioralSyncResult]
+_profile_cache_lock = RLock()
+_profile_cache: dict[tuple[str, str], OwnerBehaviorProfile] = {}
+
+
+def cached_behavior_profile_for_team(
+    league_state: LeagueState,
+    team_id: str,
+) -> OwnerBehaviorProfile | None:
+    """Return already-built Behavioral evidence for this exact State/team.
+
+    This is a read-only runtime convenience for Product evaluators. It does not
+    rebuild history, create substitute evidence, or change Behavioral authority.
+    If the asynchronous Behavioral build has not completed, callers receive None.
+    """
+
+    with _profile_cache_lock:
+        return _profile_cache.get((league_state.state_id, team_id))
+
+
+def _publish_profiles_for_state(
+    league_state: LeagueState,
+    result: BehavioralSyncResult,
+) -> None:
+    profiles_by_owner = {profile.owner_id: profile for profile in result.profiles}
+    owners_by_roster = dict(result.current_owner_by_roster)
+    entries: dict[tuple[str, str], OwnerBehaviorProfile] = {}
+    for team in league_state.teams:
+        sleeper_ref = next((ref for ref in team.provider_refs if ref.provider == "sleeper"), None)
+        if sleeper_ref is None:
+            continue
+        try:
+            roster_id = int(sleeper_ref.external_id)
+        except ValueError:
+            continue
+        owner_id = owners_by_roster.get(roster_id)
+        profile = profiles_by_owner.get(owner_id) if owner_id is not None else None
+        if profile is not None:
+            entries[(league_state.state_id, team.team_id)] = profile
+    with _profile_cache_lock:
+        _profile_cache.update(entries)
 
 
 def default_behavioral_cache_path() -> Path:
@@ -159,3 +199,4 @@ class BehavioralRuntimeCoordinator:
                 result=result,
                 error=None,
             )
+        _publish_profiles_for_state(league_state, result)
