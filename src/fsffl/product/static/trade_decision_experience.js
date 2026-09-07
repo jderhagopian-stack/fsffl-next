@@ -3,32 +3,41 @@
     accept:'Pursue this trade',
     support:'Pursue this trade',
     reject:'Do not make this trade',
+    decline:'Do not make this trade',
     counter:'Counter',
-    counter_or_review:'Counter',
+    counter_or_review:'Counter or review',
     hold:'Hold',
     review:'Review before acting',
+    no_clear_advantage:'No clear advantage',
+    insufficient_evidence:'Not enough evidence to act',
   };
 
   function esc(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
   function words(value){return String(value||'').replaceAll('_',' ')}
   function packageLabel(items){return(items||[]).map(item=>item.label).filter(Boolean).join(' + ')||'—'}
   function dispositionAction(result){return result?.disposition?.action||result?.disposition?.disposition||result?.disposition?.shape||''}
-  function dispositionDrivers(result){const disposition=result?.disposition||{};const raw=disposition.drivers||disposition.reasons||disposition.reason_codes||[];return Array.isArray(raw)?raw:[]}
-  function actionLabel(action){return actionLabels[action]||words(action)||'No action yet'}
   function driverLabel(value){const text=words(value);if(!text)return'';return text.charAt(0).toUpperCase()+text.slice(1)}
+  function dispositionDrivers(result){
+    const evidence=result?.disposition?.evidence||{};
+    const gains=(evidence.material_gains||[]).map(item=>`Gain: ${driverLabel(item)}`);
+    const losses=(evidence.material_losses||[]).map(item=>`Risk: ${driverLabel(item)}`);
+    const missing=(evidence.unavailable_metrics||[]).map(item=>`Missing: ${driverLabel(item)}`);
+    return[...gains,...losses,...missing];
+  }
+  function actionLabel(action){return actionLabels[action]||driverLabel(action)||'No action yet'}
 
   function decisionCard(result){
     const action=dispositionAction(result);
     if(!action)return'';
-    const drivers=dispositionDrivers(result).slice(0,4);
+    const drivers=dispositionDrivers(result).slice(0,6);
     const simulations=Number(result.scenario_simulation_count||0);
     return`<section class="authoritative-trade-decision" style="border:1px solid var(--accent);border-radius:14px;padding:16px;margin:0 0 14px;background:#0a1120">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
         <div><p class="eyebrow" style="margin-bottom:5px">FSFFL decision</p><h2 style="margin:0">${esc(actionLabel(action))}</h2><p style="color:var(--muted);margin:7px 0 0;max-width:760px">This is the authoritative NEXT-5 disposition after the changed roster ran through NEXT-4 Simulation, materiality, negotiation feasibility and the governed package-economics guard.</p></div>
         <span class="status-chip">${simulations?`${simulations.toLocaleString()} scenario runs`:'Changed-state simulation complete'}</span>
       </div>
-      ${drivers.length?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px">${drivers.map(item=>`<span class="opp-badge">${esc(driverLabel(item))}</span>`).join('')}</div>`:''}
-      <p style="font-size:11px;color:var(--muted);margin:12px 0 0">FSFFL Value remains market context. Owner history may inform negotiation context, but no acceptance probability is invented here.</p>
+      ${drivers.length?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px">${drivers.map(item=>`<span class="opp-badge">${esc(item)}</span>`).join('')}</div>`:''}
+      <p style="font-size:11px;color:var(--muted);margin:12px 0 0">The reasons above are copied from the governed disposition evidence. FSFFL Value remains market context. Owner history may inform negotiation context, but no acceptance probability is invented here.</p>
     </section>`;
   }
 
