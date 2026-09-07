@@ -27,14 +27,14 @@ def test_players_assets_filter_state_survives_sort_redraw() -> None:
     assert "renderPlayersAssetsExplorer(values)" in source
 
 
-def test_players_assets_prefers_fantasy_regular_season_projection() -> None:
+def test_players_assets_prefers_full_nfl_season_projection() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
     regular = "item.horizon==='fantasy_regular_season'"
     season = "item.horizon==='season'"
     assert regular in source
     assert season in source
-    assert source.index(regular) < source.index(season)
-    assert "Reg-season projection" in source
+    assert source.index(season) < source.index(regular)
+    assert "NFL season projection" in source
 
 
 def test_legacy_explorer_metrics_remain_read_only_until_terminal_replaces_them() -> None:
