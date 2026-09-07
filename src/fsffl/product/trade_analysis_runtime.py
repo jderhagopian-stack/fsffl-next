@@ -4,7 +4,7 @@ from typing import Any
 
 from fsffl.behavioral.models import OwnerBehaviorProfile
 from fsffl.forecast.models import ForecastHorizon
-from fsffl.team_utility import TeamUtilityVector, assemble_team_utility_vector
+from fsffl.team_utility import TeamUtilityVector, assemble_team_utility_vector, optimize_team_lineup
 from fsffl.trade_decision import (
     apply_bilateral_trade,
     bind_owner_behavior_evidence,
@@ -19,7 +19,7 @@ from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_fo
 from fsffl.value.models import AssetValueProfile
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v3"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v4"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -51,6 +51,27 @@ def _assemble_resilience_vector(league_state, forecasts, *, team_id: str):
         )
 
 
+def _projected_starter_map(league_state, forecasts, team_ids: tuple[str, ...]):
+    protected: dict[str, frozenset[str]] = {}
+    if not forecasts:
+        return protected
+    for team_id in team_ids:
+        try:
+            lineup = optimize_team_lineup(
+                league_state,
+                forecasts,
+                team_id=team_id,
+                as_of=league_state.as_of,
+                horizon=ForecastHorizon.SEASON,
+                allow_unfilled_slots=True,
+                model_version=f"{_PRODUCT_MODEL_VERSION}:cut-protection-lineup",
+            )
+        except ValueError:
+            continue
+        protected[team_id] = frozenset(item.player_id for item in lineup.assignments)
+    return protected
+
+
 def build_private_beta_trade_analysis(
     runtime: Any,
     proposal: BilateralTradeProposal,
@@ -58,14 +79,6 @@ def build_private_beta_trade_analysis(
     focal_team_id: str,
     counterparty_behavior_profile: OwnerBehaviorProfile | None = None,
 ) -> dict[str, object]:
-    """Build a read-only NEXT-8 view from authoritative upstream contracts.
-
-    The adapter applies NEXT-5 state-transition authority, resolves any mandatory
-    roster cuts, compares NEXT-4 roster consequences, binds governed NEXT-3 market
-    evidence, and may attach descriptive owner Behavioral evidence. Presentation
-    does not invent Value, cut costs, acceptance percentages, or recommendations.
-    """
-
     league_state = runtime.league_state
     if league_state is None:
         raise ValueError("trade analysis requires a loaded league state")
@@ -90,9 +103,10 @@ def build_private_beta_trade_analysis(
         estimate.asset_id: estimate.distribution.mean
         for estimate in (value_evidence.estimates if value_evidence is not None else ())
     }
+    protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
     roster_resolution = resolve_mandatory_roster_cuts(
         scenario.after,
-        forecasts=forecasts,
+        protected_player_ids_by_team=protected,
         market_values=market_values,
     )
     legal_after = roster_resolution.league_state
@@ -103,18 +117,10 @@ def build_private_beta_trade_analysis(
     )
 
     if forecasts:
-        before_a, error_before_a = _assemble_resilience_vector(
-            scenario.before, forecasts, team_id=side_a_id
-        )
-        after_a, error_after_a = _assemble_resilience_vector(
-            legal_after, forecasts, team_id=side_a_id
-        )
-        before_b, error_before_b = _assemble_resilience_vector(
-            scenario.before, forecasts, team_id=side_b_id
-        )
-        after_b, error_after_b = _assemble_resilience_vector(
-            legal_after, forecasts, team_id=side_b_id
-        )
+        before_a, error_before_a = _assemble_resilience_vector(scenario.before, forecasts, team_id=side_a_id)
+        after_a, error_after_a = _assemble_resilience_vector(legal_after, forecasts, team_id=side_a_id)
+        before_b, error_before_b = _assemble_resilience_vector(scenario.before, forecasts, team_id=side_b_id)
+        after_b, error_after_b = _assemble_resilience_vector(legal_after, forecasts, team_id=side_b_id)
         for label, error in (
             ("side A baseline", error_before_a),
             ("side A scenario", error_after_a),
@@ -136,13 +142,10 @@ def build_private_beta_trade_analysis(
             model_version="next5-bilateral-decision-v1:product-view",
         )
         roster_consequences_ready = any(
-            side.delta.resilience is not None
-            for side in (evaluation.side_a, evaluation.side_b)
+            side.delta.resilience is not None for side in (evaluation.side_a, evaluation.side_b)
         )
     else:
-        warnings.append(
-            "Roster consequence analysis is waiting for current NEXT-2 forecast evidence."
-        )
+        warnings.append("Roster consequence analysis is waiting for current NEXT-2 forecast evidence.")
 
     economics = None
     economic_net = None
@@ -170,9 +173,7 @@ def build_private_beta_trade_analysis(
             trade_team_resolutions,
         )
     else:
-        warnings.append(
-            "Governed market-economic context is waiting for current NEXT-3 market evidence."
-        )
+        warnings.append("Governed market-economic context is waiting for current NEXT-3 market evidence.")
 
     behavioral_view = None
     if counterparty_behavior_profile is not None:
@@ -192,17 +193,17 @@ def build_private_beta_trade_analysis(
     )
     if incomplete_cut_cost:
         warnings.append(
-            "The post-trade roster is legal, but at least one mandatory cut lacks authoritative market Value; cut opportunity cost remains incomplete."
+            "The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative market Value; cut opportunity cost remains incomplete."
         )
 
     warnings.append(
-        "Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the legal post-trade roster is run through Simulation authority."
+        "Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority."
     )
     warnings.append(
         "Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted."
     )
     warnings.append(
-        "No arbitrary elite-asset multiplier is applied. Package/consolidation effects are being derived from legal-roster opportunity cost, lineup consequences, competitive simulation, and governed team-specific utility rather than a presentation-layer premium."
+        "No arbitrary elite-asset multiplier is applied. Package/consolidation effects are derived from legal-roster opportunity cost, lineup consequences, competitive simulation, and governed team-specific utility rather than a presentation-layer premium."
     )
 
     return {
@@ -217,9 +218,7 @@ def build_private_beta_trade_analysis(
         "economics": economics.model_dump(mode="json") if economics is not None else None,
         "economic_net": economic_net.model_dump(mode="json") if economic_net is not None else None,
         "roster_adjusted_market_net": (
-            roster_adjusted_market_net.model_dump(mode="json")
-            if roster_adjusted_market_net is not None
-            else None
+            roster_adjusted_market_net.model_dump(mode="json") if roster_adjusted_market_net is not None else None
         ),
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "behavioral_context": behavioral_view.model_dump(mode="json") if behavioral_view is not None else None,
