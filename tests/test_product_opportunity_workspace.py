@@ -18,6 +18,15 @@ def test_opportunity_api_exposes_readiness_without_transport_failure() -> None:
     assert payload["authority"]["recommendation_authority"] is False
 
 
+def test_waiver_action_endpoint_fails_closed_without_runtime_context() -> None:
+    response = TestClient(app).post(
+        "/api/opportunities/waiver",
+        json={"add_player_id": "free-agent", "drop_player_id": None},
+    )
+    assert response.status_code == 409
+    assert "No league is loaded" in response.json()["detail"]
+
+
 def test_opportunity_search_uses_authoritative_cardinal_value_only() -> None:
     source = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
     assert "values.fsffl_cardinal_values" in source
@@ -43,3 +52,18 @@ def test_opportunity_presentation_retries_runtime_readiness_without_inventing_au
     assert "renderFsfflOpportunities" in shell
     assert "opportunities.js" in shell
     assert "'opportunities','analytics'" in shell
+
+
+def test_opportunity_waiver_ui_requires_server_action_authority() -> None:
+    ui = (ROOT / "src/fsffl/product/static/opportunities.js").read_text()
+    webapp = (ROOT / "src/fsffl/product/webapp.py").read_text()
+    assert "/api/opportunities/waiver" in ui
+    assert "/api/opportunities/waiver" in webapp
+    assert "build_actionable_waiver_comparison" in webapp
+    assert "simulation_loader=simulation_loader" in webapp
+    assert "Evaluate waiver move" in ui
+    assert "scenario_simulation_count" in ui
+    assert "material_assessment" in ui
+    assert "action_authority==='actionable'" in ui
+    assert "State, Value, Simulation and materiality remain server-owned" in ui
+    assert "acceptance_probability" not in ui
