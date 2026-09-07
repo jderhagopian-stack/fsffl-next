@@ -14,7 +14,7 @@ def test_league_team_views_reuse_existing_authoritative_views() -> None:
 
 def test_league_team_views_do_not_mutate_selected_team_context() -> None:
     source = Path("src/fsffl/product/webapp.py").read_text(encoding="utf-8")
-    block = source.split('def league_team_views', 1)[1].split('@application.get("/api/trade-center/browser")', 1)[0]
+    block = source.split('def league_team_views', 1)[1].split('@application.post("/api/opportunities/waiver")', 1)[0]
     assert "store.select_team" not in block
     assert "selected_team_id" not in block
 
