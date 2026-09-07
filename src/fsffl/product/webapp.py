@@ -45,6 +45,7 @@ from .trade_center_view import build_trade_center_browser_view, resolve_owned_as
 from .trade_opportunity_runtime import build_trade_opportunity_evaluation
 from .trade_simulation_runtime import build_post_trade_simulation_comparison
 from .waiver_action_runtime import build_actionable_waiver_comparison
+from .what_if_runtime import build_player_unavailable_scenario
 
 
 _STATIC_DIR = Path(__file__).with_name("static")
@@ -73,6 +74,10 @@ class AnalyzeTradeRequest(FrozenModel):
 class EvaluateWaiverRequest(FrozenModel):
     add_player_id: str
     drop_player_id: str | None = None
+
+
+class PlayerUnavailableRequest(FrozenModel):
+    player_id: str
 
 
 def _beta_auth_enabled() -> bool:
@@ -672,6 +677,18 @@ def create_app(
                 runtime,
                 proposal,
                 focal_team_id=runtime.selected_team_id,
+                simulation_loader=simulation_loader,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @application.post("/api/what-if/player-unavailable")
+    def player_unavailable_what_if(request: PlayerUnavailableRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        try:
+            return build_player_unavailable_scenario(
+                runtime,
+                player_id=request.player_id,
                 simulation_loader=simulation_loader,
             )
         except ValueError as exc:
