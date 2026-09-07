@@ -34,3 +34,29 @@ def test_market_percentile_and_age_precision_are_presented_truthfully() -> None:
     assert "<th>Dynasty value</th>" not in html
     assert ">Draft capital<" not in html
     assert "Pick inventory" in html
+
+
+def test_player_display_prefers_full_nfl_season_without_changing_simulation_horizon() -> None:
+    shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    simulation = Path("src/fsffl/product/simulation_runtime.py").read_text(encoding="utf-8")
+    assert "item.horizon==='season'" in shell
+    assert shell.index("item.horizon==='season'") < shell.index("item.horizon==='fantasy_regular_season'")
+    assert "NFL season projection" in shell
+    assert "weeks=fantasy_weeks" in simulation
+    assert "build_regular_season_simulation_input" in simulation
+
+
+def test_explorer_missing_and_zero_values_sort_after_real_values() -> None:
+    shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    assert "fsfflExplorerMissingForSort" in shell
+    assert "if(am)return 1" in shell
+    assert "if(bm)return-1" in shell
+    assert "['value','market_percentile','projection']" in shell
+
+
+def test_core_ready_presentation_exposes_live_trade_and_opportunity_capabilities() -> None:
+    shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    assert "presentDownstreamReadiness" in shell
+    assert "context?.forecast_ready&&context?.simulation_ready&&context?.value_ready" in shell
+    assert "Trade Decision is available for submitted deals" in shell
+    assert "Opportunity discovery is available" in shell
