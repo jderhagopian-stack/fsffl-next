@@ -85,7 +85,6 @@ function renderTradeBehaviorContext(){
   let panel=document.querySelector('#trade-behavior-context');
   if(!panel){panel=document.createElement('div');panel.id='trade-behavior-context';panel.className='panel trade-behavior-context';row.insertAdjacentElement('afterend',panel)}
   if(!tradeUiState?.counterpartyTeamId){panel.innerHTML='<p class="eyebrow">Behavioral Intelligence</p><strong>Choose a trade partner</strong><p>Select another franchise to see its observed transaction history beside the trade builder.</p>';return}
-  const profile=tradeBehaviorProfile(tradeUiState.counterpartyTeamId);
   panel.innerHTML=`<div><p class="eyebrow">Behavioral Intelligence</p><strong>${escapeHtml(currentCounterparty()?.display_name||'Trade partner')}</strong><p>${escapeHtml(tradeBehaviorNarrative(tradeUiState.counterpartyTeamId))}</p></div><div class="behavior-authority"><span class="status-chip">${escapeHtml(fsfflTradeBehavior?.status||'unavailable')}</span><small>Observed history informs negotiation context. It does not change market Value or imply an acceptance percentage.</small></div>`;
 }
 async function loadTradeBehavior(){
@@ -166,9 +165,10 @@ renderTradeAnalysis=function(result){
       ${humanTradeSide(result,counterpartyId,'counterparty')}
     </div>
     <section class="human-trade-next">
-      <div><strong>Competitive impact</strong><span>${competitiveReady?'Simulation evidence attached':'Post-trade simulation not connected yet'}</span><small>${competitiveReady?'The changed roster has simulation-backed competitive evidence.':'Expected wins, playoff odds and first-place odds will appear here once the changed roster is run through NEXT-4 Simulation authority.'}</small></div>
+      <div><strong>Competitive impact</strong><span>${competitiveReady?'Simulation evidence attached':'Ready to simulate on demand'}</span><small>${competitiveReady?'The changed roster has simulation-backed competitive evidence.':'Use Simulate impact to run this exact changed roster through authoritative NEXT-4 Simulation and compare expected wins, playoff odds and first-place odds.'}</small></div>
       <div><strong>Behavioral context</strong><span>${tradeBehaviorProfile(counterpartyId)?'Owner history attached':(fsfflTradeBehavior?.status==='running'?'Building owner history':'History unavailable')}</span><small>${escapeHtml(tradeBehaviorNarrative(counterpartyId))} This is descriptive evidence, not an acceptance percentage.</small></div>
     </section>
+    <div id="trade-simulation-result" class="trade-simulation-result"></div>
     <details class="technical-evidence"><summary>Technical evidence & limitations</summary>
       <div class="technical-evidence-grid">${sideAnalysisMarkup(result,focalId)}${sideAnalysisMarkup(result,counterpartyId)}</div>
       ${warnings.length?`<ul>${warnings.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ul>`:''}
@@ -200,6 +200,7 @@ function installProductPolish(){
     .human-trade-next>div{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
     .human-trade-next span{font-weight:700}
     .human-trade-next small{color:var(--muted);line-height:1.45}
+    .trade-simulation-result{margin-top:14px}
     .trade-behavior-context{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-top:-8px}
     .trade-behavior-context p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
     .behavior-authority{display:flex;flex-direction:column;gap:6px;align-items:flex-end;max-width:360px}.behavior-authority small{color:var(--muted);text-align:right;line-height:1.4}
