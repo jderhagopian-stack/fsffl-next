@@ -29,8 +29,8 @@ def test_value_lab_makes_the_ui_model_switch_auditable() -> None:
     assert "provisional_fsffl_values" in ui
     assert "Current authoritative FSFFL Value" in ui
     assert "Earlier beta challenger" in ui
-    assert "Decision and Opportunity Search must not consume it" in ui
-    assert "different valuation outputs" in ui
+    assert "Decision and Opportunity Search must not consume the earlier challenger" in ui
+    assert "retained only for calibration comparison" in ui
 
 
 def test_product_shell_routes_analytics_to_terminal_not_legacy_team_explorer() -> None:
