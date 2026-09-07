@@ -26,12 +26,13 @@ from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_fo
 from .behavioral_fit_runtime import build_trade_behavioral_fit
 from .behavioral_runtime import cached_behavior_profile_for_team
 from .runtime import LiveForecastEvidence
+from .scenario_cache import run_cached_scenario_simulation
 from .simulation_runtime import LiveSimulationAnalyticsResult
 from .trade_value_adapter import cardinal_market_profiles
 
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v5:behavioral-fit"
+_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v6:behavioral-fit-scenario-cache"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -73,7 +74,8 @@ def build_post_trade_simulation_comparison(
     before/after Team Utility vectors, cardinal market economics, actual mandatory
     cut cost and the bounded package-economics guard. Behavioral Intelligence may
     add a directional fit inference for the counterparty, but cannot alter Value,
-    Simulation, materiality, negotiation feasibility or disposition.
+    Simulation, materiality, negotiation feasibility or disposition. Exact repeated
+    changed States may reuse the prior authoritative Simulation result.
     """
 
     league_state = runtime.league_state
@@ -110,7 +112,11 @@ def build_post_trade_simulation_comparison(
         market_values=market_values,
     )
     legal_after = roster_resolution.league_state
-    changed = simulation_loader(legal_after, forecast_evidence)
+    changed, cache_hit = run_cached_scenario_simulation(
+        legal_after,
+        forecast_evidence,
+        simulation_loader=simulation_loader,
+    )
 
     baseline_a = _utility_for_team(baseline, side_a_id)
     baseline_b = _utility_for_team(baseline, side_b_id)
@@ -204,6 +210,7 @@ def build_post_trade_simulation_comparison(
         "state_id_after": legal_after.state_id,
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
+        "scenario_cache_hit": cache_hit,
         "team_deltas": comparisons,
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "evaluation": evaluation.model_dump(mode="json"),
@@ -227,6 +234,7 @@ def build_post_trade_simulation_comparison(
             "materiality_and_disposition": "NEXT-5 Trade Decision",
             "package_economic_guard": "NEXT-5 Trade Decision bounded provisional prior",
             "behavioral_fit": "Behavioral Intelligence directional inference only",
+            "scenario_cache": "performance-only exact-result reuse",
             "acceptance": "not calibrated or numerically estimated",
             "presentation_calculation": False,
         },
