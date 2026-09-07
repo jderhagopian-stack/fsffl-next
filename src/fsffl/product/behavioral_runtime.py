@@ -9,6 +9,7 @@ from pathlib import Path
 from threading import RLock
 from typing import Callable
 
+from fsffl.behavioral.models import OwnerBehaviorProfile
 from fsffl.behavioral.service import BehavioralIntelligenceService, BehavioralSyncResult
 from fsffl.behavioral.sleeper_history import SleeperBehaviorHistorySource
 from fsffl.behavioral.store import BehavioralIntelligenceStore
@@ -71,6 +72,41 @@ class BehavioralRuntimeCoordinator:
         with self._lock:
             return self._records.get(user_id, BehavioralRuntimeRecord(user_id=user_id))
 
+    def profile_for_team(
+        self,
+        user_id: str,
+        league_state: LeagueState,
+        team_id: str,
+    ) -> OwnerBehaviorProfile | None:
+        """Resolve the current team to its stable Sleeper owner profile.
+
+        Behavioral evidence follows owner identity across seasons rather than
+        assuming a roster/team slot is the manager. Missing or still-building
+        history returns None; consumers must remain functional without inventing
+        a behavioral substitute.
+        """
+
+        record = self.current(user_id)
+        if record.status != BehavioralRuntimeStatus.READY or record.result is None:
+            return None
+        team = next((item for item in league_state.teams if item.team_id == team_id), None)
+        if team is None:
+            return None
+        sleeper_ref = next((ref for ref in team.provider_refs if ref.provider == "sleeper"), None)
+        if sleeper_ref is None:
+            return None
+        try:
+            roster_id = int(sleeper_ref.external_id)
+        except ValueError:
+            return None
+        owner_id = next(
+            (owner for roster, owner in record.result.current_owner_by_roster if roster == roster_id),
+            None,
+        )
+        if owner_id is None:
+            return None
+        return next((profile for profile in record.result.profiles if profile.owner_id == owner_id), None)
+
     def start(
         self,
         *,
@@ -114,8 +150,6 @@ class BehavioralRuntimeCoordinator:
             return
         with self._lock:
             current = self._records.get(user_id, BehavioralRuntimeRecord(user_id=user_id))
-            # Ignore a stale completion if the user connected a different state
-            # while this historical build was still running.
             if current.league_state_id != league_state.state_id:
                 return
             self._records[user_id] = replace(
