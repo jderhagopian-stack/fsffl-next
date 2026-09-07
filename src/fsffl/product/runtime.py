@@ -97,6 +97,13 @@ class UserRuntimeContext:
     value_evidence: CurrentMarketValueRuntimeResult | None = None
 
 
+@dataclass(frozen=True)
+class _PendingIntelligenceSnapshot:
+    league_state: LeagueState
+    forecast_evidence: LiveForecastEvidence
+    simulation_analytics: LiveSimulationAnalyticsResult | None = None
+
+
 class PrivateBetaRuntimeStore:
     """Small in-memory runtime store for the single-user/private beta.
 
@@ -108,6 +115,7 @@ class PrivateBetaRuntimeStore:
     def __init__(self) -> None:
         self._lock = RLock()
         self._contexts: dict[str, UserRuntimeContext] = {}
+        self._pending_intelligence: dict[str, _PendingIntelligenceSnapshot] = {}
 
     def get(self, user_id: str) -> UserRuntimeContext:
         with self._lock:
@@ -151,30 +159,69 @@ class PrivateBetaRuntimeStore:
                 value_evidence=None,
             )
             self._contexts[user_id] = updated
+            self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
+                league_state=league_state,
+                forecast_evidence=evidence,
+            )
             return updated
+
+    def _recover_pending_for_result(
+        self,
+        user_id: str,
+        *,
+        expected_state_id: str,
+    ) -> tuple[UserRuntimeContext, _PendingIntelligenceSnapshot | None]:
+        current = self.get(user_id)
+        pending = self._pending_intelligence.get(user_id)
+        if pending is None or pending.league_state.state_id != expected_state_id:
+            return current, None
+        if current.league_state is not None and current.league_state.league.league_id != pending.league_state.league.league_id:
+            return current, None
+        return current, pending
 
     def set_simulation_analytics(
         self,
         user_id: str,
         result: LiveSimulationAnalyticsResult,
     ) -> UserRuntimeContext:
-        """Attach NEXT-4/NEXT-7 simulation output without rewriting its authority."""
+        """Attach NEXT-4/NEXT-7 simulation output without rewriting its authority.
+
+        If same-league session recovery re-materializes State while a background
+        refresh is running, recover the exact pending State+Forecast snapshot that
+        produced this Simulation result instead of failing on a transient reset.
+        """
 
         with self._lock:
-            current = self.get(user_id)
-            if current.league_state is None or current.forecast_evidence is None:
-                raise ValueError("cannot attach simulation before league and forecast evidence")
-            if result.league_view.context.league_state_id != current.league_state.state_id:
-                raise ValueError("simulation analytics must match current LeagueState")
+            result_state_id = result.league_view.context.league_state_id
+            current, pending = self._recover_pending_for_result(
+                user_id,
+                expected_state_id=result_state_id,
+            )
+            league_state = current.league_state
+            forecast_evidence = current.forecast_evidence
+            if league_state is None or forecast_evidence is None or league_state.state_id != result_state_id:
+                if pending is None:
+                    raise ValueError("cannot attach simulation before matching league and forecast evidence")
+                league_state = pending.league_state
+                forecast_evidence = pending.forecast_evidence
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
             updated = UserRuntimeContext(
                 user_id=user_id,
-                league_state=current.league_state,
-                selected_team_id=current.selected_team_id,
-                forecast_evidence=current.forecast_evidence,
+                league_state=league_state,
+                selected_team_id=selected,
+                forecast_evidence=forecast_evidence,
                 simulation_analytics=result,
-                value_evidence=current.value_evidence,
+                value_evidence=None,
             )
             self._contexts[user_id] = updated
+            self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
+                league_state=league_state,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=result,
+            )
             return updated
 
     def set_value_evidence(
@@ -182,23 +229,40 @@ class PrivateBetaRuntimeStore:
         user_id: str,
         result: CurrentMarketValueRuntimeResult,
     ) -> UserRuntimeContext:
-        """Attach NEXT-3 Value output only to the exact canonical state it values."""
+        """Attach NEXT-3 Value output only to the exact canonical state it values.
+
+        The same pending snapshot recovery used for Simulation prevents a
+        reconnect from splitting one refresh across incompatible State identities.
+        """
 
         with self._lock:
-            current = self.get(user_id)
-            if current.league_state is None:
-                raise ValueError("cannot attach Value evidence before a league is loaded")
-            if result.league_state_id != current.league_state.state_id:
-                raise ValueError("Value evidence must match current LeagueState")
+            current, pending = self._recover_pending_for_result(
+                user_id,
+                expected_state_id=result.league_state_id,
+            )
+            league_state = current.league_state
+            forecast_evidence = current.forecast_evidence
+            simulation_analytics = current.simulation_analytics
+            if league_state is None or league_state.state_id != result.league_state_id:
+                if pending is None:
+                    raise ValueError("Value evidence must match current LeagueState")
+                league_state = pending.league_state
+                forecast_evidence = pending.forecast_evidence
+                simulation_analytics = pending.simulation_analytics
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
             updated = UserRuntimeContext(
                 user_id=user_id,
-                league_state=current.league_state,
-                selected_team_id=current.selected_team_id,
-                forecast_evidence=current.forecast_evidence,
-                simulation_analytics=current.simulation_analytics,
+                league_state=league_state,
+                selected_team_id=selected,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=simulation_analytics,
                 value_evidence=result,
             )
             self._contexts[user_id] = updated
+            self._pending_intelligence.pop(user_id, None)
             return updated
 
     def set_intelligence_bundle(
@@ -210,14 +274,7 @@ class PrivateBetaRuntimeStore:
         simulation_analytics: LiveSimulationAnalyticsResult | None,
         value_evidence: CurrentMarketValueRuntimeResult | None,
     ) -> UserRuntimeContext:
-        """Atomically attach one internally consistent intelligence snapshot.
-
-        Forecast, Simulation and Value are computed against the supplied canonical
-        state before this method is called. Attaching them together prevents a
-        reconnect/session-recovery write from clearing forecast evidence between
-        the Simulation and Value attachment steps. This store method owns no model
-        calculations; it only enforces state/evidence identity consistency.
-        """
+        """Atomically attach one internally consistent intelligence snapshot."""
 
         forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
         if any(item.as_of > league_state.as_of for item in forecasts):
@@ -244,6 +301,7 @@ class PrivateBetaRuntimeStore:
                 value_evidence=value_evidence,
             )
             self._contexts[user_id] = updated
+            self._pending_intelligence.pop(user_id, None)
             return updated
 
     def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
@@ -270,3 +328,4 @@ class PrivateBetaRuntimeStore:
     def clear(self, user_id: str) -> None:
         with self._lock:
             self._contexts.pop(user_id, None)
+            self._pending_intelligence.pop(user_id, None)
