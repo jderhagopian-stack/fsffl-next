@@ -43,6 +43,7 @@ class SleeperSnapshotNormalizer:
             retrieved_at=snapshot.captured_at,
         )
         state = self._normalizer.normalize(bundle, as_of=as_of)
+        state = _attach_fantasy_regular_season_horizon(state, payload.get("league"))
         byes, schedule_provenance = _normalize_nfl_byes(
             payload.get("nfl_schedule", ()),
             season=state.league.season,
@@ -57,6 +58,39 @@ class SleeperSnapshotNormalizer:
                 "provenance": state.provenance + (schedule_provenance,),
             }
         )
+
+
+def _attach_fantasy_regular_season_horizon(
+    state: LeagueState,
+    raw_league: Any,
+) -> LeagueState:
+    """Preserve Sleeper's configured regular-season endpoint as canonical rules.
+
+    Future-week matchup payloads can be absent or incomplete even when the league's
+    schedule horizon is already known. Forecast horizon authority must therefore use
+    the configured playoff start, not infer the season length from currently
+    materialized matchup rows.
+    """
+
+    if not isinstance(raw_league, Mapping):
+        return state
+    settings = raw_league.get("settings")
+    if not isinstance(settings, Mapping):
+        return state
+    raw_start = settings.get("playoff_week_start")
+    try:
+        playoff_week_start = int(raw_start)
+    except (TypeError, ValueError):
+        return state
+    end_week = playoff_week_start - 1
+    if not 1 <= end_week <= 18:
+        return state
+    rules = state.league.rules.model_copy(
+        update={"fantasy_regular_season_end_week": end_week}
+    )
+    return state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
 
 
 def _normalize_team(raw: Any) -> str | None:
