@@ -35,9 +35,10 @@ def test_full_product_navigation_shell_is_exposed() -> None:
         assert f"label:'{label}'" in source
 
 
-def test_future_surfaces_explain_authoritative_reuse_not_frontend_model_logic() -> None:
+def test_product_surfaces_explain_authoritative_reuse_not_frontend_model_logic() -> None:
     source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
-    assert "reuse Forecast, Value, Decision and Simulation authority" in source
+    assert "rerun authoritative Simulation" in source
+    assert "without inventing a second forecast or Value path" in source
     assert "authoritative Analytics outputs" in source
     assert "no parallel calculation path" in source
     assert "second valuation path" in source
