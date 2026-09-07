@@ -13,6 +13,9 @@ from fsffl.value.historical_pick import (
 from fsffl.value.models import ValueDistribution, ValueScale
 
 
+SCALE = ValueScale(scale_id="test-dynasty", version="1", unit_label="test units")
+
+
 def _rules(team_count=10, rounds=4):
     return LeagueRules(
         team_count=team_count,
@@ -39,7 +42,7 @@ def _obs(season, slot, mean, available_at=None):
         round=2,
         slot_in_round=slot,
         value=ValueDistribution(mean=mean, stddev=10),
-        scale=ValueScale.FSFFL,
+        scale=SCALE,
         available_at=available_at or datetime(2025, 6, 1, tzinfo=UTC),
         model_version=f"draft-{season}",
         provenance=f"frozen evidence {season}",
@@ -62,7 +65,7 @@ def test_coordinate_derives_legal_slot_range_from_league_rules():
         ),
     )
     with pytest.raises(ValueError, match="exceeds league team count"):
-        reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(team_count=10), scale=ValueScale.FSFFL)
+        reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(team_count=10), scale=SCALE)
 
 
 def test_future_draft_observation_is_rejected():
@@ -96,7 +99,7 @@ def test_unresolved_pick_requires_explicit_slot_probabilities():
         observations=(_obs(2024, 1, 100),),
         slot_probabilities=(),
     )
-    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(), scale=ValueScale.FSFFL)
+    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(), scale=SCALE)
     assert result.estimate is None
     assert result.status == "NOT_RECONSTRUCTED_MISSING_SLOT_PROBABILITY_EVIDENCE"
 
@@ -116,7 +119,7 @@ def test_missing_slot_value_fails_closed_without_round_median_backfill():
             ),
         ),
     )
-    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(), scale=ValueScale.FSFFL)
+    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(), scale=SCALE)
     assert result.estimate is None
     assert result.missing_slots == (2,)
 
@@ -148,7 +151,7 @@ def test_coordinate_reuses_existing_pick_mixture_and_averages_prior_slot_evidenc
             ),
         ),
     )
-    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(), scale=ValueScale.FSFFL)
+    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(), scale=SCALE)
     assert result.status == "RECONSTRUCTED"
     assert result.evidence_quality == "MEDIUM"
     assert result.estimate is not None
@@ -170,7 +173,7 @@ def test_horizon_adjustment_has_no_default_and_must_be_explicit():
             ),
         ),
     )
-    no_adjustment = reconstruct_historical_pick_coordinate(base, league_rules=_rules(), scale=ValueScale.FSFFL)
+    no_adjustment = reconstruct_historical_pick_coordinate(base, league_rules=_rules(), scale=SCALE)
     assert no_adjustment.estimate.distribution.mean == pytest.approx(100.0)
 
     explicit = base.model_copy(update={
@@ -181,7 +184,7 @@ def test_horizon_adjustment_has_no_default_and_must_be_explicit():
             provenance="bounded research sensitivity",
         )
     })
-    adjusted = reconstruct_historical_pick_coordinate(explicit, league_rules=_rules(), scale=ValueScale.FSFFL)
+    adjusted = reconstruct_historical_pick_coordinate(explicit, league_rules=_rules(), scale=SCALE)
     assert adjusted.estimate.distribution.mean == pytest.approx(90.0)
 
 
@@ -192,5 +195,5 @@ def test_pick_outside_configured_rookie_rounds_is_excluded():
         observations=(),
         slot_probabilities=(),
     )
-    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(rounds=3), scale=ValueScale.FSFFL)
+    result = reconstruct_historical_pick_coordinate(evidence, league_rules=_rules(rounds=3), scale=SCALE)
     assert result.status == "EXCLUDED_OUTSIDE_LEAGUE_ROOKIE_DRAFT"
