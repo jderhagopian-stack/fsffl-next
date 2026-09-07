@@ -29,8 +29,8 @@ def test_opportunity_presentation_exposes_discovery_without_inventing_action_aut
     shell = (ROOT / "src/fsffl/product/static/product_shell.js").read_text()
     assert "/api/opportunities/workspace" in ui
     assert "Diagnostic only" in ui
-    assert "not a recommendation" in ui
-    assert "acceptance invented" in ui
+    assert "create a recommendation" in ui
+    assert "acceptance percentage" in ui
     assert "renderFsfflOpportunities" in shell
     assert "opportunities.js" in shell
     assert "'opportunities','analytics'" in shell
