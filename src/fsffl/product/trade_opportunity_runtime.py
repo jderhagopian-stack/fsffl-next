@@ -54,8 +54,8 @@ def build_trade_opportunity_evaluation(
         search_model_version=f"{_PRODUCT_MODEL_VERSION}:candidate",
     )
 
-    counterparty_team_id = next(
-        side.team_id for side in proposal.sides if side.team_id != focal_team_id
+    counterparty_team_id = (
+        proposal.side_b.team_id if proposal.side_a.team_id == focal_team_id else proposal.side_a.team_id
     )
     counterparty_profile = cached_behavior_profile_for_team(
         runtime.league_state,
