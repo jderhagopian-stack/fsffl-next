@@ -19,22 +19,8 @@ def _view() -> LeagueAnalyticsView:
     return LeagueAnalyticsView(
         context=CONTEXT,
         teams=(
-            LeagueTeamAnalyticsRow(
-                team_id="a",
-                display_name="Alpha",
-                player_count=10,
-                draft_pick_count=3,
-                expected_wins=9.0,
-                playoff_probability=0.75,
-            ),
-            LeagueTeamAnalyticsRow(
-                team_id="b",
-                display_name="Beta",
-                player_count=10,
-                draft_pick_count=5,
-                expected_wins=7.0,
-                playoff_probability=0.55,
-            ),
+            LeagueTeamAnalyticsRow(team_id="a", display_name="Alpha", player_count=10, draft_pick_count=3, expected_wins=9.0, playoff_probability=0.75, championship_probability=0.22),
+            LeagueTeamAnalyticsRow(team_id="b", display_name="Beta", player_count=10, draft_pick_count=5, expected_wins=7.0, playoff_probability=0.55, championship_probability=0.11),
         ),
     )
 
@@ -49,4 +35,10 @@ def test_league_chart_uses_named_metric_ranking_without_rescoring() -> None:
 def test_league_chart_propagates_model_lineage() -> None:
     chart = build_league_metric_chart(_view(), metric=LeagueMetric.PLAYOFF_PROBABILITY)
     assert "next4-sim-v1" in chart.source_model_versions
-    assert "next7-league-view-v1" in chart.source_model_versions
+    assert "next7-league-view-v2" in chart.source_model_versions
+
+
+def test_championship_probability_is_a_named_league_metric() -> None:
+    chart = build_league_metric_chart(_view(), metric=LeagueMetric.CHAMPIONSHIP_PROBABILITY)
+    assert [point.label for point in chart.series[0].points] == ["Alpha", "Beta"]
+    assert [point.y for point in chart.series[0].points] == [0.22, 0.11]
