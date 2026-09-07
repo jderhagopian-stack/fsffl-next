@@ -2,14 +2,15 @@ const tradeUiState={browser:null,counterpartyTeamId:'',focalSelected:new Set(),c
 
 function tradeAssetScore(option){
   const assetId=option?.player_id||option?.pick_id;
-  return assetId?provisionalScoreFor(assetId):null;
+  if(!assetId)return null;
+  return(state.valueCatalog?.fsffl_cardinal_values||[]).find(item=>item.asset_id===assetId)||null;
 }
 
 function tradeValueMarkup(option){
   const item=tradeAssetScore(option);
-  if(!item||typeof item.score!=='number')return'<span class="asset-kind">Value —</span>';
-  const detail=`${provisionalValueExplanation}\nStatus: ${item.status}\nModel: ${item.model_version}\nReference source: ${item.reference_source_id}\nReference scale: ${item.reference_scale_id}`;
-  return`<span class="asset-kind" title="${escapeHtml(detail)}">FSFFL ${fmtFsfflValue(item.score)} · PROVISIONAL</span>`;
+  if(!item||typeof item.score!=='number')return'<span class="asset-kind">FSFFL Value —</span>';
+  const detail=`Authoritative FSFFL market-cardinal Value\nStatus: ${item.authority_status||'authoritative'}\nModel: ${item.model_version||'—'}\nEvidence: ${item.evidence_source_id||'—'}\nScale: ${item.scale?.scale_id||'fsffl-market-cardinal'}`;
+  return`<span class="asset-kind" title="${escapeHtml(detail)}">FSFFL ${fmtFsfflValue(item.score)}</span>`;
 }
 
 function selectedRefs(side){return side==='focal'?tradeUiState.focalSelected:tradeUiState.counterpartySelected}
@@ -71,8 +72,8 @@ function renderTradeAssetList(side){
 }
 
 function updateAnalyzeTradeState(){const button=qs('#analyze-trade');if(!button)return;button.disabled=!(tradeUiState.counterpartyTeamId&&tradeUiState.focalSelected.size&&tradeUiState.counterpartySelected.size)}
-function invalidateTradeSimulation(){const button=qs('#simulate-trade');if(button)button.disabled=true;const target=qs('#trade-simulation-result');if(target)target.innerHTML=''}
-function toggleTradeAsset(side,assetRef){const selected=selectedRefs(side);selected.has(assetRef)?selected.delete(assetRef):selected.add(assetRef);invalidateTradeSimulation();renderTradeDraftSide(side);renderTradeAssetList(side);updateAnalyzeTradeState();renderTradeAnalysisNotice()}
+function invalidateTradeScenario(){['#simulate-trade','#explore-price'].forEach(selector=>{const button=qs(selector);if(button)button.disabled=true});['#trade-simulation-result','#trade-frontier-result'].forEach(selector=>{const target=qs(selector);if(target)target.innerHTML=''})}
+function toggleTradeAsset(side,assetRef){const selected=selectedRefs(side);selected.has(assetRef)?selected.delete(assetRef):selected.add(assetRef);invalidateTradeScenario();renderTradeDraftSide(side);renderTradeAssetList(side);updateAnalyzeTradeState();renderTradeAnalysisNotice()}
 
 function renderTradeCounterparties(){
   const select=qs('#counterparty-select');if(!select||!tradeUiState.browser)return;select.innerHTML='<option value="">Choose a team</option>';
@@ -83,7 +84,7 @@ function renderTradeCounterparties(){
 function renderTradeAnalysisNotice(message){
   const panel=qs('#trade-analysis-empty');if(!panel)return;if(message){panel.textContent=message;return}
   const ready=tradeUiState.counterpartyTeamId&&tradeUiState.focalSelected.size&&tradeUiState.counterpartySelected.size;
-  panel.textContent=ready?'Draft ready. Analyze Trade submits these canonically owned assets to the authoritative Trade Decision endpoint. Provisional FSFFL Values shown above are display-only and do not determine the result.':'Select at least one asset from each side. Provisional FSFFL Values are shown only for private-beta presentation testing; they are not a trade grade, recommendation, acceptance probability, or package economics.';
+  panel.textContent=ready?'Draft ready. Analyze Trade submits these canonically owned assets to the authoritative Trade Decision endpoint. FSFFL Values shown above are the current authoritative market-cardinal values and do not determine the bilateral result by themselves.':'Select at least one asset from each side. FSFFL Value is market context only; it is not a trade grade, recommendation, acceptance probability, or package economics.';
 }
 
 function tradeTeamName(teamId){
@@ -136,11 +137,12 @@ function renderTradeAnalysis(result){
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">${sideAnalysisMarkup(result,focalId)}${sideAnalysisMarkup(result,counterpartyId)}</div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px">
       <div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Competitive impact</span><strong style="display:block;margin:5px 0">${competitiveReady?'Ready':'Run simulation on demand'}</strong><small style="color:var(--muted)">Win, playoff and first-place deltas come only from the changed roster running through NEXT-4 Simulation authority.</small></div>
-      <div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Acceptance probability</span><strong style="display:block;margin:5px 0">Not estimated</strong><small style="color:var(--muted)">The presentation layer does not consume or estimate acceptance authority. Behavioral evidence remains descriptive until a calibrated acceptance model is promoted.</small></div>
+      <div style="border:1px solid var(--line);border-radius:10px;padding:12px"><span class="metric-label">Behavioral plausibility</span><strong style="display:block;margin:5px 0">Descriptive evidence only</strong><small style="color:var(--muted)">Owner Behavioral Intelligence can inform negotiation context without inventing an acceptance percentage.</small></div>
     </div>
     <div id="trade-simulation-result" style="margin-top:12px"></div>
+    <div id="trade-frontier-result" style="margin-top:12px"></div>
     ${warnings?`<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--accent)">Evidence & limitations</summary><ul style="color:var(--muted);font-size:12px;line-height:1.5;padding-left:18px">${warnings}</ul></details>`:''}
-    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Provisional FSFFL Value shown in the builder is not used in this analysis.</p>
+    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Authoritative FSFFL Value is market context; Trade Decision remains the authority for bilateral consequences.</p>
   </div>`;
 }
 
@@ -150,13 +152,21 @@ function renderTradeSimulationResult(result){
   const rows=result.team_deltas||[];
   target.innerHTML=`<div style="border:1px solid var(--line);border-radius:12px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><p class="eyebrow">NEXT-4 scenario simulation</p><h3 style="margin:0">Competitive impact after the trade</h3></div><span class="status-chip">${Number(result.scenario_simulation_count||0).toLocaleString()} simulations</span></div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px">${rows.map(row=>{const c=row.competitive||{};return`<article style="border:1px solid var(--line);border-radius:10px;padding:12px"><strong>${escapeHtml(tradeTeamName(row.team_id))}</strong><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px"><div><small>Expected wins</small><strong style="display:block">${signedTradeNumber(c.expected_wins,2)}</strong></div><div><small>Playoff odds</small><strong style="display:block">${signedTradePercentPoints(c.playoff_probability,1)}</strong></div><div><small>First-place odds</small><strong style="display:block">${signedTradePercentPoints(c.first_place_probability,1)}</strong></div></div></article>`}).join('')}</div><p style="color:var(--muted);font-size:11px;margin:10px 0 0">These deltas are returned by NEXT-4 Team Utility after authoritative baseline and changed-state simulations; the browser only formats them.</p></div>`;
 }
+function frontierPackageMarkup(items){return(items||[]).map(item=>escapeHtml(item.label)).join(' + ')||'—'}
+function renderTradeFrontierResult(result){
+  const target=qs('#trade-frontier-result');if(!target)return;
+  const points=(result.points||[]).filter(point=>!point.is_seed);
+  const ordered=[...points].sort((a,b)=>{const rank=value=>value==='mutual_gain_candidate'?0:value==='mixed'?1:value==='neutral'?2:value==='counterparty_dominated'?4:3;return rank(a.feasibility_shape)-rank(b.feasibility_shape)||a.depth-b.depth});
+  const visible=ordered.slice(0,18);
+  target.innerHTML=`<div style="border:1px solid var(--line);border-radius:12px;padding:14px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap"><div><p class="eyebrow">NEXT-6 price discovery</p><h3 style="margin:0">Adjacent negotiation frontier</h3><p style="color:var(--muted);font-size:12px;margin:6px 0 0">These are canonically owned package variations evaluated through NEXT-5. Search does not rewrite Value to balance a trade.</p></div><span class="status-chip">${Number(result.evaluated_count||0).toLocaleString()} packages tested</span></div><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>Your package</th><th>Their package</th><th>Bilateral shape</th><th>Feasibility</th><th>Authority</th></tr></thead><tbody>${visible.length?visible.map(point=>`<tr><td>${frontierPackageMarkup(point.focal_assets)}</td><td>${frontierPackageMarkup(point.counterparty_assets)}</td><td style="text-transform:capitalize">${escapeHtml(tradeDirectionText(point.decision_shape))}</td><td style="text-transform:capitalize">${escapeHtml(tradeDirectionText(point.feasibility_shape))}</td><td style="text-transform:capitalize">${escapeHtml(tradeDirectionText(point.action_authority))}</td></tr>`).join(''):'<tr><td colspan="5">No adjacent packages were produced inside the current search bounds.</td></tr>'}</tbody></table></div><p style="color:var(--muted);font-size:11px;margin:10px 0 0">Showing up to 18 nearby package points. Unknown materiality or acceptance remains a blocker to action authority rather than being guessed.</p></div>`;
+}
 
-function clearTradeDraft(){tradeUiState.focalSelected.clear();tradeUiState.counterpartySelected.clear();invalidateTradeSimulation();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();renderTradeAnalysisNotice()}
-function chooseTradeCounterparty(teamId){tradeUiState.counterpartyTeamId=teamId;tradeUiState.counterpartySelected.clear();invalidateTradeSimulation();const search=qs('#counterparty-asset-filter');if(search)search.value='';['type','position','slot'].forEach(kind=>{const control=qs(`#${tradeFilterId('counterparty',kind)}`);if(control)control.value=''});renderTradeCounterparties();renderTradeDraftSide('counterparty');renderTradeAssetList('counterparty');updateAnalyzeTradeState();renderTradeAnalysisNotice()}
+function clearTradeDraft(){tradeUiState.focalSelected.clear();tradeUiState.counterpartySelected.clear();invalidateTradeScenario();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();renderTradeAnalysisNotice()}
+function chooseTradeCounterparty(teamId){tradeUiState.counterpartyTeamId=teamId;tradeUiState.counterpartySelected.clear();invalidateTradeScenario();const search=qs('#counterparty-asset-filter');if(search)search.value='';['type','position','slot'].forEach(kind=>{const control=qs(`#${tradeFilterId('counterparty',kind)}`);if(control)control.value=''});renderTradeCounterparties();renderTradeDraftSide('counterparty');renderTradeAssetList('counterparty');updateAnalyzeTradeState();renderTradeAnalysisNotice()}
 
 async function analyzeTradeDraft(){
-  const button=qs('#analyze-trade');if(button){button.disabled=true;button.textContent='Analyzing…'}invalidateTradeSimulation();renderTradeAnalysisNotice('Building governed bilateral consequences…');
-  try{const result=await api('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(tradeDraftPayload())});renderTradeAnalysis(result);const simulate=qs('#simulate-trade');if(simulate)simulate.disabled=false}
+  const button=qs('#analyze-trade');if(button){button.disabled=true;button.textContent='Analyzing…'}invalidateTradeScenario();renderTradeAnalysisNotice('Building governed bilateral consequences…');
+  try{const result=await api('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(tradeDraftPayload())});renderTradeAnalysis(result);['#simulate-trade','#explore-price'].forEach(selector=>{const action=qs(selector);if(action)action.disabled=false})}
   catch(error){renderTradeAnalysisNotice(`Trade analysis is unavailable for this draft: ${error.message}. Your visual draft is preserved.`)}finally{if(button){button.textContent='Analyze Trade';updateAnalyzeTradeState()}}
 }
 
@@ -167,9 +177,16 @@ async function simulateTradeDraft(){
   finally{if(button){button.disabled=false;button.textContent='Simulate impact'}}
 }
 
+async function exploreTradeFrontier(){
+  const button=qs('#explore-price');if(button){button.disabled=true;button.textContent='Exploring…'}const target=qs('#trade-frontier-result');if(target)target.innerHTML='<div class="chart-empty"><p>Walking the governed NEXT-6 negotiation frontier…</p></div>';
+  try{const result=await api('/api/trade-center/frontier',{method:'POST',body:JSON.stringify(tradeDraftPayload())});renderTradeFrontierResult(result)}
+  catch(error){const node=qs('#trade-frontier-result');if(node)node.innerHTML=`<div class="chart-empty"><p>Price frontier is unavailable: ${escapeHtml(error.message)}</p></div>`}
+  finally{if(button){button.disabled=false;button.textContent='Explore price frontier'}}
+}
+
 async function loadTradeCenter(){
   if(!state.context?.team_id||tradeUiState.loading)return;tradeUiState.loading=true;const focalAssets=qs('#focal-assets');if(focalAssets)focalAssets.innerHTML='<p class="trade-empty">Loading canonical assets…</p>';
-  try{const browserPromise=api('/api/trade-center/browser');const valuesPromise=state.valueCatalog?Promise.resolve(state.valueCatalog):(state.context?.value_ready?api('/api/values').catch(()=>null):Promise.resolve(null));const[browser,values]=await Promise.all([browserPromise,valuesPromise]);tradeUiState.browser=browser;if(values)state.valueCatalog=values;if(tradeUiState.counterpartyTeamId&&!browser.counterparties.some(team=>team.team_id===tradeUiState.counterpartyTeamId))tradeUiState.counterpartyTeamId='';tradeUiState.focalSelected=new Set([...tradeUiState.focalSelected].filter(ref=>browser.focal_team.assets.some(item=>item.asset_ref===ref)));const counterparty=currentCounterparty();tradeUiState.counterpartySelected=new Set([...tradeUiState.counterpartySelected].filter(ref=>counterparty?.assets.some(item=>item.asset_ref===ref)));ensureTradeFilters('focal');ensureTradeFilters('counterparty');renderTradeCounterparties();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();invalidateTradeSimulation();renderTradeAnalysisNotice();const label=qs('#trade-state-label span:last-child');if(label)label.textContent=`Canonical ownership · ${String(browser.state_id).slice(0,12)}…`}
+  try{const browserPromise=api('/api/trade-center/browser');const valuesPromise=state.valueCatalog?Promise.resolve(state.valueCatalog):(state.context?.value_ready?api('/api/values').catch(()=>null):Promise.resolve(null));const[browser,values]=await Promise.all([browserPromise,valuesPromise]);tradeUiState.browser=browser;if(values)state.valueCatalog=values;if(tradeUiState.counterpartyTeamId&&!browser.counterparties.some(team=>team.team_id===tradeUiState.counterpartyTeamId))tradeUiState.counterpartyTeamId='';tradeUiState.focalSelected=new Set([...tradeUiState.focalSelected].filter(ref=>browser.focal_team.assets.some(item=>item.asset_ref===ref)));const counterparty=currentCounterparty();tradeUiState.counterpartySelected=new Set([...tradeUiState.counterpartySelected].filter(ref=>counterparty?.assets.some(item=>item.asset_ref===ref)));ensureTradeFilters('focal');ensureTradeFilters('counterparty');renderTradeCounterparties();renderTradeDraftSide('focal');renderTradeDraftSide('counterparty');renderTradeAssetList('focal');renderTradeAssetList('counterparty');updateAnalyzeTradeState();invalidateTradeScenario();renderTradeAnalysisNotice();const label=qs('#trade-state-label span:last-child');if(label)label.textContent=`Canonical ownership · ${String(browser.state_id).slice(0,12)}…`}
   catch(error){if(focalAssets)focalAssets.innerHTML=`<p class="trade-empty">Unable to load Trade Center: ${escapeHtml(error.message)}</p>`}finally{tradeUiState.loading=false}
 }
 
@@ -177,7 +194,7 @@ function wireTradeCenter(){
   qs('#counterparty-select')?.addEventListener('change',event=>chooseTradeCounterparty(event.target.value));
   qs('#focal-asset-filter')?.addEventListener('input',()=>renderTradeAssetList('focal'));
   qs('#counterparty-asset-filter')?.addEventListener('input',()=>renderTradeAssetList('counterparty'));
-  qs('#clear-trade')?.addEventListener('click',clearTradeDraft);qs('#analyze-trade')?.addEventListener('click',analyzeTradeDraft);qs('#simulate-trade')?.addEventListener('click',simulateTradeDraft);
+  qs('#clear-trade')?.addEventListener('click',clearTradeDraft);qs('#analyze-trade')?.addEventListener('click',analyzeTradeDraft);qs('#simulate-trade')?.addEventListener('click',simulateTradeDraft);qs('#explore-price')?.addEventListener('click',exploreTradeFrontier);
   qsa('[data-route="trade_center"],[data-route-link="trade_center"]').forEach(button=>button.addEventListener('click',()=>setTimeout(loadTradeCenter,0)));
 }
 
