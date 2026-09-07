@@ -13,6 +13,7 @@ from .materiality import (
     classify_negative_delta,
     classify_positive_delta,
 )
+from .roster_economics import BilateralRosterAdjustedMarketNet, RosterAdjustedEconomicStatus
 
 
 class SideMaterialAssessment(FrozenModel):
@@ -32,7 +33,7 @@ class BilateralMaterialAssessment(FrozenModel):
     side_b: SideMaterialAssessment
     competitive_policy_version: str
     economic_policy_version: str
-    model_version: str = "next5-material-assessment-v2"
+    model_version: str = "next5-material-assessment-v3"
 
     @model_validator(mode="after")
     def validate_assessment(self) -> "BilateralMaterialAssessment":
@@ -53,6 +54,25 @@ def _economic_direction(net, policy: EconomicMaterialityPolicy) -> MaterialityDi
     return classify_positive_delta(net.mean_delta, absolute_threshold=policy.mean_value_abs)
 
 
+def _market_direction(
+    economic_side,
+    adjusted_side,
+    policy: EconomicMaterialityPolicy,
+) -> MaterialityDirection:
+    if adjusted_side is None:
+        return _economic_direction(economic_side.market, policy)
+    if economic_side.market.status != EconomicNetStatus.COMPLETE:
+        return MaterialityDirection.UNAVAILABLE
+    if economic_side.market.scale != policy.scale:
+        raise ValueError("economic materiality policy scale must match roster-adjusted market scale/version")
+    if adjusted_side.status != RosterAdjustedEconomicStatus.COMPLETE:
+        return MaterialityDirection.UNAVAILABLE
+    return classify_positive_delta(
+        adjusted_side.roster_adjusted_market_delta,
+        absolute_threshold=policy.mean_value_abs,
+    )
+
+
 def _championship_direction(
     value: float | None,
     policy: CompetitiveMaterialityPolicy,
@@ -66,6 +86,7 @@ def _championship_direction(
 def _side_assessment(
     evaluation: TradeSideEvaluation,
     economic_net,
+    adjusted_market,
     *,
     competitive_policy: CompetitiveMaterialityPolicy,
     economic_policy: EconomicMaterialityPolicy,
@@ -96,7 +117,7 @@ def _side_assessment(
             resilience.largest_single_player_lineup_drop if resilience else None,
             absolute_threshold=competitive_policy.lineup_drop_abs,
         ),
-        market_value=_economic_direction(economic_net.market, economic_policy),
+        market_value=_market_direction(economic_net, adjusted_market, economic_policy),
         intrinsic_value=_economic_direction(economic_net.intrinsic, economic_policy),
     )
 
@@ -107,18 +128,21 @@ def assess_bilateral_materiality(
     *,
     competitive_policy: CompetitiveMaterialityPolicy,
     economic_policy: EconomicMaterialityPolicy,
-    model_version: str = "next5-material-assessment-v2",
+    roster_adjusted_market_net: BilateralRosterAdjustedMarketNet | None = None,
+    model_version: str = "next5-material-assessment-v3",
 ) -> BilateralMaterialAssessment:
     """Apply explicit, versioned materiality policies to bilateral deltas.
 
-    Championship probability is the action-facing postseason outcome. Regular-
-    season first-place probability remains available as diagnostic evidence but is
-    no longer the title proxy used by disposition. This function does not choose
-    thresholds, infer owner intent, estimate acceptance, or recommend action.
+    When mandatory cuts exist, market materiality consumes the separate NEXT-5
+    roster-adjusted market net so the discarded asset cost enters exactly once.
+    Raw package economics remain preserved for audit. Championship probability is
+    the action-facing postseason outcome; first-place probability is diagnostic.
     """
 
     if evaluation.proposal_id != economic_net.proposal_id:
         raise ValueError("material assessment inputs must describe the same proposal")
+    if roster_adjusted_market_net is not None and roster_adjusted_market_net.proposal_id != evaluation.proposal_id:
+        raise ValueError("roster-adjusted market net must describe the same proposal")
     if not model_version.strip():
         raise ValueError("model_version cannot be blank")
 
@@ -136,17 +160,28 @@ def assess_bilateral_materiality(
     if evaluation.side_b.team_id != economic_net.side_b.team_id:
         raise ValueError("side B economic net must match evaluation side B")
 
+    adjusted_a = adjusted_b = None
+    if roster_adjusted_market_net is not None:
+        if roster_adjusted_market_net.side_a.team_id != evaluation.side_a.team_id:
+            raise ValueError("side A roster-adjusted market net must match evaluation side A")
+        if roster_adjusted_market_net.side_b.team_id != evaluation.side_b.team_id:
+            raise ValueError("side B roster-adjusted market net must match evaluation side B")
+        adjusted_a = roster_adjusted_market_net.side_a
+        adjusted_b = roster_adjusted_market_net.side_b
+
     return BilateralMaterialAssessment(
         proposal_id=evaluation.proposal_id,
         side_a=_side_assessment(
             evaluation.side_a,
             economic_net.side_a,
+            adjusted_a,
             competitive_policy=competitive_policy,
             economic_policy=economic_policy,
         ),
         side_b=_side_assessment(
             evaluation.side_b,
             economic_net.side_b,
+            adjusted_b,
             competitive_policy=competitive_policy,
             economic_policy=economic_policy,
         ),
