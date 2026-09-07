@@ -23,13 +23,15 @@ from fsffl.trade_decision import (
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
 
+from .behavioral_fit_runtime import build_trade_behavioral_fit
+from .behavioral_runtime import cached_behavior_profile_for_team
 from .runtime import LiveForecastEvidence
 from .simulation_runtime import LiveSimulationAnalyticsResult
 from .trade_value_adapter import cardinal_market_profiles
 
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v4"
+_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v5:behavioral-fit"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -69,8 +71,9 @@ def build_post_trade_simulation_comparison(
 
     Simulation remains authoritative for competitive outcomes. NEXT-5 consumes the
     before/after Team Utility vectors, cardinal market economics, actual mandatory
-    cut cost and the bounded package-economics guard. No Presentation calculation
-    can create or modify the resulting disposition.
+    cut cost and the bounded package-economics guard. Behavioral Intelligence may
+    add a directional fit inference for the counterparty, but cannot alter Value,
+    Simulation, materiality, negotiation feasibility or disposition.
     """
 
     league_state = runtime.league_state
@@ -183,6 +186,16 @@ def build_post_trade_simulation_comparison(
         )
         comparisons.append(delta.model_dump(mode="json"))
 
+    counterparty_profile = cached_behavior_profile_for_team(league_state, counterparty_team_id)
+    focal_profile = cached_behavior_profile_for_team(league_state, focal_team_id)
+    behavioral_fit = build_trade_behavioral_fit(
+        runtime,
+        proposal,
+        focal_team_id=focal_team_id,
+        counterparty_profile=counterparty_profile,
+        focal_owner_id=focal_profile.owner_id if focal_profile is not None else None,
+    )
+
     return {
         "focal_team_id": focal_team_id,
         "counterparty_team_id": counterparty_team_id,
@@ -204,6 +217,7 @@ def build_post_trade_simulation_comparison(
         "materiality_policy": materiality_policy.model_dump(mode="json"),
         "material_assessment": material_assessment.model_dump(mode="json"),
         "disposition": disposition.model_dump(mode="json"),
+        "behavioral_fit": behavioral_fit.model_dump(mode="json") if behavioral_fit is not None else None,
         "authority": {
             "state_transition": "NEXT-5 Trade Decision",
             "mandatory_roster_cuts": "NEXT-5 Trade Decision",
@@ -212,6 +226,8 @@ def build_post_trade_simulation_comparison(
             "scenario_delta": "NEXT-4 Team Utility",
             "materiality_and_disposition": "NEXT-5 Trade Decision",
             "package_economic_guard": "NEXT-5 Trade Decision bounded provisional prior",
+            "behavioral_fit": "Behavioral Intelligence directional inference only",
+            "acceptance": "not calibrated or numerically estimated",
             "presentation_calculation": False,
         },
         "model_version": _PRODUCT_MODEL_VERSION,
