@@ -20,8 +20,10 @@ class MaterialityDirection(StrEnum):
 class CompetitiveMaterialityPolicy(FrozenModel):
     """Explicit tolerances for interpreting NEXT-4 competitive/resilience deltas.
 
-    No defaults are provided because these thresholds require empirical or policy
-    justification. The contract exists so callers cannot hide them in decision code.
+    Thresholds require empirical or explicitly provisional policy justification;
+    callers may not hide operational defaults in decision code. Championship is
+    the postseason title outcome. ``first_place_probability_abs`` remains only as
+    a backwards-compatible diagnostic tolerance while existing callers migrate.
     """
 
     expected_wins_abs: Annotated[float, Field(ge=0.0)]
@@ -31,6 +33,7 @@ class CompetitiveMaterialityPolicy(FrozenModel):
     model_version: str
     evidence_through: datetime
     provenance: str
+    championship_probability_abs: Annotated[float, Field(ge=0.0, le=1.0)] | None = None
 
     @field_validator("evidence_through")
     @classmethod
