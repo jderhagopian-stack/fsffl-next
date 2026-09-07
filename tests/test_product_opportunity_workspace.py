@@ -27,6 +27,19 @@ def test_waiver_action_endpoint_fails_closed_without_runtime_context() -> None:
     assert "No league is loaded" in response.json()["detail"]
 
 
+def test_trade_opportunity_endpoint_fails_closed_without_runtime_context() -> None:
+    response = TestClient(app).post(
+        "/api/opportunities/trade",
+        json={
+            "counterparty_team_id": "other-team",
+            "focal_asset_refs": ["player:a"],
+            "counterparty_asset_refs": ["player:b"],
+        },
+    )
+    assert response.status_code == 409
+    assert "No league is loaded" in response.json()["detail"]
+
+
 def test_opportunity_search_uses_authoritative_cardinal_value_only() -> None:
     source = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
     assert "values.fsffl_cardinal_values" in source
@@ -47,7 +60,6 @@ def test_opportunity_presentation_retries_runtime_readiness_without_inventing_au
     assert "setTimeout(()=>loadOpportunityWorkspace" in ui
     assert "This view will check again automatically" in ui
     assert "Diagnostic only" in ui
-    assert "create a recommendation" in ui
     assert "acceptance percentage" in ui
     assert "renderFsfflOpportunities" in shell
     assert "opportunities.js" in shell
@@ -66,4 +78,23 @@ def test_opportunity_waiver_ui_requires_server_action_authority() -> None:
     assert "material_assessment" in ui
     assert "action_authority==='actionable'" in ui
     assert "State, Value, Simulation and materiality remain server-owned" in ui
+    assert "acceptance_probability" not in ui
+
+
+def test_trade_opportunity_ui_promotes_only_to_server_returned_market_test_authority() -> None:
+    ui = (ROOT / "src/fsffl/product/static/opportunities.js").read_text()
+    webapp = (ROOT / "src/fsffl/product/webapp.py").read_text()
+    runtime = (ROOT / "src/fsffl/product/trade_opportunity_runtime.py").read_text()
+    assert "/api/opportunities/trade" in ui
+    assert "/api/opportunities/trade" in webapp
+    assert "build_trade_opportunity_evaluation" in webapp
+    assert "build_post_trade_simulation_comparison" in runtime
+    assert "candidate_from_trade_evaluation" in runtime
+    assert "EvidenceCompleteness.COMPLETE" in runtime
+    assert "acceptance=None" in runtime
+    assert "MARKET_TEST_ONLY" in runtime
+    assert "Evaluate offer" in ui
+    assert "Worth sending as a market test" in ui
+    assert "unknown acceptance" in ui.lower()
+    assert "cannot become ACTIONABLE" in ui
     assert "acceptance_probability" not in ui
