@@ -21,10 +21,10 @@ from fsffl.trade_decision import (
 )
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
-from fsffl.value.models import AssetValueProfile
+from fsffl.value.models import AssetValueProfile, MarketPriceEstimate, ValueDistribution
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v5"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v6"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -81,6 +81,37 @@ def _position_strength_comparison(before_state, after_state, forecasts, *, team_
     return compare_position_strengths(before, after)
 
 
+def _cardinal_market_profiles(value_evidence) -> dict[str, AssetValueProfile]:
+    """Adapt authoritative NEXT-3 cardinal scores into typed market estimates.
+
+    Trade Decision economics need a typed MarketPriceEstimate, while the product's
+    user-facing FSFFL Value is the promoted 0-10,000 cardinal market axis. This
+    adapter preserves that exact scale rather than accidentally doing package math
+    on the separate 0-1 market-percentile representation.
+    """
+
+    profiles: dict[str, AssetValueProfile] = {}
+    if value_evidence is None:
+        return profiles
+    for score in value_evidence.fsffl_cardinal_values:
+        estimate = MarketPriceEstimate(
+            asset_id=score.asset_id,
+            asset_kind=score.asset_kind,
+            distribution=ValueDistribution(mean=score.score, stddev=0.0),
+            scale=score.scale,
+            as_of=score.as_of,
+            market_context_id=score.market_context_id,
+            model_version=score.model_version,
+            evidence_sources=(score.evidence_source_id,),
+        )
+        profiles[score.asset_id] = AssetValueProfile(
+            asset_id=score.asset_id,
+            asset_kind=score.asset_kind,
+            market_price=estimate,
+        )
+    return profiles
+
+
 def build_private_beta_trade_analysis(
     runtime: Any,
     proposal: BilateralTradeProposal,
@@ -106,7 +137,12 @@ def build_private_beta_trade_analysis(
     if forecast_evidence is not None:
         forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
     value_evidence = runtime.value_evidence
-    market_values = {estimate.asset_id: estimate.distribution.mean for estimate in (value_evidence.estimates if value_evidence is not None else ())}
+    cardinal_profiles = _cardinal_market_profiles(value_evidence)
+    market_values = {
+        asset_id: profile.market_price.distribution.mean
+        for asset_id, profile in cardinal_profiles.items()
+        if profile.market_price is not None
+    }
 
     protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
     roster_resolution = resolve_mandatory_roster_cuts(
@@ -142,13 +178,22 @@ def build_private_beta_trade_analysis(
     economics = None
     economic_net = None
     roster_adjusted_market_net = None
-    if value_evidence is not None and value_evidence.estimates:
-        profiles = {estimate.asset_id: AssetValueProfile(asset_id=estimate.asset_id, asset_kind=estimate.asset_kind, market_price=estimate) for estimate in value_evidence.estimates}
-        economics = summarize_bilateral_trade_economics(proposal, profiles, model_version="next5-trade-economics-v1:product-view")
-        economic_net = calculate_bilateral_economic_net(economics, model_version="next5-economic-net-v1:product-view")
-        roster_adjusted_market_net = adjust_bilateral_market_net_for_mandatory_cuts(economic_net, trade_team_resolutions)
+    if cardinal_profiles:
+        economics = summarize_bilateral_trade_economics(
+            proposal,
+            cardinal_profiles,
+            model_version="next5-trade-economics-v1:fsffl-cardinal-product-view",
+        )
+        economic_net = calculate_bilateral_economic_net(
+            economics,
+            model_version="next5-economic-net-v1:fsffl-cardinal-product-view",
+        )
+        roster_adjusted_market_net = adjust_bilateral_market_net_for_mandatory_cuts(
+            economic_net,
+            trade_team_resolutions,
+        )
     else:
-        warnings.append("Governed market-economic context is waiting for current NEXT-3 market evidence.")
+        warnings.append("FSFFL cardinal market Value is still loading for this trade.")
 
     behavioral_view = None
     if counterparty_behavior_profile is not None:
@@ -158,7 +203,7 @@ def build_private_beta_trade_analysis(
 
     incomplete_cut_cost = any(item.required_cut_count and item.cut_market_value_total is None for item in trade_team_resolutions)
     if incomplete_cut_cost:
-        warnings.append("The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative market Value; cut opportunity cost remains incomplete.")
+        warnings.append("The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative FSFFL Value; cut opportunity cost remains incomplete.")
     warnings.append("Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority.")
     warnings.append("Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted.")
     warnings.append("No arbitrary elite-asset multiplier is applied. Package/consolidation effects are derived from legal-roster opportunity cost, lineup consequences, competitive simulation, and governed team-specific utility rather than a presentation-layer premium.")
