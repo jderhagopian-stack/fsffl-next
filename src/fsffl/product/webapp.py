@@ -20,6 +20,7 @@ from fsffl.value.models import AssetValueProfile
 from .background_jobs import IntelligenceJob, IntelligenceJobCoordinator, IntelligenceJobPhase
 from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
+from .frontier_runtime import build_negotiation_frontier
 from .intelligence_runtime import (
     build_forecast_lineup_analytics,
     build_state_only_league_view,
@@ -625,6 +626,34 @@ def create_app(
             return trade_evaluator(runtime.league_state, proposal, runtime.selected_team_id)
         try:
             return build_private_beta_trade_analysis(
+                runtime,
+                proposal,
+                focal_team_id=runtime.selected_team_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @application.post("/api/trade-center/frontier")
+    def explore_trade_frontier(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if runtime.selected_team_id is None:
+            raise HTTPException(status_code=409, detail="No managed team is selected")
+        if request.counterparty_team_id == runtime.selected_team_id:
+            raise HTTPException(status_code=422, detail="Trade counterparty must be a different team")
+        try:
+            focal_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref) for ref in request.focal_asset_refs)
+            counterparty_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref) for ref in request.counterparty_asset_refs)
+            draft = TradeDraft(
+                draft_id=f"product-frontier:{runtime.league_state.state_id}:{runtime.selected_team_id}:{request.counterparty_team_id}",
+                focal_team_id=runtime.selected_team_id,
+                counterparty_team_id=request.counterparty_team_id,
+                focal_side=TradeDraftSide(team_id=runtime.selected_team_id, assets=focal_assets),
+                counterparty_side=TradeDraftSide(team_id=request.counterparty_team_id, assets=counterparty_assets),
+            )
+            proposal = submit_trade_draft(draft, as_of=runtime.league_state.as_of)
+            return build_negotiation_frontier(
                 runtime,
                 proposal,
                 focal_team_id=runtime.selected_team_id,
