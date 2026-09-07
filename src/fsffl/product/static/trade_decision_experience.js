@@ -31,13 +31,15 @@
     if(!action)return'';
     const drivers=dispositionDrivers(result).slice(0,6);
     const simulations=Number(result.scenario_simulation_count||0);
+    const negotiation=words(result?.disposition?.evidence?.negotiation_shape||'');
     return`<section class="authoritative-trade-decision" style="border:1px solid var(--accent);border-radius:14px;padding:16px;margin:0 0 14px;background:#0a1120">
       <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-        <div><p class="eyebrow" style="margin-bottom:5px">FSFFL decision</p><h2 style="margin:0">${esc(actionLabel(action))}</h2><p style="color:var(--muted);margin:7px 0 0;max-width:760px">This is the authoritative NEXT-5 disposition after the changed roster ran through NEXT-4 Simulation, materiality, negotiation feasibility and the governed package-economics guard.</p></div>
+        <div><p class="eyebrow" style="margin-bottom:5px">FSFFL decision</p><h2 style="margin:0">${esc(actionLabel(action))}</h2><p style="color:var(--muted);margin:7px 0 0;max-width:760px">This is the focal-team NEXT-5 disposition after the changed roster ran through NEXT-4 Simulation, governed materiality and package economics. Counterparty feasibility is shown separately as negotiation context and does not reverse a clean advantage for your team.</p></div>
         <span class="status-chip">${simulations?`${simulations.toLocaleString()} scenario runs`:'Changed-state simulation complete'}</span>
       </div>
       ${drivers.length?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px">${drivers.map(item=>`<span class="opp-badge">${esc(item)}</span>`).join('')}</div>`:''}
-      <p style="font-size:11px;color:var(--muted);margin:12px 0 0">The reasons above are copied from the governed disposition evidence. FSFFL Value remains market context. Owner history may inform negotiation context, but no acceptance probability is invented here.</p>
+      ${negotiation?`<p style="font-size:12px;color:var(--muted);margin:10px 0 0"><strong>Negotiation context:</strong> ${esc(negotiation)}. This describes the bilateral shape, not whether your team should reject an otherwise favorable offer.</p>`:''}
+      <p style="font-size:11px;color:var(--muted);margin:12px 0 0">The reasons above are copied from governed disposition evidence. FSFFL Value remains market context. Owner history may inform negotiation context, but no acceptance probability is invented here.</p>
     </section>`;
   }
 
