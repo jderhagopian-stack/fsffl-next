@@ -10,6 +10,11 @@ from fsffl.team_utility.utility import OwnerStrategicPosture
 from .feasibility import NegotiationFeasibilityShape, TradeNegotiationFeasibility
 from .material_assessment import BilateralMaterialAssessment, SideMaterialAssessment
 from .materiality import MaterialityDirection
+from .package_economics import (
+    PackageEconomicAssessment,
+    PackageEconomicResolution,
+    PackageEconomicStatus,
+)
 from .strategy import StrategicTradeContext
 
 
@@ -29,6 +34,7 @@ class TradeDispositionEvidence(FrozenModel):
     unavailable_metrics: tuple[str, ...] = ()
     negotiation_shape: NegotiationFeasibilityShape
     owner_posture: OwnerStrategicPosture
+    package_economic_resolution: PackageEconomicResolution | None = None
     strategic_resolution_applied: bool = False
 
 
@@ -39,7 +45,7 @@ class TradeDecisionDisposition(FrozenModel):
     material_assessment_model_version: str
     negotiation_model_version: str
     strategic_context_model_version: str
-    model_version: str = "next5-trade-disposition-v2"
+    model_version: str = "next5-trade-disposition-v3"
 
     @model_validator(mode="after")
     def validate_disposition(self) -> "TradeDecisionDisposition":
@@ -56,15 +62,16 @@ class TradeDecisionDisposition(FrozenModel):
 
 
 # Action-facing competitive channels use actual postseason championship odds.
-# first_place_probability remains a diagnostic Simulation output but is not a
-# title proxy in the disposition contract.
+# first_place_probability remains a diagnostic Simulation output. Intrinsic Value
+# also remains diagnostic until its own authority is promoted; current action
+# authority uses the governed dynasty market-cardinal scale for long-horizon asset
+# economics rather than treating an unavailable intrinsic channel as zero.
 _METRICS = (
     "expected_wins",
     "playoff_probability",
     "championship_probability",
     "largest_single_player_lineup_drop",
     "market_value",
-    "intrinsic_value",
 )
 
 
@@ -102,20 +109,49 @@ def _metric_sets(side: SideMaterialAssessment) -> tuple[tuple[str, ...], tuple[s
     return tuple(gains), tuple(losses), tuple(unavailable)
 
 
+def _apply_package_guard(
+    disposition: TradeDisposition,
+    package_economics: PackageEconomicAssessment | None,
+    *,
+    focal_team_id: str,
+) -> TradeDisposition:
+    """Conservatively guard action authority without adding a second utility term."""
+
+    if package_economics is None or package_economics.status == PackageEconomicStatus.NOT_APPLICABLE:
+        return disposition
+    if package_economics.status == PackageEconomicStatus.INCOMPLETE:
+        return TradeDisposition.INSUFFICIENT_EVIDENCE
+
+    resolution = package_economics.resolution
+    if (
+        resolution == PackageEconomicResolution.SINGLETON_UNDERPAID
+        and focal_team_id == package_economics.singleton_sender_team_id
+    ):
+        return TradeDisposition.DECLINE
+    if (
+        resolution == PackageEconomicResolution.WITHIN_PROVISIONAL_BAND
+        and disposition not in {TradeDisposition.DECLINE, TradeDisposition.INSUFFICIENT_EVIDENCE}
+    ):
+        return TradeDisposition.COUNTER_OR_REVIEW
+    return disposition
+
+
 def decide_trade_disposition(
     material_assessment: BilateralMaterialAssessment,
     negotiation: TradeNegotiationFeasibility,
     strategic_context: StrategicTradeContext,
     *,
     focal_team_id: str,
-    model_version: str = "next5-trade-disposition-v2",
+    package_economics: PackageEconomicAssessment | None = None,
+    model_version: str = "next5-trade-disposition-v3",
 ) -> TradeDecisionDisposition:
     """Produce a conservative disposition from explicit, material evidence.
 
-    No scalar master score is used. Any unavailable required channel yields
-    insufficient evidence. Material gains plus material losses remain mixed and
-    require counter/review; owner posture is recorded but cannot silently rewrite
-    calculated consequences.
+    No scalar master score is used. Package concentration is not added as another
+    value term: while its residual economics remain provisional, a bounded interval
+    can only guard whether SUPPORT is robust, force review inside the uncertainty
+    band, or reject a clearly underpaid singleton. Roster cuts, lineup consequences
+    and Simulation remain separate authoritative channels and are not recharged.
     """
 
     if not model_version.strip():
@@ -125,6 +161,8 @@ def decide_trade_disposition(
         negotiation.proposal_id,
         strategic_context.proposal_id,
     }
+    if package_economics is not None:
+        proposal_ids.add(package_economics.proposal_id)
     if len(proposal_ids) != 1:
         raise ValueError("trade disposition inputs must describe the same proposal")
     if negotiation.focal_team_id != focal_team_id:
@@ -155,6 +193,8 @@ def decide_trade_disposition(
     else:
         disposition = TradeDisposition.NO_CLEAR_ADVANTAGE
 
+    disposition = _apply_package_guard(disposition, package_economics, focal_team_id=focal_team_id)
+
     return TradeDecisionDisposition(
         proposal_id=material_assessment.proposal_id,
         disposition=disposition,
@@ -166,6 +206,9 @@ def decide_trade_disposition(
             unavailable_metrics=unavailable,
             negotiation_shape=negotiation.shape,
             owner_posture=posture,
+            package_economic_resolution=(
+                package_economics.resolution if package_economics is not None else None
+            ),
             strategic_resolution_applied=False,
         ),
         material_assessment_model_version=material_assessment.model_version,
