@@ -218,3 +218,37 @@ def test_clearly_underpaid_singleton_declines_for_singleton_sender() -> None:
         package_economics=package,
     )
     assert result.disposition == TradeDisposition.DECLINE
+
+
+def test_unresolved_package_band_does_not_penalize_package_sender() -> None:
+    result = decide_trade_disposition(
+        _assessment(_material_side("a", gain=True), _material_side("b", gain=True)),
+        _negotiation(NegotiationFeasibilityShape.MUTUAL_GAIN_CANDIDATE),
+        _strategy(),
+        focal_team_id="a",
+        package_economics=_package_assessment(
+            PackageEconomicResolution.WITHIN_PROVISIONAL_BAND,
+            singleton_sender="b",
+        ),
+    )
+    assert result.disposition == TradeDisposition.SUPPORT
+    assert result.evidence.package_economic_resolution == PackageEconomicResolution.WITHIN_PROVISIONAL_BAND
+
+
+def test_underpaid_singleton_guard_does_not_reverse_package_sender_support() -> None:
+    package = _package_assessment(
+        PackageEconomicResolution.SINGLETON_UNDERPAID,
+        singleton_sender="b",
+    ).model_copy(update={
+        "package_market_value": 5500.0,
+        "package_surplus_vs_lower": -500.0,
+        "package_surplus_vs_upper": -1400.0,
+    })
+    result = decide_trade_disposition(
+        _assessment(_material_side("a", gain=True), _material_side("b", gain=True)),
+        _negotiation(NegotiationFeasibilityShape.MUTUAL_GAIN_CANDIDATE),
+        _strategy(),
+        focal_team_id="a",
+        package_economics=package,
+    )
+    assert result.disposition == TradeDisposition.SUPPORT
