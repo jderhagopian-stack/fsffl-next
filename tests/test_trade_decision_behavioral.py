@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 import pytest
 
 from fsffl.behavioral.models import OwnerBehaviorProfile
+from fsffl.state.models import PlayerAsset
 from fsffl.trade_decision import AcceptanceEvidenceKind, AcceptanceModelStatus, bind_owner_behavior_evidence
 from fsffl.trade_decision.models import BilateralTradeProposal, TradeLeg
 
@@ -14,8 +15,8 @@ def _proposal() -> BilateralTradeProposal:
     return BilateralTradeProposal(
         proposal_id="proposal:behavior",
         as_of=NOW,
-        side_a=TradeLeg(team_id="team:a", player_ids=("player:a",)),
-        side_b=TradeLeg(team_id="team:b", player_ids=("player:b",)),
+        side_a=TradeLeg(team_id="team:a", sends=(PlayerAsset(player_id="player:a"),)),
+        side_b=TradeLeg(team_id="team:b", sends=(PlayerAsset(player_id="player:b"),)),
     )
 
 
