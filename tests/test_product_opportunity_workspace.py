@@ -63,7 +63,7 @@ def test_opportunity_presentation_retries_runtime_readiness_without_inventing_au
     assert "acceptance percentage" in ui
     assert "renderFsfflOpportunities" in shell
     assert "opportunities.js" in shell
-    assert "'opportunities','analytics'" in shell
+    assert "'opportunities','what_if','analytics'" in shell
 
 
 def test_opportunity_waiver_ui_requires_server_action_authority() -> None:
