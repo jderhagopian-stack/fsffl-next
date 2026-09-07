@@ -61,11 +61,6 @@ class TradeDecisionDisposition(FrozenModel):
         return self
 
 
-# Action-facing competitive channels use actual postseason championship odds.
-# first_place_probability remains a diagnostic Simulation output. Intrinsic Value
-# also remains diagnostic until its own authority is promoted; current action
-# authority uses the governed dynasty market-cardinal scale for long-horizon asset
-# economics rather than treating an unavailable intrinsic channel as zero.
 _METRICS = (
     "expected_wins",
     "playoff_probability",
@@ -115,15 +110,6 @@ def _apply_package_guard(
     *,
     focal_team_id: str,
 ) -> TradeDisposition:
-    """Conservatively guard the elite-singleton seller without adding utility.
-
-    The residual package-premium uncertainty is a reservation-price question for
-    the team surrendering the uniquely valuable singleton. It must not become a
-    symmetric penalty on the package sender, whose roster, lineup, market Value,
-    and competitive consequences are already evaluated by their authoritative
-    channels.
-    """
-
     if package_economics is None or package_economics.status == PackageEconomicStatus.NOT_APPLICABLE:
         return disposition
     if package_economics.status == PackageEconomicStatus.INCOMPLETE:
@@ -151,14 +137,13 @@ def decide_trade_disposition(
     package_economics: PackageEconomicAssessment | None = None,
     model_version: str = "next5-trade-disposition-v4",
 ) -> TradeDecisionDisposition:
-    """Produce a conservative disposition from explicit, material evidence.
+    """Produce the focal team's action disposition from material evidence.
 
-    No scalar master score is used. Package concentration is not added as another
-    value term: while its residual economics remain provisional, a bounded interval
-    can only guard the elite-singleton seller's conclusion, force review inside that
-    seller's uncertainty band, or reject a clearly underpaid singleton. Roster cuts,
-    lineup consequences and Simulation remain separate authoritative channels and
-    are not recharged.
+    Counterparty feasibility remains separate negotiation context. It cannot turn
+    a clean focal-team material gain into a counter recommendation. If a deal is
+    already available and materially helps the focal team without a material loss,
+    the focal action is support; whether the counterparty should agree is a separate
+    question surfaced by negotiation feasibility.
     """
 
     if not model_version.strip():
@@ -188,15 +173,7 @@ def decide_trade_disposition(
     elif losses:
         disposition = TradeDisposition.DECLINE
     elif gains:
-        if negotiation.shape in {
-            NegotiationFeasibilityShape.COUNTERPARTY_DOMINATED,
-            NegotiationFeasibilityShape.MIXED,
-        }:
-            disposition = TradeDisposition.COUNTER_OR_REVIEW
-        elif negotiation.shape == NegotiationFeasibilityShape.INCOMPLETE:
-            disposition = TradeDisposition.INSUFFICIENT_EVIDENCE
-        else:
-            disposition = TradeDisposition.SUPPORT
+        disposition = TradeDisposition.SUPPORT
     else:
         disposition = TradeDisposition.NO_CLEAR_ADVANTAGE
 
