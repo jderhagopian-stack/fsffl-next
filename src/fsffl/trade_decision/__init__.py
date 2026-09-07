@@ -7,6 +7,7 @@ from .acceptance import (
     TradeAcceptanceView,
     build_unestimated_acceptance_view,
 )
+from .behavioral import bind_owner_behavior_evidence
 from .decision import (
     BilateralDecisionShape,
     BilateralTradeDecision,
@@ -108,6 +109,7 @@ __all__ = [
     "assess_negotiation_feasibility",
     "assess_side_direction",
     "attach_owner_strategy",
+    "bind_owner_behavior_evidence",
     "build_unestimated_acceptance_view",
     "calculate_bilateral_economic_net",
     "classify_bilateral_trade_decision",
