@@ -2,13 +2,13 @@ from datetime import UTC, datetime
 
 import pytest
 
+from fsffl.runtime.historical_pick import build_slot_forecast_from_draft_order
 from fsffl.state.models import DraftPick, LeagueRules
 from fsffl.team_utility.draft_order import (
     DraftOrderScenario,
     DraftOrderSimulationResult,
     DraftSlotAssignment,
 )
-from fsffl.value.historical_pick_simulation import build_slot_forecast_from_draft_order
 
 
 def _rules(team_count=4, rounds=3):
