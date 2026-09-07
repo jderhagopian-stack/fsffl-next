@@ -18,11 +18,11 @@ const fsfflProductSurfaceCopy={
   opportunities:['Opportunity Engine','Find places worth investigating.','Explore structural trade tests and available players from the governed Search layer. Diagnostic rows stay clearly separate from action-authoritative recommendations.'],
   what_if:['Alternate History / What-If','Change one thing. Re-run the consequences.','Counterfactual scenarios will create a changed point-in-time State and then reuse Forecast, Value, Decision and Simulation authority to show what would have changed.'],
   simulator:['Simulator','Test the future before acting.','Scenario controls will expose governed NEXT-4 competitive outcomes for lineup, roster, injury and transaction scenarios. Expensive simulation work will remain server-owned, reusable and cacheable.'],
-  analytics:['Analytics Terminal','Explore the full league intelligence stack.','Move between league, player, Value and evidence views using read-only authoritative Analytics/API outputs.'],
+  analytics:['Analytics Terminal','Explore the full league intelligence stack.','Move between league, player, owner behavior, Value and evidence views using read-only authoritative Analytics/API outputs.'],
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260906-full-beta2';
+const fsfflStaticVersion='20260907-behavior1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
@@ -34,7 +34,7 @@ function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseS
 function ensureLeagueComparisonScript(){return lazyProductScript('renderFsfflLeagueComparison','/static/league_comparison.js','Unable to load League Comparison presentation module',()=>leagueComparisonScriptPromise,value=>leagueComparisonScriptPromise=value)}
 function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/static/my_team_dashboard.js','Unable to load My Team presentation module',()=>myTeamScriptPromise,value=>myTeamScriptPromise=value)}
 function ensureReportsScript(){return lazyProductScript('renderFsfflReports','/static/reports.js','Unable to load Reports presentation module',()=>reportsScriptPromise,value=>reportsScriptPromise=value)}
-function ensureHomeScript(){return lazyProductScript('installFsfflHomeExperience','/static/home_dashboard.js','Unable to load Home presentation module',()=>homeScriptPromise,value=>homeScriptPromise=value)}
+function ensureHomeScript(){return lazyProductScript('installFsfflHomeExperience','/static/home_dashboard.js','Unable to load Home presentation module',()=>homeScriptPromise,value=>homeScriptScriptPromise=value)}
 function ensureOpportunitiesScript(){return lazyProductScript('renderFsfflOpportunities','/static/opportunities.js','Unable to load Opportunity Engine presentation module',()=>opportunitiesScriptPromise,value=>opportunitiesScriptPromise=value)}
 function ensureAnalyticsTerminalScript(){return lazyProductScript('renderFsfflAnalyticsTerminal','/static/analytics_terminal.js','Unable to load Analytics Terminal presentation module',()=>analyticsTerminalScriptPromise,value=>analyticsTerminalScriptPromise=value)}
 
