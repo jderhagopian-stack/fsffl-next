@@ -45,7 +45,7 @@ class TradeDecisionDisposition(FrozenModel):
     material_assessment_model_version: str
     negotiation_model_version: str
     strategic_context_model_version: str
-    model_version: str = "next5-trade-disposition-v3"
+    model_version: str = "next5-trade-disposition-v4"
 
     @model_validator(mode="after")
     def validate_disposition(self) -> "TradeDecisionDisposition":
@@ -115,7 +115,14 @@ def _apply_package_guard(
     *,
     focal_team_id: str,
 ) -> TradeDisposition:
-    """Conservatively guard action authority without adding a second utility term."""
+    """Conservatively guard the elite-singleton seller without adding utility.
+
+    The residual package-premium uncertainty is a reservation-price question for
+    the team surrendering the uniquely valuable singleton. It must not become a
+    symmetric penalty on the package sender, whose roster, lineup, market Value,
+    and competitive consequences are already evaluated by their authoritative
+    channels.
+    """
 
     if package_economics is None or package_economics.status == PackageEconomicStatus.NOT_APPLICABLE:
         return disposition
@@ -123,13 +130,12 @@ def _apply_package_guard(
         return TradeDisposition.INSUFFICIENT_EVIDENCE
 
     resolution = package_economics.resolution
-    if (
-        resolution == PackageEconomicResolution.SINGLETON_UNDERPAID
-        and focal_team_id == package_economics.singleton_sender_team_id
-    ):
+    focal_is_singleton_sender = focal_team_id == package_economics.singleton_sender_team_id
+    if resolution == PackageEconomicResolution.SINGLETON_UNDERPAID and focal_is_singleton_sender:
         return TradeDisposition.DECLINE
     if (
         resolution == PackageEconomicResolution.WITHIN_PROVISIONAL_BAND
+        and focal_is_singleton_sender
         and disposition not in {TradeDisposition.DECLINE, TradeDisposition.INSUFFICIENT_EVIDENCE}
     ):
         return TradeDisposition.COUNTER_OR_REVIEW
@@ -143,15 +149,16 @@ def decide_trade_disposition(
     *,
     focal_team_id: str,
     package_economics: PackageEconomicAssessment | None = None,
-    model_version: str = "next5-trade-disposition-v3",
+    model_version: str = "next5-trade-disposition-v4",
 ) -> TradeDecisionDisposition:
     """Produce a conservative disposition from explicit, material evidence.
 
     No scalar master score is used. Package concentration is not added as another
     value term: while its residual economics remain provisional, a bounded interval
-    can only guard whether SUPPORT is robust, force review inside the uncertainty
-    band, or reject a clearly underpaid singleton. Roster cuts, lineup consequences
-    and Simulation remain separate authoritative channels and are not recharged.
+    can only guard the elite-singleton seller's conclusion, force review inside that
+    seller's uncertainty band, or reject a clearly underpaid singleton. Roster cuts,
+    lineup consequences and Simulation remain separate authoritative channels and
+    are not recharged.
     """
 
     if not model_version.strip():
