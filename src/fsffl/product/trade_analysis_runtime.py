@@ -161,6 +161,9 @@ def build_private_beta_trade_analysis(
     warnings.append(
         "Competitive win/playoff impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority."
     )
+    warnings.append(
+        "Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted."
+    )
 
     return {
         "proposal": proposal.model_dump(mode="json"),
