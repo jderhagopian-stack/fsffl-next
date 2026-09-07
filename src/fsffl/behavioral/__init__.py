@@ -4,6 +4,13 @@ Behavioral evidence is descriptive input to downstream Decision/Search/Analytics
 It does not own market Value, competitive simulation, or recommendation authority.
 """
 
+from .likelihood import (
+    BehavioralDriverKind,
+    BehavioralEvidenceLevel,
+    BehavioralLikelihoodDirection,
+    BehavioralLikelihoodDriver,
+    BehavioralLikelihoodEstimate,
+)
 from .models import (
     BehavioralAsset,
     BehavioralAssetKind,
@@ -20,6 +27,11 @@ __all__ = [
     "BehavioralAsset",
     "BehavioralAssetKind",
     "BehavioralEventKind",
+    "BehavioralDriverKind",
+    "BehavioralEvidenceLevel",
+    "BehavioralLikelihoodDirection",
+    "BehavioralLikelihoodDriver",
+    "BehavioralLikelihoodEstimate",
     "OwnerBehaviorEvent",
     "OwnerBehaviorProfile",
     "SleeperBehaviorHistorySource",
