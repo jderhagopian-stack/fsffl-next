@@ -9,11 +9,13 @@ def test_post_trade_simulation_uses_existing_authoritative_contracts() -> None:
     source = RUNTIME.read_text(encoding="utf-8")
     assert "apply_bilateral_trade" in source
     assert "resolve_mandatory_roster_cuts" in source
-    assert "simulation_loader(legal_after, forecast_evidence)" in source
+    assert "run_cached_scenario_simulation(" in source
+    assert "simulation_loader=simulation_loader" in source
     assert "compare_team_utility_vectors" in source
     assert '"mandatory_roster_cuts": "NEXT-5 Trade Decision"' in source
     assert '"competitive_outcomes": "NEXT-4 Simulation"' in source
     assert '"scenario_delta": "NEXT-4 Team Utility"' in source
+    assert '"scenario_cache": "performance-only exact-result reuse"' in source
     assert '"presentation_calculation": False' in source
 
 
