@@ -36,10 +36,12 @@ def test_trade_decision_surface_translates_support_to_plain_language_accept() ->
 
 def test_frontier_release_is_cache_busted_coherently() -> None:
     html = INDEX.read_text(encoding="utf-8")
-    assert "20260907-decision3" in html
     versions = {
         token.split("?v=")[1].split('"')[0]
         for token in html.split()
         if "?v=" in token
     }
-    assert versions == {"20260907-decision3"}
+    assert len(versions) == 1
+    version = next(iter(versions))
+    assert version.strip()
+    assert version != "20260907-decision3"
