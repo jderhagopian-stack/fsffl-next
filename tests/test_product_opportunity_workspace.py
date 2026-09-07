@@ -60,7 +60,8 @@ def test_opportunity_presentation_retries_runtime_readiness_without_inventing_au
     assert "setTimeout(()=>loadOpportunityWorkspace" in ui
     assert "This view will check again automatically" in ui
     assert "Diagnostic only" in ui
-    assert "acceptance percentage" in ui
+    assert "not an acceptance probability" in ui
+    assert "Numeric acceptance" in ui and "separately calibrated" in ui
     assert "renderFsfflOpportunities" in shell
     assert "opportunities.js" in shell
     assert "'opportunities','what_if','analytics'" in shell
@@ -95,6 +96,6 @@ def test_trade_opportunity_ui_promotes_only_to_server_returned_market_test_autho
     assert "MARKET_TEST_ONLY" in runtime
     assert "Evaluate offer" in ui
     assert "Worth sending as a market test" in ui
-    assert "unknown acceptance" in ui.lower()
+    assert "acceptance is uncalibrated" in ui.lower()
     assert "cannot become ACTIONABLE" in ui
     assert "acceptance_probability" not in ui
