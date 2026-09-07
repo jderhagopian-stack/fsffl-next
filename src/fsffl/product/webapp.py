@@ -40,6 +40,7 @@ from .team_page import build_forecast_team_view, build_state_only_team_view
 from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import build_trade_center_browser_view, resolve_owned_asset_ref
+from .trade_simulation_runtime import build_post_trade_simulation_comparison
 
 
 _STATIC_DIR = Path(__file__).with_name("static")
@@ -630,6 +631,38 @@ def create_app(
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @application.post("/api/trade-center/simulate")
+    def simulate_trade(request: AnalyzeTradeRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if runtime.selected_team_id is None:
+            raise HTTPException(status_code=409, detail="No managed team is selected")
+        if request.counterparty_team_id == runtime.selected_team_id:
+            raise HTTPException(status_code=422, detail="Trade counterparty must be a different team")
+        try:
+            focal_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=runtime.selected_team_id, asset_ref=ref) for ref in request.focal_asset_refs)
+            counterparty_assets = tuple(resolve_owned_asset_ref(runtime.league_state, team_id=request.counterparty_team_id, asset_ref=ref) for ref in request.counterparty_asset_refs)
+            draft = TradeDraft(
+                draft_id=f"product-simulation:{runtime.league_state.state_id}:{runtime.selected_team_id}:{request.counterparty_team_id}",
+                focal_team_id=runtime.selected_team_id,
+                counterparty_team_id=request.counterparty_team_id,
+                focal_side=TradeDraftSide(team_id=runtime.selected_team_id, assets=focal_assets),
+                counterparty_side=TradeDraftSide(team_id=request.counterparty_team_id, assets=counterparty_assets),
+            )
+            proposal = submit_trade_draft(draft, as_of=runtime.league_state.as_of)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        try:
+            return build_post_trade_simulation_comparison(
+                runtime,
+                proposal,
+                focal_team_id=runtime.selected_team_id,
+                simulation_loader=simulation_loader,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @application.get("/api/league/chart")
     def league_chart(metric: LeagueMetric, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
