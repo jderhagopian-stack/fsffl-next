@@ -6,11 +6,12 @@ from fsffl.opportunity.waiver import WaiverMove, apply_waiver_move
 from fsffl.team_utility import compare_team_utility_vectors
 
 from .runtime import LiveForecastEvidence
+from .scenario_cache import run_cached_scenario_simulation
 from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-waiver-simulation-v1"
+_PRODUCT_MODEL_VERSION = "next8-waiver-simulation-v2:scenario-cache"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -32,7 +33,8 @@ def build_waiver_simulation_comparison(
     NEXT-4 owns competitive outcomes, and materiality remains a separate governed
     interpretation step with explicit policies. This adapter only creates the
     changed State, simulates it, and returns the typed before/after Team Utility
-    delta for the focal franchise.
+    delta for the focal franchise. Exact repeated changed States may reuse the
+    prior authoritative Simulation result.
     """
 
     league_state = runtime.league_state
@@ -48,7 +50,11 @@ def build_waiver_simulation_comparison(
         raise ValueError("waiver simulation requires a current NEXT-4 baseline simulation")
 
     changed_state = apply_waiver_move(league_state, move=move)
-    changed = simulation_loader(changed_state, forecast_evidence)
+    changed, cache_hit = run_cached_scenario_simulation(
+        changed_state,
+        forecast_evidence,
+        simulation_loader=simulation_loader,
+    )
     baseline_utility = _utility_for_team(baseline, move.focal_team_id)
     changed_utility = _utility_for_team(changed, move.focal_team_id)
     delta = compare_team_utility_vectors(
@@ -64,6 +70,7 @@ def build_waiver_simulation_comparison(
         "state_id_after": changed_state.state_id,
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
+        "scenario_cache_hit": cache_hit,
         "team_delta": delta.model_dump(mode="json"),
         "materiality": None,
         "authority": {
@@ -71,6 +78,7 @@ def build_waiver_simulation_comparison(
             "state_transition": "NEXT-6 Waiver scenario",
             "competitive_outcomes": "NEXT-4 Simulation",
             "scenario_delta": "NEXT-4 Team Utility",
+            "scenario_cache": "performance-only exact-result reuse",
             "materiality_evaluated": False,
             "presentation_calculation": False,
         },
