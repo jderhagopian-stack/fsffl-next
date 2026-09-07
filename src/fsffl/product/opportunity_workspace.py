@@ -154,14 +154,15 @@ def _evaluate_structural_trade(
 def build_opportunity_workspace(
     runtime: UserRuntimeContext,
     *,
-    candidate_limit: int = 120,
-    bilateral_evaluation_limit: int = 24,
+    candidate_limit: int = 80,
+    bilateral_evaluation_limit: int = 4,
 ) -> dict[str, object]:
-    """Build a read-only private-beta Opportunity workspace with explicit readiness.
+    """Build a responsive read-only Opportunity workspace with explicit readiness.
 
-    Expected product-runtime gaps are represented as structured workspace states
-    instead of transport errors. Search itself still runs only after canonical State,
-    a managed team, and authoritative Cardinal Value evidence are available.
+    Structural discovery is deliberately cheap enough to paint the workspace first.
+    Only a small leading set is synchronously enriched through NEXT-5 Decision on
+    initial load; deeper Decision/materiality work belongs behind explicit actions
+    rather than blocking the entire Opportunity screen.
     """
 
     league_state = runtime.league_state
