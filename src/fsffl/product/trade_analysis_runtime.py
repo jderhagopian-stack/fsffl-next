@@ -12,20 +12,23 @@ from fsffl.team_utility import (
 )
 from fsffl.trade_decision import (
     apply_bilateral_trade,
+    assess_package_economics,
     bind_owner_behavior_evidence,
     calculate_bilateral_economic_net,
     classify_bilateral_trade_decision,
     evaluate_bilateral_trade_deltas,
+    live_bounded_package_premium_prior,
     resolve_mandatory_roster_cuts,
     summarize_bilateral_trade_economics,
     summarize_package_concentration,
 )
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
-from fsffl.value.models import AssetValueProfile, MarketPriceEstimate, ValueDistribution
+
+from .trade_value_adapter import cardinal_market_profiles
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v7"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v8"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -82,37 +85,6 @@ def _position_strength_comparison(before_state, after_state, forecasts, *, team_
     return compare_position_strengths(before, after)
 
 
-def _cardinal_market_profiles(value_evidence) -> dict[str, AssetValueProfile]:
-    """Adapt authoritative NEXT-3 cardinal scores into typed market estimates.
-
-    Trade Decision economics need a typed MarketPriceEstimate, while the product's
-    user-facing FSFFL Value is the promoted 0-10,000 cardinal market axis. This
-    adapter preserves that exact scale rather than accidentally doing package math
-    on the separate 0-1 market-percentile representation.
-    """
-
-    profiles: dict[str, AssetValueProfile] = {}
-    if value_evidence is None:
-        return profiles
-    for score in value_evidence.fsffl_cardinal_values:
-        estimate = MarketPriceEstimate(
-            asset_id=score.asset_id,
-            asset_kind=score.asset_kind,
-            distribution=ValueDistribution(mean=score.score, stddev=0.0),
-            scale=score.scale,
-            as_of=score.as_of,
-            market_context_id=score.market_context_id,
-            model_version=score.model_version,
-            evidence_sources=(score.evidence_source_id,),
-        )
-        profiles[score.asset_id] = AssetValueProfile(
-            asset_id=score.asset_id,
-            asset_kind=score.asset_kind,
-            market_price=estimate,
-        )
-    return profiles
-
-
 def build_private_beta_trade_analysis(
     runtime: Any,
     proposal: BilateralTradeProposal,
@@ -138,17 +110,19 @@ def build_private_beta_trade_analysis(
     if forecast_evidence is not None:
         forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
     value_evidence = runtime.value_evidence
-    cardinal_profiles = _cardinal_market_profiles(value_evidence)
+    cardinal_profiles = cardinal_market_profiles(value_evidence)
     market_values = {
         asset_id: profile.market_price.distribution.mean
         for asset_id, profile in cardinal_profiles.items()
         if profile.market_price is not None
     }
-    package_concentration = (
-        summarize_package_concentration(proposal, market_values)
-        if market_values
-        else None
-    )
+    package_concentration = summarize_package_concentration(proposal, market_values) if market_values else None
+    package_economics = None
+    if package_concentration is not None:
+        package_economics = assess_package_economics(
+            package_concentration,
+            prior=live_bounded_package_premium_prior(as_of=proposal.as_of),
+        )
 
     protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
     roster_resolution = resolve_mandatory_roster_cuts(
@@ -212,7 +186,7 @@ def build_private_beta_trade_analysis(
         warnings.append("The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative FSFFL Value; cut opportunity cost remains incomplete.")
     warnings.append("Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority.")
     warnings.append("Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted.")
-    warnings.append("Package concentration is now measured explicitly. A package premium is not yet applied until the historical multi-asset calibration is promoted; legal-roster cut cost, lineup consequences and simulation remain active separately.")
+    warnings.append("Package concentration is measured separately from cuts, lineup impact and Simulation. The current 0%-15% residual premium interval is only a provisional Decision robustness guard and is not added to FSFFL Value.")
 
     return {
         "proposal": proposal.model_dump(mode="json"),
@@ -227,6 +201,7 @@ def build_private_beta_trade_analysis(
         "economic_net": economic_net.model_dump(mode="json") if economic_net is not None else None,
         "roster_adjusted_market_net": roster_adjusted_market_net.model_dump(mode="json") if roster_adjusted_market_net is not None else None,
         "package_concentration": package_concentration.model_dump(mode="json") if package_concentration is not None else None,
+        "package_economics": package_economics.model_dump(mode="json") if package_economics is not None else None,
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "position_strength": position_strength.model_dump(mode="json") if position_strength is not None else None,
         "behavioral_context": behavioral_view.model_dump(mode="json") if behavioral_view is not None else None,
@@ -239,6 +214,7 @@ def build_private_beta_trade_analysis(
             "championship_probability": False,
             "mandatory_cut_cost": roster_adjusted_market_net is not None and not incomplete_cut_cost,
             "package_concentration_evidence": package_concentration is not None,
+            "bounded_package_economic_guard": package_economics is not None,
             "package_concentration_premium": False,
             "behavioral_evidence": behavioral_view is not None,
             "acceptance_probability": False,
