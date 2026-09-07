@@ -9,7 +9,7 @@ def test_analytics_terminal_exposes_behavior_without_revaluing_assets() -> None:
     assert "/api/behavioral/profiles" in source
     assert 'data-at-tab="behavior"' in source
     assert "Observed owner behavior" in source
-    assert "does not change general FSFFL market Value" in source
+    assert "without changing general FSFFL market Value" in source
     assert "acceptance percentage" in source
     assert "consolidation_trade_count" in source
     assert "diversification_trade_count" in source
