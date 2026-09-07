@@ -12,6 +12,7 @@ from .simulation_runtime import LiveSimulationAnalyticsResult
 
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
 _PRODUCT_MODEL_VERSION = "next8-players-unavailable-simulator-v1:scenario-cache"
+_SIMULATOR_ENVELOPE_PREFIX = "simulator:"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -109,6 +110,7 @@ def build_players_unavailable_scenario(
         "focal_team_id": team_id,
         "player_ids": list(unique_ids),
         "players": players,
+        "player_names": [item["player_name"] for item in players],
         "state_id_before": league_state.state_id,
         "state_id_after": changed_state.state_id,
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
@@ -136,7 +138,22 @@ def build_player_unavailable_scenario(
     player_id: str,
     simulation_loader: SimulationLoader,
 ) -> dict[str, object]:
-    """Backward-compatible single-player What-If wrapper over Simulator authority."""
+    """Single-player What-If plus a temporary multi-player Simulator envelope.
+
+    The hosted product currently has one narrow availability endpoint. A value
+    prefixed with ``simulator:`` carries comma-separated canonical player ids into
+    the generalized server-side Simulator runtime. This is transport only: State,
+    Forecast, Simulation, utility delta and cache authority remain entirely on the
+    server. Normal player ids preserve the original one-player What-If contract.
+    """
+
+    if player_id.startswith(_SIMULATOR_ENVELOPE_PREFIX):
+        encoded = player_id[len(_SIMULATOR_ENVELOPE_PREFIX):]
+        return build_players_unavailable_scenario(
+            runtime,
+            player_ids=tuple(item for item in encoded.split(",") if item),
+            simulation_loader=simulation_loader,
+        )
 
     result = build_players_unavailable_scenario(
         runtime,
