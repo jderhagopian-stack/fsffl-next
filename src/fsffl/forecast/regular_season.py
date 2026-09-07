@@ -14,12 +14,21 @@ from .models import (
 
 _NFL_REGULAR_SEASON_GAMES_PER_TEAM = 17
 _NFL_REGULAR_SEASON_WEEKS = 18
-MODEL_VERSION = "next2-fantasy-regular-season-horizon-v1"
+MODEL_VERSION = "next2-fantasy-regular-season-horizon-v2"
 SOURCE = "fsffl:fantasy_regular_season_horizon"
 
 
 def fantasy_regular_season_weeks(league_state: LeagueState) -> tuple[int, ...]:
-    """Return the canonical fantasy regular-season weeks from State authority."""
+    """Return the canonical fantasy regular-season weeks from State authority.
+
+    Prefer the league's configured regular-season endpoint. Materialized matchup
+    rows are an evidence fallback only because provider APIs may omit future weeks
+    even when the league schedule is already configured.
+    """
+
+    configured_end = league_state.league.rules.fantasy_regular_season_end_week
+    if configured_end is not None:
+        return tuple(range(1, configured_end + 1))
 
     weeks = tuple(sorted({matchup.week for matchup in league_state.matchups}))
     if not weeks:
