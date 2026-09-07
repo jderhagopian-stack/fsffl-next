@@ -18,6 +18,7 @@ from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
 
 from .background_jobs import IntelligenceJob, IntelligenceJobCoordinator, IntelligenceJobPhase
+from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
 from .intelligence_runtime import (
     build_forecast_lineup_analytics,
@@ -209,10 +210,12 @@ def create_app(
     simulation_loader: SimulationLoader = _default_simulation_loader,
     value_loader: LiveValueLoader = default_live_value_loader,
     trade_evaluator: TradeEvaluator | None = None,
+    behavioral_coordinator: BehavioralRuntimeCoordinator | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
     jobs = IntelligenceJobCoordinator(max_workers=2)
+    behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
     @application.get("/health")
@@ -259,6 +262,14 @@ def create_app(
                 elif stage["stage"] == "analytics":
                     stage["readiness"] = "ready"
                     stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
+        behavior = behavior_jobs.current(user_id)
+        payload["behavioral_intelligence"] = {
+            "status": behavior.status.value,
+            "profile_count": behavior.result.profile_count if behavior.result is not None else 0,
+            "event_count": behavior.result.total_event_count if behavior.result is not None else 0,
+            "reused_historical_seasons": len(behavior.result.reused_historical_league_ids) if behavior.result is not None else 0,
+            "error": behavior.error,
+        }
         payload["value_ready"] = value_ready
         payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
         payload["cardinal_value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.fsffl_cardinal_values)
@@ -276,7 +287,73 @@ def create_app(
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Unable to load Sleeper league: {exc}") from exc
         store.set_league_state(user_id, league_state)
+        behavior_jobs.start(
+            user_id=user_id,
+            league_state=league_state,
+            sleeper_league_external_id=league_external_id,
+        )
         return _runtime_context_payload(store, user_id)
+
+    @application.get("/api/behavioral/status")
+    def behavioral_status(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        record = behavior_jobs.current(user_id)
+        result = record.result
+        return {
+            "status": record.status.value,
+            "league_state_id": record.league_state_id,
+            "started_at": record.started_at.isoformat() if record.started_at is not None else None,
+            "updated_at": record.updated_at.isoformat() if record.updated_at is not None else None,
+            "league_family_id": result.league_family_id if result is not None else None,
+            "profile_count": result.profile_count if result is not None else 0,
+            "event_count": result.total_event_count if result is not None else 0,
+            "new_event_count": result.inserted_event_count if result is not None else 0,
+            "reused_historical_league_ids": list(result.reused_historical_league_ids) if result is not None else [],
+            "scanned_league_ids": list(result.scanned_league_ids) if result is not None else [],
+            "error": record.error,
+            "cache": "sqlite_configurable_path",
+            "hosted_durability": "requires durable deployment storage",
+        }
+
+    @application.get("/api/behavioral/profiles")
+    def behavioral_profiles(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        record = behavior_jobs.current(user_id)
+        if record.status == BehavioralRuntimeStatus.FAILED:
+            raise HTTPException(status_code=502, detail=record.error or "Behavioral Intelligence build failed")
+        if record.result is None:
+            return {"status": record.status.value, "profiles": []}
+
+        roster_to_team = {}
+        for team in runtime.league_state.teams:
+            sleeper_ref = next((ref for ref in team.provider_refs if ref.provider == "sleeper"), None)
+            if sleeper_ref is None:
+                continue
+            try:
+                roster_to_team[int(sleeper_ref.external_id)] = team
+            except ValueError:
+                continue
+        owner_to_team = {
+            owner_id: roster_to_team[roster_id]
+            for roster_id, owner_id in record.result.current_owner_by_roster
+            if roster_id in roster_to_team
+        }
+        return {
+            "status": record.status.value,
+            "league_family_id": record.result.league_family_id,
+            "profiles": [
+                {
+                    **profile.model_dump(mode="json"),
+                    "current_team_id": owner_to_team[profile.owner_id].team_id if profile.owner_id in owner_to_team else None,
+                    "current_team_name": owner_to_team[profile.owner_id].display_name if profile.owner_id in owner_to_team else None,
+                }
+                for profile in record.result.profiles
+            ],
+        }
 
     @application.post("/api/select-team")
     def select_team(request: SelectTeamRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
