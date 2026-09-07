@@ -1,5 +1,5 @@
 from .assembly import assemble_team_utility_vector
-from .competitive_state import CompetitiveStatePolicy, classify_calculated_competitive_state
+from .competitive_state import CompetitiveStatePolicy, classify_calculated_competitive_state, derive_league_relative_competitive_state_policy
 from .lineup import marginal_lineup_impact, optimize_team_lineup
 from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
 from .position_strength import (
@@ -26,6 +26,7 @@ __all__ = [
     "build_bye_aware_weekly_team_scoring_distribution", "build_bye_aware_weekly_team_scoring_panel",
     "build_regular_season_simulation_input", "build_roster_resilience", "build_team_scoring_distribution",
     "build_weekly_team_scoring_distribution", "classify_calculated_competitive_state", "compare_position_strengths",
-    "compare_team_utility_vectors", "marginal_lineup_impact", "optimize_team_lineup", "regular_season_game_counts",
-    "scheduled_matchups_from_league_state", "simulate_regular_season", "summarize_lineup_by_position",
+    "compare_team_utility_vectors", "derive_league_relative_competitive_state_policy", "marginal_lineup_impact",
+    "optimize_team_lineup", "regular_season_game_counts", "scheduled_matchups_from_league_state",
+    "simulate_regular_season", "summarize_lineup_by_position",
 ]
