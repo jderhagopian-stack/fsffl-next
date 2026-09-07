@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TRADE_UI = ROOT / "src/fsffl/product/static/trade_center.js"
 WEBAPP = ROOT / "src/fsffl/product/webapp.py"
 INDEX = ROOT / "src/fsffl/product/static/index.html"
+SESSION = ROOT / "src/fsffl/product/static/session_recovery.js"
 
 
 def test_trade_center_frontier_routes_through_backend_authority() -> None:
@@ -25,12 +26,20 @@ def test_trade_center_uses_authoritative_cardinal_value_not_retired_challenger()
     assert "PROVISIONAL" not in ui
 
 
+def test_trade_decision_surface_translates_support_to_plain_language_accept() -> None:
+    ui = SESSION.read_text(encoding="utf-8")
+    assert "support:'Accept'" in ui
+    assert "counter_or_review:'Counter'" in ui
+    assert "Package / consolidation" in ui
+    assert "run the post-trade simulation to finish the recommendation" in ui
+
+
 def test_frontier_release_is_cache_busted_coherently() -> None:
     html = INDEX.read_text(encoding="utf-8")
-    assert "20260907-usability1" in html
+    assert "20260907-decision3" in html
     versions = {
         token.split("?v=")[1].split('"')[0]
         for token in html.split()
         if "?v=" in token
     }
-    assert versions == {"20260907-usability1"}
+    assert versions == {"20260907-decision3"}
