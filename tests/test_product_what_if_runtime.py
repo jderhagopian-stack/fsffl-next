@@ -35,11 +35,11 @@ def test_player_unavailable_what_if_preserves_ownership_and_does_not_revalue() -
 
 def test_player_unavailable_what_if_fails_closed_without_authoritative_prerequisites() -> None:
     source = RUNTIME.read_text(encoding="utf-8")
-    assert "What-If requires a loaded league state" in source
-    assert "What-If requires a selected franchise" in source
-    assert "What-If requires current NEXT-2 forecast evidence" in source
-    assert "What-If requires a current NEXT-4 baseline simulation" in source
-    assert "What-If player must be rostered by the selected franchise" in source
+    assert "Simulator requires a loaded league state" in source
+    assert "Simulator requires a selected franchise" in source
+    assert "Simulator requires current NEXT-2 forecast evidence" in source
+    assert "Simulator requires a current NEXT-4 baseline simulation" in source
+    assert "Simulator players must be rostered by the selected franchise" in source
 
 
 def test_player_unavailable_endpoint_fails_closed_without_runtime_context() -> None:
