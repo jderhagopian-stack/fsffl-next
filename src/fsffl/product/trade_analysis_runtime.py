@@ -11,13 +11,15 @@ from fsffl.trade_decision import (
     calculate_bilateral_economic_net,
     classify_bilateral_trade_decision,
     evaluate_bilateral_trade_deltas,
+    resolve_mandatory_roster_cuts,
     summarize_bilateral_trade_economics,
 )
 from fsffl.trade_decision.models import BilateralTradeProposal
+from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
 from fsffl.value.models import AssetValueProfile
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v2"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v3"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -58,11 +60,10 @@ def build_private_beta_trade_analysis(
 ) -> dict[str, object]:
     """Build a read-only NEXT-8 view from authoritative upstream contracts.
 
-    The adapter applies NEXT-5 state-transition authority, compares NEXT-4 roster
-    consequences when forecast evidence exists, binds governed NEXT-3 market
-    evidence, and may attach a descriptive owner Behavioral profile through the
-    existing NEXT-5 acceptance/negotiation evidence contract. It never turns that
-    profile into an acceptance percentage, trade grade, or market Value change.
+    The adapter applies NEXT-5 state-transition authority, resolves any mandatory
+    roster cuts, compares NEXT-4 roster consequences, binds governed NEXT-3 market
+    evidence, and may attach descriptive owner Behavioral evidence. Presentation
+    does not invent Value, cut costs, acceptance percentages, or recommendations.
     """
 
     league_state = runtime.league_state
@@ -80,53 +81,72 @@ def build_private_beta_trade_analysis(
     roster_consequences_ready = False
 
     forecast_evidence = runtime.forecast_evidence
+    forecasts = ()
     if forecast_evidence is not None:
         forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
-        if forecasts:
-            before_a, error_before_a = _assemble_resilience_vector(
-                scenario.before, forecasts, team_id=side_a_id
-            )
-            after_a, error_after_a = _assemble_resilience_vector(
-                scenario.after, forecasts, team_id=side_a_id
-            )
-            before_b, error_before_b = _assemble_resilience_vector(
-                scenario.before, forecasts, team_id=side_b_id
-            )
-            after_b, error_after_b = _assemble_resilience_vector(
-                scenario.after, forecasts, team_id=side_b_id
-            )
-            for label, error in (
-                ("side A baseline", error_before_a),
-                ("side A scenario", error_after_a),
-                ("side B baseline", error_before_b),
-                ("side B scenario", error_after_b),
-            ):
-                if error:
-                    warnings.append(f"Roster consequence evidence unavailable for {label}: {error}")
-            evaluation = evaluate_bilateral_trade_deltas(
-                proposal,
-                before_a=before_a,
-                after_a=after_a,
-                before_b=before_b,
-                after_b=after_b,
-                model_version="next5-bilateral-evaluation-v1:product-view",
-            )
-            decision = classify_bilateral_trade_decision(
-                evaluation,
-                model_version="next5-bilateral-decision-v1:product-view",
-            )
-            roster_consequences_ready = any(
-                side.delta.resilience is not None
-                for side in (evaluation.side_a, evaluation.side_b)
-            )
-    if evaluation is None:
+
+    value_evidence = runtime.value_evidence
+    market_values = {
+        estimate.asset_id: estimate.distribution.mean
+        for estimate in (value_evidence.estimates if value_evidence is not None else ())
+    }
+    roster_resolution = resolve_mandatory_roster_cuts(
+        scenario.after,
+        forecasts=forecasts,
+        market_values=market_values,
+    )
+    legal_after = roster_resolution.league_state
+    trade_team_resolutions = tuple(
+        item
+        for item in roster_resolution.resolutions
+        if item.team_id in {side_a_id, side_b_id}
+    )
+
+    if forecasts:
+        before_a, error_before_a = _assemble_resilience_vector(
+            scenario.before, forecasts, team_id=side_a_id
+        )
+        after_a, error_after_a = _assemble_resilience_vector(
+            legal_after, forecasts, team_id=side_a_id
+        )
+        before_b, error_before_b = _assemble_resilience_vector(
+            scenario.before, forecasts, team_id=side_b_id
+        )
+        after_b, error_after_b = _assemble_resilience_vector(
+            legal_after, forecasts, team_id=side_b_id
+        )
+        for label, error in (
+            ("side A baseline", error_before_a),
+            ("side A scenario", error_after_a),
+            ("side B baseline", error_before_b),
+            ("side B scenario", error_after_b),
+        ):
+            if error:
+                warnings.append(f"Roster consequence evidence unavailable for {label}: {error}")
+        evaluation = evaluate_bilateral_trade_deltas(
+            proposal,
+            before_a=before_a,
+            after_a=after_a,
+            before_b=before_b,
+            after_b=after_b,
+            model_version="next5-bilateral-evaluation-v1:product-view",
+        )
+        decision = classify_bilateral_trade_decision(
+            evaluation,
+            model_version="next5-bilateral-decision-v1:product-view",
+        )
+        roster_consequences_ready = any(
+            side.delta.resilience is not None
+            for side in (evaluation.side_a, evaluation.side_b)
+        )
+    else:
         warnings.append(
             "Roster consequence analysis is waiting for current NEXT-2 forecast evidence."
         )
 
     economics = None
     economic_net = None
-    value_evidence = runtime.value_evidence
+    roster_adjusted_market_net = None
     if value_evidence is not None and value_evidence.estimates:
         profiles = {
             estimate.asset_id: AssetValueProfile(
@@ -145,6 +165,10 @@ def build_private_beta_trade_analysis(
             economics,
             model_version="next5-economic-net-v1:product-view",
         )
+        roster_adjusted_market_net = adjust_bilateral_market_net_for_mandatory_cuts(
+            economic_net,
+            trade_team_resolutions,
+        )
     else:
         warnings.append(
             "Governed market-economic context is waiting for current NEXT-3 market evidence."
@@ -162,14 +186,23 @@ def build_private_beta_trade_analysis(
             "Owner Behavioral Intelligence is still building or no current owner profile is mapped for this counterparty."
         )
 
+    incomplete_cut_cost = any(
+        item.required_cut_count and item.cut_market_value_total is None
+        for item in trade_team_resolutions
+    )
+    if incomplete_cut_cost:
+        warnings.append(
+            "The post-trade roster is legal, but at least one mandatory cut lacks authoritative market Value; cut opportunity cost remains incomplete."
+        )
+
     warnings.append(
-        "Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority."
+        "Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the legal post-trade roster is run through Simulation authority."
     )
     warnings.append(
         "Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted."
     )
     warnings.append(
-        "Mandatory cut cost and elite-asset/package concentration premium are not yet applied to this fast decision view; multi-player package results must remain conservative until those governed channels are attached."
+        "No arbitrary elite-asset multiplier is applied. Package/consolidation effects are being derived from legal-roster opportunity cost, lineup consequences, competitive simulation, and governed team-specific utility rather than a presentation-layer premium."
     )
 
     return {
@@ -177,11 +210,18 @@ def build_private_beta_trade_analysis(
         "focal_team_id": focal_team_id,
         "counterparty_team_id": counterparty_team_id,
         "state_id_before": scenario.before.state_id,
-        "state_id_after": scenario.after.state_id,
+        "state_id_after_trade": scenario.after.state_id,
+        "state_id_after": legal_after.state_id,
         "evaluation": evaluation.model_dump(mode="json") if evaluation is not None else None,
         "decision": decision.model_dump(mode="json") if decision is not None else None,
         "economics": economics.model_dump(mode="json") if economics is not None else None,
         "economic_net": economic_net.model_dump(mode="json") if economic_net is not None else None,
+        "roster_adjusted_market_net": (
+            roster_adjusted_market_net.model_dump(mode="json")
+            if roster_adjusted_market_net is not None
+            else None
+        ),
+        "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "behavioral_context": behavioral_view.model_dump(mode="json") if behavioral_view is not None else None,
         "availability": {
             "roster_consequences": roster_consequences_ready,
@@ -189,7 +229,7 @@ def build_private_beta_trade_analysis(
             "economic_net": economic_net is not None,
             "competitive_outcomes": False,
             "championship_probability": False,
-            "mandatory_cut_cost": False,
+            "mandatory_cut_cost": roster_adjusted_market_net is not None and not incomplete_cut_cost,
             "package_concentration_premium": False,
             "behavioral_evidence": behavioral_view is not None,
             "acceptance_probability": False,
