@@ -37,13 +37,14 @@ class WaiverMaterialAssessment(FrozenModel):
     team_id: str
     expected_wins: MaterialityDirection
     playoff_probability: MaterialityDirection
+    championship_probability: MaterialityDirection
     first_place_probability: MaterialityDirection
     largest_single_player_lineup_drop: MaterialityDirection
     asset_portfolio_mean: MaterialityDirection
     disposition: WaiverOpportunityDisposition
     competitive_policy_version: str
     economic_policy_version: str | None = None
-    model_version: str = "next6-waiver-material-v1"
+    model_version: str = "next6-waiver-material-v2"
 
     @model_validator(mode="after")
     def validate_assessment(self) -> "WaiverMaterialAssessment":
@@ -61,13 +62,15 @@ def assess_waiver_materiality(
     competitive_policy: CompetitiveMaterialityPolicy,
     economic_policy: EconomicMaterialityPolicy | None = None,
     economic_scale: ValueScale | None = None,
-    model_version: str = "next6-waiver-material-v1",
+    model_version: str = "next6-waiver-material-v2",
 ) -> WaiverMaterialAssessment:
     """Interpret one add/drop scenario with explicit governed materiality only.
 
     NEXT-6 does not choose thresholds. It consumes the same versioned materiality
-    contracts used by Trade Decision. Missing economic policy/scale remains
-    unavailable rather than being silently treated as neutral.
+    contracts used by Trade Decision. Championship probability is the action-facing
+    postseason channel; first-place probability is retained as diagnostic evidence
+    only. Missing championship/economic policy evidence fails closed rather than
+    silently becoming neutral.
     """
 
     if as_of.tzinfo is None:
@@ -92,6 +95,15 @@ def assess_waiver_materiality(
         competitive.playoff_probability if competitive else None,
         absolute_threshold=competitive_policy.playoff_probability_abs,
     )
+    championship_threshold = competitive_policy.championship_probability_abs
+    championship = (
+        MaterialityDirection.UNAVAILABLE
+        if championship_threshold is None
+        else classify_positive_delta(
+            competitive.championship_probability if competitive else None,
+            absolute_threshold=championship_threshold,
+        )
+    )
     first = classify_positive_delta(
         competitive.first_place_probability if competitive else None,
         absolute_threshold=competitive_policy.first_place_probability_abs,
@@ -108,9 +120,13 @@ def assess_waiver_materiality(
             absolute_threshold=economic_policy.mean_value_abs,
         )
 
-    directions = (wins, playoff, first, lineup_drop, economics)
-    available = tuple(direction for direction in directions if direction != MaterialityDirection.UNAVAILABLE)
-    if not available or MaterialityDirection.UNAVAILABLE in directions:
+    action_directions = (wins, playoff, championship, lineup_drop, economics)
+    available = tuple(
+        direction
+        for direction in action_directions
+        if direction != MaterialityDirection.UNAVAILABLE
+    )
+    if not available or MaterialityDirection.UNAVAILABLE in action_directions:
         disposition = WaiverOpportunityDisposition.INSUFFICIENT_EVIDENCE
     else:
         gains = MaterialityDirection.MATERIAL_GAIN in available
@@ -128,6 +144,7 @@ def assess_waiver_materiality(
         team_id=delta.team_id,
         expected_wins=wins,
         playoff_probability=playoff,
+        championship_probability=championship,
         first_place_probability=first,
         largest_single_player_lineup_drop=lineup_drop,
         asset_portfolio_mean=economics,
@@ -146,7 +163,7 @@ def candidate_from_waiver_evaluation(
     as_of,
     evidence_completeness: EvidenceCompleteness,
     assessment: WaiverMaterialAssessment | None,
-    search_model_version: str = "next6-waiver-evaluation-v1",
+    search_model_version: str = "next6-waiver-evaluation-v2",
 ) -> OpportunityCandidate:
     """Map explicit waiver materiality to candidate action authority."""
 
