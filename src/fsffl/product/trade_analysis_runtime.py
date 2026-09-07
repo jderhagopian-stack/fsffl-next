@@ -18,13 +18,14 @@ from fsffl.trade_decision import (
     evaluate_bilateral_trade_deltas,
     resolve_mandatory_roster_cuts,
     summarize_bilateral_trade_economics,
+    summarize_package_concentration,
 )
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
 from fsffl.value.models import AssetValueProfile, MarketPriceEstimate, ValueDistribution
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v6"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v7"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -143,6 +144,11 @@ def build_private_beta_trade_analysis(
         for asset_id, profile in cardinal_profiles.items()
         if profile.market_price is not None
     }
+    package_concentration = (
+        summarize_package_concentration(proposal, market_values)
+        if market_values
+        else None
+    )
 
     protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
     roster_resolution = resolve_mandatory_roster_cuts(
@@ -206,7 +212,7 @@ def build_private_beta_trade_analysis(
         warnings.append("The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative FSFFL Value; cut opportunity cost remains incomplete.")
     warnings.append("Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority.")
     warnings.append("Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted.")
-    warnings.append("No arbitrary elite-asset multiplier is applied. Package/consolidation effects are derived from legal-roster opportunity cost, lineup consequences, competitive simulation, and governed team-specific utility rather than a presentation-layer premium.")
+    warnings.append("Package concentration is now measured explicitly. A package premium is not yet applied until the historical multi-asset calibration is promoted; legal-roster cut cost, lineup consequences and simulation remain active separately.")
 
     return {
         "proposal": proposal.model_dump(mode="json"),
@@ -220,6 +226,7 @@ def build_private_beta_trade_analysis(
         "economics": economics.model_dump(mode="json") if economics is not None else None,
         "economic_net": economic_net.model_dump(mode="json") if economic_net is not None else None,
         "roster_adjusted_market_net": roster_adjusted_market_net.model_dump(mode="json") if roster_adjusted_market_net is not None else None,
+        "package_concentration": package_concentration.model_dump(mode="json") if package_concentration is not None else None,
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "position_strength": position_strength.model_dump(mode="json") if position_strength is not None else None,
         "behavioral_context": behavioral_view.model_dump(mode="json") if behavioral_view is not None else None,
@@ -231,6 +238,7 @@ def build_private_beta_trade_analysis(
             "competitive_outcomes": False,
             "championship_probability": False,
             "mandatory_cut_cost": roster_adjusted_market_net is not None and not incomplete_cut_cost,
+            "package_concentration_evidence": package_concentration is not None,
             "package_concentration_premium": False,
             "behavioral_evidence": behavioral_view is not None,
             "acceptance_probability": False,
