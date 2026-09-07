@@ -14,7 +14,8 @@ def test_my_team_command_center_consumes_governed_backend_outputs() -> None:
 
 def test_my_team_command_center_does_not_create_parallel_authority() -> None:
     source = Path("src/fsffl/product/static/my_team_dashboard.js").read_text(encoding="utf-8")
-    assert "this screen only organizes them" in source
+    assert "api('/api/my-team')" in source
+    assert "fsffl_cardinal_values" in source
     assert "new team score" not in source.lower()
     assert "acceptance_probability" not in source
     assert "trade grade" not in source.lower()
