@@ -12,14 +12,24 @@ from fsffl.behavioral import (
     OwnerBehaviorProfile,
 )
 from fsffl.state.models import PickAsset, PlayerAsset
-from fsffl.trade_decision.models import BilateralTradeProposal
+from fsffl.trade_decision.models import BilateralTradeProposal, TradeLeg
 
 
 _MODEL_VERSION = "next8-behavioral-fit-v1:transparent-directional"
 
 
-def _side_for_team(proposal: BilateralTradeProposal, team_id: str):
-    return next((side for side in proposal.sides if side.team_id == team_id), None)
+def _leg_for_team(proposal: BilateralTradeProposal, team_id: str) -> TradeLeg | None:
+    for leg in (proposal.side_a, proposal.side_b):
+        if leg.team_id == team_id:
+            return leg
+    return None
+
+
+def _other_leg(proposal: BilateralTradeProposal, team_id: str) -> TradeLeg | None:
+    for leg in (proposal.side_a, proposal.side_b):
+        if leg.team_id != team_id:
+            return leg
+    return None
 
 
 def _player_position(league_state, player_id: str) -> str | None:
@@ -72,17 +82,15 @@ def build_trade_behavioral_fit(
     league_state = runtime.league_state
     if league_state is None:
         return None
-    focal_side = _side_for_team(proposal, focal_team_id)
-    if focal_side is None:
-        return None
-    counterparty_side = next((side for side in proposal.sides if side.team_id != focal_team_id), None)
-    if counterparty_side is None:
+    focal_leg = _leg_for_team(proposal, focal_team_id)
+    counterparty_leg = _other_leg(proposal, focal_team_id)
+    if focal_leg is None or counterparty_leg is None:
         return None
 
     # From the counterparty's perspective, they acquire the focal team's outgoing
-    # assets and dispose the assets listed on their own side.
-    acquired = tuple(focal_side.assets)
-    disposed = tuple(counterparty_side.assets)
+    # assets and dispose the assets listed on their own leg.
+    acquired = tuple(focal_leg.sends)
+    disposed = tuple(counterparty_leg.sends)
     drivers: list[BehavioralLikelihoodDriver] = []
 
     shape = _package_shape(len(acquired), len(disposed))
@@ -166,7 +174,7 @@ def build_trade_behavioral_fit(
             )
         )
 
-    team_view = _current_team_view(runtime, counterparty_side.team_id)
+    team_view = _current_team_view(runtime, counterparty_leg.team_id)
     if team_view is not None and team_view.utility is not None:
         state = team_view.utility.calculated_competitive_state.value
         receives_players = any(isinstance(asset, PlayerAsset) for asset in acquired)
