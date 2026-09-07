@@ -18,6 +18,7 @@ class LeagueMetric(StrEnum):
     EXPECTED_WINS = "expected_wins"
     PLAYOFF_PROBABILITY = "playoff_probability"
     FIRST_PLACE_PROBABILITY = "first_place_probability"
+    CHAMPIONSHIP_PROBABILITY = "championship_probability"
     ASSET_PORTFOLIO_MEAN = "asset_portfolio_mean"
     LARGEST_SINGLE_PLAYER_LINEUP_DROP = "largest_single_player_lineup_drop"
     DRAFT_PICK_COUNT = "draft_pick_count"
@@ -33,6 +34,7 @@ _METRIC_DIRECTIONS = {
     LeagueMetric.EXPECTED_WINS: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.PLAYOFF_PROBABILITY: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.FIRST_PLACE_PROBABILITY: MetricDirection.HIGHER_IS_BETTER,
+    LeagueMetric.CHAMPIONSHIP_PROBABILITY: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.ASSET_PORTFOLIO_MEAN: MetricDirection.HIGHER_IS_BETTER,
     LeagueMetric.LARGEST_SINGLE_PLAYER_LINEUP_DROP: MetricDirection.LOWER_IS_BETTER,
     LeagueMetric.DRAFT_PICK_COUNT: MetricDirection.HIGHER_IS_BETTER,
@@ -48,6 +50,7 @@ class LeagueTeamAnalyticsRow(FrozenModel):
     expected_wins: float | None = None
     playoff_probability: float | None = None
     first_place_probability: float | None = None
+    championship_probability: float | None = None
     calculated_competitive_state: CalculatedCompetitiveState | None = None
     asset_portfolio_mean: float | None = None
     asset_value_scale: ValueScale | None = None
@@ -70,7 +73,7 @@ class LeagueTeamAnalyticsRow(FrozenModel):
 class LeagueAnalyticsView(FrozenModel):
     context: AnalyticsContext
     teams: tuple[LeagueTeamAnalyticsRow, ...]
-    view_model_version: str = "next7-league-view-v1"
+    view_model_version: str = "next7-league-view-v2"
 
     @model_validator(mode="after")
     def validate_view(self) -> "LeagueAnalyticsView":
@@ -99,36 +102,24 @@ class LeagueMetricRanking(FrozenModel):
 
 
 def _optimized_regular_season_points(view: TeamAnalyticsView) -> float | None:
-    """Prefer the league-specific Forecast horizon for projected scoring.
-
-    The lineup assignment remains owned by Team Utility. Analytics only joins the
-    authoritative starter ids to the authoritative fantasy-regular-season player
-    forecasts. Older/replayed views with no such horizon retain their existing
-    lineup total for backward compatibility.
-    """
-
     lineup = view.optimized_lineup
     if lineup is None:
         return None
     starter_ids = {assignment.player_id for assignment in lineup.assignments}
     if not starter_ids:
         return 0.0
-
     latest: dict[str, object] = {}
     any_regular_season = False
     for row in view.players:
         if row.player_id not in starter_ids:
             continue
         for observation in row.forecasts:
-            if observation.metric != ForecastMetric.FANTASY_POINTS:
-                continue
-            if observation.horizon != ForecastHorizon.FANTASY_REGULAR_SEASON:
+            if observation.metric != ForecastMetric.FANTASY_POINTS or observation.horizon != ForecastHorizon.FANTASY_REGULAR_SEASON:
                 continue
             any_regular_season = True
             current = latest.get(row.player_id)
             if current is None or observation.as_of > current.as_of:
                 latest[row.player_id] = observation
-
     if not any_regular_season:
         return lineup.expected_points
     if set(latest) != starter_ids:
@@ -150,26 +141,18 @@ def _row_from_team(view: TeamAnalyticsView) -> LeagueTeamAnalyticsRow:
         expected_wins=outcome.expected_wins if outcome is not None else None,
         playoff_probability=outcome.playoff_probability if outcome is not None else None,
         first_place_probability=outcome.first_place_probability if outcome is not None else None,
-        calculated_competitive_state=(
-            utility.calculated_competitive_state if utility is not None else None
-        ),
+        championship_probability=outcome.championship_probability if outcome is not None else None,
+        calculated_competitive_state=utility.calculated_competitive_state if utility is not None else None,
         asset_portfolio_mean=portfolio.distribution.mean if portfolio is not None else None,
         asset_value_scale=portfolio.scale if portfolio is not None else None,
         asset_value_concept=portfolio.value_concept if portfolio is not None else None,
-        largest_single_player_lineup_drop=(
-            resilience.largest_single_player_lineup_drop if resilience is not None else None
-        ),
-        bench_forecasted_count=(resilience.bench_forecasted_count if resilience is not None else None),
-        missing_forecast_count=(resilience.missing_forecast_count if resilience is not None else None),
+        largest_single_player_lineup_drop=resilience.largest_single_player_lineup_drop if resilience is not None else None,
+        bench_forecasted_count=resilience.bench_forecasted_count if resilience is not None else None,
+        missing_forecast_count=resilience.missing_forecast_count if resilience is not None else None,
     )
 
 
-def build_league_analytics_view(
-    *,
-    context: AnalyticsContext,
-    team_views: tuple[TeamAnalyticsView, ...],
-    view_model_version: str = "next7-league-view-v1",
-) -> LeagueAnalyticsView:
+def build_league_analytics_view(*, context: AnalyticsContext, team_views: tuple[TeamAnalyticsView, ...], view_model_version: str = "next7-league-view-v2") -> LeagueAnalyticsView:
     for team_view in team_views:
         if team_view.context != context:
             raise ValueError("all team views must use the same analytics context")
@@ -183,22 +166,14 @@ def _metric_value(row: LeagueTeamAnalyticsRow, metric: LeagueMetric) -> float | 
     return getattr(row, metric.value)
 
 
-def rank_league_metric(
-    view: LeagueAnalyticsView,
-    *,
-    metric: LeagueMetric,
-    ranking_model_version: str = "next7-named-metric-ranking-v1",
-) -> LeagueMetricRanking:
-    """Rank teams on one explicit named metric; never combine metrics."""
-
+def rank_league_metric(view: LeagueAnalyticsView, *, metric: LeagueMetric, ranking_model_version: str = "next7-named-metric-ranking-v1") -> LeagueMetricRanking:
     if not ranking_model_version.strip():
         raise ValueError("ranking_model_version cannot be blank")
     direction = _METRIC_DIRECTIONS[metric]
-    values: list[tuple[LeagueTeamAnalyticsRow, float]] = []
-    missing: list[str] = []
-    scale: ValueScale | None = None
-    value_concept: str | None = None
-
+    values = []
+    missing = []
+    scale = None
+    value_concept = None
     for row in view.teams:
         value = _metric_value(row, metric)
         if value is None:
@@ -213,26 +188,7 @@ def rank_league_metric(
             elif row.asset_value_scale != scale or row.asset_value_concept != value_concept:
                 raise ValueError("asset portfolio ranking requires same value scale and concept")
         values.append((row, float(value)))
-
     reverse = direction == MetricDirection.HIGHER_IS_BETTER
-    ordered = sorted(
-        values,
-        key=lambda item: ((-item[1]) if reverse else item[1], item[0].team_id),
-    )
-    ranked = tuple(
-        RankedMetricRow(
-            rank=index,
-            team_id=row.team_id,
-            display_name=row.display_name,
-            value=value,
-        )
-        for index, (row, value) in enumerate(ordered, start=1)
-    )
-    return LeagueMetricRanking(
-        metric=metric,
-        direction=direction,
-        rows=ranked,
-        missing_team_ids=tuple(sorted(missing)),
-        value_scale=scale,
-        ranking_model_version=ranking_model_version,
-    )
+    ordered = sorted(values, key=lambda item: ((-item[1]) if reverse else item[1], item[0].team_id))
+    ranked = tuple(RankedMetricRow(rank=index, team_id=row.team_id, display_name=row.display_name, value=value) for index, (row, value) in enumerate(ordered, start=1))
+    return LeagueMetricRanking(metric=metric, direction=direction, rows=ranked, missing_team_ids=tuple(sorted(missing)), value_scale=scale, ranking_model_version=ranking_model_version)
