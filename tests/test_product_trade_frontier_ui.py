@@ -27,10 +27,10 @@ def test_trade_center_uses_authoritative_cardinal_value_not_retired_challenger()
 
 def test_frontier_release_is_cache_busted_coherently() -> None:
     html = INDEX.read_text(encoding="utf-8")
-    assert "20260907-trade2" in html
+    assert "20260907-usability1" in html
     versions = {
         token.split("?v=")[1].split('"')[0]
         for token in html.split()
         if "?v=" in token
     }
-    assert versions == {"20260907-trade2"}
+    assert versions == {"20260907-usability1"}
