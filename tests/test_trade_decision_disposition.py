@@ -171,14 +171,15 @@ def test_missing_required_channel_yields_insufficient_evidence() -> None:
     assert "championship_probability" in result.evidence.unavailable_metrics
 
 
-def test_focal_gain_with_counterparty_dominated_is_not_auto_supported() -> None:
+def test_focal_gain_supports_focal_action_while_preserving_counterparty_feasibility_context() -> None:
     result = decide_trade_disposition(
         _assessment(_material_side("a", gain=True), _material_side("b", loss=True)),
         _negotiation(NegotiationFeasibilityShape.COUNTERPARTY_DOMINATED),
         _strategy(),
         focal_team_id="a",
     )
-    assert result.disposition == TradeDisposition.COUNTER_OR_REVIEW
+    assert result.disposition == TradeDisposition.SUPPORT
+    assert result.evidence.negotiation_shape == NegotiationFeasibilityShape.COUNTERPARTY_DOMINATED
 
 
 def test_all_immaterial_changes_have_no_clear_advantage() -> None:
