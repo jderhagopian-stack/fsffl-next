@@ -62,6 +62,12 @@ from .materiality import (
     classify_positive_delta,
 )
 from .models import BilateralTradeProposal, TradeLeg
+from .package_concentration import (
+    BilateralPackageConcentration,
+    PackageConcentrationSide,
+    PackageConcentrationStatus,
+    summarize_package_concentration,
+)
 from .roster_legality import (
     MandatoryRosterCut,
     ResolvedRosterState,
@@ -81,6 +87,7 @@ __all__ = [
     "AppliedTradeScenario",
     "BilateralDecisionShape",
     "BilateralMaterialAssessment",
+    "BilateralPackageConcentration",
     "BilateralTradeDecision",
     "BilateralTradeEconomicNet",
     "BilateralTradeEconomics",
@@ -98,6 +105,8 @@ __all__ = [
     "MaterialityDirection",
     "MissingEconomicEvidence",
     "NegotiationFeasibilityShape",
+    "PackageConcentrationSide",
+    "PackageConcentrationStatus",
     "ResolvedRosterState",
     "RosterLegalityStatus",
     "SideDecisionShape",
@@ -130,4 +139,5 @@ __all__ = [
     "evaluate_bilateral_trade_deltas",
     "resolve_mandatory_roster_cuts",
     "summarize_bilateral_trade_economics",
+    "summarize_package_concentration",
 ]
