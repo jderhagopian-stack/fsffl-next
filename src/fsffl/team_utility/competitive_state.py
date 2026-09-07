@@ -46,6 +46,61 @@ class CompetitiveStatePolicy(FrozenModel):
         return self
 
 
+def _linear_quantile(values: tuple[float, ...], quantile: float) -> float:
+    """Return a deterministic linear-interpolated quantile for a small league panel."""
+
+    if not values:
+        raise ValueError("competitive-state policy requires league simulation outcomes")
+    if not 0 <= quantile <= 1:
+        raise ValueError("quantile must be between zero and one")
+    ordered = tuple(sorted(values))
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (len(ordered) - 1) * quantile
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    weight = position - lower
+    return ordered[lower] * (1 - weight) + ordered[upper] * weight
+
+
+def derive_league_relative_competitive_state_policy(
+    outcomes: tuple[TeamCompetitiveOutcome, ...],
+    *,
+    as_of: datetime,
+) -> CompetitiveStatePolicy:
+    """Build a transparent provisional policy from the current league distribution.
+
+    This avoids arbitrary absolute win/probability cutoffs while historical state
+    calibration is still being reconstructed. The quartile boundaries are purely
+    descriptive partitions of the current authoritative Simulation distribution:
+    lower quartile -> rebuilding, middle-lower -> developing, middle-upper ->
+    competitive, and upper quartile with upper-quartile first-place odds ->
+    contender. This policy does not change Simulation outcomes, Value, or owner
+    strategic posture and is explicitly replaceable by future empirical calibration.
+    """
+
+    if as_of.tzinfo is None:
+        raise ValueError("as_of must be timezone-aware")
+    if not outcomes:
+        raise ValueError("competitive-state policy requires league simulation outcomes")
+    playoff = tuple(item.playoff_probability for item in outcomes)
+    first_place = tuple(item.first_place_probability for item in outcomes)
+    return CompetitiveStatePolicy(
+        developing_playoff_min=_linear_quantile(playoff, 0.25),
+        competitive_playoff_min=_linear_quantile(playoff, 0.50),
+        contender_playoff_min=_linear_quantile(playoff, 0.75),
+        contender_first_place_min=_linear_quantile(first_place, 0.75),
+        model_version="next4-competitive-state-policy-v1:league-relative-quartiles",
+        evidence_through=as_of,
+        provenance=(
+            "Structurally derived from the current authoritative league Simulation "
+            "distribution using 25th/50th/75th percentile playoff boundaries and "
+            "75th-percentile first-place odds; provisional until historical "
+            "competitive-state calibration is promoted."
+        ),
+    )
+
+
 def classify_calculated_competitive_state(
     outcome: TeamCompetitiveOutcome,
     policy: CompetitiveStatePolicy,
