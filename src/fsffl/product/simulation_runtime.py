@@ -22,6 +22,8 @@ from fsffl.team_utility import (
     assemble_team_utility_vector,
     build_bye_aware_weekly_team_scoring_panel,
     build_regular_season_simulation_input,
+    classify_calculated_competitive_state,
+    derive_league_relative_competitive_state_policy,
     optimize_team_lineup,
     simulate_regular_season,
 )
@@ -33,7 +35,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     league_view: LeagueAnalyticsView
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
-    model_version: str = "next8-live-simulation-analytics-v4"
+    model_version: str = "next8-live-simulation-analytics-v5"
 
 
 def build_live_simulation_analytics(
@@ -52,7 +54,9 @@ def build_live_simulation_analytics(
     Identical no-bye/identical-bye lineup states are reused rather than recomputed.
     Season forecast means are still decomposed to equal active-NFL-game means as
     a provisional bridge, while weekly scoring variance comes from the independently
-    calibrated NEXT-2 weekly-volatility model.
+    calibrated NEXT-2 weekly-volatility model. Calculated competitive state is a
+    Team Utility interpretation of the completed Simulation distribution, never a
+    replacement for or adjustment to Simulation itself.
     """
 
     if any(item.as_of > league_state.as_of for item in forecasts):
@@ -124,6 +128,10 @@ def build_live_simulation_analytics(
     )
     simulation = simulate_regular_season(request)
     outcomes = {item.team_id: item for item in simulation.outcomes}
+    competitive_state_policy = derive_league_relative_competitive_state_policy(
+        simulation.outcomes,
+        as_of=league_state.as_of,
+    )
 
     warnings: list[AnalyticsWarning] = [
         AnalyticsWarning(
@@ -148,11 +156,12 @@ def build_live_simulation_analytics(
             source_component="forecast",
         ),
         AnalyticsWarning(
-            kind=AnalyticsWarningKind.MISSING_EVIDENCE,
-            code="competitive_state_policy_not_attached",
+            kind=AnalyticsWarningKind.PROVISIONAL,
+            code="competitive_state_policy_league_relative",
             message=(
-                "Simulation outcomes are authoritative; contender/rebuilding classification remains unknown "
-                "until an explicit governed competitive-state policy is attached."
+                "Calculated competitive state is now classified from the current authoritative Simulation "
+                "distribution using transparent league-relative quartiles. The classification is useful for the "
+                "private beta but remains provisional until historical competitive-state calibration is promoted."
             ),
             source_component="team-utility",
         ),
@@ -215,7 +224,11 @@ def build_live_simulation_analytics(
                 model_version="next4-weekly-team-scoring-v4:bye_aware_empirical_weekly_volatility",
             ),
             ModelLineageEntry(component="simulation", model_version=simulation.model_version),
-            ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v3"),
+            ModelLineageEntry(
+                component="competitive_state_policy",
+                model_version=competitive_state_policy.model_version,
+            ),
+            ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v4"),
         ),
         warnings=tuple(warnings),
     )
@@ -230,7 +243,8 @@ def build_live_simulation_analytics(
                 as_of=league_state.as_of,
                 horizon=ForecastHorizon.SEASON,
                 competitive_outcome=outcomes[team.team_id],
-                model_version="next4-live-team-utility-v3",
+                competitive_state_policy=competitive_state_policy,
+                model_version="next4-live-team-utility-v4",
             )
         except ValueError:
             if not lineups[team.team_id].unfilled_slots:
@@ -239,7 +253,12 @@ def build_live_simulation_analytics(
                 team_id=team.team_id,
                 as_of=league_state.as_of,
                 competitive_outcome=outcomes[team.team_id],
-                model_version="next4-live-team-utility-v3:resilience_unavailable_incomplete_roster",
+                calculated_competitive_state=classify_calculated_competitive_state(
+                    outcomes[team.team_id],
+                    competitive_state_policy,
+                    as_of=league_state.as_of,
+                ),
+                model_version="next4-live-team-utility-v4:resilience_unavailable_incomplete_roster",
             )
         team_views.append(
             build_team_analytics_view(
