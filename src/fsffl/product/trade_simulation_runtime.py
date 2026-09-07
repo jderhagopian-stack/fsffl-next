@@ -4,15 +4,32 @@ from typing import Any, Callable
 
 from fsffl.forecast.models import ForecastHorizon
 from fsffl.team_utility import compare_team_utility_vectors, optimize_team_lineup
-from fsffl.trade_decision import apply_bilateral_trade, resolve_mandatory_roster_cuts
+from fsffl.trade_decision import (
+    apply_bilateral_trade,
+    assess_bilateral_materiality,
+    assess_negotiation_feasibility,
+    assess_package_economics,
+    attach_owner_strategy,
+    calculate_bilateral_economic_net,
+    classify_bilateral_trade_decision,
+    decide_trade_disposition,
+    evaluate_bilateral_trade_deltas,
+    live_bounded_materiality_policy,
+    live_bounded_package_premium_prior,
+    resolve_mandatory_roster_cuts,
+    summarize_bilateral_trade_economics,
+    summarize_package_concentration,
+)
 from fsffl.trade_decision.models import BilateralTradeProposal
+from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
 
 from .runtime import LiveForecastEvidence
 from .simulation_runtime import LiveSimulationAnalyticsResult
+from .trade_value_adapter import cardinal_market_profiles
 
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v3"
+_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v4"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -48,7 +65,13 @@ def build_post_trade_simulation_comparison(
     focal_team_id: str,
     simulation_loader: SimulationLoader,
 ) -> dict[str, object]:
-    """Compare baseline and legal changed-roster outcomes through NEXT-4 Simulation."""
+    """Compare baseline and legal changed-roster outcomes and produce NEXT-5 disposition.
+
+    Simulation remains authoritative for competitive outcomes. NEXT-5 consumes the
+    before/after Team Utility vectors, cardinal market economics, actual mandatory
+    cut cost and the bounded package-economics guard. No Presentation calculation
+    can create or modify the resulting disposition.
+    """
 
     league_state = runtime.league_state
     forecast_evidence = runtime.forecast_evidence
@@ -68,12 +91,15 @@ def build_post_trade_simulation_comparison(
     counterparty_team_id = side_b_id if focal_team_id == side_a_id else side_a_id
 
     forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
+    cardinal_profiles = cardinal_market_profiles(runtime.value_evidence)
     market_values = {
-        estimate.asset_id: estimate.distribution.mean
-        for estimate in (
-            runtime.value_evidence.estimates if runtime.value_evidence is not None else ()
-        )
+        asset_id: profile.market_price.distribution.mean
+        for asset_id, profile in cardinal_profiles.items()
+        if profile.market_price is not None
     }
+    if not cardinal_profiles:
+        raise ValueError("post-trade disposition requires authoritative FSFFL cardinal Value")
+
     protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
     roster_resolution = resolve_mandatory_roster_cuts(
         scenario.after,
@@ -82,6 +108,69 @@ def build_post_trade_simulation_comparison(
     )
     legal_after = roster_resolution.league_state
     changed = simulation_loader(legal_after, forecast_evidence)
+
+    baseline_a = _utility_for_team(baseline, side_a_id)
+    baseline_b = _utility_for_team(baseline, side_b_id)
+    changed_a = _utility_for_team(changed, side_a_id)
+    changed_b = _utility_for_team(changed, side_b_id)
+
+    evaluation = evaluate_bilateral_trade_deltas(
+        proposal,
+        before_a=baseline_a,
+        after_a=changed_a,
+        before_b=baseline_b,
+        after_b=changed_b,
+        model_version="next5-bilateral-evaluation-v1:simulated-product-view",
+    )
+    decision = classify_bilateral_trade_decision(
+        evaluation,
+        model_version="next5-bilateral-decision-v2:simulated-product-view",
+    )
+    negotiation = assess_negotiation_feasibility(decision, focal_team_id=focal_team_id)
+    strategic_context = attach_owner_strategy(decision)
+
+    economics = summarize_bilateral_trade_economics(
+        proposal,
+        cardinal_profiles,
+        model_version="next5-trade-economics-v1:fsffl-cardinal-simulated-product-view",
+    )
+    economic_net = calculate_bilateral_economic_net(
+        economics,
+        model_version="next5-economic-net-v1:fsffl-cardinal-simulated-product-view",
+    )
+
+    trade_team_resolutions = tuple(
+        item
+        for item in roster_resolution.resolutions
+        if item.team_id in {focal_team_id, counterparty_team_id}
+    )
+    roster_adjusted_market_net = adjust_bilateral_market_net_for_mandatory_cuts(
+        economic_net,
+        trade_team_resolutions,
+    )
+
+    concentration = summarize_package_concentration(proposal, market_values)
+    package_economics = assess_package_economics(
+        concentration,
+        prior=live_bounded_package_premium_prior(as_of=proposal.as_of),
+    )
+    materiality_policy = live_bounded_materiality_policy(as_of=proposal.as_of)
+    material_assessment = assess_bilateral_materiality(
+        evaluation,
+        economic_net,
+        competitive_policy=materiality_policy.competitive,
+        economic_policy=materiality_policy.economic,
+        roster_adjusted_market_net=roster_adjusted_market_net,
+        model_version="next5-material-assessment-v3:simulated-product-view",
+    )
+    disposition = decide_trade_disposition(
+        material_assessment,
+        negotiation,
+        strategic_context,
+        focal_team_id=focal_team_id,
+        package_economics=package_economics,
+        model_version="next5-trade-disposition-v3:simulated-product-view",
+    )
 
     comparisons = []
     for team_id in (focal_team_id, counterparty_team_id):
@@ -94,11 +183,6 @@ def build_post_trade_simulation_comparison(
         )
         comparisons.append(delta.model_dump(mode="json"))
 
-    trade_team_resolutions = tuple(
-        item
-        for item in roster_resolution.resolutions
-        if item.team_id in {focal_team_id, counterparty_team_id}
-    )
     return {
         "focal_team_id": focal_team_id,
         "counterparty_team_id": counterparty_team_id,
@@ -109,11 +193,25 @@ def build_post_trade_simulation_comparison(
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "team_deltas": comparisons,
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
+        "evaluation": evaluation.model_dump(mode="json"),
+        "decision": decision.model_dump(mode="json"),
+        "negotiation": negotiation.model_dump(mode="json"),
+        "economics": economics.model_dump(mode="json"),
+        "economic_net": economic_net.model_dump(mode="json"),
+        "roster_adjusted_market_net": roster_adjusted_market_net.model_dump(mode="json"),
+        "package_concentration": concentration.model_dump(mode="json"),
+        "package_economics": package_economics.model_dump(mode="json"),
+        "materiality_policy": materiality_policy.model_dump(mode="json"),
+        "material_assessment": material_assessment.model_dump(mode="json"),
+        "disposition": disposition.model_dump(mode="json"),
         "authority": {
             "state_transition": "NEXT-5 Trade Decision",
             "mandatory_roster_cuts": "NEXT-5 Trade Decision",
+            "market_value": "NEXT-3 Value",
             "competitive_outcomes": "NEXT-4 Simulation",
             "scenario_delta": "NEXT-4 Team Utility",
+            "materiality_and_disposition": "NEXT-5 Trade Decision",
+            "package_economic_guard": "NEXT-5 Trade Decision bounded provisional prior",
             "presentation_calculation": False,
         },
         "model_version": _PRODUCT_MODEL_VERSION,
