@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,7 +40,7 @@ def test_post_trade_surface_preserves_mobile_freeze_regression() -> None:
 
 def test_post_trade_static_assets_share_one_cache_busting_version() -> None:
     html = INDEX.read_text(encoding="utf-8")
-    for asset in (
+    assets = (
         "app.css",
         "explorer.css",
         "app.js",
@@ -48,5 +49,11 @@ def test_post_trade_static_assets_share_one_cache_busting_version() -> None:
         "product_polish.js",
         "explorer.js",
         "product_shell.js",
-    ):
-        assert f"/static/{asset}?v=20260907-tradesim1" in html
+    )
+    versions = []
+    for asset in assets:
+        match = re.search(rf"/static/{re.escape(asset)}\?v=([^\"']+)", html)
+        assert match is not None
+        versions.append(match.group(1))
+    assert len(set(versions)) == 1
+    assert versions[0].strip()
