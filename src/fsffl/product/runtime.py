@@ -201,6 +201,51 @@ class PrivateBetaRuntimeStore:
             self._contexts[user_id] = updated
             return updated
 
+    def set_intelligence_bundle(
+        self,
+        user_id: str,
+        *,
+        league_state: LeagueState,
+        forecast_evidence: LiveForecastEvidence,
+        simulation_analytics: LiveSimulationAnalyticsResult | None,
+        value_evidence: CurrentMarketValueRuntimeResult | None,
+    ) -> UserRuntimeContext:
+        """Atomically attach one internally consistent intelligence snapshot.
+
+        Forecast, Simulation and Value are computed against the supplied canonical
+        state before this method is called. Attaching them together prevents a
+        reconnect/session-recovery write from clearing forecast evidence between
+        the Simulation and Value attachment steps. This store method owns no model
+        calculations; it only enforces state/evidence identity consistency.
+        """
+
+        forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
+        if any(item.as_of > league_state.as_of for item in forecasts):
+            raise ValueError("forecast evidence cannot postdate canonical league state")
+        if simulation_analytics is not None and simulation_analytics.league_view.context.league_state_id != league_state.state_id:
+            raise ValueError("simulation analytics must match intelligence LeagueState")
+        if value_evidence is not None and value_evidence.league_state_id != league_state.state_id:
+            raise ValueError("Value evidence must match intelligence LeagueState")
+
+        with self._lock:
+            current = self.get(user_id)
+            if current.league_state is not None and current.league_state.league.league_id != league_state.league.league_id:
+                raise ValueError("cannot attach intelligence for a different loaded league")
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
+            updated = UserRuntimeContext(
+                user_id=user_id,
+                league_state=league_state,
+                selected_team_id=selected,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=simulation_analytics,
+                value_evidence=value_evidence,
+            )
+            self._contexts[user_id] = updated
+            return updated
+
     def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
         if not team_id.strip():
             raise ValueError("team_id cannot be blank")
