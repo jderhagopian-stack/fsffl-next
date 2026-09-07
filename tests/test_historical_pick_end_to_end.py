@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+from fsffl.runtime.historical_pick import build_slot_forecast_from_draft_order
 from fsffl.state.models import DraftPick, LeagueRules
 from fsffl.team_utility.draft_order import (
     DraftOrderScenario,
@@ -8,7 +9,6 @@ from fsffl.team_utility.draft_order import (
 )
 from fsffl.value.historical_pick import reconstruct_historical_pick_coordinate
 from fsffl.value.historical_pick_evidence import FrozenDraftedAssetValue, build_historical_pick_evidence
-from fsffl.value.historical_pick_simulation import build_slot_forecast_from_draft_order
 from fsffl.value.models import ValueDistribution, ValueScale
 
 
