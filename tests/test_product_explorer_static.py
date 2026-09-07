@@ -37,6 +37,19 @@ def test_players_assets_prefers_full_nfl_season_projection() -> None:
     assert "NFL season projection" in source
 
 
+def test_players_assets_adds_read_only_league_and_position_context() -> None:
+    source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
+    assert "function explorerLeagueRank" in source
+    assert "function explorerPositionRank" in source
+    assert "Your highest FSFFL Value asset" in source
+    assert "Your highest NFL season projection" in source
+    assert "league's top 20 by FSFFL Value" in source
+    assert "Your team" in source
+    assert "presentation ordering" in source
+    assert "not a new FSFFL score" in source
+    assert "do not calculate new value, team utility, or action authority" in source
+
+
 def test_legacy_explorer_metrics_remain_read_only_until_terminal_replaces_them() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
     for metric in (
@@ -67,6 +80,8 @@ def test_explorer_does_not_derive_fsffl_value_or_action_authority() -> None:
     assert "acceptance_probability" not in source
     assert "recommendation" not in source.lower()
     assert "opportunity_score" not in source
+    assert "master_score" not in source.lower()
+    assert "composite_score" not in source.lower()
 
 
 def test_explorer_is_loaded_for_players_assets_and_has_mobile_specific_styles() -> None:
