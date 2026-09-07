@@ -11,9 +11,9 @@ function simulatorPlayers(){
   if(!team)return[];
   return (team.players||[]).filter(row=>!['ir','taxi'].includes(String(row.roster_slot||'').toLowerCase()));
 }
-function simulatorSelectedRows(){const ids=fsfflSimulatorState.selected;return simulatorPlayers().filter(row=>ids.has(row.player_id))}
 function simulatorToggle(playerId){
   fsfflSimulatorState.selected.has(playerId)?fsfflSimulatorState.selected.delete(playerId):fsfflSimulatorState.selected.add(playerId);
+  fsfflSimulatorState.result=null;
   renderFsfflSimulator();
 }
 function simulatorMetricCard(label,value,note=''){
@@ -23,9 +23,10 @@ function simulatorScenarioResult(result){
   if(!result)return'';
   const competitive=result.team_delta?.competitive||{};
   const resilience=result.team_delta?.resilience||{};
-  const names=(result.player_names||[]).join(', ');
+  const names=(result.player_names||result.players?.map(item=>item.player_name)||[]).join(', ');
+  const cacheLabel=result.scenario_cache_hit?'Exact scenario reused':'Fresh scenario run';
   return `<article class="panel" style="margin-top:16px">
-    <div class="panel-header"><div><p class="eyebrow">Scenario result</p><h2>${escapeHtml(names||'Availability stress test')}</h2><p class="lead">Compared with the current authoritative baseline.</p></div><span class="status-chip">${Number(result.scenario_simulation_count||0).toLocaleString()} simulations</span></div>
+    <div class="panel-header"><div><p class="eyebrow">Scenario result</p><h2>${escapeHtml(names||'Availability stress test')}</h2><p class="lead">Compared with the current authoritative baseline.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="status-chip">${escapeHtml(cacheLabel)}</span><span class="status-chip">${Number(result.scenario_simulation_count||0).toLocaleString()} simulations</span></div></div>
     <div class="metric-grid">
       ${simulatorMetricCard('Expected wins',simulatorFmtNumber(competitive.expected_wins,2),'Scenario minus baseline')}
       ${simulatorMetricCard('Playoff odds',simulatorFmtPctPoint(competitive.playoff_probability),'Scenario minus baseline')}
@@ -33,7 +34,7 @@ function simulatorScenarioResult(result){
       ${simulatorMetricCard('Largest lineup-loss exposure',simulatorFmtNumber(resilience.largest_single_player_lineup_drop,2),'Scenario minus baseline')}
     </div>
     <div class="panel" style="margin-top:14px;background:var(--surface-2)"><strong>Calculated state</strong><p style="margin:6px 0 0">${escapeHtml(result.calculated_state_before||'—')} → <strong>${escapeHtml(result.calculated_state_after||'—')}</strong></p></div>
-    <p style="color:var(--muted);font-size:12px;margin:12px 0 0">Ownership and FSFFL Value remain unchanged. State owns the hypothetical availability change; NEXT-4 Simulation owns competitive outcomes. Identical exact scenarios may reuse a previously computed authoritative result.</p>
+    <p style="color:var(--muted);font-size:12px;margin:12px 0 0">Ownership and FSFFL Value remain unchanged. State owns the hypothetical availability change; NEXT-4 Simulation owns competitive outcomes. Cache reuse is exact-result performance reuse only.</p>
   </article>`;
 }
 async function runFsfflSimulator(){
@@ -41,7 +42,8 @@ async function runFsfflSimulator(){
   if(!playerIds.length||fsfflSimulatorState.loading)return;
   fsfflSimulatorState.loading=true;renderFsfflSimulator();
   try{
-    fsfflSimulatorState.result=await api('/api/simulator/players-unavailable',{method:'POST',body:JSON.stringify({player_ids:playerIds})});
+    const envelope=`simulator:${playerIds.join(',')}`;
+    fsfflSimulatorState.result=await api('/api/what-if/player-unavailable',{method:'POST',body:JSON.stringify({player_id:envelope})});
   }catch(error){fsfflSimulatorState.result={error:error.message}}
   finally{fsfflSimulatorState.loading=false;renderFsfflSimulator()}
 }
@@ -57,7 +59,7 @@ function renderFsfflSimulator(){
   const players=simulatorPlayers();
   const selected=fsfflSimulatorState.selected;
   const result=fsfflSimulatorState.result;
-  panel.innerHTML=`<p class="eyebrow">Simulator</p><h2>Stress-test multiple roster losses.</h2><p class="lead">Choose one or more active-roster players to make unavailable simultaneously. FSFFL will create one hypothetical State and run the exact scenario through authoritative 50,000-run Simulation.</p>
+  panel.innerHTML=`<p class="eyebrow">Simulator</p><h2>Stress-test multiple roster losses.</h2><p class="lead">Choose one or more active-roster players to make unavailable simultaneously. FSFFL creates one hypothetical State and runs the exact scenario through authoritative 50,000-run Simulation.</p>
     <div class="panel" style="margin-top:16px"><div class="panel-header"><div><strong>Players unavailable in scenario</strong><p style="color:var(--muted);font-size:12px;margin:5px 0 0">${selected.size} selected</p></div><button id="run-simulator" class="primary-button" ${!selected.size||fsfflSimulatorState.loading?'disabled':''}>${fsfflSimulatorState.loading?'Simulating…':'Run scenario'}</button></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:14px">${players.map(row=>`<button type="button" class="asset-option${selected.has(row.player_id)?' selected':''}" data-sim-player="${escapeHtml(row.player_id)}"><span><strong>${escapeHtml(row.display_name||row.player_name||row.player_id)}</strong><small>${escapeHtml(row.position||'')} · ${escapeHtml(row.roster_slot||'active')}</small></span></button>`).join('')}</div></div>
     ${result?.error?`<div class="chart-empty" style="margin-top:14px"><p>Simulator is unavailable: ${escapeHtml(result.error)}</p></div>`:simulatorScenarioResult(result)}`;
