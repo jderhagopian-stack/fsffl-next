@@ -29,8 +29,6 @@ class AssetPortfolioDelta(FrozenModel):
 
 
 class TeamScenarioDelta(FrozenModel):
-    """Structured before/after consequence comparison for one team."""
-
     team_id: str
     baseline_as_of: datetime
     scenario_as_of: datetime
@@ -55,76 +53,51 @@ class TeamScenarioDelta(FrozenModel):
         return self
 
 
+def _optional_delta(after: float | None, before: float | None) -> float | None:
+    return None if after is None or before is None else after - before
+
+
 def compare_team_utility_vectors(
     baseline: TeamUtilityVector,
     scenario: TeamUtilityVector,
     *,
     model_version: str = "next4-scenario-delta-v2",
 ) -> TeamScenarioDelta:
-    """Compare two team-utility states without collapsing distinct channels."""
-
     if baseline.team_id != scenario.team_id:
         raise ValueError("scenario comparison requires the same team")
     if not model_version.strip():
         raise ValueError("model_version cannot be blank")
 
-    competitive: CompetitiveOutcomeDelta | None = None
+    competitive = None
     if baseline.competitive_outcome is not None and scenario.competitive_outcome is not None:
         competitive = CompetitiveOutcomeDelta(
-            expected_wins=(
-                scenario.competitive_outcome.expected_wins
-                - baseline.competitive_outcome.expected_wins
-            ),
-            playoff_probability=(
-                scenario.competitive_outcome.playoff_probability
-                - baseline.competitive_outcome.playoff_probability
-            ),
-            first_place_probability=(
-                scenario.competitive_outcome.first_place_probability
-                - baseline.competitive_outcome.first_place_probability
-            ),
-            championship_probability=(
-                scenario.competitive_outcome.championship_probability
-                - baseline.competitive_outcome.championship_probability
+            expected_wins=scenario.competitive_outcome.expected_wins - baseline.competitive_outcome.expected_wins,
+            playoff_probability=scenario.competitive_outcome.playoff_probability - baseline.competitive_outcome.playoff_probability,
+            first_place_probability=scenario.competitive_outcome.first_place_probability - baseline.competitive_outcome.first_place_probability,
+            championship_probability=_optional_delta(
+                scenario.competitive_outcome.championship_probability,
+                baseline.competitive_outcome.championship_probability,
             ),
         )
 
-    resilience: RosterResilienceDelta | None = None
+    resilience = None
     if baseline.roster_resilience is not None and scenario.roster_resilience is not None:
         resilience = RosterResilienceDelta(
-            largest_single_player_lineup_drop=(
-                scenario.roster_resilience.largest_single_player_lineup_drop
-                - baseline.roster_resilience.largest_single_player_lineup_drop
-            ),
-            bench_forecasted_count=(
-                scenario.roster_resilience.bench_forecasted_count
-                - baseline.roster_resilience.bench_forecasted_count
-            ),
-            unavailable_count=(
-                scenario.roster_resilience.unavailable_count
-                - baseline.roster_resilience.unavailable_count
-            ),
-            missing_forecast_count=(
-                scenario.roster_resilience.missing_forecast_count
-                - baseline.roster_resilience.missing_forecast_count
-            ),
+            largest_single_player_lineup_drop=scenario.roster_resilience.largest_single_player_lineup_drop - baseline.roster_resilience.largest_single_player_lineup_drop,
+            bench_forecasted_count=scenario.roster_resilience.bench_forecasted_count - baseline.roster_resilience.bench_forecasted_count,
+            unavailable_count=scenario.roster_resilience.unavailable_count - baseline.roster_resilience.unavailable_count,
+            missing_forecast_count=scenario.roster_resilience.missing_forecast_count - baseline.roster_resilience.missing_forecast_count,
         )
 
-    asset_portfolio: AssetPortfolioDelta | None = None
+    asset_portfolio = None
     if baseline.asset_portfolio is not None and scenario.asset_portfolio is not None:
         if baseline.asset_portfolio.scale != scenario.asset_portfolio.scale:
             raise ValueError("asset portfolio deltas require the same value scale/version")
         if baseline.asset_portfolio.value_concept != scenario.asset_portfolio.value_concept:
             raise ValueError("asset portfolio deltas require the same value concept")
         asset_portfolio = AssetPortfolioDelta(
-            mean_value=(
-                scenario.asset_portfolio.distribution.mean
-                - baseline.asset_portfolio.distribution.mean
-            ),
-            stddev_value=(
-                scenario.asset_portfolio.distribution.stddev
-                - baseline.asset_portfolio.distribution.stddev
-            ),
+            mean_value=scenario.asset_portfolio.distribution.mean - baseline.asset_portfolio.distribution.mean,
+            stddev_value=scenario.asset_portfolio.distribution.stddev - baseline.asset_portfolio.distribution.stddev,
         )
 
     return TeamScenarioDelta(
