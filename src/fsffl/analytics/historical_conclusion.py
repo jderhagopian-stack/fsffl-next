@@ -11,9 +11,21 @@ from fsffl.trade_decision.historical_robustness import (
     HistoricalDecisionRobustness,
     HistoricalDecisionRobustnessStatus,
 )
-from fsffl.runtime.historical_trade_readiness import HistoricalTradeValuationReadiness
 
 from .historical_grade_envelope import HistoricalGradeEnvelope
+
+
+class HistoricalEvidenceConclusionInput(FrozenModel):
+    """Small read-only handoff into Analytics; no Runtime dependency or economics."""
+
+    transaction_id: str
+    grade_eligible: bool
+
+    @model_validator(mode="after")
+    def validate_input(self) -> "HistoricalEvidenceConclusionInput":
+        if not self.transaction_id.strip():
+            raise ValueError("historical evidence conclusion transaction_id cannot be blank")
+        return self
 
 
 class HistoricalConclusionStatus(StrEnum):
@@ -66,20 +78,20 @@ class HistoricalConclusionBatch(FrozenModel):
 
 
 def conclude_historical_trade(
-    readiness: HistoricalTradeValuationReadiness,
+    evidence: HistoricalEvidenceConclusionInput,
     *,
     robustness: HistoricalDecisionRobustness | None = None,
     grade_envelope: HistoricalGradeEnvelope | None = None,
 ) -> HistoricalTradeConclusion:
     """Return the furthest defensible historical conclusion without inventing truth."""
 
-    if robustness is not None and robustness.proposal_id != readiness.transaction_id:
-        raise ValueError("Decision robustness must match readiness transaction_id")
+    if robustness is not None and robustness.proposal_id != evidence.transaction_id:
+        raise ValueError("Decision robustness must match evidence transaction_id")
     if grade_envelope is not None and robustness is None:
         raise ValueError("grade envelope requires Decision robustness")
 
-    transaction_id = readiness.transaction_id
-    if not readiness.grade_eligible:
+    transaction_id = evidence.transaction_id
+    if not evidence.grade_eligible:
         if robustness is not None or grade_envelope is not None:
             raise ValueError("blocked trade cannot carry downstream Decision/grade results")
         return HistoricalTradeConclusion(
@@ -137,25 +149,27 @@ def conclude_historical_trade(
 
 
 def summarize_historical_conclusions(
-    readiness_rows: Sequence[HistoricalTradeValuationReadiness],
+    evidence_rows: Sequence[HistoricalEvidenceConclusionInput],
     *,
     robustness_by_transaction_id: Mapping[str, HistoricalDecisionRobustness] | None = None,
     grade_envelope_by_transaction_id: Mapping[str, HistoricalGradeEnvelope] | None = None,
 ) -> HistoricalConclusionBatch:
     robustness_map = dict(robustness_by_transaction_id or {})
     envelope_map = dict(grade_envelope_by_transaction_id or {})
-    transaction_ids = {row.transaction_id for row in readiness_rows}
+    transaction_ids = {row.transaction_id for row in evidence_rows}
+    if len(transaction_ids) != len(evidence_rows):
+        raise ValueError("historical conclusion batch requires unique evidence transactions")
     unexpected = (set(robustness_map) | set(envelope_map)) - transaction_ids
     if unexpected:
         raise ValueError(f"historical conclusion inputs contain unknown transactions: {sorted(unexpected)}")
 
     rows = tuple(
         conclude_historical_trade(
-            readiness,
-            robustness=robustness_map.get(readiness.transaction_id),
-            grade_envelope=envelope_map.get(readiness.transaction_id),
+            evidence,
+            robustness=robustness_map.get(evidence.transaction_id),
+            grade_envelope=envelope_map.get(evidence.transaction_id),
         )
-        for readiness in sorted(readiness_rows, key=lambda item: item.transaction_id)
+        for evidence in sorted(evidence_rows, key=lambda item: item.transaction_id)
     )
     counts = tuple(sorted(Counter(row.status for row in rows).items(), key=lambda item: item[0].value))
     return HistoricalConclusionBatch(trade_count=len(rows), status_counts=counts, rows=rows)
