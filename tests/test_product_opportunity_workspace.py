@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from fsffl.product.opportunity_workspace import _select_bilateral_evaluation_indices
 from fsffl.product.webapp import app
 
 
@@ -73,6 +74,27 @@ def test_opportunity_search_is_roster_aware_and_not_just_nearest_one_for_one_val
     assert '"roster_aware_search": runtime.simulation_analytics is not None' in workspace
     assert '"two_for_one_consolidation_search": True' in workspace
     assert '"search_order_is_not_a_composite_opportunity_score": True' in workspace
+
+
+def test_decision_budget_preserves_best_market_candidate_and_diversifies_counterparties() -> None:
+    rows = [
+        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a1"}]},
+        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a2"}]},
+        {"counterparty_team_id": "b", "receive": [{"asset_ref": "player:b1"}]},
+        {"counterparty_team_id": "c", "receive": [{"asset_ref": "player:c1"}]},
+        {"counterparty_team_id": "d", "receive": [{"asset_ref": "player:d1"}]},
+    ]
+    assert _select_bilateral_evaluation_indices(rows, limit=4) == (0, 2, 3, 4)
+
+
+def test_decision_budget_uses_distinct_targets_before_duplicate_fill() -> None:
+    rows = [
+        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a1"}]},
+        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a1"}]},
+        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a2"}]},
+        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a3"}]},
+    ]
+    assert _select_bilateral_evaluation_indices(rows, limit=3) == (0, 2, 3)
 
 
 def test_opportunity_presentation_retries_runtime_readiness_without_inventing_authority() -> None:
