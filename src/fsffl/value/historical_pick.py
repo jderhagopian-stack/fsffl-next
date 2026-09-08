@@ -135,19 +135,80 @@ def _aggregate_slot_values(
     round: int,
     as_of: datetime,
     scale: ValueScale,
-) -> dict[int, ValueDistribution]:
-    by_slot: dict[int, list[ValueDistribution]] = defaultdict(list)
-    for observation in observations:
-        if observation.available_at > as_of or observation.round != round or observation.scale != scale:
-            continue
-        by_slot[observation.slot_in_round].append(observation.value)
+    league_rules: LeagueRules,
+) -> tuple[dict[int, ValueDistribution], bool]:
+    """Aggregate PIT slot evidence and enforce draft-position dominance.
 
-    result: dict[int, ValueDistribution] = {}
-    for slot, values in by_slot.items():
+    Within one otherwise identical rookie draft, an earlier overall pick weakly
+    dominates a later pick because its manager can always select an asset that
+    remains available later. Raw historical drafted-player evidence can violate
+    that structural property through sampling noise. We therefore project the
+    observed slot means onto a non-increasing curve using weighted pooled-adjacent
+    violators. This is a no-arbitrage constraint, not a fitted economic coefficient.
+
+    Missing slots remain missing. The projection only reorders evidence that
+    already exists, and any mean adjustment is added to the reported uncertainty
+    rather than hidden.
+    """
+
+    by_overall_slot: dict[int, list[ValueDistribution]] = defaultdict(list)
+    for observation in observations:
+        if observation.available_at > as_of or observation.scale != scale:
+            continue
+        if observation.round > league_rules.rookie_draft_rounds:
+            continue
+        if observation.slot_in_round > league_rules.team_count:
+            raise ValueError("historical draft observation slot exceeds league team count")
+        overall_slot = (observation.round - 1) * league_rules.team_count + observation.slot_in_round
+        by_overall_slot[overall_slot].append(observation.value)
+
+    raw: dict[int, tuple[float, float, int]] = {}
+    for overall_slot, values in by_overall_slot.items():
         mean = sum(value.mean for value in values) / len(values)
         second = sum(value.stddev**2 + value.mean**2 for value in values) / len(values)
-        result[slot] = ValueDistribution(mean=mean, stddev=sqrt(max(0.0, second - mean**2)))
-    return result
+        raw[overall_slot] = (mean, sqrt(max(0.0, second - mean**2)), len(values))
+
+    blocks: list[dict[str, object]] = []
+    for overall_slot in sorted(raw):
+        mean, _, count = raw[overall_slot]
+        blocks.append({"slots": [overall_slot], "weight": float(count), "mean": mean})
+        while len(blocks) >= 2 and float(blocks[-2]["mean"]) < float(blocks[-1]["mean"]):
+            right = blocks.pop()
+            left = blocks.pop()
+            weight = float(left["weight"]) + float(right["weight"])
+            pooled_mean = (
+                float(left["mean"]) * float(left["weight"])
+                + float(right["mean"]) * float(right["weight"])
+            ) / weight
+            blocks.append(
+                {
+                    "slots": list(left["slots"]) + list(right["slots"]),
+                    "weight": weight,
+                    "mean": pooled_mean,
+                }
+            )
+
+    fitted: dict[int, float] = {}
+    for block in blocks:
+        for overall_slot in block["slots"]:
+            fitted[int(overall_slot)] = float(block["mean"])
+
+    adjusted = False
+    result: dict[int, ValueDistribution] = {}
+    for overall_slot, (raw_mean, raw_stddev, _) in raw.items():
+        fitted_mean = fitted[overall_slot]
+        if abs(fitted_mean - raw_mean) > 1e-12:
+            adjusted = True
+        round_number = ((overall_slot - 1) // league_rules.team_count) + 1
+        slot_in_round = ((overall_slot - 1) % league_rules.team_count) + 1
+        if round_number != round:
+            continue
+        adjustment = raw_mean - fitted_mean
+        result[slot_in_round] = ValueDistribution(
+            mean=fitted_mean,
+            stddev=sqrt(raw_stddev**2 + adjustment**2),
+        )
+    return result, adjusted
 
 
 def reconstruct_historical_pick_coordinate(
@@ -170,11 +231,12 @@ def reconstruct_historical_pick_coordinate(
             model_version=model_version,
         )
 
-    slot_values = _aggregate_slot_values(
+    slot_values, dominance_adjusted = _aggregate_slot_values(
         evidence.observations,
         round=evidence.pick.round,
         as_of=evidence.as_of,
         scale=scale,
+        league_rules=league_rules,
     )
 
     if evidence.exact_slot_in_round is not None:
@@ -229,6 +291,8 @@ def reconstruct_historical_pick_coordinate(
     )
     draft_versions = sorted({item.model_version for item in evidence.observations})
     class_version = "+".join(draft_versions) if draft_versions else "missing"
+    if dominance_adjusted:
+        class_version += "+draft-position-dominance-v1"
     if evidence.horizon_adjustment is not None:
         class_version += "+" + evidence.horizon_adjustment.model_version
 
@@ -247,6 +311,8 @@ def reconstruct_historical_pick_coordinate(
     quality = "HIGH" if exact and len(seasons) >= 2 else "MEDIUM" if len(seasons) >= 2 else "LOW"
     provenance = sorted({item.provenance for item in evidence.observations})
     provenance.append(probability_provenance)
+    if dominance_adjusted:
+        provenance.append("structural draft-position dominance projection")
     if evidence.horizon_adjustment is not None:
         provenance.append(evidence.horizon_adjustment.provenance)
 
