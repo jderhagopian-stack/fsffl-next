@@ -76,25 +76,99 @@ def test_opportunity_search_is_roster_aware_and_not_just_nearest_one_for_one_val
     assert '"search_order_is_not_a_composite_opportunity_score": True' in workspace
 
 
-def test_decision_budget_preserves_best_market_candidate_and_diversifies_counterparties() -> None:
+def test_decision_budget_samples_market_focal_and_counterparty_fit_lanes() -> None:
     rows = [
-        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a1"}]},
-        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a2"}]},
-        {"counterparty_team_id": "b", "receive": [{"asset_ref": "player:b1"}]},
-        {"counterparty_team_id": "c", "receive": [{"asset_ref": "player:c1"}]},
-        {"counterparty_team_id": "d", "receive": [{"asset_ref": "player:d1"}]},
+        {
+            "counterparty_team_id": "a",
+            "receive": [{"asset_ref": "player:market"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 95.0,
+            "counterparty_receive_position_strength_index": 92.0,
+        },
+        {
+            "counterparty_team_id": "a",
+            "receive": [{"asset_ref": "player:focal"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 55.0,
+            "counterparty_receive_position_strength_index": 90.0,
+        },
+        {
+            "counterparty_team_id": "b",
+            "receive": [{"asset_ref": "player:other"}],
+            "package_shape": "two_for_one",
+            "focal_position_strength_index": 80.0,
+            "counterparty_receive_position_strength_index": 45.0,
+        },
+        {
+            "counterparty_team_id": "c",
+            "receive": [{"asset_ref": "player:diverse"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 85.0,
+            "counterparty_receive_position_strength_index": 85.0,
+        },
     ]
-    assert _select_bilateral_evaluation_indices(rows, limit=4) == (0, 2, 3, 4)
+    assert _select_bilateral_evaluation_indices(rows, limit=4) == (0, 1, 2, 3)
 
 
-def test_decision_budget_uses_distinct_targets_before_duplicate_fill() -> None:
+def test_decision_budget_can_evaluate_better_roster_fit_below_market_rank() -> None:
     rows = [
-        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a1"}]},
-        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a1"}]},
-        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a2"}]},
-        {"counterparty_team_id": "a", "receive": [{"asset_ref": "player:a3"}]},
+        {
+            "counterparty_team_id": "a",
+            "receive": [{"asset_ref": "player:market"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 100.0,
+            "counterparty_receive_position_strength_index": 100.0,
+        },
+        {
+            "counterparty_team_id": "a",
+            "receive": [{"asset_ref": "player:second"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 90.0,
+            "counterparty_receive_position_strength_index": 90.0,
+        },
+        {
+            "counterparty_team_id": "b",
+            "receive": [{"asset_ref": "player:focal-need"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 40.0,
+            "counterparty_receive_position_strength_index": 80.0,
+        },
+        {
+            "counterparty_team_id": "c",
+            "receive": [{"asset_ref": "player:counterparty-need"}],
+            "package_shape": "two_for_one",
+            "focal_position_strength_index": 85.0,
+            "counterparty_receive_position_strength_index": 35.0,
+        },
     ]
     assert _select_bilateral_evaluation_indices(rows, limit=3) == (0, 2, 3)
+
+
+def test_decision_budget_does_not_turn_missing_strength_evidence_into_best_fit() -> None:
+    rows = [
+        {
+            "counterparty_team_id": "a",
+            "receive": [{"asset_ref": "player:market"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 95.0,
+            "counterparty_receive_position_strength_index": 95.0,
+        },
+        {
+            "counterparty_team_id": "b",
+            "receive": [{"asset_ref": "player:missing"}],
+            "package_shape": "two_for_one",
+            "focal_position_strength_index": None,
+            "counterparty_receive_position_strength_index": None,
+        },
+        {
+            "counterparty_team_id": "c",
+            "receive": [{"asset_ref": "player:need"}],
+            "package_shape": "one_for_one",
+            "focal_position_strength_index": 50.0,
+            "counterparty_receive_position_strength_index": 60.0,
+        },
+    ]
+    assert _select_bilateral_evaluation_indices(rows, limit=2) == (0, 2)
 
 
 def test_opportunity_presentation_retries_runtime_readiness_without_inventing_authority() -> None:
