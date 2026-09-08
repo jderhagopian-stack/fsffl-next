@@ -67,6 +67,17 @@ def build_team_cardinal_portfolios(
     league_state: LeagueState,
     scores: tuple[FSFFLCardinalValueScore, ...],
 ) -> tuple[TeamCardinalPortfolio, ...]:
+    """Sum only one coherent Cardinal context into team portfolio accounting."""
+
+    asset_ids = [row.asset_id for row in scores]
+    if len(asset_ids) != len(set(asset_ids)):
+        raise ValueError("team Cardinal portfolios require unique asset scores")
+    contexts = {row.market_context_id for row in scores}
+    if len(contexts) > 1:
+        raise ValueError("team Cardinal portfolios cannot mix market contexts")
+    if any(row.scale != FSFFL_CARDINAL_SCALE for row in scores):
+        raise ValueError("team Cardinal portfolios require the governed Cardinal scale")
+
     score_by_asset = {row.asset_id: row for row in scores}
     team_state_by_id = {row.team_id: row for row in league_state.team_states}
     owned_picks_by_team: dict[str, list[str]] = {team.team_id: [] for team in league_state.teams}
