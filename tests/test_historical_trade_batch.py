@@ -18,7 +18,6 @@ from fsffl.state.historical_trade import HistoricalTradeLeg, HistoricalTradeReco
 from fsffl.state.models import PickAsset, PlayerAsset, Provenance
 from fsffl.trade_decision.decision import (
     BilateralDecisionShape,
-    BilateralTradeDecision,
     Direction,
     SideDecisionShape,
     SideDirectionalAssessment,
@@ -47,7 +46,7 @@ def record(transaction_id: str) -> HistoricalTradeRecord:
     )
 
 
-def complete_readiness(transaction_id: str, *, mode: HistoricalEvidenceMode) :
+def complete_readiness(transaction_id: str, *, mode: HistoricalEvidenceMode):
     row = record(transaction_id)
     evidence = []
     for leg in row.legs:
@@ -137,13 +136,13 @@ def test_complete_probabilistic_trade_is_ready_for_decision_before_robustness() 
     assert progress.probabilistic_asset_count == 1
 
 
-def test_robust_uncertain_trade_becomes_robustly_gradeable() -> None:
+def test_robust_uncertain_trade_advances_to_grade_envelope_not_directly_to_robust_grade() -> None:
     readiness = complete_readiness("t2", mode=HistoricalEvidenceMode.SENSITIVITY_ONLY)
     progress = classify_historical_trade_progress(
         readiness,
         robustness=robustness("t2", HistoricalDecisionRobustnessStatus.ROBUST),
     )
-    assert progress.status == HistoricalTradeProgressStatus.ROBUSTLY_GRADEABLE
+    assert progress.status == HistoricalTradeProgressStatus.READY_FOR_GRADE_ENVELOPE
     assert progress.sensitivity_only_asset_count == 1
 
 
@@ -179,7 +178,7 @@ def test_batch_summary_separates_remaining_work() -> None:
     counts = dict(summary.status_counts)
     assert counts[HistoricalTradeProgressStatus.READY_FOR_DECISION] == 1
     assert counts[HistoricalTradeProgressStatus.SENSITIVITY_DEPENDENT] == 1
-    assert counts[HistoricalTradeProgressStatus.ROBUSTLY_GRADEABLE] == 1
+    assert counts[HistoricalTradeProgressStatus.READY_FOR_GRADE_ENVELOPE] == 1
     assert counts[HistoricalTradeProgressStatus.EVIDENCE_INCOMPLETE] == 1
 
 
