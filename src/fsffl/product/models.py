@@ -60,6 +60,13 @@ class ProductContext(FrozenModel):
     statuses: tuple[ProductStatus, ...] = ()
     product_version: str = "next8-product-v1"
 
+    @field_validator("league_id", "team_id", "state_id")
+    @classmethod
+    def reject_blank_optional_identifiers(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("product context optional identifiers cannot be blank")
+        return value
+
     @field_validator("evidence_as_of")
     @classmethod
     def require_timezone(cls, value: datetime | None) -> datetime | None:
