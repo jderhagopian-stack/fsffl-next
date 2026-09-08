@@ -4,7 +4,10 @@ from itertools import combinations
 from typing import Mapping
 
 from fsffl.state.models import LeagueState, Position
-from fsffl.team_utility.position_strength import summarize_lineup_by_position
+from fsffl.team_utility.position_strength import (
+    LeagueRelativePositionStrength,
+    build_league_relative_position_strengths,
+)
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 
 from .runtime import UserRuntimeContext
@@ -21,28 +24,33 @@ def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Pos
     return player.position if player is not None else None
 
 
-def _position_strength_ranks(runtime: UserRuntimeContext) -> dict[str, dict[Position, int]]:
-    """Return 1=strongest league rank for optimized starter production by position.
+def _position_strengths(
+    runtime: UserRuntimeContext,
+) -> dict[str, dict[Position, LeagueRelativePositionStrength]]:
+    """Return transparent league-relative optimized positional production.
 
-    This is a search-order diagnostic only. It does not create a Team Utility score
-    and does not alter Forecast, Value, Decision, or Simulation authority.
+    This is Search context only. The 100-based index preserves distance from league
+    average without creating a composite Team Utility score or changing Forecast,
+    Value, Decision, or Simulation authority.
     """
 
     simulation = runtime.simulation_analytics
     if simulation is None:
         return {}
-    by_position: dict[Position, list[tuple[str, float]]] = {position: [] for position in _SKILL_POSITIONS}
-    for view in simulation.team_views:
-        if view.optimized_lineup is None:
-            continue
-        strengths = {row.position: row.expected_points for row in summarize_lineup_by_position(view.optimized_lineup)}
-        for position in _SKILL_POSITIONS:
-            by_position[position].append((view.team_id, strengths.get(position, 0.0)))
-    result: dict[str, dict[Position, int]] = {}
-    for position, rows in by_position.items():
-        ordered = sorted(rows, key=lambda item: (-item[1], item[0]))
-        for rank, (team_id, _value) in enumerate(ordered, start=1):
-            result.setdefault(team_id, {})[position] = rank
+    lineups = tuple(
+        view.optimized_lineup
+        for view in simulation.team_views
+        if view.optimized_lineup is not None
+    )
+    if not lineups:
+        return {}
+    rows = build_league_relative_position_strengths(
+        lineups,
+        positions=_SKILL_POSITIONS,
+    )
+    result: dict[str, dict[Position, LeagueRelativePositionStrength]] = {}
+    for row in rows:
+        result.setdefault(row.team_id, {})[row.position] = row
     return result
 
 
@@ -61,21 +69,33 @@ def _asset_payload(option: TradeAssetOption, value: float) -> dict[str, object]:
     }
 
 
-def _counterparty_receive_need_rank(
+def _weakest_receive_fit(
     *,
     league_state: LeagueState,
-    ranks: dict[str, dict[Position, int]],
+    strengths: dict[str, dict[Position, LeagueRelativePositionStrength]],
     team_id: str,
     send_assets: tuple[TradeAssetOption, ...],
-) -> int:
+) -> LeagueRelativePositionStrength | None:
     player_positions = [
         position
         for option in send_assets
         if (position := _player_position(league_state, option)) is not None
     ]
-    if not player_positions:
-        return 0
-    return max(ranks.get(team_id, {}).get(position, 0) for position in player_positions)
+    rows = [
+        strengths.get(team_id, {}).get(position)
+        for position in player_positions
+    ]
+    resolved = [row for row in rows if row is not None]
+    if not resolved:
+        return None
+    return min(
+        resolved,
+        key=lambda row: (
+            row.strength_index if row.strength_index is not None else 100.0,
+            -row.league_rank,
+            row.position.value,
+        ),
+    )
 
 
 def _candidate(
@@ -87,7 +107,7 @@ def _candidate(
     send_assets: tuple[TradeAssetOption, ...],
     receive_asset: TradeAssetOption,
     cardinal: Mapping[str, FSFFLCardinalValueScore],
-    ranks: dict[str, dict[Position, int]],
+    strengths: dict[str, dict[Position, LeagueRelativePositionStrength]],
 ) -> dict[str, object] | None:
     receive_value = _asset_value(receive_asset, cardinal)
     send_values = tuple(_asset_value(option, cardinal) for option in send_assets)
@@ -96,19 +116,39 @@ def _candidate(
     resolved_send_values = tuple(float(value) for value in send_values if value is not None)
     send_total = sum(resolved_send_values)
     target_position = _player_position(league_state, receive_asset)
-    focal_need_rank = ranks.get(focal_team_id, {}).get(target_position, 0) if target_position is not None else 0
-    counterparty_need_rank = _counterparty_receive_need_rank(
+    focal_strength = (
+        strengths.get(focal_team_id, {}).get(target_position)
+        if target_position is not None
+        else None
+    )
+    counterparty_fit = _weakest_receive_fit(
         league_state=league_state,
-        ranks=ranks,
+        strengths=strengths,
         team_id=counterparty_team_id,
         send_assets=send_assets,
     )
     shape = "two_for_one" if len(send_assets) == 2 else "one_for_one"
     context: list[str] = []
-    if target_position is not None and focal_need_rank:
-        context.append(f"Target addresses {target_position.value}, currently league rank #{focal_need_rank} by optimized starter production.")
-    if counterparty_need_rank:
-        context.append(f"Assets sent include a position where the other team ranks as low as #{counterparty_need_rank} by optimized starter production.")
+    if focal_strength is not None:
+        strength_text = (
+            f"{focal_strength.strength_index:.0f}"
+            if focal_strength.strength_index is not None
+            else "unavailable"
+        )
+        context.append(
+            f"Target addresses {target_position.value}: strength index {strength_text} "
+            f"(league average 100), rank #{focal_strength.league_rank}."
+        )
+    if counterparty_fit is not None:
+        strength_text = (
+            f"{counterparty_fit.strength_index:.0f}"
+            if counterparty_fit.strength_index is not None
+            else "unavailable"
+        )
+        context.append(
+            f"Assets sent include {counterparty_fit.position.value}, where the other team has "
+            f"strength index {strength_text} and rank #{counterparty_fit.league_rank}."
+        )
     if shape == "two_for_one":
         context.append("Consolidation structure: two focal assets for one target asset.")
     return {
@@ -125,15 +165,17 @@ def _candidate(
         "receive": [_asset_payload(receive_asset, receive_value)],
         "package_shape": shape,
         "target_position": target_position.value if target_position is not None else None,
-        "focal_position_strength_rank": focal_need_rank or None,
-        "counterparty_receive_position_rank": counterparty_need_rank or None,
+        "focal_position_strength_rank": focal_strength.league_rank if focal_strength is not None else None,
+        "focal_position_strength_index": focal_strength.strength_index if focal_strength is not None else None,
+        "counterparty_receive_position_rank": counterparty_fit.league_rank if counterparty_fit is not None else None,
+        "counterparty_receive_position_strength_index": counterparty_fit.strength_index if counterparty_fit is not None else None,
         "search_distance": abs(receive_value - send_total),
         "reasons": ["unknown_acceptance", "materiality_not_evaluated"],
         "search_context": context,
         "bilateral_decision_evaluated": False,
         "explanation": (
-            "Roster-aware structural trade test. Position context and Cardinal Value "
-            "order Search only; Decision and acceptance evidence remain incomplete."
+            "Roster-aware structural trade test. League-relative positional production "
+            "and Cardinal Value order Search only; Decision and acceptance evidence remain incomplete."
         ),
     }
 
@@ -147,7 +189,7 @@ def _best_single_and_pair_for_target(
     focal_assets: tuple[TradeAssetOption, ...],
     target: TradeAssetOption,
     cardinal: Mapping[str, FSFFLCardinalValueScore],
-    ranks: dict[str, dict[Position, int]],
+    strengths: dict[str, dict[Position, LeagueRelativePositionStrength]],
 ) -> tuple[dict[str, object], ...]:
     target_value = _asset_value(target, cardinal)
     if target_value is None:
@@ -172,7 +214,7 @@ def _best_single_and_pair_for_target(
         send_assets=(nearest_single,),
         receive_asset=target,
         cardinal=cardinal,
-        ranks=ranks,
+        strengths=strengths,
     )
     if single is not None:
         rows.append(single)
@@ -193,7 +235,7 @@ def _best_single_and_pair_for_target(
             send_assets=(pair[0][0], pair[1][0]),
             receive_asset=target,
             cardinal=cardinal,
-            ranks=ranks,
+            strengths=strengths,
         )
         if package is not None:
             rows.append(package)
@@ -209,7 +251,7 @@ def build_roster_aware_trade_candidates(
     focal_team_id = runtime.selected_team_id
     if league_state is None or focal_team_id is None:
         return []
-    ranks = _position_strength_ranks(runtime)
+    strengths = _position_strengths(runtime)
     candidates: list[dict[str, object]] = []
     seen: set[tuple[str, tuple[str, ...], str]] = set()
     for counterparty in browser.counterparties:
@@ -223,7 +265,7 @@ def build_roster_aware_trade_candidates(
                 focal_assets=browser.focal_team.assets,
                 target=target,
                 cardinal=cardinal,
-                ranks=ranks,
+                strengths=strengths,
             ):
                 key = (
                     counterparty.team_id,
@@ -235,13 +277,13 @@ def build_roster_aware_trade_candidates(
                 seen.add(key)
                 candidates.append(row)
     # Lexicographic, explainable ordering rather than a hidden weighted score.
-    # Weak focal positions (higher league rank number) come first, followed by
-    # structures that plausibly address a weak position for the other team, then
-    # Cardinal distance. Packages do not receive artificial value premiums here.
+    # The weakest focal position relative to league-average optimized production
+    # comes first, then structures that plausibly address a weak position for the
+    # other team, then Cardinal distance. No package premium is invented here.
     candidates.sort(
         key=lambda row: (
-            -int(row.get("focal_position_strength_rank") or 0),
-            -int(row.get("counterparty_receive_position_rank") or 0),
+            float(row.get("focal_position_strength_index") or 100.0),
+            float(row.get("counterparty_receive_position_strength_index") or 100.0),
             0 if row.get("package_shape") == "two_for_one" else 1,
             float(row["search_distance"]),
             str(row["counterparty_name"]),
