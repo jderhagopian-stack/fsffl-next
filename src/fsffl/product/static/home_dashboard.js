@@ -30,7 +30,8 @@ function renderFsfflHomeLeagueChart(spec){
 function installFsfflHomeChartRenderer(){
   window.renderBarChart=renderFsfflHomeLeagueChart;
   renderBarChart=renderFsfflHomeLeagueChart;
-  if(state?.context?.league_id&&typeof loadLeagueMetric==='function')loadLeagueMetric(document.querySelector('#metric-select')?.value||'expected_wins');
+  const metric=document.querySelector('#metric-select')?.value;
+  if(state?.context?.league_id&&metric&&typeof loadLeagueMetric==='function')loadLeagueMetric(metric);
 }
 function installFsfflHomeExperience(){
   const leagueScreen=document.querySelector('#league-screen');if(!leagueScreen)return;
