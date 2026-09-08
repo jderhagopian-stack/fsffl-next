@@ -115,8 +115,39 @@ class TeamCompetitiveOutcome(FrozenModel):
     simulation_model_version: str
 
 
+class TeamFinishDistribution(FrozenModel):
+    """Regular-season finish distribution retained from the authoritative Simulation.
+
+    Rank 1 is the best simulated regular-season finish. The distribution records
+    what the existing season simulation already observed; it does not infer rookie
+    draft order. Draft-order interpretation belongs to a downstream governed pick
+    location mapping because league rules may treat playoff teams differently.
+    """
+
+    team_id: str
+    expected_finish: Annotated[float, Field(ge=1)]
+    rank_probabilities: tuple[float, ...]
+    simulation_count: Annotated[int, Field(ge=1)]
+    simulation_model_version: str
+
+    @model_validator(mode="after")
+    def validate_distribution(self) -> "TeamFinishDistribution":
+        if not self.team_id.strip() or not self.simulation_model_version.strip():
+            raise ValueError("finish distribution identifiers cannot be blank")
+        if not self.rank_probabilities:
+            raise ValueError("finish distribution must include at least one rank")
+        if any(value < 0.0 or value > 1.0 for value in self.rank_probabilities):
+            raise ValueError("finish probabilities must be between zero and one")
+        if abs(sum(self.rank_probabilities) - 1.0) > 1e-9:
+            raise ValueError("finish probabilities must sum to one")
+        if self.expected_finish > len(self.rank_probabilities):
+            raise ValueError("expected finish cannot exceed team count")
+        return self
+
+
 class RegularSeasonSimulationResult(FrozenModel):
     outcomes: tuple[TeamCompetitiveOutcome, ...]
+    finish_distributions: tuple[TeamFinishDistribution, ...] = ()
     simulation_count: Annotated[int, Field(ge=1)]
     seed: int
     model_version: str
@@ -228,7 +259,8 @@ def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSea
     A separate deterministic postseason RNG preserves the established regular-season
     RNG stream exactly. Unsupported/custom playoff sizes keep championship probability
     explicitly unavailable rather than blocking regular-season simulation or fabricating
-    bracket semantics.
+    bracket semantics. Every simulated final regular-season rank is retained as a
+    distribution for downstream analytics and probabilistic pick-location evidence.
     """
 
     by_team = {item.team_id: item for item in request.scoring}
@@ -263,6 +295,7 @@ def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSea
     playoff_count = [0] * team_count
     first_count = [0] * team_count
     champion_count = [0] * team_count
+    finish_count = [[0] * team_count for _ in range(team_count)]
     championship_supported = request.playoff_team_count in {2, 4, 6, 8}
     ranking_indexes = tuple(range(team_count))
 
@@ -285,6 +318,8 @@ def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSea
                 wins[away_idx] += 0.5
         standings = sorted(ranking_indexes, key=lambda index: (-wins[index], -points_for[index], team_ids[index]))
         first_count[standings[0]] += 1
+        for rank_index, team_idx in enumerate(standings):
+            finish_count[team_idx][rank_index] += 1
         for index in standings[:request.playoff_team_count]:
             playoff_count[index] += 1
         if championship_supported:
@@ -296,6 +331,7 @@ def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSea
 
     n = request.simulation_count
     outcomes = []
+    finish_distributions = []
     for index, team_id in enumerate(team_ids):
         expected = wins_sum[index] / n
         variance = max(0.0, wins_sq_sum[index] / n - expected * expected)
@@ -309,7 +345,24 @@ def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSea
             simulation_count=n,
             simulation_model_version=request.model_version,
         ))
-    return RegularSeasonSimulationResult(outcomes=tuple(outcomes), simulation_count=n, seed=request.seed, model_version=request.model_version)
+        probabilities = tuple(count / n for count in finish_count[index])
+        expected_finish = sum((rank + 1) * probability for rank, probability in enumerate(probabilities))
+        finish_distributions.append(
+            TeamFinishDistribution(
+                team_id=team_id,
+                expected_finish=expected_finish,
+                rank_probabilities=probabilities,
+                simulation_count=n,
+                simulation_model_version=request.model_version,
+            )
+        )
+    return RegularSeasonSimulationResult(
+        outcomes=tuple(outcomes),
+        finish_distributions=tuple(finish_distributions),
+        simulation_count=n,
+        seed=request.seed,
+        model_version=request.model_version,
+    )
 
 
 def _sample_points(distribution, rng: Random) -> float:
