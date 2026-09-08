@@ -182,6 +182,16 @@ def _forecast_lineup_result(runtime):
     )
 
 
+def _team_market_value_payload(value_evidence, team_id: str) -> dict[str, object] | None:
+    if value_evidence is None:
+        return None
+    portfolio = next(
+        (row for row in value_evidence.team_market_value_portfolios if row.team_id == team_id),
+        None,
+    )
+    return portfolio.model_dump(mode="json") if portfolio is not None else None
+
+
 def _attach_live_value_profiles(view, value_evidence):
     if value_evidence is None or not value_evidence.estimates:
         return view
@@ -202,6 +212,14 @@ def _attach_live_value_profiles(view, value_evidence):
         for row in view.draft_picks
     )
     return view.model_copy(update={"players": players, "draft_picks": draft_picks})
+
+
+def _team_view_payload(view, value_evidence) -> dict[str, object]:
+    enriched = _attach_live_value_profiles(view, value_evidence)
+    return {
+        **enriched.model_dump(mode="json"),
+        "team_market_value": _team_market_value_payload(value_evidence, enriched.team_id),
+    }
 
 
 def _default_simulation_loader(
@@ -533,6 +551,13 @@ def create_app(
             "valued_roster_player_count": evidence.valued_roster_player_count,
             "coverage": evidence.coverage,
             "cardinal_player_coverage": evidence.cardinal_player_coverage,
+            "team_market_value_portfolios": [
+                {
+                    **portfolio.model_dump(mode="json"),
+                    "team_name": team_names.get(portfolio.team_id, portfolio.team_id),
+                }
+                for portfolio in evidence.team_market_value_portfolios
+            ],
             "team_cardinal_portfolios": [
                 {
                     **portfolio.model_dump(mode="json"),
@@ -576,11 +601,11 @@ def create_app(
                 for item in runtime.simulation_analytics.team_views
                 if item.team_id == runtime.selected_team_id
             )
-            return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
+            return _team_view_payload(view, runtime.value_evidence)
         lineup_result = _forecast_lineup_result(runtime)
         if lineup_result is not None:
             view = next(item for item in lineup_result.team_views if item.team_id == runtime.selected_team_id)
-            return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
+            return _team_view_payload(view, runtime.value_evidence)
         if runtime.forecast_evidence is not None:
             evidence = runtime.forecast_evidence
             forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
@@ -590,9 +615,9 @@ def create_app(
                 forecasts=forecasts,
                 forecast_model_version=evidence.model_version,
             )
-            return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
+            return _team_view_payload(view, runtime.value_evidence)
         view = build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id)
-        return _attach_live_value_profiles(view, runtime.value_evidence).model_dump(mode="json")
+        return _team_view_payload(view, runtime.value_evidence)
 
     @application.get("/api/league/team-views")
     def league_team_views(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -640,6 +665,11 @@ def create_app(
             "league_state_id": league_state.state_id,
             "as_of": league_state.as_of.isoformat(),
             "source_level": source_level,
+            "team_market_value_portfolios": (
+                [portfolio.model_dump(mode="json") for portfolio in runtime.value_evidence.team_market_value_portfolios]
+                if runtime.value_evidence is not None
+                else []
+            ),
             "team_views": [view.model_dump(mode="json") for view in enriched],
         }
 
