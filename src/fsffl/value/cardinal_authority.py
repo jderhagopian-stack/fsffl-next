@@ -154,6 +154,15 @@ def _scores_from_generic_pick_values(
     return tuple(result)
 
 
+def _expected_statsguy_dynasty_format(market_context_id: str) -> str | None:
+    parts = market_context_id.split(":")
+    if "sf" in parts:
+        return "sf_dynasty"
+    if "1qb" in parts:
+        return "non_sf_dynasty"
+    return None
+
+
 def build_authoritative_pick_cardinal_scores(
     json_text: str,
     *,
@@ -168,6 +177,9 @@ def build_authoritative_pick_cardinal_scores(
         raise ValueError("pick cardinal retrieval timestamp must be timezone-aware")
     if not format_key.strip() or not market_context_id.strip():
         raise ValueError("pick cardinal context identifiers cannot be blank")
+    expected = _expected_statsguy_dynasty_format(market_context_id)
+    if expected is not None and format_key != expected:
+        raise ValueError("pick Cardinal format does not match market context")
 
     payload = json.loads(json_text)
     if not isinstance(payload, dict) or not isinstance(payload.get("picks"), list):
@@ -207,18 +219,19 @@ def build_authoritative_pick_scores_from_trade_evaluation(
     market_context_id: str,
     retrieved_at: datetime,
 ) -> tuple[FSFFLCardinalValueScore, ...]:
-    """Parse bare round-only pick values from Stats Guy trade evaluation.
-
-    The public API explicitly defines ``pick:YEAR:ROUND`` as a generic unknown-slot
-    pick. Using that identifier is more truthful than substituting an early/mid/late
-    variant when canonical State does not know the future slot.
-    """
+    """Parse bare round-only pick values from a format-confirmed trade evaluation."""
 
     if retrieved_at.tzinfo is None:
         raise ValueError("pick cardinal retrieval timestamp must be timezone-aware")
     payload = json.loads(json_text)
     if not isinstance(payload, dict):
         raise ValueError("Stats Guy trade evaluation payload must be an object")
+
+    expected_format = _expected_statsguy_dynasty_format(market_context_id)
+    response_format = str(payload.get("format") or "").strip()
+    if expected_format is not None and response_format != expected_format:
+        raise ValueError("Stats Guy trade evaluation format does not match market context")
+
     as_of_raw = payload.get("asOf")
     as_of = retrieved_at
     if as_of_raw:
