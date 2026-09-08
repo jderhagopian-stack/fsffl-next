@@ -21,3 +21,20 @@ def test_trade_finder_surfaces_feasibility_without_inventing_acceptance() -> Non
     assert '"acceptance_probability": None' in source
     assert '"recommendation_authority": False' in source
     assert '"negotiation_feasibility_is_not_acceptance_probability": True' in source
+
+
+def test_trade_finder_presents_feasibility_in_plain_english_without_acceptance_odds() -> None:
+    source = Path("src/fsffl/product/static/trade_finder_feasibility.js").read_text(encoding="utf-8")
+    index = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
+
+    assert "mutual_gain_candidate:'Both sides show calculated gains'" in source
+    assert "counterparty_dominated:'Other team takes a calculated loss'" in source
+    assert "mixed:'Mixed bilateral impact'" in source
+    assert "neutral:'Near-neutral bilateral impact'" in source
+    assert "incomplete:'Decision evidence incomplete'" in source
+    assert "negotiation_feasibility_evaluated" in source
+    assert "negotiation_feasibility_shape" in source
+    assert "not an acceptance probability" in source
+    assert "acceptance_probability" not in source
+    assert "trade_finder_feasibility.js" in index
+    assert index.index("opportunities.js") < index.index("trade_finder_feasibility.js")
