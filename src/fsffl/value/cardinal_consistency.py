@@ -86,6 +86,10 @@ def build_cardinal_consistency_audit(
     providers use different numeric scales. The key diagnostic is whether another
     same-context market systematically places QBs (or another position) higher or
     lower in the *overall dynasty market* than the Cardinal reference axis does.
+
+    A missing reference source returns an empty diagnostic rather than failing the
+    broader market runtime. Cardinal authority itself remains unavailable in that
+    case; unrelated market evidence is not discarded because one provider is down.
     """
 
     if not market_context_id.strip():
@@ -104,7 +108,13 @@ def build_cardinal_consistency_audit(
 
     reference_values = by_source.get(reference_source_id, {})
     if not reference_values:
-        raise ValueError("Cardinal consistency audit requires reference-source player evidence")
+        return CardinalConsistencyAudit(
+            market_context_id=market_context_id,
+            reference_format_key=reference_format_key,
+            reference_player_count=0,
+            position_comparisons=(),
+            largest_player_disagreements=(),
+        )
     if reference_format_key is not None and reference_versions and reference_versions != {reference_format_key}:
         raise ValueError("reference source evidence mixes an unexpected format cohort")
 
