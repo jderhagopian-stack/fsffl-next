@@ -1,18 +1,28 @@
 from pathlib import Path
 
 
-def test_league_comparison_consumes_existing_analytics_metrics_only() -> None:
+def test_league_comparison_consumes_authoritative_analytics_and_value_metrics() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     for metric in (
         "expected_wins",
         "playoff_probability",
         "optimized_expected_points",
-        "asset_portfolio_mean",
+        "total_cardinal_value",
         "draft_pick_count",
     ):
         assert metric in source
     assert "/api/league/chart?metric=" in source
+    assert "api('/api/values')" in source
+    assert "team_cardinal_portfolios" in source
+    assert "browser does not sum asset prices" in source
     assert "does not calculate new scores or rankings" in source
+
+
+def test_value_api_exposes_server_owned_team_cardinal_portfolios() -> None:
+    source = Path("src/fsffl/product/webapp.py").read_text(encoding="utf-8")
+    assert '"team_cardinal_portfolios"' in source
+    assert "for portfolio in evidence.team_cardinal_portfolios" in source
+    assert '"team_name": team_names.get(portfolio.team_id, portfolio.team_id)' in source
 
 
 def test_league_comparison_is_wired_as_a_real_product_surface() -> None:
