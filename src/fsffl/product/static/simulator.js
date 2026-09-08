@@ -6,6 +6,23 @@ function simulatorFmtNumber(value,digits=2){
   return value>0?`+${text}`:text;
 }
 function simulatorFmtPctPoint(value){return typeof value==='number'&&Number.isFinite(value)?`${simulatorFmtNumber(value*100,1)} pp`:'—'}
+function simulatorPlayerName(row){return row?.full_name||row?.display_name||row?.player_name||row?.player_id||'Unknown player'}
+function simulatorPlayerProjection(row){
+  const direct=row?.season_fantasy_points_projection;
+  if(typeof direct==='number'&&Number.isFinite(direct))return direct;
+  if(typeof window.fsfflDisplayedProjectionValue==='function')return window.fsfflDisplayedProjectionValue(row);
+  return null;
+}
+function simulatorPlayerContext(row){
+  const parts=[];
+  if(row?.position)parts.push(String(row.position));
+  if(typeof row?.age_years==='number'&&Number.isFinite(row.age_years))parts.push(`Age ${Number.isInteger(row.age_years)?row.age_years:row.age_years.toFixed(1)}`);
+  if(row?.projected_starter)parts.push(`Projected ${row.projected_lineup_slot||'starter'}`);
+  else if(row?.roster_slot)parts.push(String(row.roster_slot));
+  const projection=simulatorPlayerProjection(row);
+  if(typeof projection==='number'&&Number.isFinite(projection))parts.push(`${projection.toFixed(1)} NFL-season pts`);
+  return parts.join(' · ');
+}
 function simulatorPlayers(){
   const team=fsfflSimulatorState.team;
   if(!team)return[];
@@ -74,7 +91,7 @@ function renderFsfflSimulatorView(){
   const result=fsfflSimulatorState.result;
   panel.innerHTML=`<p class="eyebrow">Simulator</p><h2>Stress-test multiple roster losses.</h2><p class="lead">Choose one or more active-roster players to make unavailable simultaneously. FSFFL creates one hypothetical State and runs the exact scenario through authoritative 50,000-run Simulation.</p>
     <div class="panel" style="margin-top:16px"><div class="panel-header"><div><strong>Players unavailable in scenario</strong><p style="color:var(--muted);font-size:12px;margin:5px 0 0">${selected.size} selected</p></div><button id="run-simulator" class="primary-button" ${!selected.size||fsfflSimulatorState.loading?'disabled':''}>${fsfflSimulatorState.loading?'Simulating…':'Run scenario'}</button></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:14px">${players.map(row=>`<button type="button" class="asset-option${selected.has(row.player_id)?' selected':''}" data-sim-player="${escapeHtml(row.player_id)}"><span><strong>${escapeHtml(row.display_name||row.player_name||row.player_id)}</strong><small>${escapeHtml(row.position||'')} · ${escapeHtml(row.roster_slot||'active')}</small></span></button>`).join('')}</div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin-top:14px">${players.map(row=>`<button type="button" class="asset-option${selected.has(row.player_id)?' selected':''}" data-sim-player="${escapeHtml(row.player_id)}"><span><strong>${escapeHtml(simulatorPlayerName(row))}</strong><small>${escapeHtml(simulatorPlayerContext(row))}</small></span></button>`).join('')}</div></div>
     ${result?.error?`<div class="chart-empty" style="margin-top:14px"><p>Simulator is unavailable: ${escapeHtml(result.error)}</p></div>`:simulatorScenarioResult(result)}${simulatorComparisonTable()}`;
   panel.querySelectorAll('[data-sim-player]').forEach(button=>button.addEventListener('click',()=>simulatorToggle(button.dataset.simPlayer)));
   panel.querySelector('#run-simulator')?.addEventListener('click',runFsfflSimulator);
