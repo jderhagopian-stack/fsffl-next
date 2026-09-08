@@ -5,6 +5,13 @@ from .calibration import (
     CalibrationPanel,
     DataRightsClass,
 )
+from .history import (
+    MarketMovement,
+    MarketMovementStatus,
+    MarketValueHistoryStore,
+    MarketValueSnapshot,
+    calculate_market_movement,
+)
 from .intrinsic import ForecastValueMapping, estimate_intrinsic_player_value
 from .market import (
     MarketBaselineMethod,
@@ -75,6 +82,8 @@ __all__ = [
     "MarketContextCalibration",
     "MarketContextFitPolicy",
     "MarketEvidenceKind",
+    "MarketMovement",
+    "MarketMovementStatus",
     "MarketObservation",
     "MarketPriceEstimate",
     "MarketSignalKind",
@@ -83,6 +92,8 @@ __all__ = [
     "MarketSourceDefinition",
     "MarketSourceRegistry",
     "MarketSourceStatus",
+    "MarketValueHistoryStore",
+    "MarketValueSnapshot",
     "MultiAssetTradeObservation",
     "OneForOneEnsembleBenchmark",
     "OneForOneSourceBenchmark",
@@ -106,6 +117,7 @@ __all__ = [
     "benchmark_market_sources_against_one_for_one_trades",
     "benchmark_market_sources_against_transactions",
     "build_market_calibration_panel_batch",
+    "calculate_market_movement",
     "comparable_values",
     "estimate_intrinsic_player_value",
     "estimate_market_price",
