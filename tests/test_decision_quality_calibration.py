@@ -10,6 +10,7 @@ from fsffl.trade_decision.decision_quality import (
 from fsffl.trade_decision.decision_quality_calibration import (
     DecisionQualityCalibrationObservation,
     DecisionQualityCalibrationPanel,
+    DecisionQualityCalibrationTargetKind,
     backtest_decision_quality_policies,
     promote_calibrated_policy,
 )
@@ -39,6 +40,7 @@ def row(observation_id: str, observed_at: datetime, economic: float, competitive
         target_score=target,
         component_scores={"economic": economic, "competitive": competitive},
         source_id="research-review",
+        target_kind=DecisionQualityCalibrationTargetKind.CONTEMPORANEOUS_BLINDED_REVIEW,
         target_definition="contemporaneous blinded decision-quality review",
         rights_class=DataRightsClass.PRIVATE_RETAINED,
         provenance="tests:research-review",
@@ -133,7 +135,7 @@ def test_promotion_is_explicit_and_only_allows_recorded_training_winner() -> Non
         )
 
 
-def test_calibration_target_requires_explicit_non_hindsight_definition_metadata() -> None:
+def test_calibration_target_requires_explicit_point_in_time_kind_and_definition() -> None:
     with pytest.raises(ValueError, match="metadata cannot be blank"):
         DecisionQualityCalibrationObservation(
             observation_id="x",
@@ -143,7 +145,23 @@ def test_calibration_target_requires_explicit_non_hindsight_definition_metadata(
             target_score=50,
             component_scores={"economic": 50},
             source_id="research-review",
+            target_kind=DecisionQualityCalibrationTargetKind.POINT_IN_TIME_EXPERT_REVIEW,
             target_definition=" ",
+            rights_class=DataRightsClass.PRIVATE_RETAINED,
+            provenance="tests",
+        )
+
+    with pytest.raises(ValueError):
+        DecisionQualityCalibrationObservation(
+            observation_id="y",
+            transaction_id="tx-y",
+            team_id="team-a",
+            observed_at=datetime(2025, 1, 1, tzinfo=UTC),
+            target_score=50,
+            component_scores={"economic": 50},
+            source_id="research-review",
+            target_kind="retrospective_outcome",
+            target_definition="who won later",
             rights_class=DataRightsClass.PRIVATE_RETAINED,
             provenance="tests",
         )
