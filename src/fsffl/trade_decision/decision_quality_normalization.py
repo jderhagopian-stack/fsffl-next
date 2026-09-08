@@ -77,8 +77,16 @@ def normalize_decision_quality_component(
     as_of: datetime,
     confidence: float,
     policy: DecisionQualityNormalizationPolicy,
+    evidence_through: datetime | None = None,
 ) -> DecisionQualityComponent:
-    """Normalize one non-overlapping Decision channel without hidden thresholds."""
+    """Normalize one non-overlapping Decision channel without hidden thresholds.
+
+    ``evidence_through`` is the cutoff of the raw channel evidence. The emitted
+    component records the later of that cutoff and the policy evidence cutoff, so
+    downstream historical grading cannot accidentally understate its information
+    boundary. When omitted, the policy cutoff is retained for backward-compatible
+    callers whose raw evidence has no later timestamp.
+    """
 
     if as_of.tzinfo is None:
         raise ValueError("normalization as_of must be timezone-aware")
@@ -86,6 +94,11 @@ def normalize_decision_quality_component(
         raise ValueError("normalization confidence must be between 0 and 1")
     if policy.evidence_through > as_of:
         raise ValueError("normalization policy uses evidence unavailable at as_of")
+    if evidence_through is not None:
+        if evidence_through.tzinfo is None:
+            raise ValueError("normalization evidence_through must be timezone-aware")
+        if evidence_through > as_of:
+            raise ValueError("normalization channel uses evidence unavailable at as_of")
     if raw_value < policy.points[0].raw_value or raw_value > policy.points[-1].raw_value:
         raise ValueError("raw value lies outside governed normalization range")
 
@@ -104,6 +117,10 @@ def normalize_decision_quality_component(
         else:
             raise ValueError("raw value could not be bracketed by normalization points")
 
+    component_evidence_through = policy.evidence_through
+    if evidence_through is not None and evidence_through > component_evidence_through:
+        component_evidence_through = evidence_through
+
     return DecisionQualityComponent(
         component_id=policy.component_id,
         authority_id=policy.authority_id,
@@ -112,7 +129,7 @@ def normalize_decision_quality_component(
         score_center=center,
         score_upper=upper,
         confidence=confidence,
-        evidence_through=policy.evidence_through,
+        evidence_through=component_evidence_through,
         model_version=policy.model_version,
         provenance=policy.provenance,
     )
