@@ -10,6 +10,11 @@ from fsffl.team_utility.utility import OwnerStrategicPosture
 from .feasibility import NegotiationFeasibilityShape, TradeNegotiationFeasibility
 from .material_assessment import BilateralMaterialAssessment, SideMaterialAssessment
 from .materiality import MaterialityDirection
+from .package_economics import (
+    PackageEconomicAssessment,
+    PackageEconomicResolution,
+    PackageEconomicStatus,
+)
 from .strategy import StrategicTradeContext
 
 
@@ -29,6 +34,7 @@ class TradeDispositionEvidence(FrozenModel):
     unavailable_metrics: tuple[str, ...] = ()
     negotiation_shape: NegotiationFeasibilityShape
     owner_posture: OwnerStrategicPosture
+    package_economic_resolution: PackageEconomicResolution | None = None
     strategic_resolution_applied: bool = False
 
 
@@ -39,7 +45,7 @@ class TradeDecisionDisposition(FrozenModel):
     material_assessment_model_version: str
     negotiation_model_version: str
     strategic_context_model_version: str
-    model_version: str = "next5-trade-disposition-v1"
+    model_version: str = "next5-trade-disposition-v4"
 
     @model_validator(mode="after")
     def validate_disposition(self) -> "TradeDecisionDisposition":
@@ -58,10 +64,9 @@ class TradeDecisionDisposition(FrozenModel):
 _METRICS = (
     "expected_wins",
     "playoff_probability",
-    "first_place_probability",
+    "championship_probability",
     "largest_single_player_lineup_drop",
     "market_value",
-    "intrinsic_value",
 )
 
 
@@ -99,20 +104,46 @@ def _metric_sets(side: SideMaterialAssessment) -> tuple[tuple[str, ...], tuple[s
     return tuple(gains), tuple(losses), tuple(unavailable)
 
 
+def _apply_package_guard(
+    disposition: TradeDisposition,
+    package_economics: PackageEconomicAssessment | None,
+    *,
+    focal_team_id: str,
+) -> TradeDisposition:
+    if package_economics is None or package_economics.status == PackageEconomicStatus.NOT_APPLICABLE:
+        return disposition
+    if package_economics.status == PackageEconomicStatus.INCOMPLETE:
+        return TradeDisposition.INSUFFICIENT_EVIDENCE
+
+    resolution = package_economics.resolution
+    focal_is_singleton_sender = focal_team_id == package_economics.singleton_sender_team_id
+    if resolution == PackageEconomicResolution.SINGLETON_UNDERPAID and focal_is_singleton_sender:
+        return TradeDisposition.DECLINE
+    if (
+        resolution == PackageEconomicResolution.WITHIN_PROVISIONAL_BAND
+        and focal_is_singleton_sender
+        and disposition not in {TradeDisposition.DECLINE, TradeDisposition.INSUFFICIENT_EVIDENCE}
+    ):
+        return TradeDisposition.COUNTER_OR_REVIEW
+    return disposition
+
+
 def decide_trade_disposition(
     material_assessment: BilateralMaterialAssessment,
     negotiation: TradeNegotiationFeasibility,
     strategic_context: StrategicTradeContext,
     *,
     focal_team_id: str,
-    model_version: str = "next5-trade-disposition-v1",
+    package_economics: PackageEconomicAssessment | None = None,
+    model_version: str = "next5-trade-disposition-v4",
 ) -> TradeDecisionDisposition:
-    """Produce a conservative disposition from explicit, material evidence.
+    """Produce the focal team's action disposition from material evidence.
 
-    No scalar score is used. Any unavailable required channel yields insufficient
-    evidence. Material gains plus material losses remain mixed and require review
-    or a future governed strategic-resolution policy. Owner posture is recorded
-    but does not silently resolve mixed evidence in v1.
+    Counterparty feasibility remains separate negotiation context. It cannot turn
+    a clean focal-team material gain into a counter recommendation. If a deal is
+    already available and materially helps the focal team without a material loss,
+    the focal action is support; whether the counterparty should agree is a separate
+    question surfaced by negotiation feasibility.
     """
 
     if not model_version.strip():
@@ -122,6 +153,8 @@ def decide_trade_disposition(
         negotiation.proposal_id,
         strategic_context.proposal_id,
     }
+    if package_economics is not None:
+        proposal_ids.add(package_economics.proposal_id)
     if len(proposal_ids) != 1:
         raise ValueError("trade disposition inputs must describe the same proposal")
     if negotiation.focal_team_id != focal_team_id:
@@ -140,17 +173,11 @@ def decide_trade_disposition(
     elif losses:
         disposition = TradeDisposition.DECLINE
     elif gains:
-        if negotiation.shape in {
-            NegotiationFeasibilityShape.COUNTERPARTY_DOMINATED,
-            NegotiationFeasibilityShape.MIXED,
-        }:
-            disposition = TradeDisposition.COUNTER_OR_REVIEW
-        elif negotiation.shape == NegotiationFeasibilityShape.INCOMPLETE:
-            disposition = TradeDisposition.INSUFFICIENT_EVIDENCE
-        else:
-            disposition = TradeDisposition.SUPPORT
+        disposition = TradeDisposition.SUPPORT
     else:
         disposition = TradeDisposition.NO_CLEAR_ADVANTAGE
+
+    disposition = _apply_package_guard(disposition, package_economics, focal_team_id=focal_team_id)
 
     return TradeDecisionDisposition(
         proposal_id=material_assessment.proposal_id,
@@ -163,6 +190,9 @@ def decide_trade_disposition(
             unavailable_metrics=unavailable,
             negotiation_shape=negotiation.shape,
             owner_posture=posture,
+            package_economic_resolution=(
+                package_economics.resolution if package_economics is not None else None
+            ),
             strategic_resolution_applied=False,
         ),
         material_assessment_model_version=material_assessment.model_version,

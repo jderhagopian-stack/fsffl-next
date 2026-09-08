@@ -15,6 +15,13 @@ dependencies = [
 dev = [
   "pytest>=8,<9",
 ]
+web = [
+  "fastapi[standard]>=0.115,<1",
+  "psycopg[binary]>=3.2,<4",
+]
+
+[tool.fastapi]
+entrypoint = "fsffl.product.persistent_webapp:app"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

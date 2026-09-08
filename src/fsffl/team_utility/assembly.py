@@ -26,9 +26,12 @@ def assemble_team_utility_vector(
     """Assemble authoritative NEXT-4 team consequence channels.
 
     This is orchestration only. It consumes upstream forecasts and NEXT-3 value
-    evidence, derives roster resilience, and optionally classifies an already-
-    simulated competitive outcome. It does not rerun Value, invent owner posture,
-    collapse channels into a scalar utility score, or recommend actions.
+    evidence, derives roster resilience, and may attach an already-simulated
+    competitive outcome. Calculated competitive-state classification is optional
+    and occurs only when an explicit governed policy is supplied; simulation
+    outcomes do not require classification. The function does not rerun Value,
+    invent owner posture, collapse channels into a scalar utility score, or
+    recommend actions.
     """
 
     if as_of.tzinfo is None:
@@ -41,9 +44,9 @@ def assemble_team_utility_vector(
         raise ValueError("competitive outcome must describe the requested team")
     if asset_portfolio is not None and asset_portfolio.team_id != team_id:
         raise ValueError("asset portfolio must describe the requested team")
-    if (competitive_outcome is None) != (competitive_state_policy is None):
+    if competitive_state_policy is not None and competitive_outcome is None:
         raise ValueError(
-            "competitive outcome and competitive-state policy must be supplied together"
+            "competitive-state policy requires a supplied competitive outcome"
         )
 
     resilience = build_roster_resilience(

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from enum import StrEnum
 from math import sqrt
 from random import Random
@@ -8,7 +7,7 @@ from typing import Annotated
 
 from pydantic import Field, model_validator
 
-from fsffl.state.models import FrozenModel
+from fsffl.state.models import FrozenModel, LeagueState
 
 
 class ScoringDistributionKind(StrEnum):
@@ -16,12 +15,7 @@ class ScoringDistributionKind(StrEnum):
 
 
 class TeamScoringDistribution(FrozenModel):
-    """Point-in-time team scoring evidence consumed by Simulation authority.
-
-    This is a competitive-performance distribution, not franchise utility or
-    dynasty value. The producing layer must record the model version that built
-    the distribution from upstream forecasts/lineup state.
-    """
+    """Point-in-time team scoring evidence consumed by Simulation authority."""
 
     team_id: str
     mean_points: float
@@ -33,6 +27,23 @@ class TeamScoringDistribution(FrozenModel):
     def validate_identifiers(self) -> "TeamScoringDistribution":
         if not self.team_id.strip() or not self.model_version.strip():
             raise ValueError("team scoring identifiers cannot be blank")
+        return self
+
+
+class WeeklyTeamScoringDistribution(FrozenModel):
+    """Week-specific team scoring evidence after canonical availability/lineup resolution."""
+
+    week: Annotated[int, Field(ge=1)]
+    team_id: str
+    mean_points: float
+    stddev_points: Annotated[float, Field(ge=0)]
+    distribution_kind: ScoringDistributionKind = ScoringDistributionKind.NORMAL
+    model_version: str
+
+    @model_validator(mode="after")
+    def validate_identifiers(self) -> "WeeklyTeamScoringDistribution":
+        if not self.team_id.strip() or not self.model_version.strip():
+            raise ValueError("weekly team scoring identifiers cannot be blank")
         return self
 
 
@@ -51,7 +62,8 @@ class ScheduledMatchup(FrozenModel):
 
 
 class RegularSeasonSimulationInput(FrozenModel):
-    scoring: tuple[TeamScoringDistribution, ...]
+    scoring: tuple[TeamScoringDistribution, ...] = ()
+    weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = ()
     schedule: tuple[ScheduledMatchup, ...]
     playoff_team_count: Annotated[int, Field(ge=1)]
     simulation_count: Annotated[int, Field(ge=1)] = 50_000
@@ -65,21 +77,30 @@ class RegularSeasonSimulationInput(FrozenModel):
         ids = [item.team_id for item in self.scoring]
         if len(ids) != len(set(ids)):
             raise ValueError("team scoring distributions must have unique team ids")
-        if not ids:
+        weekly_keys = [(item.week, item.team_id) for item in self.weekly_scoring]
+        if len(weekly_keys) != len(set(weekly_keys)):
+            raise ValueError("weekly team scoring distributions must have unique week/team keys")
+        known = set(ids) | {item.team_id for item in self.weekly_scoring}
+        if not known:
             raise ValueError("simulation requires at least one team")
-        known = set(ids)
         if self.playoff_team_count > len(known):
             raise ValueError("playoff_team_count cannot exceed team count")
         for matchup in self.schedule:
             if matchup.home_team_id not in known or matchup.away_team_id not in known:
                 raise ValueError("schedule references unknown team")
         seen_week_team: set[tuple[int, str]] = set()
+        required_weekly: set[tuple[int, str]] = set()
         for matchup in self.schedule:
             for team_id in (matchup.home_team_id, matchup.away_team_id):
                 key = (matchup.week, team_id)
                 if key in seen_week_team:
                     raise ValueError("a team may appear only once per scheduled week")
                 seen_week_team.add(key)
+                required_weekly.add(key)
+        if self.weekly_scoring and set(weekly_keys) != required_weekly:
+            missing = sorted(required_weekly - set(weekly_keys))
+            extra = sorted(set(weekly_keys) - required_weekly)
+            raise ValueError(f"weekly scoring must exactly cover schedule; missing={missing} extra={extra}")
         return self
 
 
@@ -89,100 +110,262 @@ class TeamCompetitiveOutcome(FrozenModel):
     wins_stddev: Annotated[float, Field(ge=0)]
     playoff_probability: Annotated[float, Field(ge=0, le=1)]
     first_place_probability: Annotated[float, Field(ge=0, le=1)]
+    championship_probability: Annotated[float | None, Field(ge=0, le=1)] = None
     simulation_count: Annotated[int, Field(ge=1)]
     simulation_model_version: str
 
 
+class TeamFinishDistribution(FrozenModel):
+    """Regular-season finish distribution retained from the authoritative Simulation.
+
+    Rank 1 is the best simulated regular-season finish. The distribution records
+    what the existing season simulation already observed; it does not infer rookie
+    draft order. Draft-order interpretation belongs to a downstream governed pick
+    location mapping because league rules may treat playoff teams differently.
+    """
+
+    team_id: str
+    expected_finish: Annotated[float, Field(ge=1)]
+    rank_probabilities: tuple[float, ...]
+    simulation_count: Annotated[int, Field(ge=1)]
+    simulation_model_version: str
+
+    @model_validator(mode="after")
+    def validate_distribution(self) -> "TeamFinishDistribution":
+        if not self.team_id.strip() or not self.simulation_model_version.strip():
+            raise ValueError("finish distribution identifiers cannot be blank")
+        if not self.rank_probabilities:
+            raise ValueError("finish distribution must include at least one rank")
+        if any(value < 0.0 or value > 1.0 for value in self.rank_probabilities):
+            raise ValueError("finish probabilities must be between zero and one")
+        if abs(sum(self.rank_probabilities) - 1.0) > 1e-9:
+            raise ValueError("finish probabilities must sum to one")
+        if self.expected_finish > len(self.rank_probabilities):
+            raise ValueError("expected finish cannot exceed team count")
+        return self
+
+
 class RegularSeasonSimulationResult(FrozenModel):
     outcomes: tuple[TeamCompetitiveOutcome, ...]
+    finish_distributions: tuple[TeamFinishDistribution, ...] = ()
     simulation_count: Annotated[int, Field(ge=1)]
     seed: int
     model_version: str
 
 
-def simulate_regular_season(
-    request: RegularSeasonSimulationInput,
-) -> RegularSeasonSimulationResult:
-    """Simulate regular-season competitive outcomes only.
+def scheduled_matchups_from_league_state(league_state: LeagueState) -> tuple[ScheduledMatchup, ...]:
+    if not league_state.matchups:
+        raise ValueError("canonical league state has no regular-season schedule")
+    return tuple(
+        ScheduledMatchup(week=item.week, home_team_id=item.team_a_id, away_team_id=item.team_b_id)
+        for item in league_state.matchups
+    )
 
-    Simulation owns wins and modeled playoff qualification. It does not convert
-    those outcomes into franchise utility, infer owner intent, value assets, or
-    recommend actions.
 
-    The v1 scoring sampler is an explicit non-negative normal approximation.
-    More realistic weekly/correlation models may challenge it later, but cannot
-    be hidden inside this authority boundary.
+def regular_season_game_counts(league_state: LeagueState) -> dict[str, int]:
+    schedule = scheduled_matchups_from_league_state(league_state)
+    counts = {team.team_id: 0 for team in league_state.teams}
+    for matchup in schedule:
+        counts[matchup.home_team_id] += 1
+        counts[matchup.away_team_id] += 1
+    if any(count < 1 for count in counts.values()):
+        missing = sorted(team_id for team_id, count in counts.items() if count < 1)
+        raise ValueError(f"regular-season schedule missing teams: {missing}")
+    return counts
+
+
+def build_regular_season_simulation_input(
+    league_state: LeagueState,
+    *,
+    scoring: tuple[TeamScoringDistribution, ...] = (),
+    weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = (),
+    simulation_count: int = 50_000,
+    seed: int = 20260905,
+    model_version: str = "next4-live-season-plus-playoffs-v2",
+) -> RegularSeasonSimulationInput:
+    playoff_team_count = league_state.league.rules.playoff_team_count
+    if playoff_team_count is None:
+        raise ValueError("canonical league rules do not define playoff_team_count")
+    return RegularSeasonSimulationInput(
+        scoring=scoring,
+        weekly_scoring=weekly_scoring,
+        schedule=scheduled_matchups_from_league_state(league_state),
+        playoff_team_count=playoff_team_count,
+        simulation_count=simulation_count,
+        seed=seed,
+        model_version=model_version,
+    )
+
+
+def _playoff_distributions(team_ids, scoring, weekly_scoring):
+    if scoring:
+        return tuple((scoring[team_id].mean_points, scoring[team_id].stddev_points) for team_id in team_ids)
+    by_team = {team_id: [] for team_id in team_ids}
+    for item in weekly_scoring.values():
+        by_team[item.team_id].append(item)
+    result = []
+    for team_id in team_ids:
+        rows = by_team[team_id]
+        if not rows:
+            raise ValueError(f"playoff scoring evidence unavailable for {team_id}")
+        mean = sum(item.mean_points for item in rows) / len(rows)
+        variance = sum(item.stddev_points * item.stddev_points for item in rows) / len(rows)
+        result.append((mean, sqrt(max(0.0, variance))))
+    return tuple(result)
+
+
+def _playoff_game(left, right, playoff_scoring, gauss):
+    left_idx, left_seed = left
+    right_idx, right_seed = right
+    left_mean, left_std = playoff_scoring[left_idx]
+    right_mean, right_std = playoff_scoring[right_idx]
+    left_points = left_mean if left_std == 0 else max(0.0, gauss(left_mean, left_std))
+    right_points = right_mean if right_std == 0 else max(0.0, gauss(right_mean, right_std))
+    if left_points > right_points:
+        return left
+    if right_points > left_points:
+        return right
+    return left if left_seed < right_seed else right
+
+
+def _simulate_standard_champion(standings, playoff_team_count, playoff_scoring, gauss):
+    seeded = [(standings[seed - 1], seed) for seed in range(1, playoff_team_count + 1)]
+    if playoff_team_count == 2:
+        return _playoff_game(seeded[0], seeded[1], playoff_scoring, gauss)[0]
+    if playoff_team_count == 4:
+        semi_a = _playoff_game(seeded[0], seeded[3], playoff_scoring, gauss)
+        semi_b = _playoff_game(seeded[1], seeded[2], playoff_scoring, gauss)
+        return _playoff_game(semi_a, semi_b, playoff_scoring, gauss)[0]
+    if playoff_team_count == 6:
+        round1_a = _playoff_game(seeded[2], seeded[5], playoff_scoring, gauss)
+        round1_b = _playoff_game(seeded[3], seeded[4], playoff_scoring, gauss)
+        semi_a = _playoff_game(seeded[0], round1_a, playoff_scoring, gauss)
+        semi_b = _playoff_game(seeded[1], round1_b, playoff_scoring, gauss)
+        return _playoff_game(semi_a, semi_b, playoff_scoring, gauss)[0]
+    if playoff_team_count == 8:
+        q1 = _playoff_game(seeded[0], seeded[7], playoff_scoring, gauss)
+        q2 = _playoff_game(seeded[3], seeded[4], playoff_scoring, gauss)
+        q3 = _playoff_game(seeded[1], seeded[6], playoff_scoring, gauss)
+        q4 = _playoff_game(seeded[2], seeded[5], playoff_scoring, gauss)
+        semi_a = _playoff_game(q1, q2, playoff_scoring, gauss)
+        semi_b = _playoff_game(q3, q4, playoff_scoring, gauss)
+        return _playoff_game(semi_a, semi_b, playoff_scoring, gauss)[0]
+    return None
+
+
+def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSeasonSimulationResult:
+    """Simulate canonical regular season and, when supported, a standard seeded title bracket.
+
+    A separate deterministic postseason RNG preserves the established regular-season
+    RNG stream exactly. Unsupported/custom playoff sizes keep championship probability
+    explicitly unavailable rather than blocking regular-season simulation or fabricating
+    bracket semantics. Every simulated final regular-season rank is retained as a
+    distribution for downstream analytics and probabilistic pick-location evidence.
     """
 
     by_team = {item.team_id: item for item in request.scoring}
-    team_ids = tuple(sorted(by_team))
-    rng = Random(request.seed)
+    by_week_team = {(item.week, item.team_id): item for item in request.weekly_scoring}
+    team_ids = tuple(sorted(set(by_team) | {item.team_id for item in request.weekly_scoring}))
+    team_index = {team_id: index for index, team_id in enumerate(team_ids)}
+    team_count = len(team_ids)
+    playoff_scoring = _playoff_distributions(team_ids, by_team, by_week_team)
+    compiled_schedule = []
+    weekly = bool(by_week_team)
+    for matchup in request.schedule:
+        if weekly:
+            home_dist = by_week_team[(matchup.week, matchup.home_team_id)]
+            away_dist = by_week_team[(matchup.week, matchup.away_team_id)]
+        else:
+            home_dist = by_team[matchup.home_team_id]
+            away_dist = by_team[matchup.away_team_id]
+        if home_dist.distribution_kind != ScoringDistributionKind.NORMAL or away_dist.distribution_kind != ScoringDistributionKind.NORMAL:
+            raise ValueError("unsupported scoring distribution kind")
+        compiled_schedule.append((
+            team_index[matchup.home_team_id], team_index[matchup.away_team_id],
+            home_dist.mean_points, home_dist.stddev_points,
+            away_dist.mean_points, away_dist.stddev_points,
+        ))
 
-    wins_sum = defaultdict(float)
-    wins_sq_sum = defaultdict(float)
-    playoff_count = defaultdict(int)
-    first_count = defaultdict(int)
+    rng = Random(request.seed)
+    gauss = rng.gauss
+    playoff_rng = Random(request.seed ^ 0x5F3759DF)
+    playoff_gauss = playoff_rng.gauss
+    wins_sum = [0.0] * team_count
+    wins_sq_sum = [0.0] * team_count
+    playoff_count = [0] * team_count
+    first_count = [0] * team_count
+    champion_count = [0] * team_count
+    finish_count = [[0] * team_count for _ in range(team_count)]
+    championship_supported = request.playoff_team_count in {2, 4, 6, 8}
+    ranking_indexes = tuple(range(team_count))
 
     for _ in range(request.simulation_count):
-        wins = {team_id: 0.0 for team_id in team_ids}
-        points_for = {team_id: 0.0 for team_id in team_ids}
-
-        for matchup in request.schedule:
-            home = _sample_points(by_team[matchup.home_team_id], rng)
-            away = _sample_points(by_team[matchup.away_team_id], rng)
-            points_for[matchup.home_team_id] += home
-            points_for[matchup.away_team_id] += away
+        wins = [0.0] * team_count
+        points_for = [0.0] * team_count
+        for home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev in compiled_schedule:
+            home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
+            away = away_mean if away_stddev == 0 else gauss(away_mean, away_stddev)
+            home = max(0.0, home)
+            away = max(0.0, away)
+            points_for[home_idx] += home
+            points_for[away_idx] += away
             if home > away:
-                wins[matchup.home_team_id] += 1.0
+                wins[home_idx] += 1.0
             elif away > home:
-                wins[matchup.away_team_id] += 1.0
+                wins[away_idx] += 1.0
             else:
-                wins[matchup.home_team_id] += 0.5
-                wins[matchup.away_team_id] += 0.5
+                wins[home_idx] += 0.5
+                wins[away_idx] += 0.5
+        standings = sorted(ranking_indexes, key=lambda index: (-wins[index], -points_for[index], team_ids[index]))
+        first_count[standings[0]] += 1
+        for rank_index, team_idx in enumerate(standings):
+            finish_count[team_idx][rank_index] += 1
+        for index in standings[:request.playoff_team_count]:
+            playoff_count[index] += 1
+        if championship_supported:
+            champion = _simulate_standard_champion(standings, request.playoff_team_count, playoff_scoring, playoff_gauss)
+            champion_count[champion] += 1
+        for index, value in enumerate(wins):
+            wins_sum[index] += value
+            wins_sq_sum[index] += value * value
 
-        # Deterministic modeled standings tiebreaker: simulated points-for, then
-        # team id solely for reproducibility when both are exactly equal.
-        standings = sorted(
-            team_ids,
-            key=lambda team_id: (-wins[team_id], -points_for[team_id], team_id),
-        )
-        playoff_teams = set(standings[: request.playoff_team_count])
-        first_team = standings[0]
-
-        for team_id in team_ids:
-            value = wins[team_id]
-            wins_sum[team_id] += value
-            wins_sq_sum[team_id] += value * value
-            if team_id in playoff_teams:
-                playoff_count[team_id] += 1
-        first_count[first_team] += 1
-
-    outcomes: list[TeamCompetitiveOutcome] = []
     n = request.simulation_count
-    for team_id in team_ids:
-        expected = wins_sum[team_id] / n
-        variance = max(0.0, wins_sq_sum[team_id] / n - expected * expected)
-        outcomes.append(
-            TeamCompetitiveOutcome(
+    outcomes = []
+    finish_distributions = []
+    for index, team_id in enumerate(team_ids):
+        expected = wins_sum[index] / n
+        variance = max(0.0, wins_sq_sum[index] / n - expected * expected)
+        outcomes.append(TeamCompetitiveOutcome(
+            team_id=team_id,
+            expected_wins=expected,
+            wins_stddev=sqrt(variance),
+            playoff_probability=playoff_count[index] / n,
+            first_place_probability=first_count[index] / n,
+            championship_probability=(champion_count[index] / n if championship_supported else None),
+            simulation_count=n,
+            simulation_model_version=request.model_version,
+        ))
+        probabilities = tuple(count / n for count in finish_count[index])
+        expected_finish = sum((rank + 1) * probability for rank, probability in enumerate(probabilities))
+        finish_distributions.append(
+            TeamFinishDistribution(
                 team_id=team_id,
-                expected_wins=expected,
-                wins_stddev=sqrt(variance),
-                playoff_probability=playoff_count[team_id] / n,
-                first_place_probability=first_count[team_id] / n,
+                expected_finish=expected_finish,
+                rank_probabilities=probabilities,
                 simulation_count=n,
                 simulation_model_version=request.model_version,
             )
         )
-
     return RegularSeasonSimulationResult(
         outcomes=tuple(outcomes),
+        finish_distributions=tuple(finish_distributions),
         simulation_count=n,
         seed=request.seed,
         model_version=request.model_version,
     )
 
 
-def _sample_points(distribution: TeamScoringDistribution, rng: Random) -> float:
+def _sample_points(distribution, rng: Random) -> float:
     if distribution.distribution_kind != ScoringDistributionKind.NORMAL:
         raise ValueError("unsupported scoring distribution kind")
     if distribution.stddev_points == 0:

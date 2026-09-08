@@ -1,0 +1,44 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_simulator_public_renderer_does_not_recurse_through_global_binding() -> None:
+    ui = (ROOT / "src/fsffl/product/static/simulator.js").read_text(encoding="utf-8")
+    assert "function renderFsfflSimulatorView()" in ui
+    assert "window.renderFsfflSimulator=function(){renderFsfflSimulatorView();" in ui
+    assert "function renderFsfflSimulator(){" not in ui
+
+
+def test_trade_discovery_suppresses_generic_pick_for_pick_mirrors_and_moves_beyond_flat_matching() -> None:
+    workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text(encoding="utf-8")
+    search = (ROOT / "src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
+    assert "player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == \"player\")" in search
+    assert "build_roster_aware_trade_candidates" in workspace
+    assert "for row in view.position_strengths" in search
+    assert "build_league_relative_position_strengths" not in search
+    assert "focal_position_strength_index" in search
+    assert '"two_for_one"' in search
+    assert "combinations(valued_focal, 2)" in search
+    assert "cardinal_market_fit_then_roster_need" in workspace
+    assert '"market_gap_ratio"' in search
+    assert "composite_score" not in search
+
+
+def test_live_sleeper_snapshot_includes_unrostered_fantasy_player_universe() -> None:
+    source = (ROOT / "src/fsffl/providers/sleeper_snapshot.py").read_text(encoding="utf-8")
+    assert "include_unrostered_players: bool = True" in source
+    assert "_attach_current_fantasy_player_universe" in source
+    assert '"QB": Position.QB' in source
+    assert '"RB": Position.RB' in source
+    assert '"WR": Position.WR' in source
+    assert '"TE": Position.TE' in source
+    assert "Ownership remains entirely in TeamState.roster" in source
+    assert "position is None or nfl_team is None" in source
+
+
+def test_historical_callers_can_disable_live_player_universe_enrichment() -> None:
+    source = (ROOT / "src/fsffl/providers/sleeper_snapshot.py").read_text(encoding="utf-8")
+    assert "if self._include_unrostered_players:" in source
+    assert "Historical callers can" in source
+    assert "explicitly disable" in source

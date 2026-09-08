@@ -7,6 +7,7 @@ from .acceptance import (
     TradeAcceptanceView,
     build_unestimated_acceptance_view,
 )
+from .behavioral import bind_owner_behavior_evidence
 from .decision import (
     BilateralDecisionShape,
     BilateralTradeDecision,
@@ -61,6 +62,28 @@ from .materiality import (
     classify_positive_delta,
 )
 from .models import BilateralTradeProposal, TradeLeg
+from .package_concentration import (
+    BilateralPackageConcentration,
+    PackageConcentrationSide,
+    PackageConcentrationStatus,
+    summarize_package_concentration,
+)
+from .package_economics import (
+    BoundedPackagePremiumPrior,
+    PackageEconomicAssessment,
+    PackageEconomicResolution,
+    PackageEconomicStatus,
+    assess_package_economics,
+    live_bounded_package_premium_prior,
+)
+from .policy_catalog import MaterialityPolicyBundle, live_bounded_materiality_policy
+from .roster_legality import (
+    MandatoryRosterCut,
+    ResolvedRosterState,
+    RosterLegalityStatus,
+    TeamRosterLegalityResolution,
+    resolve_mandatory_roster_cuts,
+)
 from .scenario import AppliedTradeScenario, apply_bilateral_trade
 from .strategy import StrategicSideContext, StrategicTradeContext, attach_owner_strategy
 
@@ -73,11 +96,13 @@ __all__ = [
     "AppliedTradeScenario",
     "BilateralDecisionShape",
     "BilateralMaterialAssessment",
+    "BilateralPackageConcentration",
     "BilateralTradeDecision",
     "BilateralTradeEconomicNet",
     "BilateralTradeEconomics",
     "BilateralTradeEvaluation",
     "BilateralTradeProposal",
+    "BoundedPackagePremiumPrior",
     "CompetitiveMaterialityPolicy",
     "Direction",
     "EconomicConcept",
@@ -86,14 +111,24 @@ __all__ = [
     "EconomicNetStatus",
     "ExpectedEconomicNetDelta",
     "ExpectedPackageValue",
+    "MandatoryRosterCut",
     "MaterialityDirection",
+    "MaterialityPolicyBundle",
     "MissingEconomicEvidence",
     "NegotiationFeasibilityShape",
+    "PackageConcentrationSide",
+    "PackageConcentrationStatus",
+    "PackageEconomicAssessment",
+    "PackageEconomicResolution",
+    "PackageEconomicStatus",
+    "ResolvedRosterState",
+    "RosterLegalityStatus",
     "SideDecisionShape",
     "SideDirectionalAssessment",
     "SideMaterialAssessment",
     "StrategicSideContext",
     "StrategicTradeContext",
+    "TeamRosterLegalityResolution",
     "TradeAcceptanceView",
     "TradeDecisionDisposition",
     "TradeDisposition",
@@ -106,8 +141,10 @@ __all__ = [
     "apply_bilateral_trade",
     "assess_bilateral_materiality",
     "assess_negotiation_feasibility",
+    "assess_package_economics",
     "assess_side_direction",
     "attach_owner_strategy",
+    "bind_owner_behavior_evidence",
     "build_unestimated_acceptance_view",
     "calculate_bilateral_economic_net",
     "classify_bilateral_trade_decision",
@@ -115,5 +152,9 @@ __all__ = [
     "classify_positive_delta",
     "decide_trade_disposition",
     "evaluate_bilateral_trade_deltas",
+    "live_bounded_materiality_policy",
+    "live_bounded_package_premium_prior",
+    "resolve_mandatory_roster_cuts",
     "summarize_bilateral_trade_economics",
+    "summarize_package_concentration",
 ]

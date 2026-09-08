@@ -5,6 +5,13 @@ from .calibration import (
     CalibrationPanel,
     DataRightsClass,
 )
+from .history import (
+    MarketMovement,
+    MarketMovementStatus,
+    MarketValueHistoryStore,
+    MarketValueSnapshot,
+    calculate_market_movement,
+)
 from .intrinsic import ForecastValueMapping, estimate_intrinsic_player_value
 from .market import (
     MarketBaselineMethod,
@@ -30,6 +37,14 @@ from .models import (
     ValueDistribution,
     ValueScale,
     comparable_values,
+)
+from .package_transaction_evidence import (
+    MultiAssetTradeObservation,
+    PackageAssetKind,
+    PackageAssetLeg,
+    PackageTradeSide,
+    SleeperPackageTradeImportResult,
+    normalize_sleeper_package_trades,
 )
 from .pick import PickOutcome, PickOutcomeSet, estimate_pick_value
 from .source_batch import MarketSourceBatchResult, build_market_calibration_panel_batch
@@ -67,6 +82,8 @@ __all__ = [
     "MarketContextCalibration",
     "MarketContextFitPolicy",
     "MarketEvidenceKind",
+    "MarketMovement",
+    "MarketMovementStatus",
     "MarketObservation",
     "MarketPriceEstimate",
     "MarketSignalKind",
@@ -75,14 +92,21 @@ __all__ = [
     "MarketSourceDefinition",
     "MarketSourceRegistry",
     "MarketSourceStatus",
+    "MarketValueHistoryStore",
+    "MarketValueSnapshot",
+    "MultiAssetTradeObservation",
     "OneForOneEnsembleBenchmark",
     "OneForOneSourceBenchmark",
     "OneForOneTradeBenchmarkResult",
     "OneForOneTradeObservation",
+    "PackageAssetKind",
+    "PackageAssetLeg",
+    "PackageTradeSide",
     "PickOutcome",
     "PickOutcomeSet",
     "PickValueEstimate",
     "SleeperOneForOneImportResult",
+    "SleeperPackageTradeImportResult",
     "TransactionDirection",
     "TransactionPriceEstimate",
     "TransactionPriceMapping",
@@ -93,6 +117,7 @@ __all__ = [
     "benchmark_market_sources_against_one_for_one_trades",
     "benchmark_market_sources_against_transactions",
     "build_market_calibration_panel_batch",
+    "calculate_market_movement",
     "comparable_values",
     "estimate_intrinsic_player_value",
     "estimate_market_price",
@@ -101,4 +126,5 @@ __all__ = [
     "fit_market_context_calibration",
     "next3_market_source_registry_v1",
     "normalize_sleeper_one_for_one_trades",
+    "normalize_sleeper_package_trades",
 ]

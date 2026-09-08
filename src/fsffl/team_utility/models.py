@@ -23,6 +23,20 @@ class LineupAssignment(FrozenModel):
         return self
 
 
+class UnfilledLineupSlot(FrozenModel):
+    """A required legal lineup slot the roster cannot currently fill."""
+
+    slot: RosterSlot
+    slot_index: Annotated[int, Field(ge=1)]
+    expected_points: float = 0.0
+
+    @model_validator(mode="after")
+    def zero_points_only(self) -> "UnfilledLineupSlot":
+        if self.expected_points != 0.0:
+            raise ValueError("unfilled lineup slots must contribute zero points")
+        return self
+
+
 class OptimizedTeamLineup(FrozenModel):
     team_id: str
     as_of: datetime
@@ -32,6 +46,7 @@ class OptimizedTeamLineup(FrozenModel):
     bench_player_ids: tuple[str, ...] = ()
     unavailable_player_ids: tuple[str, ...] = ()
     missing_forecast_player_ids: tuple[str, ...] = ()
+    unfilled_slots: tuple[UnfilledLineupSlot, ...] = ()
     model_version: str
 
     @field_validator("as_of")
@@ -48,9 +63,11 @@ class OptimizedTeamLineup(FrozenModel):
         player_ids = [assignment.player_id for assignment in self.assignments]
         if len(player_ids) != len(set(player_ids)):
             raise ValueError("a player may occupy only one optimized lineup slot")
-        slot_keys = [(assignment.slot, assignment.slot_index) for assignment in self.assignments]
-        if len(slot_keys) != len(set(slot_keys)):
-            raise ValueError("optimized lineup slots must be unique")
+        assigned_keys = [(assignment.slot, assignment.slot_index) for assignment in self.assignments]
+        unfilled_keys = [(slot.slot, slot.slot_index) for slot in self.unfilled_slots]
+        all_keys = assigned_keys + unfilled_keys
+        if len(all_keys) != len(set(all_keys)):
+            raise ValueError("optimized and unfilled lineup slots must be unique")
         return self
 
 

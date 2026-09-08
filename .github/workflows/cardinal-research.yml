@@ -1,0 +1,71 @@
+name: Cardinal Value Research
+
+on:
+  pull_request:
+    paths:
+      - 'src/fsffl/value/cardinal*.py'
+      - 'scripts/build_next3_research_crosswalk.py'
+      - 'scripts/build_next3_statsguy_history.py'
+      - 'scripts/build_next3_dynastyprocess_history.py'
+      - 'scripts/run_cardinal_empirical_research.py'
+      - '.github/workflows/cardinal-research.yml'
+  workflow_dispatch:
+
+jobs:
+  empirical-cardinal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install FSFFL NEXT
+        run: python -m pip install -e '.[dev,web]'
+      - name: Build research identity crosswalk
+        run: |
+          python scripts/build_next3_research_crosswalk.py \
+            --output /tmp/fsffl-cardinal/crosswalk.csv
+      - name: Clone DynastyProcess history source
+        run: |
+          git clone --quiet \
+            --filter=blob:none \
+            --no-checkout \
+            --shallow-since=2025-08-01 \
+            https://github.com/dynastyprocess/data.git \
+            /tmp/dynastyprocess-data
+      - name: Build DynastyProcess point-in-time history
+        run: |
+          python scripts/build_next3_dynastyprocess_history.py \
+            --dynastyprocess-repo /tmp/dynastyprocess-data \
+            --crosswalk /tmp/fsffl-cardinal/crosswalk.csv \
+            --output /tmp/fsffl-cardinal/dynastyprocess-history.json \
+            --start-date 2025-09-01 \
+            --end-date 2026-08-31
+      - name: Build Stats Guy point-in-time history
+        run: |
+          python scripts/build_next3_statsguy_history.py \
+            --crosswalk /tmp/fsffl-cardinal/crosswalk.csv \
+            --output /tmp/fsffl-cardinal/statsguy-history.json \
+            --start-date 2025-09-01 \
+            --end-date 2026-08-31 \
+            --step-days 7 \
+            --format sf_dynasty \
+            --format-context-id dynasty:2qb
+      - name: Run empirical cardinal benchmark
+        run: |
+          python scripts/run_cardinal_empirical_research.py \
+            --statsguy-history /tmp/fsffl-cardinal/statsguy-history.json \
+            --dynastyprocess-history /tmp/fsffl-cardinal/dynastyprocess-history.json \
+            --crosswalk /tmp/fsffl-cardinal/crosswalk.csv \
+            --sleeper-league-id 1312071960615731200 \
+            --minimum-season 2023 \
+            --market-context-id dynasty:2qb \
+            --output /tmp/fsffl-cardinal/cardinal-empirical-report.json \
+            --as-of 2026-09-06T15:50:00+00:00
+      - name: Upload empirical report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cardinal-empirical-report
+          path: /tmp/fsffl-cardinal/cardinal-empirical-report.json
+          if-no-files-found: error

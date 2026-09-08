@@ -1,0 +1,142 @@
+from __future__ import annotations
+
+from pydantic import model_validator
+
+from fsffl.state.models import Asset, FrozenModel, LeagueState, PickAsset, PlayerAsset, RosterSlot
+
+
+class TradeAssetOption(FrozenModel):
+    asset_ref: str
+    asset_kind: str
+    label: str
+    detail: str | None = None
+    player_id: str | None = None
+    pick_id: str | None = None
+    roster_slot: RosterSlot | None = None
+    age_years: float | None = None
+
+    @model_validator(mode="after")
+    def validate_asset(self) -> "TradeAssetOption":
+        if not self.asset_ref.strip() or not self.asset_kind.strip() or not self.label.strip():
+            raise ValueError("trade asset option identifiers cannot be blank")
+        if self.asset_kind == "player" and self.player_id is None:
+            raise ValueError("player trade option requires player_id")
+        if self.asset_kind == "pick" and self.pick_id is None:
+            raise ValueError("pick trade option requires pick_id")
+        if self.asset_kind != "player" and self.age_years is not None:
+            raise ValueError("only player trade options may expose age")
+        return self
+
+
+class TeamTradeBrowser(FrozenModel):
+    team_id: str
+    display_name: str
+    assets: tuple[TradeAssetOption, ...]
+    faab_balance: int
+
+
+class TradeCenterBrowserView(FrozenModel):
+    focal_team: TeamTradeBrowser
+    counterparties: tuple[TeamTradeBrowser, ...]
+    state_id: str
+    product_version: str = "next8-trade-browser-v2:player-state-age"
+
+
+def _team_browser(league_state: LeagueState, team_id: str) -> TeamTradeBrowser:
+    team = next((item for item in league_state.teams if item.team_id == team_id), None)
+    team_state = next((item for item in league_state.team_states if item.team_id == team_id), None)
+    if team is None or team_state is None:
+        raise ValueError("unknown team_id")
+
+    players_by_id = {player.player_id: player for player in league_state.players}
+    player_states_by_id = {state.player_id: state for state in league_state.player_states}
+    assets: list[TradeAssetOption] = []
+    for entry in team_state.roster:
+        player = players_by_id.get(entry.player_id)
+        if player is None:
+            continue
+        player_state = player_states_by_id.get(player.player_id)
+        assets.append(
+            TradeAssetOption(
+                asset_ref=f"player:{player.player_id}",
+                asset_kind="player",
+                label=player.full_name,
+                detail=player.position.value,
+                player_id=player.player_id,
+                roster_slot=entry.slot,
+                age_years=player_state.age_years if player_state is not None else None,
+            )
+        )
+
+    picks_by_id = {pick.pick_id: pick for pick in league_state.draft_picks}
+    for ownership in league_state.pick_ownership:
+        if ownership.owner_team_id != team_id:
+            continue
+        pick = picks_by_id.get(ownership.pick_id)
+        if pick is None:
+            continue
+        original_team = next(
+            (item.display_name for item in league_state.teams if item.team_id == pick.original_team_id),
+            pick.original_team_id,
+        )
+        assets.append(
+            TradeAssetOption(
+                asset_ref=f"pick:{pick.pick_id}",
+                asset_kind="pick",
+                label=f"{pick.season} Round {pick.round}",
+                detail=f"Originally {original_team}",
+                pick_id=pick.pick_id,
+            )
+        )
+
+    assets.sort(key=lambda item: (item.asset_kind != "player", item.label, item.asset_ref))
+    return TeamTradeBrowser(
+        team_id=team.team_id,
+        display_name=team.display_name,
+        assets=tuple(assets),
+        faab_balance=team_state.faab_balance,
+    )
+
+
+def build_trade_center_browser_view(
+    league_state: LeagueState,
+    *,
+    focal_team_id: str,
+) -> TradeCenterBrowserView:
+    """Expose canonically owned assets and descriptive State metadata for drafting.
+
+    This view does not calculate Value, forecasts, lineup optimization, decision
+    utility, or action authority. Player age is copied from canonical point-in-time
+    State so product surfaces can share one ownership-aware asset catalog.
+    """
+
+    focal = _team_browser(league_state, focal_team_id)
+    counterparties = tuple(
+        _team_browser(league_state, team.team_id)
+        for team in sorted(league_state.teams, key=lambda item: (item.display_name, item.team_id))
+        if team.team_id != focal_team_id
+    )
+    return TradeCenterBrowserView(
+        focal_team=focal,
+        counterparties=counterparties,
+        state_id=league_state.state_id,
+    )
+
+
+def resolve_owned_asset_ref(
+    league_state: LeagueState,
+    *,
+    team_id: str,
+    asset_ref: str,
+) -> Asset:
+    """Resolve one submitted UI asset ref against current canonical ownership."""
+
+    browser = _team_browser(league_state, team_id)
+    option = next((item for item in browser.assets if item.asset_ref == asset_ref), None)
+    if option is None:
+        raise ValueError("submitted asset is not currently owned by the specified team")
+    if option.asset_kind == "player" and option.player_id is not None:
+        return PlayerAsset(player_id=option.player_id)
+    if option.asset_kind == "pick" and option.pick_id is not None:
+        return PickAsset(pick_id=option.pick_id)
+    raise ValueError("unsupported trade asset option")

@@ -4,9 +4,10 @@ from collections.abc import Mapping
 
 from pydantic import model_validator
 
-from fsffl.forecast.models import ForecastObservation
+from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import DraftPick, FrozenModel, LeagueState, Position, RosterSlot
 from fsffl.team_utility.models import OptimizedTeamLineup
+from fsffl.team_utility.position_strength import LeagueRelativePositionStrength
 from fsffl.team_utility.utility import OwnerStrategicPosture, TeamUtilityVector
 from fsffl.value.models import AssetValueProfile
 
@@ -22,6 +23,7 @@ class PlayerAnalyticsRow(FrozenModel):
     projected_starter: bool = False
     projected_lineup_slot: RosterSlot | None = None
     forecasts: tuple[ForecastObservation, ...] = ()
+    season_fantasy_points_projection: float | None = None
     value_profile: AssetValueProfile | None = None
 
     @model_validator(mode="after")
@@ -55,9 +57,10 @@ class TeamAnalyticsView(FrozenModel):
     players: tuple[PlayerAnalyticsRow, ...]
     draft_picks: tuple[DraftPickAnalyticsRow, ...] = ()
     optimized_lineup: OptimizedTeamLineup | None = None
+    position_strengths: tuple[LeagueRelativePositionStrength, ...] = ()
     utility: TeamUtilityVector | None = None
     owner_posture: OwnerStrategicPosture | None = None
-    view_model_version: str = "next7-team-view-v1"
+    view_model_version: str = "next7-team-view-v3:position-strength"
 
     @model_validator(mode="after")
     def validate_view(self) -> "TeamAnalyticsView":
@@ -65,11 +68,39 @@ class TeamAnalyticsView(FrozenModel):
             raise ValueError("team analytics identifiers cannot be blank")
         if self.optimized_lineup is not None and self.optimized_lineup.team_id != self.team_id:
             raise ValueError("optimized lineup must match analytics team")
+        if any(row.team_id != self.team_id for row in self.position_strengths):
+            raise ValueError("position strength rows must match analytics team")
+        if len({row.position for row in self.position_strengths}) != len(self.position_strengths):
+            raise ValueError("position strength rows must be unique by position")
         if self.utility is not None and self.utility.team_id != self.team_id:
             raise ValueError("team utility must match analytics team")
         if len({row.player_id for row in self.players}) != len(self.players):
             raise ValueError("team analytics players must be unique")
         return self
+
+
+def _season_fantasy_points_projection(observations: tuple[ForecastObservation, ...]) -> float | None:
+    """Return the authoritative full-NFL-season fantasy-point mean for display.
+
+    Player-facing analytics must never silently substitute the shorter fantasy
+    regular-season horizon. If full-season evidence is absent, expose missing data
+    rather than scaling or falling back in Presentation.
+    """
+
+    candidates = tuple(
+        observation
+        for observation in observations
+        if observation.metric == ForecastMetric.FANTASY_POINTS
+        and observation.horizon == ForecastHorizon.SEASON
+    )
+    if not candidates:
+        return None
+    selected = sorted(
+        candidates,
+        key=lambda item: (item.as_of, item.model_version, item.source),
+        reverse=True,
+    )[0]
+    return selected.distribution.mean
 
 
 def build_team_analytics_view(
@@ -80,9 +111,10 @@ def build_team_analytics_view(
     forecasts: tuple[ForecastObservation, ...] = (),
     value_profiles: Mapping[str, AssetValueProfile] | None = None,
     optimized_lineup: OptimizedTeamLineup | None = None,
+    position_strengths: tuple[LeagueRelativePositionStrength, ...] = (),
     utility: TeamUtilityVector | None = None,
     owner_posture: OwnerStrategicPosture | None = None,
-    view_model_version: str = "next7-team-view-v1",
+    view_model_version: str = "next7-team-view-v3:position-strength",
 ) -> TeamAnalyticsView:
     """Join authoritative team evidence into a read-only analytics view."""
 
@@ -103,6 +135,8 @@ def build_team_analytics_view(
             raise ValueError("optimized lineup must describe team")
         if optimized_lineup.as_of > context.as_of:
             raise ValueError("optimized lineup cannot postdate analytics context")
+    if any(row.team_id != team_id for row in position_strengths):
+        raise ValueError("position strengths must describe team")
     if utility is not None:
         if utility.team_id != team_id:
             raise ValueError("team utility must describe team")
@@ -149,6 +183,7 @@ def build_team_analytics_view(
                 projected_starter=projected_slot is not None,
                 projected_lineup_slot=projected_slot,
                 forecasts=observations,
+                season_fantasy_points_projection=_season_fantasy_points_projection(observations),
                 value_profile=profiles.get(player.player_id),
             )
         )
@@ -192,6 +227,7 @@ def build_team_analytics_view(
         players=tuple(player_rows),
         draft_picks=pick_rows,
         optimized_lineup=optimized_lineup,
+        position_strengths=tuple(sorted(position_strengths, key=lambda row: row.position.value)),
         utility=utility,
         owner_posture=owner_posture,
         view_model_version=view_model_version,

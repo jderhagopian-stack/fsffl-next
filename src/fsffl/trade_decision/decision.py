@@ -38,6 +38,7 @@ class SideDirectionalAssessment(FrozenModel):
     expected_wins: Direction = Direction.UNAVAILABLE
     playoff_probability: Direction = Direction.UNAVAILABLE
     first_place_probability: Direction = Direction.UNAVAILABLE
+    championship_probability: Direction = Direction.UNAVAILABLE
     asset_portfolio_mean: Direction = Direction.UNAVAILABLE
     largest_single_player_lineup_drop: Direction = Direction.UNAVAILABLE
     bench_forecasted_count: Direction = Direction.UNAVAILABLE
@@ -51,7 +52,7 @@ class BilateralTradeDecision(FrozenModel):
     side_a: SideDirectionalAssessment
     side_b: SideDirectionalAssessment
     shape: BilateralDecisionShape
-    model_version: str = "next5-bilateral-decision-v1"
+    model_version: str = "next5-bilateral-decision-v2"
 
     @model_validator(mode="after")
     def validate_decision(self) -> "BilateralTradeDecision":
@@ -73,8 +74,6 @@ def _positive(value: float | int | None) -> Direction:
 
 
 def _negative(value: float | int | None) -> Direction:
-    """Classify metrics where a decrease is favorable."""
-
     if value is None:
         return Direction.UNAVAILABLE
     if value < 0:
@@ -88,7 +87,6 @@ def _shape(directions: tuple[Direction, ...]) -> SideDecisionShape:
     available = tuple(direction for direction in directions if direction != Direction.UNAVAILABLE)
     if not available:
         return SideDecisionShape.INCOMPLETE
-
     has_missing = len(available) != len(directions)
     has_gain = Direction.IMPROVES in available
     has_loss = Direction.WORSENS in available
@@ -105,29 +103,18 @@ def _shape(directions: tuple[Direction, ...]) -> SideDecisionShape:
 
 def assess_side_direction(side: TradeSideEvaluation) -> SideDirectionalAssessment:
     delta: TeamScenarioDelta = side.delta
-
-    expected_wins = _positive(delta.competitive.expected_wins if delta.competitive else None)
-    playoff_probability = _positive(
-        delta.competitive.playoff_probability if delta.competitive else None
-    )
-    first_place_probability = _positive(
-        delta.competitive.first_place_probability if delta.competitive else None
-    )
-    asset_portfolio_mean = _positive(
-        delta.asset_portfolio.mean_value if delta.asset_portfolio else None
-    )
-    largest_single_player_lineup_drop = _negative(
-        delta.resilience.largest_single_player_lineup_drop if delta.resilience else None
-    )
-    bench_forecasted_count = _positive(
-        delta.resilience.bench_forecasted_count if delta.resilience else None
-    )
-    unavailable_count = _negative(delta.resilience.unavailable_count if delta.resilience else None)
-    missing_forecast_count = _negative(
-        delta.resilience.missing_forecast_count if delta.resilience else None
-    )
-
-    directions = (
+    competitive = delta.competitive
+    resilience = delta.resilience
+    expected_wins = _positive(competitive.expected_wins if competitive else None)
+    playoff_probability = _positive(competitive.playoff_probability if competitive else None)
+    first_place_probability = _positive(competitive.first_place_probability if competitive else None)
+    championship_probability = _positive(competitive.championship_probability if competitive else None)
+    asset_portfolio_mean = _positive(delta.asset_portfolio.mean_value if delta.asset_portfolio else None)
+    largest_single_player_lineup_drop = _negative(resilience.largest_single_player_lineup_drop if resilience else None)
+    bench_forecasted_count = _positive(resilience.bench_forecasted_count if resilience else None)
+    unavailable_count = _negative(resilience.unavailable_count if resilience else None)
+    missing_forecast_count = _negative(resilience.missing_forecast_count if resilience else None)
+    legacy_directions = (
         expected_wins,
         playoff_probability,
         first_place_probability,
@@ -137,24 +124,23 @@ def assess_side_direction(side: TradeSideEvaluation) -> SideDirectionalAssessmen
         unavailable_count,
         missing_forecast_count,
     )
+    shape_directions = legacy_directions + ((championship_probability,) if championship_probability != Direction.UNAVAILABLE else ())
     return SideDirectionalAssessment(
         team_id=side.team_id,
         expected_wins=expected_wins,
         playoff_probability=playoff_probability,
         first_place_probability=first_place_probability,
+        championship_probability=championship_probability,
         asset_portfolio_mean=asset_portfolio_mean,
         largest_single_player_lineup_drop=largest_single_player_lineup_drop,
         bench_forecasted_count=bench_forecasted_count,
         unavailable_count=unavailable_count,
         missing_forecast_count=missing_forecast_count,
-        shape=_shape(directions),
+        shape=_shape(shape_directions),
     )
 
 
-def _bilateral_shape(
-    side_a: SideDirectionalAssessment,
-    side_b: SideDirectionalAssessment,
-) -> BilateralDecisionShape:
+def _bilateral_shape(side_a, side_b) -> BilateralDecisionShape:
     if side_a.shape == SideDecisionShape.UNIFORM_GAIN and side_b.shape == SideDecisionShape.UNIFORM_GAIN:
         return BilateralDecisionShape.MUTUAL_GAIN
     if side_a.shape == SideDecisionShape.UNIFORM_GAIN and side_b.shape == SideDecisionShape.UNIFORM_LOSS:
@@ -166,28 +152,9 @@ def _bilateral_shape(
     return BilateralDecisionShape.MIXED_OR_INCOMPLETE
 
 
-def classify_bilateral_trade_decision(
-    evaluation: BilateralTradeEvaluation,
-    *,
-    model_version: str = "next5-bilateral-decision-v1",
-) -> BilateralTradeDecision:
-    """Classify bilateral outcome shape without scalar utility or thresholds.
-
-    The classifier is intentionally exact and descriptive. Missing channels fail
-    closed rather than promoting a trade to a uniform or mutual gain. It does not
-    interpret Monte Carlo noise as materiality, estimate acceptance, recommend
-    action, or weight one channel against another. Any later materiality policy
-    must be separately governed rather than hidden here.
-    """
-
+def classify_bilateral_trade_decision(evaluation: BilateralTradeEvaluation, *, model_version: str = "next5-bilateral-decision-v2") -> BilateralTradeDecision:
     if not model_version.strip():
         raise ValueError("model_version cannot be blank")
     side_a = assess_side_direction(evaluation.side_a)
     side_b = assess_side_direction(evaluation.side_b)
-    return BilateralTradeDecision(
-        proposal_id=evaluation.proposal_id,
-        side_a=side_a,
-        side_b=side_b,
-        shape=_bilateral_shape(side_a, side_b),
-        model_version=model_version,
-    )
+    return BilateralTradeDecision(proposal_id=evaluation.proposal_id, side_a=side_a, side_b=side_b, shape=_bilateral_shape(side_a, side_b), model_version=model_version)
