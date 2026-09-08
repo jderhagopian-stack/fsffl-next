@@ -44,7 +44,7 @@ def test_simulator_uses_canonical_player_names_and_existing_context() -> None:
     assert "row?.full_name" in ui
     assert "row?.age_years" in ui
     assert "row?.projected_starter" in ui
-    assert "row?.projected_lineup_slot" in ui
+    assert "row.projected_lineup_slot" in ui
     assert "row?.season_fantasy_points_projection" in ui
     assert "NFL-season pts" in ui
     assert "simulatorPlayerName(row)" in ui
