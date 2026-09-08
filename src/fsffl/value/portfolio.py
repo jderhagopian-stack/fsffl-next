@@ -18,12 +18,11 @@ class PortfolioCoverageStatus(StrEnum):
 
 
 class TeamMarketValuePortfolio(FrozenModel):
-    """Additive team accounting over one coherent MarketPriceEstimate scale.
+    """Team accounting over an explicitly promoted additive Market Value scale.
 
-    This is a Value-layer portfolio view, not Team Utility, Decision, or an
-    unexplained team score. Assets are aggregated only when their market estimates
-    share the exact same ValueScale, market context, and as-of snapshot. Owned
-    assets without a compatible estimate remain visible in coverage rather than
+    Market Percentile is deliberately not additive. A team Market Value total may
+    be exposed only when Value authority explicitly supplies a compatible additive
+    market scale. Missing authority or missing assets remain visible instead of
     being filled from Cardinal, Intrinsic, or Presentation-side arithmetic.
     """
 
@@ -38,7 +37,8 @@ class TeamMarketValuePortfolio(FrozenModel):
     scale: ValueScale | None = None
     market_context_id: str | None = None
     as_of: datetime | None = None
-    model_version: str = "next3-team-market-portfolio-v1"
+    availability_reason: str | None = None
+    model_version: str = "next3-team-market-portfolio-v2"
 
     @property
     def owned_asset_count(self) -> int:
@@ -76,11 +76,15 @@ class TeamMarketValuePortfolio(FrozenModel):
             raise ValueError("team Market Value portfolio counts cannot be negative")
         if self.valued_player_count > self.owned_player_count or self.valued_pick_count > self.owned_pick_count:
             raise ValueError("valued asset counts cannot exceed owned counts")
+        if self.availability_reason is not None and not self.availability_reason.strip():
+            raise ValueError("team Market Value availability reason cannot be blank")
         if self.valued_asset_count == 0:
             if any(value is not None for value in (self.total_value, self.player_value, self.pick_value)):
                 raise ValueError("portfolio with no valued assets cannot expose market totals")
             if any(value is not None for value in (self.scale, self.market_context_id, self.as_of)):
                 raise ValueError("portfolio with no valued assets cannot claim a market snapshot")
+            if self.owned_asset_count > 0 and self.availability_reason is None:
+                raise ValueError("unavailable team Market Value requires an explicit reason")
         else:
             if self.total_value is None or self.scale is None or self.market_context_id is None or self.as_of is None:
                 raise ValueError("valued market portfolio requires total, scale, context, and as_of")
@@ -90,12 +94,11 @@ class TeamMarketValuePortfolio(FrozenModel):
 
 
 class TeamCardinalPortfolio(FrozenModel):
-    """Additive current market portfolio on the governed FSFFL Cardinal scale.
+    """Additive current market-cardinal portfolio on the FSFFL Cardinal scale.
 
-    This is a portfolio accounting view, not Team Utility or Decision authority.
-    Owned player and pick scores may be summed because every included asset is on
-    the exact same explicit Cardinal scale. Coverage remains visible so a partial
-    portfolio is never mistaken for a complete team valuation.
+    This is a Value-layer portfolio accounting view, not Team Utility or Decision
+    authority. It must remain labeled separately from external/ensemble Market
+    Value in product presentation even though both live in the Value layer.
     """
 
     team_id: str
@@ -163,39 +166,55 @@ def _owned_asset_ids(league_state: LeagueState) -> tuple[dict[str, list[str]], d
 def build_team_market_value_portfolios(
     league_state: LeagueState,
     estimates: tuple[MarketPriceEstimate, ...],
+    *,
+    additive_scale: ValueScale | None,
+    unavailable_reason: str = (
+        "No separate additive Market Value scale is promoted. Current market estimates "
+        "are relative Market Percentiles and cannot be summed."
+    ),
 ) -> tuple[TeamMarketValuePortfolio, ...]:
-    """Aggregate only mutually compatible current MarketPriceEstimate evidence.
+    """Aggregate Market Value only after Value authority promotes an additive scale.
 
-    The function intentionally does not borrow FSFFL Cardinal or Intrinsic values
-    to fill gaps. If current market authority has player coverage but no compatible
-    pick estimates, the team total remains a transparent partial market portfolio.
+    Merely sharing a ValueScale is insufficient: percentile/rank scales can be
+    mutually compatible yet still be non-additive. The caller must explicitly
+    supply the promoted additive scale. Passing ``None`` fails closed and returns
+    typed unavailable portfolios with ownership coverage and a reason.
     """
+
+    owned_players_by_team, owned_picks_by_team = _owned_asset_ids(league_state)
+    if additive_scale is None:
+        return tuple(
+            TeamMarketValuePortfolio(
+                team_id=team.team_id,
+                owned_player_count=len(owned_players_by_team.get(team.team_id, [])),
+                valued_player_count=0,
+                owned_pick_count=len(owned_picks_by_team.get(team.team_id, [])),
+                valued_pick_count=0,
+                availability_reason=unavailable_reason,
+            )
+            for team in sorted(league_state.teams, key=lambda row: row.team_id)
+        )
 
     asset_ids = [row.asset_id for row in estimates]
     if len(asset_ids) != len(set(asset_ids)):
         raise ValueError("team Market Value portfolios require unique asset estimates")
+    if any(row.scale != additive_scale for row in estimates):
+        raise ValueError("team Market Value portfolios require the explicitly promoted additive scale")
 
     if estimates:
-        scales = {row.scale for row in estimates}
         contexts = {row.market_context_id for row in estimates}
         snapshots = {row.as_of for row in estimates}
-        if len(scales) != 1:
-            raise ValueError("team Market Value portfolios cannot mix ValueScale versions")
         if len(contexts) != 1:
             raise ValueError("team Market Value portfolios cannot mix market contexts")
         if len(snapshots) != 1:
             raise ValueError("team Market Value portfolios cannot mix as-of snapshots")
-        scale = next(iter(scales))
         market_context_id = next(iter(contexts))
         as_of = next(iter(snapshots))
     else:
-        scale = None
         market_context_id = None
         as_of = None
 
     estimate_by_asset = {row.asset_id: row for row in estimates}
-    owned_players_by_team, owned_picks_by_team = _owned_asset_ids(league_state)
-
     portfolios: list[TeamMarketValuePortfolio] = []
     for team in sorted(league_state.teams, key=lambda row: row.team_id):
         player_ids = owned_players_by_team.get(team.team_id, [])
@@ -213,6 +232,7 @@ def build_team_market_value_portfolios(
             and estimate_by_asset[pick_id].asset_kind == ValueAssetKind.PICK
         ]
         valued_total = valued_players + valued_picks
+        missing_assets = len(player_ids) + len(pick_ids) - len(valued_total)
         portfolios.append(
             TeamMarketValuePortfolio(
                 team_id=team.team_id,
@@ -223,9 +243,14 @@ def build_team_market_value_portfolios(
                 valued_player_count=len(valued_players),
                 owned_pick_count=len(pick_ids),
                 valued_pick_count=len(valued_picks),
-                scale=scale if valued_total else None,
+                scale=additive_scale if valued_total else None,
                 market_context_id=market_context_id if valued_total else None,
                 as_of=as_of if valued_total else None,
+                availability_reason=(
+                    f"{missing_assets} owned asset(s) lack a compatible additive Market Value estimate."
+                    if missing_assets > 0
+                    else None
+                ),
             )
         )
     return tuple(portfolios)
