@@ -21,6 +21,35 @@ class HistoricalArtifactKind(StrEnum):
     FINAL_REPORT = "final_report"
 
 
+_DEPENDENCY_DERIVED_KINDS = {
+    HistoricalArtifactKind.POINT_IN_TIME_ANALYSIS,
+    HistoricalArtifactKind.RETROSPECTIVE_ANALYSIS,
+    HistoricalArtifactKind.ASSET_LINEAGE,
+    HistoricalArtifactKind.FINAL_REPORT,
+}
+
+
+def _parse_dependency_fingerprint(fingerprint: str) -> dict[str, str]:
+    """Parse an explicit component=version dependency fingerprint.
+
+    Dependency-derived historical artifacts must identify which governed
+    component contributed each version. Exact component/version matching keeps
+    invalidation selective and avoids substring collisions such as v1 vs v10.
+    """
+
+    dependencies: dict[str, str] = {}
+    for token in fingerprint.split("|"):
+        if "=" not in token:
+            raise ValueError("dependency_fingerprint entries must use component=version")
+        component, version = (part.strip() for part in token.split("=", 1))
+        if not component or not version:
+            raise ValueError("dependency_fingerprint component/version cannot be blank")
+        if component in dependencies:
+            raise ValueError("dependency_fingerprint components must be unique")
+        dependencies[component] = version
+    return dependencies
+
+
 class HistoricalArtifactIdentity(FrozenModel):
     league_id: str
     transaction_id: str
@@ -42,6 +71,10 @@ class HistoricalArtifactIdentity(FrozenModel):
             raise ValueError("historical artifact identifiers cannot be blank")
         if self.dependency_fingerprint is not None and not self.dependency_fingerprint.strip():
             raise ValueError("dependency_fingerprint cannot be blank")
+        if self.artifact_kind in _DEPENDENCY_DERIVED_KINDS:
+            if self.dependency_fingerprint is None:
+                raise ValueError("dependency-derived historical artifacts require a dependency_fingerprint")
+            _parse_dependency_fingerprint(self.dependency_fingerprint)
         if self.artifact_kind in {
             HistoricalArtifactKind.RETROSPECTIVE_ANALYSIS,
             HistoricalArtifactKind.ASSET_LINEAGE,
@@ -127,11 +160,16 @@ class InMemoryHistoricalReportRepository:
         entries: Mapping[HistoricalArtifactIdentity, HistoricalTradeReport] | None = None,
     ) -> None:
         self._entries = dict(entries or {})
+        for identity, report in self._entries.items():
+            if identity.transaction_id != report.transaction_id:
+                raise ValueError("historical report transaction_id must match artifact identity")
 
     def get(self, identity: HistoricalArtifactIdentity) -> HistoricalTradeReport | None:
         return self._entries.get(identity)
 
     def put(self, identity: HistoricalArtifactIdentity, report: HistoricalTradeReport) -> None:
+        if identity.transaction_id != report.transaction_id:
+            raise ValueError("historical report transaction_id must match artifact identity")
         existing = self._entries.get(identity)
         if existing is not None and existing != report:
             raise ValueError("historical artifact identity is immutable once persisted")
@@ -145,13 +183,13 @@ class InMemoryHistoricalReportRepository:
                 continue
             if affected and identity.transaction_id not in affected:
                 continue
-            fingerprint = identity.dependency_fingerprint or ""
-            if request.old_version not in fingerprint:
+            if identity.artifact_kind not in _DEPENDENCY_DERIVED_KINDS:
                 continue
-            if identity.artifact_kind in {
-                HistoricalArtifactKind.TRANSACTION_FACT,
-                HistoricalArtifactKind.POINT_IN_TIME_STATE,
-            }:
+            fingerprint = identity.dependency_fingerprint
+            if fingerprint is None:
+                continue
+            dependencies = _parse_dependency_fingerprint(fingerprint)
+            if dependencies.get(request.dependency_component) != request.old_version:
                 continue
             removed.append(identity)
             del self._entries[identity]
