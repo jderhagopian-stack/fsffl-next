@@ -138,6 +138,8 @@ class GradeResult(FrozenModel):
     reason: str
     policy_id: str | None = None
     policy_version: str | None = None
+    score_policy_id: str | None = None
+    score_policy_version: str | None = None
 
     @model_validator(mode="after")
     def validate_result(self) -> "GradeResult":
@@ -150,6 +152,12 @@ class GradeResult(FrozenModel):
                 raise ValueError("grade score bounds must satisfy lower <= upper")
             if self.score is not None and not self.score_lower <= self.score <= self.score_upper:
                 raise ValueError("grade center score must fall within supplied bounds")
+        if (self.score_policy_id is None) != (self.score_policy_version is None):
+            raise ValueError("score policy identity fields must be supplied together")
+        if self.score_policy_id is not None and (
+            not self.score_policy_id.strip() or not self.score_policy_version or not self.score_policy_version.strip()
+        ):
+            raise ValueError("score policy identity fields cannot be blank")
         if self.status == GradeStatus.GRADED:
             if self.letter is None or self.score is None or self.policy_id is None or self.policy_version is None:
                 raise ValueError("graded results require letter, score, and governed policy identity")
@@ -337,10 +345,20 @@ class HistoricalTradeReport(FrozenModel):
     def validate_report(self) -> "HistoricalTradeReport":
         if not self.transaction_id.strip() or not self.model_version.strip():
             raise ValueError("historical trade report identifiers cannot be blank")
-        if len(self.teams) < 2:
-            raise ValueError("historical trade report requires at least two teams")
-        if set(self.teams) != set(self.assets_by_team):
+        team_set = set(self.teams)
+        if len(team_set) < 2 or len(team_set) != len(self.teams):
+            raise ValueError("historical trade report requires at least two unique teams")
+        if team_set != set(self.assets_by_team):
             raise ValueError("assets_by_team must contain exactly the report teams")
+        if self.originator_team_id is not None and self.originator_team_id not in team_set:
+            raise ValueError("originator_team_id must be a report team")
+        for item in self.point_in_time_evidence:
+            if item.transaction_id != self.transaction_id:
+                raise ValueError("point-in-time evidence must match report transaction_id")
+            if item.team_id not in team_set:
+                raise ValueError("point-in-time evidence team must participate in the report trade")
+            if item.as_of > self.trade_date:
+                raise ValueError("point-in-time evidence cannot be later than trade_date")
         return self
 
 
@@ -353,6 +371,9 @@ def grade_authoritative_score(
     score_lower: float | None = None,
     score_upper: float | None = None,
     score_confidence: float | None = None,
+    evidence_context: str = "point-in-time",
+    score_policy_id: str | None = None,
+    score_policy_version: str | None = None,
 ) -> GradeResult:
     """Fail-closed grade translation while preserving authoritative uncertainty."""
 
@@ -361,13 +382,20 @@ def grade_authoritative_score(
         return GradeResult(
             status=GradeStatus.NOT_GRADED,
             confidence=confidence,
-            reason="NOT GRADED — insufficient point-in-time evidence: " + ", ".join(evidence.missing_required),
+            reason=(
+                f"NOT GRADED — insufficient {evidence_context} evidence: "
+                + ", ".join(evidence.missing_required)
+            ),
+            score_policy_id=score_policy_id,
+            score_policy_version=score_policy_version,
         )
     if score is None:
         return GradeResult(
             status=GradeStatus.NOT_GRADED,
             confidence=confidence,
             reason=missing_score_reason,
+            score_policy_id=score_policy_id,
+            score_policy_version=score_policy_version,
         )
     if (score_lower is None) != (score_upper is None):
         raise ValueError("authoritative grade score bounds must be supplied together")
@@ -382,6 +410,8 @@ def grade_authoritative_score(
             score_upper=score_upper,
             confidence=confidence,
             reason="NOT GRADED — no governed letter-grade policy is available",
+            score_policy_id=score_policy_id,
+            score_policy_version=score_policy_version,
         )
 
     center_letter = policy.letter_for(score)
@@ -408,6 +438,8 @@ def grade_authoritative_score(
         reason=reason,
         policy_id=policy.policy_id,
         policy_version=policy.model_version,
+        score_policy_id=score_policy_id,
+        score_policy_version=score_policy_version,
     )
 
 
@@ -426,6 +458,8 @@ def grade_point_in_time_decision(
         missing_score_reason=(
             "NOT GRADED — Decision has not emitted a governed historical decision-quality score"
         ),
+        score_policy_id=evidence.decision_quality_policy_id,
+        score_policy_version=evidence.decision_quality_policy_version,
     )
 
 
@@ -462,24 +496,32 @@ def grade_retrospective_outcome(
         missing_score_reason=(
             "NOT GRADED — one or more governed retrospective outcome components are unavailable"
         ),
+        evidence_context="retrospective outcome",
+        score_policy_id=outcome_policy.policy_id,
+        score_policy_version=outcome_policy.model_version,
     )
 
 
 def trace_asset_lineage(
     root_asset_id: str,
     events: tuple[AssetLineageEvent, ...],
+    *,
+    root_acquired_at: datetime | None = None,
 ) -> AssetLineageTrace:
-    """Trace explicit asset lineage without inventing attribution.
+    """Trace explicit, causally ordered asset lineage without inventing attribution.
 
     A one-child event is direct lineage. Multi-child events are followed only
     when explicit attribution weights are supplied (which this contract requires
-    for every child). Cycles are rejected. Assets without a later event are
-    terminal. The function never infers causal allocation from package size or
-    later value.
+    for every child). Each descendant may use only events strictly later than the
+    event through which it entered the lineage. ``root_acquired_at`` applies the
+    same anti-backtracking boundary to the root asset. Cycles are rejected. The
+    function never infers causal allocation from package size or later value.
     """
 
     if not root_asset_id.strip():
         raise ValueError("root_asset_id cannot be blank")
+    if root_acquired_at is not None and root_acquired_at.tzinfo is None:
+        raise ValueError("root_acquired_at must be timezone-aware")
     by_source: dict[str, list[AssetLineageEvent]] = {}
     for event in sorted(events, key=lambda item: (item.occurred_at, item.event_id)):
         by_source.setdefault(event.from_asset_id, []).append(event)
@@ -488,11 +530,20 @@ def trace_asset_lineage(
     notes: list[str] = []
     ambiguous = False
 
-    def walk(asset_id: str, weight: float, path: tuple[str, ...]) -> None:
+    def walk(
+        asset_id: str,
+        weight: float,
+        path: tuple[str, ...],
+        after: datetime | None,
+    ) -> None:
         nonlocal ambiguous
         if asset_id in path:
             raise ValueError("asset lineage contains a cycle")
-        candidates = by_source.get(asset_id, [])
+        candidates = [
+            event
+            for event in by_source.get(asset_id, [])
+            if after is None or event.occurred_at > after
+        ]
         if not candidates:
             terminal.append(
                 AssetLineageStep(
@@ -534,9 +585,9 @@ def trace_asset_lineage(
                 notes.append(
                     f"{event.event_id} uses explicit attribution for {asset_id} -> {child.asset_id}"
                 )
-            walk(child.asset_id, next_weight, path + (asset_id,))
+            walk(child.asset_id, next_weight, path + (asset_id,), event.occurred_at)
 
-    walk(root_asset_id, 1.0, ())
+    walk(root_asset_id, 1.0, (), root_acquired_at)
     return AssetLineageTrace(
         root_asset_id=root_asset_id,
         terminal_assets=tuple(terminal),
