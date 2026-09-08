@@ -14,7 +14,7 @@ function simulatorPlayers(){
 function simulatorToggle(playerId){
   fsfflSimulatorState.selected.has(playerId)?fsfflSimulatorState.selected.delete(playerId):fsfflSimulatorState.selected.add(playerId);
   fsfflSimulatorState.result=null;
-  renderFsfflSimulator();
+  renderFsfflSimulatorView();
 }
 function simulatorMetricCard(label,value,note=''){
   return `<div class="metric-card"><span class="metric-label">${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${note?`<small>${escapeHtml(note)}</small>`:''}</div>`;
@@ -52,20 +52,20 @@ function simulatorComparisonTable(){
 async function runFsfflSimulator(){
   const playerIds=[...fsfflSimulatorState.selected];
   if(!playerIds.length||fsfflSimulatorState.loading)return;
-  fsfflSimulatorState.loading=true;renderFsfflSimulator();
+  fsfflSimulatorState.loading=true;renderFsfflSimulatorView();
   try{
     const envelope=`simulator:${playerIds.join(',')}`;
     fsfflSimulatorState.result=await api('/api/what-if/player-unavailable',{method:'POST',body:JSON.stringify({player_id:envelope})});
     retainSimulatorScenario(fsfflSimulatorState.result);
   }catch(error){fsfflSimulatorState.result={error:error.message}}
-  finally{fsfflSimulatorState.loading=false;renderFsfflSimulator()}
+  finally{fsfflSimulatorState.loading=false;renderFsfflSimulatorView()}
 }
 async function loadFsfflSimulator(){
-  if(!state?.context?.team_id){fsfflSimulatorState.team=null;fsfflSimulatorState.history=[];renderFsfflSimulator();return}
+  if(!state?.context?.team_id){fsfflSimulatorState.team=null;fsfflSimulatorState.history=[];renderFsfflSimulatorView();return}
   try{fsfflSimulatorState.team=await api('/api/my-team')}catch(_error){fsfflSimulatorState.team=null}
-  renderFsfflSimulator();
+  renderFsfflSimulatorView();
 }
-function renderFsfflSimulator(){
+function renderFsfflSimulatorView(){
   const panel=document.querySelector('#generic-screen .panel');
   if(!panel)return;
   if(!state?.context?.team_id){panel.innerHTML='<p class="eyebrow">Simulator</p><h2>Select your team first.</h2><p class="lead">The Simulator runs governed hypothetical States for the franchise you manage.</p>';return}
@@ -78,6 +78,6 @@ function renderFsfflSimulator(){
     ${result?.error?`<div class="chart-empty" style="margin-top:14px"><p>Simulator is unavailable: ${escapeHtml(result.error)}</p></div>`:simulatorScenarioResult(result)}${simulatorComparisonTable()}`;
   panel.querySelectorAll('[data-sim-player]').forEach(button=>button.addEventListener('click',()=>simulatorToggle(button.dataset.simPlayer)));
   panel.querySelector('#run-simulator')?.addEventListener('click',runFsfflSimulator);
-  panel.querySelector('#clear-simulator-history')?.addEventListener('click',()=>{fsfflSimulatorState.history=[];renderFsfflSimulator()});
+  panel.querySelector('#clear-simulator-history')?.addEventListener('click',()=>{fsfflSimulatorState.history=[];renderFsfflSimulatorView()});
 }
-window.renderFsfflSimulator=function(){renderFsfflSimulator();if(state?.context?.team_id&&!fsfflSimulatorState.team)loadFsfflSimulator()};
+window.renderFsfflSimulator=function(){renderFsfflSimulatorView();if(state?.context?.team_id&&!fsfflSimulatorState.team)loadFsfflSimulator()};
