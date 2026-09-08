@@ -80,6 +80,21 @@ class SyncCursorRecord:
 
 
 @dataclass(frozen=True)
+class UserRuntimeContextRecord:
+    user_id: str
+    provider: str
+    league_external_id: str
+    league_id: str
+    season: int
+    state_hash: str
+    updated_at: datetime
+    selected_team_id: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_aware(self.updated_at, field="updated_at")
+
+
+@dataclass(frozen=True)
 class ArtifactKey:
     artifact_kind: str
     scope_kind: str
@@ -114,6 +129,10 @@ class PersistenceStore(Protocol):
     reusable only when its exact input fingerprint and model version match.
     """
 
+    def get_user_runtime_context(self, *, user_id: str) -> UserRuntimeContextRecord | None: ...
+
+    def put_user_runtime_context(self, record: UserRuntimeContextRecord) -> None: ...
+
     def get_league_snapshot(
         self, *, provider: str, league_id: str, season: int
     ) -> LeagueSnapshotRecord | None: ...
@@ -133,6 +152,15 @@ class PersistenceStore(Protocol):
     def put_sync_cursor(self, record: SyncCursorRecord) -> None: ...
 
     def get_reusable_artifact(self, key: ArtifactKey) -> ReusableArtifactRecord | None: ...
+
+    def get_latest_reusable_artifact(
+        self,
+        *,
+        artifact_kind: str,
+        scope_kind: str,
+        scope_id: str,
+        model_version: str,
+    ) -> ReusableArtifactRecord | None: ...
 
     def put_artifact(self, record: ReusableArtifactRecord) -> None: ...
 
