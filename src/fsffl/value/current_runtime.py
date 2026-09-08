@@ -25,7 +25,12 @@ from .cardinal_consistency import CardinalConsistencyAudit, build_cardinal_consi
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
 from .models import MarketPriceEstimate, ValueAssetKind, ValueScale
 from .pick_variants import PickVariantMarketValue, normalize_pick_variant_market_values
-from .portfolio import TeamCardinalPortfolio, build_team_cardinal_portfolios
+from .portfolio import (
+    TeamCardinalPortfolio,
+    TeamMarketValuePortfolio,
+    build_team_cardinal_portfolios,
+    build_team_market_value_portfolios,
+)
 from .source_batch import build_market_calibration_panel_batch
 from .source_catalog import next3_market_source_registry_v1
 from .sources import (
@@ -59,10 +64,11 @@ class CurrentMarketValueRuntimeResult:
     native_magnitude_observations: tuple[NativeMarketMagnitudeObservation, ...] = ()
     provisional_fsffl_values: tuple[ProvisionalFSFFLValueScore, ...] = ()
     fsffl_cardinal_values: tuple[FSFFLCardinalValueScore, ...] = ()
+    team_market_value_portfolios: tuple[TeamMarketValuePortfolio, ...] = ()
     team_cardinal_portfolios: tuple[TeamCardinalPortfolio, ...] = ()
     pick_variant_market_values: tuple[PickVariantMarketValue, ...] = ()
     cardinal_consistency_audit: CardinalConsistencyAudit | None = None
-    model_version: str = "next3-current-market-runtime-v5:format-locked-consistency-audit"
+    model_version: str = "next3-current-market-runtime-v6:team-market-portfolios"
 
     @property
     def coverage(self) -> float:
@@ -209,9 +215,11 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     reference cohort for players and generic unknown-slot rookie picks. The
     separate consistency audit compares that reference against the fully
     parameterized FantasyCalc cohort by position, but remains diagnostic and
-    cannot change Value. Team portfolio totals are additive accounting on the
-    Cardinal scale and carry explicit asset coverage. Early/mid/late pick variants
-    remain separate Simulation-informed challenger evidence.
+    cannot change Value. Team Market Value portfolios aggregate only compatible
+    MarketPriceEstimate evidence and retain partial asset coverage explicitly;
+    Team Cardinal portfolios remain a separate accounting view on the Cardinal
+    scale. Early/mid/late pick variants remain separate Simulation-informed
+    challenger evidence.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -363,16 +371,18 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         for team_state in league_state.team_states
         for entry in team_state.roster
     }
-    valued = roster_player_ids.intersection({estimate.asset_id for estimate in estimates})
+    estimates_tuple = tuple(estimates)
+    valued = roster_player_ids.intersection({estimate.asset_id for estimate in estimates_tuple})
     failures.append("dynastyprocess_market_values")
     errors["dynastyprocess_market_values"] = "IdentityCrosswalkUnavailable: current State lacks explicit FantasyPros ids"
 
+    market_portfolios = build_team_market_value_portfolios(league_state, estimates_tuple)
     cardinal_tuple = tuple(sorted(cardinal_values, key=lambda item: (item.asset_kind.value, item.asset_id)))
-    portfolios = build_team_cardinal_portfolios(league_state, cardinal_tuple)
+    cardinal_portfolios = build_team_cardinal_portfolios(league_state, cardinal_tuple)
 
     return CurrentMarketValueRuntimeResult(
         league_state_id=league_state.state_id,
-        estimates=tuple(estimates),
+        estimates=estimates_tuple,
         successful_source_ids=batch.completed_source_ids,
         failed_sources=tuple(sorted(set(failures))),
         errors_by_source_id=errors,
@@ -382,7 +392,8 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         native_magnitude_observations=native_magnitude_observations,
         provisional_fsffl_values=provisional_fsffl_values,
         fsffl_cardinal_values=cardinal_tuple,
-        team_cardinal_portfolios=portfolios,
+        team_market_value_portfolios=market_portfolios,
+        team_cardinal_portfolios=cardinal_portfolios,
         pick_variant_market_values=pick_variant_values,
         cardinal_consistency_audit=consistency_audit,
     )
