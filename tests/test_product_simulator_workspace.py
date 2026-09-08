@@ -60,8 +60,12 @@ def test_simulator_is_first_class_team_scoped_product_route() -> None:
     assert "/static/simulator.js" in shell
     assert "route==='simulator'" in shell
     assert "'what_if','simulator','analytics'" in shell
+    # The shell can retain its lazy-loader token because index explicitly loads the
+    # repaired Simulator before product_shell. The published HTML must carry the
+    # stabilization token so a previously broken mobile module cannot be reused.
     assert "20260907-reportsuite1" in shell
-    assert "20260907-reportsuite1" in index
+    assert "20260907-stabilize1" in index
+    assert '/static/simulator.js?v=20260907-stabilize1' in index
 
 
 def test_simulator_endpoint_fails_closed_without_runtime_context() -> None:
