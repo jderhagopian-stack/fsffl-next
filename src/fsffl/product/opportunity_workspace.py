@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .opportunity_search import build_roster_aware_trade_candidates
+from .opportunity_spotlights import build_trade_spotlights
 from .runtime import UserRuntimeContext
 from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
@@ -47,6 +48,7 @@ def _empty_workspace(
             "bilateral_evaluated_count": 0,
             "bilateral_evaluation_limit": 0,
             "bilateral_evaluation_policy": _DECISION_BUDGET_POLICY,
+            "spotlights": build_trade_spotlights(()),
             "candidates": [],
         },
         "available_players": {"count": 0, "players": []},
@@ -205,11 +207,8 @@ def _select_bilateral_evaluation_indices(
         selected.append(index)
         selected_set.add(index)
 
-    # Lane 1: closest governed market-plausibility candidate from Search.
     add(0)
 
-    # Lane 2: best published focal-team roster-need fit, with market rank only as
-    # a deterministic tie-breaker. Missing strength evidence does not win the lane.
     focal_index = min(
         range(len(candidates)),
         key=lambda index: (
@@ -223,7 +222,6 @@ def _select_bilateral_evaluation_indices(
     ) != float("inf"):
         add(focal_index)
 
-    # Lane 3: best published counterparty need fit, again without scalar blending.
     counterparty_index = min(
         range(len(candidates)),
         key=lambda index: (
@@ -239,9 +237,6 @@ def _select_bilateral_evaluation_indices(
     ) != float("inf"):
         add(counterparty_index)
 
-    # Remaining compute seeks genuinely different structures before duplicating the
-    # same counterparty, receive target and package shape. This is coverage policy,
-    # not football or economic scoring.
     while len(selected) < budget:
         covered_counterparties = {
             str(candidates[index].get("counterparty_team_id", "")) for index in selected
@@ -354,6 +349,8 @@ def build_opportunity_workspace(
                 "decision_error": str(exc),
             }
 
+    trade_spotlights = build_trade_spotlights(returned)
+
     rostered_ids = {
         entry.player_id
         for team_state in league_state.team_states
@@ -414,6 +411,7 @@ def build_opportunity_workspace(
             ),
             "bilateral_evaluation_limit": bilateral_evaluation_limit,
             "bilateral_evaluation_policy": _DECISION_BUDGET_POLICY,
+            "spotlights": trade_spotlights,
             "candidates": returned,
         },
         "available_players": {"count": len(available_players), "players": available_players},
@@ -437,6 +435,8 @@ def build_opportunity_workspace(
             "bilateral_evaluation_budget_is_product_compute_policy": True,
             "decision_budget_coverage_does_not_reorder_candidates": True,
             "decision_budget_market_fit_is_one_lane_not_winner_selection": True,
+            "spotlight_selection_is_categorical_not_composite_scoring": True,
+            "spotlights_do_not_create_recommendation_authority": True,
             "search_order_is_not_a_composite_opportunity_score": True,
             "search_market_fit_has_no_fixed_acceptability_cutoff": True,
             "negotiation_feasibility_is_not_acceptance_probability": True,
