@@ -116,3 +116,18 @@ def test_real_kirk_freiermuth_case_is_research_conflicted_not_forced() -> None:
         future_confidence=0.8,
     )
     assert classify_historical_evidence_alignment(kirk_freiermuth) == HistoricalEvidenceAlignment.CONFLICTED
+
+
+def test_real_garoppolo_pierce_case_is_research_conflicted_not_forced() -> None:
+    # Team A received Jimmy Garoppolo on 2022-11-13. Contemporary 2QB redraft
+    # evidence favored Garoppolo for immediate utility, while the younger rookie WR
+    # carried the stronger long-horizon dynasty case. The research queue must keep
+    # that conflict visible rather than turning either ranking into a grade.
+    garoppolo_pierce = profile(
+        "897547497647054848",
+        HistoricalEvidenceDirection.FAVORS_TEAM_A,
+        HistoricalEvidenceDirection.FAVORS_TEAM_B,
+        current_confidence=0.85,
+        future_confidence=0.7,
+    )
+    assert classify_historical_evidence_alignment(garoppolo_pierce) == HistoricalEvidenceAlignment.CONFLICTED
