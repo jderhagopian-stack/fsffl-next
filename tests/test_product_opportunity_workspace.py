@@ -55,7 +55,7 @@ def test_opportunity_search_uses_authoritative_cardinal_value_only() -> None:
     assert "provisional_fsffl_values" not in search
 
 
-def test_opportunity_search_is_roster_aware_and_not_just_nearest_one_for_one_value() -> None:
+def test_opportunity_search_is_roster_aware_and_broadens_premium_target_structures() -> None:
     source = (ROOT / "src/fsffl/product/opportunity_search.py").read_text()
     workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
     assert "for row in view.position_strengths" in source
@@ -66,8 +66,11 @@ def test_opportunity_search_is_roster_aware_and_not_just_nearest_one_for_one_val
     assert "counterparty_receive_position_strength_index" in source
     assert '"package_shape": shape' in source
     assert '"two_for_one"' in source
-    assert "combinations(valued_focal, 2)" in source
-    assert "Lexicographic, explainable ordering" in source
+    assert '"three_for_one"' in source
+    assert "_MAX_DISCOVERY_PACKAGE_SIZE = 3" in source
+    assert "_multi_lane_search_order" in source
+    assert "premium target value" in source
+    assert "No metrics are blended into a score" in source
     assert "composite_score" not in source
     assert "opportunity_score" not in source
     assert "build_roster_aware_trade_candidates" in workspace
