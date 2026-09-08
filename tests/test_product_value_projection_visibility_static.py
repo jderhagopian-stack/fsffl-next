@@ -22,7 +22,7 @@ def test_simulation_floor_forecasts_do_not_masquerade_as_direct_player_projectio
     assert "forecasts=effective_forecasts" not in analytics_join
 
 
-def test_market_percentile_and_age_precision_are_presented_truthfully() -> None:
+def test_market_value_percentile_and_age_are_presented_as_separate_concepts() -> None:
     source = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     assert "estimate.scale?.scale_id==='dynasty-market-percentile'" in source
@@ -30,7 +30,8 @@ def test_market_percentile_and_age_precision_are_presented_truthfully() -> None:
     assert "function fmtAge" in source
     assert "Number.isInteger(value)?value.toFixed(0):value.toFixed(1)" in source
     assert "<th>Market percentile</th>" in html
-    assert "Market percentile portfolio" in html
+    assert 'value="total_cardinal_value">Total market value' in html
+    assert "team_cardinal_portfolios" in source
     assert "<th>Dynasty value</th>" not in html
     assert ">Draft capital<" not in html
     assert "Pick inventory" in html
