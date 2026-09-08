@@ -11,6 +11,7 @@ from .trade_center_view import (
 
 
 _SEARCH_ORDERING = "cardinal_market_fit_then_roster_need"
+_DECISION_BUDGET_POLICY = "ranked_market_fit_with_counterparty_and_target_coverage"
 
 
 def _empty_workspace(
@@ -45,6 +46,7 @@ def _empty_workspace(
             "ordering": _SEARCH_ORDERING,
             "bilateral_evaluated_count": 0,
             "bilateral_evaluation_limit": 0,
+            "bilateral_evaluation_policy": _DECISION_BUDGET_POLICY,
             "candidates": [],
         },
         "available_players": {"count": 0, "players": []},
@@ -159,6 +161,74 @@ def _evaluate_structural_trade(
     }
 
 
+def _receive_asset_ref(row: dict[str, object]) -> str:
+    receive = row.get("receive") or []
+    if not receive:
+        return ""
+    first = receive[0]
+    return str(first.get("asset_ref", "")) if isinstance(first, dict) else ""
+
+
+def _select_bilateral_evaluation_indices(
+    candidates: list[dict[str, object]],
+    *,
+    limit: int,
+) -> tuple[int, ...]:
+    """Allocate scarce Decision work without creating a new opportunity score.
+
+    Candidate ordering remains the governed Search ordering. The compute budget first
+    preserves the best-ranked candidate, then takes the best-ranked candidate from
+    each not-yet-covered counterparty. If budget remains, it adds distinct receive
+    targets before filling from the original rank order. This is deterministic,
+    parameter-free coverage policy: it changes which rows receive expensive Decision
+    evidence, not the market ordering or recommendation authority of any candidate.
+    """
+
+    budget = min(max(limit, 0), len(candidates))
+    if budget == 0:
+        return ()
+
+    selected: list[int] = [0]
+    selected_set = {0}
+    seen_counterparties = {str(candidates[0].get("counterparty_team_id", ""))}
+    seen_targets = {_receive_asset_ref(candidates[0])}
+
+    for index, row in enumerate(candidates[1:], start=1):
+        if len(selected) >= budget:
+            break
+        counterparty = str(row.get("counterparty_team_id", ""))
+        if counterparty in seen_counterparties:
+            continue
+        selected.append(index)
+        selected_set.add(index)
+        seen_counterparties.add(counterparty)
+        seen_targets.add(_receive_asset_ref(row))
+
+    if len(selected) < budget:
+        for index, row in enumerate(candidates):
+            if len(selected) >= budget:
+                break
+            if index in selected_set:
+                continue
+            target = _receive_asset_ref(row)
+            if target in seen_targets:
+                continue
+            selected.append(index)
+            selected_set.add(index)
+            seen_targets.add(target)
+
+    if len(selected) < budget:
+        for index in range(len(candidates)):
+            if len(selected) >= budget:
+                break
+            if index in selected_set:
+                continue
+            selected.append(index)
+            selected_set.add(index)
+
+    return tuple(sorted(selected))
+
+
 def build_opportunity_workspace(
     runtime: UserRuntimeContext,
     *,
@@ -169,8 +239,8 @@ def build_opportunity_workspace(
 
     Search uses Cardinal market fit first and roster-aware position context second
     to order candidate structures without creating recommendation authority. Only a
-    small leading set is synchronously enriched through NEXT-5 Decision on initial
-    load; deeper Decision/materiality work belongs behind explicit actions.
+    small, coverage-aware set is synchronously enriched through NEXT-5 Decision on
+    initial load; deeper Decision/materiality work belongs behind explicit actions.
     """
 
     league_state = runtime.league_state
@@ -223,8 +293,11 @@ def build_opportunity_workspace(
     total_candidate_count = len(candidates)
     returned = candidates[: max(candidate_limit, 0)]
 
-    evaluate_count = min(max(bilateral_evaluation_limit, 0), len(returned))
-    for index in range(evaluate_count):
+    evaluation_indices = _select_bilateral_evaluation_indices(
+        returned,
+        limit=bilateral_evaluation_limit,
+    )
+    for index in evaluation_indices:
         try:
             returned[index] = _evaluate_structural_trade(runtime, returned[index])
         except ValueError as exc:
@@ -294,6 +367,7 @@ def build_opportunity_workspace(
                 1 for row in returned if row.get("bilateral_decision_evaluated")
             ),
             "bilateral_evaluation_limit": bilateral_evaluation_limit,
+            "bilateral_evaluation_policy": _DECISION_BUDGET_POLICY,
             "candidates": returned,
         },
         "available_players": {"count": len(available_players), "players": available_players},
@@ -302,7 +376,7 @@ def build_opportunity_workspace(
             "authoritative_value_ordering": True,
             "roster_aware_search": runtime.simulation_analytics is not None,
             "two_for_one_consolidation_search": True,
-            "bilateral_decision_evaluation": evaluate_count > 0,
+            "bilateral_decision_evaluation": bool(evaluation_indices),
             "negotiation_feasibility": any(
                 row.get("negotiation_feasibility_evaluated") for row in returned
             ),
@@ -315,6 +389,7 @@ def build_opportunity_workspace(
             "recommendation_authority": False,
             "provisional_value_used": False,
             "bilateral_evaluation_budget_is_product_compute_policy": True,
+            "decision_budget_coverage_does_not_reorder_candidates": True,
             "search_order_is_not_a_composite_opportunity_score": True,
             "search_market_fit_has_no_fixed_acceptability_cutoff": True,
             "negotiation_feasibility_is_not_acceptance_probability": True,
