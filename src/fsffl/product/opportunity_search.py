@@ -12,6 +12,7 @@ from .trade_center_view import TradeAssetOption, TradeCenterBrowserView
 
 
 _SKILL_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
+_MAX_DISCOVERY_PACKAGE_SIZE = 3
 
 
 def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Position | None:
@@ -21,15 +22,8 @@ def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Pos
     return player.position if player is not None else None
 
 
-def _position_strengths(
-    runtime: UserRuntimeContext,
-) -> dict[str, dict[Position, LeagueRelativePositionStrength]]:
-    """Consume the published league-relative positional-production evidence.
-
-    Search does not rebuild this derived truth. NEXT-4/Analytics publishes the
-    common 100-based position-strength rows once; Search only indexes those rows
-    for candidate ordering and explanatory context.
-    """
+def _position_strengths(runtime: UserRuntimeContext) -> dict[str, dict[Position, LeagueRelativePositionStrength]]:
+    """Consume already-published league-relative position strength evidence."""
 
     simulation = runtime.simulation_analytics
     if simulation is None:
@@ -37,9 +31,8 @@ def _position_strengths(
     result: dict[str, dict[Position, LeagueRelativePositionStrength]] = {}
     for view in simulation.team_views:
         for row in view.position_strengths:
-            if row.position not in _SKILL_POSITIONS:
-                continue
-            result.setdefault(view.team_id, {})[row.position] = row
+            if row.position in _SKILL_POSITIONS:
+                result.setdefault(view.team_id, {})[row.position] = row
     return result
 
 
@@ -50,8 +43,6 @@ def _asset_value(option: TradeAssetOption, cardinal: Mapping[str, FSFFLCardinalV
 
 
 def _asset_payload(option: TradeAssetOption, value: float) -> dict[str, object]:
-    """Publish existing canonical asset metadata without creating new Search truth."""
-
     return {
         "asset_ref": option.asset_ref,
         "label": option.label,
@@ -64,8 +55,6 @@ def _asset_payload(option: TradeAssetOption, value: float) -> dict[str, object]:
 
 
 def _relative_market_gap(receive_value: float, send_total: float) -> float:
-    """Scale Cardinal mismatch for cross-tier ordering without a fitted cutoff."""
-
     denominator = max(abs(receive_value), abs(send_total))
     return abs(receive_value - send_total) / denominator if denominator > 0.0 else 0.0
 
@@ -77,15 +66,12 @@ def _weakest_receive_fit(
     team_id: str,
     send_assets: tuple[TradeAssetOption, ...],
 ) -> LeagueRelativePositionStrength | None:
-    player_positions = [
+    positions = [
         position
         for option in send_assets
         if (position := _player_position(league_state, option)) is not None
     ]
-    rows = [
-        strengths.get(team_id, {}).get(position)
-        for position in player_positions
-    ]
+    rows = [strengths.get(team_id, {}).get(position) for position in positions]
     resolved = [row for row in rows if row is not None]
     if not resolved:
         return None
@@ -117,43 +103,33 @@ def _candidate(
     resolved_send_values = tuple(float(value) for value in send_values if value is not None)
     send_total = sum(resolved_send_values)
     target_position = _player_position(league_state, receive_asset)
-    focal_strength = (
-        strengths.get(focal_team_id, {}).get(target_position)
-        if target_position is not None
-        else None
-    )
+    focal_strength = strengths.get(focal_team_id, {}).get(target_position) if target_position is not None else None
     counterparty_fit = _weakest_receive_fit(
         league_state=league_state,
         strengths=strengths,
         team_id=counterparty_team_id,
         send_assets=send_assets,
     )
-    shape = "two_for_one" if len(send_assets) == 2 else "one_for_one"
+    shape = {1: "one_for_one", 2: "two_for_one", 3: "three_for_one"}.get(
+        len(send_assets), f"{len(send_assets)}_for_one"
+    )
     context: list[str] = []
     if focal_strength is not None:
-        strength_text = (
-            f"{focal_strength.strength_index:.0f}"
-            if focal_strength.strength_index is not None
-            else "unavailable"
-        )
+        strength_text = f"{focal_strength.strength_index:.0f}" if focal_strength.strength_index is not None else "unavailable"
         context.append(
             f"Target addresses {target_position.value}: strength index {strength_text} "
             f"(league average 100), rank #{focal_strength.league_rank}."
         )
     if counterparty_fit is not None:
-        strength_text = (
-            f"{counterparty_fit.strength_index:.0f}"
-            if counterparty_fit.strength_index is not None
-            else "unavailable"
-        )
+        strength_text = f"{counterparty_fit.strength_index:.0f}" if counterparty_fit.strength_index is not None else "unavailable"
         context.append(
             f"Assets sent include {counterparty_fit.position.value}, where the other team has "
             f"strength index {strength_text} and rank #{counterparty_fit.league_rank}."
         )
-    if shape == "two_for_one":
+    if len(send_assets) > 1:
         context.append(
-            "Consolidation structure: two focal assets for one target asset. Search does not "
-            "award a package premium; Decision owns package economics."
+            f"Consolidation structure: {len(send_assets)} focal assets for one target. Search does not "
+            "award a consolidation premium; NEXT-5 Decision owns package economics."
         )
     return {
         "kind": "trade",
@@ -169,6 +145,7 @@ def _candidate(
         "receive": [_asset_payload(receive_asset, receive_value)],
         "package_shape": shape,
         "target_position": target_position.value if target_position is not None else None,
+        "target_fsffl_value": float(receive_value),
         "focal_position_strength_rank": focal_strength.league_rank if focal_strength is not None else None,
         "focal_position_strength_index": focal_strength.strength_index if focal_strength is not None else None,
         "counterparty_receive_position_rank": counterparty_fit.league_rank if counterparty_fit is not None else None,
@@ -179,13 +156,13 @@ def _candidate(
         "search_context": context,
         "bilateral_decision_evaluated": False,
         "explanation": (
-            "Roster-aware structural trade test. Cardinal Value order Search only, using "
-            "relative market fit before roster context; Decision and acceptance evidence remain incomplete."
+            "Broad structural trade search. Cardinal Value is one market-plausibility coordinate, "
+            "not the definition of the best opportunity; Decision and acceptance evidence remain incomplete."
         ),
     }
 
 
-def _best_single_and_pair_for_target(
+def _nearest_packages_for_target(
     *,
     league_state: LeagueState,
     focal_team_id: str,
@@ -196,68 +173,97 @@ def _best_single_and_pair_for_target(
     cardinal: Mapping[str, FSFFLCardinalValueScore],
     strengths: dict[str, dict[Position, LeagueRelativePositionStrength]],
 ) -> tuple[dict[str, object], ...]:
+    """Generate a bounded structural neighborhood for every target.
+
+    Keep the nearest Cardinal package at each supported size instead of allowing
+    the best single asset to veto all package complexity. This expands premium-target
+    access without inventing a consolidation coefficient or acceptance rule.
+    """
+
     target_value = _asset_value(target, cardinal)
     if target_value is None:
         return ()
     valued_focal = tuple(
-        (asset, value)
+        (asset, float(value))
         for asset in focal_assets
         if (value := _asset_value(asset, cardinal)) is not None
     )
-    if not valued_focal:
-        return ()
-    nearest_single, nearest_single_value = min(
-        valued_focal,
-        key=lambda item: (abs(float(item[1]) - target_value), item[0].asset_ref),
-    )
-    single_distance = abs(float(nearest_single_value) - target_value)
     rows: list[dict[str, object]] = []
-    single = _candidate(
-        league_state=league_state,
-        focal_team_id=focal_team_id,
-        counterparty_team_id=counterparty_team_id,
-        counterparty_name=counterparty_name,
-        send_assets=(nearest_single,),
-        receive_asset=target,
-        cardinal=cardinal,
-        strengths=strengths,
-    )
-    if single is not None:
-        rows.append(single)
-    if len(valued_focal) >= 2:
-        pair = min(
-            combinations(valued_focal, 2),
+    max_size = min(_MAX_DISCOVERY_PACKAGE_SIZE, len(valued_focal))
+    for size in range(1, max_size + 1):
+        package = min(
+            combinations(valued_focal, size),
             key=lambda items: (
-                abs(float(items[0][1]) + float(items[1][1]) - target_value),
-                items[0][0].asset_ref,
-                items[1][0].asset_ref,
+                abs(sum(value for _, value in items) - target_value),
+                tuple(asset.asset_ref for asset, _ in items),
             ),
         )
-        pair_total = float(pair[0][1]) + float(pair[1][1])
-        pair_distance = abs(pair_total - target_value)
-        # Structural realism guard: Search may only add package complexity when it
-        # improves the governed market-value match over every available single asset.
-        # This is parameter-free and does not attempt to estimate a consolidation
-        # premium; NEXT-5 Decision remains authoritative for package economics.
-        if pair_distance < single_distance:
-            package = _candidate(
-                league_state=league_state,
-                focal_team_id=focal_team_id,
-                counterparty_team_id=counterparty_team_id,
-                counterparty_name=counterparty_name,
-                send_assets=(pair[0][0], pair[1][0]),
-                receive_asset=target,
-                cardinal=cardinal,
-                strengths=strengths,
-            )
-            if package is not None:
-                package["search_context"] = [
-                    *(package.get("search_context") or []),
-                    "Two-asset package retained because it is a closer Cardinal market-value match "
-                    "than every available single focal asset.",
-                ]
-                rows.append(package)
+        row = _candidate(
+            league_state=league_state,
+            focal_team_id=focal_team_id,
+            counterparty_team_id=counterparty_team_id,
+            counterparty_name=counterparty_name,
+            send_assets=tuple(asset for asset, _ in package),
+            receive_asset=target,
+            cardinal=cardinal,
+            strengths=strengths,
+        )
+        if row is not None:
+            row["search_context"] = [
+                *(row.get("search_context") or []),
+                f"Search retained the nearest governed {size}-asset market structure for this target. "
+                "Package size is exploratory; Decision owns whether the structure is actually good.",
+            ]
+            rows.append(row)
     return tuple(rows)
+
+
+def _strength(row: dict[str, object], key: str) -> float:
+    value = row.get(key)
+    return float(value) if value is not None else float("inf")
+
+
+def _target_value(row: dict[str, object]) -> float:
+    value = row.get("target_fsffl_value")
+    return float(value) if value is not None else float("-inf")
+
+
+def _multi_lane_search_order(candidates: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Interleave distinct Search lenses before the workspace truncates candidates.
+
+    The first row remains the closest market match. Subsequent rows are admitted in
+    round-robin order from market fit, premium target value, focal roster need,
+    counterparty fit, and package complexity. No metrics are blended into a score.
+    """
+
+    if not candidates:
+        return []
+    indices = range(len(candidates))
+    lanes = (
+        sorted(indices, key=lambda i: (float(candidates[i]["market_gap_ratio"]), float(candidates[i]["search_distance"]), i)),
+        sorted(indices, key=lambda i: (-_target_value(candidates[i]), float(candidates[i]["market_gap_ratio"]), i)),
+        sorted(indices, key=lambda i: (_strength(candidates[i], "focal_position_strength_index"), float(candidates[i]["market_gap_ratio"]), i)),
+        sorted(indices, key=lambda i: (_strength(candidates[i], "counterparty_receive_position_strength_index"), float(candidates[i]["market_gap_ratio"]), i)),
+        sorted(indices, key=lambda i: (-len(candidates[i].get("send") or []), float(candidates[i]["market_gap_ratio"]), i)),
+    )
+    ordered: list[int] = []
+    seen: set[int] = set()
+    cursors = [0] * len(lanes)
+    while len(ordered) < len(candidates):
+        progressed = False
+        for lane_index, lane in enumerate(lanes):
+            while cursors[lane_index] < len(lane) and lane[cursors[lane_index]] in seen:
+                cursors[lane_index] += 1
+            if cursors[lane_index] >= len(lane):
+                continue
+            candidate_index = lane[cursors[lane_index]]
+            cursors[lane_index] += 1
+            seen.add(candidate_index)
+            ordered.append(candidate_index)
+            progressed = True
+        if not progressed:
+            break
+    return [candidates[index] for index in ordered]
 
 
 def build_roster_aware_trade_candidates(
@@ -275,7 +281,7 @@ def build_roster_aware_trade_candidates(
     for counterparty in browser.counterparties:
         player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == "player")
         for target in player_targets:
-            for row in _best_single_and_pair_for_target(
+            for row in _nearest_packages_for_target(
                 league_state=league_state,
                 focal_team_id=focal_team_id,
                 counterparty_team_id=counterparty.team_id,
@@ -290,24 +296,7 @@ def build_roster_aware_trade_candidates(
                     tuple(sorted(str(item["asset_ref"]) for item in row["send"])),
                     str(row["receive"][0]["asset_ref"]),
                 )
-                if key in seen:
-                    continue
-                seen.add(key)
-                candidates.append(row)
-    # Lexicographic, explainable ordering with no hidden weighted score: market
-    # plausibility is the cheap Search prerequisite for scarce Decision enrichment.
-    # Roster need and counterpart fit break ties after relative Cardinal mismatch,
-    # rather than allowing a positional need to push an economically remote trade
-    # ahead of a much closer structure.
-    candidates.sort(
-        key=lambda row: (
-            float(row["market_gap_ratio"]),
-            float(row.get("focal_position_strength_index") or 100.0),
-            float(row.get("counterparty_receive_position_strength_index") or 100.0),
-            float(row["search_distance"]),
-            0 if row.get("package_shape") == "one_for_one" else 1,
-            str(row["counterparty_name"]),
-            str(row["receive"][0]["label"]),
-        )
-    )
-    return candidates
+                if key not in seen:
+                    seen.add(key)
+                    candidates.append(row)
+    return _multi_lane_search_order(candidates)
