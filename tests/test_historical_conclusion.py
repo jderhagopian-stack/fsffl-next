@@ -1,10 +1,10 @@
 from fsffl.analytics.historical_conclusion import (
     HistoricalConclusionStatus,
+    HistoricalEvidenceConclusionInput,
     conclude_historical_trade,
     summarize_historical_conclusions,
 )
 from fsffl.analytics.historical_grade_envelope import HistoricalGradeEnvelope
-from fsffl.runtime.historical_trade_readiness import HistoricalTradeValuationReadiness
 from fsffl.trade_decision.decision import BilateralDecisionShape, SideDecisionShape
 from fsffl.trade_decision.historical_robustness import (
     HistoricalDecisionRobustness,
@@ -12,13 +12,8 @@ from fsffl.trade_decision.historical_robustness import (
 )
 
 
-def readiness(transaction_id: str, eligible: bool = True) -> HistoricalTradeValuationReadiness:
-    return HistoricalTradeValuationReadiness(
-        transaction_id=transaction_id,
-        assets=(),
-        complete=eligible,
-        grade_eligible=eligible,
-    )
+def evidence(transaction_id: str, eligible: bool = True) -> HistoricalEvidenceConclusionInput:
+    return HistoricalEvidenceConclusionInput(transaction_id=transaction_id, grade_eligible=eligible)
 
 
 def robustness(transaction_id: str, status: HistoricalDecisionRobustnessStatus) -> HistoricalDecisionRobustness:
@@ -68,24 +63,24 @@ def envelope(*letters: str) -> HistoricalGradeEnvelope:
 
 
 def test_final_status_progression_is_fail_closed() -> None:
-    assert conclude_historical_trade(readiness("blocked", False)).status == HistoricalConclusionStatus.EVIDENCE_INCOMPLETE
-    assert conclude_historical_trade(readiness("ready")).status == HistoricalConclusionStatus.READY_FOR_DECISION
+    assert conclude_historical_trade(evidence("blocked", False)).status == HistoricalConclusionStatus.EVIDENCE_INCOMPLETE
+    assert conclude_historical_trade(evidence("ready")).status == HistoricalConclusionStatus.READY_FOR_DECISION
     assert conclude_historical_trade(
-        readiness("sensitive"), robustness=robustness("sensitive", HistoricalDecisionRobustnessStatus.SENSITIVE)
+        evidence("sensitive"), robustness=robustness("sensitive", HistoricalDecisionRobustnessStatus.SENSITIVE)
     ).status == HistoricalConclusionStatus.DECISION_SENSITIVE
     assert conclude_historical_trade(
-        readiness("robust"), robustness=robustness("robust", HistoricalDecisionRobustnessStatus.ROBUST)
+        evidence("robust"), robustness=robustness("robust", HistoricalDecisionRobustnessStatus.ROBUST)
     ).status == HistoricalConclusionStatus.READY_FOR_GRADE_ENVELOPE
 
 
 def test_robust_and_sensitive_grade_are_distinguished() -> None:
     robust = conclude_historical_trade(
-        readiness("t1"),
+        evidence("t1"),
         robustness=robustness("t1", HistoricalDecisionRobustnessStatus.ROBUST),
         grade_envelope=envelope("B"),
     )
     sensitive = conclude_historical_trade(
-        readiness("t2"),
+        evidence("t2"),
         robustness=robustness("t2", HistoricalDecisionRobustnessStatus.ROBUST),
         grade_envelope=envelope("B", "C"),
     )
@@ -96,7 +91,7 @@ def test_robust_and_sensitive_grade_are_distinguished() -> None:
 
 
 def test_batch_reports_one_final_status_per_trade() -> None:
-    rows = (readiness("a", False), readiness("b"), readiness("c"))
+    rows = (evidence("a", False), evidence("b"), evidence("c"))
     summary = summarize_historical_conclusions(
         rows,
         robustness_by_transaction_id={
