@@ -68,7 +68,9 @@ def test_exact_historical_slot_cannot_exceed_league_size() -> None:
 def test_unrelated_observations_do_not_inflate_pick_evidence_metadata() -> None:
     contributing = _obs(season=2025, slot=1, mean=100, source="contributing")
     wrong_scale = _obs(season=2024, slot=1, mean=999, scale=OTHER_SCALE, source="wrong-scale")
-    other_round = _obs(season=2023, round=3, slot=1, mean=999, source="other-round")
+    # These remain on later, lower-valued draft positions and therefore do not join
+    # the PAVA block that shapes the target slot-1 coordinate.
+    other_round = _obs(season=2023, round=3, slot=1, mean=5, source="other-round")
     separate_slot = _obs(season=2022, slot=8, mean=10, source="separate-slot")
     evidence = HistoricalPickCoordinateEvidence(
         pick=_pick(),
