@@ -98,10 +98,10 @@ def _estimate(
     )
 
 
-def test_team_market_portfolio_exposes_partial_pick_coverage_without_cross_scale_fill() -> None:
+def test_team_market_portfolio_fails_closed_when_no_additive_scale_is_promoted() -> None:
     now = datetime.now(UTC)
     state = _state(now)
-    scale = ValueScale(
+    percentile_scale = ValueScale(
         scale_id="dynasty-market-percentile",
         version="next3-v1",
         unit_label="market percentile",
@@ -109,26 +109,64 @@ def test_team_market_portfolio_exposes_partial_pick_coverage_without_cross_scale
     portfolios = build_team_market_value_portfolios(
         state,
         (
-            _estimate(asset_id="p1", asset_kind=ValueAssetKind.PLAYER, value=0.8, as_of=now, scale=scale),
-            _estimate(asset_id="p2", asset_kind=ValueAssetKind.PLAYER, value=0.4, as_of=now, scale=scale),
+            _estimate(
+                asset_id="p1",
+                asset_kind=ValueAssetKind.PLAYER,
+                value=0.8,
+                as_of=now,
+                scale=percentile_scale,
+            ),
+            _estimate(
+                asset_id="p2",
+                asset_kind=ValueAssetKind.PLAYER,
+                value=0.4,
+                as_of=now,
+                scale=percentile_scale,
+            ),
         ),
+        additive_scale=None,
     )
     by_team = {row.team_id: row for row in portfolios}
 
-    assert by_team["t1"].total_value == pytest.approx(0.8)
-    assert by_team["t1"].player_value == pytest.approx(0.8)
+    assert by_team["t1"].total_value is None
+    assert by_team["t1"].valued_asset_count == 0
+    assert by_team["t1"].owned_asset_count == 2
+    assert by_team["t1"].coverage_status == PortfolioCoverageStatus.UNAVAILABLE
+    assert "cannot be summed" in by_team["t1"].availability_reason
+    assert by_team["t2"].total_value is None
+    assert by_team["t2"].owned_asset_count == 1
+    assert by_team["t2"].coverage_status == PortfolioCoverageStatus.UNAVAILABLE
+
+
+def test_team_market_portfolio_exposes_partial_coverage_on_promoted_additive_scale() -> None:
+    now = datetime.now(UTC)
+    state = _state(now)
+    scale = ValueScale(scale_id="market-index", version="v1", unit_label="market units")
+    portfolios = build_team_market_value_portfolios(
+        state,
+        (
+            _estimate(asset_id="p1", asset_kind=ValueAssetKind.PLAYER, value=80.0, as_of=now, scale=scale),
+            _estimate(asset_id="p2", asset_kind=ValueAssetKind.PLAYER, value=40.0, as_of=now, scale=scale),
+        ),
+        additive_scale=scale,
+    )
+    by_team = {row.team_id: row for row in portfolios}
+
+    assert by_team["t1"].total_value == pytest.approx(80.0)
+    assert by_team["t1"].player_value == pytest.approx(80.0)
     assert by_team["t1"].pick_value is None
     assert by_team["t1"].coverage == pytest.approx(0.5)
     assert by_team["t1"].coverage_status == PortfolioCoverageStatus.PARTIAL
-    assert by_team["t1"].scale == scale
+    assert "1 owned asset" in by_team["t1"].availability_reason
 
-    assert by_team["t2"].total_value == pytest.approx(0.4)
+    assert by_team["t2"].total_value == pytest.approx(40.0)
     assert by_team["t2"].pick_value == pytest.approx(0.0)
     assert by_team["t2"].coverage == pytest.approx(1.0)
     assert by_team["t2"].coverage_status == PortfolioCoverageStatus.COMPLETE
+    assert by_team["t2"].availability_reason is None
 
 
-def test_team_market_portfolio_includes_pick_only_on_same_market_scale() -> None:
+def test_team_market_portfolio_includes_pick_only_on_promoted_additive_scale() -> None:
     now = datetime.now(UTC)
     state = _state(now)
     scale = ValueScale(scale_id="market-index", version="v1", unit_label="market units")
@@ -145,6 +183,7 @@ def test_team_market_portfolio_includes_pick_only_on_same_market_scale() -> None
                 scale=scale,
             ),
         ),
+        additive_scale=scale,
     )
     t1 = next(row for row in portfolios if row.team_id == "t1")
 
@@ -153,19 +192,33 @@ def test_team_market_portfolio_includes_pick_only_on_same_market_scale() -> None
     assert t1.pick_value == pytest.approx(30.0)
     assert t1.coverage == pytest.approx(1.0)
     assert t1.coverage_status == PortfolioCoverageStatus.COMPLETE
+    assert t1.availability_reason is None
 
 
-def test_team_market_portfolio_rejects_mixed_value_scales() -> None:
+def test_team_market_portfolio_rejects_estimates_outside_promoted_additive_scale() -> None:
     now = datetime.now(UTC)
     state = _state(now)
-    scale_a = ValueScale(scale_id="market-index", version="v1", unit_label="market units")
-    scale_b = ValueScale(scale_id="market-index", version="v2", unit_label="market units")
+    promoted_scale = ValueScale(scale_id="market-index", version="v1", unit_label="market units")
+    other_scale = ValueScale(scale_id="market-index", version="v2", unit_label="market units")
 
-    with pytest.raises(ValueError, match="cannot mix ValueScale versions"):
+    with pytest.raises(ValueError, match="explicitly promoted additive scale"):
         build_team_market_value_portfolios(
             state,
             (
-                _estimate(asset_id="p1", asset_kind=ValueAssetKind.PLAYER, value=80.0, as_of=now, scale=scale_a),
-                _estimate(asset_id="p2", asset_kind=ValueAssetKind.PLAYER, value=40.0, as_of=now, scale=scale_b),
+                _estimate(
+                    asset_id="p1",
+                    asset_kind=ValueAssetKind.PLAYER,
+                    value=80.0,
+                    as_of=now,
+                    scale=promoted_scale,
+                ),
+                _estimate(
+                    asset_id="p2",
+                    asset_kind=ValueAssetKind.PLAYER,
+                    value=40.0,
+                    as_of=now,
+                    scale=other_scale,
+                ),
             ),
+            additive_scale=promoted_scale,
         )
