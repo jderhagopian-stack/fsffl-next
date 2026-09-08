@@ -91,6 +91,8 @@ def _empty_state() -> LeagueState:
             TeamState(team_id="team-a", roster=()),
             TeamState(team_id="team-b", roster=()),
         ),
+        players=(),
+        player_states=(),
     )
 
 
