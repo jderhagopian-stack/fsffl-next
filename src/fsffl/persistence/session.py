@@ -137,10 +137,10 @@ def persist_runtime_snapshot(
                 scale_id=estimate.scale.scale_id,
                 market_context_id=estimate.market_context_id,
                 estimate_as_of=estimate.as_of,
-                value=float(estimate.value),
+                value=float(estimate.distribution.mean),
                 source_lineage={
                     "model_version": estimate.model_version,
-                    "evidence_ids": list(estimate.evidence_ids),
+                    "evidence_sources": list(estimate.evidence_sources),
                 },
                 recorded_at=now,
             )
