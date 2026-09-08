@@ -140,9 +140,11 @@ class HistoricalTradeReadinessSummary(FrozenModel):
     trade_count: int
     complete_trade_count: int
     blocked_trade_count: int
+    exact_trade_count: int = 0
     probabilistic_trade_count: int = 0
     bounded_nuisance_trade_count: int = 0
     sensitivity_only_trade_count: int = 0
+    available_asset_count_by_mode: tuple[tuple[HistoricalEvidenceMode, int], ...] = ()
     missing_asset_count_by_kind: tuple[tuple[str, int], ...] = ()
     excluded_asset_count_by_kind: tuple[tuple[str, int], ...] = ()
     blocked_transaction_ids: tuple[str, ...] = ()
@@ -153,6 +155,7 @@ class HistoricalTradeReadinessSummary(FrozenModel):
             self.trade_count,
             self.complete_trade_count,
             self.blocked_trade_count,
+            self.exact_trade_count,
             self.probabilistic_trade_count,
             self.bounded_nuisance_trade_count,
             self.sensitivity_only_trade_count,
@@ -161,6 +164,8 @@ class HistoricalTradeReadinessSummary(FrozenModel):
             raise ValueError("historical trade readiness counts cannot be negative")
         if self.complete_trade_count + self.blocked_trade_count != self.trade_count:
             raise ValueError("complete and blocked trade counts must equal trade_count")
+        if self.exact_trade_count > self.complete_trade_count:
+            raise ValueError("exact_trade_count cannot exceed complete_trade_count")
         if len(self.blocked_transaction_ids) != self.blocked_trade_count:
             raise ValueError("blocked transaction ids must match blocked trade count")
         return self
@@ -262,6 +267,7 @@ def summarize_historical_trade_readiness(
 
     missing_by_kind: Counter[str] = Counter()
     excluded_by_kind: Counter[str] = Counter()
+    available_by_mode: Counter[HistoricalEvidenceMode] = Counter()
     blocked: list[str] = []
     for row in rows:
         if not row.grade_eligible:
@@ -271,19 +277,30 @@ def summarize_historical_trade_readiness(
                 missing_by_kind[asset.asset_kind] += 1
             elif asset.status == HistoricalAssetEvidenceStatus.EXCLUDED:
                 excluded_by_kind[asset.asset_kind] += 1
+            elif asset.mode is not None:
+                available_by_mode[asset.mode] += 1
 
     blocked.sort()
     complete_count = sum(row.grade_eligible for row in rows)
     probabilistic_count = sum(bool(row.probabilistic_asset_keys) for row in rows)
     nuisance_count = sum(bool(row.bounded_nuisance_asset_keys) for row in rows)
     sensitivity_count = sum(bool(row.sensitivity_only_asset_keys) for row in rows)
+    exact_count = sum(
+        row.grade_eligible
+        and not row.probabilistic_asset_keys
+        and not row.bounded_nuisance_asset_keys
+        and not row.sensitivity_only_asset_keys
+        for row in rows
+    )
     return HistoricalTradeReadinessSummary(
         trade_count=len(rows),
         complete_trade_count=complete_count,
         blocked_trade_count=len(rows) - complete_count,
+        exact_trade_count=exact_count,
         probabilistic_trade_count=probabilistic_count,
         bounded_nuisance_trade_count=nuisance_count,
         sensitivity_only_trade_count=sensitivity_count,
+        available_asset_count_by_mode=tuple(sorted(available_by_mode.items(), key=lambda item: item[0].value)),
         missing_asset_count_by_kind=tuple(sorted(missing_by_kind.items())),
         excluded_asset_count_by_kind=tuple(sorted(excluded_by_kind.items())),
         blocked_transaction_ids=tuple(blocked),
