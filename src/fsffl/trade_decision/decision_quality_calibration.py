@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import Field, field_validator, model_validator
@@ -11,13 +12,19 @@ from fsffl.value.calibration import DataRightsClass
 from .decision_quality import DecisionQualityPolicy, DecisionQualityPolicyAuthority
 
 
+class DecisionQualityCalibrationTargetKind(StrEnum):
+    CONTEMPORANEOUS_BLINDED_REVIEW = "contemporaneous_blinded_review"
+    POINT_IN_TIME_EXPERT_REVIEW = "point_in_time_expert_review"
+    POINT_IN_TIME_GOVERNANCE_LABEL = "point_in_time_governance_label"
+
+
 class DecisionQualityCalibrationObservation(FrozenModel):
     """One leakage-safe target row for comparing Decision-quality policies.
 
-    The target is supplied by an explicit research/governance source. This module
-    never derives a target from hindsight outcomes and never invents candidate
-    weights. Raw league data may remain private/runtime-only; provenance and data
-    rights travel with the calibration row.
+    The target must be explicitly point-in-time. Retrospective outcomes are not a
+    valid target kind for calibrating the at-the-time Decision grade. Raw league
+    data may remain private/runtime-only; provenance and data rights travel with
+    every calibration row.
     """
 
     observation_id: str
@@ -27,6 +34,7 @@ class DecisionQualityCalibrationObservation(FrozenModel):
     target_score: Annotated[float, Field(ge=0, le=100)]
     component_scores: dict[str, Annotated[float, Field(ge=0, le=100)]]
     source_id: str
+    target_kind: DecisionQualityCalibrationTargetKind
     target_definition: str
     rights_class: DataRightsClass
     provenance: str
@@ -109,7 +117,6 @@ class DecisionQualityCalibrationResult(FrozenModel):
         if value.tzinfo is None:
             raise ValueError("decision-quality calibration evidence_through must be timezone-aware")
         return value
-
 
 
 def _predict(row: DecisionQualityCalibrationObservation, policy: DecisionQualityPolicy) -> float:
