@@ -23,6 +23,7 @@ from .cardinal_authority import (
 )
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
 from .models import MarketPriceEstimate, ValueAssetKind, ValueScale
+from .portfolio import TeamCardinalPortfolio, build_team_cardinal_portfolios
 from .source_batch import build_market_calibration_panel_batch
 from .source_catalog import next3_market_source_registry_v1
 from .sources import (
@@ -55,7 +56,8 @@ class CurrentMarketValueRuntimeResult:
     native_magnitude_observations: tuple[NativeMarketMagnitudeObservation, ...] = ()
     provisional_fsffl_values: tuple[ProvisionalFSFFLValueScore, ...] = ()
     fsffl_cardinal_values: tuple[FSFFLCardinalValueScore, ...] = ()
-    model_version: str = "next3-current-market-runtime-v2"
+    team_cardinal_portfolios: tuple[TeamCardinalPortfolio, ...] = ()
+    model_version: str = "next3-current-market-runtime-v3:team-cardinal-portfolios"
 
     @property
     def coverage(self) -> float:
@@ -176,9 +178,6 @@ def _current_generic_pick_cardinal_scores(
     )
     if len(generic_ids) > 20:
         raise ValueError("current cardinal pick resolver supports at most 20 unique season-round ids")
-    # The trade-evaluation API explicitly accepts bare round-only IDs as generic
-    # unknown-slot picks. A real player is used only as the inert opposite side;
-    # its value is ignored. This avoids inventing early/mid/late slot assumptions.
     anchor_sleeper_id = next(iter(sorted(sleeper_crosswalk)))
     evaluation = _post_json_text(
         STATSGUY_TRADE_EVALUATE_URL,
@@ -203,7 +202,9 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     Provider-native magnitudes are retained for audit/research. The promoted
     FSFFL Cardinal Market Score uses the empirically validated Stats Guy reference
     axis for players and generic unknown-slot rookie picks; it remains distinct
-    from intrinsic dynasty value and downstream Decision utility.
+    from intrinsic dynasty value and downstream Decision utility. Team portfolio
+    totals are additive accounting on that same Cardinal scale and carry explicit
+    asset coverage; they do not become Team Utility or recommendation authority.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -325,6 +326,9 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     failures.append("dynastyprocess_market_values")
     errors["dynastyprocess_market_values"] = "IdentityCrosswalkUnavailable: current State lacks explicit FantasyPros ids"
 
+    cardinal_tuple = tuple(sorted(cardinal_values, key=lambda item: (item.asset_kind.value, item.asset_id)))
+    portfolios = build_team_cardinal_portfolios(league_state, cardinal_tuple)
+
     return CurrentMarketValueRuntimeResult(
         league_state_id=league_state.state_id,
         estimates=tuple(estimates),
@@ -336,5 +340,6 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         market_context_id=context,
         native_magnitude_observations=native_magnitude_observations,
         provisional_fsffl_values=provisional_fsffl_values,
-        fsffl_cardinal_values=tuple(sorted(cardinal_values, key=lambda item: (item.asset_kind.value, item.asset_id))),
+        fsffl_cardinal_values=cardinal_tuple,
+        team_cardinal_portfolios=portfolios,
     )
