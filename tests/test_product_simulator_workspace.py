@@ -72,10 +72,10 @@ def test_simulator_is_first_class_team_scoped_product_route() -> None:
     assert "/static/simulator.js" in shell
     assert "route==='simulator'" in shell
     assert "'what_if','simulator','analytics'" in shell
-    assert "20260908-marketportfolio1" in shell
-    assert "20260908-marketportfolio1" in index
-    assert '/static/simulator.js?v=20260908-marketportfolio1' in index
-    assert '/static/opportunities.js?v=20260908-marketportfolio1' in index
+    assert "20260908-marketportfolio2" in shell
+    assert "20260908-marketportfolio2" in index
+    assert '/static/simulator.js?v=20260908-marketportfolio2' in index
+    assert '/static/opportunities.js?v=20260908-marketportfolio2' in index
 
 
 def test_simulator_endpoint_fails_closed_without_runtime_context() -> None:
