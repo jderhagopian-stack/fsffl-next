@@ -23,6 +23,7 @@ from .cardinal_authority import (
 )
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
 from .models import MarketPriceEstimate, ValueAssetKind, ValueScale
+from .pick_variants import PickVariantMarketValue, normalize_pick_variant_market_values
 from .portfolio import TeamCardinalPortfolio, build_team_cardinal_portfolios
 from .source_batch import build_market_calibration_panel_batch
 from .source_catalog import next3_market_source_registry_v1
@@ -35,6 +36,7 @@ from .sources import (
 DYNASTYDEALER_URL = "https://www.dynastydealer.com/api/player-values"
 FANTASYCALC_URL = "https://api.fantasycalc.com/values/current"
 STATSGUY_URL = "https://api.statsguyfantasy.com/api/v1/rankings"
+STATSGUY_PICKS_URL = "https://api.statsguyfantasy.com/api/v1/picks"
 STATSGUY_TRADE_EVALUATE_URL = "https://api.statsguyfantasy.com/api/v1/trades/evaluate"
 MARKET_PERCENTILE_SCALE = ValueScale(
     scale_id="dynasty-market-percentile",
@@ -57,7 +59,8 @@ class CurrentMarketValueRuntimeResult:
     provisional_fsffl_values: tuple[ProvisionalFSFFLValueScore, ...] = ()
     fsffl_cardinal_values: tuple[FSFFLCardinalValueScore, ...] = ()
     team_cardinal_portfolios: tuple[TeamCardinalPortfolio, ...] = ()
-    model_version: str = "next3-current-market-runtime-v3:team-cardinal-portfolios"
+    pick_variant_market_values: tuple[PickVariantMarketValue, ...] = ()
+    model_version: str = "next3-current-market-runtime-v4:portfolio-and-pick-variants"
 
     @property
     def coverage(self) -> float:
@@ -205,6 +208,9 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     from intrinsic dynasty value and downstream Decision utility. Team portfolio
     totals are additive accounting on that same Cardinal scale and carry explicit
     asset coverage; they do not become Team Utility or recommendation authority.
+    Early/mid/late pick variants are retained as provider-backed reference evidence
+    for a separate Simulation-informed next-season pick challenger; they do not
+    silently overwrite the authoritative generic future-pick score.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -275,6 +281,18 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         failures.append("statsguy_pick_values")
         errors["statsguy_pick_values"] = f"{type(exc).__name__}: {exc}"
 
+    pick_variant_values: tuple[PickVariantMarketValue, ...] = ()
+    try:
+        pick_variant_values = normalize_pick_variant_market_values(
+            _download_text(STATSGUY_PICKS_URL),
+            format_key=statsguy_format,
+            market_context_id=context,
+            retrieved_at=acquisition_time,
+        )
+    except Exception as exc:
+        failures.append("statsguy_pick_variant_values")
+        errors["statsguy_pick_variant_values"] = f"{type(exc).__name__}: {exc}"
+
     market_observations: list[MarketObservation] = []
     for source_id, values in _latest_source_values(batch.panel.observations).items():
         percentile_values = _percentiles(values)
@@ -342,4 +360,5 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         provisional_fsffl_values=provisional_fsffl_values,
         fsffl_cardinal_values=cardinal_tuple,
         team_cardinal_portfolios=portfolios,
+        pick_variant_market_values=pick_variant_values,
     )
