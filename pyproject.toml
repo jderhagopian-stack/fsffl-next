@@ -17,6 +17,7 @@ dev = [
 ]
 web = [
   "fastapi[standard]>=0.115,<1",
+  "psycopg[binary]>=3.2,<4",
 ]
 
 [tool.fastapi]
