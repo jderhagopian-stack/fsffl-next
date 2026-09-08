@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
 
@@ -79,6 +80,27 @@ class HistoricalTradeValuationReadiness(FrozenModel):
         return self
 
 
+class HistoricalTradeReadinessSummary(FrozenModel):
+    """Batch-level reconstructability matrix summary for historical calibration."""
+
+    trade_count: int
+    complete_trade_count: int
+    blocked_trade_count: int
+    missing_asset_count_by_kind: tuple[tuple[str, int], ...] = ()
+    excluded_asset_count_by_kind: tuple[tuple[str, int], ...] = ()
+    blocked_transaction_ids: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> "HistoricalTradeReadinessSummary":
+        if self.trade_count < 0 or self.complete_trade_count < 0 or self.blocked_trade_count < 0:
+            raise ValueError("historical trade readiness counts cannot be negative")
+        if self.complete_trade_count + self.blocked_trade_count != self.trade_count:
+            raise ValueError("complete and blocked trade counts must equal trade_count")
+        if len(self.blocked_transaction_ids) != self.blocked_trade_count:
+            raise ValueError("blocked transaction ids must match blocked trade count")
+        return self
+
+
 def historical_trade_asset_key(*, team_id: str, ordinal: int, asset: PlayerAsset | PickAsset | FaabAsset) -> str:
     """Return a stable trade-local identity for one outgoing asset."""
 
@@ -150,4 +172,37 @@ def assess_historical_trade_valuation_readiness(
         complete=not missing and not excluded,
         missing_asset_keys=missing,
         excluded_asset_keys=excluded,
+    )
+
+
+def summarize_historical_trade_readiness(
+    rows: Sequence[HistoricalTradeValuationReadiness],
+) -> HistoricalTradeReadinessSummary:
+    """Aggregate a league history without hiding why transactions are blocked."""
+
+    transaction_ids = [row.transaction_id for row in rows]
+    if len(transaction_ids) != len(set(transaction_ids)):
+        raise ValueError("historical readiness summary requires unique transaction ids")
+
+    missing_by_kind: Counter[str] = Counter()
+    excluded_by_kind: Counter[str] = Counter()
+    blocked: list[str] = []
+    for row in rows:
+        if not row.complete:
+            blocked.append(row.transaction_id)
+        for asset in row.assets:
+            if asset.status == HistoricalAssetEvidenceStatus.MISSING:
+                missing_by_kind[asset.asset_kind] += 1
+            elif asset.status == HistoricalAssetEvidenceStatus.EXCLUDED:
+                excluded_by_kind[asset.asset_kind] += 1
+
+    blocked.sort()
+    complete_count = sum(row.complete for row in rows)
+    return HistoricalTradeReadinessSummary(
+        trade_count=len(rows),
+        complete_trade_count=complete_count,
+        blocked_trade_count=len(rows) - complete_count,
+        missing_asset_count_by_kind=tuple(sorted(missing_by_kind.items())),
+        excluded_asset_count_by_kind=tuple(sorted(excluded_by_kind.items())),
+        blocked_transaction_ids=tuple(blocked),
     )
