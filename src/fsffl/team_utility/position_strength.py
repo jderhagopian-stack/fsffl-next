@@ -11,6 +11,25 @@ class PositionLineupStrength(FrozenModel):
     expected_points: float
 
 
+class LeagueRelativePositionStrength(FrozenModel):
+    """Transparent league-relative positional strength from optimized production.
+
+    The index is descriptive only: 100 equals the league-average optimized starter
+    production at that position, 120 is 20% above average, and 80 is 20% below.
+    It does not create a composite Team Utility score or introduce fitted weights.
+    """
+
+    team_id: str
+    position: Position
+    starter_count: int
+    expected_points: float
+    league_average_expected_points: float
+    strength_index: float | None
+    league_rank: int
+    team_count: int
+    model_version: str = "next4-league-relative-position-strength-v1"
+
+
 class PositionStrengthDelta(FrozenModel):
     position: Position
     before_starter_count: int
@@ -36,6 +55,72 @@ def summarize_lineup_by_position(lineup: OptimizedTeamLineup) -> tuple[PositionL
     return tuple(
         PositionLineupStrength(position=position, starter_count=count, expected_points=points)
         for position, (count, points) in sorted(totals.items(), key=lambda item: item[0].value)
+    )
+
+
+def build_league_relative_position_strengths(
+    lineups: tuple[OptimizedTeamLineup, ...],
+    *,
+    positions: tuple[Position, ...] = (Position.QB, Position.RB, Position.WR, Position.TE),
+    model_version: str = "next4-league-relative-position-strength-v1",
+) -> tuple[LeagueRelativePositionStrength, ...]:
+    """Compare each team's optimized positional production with the league average.
+
+    Every team is included for every requested position. FLEX and SUPERFLEX remain
+    attributed to the player's actual position through the optimized lineup itself.
+    This is a named descriptive diagnostic for comparison and before/after views;
+    it does not alter Forecast, Simulation, Value, or Decision authority.
+    """
+
+    if not model_version.strip():
+        raise ValueError("position strength model_version cannot be blank")
+    team_ids = [lineup.team_id for lineup in lineups]
+    if len(team_ids) != len(set(team_ids)):
+        raise ValueError("league-relative position strength requires unique team lineups")
+    if not lineups:
+        return ()
+
+    summaries = {
+        lineup.team_id: {row.position: row for row in summarize_lineup_by_position(lineup)}
+        for lineup in lineups
+    }
+    result: list[LeagueRelativePositionStrength] = []
+    team_count = len(lineups)
+    for position in positions:
+        rows: list[tuple[str, int, float]] = []
+        for lineup in lineups:
+            row = summaries[lineup.team_id].get(position)
+            rows.append(
+                (
+                    lineup.team_id,
+                    row.starter_count if row is not None else 0,
+                    row.expected_points if row is not None else 0.0,
+                )
+            )
+        league_average = sum(points for _, _, points in rows) / team_count
+        ordered = sorted(rows, key=lambda item: (-item[2], item[0]))
+        rank_by_team = {team_id: rank for rank, (team_id, _, _) in enumerate(ordered, start=1)}
+        for team_id, starter_count, expected_points in rows:
+            strength_index = (
+                100.0 * expected_points / league_average
+                if league_average > 0
+                else None
+            )
+            result.append(
+                LeagueRelativePositionStrength(
+                    team_id=team_id,
+                    position=position,
+                    starter_count=starter_count,
+                    expected_points=expected_points,
+                    league_average_expected_points=league_average,
+                    strength_index=strength_index,
+                    league_rank=rank_by_team[team_id],
+                    team_count=team_count,
+                    model_version=model_version,
+                )
+            )
+    return tuple(
+        sorted(result, key=lambda row: (row.team_id, row.position.value))
     )
 
 
