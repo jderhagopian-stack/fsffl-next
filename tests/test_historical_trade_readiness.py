@@ -244,6 +244,23 @@ def test_batch_summary_counts_uncertainty_separately_from_blockers() -> None:
         ),
     )
 
+    exact_record = HistoricalTradeRecord(
+        transaction_id="exact-trade",
+        league_id="league",
+        completed_at=datetime(2024, 1, 2, 12, tzinfo=UTC),
+        legs=(
+            HistoricalTradeLeg(team_id="A", sends=(PlayerAsset(player_id="p3"),)),
+            HistoricalTradeLeg(team_id="B", sends=(PickAsset(pick_id="known-pick"),)),
+        ),
+        provenance=provenance(),
+    )
+    eplayer = historical_trade_asset_key(team_id="A", ordinal=0, asset=exact_record.legs[0].sends[0])
+    epick = historical_trade_asset_key(team_id="B", ordinal=0, asset=exact_record.legs[1].sends[0])
+    exact = assess_historical_trade_valuation_readiness(
+        exact_record,
+        evidence=(evidence_for(eplayer), evidence_for(epick)),
+    )
+
     blocked_record = HistoricalTradeRecord(
         transaction_id="blocked-trade",
         league_id="league",
@@ -257,13 +274,20 @@ def test_batch_summary_counts_uncertainty_separately_from_blockers() -> None:
     bkey = historical_trade_asset_key(team_id="A", ordinal=0, asset=blocked_record.legs[0].sends[0])
     blocked = assess_historical_trade_valuation_readiness(blocked_record, evidence=(evidence_for(bkey),))
 
-    summary = summarize_historical_trade_readiness((usable, sensitivity, blocked))
-    assert summary.trade_count == 3
-    assert summary.complete_trade_count == 2
+    summary = summarize_historical_trade_readiness((usable, sensitivity, exact, blocked))
+    assert summary.trade_count == 4
+    assert summary.complete_trade_count == 3
     assert summary.blocked_trade_count == 1
+    assert summary.exact_trade_count == 1
     assert summary.probabilistic_trade_count == 1
     assert summary.bounded_nuisance_trade_count == 1
     assert summary.sensitivity_only_trade_count == 1
+    assert summary.available_asset_count_by_mode == (
+        (HistoricalEvidenceMode.BOUNDED_NUISANCE, 1),
+        (HistoricalEvidenceMode.EXACT, 4),
+        (HistoricalEvidenceMode.PROBABILISTIC, 1),
+        (HistoricalEvidenceMode.SENSITIVITY_ONLY, 1),
+    )
     assert summary.missing_asset_count_by_kind == (("pick", 1),)
 
 
