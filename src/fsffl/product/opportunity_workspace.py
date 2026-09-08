@@ -10,6 +10,9 @@ from .trade_center_view import (
 )
 
 
+_SEARCH_ORDERING = "cardinal_market_fit_then_roster_need"
+
+
 def _empty_workspace(
     *,
     status: str,
@@ -39,7 +42,7 @@ def _empty_workspace(
             "candidate_count": 0,
             "returned_count": 0,
             "truncated": False,
-            "ordering": "roster_aware_position_need_then_cardinal_distance",
+            "ordering": _SEARCH_ORDERING,
             "bilateral_evaluated_count": 0,
             "bilateral_evaluation_limit": 0,
             "candidates": [],
@@ -164,10 +167,10 @@ def build_opportunity_workspace(
 ) -> dict[str, object]:
     """Build a responsive Opportunity workspace with progressive governed evidence.
 
-    Search uses roster-aware position context and Cardinal Value only for ordering
-    candidate structures. It does not create recommendation authority. Only a small
-    leading set is synchronously enriched through NEXT-5 Decision on initial load;
-    deeper Decision/materiality work belongs behind explicit actions.
+    Search uses Cardinal market fit first and roster-aware position context second
+    to order candidate structures without creating recommendation authority. Only a
+    small leading set is synchronously enriched through NEXT-5 Decision on initial
+    load; deeper Decision/materiality work belongs behind explicit actions.
     """
 
     league_state = runtime.league_state
@@ -286,7 +289,7 @@ def build_opportunity_workspace(
             "candidate_count": total_candidate_count,
             "returned_count": len(returned),
             "truncated": total_candidate_count > len(returned),
-            "ordering": "roster_aware_position_need_then_cardinal_distance",
+            "ordering": _SEARCH_ORDERING,
             "bilateral_evaluated_count": sum(
                 1 for row in returned if row.get("bilateral_decision_evaluated")
             ),
@@ -313,6 +316,7 @@ def build_opportunity_workspace(
             "provisional_value_used": False,
             "bilateral_evaluation_budget_is_product_compute_policy": True,
             "search_order_is_not_a_composite_opportunity_score": True,
+            "search_market_fit_has_no_fixed_acceptability_cutoff": True,
             "negotiation_feasibility_is_not_acceptance_probability": True,
         },
     }
