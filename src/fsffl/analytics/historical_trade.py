@@ -109,11 +109,31 @@ class GovernedGradePolicy(FrozenModel):
         eligible = [band for band in self.bands if score >= band.minimum_score]
         return max(eligible, key=lambda band: band.minimum_score).letter
 
+    def letters_for_range(self, lower: float, upper: float) -> tuple[str, ...]:
+        if lower < 0 or upper > 100 or lower > upper:
+            raise ValueError("grade score range must satisfy 0 <= lower <= upper <= 100")
+        candidate_scores = {lower, upper}
+        candidate_scores.update(
+            band.minimum_score
+            for band in self.bands
+            if lower <= band.minimum_score <= upper
+        )
+        ordered = sorted(candidate_scores)
+        letters: list[str] = []
+        for score in ordered:
+            letter = self.letter_for(score)
+            if letter not in letters:
+                letters.append(letter)
+        return tuple(letters)
+
 
 class GradeResult(FrozenModel):
     status: GradeStatus
     letter: str | None = None
     score: Annotated[float | None, Field(default=None, ge=0, le=100)] = None
+    score_lower: Annotated[float | None, Field(default=None, ge=0, le=100)] = None
+    score_upper: Annotated[float | None, Field(default=None, ge=0, le=100)] = None
+    possible_letters: tuple[str, ...] = ()
     confidence: Annotated[float, Field(ge=0, le=1)]
     reason: str
     policy_id: str | None = None
@@ -123,20 +143,31 @@ class GradeResult(FrozenModel):
     def validate_result(self) -> "GradeResult":
         if not self.reason.strip():
             raise ValueError("grade result reason cannot be blank")
+        if (self.score_lower is None) != (self.score_upper is None):
+            raise ValueError("grade score bounds must be supplied together")
+        if self.score_lower is not None and self.score_upper is not None:
+            if self.score_lower > self.score_upper:
+                raise ValueError("grade score bounds must satisfy lower <= upper")
+            if self.score is not None and not self.score_lower <= self.score <= self.score_upper:
+                raise ValueError("grade center score must fall within supplied bounds")
         if self.status == GradeStatus.GRADED:
             if self.letter is None or self.score is None or self.policy_id is None or self.policy_version is None:
                 raise ValueError("graded results require letter, score, and governed policy identity")
+            if self.possible_letters and self.letter not in self.possible_letters:
+                raise ValueError("center grade letter must be included in possible_letters")
         else:
             if self.letter is not None:
                 raise ValueError("not-graded results cannot contain a letter grade")
+            if self.possible_letters:
+                raise ValueError("not-graded results cannot contain possible letter grades")
         return self
 
 
 class PointInTimeDecisionEvidence(FrozenModel):
     """Decision-authority output prepared for historical grading.
 
-    ``decision_quality_score`` is deliberately not computed here. It must be
-    emitted by the authoritative Decision layer or another explicitly governed
+    ``decision_quality_score`` and optional bounds are deliberately not computed
+    here. They must be emitted by Decision or another explicitly governed
     decision-quality policy. Historical analytics only validates evidence and
     translates that authoritative score through a governed letter-grade policy.
     """
@@ -146,6 +177,12 @@ class PointInTimeDecisionEvidence(FrozenModel):
     as_of: datetime
     decision_model_version: str
     decision_quality_score: Annotated[float | None, Field(default=None, ge=0, le=100)] = None
+    decision_quality_score_lower: Annotated[float | None, Field(default=None, ge=0, le=100)] = None
+    decision_quality_score_upper: Annotated[float | None, Field(default=None, ge=0, le=100)] = None
+    decision_quality_confidence: Annotated[float | None, Field(default=None, ge=0, le=1)] = None
+    decision_quality_policy_id: str | None = None
+    decision_quality_policy_version: str | None = None
+    decision_quality_policy_authority: str | None = None
     decision_disposition: str | None = None
     value_exchanged: float | None = None
     team_utility_delta: float | None = None
@@ -168,6 +205,26 @@ class PointInTimeDecisionEvidence(FrozenModel):
     def validate_identity(self) -> "PointInTimeDecisionEvidence":
         if not self.transaction_id.strip() or not self.team_id.strip() or not self.decision_model_version.strip():
             raise ValueError("point-in-time decision identifiers cannot be blank")
+        if (self.decision_quality_score_lower is None) != (self.decision_quality_score_upper is None):
+            raise ValueError("decision-quality score bounds must be supplied together")
+        if self.decision_quality_score_lower is not None and self.decision_quality_score_upper is not None:
+            if self.decision_quality_score_lower > self.decision_quality_score_upper:
+                raise ValueError("decision-quality score bounds must satisfy lower <= upper")
+            if self.decision_quality_score is not None and not (
+                self.decision_quality_score_lower
+                <= self.decision_quality_score
+                <= self.decision_quality_score_upper
+            ):
+                raise ValueError("decision-quality center score must fall within supplied bounds")
+        policy_fields = (
+            self.decision_quality_policy_id,
+            self.decision_quality_policy_version,
+            self.decision_quality_policy_authority,
+        )
+        if any(value is not None for value in policy_fields) and not all(
+            value is not None and value.strip() for value in policy_fields
+        ):
+            raise ValueError("decision-quality policy identity fields must be supplied together")
         return self
 
 
@@ -293,10 +350,13 @@ def grade_authoritative_score(
     evidence: EvidenceCompleteness,
     policy: GovernedGradePolicy | None,
     missing_score_reason: str,
+    score_lower: float | None = None,
+    score_upper: float | None = None,
+    score_confidence: float | None = None,
 ) -> GradeResult:
-    """Fail-closed grade translation with no hidden thresholds or imputation."""
+    """Fail-closed grade translation while preserving authoritative uncertainty."""
 
-    confidence = evidence.ratio
+    confidence = evidence.ratio * (score_confidence if score_confidence is not None else 1.0)
     if not evidence.complete:
         return GradeResult(
             status=GradeStatus.NOT_GRADED,
@@ -309,19 +369,43 @@ def grade_authoritative_score(
             confidence=confidence,
             reason=missing_score_reason,
         )
+    if (score_lower is None) != (score_upper is None):
+        raise ValueError("authoritative grade score bounds must be supplied together")
+    if score_lower is not None and score_upper is not None:
+        if score_lower > score_upper or not score_lower <= score <= score_upper:
+            raise ValueError("authoritative grade score must fall within ordered bounds")
     if policy is None:
         return GradeResult(
             status=GradeStatus.NOT_GRADED,
             score=score,
+            score_lower=score_lower,
+            score_upper=score_upper,
             confidence=confidence,
             reason="NOT GRADED — no governed letter-grade policy is available",
         )
+
+    center_letter = policy.letter_for(score)
+    possible_letters = (
+        policy.letters_for_range(score_lower, score_upper)
+        if score_lower is not None and score_upper is not None
+        else (center_letter,)
+    )
+    if len(possible_letters) == 1:
+        reason = "Grade translated from authoritative score through governed policy"
+    else:
+        reason = (
+            "Center grade translated from authoritative score; plausible score range spans "
+            + "–".join(possible_letters)
+        )
     return GradeResult(
         status=GradeStatus.GRADED,
-        letter=policy.letter_for(score),
+        letter=center_letter,
         score=score,
+        score_lower=score_lower,
+        score_upper=score_upper,
+        possible_letters=possible_letters,
         confidence=confidence,
-        reason="Grade translated from authoritative score through governed policy",
+        reason=reason,
         policy_id=policy.policy_id,
         policy_version=policy.model_version,
     )
@@ -334,6 +418,9 @@ def grade_point_in_time_decision(
 ) -> GradeResult:
     return grade_authoritative_score(
         score=evidence.decision_quality_score,
+        score_lower=evidence.decision_quality_score_lower,
+        score_upper=evidence.decision_quality_score_upper,
+        score_confidence=evidence.decision_quality_confidence,
         evidence=evidence.evidence,
         policy=policy,
         missing_score_reason=(
