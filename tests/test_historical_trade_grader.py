@@ -7,6 +7,7 @@ from fsffl.analytics.historical_trade import (
     AssetLineageEvent,
     EvidenceCompleteness,
     GradeBand,
+    GradeResult,
     GradeStatus,
     GovernedGradePolicy,
     PointInTimeDecisionEvidence,
@@ -94,7 +95,113 @@ def test_point_in_time_grade_translates_authoritative_score_only_through_policy(
     assert result.status == GradeStatus.GRADED
     assert result.letter == "A"
     assert result.score == 91
+    assert result.possible_letters == ("A",)
     assert result.policy_id == "research-grade-policy"
+
+
+def test_uncertain_decision_score_keeps_center_grade_and_exposes_plausible_letters() -> None:
+    evidence = PointInTimeDecisionEvidence(
+        transaction_id="t1",
+        team_id="a",
+        as_of=AS_OF,
+        decision_model_version="next5",
+        decision_quality_score=70,
+        decision_quality_score_lower=55,
+        decision_quality_score_upper=82,
+        decision_quality_confidence=0.8,
+        decision_quality_policy_id="dq-policy",
+        decision_quality_policy_version="v1",
+        decision_quality_policy_authority="bounded_prior",
+        evidence=complete_evidence(),
+    )
+
+    result = grade_point_in_time_decision(evidence, policy=grade_policy())
+
+    assert result.status == GradeStatus.GRADED
+    assert result.letter == "C"
+    assert result.score == 70
+    assert result.score_lower == 55
+    assert result.score_upper == 82
+    assert result.possible_letters == ("F", "C", "B")
+    assert result.confidence == pytest.approx(0.8)
+    assert "plausible score range" in result.reason
+
+
+def test_score_confidence_combines_with_evidence_completeness() -> None:
+    evidence = PointInTimeDecisionEvidence(
+        transaction_id="t1",
+        team_id="a",
+        as_of=AS_OF,
+        decision_model_version="next5",
+        decision_quality_score=70,
+        decision_quality_score_lower=60,
+        decision_quality_score_upper=80,
+        decision_quality_confidence=0.75,
+        evidence=EvidenceCompleteness(
+            required_items=("state", "forecast", "value", "package"),
+            available_items=("state", "forecast", "value"),
+            gaps=("package",),
+        ),
+    )
+
+    result = grade_point_in_time_decision(evidence, policy=grade_policy())
+
+    assert result.status == GradeStatus.NOT_GRADED
+    assert result.confidence == pytest.approx(0.75 * 0.75)
+
+
+def test_point_in_time_score_bounds_must_be_ordered_and_contain_center() -> None:
+    with pytest.raises(ValueError, match="lower <= upper"):
+        PointInTimeDecisionEvidence(
+            transaction_id="t1",
+            team_id="a",
+            as_of=AS_OF,
+            decision_model_version="next5",
+            decision_quality_score=70,
+            decision_quality_score_lower=80,
+            decision_quality_score_upper=60,
+            evidence=complete_evidence(),
+        )
+    with pytest.raises(ValueError, match="center score"):
+        PointInTimeDecisionEvidence(
+            transaction_id="t1",
+            team_id="a",
+            as_of=AS_OF,
+            decision_model_version="next5",
+            decision_quality_score=50,
+            decision_quality_score_lower=60,
+            decision_quality_score_upper=80,
+            evidence=complete_evidence(),
+        )
+
+
+def test_decision_quality_policy_identity_is_all_or_nothing() -> None:
+    with pytest.raises(ValueError, match="supplied together"):
+        PointInTimeDecisionEvidence(
+            transaction_id="t1",
+            team_id="a",
+            as_of=AS_OF,
+            decision_model_version="next5",
+            decision_quality_score=70,
+            decision_quality_policy_id="policy",
+            evidence=complete_evidence(),
+        )
+
+
+def test_grade_result_rejects_center_outside_uncertainty_bounds() -> None:
+    with pytest.raises(ValueError, match="center score"):
+        GradeResult(
+            status=GradeStatus.GRADED,
+            letter="C",
+            score=50,
+            score_lower=60,
+            score_upper=80,
+            possible_letters=("C", "B"),
+            confidence=0.8,
+            reason="bad",
+            policy_id="p",
+            policy_version="v1",
+        )
 
 
 def test_grade_policy_has_no_implicit_threshold_floor() -> None:
@@ -157,6 +264,7 @@ def test_retrospective_grade_uses_explicit_governed_weights() -> None:
 
     assert result.score == pytest.approx(86)
     assert result.letter == "B"
+    assert result.possible_letters == ("B",)
 
 
 def test_pick_to_player_lineage_is_direct_and_preserved() -> None:
