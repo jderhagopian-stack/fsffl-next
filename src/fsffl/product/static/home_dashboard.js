@@ -1,54 +1,63 @@
-let fsfflHomeChartSortDirection='desc';
-let fsfflHomeLastChartSpec=null;
+let fsfflHomeRenderHookInstalled=false;
 
-function homeChartValue(spec,value){
-  if(typeof value!=='number'||!Number.isFinite(value))return'—';
-  const unit=String(spec?.series?.[0]?.unit||'').toLowerCase();
-  if(unit==='probability')return`${(value*100).toFixed(1)}%`;
-  if(unit==='wins')return value.toFixed(2);
-  if(unit==='picks')return value.toFixed(0);
-  if(unit==='fantasy points')return value.toFixed(1);
-  if(unit==='value'&&value>=0&&value<=1)return`${(value*100).toFixed(1)} pct`;
-  return value.toLocaleString(undefined,{maximumFractionDigits:1});
+function homeEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+function homeNumber(value,digits=1){return typeof value==='number'&&Number.isFinite(value)?value.toFixed(digits):'—'}
+function homePercent(value,digits=1){return typeof value==='number'&&Number.isFinite(value)?`${(value*100).toFixed(digits)}%`:'—'}
+function homeStateLabel(value){return value&&value!=='unknown'?String(value).replaceAll('_',' '):'Not classified'}
+function homeStrengthRows(view){return (view?.position_strengths||[]).filter(row=>typeof row?.strength_index==='number'&&Number.isFinite(row.strength_index))}
+function homeAttentionCard({eyebrow,title,value,detail,route,action}){return `<article class="home-attention-card"><p class="eyebrow">${homeEscape(eyebrow)}</p><h3>${homeEscape(title)}</h3><strong class="home-attention-value">${homeEscape(value)}</strong><p>${homeEscape(detail)}</p>${route?`<button type="button" class="text-button" data-home-route="${homeEscape(route)}">${homeEscape(action||'Investigate')}</button>`:''}</article>`}
+
+function renderFsfflHomeAttention(view=state?.teamView){
+  const container=document.querySelector('#home-attention');if(!container)return;
+  if(!state?.context?.league_id){container.innerHTML='<div class="home-attention-empty"><p class="eyebrow">Start here</p><h2>Connect your league</h2><p>FSFFL NEXT will surface the few things that deserve attention instead of making you scan every dashboard.</p></div>';return}
+  if(!state?.context?.team_id){container.innerHTML='<div class="home-attention-empty"><p class="eyebrow">One step left</p><h2>Choose the franchise you manage</h2><p>Home becomes personalized once a managed team is selected.</p></div>';return}
+  if(!view){container.innerHTML='<div class="home-attention-empty"><p class="eyebrow">Your attention board</p><h2>Reading the current franchise state…</h2><p>Useful league context can load first while governed team evidence finishes attaching.</p></div>';return}
+
+  const outcome=view.utility?.competitive_outcome;
+  const resilience=view.utility?.roster_resilience;
+  const strengths=homeStrengthRows(view).sort((a,b)=>a.strength_index-b.strength_index);
+  const weakest=strengths[0]||null,strongest=strengths[strengths.length-1]||null;
+  const stateLabel=homeStateLabel(view.utility?.calculated_competitive_state);
+  const fragility=typeof resilience?.largest_single_player_lineup_drop==='number'?`${homeNumber(resilience.largest_single_player_lineup_drop,1)} pts`:'Evidence unavailable';
+  const fragilityDetail=typeof resilience?.largest_single_player_lineup_drop==='number'
+    ?`Largest projected lineup loss if one starter becomes unavailable. ${resilience.bench_forecasted_count??'—'} bench players have forecast evidence; ${resilience.missing_forecast_count??'—'} roster forecasts are missing.`
+    :'Roster-resilience evidence has not attached to this state yet.';
+  const positionValue=weakest?`${weakest.position} · ${Math.round(weakest.strength_index)}`:'Evidence unavailable';
+  const positionDetail=weakest
+    ?`Weakest current optimized-starter position versus the league. 100 is league average.${strongest&&strongest.position!==weakest.position?` Strongest: ${strongest.position} (${Math.round(strongest.strength_index)}).`:''}`
+    :'Position-strength evidence has not attached to this state yet.';
+  const outlookValue=outcome?`${homeNumber(outcome.expected_wins,2)} wins · ${homePercent(outcome.playoff_probability,0)} playoffs`:stateLabel;
+  const outlookDetail=outcome?`${stateLabel}. This is governed Simulation/Team Utility evidence, not an owner-strategy label.`:'Competitive-outcome evidence is still loading or unavailable.';
+
+  container.innerHTML=`<div class="home-attention-header"><div><p class="eyebrow">What should I care about right now?</p><h2>${homeEscape(view.display_name)}</h2><p>These are separate governed signals, not an opaque combined score. Use them to decide where to investigate next.</p></div><button type="button" class="secondary-button" data-home-route="opportunities">Open Opportunities</button></div><div class="home-attention-grid">${homeAttentionCard({eyebrow:'Competitive outlook',title:'Where you stand now',value:outlookValue,detail:outlookDetail,route:'my_team',action:'See franchise drivers'})}${homeAttentionCard({eyebrow:'Roster vulnerability',title:'How much one absence can hurt',value:fragility,detail:fragilityDetail,route:'what_if',action:'Stress-test the roster'})}${homeAttentionCard({eyebrow:'Position to investigate',title:'Current lineup pressure point',value:positionValue,detail:positionDetail,route:'my_team',action:'Inspect position depth'})}</div><div class="home-investigate"><div><p class="eyebrow">From insight to action</p><h3>Choose the next question</h3></div><div class="home-investigate-actions"><button type="button" data-home-route="opportunities"><strong>Find something worth doing</strong><span>Trade Finder and governed opportunity discovery</span></button><button type="button" data-home-route="league_comparison"><strong>Understand the league structure</strong><span>Compare franchises rather than another team summary</span></button><button type="button" data-home-route="trade_center"><strong>Test a specific trade</strong><span>Build the deal and evaluate both sides</span></button><button type="button" data-home-route="analytics"><strong>Investigate for yourself</strong><span>Open the read-only Analytics Terminal</span></button></div></div><p class="home-roadmap-note"><strong>Not fabricated:</strong> change-since-last-visit, historical inflection points, and owner-behavior alerts will appear here only after their governed history/evidence contracts exist.</p>`;
+  container.querySelectorAll('[data-home-route]').forEach(button=>button.addEventListener('click',()=>setRoute(button.dataset.homeRoute)));
 }
-function renderFsfflHomeLeagueChart(spec){
-  const container=document.querySelector('#league-chart');
-  if(!container||!spec?.series?.length)return;
-  fsfflHomeLastChartSpec=spec;
-  const title=document.querySelector('#league-chart-title');
-  if(title)title.textContent=spec.title||'League comparison';
-  const points=(spec.series[0].points||[]).filter(point=>typeof point.y==='number'&&Number.isFinite(point.y));
-  if(!points.length){showChartMessage('This metric is waiting for its authoritative forecast/value/simulation evidence.');return}
-  const direction=fsfflHomeChartSortDirection;
-  const ordered=[...points].sort((a,b)=>direction==='asc'?a.y-b.y:b.y-a.y);
-  const values=ordered.map(point=>point.y),max=Math.max(...values),min=Math.min(...values),span=Math.max(max-min,1e-9);
-  container.className='home-league-leaderboard';
-  container.innerHTML=`<div class="home-chart-toolbar"><span>${ordered.length} teams</span><button type="button" id="home-chart-sort" class="text-button">${direction==='desc'?'High → low':'Low → high'}</button></div><div class="home-chart-rows">${ordered.map((point,index)=>{const normalized=(point.y-min)/span;const width=points.length===1?100:18+82*normalized;const managed=point.key===state?.context?.team_id;return `<button type="button" class="home-chart-row${managed?' managed':''}" data-home-drilldown="${escapeHtml(point.drilldown_ref||'')}"><span class="home-chart-rank">${index+1}</span><span class="home-chart-team"><strong>${escapeHtml(point.label)}</strong>${managed?'<small>Your team</small>':''}</span><span class="home-chart-bar-track"><i style="width:${width.toFixed(1)}%"></i></span><strong class="home-chart-value">${escapeHtml(homeChartValue(spec,point.y))}</strong></button>`}).join('')}</div>`;
-  container.querySelector('#home-chart-sort')?.addEventListener('click',()=>{fsfflHomeChartSortDirection=fsfflHomeChartSortDirection==='desc'?'asc':'desc';renderFsfflHomeLeagueChart(fsfflHomeLastChartSpec)});
-  container.querySelectorAll('[data-home-drilldown]').forEach(row=>row.addEventListener('click',()=>{const ref=row.dataset.homeDrilldown;if(ref)window.dispatchEvent(new CustomEvent('fsffl:drilldown',{detail:ref}))}));
-}
-function installFsfflHomeChartRenderer(){
-  window.renderBarChart=renderFsfflHomeLeagueChart;
-  renderBarChart=renderFsfflHomeLeagueChart;
-  const metric=document.querySelector('#metric-select')?.value;
-  if(state?.context?.league_id&&metric&&typeof loadLeagueMetric==='function')loadLeagueMetric(metric);
-}
+
 function installFsfflHomeExperience(){
   const leagueScreen=document.querySelector('#league-screen');if(!leagueScreen)return;
-  installFsfflHomeChartRenderer();
-  if(document.querySelector('#home-quick-actions'))return;
   const hero=leagueScreen.querySelector('.hero-row');
-  const lead=hero?.querySelector('.lead');if(lead)lead.textContent='Start with the question you want answered. FSFFL NEXT keeps the model complexity underneath and brings the useful result to the surface.';
-  const actions=document.createElement('section');actions.id='home-quick-actions';actions.className='home-quick-actions';actions.innerHTML=`<div class="home-quick-header"><p class="eyebrow">What do you want to do?</p><h2>Jump straight to the answer</h2></div><div class="home-quick-grid"><button type="button" data-home-route="my_team"><strong>Review My Team</strong><span>Lineup, outlook, values and picks</span></button><button type="button" data-home-route="league_comparison"><strong>Compare the League</strong><span>See where every franchise stands</span></button><button type="button" data-home-route="players_assets"><strong>Browse Players & Assets</strong><span>Search and sort the whole market</span></button><button type="button" data-home-route="trade_center"><strong>Analyze a Trade</strong><span>Build a deal and see both sides</span></button><button type="button" data-home-route="opportunities"><strong>Find Opportunities</strong><span>Explore trade tests and available players</span></button><button type="button" data-home-route="analytics"><strong>Open Analytics Terminal</strong><span>League, players, Value Lab and evidence</span></button><button type="button" data-home-route="reports"><strong>Open Reports</strong><span>Readable team, league and evidence views</span></button></div>`;
-  hero?.insertAdjacentElement('afterend',actions);
-  actions.querySelectorAll('[data-home-route]').forEach(button=>button.addEventListener('click',()=>{const route=button.dataset.homeRoute;if(['my_team','trade_center','opportunities'].includes(route)&&!state?.context?.team_id){document.querySelector('#team-select')?.focus();return}setRoute(route)}));
+  const eyebrow=hero?.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='Home';
+  const heading=hero?.querySelector('h1');if(heading)heading.textContent='Know what deserves your attention.';
+  const lead=hero?.querySelector('.lead');if(lead)lead.textContent='Home prioritizes the current signals worth investigating. Full diagnostics, comparisons, trade analysis and exploration live on their own dedicated surfaces.';
 
-  const runtime=document.querySelector('#runtime-status');const grid=document.querySelector('#runtime-stage-grid');if(runtime&&grid&&!runtime.querySelector('#runtime-detail-toggle')){
-    grid.hidden=true;
-    const toggle=document.createElement('button');toggle.id='runtime-detail-toggle';toggle.type='button';toggle.className='text-button';toggle.textContent='Show technical status';toggle.setAttribute('aria-expanded','false');toggle.addEventListener('click',()=>{grid.hidden=!grid.hidden;toggle.textContent=grid.hidden?'Show technical status':'Hide technical status';toggle.setAttribute('aria-expanded',String(!grid.hidden))});
-    runtime.querySelector('.panel-header')?.appendChild(toggle);
-    const eyebrow=runtime.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='System status';
+  leagueScreen.querySelector('.metric-grid')?.setAttribute('hidden','');
+  leagueScreen.querySelector('.dashboard-grid')?.setAttribute('hidden','');
+  leagueScreen.querySelector('.roster-panel')?.setAttribute('hidden','');
+  document.querySelector('#home-quick-actions')?.remove();
+  let attention=document.querySelector('#home-attention');
+  if(!attention){attention=document.createElement('section');attention.id='home-attention';attention.className='home-attention';hero?.insertAdjacentElement('afterend',attention)}
+
+  const runtime=document.querySelector('#runtime-status'),grid=document.querySelector('#runtime-stage-grid');
+  if(runtime&&grid&&!runtime.querySelector('#runtime-detail-toggle')){grid.hidden=true;const toggle=document.createElement('button');toggle.id='runtime-detail-toggle';toggle.type='button';toggle.className='text-button';toggle.textContent='Show technical status';toggle.setAttribute('aria-expanded','false');toggle.addEventListener('click',()=>{grid.hidden=!grid.hidden;toggle.textContent=grid.hidden?'Show technical status':'Hide technical status';toggle.setAttribute('aria-expanded',String(!grid.hidden))});runtime.querySelector('.panel-header')?.appendChild(toggle);const runtimeEyebrow=runtime.querySelector('.eyebrow');if(runtimeEyebrow)runtimeEyebrow.textContent='System status'}
+
+  if(!fsfflHomeRenderHookInstalled&&typeof renderMyTeam==='function'){
+    const originalRenderMyTeam=renderMyTeam;
+    window.renderMyTeam=function(view){const result=originalRenderMyTeam(view);renderFsfflHomeAttention(view);return result};
+    renderMyTeam=window.renderMyTeam;fsfflHomeRenderHookInstalled=true;
   }
-  const style=document.createElement('style');style.textContent=`.home-quick-actions{margin:16px 0 20px}.home-quick-header h2{margin-top:0}.home-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.home-quick-grid button{border:1px solid var(--line);background:#0a1120;color:var(--text);border-radius:14px;padding:15px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:5px;min-height:86px}.home-quick-grid button:hover{border-color:var(--accent)}.home-quick-grid strong{font-size:14px}.home-quick-grid span{color:var(--muted);font-size:12px;line-height:1.4}.home-league-leaderboard{display:block!important;min-height:0!important}.home-chart-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;color:var(--muted);font-size:12px}.home-chart-rows{display:grid;gap:7px}.home-chart-row{appearance:none;width:100%;border:1px solid var(--line);background:#0a1120;color:var(--text);border-radius:10px;padding:9px 10px;display:grid;grid-template-columns:28px minmax(120px,1.2fr) minmax(90px,2fr) auto;gap:9px;align-items:center;text-align:left;cursor:pointer}.home-chart-row.managed{border-color:var(--accent);background:rgba(87,166,255,.07)}.home-chart-rank{color:var(--muted);font-size:12px;text-align:center}.home-chart-team{display:grid;min-width:0}.home-chart-team strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.home-chart-team small{color:var(--accent);font-size:10px}.home-chart-bar-track{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden}.home-chart-bar-track i{display:block;height:100%;background:var(--accent);border-radius:999px}.home-chart-value{font-variant-numeric:tabular-nums;white-space:nowrap}@media(max-width:760px){.home-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-chart-row{grid-template-columns:24px minmax(105px,1fr) minmax(55px,.8fr) auto;padding:9px 8px;gap:7px}.home-chart-value{font-size:12px}}@media(max-width:460px){.home-quick-grid{grid-template-columns:1fr}.home-quick-grid button{min-height:0}.home-chart-bar-track{display:none}.home-chart-row{grid-template-columns:22px minmax(0,1fr) auto}}`;document.head.appendChild(style);
+  renderFsfflHomeAttention(state?.teamView||null);
+  if(!document.querySelector('#fsffl-home-attention-style')){const style=document.createElement('style');style.id='fsffl-home-attention-style';style.textContent=`.home-attention{margin:16px 0 20px}.home-attention-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.home-attention-header h2,.home-attention-header p{margin-top:0}.home-attention-header>div>p:last-child,.home-attention-card p,.home-roadmap-note,.home-attention-empty p{color:var(--muted);line-height:1.45}.home-attention-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.home-attention-card,.home-investigate,.home-attention-empty{border:1px solid var(--line);background:#0a1120;border-radius:16px;padding:16px}.home-attention-card h3{margin:4px 0 10px;font-size:1rem}.home-attention-value{display:block;font-size:1.35rem;line-height:1.2;margin-bottom:8px;text-transform:capitalize}.home-attention-card .text-button{padding-left:0}.home-investigate{margin-top:10px;display:grid;grid-template-columns:minmax(180px,.75fr) minmax(0,2fr);gap:16px;align-items:start}.home-investigate h3{margin:3px 0}.home-investigate-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-investigate-actions button{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:12px;padding:12px;text-align:left;display:grid;gap:4px;cursor:pointer}.home-investigate-actions button:hover{border-color:var(--accent)}.home-investigate-actions span{font-size:11px;color:var(--muted);line-height:1.35}.home-roadmap-note{font-size:12px;margin:10px 2px 0}.home-attention-empty{min-height:120px}.home-attention-empty h2{margin:4px 0}@media(max-width:760px){.home-attention-header{display:grid}.home-attention-header .secondary-button{width:100%}.home-attention-grid{grid-template-columns:1fr}.home-investigate{grid-template-columns:1fr}.home-investigate-actions{grid-template-columns:1fr}.home-attention-card{padding:14px}.home-attention-value{font-size:1.2rem}}`;document.head.appendChild(style)}
 }
+window.renderFsfflHomeAttention=renderFsfflHomeAttention;
 window.installFsfflHomeExperience=installFsfflHomeExperience;
+window.addEventListener('fsffl:product-context-updated',()=>setTimeout(()=>renderFsfflHomeAttention(state?.teamView||null),0));
