@@ -68,7 +68,7 @@ class CurrentMarketValueRuntimeResult:
     team_cardinal_portfolios: tuple[TeamCardinalPortfolio, ...] = ()
     pick_variant_market_values: tuple[PickVariantMarketValue, ...] = ()
     cardinal_consistency_audit: CardinalConsistencyAudit | None = None
-    model_version: str = "next3-current-market-runtime-v6:team-market-portfolios"
+    model_version: str = "next3-current-market-runtime-v7:market-total-fail-closed"
 
     @property
     def coverage(self) -> float:
@@ -215,11 +215,11 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     reference cohort for players and generic unknown-slot rookie picks. The
     separate consistency audit compares that reference against the fully
     parameterized FantasyCalc cohort by position, but remains diagnostic and
-    cannot change Value. Team Market Value portfolios aggregate only compatible
-    MarketPriceEstimate evidence and retain partial asset coverage explicitly;
-    Team Cardinal portfolios remain a separate accounting view on the Cardinal
-    scale. Early/mid/late pick variants remain separate Simulation-informed
-    challenger evidence.
+    cannot change Value. A separate Total Team Market Value contract is published
+    but fails closed while the authoritative market ensemble remains percentile-
+    based rather than additive. Team Cardinal portfolios remain the explicitly
+    additive FSFFL market-cardinal accounting view. Early/mid/late pick variants
+    remain separate Simulation-informed challenger evidence.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -376,7 +376,11 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     failures.append("dynastyprocess_market_values")
     errors["dynastyprocess_market_values"] = "IdentityCrosswalkUnavailable: current State lacks explicit FantasyPros ids"
 
-    market_portfolios = build_team_market_value_portfolios(league_state, estimates_tuple)
+    market_portfolios = build_team_market_value_portfolios(
+        league_state,
+        estimates_tuple,
+        additive_scale=None,
+    )
     cardinal_tuple = tuple(sorted(cardinal_values, key=lambda item: (item.asset_kind.value, item.asset_id)))
     cardinal_portfolios = build_team_cardinal_portfolios(league_state, cardinal_tuple)
 
