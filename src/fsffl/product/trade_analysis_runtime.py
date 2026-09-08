@@ -12,6 +12,7 @@ from fsffl.team_utility import (
 )
 from fsffl.trade_decision import (
     apply_bilateral_trade,
+    assess_negotiation_feasibility,
     assess_package_economics,
     bind_owner_behavior_evidence,
     calculate_bilateral_economic_net,
@@ -28,7 +29,7 @@ from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_fo
 from .trade_value_adapter import cardinal_market_profiles
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v8"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v9:negotiation-feasibility"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -103,6 +104,7 @@ def build_private_beta_trade_analysis(
     warnings: list[str] = []
     evaluation = None
     decision = None
+    negotiation_feasibility = None
     roster_consequences_ready = False
 
     forecast_evidence = runtime.forecast_evidence
@@ -151,6 +153,12 @@ def build_private_beta_trade_analysis(
             model_version="next5-bilateral-evaluation-v1:product-view",
         )
         decision = classify_bilateral_trade_decision(evaluation, model_version="next5-bilateral-decision-v2:product-view")
+        negotiation_feasibility = assess_negotiation_feasibility(
+            decision,
+            focal_team_id=focal_team_id,
+            acceptance=None,
+            model_version="next5-negotiation-feasibility-v1:product-view",
+        )
         roster_consequences_ready = any(side.delta.resilience is not None for side in (evaluation.side_a, evaluation.side_b))
     else:
         warnings.append("Roster consequence analysis is waiting for current NEXT-2 forecast evidence.")
@@ -185,6 +193,7 @@ def build_private_beta_trade_analysis(
     if incomplete_cut_cost:
         warnings.append("The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative FSFFL Value; cut opportunity cost remains incomplete.")
     warnings.append("Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority.")
+    warnings.append("Negotiation feasibility is a Decision-owned bilateral consequence shape, not an acceptance probability.")
     warnings.append("Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted.")
     warnings.append("Package concentration is measured separately from cuts, lineup impact and Simulation. The current 0%-15% residual premium interval is only a provisional Decision robustness guard and is not added to FSFFL Value.")
 
@@ -197,6 +206,7 @@ def build_private_beta_trade_analysis(
         "state_id_after": legal_after.state_id,
         "evaluation": evaluation.model_dump(mode="json") if evaluation is not None else None,
         "decision": decision.model_dump(mode="json") if decision is not None else None,
+        "negotiation_feasibility": negotiation_feasibility.model_dump(mode="json") if negotiation_feasibility is not None else None,
         "economics": economics.model_dump(mode="json") if economics is not None else None,
         "economic_net": economic_net.model_dump(mode="json") if economic_net is not None else None,
         "roster_adjusted_market_net": roster_adjusted_market_net.model_dump(mode="json") if roster_adjusted_market_net is not None else None,
@@ -208,6 +218,7 @@ def build_private_beta_trade_analysis(
         "availability": {
             "roster_consequences": roster_consequences_ready,
             "position_strength": position_strength is not None,
+            "negotiation_feasibility": negotiation_feasibility is not None,
             "market_economics": economics is not None,
             "economic_net": economic_net is not None,
             "competitive_outcomes": False,
