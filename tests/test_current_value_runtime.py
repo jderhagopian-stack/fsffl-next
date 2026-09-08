@@ -114,6 +114,7 @@ def test_current_market_runtime_uses_governed_lineage_and_cardinal_authority(mon
         ],
     }
     statsguy_trade_evaluation = {
+        "format": "sf_dynasty",
         "asOf": now.isoformat(),
         "sideA": {
             "assets": [
