@@ -57,9 +57,11 @@ def test_opportunity_search_uses_authoritative_cardinal_value_only() -> None:
 def test_opportunity_search_is_roster_aware_and_not_just_nearest_one_for_one_value() -> None:
     source = (ROOT / "src/fsffl/product/opportunity_search.py").read_text()
     workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
-    assert "summarize_lineup_by_position" in source
+    assert "build_league_relative_position_strengths" in source
     assert "focal_position_strength_rank" in source
+    assert "focal_position_strength_index" in source
     assert "counterparty_receive_position_rank" in source
+    assert "counterparty_receive_position_strength_index" in source
     assert '"package_shape": shape' in source
     assert '"two_for_one"' in source
     assert "combinations(valued_focal, 2)" in source
