@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: python -m pip install -e '.[web]'
-    startCommand: uvicorn fsffl.product.webapp:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn fsffl.product.persistent_webapp:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: FSFFL_BETA_AUTH
@@ -12,4 +12,6 @@ services:
       - key: FSFFL_BETA_USERNAME
         sync: false
       - key: FSFFL_BETA_PASSWORD
+        sync: false
+      - key: FSFFL_DATABASE_URL
         sync: false
