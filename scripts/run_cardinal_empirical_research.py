@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+from fsffl.state.models import Position
 from fsffl.value.calibration import CalibrationPanel
 from fsffl.value.cardinal import NativeMarketMagnitudeObservation
 from fsffl.value.cardinal_challenger import (
@@ -18,6 +19,9 @@ from fsffl.value.cardinal_history import (
     build_fresh_historical_pairs,
     native_history_from_panel,
     split_cardinal_pairs,
+)
+from fsffl.value.cardinal_position_benchmark import (
+    benchmark_cardinal_sources_by_position_against_one_for_one_trades,
 )
 from fsffl.value.cardinal_transaction_benchmark import (
     benchmark_cardinal_sources_against_one_for_one_trades,
@@ -53,6 +57,35 @@ def _load_sleeper_crosswalk(path: Path) -> dict[str, str]:
             for row in reader
             if (row.get("sleeper_id") or "").strip() and (row.get("asset_id") or "").strip()
         }
+
+
+def _sleeper_player_positions(crosswalk: dict[str, str]) -> dict[str, Position]:
+    """Build research-only position labels from Sleeper identity metadata.
+
+    This is intentionally separate from canonical NEXT State. It exists only to
+    stratify historical market/trade evidence by position during research.
+    Unknown/non-fantasy positions are skipped rather than coerced.
+    """
+
+    payload = json.loads(_download_text(f"{SLEEPER_BASE}/players/nfl"))
+    if not isinstance(payload, dict):
+        raise ValueError("Sleeper player metadata must be an object keyed by player id")
+    supported = {
+        "QB": Position.QB,
+        "RB": Position.RB,
+        "WR": Position.WR,
+        "TE": Position.TE,
+    }
+    positions: dict[str, Position] = {}
+    for sleeper_id, asset_id in crosswalk.items():
+        row = payload.get(sleeper_id)
+        if not isinstance(row, dict):
+            continue
+        raw_position = str(row.get("position") or "").strip().upper()
+        position = supported.get(raw_position)
+        if position is not None:
+            positions[asset_id] = position
+    return positions
 
 
 def _league_chain(current_league_id: str, *, minimum_season: int) -> tuple[tuple[str, int], ...]:
@@ -228,6 +261,7 @@ def main() -> None:
     statsguy_panel = _load_panel(args.statsguy_history)
     dynastyprocess_panel = _load_panel(args.dynastyprocess_history)
     crosswalk = _load_sleeper_crosswalk(args.crosswalk)
+    player_positions = _sleeper_player_positions(crosswalk)
 
     statsguy = native_history_from_panel(
         statsguy_panel,
@@ -268,9 +302,17 @@ def main() -> None:
         format_context_id=args.market_context_id,
         as_of=as_of,
     )
+    combined_market_history = statsguy + dynastyprocess
     native_trade_benchmark = benchmark_cardinal_sources_against_one_for_one_trades(
-        statsguy + dynastyprocess,
+        combined_market_history,
         trades,
+        market_context_id=args.market_context_id,
+        max_snapshot_age_days=args.max_target_age_days,
+    )
+    position_trade_benchmark = benchmark_cardinal_sources_by_position_against_one_for_one_trades(
+        combined_market_history,
+        trades,
+        player_positions=player_positions,
         market_context_id=args.market_context_id,
         max_snapshot_age_days=args.max_target_age_days,
     )
@@ -283,6 +325,7 @@ def main() -> None:
         "market_context_id": args.market_context_id,
         "minimum_sleeper_season": args.minimum_season,
         "startup_2022_excluded": args.minimum_season > 2022,
+        "research_player_position_count": len(player_positions),
         "source_history": {
             "statsguy": {
                 "observations": len(statsguy),
@@ -310,12 +353,16 @@ def main() -> None:
             ),
         ],
         "one_for_one_trade_benchmark": native_trade_benchmark.model_dump(mode="json"),
+        "position_pair_trade_benchmark": position_trade_benchmark.model_dump(mode="json"),
         "one_for_one_trade_count": len(trades),
         "one_for_one_trade_dates": trade_dates,
         "notes": [
-            "All scale mappings are challenger research only; no production Value authority is changed.",
+            "All scale mappings and position-pair diagnostics are challenger research only; no production Value authority is changed.",
             "Chronological holdout is used for transformation comparison; future market evidence is excluded.",
             "Completed one-for-one Sleeper trades are pairwise revealed-preference evidence, not exact scalar clearing prices.",
+            "For cross-position QB trades, qb_relative_signed_gap is oriented as QB minus non-QB on the source native scale, normalized by the pair midpoint.",
+            "Negative qb_relative_signed_gap indicates that source priced the QB below the exchanged non-QB asset; positive indicates above.",
+            "Player positions are research-only labels resolved from Sleeper player metadata through the non-authoritative research crosswalk.",
             "The 2022 startup season is excluded from transaction calibration by construction.",
         ],
     }
@@ -326,6 +373,7 @@ def main() -> None:
     print("FSFFL NEXT cardinal empirical research")
     print(f"statsguy observations={len(statsguy)}")
     print(f"dynastyprocess observations={len(dynastyprocess)}")
+    print(f"research player positions={len(player_positions)}")
     print(f"fresh overlap sg->dp={len(sg_to_dp_pairs)} dp->sg={len(dp_to_sg_pairs)}")
     print(f"clean one-for-one trades={len(trades)} dates={trade_dates}")
     for mapping in report["mapping_benchmarks"]:
@@ -340,6 +388,13 @@ def main() -> None:
             f"trade benchmark {row.source_id}/{row.native_scale_id}: "
             f"n={row.evaluated_trades} mean_relative_gap={row.mean_abs_relative_gap:.4f} "
             f"median_relative_gap={row.median_abs_relative_gap:.4f}"
+        )
+    for row in position_trade_benchmark.source_results:
+        print(
+            f"position trade benchmark {row.source_id}/{row.native_scale_id} "
+            f"{row.position_a.value}-{row.position_b.value}: n={row.evaluated_trades} "
+            f"mean_gap={row.mean_abs_relative_gap:.4f} median_gap={row.median_abs_relative_gap:.4f} "
+            f"qb_signed_gap={row.qb_relative_signed_gap}"
         )
     print("RESULT_JSON_BEGIN")
     print(json.dumps(report, sort_keys=True))
