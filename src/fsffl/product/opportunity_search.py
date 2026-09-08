@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bisect import bisect_left
 from itertools import combinations
 from typing import Mapping
 
@@ -14,6 +15,8 @@ from .trade_center_view import TradeAssetOption, TradeCenterBrowserView
 _SKILL_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
 _MAX_DISCOVERY_PACKAGE_SIZE = 3
 
+PackageCatalog = dict[int, tuple[tuple[float, tuple[str, ...], tuple[TradeAssetOption, ...]], ...]]
+
 
 def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Position | None:
     if option.asset_kind != "player" or option.player_id is None:
@@ -23,7 +26,11 @@ def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Pos
 
 
 def _position_strengths(runtime: UserRuntimeContext) -> dict[str, dict[Position, LeagueRelativePositionStrength]]:
-    """Consume already-published league-relative position strength evidence."""
+    """Consume already-published league-relative position strength evidence.
+
+    Search does not rebuild this derived truth; it only consumes the common
+    Analytics/Simulation position-strength rows for exploration context.
+    """
 
     simulation = runtime.simulation_analytics
     if simulation is None:
@@ -43,6 +50,8 @@ def _asset_value(option: TradeAssetOption, cardinal: Mapping[str, FSFFLCardinalV
 
 
 def _asset_payload(option: TradeAssetOption, value: float) -> dict[str, object]:
+    """Publish existing canonical asset metadata without creating new Search truth."""
+
     return {
         "asset_ref": option.asset_ref,
         "label": option.label,
@@ -162,13 +171,57 @@ def _candidate(
     }
 
 
+def _build_package_catalog(
+    focal_assets: tuple[TradeAssetOption, ...],
+    cardinal: Mapping[str, FSFFLCardinalValueScore],
+) -> PackageCatalog:
+    """Enumerate the focal package universe once, not once per opposing target.
+
+    With the discovery cap at three assets this is O(focal_assets^3) once per
+    workspace. Target lookup then uses a binary search over package totals, avoiding
+    the previous O(targets × focal_assets^3) synchronous path.
+    """
+
+    valued_focal = tuple(
+        (asset, float(value))
+        for asset in focal_assets
+        if (value := _asset_value(asset, cardinal)) is not None
+    )
+    catalog: PackageCatalog = {}
+    max_size = min(_MAX_DISCOVERY_PACKAGE_SIZE, len(valued_focal))
+    for size in range(1, max_size + 1):
+        entries: list[tuple[float, tuple[str, ...], tuple[TradeAssetOption, ...]]] = []
+        for package in combinations(valued_focal, size):
+            assets = tuple(asset for asset, _ in package)
+            total = sum(value for _, value in package)
+            refs = tuple(sorted(asset.asset_ref for asset in assets))
+            entries.append((total, refs, assets))
+        entries.sort(key=lambda item: (item[0], item[1]))
+        catalog[size] = tuple(entries)
+    return catalog
+
+
+def _nearest_package(catalog: PackageCatalog, *, size: int, target_value: float) -> tuple[TradeAssetOption, ...] | None:
+    entries = catalog.get(size) or ()
+    if not entries:
+        return None
+    totals = [item[0] for item in entries]
+    insertion = bisect_left(totals, target_value)
+    candidate_indices = {max(0, insertion - 1), min(len(entries) - 1, insertion)}
+    _, _, assets = min(
+        (entries[index] for index in candidate_indices),
+        key=lambda item: (abs(item[0] - target_value), item[1]),
+    )
+    return assets
+
+
 def _nearest_packages_for_target(
     *,
     league_state: LeagueState,
     focal_team_id: str,
     counterparty_team_id: str,
     counterparty_name: str,
-    focal_assets: tuple[TradeAssetOption, ...],
+    package_catalog: PackageCatalog,
     target: TradeAssetOption,
     cardinal: Mapping[str, FSFFLCardinalValueScore],
     strengths: dict[str, dict[Position, LeagueRelativePositionStrength]],
@@ -183,27 +236,17 @@ def _nearest_packages_for_target(
     target_value = _asset_value(target, cardinal)
     if target_value is None:
         return ()
-    valued_focal = tuple(
-        (asset, float(value))
-        for asset in focal_assets
-        if (value := _asset_value(asset, cardinal)) is not None
-    )
     rows: list[dict[str, object]] = []
-    max_size = min(_MAX_DISCOVERY_PACKAGE_SIZE, len(valued_focal))
-    for size in range(1, max_size + 1):
-        package = min(
-            combinations(valued_focal, size),
-            key=lambda items: (
-                abs(sum(value for _, value in items) - target_value),
-                tuple(asset.asset_ref for asset, _ in items),
-            ),
-        )
+    for size in sorted(package_catalog):
+        package = _nearest_package(package_catalog, size=size, target_value=float(target_value))
+        if package is None:
+            continue
         row = _candidate(
             league_state=league_state,
             focal_team_id=focal_team_id,
             counterparty_team_id=counterparty_team_id,
             counterparty_name=counterparty_name,
-            send_assets=tuple(asset for asset, _ in package),
+            send_assets=package,
             receive_asset=target,
             cardinal=cardinal,
             strengths=strengths,
@@ -276,6 +319,7 @@ def build_roster_aware_trade_candidates(
     if league_state is None or focal_team_id is None:
         return []
     strengths = _position_strengths(runtime)
+    package_catalog = _build_package_catalog(browser.focal_team.assets, cardinal)
     candidates: list[dict[str, object]] = []
     seen: set[tuple[str, tuple[str, ...], str]] = set()
     for counterparty in browser.counterparties:
@@ -286,7 +330,7 @@ def build_roster_aware_trade_candidates(
                 focal_team_id=focal_team_id,
                 counterparty_team_id=counterparty.team_id,
                 counterparty_name=counterparty.display_name,
-                focal_assets=browser.focal_team.assets,
+                package_catalog=package_catalog,
                 target=target,
                 cardinal=cardinal,
                 strengths=strengths,
