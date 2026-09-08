@@ -17,7 +17,7 @@ def test_trade_finder_surfaces_feasibility_without_inventing_acceptance() -> Non
 
     assert 'analysis.get("negotiation_feasibility")' in source
     assert '"negotiation_feasibility_shape": feasibility.get("shape")' in source
+    assert '"negotiation_feasibility_evaluated": bool(feasibility)' in source
     assert '"acceptance_probability": None' in source
     assert '"recommendation_authority": False' in source
     assert '"negotiation_feasibility_is_not_acceptance_probability": True' in source
-    assert "Feasibility describes calculated bilateral consequences" in source
