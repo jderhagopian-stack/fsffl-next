@@ -34,15 +34,15 @@ _FANTASY_POSITIONS = {
 class SleeperSnapshotNormalizer:
     """Bridge an acquired Sleeper snapshot into canonical point-in-time State.
 
-    `include_unrostered_players` is intentionally opt-in. The private-beta live
-    loader enables it so waiver/free-agent discovery has a canonical current player
-    universe. Historical reconstruction leaves it disabled unless a dedicated
-    point-in-time source contract explicitly provides that historical universe.
+    Current live snapshots include the unrostered QB/RB/WR/TE universe by default
+    so waiver/free-agent discovery has canonical candidates. Historical callers can
+    explicitly disable that enrichment when their snapshot does not carry a valid
+    point-in-time player universe.
     """
 
     provider_name = "sleeper"
 
-    def __init__(self, *, include_unrostered_players: bool = False) -> None:
+    def __init__(self, *, include_unrostered_players: bool = True) -> None:
         self._normalizer = SleeperNormalizer()
         self._include_unrostered_players = include_unrostered_players
 
