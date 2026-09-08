@@ -131,3 +131,19 @@ def test_real_garoppolo_pierce_case_is_research_conflicted_not_forced() -> None:
         future_confidence=0.7,
     )
     assert classify_historical_evidence_alignment(garoppolo_pierce) == HistoricalEvidenceAlignment.CONFLICTED
+
+
+def test_real_davis_robinson_pickett_beckham_case_is_research_aligned() -> None:
+    # 2023-03-12 transaction 940755540299366400 exchanged Gabe Davis + Brian
+    # Robinson for Kenny Pickett + Odell Beckham Jr. Pre-trade dynasty evidence
+    # favored the Davis/Robinson package, and the available 2023 current-impact
+    # outlook also favored that side. This is a research-priority positive control,
+    # not an authoritative trade grade or a substitute for team-specific Decision.
+    davis_robinson = profile(
+        "940755540299366400",
+        HistoricalEvidenceDirection.FAVORS_TEAM_A,
+        HistoricalEvidenceDirection.FAVORS_TEAM_A,
+        current_confidence=0.7,
+        future_confidence=0.85,
+    )
+    assert classify_historical_evidence_alignment(davis_robinson) == HistoricalEvidenceAlignment.ALIGNED
