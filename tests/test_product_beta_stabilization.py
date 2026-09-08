@@ -20,7 +20,8 @@ def test_trade_discovery_suppresses_generic_pick_for_pick_mirrors_and_moves_beyo
     assert "focal_position_strength_index" in search
     assert '"two_for_one"' in search
     assert "combinations(valued_focal, 2)" in search
-    assert "roster_aware_position_need_then_cardinal_distance" in workspace
+    assert "cardinal_market_fit_then_roster_need" in workspace
+    assert '"market_gap_ratio"' in search
     assert "composite_score" not in search
 
 
