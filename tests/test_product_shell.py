@@ -30,6 +30,15 @@ def test_navigation_unlocks_with_league_and_team_context() -> None:
     assert {item.route for item in available_navigation(team)} == set(ProductRoute)
 
 
+def test_blank_optional_context_identifiers_are_rejected_before_navigation_unlocks() -> None:
+    for field in ("league_id", "team_id", "state_id"):
+        kwargs = {"user_id": "u1", field: "   "}
+        if field in {"team_id", "state_id"}:
+            kwargs["league_id"] = "l1"
+        with pytest.raises(ValueError, match="optional identifiers cannot be blank"):
+            ProductContext(**kwargs)
+
+
 def test_team_requires_selected_league() -> None:
     with pytest.raises(ValueError, match="team selection requires selected league"):
         ProductContext(user_id="u1", team_id="t1")
