@@ -21,6 +21,7 @@ from fsffl.team_utility import (
     TeamUtilityVector,
     assemble_team_utility_vector,
     build_bye_aware_weekly_team_scoring_panel,
+    build_league_relative_position_strengths,
     build_regular_season_simulation_input,
     classify_calculated_competitive_state,
     derive_league_relative_competitive_state_policy,
@@ -35,7 +36,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     league_view: LeagueAnalyticsView
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
-    model_version: str = "next8-live-simulation-analytics-v5"
+    model_version: str = "next8-live-simulation-analytics-v6:position-strength"
 
 
 def build_live_simulation_analytics(
@@ -102,6 +103,16 @@ def build_live_simulation_analytics(
                 f"{item.slot.value}{item.slot_index}" for item in lineup.unfilled_slots
             )
             incomplete_team_names.append(f"{team.display_name} ({slots})")
+
+    position_strength_rows = build_league_relative_position_strengths(
+        tuple(lineups[team.team_id] for team in ordered_teams)
+    )
+    position_strengths_by_team = {
+        team.team_id: tuple(
+            row for row in position_strength_rows if row.team_id == team.team_id
+        )
+        for team in ordered_teams
+    }
 
     weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
         league_state,
@@ -216,6 +227,10 @@ def build_live_simulation_analytics(
             ModelLineageEntry(component="forecast", model_version=forecast_model_version),
             ModelLineageEntry(component="lineup", model_version="next4-lineup-v3:bye-aware"),
             ModelLineageEntry(
+                component="position_strength",
+                model_version="next4-league-relative-position-strength-v1",
+            ),
+            ModelLineageEntry(
                 component="weekly_volatility",
                 model_version="next2-weekly-volatility-v1:2023-2025-position-cv",
             ),
@@ -267,6 +282,7 @@ def build_live_simulation_analytics(
                 team_id=team.team_id,
                 forecasts=forecasts,
                 optimized_lineup=lineups[team.team_id],
+                position_strengths=position_strengths_by_team[team.team_id],
                 utility=utility,
             )
         )
