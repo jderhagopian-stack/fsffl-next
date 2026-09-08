@@ -7,6 +7,7 @@ from fsffl.runtime.historical_trade_readiness import (
     HistoricalAssetEvidenceStatus,
     assess_historical_trade_valuation_readiness,
     historical_trade_asset_key,
+    summarize_historical_trade_readiness,
 )
 from fsffl.state.historical_trade import HistoricalTradeLeg, HistoricalTradeRecord
 from fsffl.state.models import FaabAsset, PickAsset, PlayerAsset, Provenance
@@ -154,6 +155,46 @@ def test_complete_only_when_every_material_asset_has_authoritative_pit_evidence(
     assert readiness.complete is True
     assert readiness.missing_asset_keys == ()
     assert readiness.excluded_asset_keys == ()
+
+
+def test_batch_summary_exposes_blocker_asset_families() -> None:
+    complete_record = HistoricalTradeRecord(
+        transaction_id="complete-trade",
+        league_id="league",
+        completed_at=datetime(2024, 1, 1, tzinfo=UTC),
+        legs=(
+            HistoricalTradeLeg(team_id="A", sends=(PlayerAsset(player_id="p1"),)),
+            HistoricalTradeLeg(team_id="B", sends=(PlayerAsset(player_id="p2"),)),
+        ),
+        provenance=provenance(),
+    )
+    complete_evidence = []
+    for leg in complete_record.legs:
+        for ordinal, asset in enumerate(leg.sends):
+            complete_evidence.append(
+                evidence_for(historical_trade_asset_key(team_id=leg.team_id, ordinal=ordinal, asset=asset))
+            )
+    complete = assess_historical_trade_valuation_readiness(complete_record, evidence=tuple(complete_evidence))
+
+    blocked_record = HistoricalTradeRecord(
+        transaction_id="blocked-trade",
+        league_id="league",
+        completed_at=datetime(2024, 1, 2, tzinfo=UTC),
+        legs=(
+            HistoricalTradeLeg(team_id="A", sends=(PickAsset(pick_id="future-pick"),)),
+            HistoricalTradeLeg(team_id="B", sends=(FaabAsset(amount=10),)),
+        ),
+        provenance=provenance(),
+    )
+    blocked = assess_historical_trade_valuation_readiness(blocked_record, evidence=())
+
+    summary = summarize_historical_trade_readiness((complete, blocked))
+
+    assert summary.trade_count == 2
+    assert summary.complete_trade_count == 1
+    assert summary.blocked_trade_count == 1
+    assert summary.blocked_transaction_ids == ("blocked-trade",)
+    assert summary.missing_asset_count_by_kind == (("faab", 1), ("pick", 1))
 
 
 def test_rejects_evidence_for_asset_not_in_trade() -> None:
