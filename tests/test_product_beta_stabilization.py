@@ -15,7 +15,8 @@ def test_trade_discovery_suppresses_generic_pick_for_pick_mirrors_and_moves_beyo
     search = (ROOT / "src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
     assert "player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == \"player\")" in search
     assert "build_roster_aware_trade_candidates" in workspace
-    assert "summarize_lineup_by_position" in search
+    assert "build_league_relative_position_strengths" in search
+    assert "focal_position_strength_index" in search
     assert '"two_for_one"' in search
     assert "combinations(valued_focal, 2)" in search
     assert "roster_aware_position_need_then_cardinal_distance" in workspace
