@@ -39,7 +39,7 @@ def test_product_surfaces_explain_authoritative_reuse_not_frontend_model_logic()
     source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
     assert "rerun authoritative Simulation" in source
     assert "without inventing a second forecast or Value path" in source
-    assert "authoritative Analytics outputs" in source
+    assert "authoritative Analytics/API outputs" in source
     assert "no parallel calculation path" in source
     assert "second valuation path" in source
 
