@@ -42,14 +42,34 @@ def test_trade_opportunity_endpoint_fails_closed_without_runtime_context() -> No
 
 def test_opportunity_search_uses_authoritative_cardinal_value_only() -> None:
     source = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
+    search = (ROOT / "src/fsffl/product/opportunity_search.py").read_text()
     assert "values.fsffl_cardinal_values" in source
     assert '"action_authority": "diagnostic_only"' in source
-    assert '"unknown_acceptance"' in source
-    assert '"materiality_not_evaluated"' in source
+    assert '"unknown_acceptance"' in search
+    assert '"materiality_not_evaluated"' in search
     assert '"recommendation_authority": False' in source
     assert 'status="building_intelligence"' in source
     assert 'status="blocked"' in source
     assert "provisional_fsffl_values" not in source
+    assert "provisional_fsffl_values" not in search
+
+
+def test_opportunity_search_is_roster_aware_and_not_just_nearest_one_for_one_value() -> None:
+    source = (ROOT / "src/fsffl/product/opportunity_search.py").read_text()
+    workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
+    assert "summarize_lineup_by_position" in source
+    assert "focal_position_strength_rank" in source
+    assert "counterparty_receive_position_rank" in source
+    assert '"package_shape": shape' in source
+    assert '"two_for_one"' in source
+    assert "combinations(valued_focal, 2)" in source
+    assert "Lexicographic, explainable ordering" in source
+    assert "composite_score" not in source
+    assert "opportunity_score" not in source
+    assert "build_roster_aware_trade_candidates" in workspace
+    assert '"roster_aware_search": runtime.simulation_analytics is not None' in workspace
+    assert '"two_for_one_consolidation_search": True' in workspace
+    assert '"search_order_is_not_a_composite_opportunity_score": True' in workspace
 
 
 def test_opportunity_presentation_retries_runtime_readiness_without_inventing_authority() -> None:
