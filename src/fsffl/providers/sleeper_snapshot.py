@@ -5,7 +5,16 @@ from typing import Any
 
 from fsffl.providers.acquisition import ProviderSnapshot
 from fsffl.providers.sleeper import SleeperNormalizer, SleeperPayloadBundle
-from fsffl.state.models import LeagueState, NflTeamBye, Provenance, ProviderRef
+from fsffl.state.models import (
+    LeagueState,
+    NflTeamBye,
+    Player,
+    PlayerState,
+    PlayerStatus,
+    Position,
+    Provenance,
+    ProviderRef,
+)
 
 
 _TEAM_ALIASES = {
@@ -14,15 +23,28 @@ _TEAM_ALIASES = {
     "SD": "LAC",
     "STL": "LAR",
 }
+_FANTASY_POSITIONS = {
+    "QB": Position.QB,
+    "RB": Position.RB,
+    "WR": Position.WR,
+    "TE": Position.TE,
+}
 
 
 class SleeperSnapshotNormalizer:
-    """Bridge an acquired Sleeper snapshot into canonical point-in-time State."""
+    """Bridge an acquired Sleeper snapshot into canonical point-in-time State.
+
+    `include_unrostered_players` is intentionally opt-in. The private-beta live
+    loader enables it so waiver/free-agent discovery has a canonical current player
+    universe. Historical reconstruction leaves it disabled unless a dedicated
+    point-in-time source contract explicitly provides that historical universe.
+    """
 
     provider_name = "sleeper"
 
-    def __init__(self) -> None:
+    def __init__(self, *, include_unrostered_players: bool = False) -> None:
         self._normalizer = SleeperNormalizer()
+        self._include_unrostered_players = include_unrostered_players
 
     def normalize_snapshot(self, snapshot: ProviderSnapshot, *, as_of) -> LeagueState:
         if snapshot.provider_name != self.provider_name:
@@ -43,6 +65,13 @@ class SleeperSnapshotNormalizer:
             retrieved_at=snapshot.captured_at,
         )
         state = self._normalizer.normalize(bundle, as_of=as_of)
+        if self._include_unrostered_players:
+            state = _attach_current_fantasy_player_universe(
+                state,
+                payload.get("players"),
+                retrieved_at=snapshot.captured_at,
+                effective_at=as_of,
+            )
         state = _attach_fantasy_regular_season_horizon(state, payload.get("league"))
         byes, schedule_provenance = _normalize_nfl_byes(
             payload.get("nfl_schedule", ()),
@@ -58,6 +87,86 @@ class SleeperSnapshotNormalizer:
                 "provenance": state.provenance + (schedule_provenance,),
             }
         )
+
+
+def _age_years(raw_age: Any) -> float | None:
+    if isinstance(raw_age, bool) or raw_age is None:
+        return None
+    try:
+        age = float(raw_age)
+    except (TypeError, ValueError):
+        return None
+    return age if age >= 0 else None
+
+
+def _attach_current_fantasy_player_universe(
+    state: LeagueState,
+    raw_players: Any,
+    *,
+    retrieved_at,
+    effective_at,
+) -> LeagueState:
+    """Add current unrostered fantasy-relevant NFL players to live State.
+
+    Ownership remains entirely in TeamState.roster. This only broadens the canonical
+    player identity/state universe so Search can truthfully distinguish rostered
+    assets from available players. Players without a current NFL team are excluded
+    from automatic waiver discovery; no browser-side player catalog is invented.
+    """
+
+    if not isinstance(raw_players, Mapping):
+        return state
+    players_by_id = {player.player_id: player for player in state.players}
+    states_by_id = {player_state.player_id: player_state for player_state in state.player_states}
+    provenance = Provenance(
+        source="sleeper:current_player_universe",
+        retrieved_at=retrieved_at,
+        effective_at=effective_at,
+        provider_ref=ProviderRef(provider="sleeper", external_id="players:nfl"),
+    )
+
+    for external_id, raw in raw_players.items():
+        if not isinstance(raw, Mapping):
+            continue
+        position = _FANTASY_POSITIONS.get(str(raw.get("position") or "").upper())
+        nfl_team = _normalize_team(raw.get("team"))
+        if position is None or nfl_team is None:
+            continue
+        player_id = f"sleeper:player:{external_id}"
+        if player_id in players_by_id:
+            continue
+        full_name = str(
+            raw.get("full_name")
+            or " ".join(
+                filter(None, [raw.get("first_name"), raw.get("last_name")])
+            )
+            or external_id
+        )
+        players_by_id[player_id] = Player(
+            player_id=player_id,
+            full_name=full_name,
+            position=position,
+            nfl_team=nfl_team,
+            provider_refs=(ProviderRef(provider="sleeper", external_id=str(external_id)),),
+        )
+        status_raw = str(raw.get("status") or "unknown").lower()
+        status = PlayerStatus.ACTIVE if status_raw == "active" else PlayerStatus.UNKNOWN
+        states_by_id[player_id] = PlayerState(
+            player_id=player_id,
+            as_of=effective_at,
+            age_years=_age_years(raw.get("age")),
+            nfl_team=nfl_team,
+            status=status,
+            provenance=provenance,
+        )
+
+    return state.model_copy(
+        update={
+            "players": tuple(sorted(players_by_id.values(), key=lambda item: item.player_id)),
+            "player_states": tuple(sorted(states_by_id.values(), key=lambda item: item.player_id)),
+            "provenance": state.provenance + (provenance,),
+        }
+    )
 
 
 def _attach_fantasy_regular_season_horizon(
