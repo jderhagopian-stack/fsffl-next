@@ -80,11 +80,17 @@ def _empty_state() -> LeagueState:
             league_id="league",
             name="League",
             season=2026,
-            rules=LeagueRules(team_count=1, roster_size=1, lineup=(), scoring=()),
+            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
         ),
         as_of=NOW,
-        teams=(Team(team_id="team-a", league_id="league", display_name="A"),),
-        team_states=(TeamState(team_id="team-a", roster=()),),
+        teams=(
+            Team(team_id="team-a", league_id="league", display_name="A"),
+            Team(team_id="team-b", league_id="league", display_name="B"),
+        ),
+        team_states=(
+            TeamState(team_id="team-a", roster=()),
+            TeamState(team_id="team-b", roster=()),
+        ),
     )
 
 
