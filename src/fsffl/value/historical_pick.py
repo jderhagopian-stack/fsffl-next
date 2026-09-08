@@ -129,6 +129,42 @@ class HistoricalPickCoordinateResult(FrozenModel):
     model_version: str = "historical-pick-coordinate-v1"
 
 
+def _observation_identity(item: HistoricalDraftSlotObservation) -> tuple[object, ...]:
+    return (
+        item.draft_season,
+        item.round,
+        item.slot_in_round,
+        item.available_at,
+        item.model_version,
+        item.provenance,
+        item.scale.scale_id,
+        item.scale.version,
+        item.value.mean,
+        item.value.stddev,
+    )
+
+
+def _dedupe_observations(
+    observations: list[HistoricalDraftSlotObservation],
+) -> tuple[HistoricalDraftSlotObservation, ...]:
+    unique: dict[tuple[object, ...], HistoricalDraftSlotObservation] = {}
+    for item in observations:
+        unique.setdefault(_observation_identity(item), item)
+    return tuple(
+        sorted(
+            unique.values(),
+            key=lambda item: (
+                item.draft_season,
+                item.round,
+                item.slot_in_round,
+                item.available_at,
+                item.model_version,
+                item.provenance,
+            ),
+        )
+    )
+
+
 def _aggregate_slot_values(
     observations: tuple[HistoricalDraftSlotObservation, ...],
     *,
@@ -136,7 +172,11 @@ def _aggregate_slot_values(
     as_of: datetime,
     scale: ValueScale,
     league_rules: LeagueRules,
-) -> tuple[dict[int, ValueDistribution], bool]:
+) -> tuple[
+    dict[int, ValueDistribution],
+    frozenset[int],
+    dict[int, tuple[HistoricalDraftSlotObservation, ...]],
+]:
     """Aggregate PIT slot evidence and enforce draft-position dominance.
 
     Within one otherwise identical rookie draft, an earlier overall pick weakly
@@ -148,10 +188,12 @@ def _aggregate_slot_values(
 
     Missing slots remain missing. The projection only reorders evidence that
     already exists, and any mean adjustment is added to the reported uncertainty
-    rather than hidden.
+    rather than hidden. Contributor metadata follows the same pooled blocks used
+    to construct each returned slot so unrelated observations cannot inflate
+    evidence quality or provenance.
     """
 
-    by_overall_slot: dict[int, list[ValueDistribution]] = defaultdict(list)
+    by_overall_slot: dict[int, list[HistoricalDraftSlotObservation]] = defaultdict(list)
     for observation in observations:
         if observation.available_at > as_of or observation.scale != scale:
             continue
@@ -160,10 +202,11 @@ def _aggregate_slot_values(
         if observation.slot_in_round > league_rules.team_count:
             raise ValueError("historical draft observation slot exceeds league team count")
         overall_slot = (observation.round - 1) * league_rules.team_count + observation.slot_in_round
-        by_overall_slot[overall_slot].append(observation.value)
+        by_overall_slot[overall_slot].append(observation)
 
     raw: dict[int, tuple[float, float, int]] = {}
-    for overall_slot, values in by_overall_slot.items():
+    for overall_slot, source_rows in by_overall_slot.items():
+        values = [item.value for item in source_rows]
         mean = sum(value.mean for value in values) / len(values)
         second = sum(value.stddev**2 + value.mean**2 for value in values) / len(values)
         raw[overall_slot] = (mean, sqrt(max(0.0, second - mean**2)), len(values))
@@ -189,26 +232,44 @@ def _aggregate_slot_values(
             )
 
     fitted: dict[int, float] = {}
+    block_slots_by_overall_slot: dict[int, tuple[int, ...]] = {}
     for block in blocks:
-        for overall_slot in block["slots"]:
-            fitted[int(overall_slot)] = float(block["mean"])
+        block_slots = tuple(int(value) for value in block["slots"])
+        for overall_slot in block_slots:
+            fitted[overall_slot] = float(block["mean"])
+            block_slots_by_overall_slot[overall_slot] = block_slots
 
-    adjusted = False
+    adjusted_slots: set[int] = set()
     result: dict[int, ValueDistribution] = {}
+    contributors: dict[int, tuple[HistoricalDraftSlotObservation, ...]] = {}
     for overall_slot, (raw_mean, raw_stddev, _) in raw.items():
-        fitted_mean = fitted[overall_slot]
-        if abs(fitted_mean - raw_mean) > 1e-12:
-            adjusted = True
         round_number = ((overall_slot - 1) // league_rules.team_count) + 1
         slot_in_round = ((overall_slot - 1) % league_rules.team_count) + 1
         if round_number != round:
             continue
+        fitted_mean = fitted[overall_slot]
+        if abs(fitted_mean - raw_mean) > 1e-12:
+            adjusted_slots.add(slot_in_round)
         adjustment = raw_mean - fitted_mean
         result[slot_in_round] = ValueDistribution(
             mean=fitted_mean,
             stddev=sqrt(raw_stddev**2 + adjustment**2),
         )
-    return result, adjusted
+        source_rows: list[HistoricalDraftSlotObservation] = []
+        for source_slot in block_slots_by_overall_slot[overall_slot]:
+            source_rows.extend(by_overall_slot[source_slot])
+        contributors[slot_in_round] = _dedupe_observations(source_rows)
+    return result, frozenset(adjusted_slots), contributors
+
+
+def _contributors_for_slots(
+    contributors_by_slot: dict[int, tuple[HistoricalDraftSlotObservation, ...]],
+    slots: set[int],
+) -> tuple[HistoricalDraftSlotObservation, ...]:
+    rows: list[HistoricalDraftSlotObservation] = []
+    for slot in sorted(slots):
+        rows.extend(contributors_by_slot.get(slot, ()))
+    return _dedupe_observations(rows)
 
 
 def reconstruct_historical_pick_coordinate(
@@ -231,7 +292,7 @@ def reconstruct_historical_pick_coordinate(
             model_version=model_version,
         )
 
-    slot_values, dominance_adjusted = _aggregate_slot_values(
+    slot_values, adjusted_slots, contributors_by_slot = _aggregate_slot_values(
         evidence.observations,
         round=evidence.pick.round,
         as_of=evidence.as_of,
@@ -240,6 +301,8 @@ def reconstruct_historical_pick_coordinate(
     )
 
     if evidence.exact_slot_in_round is not None:
+        if evidence.exact_slot_in_round > league_rules.team_count:
+            raise ValueError("historical exact slot exceeds league team count")
         probabilities = {evidence.exact_slot_in_round: 1.0}
         probability_version = "exact-slot"
         probability_provenance = "historically-known exact draft slot"
@@ -247,10 +310,15 @@ def reconstruct_historical_pick_coordinate(
     else:
         probabilities = {item.slot_in_round: item.probability for item in evidence.slot_probabilities}
         if not probabilities:
+            available_contributors = _contributors_for_slots(
+                contributors_by_slot, set(contributors_by_slot)
+            )
             return HistoricalPickCoordinateResult(
                 status="NOT_RECONSTRUCTED_MISSING_SLOT_PROBABILITY_EVIDENCE",
                 evidence_quality="INSUFFICIENT",
-                used_draft_seasons=tuple(sorted({item.draft_season for item in evidence.observations})),
+                used_draft_seasons=tuple(
+                    sorted({item.draft_season for item in available_contributors})
+                ),
                 model_version=model_version,
             )
         if len(probabilities) != len(evidence.slot_probabilities):
@@ -263,18 +331,23 @@ def reconstruct_historical_pick_coordinate(
         probability_provenance = "; ".join(sorted({item.provenance for item in evidence.slot_probabilities}))
         exact = False
 
+    probability_slots = set(probabilities)
+    contributing_observations = _contributors_for_slots(contributors_by_slot, probability_slots)
     missing = tuple(sorted(slot for slot in probabilities if slot not in slot_values))
     if missing:
         return HistoricalPickCoordinateResult(
             status="NOT_RECONSTRUCTED_MISSING_SLOT_VALUE_EVIDENCE",
             evidence_quality="INSUFFICIENT",
-            used_draft_seasons=tuple(sorted({item.draft_season for item in evidence.observations})),
+            used_draft_seasons=tuple(
+                sorted({item.draft_season for item in contributing_observations})
+            ),
             missing_slots=missing,
             exact_slot_used=exact,
             provenance=(probability_provenance,),
             model_version=model_version,
         )
 
+    dominance_adjusted = bool(probability_slots & set(adjusted_slots))
     factor = evidence.horizon_adjustment.factor if evidence.horizon_adjustment is not None else 1.0
     outcomes = PickOutcomeSet(
         outcomes=tuple(
@@ -289,7 +362,7 @@ def reconstruct_historical_pick_coordinate(
             for slot, probability in sorted(probabilities.items())
         )
     )
-    draft_versions = sorted({item.model_version for item in evidence.observations})
+    draft_versions = sorted({item.model_version for item in contributing_observations})
     class_version = "+".join(draft_versions) if draft_versions else "missing"
     if dominance_adjusted:
         class_version += "+draft-position-dominance-v1"
@@ -307,9 +380,9 @@ def reconstruct_historical_pick_coordinate(
         class_strength_model_version=class_version,
         slot_uncertainty_model_version=probability_version,
     )
-    seasons = tuple(sorted({item.draft_season for item in evidence.observations}))
+    seasons = tuple(sorted({item.draft_season for item in contributing_observations}))
     quality = "HIGH" if exact and len(seasons) >= 2 else "MEDIUM" if len(seasons) >= 2 else "LOW"
-    provenance = sorted({item.provenance for item in evidence.observations})
+    provenance = sorted({item.provenance for item in contributing_observations})
     provenance.append(probability_provenance)
     if dominance_adjusted:
         provenance.append("structural draft-position dominance projection")
