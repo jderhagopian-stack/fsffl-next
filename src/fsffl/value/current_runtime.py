@@ -21,6 +21,7 @@ from .cardinal_authority import (
     build_authoritative_pick_scores_from_trade_evaluation,
     build_authoritative_player_cardinal_scores,
 )
+from .cardinal_consistency import CardinalConsistencyAudit, build_cardinal_consistency_audit
 from .market import MarketEvidenceKind, MarketObservation, estimate_market_price
 from .models import MarketPriceEstimate, ValueAssetKind, ValueScale
 from .pick_variants import PickVariantMarketValue, normalize_pick_variant_market_values
@@ -60,7 +61,8 @@ class CurrentMarketValueRuntimeResult:
     fsffl_cardinal_values: tuple[FSFFLCardinalValueScore, ...] = ()
     team_cardinal_portfolios: tuple[TeamCardinalPortfolio, ...] = ()
     pick_variant_market_values: tuple[PickVariantMarketValue, ...] = ()
-    model_version: str = "next3-current-market-runtime-v4:portfolio-and-pick-variants"
+    cardinal_consistency_audit: CardinalConsistencyAudit | None = None
+    model_version: str = "next3-current-market-runtime-v5:format-locked-consistency-audit"
 
     @property
     def coverage(self) -> float:
@@ -203,14 +205,13 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
 
     Market Percentile remains the authoritative relative market-position measure.
     Provider-native magnitudes are retained for audit/research. The promoted
-    FSFFL Cardinal Market Score uses the empirically validated Stats Guy reference
-    axis for players and generic unknown-slot rookie picks; it remains distinct
-    from intrinsic dynasty value and downstream Decision utility. Team portfolio
-    totals are additive accounting on that same Cardinal scale and carry explicit
-    asset coverage; they do not become Team Utility or recommendation authority.
-    Early/mid/late pick variants are retained as provider-backed reference evidence
-    for a separate Simulation-informed next-season pick challenger; they do not
-    silently overwrite the authoritative generic future-pick score.
+    FSFFL Cardinal Market Score uses one explicitly format-locked Stats Guy
+    reference cohort for players and generic unknown-slot rookie picks. The
+    separate consistency audit compares that reference against the fully
+    parameterized FantasyCalc cohort by position, but remains diagnostic and
+    cannot change Value. Team portfolio totals are additive accounting on the
+    Cardinal scale and carry explicit asset coverage. Early/mid/late pick variants
+    remain separate Simulation-informed challenger evidence.
     """
 
     sleeper_crosswalk = _sleeper_crosswalk(league_state)
@@ -219,6 +220,7 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
     num_qbs, num_teams, ppr, context = _format_inputs(league_state)
     acquisition_time = datetime.now(UTC)
 
+    fantasycalc_format = f"dynasty:{num_teams}t:{num_qbs}qb:{ppr:g}ppr"
     fantasycalc_url = f"{FANTASYCALC_URL}?{urlencode({'isDynasty': 'true', 'numQbs': num_qbs, 'numTeams': num_teams, 'ppr': ppr})}"
     statsguy_format = "sf_dynasty" if num_qbs == 2 else "non_sf_dynasty"
     statsguy_url = f"{STATSGUY_URL}?{urlencode({'format': statsguy_format, 'limit': 1000})}"
@@ -228,6 +230,7 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
             _download_text(DYNASTYDEALER_URL),
             asset_id_by_sleeper_id=sleeper_crosswalk,
             format_context_id=context,
+            source_version="provider-default-unparameterized",
             provenance_uri=DYNASTYDEALER_URL,
         ).observations
 
@@ -237,6 +240,7 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
             observed_at=acquisition_time,
             asset_id_by_sleeper_id=sleeper_crosswalk,
             format_context_id=context,
+            source_version=fantasycalc_format,
             provenance_uri=fantasycalc_url,
         ).observations
 
@@ -245,6 +249,7 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
             _download_text(statsguy_url),
             asset_id_by_sleeper_id=sleeper_crosswalk,
             format_context_id=context,
+            source_version=statsguy_format,
             provenance_uri=statsguy_url,
         ).observations
 
@@ -263,7 +268,25 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
 
     native_magnitude_observations = preserve_native_market_magnitudes(batch.panel.observations)
     provisional_fsffl_values = build_provisional_fsffl_values(native_magnitude_observations)
-    cardinal_values = list(build_authoritative_player_cardinal_scores(native_magnitude_observations))
+    cardinal_values = list(
+        build_authoritative_player_cardinal_scores(
+            native_magnitude_observations,
+            expected_market_context_id=context,
+            expected_reference_format=statsguy_format,
+        )
+    )
+
+    consistency_observations = tuple(
+        row
+        for row in native_magnitude_observations
+        if row.source_id in {"statsguy_market_values", "fantasycalc_market_values"}
+    )
+    consistency_audit = build_cardinal_consistency_audit(
+        league_state,
+        consistency_observations,
+        market_context_id=context,
+        reference_format_key=statsguy_format,
+    )
 
     failures = list(batch.failed_source_ids)
     errors = dict(batch.errors_by_source_id)
@@ -361,4 +384,5 @@ def build_current_market_values(league_state: LeagueState) -> CurrentMarketValue
         fsffl_cardinal_values=cardinal_tuple,
         team_cardinal_portfolios=portfolios,
         pick_variant_market_values=pick_variant_values,
+        cardinal_consistency_audit=consistency_audit,
     )
