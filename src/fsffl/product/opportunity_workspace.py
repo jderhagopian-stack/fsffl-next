@@ -40,7 +40,7 @@ def _empty_workspace(
             "candidate_count": 0,
             "returned_count": 0,
             "truncated": False,
-            "ordering": "authoritative_cardinal_market_distance",
+            "ordering": "authoritative_cardinal_market_distance_with_player_target_priority",
             "bilateral_evaluated_count": 0,
             "bilateral_evaluation_limit": 0,
             "candidates": [],
@@ -151,6 +151,22 @@ def _evaluate_structural_trade(
     }
 
 
+def _candidate_family_priority(row: dict[str, object]) -> int:
+    """Presentation/search priority only; it does not alter Value or Decision truth."""
+
+    send = row.get("send") or []
+    receive = row.get("receive") or []
+    send_kind = str(send[0].get("asset_kind")) if send else ""
+    receive_kind = str(receive[0].get("asset_kind")) if receive else ""
+    if receive_kind == "player" and send_kind == "player":
+        return 0
+    if receive_kind == "player":
+        return 1
+    if send_kind == "player":
+        return 2
+    return 3
+
+
 def build_opportunity_workspace(
     runtime: UserRuntimeContext,
     *,
@@ -217,15 +233,31 @@ def build_opportunity_workspace(
         return row.score if row is not None else None
 
     candidates: list[dict[str, object]] = []
+    seen_structures: set[tuple[str, str, str, str, str]] = set()
     for counterparty in browser.counterparties:
         for focal_asset, target_asset in product(
             browser.focal_team.assets,
             counterparty.assets,
         ):
+            # Generic same-class pick swaps have no useful price-discovery content
+            # before slot-specific pick evidence exists. Their equal generic values
+            # previously crowded the top of discovery with zero-distance mirrors.
+            if focal_asset.asset_kind == "pick" and target_asset.asset_kind == "pick":
+                continue
             focal_value = option_value(focal_asset)
             target_value = option_value(target_asset)
             if focal_value is None or target_value is None:
                 continue
+            structure_key = (
+                counterparty.team_id,
+                focal_asset.asset_kind,
+                focal_asset.label,
+                target_asset.asset_kind,
+                target_asset.label,
+            )
+            if structure_key in seen_structures:
+                continue
+            seen_structures.add(structure_key)
             candidates.append(
                 {
                     "kind": "trade",
@@ -258,6 +290,7 @@ def build_opportunity_workspace(
 
     candidates.sort(
         key=lambda row: (
+            _candidate_family_priority(row),
             float(row["search_distance"]),
             str(row["counterparty_name"]),
             str(row["receive"][0]["label"]),
@@ -331,7 +364,7 @@ def build_opportunity_workspace(
             "candidate_count": total_candidate_count,
             "returned_count": len(returned),
             "truncated": total_candidate_count > len(returned),
-            "ordering": "authoritative_cardinal_market_distance",
+            "ordering": "authoritative_cardinal_market_distance_with_player_target_priority",
             "bilateral_evaluated_count": sum(
                 1 for row in returned if row.get("bilateral_decision_evaluated")
             ),
@@ -344,7 +377,7 @@ def build_opportunity_workspace(
             "authoritative_value_ordering": True,
             "bilateral_decision_evaluation": evaluate_count > 0,
             "behavioral_acceptance": False,
-            "waiver_materiality": False,
+            "waiver_materiality": bool(available_players),
             "post_transaction_simulation": False,
         },
         "authority": {
