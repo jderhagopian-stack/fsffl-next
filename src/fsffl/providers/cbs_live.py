@@ -18,11 +18,15 @@ _NFL_TEAMS = {
     "HOU", "IND", "JAC", "JAX", "KC", "LAC", "LAR", "LV", "MIA", "MIN", "NE", "NO", "NYG",
     "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS", "WSH",
 }
+_NON_SEASON_PROJECTION_PATTERN = re.compile(
+    r"\b(?:week\s*\d+\s*proj(?:ection)?s?|rest\s+of\s+season\s+proj(?:ection)?s?)\b",
+    re.IGNORECASE,
+)
 
 
 class CBSLiveProjectionSource:
     provider_name = "cbs"
-    source_version = "cbs-season-projections-html-v4"
+    source_version = "cbs-season-projections-html-v5:horizon-verified"
     usage_class = "beta-personal-research-requires-commercial-review"
 
     def __init__(self, *, http_get_text: HtmlGetter | None = None, clock: Clock | None = None) -> None:
@@ -35,7 +39,9 @@ class CBSLiveProjectionSource:
             raise ValueError("live CBS clock must be timezone-aware")
         rows: list[CurrentProjectionRow] = []
         for position in _POSITIONS:
-            rows.extend(_parse_page(self._http_get_text(self._url(season=season, position=position)), provider=self.provider_name, position=position))
+            html = self._http_get_text(self._url(season=season, position=position))
+            _assert_full_season_projection_page(html, position=position)
+            rows.extend(_parse_page(html, provider=self.provider_name, position=position))
         if not rows:
             raise ValueError("CBS returned no current projections")
         return CurrentProjectionSnapshot(
@@ -50,6 +56,27 @@ class CBSLiveProjectionSource:
     @staticmethod
     def _url(*, season: int, position: Position) -> str:
         return f"https://www.cbssports.com/fantasy/football/stats/{position.value}/{season}/season/projections/nonppr/"
+
+
+def _assert_full_season_projection_page(html: str, *, position: Position) -> None:
+    """Reject CBS content whose semantic horizon is not a full NFL season.
+
+    CBS has changed the content served at its historical `/season/projections/`
+    URL without changing the URL itself. In September 2026 that route served a
+    Week 1 projection grid. URL shape is therefore not horizon evidence.
+    """
+
+    text = " ".join(HtmlTableParser().text_parts)
+    # HtmlTableParser.text_parts is populated only after feed; keep the horizon
+    # check independent of table parsing so provider drift fails before rows are
+    # normalized as ForecastHorizon.SEASON.
+    parser = HtmlTableParser()
+    parser.feed(html)
+    text = " ".join(parser.text_parts)
+    if _NON_SEASON_PROJECTION_PATTERN.search(text):
+        raise ValueError(
+            f"CBS {position.value} response is not a full-season projection page"
+        )
 
 
 def _parse_page(html: str, *, provider: str, position: Position) -> tuple[CurrentProjectionRow, ...]:
