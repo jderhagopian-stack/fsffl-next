@@ -521,6 +521,7 @@ def create_app(
         if evidence is None:
             raise HTTPException(status_code=409, detail="Current NEXT-3 Value evidence is not loaded")
         player_names = {player.player_id: player.full_name for player in runtime.league_state.players}
+        team_names = {team.team_id: team.display_name for team in runtime.league_state.teams}
         return {
             "league_state_id": evidence.league_state_id,
             "market_context_id": evidence.market_context_id,
@@ -532,6 +533,13 @@ def create_app(
             "valued_roster_player_count": evidence.valued_roster_player_count,
             "coverage": evidence.coverage,
             "cardinal_player_coverage": evidence.cardinal_player_coverage,
+            "team_cardinal_portfolios": [
+                {
+                    **portfolio.model_dump(mode="json"),
+                    "team_name": team_names.get(portfolio.team_id, portfolio.team_id),
+                }
+                for portfolio in evidence.team_cardinal_portfolios
+            ],
             "estimates": [
                 {
                     **estimate.model_dump(mode="json"),
