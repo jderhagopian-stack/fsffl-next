@@ -5,18 +5,18 @@ import pytest
 from fsffl.runtime.historical_pick_batch import HistoricalPickBatchItem, summarize_historical_pick_batch
 from fsffl.runtime.historical_trade_readiness import HistoricalEvidenceMode
 from fsffl.value.historical_pick import HistoricalPickCoordinateResult
-from fsffl.value.models import PickValueEstimate, ValueScale
+from fsffl.value.models import PickValueEstimate, ValueDistribution, ValueScale
 
 
 AS_OF = datetime(2024, 5, 1, tzinfo=UTC)
+TEST_SCALE = ValueScale(scale_id="test", version="v1", unit_label="test units")
 
 
 def estimate(asset_id: str) -> PickValueEstimate:
     return PickValueEstimate(
         asset_id=asset_id,
-        mean=50.0,
-        stddev=10.0,
-        scale=ValueScale.GENERIC,
+        distribution=ValueDistribution(mean=50.0, stddev=10.0),
+        scale=TEST_SCALE,
         as_of=AS_OF,
         draft_season=2025,
         round=1,
