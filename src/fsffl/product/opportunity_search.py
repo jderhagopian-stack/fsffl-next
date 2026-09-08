@@ -174,8 +174,8 @@ def _candidate(
         "search_context": context,
         "bilateral_decision_evaluated": False,
         "explanation": (
-            "Roster-aware structural trade test. Cardinal market fit determines cheap Search "
-            "priority before roster context; Decision and acceptance evidence remain incomplete."
+            "Roster-aware structural trade test. Cardinal Value order Search only, using "
+            "relative market fit before roster context; Decision and acceptance evidence remain incomplete."
         ),
     }
 
@@ -289,10 +289,11 @@ def build_roster_aware_trade_candidates(
                     continue
                 seen.add(key)
                 candidates.append(row)
-    # Lexicographic and parameter-free: market plausibility is the cheap Search
-    # prerequisite for scarce Decision enrichment. Roster need and counterpart fit
-    # break ties after relative Cardinal mismatch, rather than allowing a positional
-    # need to push an economically remote trade ahead of a much closer structure.
+    # Lexicographic, explainable ordering with no hidden weighted score: market
+    # plausibility is the cheap Search prerequisite for scarce Decision enrichment.
+    # Roster need and counterpart fit break ties after relative Cardinal mismatch,
+    # rather than allowing a positional need to push an economically remote trade
+    # ahead of a much closer structure.
     candidates.sort(
         key=lambda row: (
             float(row["market_gap_ratio"]),
