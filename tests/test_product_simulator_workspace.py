@@ -39,6 +39,18 @@ def test_simulator_transport_envelope_reuses_hosted_governed_endpoint() -> None:
     assert "acceptance_probability" not in ui
 
 
+def test_simulator_uses_canonical_player_names_and_existing_context() -> None:
+    ui = UI.read_text(encoding="utf-8")
+    assert "row?.full_name" in ui
+    assert "row?.age_years" in ui
+    assert "row?.projected_starter" in ui
+    assert "row?.projected_lineup_slot" in ui
+    assert "row?.season_fantasy_points_projection" in ui
+    assert "NFL-season pts" in ui
+    assert "simulatorPlayerName(row)" in ui
+    assert "simulatorPlayerContext(row)" in ui
+
+
 def test_simulator_compares_only_server_returned_scenarios_without_new_score() -> None:
     ui = UI.read_text(encoding="utf-8")
     assert "retainSimulatorScenario" in ui
@@ -60,9 +72,6 @@ def test_simulator_is_first_class_team_scoped_product_route() -> None:
     assert "/static/simulator.js" in shell
     assert "route==='simulator'" in shell
     assert "'what_if','simulator','analytics'" in shell
-    # The shell can retain its lazy-loader token because index explicitly loads the
-    # repaired Simulator before product_shell. The published HTML must carry the
-    # stabilization token so a previously broken mobile module cannot be reused.
     assert "20260907-reportsuite1" in shell
     assert "20260907-stabilize1" in index
     assert '/static/simulator.js?v=20260907-stabilize1' in index
