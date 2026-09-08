@@ -49,6 +49,7 @@ def _empty_workspace(
             "structural_trade_discovery": False,
             "authoritative_value_ordering": False,
             "bilateral_decision_evaluation": False,
+            "negotiation_feasibility": False,
             "behavioral_acceptance": False,
             "waiver_materiality": False,
             "post_transaction_simulation": False,
@@ -128,6 +129,7 @@ def _evaluate_structural_trade(
     eval_b = evaluation.get("side_b") or {}
     focal_eval = eval_a if eval_a.get("team_id") == focal_team_id else eval_b
     counterparty_eval = eval_a if eval_a.get("team_id") == counterparty_team_id else eval_b
+    feasibility = analysis.get("negotiation_feasibility") or {}
 
     return {
         **row,
@@ -135,6 +137,9 @@ def _evaluate_structural_trade(
         "decision_shape": decision.get("shape"),
         "focal_decision_shape": focal_side.get("shape"),
         "counterparty_decision_shape": counterparty_side.get("shape"),
+        "negotiation_feasibility_shape": feasibility.get("shape"),
+        "negotiation_feasibility_evaluated": bool(feasibility),
+        "acceptance_probability": None,
         "focal_roster_delta": (focal_eval.get("delta") or {}).get("resilience"),
         "counterparty_roster_delta": (counterparty_eval.get("delta") or {}).get("resilience"),
         "behavioral_evidence_attached": bool(
@@ -144,9 +149,9 @@ def _evaluate_structural_trade(
             (analysis.get("availability") or {}).get("competitive_outcomes")
         ),
         "explanation": (
-            "Roster-aware structural trade test enriched with the current NEXT-5 "
-            "bilateral roster-consequence view. It remains diagnostic until materiality, "
-            "Behavioral evidence, and changed-state competitive outcomes support stronger authority."
+            "Roster-aware structural trade test enriched with the current NEXT-5 bilateral "
+            "Decision and negotiation-feasibility shape. Feasibility describes calculated "
+            "bilateral consequences; it is not an acceptance probability or recommendation."
         ),
     }
 
@@ -223,6 +228,7 @@ def build_opportunity_workspace(
             returned[index] = {
                 **returned[index],
                 "bilateral_decision_evaluated": False,
+                "negotiation_feasibility_evaluated": False,
                 "decision_error": str(exc),
             }
 
@@ -294,6 +300,9 @@ def build_opportunity_workspace(
             "roster_aware_search": runtime.simulation_analytics is not None,
             "two_for_one_consolidation_search": True,
             "bilateral_decision_evaluation": evaluate_count > 0,
+            "negotiation_feasibility": any(
+                row.get("negotiation_feasibility_evaluated") for row in returned
+            ),
             "behavioral_acceptance": False,
             "waiver_materiality": bool(available_players),
             "post_transaction_simulation": False,
@@ -304,5 +313,6 @@ def build_opportunity_workspace(
             "provisional_value_used": False,
             "bilateral_evaluation_budget_is_product_compute_policy": True,
             "search_order_is_not_a_composite_opportunity_score": True,
+            "negotiation_feasibility_is_not_acceptance_probability": True,
         },
     }
