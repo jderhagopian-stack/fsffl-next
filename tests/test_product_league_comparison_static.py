@@ -7,19 +7,24 @@ def test_league_comparison_consumes_authoritative_analytics_and_value_metrics() 
         "expected_wins",
         "playoff_probability",
         "optimized_expected_points",
+        "total_market_value",
         "total_cardinal_value",
         "draft_pick_count",
     ):
         assert metric in source
     assert "/api/league/chart?metric=" in source
     assert "api('/api/values')" in source
+    assert "team_market_value_portfolios" in source
     assert "team_cardinal_portfolios" in source
-    assert "browser does not sum asset prices" in source
+    assert "browser never sums asset prices" in source
     assert "does not calculate new scores or rankings" in source
+    assert "FSFFL Cardinal Value" in source
 
 
-def test_value_api_exposes_server_owned_team_cardinal_portfolios() -> None:
+def test_value_api_exposes_server_owned_team_value_portfolios() -> None:
     source = Path("src/fsffl/product/webapp.py").read_text(encoding="utf-8")
+    assert '"team_market_value_portfolios"' in source
+    assert "for portfolio in evidence.team_market_value_portfolios" in source
     assert '"team_cardinal_portfolios"' in source
     assert "for portfolio in evidence.team_cardinal_portfolios" in source
     assert '"team_name": team_names.get(portfolio.team_id, portfolio.team_id)' in source
