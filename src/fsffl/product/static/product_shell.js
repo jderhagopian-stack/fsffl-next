@@ -14,7 +14,7 @@ const fsfflProductRoutes=[
 const fsfflProductSurfaceCopy={
   my_team:['My Team','Your franchise command center.','See competitive outlook, optimized lineup, roster depth, draft picks, authoritative FSFFL Value and supporting evidence in one place.'],
   players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Value and separate market-position evidence, without creating a second valuation path.'],
-  league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings, tiles and charts expose regular-season projected scoring, expected wins, playoff odds, market portfolio and pick inventory from authoritative Analytics outputs.'],
+  league_comparison:['League Comparison','Compare every franchise live.','Interactive rankings and leaderboards expose projected scoring, expected wins, playoff odds, authoritative total market value and pick inventory without creating a new master score.'],
   opportunities:['Opportunity Engine','Find places worth investigating.','Explore structural trade tests and available players from the governed Search layer. Diagnostic rows stay clearly separate from action-authoritative recommendations.'],
   what_if:['What-If','Stress-test your roster.','Change one roster-availability assumption, rerun authoritative Simulation, and see how your competitive outlook changes without inventing a second forecast or Value path.'],
   simulator:['Simulator','Test multiple roster shocks together.','Choose multiple active-roster players to make unavailable in one hypothetical State, then compare governed NEXT-4 competitive outcomes against baseline. Exact repeated scenarios can reuse authoritative cached results.'],
@@ -22,7 +22,7 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260907-reportsuite1';
+const fsfflStaticVersion='20260908-marketportfolio1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
