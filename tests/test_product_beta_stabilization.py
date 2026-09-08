@@ -10,12 +10,16 @@ def test_simulator_public_renderer_does_not_recurse_through_global_binding() -> 
     assert "function renderFsfflSimulator(){" not in ui
 
 
-def test_trade_discovery_suppresses_generic_pick_for_pick_mirrors() -> None:
-    source = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text(encoding="utf-8")
-    assert 'focal_asset.asset_kind == "pick" and target_asset.asset_kind == "pick"' in source
-    assert "seen_structures" in source
-    assert "_candidate_family_priority" in source
-    assert "authoritative_cardinal_market_distance_with_player_target_priority" in source
+def test_trade_discovery_suppresses_generic_pick_for_pick_mirrors_and_moves_beyond_flat_matching() -> None:
+    workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text(encoding="utf-8")
+    search = (ROOT / "src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
+    assert "player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == \"player\")" in search
+    assert "build_roster_aware_trade_candidates" in workspace
+    assert "summarize_lineup_by_position" in search
+    assert '"two_for_one"' in search
+    assert "combinations(valued_focal, 2)" in search
+    assert "roster_aware_position_need_then_cardinal_distance" in workspace
+    assert "composite_score" not in search
 
 
 def test_live_sleeper_snapshot_includes_unrostered_fantasy_player_universe() -> None:
