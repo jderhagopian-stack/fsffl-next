@@ -58,6 +58,13 @@ def _asset_payload(option: TradeAssetOption, value: float) -> dict[str, object]:
     }
 
 
+def _relative_market_gap(receive_value: float, send_total: float) -> float:
+    """Scale Cardinal mismatch for cross-tier ordering without a fitted cutoff."""
+
+    denominator = max(abs(receive_value), abs(send_total))
+    return abs(receive_value - send_total) / denominator if denominator > 0.0 else 0.0
+
+
 def _weakest_receive_fit(
     *,
     league_state: LeagueState,
@@ -162,12 +169,13 @@ def _candidate(
         "counterparty_receive_position_rank": counterparty_fit.league_rank if counterparty_fit is not None else None,
         "counterparty_receive_position_strength_index": counterparty_fit.strength_index if counterparty_fit is not None else None,
         "search_distance": abs(receive_value - send_total),
+        "market_gap_ratio": _relative_market_gap(receive_value, send_total),
         "reasons": ["unknown_acceptance", "materiality_not_evaluated"],
         "search_context": context,
         "bilateral_decision_evaluated": False,
         "explanation": (
-            "Roster-aware structural trade test. League-relative positional production "
-            "and Cardinal Value order Search only; Decision and acceptance evidence remain incomplete."
+            "Roster-aware structural trade test. Cardinal market fit determines cheap Search "
+            "priority before roster context; Decision and acceptance evidence remain incomplete."
         ),
     }
 
@@ -281,13 +289,13 @@ def build_roster_aware_trade_candidates(
                     continue
                 seen.add(key)
                 candidates.append(row)
-    # Lexicographic, explainable ordering rather than a hidden weighted score.
-    # The weakest focal position relative to league-average optimized production
-    # comes first, then structures that plausibly address a weak position for the
-    # other team, then Cardinal distance. Search does not award a package-shape
-    # preference; the simpler one-for-one wins only an exact-distance tie.
+    # Lexicographic and parameter-free: market plausibility is the cheap Search
+    # prerequisite for scarce Decision enrichment. Roster need and counterpart fit
+    # break ties after relative Cardinal mismatch, rather than allowing a positional
+    # need to push an economically remote trade ahead of a much closer structure.
     candidates.sort(
         key=lambda row: (
+            float(row["market_gap_ratio"]),
             float(row.get("focal_position_strength_index") or 100.0),
             float(row.get("counterparty_receive_position_strength_index") or 100.0),
             float(row["search_distance"]),
