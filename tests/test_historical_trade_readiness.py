@@ -102,6 +102,33 @@ def test_probabilistic_future_pick_coordinates_are_usable_not_blockers() -> None
     assert len(readiness.probabilistic_asset_keys) == 2
 
 
+def test_sensitivity_only_pick_can_advance_to_decision_robustness_analysis() -> None:
+    record = HistoricalTradeRecord(
+        transaction_id="sensitivity-pick",
+        league_id="league",
+        completed_at=datetime(2023, 5, 11, tzinfo=UTC),
+        legs=(
+            HistoricalTradeLeg(team_id="A", sends=(PickAsset(pick_id="weak-future-pick"),)),
+            HistoricalTradeLeg(team_id="B", sends=(PlayerAsset(player_id="p1"),)),
+        ),
+        provenance=provenance(),
+    )
+    pick_key = historical_trade_asset_key(team_id="A", ordinal=0, asset=record.legs[0].sends[0])
+    player_key = historical_trade_asset_key(team_id="B", ordinal=0, asset=record.legs[1].sends[0])
+
+    readiness = assess_historical_trade_valuation_readiness(
+        record,
+        evidence=(
+            evidence_for(pick_key, mode=HistoricalEvidenceMode.SENSITIVITY_ONLY, model_version="broad-pick-range-v1"),
+            evidence_for(player_key),
+        ),
+    )
+
+    assert readiness.complete is True
+    assert readiness.grade_eligible is True
+    assert readiness.sensitivity_only_asset_keys == (pick_key,)
+
+
 def test_incidental_faab_can_be_bounded_nuisance_without_claiming_exact_exchange_rate() -> None:
     record = HistoricalTradeRecord(
         transaction_id="draft-day-faab-regression",
@@ -197,10 +224,30 @@ def test_batch_summary_counts_uncertainty_separately_from_blockers() -> None:
         ),
     )
 
+    sensitivity_record = HistoricalTradeRecord(
+        transaction_id="usable-sensitivity",
+        league_id="league",
+        completed_at=datetime(2024, 1, 2, tzinfo=UTC),
+        legs=(
+            HistoricalTradeLeg(team_id="A", sends=(PickAsset(pick_id="weak-pick"),)),
+            HistoricalTradeLeg(team_id="B", sends=(PlayerAsset(player_id="p2"),)),
+        ),
+        provenance=provenance(),
+    )
+    skey = historical_trade_asset_key(team_id="A", ordinal=0, asset=sensitivity_record.legs[0].sends[0])
+    spkey = historical_trade_asset_key(team_id="B", ordinal=0, asset=sensitivity_record.legs[1].sends[0])
+    sensitivity = assess_historical_trade_valuation_readiness(
+        sensitivity_record,
+        evidence=(
+            evidence_for(skey, mode=HistoricalEvidenceMode.SENSITIVITY_ONLY),
+            evidence_for(spkey),
+        ),
+    )
+
     blocked_record = HistoricalTradeRecord(
         transaction_id="blocked-trade",
         league_id="league",
-        completed_at=datetime(2024, 1, 2, tzinfo=UTC),
+        completed_at=datetime(2024, 1, 3, tzinfo=UTC),
         legs=(
             HistoricalTradeLeg(team_id="A", sends=(PlayerAsset(player_id="p1"),)),
             HistoricalTradeLeg(team_id="B", sends=(PickAsset(pick_id="missing"),)),
@@ -210,12 +257,13 @@ def test_batch_summary_counts_uncertainty_separately_from_blockers() -> None:
     bkey = historical_trade_asset_key(team_id="A", ordinal=0, asset=blocked_record.legs[0].sends[0])
     blocked = assess_historical_trade_valuation_readiness(blocked_record, evidence=(evidence_for(bkey),))
 
-    summary = summarize_historical_trade_readiness((usable, blocked))
-    assert summary.trade_count == 2
-    assert summary.complete_trade_count == 1
+    summary = summarize_historical_trade_readiness((usable, sensitivity, blocked))
+    assert summary.trade_count == 3
+    assert summary.complete_trade_count == 2
     assert summary.blocked_trade_count == 1
     assert summary.probabilistic_trade_count == 1
     assert summary.bounded_nuisance_trade_count == 1
+    assert summary.sensitivity_only_trade_count == 1
     assert summary.missing_asset_count_by_kind == (("pick", 1),)
 
 
