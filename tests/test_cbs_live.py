@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from fsffl.providers.cbs_live import CBSLiveProjectionSource
 
 
@@ -7,8 +9,8 @@ def test_cbs_live_parses_current_position_pages() -> None:
     pages = {
         "/QB/": """<table><tr><th>Player</th><th>GP</th><th>ATT</th><th>CMP</th><th>YDS</th><th>YDS/G</th><th>TD</th><th>INT</th><th>RATE</th><th>ATT</th><th>YDS</th><th>AVG</th><th>TD</th><th>FL</th><th>FPTS</th><th>FPPG</th></tr><tr><td>L. Jackson QB BAL Lamar Jackson QB BAL</td><td>17</td><td>405</td><td>268</td><td>3364</td><td>197.9</td><td>33</td><td>11</td><td>107.7</td><td>107</td><td>604</td><td>5.6</td><td>3</td><td>4</td><td>362</td><td>21.3</td></tr></table>""",
         "/RB/": """<table><tr><th>Player</th><th>GP</th><th>ATT</th><th>YDS</th><th>AVG</th><th>TD</th><th>TGT</th><th>REC</th><th>YDS</th><th>YDS/G</th><th>AVG</th><th>TD</th><th>FL</th><th>FPTS</th></tr><tr><td>B. Robinson RB ATL Bijan Robinson RB ATL</td><td>17</td><td>291</td><td>1400</td><td>4.8</td><td>9</td><td>91</td><td>71</td><td>701</td><td>41.2</td><td>9.9</td><td>4</td><td>2</td><td>269</td></tr></table>""",
-        "/WR/": """<table><tr><th>Player</th><th>GP</th><th>TGT</th><th>REC</th><th>YDS</th><th>YDS/G</th><th>AVG</th><th>TD</th><th>ATT</th><th>YDS</th><th>AVG</th><th>TD</th><th>FL</th><th>FPTS</th></tr><tr><td>D. London WR ATL Drake London WR ATL</td><td>17</td><td>140</td><td>98</td><td>1273</td><td>74.9</td><td>13.0</td><td>9</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>181</td></tr></table>""",
-        "/TE/": """<table><tr><th>Player</th><th>GP</th><th>TGT</th><th>REC</th><th>YDS</th><th>YDS/G</th><th>AVG</th><th>TD</th><th>FL</th><th>FPTS</th></tr><tr><td>K. Pitts TE ATL Kyle Pitts TE ATL</td><td>17</td><td>110</td><td>80</td><td>900</td><td>52.9</td><td>11.3</td><td>6</td><td>1</td><td>126</td></tr></table>""",
+        "/WR/": """<table><tr><th>Player</th><th>GP</th><th>TGT</th><th>REC</th><th>YDS</th><th>YDS/G</th><th>AVG</th><th>TD</th><th>ATT</th><th>YDS</th><th>AVG</th><th>TD</th><th>FL</th><th>FPTS</th></tr><tr><td>D. London WR ATL Drake London WR ATL</td><td>17</td><td>153</td><td>94</td><td>1257</td><td>73.9</td><td>13.4</td><td>12</td><td>0</td><td>0</td><td>0.0</td><td>0</td><td>1</td><td>187</td></tr></table>""",
+        "/TE/": """<table><tr><th>Player</th><th>GP</th><th>TGT</th><th>REC</th><th>YDS</th><th>YDS/G</th><th>AVG</th><th>TD</th><th>FL</th><th>FPTS</th></tr><tr><td>K. Pitts TE ATL Kyle Pitts TE ATL</td><td>17</td><td>103</td><td>74</td><td>822</td><td>48.4</td><td>11.1</td><td>6</td><td>0</td><td>109</td></tr></table>""",
     }
 
     def getter(url: str) -> str:
@@ -59,3 +61,23 @@ def test_cbs_live_parses_hosted_text_grid_when_no_html_table_is_present() -> Non
     pitts = next(row for row in snapshot.rows if row.player_name == "Kyle Pitts")
     assert pitts.stats["rec_yd"] == 822
     assert pitts.stats["rush_yd"] == 0
+
+
+def test_cbs_live_rejects_weekly_content_served_from_season_url() -> None:
+    weekly = """<html><body><h1>Week 1 Proj Fantasy Football Quarterback Stats</h1><table><tr><th>Player</th><th>GP</th><th>ATT</th><th>CMP</th><th>YDS</th><th>YDS/G</th><th>TD</th><th>INT</th><th>RATE</th><th>ATT</th><th>YDS</th><th>AVG</th><th>TD</th><th>FL</th><th>FPTS</th><th>FPPG</th></tr><tr><td>J. Allen QB BUF Josh Allen QB BUF</td><td>1</td><td>28</td><td>18</td><td>198</td><td>198</td><td>1.3</td><td>1</td><td>83</td><td>7</td><td>35</td><td>5</td><td>0.5</td><td>0.2</td><td>18.4</td><td>18.4</td></tr></table></body></html>"""
+    source = CBSLiveProjectionSource(
+        http_get_text=lambda url: weekly,
+        clock=lambda: datetime(2026, 9, 7, tzinfo=UTC),
+    )
+    with pytest.raises(ValueError, match="not a full-season projection page"):
+        source.fetch_latest(season=2026)
+
+
+def test_cbs_live_rejects_rest_of_season_content_as_full_season() -> None:
+    ros = """<html><body><h1>Rest of Season Proj Fantasy Football Quarterback Stats</h1></body></html>"""
+    source = CBSLiveProjectionSource(
+        http_get_text=lambda url: ros,
+        clock=lambda: datetime(2026, 9, 7, tzinfo=UTC),
+    )
+    with pytest.raises(ValueError, match="not a full-season projection page"):
+        source.fetch_latest(season=2026)
