@@ -11,8 +11,8 @@ from .trade_center_view import (
 )
 
 
-_SEARCH_ORDERING = "cardinal_market_fit_then_roster_need"
-_DECISION_BUDGET_POLICY = "multi_lane_market_focal_counterparty_structural_exploration"
+_SEARCH_ORDERING = "multi_lane_market_premium_focal_counterparty_structural"
+_DECISION_BUDGET_POLICY = "multi_lane_market_premium_focal_counterparty_structural_exploration"
 
 
 def _empty_workspace(
@@ -176,6 +176,11 @@ def _optional_strength(row: dict[str, object], key: str) -> float:
     return float(value) if value is not None else float("inf")
 
 
+def _optional_target_value(row: dict[str, object]) -> float:
+    value = row.get("target_fsffl_value")
+    return float(value) if value is not None else float("-inf")
+
+
 def _select_bilateral_evaluation_indices(
     candidates: list[dict[str, object]],
     *,
@@ -184,9 +189,10 @@ def _select_bilateral_evaluation_indices(
     """Allocate scarce Decision work across distinct governed search lenses.
 
     Cardinal Value remains a cheap market-plausibility coordinate, not the definition
-    of the best trade. The first Decision lane preserves the best market-ranked row.
-    Separate lanes then sample the strongest focal roster-need fit and the strongest
-    counterparty roster-need fit using already-published positional-strength evidence.
+    of the best trade. The first Decision lane preserves the closest market-ranked row.
+    A premium-target lane ensures a high-value acquisition can reach Decision even when
+    its package is not the nearest Cardinal match. Separate lanes then sample focal
+    roster need and counterparty fit using published positional-strength evidence.
     Remaining budget favors structural diversity before falling back to Search rank.
 
     No lane creates a composite score, trade-value coefficient, fixed acceptability
@@ -208,6 +214,14 @@ def _select_bilateral_evaluation_indices(
         selected_set.add(index)
 
     add(0)
+
+    premium_index = max(
+        range(len(candidates)),
+        key=lambda index: (_optional_target_value(candidates[index]), -index),
+        default=None,
+    )
+    if premium_index is not None and _optional_target_value(candidates[premium_index]) != float("-inf"):
+        add(premium_index)
 
     focal_index = min(
         range(len(candidates)),
@@ -277,10 +291,9 @@ def build_opportunity_workspace(
 ) -> dict[str, object]:
     """Build a responsive Opportunity workspace with progressive governed evidence.
 
-    Search uses Cardinal market plausibility and roster context to generate an ordered
-    candidate universe without recommendation authority. A small multi-lane set is
-    synchronously enriched through NEXT-5 Decision so a better roster-fit opportunity
-    is not hidden merely because another structure is the closest Cardinal match.
+    Search uses distinct market, premium-target, roster-need, counterparty-fit, and
+    structural lanes to construct a broad candidate universe without recommendation
+    authority. A small multi-lane set is synchronously enriched through NEXT-5 Decision.
     Deeper Decision/materiality work remains behind explicit actions.
     """
 
@@ -420,6 +433,7 @@ def build_opportunity_workspace(
             "authoritative_value_ordering": True,
             "roster_aware_search": runtime.simulation_analytics is not None,
             "two_for_one_consolidation_search": True,
+            "three_for_one_consolidation_search": True,
             "bilateral_decision_evaluation": bool(evaluation_indices),
             "negotiation_feasibility": any(
                 row.get("negotiation_feasibility_evaluated") for row in returned
@@ -435,6 +449,7 @@ def build_opportunity_workspace(
             "bilateral_evaluation_budget_is_product_compute_policy": True,
             "decision_budget_coverage_does_not_reorder_candidates": True,
             "decision_budget_market_fit_is_one_lane_not_winner_selection": True,
+            "decision_budget_premium_target_is_one_lane_not_winner_selection": True,
             "spotlight_selection_is_categorical_not_composite_scoring": True,
             "spotlights_do_not_create_recommendation_authority": True,
             "search_order_is_not_a_composite_opportunity_score": True,
