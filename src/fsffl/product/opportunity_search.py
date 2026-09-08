@@ -50,10 +50,15 @@ def _asset_value(option: TradeAssetOption, cardinal: Mapping[str, FSFFLCardinalV
 
 
 def _asset_payload(option: TradeAssetOption, value: float) -> dict[str, object]:
+    """Publish existing canonical asset metadata without creating new Search truth."""
+
     return {
         "asset_ref": option.asset_ref,
         "label": option.label,
         "asset_kind": option.asset_kind,
+        "detail": option.detail,
+        "age_years": option.age_years,
+        "roster_slot": option.roster_slot.value if option.roster_slot is not None else None,
         "fsffl_value": value,
     }
 
