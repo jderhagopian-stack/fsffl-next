@@ -48,6 +48,27 @@ def test_normalization_interpolates_center_and_uncertainty_without_extrapolation
         )
 
 
+def test_normalization_records_later_raw_evidence_cutoff_and_rejects_future_channel() -> None:
+    raw_cutoff = datetime(2025, 5, 15, tzinfo=UTC)
+    component = normalize_decision_quality_component(
+        raw_value=0.0,
+        as_of=datetime(2025, 6, 1, tzinfo=UTC),
+        confidence=1.0,
+        policy=policy(),
+        evidence_through=raw_cutoff,
+    )
+    assert component.evidence_through == raw_cutoff
+
+    with pytest.raises(ValueError, match="channel uses evidence unavailable"):
+        normalize_decision_quality_component(
+            raw_value=0.0,
+            as_of=datetime(2025, 6, 1, tzinfo=UTC),
+            confidence=1.0,
+            policy=policy(),
+            evidence_through=datetime(2025, 6, 2, tzinfo=UTC),
+        )
+
+
 def test_normalization_rejects_future_policy_and_nonmonotonic_mapping() -> None:
     with pytest.raises(ValueError, match="unavailable at as_of"):
         normalize_decision_quality_component(
