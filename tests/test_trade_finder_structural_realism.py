@@ -34,3 +34,12 @@ def test_trade_finder_market_gap_is_scale_relative_without_a_fitted_cutoff() -> 
     assert '"market_gap_ratio": _relative_market_gap(receive_value, send_total)' in search_source
     assert '"cardinal_market_fit_then_roster_need"' in workspace_source
     assert "search_market_fit_has_no_fixed_acceptability_cutoff" in workspace_source
+
+
+def test_trade_finder_asset_payload_preserves_canonical_player_context() -> None:
+    source = Path("src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
+
+    assert '"detail": option.detail' in source
+    assert '"age_years": option.age_years' in source
+    assert '"roster_slot": option.roster_slot.value if option.roster_slot is not None else None' in source
+    assert "Publish existing canonical asset metadata without creating new Search truth" in source
