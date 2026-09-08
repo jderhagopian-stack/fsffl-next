@@ -8,6 +8,7 @@ from fsffl.runtime.historical_trade_research_priority import (
     HistoricalResearchEvidenceProfile,
     classify_historical_evidence_alignment,
     prioritize_historical_trade_evidence_cases,
+    summarize_historical_research_evidence,
 )
 
 
@@ -105,6 +106,34 @@ def test_research_priority_prefers_aligned_clean_high_confidence_cases() -> None
         "conflicted-player",
     ]
     assert ranked[0].evidence_strength == 0.85
+
+    inventory = summarize_historical_research_evidence(priorities=ranked)
+    assert inventory.profiled_trade_count == 4
+    assert inventory.alignment_counts == {
+        "aligned": 3,
+        "conflicted": 1,
+        "neutral_or_unknown": 0,
+    }
+    assert inventory.aligned_transaction_ids == (
+        "aligned-mixed",
+        "aligned-player-high",
+        "aligned-player-low",
+    )
+    assert inventory.conflicted_transaction_ids == ("conflicted-player",)
+    assert inventory.minimum_evidence_strength == 0.55
+    assert inventory.maximum_evidence_strength == 0.95
+
+
+def test_research_inventory_handles_empty_batch_without_inventing_strength() -> None:
+    inventory = summarize_historical_research_evidence(priorities=())
+    assert inventory.profiled_trade_count == 0
+    assert inventory.alignment_counts == {
+        "aligned": 0,
+        "conflicted": 0,
+        "neutral_or_unknown": 0,
+    }
+    assert inventory.minimum_evidence_strength is None
+    assert inventory.maximum_evidence_strength is None
 
 
 def test_real_kirk_freiermuth_case_is_research_conflicted_not_forced() -> None:
