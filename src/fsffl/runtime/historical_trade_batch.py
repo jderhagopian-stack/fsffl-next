@@ -17,7 +17,7 @@ from .historical_trade_readiness import HistoricalTradeValuationReadiness
 
 class HistoricalTradeProgressStatus(StrEnum):
     READY_FOR_DECISION = "ready_for_decision"
-    ROBUSTLY_GRADEABLE = "robustly_gradeable"
+    READY_FOR_GRADE_ENVELOPE = "ready_for_grade_envelope"
     SENSITIVITY_DEPENDENT = "sensitivity_dependent"
     DECISION_INCOMPLETE = "decision_incomplete"
     EVIDENCE_INCOMPLETE = "evidence_incomplete"
@@ -71,8 +71,9 @@ def classify_historical_trade_progress(
 
     Readiness answers whether every material asset has usable PIT evidence.
     Robustness answers whether Decision's qualitative conclusion survives the
-    supplied uncertainty scenarios. This function coordinates those authorities;
-    it does not calculate asset value, utility, or a grade score.
+    supplied uncertainty scenarios. A ROBUST Decision is only ready for a
+    downstream grade-envelope calculation; Runtime does not claim that the letter
+    itself is invariant because grade translation belongs to Analytics.
     """
 
     if robustness is not None and robustness.proposal_id != readiness.transaction_id:
@@ -103,8 +104,8 @@ def classify_historical_trade_progress(
         )
 
     if robustness.status == HistoricalDecisionRobustnessStatus.ROBUST:
-        status = HistoricalTradeProgressStatus.ROBUSTLY_GRADEABLE
-        reason = "Decision conclusion is stable across all supplied PIT uncertainty scenarios"
+        status = HistoricalTradeProgressStatus.READY_FOR_GRADE_ENVELOPE
+        reason = "Decision conclusion is stable across supplied PIT scenarios; downstream grade-envelope robustness remains to be tested"
     elif robustness.status == HistoricalDecisionRobustnessStatus.SENSITIVE:
         status = HistoricalTradeProgressStatus.SENSITIVITY_DEPENDENT
         reason = "plausible PIT uncertainty scenarios change the Decision conclusion"
