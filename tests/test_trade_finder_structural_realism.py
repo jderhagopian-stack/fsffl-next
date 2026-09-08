@@ -5,7 +5,7 @@ def test_trade_finder_only_adds_package_complexity_when_market_match_improves() 
     source = Path("src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
 
     assert "if pair_distance < single_distance:" in source
-    assert "Search does not award a package premium" in source
+    assert "does not attempt to estimate a consolidation" in source
     assert "Decision owns package economics" in source
     assert "closer Cardinal market-value match" in source
 
