@@ -30,7 +30,9 @@ def test_market_value_percentile_and_age_are_presented_as_separate_concepts() ->
     assert "function fmtAge" in source
     assert "Number.isInteger(value)?value.toFixed(0):value.toFixed(1)" in source
     assert "<th>Market percentile</th>" in html
-    assert 'value="total_cardinal_value">Total market value' in html
+    assert 'value="total_market_value">Total market value' in html
+    assert 'value="total_cardinal_value">Total FSFFL Cardinal Value' in html
+    assert "team_market_value_portfolios" in source
     assert "team_cardinal_portfolios" in source
     assert "<th>Dynasty value</th>" not in html
     assert ">Draft capital<" not in html
