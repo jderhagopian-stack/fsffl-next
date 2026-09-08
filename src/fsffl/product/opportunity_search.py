@@ -4,10 +4,7 @@ from itertools import combinations
 from typing import Mapping
 
 from fsffl.state.models import LeagueState, Position
-from fsffl.team_utility.position_strength import (
-    LeagueRelativePositionStrength,
-    build_league_relative_position_strengths,
-)
+from fsffl.team_utility.position_strength import LeagueRelativePositionStrength
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 
 from .runtime import UserRuntimeContext
@@ -27,30 +24,22 @@ def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Pos
 def _position_strengths(
     runtime: UserRuntimeContext,
 ) -> dict[str, dict[Position, LeagueRelativePositionStrength]]:
-    """Return transparent league-relative optimized positional production.
+    """Consume the published league-relative positional-production evidence.
 
-    This is Search context only. The 100-based index preserves distance from league
-    average without creating a composite Team Utility score or changing Forecast,
-    Value, Decision, or Simulation authority.
+    Search does not rebuild this derived truth. NEXT-4/Analytics publishes the
+    common 100-based position-strength rows once; Search only indexes those rows
+    for candidate ordering and explanatory context.
     """
 
     simulation = runtime.simulation_analytics
     if simulation is None:
         return {}
-    lineups = tuple(
-        view.optimized_lineup
-        for view in simulation.team_views
-        if view.optimized_lineup is not None
-    )
-    if not lineups:
-        return {}
-    rows = build_league_relative_position_strengths(
-        lineups,
-        positions=_SKILL_POSITIONS,
-    )
     result: dict[str, dict[Position, LeagueRelativePositionStrength]] = {}
-    for row in rows:
-        result.setdefault(row.team_id, {})[row.position] = row
+    for view in simulation.team_views:
+        for row in view.position_strengths:
+            if row.position not in _SKILL_POSITIONS:
+                continue
+            result.setdefault(view.team_id, {})[row.position] = row
     return result
 
 
