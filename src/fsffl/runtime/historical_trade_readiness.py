@@ -22,6 +22,7 @@ class HistoricalEvidenceMode(StrEnum):
     EXACT = "exact"
     PROBABILISTIC = "probabilistic"
     BOUNDED_NUISANCE = "bounded_nuisance"
+    SENSITIVITY_ONLY = "sensitivity_only"
 
 
 class HistoricalAssetEvidence(FrozenModel):
@@ -36,6 +37,11 @@ class HistoricalAssetEvidence(FrozenModel):
     PIT distribution. ``BOUNDED_NUISANCE`` is intended for small ancillary terms
     (for example incidental FAAB) whose effect is represented by an explicit
     governed range rather than an invented exact exchange rate.
+
+    ``SENSITIVITY_ONLY`` preserves evidence that is too weak for a single precise
+    estimate but still supports an explicit plausible range. It may advance to
+    Decision robustness analysis; a final grade is allowed only if the conclusion
+    is stable across the governed range. Runtime does not choose that conclusion.
     """
 
     asset_key: str
@@ -79,8 +85,8 @@ class HistoricalTradeValuationReadiness(FrozenModel):
     ``complete`` means every material asset has some authoritative PIT evidence.
     It does NOT mean every asset is known exactly. ``grade_eligible`` means the
     trade may advance to Value/Decision uncertainty analysis. Decision remains
-    responsible for deciding whether the resulting uncertainty is too wide to
-    support a final grade.
+    responsible for deciding whether probabilistic, nuisance, or sensitivity-only
+    uncertainty is too wide to support a final grade.
     """
 
     transaction_id: str
@@ -91,6 +97,7 @@ class HistoricalTradeValuationReadiness(FrozenModel):
     excluded_asset_keys: tuple[str, ...] = ()
     probabilistic_asset_keys: tuple[str, ...] = ()
     bounded_nuisance_asset_keys: tuple[str, ...] = ()
+    sensitivity_only_asset_keys: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def validate_summary(self) -> "HistoricalTradeValuationReadiness":
@@ -106,6 +113,9 @@ class HistoricalTradeValuationReadiness(FrozenModel):
         expected_nuisance = tuple(
             sorted(item.asset_key for item in self.assets if item.mode == HistoricalEvidenceMode.BOUNDED_NUISANCE)
         )
+        expected_sensitivity = tuple(
+            sorted(item.asset_key for item in self.assets if item.mode == HistoricalEvidenceMode.SENSITIVITY_ONLY)
+        )
         if self.missing_asset_keys != expected_missing:
             raise ValueError("missing_asset_keys must match asset readiness rows")
         if self.excluded_asset_keys != expected_excluded:
@@ -114,6 +124,8 @@ class HistoricalTradeValuationReadiness(FrozenModel):
             raise ValueError("probabilistic_asset_keys must match asset readiness rows")
         if self.bounded_nuisance_asset_keys != expected_nuisance:
             raise ValueError("bounded_nuisance_asset_keys must match asset readiness rows")
+        if self.sensitivity_only_asset_keys != expected_sensitivity:
+            raise ValueError("sensitivity_only_asset_keys must match asset readiness rows")
         expected_complete = not expected_missing and not expected_excluded
         if self.complete != expected_complete:
             raise ValueError("historical trade readiness complete flag is inconsistent")
@@ -130,6 +142,7 @@ class HistoricalTradeReadinessSummary(FrozenModel):
     blocked_trade_count: int
     probabilistic_trade_count: int = 0
     bounded_nuisance_trade_count: int = 0
+    sensitivity_only_trade_count: int = 0
     missing_asset_count_by_kind: tuple[tuple[str, int], ...] = ()
     excluded_asset_count_by_kind: tuple[tuple[str, int], ...] = ()
     blocked_transaction_ids: tuple[str, ...] = ()
@@ -142,6 +155,7 @@ class HistoricalTradeReadinessSummary(FrozenModel):
             self.blocked_trade_count,
             self.probabilistic_trade_count,
             self.bounded_nuisance_trade_count,
+            self.sensitivity_only_trade_count,
         )
         if any(value < 0 for value in values):
             raise ValueError("historical trade readiness counts cannot be negative")
@@ -174,9 +188,9 @@ def assess_historical_trade_valuation_readiness(
     Missing evidence is never interpreted as zero value, and an excluded asset is
     never silently dropped. But a probabilistic pick coordinate is authoritative
     evidence, not a failure merely because the eventual slot was unknown.
-    Likewise, a governed bounded nuisance representation can keep an incidental
-    asset in sensitivity analysis without pretending its exact historical price is
-    empirically identified.
+    Likewise, bounded nuisance and sensitivity-only representations can preserve
+    uncertain assets for downstream robustness analysis without claiming false
+    empirical precision.
     """
 
     evidence_by_key: Mapping[str, HistoricalAssetEvidence] = {item.asset_key: item for item in evidence}
@@ -222,6 +236,7 @@ def assess_historical_trade_valuation_readiness(
     excluded = tuple(sorted(item.asset_key for item in rows if item.status == HistoricalAssetEvidenceStatus.EXCLUDED))
     probabilistic = tuple(sorted(item.asset_key for item in rows if item.mode == HistoricalEvidenceMode.PROBABILISTIC))
     nuisance = tuple(sorted(item.asset_key for item in rows if item.mode == HistoricalEvidenceMode.BOUNDED_NUISANCE))
+    sensitivity = tuple(sorted(item.asset_key for item in rows if item.mode == HistoricalEvidenceMode.SENSITIVITY_ONLY))
     complete = not missing and not excluded
     return HistoricalTradeValuationReadiness(
         transaction_id=record.transaction_id,
@@ -232,6 +247,7 @@ def assess_historical_trade_valuation_readiness(
         excluded_asset_keys=excluded,
         probabilistic_asset_keys=probabilistic,
         bounded_nuisance_asset_keys=nuisance,
+        sensitivity_only_asset_keys=sensitivity,
     )
 
 
@@ -260,12 +276,14 @@ def summarize_historical_trade_readiness(
     complete_count = sum(row.grade_eligible for row in rows)
     probabilistic_count = sum(bool(row.probabilistic_asset_keys) for row in rows)
     nuisance_count = sum(bool(row.bounded_nuisance_asset_keys) for row in rows)
+    sensitivity_count = sum(bool(row.sensitivity_only_asset_keys) for row in rows)
     return HistoricalTradeReadinessSummary(
         trade_count=len(rows),
         complete_trade_count=complete_count,
         blocked_trade_count=len(rows) - complete_count,
         probabilistic_trade_count=probabilistic_count,
         bounded_nuisance_trade_count=nuisance_count,
+        sensitivity_only_trade_count=sensitivity_count,
         missing_asset_count_by_kind=tuple(sorted(missing_by_kind.items())),
         excluded_asset_count_by_kind=tuple(sorted(excluded_by_kind.items())),
         blocked_transaction_ids=tuple(blocked),
