@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from itertools import product
-
+from .opportunity_search import build_roster_aware_trade_candidates
 from .runtime import UserRuntimeContext
 from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
@@ -40,7 +39,7 @@ def _empty_workspace(
             "candidate_count": 0,
             "returned_count": 0,
             "truncated": False,
-            "ordering": "authoritative_cardinal_market_distance_with_player_target_priority",
+            "ordering": "roster_aware_position_need_then_cardinal_distance",
             "bilateral_evaluated_count": 0,
             "bilateral_evaluation_limit": 0,
             "candidates": [],
@@ -99,7 +98,9 @@ def _evaluate_structural_trade(
     draft = TradeDraft(
         draft_id=(
             f"opportunity:{league_state.state_id}:{focal_team_id}:"
-            f"{counterparty_team_id}:{send[0]['asset_ref']}:{receive[0]['asset_ref']}"
+            f"{counterparty_team_id}:"
+            f"{'-'.join(str(item['asset_ref']) for item in send)}:"
+            f"{'-'.join(str(item['asset_ref']) for item in receive)}"
         ),
         focal_team_id=focal_team_id,
         counterparty_team_id=counterparty_team_id,
@@ -143,28 +144,11 @@ def _evaluate_structural_trade(
             (analysis.get("availability") or {}).get("competitive_outcomes")
         ),
         "explanation": (
-            "Market-comparable structural trade test enriched with the current "
-            "NEXT-5 bilateral roster-consequence view. It remains diagnostic until "
-            "materiality, Behavioral evidence, and changed-state competitive outcomes "
-            "support stronger authority."
+            "Roster-aware structural trade test enriched with the current NEXT-5 "
+            "bilateral roster-consequence view. It remains diagnostic until materiality, "
+            "Behavioral evidence, and changed-state competitive outcomes support stronger authority."
         ),
     }
-
-
-def _candidate_family_priority(row: dict[str, object]) -> int:
-    """Presentation/search priority only; it does not alter Value or Decision truth."""
-
-    send = row.get("send") or []
-    receive = row.get("receive") or []
-    send_kind = str(send[0].get("asset_kind")) if send else ""
-    receive_kind = str(receive[0].get("asset_kind")) if receive else ""
-    if receive_kind == "player" and send_kind == "player":
-        return 0
-    if receive_kind == "player":
-        return 1
-    if send_kind == "player":
-        return 2
-    return 3
 
 
 def build_opportunity_workspace(
@@ -173,12 +157,12 @@ def build_opportunity_workspace(
     candidate_limit: int = 80,
     bilateral_evaluation_limit: int = 4,
 ) -> dict[str, object]:
-    """Build a responsive read-only Opportunity workspace with explicit readiness.
+    """Build a responsive Opportunity workspace with progressive governed evidence.
 
-    Structural discovery is deliberately cheap enough to paint the workspace first.
-    Only a small leading set is synchronously enriched through NEXT-5 Decision on
-    initial load; deeper Decision/materiality work belongs behind explicit actions
-    rather than blocking the entire Opportunity screen.
+    Search uses roster-aware position context and Cardinal Value only for ordering
+    candidate structures. It does not create recommendation authority. Only a small
+    leading set is synchronously enriched through NEXT-5 Decision on initial load;
+    deeper Decision/materiality work belongs behind explicit actions.
     """
 
     league_state = runtime.league_state
@@ -227,75 +211,7 @@ def build_opportunity_workspace(
             runtime=runtime,
         )
 
-    def option_value(option: object) -> float | None:
-        asset_id = getattr(option, "player_id", None) or getattr(option, "pick_id", None)
-        row = cardinal.get(asset_id)
-        return row.score if row is not None else None
-
-    candidates: list[dict[str, object]] = []
-    seen_structures: set[tuple[str, str, str, str, str]] = set()
-    for counterparty in browser.counterparties:
-        for focal_asset, target_asset in product(
-            browser.focal_team.assets,
-            counterparty.assets,
-        ):
-            # Generic same-class pick swaps have no useful price-discovery content
-            # before slot-specific pick evidence exists. Their equal generic values
-            # previously crowded the top of discovery with zero-distance mirrors.
-            if focal_asset.asset_kind == "pick" and target_asset.asset_kind == "pick":
-                continue
-            focal_value = option_value(focal_asset)
-            target_value = option_value(target_asset)
-            if focal_value is None or target_value is None:
-                continue
-            structure_key = (
-                counterparty.team_id,
-                focal_asset.asset_kind,
-                focal_asset.label,
-                target_asset.asset_kind,
-                target_asset.label,
-            )
-            if structure_key in seen_structures:
-                continue
-            seen_structures.add(structure_key)
-            candidates.append(
-                {
-                    "kind": "trade",
-                    "discovery_status": "structurally_valid",
-                    "action_authority": "diagnostic_only",
-                    "evidence_completeness": "partial",
-                    "counterparty_team_id": counterparty.team_id,
-                    "counterparty_name": counterparty.display_name,
-                    "send": [{
-                        "asset_ref": focal_asset.asset_ref,
-                        "label": focal_asset.label,
-                        "asset_kind": focal_asset.asset_kind,
-                        "fsffl_value": focal_value,
-                    }],
-                    "receive": [{
-                        "asset_ref": target_asset.asset_ref,
-                        "label": target_asset.label,
-                        "asset_kind": target_asset.asset_kind,
-                        "fsffl_value": target_value,
-                    }],
-                    "search_distance": abs(target_value - focal_value),
-                    "reasons": ["unknown_acceptance", "materiality_not_evaluated"],
-                    "bilateral_decision_evaluated": False,
-                    "explanation": (
-                        "Market-comparable structural trade test. Decision and acceptance "
-                        "evidence are not yet complete enough to recommend action."
-                    ),
-                }
-            )
-
-    candidates.sort(
-        key=lambda row: (
-            _candidate_family_priority(row),
-            float(row["search_distance"]),
-            str(row["counterparty_name"]),
-            str(row["receive"][0]["label"]),
-        )
-    )
+    candidates = build_roster_aware_trade_candidates(runtime, browser, cardinal)
     total_candidate_count = len(candidates)
     returned = candidates[: max(candidate_limit, 0)]
 
@@ -348,7 +264,7 @@ def build_opportunity_workspace(
 
     return {
         "status": "ready",
-        "message": "Current opportunity discovery workspace is ready.",
+        "message": "Current roster-aware opportunity discovery workspace is ready.",
         "retryable": False,
         "league_state_id": league_state.state_id,
         "as_of": league_state.as_of.isoformat(),
@@ -364,7 +280,7 @@ def build_opportunity_workspace(
             "candidate_count": total_candidate_count,
             "returned_count": len(returned),
             "truncated": total_candidate_count > len(returned),
-            "ordering": "authoritative_cardinal_market_distance_with_player_target_priority",
+            "ordering": "roster_aware_position_need_then_cardinal_distance",
             "bilateral_evaluated_count": sum(
                 1 for row in returned if row.get("bilateral_decision_evaluated")
             ),
@@ -375,6 +291,8 @@ def build_opportunity_workspace(
         "capabilities": {
             "structural_trade_discovery": True,
             "authoritative_value_ordering": True,
+            "roster_aware_search": runtime.simulation_analytics is not None,
+            "two_for_one_consolidation_search": True,
             "bilateral_decision_evaluation": evaluate_count > 0,
             "behavioral_acceptance": False,
             "waiver_materiality": bool(available_players),
@@ -385,5 +303,6 @@ def build_opportunity_workspace(
             "recommendation_authority": False,
             "provisional_value_used": False,
             "bilateral_evaluation_budget_is_product_compute_policy": True,
+            "search_order_is_not_a_composite_opportunity_score": True,
         },
     }
