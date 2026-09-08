@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from enum import StrEnum
 
 from pydantic import Field, model_validator
@@ -53,6 +54,36 @@ class HistoricalResearchPriority(FrozenModel):
     composition: HistoricalTradeComposition
 
 
+class HistoricalResearchEvidenceInventory(FrozenModel):
+    """Batch research summary with no valuation or grading authority."""
+
+    profiled_trade_count: int = Field(ge=0)
+    alignment_counts: dict[str, int]
+    aligned_transaction_ids: tuple[str, ...]
+    conflicted_transaction_ids: tuple[str, ...]
+    neutral_or_unknown_transaction_ids: tuple[str, ...]
+    minimum_evidence_strength: float | None = Field(default=None, ge=0, le=1)
+    maximum_evidence_strength: float | None = Field(default=None, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def validate_inventory(self) -> "HistoricalResearchEvidenceInventory":
+        ids = (
+            self.aligned_transaction_ids
+            + self.conflicted_transaction_ids
+            + self.neutral_or_unknown_transaction_ids
+        )
+        if len(ids) != self.profiled_trade_count or len(ids) != len(set(ids)):
+            raise ValueError("historical research inventory transaction ids must be unique and complete")
+        if sum(self.alignment_counts.values()) != self.profiled_trade_count:
+            raise ValueError("historical research inventory alignment counts must sum to profiled trades")
+        if self.profiled_trade_count == 0:
+            if self.minimum_evidence_strength is not None or self.maximum_evidence_strength is not None:
+                raise ValueError("empty research inventory cannot carry evidence strength extrema")
+        elif self.minimum_evidence_strength is None or self.maximum_evidence_strength is None:
+            raise ValueError("nonempty research inventory requires evidence strength extrema")
+        return self
+
+
 def classify_historical_evidence_alignment(
     profile: HistoricalResearchEvidenceProfile,
 ) -> HistoricalEvidenceAlignment:
@@ -84,6 +115,10 @@ def prioritize_historical_trade_evidence_cases(
     composition_by_id = {row.transaction_id: row for row in compositions}
     if len(composition_by_id) != len(compositions):
         raise ValueError("historical trade compositions must have unique transaction ids")
+
+    profile_ids = [profile.transaction_id for profile in evidence_profiles]
+    if len(profile_ids) != len(set(profile_ids)):
+        raise ValueError("historical research profiles must have unique transaction ids")
 
     rows: list[HistoricalResearchPriority] = []
     for profile in evidence_profiles:
@@ -125,4 +160,41 @@ def prioritize_historical_trade_evidence_cases(
                 row.transaction_id,
             ),
         )
+    )
+
+
+def summarize_historical_research_evidence(
+    *,
+    priorities: tuple[HistoricalResearchPriority, ...],
+) -> HistoricalResearchEvidenceInventory:
+    """Summarize evidence alignment for batch orchestration only.
+
+    The inventory identifies which PIT-researched cases are ready to *attempt*
+    robustness envelopes. It does not infer missing evidence, value assets, select a
+    winner, or establish grade eligibility.
+    """
+
+    ids = [row.transaction_id for row in priorities]
+    if len(ids) != len(set(ids)):
+        raise ValueError("historical research priorities must have unique transaction ids")
+
+    counts = Counter(row.alignment.value for row in priorities)
+    aligned = tuple(sorted(row.transaction_id for row in priorities if row.alignment == HistoricalEvidenceAlignment.ALIGNED))
+    conflicted = tuple(sorted(row.transaction_id for row in priorities if row.alignment == HistoricalEvidenceAlignment.CONFLICTED))
+    unknown = tuple(
+        sorted(
+            row.transaction_id
+            for row in priorities
+            if row.alignment == HistoricalEvidenceAlignment.NEUTRAL_OR_UNKNOWN
+        )
+    )
+    strengths = [row.evidence_strength for row in priorities]
+    return HistoricalResearchEvidenceInventory(
+        profiled_trade_count=len(priorities),
+        alignment_counts={alignment.value: counts.get(alignment.value, 0) for alignment in HistoricalEvidenceAlignment},
+        aligned_transaction_ids=aligned,
+        conflicted_transaction_ids=conflicted,
+        neutral_or_unknown_transaction_ids=unknown,
+        minimum_evidence_strength=min(strengths) if strengths else None,
+        maximum_evidence_strength=max(strengths) if strengths else None,
     )
