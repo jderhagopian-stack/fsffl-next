@@ -21,7 +21,7 @@ web = [
 ]
 
 [tool.fastapi]
-entrypoint = "fsffl.product.webapp:app"
+entrypoint = "fsffl.product.persistent_webapp:app"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
