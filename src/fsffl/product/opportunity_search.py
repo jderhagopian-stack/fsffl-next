@@ -139,7 +139,10 @@ def _candidate(
             f"strength index {strength_text} and rank #{counterparty_fit.league_rank}."
         )
     if shape == "two_for_one":
-        context.append("Consolidation structure: two focal assets for one target asset.")
+        context.append(
+            "Consolidation structure: two focal assets for one target asset. Search does not "
+            "award a package premium; Decision owns package economics."
+        )
     return {
         "kind": "trade",
         "discovery_status": "structurally_valid",
@@ -190,10 +193,11 @@ def _best_single_and_pair_for_target(
     )
     if not valued_focal:
         return ()
-    nearest_single = min(
+    nearest_single, nearest_single_value = min(
         valued_focal,
         key=lambda item: (abs(float(item[1]) - target_value), item[0].asset_ref),
-    )[0]
+    )
+    single_distance = abs(float(nearest_single_value) - target_value)
     rows: list[dict[str, object]] = []
     single = _candidate(
         league_state=league_state,
@@ -216,18 +220,30 @@ def _best_single_and_pair_for_target(
                 items[1][0].asset_ref,
             ),
         )
-        package = _candidate(
-            league_state=league_state,
-            focal_team_id=focal_team_id,
-            counterparty_team_id=counterparty_team_id,
-            counterparty_name=counterparty_name,
-            send_assets=(pair[0][0], pair[1][0]),
-            receive_asset=target,
-            cardinal=cardinal,
-            strengths=strengths,
-        )
-        if package is not None:
-            rows.append(package)
+        pair_total = float(pair[0][1]) + float(pair[1][1])
+        pair_distance = abs(pair_total - target_value)
+        # Structural realism guard: Search may only add package complexity when it
+        # improves the governed market-value match over every available single asset.
+        # This is parameter-free and does not attempt to estimate a consolidation
+        # premium; NEXT-5 Decision remains authoritative for package economics.
+        if pair_distance < single_distance:
+            package = _candidate(
+                league_state=league_state,
+                focal_team_id=focal_team_id,
+                counterparty_team_id=counterparty_team_id,
+                counterparty_name=counterparty_name,
+                send_assets=(pair[0][0], pair[1][0]),
+                receive_asset=target,
+                cardinal=cardinal,
+                strengths=strengths,
+            )
+            if package is not None:
+                package["search_context"] = [
+                    *(package.get("search_context") or []),
+                    "Two-asset package retained because it is a closer Cardinal market-value match "
+                    "than every available single focal asset.",
+                ]
+                rows.append(package)
     return tuple(rows)
 
 
@@ -268,13 +284,14 @@ def build_roster_aware_trade_candidates(
     # Lexicographic, explainable ordering rather than a hidden weighted score.
     # The weakest focal position relative to league-average optimized production
     # comes first, then structures that plausibly address a weak position for the
-    # other team, then Cardinal distance. No package premium is invented here.
+    # other team, then Cardinal distance. Search does not award a package-shape
+    # preference; the simpler one-for-one wins only an exact-distance tie.
     candidates.sort(
         key=lambda row: (
             float(row.get("focal_position_strength_index") or 100.0),
             float(row.get("counterparty_receive_position_strength_index") or 100.0),
-            0 if row.get("package_shape") == "two_for_one" else 1,
             float(row["search_distance"]),
+            0 if row.get("package_shape") == "one_for_one" else 1,
             str(row["counterparty_name"]),
             str(row["receive"][0]["label"]),
         )
