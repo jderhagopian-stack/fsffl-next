@@ -78,12 +78,16 @@ class FSFFLCardinalValueScore(FrozenModel):
 
 def build_authoritative_player_cardinal_scores(
     observations: tuple[NativeMarketMagnitudeObservation, ...],
+    *,
+    expected_market_context_id: str | None = None,
+    expected_reference_format: str | None = None,
 ) -> tuple[FSFFLCardinalValueScore, ...]:
-    """Promote direct Stats Guy player evidence onto the governed FSFFL axis.
+    """Promote one coherent Stats Guy player cohort onto the governed FSFFL axis.
 
     The reference source already uses the selected 0-10,000 trade-derived axis,
     so no percentile rescaling, clipping, or cross-provider arithmetic occurs.
-    Out-of-scale evidence fails validation rather than being silently transformed.
+    Promotion fails closed if reference rows mix market contexts, duplicate an
+    asset, or contradict the explicitly requested SF/non-SF provider format.
     """
 
     rows = [
@@ -92,6 +96,24 @@ def build_authoritative_player_cardinal_scores(
         if row.source_id == FSFFL_CARDINAL_REFERENCE_SOURCE_ID
         and row.native_scale_id == FSFFL_CARDINAL_REFERENCE_SCALE_ID
     ]
+    if not rows:
+        return ()
+
+    contexts = {row.market_context_id for row in rows}
+    if len(contexts) != 1:
+        raise ValueError("authoritative player Cardinal promotion requires one market context")
+    if expected_market_context_id is not None and contexts != {expected_market_context_id}:
+        raise ValueError("authoritative player Cardinal evidence does not match requested market context")
+
+    asset_ids = [row.asset_id for row in rows]
+    if len(asset_ids) != len(set(asset_ids)):
+        raise ValueError("authoritative player Cardinal promotion requires one reference row per asset")
+
+    if expected_reference_format is not None:
+        formats = {row.source_version for row in rows}
+        if formats != {expected_reference_format}:
+            raise ValueError("authoritative player Cardinal evidence does not match requested reference format")
+
     return tuple(
         FSFFLCardinalValueScore(
             asset_id=row.asset_id,
