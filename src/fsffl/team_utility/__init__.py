@@ -1,5 +1,6 @@
 from .assembly import assemble_team_utility_vector
 from .competitive_state import CompetitiveStatePolicy, classify_calculated_competitive_state, derive_league_relative_competitive_state_policy
+from .dispersion_diagnostics import LeagueScoringDispersionDiagnostic, TeamScoringDispersionDiagnostic, build_scoring_dispersion_diagnostic
 from .lineup import marginal_lineup_impact, optimize_team_lineup
 from .models import LineupAssignment, MarginalLineupImpact, OptimizedTeamLineup
 from .position_strength import (
@@ -19,13 +20,13 @@ from .utility import CalculatedCompetitiveState, FranchiseAssetPortfolio, OwnerS
 
 __all__ = [
     "AssetPortfolioDelta", "CalculatedCompetitiveState", "CompetitiveOutcomeDelta", "CompetitiveStatePolicy",
-    "FranchiseAssetPortfolio", "LeagueRelativePositionStrength", "LineupAssignment", "MarginalLineupImpact", "OptimizedTeamLineup",
+    "FranchiseAssetPortfolio", "LeagueRelativePositionStrength", "LeagueScoringDispersionDiagnostic", "LineupAssignment", "MarginalLineupImpact", "OptimizedTeamLineup",
     "OwnerStrategicPosture", "PositionLineupStrength", "PositionStrengthDelta", "RegularSeasonSimulationInput",
     "RegularSeasonSimulationResult", "RosterResilience", "RosterResilienceDelta", "ScheduledMatchup",
     "ScoringDistributionKind", "StrategicTeamView", "TeamCompetitiveOutcome", "TeamPositionStrengthComparison",
-    "TeamScenarioDelta", "TeamScoringDistribution", "TeamUncertaintyMethod", "TeamUtilityVector",
+    "TeamScenarioDelta", "TeamScoringDispersionDiagnostic", "TeamScoringDistribution", "TeamUncertaintyMethod", "TeamUtilityVector",
     "WeeklyScoringDecomposition", "WeeklyTeamScoringDistribution", "assemble_team_utility_vector",
-    "build_bye_aware_weekly_team_scoring_distribution", "build_bye_aware_weekly_team_scoring_panel",
+    "build_bye_aware_weekly_team_scoring_distribution", "build_bye_aware_weekly_team_scoring_panel", "build_scoring_dispersion_diagnostic",
     "build_league_relative_position_strengths", "build_regular_season_simulation_input", "build_roster_resilience", "build_team_scoring_distribution",
     "build_weekly_team_scoring_distribution", "classify_calculated_competitive_state", "compare_position_strengths",
     "compare_team_utility_vectors", "derive_league_relative_competitive_state_policy", "marginal_lineup_impact",
