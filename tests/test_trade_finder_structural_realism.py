@@ -1,22 +1,46 @@
 from pathlib import Path
 
-from fsffl.product.opportunity_search import _relative_market_gap
+from fsffl.product.opportunity_search import _multi_lane_search_order, _relative_market_gap
 
 
-def test_trade_finder_only_adds_package_complexity_when_market_match_improves() -> None:
+def _row(name: str, *, gap: float, target_value: float, focal: float, counterparty: float, send_count: int) -> dict[str, object]:
+    return {
+        "name": name,
+        "market_gap_ratio": gap,
+        "search_distance": gap * 100.0,
+        "target_fsffl_value": target_value,
+        "focal_position_strength_index": focal,
+        "counterparty_receive_position_strength_index": counterparty,
+        "send": [{"asset_ref": f"player:{name}:{index}"} for index in range(send_count)],
+    }
+
+
+def test_trade_finder_broadens_package_complexity_without_inventing_consolidation_economics() -> None:
     source = Path("src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
 
-    assert "if pair_distance < single_distance:" in source
-    assert "does not attempt to estimate a consolidation" in source
-    assert "Decision owns package economics" in source
-    assert "closer Cardinal market-value match" in source
+    assert "_MAX_DISCOVERY_PACKAGE_SIZE = 3" in source
+    assert "for size in range(1, max_size + 1)" in source
+    assert "best single asset to veto all package complexity" in source
+    assert "consolidation coefficient" in source
+    assert "Decision owns whether the structure is actually good" in source
+    assert "award a consolidation premium" in source
+    assert "if pair_distance < single_distance:" not in source
 
 
-def test_trade_finder_does_not_rank_two_for_one_packages_ahead_by_shape() -> None:
+def test_trade_finder_package_shape_is_an_exploration_lane_not_a_value_score() -> None:
+    rows = [
+        _row("closest", gap=0.01, target_value=40.0, focal=95.0, counterparty=95.0, send_count=1),
+        _row("package", gap=0.20, target_value=80.0, focal=80.0, counterparty=80.0, send_count=3),
+    ]
+
+    ordered = _multi_lane_search_order(rows)
+
+    assert ordered[0]["name"] == "closest"
+    assert {row["name"] for row in ordered} == {"closest", "package"}
     source = Path("src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
-
-    assert '0 if row.get("package_shape") == "one_for_one" else 1' in source
-    assert '0 if row.get("package_shape") == "two_for_one" else 1' not in source
+    assert "No metrics are blended into a score" in source
+    assert "composite_score" not in source
+    assert "opportunity_score" not in source
 
 
 def test_trade_finder_market_gap_is_scale_relative_without_a_fitted_cutoff() -> None:
@@ -25,14 +49,11 @@ def test_trade_finder_market_gap_is_scale_relative_without_a_fitted_cutoff() -> 
 
     search_source = Path("src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
     workspace_source = Path("src/fsffl/product/opportunity_workspace.py").read_text(encoding="utf-8")
-    market_key = 'float(row["market_gap_ratio"])'
-    need_key = 'float(row.get("focal_position_strength_index") or 100.0)'
 
-    assert market_key in search_source
-    assert need_key in search_source
-    assert search_source.index(market_key) < search_source.index(need_key)
     assert '"market_gap_ratio": _relative_market_gap(receive_value, send_total)' in search_source
-    assert '"cardinal_market_fit_then_roster_need"' in workspace_source
+    assert "market_gap_ratio" in search_source
+    assert "_multi_lane_search_order" in search_source
+    assert "closest market match" in search_source
     assert "search_market_fit_has_no_fixed_acceptability_cutoff" in workspace_source
 
 
@@ -42,4 +63,5 @@ def test_trade_finder_asset_payload_preserves_canonical_player_context() -> None
     assert '"detail": option.detail' in source
     assert '"age_years": option.age_years' in source
     assert '"roster_slot": option.roster_slot.value if option.roster_slot is not None else None' in source
-    assert "Publish existing canonical asset metadata without creating new Search truth" in source
+    assert "def _asset_payload" in source
+    assert "fsffl_value" in source

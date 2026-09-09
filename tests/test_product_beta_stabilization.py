@@ -19,10 +19,12 @@ def test_trade_discovery_suppresses_generic_pick_for_pick_mirrors_and_moves_beyo
     assert "build_league_relative_position_strengths" not in search
     assert "focal_position_strength_index" in search
     assert '"two_for_one"' in search
-    assert "combinations(valued_focal, 2)" in search
-    assert "cardinal_market_fit_then_roster_need" in workspace
+    assert '"three_for_one"' in search
+    assert "for size in range(1, max_size + 1)" in search
+    assert "_multi_lane_search_order" in search
     assert '"market_gap_ratio"' in search
     assert "composite_score" not in search
+    assert "opportunity_score" not in search
 
 
 def test_live_sleeper_snapshot_includes_unrostered_fantasy_player_universe() -> None:

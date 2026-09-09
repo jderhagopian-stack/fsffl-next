@@ -111,11 +111,14 @@ def test_empty_candidate_set_publishes_no_spotlight() -> None:
     assert result["same_candidate"] is False
 
 
-def test_frontier_result_is_scoped_to_current_league_team_and_seed() -> None:
+def test_frontier_result_is_scoped_to_current_league_team_and_selected_spotlight_seed() -> None:
     ui = (ROOT / "src/fsffl/product/static/opportunity_spotlights.js").read_text()
 
     assert "payload.league_state_id" in ui
     assert "payload.focal_team_id" in ui
     assert "spotlightSeedKey" in ui
     assert "spotlightFrontierResult=null" in ui
-    assert "oppSpotlightSeedKey()===requestKey" in ui
+    assert "oppSpotlightSeedKey(kind)===requestKey" in ui
+    assert "oppSpotlightWorkspaceKey" in ui
+    assert "opp-explore-market" in ui
+    assert "opp-explore-promising" in ui
