@@ -46,6 +46,11 @@ from .models import (
     OwnerBehaviorEvent,
     OwnerBehaviorProfile,
 )
+from .preference_stability import (
+    OwnerPositionPreferenceStability,
+    OwnerPreferenceStabilityProfile,
+    build_owner_preference_stability_profile,
+)
 from .profiles import build_owner_behavior_profiles
 from .residual_preference import (
     BehavioralResidualPolicy,
@@ -86,6 +91,8 @@ __all__ = [
     "OwnerContextControlledPreferenceProfile",
     "OwnerPositionPreferenceResidual",
     "OwnerPositionPreferenceResidualResult",
+    "OwnerPositionPreferenceStability",
+    "OwnerPreferenceStabilityProfile",
     "SleeperBehaviorHistorySource",
     "SleeperLeagueHistory",
     "BehavioralIntelligenceStore",
@@ -94,6 +101,7 @@ __all__ = [
     "build_behavioral_context_calibration_dataset",
     "build_owner_behavior_profiles",
     "build_owner_context_controlled_preference_profile",
+    "build_owner_preference_stability_profile",
     "estimate_context_acquisition_distribution",
     "estimate_owner_position_preference_from_context_expectation",
     "estimate_owner_position_preference_residual",
