@@ -53,9 +53,9 @@ def test_sleeper_live_acquires_only_configured_regular_season_weeks() -> None:
     assert tuple(snapshot.payload["matchups"]) == tuple(str(week) for week in range(1, 15))
     matchup_urls = [url for url in requested if "/matchups/" in url]
     assert len(matchup_urls) == 14
-    assert matchup_urls[0].endswith("/matchups/1")
-    assert matchup_urls[-1].endswith("/matchups/14")
-    assert requested[-1].endswith("/schedule/nfl/regular/2026")
+    assert {int(url.rsplit("/", 1)[-1]) for url in matchup_urls} == set(range(1, 15))
+    schedule_urls = [url for url in requested if url.endswith("/schedule/nfl/regular/2026")]
+    assert len(schedule_urls) == 1
 
 
 def test_sleeper_schedule_normalizes_to_canonical_team_ids_and_points() -> None:
