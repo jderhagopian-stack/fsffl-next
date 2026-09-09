@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Callable
@@ -37,7 +38,7 @@ class LiveForecastRuntimeResult(FrozenModel):
     failed_sources: tuple[str, ...]
     evaluation_as_of: datetime
     fantasy_regular_season_forecasts: tuple[ForecastObservation, ...] = ()
-    model_version: str = "next2-current-runtime-v3"
+    model_version: str = "next2-current-runtime-v4:parallel-provider-ingestion"
 
 
 def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher, ...]:
@@ -65,6 +66,42 @@ def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher
     )
 
 
+def _fetch_current_snapshots(
+    fetchers: tuple[NamedCurrentProjectionFetcher, ...],
+    *,
+    season: int,
+) -> tuple[list[tuple[str, CurrentProjectionSnapshot]], list[str]]:
+    """Acquire independent provider snapshots concurrently without changing evidence semantics."""
+
+    if not fetchers:
+        return [], []
+    snapshots: list[tuple[str, CurrentProjectionSnapshot]] = []
+    failed: list[str] = []
+    with ThreadPoolExecutor(
+        max_workers=len(fetchers),
+        thread_name_prefix="fsffl-forecast-provider",
+    ) as executor:
+        future_by_source = {
+            executor.submit(fetcher.fetch, season): fetcher.source_id
+            for fetcher in fetchers
+        }
+        for future in as_completed(future_by_source):
+            source_id = future_by_source[future]
+            try:
+                snapshot = future.result()
+                if snapshot.provider != source_id:
+                    raise ValueError("current projection fetcher returned wrong provider id")
+                snapshots.append((source_id, snapshot))
+            except Exception as exc:
+                failed.append(f"{source_id}: {type(exc).__name__}: {exc}")
+
+    # Completion order is intentionally discarded. All downstream behavior remains
+    # deterministic and source-id ordered exactly as before the parallel acquisition.
+    snapshots.sort(key=lambda item: item[0])
+    failed.sort()
+    return snapshots, failed
+
+
 def build_current_live_forecasts(
     league_state: LeagueState,
     *,
@@ -72,22 +109,20 @@ def build_current_live_forecasts(
     clock: Clock | None = None,
     minimum_independent_sources: int = 2,
 ) -> LiveForecastRuntimeResult:
-    """Build current authoritative FSFFL forecasts from independent live evidence."""
+    """Build current authoritative FSFFL forecasts from independent live evidence.
+
+    Independent network acquisitions run concurrently. Normalization, source gates,
+    ensemble construction, scoring and uncertainty remain deterministic and unchanged.
+    """
 
     active_fetchers = fetchers or default_current_projection_fetchers()
     if len({item.source_id for item in active_fetchers}) != len(active_fetchers):
         raise ValueError("current projection fetcher ids must be unique")
 
-    snapshots: list[tuple[str, CurrentProjectionSnapshot]] = []
-    failed: list[str] = []
-    for fetcher in active_fetchers:
-        try:
-            snapshot = fetcher.fetch(league_state.league.season)
-            if snapshot.provider != fetcher.source_id:
-                raise ValueError("current projection fetcher returned wrong provider id")
-            snapshots.append((fetcher.source_id, snapshot))
-        except Exception as exc:
-            failed.append(f"{fetcher.source_id}: {type(exc).__name__}: {exc}")
+    snapshots, failed = _fetch_current_snapshots(
+        active_fetchers,
+        season=league_state.league.season,
+    )
 
     cutoff = (clock or (lambda: datetime.now(UTC)))()
     if cutoff.tzinfo is None:
@@ -134,7 +169,7 @@ def build_current_live_forecasts(
         raw_ensemble,
         rules=league_state.league.rules,
         source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v3",
+        model_version="next2-current-runtime-v4:parallel-provider-ingestion",
     )
     fantasy_points = apply_empirical_season_fantasy_point_uncertainty(league_scored)
     fantasy_regular_season = (
