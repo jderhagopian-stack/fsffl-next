@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from threading import RLock
 
 from fsffl.persistence import PersistenceStore, persistence_store_from_env
@@ -18,11 +19,11 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     to the existing runtime so storage can never become a second model authority or a
     single point of failure for calculations already in memory.
 
-    Hosted latency rule: only completed intelligence bundles are checkpointed
-    synchronously. State-only, forecast-only, and simulation-only transitions stay in
-    memory and are recoverable from canonical sources. This keeps connect/refresh UI
-    latency off the Postgres serialization path while preserving the last durable,
-    internally coherent bundle across restarts.
+    Hosted latency rule: persistence never sits on the user-request path. Canonical
+    league State is checkpointed as soon as it is usable, and richer Forecast /
+    Simulation / Value checkpoints follow in mutation order on one serialized worker.
+    This lets a successfully loaded league survive a web-service restart without making
+    Connect League wait for Postgres serialization.
     """
 
     def __init__(self, persistence_store: PersistenceStore | None = None) -> None:
@@ -30,21 +31,16 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self._persistence = persistence_store if persistence_store is not None else persistence_store_from_env()
         self._restore_lock = RLock()
         self._restore_attempted: set[str] = set()
+        self._checkpoint_executor = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="fsffl-persist",
+        )
 
     @property
     def persistence_enabled(self) -> bool:
         return self._persistence is not None
 
-    @staticmethod
-    def _complete_bundle(context: UserRuntimeContext) -> bool:
-        return (
-            context.league_state is not None
-            and context.forecast_evidence is not None
-            and context.simulation_analytics is not None
-            and context.value_evidence is not None
-        )
-
-    def _checkpoint(self, user_id: str, context: UserRuntimeContext) -> None:
+    def _persist_context(self, user_id: str, context: UserRuntimeContext) -> None:
         if self._persistence is None or context.league_state is None:
             return
         try:
@@ -60,9 +56,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         except Exception as exc:  # persistence must not break authoritative runtime
             _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
 
-    def _checkpoint_if_complete(self, user_id: str, context: UserRuntimeContext) -> None:
-        if self._complete_bundle(context):
-            self._checkpoint(user_id, context)
+    def _checkpoint_async(self, user_id: str, context: UserRuntimeContext) -> None:
+        if self._persistence is None or context.league_state is None:
+            return
+        # One worker is deliberate: an earlier state-only snapshot can never finish
+        # after and overwrite a later, richer intelligence snapshot.
+        self._checkpoint_executor.submit(self._persist_context, user_id, context)
 
     def _restore_once(self, user_id: str) -> None:
         if self._persistence is None:
@@ -108,8 +107,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         context = super().set_league_state(user_id, league_state)
         with self._restore_lock:
             self._restore_attempted.add(user_id)
-        # State is already recoverable from Sleeper. Do not block connect on a
-        # large serialization/database write before the product can use it.
+        self._checkpoint_async(user_id, context)
         return context
 
     def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
@@ -118,17 +116,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             evidence,
             refreshed_league_state=refreshed_league_state,
         )
-        self._checkpoint_if_complete(user_id, context)
+        self._checkpoint_async(user_id, context)
         return context
 
     def set_simulation_analytics(self, user_id: str, result):
         context = super().set_simulation_analytics(user_id, result)
-        self._checkpoint_if_complete(user_id, context)
+        self._checkpoint_async(user_id, context)
         return context
 
     def set_value_evidence(self, user_id: str, result):
         context = super().set_value_evidence(user_id, result)
-        self._checkpoint_if_complete(user_id, context)
+        self._checkpoint_async(user_id, context)
         return context
 
     def set_intelligence_bundle(
@@ -147,12 +145,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             simulation_analytics=simulation_analytics,
             value_evidence=value_evidence,
         )
-        self._checkpoint_if_complete(user_id, context)
+        self._checkpoint_async(user_id, context)
         return context
 
     def select_team(self, user_id: str, team_id: str):
         context = super().select_team(user_id, team_id)
-        # Before a complete intelligence bundle exists, team selection is already
-        # retained client-side and should not force a state-only Postgres snapshot.
-        self._checkpoint_if_complete(user_id, context)
+        self._checkpoint_async(user_id, context)
         return context
