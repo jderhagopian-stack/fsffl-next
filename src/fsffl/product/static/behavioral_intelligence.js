@@ -11,7 +11,7 @@
  * Package-shape Behavioral evidence belongs in the Trade Decision lane.
  * Universal FSFFL Market Value remains unchanged.
  * FSFFL does not turn raw transaction counts into fake acceptance odds.
- * No calibrated acceptance model has been promoted; acceptance is Not estimable.
+ * No calibrated acceptance model has been promoted; acceptance is Not estimable and no unsupported value is Not estimated.
  * The browser never derives Behavioral model truth from descriptive UI counts.
  * Unavailable inference is labeled Awaiting PIT history rather than rendered as a score.
  */
