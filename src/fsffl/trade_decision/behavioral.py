@@ -16,6 +16,7 @@ from .acceptance import (
     TradeAcceptanceView,
     build_unestimated_acceptance_view,
 )
+from .behavioral_trade_shape import OwnerTradeShapeProposalFit
 from .models import BilateralTradeProposal
 
 
@@ -25,18 +26,20 @@ def bind_owner_behavior_evidence(
     accepting_team_id: str,
     profile: OwnerBehaviorProfile,
     likelihood: BehavioralLikelihoodEstimate | None = None,
+    trade_shape_fit: OwnerTradeShapeProposalFit | None = None,
 ) -> TradeAcceptanceView:
     """Bind governed Behavioral evidence to NEXT-5 without recalculating it.
 
-    The raw profile remains useful when no probability estimate exists. When a
-    governed BehavioralLikelihoodEstimate is supplied, this boundary may pass its
-    inferred or calibrated probability through to Trade Decision with explicit
-    provenance and uncertainty. It does not derive odds, alter universal market
-    Value, or compound behavioral evidence with franchise-utility factors.
+    The raw profile remains useful when no probability estimate exists. Context-
+    controlled proposal-shape fit may also be attached as descriptive acceptance
+    evidence. It does not change the probability by itself. When a governed
+    BehavioralLikelihoodEstimate is supplied, this boundary may pass its inferred
+    or calibrated probability through with explicit provenance and uncertainty.
 
-    Inferred Behavioral odds are provisional Decision evidence. Calibration is a
-    stronger Behavioral evidence class, but does not by itself promote Trade
-    Decision acceptance authority to AUTHORITATIVE.
+    This function does not derive odds, alter universal market Value, or compound
+    Behavioral evidence with franchise-utility factors. Inferred Behavioral odds
+    are provisional Decision evidence; calibration does not by itself promote
+    Trade Decision acceptance authority to AUTHORITATIVE.
     """
 
     team_ids = {proposal.side_a.team_id, proposal.side_b.team_id}
@@ -44,6 +47,15 @@ def bind_owner_behavior_evidence(
         raise ValueError("accepting team must be one side of the proposal")
     if profile.as_of > proposal.as_of:
         raise ValueError("behavioral profile cannot use evidence after proposal cutoff")
+    if trade_shape_fit is not None:
+        if trade_shape_fit.proposal_id != proposal.proposal_id:
+            raise ValueError("trade-shape fit proposal must match acceptance proposal")
+        if trade_shape_fit.accepting_team_id != accepting_team_id:
+            raise ValueError("trade-shape fit accepting team must match acceptance view")
+        if trade_shape_fit.owner_id != profile.owner_id:
+            raise ValueError("trade-shape fit owner must match behavioral profile")
+        if trade_shape_fit.source_profile_as_of > proposal.as_of:
+            raise ValueError("trade-shape fit cannot use evidence after proposal cutoff")
     if likelihood is not None:
         if likelihood.owner_id != profile.owner_id:
             raise ValueError("behavioral likelihood owner must match behavioral profile")
@@ -73,6 +85,31 @@ def bind_owner_behavior_evidence(
             description=description,
         )
     ]
+    if trade_shape_fit is not None:
+        if trade_shape_fit.status == "estimated":
+            shape_description = (
+                f"Proposal shape from accepting owner's perspective={trade_shape_fit.proposed_shape.value}; "
+                f"observed historical share={trade_shape_fit.observed_historical_share:.3f}; "
+                f"context-expected share={trade_shape_fit.context_expected_share:.3f}; "
+                f"context-controlled residual={trade_shape_fit.residual_share:.3f}; "
+                f"residual confidence={trade_shape_fit.confidence:.3f}; "
+                f"historical coverage={trade_shape_fit.historical_coverage_rate:.3f}."
+            )
+        else:
+            shape_description = (
+                f"Proposal shape from accepting owner's perspective={trade_shape_fit.proposed_shape.value}; "
+                "context-controlled historical shape fit unavailable."
+            )
+        evidence_items.append(
+            AcceptanceEvidenceItem(
+                evidence_id=f"owner-trade-shape-fit:{profile.owner_id}:{trade_shape_fit.model_version}",
+                kind=AcceptanceEvidenceKind.OWNER_BEHAVIOR,
+                observed_at=trade_shape_fit.source_profile_as_of,
+                source="fsffl-behavioral-trade-shape",
+                source_version=trade_shape_fit.source_profile_model_version,
+                description=shape_description,
+            )
+        )
     if likelihood is not None:
         evidence_items.append(
             AcceptanceEvidenceItem(
@@ -95,7 +132,7 @@ def bind_owner_behavior_evidence(
         counterparty_team_id=accepting_team_id,
         as_of=proposal.as_of,
         items=tuple(evidence_items),
-        model_version="next5-owner-behavior-evidence-v2",
+        model_version="next5-owner-behavior-evidence-v3",
     )
 
     if likelihood is None or likelihood.acceptance_probability is None:
@@ -118,7 +155,9 @@ def bind_owner_behavior_evidence(
 
     # Behavioral evidence is contextual and bounded upstream. This binding is a
     # pass-through only: it neither adds another team-need adjustment nor
-    # multiplies this probability by other Decision factors.
+    # multiplies this probability by other Decision factors. Trade-shape fit is
+    # evidence only unless it is incorporated exactly once by a governed upstream
+    # Behavioral likelihood model.
     status = AcceptanceModelStatus.PROVISIONAL_GOVERNED
     estimate = AcceptanceProbabilityEstimate(
         proposal_id=proposal.proposal_id,

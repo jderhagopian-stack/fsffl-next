@@ -12,6 +12,10 @@ from .behavioral_contextual_value import (
     derive_owner_behavior_contextual_signal,
     derive_owner_profile_contextual_signal,
 )
+from .behavioral_trade_shape import (
+    OwnerTradeShapeProposalFit,
+    assess_owner_trade_shape_proposal_fit,
+)
 from .contextual_value import (
     ContextualValueAdjustment,
     ContextualValueAdjustmentKind,
@@ -138,6 +142,7 @@ __all__ = [
     "MaterialityPolicyBundle",
     "MissingEconomicEvidence",
     "NegotiationFeasibilityShape",
+    "OwnerTradeShapeProposalFit",
     "PackageConcentrationSide",
     "PackageConcentrationStatus",
     "PackageEconomicAssessment",
@@ -164,6 +169,7 @@ __all__ = [
     "apply_bilateral_trade",
     "assess_bilateral_materiality",
     "assess_negotiation_feasibility",
+    "assess_owner_trade_shape_proposal_fit",
     "assess_package_economics",
     "assess_side_direction",
     "attach_owner_strategy",
