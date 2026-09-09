@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from dataclasses import dataclass
 from threading import RLock
@@ -18,6 +20,74 @@ from .simulation_runtime import LiveSimulationAnalyticsResult
 
 LiveStateLoader = Callable[[str], LeagueState]
 _logger = logging.getLogger("fsffl.product.forecast")
+
+
+def league_material_fingerprint(league_state: LeagueState) -> str:
+    """Hash substantive league facts while ignoring snapshot/provenance timestamps.
+
+    `LeagueState.state_id` intentionally changes whenever the canonical snapshot
+    changes, including a fresh retrieval timestamp. That is correct for evidence
+    provenance, but too strict for product cache reuse. This fingerprint is a
+    performance-only compatibility key: any roster, rules, ownership, player
+    status, matchup result, or NFL bye change invalidates it. Retrieval/effective
+    timestamps and provenance metadata do not.
+    """
+
+    payload = {
+        "schema_version": league_state.schema_version,
+        "league": league_state.league.model_dump(mode="json"),
+        "teams": [
+            team.model_dump(mode="json")
+            for team in sorted(league_state.teams, key=lambda item: item.team_id)
+        ],
+        "team_states": [
+            state.model_dump(mode="json")
+            for state in sorted(league_state.team_states, key=lambda item: item.team_id)
+        ],
+        "players": [
+            player.model_dump(mode="json")
+            for player in sorted(league_state.players, key=lambda item: item.player_id)
+        ],
+        "player_states": [
+            {
+                "player_id": state.player_id,
+                "age_years": state.age_years,
+                "nfl_team": state.nfl_team,
+                "status": state.status.value,
+            }
+            for state in sorted(league_state.player_states, key=lambda item: item.player_id)
+        ],
+        "draft_picks": [
+            pick.model_dump(mode="json")
+            for pick in sorted(league_state.draft_picks, key=lambda item: item.pick_id)
+        ],
+        "pick_ownership": [
+            ownership.model_dump(mode="json")
+            for ownership in sorted(league_state.pick_ownership, key=lambda item: item.pick_id)
+        ],
+        "matchups": [
+            {
+                "week": matchup.week,
+                "team_a_id": matchup.team_a_id,
+                "team_b_id": matchup.team_b_id,
+                "team_a_points": matchup.team_a_points,
+                "team_b_points": matchup.team_b_points,
+            }
+            for matchup in sorted(
+                league_state.matchups,
+                key=lambda item: (item.week, item.team_a_id, item.team_b_id),
+            )
+        ],
+        "nfl_team_byes": [
+            {"season": bye.season, "nfl_team": bye.nfl_team, "week": bye.week}
+            for bye in sorted(
+                league_state.nfl_team_byes,
+                key=lambda item: (item.season, item.nfl_team),
+            )
+        ],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -95,6 +165,7 @@ class UserRuntimeContext:
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
+    intelligence_reused: bool = False
 
 
 @dataclass(frozen=True)
@@ -125,8 +196,46 @@ class PrivateBetaRuntimeStore:
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
         with self._lock:
-            context = UserRuntimeContext(user_id=user_id, league_state=league_state)
+            current = self.get(user_id)
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            selected = current.selected_team_id if current.selected_team_id in valid_team_ids else None
+            same_league = (
+                current.league_state is not None
+                and current.league_state.league.league_id == league_state.league.league_id
+            )
+            complete_bundle = (
+                current.forecast_evidence is not None
+                and current.simulation_analytics is not None
+                and current.value_evidence is not None
+                and user_id not in self._pending_intelligence
+            )
+            if (
+                same_league
+                and complete_bundle
+                and current.league_state is not None
+                and league_material_fingerprint(current.league_state)
+                == league_material_fingerprint(league_state)
+            ):
+                reused = UserRuntimeContext(
+                    user_id=user_id,
+                    league_state=current.league_state,
+                    selected_team_id=selected,
+                    forecast_evidence=current.forecast_evidence,
+                    simulation_analytics=current.simulation_analytics,
+                    value_evidence=current.value_evidence,
+                    intelligence_reused=True,
+                )
+                self._contexts[user_id] = reused
+                return reused
+
+            context = UserRuntimeContext(
+                user_id=user_id,
+                league_state=league_state,
+                selected_team_id=selected if same_league else None,
+            )
             self._contexts[user_id] = context
+            if not same_league:
+                self._pending_intelligence.pop(user_id, None)
             return context
 
     def set_forecast_evidence(
@@ -157,6 +266,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=evidence,
                 simulation_analytics=None,
                 value_evidence=None,
+                intelligence_reused=False,
             )
             self._contexts[user_id] = updated
             self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
@@ -215,6 +325,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=forecast_evidence,
                 simulation_analytics=result,
                 value_evidence=None,
+                intelligence_reused=False,
             )
             self._contexts[user_id] = updated
             self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
@@ -260,6 +371,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=forecast_evidence,
                 simulation_analytics=simulation_analytics,
                 value_evidence=result,
+                intelligence_reused=False,
             )
             self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
@@ -299,6 +411,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=forecast_evidence,
                 simulation_analytics=simulation_analytics,
                 value_evidence=value_evidence,
+                intelligence_reused=False,
             )
             self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
@@ -321,6 +434,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=current.forecast_evidence,
                 simulation_analytics=current.simulation_analytics,
                 value_evidence=current.value_evidence,
+                intelligence_reused=current.intelligence_reused,
             )
             self._contexts[user_id] = updated
             return updated
