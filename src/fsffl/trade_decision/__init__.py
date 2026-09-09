@@ -8,6 +8,12 @@ from .acceptance import (
     build_unestimated_acceptance_view,
 )
 from .behavioral import bind_owner_behavior_evidence
+from .contextual_value import (
+    ContextualValueAdjustment,
+    ContextualValueAdjustmentKind,
+    ContextualValueEvidenceLevel,
+    TeamOwnerAdjustedValueEstimate,
+)
 from .decision import (
     BilateralDecisionShape,
     BilateralTradeDecision,
@@ -104,6 +110,9 @@ __all__ = [
     "BilateralTradeProposal",
     "BoundedPackagePremiumPrior",
     "CompetitiveMaterialityPolicy",
+    "ContextualValueAdjustment",
+    "ContextualValueAdjustmentKind",
+    "ContextualValueEvidenceLevel",
     "Direction",
     "EconomicConcept",
     "EconomicFlow",
@@ -128,6 +137,7 @@ __all__ = [
     "SideMaterialAssessment",
     "StrategicSideContext",
     "StrategicTradeContext",
+    "TeamOwnerAdjustedValueEstimate",
     "TeamRosterLegalityResolution",
     "TradeAcceptanceView",
     "TradeDecisionDisposition",
