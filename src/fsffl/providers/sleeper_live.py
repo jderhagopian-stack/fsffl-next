@@ -56,9 +56,13 @@ class SleeperLiveSource:
         season = int(league_payload.get("season")) if league_payload.get("season") else None
         matchup_weeks = self._regular_season_weeks(league_payload)
 
+        # Keep roster validation first in logical resolution order. Its requests run
+        # concurrently with the rest, but a persistently incomplete roster payload
+        # remains the primary canonical-State failure rather than being masked by a
+        # later independent endpoint error.
         tasks: dict[str, Callable[[], Any]] = {
-            "users": lambda: self._get(f"/league/{league_id}/users"),
             "rosters": lambda: self._complete_rosters(league_id, league_payload),
+            "users": lambda: self._get(f"/league/{league_id}/users"),
             "players": lambda: self._get("/players/nfl"),
             "traded_picks": lambda: self._get(f"/league/{league_id}/traded_picks"),
             "nfl_schedule": lambda: self._nfl_regular_season_schedule(season),
