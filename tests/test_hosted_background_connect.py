@@ -63,3 +63,27 @@ def test_mobile_connect_uses_background_import_and_transport_recovery() -> None:
     assert "Loading league…" in source
     assert "visibilitychange" not in source
     assert "pageshow" not in source
+
+
+def test_hosted_connect_does_not_wait_on_partial_postgres_checkpoint() -> None:
+    source = open(
+        "src/fsffl/product/persistent_runtime.py",
+        encoding="utf-8",
+    ).read()
+
+    # Connecting a league must return after canonical state is usable in memory.
+    # State-only/partial pipeline transitions must not synchronously serialize a
+    # large Postgres snapshot; only a complete Forecast+Simulation+Value bundle
+    # is durable enough to checkpoint.
+    set_state = source.split("def set_league_state", 1)[1].split("def set_forecast_evidence", 1)[0]
+    set_forecast = source.split("def set_forecast_evidence", 1)[1].split("def set_simulation_analytics", 1)[0]
+    set_simulation = source.split("def set_simulation_analytics", 1)[1].split("def set_value_evidence", 1)[0]
+    set_value = source.split("def set_value_evidence", 1)[1].split("def set_intelligence_bundle", 1)[0]
+
+    assert "self._checkpoint(" not in set_state
+    assert "self._checkpoint_if_complete" in set_forecast
+    assert "self._checkpoint_if_complete" in set_simulation
+    assert "self._checkpoint_if_complete" in set_value
+    assert "context.forecast_evidence is not None" in source
+    assert "context.simulation_analytics is not None" in source
+    assert "context.value_evidence is not None" in source
