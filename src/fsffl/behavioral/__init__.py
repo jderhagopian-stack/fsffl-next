@@ -79,6 +79,18 @@ from .residual_preference import (
 from .service import BehavioralIntelligenceService, BehavioralSyncResult
 from .sleeper_history import SleeperBehaviorHistorySource, SleeperLeagueHistory
 from .store import BehavioralIntelligenceStore
+from .trade_shape_context import (
+    BehavioralTradeShape,
+    BehavioralTradeShapeContextModel,
+    BehavioralTradeShapeContextResult,
+    BehavioralTradeShapeExpectation,
+    OwnerTradeShapePreference,
+    OwnerTradeShapePreferenceProfile,
+    build_owner_trade_shape_preference_profile,
+    classify_behavioral_trade_shape,
+    estimate_trade_shape_context_distribution,
+    fit_behavioral_trade_shape_context_model,
+)
 
 __all__ = [
     "BehavioralActionContext",
@@ -104,6 +116,10 @@ __all__ = [
     "BehavioralPositionContextExpectation",
     "BehavioralProbabilityBasis",
     "BehavioralResidualPolicy",
+    "BehavioralTradeShape",
+    "BehavioralTradeShapeContextModel",
+    "BehavioralTradeShapeContextResult",
+    "BehavioralTradeShapeExpectation",
     "OwnerBehaviorEvent",
     "OwnerBehaviorProfile",
     "OwnerBehaviorInferenceQualityProfile",
@@ -117,6 +133,8 @@ __all__ = [
     "OwnerPositionPreferenceResidualResult",
     "OwnerPositionPreferenceStability",
     "OwnerPreferenceStabilityProfile",
+    "OwnerTradeShapePreference",
+    "OwnerTradeShapePreferenceProfile",
     "SleeperBehaviorHistorySource",
     "SleeperLeagueHistory",
     "BehavioralIntelligenceStore",
@@ -128,11 +146,15 @@ __all__ = [
     "build_owner_context_controlled_preference_profile",
     "build_owner_historical_context_controlled_preference_profile",
     "build_owner_preference_stability_profile",
+    "build_owner_trade_shape_preference_profile",
+    "classify_behavioral_trade_shape",
     "estimate_context_acquisition_distribution",
     "estimate_multiclass_context_acquisition_distribution",
     "estimate_owner_position_preference_from_context_expectation",
     "estimate_owner_position_preference_residual",
+    "estimate_trade_shape_context_distribution",
     "fit_behavioral_context_expectation_model",
     "fit_behavioral_multiclass_context_expectation_model",
+    "fit_behavioral_trade_shape_context_model",
     "reconstruct_behavioral_action_context",
 ]
