@@ -43,6 +43,11 @@ from .historical_context_profile import (
     OwnerHistoricalContextCoverageIssue,
     build_owner_historical_context_controlled_preference_profile,
 )
+from .inference_quality import (
+    OwnerBehaviorInferenceQualityProfile,
+    OwnerPositionInferenceQuality,
+    build_owner_behavior_inference_quality_profile,
+)
 from .likelihood import (
     BehavioralDriverKind,
     BehavioralEvidenceLevel,
@@ -101,11 +106,13 @@ __all__ = [
     "BehavioralResidualPolicy",
     "OwnerBehaviorEvent",
     "OwnerBehaviorProfile",
+    "OwnerBehaviorInferenceQualityProfile",
     "OwnerContextControlledPositionPreference",
     "OwnerContextControlledPreferenceProfile",
     "OwnerHistoricalContextControlledPreferenceResult",
     "OwnerHistoricalContextCoverage",
     "OwnerHistoricalContextCoverageIssue",
+    "OwnerPositionInferenceQuality",
     "OwnerPositionPreferenceResidual",
     "OwnerPositionPreferenceResidualResult",
     "OwnerPositionPreferenceStability",
@@ -116,6 +123,7 @@ __all__ = [
     "BehavioralIntelligenceService",
     "BehavioralSyncResult",
     "build_behavioral_context_calibration_dataset",
+    "build_owner_behavior_inference_quality_profile",
     "build_owner_behavior_profiles",
     "build_owner_context_controlled_preference_profile",
     "build_owner_historical_context_controlled_preference_profile",
