@@ -1,7 +1,8 @@
 """Shared Behavioral Intelligence evidence for FSFFL NEXT.
 
-Behavioral evidence is descriptive input to downstream Decision/Search/Analytics.
-It does not own market Value, competitive simulation, or recommendation authority.
+Behavioral evidence can support governed probabilistic inference downstream while
+remaining separate from universal market Value, competitive simulation, and
+recommendation authority.
 """
 
 from .likelihood import (
@@ -10,6 +11,7 @@ from .likelihood import (
     BehavioralLikelihoodDirection,
     BehavioralLikelihoodDriver,
     BehavioralLikelihoodEstimate,
+    BehavioralProbabilityBasis,
 )
 from .models import (
     BehavioralAsset,
@@ -32,6 +34,7 @@ __all__ = [
     "BehavioralLikelihoodDirection",
     "BehavioralLikelihoodDriver",
     "BehavioralLikelihoodEstimate",
+    "BehavioralProbabilityBasis",
     "OwnerBehaviorEvent",
     "OwnerBehaviorProfile",
     "SleeperBehaviorHistorySource",
