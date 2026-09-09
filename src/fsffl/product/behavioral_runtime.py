@@ -10,6 +10,7 @@ from threading import RLock
 from typing import Callable
 
 from fsffl.behavioral.models import OwnerBehaviorProfile
+from fsffl.behavioral.postgres_store import PostgresBehavioralIntelligenceStore
 from fsffl.behavioral.service import BehavioralIntelligenceService, BehavioralSyncResult
 from fsffl.behavioral.sleeper_history import SleeperBehaviorHistorySource
 from fsffl.behavioral.store import BehavioralIntelligenceStore
@@ -78,20 +79,24 @@ def _publish_profiles_for_state(
 
 
 def default_behavioral_cache_path() -> Path:
-    """Return the private-beta cache path without implying hosted durability.
-
-    A configurable path lets deployments mount durable storage later. The Render
-    free-service filesystem is ephemeral, so callers must not describe the default
-    path as durable across service replacement/redeploy.
-    """
+    """Return the local/test Behavioral cache path."""
 
     return Path(os.getenv("FSFFL_BEHAVIOR_CACHE_PATH", "/tmp/fsffl-next/behavior.sqlite3"))
+
+
+def default_behavioral_store():
+    """Use hosted Postgres when configured; retain SQLite for local/test workflows."""
+
+    database_url = os.getenv("FSFFL_DATABASE_URL", "").strip()
+    if database_url:
+        return PostgresBehavioralIntelligenceStore(database_url)
+    return BehavioralIntelligenceStore(default_behavioral_cache_path())
 
 
 def default_behavioral_work(league_state: LeagueState, sleeper_league_external_id: str) -> BehavioralSyncResult:
     service = BehavioralIntelligenceService(
         source=SleeperBehaviorHistorySource(),
-        store=BehavioralIntelligenceStore(default_behavioral_cache_path()),
+        store=default_behavioral_store(),
     )
     return service.sync_sleeper_league(
         league_state,
