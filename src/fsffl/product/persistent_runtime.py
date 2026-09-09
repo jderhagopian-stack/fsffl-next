@@ -17,6 +17,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     Postgres is a reusable state/artifact cache only. Any persistence failure fails open
     to the existing runtime so storage can never become a second model authority or a
     single point of failure for calculations already in memory.
+
+    Hosted latency rule: only completed intelligence bundles are checkpointed
+    synchronously. State-only, forecast-only, and simulation-only transitions stay in
+    memory and are recoverable from canonical sources. This keeps connect/refresh UI
+    latency off the Postgres serialization path while preserving the last durable,
+    internally coherent bundle across restarts.
     """
 
     def __init__(self, persistence_store: PersistenceStore | None = None) -> None:
@@ -28,6 +34,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     @property
     def persistence_enabled(self) -> bool:
         return self._persistence is not None
+
+    @staticmethod
+    def _complete_bundle(context: UserRuntimeContext) -> bool:
+        return (
+            context.league_state is not None
+            and context.forecast_evidence is not None
+            and context.simulation_analytics is not None
+            and context.value_evidence is not None
+        )
 
     def _checkpoint(self, user_id: str, context: UserRuntimeContext) -> None:
         if self._persistence is None or context.league_state is None:
@@ -44,6 +59,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
         except Exception as exc:  # persistence must not break authoritative runtime
             _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
+
+    def _checkpoint_if_complete(self, user_id: str, context: UserRuntimeContext) -> None:
+        if self._complete_bundle(context):
+            self._checkpoint(user_id, context)
 
     def _restore_once(self, user_id: str) -> None:
         if self._persistence is None:
@@ -89,7 +108,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         context = super().set_league_state(user_id, league_state)
         with self._restore_lock:
             self._restore_attempted.add(user_id)
-        self._checkpoint(user_id, context)
+        # State is already recoverable from Sleeper. Do not block connect on a
+        # large serialization/database write before the product can use it.
         return context
 
     def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
@@ -98,17 +118,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             evidence,
             refreshed_league_state=refreshed_league_state,
         )
-        self._checkpoint(user_id, context)
+        self._checkpoint_if_complete(user_id, context)
         return context
 
     def set_simulation_analytics(self, user_id: str, result):
         context = super().set_simulation_analytics(user_id, result)
-        self._checkpoint(user_id, context)
+        self._checkpoint_if_complete(user_id, context)
         return context
 
     def set_value_evidence(self, user_id: str, result):
         context = super().set_value_evidence(user_id, result)
-        self._checkpoint(user_id, context)
+        self._checkpoint_if_complete(user_id, context)
         return context
 
     def set_intelligence_bundle(
@@ -127,10 +147,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             simulation_analytics=simulation_analytics,
             value_evidence=value_evidence,
         )
-        self._checkpoint(user_id, context)
+        self._checkpoint_if_complete(user_id, context)
         return context
 
     def select_team(self, user_id: str, team_id: str):
         context = super().select_team(user_id, team_id)
-        self._checkpoint(user_id, context)
+        # Before a complete intelligence bundle exists, team selection is already
+        # retained client-side and should not force a state-only Postgres snapshot.
+        self._checkpoint_if_complete(user_id, context)
         return context
