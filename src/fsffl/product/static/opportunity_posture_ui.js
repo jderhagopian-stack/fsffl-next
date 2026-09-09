@@ -2,6 +2,8 @@
   const STORAGE_KEY='fsffl.tradeFinderPosture';
   const DEFAULT='default_calculated';
   let latestMeta=null;
+  let observerStarted=false;
+  let renderQueued=false;
   const originalFetch=window.fetch.bind(window);
 
   function selectedPosture(){
@@ -83,7 +85,9 @@
     const selected=selectedPosture();
     const calculated=String(latestMeta.calculated_competitive_state||'unknown').replaceAll('_',' ');
     const effective=String(latestMeta.effective_posture||'balanced').replaceAll('_',' ');
-    control.innerHTML='<label><span>What are you trying to do?</span><select id="opp-posture-select">'+options.map(row=>'<option value="'+String(row.value)+'"'+(row.value===selected?' selected':'')+'>'+String(row.label)+'</option>').join('')+'</select></label><small><strong>Calculated state:</strong> '+calculated+' · <strong>Search lens:</strong> '+effective+'. This changes Trade Finder discovery order only; it does not rewrite FSFFL Value, calculated state, Decision truth, or acceptance probability.</small>';
+    const markup='<label><span>What are you trying to do?</span><select id="opp-posture-select">'+options.map(row=>'<option value="'+String(row.value)+'"'+(row.value===selected?' selected':'')+'>'+String(row.label)+'</option>').join('')+'</select></label><small><strong>Calculated state:</strong> '+calculated+' · <strong>Search lens:</strong> '+effective+'. This changes Trade Finder discovery order only; it does not rewrite FSFFL Value, calculated state, Decision truth, or acceptance probability.</small>';
+    if(control.innerHTML===markup)return;
+    control.innerHTML=markup;
     control.querySelector('#opp-posture-select')?.addEventListener('change',event=>{
       rememberPosture(event.target.value||DEFAULT);
       if(typeof loadOpportunityWorkspace==='function')loadOpportunityWorkspace({showLoading:false});
@@ -91,9 +95,28 @@
     });
   }
 
-  const observer=new MutationObserver(renderControl);
-  document.addEventListener('DOMContentLoaded',()=>{
+  const observer=new MutationObserver(()=>queueRender());
+
+  function observe(){
+    if(!document.body)return;
     observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});
-    renderControl();
+    observerStarted=true;
+  }
+
+  function renderSafely(){
+    renderQueued=false;
+    if(observerStarted){observer.disconnect();observerStarted=false}
+    try{renderControl()}finally{observe()}
+  }
+
+  function queueRender(){
+    if(renderQueued)return;
+    renderQueued=true;
+    requestAnimationFrame(renderSafely);
+  }
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    observe();
+    queueRender();
   });
 })();
