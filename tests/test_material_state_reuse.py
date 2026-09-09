@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import cast
+from typing import Any, cast
 
 from fsffl.product.runtime import (
     LiveForecastEvidence,
@@ -68,6 +68,25 @@ def _state(*, as_of: datetime, p1_status: PlayerStatus = PlayerStatus.ACTIVE) ->
     )
 
 
+def _complete_context(state: LeagueState) -> tuple[UserRuntimeContext, object, object, object]:
+    fake_forecast = cast(LiveForecastEvidence, object())
+    fake_simulation = cast(Any, object())
+    fake_value = cast(Any, object())
+    return (
+        UserRuntimeContext(
+            user_id="u",
+            league_state=state,
+            selected_team_id="team:a",
+            forecast_evidence=fake_forecast,
+            simulation_analytics=fake_simulation,
+            value_evidence=fake_value,
+        ),
+        fake_forecast,
+        fake_simulation,
+        fake_value,
+    )
+
+
 def test_material_fingerprint_ignores_snapshot_timestamp_and_provenance_time() -> None:
     first = _state(as_of=BASE)
     later = _state(as_of=BASE + timedelta(minutes=5))
@@ -81,40 +100,34 @@ def test_material_fingerprint_changes_when_player_status_changes() -> None:
     assert league_material_fingerprint(active) != league_material_fingerprint(injured)
 
 
-def test_same_material_state_preserves_existing_intelligence_and_team_selection() -> None:
+def test_same_material_state_preserves_completed_intelligence_and_team_selection() -> None:
     store = PrivateBetaRuntimeStore()
     original = _state(as_of=BASE)
-    fake_forecast = cast(LiveForecastEvidence, object())
-    store._contexts["u"] = UserRuntimeContext(
-        user_id="u",
-        league_state=original,
-        selected_team_id="team:a",
-        forecast_evidence=fake_forecast,
-    )
+    context, fake_forecast, fake_simulation, fake_value = _complete_context(original)
+    store._contexts["u"] = context
 
     returned = store.set_league_state("u", _state(as_of=BASE + timedelta(minutes=5)))
 
     assert returned.league_state is original
     assert returned.forecast_evidence is fake_forecast
+    assert returned.simulation_analytics is fake_simulation
+    assert returned.value_evidence is fake_value
     assert returned.selected_team_id == "team:a"
     assert returned.intelligence_reused is True
 
 
-def test_material_change_invalidates_intelligence_but_preserves_valid_team_selection() -> None:
+def test_material_change_invalidates_completed_intelligence_but_preserves_team_selection() -> None:
     store = PrivateBetaRuntimeStore()
     original = _state(as_of=BASE)
-    fake_forecast = cast(LiveForecastEvidence, object())
-    store._contexts["u"] = UserRuntimeContext(
-        user_id="u",
-        league_state=original,
-        selected_team_id="team:a",
-        forecast_evidence=fake_forecast,
-    )
+    context, _, _, _ = _complete_context(original)
+    store._contexts["u"] = context
     changed = _state(as_of=BASE + timedelta(minutes=5), p1_status=PlayerStatus.INJURED)
 
     returned = store.set_league_state("u", changed)
 
     assert returned.league_state is changed
     assert returned.forecast_evidence is None
+    assert returned.simulation_analytics is None
+    assert returned.value_evidence is None
     assert returned.selected_team_id == "team:a"
     assert returned.intelligence_reused is False
