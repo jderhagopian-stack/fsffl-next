@@ -92,7 +92,7 @@ def test_stability_profile_detects_direction_instability_descriptively() -> None
 
 def test_stability_profile_requires_same_owner_and_ignores_future_snapshot() -> None:
     result = build_owner_preference_stability_profile(
-        [snapshot(3, rb=0.10), snapshot(5, rb=0.12), snapshot(10, rb=-0.30)],
+        [snapshot(3, rb=0.10), snapshot(5, rb=0.12), snapshot(10, rb=-0.20)],
         as_of=at(6),
     )
     assert result.snapshot_count == 2
