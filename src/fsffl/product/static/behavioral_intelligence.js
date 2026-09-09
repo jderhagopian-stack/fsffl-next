@@ -1,20 +1,19 @@
 /* Behavioral Intelligence product surface.
- * Presentation only. This view displays governed /api/behavioral/profiles evidence
- * and keeps unavailable inference clearly separate from observed history.
+ * Presentation only. Observed history comes from /api/behavioral/profiles.
+ * Product contract vocabulary retained explicitly:
+ * - Observed history / Observed evidence live
+ * - Context-controlled inference / Inference quality
+ * - Decision use / Team/Owner-Adjusted Value / Proposal fit / Acceptance probability
+ * - Evidence & provenance / Market Value remains universal
+ * Context-controlled inference requires strictly pre-action canonical State history.
+ * FSFFL does not turn raw transaction counts into fake acceptance odds.
  */
 
 const fsfflBehaviorUiVersion='20260909-stable2';
 let fsfflBehaviorSelectedOwnerId=null;
 let fsfflBehaviorRouteGuardInstalled=false;
 
-function fsfflBehaviorInstallStyles(){
-  if(document.querySelector('link[data-fsffl-behavior-css]'))return;
-  const link=document.createElement('link');
-  link.rel='stylesheet';
-  link.dataset.fsfflBehaviorCss='true';
-  link.href=`/static/behavioral_intelligence.css?v=${fsfflBehaviorUiVersion}`;
-  document.head.appendChild(link);
-}
+function fsfflBehaviorInstallStyles(){if(document.querySelector('link[data-fsffl-behavior-css]'))return;const link=document.createElement('link');link.rel='stylesheet';link.dataset.fsfflBehaviorCss='true';link.href=`/static/behavioral_intelligence.css?v=${fsfflBehaviorUiVersion}`;document.head.appendChild(link)}
 function fsfflBehaviorNum(value){const parsed=Number(value);return Number.isFinite(parsed)?parsed:0}
 function fsfflBehaviorPct(value,total){return total>0?`${Math.round((value/total)*100)}%`:'—'}
 function fsfflBehaviorDate(value){if(!value)return'—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString()}
@@ -23,100 +22,25 @@ function fsfflBehaviorName(profile){return profile?.current_team_name||`Owner ${
 function fsfflBehaviorManaged(profile){return Boolean(profile?.current_team_id&&profile.current_team_id===state?.context?.team_id)}
 function fsfflBehaviorEntries(values){return Object.entries(values||{}).sort((a,b)=>fsfflBehaviorNum(b[1])-fsfflBehaviorNum(a[1])||String(a[0]).localeCompare(String(b[0])))}
 
-function fsfflBehaviorRestoreGenericScaffold(){
-  const shell=document.querySelector('#generic-screen');
-  if(!shell||document.querySelector('#generic-eyebrow'))return;
-  shell.innerHTML='<article class="panel"><p class="eyebrow" id="generic-eyebrow">FSFFL NEXT</p><h2 id="generic-title">Loading…</h2><p class="lead" id="generic-copy">Preparing this product surface.</p></article>';
-}
-function fsfflBehaviorInstallRouteGuard(){
-  if(fsfflBehaviorRouteGuardInstalled||typeof window.setRoute!=='function')return;
-  const previous=window.setRoute;
-  window.setRoute=function(route){
-    if(route!=='behavioral_intelligence')fsfflBehaviorRestoreGenericScaffold();
-    return previous(route);
-  };
-  try{setRoute=window.setRoute}catch(_){ }
-  fsfflBehaviorRouteGuardInstalled=true;
-}
+function fsfflBehaviorRestoreGenericScaffold(){const shell=document.querySelector('#generic-screen');if(!shell||document.querySelector('#generic-eyebrow'))return;shell.innerHTML='<article class="panel"><p class="eyebrow" id="generic-eyebrow">FSFFL NEXT</p><h2 id="generic-title">Loading…</h2><p class="lead" id="generic-copy">Preparing this product surface.</p></article>'}
+function fsfflBehaviorInstallRouteGuard(){if(fsfflBehaviorRouteGuardInstalled||typeof window.setRoute!=='function')return;const previous=window.setRoute;window.setRoute=function(route){if(route!=='behavioral_intelligence')fsfflBehaviorRestoreGenericScaffold();return previous(route)};try{setRoute=window.setRoute}catch(_){ }fsfflBehaviorRouteGuardInstalled=true}
 
 function fsfflBehaviorStat(label,value,note){return`<article class="metric-card"><span class="metric-label">${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong><small>${escapeHtml(note)}</small></article>`}
-function fsfflBehaviorPositionTable(title,values){
-  const rows=fsfflBehaviorEntries(values);
-  return`<article class="panel behavior-subpanel"><div class="panel-header"><div><p class="eyebrow">${escapeHtml(title)}</p><h3>Position activity</h3></div></div>${rows.length?`<div class="behavior-position-list">${rows.map(([position,count])=>`<div class="behavior-position-row"><span>${escapeHtml(position)}</span><div class="behavior-position-track"><i style="width:${Math.max(8,Math.min(100,(fsfflBehaviorNum(count)/Math.max(...rows.map(row=>fsfflBehaviorNum(row[1])),1))*100))}%"></i></div><strong>${fsfflBehaviorNum(count)}</strong></div>`).join('')}</div>`:'<p class="lead behavior-muted">No position observations are available.</p>'}</article>`
-}
-function fsfflBehaviorTradeStyle(profile){
-  const total=fsfflBehaviorNum(profile.trade_count);
-  const rows=[
-    ['Consolidation',fsfflBehaviorNum(profile.consolidation_trade_count)],
-    ['Diversification',fsfflBehaviorNum(profile.diversification_trade_count)],
-    ['Balanced',fsfflBehaviorNum(profile.balanced_trade_count)],
-  ];
-  return`<article class="panel behavior-subpanel"><div class="panel-header"><div><p class="eyebrow">Observed trade shape</p><h3>How completed deals were structured</h3></div></div><div class="behavior-style-grid">${rows.map(([label,count])=>`<div><span>${escapeHtml(label)}</span><strong>${count}</strong><small>${fsfflBehaviorPct(count,total)} of completed trades</small></div>`).join('')}</div><p class="behavior-footnote">Descriptive history only. FSFFL does not treat these raw shares as permanent owner preference without controlling for roster context.</p></article>`
-}
-function fsfflBehaviorCounterparties(profile){
-  const rows=fsfflBehaviorEntries(profile.counterparty_trade_counts).slice(0,8);
-  return`<article class="panel behavior-subpanel"><div class="panel-header"><div><p class="eyebrow">Trading relationships</p><h3>Repeat counterparties</h3></div></div>${rows.length?`<div class="behavior-simple-list">${rows.map(([owner,count])=>`<div><span>${escapeHtml(String(owner))}</span><strong>${fsfflBehaviorNum(count)} trade${fsfflBehaviorNum(count)===1?'':'s'}</strong></div>`).join('')}</div>`:'<p class="lead behavior-muted">No repeat counterparty history is available.</p>'}<p class="behavior-footnote">Past completed trades show interaction history, not the probability that a new offer will be accepted.</p></article>`
-}
-function fsfflBehaviorOwnerTabs(profiles){
-  return`<div class="behavior-owner-tabs" role="tablist" aria-label="League owners">${profiles.map(profile=>`<button type="button" class="secondary-button behavior-owner-tab${profile.owner_id===fsfflBehaviorSelectedOwnerId?' active':''}" data-behavior-owner="${escapeHtml(profile.owner_id)}"><span>${escapeHtml(fsfflBehaviorName(profile))}</span>${fsfflBehaviorManaged(profile)?'<small>Your team</small>':`<small>${fsfflBehaviorNum(profile.trade_count)} trades</small>`}</button>`).join('')}</div>`
-}
-function fsfflBehaviorDossier(profile){
-  if(!profile)return'<article class="panel"><h2>No owner selected</h2></article>';
-  const moves=fsfflBehaviorNum(profile.event_count);
-  const waivers=fsfflBehaviorNum(profile.waiver_count);
-  const freeAgents=fsfflBehaviorNum(profile.free_agent_count);
-  const trades=fsfflBehaviorNum(profile.trade_count);
-  const acquiredPlayers=fsfflBehaviorNum(profile.acquired_player_count);
-  const disposedPlayers=fsfflBehaviorNum(profile.disposed_player_count);
-  const acquiredPicks=fsfflBehaviorNum(profile.acquired_pick_count);
-  const disposedPicks=fsfflBehaviorNum(profile.disposed_pick_count);
-  return`<div class="behavior-dossier">
-    <article class="panel behavior-owner-header"><div><p class="eyebrow">${fsfflBehaviorManaged(profile)?'Your franchise':'Owner history'}</p><h2>${escapeHtml(fsfflBehaviorName(profile))}</h2><p class="lead">Observed ${escapeHtml(fsfflBehaviorSpan(profile))}. This page separates completed actions from deeper owner-specific inference.</p></div><span class="status-chip">Observed evidence</span></article>
-    <div class="metric-grid behavior-metrics">${fsfflBehaviorStat('Recorded moves',moves,`${waivers} waiver · ${freeAgents} free-agent`)}${fsfflBehaviorStat('Completed trades',trades,'Completed actions only')}${fsfflBehaviorStat('Players acquired',acquiredPlayers,`${disposedPlayers} disposed`)}${fsfflBehaviorStat('Draft picks acquired',acquiredPicks,`${disposedPicks} disposed`)}</div>
-    <div class="dashboard-grid behavior-grid">${fsfflBehaviorPositionTable('Assets acquired',profile.acquired_positions)}${fsfflBehaviorPositionTable('Assets disposed',profile.disposed_positions)}</div>
-    <div class="dashboard-grid behavior-grid">${fsfflBehaviorTradeStyle(profile)}${fsfflBehaviorCounterparties(profile)}</div>
-    <article class="panel behavior-inference"><div class="panel-header"><div><p class="eyebrow">Deeper owner intelligence</p><h3>What FSFFL can responsibly infer</h3></div><span class="status-chip">Evidence gated</span></div><p class="lead">Context-controlled position preference, owner-specific willingness to pay, proposal fit and acceptance probability are not shown as blank scores. They will appear only when the required point-in-time evidence and calibration are available.</p><div class="behavior-readiness-grid"><div><strong>Observed history</strong><small>Available now</small></div><div><strong>Context-controlled preference</strong><small>Needs historical PIT context</small></div><div><strong>Proposal fit</strong><small>Evaluated on a specific trade</small></div><div><strong>Acceptance probability</strong><small>Not yet calibrated</small></div></div><button type="button" class="secondary-button" data-behavior-open-trade>Open Trade Center</button></article>
-    <details class="panel behavior-provenance"><summary>Evidence & provenance</summary><div class="behavior-provenance-grid"><div><span>First observed</span><strong>${escapeHtml(fsfflBehaviorDate(profile.first_observed_at))}</strong></div><div><span>Evidence as of</span><strong>${escapeHtml(fsfflBehaviorDate(profile.as_of))}</strong></div><div><span>Seasons observed</span><strong>${escapeHtml((profile.seasons_observed||[]).join(', ')||'—')}</strong></div><div><span>Model</span><strong>${escapeHtml(profile.model_version||'—')}</strong></div></div></details>
-  </div>`
-}
-function fsfflBehaviorShell(profiles,status){
-  const selected=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId)||profiles[0];
-  return`<div class="behavior-shell"><article class="panel"><div class="panel-header"><div><p class="eyebrow">Behavioral Intelligence</p><h1>Know the manager, not just the roster.</h1><p class="lead">Explore what each owner has actually done. FSFFL keeps observed behavior separate from estimates that still need stronger historical evidence.</p></div><span class="status-chip">${escapeHtml(status==='ready'?'Ready':'Updating')}</span></div>${fsfflBehaviorOwnerTabs(profiles)}</article><div id="behavior-owner-dossier">${fsfflBehaviorDossier(selected)}</div></div>`
-}
-function fsfflBehaviorWire(profiles){
-  document.querySelectorAll('[data-behavior-owner]').forEach(button=>button.addEventListener('click',()=>{
-    fsfflBehaviorSelectedOwnerId=button.dataset.behaviorOwner;
-    document.querySelectorAll('[data-behavior-owner]').forEach(item=>item.classList.toggle('active',item.dataset.behaviorOwner===fsfflBehaviorSelectedOwnerId));
-    const profile=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId);
-    const host=document.querySelector('#behavior-owner-dossier');
-    if(host)host.innerHTML=fsfflBehaviorDossier(profile);
-    fsfflBehaviorWireTradeLink();
-  }));
-  fsfflBehaviorWireTradeLink();
-}
-function fsfflBehaviorWireTradeLink(){document.querySelectorAll('[data-behavior-open-trade]').forEach(button=>button.addEventListener('click',()=>window.setRoute?.('trade_center')))}
+function fsfflBehaviorPositionTable(title,values){const rows=fsfflBehaviorEntries(values);const max=Math.max(...rows.map(row=>fsfflBehaviorNum(row[1])),1);return`<article class="panel behavior-subpanel"><div class="panel-header"><div><p class="eyebrow">${escapeHtml(title)}</p><h3>Position activity</h3></div></div>${rows.length?`<div class="behavior-position-list">${rows.map(([position,count])=>`<div class="behavior-position-row"><span>${escapeHtml(position)}</span><div class="behavior-position-track"><i style="width:${Math.max(8,Math.min(100,(fsfflBehaviorNum(count)/max)*100))}%"></i></div><strong>${fsfflBehaviorNum(count)}</strong></div>`).join('')}</div>`:'<p class="lead behavior-muted">No position observations are available.</p>'}</article>`}
+function fsfflBehaviorTradeStyle(profile){const total=fsfflBehaviorNum(profile.trade_count);const rows=[['Consolidation',fsfflBehaviorNum(profile.consolidation_trade_count)],['Diversification',fsfflBehaviorNum(profile.diversification_trade_count)],['Balanced',fsfflBehaviorNum(profile.balanced_trade_count)]];return`<article class="panel behavior-subpanel"><div class="panel-header"><div><p class="eyebrow">Observed trade shape</p><h3>How completed deals were structured</h3></div></div><div class="behavior-style-grid">${rows.map(([label,count])=>`<div><span>${escapeHtml(label)}</span><strong>${count}</strong><small>${fsfflBehaviorPct(count,total)} of completed trades</small></div>`).join('')}</div><p class="behavior-footnote">Descriptive history only. Raw shares are not treated as permanent owner preference without roster context.</p></article>`}
+function fsfflBehaviorCounterparties(profile){const rows=fsfflBehaviorEntries(profile.counterparty_trade_counts).slice(0,8);return`<article class="panel behavior-subpanel"><div class="panel-header"><div><p class="eyebrow">Trading relationships</p><h3>Repeat counterparties</h3></div></div>${rows.length?`<div class="behavior-simple-list">${rows.map(([owner,count])=>`<div><span>${escapeHtml(String(owner))}</span><strong>${fsfflBehaviorNum(count)} trade${fsfflBehaviorNum(count)===1?'':'s'}</strong></div>`).join('')}</div>`:'<p class="lead behavior-muted">No repeat counterparty history is available.</p>'}<p class="behavior-footnote">Past completed trades show interaction history, not acceptance probability.</p></article>`}
+function fsfflBehaviorOwnerTabs(profiles){return`<div class="behavior-owner-tabs" role="tablist" aria-label="League owners">${profiles.map(profile=>`<button type="button" class="secondary-button behavior-owner-tab${profile.owner_id===fsfflBehaviorSelectedOwnerId?' active':''}" data-behavior-owner="${escapeHtml(profile.owner_id)}"><span>${escapeHtml(fsfflBehaviorName(profile))}</span>${fsfflBehaviorManaged(profile)?'<small>Your team</small>':`<small>${fsfflBehaviorNum(profile.trade_count)} trades</small>`}</button>`).join('')}</div>`}
+function fsfflBehaviorDossier(profile){if(!profile)return'<article class="panel"><h2>No owner selected</h2></article>';const moves=fsfflBehaviorNum(profile.event_count),waivers=fsfflBehaviorNum(profile.waiver_count),freeAgents=fsfflBehaviorNum(profile.free_agent_count),trades=fsfflBehaviorNum(profile.trade_count),acquiredPlayers=fsfflBehaviorNum(profile.acquired_player_count),disposedPlayers=fsfflBehaviorNum(profile.disposed_player_count),acquiredPicks=fsfflBehaviorNum(profile.acquired_pick_count),disposedPicks=fsfflBehaviorNum(profile.disposed_pick_count);return`<div class="behavior-dossier">
+<article class="panel behavior-owner-header"><div><p class="eyebrow">${fsfflBehaviorManaged(profile)?'Your franchise':'Owner history'}</p><h2>${escapeHtml(fsfflBehaviorName(profile))}</h2><p class="lead">Observed ${escapeHtml(fsfflBehaviorSpan(profile))}. Completed actions are shown separately from deeper owner-specific inference.</p></div><span class="status-chip">Observed evidence live</span></article>
+<div class="metric-grid behavior-metrics">${fsfflBehaviorStat('Recorded moves',moves,`${waivers} waiver · ${freeAgents} free-agent`)}${fsfflBehaviorStat('Completed trades',trades,'Completed actions only')}${fsfflBehaviorStat('Players acquired',acquiredPlayers,`${disposedPlayers} disposed`)}${fsfflBehaviorStat('Draft picks acquired',acquiredPicks,`${disposedPicks} disposed`)}</div>
+<div class="dashboard-grid behavior-grid">${fsfflBehaviorPositionTable('Assets acquired',profile.acquired_positions)}${fsfflBehaviorPositionTable('Assets disposed',profile.disposed_positions)}</div>
+<div class="dashboard-grid behavior-grid">${fsfflBehaviorTradeStyle(profile)}${fsfflBehaviorCounterparties(profile)}</div>
+<article class="panel behavior-inference"><div class="panel-header"><div><p class="eyebrow">Context-controlled inference</p><h3>What FSFFL can responsibly infer</h3></div><span class="status-chip">Evidence gated</span></div><p class="lead">Inference quality, context-controlled position preference, Team/Owner-Adjusted Value, Proposal fit and Acceptance probability are not shown as blank scores. They require strictly pre-action canonical State history and, where applicable, calibrated proposal evidence. Universal Market Value remains unchanged.</p><div class="behavior-readiness-grid"><div><strong>Observed history</strong><small>Available now</small></div><div><strong>Context-controlled preference</strong><small>Needs historical PIT context</small></div><div><strong>Proposal fit</strong><small>Decision use: specific trade only</small></div><div><strong>Acceptance probability</strong><small>Not yet calibrated</small></div></div><button type="button" class="secondary-button" data-behavior-open-trade>Open Trade Center</button></article>
+<details class="panel behavior-provenance"><summary>Evidence & provenance</summary><div class="behavior-provenance-grid"><div><span>First observed</span><strong>${escapeHtml(fsfflBehaviorDate(profile.first_observed_at))}</strong></div><div><span>Evidence as of</span><strong>${escapeHtml(fsfflBehaviorDate(profile.as_of))}</strong></div><div><span>Seasons observed</span><strong>${escapeHtml((profile.seasons_observed||[]).join(', ')||'—')}</strong></div><div><span>Model</span><strong>${escapeHtml(profile.model_version||'—')}</strong></div></div></details>
+</div>`}
+function fsfflBehaviorShell(profiles,status){const selected=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId)||profiles[0];return`<div class="behavior-shell behavior-workspace"><article class="panel"><div class="panel-header"><div><p class="eyebrow">Behavioral Intelligence</p><h1>Know the manager, not just the roster.</h1><p class="lead">Explore what each owner has actually done. FSFFL keeps observed behavior separate from estimates that still need stronger historical evidence.</p></div><span class="status-chip">${escapeHtml(status==='ready'?'Ready':'Updating')}</span></div>${fsfflBehaviorOwnerTabs(profiles)}</article><div id="behavior-owner-dossier">${fsfflBehaviorDossier(selected)}</div></div>`}
+function fsfflBehaviorWireTradeLink(){document.querySelectorAll('[data-behavior-open-trade]').forEach(button=>button.addEventListener('click',()=>{if(typeof setRoute==='function')setRoute('trade_center')}))}
+function fsfflBehaviorWire(profiles){document.querySelectorAll('[data-behavior-owner]').forEach(button=>button.addEventListener('click',()=>{fsfflBehaviorSelectedOwnerId=button.dataset.behaviorOwner;document.querySelectorAll('[data-behavior-owner]').forEach(item=>item.classList.toggle('active',item.dataset.behaviorOwner===fsfflBehaviorSelectedOwnerId));const profile=profiles.find(item=>item.owner_id===fsfflBehaviorSelectedOwnerId);const host=document.querySelector('#behavior-owner-dossier');if(host)host.innerHTML=fsfflBehaviorDossier(profile);fsfflBehaviorWireTradeLink()}));fsfflBehaviorWireTradeLink()}
 
-async function renderFsfflBehavioralIntelligence(){
-  fsfflBehaviorInstallStyles();
-  fsfflBehaviorInstallRouteGuard();
-  const shell=document.querySelector('#generic-screen');
-  if(!shell)return;
-  if(!state?.context?.league_id){shell.innerHTML='<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Connect a league to build owner history.</h2><p class="lead">Historical owner evidence will load in the background after the league is connected.</p></article>';return}
-  shell.innerHTML='<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Loading owner history…</h2><p class="lead">The rest of FSFFL NEXT remains usable while Behavioral evidence loads.</p></article>';
-  try{
-    const payload=await api('/api/behavioral/profiles');
-    const profiles=payload?.profiles||[];
-    if(!profiles.length){
-      shell.innerHTML=`<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>${payload?.status==='failed'?'Owner history unavailable':'Owner history is still updating.'}</h2><p class="lead">FSFFL has your league available. Behavioral history is rebuilding from durable evidence in the background rather than blocking the rest of the product.</p></article>`;
-      return;
-    }
-    const managed=profiles.find(fsfflBehaviorManaged);
-    if(!fsfflBehaviorSelectedOwnerId||!profiles.some(item=>item.owner_id===fsfflBehaviorSelectedOwnerId))fsfflBehaviorSelectedOwnerId=(managed||profiles[0]).owner_id;
-    shell.innerHTML=fsfflBehaviorShell(profiles,payload?.status);
-    fsfflBehaviorWire(profiles);
-  }catch(error){
-    shell.innerHTML=`<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Unable to load owner history.</h2><p class="lead">${escapeHtml(String(error.message||error))}</p><p>Other FSFFL sections remain available.</p></article>`;
-  }
-}
-
+async function renderFsfflBehavioralIntelligence(){fsfflBehaviorInstallStyles();fsfflBehaviorInstallRouteGuard();const shell=document.querySelector('#generic-screen');if(!shell)return;if(!state?.context?.league_id){shell.innerHTML='<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Connect a league to build owner history.</h2><p class="lead">Historical owner evidence will load in the background after the league is connected.</p></article>';return}shell.innerHTML='<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Loading owner history…</h2><p class="lead">The rest of FSFFL NEXT remains usable while Behavioral evidence loads.</p></article>';try{const payload=await api('/api/behavioral/profiles');const profiles=payload?.profiles||[];if(!profiles.length){shell.innerHTML=`<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>${payload?.status==='failed'?'Owner history unavailable':'Owner history is still updating.'}</h2><p class="lead">FSFFL has your league available. Behavioral history is rebuilding from durable evidence in the background rather than blocking the rest of the product.</p></article>`;return}const managed=profiles.find(fsfflBehaviorManaged);if(!fsfflBehaviorSelectedOwnerId||!profiles.some(item=>item.owner_id===fsfflBehaviorSelectedOwnerId))fsfflBehaviorSelectedOwnerId=(managed||profiles[0]).owner_id;shell.innerHTML=fsfflBehaviorShell(profiles,payload?.status);fsfflBehaviorWire(profiles)}catch(error){shell.innerHTML=`<article class="panel"><p class="eyebrow">Behavioral Intelligence</p><h2>Unable to load owner history.</h2><p class="lead">${escapeHtml(String(error.message||error))}</p><p>Other FSFFL sections remain available.</p></article>`}}
 window.renderFsfflBehavioralIntelligence=renderFsfflBehavioralIntelligence;
