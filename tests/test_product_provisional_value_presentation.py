@@ -7,12 +7,10 @@ def test_product_api_exposes_authoritative_cardinal_value_without_replacing_mark
     assert '"fsffl_cardinal_values": [' in source
     assert "evidence.fsffl_cardinal_values" in source
     assert '"cardinal_player_coverage": evidence.cardinal_player_coverage' in source
-    # Challenger evidence may remain exposed for research/debugging, but is no
-    # longer the product's displayed FSFFL Value authority.
     assert '"provisional_fsffl_values": [' in source
 
 
-def test_roster_presents_authoritative_value_and_market_percentile_separately() -> None:
+def test_roster_presents_value_and_market_percentile_separately_without_primary_jargon() -> None:
     polish = Path("src/fsffl/product/static/product_polish.js").read_text(encoding="utf-8")
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
 
@@ -24,7 +22,8 @@ def test_roster_presents_authoritative_value_and_market_percentile_separately() 
     assert "Authoritative NEXT-3 FSFFL Cardinal Market Score" in polish
     assert "<th>FSFFL Value</th>" in html
     assert "<th>Market percentile</th>" in html
-    assert "authoritative NEXT-3 market-cardinal score" in html
+    assert "consistent current franchise-value scale" in html
+    assert "authoritative NEXT-3 market-cardinal score" not in html
     assert "PROVISIONAL — calibration in progress" not in html
 
 
