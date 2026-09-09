@@ -21,6 +21,11 @@ from .models import (
     OwnerBehaviorProfile,
 )
 from .profiles import build_owner_behavior_profiles
+from .residual_preference import (
+    BehavioralResidualPolicy,
+    OwnerPositionPreferenceResidual,
+    estimate_owner_position_preference_residual,
+)
 from .service import BehavioralIntelligenceService, BehavioralSyncResult
 from .sleeper_history import SleeperBehaviorHistorySource, SleeperLeagueHistory
 from .store import BehavioralIntelligenceStore
@@ -35,12 +40,15 @@ __all__ = [
     "BehavioralLikelihoodDriver",
     "BehavioralLikelihoodEstimate",
     "BehavioralProbabilityBasis",
+    "BehavioralResidualPolicy",
     "OwnerBehaviorEvent",
     "OwnerBehaviorProfile",
+    "OwnerPositionPreferenceResidual",
     "SleeperBehaviorHistorySource",
     "SleeperLeagueHistory",
     "BehavioralIntelligenceStore",
     "BehavioralIntelligenceService",
     "BehavioralSyncResult",
     "build_owner_behavior_profiles",
+    "estimate_owner_position_preference_residual",
 ]

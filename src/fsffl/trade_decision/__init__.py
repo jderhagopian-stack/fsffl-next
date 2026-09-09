@@ -8,6 +8,7 @@ from .acceptance import (
     build_unestimated_acceptance_view,
 )
 from .behavioral import bind_owner_behavior_evidence
+from .behavioral_contextual_value import derive_owner_behavior_contextual_signal
 from .contextual_value import (
     ContextualValueAdjustment,
     ContextualValueAdjustmentKind,
@@ -171,6 +172,7 @@ __all__ = [
     "classify_negative_delta",
     "classify_positive_delta",
     "decide_trade_disposition",
+    "derive_owner_behavior_contextual_signal",
     "derive_team_need_signal",
     "estimate_contextual_adjustment",
     "evaluate_bilateral_trade_deltas",
