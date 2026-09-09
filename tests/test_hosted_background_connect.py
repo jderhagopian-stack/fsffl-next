@@ -65,25 +65,44 @@ def test_mobile_connect_uses_background_import_and_transport_recovery() -> None:
     assert "pageshow" not in source
 
 
-def test_hosted_connect_does_not_wait_on_partial_postgres_checkpoint() -> None:
+def test_mobile_connect_is_single_flight_and_recovers_existing_job_before_starting() -> None:
+    source = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+
+    assert "let activeConnectPromise=null" in source
+    assert "let activeLeagueId=null" in source
+    assert "activeConnectPromise&&activeLeagueId===leagueId" in source
+    assert "const existing=await recoverCurrentJob(leagueId)" in source
+    assert "['queued','running'].includes(existing.status)" in source
+
+
+def test_hosted_connect_persists_partial_state_off_request_path() -> None:
     source = open(
         "src/fsffl/product/persistent_runtime.py",
         encoding="utf-8",
     ).read()
 
-    # Connecting a league must return after canonical state is usable in memory.
-    # State-only/partial pipeline transitions must not synchronously serialize a
-    # large Postgres snapshot; only a complete Forecast+Simulation+Value bundle
-    # is durable enough to checkpoint.
+    # League State must become durable without putting Postgres serialization back
+    # on the Connect League request. One worker preserves checkpoint ordering so an
+    # earlier partial snapshot cannot overwrite a later complete bundle.
     set_state = source.split("def set_league_state", 1)[1].split("def set_forecast_evidence", 1)[0]
-    set_forecast = source.split("def set_forecast_evidence", 1)[1].split("def set_simulation_analytics", 1)[0]
-    set_simulation = source.split("def set_simulation_analytics", 1)[1].split("def set_value_evidence", 1)[0]
-    set_value = source.split("def set_value_evidence", 1)[1].split("def set_intelligence_bundle", 1)[0]
+    assert "self._checkpoint_async(user_id, context)" in set_state
+    assert "ThreadPoolExecutor" in source
+    assert "max_workers=1" in source
+    assert "self._checkpoint_executor.submit" in source
+    assert "context.forecast_evidence is not None" not in source
+    assert "context.simulation_analytics is not None" not in source
+    assert "context.value_evidence is not None" not in source
 
-    assert "self._checkpoint(" not in set_state
-    assert "self._checkpoint_if_complete" in set_forecast
-    assert "self._checkpoint_if_complete" in set_simulation
-    assert "self._checkpoint_if_complete" in set_value
-    assert "context.forecast_evidence is not None" in source
-    assert "context.simulation_analytics is not None" in source
-    assert "context.value_evidence is not None" in source
+
+def test_hosted_connect_reuses_restored_matching_league_before_provider_reload() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+
+    assert "already_loaded = _matches_sleeper_league" in source
+    assert "if already_loaded:" in source
+    assert "return" in source.split("if already_loaded:", 1)[1].split("league_state = state_loader", 1)[0]

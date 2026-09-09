@@ -152,6 +152,17 @@ def _job_payload(job: LeagueConnectJob | None) -> dict[str, object]:
     }
 
 
+def _matches_sleeper_league(league_state: LeagueState | None, league_external_id: str) -> bool:
+    if league_state is None:
+        return False
+    if league_state.league.league_id == f"sleeper:{league_external_id}":
+        return True
+    return any(
+        ref.provider == "sleeper" and ref.external_id == league_external_id
+        for ref in league_state.league.provider_refs
+    )
+
+
 def install_hosted_connect_routes(
     application: FastAPI,
     *,
@@ -173,7 +184,12 @@ def install_hosted_connect_routes(
         if not league_external_id:
             raise HTTPException(status_code=422, detail="Sleeper league id cannot be blank")
 
+        runtime = runtime_store.get(user_id)
+        already_loaded = _matches_sleeper_league(runtime.league_state, league_external_id)
+
         def work() -> None:
+            if already_loaded:
+                return
             league_state = state_loader(league_external_id)
             runtime_store.set_league_state(user_id, league_state)
             behavioral_coordinator.start(
