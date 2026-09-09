@@ -234,7 +234,8 @@ class PrivateBetaRuntimeStore:
                 selected_team_id=selected if same_league else None,
             )
             self._contexts[user_id] = context
-            self._pending_intelligence.pop(user_id, None)
+            if not same_league:
+                self._pending_intelligence.pop(user_id, None)
             return context
 
     def set_forecast_evidence(
