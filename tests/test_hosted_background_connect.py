@@ -41,9 +41,37 @@ def test_background_connect_returns_without_waiting_for_provider_work() -> None:
     assert current.status == LeagueConnectStatus.COMPLETED
 
 
-def test_hosted_app_exposes_short_start_and_poll_connect_routes() -> None:
+def test_background_refresh_is_labeled_but_uses_same_single_flight_coordinator() -> None:
+    coordinator = LeagueConnectCoordinator(max_workers=1)
+    release = Event()
+    started = Event()
+
+    def work() -> None:
+        started.set()
+        release.wait(timeout=2)
+
+    job = coordinator.start(
+        user_id="u",
+        league_external_id="123",
+        work=work,
+        operation="refresh",
+    )
+    assert job.operation == "refresh"
+    assert started.wait(timeout=1)
+    duplicate = coordinator.start(
+        user_id="u",
+        league_external_id="123",
+        work=work,
+        operation="connect",
+    )
+    assert duplicate.job_id == job.job_id
+    release.set()
+
+
+def test_hosted_app_exposes_short_start_poll_and_refresh_routes() -> None:
     paths = {getattr(route, "path", None) for route in app.routes}
     assert "/api/connect/sleeper/background" in paths
+    assert "/api/connect/sleeper/background/refresh" in paths
     assert "/api/connect/sleeper/background/current" in paths
 
 
@@ -55,6 +83,7 @@ def test_mobile_connect_uses_background_import_and_transport_recovery() -> None:
 
     assert "fsfflMobileSafariRecoveryDisabled=true" in source
     assert "/api/connect/sleeper/background'" in source
+    assert "/api/connect/sleeper/background/refresh'" in source
     assert "/api/connect/sleeper/background/current" in source
     assert "Load failed|Failed to fetch|Network request failed|network error" in source
     assert "document.addEventListener('click'" in source
@@ -73,9 +102,45 @@ def test_mobile_connect_is_single_flight_and_recovers_existing_job_before_starti
 
     assert "let activeConnectPromise=null" in source
     assert "let activeLeagueId=null" in source
-    assert "activeConnectPromise&&activeLeagueId===leagueId" in source
-    assert "const existing=await recoverCurrentJob(leagueId)" in source
+    assert "let activeOperation=null" in source
+    assert "activeConnectPromise&&" in source
+    assert "activeLeagueId===leagueId" in source
+    assert "activeOperation===operation" in source
+    assert "const existing=await recoverCurrentJob(leagueId,operation)" in source
     assert "['queued','running'].includes(existing.status)" in source
+
+
+def test_saved_session_restores_before_provider_refresh() -> None:
+    source = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+    restore = source.split("async function restoreSavedSession()", 1)[1].split(
+        "async function interactiveConnect()", 1
+    )[0]
+
+    product_context_index = restore.index("/api/product-context")
+    apply_index = restore.index("applyConnectedContext(context)")
+    refresh_index = restore.index("void refreshStoredLeague")
+    assert product_context_index < apply_index < refresh_index
+    assert "waitForBackgroundImport(leagueId,null,'connect')" in restore
+    assert "Stale-while-revalidate" in restore
+
+
+def test_hosted_refresh_only_rebuilds_behavior_when_material_state_changed() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    refresh = source.split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[1].split('@application.get("/api/connect/sleeper/background/current")', 1)[0]
+
+    assert "league_material_fingerprint" in refresh
+    assert "changed =" in refresh
+    assert "runtime_store.set_league_state" in refresh
+    assert "if changed:" in refresh
+    assert "behavioral_coordinator.start" in refresh
 
 
 def test_hosted_connect_persists_partial_state_off_request_path() -> None:
@@ -84,9 +149,6 @@ def test_hosted_connect_persists_partial_state_off_request_path() -> None:
         encoding="utf-8",
     ).read()
 
-    # League State must become durable without putting Postgres serialization back
-    # on the Connect League request. One worker preserves checkpoint ordering so an
-    # earlier partial snapshot cannot overwrite a later complete bundle.
     set_state = source.split("def set_league_state", 1)[1].split("def set_forecast_evidence", 1)[0]
     assert "self._checkpoint_async(user_id, context)" in set_state
     assert "ThreadPoolExecutor" in source

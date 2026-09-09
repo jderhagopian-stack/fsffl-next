@@ -13,7 +13,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fsffl.state.models import LeagueState
 
 from .behavioral_runtime import BehavioralRuntimeCoordinator
-from .runtime import PrivateBetaRuntimeStore
+from .runtime import PrivateBetaRuntimeStore, league_material_fingerprint
 from .webapp import ConnectSleeperLeagueRequest, require_beta_user
 
 
@@ -33,6 +33,7 @@ class LeagueConnectJob:
     message: str
     created_at: datetime
     updated_at: datetime
+    operation: str = "connect"
     error: str | None = None
 
 
@@ -63,6 +64,7 @@ class LeagueConnectCoordinator:
         user_id: str,
         league_external_id: str,
         work: ConnectWork,
+        operation: str = "connect",
     ) -> LeagueConnectJob:
         now = datetime.now(UTC)
         with self._lock:
@@ -78,9 +80,14 @@ class LeagueConnectCoordinator:
                 user_id=user_id,
                 league_external_id=league_external_id,
                 status=LeagueConnectStatus.QUEUED,
-                message="League import queued on the server.",
+                message=(
+                    "League refresh queued on the server."
+                    if operation == "refresh"
+                    else "League import queued on the server."
+                ),
                 created_at=now,
                 updated_at=now,
+                operation=operation,
             )
             self._jobs[job.job_id] = job
             self._current_by_user[user_id] = job.job_id
@@ -108,10 +115,15 @@ class LeagueConnectCoordinator:
             return updated
 
     def _run(self, job_id: str, work: ConnectWork) -> None:
+        current = self._jobs[job_id]
         self._set(
             job_id,
             status=LeagueConnectStatus.RUNNING,
-            message="Loading current league data from Sleeper.",
+            message=(
+                "Checking Sleeper for league updates."
+                if current.operation == "refresh"
+                else "Loading current league data from Sleeper."
+            ),
         )
         try:
             work()
@@ -119,14 +131,22 @@ class LeagueConnectCoordinator:
             self._set(
                 job_id,
                 status=LeagueConnectStatus.FAILED,
-                message="League import failed.",
+                message=(
+                    "League refresh failed. Stored league data remains available."
+                    if current.operation == "refresh"
+                    else "League import failed."
+                ),
                 error=f"{type(exc).__name__}: {exc}",
             )
             return
         self._set(
             job_id,
             status=LeagueConnectStatus.COMPLETED,
-            message="League is ready.",
+            message=(
+                "League sync is complete."
+                if current.operation == "refresh"
+                else "League is ready."
+            ),
         )
 
 
@@ -136,6 +156,7 @@ def _job_payload(job: LeagueConnectJob | None) -> dict[str, object]:
             "job_id": None,
             "league_external_id": None,
             "status": "idle",
+            "operation": None,
             "message": "No league import is running.",
             "error": None,
             "created_at": None,
@@ -145,6 +166,7 @@ def _job_payload(job: LeagueConnectJob | None) -> dict[str, object]:
         "job_id": job.job_id,
         "league_external_id": job.league_external_id,
         "status": job.status.value,
+        "operation": job.operation,
         "message": job.message,
         "error": job.error,
         "created_at": job.created_at.isoformat(),
@@ -171,7 +193,7 @@ def install_hosted_connect_routes(
     behavioral_coordinator: BehavioralRuntimeCoordinator,
     coordinator: LeagueConnectCoordinator | None = None,
 ) -> LeagueConnectCoordinator:
-    """Attach hosted-only background connect routes to the private-beta app."""
+    """Attach hosted-only background connect and refresh routes to the beta app."""
 
     jobs = coordinator or LeagueConnectCoordinator(max_workers=2)
 
@@ -203,6 +225,50 @@ def install_hosted_connect_routes(
                 user_id=user_id,
                 league_external_id=league_external_id,
                 work=work,
+                operation="connect",
+            )
+        )
+
+    @application.post("/api/connect/sleeper/background/refresh")
+    def start_background_refresh(
+        request: ConnectSleeperLeagueRequest,
+        user_id: str = Depends(require_beta_user),
+    ) -> dict[str, object]:
+        """Revalidate a restored league without making the browser wait for it."""
+
+        league_external_id = request.league_external_id.strip()
+        if not league_external_id:
+            raise HTTPException(status_code=422, detail="Sleeper league id cannot be blank")
+
+        runtime = runtime_store.get(user_id)
+        if not _matches_sleeper_league(runtime.league_state, league_external_id):
+            raise HTTPException(status_code=409, detail="Requested league is not loaded")
+
+        previous_state = runtime.league_state
+        previous_fingerprint = (
+            league_material_fingerprint(previous_state) if previous_state is not None else None
+        )
+
+        def work() -> None:
+            league_state = state_loader(league_external_id)
+            changed = (
+                previous_fingerprint is None
+                or league_material_fingerprint(league_state) != previous_fingerprint
+            )
+            runtime_store.set_league_state(user_id, league_state)
+            if changed:
+                behavioral_coordinator.start(
+                    user_id=user_id,
+                    league_state=league_state,
+                    sleeper_league_external_id=league_external_id,
+                )
+
+        return _job_payload(
+            jobs.start(
+                user_id=user_id,
+                league_external_id=league_external_id,
+                work=work,
+                operation="refresh",
             )
         )
 

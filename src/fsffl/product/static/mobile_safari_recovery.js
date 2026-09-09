@@ -1,7 +1,6 @@
 // Safari resume-specific recovery remains disabled while the base page is stabilized.
-// This module now owns only the hosted mobile-safe Sleeper connection flow: the
-// long Sleeper import runs server-side so Safari never has to hold one fragile
-// request open for the duration of provider acquisition and normalization.
+// This module owns the hosted mobile-safe Sleeper session flow. Stored league state
+// is restored first; provider revalidation runs afterward without blocking navigation.
 window.fsfflMobileSafariRecoveryDisabled=true;
 
 (function(){
@@ -10,10 +9,12 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   let interactiveConnectInFlight=false;
   let restoreInFlight=false;
   let activeLeagueId=null;
+  let activeOperation=null;
   let activeConnectPromise=null;
 
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const isTransportError=error=>/Load failed|Failed to fetch|Network request failed|network error/i.test(String(error?.message||''));
+  const contextMatchesLeague=(context,leagueId)=>context?.league_id===`sleeper:${leagueId}`;
 
   async function resilientApi(path,options={},attempts=2){
     let lastError=null;
@@ -27,34 +28,41 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     throw lastError||new Error('Request failed');
   }
 
-  async function recoverCurrentJob(leagueId){
+  async function recoverCurrentJob(leagueId,operation){
     try{
       const current=await resilientApi('/api/connect/sleeper/background/current',{},2);
-      if(current?.league_external_id===leagueId&&['queued','running','completed'].includes(current.status))return current;
+      if(
+        current?.league_external_id===leagueId&&
+        ['queued','running','completed'].includes(current.status)&&
+        (!operation||!current.operation||current.operation===operation)
+      )return current;
     }catch(error){
       if(!isTransportError(error))throw error;
     }
     return null;
   }
 
-  async function startBackgroundImport(leagueId){
-    const existing=await recoverCurrentJob(leagueId);
+  async function startBackgroundImport(leagueId,operation='connect'){
+    const existing=await recoverCurrentJob(leagueId,operation);
     if(existing&&['queued','running'].includes(existing.status))return existing;
+    const endpoint=operation==='refresh'
+      ?'/api/connect/sleeper/background/refresh'
+      :'/api/connect/sleeper/background';
     try{
-      return await resilientApi('/api/connect/sleeper/background',{
+      return await resilientApi(endpoint,{
         method:'POST',
         body:JSON.stringify({league_external_id:leagueId}),
       },2);
     }catch(error){
       if(!isTransportError(error))throw error;
-      const recovered=await recoverCurrentJob(leagueId);
+      const recovered=await recoverCurrentJob(leagueId,operation);
       if(recovered)return recovered;
       throw error;
     }
   }
 
-  async function performBackgroundImport(leagueId,onProgress){
-    let job=await startBackgroundImport(leagueId);
+  async function performBackgroundImport(leagueId,onProgress,operation='connect'){
+    let job=await startBackgroundImport(leagueId,operation);
     const deadline=Date.now()+120000;
     let consecutiveTransportFailures=0;
     while(Date.now()<deadline){
@@ -74,15 +82,21 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     throw new Error('League import is taking longer than expected. Please try again in a moment.');
   }
 
-  function waitForBackgroundImport(leagueId,onProgress){
-    if(activeConnectPromise&&activeLeagueId===leagueId)return activeConnectPromise;
-    const run=performBackgroundImport(leagueId,onProgress);
+  function waitForBackgroundImport(leagueId,onProgress,operation='connect'){
+    if(
+      activeConnectPromise&&
+      activeLeagueId===leagueId&&
+      activeOperation===operation
+    )return activeConnectPromise;
+    const run=performBackgroundImport(leagueId,onProgress,operation);
     activeLeagueId=leagueId;
+    activeOperation=operation;
     activeConnectPromise=run;
     run.finally(()=>{
       if(activeConnectPromise===run){
         activeConnectPromise=null;
         activeLeagueId=null;
+        activeOperation=null;
       }
     }).catch(()=>{});
     return run;
@@ -96,17 +110,49 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     applyContext();
   }
 
+  async function restoreSelectedTeam(context){
+    const teamId=localStorage.getItem(TEAM_KEY);
+    if(teamId&&(context.teams||[]).some(team=>team.team_id===teamId)&&context.team_id!==teamId){
+      return resilientApi('/api/select-team',{method:'POST',body:JSON.stringify({team_id:teamId})},2);
+    }
+    return context;
+  }
+
+  async function refreshStoredLeague(leagueId,baselineStateId){
+    try{
+      const refreshed=await waitForBackgroundImport(leagueId,null,'refresh');
+      if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
+        const selected=await restoreSelectedTeam(refreshed);
+        applyConnectedContext(selected);
+      }
+    }catch(error){
+      // Stored state remains usable. Revalidation failure should not evict the user
+      // from an already-restored league session.
+      console.warn('FSFFL background league refresh failed; using stored state',error);
+    }
+  }
+
   async function restoreSavedSession(){
     if(restoreInFlight)return false;
     const leagueId=localStorage.getItem(LEAGUE_KEY);
     if(!leagueId)return false;
     restoreInFlight=true;
     try{
-      let context=await waitForBackgroundImport(leagueId);
-      const teamId=localStorage.getItem(TEAM_KEY);
-      if(teamId&&(context.teams||[]).some(team=>team.team_id===teamId)){
-        context=await resilientApi('/api/select-team',{method:'POST',body:JSON.stringify({team_id:teamId})},2);
+      // Stale-while-revalidate: let the durable runtime restore itself and render
+      // immediately before any provider acquisition begins.
+      let context=await resilientApi('/api/product-context',{},3);
+      if(contextMatchesLeague(context,leagueId)&&context.state_id){
+        context=await restoreSelectedTeam(context);
+        applyConnectedContext(context);
+        if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
+        void refreshStoredLeague(leagueId,context.state_id);
+        return true;
       }
+
+      // First connection (or a missing durable snapshot) still uses the governed
+      // server-owned import path and waits only because no usable league exists yet.
+      context=await waitForBackgroundImport(leagueId,null,'connect');
+      context=await restoreSelectedTeam(context);
       applyConnectedContext(context);
       if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
       return true;
@@ -131,7 +177,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     try{
       const context=await waitForBackgroundImport(normalized,job=>{
         if(button)button.textContent=job?.status==='running'?'Loading league…':'Starting import…';
-      });
+      },'connect');
       applyConnectedContext(context);
     }catch(error){
       window.alert(`Could not connect league: ${error.message}`);
@@ -141,12 +187,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }
   }
 
-  // Replace the synchronous session-recovery path before its startup timer fires.
   window.fsfflRestoreSession=restoreSavedSession;
   window.fsfflHostedConnectSleeper=interactiveConnect;
 
-  // Capture before the legacy target listener so hosted beta never opens the
-  // long-lived synchronous /api/connect/sleeper request from mobile Safari.
   document.addEventListener('click',event=>{
     const button=event.target?.closest?.('#connect-button');
     if(!button)return;
