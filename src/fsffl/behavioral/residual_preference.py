@@ -7,16 +7,12 @@ from pydantic import Field, field_validator, model_validator
 
 from fsffl.state.models import FrozenModel
 
+from .context_expectation import BehavioralContextExpectationResult
 from .models import OwnerBehaviorProfile
 
 
 class BehavioralResidualPolicy(FrozenModel):
-    """Explicit shrinkage policy for residual owner-preference inference.
-
-    The policy controls how strongly sparse accepted-action history is shrunk
-    toward the context-explained expectation. It is separate from both the raw
-    descriptive profile and any downstream ValueScale conversion.
-    """
+    """Explicit shrinkage policy for residual owner-preference inference."""
 
     parameter_id: str
     prior_strength: Annotated[float, Field(gt=0.0)]
@@ -43,14 +39,7 @@ class BehavioralResidualPolicy(FrozenModel):
 
 
 class OwnerPositionPreferenceResidual(FrozenModel):
-    """Owner position tendency remaining after an explicit context expectation.
-
-    This is inferred from completed/observed acquisition history only. It is not an
-    acceptance probability and does not pretend that rejected offers were observed.
-    `context_expected_acquisition_share` must come from a separately identified
-    context model so team need or league environment can be removed before a true
-    owner-specific residual is claimed.
-    """
+    """Owner position tendency remaining after an explicit context expectation."""
 
     owner_id: str
     position: str
@@ -116,6 +105,21 @@ class OwnerPositionPreferenceResidual(FrozenModel):
         return self
 
 
+class OwnerPositionPreferenceResidualResult(FrozenModel):
+    """Governed bridge result from empirical context expectation to owner residual."""
+
+    residual: OwnerPositionPreferenceResidual | None = None
+    unavailable_reason: str | None = None
+
+    @model_validator(mode="after")
+    def exactly_one_result(self) -> "OwnerPositionPreferenceResidualResult":
+        if (self.residual is None) == (self.unavailable_reason is None):
+            raise ValueError("owner residual result requires residual or unavailable_reason")
+        if self.unavailable_reason is not None and not self.unavailable_reason.strip():
+            raise ValueError("owner residual unavailable_reason cannot be blank")
+        return self
+
+
 def estimate_owner_position_preference_residual(
     profile: OwnerBehaviorProfile,
     *,
@@ -126,13 +130,7 @@ def estimate_owner_position_preference_residual(
     policy: BehavioralResidualPolicy,
     as_of: datetime,
 ) -> OwnerPositionPreferenceResidual:
-    """Estimate a context-controlled, shrinkage-adjusted owner position tendency.
-
-    Sparse history is shrunk toward zero residual using `n / (n + prior_strength)`.
-    The shrinkage parameter is explicit policy rather than a hidden coefficient.
-    Missing positioned acquisition history remains unestimated (`None`) rather than
-    being silently interpreted as neutral owner preference.
-    """
+    """Estimate a context-controlled, shrinkage-adjusted owner position tendency."""
 
     if as_of.tzinfo is None:
         raise ValueError("owner preference residual timestamp must be timezone-aware")
@@ -195,3 +193,54 @@ def estimate_owner_position_preference_residual(
         policy_parameter_id=policy.parameter_id,
         evidence_ids=evidence_ids,
     )
+
+
+def estimate_owner_position_preference_from_context_expectation(
+    profile: OwnerBehaviorProfile,
+    *,
+    position: str,
+    context_expectation: BehavioralContextExpectationResult,
+    policy: BehavioralResidualPolicy,
+    as_of: datetime,
+) -> OwnerPositionPreferenceResidualResult:
+    """Bridge the empirical context-only baseline into residual owner inference.
+
+    This function removes the manual middle-number seam. It accepts only a governed
+    context expectation result, propagates its model/policy provenance as the
+    context authority, and then delegates the owner-specific residual calculation
+    to the existing shrinkage-governed estimator.
+    """
+
+    if context_expectation.owner_id != profile.owner_id:
+        raise ValueError("context expectation owner must match behavioral profile owner")
+    if context_expectation.as_of > as_of:
+        raise ValueError("owner residual cannot use a future context expectation")
+    if context_expectation.unavailable_reason is not None:
+        return OwnerPositionPreferenceResidualResult(
+            unavailable_reason=f"context expectation unavailable: {context_expectation.unavailable_reason}"
+        )
+
+    expected_share = context_expectation.share_for(position)
+    if expected_share is None:
+        return OwnerPositionPreferenceResidualResult(
+            unavailable_reason=f"context expectation has no estimate for {position}"
+        )
+
+    context_model_version = (
+        f"{context_expectation.source_model_version}+"
+        f"{context_expectation.model_version}+"
+        f"{context_expectation.policy_parameter_id}"
+    )
+    residual = estimate_owner_position_preference_residual(
+        profile,
+        position=position,
+        context_expected_acquisition_share=expected_share,
+        context_authority_ids=(
+            f"behavioral:context-expectation:{context_expectation.source_model_version}",
+            f"behavioral:context-policy:{context_expectation.policy_parameter_id}",
+        ),
+        context_model_version=context_model_version,
+        policy=policy,
+        as_of=as_of,
+    )
+    return OwnerPositionPreferenceResidualResult(residual=residual)
