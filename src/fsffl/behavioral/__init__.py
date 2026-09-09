@@ -31,6 +31,12 @@ from .context_expectation import (
     estimate_context_acquisition_distribution,
     fit_behavioral_context_expectation_model,
 )
+from .context_expectation_v2 import (
+    BehavioralMulticlassContextExpectationModel,
+    BehavioralMulticlassContextObservation,
+    estimate_multiclass_context_acquisition_distribution,
+    fit_behavioral_multiclass_context_expectation_model,
+)
 from .likelihood import (
     BehavioralDriverKind,
     BehavioralEvidenceLevel,
@@ -81,6 +87,8 @@ __all__ = [
     "BehavioralLikelihoodDirection",
     "BehavioralLikelihoodDriver",
     "BehavioralLikelihoodEstimate",
+    "BehavioralMulticlassContextExpectationModel",
+    "BehavioralMulticlassContextObservation",
     "BehavioralPositionContext",
     "BehavioralPositionContextExpectation",
     "BehavioralProbabilityBasis",
@@ -103,8 +111,10 @@ __all__ = [
     "build_owner_context_controlled_preference_profile",
     "build_owner_preference_stability_profile",
     "estimate_context_acquisition_distribution",
+    "estimate_multiclass_context_acquisition_distribution",
     "estimate_owner_position_preference_from_context_expectation",
     "estimate_owner_position_preference_residual",
     "fit_behavioral_context_expectation_model",
+    "fit_behavioral_multiclass_context_expectation_model",
     "reconstruct_behavioral_action_context",
 ]
