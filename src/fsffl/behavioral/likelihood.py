@@ -30,6 +30,11 @@ class BehavioralDriverKind(StrEnum):
     COUNTERPARTY_HISTORY = "counterparty_history"
 
 
+class BehavioralProbabilityBasis(StrEnum):
+    INFERRED = "inferred"
+    CALIBRATED = "calibrated"
+
+
 class BehavioralLikelihoodDriver(FrozenModel):
     kind: BehavioralDriverKind
     direction: BehavioralLikelihoodDirection
@@ -45,15 +50,19 @@ class BehavioralLikelihoodDriver(FrozenModel):
 
 
 class BehavioralLikelihoodEstimate(FrozenModel):
-    """Governed owner-response estimate without pretending inference is fact.
+    """Governed owner-response estimate with explicit uncertainty and provenance.
 
     Observed evidence reports what an owner actually did. Inferred estimates may
     combine observed owner history with current competitive state, roster
-    construction and package shape to provide a directional likelihood judgment.
-    Numeric acceptance probabilities are reserved for historically calibrated
-    models whose predictive calibration has been validated separately.
+    construction, package shape and other governed context to produce a numeric
+    probability when the inferential method and uncertainty are exposed.
 
-    This contract never owns market Value or recommendation authority.
+    Calibrated estimates are a stronger evidence class: they additionally require
+    predictive calibration provenance. Lack of full calibration does not force a
+    useful estimate to zero; it requires the product to label the estimate as
+    inferred and expose its uncertainty.
+
+    This contract never owns universal market Value or recommendation authority.
     """
 
     owner_id: str
@@ -65,8 +74,12 @@ class BehavioralLikelihoodEstimate(FrozenModel):
     acceptance_probability: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
     probability_interval_low: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
     probability_interval_high: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    probability_basis: BehavioralProbabilityBasis | None = None
+    probability_method: str | None = None
+    confidence_score: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    inference_model_version: str | None = None
     calibration_model_version: str | None = None
-    model_version: str = "behavioral-likelihood-contract-v1"
+    model_version: str = "behavioral-likelihood-contract-v2"
 
     @field_validator("as_of")
     @classmethod
@@ -76,26 +89,49 @@ class BehavioralLikelihoodEstimate(FrozenModel):
         return value
 
     @model_validator(mode="after")
-    def enforce_calibration_boundary(self) -> "BehavioralLikelihoodEstimate":
+    def enforce_probability_provenance(self) -> "BehavioralLikelihoodEstimate":
         probability_fields = (
             self.acceptance_probability,
             self.probability_interval_low,
             self.probability_interval_high,
         )
-        has_probability = any(value is not None for value in probability_fields)
-        if self.evidence_level != BehavioralEvidenceLevel.CALIBRATED and has_probability:
-            raise ValueError("numeric acceptance probability requires calibrated behavioral evidence")
-        if self.evidence_level != BehavioralEvidenceLevel.CALIBRATED and self.calibration_model_version is not None:
-            raise ValueError("calibration_model_version is only valid for calibrated estimates")
-        if self.evidence_level == BehavioralEvidenceLevel.CALIBRATED:
-            if self.acceptance_probability is None:
-                raise ValueError("calibrated behavioral estimates require acceptance_probability")
-            if self.probability_interval_low is None or self.probability_interval_high is None:
-                raise ValueError("calibrated behavioral estimates require a probability interval")
-            if self.probability_interval_low > self.acceptance_probability:
-                raise ValueError("probability interval low cannot exceed acceptance_probability")
-            if self.probability_interval_high < self.acceptance_probability:
-                raise ValueError("probability interval high cannot be below acceptance_probability")
+        has_any_probability = any(value is not None for value in probability_fields)
+        has_all_probability = all(value is not None for value in probability_fields)
+
+        if not has_any_probability:
+            if self.probability_basis is not None or self.probability_method is not None:
+                raise ValueError("probability provenance requires a numeric behavioral probability")
+            if self.confidence_score is not None:
+                raise ValueError("probability confidence requires a numeric behavioral probability")
+            if self.inference_model_version is not None or self.calibration_model_version is not None:
+                raise ValueError("probability model provenance requires a numeric behavioral probability")
+            return self
+
+        if not has_all_probability:
+            raise ValueError("behavioral probabilities require a complete uncertainty interval")
+        if self.probability_interval_low > self.acceptance_probability:
+            raise ValueError("probability interval low cannot exceed acceptance_probability")
+        if self.probability_interval_high < self.acceptance_probability:
+            raise ValueError("probability interval high cannot be below acceptance_probability")
+        if self.probability_basis is None:
+            raise ValueError("behavioral probabilities require an explicit probability_basis")
+        if not self.probability_method or not self.probability_method.strip():
+            raise ValueError("behavioral probabilities require method provenance")
+        if self.confidence_score is None:
+            raise ValueError("behavioral probabilities require an explicit confidence_score")
+
+        if self.probability_basis == BehavioralProbabilityBasis.INFERRED:
+            if self.evidence_level != BehavioralEvidenceLevel.INFERRED:
+                raise ValueError("inferred probability basis requires inferred behavioral evidence")
+            if not self.inference_model_version or not self.inference_model_version.strip():
+                raise ValueError("inferred behavioral probabilities require inference model provenance")
+            if self.calibration_model_version is not None:
+                raise ValueError("inferred behavioral probabilities cannot claim calibration provenance")
+
+        if self.probability_basis == BehavioralProbabilityBasis.CALIBRATED:
+            if self.evidence_level != BehavioralEvidenceLevel.CALIBRATED:
+                raise ValueError("calibrated probability basis requires calibrated behavioral evidence")
             if not self.calibration_model_version or not self.calibration_model_version.strip():
-                raise ValueError("calibrated behavioral estimates require calibration provenance")
+                raise ValueError("calibrated behavioral probabilities require calibration provenance")
+
         return self
