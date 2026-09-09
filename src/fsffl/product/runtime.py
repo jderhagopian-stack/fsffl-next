@@ -203,16 +203,18 @@ class PrivateBetaRuntimeStore:
                 current.league_state is not None
                 and current.league_state.league.league_id == league_state.league.league_id
             )
+            complete_bundle = (
+                current.forecast_evidence is not None
+                and current.simulation_analytics is not None
+                and current.value_evidence is not None
+                and user_id not in self._pending_intelligence
+            )
             if (
                 same_league
+                and complete_bundle
                 and current.league_state is not None
                 and league_material_fingerprint(current.league_state)
                 == league_material_fingerprint(league_state)
-                and (
-                    current.forecast_evidence is not None
-                    or current.simulation_analytics is not None
-                    or current.value_evidence is not None
-                )
             ):
                 reused = UserRuntimeContext(
                     user_id=user_id,
