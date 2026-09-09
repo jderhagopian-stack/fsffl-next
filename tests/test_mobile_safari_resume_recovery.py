@@ -15,7 +15,11 @@ def test_mobile_safari_resume_guard_is_loaded_and_handles_lifecycle_events():
     assert "fsfflRehydrateAfterMobileResume" in recovery
     assert "/api/product-context" in recovery
     assert "fsfflRestoreSession" in recovery
-    assert "fsfflForceMobileRepaint" in recovery
+    assert "event.persisted" in recovery
+    assert "fsfflMobileHiddenAt==null" in recovery
+    assert "fsfflContextsEquivalent" in recovery
+    assert "fsfflForceMobileRepaint" not in recovery
+    assert "window.addEventListener('focus'" not in recovery
 
 
 def test_route_specific_modules_are_lazy_at_initial_page_load():
