@@ -17,6 +17,16 @@ from .context_dataset import (
     BehavioralContextCoverageIssue,
     build_behavioral_context_calibration_dataset,
 )
+from .context_expectation import (
+    BehavioralContextExpectationModel,
+    BehavioralContextExpectationObservation,
+    BehavioralContextExpectationPolicy,
+    BehavioralContextExpectationResult,
+    BehavioralContextFeatureScale,
+    BehavioralPositionContextExpectation,
+    estimate_context_acquisition_distribution,
+    fit_behavioral_context_expectation_model,
+)
 from .likelihood import (
     BehavioralDriverKind,
     BehavioralEvidenceLevel,
@@ -50,6 +60,11 @@ __all__ = [
     "BehavioralContextCalibrationDataset",
     "BehavioralContextCalibrationRow",
     "BehavioralContextCoverageIssue",
+    "BehavioralContextExpectationModel",
+    "BehavioralContextExpectationObservation",
+    "BehavioralContextExpectationPolicy",
+    "BehavioralContextExpectationResult",
+    "BehavioralContextFeatureScale",
     "BehavioralEventKind",
     "BehavioralDriverKind",
     "BehavioralEvidenceLevel",
@@ -57,6 +72,7 @@ __all__ = [
     "BehavioralLikelihoodDriver",
     "BehavioralLikelihoodEstimate",
     "BehavioralPositionContext",
+    "BehavioralPositionContextExpectation",
     "BehavioralProbabilityBasis",
     "BehavioralResidualPolicy",
     "OwnerBehaviorEvent",
@@ -69,6 +85,8 @@ __all__ = [
     "BehavioralSyncResult",
     "build_behavioral_context_calibration_dataset",
     "build_owner_behavior_profiles",
+    "estimate_context_acquisition_distribution",
     "estimate_owner_position_preference_residual",
+    "fit_behavioral_context_expectation_model",
     "reconstruct_behavioral_action_context",
 ]
