@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from fsffl.team_utility.utility import OwnerStrategicPosture
+
+from .opportunity_posture import apply_search_posture, posture_payload
 from .opportunity_search import build_roster_aware_trade_candidates
 from .opportunity_spotlights import build_trade_spotlights
 from .runtime import UserRuntimeContext
@@ -31,6 +34,10 @@ def _empty_workspace(
         "as_of": league_state.as_of.isoformat() if league_state is not None else None,
         "focal_team_id": runtime.selected_team_id,
         "focal_team_name": None,
+        "search_posture": posture_payload(
+            runtime,
+            OwnerStrategicPosture.DEFAULT_CALCULATED,
+        ),
         "requirements": {
             "league_state": league_state is not None,
             "managed_team": runtime.selected_team_id is not None,
@@ -49,12 +56,14 @@ def _empty_workspace(
             "bilateral_evaluation_limit": 0,
             "bilateral_evaluation_policy": _DECISION_BUDGET_POLICY,
             "spotlights": build_trade_spotlights(()),
+            "posture_views": {},
             "candidates": [],
         },
         "available_players": {"count": 0, "players": []},
         "capabilities": {
             "structural_trade_discovery": False,
             "authoritative_value_ordering": False,
+            "owner_strategic_posture_search": True,
             "bilateral_decision_evaluation": False,
             "negotiation_feasibility": False,
             "behavioral_acceptance": False,
@@ -66,6 +75,7 @@ def _empty_workspace(
             "recommendation_authority": False,
             "provisional_value_used": False,
             "bilateral_evaluation_budget_is_product_compute_policy": True,
+            "owner_strategic_posture_is_search_lens_only": True,
         },
     }
 
@@ -283,6 +293,29 @@ def _select_bilateral_evaluation_indices(
     return tuple(sorted(selected))
 
 
+def _posture_views(
+    runtime: UserRuntimeContext,
+    rows: list[dict[str, object]],
+) -> dict[str, dict[str, object]]:
+    """Publish server-owned candidate orders for each explicit owner search posture.
+
+    The browser may select one of these already-computed views, but does not calculate
+    ranking, Value, Decision consequences, or acceptance evidence itself.
+    """
+
+    result: dict[str, dict[str, object]] = {}
+    for requested in OwnerStrategicPosture:
+        meta = posture_payload(runtime, requested)
+        effective = OwnerStrategicPosture(str(meta["effective_posture"]))
+        ordered = apply_search_posture(rows, effective)
+        result[requested.value] = {
+            "posture": meta,
+            "spotlights": build_trade_spotlights(ordered),
+            "candidates": ordered,
+        }
+    return result
+
+
 def build_opportunity_workspace(
     runtime: UserRuntimeContext,
     *,
@@ -291,10 +324,11 @@ def build_opportunity_workspace(
 ) -> dict[str, object]:
     """Build a responsive Opportunity workspace with progressive governed evidence.
 
-    Search uses distinct market, premium-target, roster-need, counterparty-fit, and
-    structural lanes to construct a broad candidate universe without recommendation
-    authority. A small multi-lane set is synchronously enriched through NEXT-5 Decision.
-    Deeper Decision/materiality work remains behind explicit actions.
+    Search first builds a broad multi-lane candidate window. The workspace then
+    publishes server-owned owner-posture views over that same governed window, while
+    keeping calculated competitive state separate. A small multi-lane set is
+    synchronously enriched through NEXT-5 Decision. Deeper Decision/materiality work
+    remains behind explicit actions.
     """
 
     league_state = runtime.league_state
@@ -363,6 +397,7 @@ def build_opportunity_workspace(
             }
 
     trade_spotlights = build_trade_spotlights(returned)
+    posture_views = _posture_views(runtime, returned)
 
     rostered_ids = {
         entry.player_id
@@ -408,6 +443,10 @@ def build_opportunity_workspace(
         "as_of": league_state.as_of.isoformat(),
         "focal_team_id": focal_team_id,
         "focal_team_name": browser.focal_team.display_name,
+        "search_posture": posture_payload(
+            runtime,
+            OwnerStrategicPosture.DEFAULT_CALCULATED,
+        ),
         "requirements": {
             "league_state": True,
             "managed_team": True,
@@ -425,6 +464,7 @@ def build_opportunity_workspace(
             "bilateral_evaluation_limit": bilateral_evaluation_limit,
             "bilateral_evaluation_policy": _DECISION_BUDGET_POLICY,
             "spotlights": trade_spotlights,
+            "posture_views": posture_views,
             "candidates": returned,
         },
         "available_players": {"count": len(available_players), "players": available_players},
@@ -432,6 +472,7 @@ def build_opportunity_workspace(
             "structural_trade_discovery": True,
             "authoritative_value_ordering": True,
             "roster_aware_search": runtime.simulation_analytics is not None,
+            "owner_strategic_posture_search": True,
             "two_for_one_consolidation_search": True,
             "three_for_one_consolidation_search": True,
             "bilateral_decision_evaluation": bool(evaluation_indices),
@@ -455,5 +496,7 @@ def build_opportunity_workspace(
             "search_order_is_not_a_composite_opportunity_score": True,
             "search_market_fit_has_no_fixed_acceptability_cutoff": True,
             "negotiation_feasibility_is_not_acceptance_probability": True,
+            "owner_strategic_posture_is_search_lens_only": True,
+            "browser_selects_server_owned_posture_views_only": True,
         },
     }
