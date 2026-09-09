@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import model_validator
+from datetime import datetime
+
+from pydantic import field_validator, model_validator
 
 from fsffl.behavioral.trade_shape_context import BehavioralTradeShape, OwnerTradeShapePreferenceProfile
 from fsffl.state.models import FrozenModel
@@ -26,9 +28,16 @@ class OwnerTradeShapeProposalFit(FrozenModel):
     confidence: float
     historical_coverage_rate: float
     status: str
-    source_profile_as_of: object
+    source_profile_as_of: datetime
     source_profile_model_version: str
     model_version: str = "owner-trade-shape-proposal-fit-v1"
+
+    @field_validator("source_profile_as_of")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("owner trade-shape proposal fit timestamp must be timezone-aware")
+        return value
 
     @model_validator(mode="after")
     def validate_fit(self) -> "OwnerTradeShapeProposalFit":
