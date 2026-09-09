@@ -5,6 +5,12 @@ remaining separate from universal market Value, competitive simulation, and
 recommendation authority.
 """
 
+from .action_context import (
+    BehavioralActionContext,
+    BehavioralActionContextResult,
+    BehavioralPositionContext,
+    reconstruct_behavioral_action_context,
+)
 from .likelihood import (
     BehavioralDriverKind,
     BehavioralEvidenceLevel,
@@ -31,6 +37,8 @@ from .sleeper_history import SleeperBehaviorHistorySource, SleeperLeagueHistory
 from .store import BehavioralIntelligenceStore
 
 __all__ = [
+    "BehavioralActionContext",
+    "BehavioralActionContextResult",
     "BehavioralAsset",
     "BehavioralAssetKind",
     "BehavioralEventKind",
@@ -39,6 +47,7 @@ __all__ = [
     "BehavioralLikelihoodDirection",
     "BehavioralLikelihoodDriver",
     "BehavioralLikelihoodEstimate",
+    "BehavioralPositionContext",
     "BehavioralProbabilityBasis",
     "BehavioralResidualPolicy",
     "OwnerBehaviorEvent",
@@ -51,4 +60,5 @@ __all__ = [
     "BehavioralSyncResult",
     "build_owner_behavior_profiles",
     "estimate_owner_position_preference_residual",
+    "reconstruct_behavioral_action_context",
 ]
