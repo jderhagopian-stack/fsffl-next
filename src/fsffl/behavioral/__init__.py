@@ -37,6 +37,12 @@ from .context_expectation_v2 import (
     estimate_multiclass_context_acquisition_distribution,
     fit_behavioral_multiclass_context_expectation_model,
 )
+from .historical_context_profile import (
+    OwnerHistoricalContextControlledPreferenceResult,
+    OwnerHistoricalContextCoverage,
+    OwnerHistoricalContextCoverageIssue,
+    build_owner_historical_context_controlled_preference_profile,
+)
 from .likelihood import (
     BehavioralDriverKind,
     BehavioralEvidenceLevel,
@@ -97,6 +103,9 @@ __all__ = [
     "OwnerBehaviorProfile",
     "OwnerContextControlledPositionPreference",
     "OwnerContextControlledPreferenceProfile",
+    "OwnerHistoricalContextControlledPreferenceResult",
+    "OwnerHistoricalContextCoverage",
+    "OwnerHistoricalContextCoverageIssue",
     "OwnerPositionPreferenceResidual",
     "OwnerPositionPreferenceResidualResult",
     "OwnerPositionPreferenceStability",
@@ -109,6 +118,7 @@ __all__ = [
     "build_behavioral_context_calibration_dataset",
     "build_owner_behavior_profiles",
     "build_owner_context_controlled_preference_profile",
+    "build_owner_historical_context_controlled_preference_profile",
     "build_owner_preference_stability_profile",
     "estimate_context_acquisition_distribution",
     "estimate_multiclass_context_acquisition_distribution",
