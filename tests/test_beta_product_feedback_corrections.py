@@ -25,15 +25,15 @@ def test_trade_simulation_updates_competitive_summary_and_keeps_methods_secondar
     assert "Decision summary" in script
 
 
-def test_position_strength_is_explicitly_current_season_and_future_view_is_separate() -> None:
+def test_position_strength_is_explicitly_current_season_and_long_term_is_roadmap_only() -> None:
     script = (STATIC / "beta_product_corrections.js").read_text()
     assert "current-season lineup strength" in script
     assert "2026 lineup strength by franchise" in script
-    assert "separate 3-year dynasty-strength view" in script
+    assert "Longer-term dynasty position outlook is a separate roadmap item" in script
 
 
 def test_behavioral_correction_hides_raw_counterparty_identifiers_when_name_is_unknown() -> None:
     script = (STATIC / "beta_product_corrections.js").read_text()
     assert "League owner" in script
-    assert "counterparty_trade_counts" in script
-    assert "behavior-owner-list" in script
+    assert "[data-behavior-owner]" in script
+    assert "behavior-counterparty-row" in script
