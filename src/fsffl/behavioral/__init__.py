@@ -11,6 +11,12 @@ from .action_context import (
     BehavioralPositionContext,
     reconstruct_behavioral_action_context,
 )
+from .context_dataset import (
+    BehavioralContextCalibrationDataset,
+    BehavioralContextCalibrationRow,
+    BehavioralContextCoverageIssue,
+    build_behavioral_context_calibration_dataset,
+)
 from .likelihood import (
     BehavioralDriverKind,
     BehavioralEvidenceLevel,
@@ -41,6 +47,9 @@ __all__ = [
     "BehavioralActionContextResult",
     "BehavioralAsset",
     "BehavioralAssetKind",
+    "BehavioralContextCalibrationDataset",
+    "BehavioralContextCalibrationRow",
+    "BehavioralContextCoverageIssue",
     "BehavioralEventKind",
     "BehavioralDriverKind",
     "BehavioralEvidenceLevel",
@@ -58,6 +67,7 @@ __all__ = [
     "BehavioralIntelligenceStore",
     "BehavioralIntelligenceService",
     "BehavioralSyncResult",
+    "build_behavioral_context_calibration_dataset",
     "build_owner_behavior_profiles",
     "estimate_owner_position_preference_residual",
     "reconstruct_behavioral_action_context",
