@@ -10,19 +10,9 @@ function fsfflIsMobileSafari(){
   return ios&&webkit&&!otherIosBrowser;
 }
 
-function fsfflForceMobileRepaint(){
-  const shell=document.querySelector('.app-shell');
-  const body=document.body;
-  if(!body)return;
-  body.style.visibility='visible';
-  body.style.opacity='1';
-  body.style.minHeight='100dvh';
-  if(shell){
-    shell.style.visibility='visible';
-    shell.style.opacity='1';
-  }
-  void body.offsetHeight;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('resize'))));
+function fsfflContextsEquivalent(a,b){
+  if(!a||!b)return false;
+  return a.league_id===b.league_id&&a.team_id===b.team_id&&a.state_id===b.state_id;
 }
 
 async function fsfflRehydrateAfterMobileResume(reason){
@@ -30,9 +20,8 @@ async function fsfflRehydrateAfterMobileResume(reason){
   fsfflMobileResumeInFlight=true;
   const token=++fsfflMobileResumeToken;
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),5000);
+  const timeout=setTimeout(()=>controller.abort(),4000);
   try{
-    fsfflForceMobileRepaint();
     let context=null;
     try{
       const response=await fetch('/api/product-context',{headers:{Accept:'application/json'},cache:'no-store',signal:controller.signal});
@@ -41,17 +30,13 @@ async function fsfflRehydrateAfterMobileResume(reason){
       console.warn('Mobile Safari resume context check failed',reason,error);
     }
     if(token!==fsfflMobileResumeToken)return;
-    if(context&&typeof state!=='undefined'){
+    if(context&&typeof state!=='undefined'&&!fsfflContextsEquivalent(state.context,context)){
       state.context=context;
       if(typeof applyContext==='function')applyContext();
     }
     if((!context?.league_id)&&typeof fsfflRestoreSession==='function'){
       try{await fsfflRestoreSession()}catch(error){console.warn('Mobile Safari session restore failed',error)}
     }
-    if(typeof state!=='undefined'&&typeof setRoute==='function'){
-      try{setRoute(state.route||'league')}catch(error){console.warn('Mobile Safari route restore failed',error)}
-    }
-    fsfflForceMobileRepaint();
   }finally{
     clearTimeout(timeout);
     fsfflMobileResumeInFlight=false;
@@ -63,11 +48,10 @@ function fsfflMarkMobileHidden(){
 }
 
 function fsfflHandleMobileVisible(reason){
-  if(!fsfflIsMobileSafari())return;
-  const hiddenFor=fsfflMobileHiddenAt==null?0:Date.now()-fsfflMobileHiddenAt;
+  if(!fsfflIsMobileSafari()||fsfflMobileHiddenAt==null)return;
+  const hiddenFor=Date.now()-fsfflMobileHiddenAt;
   fsfflMobileHiddenAt=null;
-  fsfflForceMobileRepaint();
-  if(hiddenFor>=750||reason==='pageshow')void fsfflRehydrateAfterMobileResume(reason);
+  if(hiddenFor>=750)void fsfflRehydrateAfterMobileResume(reason);
 }
 
 document.addEventListener('visibilitychange',()=>{
@@ -75,5 +59,6 @@ document.addEventListener('visibilitychange',()=>{
   else fsfflHandleMobileVisible('visibilitychange');
 });
 window.addEventListener('pagehide',fsfflMarkMobileHidden);
-window.addEventListener('pageshow',()=>fsfflHandleMobileVisible('pageshow'));
-window.addEventListener('focus',()=>fsfflHandleMobileVisible('focus'));
+window.addEventListener('pageshow',event=>{
+  if(event.persisted&&fsfflMobileHiddenAt!=null)fsfflHandleMobileVisible('pageshow-bfcache');
+});
