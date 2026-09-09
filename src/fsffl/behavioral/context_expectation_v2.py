@@ -18,6 +18,7 @@ from .context_expectation import (
 
 
 _CONTEXT_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
+_FULL_CONTEXT_FEATURE_COUNT = len(_CONTEXT_POSITIONS) * 4 + 5
 
 
 class BehavioralMulticlassContextObservation(FrozenModel):
@@ -132,7 +133,7 @@ def fit_behavioral_multiclass_context_expectation_model(
 
     return BehavioralMulticlassContextExpectationModel(
         observations=tuple(observations),
-        feature_count=feature_count or len(_full_context_features(dataset.rows[0].context)) if dataset.rows else 21,
+        feature_count=feature_count if feature_count is not None else _FULL_CONTEXT_FEATURE_COUNT,
         source_dataset_model_version=dataset.model_version,
         source_coverage_rate=dataset.coverage_rate,
     )
