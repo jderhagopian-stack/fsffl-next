@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import datetime
 from math import sqrt
 from typing import Annotated
@@ -79,30 +78,15 @@ class BehavioralContextExpectationObservation(FrozenModel):
         return self
 
 
-class BehavioralContextFeatureScale(FrozenModel):
-    position: Position
-    means: tuple[float, ...]
-    standard_deviations: tuple[float, ...]
-
-    @model_validator(mode="after")
-    def validate_scale(self) -> "BehavioralContextFeatureScale":
-        if len(self.means) != len(_FEATURE_NAMES) or len(self.standard_deviations) != len(_FEATURE_NAMES):
-            raise ValueError("context expectation feature scale shape is invalid")
-        if any(value <= 0.0 for value in self.standard_deviations):
-            raise ValueError("context expectation feature scales must be positive")
-        return self
-
-
 class BehavioralContextExpectationModel(FrozenModel):
     """Pooled empirical context model with no owner-specific effects.
 
-    Observations are retained with timestamps so every prediction can filter out
-    future actions. Owner identity is used only to exclude the focal owner's own
-    history from the context baseline and to enforce distinct-owner coverage.
+    The fitted artifact stores observed PIT examples only. Feature scaling is
+    intentionally recomputed from the eligible pre-target, other-owner population
+    at prediction time so future contexts cannot influence historical similarity.
     """
 
     observations: tuple[BehavioralContextExpectationObservation, ...]
-    feature_scales: tuple[BehavioralContextFeatureScale, ...]
     source_dataset_model_version: str
     source_coverage_rate: Annotated[float, Field(ge=0.0, le=1.0)]
     model_version: str = "behavioral-context-expectation-knn-v1"
@@ -111,9 +95,6 @@ class BehavioralContextExpectationModel(FrozenModel):
     def validate_model(self) -> "BehavioralContextExpectationModel":
         if not self.source_dataset_model_version.strip() or not self.model_version.strip():
             raise ValueError("context expectation model versions cannot be blank")
-        positions = [item.position for item in self.feature_scales]
-        if len(positions) != len(set(positions)):
-            raise ValueError("context expectation model may have only one feature scale per position")
         return self
 
 
@@ -191,24 +172,26 @@ def _sample_std(values: list[float], mean: float) -> float:
     if len(values) <= 1:
         return 1.0
     variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
-    # A constant feature carries no distance information. Scale it to one rather
-    # than injecting an arbitrary epsilon that could distort another feature.
     return sqrt(variance) if variance > 0.0 else 1.0
+
+
+def _eligible_feature_scale(
+    candidates: list[BehavioralContextExpectationObservation],
+) -> tuple[float, ...]:
+    columns = list(zip(*(item.features for item in candidates), strict=True))
+    means = tuple(_mean(list(column)) for column in columns)
+    return tuple(
+        _sample_std(list(column), mean)
+        for column, mean in zip(columns, means, strict=True)
+    )
 
 
 def fit_behavioral_context_expectation_model(
     dataset: BehavioralContextCalibrationDataset,
 ) -> BehavioralContextExpectationModel:
-    """Fit the data substrate for a cross-owner empirical context model.
-
-    Only rows with at least one positioned player acquisition teach the conditional
-    distribution of QB/RB/WR/TE acquisitions. No owner-specific indicator or future
-    outcome is included in the feature vector.
-    """
+    """Fit the data substrate for a cross-owner empirical context model."""
 
     observations: list[BehavioralContextExpectationObservation] = []
-    feature_values: dict[Position, list[list[float]]] = defaultdict(list)
-
     for row in dataset.rows:
         total = sum(row.acquired_position_counts.get(position.value, 0) for position in _CONTEXT_POSITIONS)
         if total <= 0:
@@ -218,40 +201,21 @@ def fit_behavioral_context_expectation_model(
             position_context = by_position.get(position)
             if position_context is None:
                 continue
-            values = _features(row.context, position_context)
             observations.append(
                 BehavioralContextExpectationObservation(
                     event_id=row.event_id,
                     owner_id=row.owner_id,
                     occurred_at=row.occurred_at,
                     position=position,
-                    features=values,
+                    features=_features(row.context, position_context),
                     acquired_position_count=row.acquired_position_counts.get(position.value, 0),
                     total_positioned_acquisitions=total,
                     source_snapshot_state_id=row.context.snapshot_state_id,
                 )
             )
-            feature_values[position].append(list(values))
-
-    scales: list[BehavioralContextFeatureScale] = []
-    for position in _CONTEXT_POSITIONS:
-        rows = feature_values.get(position, [])
-        if not rows:
-            continue
-        columns = list(zip(*rows, strict=True))
-        means = tuple(_mean(list(column)) for column in columns)
-        stds = tuple(_sample_std(list(column), mean) for column, mean in zip(columns, means, strict=True))
-        scales.append(
-            BehavioralContextFeatureScale(
-                position=position,
-                means=means,
-                standard_deviations=stds,
-            )
-        )
 
     return BehavioralContextExpectationModel(
         observations=tuple(observations),
-        feature_scales=tuple(scales),
         source_dataset_model_version=dataset.model_version,
         source_coverage_rate=dataset.coverage_rate,
     )
@@ -260,12 +224,12 @@ def fit_behavioral_context_expectation_model(
 def _distance(
     left: tuple[float, ...],
     right: tuple[float, ...],
-    scale: BehavioralContextFeatureScale,
+    standard_deviations: tuple[float, ...],
 ) -> float:
     return sqrt(
         sum(
             ((a - b) / std) ** 2
-            for a, b, std in zip(left, right, scale.standard_deviations, strict=True)
+            for a, b, std in zip(left, right, standard_deviations, strict=True)
         )
     )
 
@@ -280,9 +244,8 @@ def estimate_context_acquisition_distribution(
     """Estimate the position mix expected from context, excluding focal-owner history.
 
     Every eligible training observation must precede the target action/context.
-    Neighbors are chosen independently for each position on standardized factual
-    roster/lineup features. The four shrunken empirical rates are normalized into a
-    position-acquisition distribution so it can feed the existing residual model.
+    Both distance scaling and outcomes are derived only from that eligible set, so
+    future contexts cannot affect an earlier estimate even indirectly.
     """
 
     if context.occurred_at.tzinfo is None:
@@ -290,7 +253,6 @@ def estimate_context_acquisition_distribution(
     if not owner_id.strip():
         raise ValueError("context expectation owner_id cannot be blank")
 
-    scale_by_position = {item.position: item for item in model.feature_scales}
     target_by_position = {item.position: item for item in context.positions}
     eligible_all = [
         item
@@ -298,6 +260,7 @@ def estimate_context_acquisition_distribution(
         if item.occurred_at < context.occurred_at and item.owner_id != owner_id and item.event_id != context.event_id
     ]
     distinct_owners_all = {item.owner_id for item in eligible_all}
+    training_through = max((item.occurred_at for item in eligible_all), default=None)
     if len(distinct_owners_all) < policy.min_distinct_owners:
         return BehavioralContextExpectationResult(
             owner_id=owner_id,
@@ -305,32 +268,36 @@ def estimate_context_acquisition_distribution(
             unavailable_reason="insufficient distinct other-owner PIT history for context expectation",
             training_observation_count=len(eligible_all),
             training_owner_count=len(distinct_owners_all),
-            training_through=max((item.occurred_at for item in eligible_all), default=None),
+            training_through=training_through,
             policy_parameter_id=policy.parameter_id,
             source_model_version=model.model_version,
         )
 
     provisional: list[tuple[Position, float, float, float, int, int, int, float]] = []
     for position in _CONTEXT_POSITIONS:
-        scale = scale_by_position.get(position)
         target = target_by_position.get(position)
-        if scale is None or target is None:
+        candidates = [item for item in eligible_all if item.position == position]
+        if target is None or not candidates:
             return BehavioralContextExpectationResult(
                 owner_id=owner_id,
                 as_of=context.occurred_at,
                 unavailable_reason=f"missing empirical feature coverage for {position.value}",
                 training_observation_count=len(eligible_all),
                 training_owner_count=len(distinct_owners_all),
-                training_through=max((item.occurred_at for item in eligible_all), default=None),
+                training_through=training_through,
                 policy_parameter_id=policy.parameter_id,
                 source_model_version=model.model_version,
             )
 
-        candidates = [item for item in eligible_all if item.position == position]
+        standard_deviations = _eligible_feature_scale(candidates)
         target_features = _features(context, target)
         ranked = sorted(
             candidates,
-            key=lambda item: (_distance(target_features, item.features, scale), item.occurred_at, item.event_id),
+            key=lambda item: (
+                _distance(target_features, item.features, standard_deviations),
+                item.occurred_at,
+                item.event_id,
+            ),
         )
         neighbors = ranked[: policy.neighbor_count]
         owners = {item.owner_id for item in neighbors}
@@ -341,7 +308,7 @@ def estimate_context_acquisition_distribution(
                 unavailable_reason=f"insufficient distinct-owner neighborhood for {position.value}",
                 training_observation_count=len(eligible_all),
                 training_owner_count=len(distinct_owners_all),
-                training_through=max((item.occurred_at for item in eligible_all), default=None),
+                training_through=training_through,
                 policy_parameter_id=policy.parameter_id,
                 source_model_version=model.model_version,
             )
@@ -357,7 +324,7 @@ def estimate_context_acquisition_distribution(
                 unavailable_reason=f"insufficient positioned acquisition outcomes for {position.value}",
                 training_observation_count=len(eligible_all),
                 training_owner_count=len(distinct_owners_all),
-                training_through=max((item.occurred_at for item in eligible_all), default=None),
+                training_through=training_through,
                 policy_parameter_id=policy.parameter_id,
                 source_model_version=model.model_version,
             )
@@ -378,7 +345,7 @@ def estimate_context_acquisition_distribution(
             unavailable_reason="empirical context expectation has no positioned acquisition mass",
             training_observation_count=len(eligible_all),
             training_owner_count=len(distinct_owners_all),
-            training_through=max((item.occurred_at for item in eligible_all), default=None),
+            training_through=training_through,
             policy_parameter_id=policy.parameter_id,
             source_model_version=model.model_version,
         )
@@ -402,7 +369,7 @@ def estimate_context_acquisition_distribution(
         expectations=expectations,
         training_observation_count=len(eligible_all),
         training_owner_count=len(distinct_owners_all),
-        training_through=max((item.occurred_at for item in eligible_all), default=None),
+        training_through=training_through,
         policy_parameter_id=policy.parameter_id,
         source_model_version=model.model_version,
     )
