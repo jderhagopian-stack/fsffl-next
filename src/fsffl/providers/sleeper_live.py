@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Callable, Mapping, Sequence
 from urllib.request import Request, urlopen
@@ -11,6 +13,17 @@ from .acquisition import ProviderSnapshot
 
 JsonGetter = Callable[[str], Any]
 Clock = Callable[[], datetime]
+
+
+@dataclass(frozen=True)
+class SleeperSyncProbe:
+    """Cheap league-specific evidence used only to decide whether full refresh is needed."""
+
+    league_external_id: str
+    captured_at: datetime
+    season: int | None
+    week: int | None
+    fingerprint: str
 
 
 class SleeperLiveSource:
@@ -39,6 +52,78 @@ class SleeperLiveSource:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._max_workers = max_workers
 
+    def fetch_sync_probe(self, *, league_external_id: str) -> SleeperSyncProbe:
+        """Fingerprint likely league changes without rebuilding canonical State.
+
+        Sleeper does not expose a true league change-feed token. This probe therefore
+        checks league metadata, owners, rosters, traded picks, NFL week, and the current
+        plus immediately previous matchup week. It intentionally does not pretend this
+        is exhaustive: callers must periodically force a full provider reconciliation
+        for global player metadata/status and rare older stat corrections.
+        """
+
+        league_id = league_external_id.strip()
+        if not league_id:
+            raise ValueError("league_external_id cannot be blank")
+        captured_at = self._clock()
+        if captured_at.tzinfo is None:
+            raise ValueError("live Sleeper clock must return a timezone-aware datetime")
+
+        league_payload = self._get(f"/league/{league_id}")
+        season = int(league_payload.get("season")) if league_payload.get("season") else None
+        nfl_state = self._get("/state/nfl")
+        raw_week = nfl_state.get("week") if isinstance(nfl_state, Mapping) else None
+        try:
+            week = int(raw_week) if raw_week not in (None, "") else None
+        except (TypeError, ValueError):
+            week = None
+
+        tasks: dict[str, Callable[[], Any]] = {
+            "rosters": lambda: self._complete_rosters(league_id, league_payload),
+            "users": lambda: self._get(f"/league/{league_id}/users"),
+            "traded_picks": lambda: self._get(f"/league/{league_id}/traded_picks"),
+        }
+        if week is not None and week > 0:
+            for matchup_week in sorted({max(1, week - 1), week}):
+                tasks[f"matchup:{matchup_week}"] = lambda matchup_week=matchup_week: self._get(
+                    f"/league/{league_id}/matchups/{matchup_week}"
+                )
+
+        worker_count = min(self._max_workers, len(tasks))
+        with ThreadPoolExecutor(
+            max_workers=worker_count,
+            thread_name_prefix="fsffl-sleeper-probe",
+        ) as executor:
+            futures = {key: executor.submit(loader) for key, loader in tasks.items()}
+            results = {key: futures[key].result() for key in tasks}
+
+        probe_payload = {
+            "league": league_payload,
+            "nfl_state": nfl_state,
+            "users": results["users"],
+            "rosters": results["rosters"],
+            "traded_picks": results["traded_picks"],
+            "matchups": {
+                key.split(":", 1)[1]: value
+                for key, value in results.items()
+                if key.startswith("matchup:")
+            },
+        }
+        encoded = json.dumps(
+            probe_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            default=str,
+        ).encode("utf-8")
+        return SleeperSyncProbe(
+            league_external_id=league_id,
+            captured_at=captured_at,
+            season=season,
+            week=week,
+            fingerprint=hashlib.sha256(encoded).hexdigest(),
+        )
+
     def fetch_latest(self, *, league_external_id: str) -> ProviderSnapshot:
         league_id = league_external_id.strip()
         if not league_id:
@@ -48,18 +133,10 @@ class SleeperLiveSource:
         if captured_at.tzinfo is None:
             raise ValueError("live Sleeper clock must return a timezone-aware datetime")
 
-        # League metadata must be acquired first because it defines season and
-        # regular-season schedule shape. Every remaining payload is independent
-        # provider evidence and can be fetched concurrently without changing State
-        # semantics or source authority.
         league_payload = self._get(f"/league/{league_id}")
         season = int(league_payload.get("season")) if league_payload.get("season") else None
         matchup_weeks = self._regular_season_weeks(league_payload)
 
-        # Keep roster validation first in logical resolution order. Its requests run
-        # concurrently with the rest, but a persistently incomplete roster payload
-        # remains the primary canonical-State failure rather than being masked by a
-        # later independent endpoint error.
         tasks: dict[str, Callable[[], Any]] = {
             "rosters": lambda: self._complete_rosters(league_id, league_payload),
             "users": lambda: self._get(f"/league/{league_id}/users"),
@@ -78,8 +155,6 @@ class SleeperLiveSource:
             thread_name_prefix="fsffl-sleeper",
         ) as executor:
             futures = {key: executor.submit(loader) for key, loader in tasks.items()}
-            # Resolve in deterministic logical order even though acquisition runs
-            # concurrently. Exceptions still fail closed rather than degrading State.
             results = {key: futures[key].result() for key in tasks}
 
         payload = {
@@ -136,8 +211,6 @@ class SleeperLiveSource:
 
         if roster_count(rosters) == expected:
             return rosters
-        # A transient/partial provider response must not silently become canonical
-        # State. Retry once, then fail closed with an explicit count mismatch.
         rosters = self._get(path)
         actual = roster_count(rosters)
         if actual != expected:
