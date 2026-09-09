@@ -17,12 +17,14 @@ from fsffl.forecast import (
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
+    LeagueScoringDispersionDiagnostic,
     RegularSeasonSimulationResult,
     TeamUtilityVector,
     assemble_team_utility_vector,
     build_bye_aware_weekly_team_scoring_panel,
     build_league_relative_position_strengths,
     build_regular_season_simulation_input,
+    build_scoring_dispersion_diagnostic,
     classify_calculated_competitive_state,
     derive_league_relative_competitive_state_policy,
     optimize_team_lineup,
@@ -36,7 +38,8 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     league_view: LeagueAnalyticsView
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
-    model_version: str = "next8-live-simulation-analytics-v6:position-strength"
+    scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic
+    model_version: str = "next8-live-simulation-analytics-v7:scoring-dispersion-diagnostic"
 
 
 def build_live_simulation_analytics(
@@ -58,6 +61,10 @@ def build_live_simulation_analytics(
     calibrated NEXT-2 weekly-volatility model. Calculated competitive state is a
     Team Utility interpretation of the completed Simulation distribution, never a
     replacement for or adjustment to Simulation itself.
+
+    The attached scoring-dispersion diagnostic is read-only. It separates the
+    between-team weekly scoring signal from ordinary within-week scoring noise so
+    forecast-compression calibration can target the earliest authoritative cause.
     """
 
     if any(item.as_of > league_state.as_of for item in forecasts):
@@ -138,6 +145,12 @@ def build_live_simulation_analytics(
         model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
     )
     simulation = simulate_regular_season(request)
+    scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
+        weekly_scoring,
+        simulation,
+        baseline_lineups=lineups,
+        fallback_player_ids=fallback_ids,
+    )
     outcomes = {item.team_id: item for item in simulation.outcomes}
     competitive_state_policy = derive_league_relative_competitive_state_policy(
         simulation.outcomes,
@@ -240,6 +253,10 @@ def build_live_simulation_analytics(
             ),
             ModelLineageEntry(component="simulation", model_version=simulation.model_version),
             ModelLineageEntry(
+                component="scoring_dispersion_diagnostic",
+                model_version=scoring_dispersion_diagnostic.model_version,
+            ),
+            ModelLineageEntry(
                 component="competitive_state_policy",
                 model_version=competitive_state_policy.model_version,
             ),
@@ -292,4 +309,5 @@ def build_live_simulation_analytics(
         league_view=build_league_analytics_view(context=context, team_views=views),
         team_views=views,
         simulation_result=simulation,
+        scoring_dispersion_diagnostic=scoring_dispersion_diagnostic,
     )
