@@ -15,7 +15,7 @@ from .trade_center_view import (
 
 
 _SEARCH_ORDERING = "multi_lane_market_premium_focal_counterparty_structural"
-_DECISION_BUDGET_POLICY = "multi_lane_market_premium_focal_counterparty_structural_exploration"
+_DECISION_BUDGET_POLICY = "explicit_evaluation_only_for_interactive_workspace"
 
 
 def _empty_workspace(
@@ -196,19 +196,7 @@ def _select_bilateral_evaluation_indices(
     *,
     limit: int,
 ) -> tuple[int, ...]:
-    """Allocate scarce Decision work across distinct governed search lenses.
-
-    Cardinal Value remains a cheap market-plausibility coordinate, not the definition
-    of the best trade. The first Decision lane preserves the closest market-ranked row.
-    A premium-target lane ensures a high-value acquisition can reach Decision even when
-    its package is not the nearest Cardinal match. Separate lanes then sample focal
-    roster need and counterparty fit using published positional-strength evidence.
-    Remaining budget favors structural diversity before falling back to Search rank.
-
-    No lane creates a composite score, trade-value coefficient, fixed acceptability
-    cutoff, acceptance probability, or recommendation. The candidate list is not
-    reordered. NEXT-5 Decision remains authoritative for bilateral consequences.
-    """
+    """Allocate scarce Decision work across distinct governed search lenses."""
 
     budget = min(max(limit, 0), len(candidates))
     if budget == 0:
@@ -297,11 +285,7 @@ def _posture_views(
     runtime: UserRuntimeContext,
     rows: list[dict[str, object]],
 ) -> dict[str, dict[str, object]]:
-    """Publish server-owned candidate orders for each explicit owner search posture.
-
-    The browser may select one of these already-computed views, but does not calculate
-    ranking, Value, Decision consequences, or acceptance evidence itself.
-    """
+    """Publish server-owned candidate orders for each explicit owner search posture."""
 
     result: dict[str, dict[str, object]] = {}
     for requested in OwnerStrategicPosture:
@@ -320,15 +304,14 @@ def build_opportunity_workspace(
     runtime: UserRuntimeContext,
     *,
     candidate_limit: int = 80,
-    bilateral_evaluation_limit: int = 4,
+    bilateral_evaluation_limit: int = 0,
 ) -> dict[str, object]:
     """Build a responsive Opportunity workspace with progressive governed evidence.
 
-    Search first builds a broad multi-lane candidate window. The workspace then
-    publishes server-owned owner-posture views over that same governed window, while
-    keeping calculated competitive state separate. A small multi-lane set is
-    synchronously enriched through NEXT-5 Decision. Deeper Decision/materiality work
-    remains behind explicit actions.
+    Initial discovery stays cheap: it builds and orders the governed Search window but
+    does not synchronously run deep bilateral Decision work. Full changed-state Decision
+    and Simulation remain available behind the explicit Evaluate offer action, which
+    preserves authority while keeping tab activation responsive.
     """
 
     league_state = runtime.league_state
