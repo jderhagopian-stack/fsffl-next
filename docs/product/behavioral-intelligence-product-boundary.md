@@ -25,6 +25,8 @@ That adjustment may incorporate governed context such as team need, current comp
 
 Those inputs must respect authority boundaries and anti-double-counting rules. For example, repeated historical RB acquisitions that were fully explained by persistent RB roster need should not be counted once as team need and again at full strength as an independent RB preference. Behavioral modeling should seek the residual owner tendency after controlling for contextual explanations where feasible, and uncertainty should remain visible when separation is weak.
 
+Behavioral adjustments must not be applied as uncontrolled multiplicative boosts on top of other value or utility factors. Overlapping signals should be controlled, residualized, attributed once, or otherwise combined through a governed model so that the same underlying economic effect is counted only once. Any bounded interaction term must be explicitly modeled, evidence-backed, and validated rather than created by multiplying independent-looking factors in Presentation or downstream orchestration.
+
 ## Acceptance probability
 
 A governed acceptance model may combine bilateral package economics, team-specific consequences, owner-specific adjusted value, behavioral tendencies, package shape, negotiation history, and uncertainty to estimate the probability that a particular offer is accepted. The output is a calibrated probability or range, not a claim that the owner will or will not accept.
