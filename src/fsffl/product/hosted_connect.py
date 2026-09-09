@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -10,11 +11,17 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException
 
+from fsffl.persistence import PersistenceStore, SyncCursorRecord
+from fsffl.providers.sleeper_live import SleeperSyncProbe
 from fsffl.state.models import LeagueState
 
 from .behavioral_runtime import BehavioralRuntimeCoordinator
 from .runtime import PrivateBetaRuntimeStore, league_material_fingerprint
 from .webapp import ConnectSleeperLeagueRequest, require_beta_user
+
+
+_logger = logging.getLogger("fsffl.product.persistence")
+_SYNC_SCOPE_KIND = "league_refresh"
 
 
 class LeagueConnectStatus(StrEnum):
@@ -39,6 +46,7 @@ class LeagueConnectJob:
 
 ConnectWork = Callable[[], None]
 StateLoader = Callable[[str], LeagueState]
+SyncProbeLoader = Callable[[str], SleeperSyncProbe]
 
 
 class LeagueConnectCoordinator:
@@ -185,6 +193,35 @@ def _matches_sleeper_league(league_state: LeagueState | None, league_external_id
     )
 
 
+def _full_refresh_due(
+    cursor: SyncCursorRecord | None,
+    *,
+    now: datetime,
+    full_refresh_seconds: int,
+) -> bool:
+    if cursor is None:
+        return True
+    raw = cursor.cursor_payload.get("last_full_refresh_at")
+    if not raw:
+        return True
+    try:
+        last_full = datetime.fromisoformat(str(raw))
+    except ValueError:
+        return True
+    if last_full.tzinfo is None:
+        return True
+    return (now - last_full).total_seconds() >= full_refresh_seconds
+
+
+def _probe_matches_cursor(cursor: SyncCursorRecord | None, probe: SleeperSyncProbe) -> bool:
+    return bool(
+        cursor is not None
+        and cursor.cursor_payload.get("probe_fingerprint") == probe.fingerprint
+        and cursor.cursor_payload.get("season") == probe.season
+        and cursor.cursor_payload.get("week") == probe.week
+    )
+
+
 def install_hosted_connect_routes(
     application: FastAPI,
     *,
@@ -192,9 +229,14 @@ def install_hosted_connect_routes(
     state_loader: StateLoader,
     behavioral_coordinator: BehavioralRuntimeCoordinator,
     coordinator: LeagueConnectCoordinator | None = None,
+    persistence_store: PersistenceStore | None = None,
+    sync_probe_loader: SyncProbeLoader | None = None,
+    full_refresh_seconds: int = 3600,
 ) -> LeagueConnectCoordinator:
     """Attach hosted-only background connect and refresh routes to the beta app."""
 
+    if full_refresh_seconds < 1:
+        raise ValueError("full_refresh_seconds must be positive")
     jobs = coordinator or LeagueConnectCoordinator(max_workers=2)
 
     @application.post("/api/connect/sleeper/background")
@@ -250,6 +292,41 @@ def install_hosted_connect_routes(
         )
 
         def work() -> None:
+            now = datetime.now(UTC)
+            probe: SleeperSyncProbe | None = None
+            cursor: SyncCursorRecord | None = None
+            if persistence_store is not None and sync_probe_loader is not None:
+                try:
+                    probe = sync_probe_loader(league_external_id)
+                    cursor = persistence_store.get_sync_cursor(
+                        provider="sleeper",
+                        scope_kind=_SYNC_SCOPE_KIND,
+                        scope_id=league_external_id,
+                    )
+                    if (
+                        _probe_matches_cursor(cursor, probe)
+                        and not _full_refresh_due(
+                            cursor,
+                            now=now,
+                            full_refresh_seconds=full_refresh_seconds,
+                        )
+                    ):
+                        _logger.info(
+                            "FSFFL Sleeper incremental sync reused stored state league=%s week=%s",
+                            league_external_id,
+                            probe.week,
+                        )
+                        return
+                except Exception as exc:
+                    # The probe is an optimization only. Any probe/cursor failure must
+                    # fall back to the authoritative full provider refresh.
+                    _logger.warning(
+                        "FSFFL Sleeper sync probe failed; forcing full refresh league=%s error=%s",
+                        league_external_id,
+                        exc,
+                    )
+                    probe = None
+
             league_state = state_loader(league_external_id)
             changed = (
                 previous_fingerprint is None
@@ -262,6 +339,30 @@ def install_hosted_connect_routes(
                     league_state=league_state,
                     sleeper_league_external_id=league_external_id,
                 )
+
+            if persistence_store is not None and probe is not None:
+                try:
+                    persistence_store.put_sync_cursor(
+                        SyncCursorRecord(
+                            provider="sleeper",
+                            scope_kind=_SYNC_SCOPE_KIND,
+                            scope_id=league_external_id,
+                            cursor_payload={
+                                "probe_fingerprint": probe.fingerprint,
+                                "season": probe.season,
+                                "week": probe.week,
+                                "last_full_refresh_at": now.isoformat(),
+                            },
+                            synced_at=now,
+                            source_updated_at=probe.captured_at,
+                        )
+                    )
+                except Exception as exc:
+                    _logger.warning(
+                        "FSFFL Sleeper sync cursor checkpoint failed league=%s error=%s",
+                        league_external_id,
+                        exc,
+                    )
 
         return _job_payload(
             jobs.start(
