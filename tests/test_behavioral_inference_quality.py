@@ -52,18 +52,15 @@ def historical() -> OwnerHistoricalContextControlledPreferenceResult:
     coverage = OwnerHistoricalContextCoverage(
         owner_id="owner",
         as_of=at(10),
-        eligible_event_count=10,
+        eligible_event_count=8,
         estimated_event_count=8,
         eligible_positioned_acquisitions=10,
         estimated_positioned_acquisitions=8,
-        event_coverage_rate=0.8,
+        event_coverage_rate=1.0,
         acquisition_coverage_rate=0.8,
         unavailable=(),
-    ).model_copy(update={"unavailable": ()})
-    # Coverage requires one issue per uncovered event; use model construction only
-    # to keep this unit test focused on the join contract rather than issue details.
-    object.__setattr__(coverage, "unavailable", ())
-    return OwnerHistoricalContextControlledPreferenceResult.model_construct(profile=profile, coverage=coverage)
+    )
+    return OwnerHistoricalContextControlledPreferenceResult(profile=profile, coverage=coverage)
 
 
 def stability() -> OwnerPreferenceStabilityProfile:
@@ -98,12 +95,7 @@ def stability() -> OwnerPreferenceStabilityProfile:
 
 
 def test_quality_keeps_coverage_confidence_and_stability_separate() -> None:
-    hist = historical()
-    # Construct a valid coverage object explicitly with two uncovered issues bypassed
-    # from this join-level test; the quality builder only consumes reconciled fields.
-    coverage = hist.coverage.model_copy(update={"eligible_event_count": 8, "event_coverage_rate": 1.0})
-    hist = hist.model_copy(update={"coverage": coverage})
-    result = build_owner_behavior_inference_quality_profile(hist, stability=stability())
+    result = build_owner_behavior_inference_quality_profile(historical(), stability=stability())
 
     rb = result.position("RB")
     assert rb.residual_confidence == 0.75
@@ -116,18 +108,12 @@ def test_quality_keeps_coverage_confidence_and_stability_separate() -> None:
 
 
 def test_quality_can_exist_before_stability_is_available() -> None:
-    hist = historical()
-    coverage = hist.coverage.model_copy(update={"eligible_event_count": 8, "event_coverage_rate": 1.0})
-    hist = hist.model_copy(update={"coverage": coverage})
-    result = build_owner_behavior_inference_quality_profile(hist)
+    result = build_owner_behavior_inference_quality_profile(historical())
     assert result.position(Position.RB).stability_status == "not_supplied"
     assert result.position(Position.RB).latest_direction_agreement is None
 
 
 def test_quality_rejects_mismatched_stability_identity() -> None:
-    hist = historical()
-    coverage = hist.coverage.model_copy(update={"eligible_event_count": 8, "event_coverage_rate": 1.0})
-    hist = hist.model_copy(update={"coverage": coverage})
     other = stability().model_copy(update={"owner_id": "other"})
     with pytest.raises(ValueError, match="identity"):
-        build_owner_behavior_inference_quality_profile(hist, stability=other)
+        build_owner_behavior_inference_quality_profile(historical(), stability=other)
