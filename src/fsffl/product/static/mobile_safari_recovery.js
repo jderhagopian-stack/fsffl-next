@@ -9,6 +9,8 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   const TEAM_KEY='fsffl:last-team';
   let interactiveConnectInFlight=false;
   let restoreInFlight=false;
+  let activeLeagueId=null;
+  let activeConnectPromise=null;
 
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const isTransportError=error=>/Load failed|Failed to fetch|Network request failed|network error/i.test(String(error?.message||''));
@@ -36,6 +38,8 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   }
 
   async function startBackgroundImport(leagueId){
+    const existing=await recoverCurrentJob(leagueId);
+    if(existing&&['queued','running'].includes(existing.status))return existing;
     try{
       return await resilientApi('/api/connect/sleeper/background',{
         method:'POST',
@@ -49,7 +53,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }
   }
 
-  async function waitForBackgroundImport(leagueId,onProgress){
+  async function performBackgroundImport(leagueId,onProgress){
     let job=await startBackgroundImport(leagueId);
     const deadline=Date.now()+120000;
     let consecutiveTransportFailures=0;
@@ -68,6 +72,20 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
     }
     throw new Error('League import is taking longer than expected. Please try again in a moment.');
+  }
+
+  function waitForBackgroundImport(leagueId,onProgress){
+    if(activeConnectPromise&&activeLeagueId===leagueId)return activeConnectPromise;
+    const run=performBackgroundImport(leagueId,onProgress);
+    activeLeagueId=leagueId;
+    activeConnectPromise=run;
+    run.finally(()=>{
+      if(activeConnectPromise===run){
+        activeConnectPromise=null;
+        activeLeagueId=null;
+      }
+    }).catch(()=>{});
+    return run;
   }
 
   function applyConnectedContext(context){
