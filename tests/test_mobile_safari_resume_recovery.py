@@ -4,7 +4,7 @@ from pathlib import Path
 STATIC = Path(__file__).parents[1] / "src" / "fsffl" / "product" / "static"
 
 
-def test_mobile_safari_resume_module_is_inert_while_startup_lockup_is_isolated():
+def test_mobile_safari_resume_module_keeps_lifecycle_recovery_disabled():
     index = (STATIC / "index.html").read_text()
     recovery = (STATIC / "mobile_safari_recovery.js").read_text()
 
@@ -12,7 +12,8 @@ def test_mobile_safari_resume_module_is_inert_while_startup_lockup_is_isolated()
     assert "fsfflMobileSafariRecoveryDisabled=true" in recovery
     assert "visibilitychange" not in recovery
     assert "pageshow" not in recovery
-    assert "/api/product-context" not in recovery
+    assert "fsfflForceMobileRepaint" not in recovery
+    assert "window.addEventListener('focus'" not in recovery
 
 
 def test_beta_correction_observer_cannot_reenter_on_its_own_dom_mutations():
