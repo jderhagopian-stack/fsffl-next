@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from threading import Barrier
 
 from fsffl.forecast.current_runtime import NamedCurrentProjectionFetcher, build_current_live_forecasts
 from fsffl.forecast.models import ForecastMetric
@@ -78,3 +79,25 @@ def test_runtime_cutoff_advances_past_provider_retrieval_timestamp() -> None:
     result = build_current_live_forecasts(state(), fetchers=fetchers, clock=lambda: NOW)
     assert result.evaluation_as_of == captured_after_initial_clock
     assert result.successful_source_ids == ("cbs", "fftoday")
+
+
+def test_independent_provider_fetches_overlap_instead_of_running_serially() -> None:
+    barrier = Barrier(2, timeout=2.0)
+
+    def fetch(provider: str, yards: float):
+        def run(season: int) -> CurrentProjectionSnapshot:
+            assert season == 2026
+            barrier.wait()
+            return snapshot(provider, yards)
+        return run
+
+    result = build_current_live_forecasts(
+        state(),
+        fetchers=(
+            NamedCurrentProjectionFetcher("fftoday", fetch("fftoday", 4000.0)),
+            NamedCurrentProjectionFetcher("cbs", fetch("cbs", 4200.0)),
+        ),
+        clock=lambda: NOW,
+    )
+    assert result.successful_source_ids == ("cbs", "fftoday")
+    assert result.model_version == "next2-current-runtime-v4:parallel-provider-ingestion"
