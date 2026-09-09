@@ -11,6 +11,11 @@ from .action_context import (
     BehavioralPositionContext,
     reconstruct_behavioral_action_context,
 )
+from .context_controlled_profile import (
+    OwnerContextControlledPositionPreference,
+    OwnerContextControlledPreferenceProfile,
+    build_owner_context_controlled_preference_profile,
+)
 from .context_dataset import (
     BehavioralContextCalibrationDataset,
     BehavioralContextCalibrationRow,
@@ -77,6 +82,8 @@ __all__ = [
     "BehavioralResidualPolicy",
     "OwnerBehaviorEvent",
     "OwnerBehaviorProfile",
+    "OwnerContextControlledPositionPreference",
+    "OwnerContextControlledPreferenceProfile",
     "OwnerPositionPreferenceResidual",
     "OwnerPositionPreferenceResidualResult",
     "SleeperBehaviorHistorySource",
@@ -86,6 +93,7 @@ __all__ = [
     "BehavioralSyncResult",
     "build_behavioral_context_calibration_dataset",
     "build_owner_behavior_profiles",
+    "build_owner_context_controlled_preference_profile",
     "estimate_context_acquisition_distribution",
     "estimate_owner_position_preference_from_context_expectation",
     "estimate_owner_position_preference_residual",
