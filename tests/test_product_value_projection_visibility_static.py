@@ -22,7 +22,7 @@ def test_simulation_floor_forecasts_do_not_masquerade_as_direct_player_projectio
     assert "forecasts=effective_forecasts" not in analytics_join
 
 
-def test_market_value_percentile_and_age_are_presented_as_separate_concepts() -> None:
+def test_market_percentile_and_age_stay_separate_while_dead_additive_market_total_is_removed() -> None:
     source = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     assert "estimate.scale?.scale_id==='dynasty-market-percentile'" in source
@@ -30,8 +30,8 @@ def test_market_value_percentile_and_age_are_presented_as_separate_concepts() ->
     assert "function fmtAge" in source
     assert "Number.isInteger(value)?value.toFixed(0):value.toFixed(1)" in source
     assert "<th>Market percentile</th>" in html
-    assert 'value="total_market_value">Total market value' in html
-    assert 'value="total_cardinal_value">Total FSFFL Cardinal Value' in html
+    assert 'value="total_market_value">Total market value' not in html
+    assert 'value="total_cardinal_value">Franchise value' in html
     assert "team_market_value_portfolios" in source
     assert "team_cardinal_portfolios" in source
     assert "<th>Dynasty value</th>" not in html
@@ -52,7 +52,6 @@ def test_player_display_uses_explicit_full_nfl_season_contract_without_changing_
     assert "item.horizon==='fantasy_regular_season'" not in shell
     assert "NFL season projection" in shell
 
-    # Simulation still owns and uses the shorter fantasy-regular-season horizon.
     assert "weeks=fantasy_weeks" in simulation
     assert "build_regular_season_simulation_input" in simulation
 
