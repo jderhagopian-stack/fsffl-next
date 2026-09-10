@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from time import monotonic, sleep
 
 from fsffl.persistence.session import persist_runtime_snapshot, restore_runtime_snapshot
+from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -128,3 +130,39 @@ def test_restore_fails_closed_when_snapshot_hash_does_not_match_context() -> Non
     )
 
     assert restore_runtime_snapshot(persistence, user_id="jimmy") is None
+
+
+def test_runtime_restore_backfills_exact_state_into_history_off_request_path() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=state,
+        selected_team_id="t2",
+    )
+    captured: list[LeagueState] = []
+
+    class CapturingHistory:
+        def save(self, restored_state: LeagueState) -> None:
+            captured.append(restored_state)
+
+        def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
+            return None
+
+    runtime = PersistentPrivateBetaRuntimeStore(
+        persistence,
+        state_snapshot_store=CapturingHistory(),
+    )
+
+    before = monotonic()
+    restored = runtime.get("jimmy")
+    assert monotonic() - before < 0.25
+    assert restored.league_state == state
+    assert restored.selected_team_id == "t2"
+
+    deadline = monotonic() + 2
+    while not captured and monotonic() < deadline:
+        sleep(0.01)
+
+    assert captured == [state]
