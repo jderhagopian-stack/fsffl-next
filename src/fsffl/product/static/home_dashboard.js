@@ -1,7 +1,4 @@
 let fsfflHomeRenderHookInstalled=false;
-let fsfflHomeOpportunityWorkspace=null;
-let fsfflHomeOpportunityKey=null;
-let fsfflHomeOpportunityLoading=false;
 
 function homeEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 function homeNumber(value,digits=1){return typeof value==='number'&&Number.isFinite(value)?value.toFixed(digits):'—'}
@@ -10,28 +7,18 @@ function homeStateLabel(value){return value&&value!=='unknown'?String(value).rep
 function homeStrengthRows(view){return (view?.position_strengths||[]).filter(row=>typeof row?.strength_index==='number'&&Number.isFinite(row.strength_index))}
 function homeAttentionCard({eyebrow,title,value,detail,route,action}){return `<article class="home-attention-card"><p class="eyebrow">${homeEscape(eyebrow)}</p><h3>${homeEscape(title)}</h3><strong class="home-attention-value">${homeEscape(value)}</strong><p>${homeEscape(detail)}</p>${route?`<button type="button" class="text-button" data-home-route="${homeEscape(route)}">${homeEscape(action||'Investigate')}</button>`:''}</article>`}
 function homeOpportunityAssetLabels(items){return(items||[]).map(item=>item.label||item.asset_ref).filter(Boolean).join(' + ')||'—'}
+function homeLoadedOpportunityWorkspace(){return typeof fsfflOpportunityState!=='undefined'?fsfflOpportunityState.payload:null}
 function homeOpportunityCard(){
-  const workspace=fsfflHomeOpportunityWorkspace;
+  const workspace=homeLoadedOpportunityWorkspace();
   const lead=workspace?.trade_discovery?.spotlights?.most_promising_evaluated;
   if(lead){
     const receive=homeOpportunityAssetLabels(lead.receive),send=homeOpportunityAssetLabels(lead.send),other=lead.counterparty_name||lead.counterparty_team_id||'another team';
     const shape=lead.negotiation_feasibility_shape?String(lead.negotiation_feasibility_shape).replaceAll('_',' '):'evaluated lead';
     return homeAttentionCard({eyebrow:'Current opportunity',title:'Most promising evaluated lead',value:receive,detail:`Send ${send} to ${other}. ${shape}. This is the server-selected Decision-evaluated lead, not an acceptance prediction.`,route:'opportunities',action:'Open in Trade Finder'});
   }
-  if(fsfflHomeOpportunityLoading)return homeAttentionCard({eyebrow:'Current opportunity',title:'Finding something worth doing',value:'Checking…',detail:'Trade Finder is loading its normal governed workspace. Home does not launch a separate deep Decision run.'});
   if(workspace?.status&&workspace.status!=='ready')return homeAttentionCard({eyebrow:'Current opportunity',title:'Trade Finder is still preparing',value:'Not ready yet',detail:workspace.message||'A required governed input is still loading.',route:'opportunities',action:'See readiness'});
-  return homeAttentionCard({eyebrow:'Current opportunity',title:'No evaluated lead available',value:'No clear lead',detail:'FSFFL will not invent an opportunity when the current governed workspace has not identified one.',route:'opportunities',action:'Explore Trade Finder'});
-}
-function homeOpportunityContextKey(){return`${state?.context?.state_id||''}:${state?.context?.team_id||''}`}
-async function loadFsfflHomeOpportunity(){
-  if(!state?.context?.league_id||!state?.context?.team_id){fsfflHomeOpportunityWorkspace=null;fsfflHomeOpportunityKey=null;fsfflHomeOpportunityLoading=false;renderFsfflHomeAttention(state?.teamView||null);return}
-  const key=homeOpportunityContextKey();
-  if(fsfflHomeOpportunityLoading&&fsfflHomeOpportunityKey===key)return;
-  if(fsfflHomeOpportunityWorkspace&&fsfflHomeOpportunityKey===key)return;
-  fsfflHomeOpportunityKey=key;fsfflHomeOpportunityLoading=true;renderFsfflHomeAttention(state?.teamView||null);
-  try{fsfflHomeOpportunityWorkspace=await api('/api/opportunities/workspace')}
-  catch(error){fsfflHomeOpportunityWorkspace={status:'blocked',message:error.message}}
-  finally{if(fsfflHomeOpportunityKey===key){fsfflHomeOpportunityLoading=false;renderFsfflHomeAttention(state?.teamView||null)}}
+  if(workspace)return homeAttentionCard({eyebrow:'Current opportunity',title:'No evaluated lead available',value:'No clear lead',detail:'FSFFL will not invent an opportunity when the current governed workspace has not identified one.',route:'opportunities',action:'Explore Trade Finder'});
+  return homeAttentionCard({eyebrow:'Current opportunity',title:'Check current acquisition paths',value:'Open Trade Finder',detail:'Home stays fast by reusing Trade Finder results only after its governed workspace has been loaded. It does not launch Search on its own.',route:'opportunities',action:'Load current opportunities'});
 }
 
 function renderFsfflHomeAttention(view=state?.teamView){
@@ -83,9 +70,8 @@ function installFsfflHomeExperience(){
     renderMyTeam=window.renderMyTeam;fsfflHomeRenderHookInstalled=true;
   }
   renderFsfflHomeAttention(state?.teamView||null);
-  loadFsfflHomeOpportunity();
   if(!document.querySelector('#fsffl-home-attention-style')){const style=document.createElement('style');style.id='fsffl-home-attention-style';style.textContent=`.home-attention{margin:16px 0 20px}.home-attention-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}.home-attention-header h2,.home-attention-header p{margin-top:0}.home-attention-header>div>p:last-child,.home-attention-card p,.home-roadmap-note,.home-attention-empty p{color:var(--muted);line-height:1.45}.home-attention-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.home-attention-card,.home-investigate,.home-attention-empty{border:1px solid var(--line);background:#0a1120;border-radius:16px;padding:16px}.home-attention-card h3{margin:4px 0 10px;font-size:1rem}.home-attention-value{display:block;font-size:1.35rem;line-height:1.2;margin-bottom:8px;text-transform:capitalize}.home-attention-card .text-button{padding-left:0}.home-investigate{margin-top:10px;display:grid;grid-template-columns:minmax(180px,.75fr) minmax(0,2fr);gap:16px;align-items:start}.home-investigate h3{margin:3px 0}.home-investigate-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.home-investigate-actions button{border:1px solid var(--line);background:var(--surface-2);color:var(--text);border-radius:12px;padding:12px;text-align:left;display:grid;gap:4px;cursor:pointer}.home-investigate-actions button:hover{border-color:var(--accent)}.home-investigate-actions span{font-size:11px;color:var(--muted);line-height:1.35}.home-roadmap-note{font-size:12px;margin:10px 2px 0}.home-attention-empty{min-height:120px}.home-attention-empty h2{margin:4px 0}@media(max-width:1100px){.home-attention-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.home-attention-header{display:grid}.home-attention-header .secondary-button{width:100%}.home-attention-grid{grid-template-columns:1fr}.home-investigate{grid-template-columns:1fr}.home-investigate-actions{grid-template-columns:1fr}.home-attention-card{padding:14px}.home-attention-value{font-size:1.2rem}}`;document.head.appendChild(style)}
 }
 window.renderFsfflHomeAttention=renderFsfflHomeAttention;
 window.installFsfflHomeExperience=installFsfflHomeExperience;
-window.addEventListener('fsffl:product-context-updated',()=>setTimeout(()=>{renderFsfflHomeAttention(state?.teamView||null);loadFsfflHomeOpportunity()},0));
+window.addEventListener('fsffl:product-context-updated',()=>setTimeout(()=>renderFsfflHomeAttention(state?.teamView||null),0));
