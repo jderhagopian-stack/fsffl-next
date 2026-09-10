@@ -33,6 +33,12 @@ from fsffl.state.models import (
     TeamState,
 )
 from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
+from fsffl.value.models import (
+    MarketPriceEstimate,
+    ValueAssetKind,
+    ValueDistribution,
+    ValueScale,
+)
 
 
 AS_OF = datetime(2026, 9, 10, 2, 0, tzinfo=UTC)
@@ -197,15 +203,30 @@ def _complete_bundle(state: LeagueState):
         seed=7,
         generated_at=AS_OF,
     )
+    market_context_id = "test:artifact-lifecycle"
+    estimate = MarketPriceEstimate(
+        asset_id="pa",
+        asset_kind=ValueAssetKind.PLAYER,
+        distribution=ValueDistribution(mean=0.8, stddev=0.05, p10=0.7, p50=0.8, p90=0.9),
+        scale=ValueScale(
+            scale_id="test-market-percentile",
+            version="v1",
+            unit_label="market percentile",
+        ),
+        as_of=AS_OF,
+        market_context_id=market_context_id,
+        model_version="test-market-v1",
+        evidence_sources=("test-source",),
+    )
     values = CurrentMarketValueRuntimeResult(
         league_state_id=state.state_id,
-        estimates=(),
-        successful_source_ids=(),
+        estimates=(estimate,),
+        successful_source_ids=("test-source",),
         failed_sources=(),
         errors_by_source_id={},
         roster_player_count=2,
-        valued_roster_player_count=0,
-        market_context_id="test:artifact-lifecycle",
+        valued_roster_player_count=1,
+        market_context_id=market_context_id,
     )
     return forecast, simulation, values
 
@@ -233,6 +254,7 @@ def test_current_forecast_simulation_and_value_restore_together_after_restart() 
     assert restored.forecast_evidence == forecast
     assert restored.simulation_analytics == simulation
     assert restored.value_evidence == values
+    assert restored.value_evidence.estimates == values.estimates
 
 
 def test_roster_only_change_preserves_forecast_but_invalidates_downstream_across_restart() -> None:
@@ -271,14 +293,21 @@ def test_roster_only_change_preserves_forecast_but_invalidates_downstream_across
     assert updated.simulation_analytics is None
     assert updated.value_evidence is None
 
+    durable_snapshot = None
     deadline = monotonic() + 2
-    while (
-        (persistence.user is None or persistence.user.state_hash != changed.state_id)
-        and monotonic() < deadline
-    ):
+    while monotonic() < deadline:
+        durable_snapshot = restore_runtime_snapshot(persistence, user_id="jimmy")
+        if (
+            durable_snapshot is not None
+            and durable_snapshot.league_state == changed
+            and durable_snapshot.forecast_evidence == forecast
+            and durable_snapshot.simulation_analytics is None
+            and durable_snapshot.value_evidence is None
+        ):
+            break
         sleep(0.01)
-    assert persistence.user is not None
-    assert persistence.user.state_hash == changed.state_id
+    else:
+        raise AssertionError("selective checkpoint was not fully durable before restart")
 
     restarted = PersistentPrivateBetaRuntimeStore(persistence)
     durable = restarted.get("jimmy")
