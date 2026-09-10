@@ -4,8 +4,7 @@ from datetime import UTC, datetime
 from threading import Event
 from time import monotonic, sleep
 
-from fsffl.persistence.memory import InMemoryPersistenceStore
-from fsffl.product.persistent_runtime import PersistentBetaRuntimeStore
+from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -26,6 +25,56 @@ from fsffl.state.models import (
 
 
 NOW = datetime(2026, 9, 10, 7, 0, tzinfo=UTC)
+
+
+class MemoryPersistence:
+    def __init__(self) -> None:
+        self.user = None
+        self.league = None
+        self.teams = {}
+
+    def get_user_runtime_context(self, *, user_id):
+        return self.user if self.user and self.user.user_id == user_id else None
+
+    def put_user_runtime_context(self, record):
+        self.user = record
+
+    def get_league_snapshot(self, *, provider, league_id, season):
+        row = self.league
+        return row if row and (row.provider, row.league_id, row.season) == (provider, league_id, season) else None
+
+    def put_league_snapshot(self, record):
+        self.league = record
+
+    def get_team_snapshot(self, *, provider, league_id, team_id):
+        return self.teams.get((provider, league_id, team_id))
+
+    def put_team_snapshot(self, record):
+        self.teams[(record.provider, record.league_id, record.team_id)] = record
+
+    def get_sync_cursor(self, **_kwargs):
+        return None
+
+    def put_sync_cursor(self, _record):
+        pass
+
+    def get_reusable_artifact(self, _key):
+        return None
+
+    def get_latest_reusable_artifact(self, **_kwargs):
+        return None
+
+    def put_artifact(self, _record):
+        pass
+
+    def invalidate_scope(self, **_kwargs):
+        pass
+
+    def append_market_value_snapshot(self, **_kwargs):
+        pass
+
+    def append_user_perceived_latency(self, _record):
+        pass
 
 
 def _state() -> LeagueState:
@@ -65,13 +114,13 @@ def _state() -> LeagueState:
     )
 
 
-class SlowPersistence(InMemoryPersistenceStore):
+class SlowPersistence(MemoryPersistence):
     def put_league_snapshot(self, record):
         sleep(0.1)
         super().put_league_snapshot(record)
 
 
-class WriteFailingPersistence(InMemoryPersistenceStore):
+class WriteFailingPersistence(MemoryPersistence):
     def __init__(self) -> None:
         super().__init__()
         self.write_attempted = Event()
@@ -83,7 +132,7 @@ class WriteFailingPersistence(InMemoryPersistenceStore):
 
 def test_runtime_mutation_returns_before_slow_checkpoint_completes() -> None:
     persistence = SlowPersistence()
-    runtime = PersistentBetaRuntimeStore(persistence_store=persistence)
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
 
     started = monotonic()
     context = runtime.set_league_state("jimmy", _state())
@@ -93,14 +142,14 @@ def test_runtime_mutation_returns_before_slow_checkpoint_completes() -> None:
     assert elapsed < 0.08
 
     deadline = monotonic() + 2
-    while persistence.load_user_context("jimmy") is None and monotonic() < deadline:
+    while persistence.get_user_runtime_context(user_id="jimmy") is None and monotonic() < deadline:
         sleep(0.01)
-    assert persistence.load_user_context("jimmy") is not None
+    assert persistence.get_user_runtime_context(user_id="jimmy") is not None
 
 
 def test_failed_async_checkpoint_does_not_replace_authoritative_runtime_state() -> None:
     persistence = WriteFailingPersistence()
-    runtime = PersistentBetaRuntimeStore(persistence_store=persistence)
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
     state = _state()
 
     context = runtime.set_league_state("jimmy", state)
@@ -109,4 +158,4 @@ def test_failed_async_checkpoint_does_not_replace_authoritative_runtime_state() 
     current = runtime.get("jimmy")
     assert context.league_state == state
     assert current.league_state == state
-    assert persistence.load_user_context("jimmy") is None
+    assert persistence.get_user_runtime_context(user_id="jimmy") is None
