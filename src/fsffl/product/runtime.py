@@ -94,18 +94,23 @@ def forecast_input_fingerprint(league_state: LeagueState) -> str:
     """Hash only canonical State inputs consumed by the current forecast runtime.
 
     Forecast acquisition/normalization depends on the season and canonical player
-    identity/team mapping. League scoring and the derived fantasy-regular-season
-    horizon additionally depend on scoring rules, the configured/scheduled fantasy
-    weeks, and NFL bye state. Roster ownership, draft-pick ownership, team labels,
-    FAAB, matchup scores, age and player availability status are intentionally not
-    forecast inputs; those facts remain free to invalidate Simulation, Value and
-    downstream Decision outputs through the broader material fingerprint.
+    identity/team mapping. League scoring and scoring-domain coverage depend on both
+    scoring rules and active lineup requirements; the derived fantasy-regular-season
+    horizon additionally depends on configured/scheduled fantasy weeks and NFL bye
+    state. Roster ownership, draft-pick ownership, team labels, FAAB, matchup scores,
+    age and player availability status are intentionally not forecast inputs; those
+    facts remain free to invalidate Simulation, Value and downstream Decision outputs
+    through the broader material fingerprint.
     """
 
     rules = league_state.league.rules
     payload = {
         "schema_version": league_state.schema_version,
         "season": league_state.league.season,
+        "lineup": [
+            requirement.model_dump(mode="json")
+            for requirement in sorted(rules.lineup, key=lambda item: (item.slot.value, item.count))
+        ],
         "scoring": [
             rule.model_dump(mode="json")
             for rule in sorted(rules.scoring, key=lambda item: (item.stat, item.points))
@@ -271,11 +276,23 @@ class PrivateBetaRuntimeStore:
                 self._contexts[user_id] = reused
                 return reused
 
+            forecast_evidence = current.forecast_evidence
+            forecast_cutoff_compatible = bool(
+                forecast_evidence is not None
+                and not any(
+                    item.as_of > league_state.as_of
+                    for item in (
+                        forecast_evidence.raw_forecasts
+                        + forecast_evidence.league_scored_forecasts
+                    )
+                )
+            )
             forecast_reusable = (
                 same_league
                 and current.league_state is not None
-                and current.forecast_evidence is not None
+                and forecast_evidence is not None
                 and user_id not in self._pending_intelligence
+                and forecast_cutoff_compatible
                 and forecast_input_fingerprint(current.league_state)
                 == forecast_input_fingerprint(league_state)
             )
@@ -283,7 +300,7 @@ class PrivateBetaRuntimeStore:
                 user_id=user_id,
                 league_state=league_state,
                 selected_team_id=selected if same_league else None,
-                forecast_evidence=current.forecast_evidence if forecast_reusable else None,
+                forecast_evidence=forecast_evidence if forecast_reusable else None,
             )
             self._contexts[user_id] = context
             if not same_league:
