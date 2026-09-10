@@ -9,6 +9,7 @@ from fsffl.providers.sleeper_live import SleeperLiveSource
 from .behavioral_runtime import BehavioralRuntimeCoordinator
 from .hosted_connect import install_hosted_connect_routes
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
+from .phase1_latency import install_phase1_latency_routes
 from .runtime import default_sleeper_state_loader
 from .webapp import create_app
 
@@ -42,3 +43,4 @@ install_hosted_connect_routes(
     ),
     full_refresh_seconds=_full_refresh_seconds,
 )
+install_phase1_latency_routes(app)
