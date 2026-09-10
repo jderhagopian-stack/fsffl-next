@@ -285,8 +285,9 @@ def _posture_views(
     runtime: UserRuntimeContext,
     rows: list[dict[str, object]],
 ) -> dict[str, dict[str, object]]:
-    """Publish server-owned candidate orders for each explicit owner search posture."""
+    """Publish compact server-owned orders over one canonical candidate collection."""
 
+    index_by_identity = {id(row): index for index, row in enumerate(rows)}
     result: dict[str, dict[str, object]] = {}
     for requested in OwnerStrategicPosture:
         meta = posture_payload(runtime, requested)
@@ -295,7 +296,7 @@ def _posture_views(
         result[requested.value] = {
             "posture": meta,
             "spotlights": build_trade_spotlights(ordered),
-            "candidates": ordered,
+            "candidate_indices": [index_by_identity[id(row)] for row in ordered],
         }
     return result
 
