@@ -15,7 +15,7 @@ from .trade_center_view import (
 
 
 _SEARCH_ORDERING = "multi_lane_market_premium_focal_counterparty_structural"
-_DECISION_BUDGET_POLICY = "explicit_evaluation_only_for_interactive_workspace"
+_DECISION_BUDGET_POLICY = "bounded_lead_evaluation_for_interactive_workspace"
 
 
 def _empty_workspace(
@@ -305,14 +305,15 @@ def build_opportunity_workspace(
     runtime: UserRuntimeContext,
     *,
     candidate_limit: int = 80,
-    bilateral_evaluation_limit: int = 0,
+    bilateral_evaluation_limit: int = 1,
 ) -> dict[str, object]:
     """Build a responsive Opportunity workspace with progressive governed evidence.
 
-    Initial discovery stays cheap: it builds and orders the governed Search window but
-    does not synchronously run deep bilateral Decision work. Full changed-state Decision
-    and Simulation remain available behind the explicit Evaluate offer action, which
-    preserves authority while keeping tab activation responsive.
+    The interactive Trade Finder performs one bounded server-owned bilateral Decision
+    enrichment by default so its evaluated spotlight is reachable. Home never launches
+    this work: it only reuses a Trade Finder workspace that has already been loaded.
+    Full changed-state Decision and Simulation remain behind the explicit Evaluate offer
+    action, preserving authority while bounding automatic workspace compute.
     """
 
     league_state = runtime.league_state
