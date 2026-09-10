@@ -47,4 +47,4 @@ install_hosted_connect_routes(
     ),
     full_refresh_seconds=_full_refresh_seconds,
 )
-install_phase1_latency_routes(app)
+install_phase1_latency_routes(app, persistence_store=_persistence_store)
