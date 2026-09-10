@@ -15,10 +15,14 @@ def test_home_reuses_already_loaded_governed_opportunity_workspace_without_api_w
     assert "/api/opportunities/trade" not in HOME
 
 
-def test_home_labels_loaded_opportunity_as_server_selected_not_acceptance_prediction() -> None:
-    assert "server-selected Decision-evaluated lead" in HOME
+def test_home_gates_action_language_on_explicit_recommendation_authority() -> None:
+    assert "lead.recommendation_authority===true" in HOME
+    assert "server-selected action-authoritative lead" in HOME
     assert "not an acceptance prediction" in HOME
-    assert "Strongest evaluated path already loaded by Market" in HOME
+    assert "Strongest action-authoritative path already loaded by Market" in HOME
+    assert "Lead to investigate" in HOME
+    assert "diagnostic evidence, not an action-authoritative recommendation" in HOME
+    assert "Diagnostic candidate — no recommendation authority" in HOME
 
 
 def test_home_keeps_unloaded_and_no_lead_states_explicit_without_fabrication() -> None:
@@ -29,7 +33,7 @@ def test_home_keeps_unloaded_and_no_lead_states_explicit_without_fabrication() -
     assert "No fabricated recommendation" in HOME
 
 
-def test_home_makes_the_governed_next_action_visually_dominant() -> None:
+def test_home_makes_an_authorized_next_action_visually_dominant() -> None:
     assert "homePrimaryAction" in HOME
     assert "home-priority" in HOME
     assert "Work this opportunity" in HOME

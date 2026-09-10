@@ -72,7 +72,7 @@ def test_simulator_is_first_class_team_scoped_product_route() -> None:
     assert "/static/simulator.js" in shell
     assert "route==='simulator'" in shell
     assert "'what_if','simulator','analytics'" in shell
-    assert "20260908-marketportfolio2" in shell
+    assert "20260910-phase3-franchise1" in shell
     assert "20260909-beta-feedback1" in index
     assert '/static/simulator.js?v=20260909-beta-feedback1' not in index
     assert '/static/opportunities.js?v=20260909-beta-feedback1' not in index
