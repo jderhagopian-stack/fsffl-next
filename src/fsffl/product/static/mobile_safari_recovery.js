@@ -22,15 +22,22 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       keepalive:true,
     }).catch(()=>{});
   };
-  const loadLatencyObserver=()=>{
-    if(document.querySelector('script[data-fsffl-phase1-latency]'))return;
+  const loadHelper=(selector,src,datasetKey)=>{
+    if(document.querySelector(selector))return;
     const script=document.createElement('script');
-    script.src='/static/phase1_latency.js?v=20260909-phase1-latency1';
+    script.src=src;
     script.defer=true;
-    script.dataset.fsfflPhase1Latency='true';
+    script.dataset[datasetKey]='true';
     document.head.appendChild(script);
   };
-  loadLatencyObserver();
+  loadHelper('script[data-fsffl-phase1-latency]','/static/phase1_latency.js?v=20260909-phase1-latency1','fsfflPhase1Latency');
+  loadHelper('script[data-fsffl-sync-state]','/static/phase1_sync_state.js?v=20260909-phase1-sync1','fsfflSyncState');
+  const publishSyncState=(syncState,message=null)=>{
+    const detail={state:syncState,message};
+    window.fsfflPendingSyncState=detail;
+    if(window.fsfflSyncState?.set)window.fsfflSyncState.set(syncState,message);
+    window.dispatchEvent(new CustomEvent('fsffl:sync-state',{detail}));
+  };
 
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const isTransportError=error=>/Load failed|Failed to fetch|Network request failed|network error/i.test(String(error?.message||''));
@@ -139,15 +146,18 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   }
 
   async function refreshStoredLeague(leagueId,baselineStateId){
+    publishSyncState('checking');
     try{
       const refreshed=await waitForBackgroundImport(leagueId,null,'refresh');
       if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
         const selected=await restoreSelectedTeam(refreshed);
         applyConnectedContext(selected);
       }
+      publishSyncState('current');
     }catch(error){
       // Stored state remains usable. Revalidation failure should not evict the user
       // from an already-restored league session.
+      publishSyncState('stale','Refresh unavailable. Continuing with the last valid stored league.');
       console.warn('FSFFL background league refresh failed; using stored state',error);
     }
   }
@@ -177,6 +187,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       context=await restoreSelectedTeam(context);
       applyConnectedContext(context);
       if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
+      publishSyncState('current');
       recordLatency('restore_ready',started,'success','provider_fallback');
       return true;
     }catch(error){
@@ -204,6 +215,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         if(button)button.textContent=job?.status==='running'?'Loading league…':'Starting import…';
       },'connect');
       applyConnectedContext(context);
+      publishSyncState('current');
       recordLatency('first_connect_ready',started,'success');
     }catch(error){
       recordLatency('first_connect_ready',started,'failed',String(error?.message||error));
