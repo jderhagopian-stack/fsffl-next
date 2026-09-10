@@ -4,6 +4,7 @@ import logging
 
 from fastapi import Depends, FastAPI, HTTPException
 
+from fsffl.persistence import PersistenceStore, UserPerceivedLatencyRecord, utc_now
 from fsffl.state.models import FrozenModel
 
 from .webapp import require_beta_user
@@ -26,8 +27,12 @@ class UserPerceivedLatencyEvent(FrozenModel):
     detail: str | None = None
 
 
-def install_phase1_latency_routes(application: FastAPI) -> None:
-    """Record Phase 1 exit-gate timings without affecting model truth or runtime work."""
+def install_phase1_latency_routes(
+    application: FastAPI,
+    *,
+    persistence_store: PersistenceStore | None = None,
+) -> None:
+    """Record Phase 1/2 exit-gate timings without affecting model truth or runtime work."""
 
     @application.post("/api/performance/latency")
     def record_phase1_latency(
@@ -49,4 +54,25 @@ def install_phase1_latency_routes(application: FastAPI) -> None:
             detail,
             user_id,
         )
+        if persistence_store is not None:
+            try:
+                persistence_store.append_user_perceived_latency(
+                    UserPerceivedLatencyRecord(
+                        user_id=user_id,
+                        operation=event.operation,
+                        elapsed_ms=event.elapsed_ms,
+                        outcome=event.outcome,
+                        detail=detail or None,
+                        observed_at=utc_now(),
+                    )
+                )
+            except Exception as exc:
+                # Observability storage must never break the user request or become
+                # a runtime/model dependency.
+                _logger.warning(
+                    "FSFFL latency persistence failed operation=%s user=%s error=%s",
+                    event.operation,
+                    user_id,
+                    exc,
+                )
         return {"status": "recorded", "operation": event.operation}
