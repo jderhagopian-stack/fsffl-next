@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import textwrap
 from threading import Event
 from time import monotonic, sleep
 
@@ -132,10 +134,6 @@ def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
     ).read()
-    sync_state = open(
-        "src/fsffl/product/static/phase1_sync_state.js",
-        encoding="utf-8",
-    ).read()
 
     refresh = recovery.split("async function refreshStoredLeague", 1)[1].split(
         "async function restoreSavedSession", 1
@@ -146,13 +144,59 @@ def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:
     stale_index = refresh.index("publishSyncState('stale'")
     assert checking_index < refresh_index < current_index < stale_index
 
-    assert "Checking league updates" in sync_state
-    assert "Stored league is usable while Sleeper is revalidated." in sync_state
-    assert "League data current" in sync_state
-    assert "Using stored league" in sync_state
-    assert "Your last valid stored league remains usable." in sync_state
-    assert "role','status" in sync_state
-    assert "aria-live','polite" in sync_state
+    script = textwrap.dedent(
+        r"""
+        const fs=require('fs');
+        const vm=require('vm');
+        const assert=require('assert');
+        const nodes={};
+        function element(tag){
+          return {
+            tagName:tag.toUpperCase(), id:'', className:'', hidden:true,
+            dataset:{}, attributes:{}, innerHTML:'', textContent:'',
+            setAttribute(name,value){this.attributes[name]=String(value)},
+            insertAdjacentElement(_where,node){if(node.id)nodes['#'+node.id]=node},
+          };
+        }
+        const topbar=element('div');
+        const head={appendChild(node){if(node.id)nodes['#'+node.id]=node}};
+        global.document={
+          head,
+          querySelector(selector){
+            if(selector==='.topbar')return topbar;
+            return nodes[selector]||null;
+          },
+          createElement:element,
+        };
+        global.window={addEventListener(){},fsfflPendingSyncState:null};
+        vm.runInThisContext(fs.readFileSync('src/fsffl/product/static/phase1_sync_state.js','utf8'));
+        const expected={
+          checking:['Checking league updates','Stored league is usable while Sleeper is revalidated.'],
+          current:['League data current','Latest provider check completed successfully.'],
+          stale:['Using stored league','Your last valid stored league remains usable.'],
+        };
+        for(const [state,[title,copy]] of Object.entries(expected)){
+          window.fsfflSyncState.set(state);
+          const node=nodes['#fsffl-sync-state'];
+          assert(node,'sync-state node should be rendered');
+          assert.strictEqual(node.attributes.role,'status');
+          assert.strictEqual(node.attributes['aria-live'],'polite');
+          assert.strictEqual(node.dataset.state,state);
+          assert.strictEqual(node.hidden,false);
+          assert(node.innerHTML.includes(title));
+          assert(node.innerHTML.includes(copy));
+        }
+        window.fsfflSyncState.clear();
+        assert.strictEqual(nodes['#fsffl-sync-state'].hidden,true);
+        """
+    )
+    completed = subprocess.run(
+        ["node", "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_hosted_refresh_only_rebuilds_behavior_when_material_state_changed() -> None:
