@@ -99,8 +99,9 @@
   const observer=new MutationObserver(()=>queueRender());
 
   function observe(){
-    if(!document.body)return;
-    observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});
+    const screen=document.querySelector('#generic-screen');
+    if(!screen)return;
+    observer.observe(screen,{subtree:true,childList:true});
     observerStarted=true;
   }
 
@@ -120,6 +121,10 @@
     renderQueued=true;
     requestAnimationFrame(renderSafely);
   }
+
+  document.addEventListener('click',event=>{
+    if(event.target?.closest?.('[data-route="opportunities"]'))queueRender();
+  });
 
   document.addEventListener('DOMContentLoaded',()=>{
     observe();
