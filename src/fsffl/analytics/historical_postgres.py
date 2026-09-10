@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from collections.abc import Callable
+from datetime import UTC
 from typing import Any
 
 from .historical_persistence import (
@@ -21,8 +22,51 @@ ConnectFactory = Callable[[], Any]
 
 def _identity_key(identity: HistoricalArtifactIdentity) -> str:
     payload = identity.model_dump(mode="json")
+    # Datetimes that represent the same instant compare equal in Python even when
+    # their offsets differ. Hash the canonical UTC representation so one logical
+    # immutable historical identity cannot acquire multiple storage keys.
+    if identity.as_of is not None:
+        payload["as_of"] = identity.as_of.astimezone(UTC).isoformat()
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _select_identity_row(cursor: Any, identity: HistoricalArtifactIdentity) -> dict[str, object] | None:
+    """Read canonical-key rows while preserving pre-UTC-key artifacts.
+
+    Historical artifacts written before UTC key canonicalization may have been hashed
+    from an equivalent non-UTC offset. PostgreSQL timestamptz equality compares the
+    instant, so an identity-column fallback can recover that row without guessing the
+    legacy offset or creating a duplicate immutable artifact.
+    """
+
+    cursor.execute(
+        """select identity_payload, report_payload
+           from fsffl.historical_artifact where artifact_key=%s""",
+        (_identity_key(identity),),
+    )
+    row = cursor.fetchone()
+    if row is not None:
+        return row
+    cursor.execute(
+        """select identity_payload, report_payload
+           from fsffl.historical_artifact
+           where league_id=%s and transaction_id=%s and artifact_kind=%s
+             and artifact_version=%s
+             and as_of is not distinct from %s
+             and dependency_fingerprint is not distinct from %s
+           order by artifact_key
+           limit 1""",
+        (
+            identity.league_id,
+            identity.transaction_id,
+            identity.artifact_kind.value,
+            identity.artifact_version,
+            identity.as_of,
+            identity.dependency_fingerprint,
+        ),
+    )
+    return cursor.fetchone()
 
 
 class PostgresHistoricalPersistence:
@@ -50,14 +94,8 @@ class PostgresHistoricalPersistence:
         return psycopg.connect(self._database_url, row_factory=dict_row)
 
     def get(self, identity: HistoricalArtifactIdentity) -> HistoricalTradeReport | None:
-        key = _identity_key(identity)
         with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute(
-                """select identity_payload, report_payload
-                   from fsffl.historical_artifact where artifact_key=%s""",
-                (key,),
-            )
-            row = cursor.fetchone()
+            row = _select_identity_row(cursor, identity)
         if row is None:
             return None
         stored_identity = HistoricalArtifactIdentity.model_validate(row["identity_payload"])
@@ -80,6 +118,14 @@ class PostgresHistoricalPersistence:
             else {}
         )
         with self._connect() as connection, connection.cursor() as cursor:
+            existing = _select_identity_row(cursor, identity)
+            if existing is not None:
+                existing_identity = HistoricalArtifactIdentity.model_validate(existing["identity_payload"])
+                existing_report = HistoricalTradeReport.model_validate(existing["report_payload"])
+                if existing_identity != identity or existing_report != report:
+                    raise ValueError("historical artifact identity is immutable once persisted")
+                return
+
             cursor.execute(
                 """insert into fsffl.historical_artifact
                    (artifact_key, league_id, transaction_id, artifact_kind, artifact_version,
@@ -170,14 +216,6 @@ class PostgresHistoricalPersistence:
     def put_checkpoint(self, checkpoint: HistoricalSyncCheckpoint) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
-                """select last_completed_at from fsffl.historical_sync_checkpoint
-                   where league_id=%s and provider=%s for update""",
-                (checkpoint.league_id, checkpoint.provider),
-            )
-            previous = cursor.fetchone()
-            if previous is not None and checkpoint.last_completed_at < previous["last_completed_at"]:
-                raise ValueError("sync checkpoints cannot move backward")
-            cursor.execute(
                 """insert into fsffl.historical_sync_checkpoint
                    (league_id, provider, last_completed_at, provider_cursor, model_version)
                    values (%s,%s,%s,%s,%s)
@@ -185,7 +223,9 @@ class PostgresHistoricalPersistence:
                      last_completed_at=excluded.last_completed_at,
                      provider_cursor=excluded.provider_cursor,
                      model_version=excluded.model_version,
-                     updated_at=now()""",
+                     updated_at=now()
+                   where fsffl.historical_sync_checkpoint.last_completed_at <= excluded.last_completed_at
+                   returning last_completed_at""",
                 (
                     checkpoint.league_id,
                     checkpoint.provider,
@@ -194,6 +234,8 @@ class PostgresHistoricalPersistence:
                     checkpoint.model_version,
                 ),
             )
+            if cursor.fetchone() is None:
+                raise ValueError("sync checkpoints cannot move backward")
 
 
 class PostgresHistoricalReportRepository:

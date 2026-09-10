@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
@@ -79,10 +80,27 @@ class FakeCursor:
                 },
             )
             return
-        if normalized.startswith("select identity_payload, report_payload from fsffl.historical_artifact"):
+        if normalized.startswith("select identity_payload, report_payload from fsffl.historical_artifact where artifact_key"):
             row = self.database.artifacts.get(params[0])
             if row:
                 self.rows = [{"identity_payload": row["identity_payload"], "report_payload": row["report_payload"]}]
+            return
+        if (
+            normalized.startswith("select identity_payload, report_payload from fsffl.historical_artifact")
+            and "artifact_version=%s" in normalized
+        ):
+            league_id, transaction_id, artifact_kind, artifact_version, as_of, dependency_fingerprint = params
+            for row in self.database.artifacts.values():
+                if (
+                    row["league_id"] == league_id
+                    and row["transaction_id"] == transaction_id
+                    and row["artifact_kind"] == artifact_kind
+                    and row["artifact_version"] == artifact_version
+                    and row["as_of"] == as_of
+                    and row["dependency_fingerprint"] == dependency_fingerprint
+                ):
+                    self.rows = [{"identity_payload": row["identity_payload"], "report_payload": row["report_payload"]}]
+                    break
             return
         if normalized.startswith("insert into fsffl.historical_artifact_dependency"):
             self.database.dependencies.setdefault(params[0], {})[params[1]] = params[2]
@@ -108,19 +126,19 @@ class FakeCursor:
             if row:
                 self.rows = [dict(row)]
             return
-        if normalized.startswith("select last_completed_at from fsffl.historical_sync_checkpoint"):
-            row = self.database.checkpoints.get((params[0], params[1]))
-            if row:
-                self.rows = [{"last_completed_at": row["last_completed_at"]}]
-            return
         if normalized.startswith("insert into fsffl.historical_sync_checkpoint"):
-            self.database.checkpoints[(params[0], params[1])] = {
+            key = (params[0], params[1])
+            previous = self.database.checkpoints.get(key)
+            if previous is not None and params[2] < previous["last_completed_at"]:
+                return
+            self.database.checkpoints[key] = {
                 "league_id": params[0],
                 "provider": params[1],
                 "last_completed_at": params[2],
                 "provider_cursor": params[3],
                 "model_version": params[4],
             }
+            self.rows = [{"last_completed_at": params[2]}]
             return
         raise AssertionError(f"unexpected SQL: {normalized}")
 
@@ -163,6 +181,16 @@ def _identity(*, artifact_version: str, decision_version: str) -> HistoricalArti
     )
 
 
+def _legacy_key(identity: HistoricalArtifactIdentity) -> str:
+    encoded = json.dumps(
+        identity.model_dump(mode="json"),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 def _store(database: FakeDatabase) -> PostgresHistoricalPersistence:
     return PostgresHistoricalPersistence("postgresql://test", connect_factory=database.connect)
 
@@ -180,6 +208,47 @@ def test_historical_report_round_trips_under_exact_immutable_identity() -> None:
 
     with pytest.raises(ValueError, match="immutable"):
         store.put(identity, _report(lesson="Conflicting rewrite."))
+
+
+def test_equivalent_as_of_instants_share_one_historical_identity_key() -> None:
+    database = FakeDatabase()
+    store = _store(database)
+    utc_identity = _identity(artifact_version="report-v1", decision_version="v5")
+    offset_identity = utc_identity.model_copy(
+        update={"as_of": NOW.astimezone(timezone(timedelta(hours=-4)))}
+    )
+
+    store.put(utc_identity, _report())
+
+    assert store.get(offset_identity) == _report()
+    assert len(database.artifacts) == 1
+
+
+def test_precanonicalization_offset_key_remains_readable_without_duplicate_write() -> None:
+    database = FakeDatabase()
+    store = _store(database)
+    utc_identity = _identity(artifact_version="report-v1", decision_version="v5")
+    offset_identity = utc_identity.model_copy(
+        update={"as_of": NOW.astimezone(timezone(timedelta(hours=-4)))}
+    )
+    report = _report()
+    legacy_key = _legacy_key(offset_identity)
+    database.artifacts[legacy_key] = {
+        "artifact_key": legacy_key,
+        "league_id": offset_identity.league_id,
+        "transaction_id": offset_identity.transaction_id,
+        "artifact_kind": offset_identity.artifact_kind.value,
+        "artifact_version": offset_identity.artifact_version,
+        "as_of": offset_identity.as_of,
+        "dependency_fingerprint": offset_identity.dependency_fingerprint,
+        "identity_payload": offset_identity.model_dump(mode="json"),
+        "report_payload": report.model_dump(mode="json"),
+    }
+
+    assert store.get(utc_identity) == report
+    store.put(utc_identity, report)
+    assert len(database.artifacts) == 1
+    assert legacy_key in database.artifacts
 
 
 def test_dependency_invalidation_removes_only_matching_derived_version() -> None:
@@ -227,3 +296,4 @@ def test_historical_sync_checkpoint_survives_restart_and_never_moves_backward() 
                 provider_cursor="cursor-6",
             )
         )
+    assert restarted.get_checkpoint("sleeper:123", "sleeper") == checkpoint

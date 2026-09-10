@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import json
+from threading import Lock
 from typing import Iterable
 
 from .models import OwnerBehaviorEvent, OwnerBehaviorProfile
+
+
+_RLS_BOOTSTRAP_LOCK = Lock()
+_RLS_BOOTSTRAPPED_DATABASE_URLS: set[str] = set()
 
 
 class PostgresBehavioralIntelligenceStore:
@@ -89,6 +94,20 @@ class PostgresBehavioralIntelligenceStore:
                 )
                 """
             )
+            # Hosted startup intentionally supports deploy-before-migration. Apply the
+            # same deny-by-default RLS protection as migration _007, but only once per
+            # database URL in this process. Failed bootstrap attempts are not cached,
+            # so a later construction retries rather than silently assuming protection.
+            with _RLS_BOOTSTRAP_LOCK:
+                if self._database_url not in _RLS_BOOTSTRAPPED_DATABASE_URLS:
+                    for table_name in (
+                        "behavior_event",
+                        "behavior_profile",
+                        "behavior_season",
+                        "behavior_runtime_context",
+                    ):
+                        cursor.execute(f"alter table fsffl.{table_name} enable row level security")
+                    _RLS_BOOTSTRAPPED_DATABASE_URLS.add(self._database_url)
 
     def put_events(self, events: Iterable[OwnerBehaviorEvent]) -> int:
         inserted = 0

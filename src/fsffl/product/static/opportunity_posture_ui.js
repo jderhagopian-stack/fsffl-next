@@ -5,6 +5,8 @@
   let observerStarted=false;
   let renderQueued=false;
   let applyingWorkspace=false;
+  let canonicalCandidates=null;
+  let canonicalWorkspaceKey=null;
 
   function selectedPosture(){
     try{return localStorage.getItem(STORAGE_KEY)||DEFAULT}catch(_){return DEFAULT}
@@ -14,8 +16,21 @@
     try{localStorage.setItem(STORAGE_KEY,value)}catch(_){}
   }
 
-  function orderedCandidates(discovery,view){
-    const canonical=Array.isArray(discovery?.candidates)?discovery.candidates:[];
+  function workspaceKey(payload){
+    return `${payload?.league_state_id||''}|${payload?.focal_team_id||''}|${payload?.as_of||''}`;
+  }
+
+  function canonicalCandidatesFor(payload,discovery){
+    const key=workspaceKey(payload);
+    const freshServerPayload=!discovery?.active_posture;
+    if(freshServerPayload||canonicalWorkspaceKey!==key||!Array.isArray(canonicalCandidates)){
+      canonicalWorkspaceKey=key;
+      canonicalCandidates=Array.isArray(discovery?.candidates)?discovery.candidates:[];
+    }
+    return canonicalCandidates;
+  }
+
+  function orderedCandidates(canonical,view){
     if(Array.isArray(view?.candidate_indices)){
       const ordered=[];
       for(const rawIndex of view.candidate_indices){
@@ -35,13 +50,14 @@
     const view=views[requested]||views[DEFAULT];
     if(!view)return payload;
     latestMeta=view.posture||payload.search_posture||null;
+    const canonical=canonicalCandidatesFor(payload,discovery);
     if(discovery.active_posture===requested&&payload.search_posture===latestMeta)return payload;
     return {
       ...payload,
       search_posture:latestMeta,
       trade_discovery:{
         ...discovery,
-        candidates:orderedCandidates(discovery,view),
+        candidates:orderedCandidates(canonical,view),
         spotlights:view.spotlights||discovery.spotlights,
         active_posture:requested
       }

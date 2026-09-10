@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import Any, cast
 
 from fsffl.product.runtime import (
@@ -36,6 +37,7 @@ def _state(
     as_of: datetime,
     p1_status: PlayerStatus = PlayerStatus.ACTIVE,
     pass_yard_points: float = 0.04,
+    lineup: tuple[LineupRequirement, ...] | None = None,
 ) -> LeagueState:
     provenance = Provenance(source="test", retrieved_at=as_of, effective_at=as_of)
     league = League(
@@ -45,7 +47,7 @@ def _state(
         rules=LeagueRules(
             team_count=2,
             roster_size=1,
-            lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
+            lineup=lineup or (LineupRequirement(slot=RosterSlot.QB, count=1),),
             scoring=(ScoringRule(stat="pass_yd", points=pass_yard_points),),
         ),
     )
@@ -74,8 +76,15 @@ def _state(
     )
 
 
+def _empty_forecast() -> LiveForecastEvidence:
+    return cast(
+        LiveForecastEvidence,
+        SimpleNamespace(raw_forecasts=(), league_scored_forecasts=()),
+    )
+
+
 def _complete_context(state: LeagueState) -> tuple[UserRuntimeContext, object, object, object]:
-    fake_forecast = cast(LiveForecastEvidence, object())
+    fake_forecast = _empty_forecast()
     fake_simulation = cast(Any, object())
     fake_value = cast(Any, object())
     return (
@@ -116,6 +125,18 @@ def test_forecast_input_fingerprint_changes_when_scoring_changes() -> None:
     standard = _state(as_of=BASE)
     changed_scoring = _state(as_of=BASE + timedelta(minutes=5), pass_yard_points=0.05)
     assert forecast_input_fingerprint(standard) != forecast_input_fingerprint(changed_scoring)
+
+
+def test_forecast_input_fingerprint_changes_when_active_lineup_domains_change() -> None:
+    qb_only = _state(as_of=BASE)
+    with_kicker = _state(
+        as_of=BASE + timedelta(minutes=5),
+        lineup=(
+            LineupRequirement(slot=RosterSlot.QB, count=1),
+            LineupRequirement(slot=RosterSlot.K, count=1),
+        ),
+    )
+    assert forecast_input_fingerprint(qb_only) != forecast_input_fingerprint(with_kicker)
 
 
 def test_same_material_state_preserves_completed_intelligence_and_team_selection() -> None:
@@ -166,3 +187,26 @@ def test_forecast_input_change_invalidates_forecast_and_downstream_intelligence(
     assert returned.value_evidence is None
     assert returned.selected_team_id == "team:a"
     assert returned.intelligence_reused is False
+
+
+def test_older_replacement_state_does_not_reuse_future_forecast_evidence() -> None:
+    store = PrivateBetaRuntimeStore()
+    original = _state(as_of=BASE + timedelta(minutes=10))
+    future_observation = SimpleNamespace(as_of=BASE + timedelta(minutes=10))
+    forecast = cast(
+        LiveForecastEvidence,
+        SimpleNamespace(raw_forecasts=(future_observation,), league_scored_forecasts=()),
+    )
+    store._contexts["u"] = UserRuntimeContext(
+        user_id="u",
+        league_state=original,
+        selected_team_id="team:a",
+        forecast_evidence=forecast,
+    )
+    replacement = _state(as_of=BASE, p1_status=PlayerStatus.INJURED)
+
+    returned = store.set_league_state("u", replacement)
+
+    assert forecast_input_fingerprint(original) == forecast_input_fingerprint(replacement)
+    assert returned.league_state is replacement
+    assert returned.forecast_evidence is None

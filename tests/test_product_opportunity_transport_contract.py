@@ -23,7 +23,7 @@ def test_posture_observer_is_scoped_to_opportunity_surface() -> None:
     assert "attributeFilter:['hidden','class']" not in source
 
 
-def test_posture_transport_reuses_one_canonical_candidate_collection() -> None:
+def test_posture_transport_reuses_one_immutable_canonical_candidate_collection() -> None:
     server = Path("src/fsffl/product/opportunity_workspace.py").read_text()
     client = Path("src/fsffl/product/static/opportunity_posture_ui.js").read_text()
 
@@ -32,3 +32,8 @@ def test_posture_transport_reuses_one_canonical_candidate_collection() -> None:
     assert "candidate_indices" in client
     assert "canonical[index]" in client
     assert "view?.candidates" in client
+    assert "let canonicalCandidates=null" in client
+    assert "let canonicalWorkspaceKey=null" in client
+    assert "canonicalCandidatesFor" in client
+    assert "const freshServerPayload=!discovery?.active_posture" in client
+    assert "candidates:orderedCandidates(canonical,view)" in client

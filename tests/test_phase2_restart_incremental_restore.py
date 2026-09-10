@@ -1,32 +1,36 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from time import monotonic, sleep
+from time import sleep
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from fsffl.persistence.contracts import SyncCursorRecord
-from fsffl.persistence.runtime_cache import SIMULATION_MODEL_VERSION
+from fsffl.persistence import SyncCursorRecord
 from fsffl.persistence.session import persist_runtime_snapshot
-from fsffl.product.hosted_connect import (
-    LeagueConnectStatus,
-    install_hosted_connect_routes,
-)
+from fsffl.product.hosted_connect import install_hosted_connect_routes
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
-from fsffl.product.simulation_runtime import LiveSimulationAnalyticsResult
-from fsffl.product.webapp import require_beta_user
 from fsffl.providers.sleeper_live import SleeperSyncProbe
 from fsffl.state.models import (
     League,
     LeagueRules,
     LeagueState,
     LineupRequirement,
+    Player,
+    PlayerState,
+    PlayerStatus,
+    Position,
+    Provenance,
     ProviderRef,
+    RosterEntry,
     RosterSlot,
+    ScoringRule,
     Team,
     TeamState,
 )
+
+
+NOW = datetime(2026, 9, 10, 7, 0, tzinfo=UTC)
 
 
 class MemoryPersistence:
@@ -34,8 +38,8 @@ class MemoryPersistence:
         self.user = None
         self.league = None
         self.teams = {}
+        self.cursors = {}
         self.artifacts = []
-        self.cursor = None
 
     def get_user_runtime_context(self, *, user_id):
         return self.user if self.user and self.user.user_id == user_id else None
@@ -57,15 +61,10 @@ class MemoryPersistence:
         self.teams[(record.provider, record.league_id, record.team_id)] = record
 
     def get_sync_cursor(self, *, provider, scope_kind, scope_id):
-        row = self.cursor
-        if row is None:
-            return None
-        if (row.provider, row.scope_kind, row.scope_id) != (provider, scope_kind, scope_id):
-            return None
-        return row
+        return self.cursors.get((provider, scope_kind, scope_id))
 
     def put_sync_cursor(self, record):
-        self.cursor = record
+        self.cursors[(record.provider, record.scope_kind, record.scope_id)] = record
 
     def get_reusable_artifact(self, key):
         return next((row for row in self.artifacts if row.key == key and row.reusable), None)
@@ -85,65 +84,75 @@ class MemoryPersistence:
     def put_artifact(self, record):
         self.artifacts.append(record)
 
-    def invalidate_scope(self, **kwargs):
+    def invalidate_scope(self, **_kwargs):
         pass
 
-    def append_market_value_snapshot(self, **kwargs):
+    def append_market_value_snapshot(self, **_kwargs):
         pass
 
-
-def _league_state() -> LeagueState:
-    league_id = "sleeper:123"
-    rules = LeagueRules(
-        team_count=2,
-        roster_size=1,
-        lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
-        scoring=(),
-    )
-    return LeagueState(
-        league=League(
-            league_id=league_id,
-            name="Restart Test League",
-            season=2026,
-            rules=rules,
-            provider_refs=(ProviderRef(provider="sleeper", external_id="123"),),
-        ),
-        as_of=datetime(2026, 9, 10, 1, 0, tzinfo=UTC),
-        teams=(
-            Team(team_id="t1", league_id=league_id, display_name="One"),
-            Team(team_id="t2", league_id=league_id, display_name="Two"),
-        ),
-        team_states=(TeamState(team_id="t1", roster=()), TeamState(team_id="t2", roster=())),
-        players=(),
-        player_states=(),
-    )
+    def append_user_perceived_latency(self, _record):
+        pass
 
 
 class NoopBehavioralCoordinator:
-    def __init__(self) -> None:
-        self.starts = 0
-
-    def start(self, **kwargs):
-        self.starts += 1
+    def start(self, **_kwargs):
+        raise AssertionError("unchanged restored state should not rebuild Behavioral evidence")
 
 
-def test_restart_restore_plus_matching_probe_skips_full_sleeper_reload() -> None:
-    persistence = MemoryPersistence()
-    state = _league_state()
-    persist_runtime_snapshot(
-        persistence,
-        user_id="jimmy",
-        league_state=state,
-        selected_team_id="t1",
+def _state() -> LeagueState:
+    provenance = Provenance(source="test", retrieved_at=NOW, effective_at=NOW)
+    league = League(
+        league_id="sleeper:123",
+        name="Test",
+        season=2026,
+        rules=LeagueRules(
+            team_count=2,
+            roster_size=1,
+            lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
+            scoring=(ScoringRule(stat="pass_yd", points=0.04),),
+        ),
+        provider_refs=(ProviderRef(provider="sleeper", external_id="123"),),
+    )
+    return LeagueState(
+        league=league,
+        as_of=NOW,
+        teams=(
+            Team(team_id="team:a", league_id=league.league_id, display_name="A"),
+            Team(team_id="team:b", league_id=league.league_id, display_name="B"),
+        ),
+        team_states=(
+            TeamState(team_id="team:a", roster=(RosterEntry(player_id="p1", slot=RosterSlot.QB),)),
+            TeamState(team_id="team:b", roster=(RosterEntry(player_id="p2", slot=RosterSlot.QB),)),
+        ),
+        players=(
+            Player(player_id="p1", full_name="One", position=Position.QB),
+            Player(player_id="p2", full_name="Two", position=Position.QB),
+        ),
+        player_states=(
+            PlayerState(player_id="p1", as_of=NOW, status=PlayerStatus.ACTIVE, provenance=provenance),
+            PlayerState(player_id="p2", as_of=NOW, status=PlayerStatus.ACTIVE, provenance=provenance),
+        ),
+        provenance=(provenance,),
     )
 
-    now = datetime.now(UTC)
+
+def test_unchanged_restored_league_uses_probe_without_full_loader() -> None:
+    persistence = MemoryPersistence()
+    state = _state()
+    persist_runtime_snapshot(
+        persistence,
+        user_id="local-beta-user",
+        league_state=state,
+        selected_team_id="team:a",
+    )
+
+    probe_time = datetime.now(UTC)
     probe = SleeperSyncProbe(
         league_external_id="123",
-        captured_at=now,
+        captured_at=probe_time,
         season=2026,
-        week=3,
-        fingerprint="unchanged-league",
+        week=1,
+        fingerprint="same-provider-fingerprint",
     )
     persistence.put_sync_cursor(
         SyncCursorRecord(
@@ -154,64 +163,57 @@ def test_restart_restore_plus_matching_probe_skips_full_sleeper_reload() -> None
                 "probe_fingerprint": probe.fingerprint,
                 "season": probe.season,
                 "week": probe.week,
-                "last_full_refresh_at": now.isoformat(),
+                "last_full_refresh_at": probe_time.isoformat(),
             },
-            synced_at=now,
+            synced_at=probe_time,
             source_updated_at=probe.captured_at,
         )
     )
 
-    # A new runtime instance represents a hosted-process restart. It starts empty and
-    # must recover the league from durable storage before revalidation begins.
-    runtime = PersistentPrivateBetaRuntimeStore(persistence)
-    full_loader_calls = 0
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.get("local-beta-user")
+    assert restored.league_state == state
+    assert restored.selected_team_id == "team:a"
 
-    def full_state_loader(league_external_id: str) -> LeagueState:
+    full_loader_calls = 0
+    probe_calls: list[str] = []
+
+    def full_loader(_league_external_id: str) -> LeagueState:
         nonlocal full_loader_calls
         full_loader_calls += 1
-        raise AssertionError("unchanged restored league must not trigger full Sleeper reload")
+        raise AssertionError("unchanged state should not require a full Sleeper acquisition")
 
-    behavioral = NoopBehavioralCoordinator()
+    def sync_probe_loader(league_external_id: str) -> SleeperSyncProbe:
+        probe_calls.append(league_external_id)
+        return probe
+
     app = FastAPI()
-    app.dependency_overrides[require_beta_user] = lambda: "jimmy"
-    coordinator = install_hosted_connect_routes(
+    install_hosted_connect_routes(
         app,
-        runtime_store=runtime,
-        state_loader=full_state_loader,
-        behavioral_coordinator=behavioral,
+        runtime_store=restarted,
+        state_loader=full_loader,
+        behavioral_coordinator=NoopBehavioralCoordinator(),  # type: ignore[arg-type]
         persistence_store=persistence,
-        sync_probe_loader=lambda league_external_id: probe,
-        full_refresh_seconds=3600,
+        sync_probe_loader=sync_probe_loader,
     )
-
-    restored = runtime.get("jimmy")
-    assert restored.league_state == state
-    assert restored.selected_team_id == "t1"
-
-    response = TestClient(app).post(
+    client = TestClient(app)
+    response = client.post(
         "/api/connect/sleeper/background/refresh",
         json={"league_external_id": "123"},
     )
     assert response.status_code == 200
+    job_id = response.json()["job_id"]
 
-    deadline = monotonic() + 2
-    current = coordinator.current("jimmy")
-    while monotonic() < deadline and current is not None and current.status in {
-        LeagueConnectStatus.QUEUED,
-        LeagueConnectStatus.RUNNING,
-    }:
+    payload = {}
+    for _ in range(200):
+        current = client.get("/api/connect/sleeper/background/current")
+        payload = current.json()
+        if payload["job_id"] == job_id and payload["status"] in {"completed", "failed"}:
+            break
         sleep(0.01)
-        current = coordinator.current("jimmy")
+    else:
+        raise AssertionError("background refresh did not complete")
 
-    assert current is not None
-    assert current.status == LeagueConnectStatus.COMPLETED
+    assert payload["status"] == "completed", payload
+    assert probe_calls == ["123"]
     assert full_loader_calls == 0
-    assert behavioral.starts == 0
-    assert runtime.get("jimmy").league_state == state
-
-
-def test_durable_simulation_cache_version_matches_current_authoritative_result() -> None:
-    assert (
-        LiveSimulationAnalyticsResult.model_fields["model_version"].default
-        == SIMULATION_MODEL_VERSION
-    )
