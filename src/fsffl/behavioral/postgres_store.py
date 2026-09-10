@@ -89,6 +89,17 @@ class PostgresBehavioralIntelligenceStore:
                 )
                 """
             )
+            # Hosted startup intentionally supports deploy-before-migration. Apply the
+            # same deny-by-default RLS protection as migration _007 immediately after
+            # each idempotent table bootstrap so that ordering cannot create a window
+            # where browser/client database roles can reach private Behavioral data.
+            for table_name in (
+                "behavior_event",
+                "behavior_profile",
+                "behavior_season",
+                "behavior_runtime_context",
+            ):
+                cursor.execute(f"alter table fsffl.{table_name} enable row level security")
 
     def put_events(self, events: Iterable[OwnerBehaviorEvent]) -> int:
         inserted = 0
