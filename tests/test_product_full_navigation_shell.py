@@ -22,7 +22,7 @@ def test_full_product_navigation_shell_is_exposed() -> None:
 
     for label in (
         "Home",
-        "My Team",
+        "Franchise",
         "Players & Assets",
         "League Comparison",
         "Trade Center",
