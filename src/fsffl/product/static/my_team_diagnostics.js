@@ -24,9 +24,33 @@ function renderFsfflMyTeamDiagnostics(){
 }
 
 (function installFsfflMyTeamDiagnostics(){
-  if(typeof renderMyTeamCommandCenter!=='function')return;
-  const originalRenderMyTeamCommandCenter=renderMyTeamCommandCenter;
-  renderMyTeamCommandCenter=function(){const result=originalRenderMyTeamCommandCenter();renderFsfflMyTeamDiagnostics();return result};
+  let attached=false;
+  function attachDiagnostics(){
+    if(attached||typeof renderMyTeamCommandCenter!=='function')return attached;
+    const originalRenderMyTeamCommandCenter=renderMyTeamCommandCenter;
+    renderMyTeamCommandCenter=function(){const result=originalRenderMyTeamCommandCenter();renderFsfflMyTeamDiagnostics();return result};
+    attached=true;
+    return true;
+  }
+
+  if(!attachDiagnostics()){
+    // My Team is intentionally lazy-loaded by product_shell.js, while this tiny
+    // presentation helper is part of the initial shell. Observe the one global
+    // renderer assignment that marks the lazy module as ready, attach once, then
+    // restore an ordinary writable property so there is no lasting interception.
+    let lazyRenderer=window.renderFsfflMyTeam;
+    Object.defineProperty(window,'renderFsfflMyTeam',{
+      configurable:true,
+      enumerable:true,
+      get(){return lazyRenderer},
+      set(value){
+        lazyRenderer=value;
+        if(!attachDiagnostics())return;
+        Object.defineProperty(window,'renderFsfflMyTeam',{configurable:true,enumerable:true,writable:true,value:lazyRenderer});
+      }
+    });
+  }
+
   const style=document.createElement('style');style.id='fsffl-my-team-diagnostics-style';style.textContent=`.my-team-driver-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.my-team-driver-heading h3{margin:3px 0}.my-team-driver-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.my-team-driver-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#0a1120;min-width:0}.my-team-driver-card h4{margin:3px 0 8px}.my-team-driver-card>strong{display:block;font-size:1.15rem;line-height:1.25;margin-bottom:7px;overflow-wrap:anywhere}.my-team-driver-card>p:last-child{color:var(--muted);font-size:12px;line-height:1.45;margin-bottom:0}@media(max-width:760px){.my-team-driver-heading{display:grid}.my-team-driver-grid{grid-template-columns:1fr}.my-team-driver-card{padding:13px}}`;document.head.appendChild(style);
 })();
 window.renderFsfflMyTeamDiagnostics=renderFsfflMyTeamDiagnostics;
