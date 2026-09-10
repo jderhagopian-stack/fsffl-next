@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from time import sleep
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from fsffl.persistence.memory import InMemoryPersistenceStore
+from fsffl.persistence import SyncCursorRecord
+from fsffl.persistence.session import persist_runtime_snapshot
 from fsffl.product.hosted_connect import install_hosted_connect_routes
-from fsffl.product.persistent_runtime import PersistentBetaRuntimeStore
-from fsffl.product.runtime import UserRuntimeContext
-from fsffl.product.sync_cursor import SleeperSyncProbe
+from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
+from fsffl.providers.sleeper_live import SleeperSyncProbe
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -29,6 +31,72 @@ from fsffl.state.models import (
 
 
 NOW = datetime(2026, 9, 10, 7, 0, tzinfo=UTC)
+
+
+class MemoryPersistence:
+    def __init__(self) -> None:
+        self.user = None
+        self.league = None
+        self.teams = {}
+        self.cursors = {}
+        self.artifacts = []
+
+    def get_user_runtime_context(self, *, user_id):
+        return self.user if self.user and self.user.user_id == user_id else None
+
+    def put_user_runtime_context(self, record):
+        self.user = record
+
+    def get_league_snapshot(self, *, provider, league_id, season):
+        row = self.league
+        return row if row and (row.provider, row.league_id, row.season) == (provider, league_id, season) else None
+
+    def put_league_snapshot(self, record):
+        self.league = record
+
+    def get_team_snapshot(self, *, provider, league_id, team_id):
+        return self.teams.get((provider, league_id, team_id))
+
+    def put_team_snapshot(self, record):
+        self.teams[(record.provider, record.league_id, record.team_id)] = record
+
+    def get_sync_cursor(self, *, provider, scope_kind, scope_id):
+        return self.cursors.get((provider, scope_kind, scope_id))
+
+    def put_sync_cursor(self, record):
+        self.cursors[(record.provider, record.scope_kind, record.scope_id)] = record
+
+    def get_reusable_artifact(self, key):
+        return next((row for row in self.artifacts if row.key == key and row.reusable), None)
+
+    def get_latest_reusable_artifact(self, *, artifact_kind, scope_kind, scope_id, model_version):
+        rows = [
+            row
+            for row in self.artifacts
+            if row.reusable
+            and row.key.artifact_kind == artifact_kind
+            and row.key.scope_kind == scope_kind
+            and row.key.scope_id == scope_id
+            and row.key.model_version == model_version
+        ]
+        return max(rows, key=lambda row: row.computed_at) if rows else None
+
+    def put_artifact(self, record):
+        self.artifacts.append(record)
+
+    def invalidate_scope(self, **_kwargs):
+        pass
+
+    def append_market_value_snapshot(self, **_kwargs):
+        pass
+
+    def append_user_perceived_latency(self, _record):
+        pass
+
+
+class NoopBehavioralCoordinator:
+    def start(self, **_kwargs):
+        raise AssertionError("unchanged restored state should not rebuild Behavioral evidence")
 
 
 def _state() -> LeagueState:
@@ -69,24 +137,41 @@ def _state() -> LeagueState:
 
 
 def test_unchanged_restored_league_uses_probe_without_full_loader() -> None:
-    persistence = InMemoryPersistenceStore()
-    runtime = PersistentBetaRuntimeStore(persistence_store=persistence)
+    persistence = MemoryPersistence()
     state = _state()
-    runtime.set_league_state("jimmy", state)
-    runtime.select_team("jimmy", "team:a")
+    persist_runtime_snapshot(
+        persistence,
+        user_id="local-beta-user",
+        league_state=state,
+        selected_team_id="team:a",
+    )
 
+    probe_time = datetime.now(UTC)
     probe = SleeperSyncProbe(
         league_external_id="123",
+        captured_at=probe_time,
         season=2026,
         week=1,
         fingerprint="same-provider-fingerprint",
-        observed_at=NOW,
     )
-    persistence.put_sleeper_sync_cursor("jimmy", probe.to_record())
+    persistence.put_sync_cursor(
+        SyncCursorRecord(
+            provider="sleeper",
+            scope_kind="league_refresh",
+            scope_id="123",
+            cursor_payload={
+                "probe_fingerprint": probe.fingerprint,
+                "season": probe.season,
+                "week": probe.week,
+                "last_full_refresh_at": probe_time.isoformat(),
+            },
+            synced_at=probe_time,
+            source_updated_at=probe.captured_at,
+        )
+    )
 
-    restarted = PersistentBetaRuntimeStore(persistence_store=persistence)
-    restored = restarted.restore("jimmy")
-    assert restored is not None
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.get("local-beta-user")
     assert restored.league_state == state
     assert restored.selected_team_id == "team:a"
 
@@ -102,28 +187,33 @@ def test_unchanged_restored_league_uses_probe_without_full_loader() -> None:
         probe_calls.append(league_external_id)
         return probe
 
-    from fastapi import FastAPI
-
     app = FastAPI()
     install_hosted_connect_routes(
         app,
-        store=restarted,
+        runtime_store=restarted,
         state_loader=full_loader,
+        behavioral_coordinator=NoopBehavioralCoordinator(),  # type: ignore[arg-type]
+        persistence_store=persistence,
         sync_probe_loader=sync_probe_loader,
     )
     client = TestClient(app)
-    response = client.post("/api/connect/sleeper/background/refresh", json={"league_id": "123"})
+    response = client.post(
+        "/api/connect/sleeper/background/refresh",
+        json={"league_external_id": "123"},
+    )
     assert response.status_code == 200
     job_id = response.json()["job_id"]
 
-    for _ in range(100):
+    payload = {}
+    for _ in range(200):
         current = client.get("/api/connect/sleeper/background/current")
         payload = current.json()
-        if payload["job_id"] == job_id and payload["status"] in {"succeeded", "failed"}:
+        if payload["job_id"] == job_id and payload["status"] in {"completed", "failed"}:
             break
+        sleep(0.01)
     else:
         raise AssertionError("background refresh did not complete")
 
-    assert payload["status"] == "succeeded", payload
+    assert payload["status"] == "completed", payload
     assert probe_calls == ["123"]
     assert full_loader_calls == 0
