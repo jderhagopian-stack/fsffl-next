@@ -14,6 +14,19 @@
     try{localStorage.setItem(STORAGE_KEY,value)}catch(_){}
   }
 
+  function orderedCandidates(discovery,view){
+    const canonical=Array.isArray(discovery?.candidates)?discovery.candidates:[];
+    if(Array.isArray(view?.candidate_indices)){
+      const ordered=[];
+      for(const rawIndex of view.candidate_indices){
+        const index=Number(rawIndex);
+        if(Number.isInteger(index)&&index>=0&&index<canonical.length)ordered.push(canonical[index]);
+      }
+      if(ordered.length===view.candidate_indices.length)return ordered;
+    }
+    return Array.isArray(view?.candidates)?view.candidates:canonical;
+  }
+
   function applyServerPostureView(payload){
     const discovery=payload&&payload.trade_discovery;
     const views=discovery&&discovery.posture_views;
@@ -28,7 +41,7 @@
       search_posture:latestMeta,
       trade_discovery:{
         ...discovery,
-        candidates:Array.isArray(view.candidates)?view.candidates:discovery.candidates,
+        candidates:orderedCandidates(discovery,view),
         spotlights:view.spotlights||discovery.spotlights,
         active_posture:requested
       }
