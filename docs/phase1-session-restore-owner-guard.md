@@ -1,1 +1,0 @@
-This guard note exists only to document the Phase 1 invariant that provider-facing restore/revalidation has one owner. The executable regression is in `tests/test_product_single_session_restore_owner.py`.
