@@ -90,6 +90,49 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def forecast_input_fingerprint(league_state: LeagueState) -> str:
+    """Hash only canonical State inputs consumed by the current forecast runtime.
+
+    Forecast acquisition/normalization depends on the season and canonical player
+    identity/team mapping. League scoring and the derived fantasy-regular-season
+    horizon additionally depend on scoring rules, the configured/scheduled fantasy
+    weeks, and NFL bye state. Roster ownership, draft-pick ownership, team labels,
+    FAAB, matchup scores, age and player availability status are intentionally not
+    forecast inputs; those facts remain free to invalidate Simulation, Value and
+    downstream Decision outputs through the broader material fingerprint.
+    """
+
+    rules = league_state.league.rules
+    payload = {
+        "schema_version": league_state.schema_version,
+        "season": league_state.league.season,
+        "scoring": [
+            rule.model_dump(mode="json")
+            for rule in sorted(rules.scoring, key=lambda item: (item.stat, item.points))
+        ],
+        "fantasy_regular_season_end_week": rules.fantasy_regular_season_end_week,
+        "matchup_weeks": sorted({matchup.week for matchup in league_state.matchups}),
+        "players": [
+            {
+                "player_id": player.player_id,
+                "full_name": player.full_name,
+                "position": player.position.value,
+                "nfl_team": player.nfl_team,
+            }
+            for player in sorted(league_state.players, key=lambda item: item.player_id)
+        ],
+        "nfl_team_byes": [
+            {"season": bye.season, "nfl_team": bye.nfl_team, "week": bye.week}
+            for bye in sorted(
+                league_state.nfl_team_byes,
+                key=lambda item: (item.season, item.nfl_team),
+            )
+        ],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 @dataclass(frozen=True)
 class LiveForecastEvidence:
     """Product-runtime handle to authoritative NEXT-2 current forecast output."""
@@ -228,10 +271,19 @@ class PrivateBetaRuntimeStore:
                 self._contexts[user_id] = reused
                 return reused
 
+            forecast_reusable = (
+                same_league
+                and current.league_state is not None
+                and current.forecast_evidence is not None
+                and user_id not in self._pending_intelligence
+                and forecast_input_fingerprint(current.league_state)
+                == forecast_input_fingerprint(league_state)
+            )
             context = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
                 selected_team_id=selected if same_league else None,
+                forecast_evidence=current.forecast_evidence if forecast_reusable else None,
             )
             self._contexts[user_id] = context
             if not same_league:
