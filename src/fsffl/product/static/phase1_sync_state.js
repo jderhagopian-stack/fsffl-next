@@ -35,4 +35,8 @@
   }
   installStyles();
   window.fsfflSyncState={set,clear};
+  window.addEventListener('fsffl:sync-state',event=>{
+    const detail=event.detail||{};
+    if(detail.state)set(detail.state,detail.message||null);
+  });
 })();
