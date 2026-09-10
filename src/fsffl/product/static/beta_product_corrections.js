@@ -27,7 +27,7 @@
   let observer=null;
   let refreshQueued=false;
   let refreshing=false;
-  const observe=()=>observer?.observe(document.body,{childList:true,subtree:true});
+  const observe=()=>{const root=document.querySelector('#screen');if(root)observer?.observe(root,{childList:true,subtree:true})};
   function safeRefresh(){
     if(refreshing)return;
     refreshing=true;
