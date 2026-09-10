@@ -6,6 +6,7 @@ from threading import RLock
 
 from fsffl.persistence import PersistenceStore, persistence_store_from_env
 from fsffl.persistence.session import persist_runtime_snapshot, restore_runtime_snapshot
+from fsffl.state.history import StateSnapshotStore
 
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
@@ -22,13 +23,19 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     Hosted latency rule: persistence never sits on the user-request path. Canonical
     league State is checkpointed as soon as it is usable, and richer Forecast /
     Simulation / Value checkpoints follow in mutation order on one serialized worker.
-    This lets a successfully loaded league survive a web-service restart without making
-    Connect League wait for Postgres serialization.
+    The same worker may also retain exact canonical State snapshots in the State-history
+    store; that history is read-only persistence of State authority, never reconstruction.
     """
 
-    def __init__(self, persistence_store: PersistenceStore | None = None) -> None:
+    def __init__(
+        self,
+        persistence_store: PersistenceStore | None = None,
+        *,
+        state_snapshot_store: StateSnapshotStore | None = None,
+    ) -> None:
         super().__init__()
         self._persistence = persistence_store if persistence_store is not None else persistence_store_from_env()
+        self._state_history = state_snapshot_store
         self._restore_lock = RLock()
         self._restore_attempted: set[str] = set()
         self._checkpoint_executor = ThreadPoolExecutor(
@@ -41,26 +48,35 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return self._persistence is not None
 
     def _persist_context(self, user_id: str, context: UserRuntimeContext) -> None:
-        if self._persistence is None or context.league_state is None:
+        if context.league_state is None:
             return
-        try:
-            persist_runtime_snapshot(
-                self._persistence,
-                user_id=user_id,
-                league_state=context.league_state,
-                selected_team_id=context.selected_team_id,
-                forecast_evidence=context.forecast_evidence,
-                simulation_analytics=context.simulation_analytics,
-                value_evidence=context.value_evidence,
-            )
-        except Exception as exc:  # persistence must not break authoritative runtime
-            _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
+        if self._persistence is not None:
+            try:
+                persist_runtime_snapshot(
+                    self._persistence,
+                    user_id=user_id,
+                    league_state=context.league_state,
+                    selected_team_id=context.selected_team_id,
+                    forecast_evidence=context.forecast_evidence,
+                    simulation_analytics=context.simulation_analytics,
+                    value_evidence=context.value_evidence,
+                )
+            except Exception as exc:  # persistence must not break authoritative runtime
+                _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
+        if self._state_history is not None:
+            try:
+                self._state_history.save(context.league_state)
+            except Exception as exc:  # history retention must also fail open
+                _logger.warning("FSFFL State history checkpoint failed user=%s error=%s", user_id, exc)
 
     def _checkpoint_async(self, user_id: str, context: UserRuntimeContext) -> None:
-        if self._persistence is None or context.league_state is None:
+        if context.league_state is None or (
+            self._persistence is None and self._state_history is None
+        ):
             return
         # One worker is deliberate: an earlier state-only snapshot can never finish
-        # after and overwrite a later, richer intelligence snapshot.
+        # after and overwrite a later, richer intelligence snapshot. State-history
+        # retention follows the same mutation order.
         self._checkpoint_executor.submit(self._persist_context, user_id, context)
 
     def _restore_once(self, user_id: str) -> None:
