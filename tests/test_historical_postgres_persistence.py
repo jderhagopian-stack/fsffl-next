@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
@@ -108,19 +108,19 @@ class FakeCursor:
             if row:
                 self.rows = [dict(row)]
             return
-        if normalized.startswith("select last_completed_at from fsffl.historical_sync_checkpoint"):
-            row = self.database.checkpoints.get((params[0], params[1]))
-            if row:
-                self.rows = [{"last_completed_at": row["last_completed_at"]}]
-            return
         if normalized.startswith("insert into fsffl.historical_sync_checkpoint"):
-            self.database.checkpoints[(params[0], params[1])] = {
+            key = (params[0], params[1])
+            previous = self.database.checkpoints.get(key)
+            if previous is not None and params[2] < previous["last_completed_at"]:
+                return
+            self.database.checkpoints[key] = {
                 "league_id": params[0],
                 "provider": params[1],
                 "last_completed_at": params[2],
                 "provider_cursor": params[3],
                 "model_version": params[4],
             }
+            self.rows = [{"last_completed_at": params[2]}]
             return
         raise AssertionError(f"unexpected SQL: {normalized}")
 
@@ -182,6 +182,20 @@ def test_historical_report_round_trips_under_exact_immutable_identity() -> None:
         store.put(identity, _report(lesson="Conflicting rewrite."))
 
 
+def test_equivalent_as_of_instants_share_one_historical_identity_key() -> None:
+    database = FakeDatabase()
+    store = _store(database)
+    utc_identity = _identity(artifact_version="report-v1", decision_version="v5")
+    offset_identity = utc_identity.model_copy(
+        update={"as_of": NOW.astimezone(timezone(timedelta(hours=-4)))}
+    )
+
+    store.put(utc_identity, _report())
+
+    assert store.get(offset_identity) == _report()
+    assert len(database.artifacts) == 1
+
+
 def test_dependency_invalidation_removes_only_matching_derived_version() -> None:
     database = FakeDatabase()
     store = _store(database)
@@ -227,3 +241,4 @@ def test_historical_sync_checkpoint_survives_restart_and_never_moves_backward() 
                 provider_cursor="cursor-6",
             )
         )
+    assert restarted.get_checkpoint("sleeper:123", "sleeper") == checkpoint
