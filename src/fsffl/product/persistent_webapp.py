@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 
-from fsffl.persistence import persistence_store_from_env
+from fsffl.persistence import persistence_store_from_env, state_snapshot_store_from_env
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
 from .behavioral_runtime import BehavioralRuntimeCoordinator
@@ -20,7 +20,11 @@ from .webapp import create_app
 logging.getLogger("fsffl.product.performance").setLevel(logging.INFO)
 
 _persistence_store = persistence_store_from_env()
-_runtime_store = PersistentPrivateBetaRuntimeStore(_persistence_store)
+_state_snapshot_store = state_snapshot_store_from_env()
+_runtime_store = PersistentPrivateBetaRuntimeStore(
+    _persistence_store,
+    state_snapshot_store=_state_snapshot_store,
+)
 _behavioral_coordinator = BehavioralRuntimeCoordinator(max_workers=2)
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
