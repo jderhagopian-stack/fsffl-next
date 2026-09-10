@@ -95,6 +95,21 @@ class UserRuntimeContextRecord:
 
 
 @dataclass(frozen=True)
+class UserPerceivedLatencyRecord:
+    user_id: str
+    operation: str
+    elapsed_ms: float
+    outcome: str
+    observed_at: datetime
+    detail: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_aware(self.observed_at, field="observed_at")
+        if self.elapsed_ms < 0:
+            raise ValueError("elapsed_ms cannot be negative")
+
+
+@dataclass(frozen=True)
 class ArtifactKey:
     artifact_kind: str
     scope_kind: str
@@ -187,6 +202,8 @@ class PersistenceStore(Protocol):
         source_lineage: JsonMapping,
         recorded_at: datetime | None = None,
     ) -> None: ...
+
+    def append_user_perceived_latency(self, record: UserPerceivedLatencyRecord) -> None: ...
 
 
 def utc_now() -> datetime:
