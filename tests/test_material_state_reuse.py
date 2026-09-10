@@ -7,6 +7,7 @@ from fsffl.product.runtime import (
     LiveForecastEvidence,
     PrivateBetaRuntimeStore,
     UserRuntimeContext,
+    forecast_input_fingerprint,
     league_material_fingerprint,
 )
 from fsffl.state.models import (
@@ -30,7 +31,12 @@ from fsffl.state.models import (
 BASE = datetime(2026, 9, 9, 12, 0, tzinfo=UTC)
 
 
-def _state(*, as_of: datetime, p1_status: PlayerStatus = PlayerStatus.ACTIVE) -> LeagueState:
+def _state(
+    *,
+    as_of: datetime,
+    p1_status: PlayerStatus = PlayerStatus.ACTIVE,
+    pass_yard_points: float = 0.04,
+) -> LeagueState:
     provenance = Provenance(source="test", retrieved_at=as_of, effective_at=as_of)
     league = League(
         league_id="league:test",
@@ -40,7 +46,7 @@ def _state(*, as_of: datetime, p1_status: PlayerStatus = PlayerStatus.ACTIVE) ->
             team_count=2,
             roster_size=1,
             lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
-            scoring=(ScoringRule(stat="pass_yd", points=0.04),),
+            scoring=(ScoringRule(stat="pass_yd", points=pass_yard_points),),
         ),
     )
     teams = (
@@ -100,6 +106,18 @@ def test_material_fingerprint_changes_when_player_status_changes() -> None:
     assert league_material_fingerprint(active) != league_material_fingerprint(injured)
 
 
+def test_forecast_input_fingerprint_ignores_status_and_snapshot_time() -> None:
+    active = _state(as_of=BASE)
+    injured = _state(as_of=BASE + timedelta(minutes=5), p1_status=PlayerStatus.INJURED)
+    assert forecast_input_fingerprint(active) == forecast_input_fingerprint(injured)
+
+
+def test_forecast_input_fingerprint_changes_when_scoring_changes() -> None:
+    standard = _state(as_of=BASE)
+    changed_scoring = _state(as_of=BASE + timedelta(minutes=5), pass_yard_points=0.05)
+    assert forecast_input_fingerprint(standard) != forecast_input_fingerprint(changed_scoring)
+
+
 def test_same_material_state_preserves_completed_intelligence_and_team_selection() -> None:
     store = PrivateBetaRuntimeStore()
     original = _state(as_of=BASE)
@@ -116,12 +134,29 @@ def test_same_material_state_preserves_completed_intelligence_and_team_selection
     assert returned.intelligence_reused is True
 
 
-def test_material_change_invalidates_completed_intelligence_but_preserves_team_selection() -> None:
+def test_forecast_compatible_material_change_preserves_forecast_only() -> None:
+    store = PrivateBetaRuntimeStore()
+    original = _state(as_of=BASE)
+    context, fake_forecast, _, _ = _complete_context(original)
+    store._contexts["u"] = context
+    changed = _state(as_of=BASE + timedelta(minutes=5), p1_status=PlayerStatus.INJURED)
+
+    returned = store.set_league_state("u", changed)
+
+    assert returned.league_state is changed
+    assert returned.forecast_evidence is fake_forecast
+    assert returned.simulation_analytics is None
+    assert returned.value_evidence is None
+    assert returned.selected_team_id == "team:a"
+    assert returned.intelligence_reused is False
+
+
+def test_forecast_input_change_invalidates_forecast_and_downstream_intelligence() -> None:
     store = PrivateBetaRuntimeStore()
     original = _state(as_of=BASE)
     context, _, _, _ = _complete_context(original)
     store._contexts["u"] = context
-    changed = _state(as_of=BASE + timedelta(minutes=5), p1_status=PlayerStatus.INJURED)
+    changed = _state(as_of=BASE + timedelta(minutes=5), pass_yard_points=0.05)
 
     returned = store.set_league_state("u", changed)
 
