@@ -12,6 +12,26 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   let activeOperation=null;
   let activeConnectPromise=null;
 
+  const now=()=>window.performance?.now?.()??Date.now();
+  const recordLatency=(operation,started,outcome='success',detail=null)=>{
+    const elapsed=Math.max(0,now()-started);
+    fetch('/api/performance/latency',{
+      method:'POST',
+      headers:{'Accept':'application/json','Content-Type':'application/json'},
+      body:JSON.stringify({operation,elapsed_ms:elapsed,outcome,detail}),
+      keepalive:true,
+    }).catch(()=>{});
+  };
+  const loadLatencyObserver=()=>{
+    if(document.querySelector('script[data-fsffl-phase1-latency]'))return;
+    const script=document.createElement('script');
+    script.src='/static/phase1_latency.js?v=20260909-phase1-latency1';
+    script.defer=true;
+    script.dataset.fsfflPhase1Latency='true';
+    document.head.appendChild(script);
+  };
+  loadLatencyObserver();
+
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const isTransportError=error=>/Load failed|Failed to fetch|Network request failed|network error/i.test(String(error?.message||''));
   const contextMatchesLeague=(context,leagueId)=>context?.league_id===`sleeper:${leagueId}`;
@@ -136,6 +156,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     if(restoreInFlight)return false;
     const leagueId=localStorage.getItem(LEAGUE_KEY);
     if(!leagueId)return false;
+    const started=now();
     restoreInFlight=true;
     try{
       // Stale-while-revalidate: let the durable runtime restore itself and render
@@ -145,6 +166,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         context=await restoreSelectedTeam(context);
         applyConnectedContext(context);
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
+        recordLatency('restore_ready',started,'success','durable_restore');
         void refreshStoredLeague(leagueId,context.state_id);
         return true;
       }
@@ -155,8 +177,10 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       context=await restoreSelectedTeam(context);
       applyConnectedContext(context);
       if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
+      recordLatency('restore_ready',started,'success','provider_fallback');
       return true;
     }catch(error){
+      recordLatency('restore_ready',started,'failed',String(error?.message||error));
       console.error('Unable to restore previous FSFFL session',error);
       return false;
     }finally{
@@ -169,6 +193,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     const leagueId=window.prompt('Enter your Sleeper league ID');
     if(!leagueId?.trim())return;
     const normalized=leagueId.trim();
+    const started=now();
     localStorage.setItem(LEAGUE_KEY,normalized);
     interactiveConnectInFlight=true;
     const button=document.querySelector('#connect-button');
@@ -179,7 +204,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         if(button)button.textContent=job?.status==='running'?'Loading league…':'Starting import…';
       },'connect');
       applyConnectedContext(context);
+      recordLatency('first_connect_ready',started,'success');
     }catch(error){
+      recordLatency('first_connect_ready',started,'failed',String(error?.message||error));
       window.alert(`Could not connect league: ${error.message}`);
     }finally{
       interactiveConnectInFlight=false;
