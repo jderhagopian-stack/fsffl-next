@@ -24,10 +24,11 @@
   ];
   const ALL=[...PRIMARY,...DECISIONS,...SCENARIOS,...EXPLORE];
   let installed=false;
+  let moreReturnFocus=null;
 
   function esc(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
   function routeMeta(route){return ALL.find(item=>item.route===route)||{route,label:String(route||'FSFFL NEXT'),question:'Decision intelligence for your league.'}}
-  function hasTeam(){return Boolean(window.state?.context?.team_id)}
+  function hasTeam(){return Boolean(state?.context?.team_id)}
   function locked(item){return Boolean(item.teamScoped&&!hasTeam())}
   function icon(name){
     const paths={
@@ -46,8 +47,8 @@
     };
     return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]||paths.more}</svg>`;
   }
-  function go(route){closeMore();if(typeof window.setRoute==='function')window.setRoute(route)}
-  function desktopButton(item){const isActive=window.state?.route===item.route,isLocked=locked(item);return `<button type="button" class="nav-item product-nav-item${isActive?' active':''}${isLocked?' locked':''}" data-product-route="${esc(item.route)}" ${isLocked?'disabled':''} ${isActive?'aria-current="page"':''}>${icon(item.icon)}<span><strong>${esc(item.label)}</strong>${item.question?`<small>${esc(item.question)}</small>`:''}</span></button>`}
+  function go(route){closeMore(false);if(typeof window.setRoute==='function')window.setRoute(route)}
+  function desktopButton(item){const isActive=state?.route===item.route,isLocked=locked(item);return `<button type="button" class="nav-item product-nav-item${isActive?' active':''}${isLocked?' locked':''}" data-product-route="${esc(item.route)}" ${isLocked?'disabled':''} ${isActive?'aria-current="page"':''}>${icon(item.icon)}<span><strong>${esc(item.label)}</strong>${item.question?`<small>${esc(item.question)}</small>`:''}</span></button>`}
   function renderDesktop(){
     const nav=document.querySelector('#primary-nav');if(!nav)return;
     nav.className='nav-list product-desktop-nav';
@@ -57,29 +58,30 @@
   function moreRow(item){const isLocked=locked(item);return `<button type="button" class="product-more-row" data-product-more-route="${esc(item.route)}" ${isLocked?'disabled':''}>${icon(item.icon)}<span><strong>${esc(item.label)}</strong><small>${esc(isLocked?'Select a managed franchise first.':item.description||'')}</small></span><b aria-hidden="true">›</b></button>`}
   function ensureMore(){
     let backdrop=document.querySelector('#product-more-backdrop');
-    if(!backdrop){backdrop=document.createElement('div');backdrop.id='product-more-backdrop';backdrop.className='product-more-backdrop';backdrop.hidden=true;backdrop.addEventListener('click',closeMore);document.body.appendChild(backdrop)}
+    if(!backdrop){backdrop=document.createElement('div');backdrop.id='product-more-backdrop';backdrop.className='product-more-backdrop';backdrop.hidden=true;backdrop.addEventListener('click',()=>closeMore());document.body.appendChild(backdrop)}
     let sheet=document.querySelector('#product-more-sheet');
     if(!sheet){sheet=document.createElement('section');sheet.id='product-more-sheet';sheet.className='product-more-sheet';sheet.hidden=true;sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label','More FSFFL destinations');document.body.appendChild(sheet)}
     sheet.innerHTML=`<div class="product-more-handle" aria-hidden="true"></div><div class="product-more-head"><div><p class="eyebrow">More</p><h2>Decide, explore, investigate.</h2></div><button type="button" class="icon-button" data-product-more-close aria-label="Close More menu">×</button></div><div class="product-more-group"><span>Decision tools</span>${DECISIONS.map(moreRow).join('')}</div><div class="product-more-group"><span>Scenarios</span>${SCENARIOS.map(moreRow).join('')}</div><div class="product-more-group"><span>Explore</span>${EXPLORE.map(moreRow).join('')}</div>`;
-    sheet.querySelector('[data-product-more-close]')?.addEventListener('click',closeMore);
+    sheet.querySelector('[data-product-more-close]')?.addEventListener('click',()=>closeMore());
     sheet.querySelectorAll('[data-product-more-route]').forEach(button=>button.addEventListener('click',()=>{if(!button.disabled)go(button.dataset.productMoreRoute)}));
     return sheet;
   }
-  function openMore(){const sheet=ensureMore(),backdrop=document.querySelector('#product-more-backdrop');if(backdrop)backdrop.hidden=false;sheet.hidden=false;requestAnimationFrame(()=>document.body.classList.add('product-more-open'));sheet.querySelector('[data-product-more-close]')?.focus()}
-  function closeMore(){document.body.classList.remove('product-more-open');const sheet=document.querySelector('#product-more-sheet'),backdrop=document.querySelector('#product-more-backdrop');if(sheet)sheet.hidden=true;if(backdrop)backdrop.hidden=true}
+  function openMore(trigger){const sheet=ensureMore(),backdrop=document.querySelector('#product-more-backdrop');moreReturnFocus=trigger||document.activeElement;if(backdrop)backdrop.hidden=false;sheet.hidden=false;requestAnimationFrame(()=>document.body.classList.add('product-more-open'));sheet.querySelector('[data-product-more-close]')?.focus()}
+  function closeMore(restoreFocus=true){document.body.classList.remove('product-more-open');const sheet=document.querySelector('#product-more-sheet'),backdrop=document.querySelector('#product-more-backdrop');if(sheet)sheet.hidden=true;if(backdrop)backdrop.hidden=true;if(restoreFocus&&moreReturnFocus?.isConnected)moreReturnFocus.focus();moreReturnFocus=null}
+  function trapMoreFocus(event){const sheet=document.querySelector('#product-more-sheet');if(event.key!=='Tab'||!sheet||sheet.hidden)return;const focusable=[...sheet.querySelectorAll('button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')].filter(node=>!node.hidden);if(!focusable.length){event.preventDefault();return}const first=focusable[0],last=focusable[focusable.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}else if(!sheet.contains(document.activeElement)){event.preventDefault();first.focus()}}
   function renderMobile(){
     document.querySelector('#mobile-direct-nav')?.remove();
     let nav=document.querySelector('#product-mobile-nav');if(!nav){nav=document.createElement('nav');nav.id='product-mobile-nav';nav.className='product-mobile-nav';nav.setAttribute('aria-label','Primary product navigation');document.body.appendChild(nav)}
-    const current=window.state?.route;
+    const current=state?.route;
     nav.innerHTML=PRIMARY.map(item=>{const isActive=current===item.route,isLocked=locked(item);return `<button type="button" data-product-mobile-route="${esc(item.route)}" ${isLocked?'disabled':''} ${isActive?'aria-current="page"':''}>${icon(item.icon)}<span>${esc(item.short)}</span></button>`}).join('')+`<button type="button" data-product-more ${PRIMARY.some(item=>item.route===current)?'':'aria-current="page"'}>${icon('more')}<span>More</span></button>`;
     nav.querySelectorAll('[data-product-mobile-route]').forEach(button=>button.addEventListener('click',()=>{if(!button.disabled)go(button.dataset.productMobileRoute)}));
-    nav.querySelector('[data-product-more]')?.addEventListener('click',openMore);
+    const moreButton=nav.querySelector('[data-product-more]');moreButton?.addEventListener('click',()=>openMore(moreButton));
     ensureMore();
   }
   function renderRouteContext(){
     const topbar=document.querySelector('.topbar');if(!topbar)return;
     let node=document.querySelector('#product-route-context');if(!node){node=document.createElement('div');node.id='product-route-context';node.className='product-route-context';topbar.insertBefore(node,topbar.querySelector('.context-controls')||topbar.firstChild)}
-    const meta=routeMeta(window.state?.route||'league');
+    const meta=routeMeta(state?.route||'league');
     node.innerHTML=`<strong>${esc(meta.label)}</strong><span>${esc(meta.question||meta.description||'')}</span>`;
   }
   function renderAll(){document.body.classList.add('fsffl-product-architecture');renderDesktop();renderMobile();renderRouteContext()}
@@ -91,8 +93,9 @@
       try{setRoute=window.setRoute}catch(_){ }
     }
     window.addEventListener('fsffl:product-context-updated',()=>setTimeout(renderAll,0));
-    window.addEventListener('keydown',event=>{if(event.key==='Escape')closeMore()});
-    window.addEventListener('resize',()=>{if(window.innerWidth>980)closeMore()});
+    window.addEventListener('load',renderAll,{once:true});
+    window.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.querySelector('#product-more-sheet')?.hidden){event.preventDefault();closeMore();return}trapMoreFocus(event)});
+    window.addEventListener('resize',()=>{if(window.innerWidth>980)closeMore(false)});
     renderAll();
   }
   window.fsfflProductArchitecture={primary:PRIMARY,decisions:DECISIONS,scenarios:SCENARIOS,explore:EXPLORE};
