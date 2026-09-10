@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from collections.abc import Callable
+from datetime import UTC
 from typing import Any
 
 from .historical_persistence import (
@@ -21,6 +22,11 @@ ConnectFactory = Callable[[], Any]
 
 def _identity_key(identity: HistoricalArtifactIdentity) -> str:
     payload = identity.model_dump(mode="json")
+    # Datetimes that represent the same instant compare equal in Python even when
+    # their offsets differ. Hash the canonical UTC representation so one logical
+    # immutable historical identity cannot acquire multiple storage keys.
+    if identity.as_of is not None:
+        payload["as_of"] = identity.as_of.astimezone(UTC).isoformat()
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
@@ -170,14 +176,6 @@ class PostgresHistoricalPersistence:
     def put_checkpoint(self, checkpoint: HistoricalSyncCheckpoint) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
-                """select last_completed_at from fsffl.historical_sync_checkpoint
-                   where league_id=%s and provider=%s for update""",
-                (checkpoint.league_id, checkpoint.provider),
-            )
-            previous = cursor.fetchone()
-            if previous is not None and checkpoint.last_completed_at < previous["last_completed_at"]:
-                raise ValueError("sync checkpoints cannot move backward")
-            cursor.execute(
                 """insert into fsffl.historical_sync_checkpoint
                    (league_id, provider, last_completed_at, provider_cursor, model_version)
                    values (%s,%s,%s,%s,%s)
@@ -185,7 +183,9 @@ class PostgresHistoricalPersistence:
                      last_completed_at=excluded.last_completed_at,
                      provider_cursor=excluded.provider_cursor,
                      model_version=excluded.model_version,
-                     updated_at=now()""",
+                     updated_at=now()
+                   where fsffl.historical_sync_checkpoint.last_completed_at <= excluded.last_completed_at
+                   returning last_completed_at""",
                 (
                     checkpoint.league_id,
                     checkpoint.provider,
@@ -194,6 +194,8 @@ class PostgresHistoricalPersistence:
                     checkpoint.model_version,
                 ),
             )
+            if cursor.fetchone() is None:
+                raise ValueError("sync checkpoints cannot move backward")
 
 
 class PostgresHistoricalReportRepository:
