@@ -77,6 +77,18 @@ class PostgresBehavioralIntelligenceStore:
                 )
                 """
             )
+            cursor.execute(
+                """
+                create table if not exists fsffl.behavior_runtime_context (
+                    user_id text primary key,
+                    league_state_id text not null,
+                    sleeper_league_external_id text not null,
+                    league_family_id text not null,
+                    current_owner_by_roster jsonb not null,
+                    updated_at timestamptz not null default now()
+                )
+                """
+            )
 
     def put_events(self, events: Iterable[OwnerBehaviorEvent]) -> int:
         inserted = 0
@@ -147,6 +159,61 @@ class PostgresBehavioralIntelligenceStore:
             )
             rows = cursor.fetchall()
         return tuple(OwnerBehaviorProfile.model_validate(row["payload"]) for row in rows)
+
+    def put_runtime_context(
+        self,
+        *,
+        user_id: str,
+        league_state_id: str,
+        sleeper_league_external_id: str,
+        league_family_id: str,
+        current_owner_by_roster: Iterable[tuple[int, str]],
+    ) -> None:
+        owner_rows = [[int(roster_id), str(owner_id)] for roster_id, owner_id in current_owner_by_roster]
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                insert into fsffl.behavior_runtime_context
+                (user_id, league_state_id, sleeper_league_external_id, league_family_id,
+                 current_owner_by_roster, updated_at)
+                values (%s,%s,%s,%s,%s::jsonb,now())
+                on conflict (user_id) do update set
+                    league_state_id=excluded.league_state_id,
+                    sleeper_league_external_id=excluded.sleeper_league_external_id,
+                    league_family_id=excluded.league_family_id,
+                    current_owner_by_roster=excluded.current_owner_by_roster,
+                    updated_at=excluded.updated_at
+                """,
+                (
+                    user_id,
+                    league_state_id,
+                    sleeper_league_external_id,
+                    league_family_id,
+                    json.dumps(owner_rows, separators=(",", ":")),
+                ),
+            )
+
+    def load_runtime_context(self, user_id: str) -> dict[str, object] | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                select league_state_id, sleeper_league_external_id, league_family_id,
+                       current_owner_by_roster
+                from fsffl.behavior_runtime_context
+                where user_id=%s
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        owner_rows = row["current_owner_by_roster"]
+        return {
+            "league_state_id": str(row["league_state_id"]),
+            "sleeper_league_external_id": str(row["sleeper_league_external_id"]),
+            "league_family_id": str(row["league_family_id"]),
+            "current_owner_by_roster": tuple((int(item[0]), str(item[1])) for item in owner_rows),
+        }
 
     def mark_season_complete(self, league_family_id: str, league_external_id: str, season: int) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
