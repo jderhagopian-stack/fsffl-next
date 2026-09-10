@@ -15,16 +15,19 @@ from .contracts import (
     canonical_fingerprint,
 )
 from .postgres import PostgresPersistenceStore, persistence_store_from_env
+from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
 
 __all__ = [
     "ArtifactKey",
     "LeagueSnapshotRecord",
     "PersistenceStore",
     "PostgresPersistenceStore",
+    "PostgresStateSnapshotStore",
     "ReusableArtifactRecord",
     "SyncCursorRecord",
     "TeamSnapshotRecord",
     "UserRuntimeContextRecord",
     "canonical_fingerprint",
     "persistence_store_from_env",
+    "state_snapshot_store_from_env",
 ]
