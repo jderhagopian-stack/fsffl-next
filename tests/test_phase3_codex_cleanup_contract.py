@@ -10,6 +10,8 @@ def test_home_stays_presentation_only_after_codex_cleanup() -> None:
     assert "most_promising_evaluated" in home
     assert "bilateral_evaluation_limit: int = 1" in workspace
     assert "_evaluate_structural_trade" in workspace
-    assert "oppContextKey" in opportunities
-    assert "requestContext" in opportunities
-    assert "currentContext!==requestContext" in opportunities
+    assert "oppContextSnapshot" in opportunities
+    assert "oppPayloadMatchesCapturedContext" in opportunities
+    assert "requestSequence" in opportunities
+    assert "requestId!==fsfflOpportunityState.requestSequence" in opportunities
+    assert "invalidateOpportunityWorkspaceContext" in opportunities
