@@ -14,3 +14,10 @@ def test_posture_switch_reuses_loaded_workspace() -> None:
     assert "applyCurrentWorkspace" in source
     assert "fsfflOpportunityState.payload=updated" in source
     assert "renderOpportunityWorkspace" in source
+
+
+def test_posture_observer_is_scoped_to_opportunity_surface() -> None:
+    source = Path("src/fsffl/product/static/opportunity_posture_ui.js").read_text()
+    assert "observer.observe(screen,{subtree:true,childList:true})" in source
+    assert "observer.observe(document.body" not in source
+    assert "attributeFilter:['hidden','class']" not in source
