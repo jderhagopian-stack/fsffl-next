@@ -144,3 +144,23 @@ def test_runtime_checkpoint_retains_canonical_state_history_off_request_path(mon
 
     assert captured == [state]
     assert runtime.get("jimmy").league_state == state
+
+
+def test_state_history_write_failure_cannot_replace_authoritative_runtime_state(monkeypatch) -> None:
+    monkeypatch.delenv("FSFFL_DATABASE_URL", raising=False)
+
+    class FailingHistory:
+        def save(self, state: LeagueState) -> None:
+            raise RuntimeError("history unavailable")
+
+        def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
+            return None
+
+    runtime = PersistentPrivateBetaRuntimeStore(state_snapshot_store=FailingHistory())
+    state = _state(as_of=NOW)
+
+    context = runtime.set_league_state("jimmy", state)
+    assert context.league_state == state
+
+    sleep(0.05)
+    assert runtime.get("jimmy").league_state == state
