@@ -4,7 +4,7 @@
   let latestMeta=null;
   let observerStarted=false;
   let renderQueued=false;
-  const originalFetch=window.fetch.bind(window);
+  let applyingWorkspace=false;
 
   function selectedPosture(){
     try{return localStorage.getItem(STORAGE_KEY)||DEFAULT}catch(_){return DEFAULT}
@@ -12,11 +12,6 @@
 
   function rememberPosture(value){
     try{localStorage.setItem(STORAGE_KEY,value)}catch(_){}
-  }
-
-  function workspaceRequest(input){
-    const url=typeof input==='string'?input:(input&&input.url)||'';
-    return String(url).includes('/api/opportunities/workspace');
   }
 
   function applyServerPostureView(payload){
@@ -27,6 +22,7 @@
     const view=views[requested]||views[DEFAULT];
     if(!view)return payload;
     latestMeta=view.posture||payload.search_posture||null;
+    if(discovery.active_posture===requested&&payload.search_posture===latestMeta)return payload;
     return {
       ...payload,
       search_posture:latestMeta,
@@ -39,19 +35,24 @@
     };
   }
 
-  window.fetch=async function(input,init){
-    const response=await originalFetch(input,init);
-    if(!workspaceRequest(input)||!response.ok)return response;
-    const contentType=response.headers.get('content-type')||'';
-    if(!contentType.includes('application/json'))return response;
+  function applyCurrentWorkspace(){
+    if(applyingWorkspace||typeof fsfflOpportunityState==='undefined'||!fsfflOpportunityState.payload)return false;
+    const updated=applyServerPostureView(fsfflOpportunityState.payload);
+    if(updated===fsfflOpportunityState.payload)return false;
+    applyingWorkspace=true;
     try{
-      const payload=applyServerPostureView(await response.clone().json());
-      return new Response(JSON.stringify(payload),{
-        status:response.status,
-        statusText:response.statusText,
-        headers:response.headers
-      });
-    }catch(_){return response}
+      fsfflOpportunityState.payload=updated;
+      if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace();
+    }finally{
+      applyingWorkspace=false;
+    }
+    return true;
+  }
+
+  window.fsfflOpportunityPosture={
+    selectedPosture,
+    applyWorkspace:applyServerPostureView,
+    applyCurrentWorkspace
   };
 
   function activeOpportunityScreen(){
@@ -90,8 +91,8 @@
     control.innerHTML=markup;
     control.querySelector('#opp-posture-select')?.addEventListener('change',event=>{
       rememberPosture(event.target.value||DEFAULT);
-      if(typeof loadOpportunityWorkspace==='function')loadOpportunityWorkspace({showLoading:false});
-      else window.location.reload();
+      applyCurrentWorkspace();
+      queueRender();
     });
   }
 
@@ -106,7 +107,12 @@
   function renderSafely(){
     renderQueued=false;
     if(observerStarted){observer.disconnect();observerStarted=false}
-    try{renderControl()}finally{observe()}
+    try{
+      applyCurrentWorkspace();
+      renderControl();
+    }finally{
+      observe();
+    }
   }
 
   function queueRender(){
