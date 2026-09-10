@@ -73,6 +73,16 @@ class MemoryPersistence:
         self.market.append(kwargs)
 
 
+class ReadFailingPersistence(MemoryPersistence):
+    def get_user_runtime_context(self, *, user_id):
+        raise RuntimeError("database unavailable")
+
+
+class WriteFailingPersistence(MemoryPersistence):
+    def put_league_snapshot(self, record):
+        raise RuntimeError("database unavailable")
+
+
 def _state() -> LeagueState:
     league_id = "sleeper:123"
     return LeagueState(
@@ -120,3 +130,30 @@ def test_state_only_checkpoint_is_async_and_restores_after_restart() -> None:
     assert restored.forecast_evidence is None
     assert restored.simulation_analytics is None
     assert restored.value_evidence is None
+
+
+def test_persistence_read_failure_cannot_block_later_authoritative_runtime_state() -> None:
+    runtime = PersistentPrivateBetaRuntimeStore(ReadFailingPersistence())
+
+    empty = runtime.get("jimmy")
+    assert empty.league_state is None
+
+    state = _state()
+    runtime.set_league_state("jimmy", state)
+
+    assert runtime.get("jimmy").league_state == state
+
+
+def test_persistence_write_failure_cannot_replace_authoritative_runtime_state() -> None:
+    runtime = PersistentPrivateBetaRuntimeStore(WriteFailingPersistence())
+    state = _state()
+
+    context = runtime.set_league_state("jimmy", state)
+
+    assert context.league_state == state
+    assert runtime.get("jimmy").league_state == state
+
+    # Give the serialized persistence worker a chance to execute the failing write.
+    # The authoritative in-memory state must remain unchanged after that failure.
+    sleep(0.05)
+    assert runtime.get("jimmy").league_state == state
