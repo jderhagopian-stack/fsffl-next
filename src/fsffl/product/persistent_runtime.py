@@ -47,6 +47,19 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     def persistence_enabled(self) -> bool:
         return self._persistence is not None
 
+    def _persist_state_history(self, league_state) -> None:
+        if self._state_history is None:
+            return
+        try:
+            self._state_history.save(league_state)
+        except Exception as exc:  # history retention must also fail open
+            _logger.warning("FSFFL State history checkpoint failed league=%s error=%s", league_state.league.league_id, exc)
+
+    def _checkpoint_state_history_async(self, league_state) -> None:
+        if self._state_history is None:
+            return
+        self._checkpoint_executor.submit(self._persist_state_history, league_state)
+
     def _persist_context(self, user_id: str, context: UserRuntimeContext) -> None:
         if context.league_state is None:
             return
@@ -63,11 +76,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 )
             except Exception as exc:  # persistence must not break authoritative runtime
                 _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
-        if self._state_history is not None:
-            try:
-                self._state_history.save(context.league_state)
-            except Exception as exc:  # history retention must also fail open
-                _logger.warning("FSFFL State history checkpoint failed user=%s error=%s", user_id, exc)
+        self._persist_state_history(context.league_state)
 
     def _checkpoint_async(self, user_id: str, context: UserRuntimeContext) -> None:
         if context.league_state is None or (
@@ -101,6 +110,11 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     )
                 if snapshot.selected_team_id is not None:
                     super().select_team(user_id, snapshot.selected_team_id)
+                # Existing durable runtime rows may predate the point-in-time history
+                # table. Retain the exact restored canonical state asynchronously so
+                # restart recovery naturally backfills history without reingestion or
+                # placing database writes on the user-request path.
+                self._checkpoint_state_history_async(snapshot.league_state)
                 _logger.info(
                     "FSFFL durable runtime restored user=%s league=%s forecast=%s simulation=%s value=%s",
                     user_id,
