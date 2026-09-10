@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 
 from fastapi import Depends, FastAPI, HTTPException
 
@@ -43,7 +44,7 @@ def install_phase1_latency_routes(
             raise HTTPException(status_code=422, detail="Unsupported latency operation")
         if event.outcome not in _ALLOWED_OUTCOMES:
             raise HTTPException(status_code=422, detail="Unsupported latency outcome")
-        if event.elapsed_ms < 0 or event.elapsed_ms > 300_000:
+        if not math.isfinite(event.elapsed_ms) or event.elapsed_ms < 0 or event.elapsed_ms > 300_000:
             raise HTTPException(status_code=422, detail="Latency measurement is outside the supported range")
         detail = (event.detail or "")[:160]
         _logger.info(
