@@ -1,1 +1,0 @@
-Hosted restore ownership is single-source: mobile_safari_recovery.js owns provider-facing restore/revalidation; session_recovery.js delegates and does not perform synchronous provider restore.
