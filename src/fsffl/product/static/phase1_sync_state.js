@@ -39,4 +39,6 @@
     const detail=event.detail||{};
     if(detail.state)set(detail.state,detail.message||null);
   });
+  const pending=window.fsfflPendingSyncState;
+  if(pending?.state)set(pending.state,pending.message||null);
 })();
