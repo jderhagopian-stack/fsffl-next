@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
@@ -17,6 +18,9 @@ from fsffl.behavioral.store import BehavioralIntelligenceStore
 from fsffl.state.models import LeagueState
 
 
+_logger = logging.getLogger("fsffl.product.behavioral")
+
+
 class BehavioralRuntimeStatus(StrEnum):
     IDLE = "idle"
     RUNNING = "running"
@@ -28,6 +32,7 @@ class BehavioralRuntimeStatus(StrEnum):
 class BehavioralRuntimeRecord:
     user_id: str
     league_state_id: str | None = None
+    sleeper_league_external_id: str | None = None
     status: BehavioralRuntimeStatus = BehavioralRuntimeStatus.IDLE
     started_at: datetime | None = None
     updated_at: datetime | None = None
@@ -36,6 +41,7 @@ class BehavioralRuntimeRecord:
 
 
 BehavioralWork = Callable[[LeagueState, str], BehavioralSyncResult]
+BehavioralStoreFactory = Callable[[], object]
 _profile_cache_lock = RLock()
 _profile_cache: dict[tuple[str, str], OwnerBehaviorProfile] = {}
 
@@ -105,17 +111,68 @@ def default_behavioral_work(league_state: LeagueState, sleeper_league_external_i
 
 
 class BehavioralRuntimeCoordinator:
-    """Build/reuse league Behavioral Intelligence without blocking league load."""
+    """Build/reuse league Behavioral Intelligence without blocking league load.
 
-    def __init__(self, *, work: BehavioralWork = default_behavioral_work, max_workers: int = 2) -> None:
+    Durable observed Behavioral history is independently readable from the
+    in-memory refresh lifecycle. The in-memory record communicates active refresh
+    state; it is not the persistence authority for previously built profiles.
+    """
+
+    def __init__(
+        self,
+        *,
+        work: BehavioralWork = default_behavioral_work,
+        store_factory: BehavioralStoreFactory = default_behavioral_store,
+        max_workers: int = 2,
+    ) -> None:
         self._work = work
+        self._store_factory = store_factory
         self._lock = RLock()
         self._records: dict[str, BehavioralRuntimeRecord] = {}
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="fsffl-behavior")
 
+    def _hydrate_durable_record(self, user_id: str) -> BehavioralRuntimeRecord | None:
+        try:
+            store = self._store_factory()
+            context = store.load_runtime_context(user_id)
+            if context is None:
+                return None
+            league_family_id = str(context["league_family_id"])
+            profiles = store.load_profiles(league_family_id)
+            events = store.load_events(league_family_id)
+            result = BehavioralSyncResult(
+                league_family_id=league_family_id,
+                profile_count=len(profiles),
+                total_event_count=len(events),
+                inserted_event_count=0,
+                reused_historical_league_ids=(),
+                scanned_league_ids=(),
+                current_owner_by_roster=tuple(context["current_owner_by_roster"]),
+                profiles=profiles,
+            )
+        except Exception as exc:
+            _logger.warning("Unable to hydrate durable Behavioral history for user=%s: %s", user_id, exc)
+            return None
+        return BehavioralRuntimeRecord(
+            user_id=user_id,
+            league_state_id=str(context["league_state_id"]),
+            sleeper_league_external_id=str(context["sleeper_league_external_id"]),
+            status=BehavioralRuntimeStatus.READY,
+            updated_at=datetime.now(UTC),
+            result=result,
+        )
+
     def current(self, user_id: str) -> BehavioralRuntimeRecord:
         with self._lock:
-            return self._records.get(user_id, BehavioralRuntimeRecord(user_id=user_id))
+            record = self._records.get(user_id)
+        if record is not None:
+            return record
+
+        hydrated = self._hydrate_durable_record(user_id)
+        if hydrated is None:
+            return BehavioralRuntimeRecord(user_id=user_id)
+        with self._lock:
+            return self._records.setdefault(user_id, hydrated)
 
     def profile_for_team(
         self,
@@ -126,13 +183,17 @@ class BehavioralRuntimeCoordinator:
         """Resolve the current team to its stable Sleeper owner profile.
 
         Behavioral evidence follows owner identity across seasons rather than
-        assuming a roster/team slot is the manager. Missing or still-building
-        history returns None; consumers must remain functional without inventing
-        a behavioral substitute.
+        assuming a roster/team slot is the manager. Missing, refreshing, or
+        refresh-failed history returns None to governed Decision consumers; the
+        Product surface may still display previously valid durable observations.
         """
 
         record = self.current(user_id)
-        if record.status != BehavioralRuntimeStatus.READY or record.result is None:
+        if (
+            record.status != BehavioralRuntimeStatus.READY
+            or record.result is None
+            or record.error is not None
+        ):
             return None
         team = next((item for item in league_state.teams if item.team_id == team_id), None)
         if team is None:
@@ -160,16 +221,28 @@ class BehavioralRuntimeCoordinator:
         sleeper_league_external_id: str,
     ) -> BehavioralRuntimeRecord:
         now = datetime.now(UTC)
+        current = self.current(user_id)
         with self._lock:
-            current = self.current(user_id)
-            if current.league_state_id == league_state.state_id and current.status == BehavioralRuntimeStatus.RUNNING:
-                return current
+            live_current = self._records.get(user_id, current)
+            if (
+                live_current.sleeper_league_external_id == sleeper_league_external_id
+                and live_current.league_state_id == league_state.state_id
+                and live_current.status == BehavioralRuntimeStatus.RUNNING
+            ):
+                return live_current
+            reusable_result = (
+                live_current.result
+                if live_current.sleeper_league_external_id == sleeper_league_external_id
+                else None
+            )
             record = BehavioralRuntimeRecord(
                 user_id=user_id,
                 league_state_id=league_state.state_id,
+                sleeper_league_external_id=sleeper_league_external_id,
                 status=BehavioralRuntimeStatus.RUNNING,
                 started_at=now,
                 updated_at=now,
+                result=reusable_result,
             )
             self._records[user_id] = record
             self._executor.submit(
@@ -183,12 +256,23 @@ class BehavioralRuntimeCoordinator:
     def _run(self, user_id: str, league_state: LeagueState, sleeper_league_external_id: str) -> None:
         try:
             result = self._work(league_state, sleeper_league_external_id)
+            self._store_factory().put_runtime_context(
+                user_id=user_id,
+                league_state_id=league_state.state_id,
+                sleeper_league_external_id=sleeper_league_external_id,
+                league_family_id=result.league_family_id,
+                current_owner_by_roster=result.current_owner_by_roster,
+            )
         except Exception as exc:
             with self._lock:
                 current = self._records.get(user_id, BehavioralRuntimeRecord(user_id=user_id))
                 self._records[user_id] = replace(
                     current,
-                    status=BehavioralRuntimeStatus.FAILED,
+                    status=(
+                        BehavioralRuntimeStatus.READY
+                        if current.result is not None
+                        else BehavioralRuntimeStatus.FAILED
+                    ),
                     updated_at=datetime.now(UTC),
                     error=f"{type(exc).__name__}: {exc}",
                 )

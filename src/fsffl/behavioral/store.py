@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Iterable
@@ -15,7 +16,7 @@ class BehavioralIntelligenceStore:
     Behavioral Intelligence or downstream Decision/Search contracts.
     """
 
-    schema_version = 1
+    schema_version = 2
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -56,6 +57,14 @@ class BehavioralIntelligenceStore:
                     season INTEGER NOT NULL,
                     complete INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY (league_family_id, league_external_id)
+                );
+
+                CREATE TABLE IF NOT EXISTS behavior_runtime_context (
+                    user_id TEXT PRIMARY KEY,
+                    league_state_id TEXT NOT NULL,
+                    sleeper_league_external_id TEXT NOT NULL,
+                    league_family_id TEXT NOT NULL,
+                    current_owner_by_roster_json TEXT NOT NULL
                 );
                 """
             )
@@ -124,6 +133,58 @@ class BehavioralIntelligenceStore:
                 (league_family_id,),
             ).fetchall()
         return tuple(OwnerBehaviorProfile.model_validate_json(row[0]) for row in rows)
+
+    def put_runtime_context(
+        self,
+        *,
+        user_id: str,
+        league_state_id: str,
+        sleeper_league_external_id: str,
+        league_family_id: str,
+        current_owner_by_roster: Iterable[tuple[int, str]],
+    ) -> None:
+        owner_rows = [[int(roster_id), str(owner_id)] for roster_id, owner_id in current_owner_by_roster]
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO behavior_runtime_context
+                (user_id, league_state_id, sleeper_league_external_id, league_family_id, current_owner_by_roster_json)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    league_state_id = excluded.league_state_id,
+                    sleeper_league_external_id = excluded.sleeper_league_external_id,
+                    league_family_id = excluded.league_family_id,
+                    current_owner_by_roster_json = excluded.current_owner_by_roster_json
+                """,
+                (
+                    user_id,
+                    league_state_id,
+                    sleeper_league_external_id,
+                    league_family_id,
+                    json.dumps(owner_rows, separators=(",", ":")),
+                ),
+            )
+
+    def load_runtime_context(self, user_id: str) -> dict[str, object] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT league_state_id, sleeper_league_external_id, league_family_id,
+                       current_owner_by_roster_json
+                FROM behavior_runtime_context
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        owner_rows = json.loads(row[3])
+        return {
+            "league_state_id": str(row[0]),
+            "sleeper_league_external_id": str(row[1]),
+            "league_family_id": str(row[2]),
+            "current_owner_by_roster": tuple((int(item[0]), str(item[1])) for item in owner_rows),
+        }
 
     def mark_season_complete(self, league_family_id: str, league_external_id: str, season: int) -> None:
         with self._connect() as connection:
