@@ -56,3 +56,16 @@ def test_behavioral_migration_preserves_evidence_profile_and_season_layers() -> 
     assert "primary key (league_family_id, event_id)" in sql
     assert "primary key (league_family_id, owner_id)" in sql
     assert "primary key (league_family_id, league_external_id)" in sql
+
+
+def test_postgres_behavioral_bootstrap_enables_rls_without_waiting_for_migration() -> None:
+    source = Path("src/fsffl/behavioral/postgres_store.py").read_text()
+
+    for table_name in (
+        "behavior_event",
+        "behavior_profile",
+        "behavior_season",
+        "behavior_runtime_context",
+    ):
+        assert f'"{table_name}"' in source
+    assert 'cursor.execute(f"alter table fsffl.{table_name} enable row level security")' in source
