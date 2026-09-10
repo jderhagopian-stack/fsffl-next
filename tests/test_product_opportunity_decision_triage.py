@@ -24,7 +24,7 @@ def test_triage_uses_existing_bilateral_shapes_without_new_score():
 
 def test_triage_preserves_existing_search_order_and_only_filters_presented_rows():
     source = (STATIC / "opportunity_decision_triage.js").read_text()
-    assert "const originalOppTradeRows" in source
+    assert "const originalOppTradeRows=oppTradeRows" in source
     assert "return triageFilter==='all'?rows:rows.filter" in source
     assert ".filter(row=>category(row)==='mutual_gain').slice(0,3)" in source
     assert "existing Search order" in source
@@ -41,3 +41,12 @@ def test_triage_surfaces_plain_language_actionable_buckets_and_trade_handoff():
     assert "Work this deal" in source
     assert "fsfflOpenOpportunityInTradeCenter" in source
     assert "not an acceptance forecast" in source
+
+
+def test_triage_installs_after_lazy_opportunities_script_loads():
+    source = (STATIC / "opportunity_decision_triage.js").read_text()
+    assert "window.installFsfflOpportunityDecisionTriage=installFsfflOpportunityDecisionTriage" in source
+    assert "new MutationObserver" in source
+    assert "includes('/static/opportunities.js')" in source
+    assert "node.addEventListener('load'" in source
+    assert "installFsfflOpportunityDecisionTriage();observer.disconnect()" in source
