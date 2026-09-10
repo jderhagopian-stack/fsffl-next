@@ -15,7 +15,7 @@ VALUE_ARTIFACT_KIND = "current_market_value"
 LEAGUE_SCOPE_KIND = "league_state"
 
 FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v3"
-SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v6:position-strength"
+SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v7:scoring-dispersion-diagnostic"
 VALUE_MODEL_VERSION = "next3-current-market-runtime-v7:market-total-fail-closed"
 
 _forecast_adapter = TypeAdapter(LiveForecastEvidence)
