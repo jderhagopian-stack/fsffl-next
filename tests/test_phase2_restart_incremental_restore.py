@@ -7,12 +7,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from fsffl.persistence.contracts import SyncCursorRecord
+from fsffl.persistence.runtime_cache import SIMULATION_MODEL_VERSION
 from fsffl.persistence.session import persist_runtime_snapshot
 from fsffl.product.hosted_connect import (
     LeagueConnectStatus,
     install_hosted_connect_routes,
 )
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
+from fsffl.product.simulation_runtime import LiveSimulationAnalyticsResult
 from fsffl.product.webapp import require_beta_user
 from fsffl.providers.sleeper_live import SleeperSyncProbe
 from fsffl.state.models import (
@@ -206,3 +208,10 @@ def test_restart_restore_plus_matching_probe_skips_full_sleeper_reload() -> None
     assert full_loader_calls == 0
     assert behavioral.starts == 0
     assert runtime.get("jimmy").league_state == state
+
+
+def test_durable_simulation_cache_version_matches_current_authoritative_result() -> None:
+    assert (
+        LiveSimulationAnalyticsResult.model_fields["model_version"].default
+        == SIMULATION_MODEL_VERSION
+    )
