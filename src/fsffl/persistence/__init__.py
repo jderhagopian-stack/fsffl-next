@@ -11,8 +11,10 @@ from .contracts import (
     ReusableArtifactRecord,
     SyncCursorRecord,
     TeamSnapshotRecord,
+    UserPerceivedLatencyRecord,
     UserRuntimeContextRecord,
     canonical_fingerprint,
+    utc_now,
 )
 from .postgres import PostgresPersistenceStore, persistence_store_from_env
 from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
@@ -26,8 +28,10 @@ __all__ = [
     "ReusableArtifactRecord",
     "SyncCursorRecord",
     "TeamSnapshotRecord",
+    "UserPerceivedLatencyRecord",
     "UserRuntimeContextRecord",
     "canonical_fingerprint",
     "persistence_store_from_env",
     "state_snapshot_store_from_env",
+    "utc_now",
 ]
