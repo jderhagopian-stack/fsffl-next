@@ -6,7 +6,7 @@ from time import monotonic, sleep
 
 from fsffl.persistence.state_history import PostgresStateSnapshotStore
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
-from fsffl.state.models import League, LeagueRules, LeagueState
+from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 
 NOW = datetime(2026, 9, 10, 8, 0, tzinfo=UTC)
@@ -86,16 +86,20 @@ class FakeCursor:
 
 
 def _state(*, as_of: datetime) -> LeagueState:
+    league_id = "sleeper:history"
     return LeagueState(
         league=League(
-            league_id="sleeper:history",
+            league_id=league_id,
             name="History League",
             season=2026,
-            rules=LeagueRules(team_count=0, roster_size=0, lineup=(), scoring=()),
+            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
         ),
         as_of=as_of,
-        teams=(),
-        team_states=(),
+        teams=(
+            Team(team_id="a", league_id=league_id, display_name="A"),
+            Team(team_id="b", league_id=league_id, display_name="B"),
+        ),
+        team_states=(TeamState(team_id="a", roster=()), TeamState(team_id="b", roster=())),
         players=(),
         player_states=(),
     )
