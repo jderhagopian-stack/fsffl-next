@@ -12,6 +12,7 @@ from .contracts import (
     ReusableArtifactRecord,
     SyncCursorRecord,
     TeamSnapshotRecord,
+    UserPerceivedLatencyRecord,
     UserRuntimeContextRecord,
     utc_now,
 )
@@ -305,6 +306,22 @@ class PostgresPersistenceStore(PersistenceStore):
                     recorded_at or utc_now(),
                     value,
                     json.dumps(source_lineage),
+                ),
+            )
+
+    def append_user_perceived_latency(self, record: UserPerceivedLatencyRecord) -> None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """insert into fsffl.user_perceived_latency
+                   (user_id, operation, elapsed_ms, outcome, detail, observed_at)
+                   values (%s,%s,%s,%s,%s,%s)""",
+                (
+                    record.user_id,
+                    record.operation,
+                    record.elapsed_ms,
+                    record.outcome,
+                    record.detail,
+                    record.observed_at,
                 ),
             )
 
