@@ -127,6 +127,34 @@ def test_saved_session_restores_before_provider_refresh() -> None:
     assert "Stale-while-revalidate" in restore
 
 
+def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:
+    recovery = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+    sync_state = open(
+        "src/fsffl/product/static/phase1_sync_state.js",
+        encoding="utf-8",
+    ).read()
+
+    refresh = recovery.split("async function refreshStoredLeague", 1)[1].split(
+        "async function restoreSavedSession", 1
+    )[0]
+    checking_index = refresh.index("publishSyncState('checking')")
+    refresh_index = refresh.index("waitForBackgroundImport(leagueId,null,'refresh')")
+    current_index = refresh.index("publishSyncState('current')")
+    stale_index = refresh.index("publishSyncState('stale'")
+    assert checking_index < refresh_index < current_index < stale_index
+
+    assert "Checking league updates" in sync_state
+    assert "Stored league is usable while Sleeper is revalidated." in sync_state
+    assert "League data current" in sync_state
+    assert "Using stored league" in sync_state
+    assert "Your last valid stored league remains usable." in sync_state
+    assert "role','status" in sync_state
+    assert "aria-live','polite" in sync_state
+
+
 def test_hosted_refresh_only_rebuilds_behavior_when_material_state_changed() -> None:
     source = open(
         "src/fsffl/product/hosted_connect.py",
