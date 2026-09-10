@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from fsffl.persistence.base import UserPerceivedLatencyRecord
+from fsffl.persistence.contracts import UserPerceivedLatencyRecord
 from fsffl.product.phase1_latency import install_phase1_latency_routes
 
 
