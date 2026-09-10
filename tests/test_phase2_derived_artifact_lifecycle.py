@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from time import monotonic, sleep
 
 from fsffl.forecast.current_runtime import LiveForecastRuntimeResult
 from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
@@ -11,6 +12,7 @@ from fsffl.forecast.models import (
     ForecastObservation,
 )
 from fsffl.persistence.session import persist_runtime_snapshot, restore_runtime_snapshot
+from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.product.runtime import LiveForecastEvidence
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.state.models import (
@@ -184,9 +186,7 @@ def _forecast_evidence(forecasts: tuple[ForecastObservation, ...]) -> LiveForeca
     )
 
 
-def test_current_forecast_simulation_and_value_restore_together_after_restart() -> None:
-    persistence = MemoryPersistence()
-    state = _state()
+def _complete_bundle(state: LeagueState):
     forecasts = _forecasts()
     forecast = _forecast_evidence(forecasts)
     simulation = build_live_simulation_analytics(
@@ -207,6 +207,13 @@ def test_current_forecast_simulation_and_value_restore_together_after_restart() 
         valued_roster_player_count=0,
         market_context_id="test:artifact-lifecycle",
     )
+    return forecast, simulation, values
+
+
+def test_current_forecast_simulation_and_value_restore_together_after_restart() -> None:
+    persistence = MemoryPersistence()
+    state = _state()
+    forecast, simulation, values = _complete_bundle(state)
 
     persist_runtime_snapshot(
         persistence,
@@ -226,3 +233,58 @@ def test_current_forecast_simulation_and_value_restore_together_after_restart() 
     assert restored.forecast_evidence == forecast
     assert restored.simulation_analytics == simulation
     assert restored.value_evidence == values
+
+
+def test_roster_only_change_preserves_forecast_but_invalidates_downstream_across_restart() -> None:
+    persistence = MemoryPersistence()
+    original = _state()
+    forecast, simulation, values = _complete_bundle(original)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=original,
+        selected_team_id="a",
+        forecast_evidence=forecast,
+        simulation_analytics=simulation,
+        value_evidence=values,
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence)
+    restored = runtime.get("jimmy")
+    assert restored.forecast_evidence == forecast
+    assert restored.simulation_analytics == simulation
+    assert restored.value_evidence == values
+
+    changed = original.model_copy(
+        update={
+            "as_of": AS_OF + timedelta(minutes=5),
+            "team_states": (
+                TeamState(team_id="a", roster=(RosterEntry(player_id="pb", slot=RosterSlot.QB),)),
+                TeamState(team_id="b", roster=(RosterEntry(player_id="pa", slot=RosterSlot.QB),)),
+            ),
+        }
+    )
+    updated = runtime.set_league_state("jimmy", changed)
+
+    assert updated.league_state == changed
+    assert updated.forecast_evidence == forecast
+    assert updated.simulation_analytics is None
+    assert updated.value_evidence is None
+
+    deadline = monotonic() + 2
+    while (
+        (persistence.user is None or persistence.user.state_hash != changed.state_id)
+        and monotonic() < deadline
+    ):
+        sleep(0.01)
+    assert persistence.user is not None
+    assert persistence.user.state_hash == changed.state_id
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence)
+    durable = restarted.get("jimmy")
+
+    assert durable.league_state == changed
+    assert durable.selected_team_id == "a"
+    assert durable.forecast_evidence == forecast
+    assert durable.simulation_analytics is None
+    assert durable.value_evidence is None
