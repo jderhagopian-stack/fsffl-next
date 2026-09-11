@@ -17,7 +17,7 @@ def test_market_leads_with_personalized_opportunity_cards_not_table() -> None:
     assert "Moves worth your attention." in source
     assert "ns-market-card" in source
     assert "data-ns-market-eval" in source
-    assert "See every candidate and exact Search evidence" in source
+    assert "View every market match" in source
 
 
 def test_market_preserves_search_and_decision_authority_boundaries() -> None:
@@ -26,8 +26,42 @@ def test_market_preserves_search_and_decision_authority_boundaries() -> None:
     assert "does not create candidate ordering" in source
     assert "recommendation authority" in source
     assert "acceptance probability" in source
-    assert "diagnostic Search evidence, not an acceptance score" in source
+    assert "does not calculate an acceptance probability" in source
     assert "runTradeEvaluation" in source
+
+
+def test_market_has_explicit_consumer_authority_states() -> None:
+    source = _source(MARKET)
+    css = _source(MARKET_CSS)
+
+    assert "function authorityState(row)" in source
+    for label in (
+        "Recommended",
+        "Worth investigating",
+        "Needs full evaluation",
+        "Market match only",
+    ):
+        assert label in source
+    for token in (
+        "authority-recommended",
+        "authority-investigate",
+        "authority-needs-eval",
+        "authority-match-only",
+    ):
+        assert token in css or token in source
+    assert ".ns-market-card.featured" in css
+    assert "--authority-accent" in css
+
+
+def test_market_why_this_surfaced_uses_consumer_language_then_methods() -> None:
+    source = _source(MARKET)
+
+    assert "Why this surfaced" in source
+    assert "roster pressure point" in source
+    assert "close enough in current value to be worth checking" in source
+    assert "Methods & evidence" in source
+    assert "cleanReason" in source
+    assert "diagnostic Search evidence, not an acceptance score" not in source
 
 
 def test_market_surfaces_identity_package_and_behavioral_context() -> None:
@@ -83,3 +117,16 @@ def test_featured_market_spotlight_matches_complete_trade_package() -> None:
     assert "leadReceive=assetRefs(lead.receive).join('|')" in source
     assert "assetRefs(row.send).join('|')===leadSend" in source
     assert "assetRefs(row.receive).join('|')===leadReceive" in source
+
+
+def test_waiver_drop_selection_survives_rerenders_and_methods_are_secondary() -> None:
+    source = _source(MARKET)
+    css = _source(MARKET_CSS)
+
+    assert "nsWaiverDropSelection" in source
+    assert "select.addEventListener('change'" in source
+    assert "select.value=String(s.nsWaiverDropSelection||'')" in source
+    assert "s.nsWaiverAddKey!==addKey" in source
+    assert "simplifyWaiverResult" in source
+    assert "ns-waiver-methods" in source
+    assert ".ns-waiver-methods" in css
