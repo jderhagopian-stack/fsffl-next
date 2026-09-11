@@ -4,6 +4,7 @@ from pathlib import Path
 MARKET = Path("src/fsffl/product/static/north_star_market.js")
 MARKET_CSS = Path("src/fsffl/product/static/north_star_market.css")
 APP = Path("src/fsffl/product/static/north_star_app.js")
+INDEX = Path("src/fsffl/product/static/index.html")
 
 
 def _source(path: Path) -> str:
@@ -91,6 +92,20 @@ def test_app_shell_loads_market_visual_assets_once() -> None:
     assert "north_star_market.js?v=" in source
     assert "link[data-ns-market]" in source
     assert "script[data-ns-market]" in source
+
+
+def test_hosted_release_eagerly_refreshes_market_authority_assets() -> None:
+    source = _source(INDEX)
+
+    assert '/static/north_star_market.css?v=20260911-market-authority1' in source
+    assert '/static/north_star_market.js?v=20260911-market-authority1' in source
+    assert 'data-ns-market="true"' in source
+    versions = {
+        token.split("?v=")[1].split('"')[0]
+        for token in source.split()
+        if "?v=" in token
+    }
+    assert versions == {"20260911-market-authority1"}
 
 
 def test_market_shell_is_route_scoped_and_cleaned_up() -> None:
