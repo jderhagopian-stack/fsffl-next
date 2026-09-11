@@ -53,6 +53,36 @@ class PostgresProjectionHistoryStore:
     def save_revision(self, revision: ProjectionRevision) -> int:
         snapshot = revision.snapshot
         with self._connect() as connection, connection.cursor() as cursor:
+            # Suppress only a consecutive unchanged poll. A provider may legitimately
+            # publish A, change to B, and later revert to A; that reversion is a new
+            # point-in-time revision and must be retained. Historical backfills whose
+            # effective time predates the latest retained row are also never discarded.
+            cursor.execute(
+                """select id, effective_at, content_fingerprint
+                   from fsffl.projection_snapshot
+                   where provider=%s and season=%s and horizon=%s
+                     and coalesce(week, 0)=coalesce(%s, 0)
+                     and period_start=%s and period_end=%s and source_version=%s
+                   order by effective_at desc, id desc
+                   limit 1""",
+                (
+                    snapshot.provider,
+                    snapshot.season,
+                    snapshot.horizon.value,
+                    snapshot.week,
+                    snapshot.period_start,
+                    snapshot.period_end,
+                    snapshot.source_version,
+                ),
+            )
+            latest = cursor.fetchone()
+            if (
+                latest is not None
+                and snapshot.effective_at >= latest["effective_at"]
+                and latest["content_fingerprint"] == snapshot.content_fingerprint
+            ):
+                return int(latest["id"])
+
             cursor.execute(
                 """insert into fsffl.projection_snapshot
                    (provider, season, horizon, week, period_start, period_end,
@@ -75,14 +105,11 @@ class PostgresProjectionHistoryStore:
                     json.dumps(snapshot.raw_payload) if snapshot.raw_payload is not None else None,
                 ),
             )
-            # A later duplicate pull with identical normalized content intentionally
-            # resolves to the first retained revision. Retrieval time alone is not a
-            # meaningful forecast change and therefore does not create history noise.
             cursor.execute(
                 """select id from fsffl.projection_snapshot
                    where provider=%s and season=%s and horizon=%s
                      and coalesce(week, 0)=coalesce(%s, 0)
-                     and period_start=%s and period_end=%s
+                     and period_start=%s and period_end=%s and effective_at=%s
                      and content_fingerprint=%s and source_version=%s""",
                 (
                     snapshot.provider,
@@ -91,6 +118,7 @@ class PostgresProjectionHistoryStore:
                     snapshot.week,
                     snapshot.period_start,
                     snapshot.period_end,
+                    snapshot.effective_at,
                     snapshot.content_fingerprint,
                     snapshot.source_version,
                 ),
