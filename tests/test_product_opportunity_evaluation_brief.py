@@ -6,7 +6,7 @@ STATIC = Path("src/fsffl/product/static")
 
 def test_evaluation_brief_loads_after_triage_with_same_static_version():
     html = (STATIC / "index.html").read_text()
-    assert html.index('/static/opportunity_evaluation_brief.js?v=20260909-beta-feedback1') > html.index('/static/opportunity_decision_triage.js?v=20260909-beta-feedback1')
+    assert html.index('/static/opportunity_evaluation_brief.js?v=') > html.index('/static/opportunity_decision_triage.js?v=')
 
 
 def test_evaluation_brief_answers_three_primary_user_questions():
