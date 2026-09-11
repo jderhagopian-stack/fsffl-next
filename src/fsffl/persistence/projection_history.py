@@ -5,6 +5,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
+from fsffl.forecast.models import ForecastHorizon, ForecastMetric
 from fsffl.forecast.projection_history import (
     ProjectionBasis,
     ProjectionObservationRecord,
@@ -12,7 +13,6 @@ from fsffl.forecast.projection_history import (
     ProjectionSelector,
     ProjectionSnapshotRecord,
 )
-from fsffl.forecast.models import ForecastHorizon, ForecastMetric
 from fsffl.state.models import Position
 
 
@@ -120,14 +120,23 @@ class PostgresProjectionHistoryStore:
         return snapshot_id
 
     @staticmethod
-    def _selector_where(selector: ProjectionSelector) -> tuple[str, list[object]]:
-        clauses = ["season=%s", "horizon=%s", "coalesce(week, 0)=coalesce(%s, 0)"]
+    def _selector_where(
+        selector: ProjectionSelector,
+        *,
+        alias: str | None = None,
+    ) -> tuple[str, list[object]]:
+        prefix = f"{alias}." if alias else ""
+        clauses = [
+            f"{prefix}season=%s",
+            f"{prefix}horizon=%s",
+            f"coalesce({prefix}week, 0)=coalesce(%s, 0)",
+        ]
         params: list[object] = [selector.season, selector.horizon.value, selector.week]
         if selector.provider is not None:
-            clauses.append("provider=%s")
+            clauses.append(f"{prefix}provider=%s")
             params.append(selector.provider)
         if selector.as_of is not None:
-            clauses.append("effective_at <= %s")
+            clauses.append(f"{prefix}effective_at <= %s")
             params.append(selector.as_of)
         return " and ".join(clauses), params
 
@@ -160,7 +169,7 @@ class PostgresProjectionHistoryStore:
         if not player_id.strip():
             raise ValueError("player_id cannot be blank")
         self._provider_selector(selector)
-        where, params = self._selector_where(selector)
+        where, params = self._selector_where(selector, alias="s")
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 f"""select distinct s.id, s.provider, s.season, s.horizon, s.week,
@@ -169,8 +178,7 @@ class PostgresProjectionHistoryStore:
                            s.raw_payload
                     from fsffl.projection_snapshot s
                     join fsffl.projection_observation o on o.snapshot_id=s.id
-                    where {where.replace('season=', 's.season=').replace('horizon=', 's.horizon=').replace('coalesce(week, 0)', 'coalesce(s.week, 0)').replace('provider=', 's.provider=').replace('effective_at <=', 's.effective_at <=')}
-                      and o.player_id=%s
+                    where {where} and o.player_id=%s
                     order by s.effective_at desc, s.id desc""",  # nosec B608 - fixed clauses only
                 [*params, player_id],
             )
