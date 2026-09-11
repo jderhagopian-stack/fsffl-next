@@ -55,9 +55,15 @@ def test_visual_system_respects_reduced_motion() -> None:
     assert "transition:none!important" in source
 
 
-def test_north_star_stylesheet_has_dedicated_cache_generation() -> None:
+def test_north_star_release_cache_generation_is_coherent() -> None:
     source = _source(INDEX)
 
     assert "/static/north_star.css?v=20260910-phase3-visual1" in source
-    assert "/static/session_recovery.js?v=20260910-phase3-league2" in source
-    assert "/static/mobile_safari_recovery.js?v=20260910-phase3-league2" in source
+    assert "/static/session_recovery.js?v=20260910-phase3-visual1" in source
+    assert "/static/mobile_safari_recovery.js?v=20260910-phase3-visual1" in source
+    versions = {
+        token.split("?v=")[1].split('"')[0]
+        for token in source.split()
+        if "?v=" in token
+    }
+    assert versions == {"20260910-phase3-visual1"}
