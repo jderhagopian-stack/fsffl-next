@@ -197,16 +197,21 @@ def test_week_runtime_requires_week_and_never_relabels_as_ros():
         )
 
 
-def _forecast(*, horizon: ForecastHorizon = ForecastHorizon.REST_OF_SEASON) -> ForecastObservation:
-    as_of = datetime(2026, 9, 10, 20, 0, tzinfo=UTC)
+def _forecast(
+    *,
+    horizon: ForecastHorizon = ForecastHorizon.REST_OF_SEASON,
+    period_start: datetime = datetime(2026, 9, 9, tzinfo=UTC),
+    mean: float = 800.0,
+) -> ForecastObservation:
+    as_of = datetime(2026, 10, 7, 20, 0, tzinfo=UTC)
     return ForecastObservation(
         player_id="p1",
         position=Position.RB,
         horizon=horizon,
         metric=ForecastMetric.RUSH_YARDS,
-        period_start=datetime(2026, 9, 9, tzinfo=UTC),
+        period_start=period_start,
         period_end=datetime(2027, 1, 5, tzinfo=UTC),
-        distribution=ForecastDistribution(mean=800.0, stddev=100.0, p10=650.0, p50=800.0, p90=950.0),
+        distribution=ForecastDistribution(mean=mean, stddev=100.0, p10=650.0, p50=800.0, p90=950.0),
         source="fsffl:ros",
         model_version="ros-v1",
         as_of=as_of,
@@ -218,8 +223,13 @@ def _forecast(*, horizon: ForecastHorizon = ForecastHorizon.REST_OF_SEASON) -> F
     )
 
 
-def _actual(*, end: datetime, finalized: datetime | None = None) -> RealizedOutcome:
-    start = datetime(2026, 9, 1, tzinfo=UTC)
+def _actual(
+    *,
+    start: datetime,
+    end: datetime,
+    value: float = 85.0,
+    finalized: datetime | None = None,
+) -> RealizedOutcome:
     final = finalized or end
     return RealizedOutcome(
         player_id="p1",
@@ -227,7 +237,7 @@ def _actual(*, end: datetime, finalized: datetime | None = None) -> RealizedOutc
         metric=ForecastMetric.RUSH_YARDS,
         period_start=start,
         period_end=end,
-        actual=85.0,
+        actual=value,
         finalized_at=final,
         provenance=Provenance(source="actual", retrieved_at=final, effective_at=final),
     )
@@ -235,9 +245,10 @@ def _actual(*, end: datetime, finalized: datetime | None = None) -> RealizedOutc
 
 def test_season_roll_forward_adds_completed_actual_and_shifts_distribution_without_extra_variance():
     ros = _forecast()
+    actual_start = datetime(2026, 9, 1, tzinfo=UTC)
     actual_end = datetime(2026, 9, 8, tzinfo=UTC)
     result = compose_completed_actuals_with_ros(
-        completed_actuals=(_actual(end=actual_end),),
+        completed_actuals=(_actual(start=actual_start, end=actual_end),),
         ros_forecasts=(ros,),
         season_start=datetime(2026, 9, 1, tzinfo=UTC),
     )
@@ -250,11 +261,37 @@ def test_season_roll_forward_adds_completed_actual_and_shifts_distribution_witho
     assert season.source == "fsffl:completed-actuals-plus-ros"
 
 
+def test_week4_acceptance_gate_counts_weeks_1_to_4_once_then_ros_only():
+    season_start = datetime(2026, 9, 1, tzinfo=UTC)
+    week5_start = datetime(2026, 10, 6, tzinfo=UTC)
+    actuals = (
+        _actual(start=datetime(2026, 9, 1, tzinfo=UTC), end=datetime(2026, 9, 8, tzinfo=UTC), value=10.0),
+        _actual(start=datetime(2026, 9, 8, tzinfo=UTC), end=datetime(2026, 9, 15, tzinfo=UTC), value=20.0),
+        _actual(start=datetime(2026, 9, 15, tzinfo=UTC), end=datetime(2026, 9, 22, tzinfo=UTC), value=30.0),
+        _actual(start=datetime(2026, 9, 22, tzinfo=UTC), end=datetime(2026, 10, 6, tzinfo=UTC), value=40.0),
+    )
+    ros = _forecast(period_start=week5_start, mean=800.0)
+
+    season = compose_completed_actuals_with_ros(
+        completed_actuals=actuals,
+        ros_forecasts=(ros,),
+        season_start=season_start,
+    )[0]
+
+    assert season.distribution.mean == pytest.approx(900.0)
+    assert season.distribution.stddev == pytest.approx(100.0)
+
+
 def test_season_roll_forward_rejects_overlap_future_leak_and_weekly_evidence():
     ros = _forecast()
-    with pytest.raises(ValueError, match="overlaps"):
+    with pytest.raises(ValueError, match="overlaps ROS"):
         compose_completed_actuals_with_ros(
-            completed_actuals=(_actual(end=datetime(2026, 9, 10, tzinfo=UTC)),),
+            completed_actuals=(
+                _actual(
+                    start=datetime(2026, 9, 1, tzinfo=UTC),
+                    end=datetime(2026, 9, 10, tzinfo=UTC),
+                ),
+            ),
             ros_forecasts=(ros,),
             season_start=datetime(2026, 9, 1, tzinfo=UTC),
         )
@@ -263,8 +300,9 @@ def test_season_roll_forward_rejects_overlap_future_leak_and_weekly_evidence():
         compose_completed_actuals_with_ros(
             completed_actuals=(
                 _actual(
+                    start=datetime(2026, 9, 1, tzinfo=UTC),
                     end=datetime(2026, 9, 8, tzinfo=UTC),
-                    finalized=datetime(2026, 9, 11, tzinfo=UTC),
+                    finalized=datetime(2026, 10, 8, tzinfo=UTC),
                 ),
             ),
             ros_forecasts=(ros,),
@@ -275,5 +313,27 @@ def test_season_roll_forward_rejects_overlap_future_leak_and_weekly_evidence():
         compose_completed_actuals_with_ros(
             completed_actuals=(),
             ros_forecasts=(_forecast(horizon=ForecastHorizon.WEEK),),
+            season_start=datetime(2026, 9, 1, tzinfo=UTC),
+        )
+
+
+def test_season_roll_forward_rejects_overlapping_or_duplicate_actual_periods():
+    ros = _forecast(period_start=datetime(2026, 10, 6, tzinfo=UTC))
+    overlapping = (
+        _actual(
+            start=datetime(2026, 9, 1, tzinfo=UTC),
+            end=datetime(2026, 9, 15, tzinfo=UTC),
+            value=30.0,
+        ),
+        _actual(
+            start=datetime(2026, 9, 8, tzinfo=UTC),
+            end=datetime(2026, 9, 15, tzinfo=UTC),
+            value=20.0,
+        ),
+    )
+    with pytest.raises(ValueError, match="actual periods overlap"):
+        compose_completed_actuals_with_ros(
+            completed_actuals=overlapping,
+            ros_forecasts=(ros,),
             season_start=datetime(2026, 9, 1, tzinfo=UTC),
         )
