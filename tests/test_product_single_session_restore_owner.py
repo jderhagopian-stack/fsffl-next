@@ -8,7 +8,8 @@ def test_legacy_session_bridge_delegates_restore_to_hosted_owner() -> None:
     assert "return await hostedRestore()" in source
     assert "fsfflOriginalApi('/api/connect/sleeper'" not in source
     assert "window.addEventListener('load'" in source
-    assert "hosted restore-first flow" in source
+    assert "handed it to hosted revalidation" in source
+    assert "if(!state.context?.league_id)" not in source
 
 
 def test_mobile_hosted_module_remains_the_provider_restore_owner() -> None:

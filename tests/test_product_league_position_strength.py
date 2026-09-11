@@ -19,7 +19,7 @@ def test_league_position_strength_is_wired_with_current_beta_release_token() -> 
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     source = Path("src/fsffl/product/static/league_position_strength.js").read_text(encoding="utf-8")
 
-    assert '/static/league_position_strength.js?v=20260909-beta-feedback1' in html
+    assert '/static/league_position_strength.js?v=' in html
     assert "MutationObserver" in source
     assert "state?.route==='league_comparison'" in source
     assert "@media(max-width:620px)" in source

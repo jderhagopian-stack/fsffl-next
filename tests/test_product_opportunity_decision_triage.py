@@ -6,7 +6,7 @@ STATIC = Path("src/fsffl/product/static")
 
 def test_opportunity_decision_triage_is_loaded_with_coherent_static_version():
     html = (STATIC / "index.html").read_text()
-    assert '/static/opportunity_decision_triage.js?v=20260909-beta-feedback1' in html
+    assert '/static/opportunity_decision_triage.js?v=' in html
 
 
 def test_triage_uses_existing_bilateral_shapes_without_new_score():

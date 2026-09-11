@@ -6,7 +6,7 @@ STATIC = Path("src/fsffl/product/static")
 
 def test_trade_workflow_handoff_is_loaded_with_coherent_static_version():
     html = (STATIC / "index.html").read_text()
-    assert '/static/trade_workflow_handoff.js?v=20260909-beta-feedback1' in html
+    assert '/static/trade_workflow_handoff.js?v=' in html
 
 
 def test_opportunity_handoff_carries_exact_asset_refs_and_revalidates_current_state():

@@ -96,7 +96,7 @@ def test_mobile_connect_uses_background_import_and_transport_recovery() -> None:
     assert "pageshow" not in source
 
 
-def test_mobile_connect_is_single_flight_and_recovers_existing_job_before_starting() -> None:
+def test_mobile_connect_has_one_same_league_poll_owner_and_canonical_readiness_probe() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -104,12 +104,16 @@ def test_mobile_connect_is_single_flight_and_recovers_existing_job_before_starti
 
     assert "let activeConnectPromise=null" in source
     assert "let activeLeagueId=null" in source
-    assert "let activeOperation=null" in source
-    assert "activeConnectPromise&&" in source
-    assert "activeLeagueId===leagueId" in source
-    assert "activeOperation===operation" in source
+    assert "activeConnectPromise&&activeLeagueId===leagueId" in source
+    assert "activeOperation" not in source
     assert "const existing=await recoverCurrentJob(leagueId,operation)" in source
     assert "['queued','running'].includes(existing.status)" in source
+    assert "current.status==='completed'&&current.operation===operation" in source
+    assert "const recovered=await recoverCurrentJob(leagueId,operation)" in source
+    assert "async function usableConnectedContext(leagueId)" in source
+    assert "if(operation==='connect'&&Date.now()>=nextContextProbeAt)" in source
+    assert "if(context)return context" in source
+    assert "pollDelay=Math.min(2200" in source
 
 
 def test_saved_session_restores_before_provider_refresh() -> None:
@@ -127,6 +131,18 @@ def test_saved_session_restores_before_provider_refresh() -> None:
     assert product_context_index < apply_index < refresh_index
     assert "waitForBackgroundImport(leagueId,null,'connect')" in restore
     assert "Stale-while-revalidate" in restore
+
+
+def test_session_startup_hands_durable_context_to_hosted_revalidation() -> None:
+    source = open(
+        "src/fsffl/product/static/session_recovery.js",
+        encoding="utf-8",
+    ).read()
+    startup = source.rsplit("window.addEventListener('load'", 1)[1]
+
+    assert "const restored=await fsfflRestoreSession()" in startup
+    assert "if(!state.context?.league_id)" not in startup
+    assert "handed it to hosted revalidation" in startup
 
 
 def test_stale_while_revalidate_is_visible_and_explains_stored_state() -> None:

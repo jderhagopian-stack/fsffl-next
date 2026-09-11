@@ -9,7 +9,6 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   let interactiveConnectInFlight=false;
   let restoreInFlight=false;
   let activeLeagueId=null;
-  let activeOperation=null;
   let activeConnectPromise=null;
 
   const now=()=>window.performance?.now?.()??Date.now();
@@ -58,11 +57,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   async function recoverCurrentJob(leagueId,operation){
     try{
       const current=await resilientApi('/api/connect/sleeper/background/current',{},2);
-      if(
-        current?.league_external_id===leagueId&&
-        ['queued','running','completed'].includes(current.status)&&
-        (!operation||!current.operation||current.operation===operation)
-      )return current;
+      if(current?.league_external_id!==leagueId)return null;
+      if(['queued','running'].includes(current.status))return current;
+      if(current.status==='completed'&&current.operation===operation)return current;
     }catch(error){
       if(!isTransportError(error))throw error;
     }
@@ -88,17 +85,45 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     }
   }
 
+  async function usableConnectedContext(leagueId){
+    try{
+      const context=await resilientApi('/api/product-context',{},1);
+      return contextMatchesLeague(context,leagueId)&&context?.state_id?context:null;
+    }catch(error){
+      if(isTransportError(error))return null;
+      throw error;
+    }
+  }
+
   async function performBackgroundImport(leagueId,onProgress,operation='connect'){
     let job=await startBackgroundImport(leagueId,operation);
     const deadline=Date.now()+120000;
     let consecutiveTransportFailures=0;
+    let pollDelay=700;
+    let nextContextProbeAt=Date.now()+1000;
     while(Date.now()<deadline){
       onProgress?.(job);
       if(job?.status==='completed')return resilientApi('/api/product-context',{},3);
       if(job?.status==='failed')throw new Error(job.error||'Sleeper league import failed');
-      await sleep(document.visibilityState==='hidden'?1200:550);
+
+      // Canonical State is the readiness boundary for using the application. A hosted
+      // worker can still be finishing bookkeeping or secondary intelligence after the
+      // valid league snapshot is already available, so do not turn that into a false
+      // browser timeout. Value and Behavioral surfaces retain their own readiness gates.
+      if(operation==='connect'&&Date.now()>=nextContextProbeAt){
+        const context=await usableConnectedContext(leagueId);
+        if(context)return context;
+        nextContextProbeAt=Date.now()+Math.max(1400,pollDelay);
+      }
+
+      await sleep(document.visibilityState==='hidden'?Math.max(1500,pollDelay):pollDelay);
+      pollDelay=Math.min(2200,Math.round(pollDelay*1.35));
       try{
-        job=await api('/api/connect/sleeper/background/current');
+        const current=await api('/api/connect/sleeper/background/current');
+        if(current?.league_external_id&&current.league_external_id!==leagueId){
+          throw new Error('Another league connection replaced this request.');
+        }
+        job=current;
         consecutiveTransportFailures=0;
       }catch(error){
         if(!isTransportError(error))throw error;
@@ -106,24 +131,23 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         if(consecutiveTransportFailures>=8)throw new Error('Connection to the server was interrupted. Please try again.');
       }
     }
+    const context=operation==='connect'?await usableConnectedContext(leagueId):null;
+    if(context)return context;
     throw new Error('League import is taking longer than expected. Please try again in a moment.');
   }
 
   function waitForBackgroundImport(leagueId,onProgress,operation='connect'){
-    if(
-      activeConnectPromise&&
-      activeLeagueId===leagueId&&
-      activeOperation===operation
-    )return activeConnectPromise;
+    // The server already treats a same-user/same-league connect or refresh as one
+    // single-flight job. Mirror that contract in the browser so startup recovery,
+    // manual connect and stale-while-revalidate cannot create competing poll loops.
+    if(activeConnectPromise&&activeLeagueId===leagueId)return activeConnectPromise;
     const run=performBackgroundImport(leagueId,onProgress,operation);
     activeLeagueId=leagueId;
-    activeOperation=operation;
     activeConnectPromise=run;
     run.finally(()=>{
       if(activeConnectPromise===run){
         activeConnectPromise=null;
         activeLeagueId=null;
-        activeOperation=null;
       }
     }).catch(()=>{});
     return run;
@@ -182,7 +206,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
 
       // First connection (or a missing durable snapshot) still uses the governed
-      // server-owned import path and waits only because no usable league exists yet.
+      // server-owned import path and waits only until canonical league State is usable.
       context=await waitForBackgroundImport(leagueId,null,'connect');
       context=await restoreSelectedTeam(context);
       applyConnectedContext(context);

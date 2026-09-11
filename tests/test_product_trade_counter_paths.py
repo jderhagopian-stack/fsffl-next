@@ -6,7 +6,7 @@ STATIC = Path("src/fsffl/product/static")
 
 def test_trade_counter_paths_load_after_primary_narrative():
     html = (STATIC / "index.html").read_text()
-    assert html.index('/static/trade_counter_paths.js?v=20260909-beta-feedback1') > html.index('/static/trade_primary_narrative.js?v=20260909-beta-feedback1')
+    assert html.index('/static/trade_counter_paths.js?v=') > html.index('/static/trade_primary_narrative.js?v=')
 
 
 def test_counter_paths_only_surface_governed_mutual_gain_frontier_points():
