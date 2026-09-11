@@ -49,7 +49,9 @@ def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher
     return (
         NamedCurrentProjectionFetcher(
             source_id="razzball",
-            fetch=lambda season: current_snapshot_from_razzball(razzball.fetch_latest()),
+            fetch=lambda season: current_snapshot_from_razzball(
+                razzball.fetch_latest(season=season)
+            ),
         ),
         NamedCurrentProjectionFetcher(
             source_id="fftoday",
