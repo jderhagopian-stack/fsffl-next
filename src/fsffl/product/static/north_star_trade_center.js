@@ -15,7 +15,6 @@
   function adjusted(result,teamId){return[result?.roster_adjusted_market_net?.side_a,result?.roster_adjusted_market_net?.side_b].find(item=>item?.team_id===teamId)||null}
   function simRow(result,teamId){return(result?.team_deltas||[]).find(item=>item?.team_id===teamId)||null}
   function disposition(result){return result?.disposition?.action||result?.disposition?.disposition||result?.disposition?.shape||''}
-  function teamName(teamId,focal){if(focal)return tradeUiState?.browser?.focal_team?.display_name||'Your team';return(typeof tradeTeamName==='function'?tradeTeamName(teamId):teamId)||'Other team'}
   function selectedLabels(kind){
     if(typeof tradeUiState==='undefined')return[];
     const team=kind==='focal'?tradeUiState.browser?.focal_team:(tradeUiState.browser?.counterparties||[]).find(item=>item.team_id===tradeUiState.counterpartyTeamId);
@@ -33,7 +32,6 @@
     return pieces.join(' · ')||'Market evidence incomplete';
   }
   function tone(value){return !finite(value)||Math.abs(value)<1e-9?'neutral':value>0?'good':'risk'}
-  function decisionShape(result,teamId){return side(result,'decision',teamId)?.shape||'incomplete'}
   function impactCard(result,teamId,focal){
     const decision=side(result,'decision',teamId),net=adjusted(result,teamId),evaluation=side(result,'evaluation',teamId),res=evaluation?.delta?.resilience||{};
     const valueDelta=net?.roster_adjusted_market_delta;
@@ -43,8 +41,8 @@
   }
   function seasonCard(result,focalId){
     const row=simRow(result,focalId),c=row?.competitive||{};
-    const ready=finite(c.expected_wins)||finite(c.playoff_probability)||finite(c.championship_probability);
-    return`<article class="ns-trade-card ns-trade-card--season"><div class="ns-trade-card__head"><span>Season impact</span><strong>${ready?`${Number(result?.scenario_simulation_count||0).toLocaleString()} runs`:'Simulation needed'}</strong></div><div class="ns-trade-season-grid"><div class="ns-trade-season-metric"><span>Expected wins</span><strong class="ns-trade-delta" data-tone="${tone(c.expected_wins)}">${signed(c.expected_wins,2)}</strong></div><div class="ns-trade-season-metric"><span>Playoff odds</span><strong class="ns-trade-delta" data-tone="${tone(c.playoff_probability)}">${pctPoints(c.playoff_probability)}</strong></div><div class="ns-trade-season-metric"><span>Title odds</span><strong class="ns-trade-delta" data-tone="${tone(c.championship_probability)}">${pctPoints(c.championship_probability)}</strong></div></div></article>`;
+    const ready=finite(c.expected_wins)||finite(c.playoff_probability)||finite(c.first_place_probability);
+    return`<article class="ns-trade-card ns-trade-card--season"><div class="ns-trade-card__head"><span>Season impact</span><strong>${ready?`${Number(result?.scenario_simulation_count||0).toLocaleString()} runs`:'Simulation needed'}</strong></div><div class="ns-trade-season-grid"><div class="ns-trade-season-metric"><span>Expected wins</span><strong class="ns-trade-delta" data-tone="${tone(c.expected_wins)}">${signed(c.expected_wins,2)}</strong></div><div class="ns-trade-season-metric"><span>Playoff odds</span><strong class="ns-trade-delta" data-tone="${tone(c.playoff_probability)}">${pctPoints(c.playoff_probability)}</strong></div><div class="ns-trade-season-metric"><span>First-place odds</span><strong class="ns-trade-delta" data-tone="${tone(c.first_place_probability)}">${pctPoints(c.first_place_probability)}</strong></div></div></article>`;
   }
   function positionRows(result){return(result?.position_strength?.positions||[]).filter(row=>finite(row.expected_points_delta)&&Math.abs(row.expected_points_delta)>1e-9).sort((a,b)=>Math.abs(b.expected_points_delta)-Math.abs(a.expected_points_delta)).slice(0,4)}
   function positionCard(result){
@@ -90,10 +88,11 @@
     const result=lastAnalysis,root=document.querySelector('#trade-analysis-empty > div');if(!result||!root)return;
     const existing=root.querySelector('#ns-trade-decision-room');if(existing)existing.remove();
     markLegacy(root);
-    const focalId=result.focal_team_id,otherId=result.counterparty_team_id,simulated=Boolean(lastSimulation),action=actionState(simulated),block=blocker(result,simulated);
+    const evidenceResult=lastSimulation||result;
+    const focalId=result.focal_team_id,otherId=result.counterparty_team_id,simulated=Boolean(lastSimulation),action=actionState(simulated),block=blocker(evidenceResult,simulated);
     const finalAction=simulated&&Boolean(disposition(lastSimulation));
     const room=document.createElement('section');room.id='ns-trade-decision-room';room.className='ns-trade-room';
-    room.innerHTML=`<div class="ns-trade-room__hero"><div class="ns-trade-room__top"><div><p class="eyebrow">Trade decision</p><h2>${esc(action.title)}</h2><p>${simulated?'Changed-roster evidence is complete for this run.':'Fast roster and package evidence is ready; season impact is the next decision layer.'}</p></div><span class="ns-trade-status" data-final="${finalAction?'true':'false'}">${finalAction?'Decision ready':'Simulation needed'}</span></div><div class="ns-trade-packages"><div class="ns-trade-package"><span>You give</span><strong>${esc(packageText('focal'))}</strong><small>${esc(packageEvidence(result,focalId))}</small></div><div class="ns-trade-swap" aria-hidden="true">⇄</div><div class="ns-trade-package"><span>You get</span><strong>${esc(packageText('counterparty'))}</strong><small>${esc(packageEvidence(result,otherId))}</small></div></div></div><div class="ns-trade-room__grid">${impactCard(result,focalId,true)}${impactCard(result,otherId,false)}${seasonCard(lastSimulation,focalId)}${positionCard(result)}<article class="ns-trade-card ns-trade-card--blocker"><span>Main blocker / risk</span><h3 class="ns-trade-blocker-copy">${esc(block.title)}</h3><p class="ns-trade-blocker-note">${esc(block.note)}</p>${frontierCopy(lastFrontier)}</article><article class="ns-trade-card ns-trade-card--action"><span>What to do next</span><h3 class="ns-trade-action-title">${esc(action.title)}</h3><p class="ns-trade-action-copy">${esc(action.copy)}</p><button type="button" class="primary-button ns-trade-primary">${esc(action.cta)}</button></article></div>`;
+    room.innerHTML=`<div class="ns-trade-room__hero"><div class="ns-trade-room__top"><div><p class="eyebrow">Trade decision</p><h2>${esc(action.title)}</h2><p>${simulated?'Changed-roster evidence is complete for this run.':'Fast roster and package evidence is ready; season impact is the next decision layer.'}</p></div><span class="ns-trade-status" data-final="${finalAction?'true':'false'}">${finalAction?'Decision ready':'Simulation needed'}</span></div><div class="ns-trade-packages"><div class="ns-trade-package"><span>You give</span><strong>${esc(packageText('focal'))}</strong><small>${esc(packageEvidence(evidenceResult,focalId))}</small></div><div class="ns-trade-swap" aria-hidden="true">⇄</div><div class="ns-trade-package"><span>You get</span><strong>${esc(packageText('counterparty'))}</strong><small>${esc(packageEvidence(evidenceResult,otherId))}</small></div></div></div><div class="ns-trade-room__grid">${impactCard(evidenceResult,focalId,true)}${impactCard(evidenceResult,otherId,false)}${seasonCard(lastSimulation,focalId)}${positionCard(result)}<article class="ns-trade-card ns-trade-card--blocker"><span>Main blocker / risk</span><h3 class="ns-trade-blocker-copy">${esc(block.title)}</h3><p class="ns-trade-blocker-note">${esc(block.note)}</p>${frontierCopy(lastFrontier)}</article><article class="ns-trade-card ns-trade-card--action"><span>What to do next</span><h3 class="ns-trade-action-title">${esc(action.title)}</h3><p class="ns-trade-action-copy">${esc(action.copy)}</p><button type="button" class="primary-button ns-trade-primary">${esc(action.cta)}</button></article></div>`;
     root.prepend(room);methodsToggle(root);markLegacy(root);room.querySelector('.ns-trade-primary')?.addEventListener('click',()=>primaryAction(action.target,root));
   }
   function refineShell(){
