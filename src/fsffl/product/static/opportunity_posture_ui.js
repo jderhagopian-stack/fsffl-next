@@ -2,7 +2,8 @@
   const POSTURE_STORAGE_KEY='fsffl.tradeFinderPosture',INTENT_STORAGE_KEY='fsffl.marketIntent',INTENT_VALUE_STORAGE_KEY='fsffl.marketIntentValue',DEFAULT='default_calculated';
   const CONSUMER_LABELS={default_calculated:'Use calculated / neutral',win_now:'Push in the chips / Win now',balanced:'Balanced',retool:'Retool',rebuild:'Rebuild'},LOCAL_INTENTS={position:'Improve a position',shop:'Shop a player',target:'Target a player',consolidate:'Consolidate'};
   let latestMeta=null,observerStarted=false,renderQueued=false,applyingWorkspace=false;
-  let canonicalCandidates=null,canonicalWorkspaceKey=null;
+  let canonicalCandidates=null;
+  let canonicalWorkspaceKey=null;
   const stored=(key,fallback='')=>{try{return localStorage.getItem(key)||fallback}catch(_){return fallback}},store=(key,value)=>{try{value?localStorage.setItem(key,value):localStorage.removeItem(key)}catch(_){}};
   const selectedPosture=()=>stored(POSTURE_STORAGE_KEY,DEFAULT),rememberPosture=value=>store(POSTURE_STORAGE_KEY,value),selectedIntent=()=>stored(INTENT_STORAGE_KEY,''),selectedIntentValue=()=>stored(INTENT_VALUE_STORAGE_KEY,''),rememberIntent=(intent,value='')=>{store(INTENT_STORAGE_KEY,intent);store(INTENT_VALUE_STORAGE_KEY,value)},clearIntent=()=>rememberIntent('',''),intentSelection=()=>({intent:selectedIntent(),value:selectedIntentValue()});
   function workspaceKey(payload){return `${payload?.league_state_id||''}|${payload?.focal_team_id||''}|${payload?.as_of||''}`}
