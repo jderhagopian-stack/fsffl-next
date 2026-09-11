@@ -6,6 +6,7 @@ DETAIL = ROOT / "north_star_opportunity_detail.js"
 HANDOFF = ROOT / "north_star_opportunity_handoff.js"
 CSS = ROOT / "north_star_opportunity_detail.css"
 INDEX = ROOT / "index.html"
+RELEASE = "20260911-trade-center1"
 
 
 def _read(path: Path) -> str:
@@ -68,7 +69,7 @@ def test_trade_center_handoff_carries_market_context_without_replacing_canonical
 
 def test_opportunity_detail_assets_load_after_market_layer() -> None:
     source = _read(INDEX)
-    assert "north_star_opportunity_detail.css?v=20260911-opportunity-detail1" in source
-    assert "north_star_opportunity_handoff.js?v=20260911-opportunity-detail1" in source
-    assert "north_star_opportunity_detail.js?v=20260911-opportunity-detail1" in source
+    assert f"north_star_opportunity_detail.css?v={RELEASE}" in source
+    assert f"north_star_opportunity_handoff.js?v={RELEASE}" in source
+    assert f"north_star_opportunity_detail.js?v={RELEASE}" in source
     assert source.index("north_star_market.js") < source.index("north_star_opportunity_detail.js")
