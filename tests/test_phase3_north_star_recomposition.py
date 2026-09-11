@@ -9,10 +9,15 @@ def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _asset_position(source: str, asset: str) -> int:
+    marker = f'/static/{asset}?v='
+    return source.index(marker)
+
+
 def test_recomposition_is_loaded_after_shared_north_star_styles() -> None:
     source = _source(INDEX)
-    shared = source.index("/static/north_star.css?v=20260910-phase3-visual2")
-    recomposed = source.index("/static/north_star_recomposition.css?v=20260910-phase3-visual2")
+    shared = _asset_position(source, "north_star.css")
+    recomposed = _asset_position(source, "north_star_recomposition.css")
     assert shared < recomposed
 
 
