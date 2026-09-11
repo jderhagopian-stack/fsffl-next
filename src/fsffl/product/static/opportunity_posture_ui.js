@@ -36,7 +36,8 @@
 
   function workspaceKey(payload){return `${payload?.league_state_id||''}|${payload?.focal_team_id||''}|${payload?.as_of||''}`}
   function canonicalCandidatesFor(payload,discovery){
-    const key=workspaceKey(payload),freshServerPayload=!discovery?.active_posture;
+    const key=workspaceKey(payload);
+    const freshServerPayload=!discovery?.active_posture;
     if(freshServerPayload||canonicalWorkspaceKey!==key||!Array.isArray(canonicalCandidates)){
       canonicalWorkspaceKey=key;
       canonicalCandidates=Array.isArray(discovery?.candidates)?discovery.candidates:[];
