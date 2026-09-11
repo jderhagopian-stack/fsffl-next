@@ -5,6 +5,7 @@ LEAGUE = Path("src/fsffl/product/static/league_comparison.js")
 INDEX = Path("src/fsffl/product/static/index.html")
 POSITION_MAP = Path("src/fsffl/product/static/league_position_map.js")
 POSITION_STRENGTH = Path("src/fsffl/product/static/league_position_strength.js")
+PRODUCT_SHELL = Path("src/fsffl/product/static/product_shell.js")
 
 
 def _source(path: Path) -> str:
@@ -63,3 +64,25 @@ def test_phase3_league_cache_generation_preserves_hosted_recovery_scripts() -> N
     assert "mobile_safari_recovery.js?v=20260910-phase3-league2" in source
     assert "league_comparison.js?v=20260910-phase3-league2" not in source
     assert "product_shell.js?v=20260910-phase3-league2" in source
+
+
+def test_league_asset_order_never_mixes_pick_count_with_cardinal_value() -> None:
+    source = _source(LEAGUE)
+
+    assert "b.picks-a.picks" in source
+    assert "(b.pickValue??b.picks)" not in source
+    assert "(a.pickValue??a.picks)" not in source
+
+
+def test_age_profile_surfaces_starter_specific_evidence_on_mobile() -> None:
+    source = _source(LEAGUE)
+
+    assert "known_starter_age_count" in source
+    assert "starter avg · ${view.known_starter_age_count||0} known" in source
+    assert ".league-age-reading:nth-child(3){display:none}" not in source
+
+
+def test_generic_surface_clears_league_only_panel_class() -> None:
+    source = _source(PRODUCT_SHELL)
+
+    assert "if(route!=='league_comparison')panel?.classList.remove('league-structure-panel')" in source
