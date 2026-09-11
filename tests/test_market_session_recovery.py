@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RECOVERY = ROOT / "src/fsffl/product/static/market_session_recovery.js"
 INDEX = ROOT / "src/fsffl/product/static/index.html"
+RELEASE = "20260911-opportunity-detail1"
 
 
 def _source(path: Path) -> str:
@@ -51,6 +52,6 @@ def test_market_recovery_is_presentation_and_session_only() -> None:
 def test_hosted_release_eagerly_loads_market_recovery_with_one_asset_generation() -> None:
     source = _source(INDEX)
 
-    assert "market_session_recovery.js?v=20260911-market-recovery1" in source
+    assert f"market_session_recovery.js?v={RELEASE}" in source
     versions = {token.split("?v=")[1].split('"')[0] for token in source.split() if "?v=" in token}
-    assert versions == {"20260911-market-recovery1"}
+    assert versions == {RELEASE}
