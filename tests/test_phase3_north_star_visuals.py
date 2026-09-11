@@ -26,6 +26,7 @@ def test_home_has_one_dominant_command_surface_and_asymmetric_workflows() -> Non
     assert "font-size:clamp(1.8rem,4.2vw,3.1rem)" in source
     assert ".home-workflows{grid-template-columns:1.25fr .9fr .9fr" in source
     assert ".home-workflow:first-child{" in source
+    assert ".home-attention,.franchise-shell,.league-structure-panel{max-width:1180px!important;margin-inline:auto!important}" in source
 
 
 def test_franchise_uses_unequal_visual_weight_for_diagnosis() -> None:
@@ -45,7 +46,7 @@ def test_mobile_rules_are_intentional_not_desktop_compression() -> None:
     assert ".home-priority{min-height:0" in source
     assert ".home-workflows{grid-template-columns:1fr!important}" in source
     assert ".franchise-diagnosis-grid{grid-template-columns:1fr!important}" in source
-    assert ".franchise-position-row{grid-template-columns:72px minmax(110px,1fr) 78px" in source
+    assert ".franchise-position-row{grid-template-columns:64px minmax(0,1fr) 68px" in source
 
 
 def test_visual_system_respects_reduced_motion() -> None:
