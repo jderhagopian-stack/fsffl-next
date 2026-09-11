@@ -6,8 +6,8 @@ STATIC = Path("src/fsffl/product/static")
 
 def test_trade_primary_narrative_loads_after_existing_trade_explainer():
     html = (STATIC / "index.html").read_text()
-    explainer = html.index('/static/trade_explainer.js?v=20260909-beta-feedback1')
-    narrative = html.index('/static/trade_primary_narrative.js?v=20260909-beta-feedback1')
+    explainer = html.index('/static/trade_explainer.js?v=')
+    narrative = html.index('/static/trade_primary_narrative.js?v=')
     assert narrative > explainer
 
 
