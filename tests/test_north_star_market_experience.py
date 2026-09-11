@@ -63,7 +63,7 @@ def test_market_shell_is_route_scoped_and_cleaned_up() -> None:
     source = _source(MARKET)
 
     assert "function onMarketRoute()" in source
-    assert "if(!onMarketRoute()||state()?.payload?.status!=='ready')" in source
+    assert "if(!onMarketRoute()||opportunityState()?.payload?.status!=='ready')" in source
     assert "panel.classList.remove('ns-market-shell')" in source
     assert "if(!onMarketRoute())return" in source
 
