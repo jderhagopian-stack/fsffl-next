@@ -242,46 +242,72 @@ class PrivateBetaRuntimeStore:
         with self._lock:
             return self._contexts.get(user_id, UserRuntimeContext(user_id=user_id))
 
-    def set_league_state(self, user_id: str, league_state: LeagueState) -> None:
+    def set_league_state(self, user_id: str, league_state: LeagueState) -> UserRuntimeContext:
+        if not user_id.strip():
+            raise ValueError("user_id cannot be blank")
         with self._lock:
             current = self.get(user_id)
-            same_material_state = (
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            selected = current.selected_team_id if current.selected_team_id in valid_team_ids else None
+            same_league = (
                 current.league_state is not None
+                and current.league_state.league.league_id == league_state.league.league_id
+            )
+            complete_bundle = (
+                current.forecast_evidence is not None
+                and current.simulation_analytics is not None
+                and current.value_evidence is not None
+                and user_id not in self._pending_intelligence
+            )
+            if (
+                same_league
+                and complete_bundle
+                and current.league_state is not None
                 and league_material_fingerprint(current.league_state)
                 == league_material_fingerprint(league_state)
+            ):
+                reused = UserRuntimeContext(
+                    user_id=user_id,
+                    league_state=current.league_state,
+                    selected_team_id=selected,
+                    forecast_evidence=current.forecast_evidence,
+                    simulation_analytics=current.simulation_analytics,
+                    value_evidence=current.value_evidence,
+                    intelligence_reused=True,
+                )
+                self._contexts[user_id] = reused
+                return reused
+
+            forecast_evidence = current.forecast_evidence
+            forecast_cutoff_compatible = bool(
+                forecast_evidence is not None
+                and not any(
+                    item.as_of > league_state.as_of
+                    for item in (
+                        forecast_evidence.raw_forecasts
+                        + forecast_evidence.league_scored_forecasts
+                    )
+                )
             )
-            self._contexts[user_id] = UserRuntimeContext(
+            forecast_reusable = (
+                same_league
+                and current.league_state is not None
+                and forecast_evidence is not None
+                and user_id not in self._pending_intelligence
+                and forecast_cutoff_compatible
+                and forecast_input_fingerprint(current.league_state)
+                == forecast_input_fingerprint(league_state)
+            )
+            context = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
-                selected_team_id=(
-                    current.selected_team_id
-                    if current.selected_team_id in {team.team_id for team in league_state.teams}
-                    else None
-                ),
-                forecast_evidence=current.forecast_evidence if same_material_state else None,
-                simulation_analytics=current.simulation_analytics if same_material_state else None,
-                value_evidence=current.value_evidence if same_material_state else None,
-                intelligence_reused=same_material_state and current.forecast_evidence is not None,
+                selected_team_id=selected if same_league else None,
+                forecast_evidence=forecast_evidence if forecast_reusable else None,
             )
-            if not same_material_state:
+            self._contexts[user_id] = context
+            if not same_league:
                 self._pending_intelligence.pop(user_id, None)
-
-    def select_team(self, user_id: str, team_id: str) -> None:
-        with self._lock:
-            current = self.get(user_id)
-            if current.league_state is None:
-                raise ValueError("load a league before selecting a team")
-            if team_id not in {team.team_id for team in current.league_state.teams}:
-                raise ValueError("selected team is not part of the loaded league")
-            self._contexts[user_id] = UserRuntimeContext(
-                user_id=current.user_id,
-                league_state=current.league_state,
-                selected_team_id=team_id,
-                forecast_evidence=current.forecast_evidence,
-                simulation_analytics=current.simulation_analytics,
-                value_evidence=current.value_evidence,
-                intelligence_reused=current.intelligence_reused,
-            )
+            return context
 
     def set_forecast_evidence(
         self,
@@ -289,61 +315,202 @@ class PrivateBetaRuntimeStore:
         evidence: LiveForecastEvidence,
         *,
         refreshed_league_state: LeagueState | None = None,
-    ) -> None:
+    ) -> UserRuntimeContext:
+        """Attach NEXT-2 evidence, optionally advancing state past evidence cutoff."""
+
         with self._lock:
             current = self.get(user_id)
             league_state = refreshed_league_state or current.league_state
             if league_state is None:
-                raise ValueError("load a league before attaching forecast evidence")
-            self._contexts[user_id] = UserRuntimeContext(
-                user_id=current.user_id,
+                raise ValueError("cannot attach forecasts before a league is loaded")
+            forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
+            if any(item.as_of > league_state.as_of for item in forecasts):
+                raise ValueError("forecast evidence cannot postdate canonical league state")
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
+            updated = UserRuntimeContext(
+                user_id=user_id,
                 league_state=league_state,
-                selected_team_id=current.selected_team_id,
+                selected_team_id=selected,
                 forecast_evidence=evidence,
                 simulation_analytics=None,
-                value_evidence=current.value_evidence,
+                value_evidence=None,
                 intelligence_reused=False,
             )
+            self._contexts[user_id] = updated
             self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
                 league_state=league_state,
                 forecast_evidence=evidence,
             )
+            return updated
 
-    def set_simulation_analytics(self, user_id: str, simulation: LiveSimulationAnalyticsResult) -> None:
+    def _recover_pending_for_result(
+        self,
+        user_id: str,
+        *,
+        expected_state_id: str,
+    ) -> tuple[UserRuntimeContext, _PendingIntelligenceSnapshot | None]:
+        current = self.get(user_id)
+        pending = self._pending_intelligence.get(user_id)
+        if pending is None or pending.league_state.state_id != expected_state_id:
+            return current, None
+        if current.league_state is not None and current.league_state.league.league_id != pending.league_state.league.league_id:
+            return current, None
+        return current, pending
+
+    def set_simulation_analytics(
+        self,
+        user_id: str,
+        result: LiveSimulationAnalyticsResult,
+    ) -> UserRuntimeContext:
+        """Attach NEXT-4/NEXT-7 simulation output without rewriting its authority.
+
+        If same-league session recovery re-materializes State while a background
+        refresh is running, recover the exact pending State+Forecast snapshot that
+        produced this Simulation result instead of failing on a transient reset.
+        """
+
+        with self._lock:
+            result_state_id = result.league_view.context.league_state_id
+            current, pending = self._recover_pending_for_result(
+                user_id,
+                expected_state_id=result_state_id,
+            )
+            league_state = current.league_state
+            forecast_evidence = current.forecast_evidence
+            if league_state is None or forecast_evidence is None or league_state.state_id != result_state_id:
+                if pending is None:
+                    raise ValueError("cannot attach simulation before matching league and forecast evidence")
+                league_state = pending.league_state
+                forecast_evidence = pending.forecast_evidence
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
+            updated = UserRuntimeContext(
+                user_id=user_id,
+                league_state=league_state,
+                selected_team_id=selected,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=result,
+                value_evidence=None,
+                intelligence_reused=False,
+            )
+            self._contexts[user_id] = updated
+            self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
+                league_state=league_state,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=result,
+            )
+            return updated
+
+    def set_value_evidence(
+        self,
+        user_id: str,
+        result: CurrentMarketValueRuntimeResult,
+    ) -> UserRuntimeContext:
+        """Attach NEXT-3 Value output only to the exact canonical state it values.
+
+        The same pending snapshot recovery used for Simulation prevents a
+        reconnect from splitting one refresh across incompatible State identities.
+        """
+
+        with self._lock:
+            current, pending = self._recover_pending_for_result(
+                user_id,
+                expected_state_id=result.league_state_id,
+            )
+            league_state = current.league_state
+            forecast_evidence = current.forecast_evidence
+            simulation_analytics = current.simulation_analytics
+            if league_state is None or league_state.state_id != result.league_state_id:
+                if pending is None:
+                    raise ValueError("Value evidence must match current LeagueState")
+                league_state = pending.league_state
+                forecast_evidence = pending.forecast_evidence
+                simulation_analytics = pending.simulation_analytics
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
+            updated = UserRuntimeContext(
+                user_id=user_id,
+                league_state=league_state,
+                selected_team_id=selected,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=simulation_analytics,
+                value_evidence=result,
+                intelligence_reused=False,
+            )
+            self._contexts[user_id] = updated
+            self._pending_intelligence.pop(user_id, None)
+            return updated
+
+    def set_intelligence_bundle(
+        self,
+        user_id: str,
+        *,
+        league_state: LeagueState,
+        forecast_evidence: LiveForecastEvidence,
+        simulation_analytics: LiveSimulationAnalyticsResult | None,
+        value_evidence: CurrentMarketValueRuntimeResult | None,
+    ) -> UserRuntimeContext:
+        """Atomically attach one internally consistent intelligence snapshot."""
+
+        forecasts = forecast_evidence.raw_forecasts + forecast_evidence.league_scored_forecasts
+        if any(item.as_of > league_state.as_of for item in forecasts):
+            raise ValueError("forecast evidence cannot postdate canonical league state")
+        if simulation_analytics is not None and simulation_analytics.league_view.context.league_state_id != league_state.state_id:
+            raise ValueError("simulation analytics must match intelligence LeagueState")
+        if value_evidence is not None and value_evidence.league_state_id != league_state.state_id:
+            raise ValueError("Value evidence must match intelligence LeagueState")
+
         with self._lock:
             current = self.get(user_id)
-            self._contexts[user_id] = UserRuntimeContext(
-                user_id=current.user_id,
+            if current.league_state is not None and current.league_state.league.league_id != league_state.league.league_id:
+                raise ValueError("cannot attach intelligence for a different loaded league")
+            selected = current.selected_team_id
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            if selected not in valid_team_ids:
+                selected = None
+            updated = UserRuntimeContext(
+                user_id=user_id,
+                league_state=league_state,
+                selected_team_id=selected,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=simulation_analytics,
+                value_evidence=value_evidence,
+                intelligence_reused=False,
+            )
+            self._contexts[user_id] = updated
+            self._pending_intelligence.pop(user_id, None)
+            return updated
+
+    def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
+        if not team_id.strip():
+            raise ValueError("team_id cannot be blank")
+        with self._lock:
+            current = self.get(user_id)
+            if current.league_state is None:
+                raise ValueError("cannot select team before a league is loaded")
+            valid_team_ids = {team.team_id for team in current.league_state.teams}
+            if team_id not in valid_team_ids:
+                raise ValueError("selected team does not belong to loaded league")
+            updated = UserRuntimeContext(
+                user_id=user_id,
                 league_state=current.league_state,
-                selected_team_id=current.selected_team_id,
+                selected_team_id=team_id,
                 forecast_evidence=current.forecast_evidence,
-                simulation_analytics=simulation,
+                simulation_analytics=current.simulation_analytics,
                 value_evidence=current.value_evidence,
                 intelligence_reused=current.intelligence_reused,
             )
-            pending = self._pending_intelligence.get(user_id)
-            if pending is not None:
-                self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
-                    league_state=pending.league_state,
-                    forecast_evidence=pending.forecast_evidence,
-                    simulation_analytics=simulation,
-                )
+            self._contexts[user_id] = updated
+            return updated
 
-    def set_value_evidence(self, user_id: str, values: CurrentMarketValueRuntimeResult) -> None:
+    def clear(self, user_id: str) -> None:
         with self._lock:
-            current = self.get(user_id)
-            self._contexts[user_id] = UserRuntimeContext(
-                user_id=current.user_id,
-                league_state=current.league_state,
-                selected_team_id=current.selected_team_id,
-                forecast_evidence=current.forecast_evidence,
-                simulation_analytics=current.simulation_analytics,
-                value_evidence=values,
-                intelligence_reused=current.intelligence_reused,
-            )
-            pending = self._pending_intelligence.pop(user_id, None)
-            if pending is not None:
-                self._persist_completed_intelligence_snapshot(user_id, pending, values)
-
-    def _persist_completed_intelligence_snapshot(self, user_id: str, pending: _PendingIntelligenceSnapshot, values: CurrentMarketValueRuntimeResult) -> None:
-        return None
+            self._contexts.pop(user_id, None)
+            self._pending_intelligence.pop(user_id, None)
