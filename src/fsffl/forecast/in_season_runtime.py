@@ -68,7 +68,9 @@ def default_in_season_projection_fetchers(
         return (
             NamedInSeasonProjectionFetcher(
                 source_id="razzball",
-                fetch=lambda season, week: current_snapshot_from_razzball(razzball.fetch_latest()),
+                fetch=lambda season, week: current_snapshot_from_razzball(
+                    razzball.fetch_latest(season=season)
+                ),
             ),
             NamedInSeasonProjectionFetcher(
                 source_id="cbs",
