@@ -17,6 +17,10 @@ from .contracts import (
     utc_now,
 )
 from .postgres import PostgresPersistenceStore, persistence_store_from_env
+from .projection_history import (
+    PostgresProjectionHistoryStore,
+    projection_history_store_from_env,
+)
 from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
 
 __all__ = [
@@ -24,6 +28,7 @@ __all__ = [
     "LeagueSnapshotRecord",
     "PersistenceStore",
     "PostgresPersistenceStore",
+    "PostgresProjectionHistoryStore",
     "PostgresStateSnapshotStore",
     "ReusableArtifactRecord",
     "SyncCursorRecord",
@@ -32,6 +37,7 @@ __all__ = [
     "UserRuntimeContextRecord",
     "canonical_fingerprint",
     "persistence_store_from_env",
+    "projection_history_store_from_env",
     "state_snapshot_store_from_env",
     "utc_now",
 ]
