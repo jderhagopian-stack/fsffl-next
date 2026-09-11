@@ -109,6 +109,8 @@
   function render(){
     queued=false;const host=document.querySelector('.ns-market-opportunity-detail');const row=selected();if(!host||!row)return;
     const s=stateRef(),result=evaluationFor(row),loading=Boolean(s?.tradeEvaluationLoading&&s?.tradeEvaluationKey===key(row)),current=status(row,result),fit=plainFit(row,result),stop=blocker(result,row),next=nextStep(result,row),saved=localSet(SAVE_KEY).has(key(row)),watchRef=row.receive?.[0]?.asset_ref||'',watched=watchRef&&localSet(WATCH_KEY).has(watchRef),receive=assets(row.receive).join(' + ')||row.target_position||'Trade opportunity',send=assets(row.send).join(' + ')||'—';
+    const renderKey=JSON.stringify([key(row),loading,saved,Boolean(watched),result?.action_authority||'',result?.disposition?.disposition||'',result?.scenario_simulation_count||0,result?.team_deltas||null,result?.candidate?.reasons||null]);
+    if(host.dataset.nsodKey===renderKey)return;host.dataset.nsodKey=renderKey;
     host.classList.add('nsod');
     host.innerHTML=`<div class="nsod-top"><button type="button" class="nsod-back" data-nsod-back>‹ Market</button><span class="nsod-status ${current.key}">${esc(current.label)}</span></div>
       <section class="nsod-hero"><div><p class="eyebrow">Opportunity detail</p><h3>Acquire ${esc(receive)}</h3><p>Trade with ${esc(row.counterparty_name||'another franchise')}</p></div><div class="nsod-hero-actions"><button type="button" class="secondary-button" data-nsod-save>${saved?'Saved ✓':'Save'}</button>${watchRef?`<button type="button" class="secondary-button" data-nsod-watch>${watched?'Watching ✓':'Watch'}</button>`:''}<button type="button" class="primary-button" data-nsod-trade>Send to Trade Center</button></div></section>
@@ -119,8 +121,8 @@
       <section class="nsod-section nsod-next"><div class="nsod-section-head"><span>5</span><div><small>Next step</small><h4>${esc(next.label)}</h4></div></div><p>${esc(next.copy)}</p><button type="button" class="primary-button" data-nsod-next data-kind="${esc(next.kind)}">${esc(next.label)}</button></section>
       ${methods(row,result)}`;
     host.querySelector('[data-nsod-back]')?.addEventListener('click',()=>{s.nsSelectedTradeKey='';if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace()});
-    host.querySelector('[data-nsod-save]')?.addEventListener('click',()=>{const set=localSet(SAVE_KEY),k=key(row);set.has(k)?set.delete(k):set.add(k);saveSet(SAVE_KEY,set);queue()});
-    host.querySelector('[data-nsod-watch]')?.addEventListener('click',()=>{if(!watchRef)return;const set=localSet(WATCH_KEY);set.has(watchRef)?set.delete(watchRef):set.add(watchRef);saveSet(WATCH_KEY,set);queue()});
+    host.querySelector('[data-nsod-save]')?.addEventListener('click',()=>{const set=localSet(SAVE_KEY),k=key(row);set.has(k)?set.delete(k):set.add(k);saveSet(SAVE_KEY,set);host.dataset.nsodKey='';queue()});
+    host.querySelector('[data-nsod-watch]')?.addEventListener('click',()=>{if(!watchRef)return;const set=localSet(WATCH_KEY);set.has(watchRef)?set.delete(watchRef):set.add(watchRef);saveSet(WATCH_KEY,set);host.dataset.nsodKey='';queue()});
     const openTrade=()=>{if(typeof window.fsfflOpenOpportunityInTradeCenter==='function')window.fsfflOpenOpportunityInTradeCenter(row)};
     host.querySelector('[data-nsod-trade]')?.addEventListener('click',openTrade);
     host.querySelector('[data-nsod-next]')?.addEventListener('click',event=>{if(event.currentTarget.dataset.kind==='evaluate'&&typeof runTradeEvaluation==='function'){runTradeEvaluation(row);return}openTrade()});
