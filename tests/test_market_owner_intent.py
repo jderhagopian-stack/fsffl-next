@@ -15,25 +15,42 @@ def test_market_exposes_consumer_owner_intent_control() -> None:
     source = _source(POSTURE_UI)
 
     assert "What are you trying to do?" in source
-    assert "Best for my team" in source
-    assert "Build for a Championship" in source
-    assert "Balanced Trade" in source
-    assert "Get Younger" in source
-    assert "Rebuild" in source
+    for label in (
+        "Use calculated / neutral",
+        "Push in the chips / Win now",
+        "Balanced",
+        "Retool",
+        "Rebuild",
+        "Improve a position",
+        "Shop a player",
+        "Target a player",
+        "Consolidate",
+    ):
+        assert label in source
     assert "Market focus" in source
     assert "How this changes suggestions" in source
     assert "deck.prepend(control)" in source
 
 
-def test_owner_intent_uses_server_published_posture_ordering_not_ui_score() -> None:
+def test_strategic_owner_intent_uses_server_published_posture_ordering_not_ui_score() -> None:
     source = _source(POSTURE_UI)
 
     assert "posture_views" in source
     assert "candidate_indices" in source
     assert "applyServerPostureView" in source
     assert "fsffl.tradeFinderPosture" in source
-    assert "localStorage" in source
-    assert "This choice only changes the server-published Search ordering" in source
+    assert "Strategic choices change Trade Finder discovery order only" in source
+    assert "server-published posture views" in source
+
+
+def test_specific_market_tasks_only_narrow_already_returned_candidates() -> None:
+    source = _source(POSTURE_UI)
+
+    assert "fsffl.marketIntent" in source
+    assert "fsffl.marketIntentValue" in source
+    assert "Position, shop, target and consolidation choices only narrow" in source
+    assert "already-returned candidate set" in source
+    assert "fsffl:market-intent-changed" in source
 
 
 def test_default_market_focus_resolves_from_calculated_competitive_state() -> None:
