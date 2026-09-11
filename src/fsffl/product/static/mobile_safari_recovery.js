@@ -54,13 +54,12 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     throw lastError||new Error('Request failed');
   }
 
-  async function recoverCurrentJob(leagueId){
+  async function recoverCurrentJob(leagueId,operation){
     try{
       const current=await resilientApi('/api/connect/sleeper/background/current',{},2);
-      if(
-        current?.league_external_id===leagueId&&
-        ['queued','running','completed'].includes(current.status)
-      )return current;
+      if(current?.league_external_id!==leagueId)return null;
+      if(['queued','running'].includes(current.status))return current;
+      if(current.status==='completed'&&current.operation===operation)return current;
     }catch(error){
       if(!isTransportError(error))throw error;
     }
@@ -68,7 +67,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   }
 
   async function startBackgroundImport(leagueId,operation='connect'){
-    const existing=await recoverCurrentJob(leagueId);
+    const existing=await recoverCurrentJob(leagueId,operation);
     if(existing&&['queued','running'].includes(existing.status))return existing;
     const endpoint=operation==='refresh'
       ?'/api/connect/sleeper/background/refresh'
@@ -80,7 +79,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       },2);
     }catch(error){
       if(!isTransportError(error))throw error;
-      const recovered=await recoverCurrentJob(leagueId);
+      const recovered=await recoverCurrentJob(leagueId,operation);
       if(recovered)return recovered;
       throw error;
     }
