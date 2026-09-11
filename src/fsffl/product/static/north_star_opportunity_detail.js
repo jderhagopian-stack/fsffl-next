@@ -36,8 +36,7 @@
   }
   function plainFit(row,result){
     const out=[];
-    if(row?.focal_position_strength_rank)out.push(`${row.target_position||'This position'} is a pressure point for your roster (#${row.focal_position_strength_rank} in the league).`);
-    if(typeof row?.counterparty_receive_position_strength_index==='number')out.push(`${row.counterparty_name||'The other team'} can use something from the package you would send.`);
+    if(row?.focal_position_strength_rank)out.push(`Targets ${row.target_position||'this position'}, currently #${row.focal_position_strength_rank} in your league-relative position profile.`);
     if(typeof row?.market_gap_ratio==='number'||typeof row?.search_distance==='number')out.push('The package is close enough to current market value to merit a closer look.');
     if((row?.send||[]).length>1)out.push(`This consolidates ${row.send.length} outgoing assets into a smaller package.`);
     const fit=result?.behavioral_fit;
