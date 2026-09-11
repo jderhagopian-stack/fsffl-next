@@ -106,8 +106,10 @@ def test_mobile_connect_has_one_same_league_poll_owner_and_canonical_readiness_p
     assert "let activeLeagueId=null" in source
     assert "activeConnectPromise&&activeLeagueId===leagueId" in source
     assert "activeOperation" not in source
-    assert "const existing=await recoverCurrentJob(leagueId)" in source
+    assert "const existing=await recoverCurrentJob(leagueId,operation)" in source
     assert "['queued','running'].includes(existing.status)" in source
+    assert "current.status==='completed'&&current.operation===operation" in source
+    assert "const recovered=await recoverCurrentJob(leagueId,operation)" in source
     assert "async function usableConnectedContext(leagueId)" in source
     assert "if(operation==='connect'&&Date.now()>=nextContextProbeAt)" in source
     assert "if(context)return context" in source
