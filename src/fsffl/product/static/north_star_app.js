@@ -85,8 +85,9 @@
   }
 
   function simplifyPrimaryLanguage(){
-    const league=document.querySelector('.league-structure-panel');if(league){const lead=league.querySelector('.league-structure-hero .lead');if(lead)lead.textContent='Spot the league’s strongest rooms, weakest links, competitive tiers and future flexibility at a glance.'}
-    const franchise=document.querySelector('.franchise-header>div>p:last-child');if(franchise&&franchise.textContent.length>170)franchise.classList.add('ns-supporting-detail');
+    const league=document.querySelector('.league-structure-panel');
+    if(league){const lead=league.querySelector('.league-structure-hero .lead'),copy='Spot the league’s strongest rooms, weakest links, competitive tiers and future flexibility at a glance.';if(lead&&lead.textContent!==copy)lead.textContent=copy}
+    const franchise=document.querySelector('.franchise-header>div>p:last-child');if(franchise&&franchise.textContent.length>170&&!franchise.classList.contains('ns-supporting-detail'))franchise.classList.add('ns-supporting-detail');
   }
 
   function enhance(){queued=false;enhanceHome();enhanceFranchise();leagueAtlas();compressLeagueLists();simplifyPrimaryLanguage()}
