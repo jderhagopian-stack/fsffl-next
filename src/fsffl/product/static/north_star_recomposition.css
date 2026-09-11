@@ -84,7 +84,7 @@
 .franchise-tabs button[aria-selected="true"]{background:transparent!important;box-shadow:none!important;color:#f4f8fc!important;border-bottom-color:#78bdff!important}
 .franchise-hero{min-height:410px!important;grid-template-columns:minmax(0,1.55fr) minmax(280px,.45fr)!important;border:0!important;border-radius:0!important;background:linear-gradient(118deg,rgba(20,55,91,.94),rgba(9,24,42,.97) 58%,rgba(7,16,28,.99))!important;box-shadow:0 32px 76px rgba(0,0,0,.26)!important;overflow:hidden}
 .franchise-hero:before{content:"FRANCHISE";position:absolute;left:clamp(26px,4vw,48px);bottom:-10px;font-size:clamp(4.5rem,12vw,10rem);font-weight:900;line-height:.75;letter-spacing:-.08em;color:rgba(255,255,255,.025);pointer-events:none}
-.franchise-hero-main{padding:clamp(30px,5vw,54px)!important;align-self:end!important}
+.franchise-hero-main{padding:clamp(30px,5vw,54px)!important;align-self:end!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
 .franchise-hero-main h3{font-size:clamp(2.8rem,6vw,5.2rem)!important;line-height:.89!important;letter-spacing:-.07em!important;max-width:800px!important;margin:10px 0 22px!important}
 .franchise-hero-main p{font-size:clamp(.98rem,1.35vw,1.12rem)!important;line-height:1.62!important;max-width:720px!important}
 .franchise-hero-actions{margin-top:26px!important}
