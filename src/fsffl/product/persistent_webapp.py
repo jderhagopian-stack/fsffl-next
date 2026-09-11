@@ -10,14 +10,16 @@ from fsffl.persistence import (
 )
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
+from . import webapp as _webapp
 from .behavioral_runtime import BehavioralRuntimeCoordinator
 from .forecast_resilience import make_resilient_forecast_loader
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
+from .latency_observability import install_latency_observability
+from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
 from .phase1_latency import install_phase1_latency_routes
 from .runtime import default_sleeper_state_loader
-from .webapp import create_app
 
 
 # Hosted private-beta observability only. The coordinator already records exact
@@ -40,7 +42,15 @@ _full_refresh_seconds = max(
 )
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
 
-app = create_app(
+# Market navigation can issue the same workspace request repeatedly while the
+# authoritative runtime is unchanged. Reuse the exact server-produced workspace
+# instead of repeating Search + bounded Decision work. This wrapper is hosted-
+# composition infrastructure only; the original builder remains authoritative.
+_webapp.build_opportunity_workspace = make_cached_opportunity_workspace(
+    _webapp.build_opportunity_workspace
+)
+
+app = _webapp.create_app(
     runtime_store=_runtime_store,
     behavioral_coordinator=_behavioral_coordinator,
     forecast_loader=_forecast_loader,
@@ -63,3 +73,4 @@ install_in_season_forecast_routes(
     projection_history_store=_projection_history_store,
 )
 install_phase1_latency_routes(app, persistence_store=_persistence_store)
+install_latency_observability(app)
