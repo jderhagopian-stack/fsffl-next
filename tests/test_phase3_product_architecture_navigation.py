@@ -6,8 +6,8 @@ STATIC = Path("src/fsffl/product/static")
 
 def test_new_product_navigation_is_loaded_after_product_shell():
     html = (STATIC / "index.html").read_text()
-    shell = html.index('/static/product_shell.js?v=20260909-beta-feedback1')
-    architecture = html.index('/static/product_navigation.js?v=20260909-beta-feedback1')
+    shell = html.index('/static/product_shell.js?v=')
+    architecture = html.index('/static/product_navigation.js?v=')
     assert architecture > shell
     assert '<span>Home</span>' in html
     assert '<span>Franchise</span>' in html
