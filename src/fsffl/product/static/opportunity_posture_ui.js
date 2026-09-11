@@ -1,150 +1,28 @@
 (function(){
-  const POSTURE_STORAGE_KEY='fsffl.tradeFinderPosture';
-  const INTENT_STORAGE_KEY='fsffl.marketIntent';
-  const INTENT_VALUE_STORAGE_KEY='fsffl.marketIntentValue';
-  const DEFAULT='default_calculated';
-  const CONSUMER_LABELS={
-    default_calculated:'Use calculated / neutral',
-    win_now:'Push in the chips / Win now',
-    balanced:'Balanced',
-    retool:'Retool',
-    rebuild:'Rebuild'
-  };
-  const LOCAL_INTENTS={
-    position:'Improve a position',
-    shop:'Shop a player',
-    target:'Target a player',
-    consolidate:'Consolidate'
-  };
-  let latestMeta=null;
-  let observerStarted=false;
-  let renderQueued=false;
-  let applyingWorkspace=false;
+  const POSTURE_STORAGE_KEY='fsffl.tradeFinderPosture',INTENT_STORAGE_KEY='fsffl.marketIntent',INTENT_VALUE_STORAGE_KEY='fsffl.marketIntentValue',DEFAULT='default_calculated';
+  const CONSUMER_LABELS={default_calculated:'Use calculated / neutral',win_now:'Push in the chips / Win now',balanced:'Balanced',retool:'Retool',rebuild:'Rebuild'},LOCAL_INTENTS={position:'Improve a position',shop:'Shop a player',target:'Target a player',consolidate:'Consolidate'};
+  let latestMeta=null,observerStarted=false,renderQueued=false,applyingWorkspace=false;
   let canonicalCandidates=null;
   let canonicalWorkspaceKey=null;
-
-  function stored(key,fallback=''){
-    try{return localStorage.getItem(key)||fallback}catch(_){return fallback}
-  }
-  function store(key,value){try{value?localStorage.setItem(key,value):localStorage.removeItem(key)}catch(_){}}
-  function selectedPosture(){return stored(POSTURE_STORAGE_KEY,DEFAULT)}
-  function rememberPosture(value){store(POSTURE_STORAGE_KEY,value)}
-  function selectedIntent(){return stored(INTENT_STORAGE_KEY,'')}
-  function selectedIntentValue(){return stored(INTENT_VALUE_STORAGE_KEY,'')}
-  function rememberIntent(intent,value=''){store(INTENT_STORAGE_KEY,intent);store(INTENT_VALUE_STORAGE_KEY,value)}
-  function clearIntent(){rememberIntent('','')}
-
+  const stored=(key,fallback='')=>{try{return localStorage.getItem(key)||fallback}catch(_){return fallback}},store=(key,value)=>{try{value?localStorage.setItem(key,value):localStorage.removeItem(key)}catch(_){}};
+  const selectedPosture=()=>stored(POSTURE_STORAGE_KEY,DEFAULT),rememberPosture=value=>store(POSTURE_STORAGE_KEY,value),selectedIntent=()=>stored(INTENT_STORAGE_KEY,''),selectedIntentValue=()=>stored(INTENT_VALUE_STORAGE_KEY,''),rememberIntent=(intent,value='')=>{store(INTENT_STORAGE_KEY,intent);store(INTENT_VALUE_STORAGE_KEY,value)},clearIntent=()=>rememberIntent('',''),intentSelection=()=>({intent:selectedIntent(),value:selectedIntentValue()});
   function workspaceKey(payload){return `${payload?.league_state_id||''}|${payload?.focal_team_id||''}|${payload?.as_of||''}`}
-  function canonicalCandidatesFor(payload,discovery){
-    const key=workspaceKey(payload);
-    const freshServerPayload=!discovery?.active_posture;
-    if(freshServerPayload||canonicalWorkspaceKey!==key||!Array.isArray(canonicalCandidates)){
-      canonicalWorkspaceKey=key;
-      canonicalCandidates=Array.isArray(discovery?.candidates)?discovery.candidates:[];
-    }
-    return canonicalCandidates;
-  }
-  function orderedCandidates(canonical,view){
-    if(Array.isArray(view?.candidate_indices)){
-      const ordered=[];
-      for(const rawIndex of view.candidate_indices){
-        const index=Number(rawIndex);
-        if(Number.isInteger(index)&&index>=0&&index<canonical.length)ordered.push(canonical[index]);
-      }
-      if(ordered.length===view.candidate_indices.length)return ordered;
-    }
-    return Array.isArray(view?.candidates)?view.candidates:canonical;
-  }
-  function applyServerPostureView(payload){
-    const discovery=payload&&payload.trade_discovery,views=discovery&&discovery.posture_views;
-    if(!views||typeof views!=='object')return payload;
-    const requested=selectedPosture(),view=views[requested]||views[DEFAULT];
-    if(!view)return payload;
-    latestMeta=view.posture||payload.search_posture||null;
-    const canonical=canonicalCandidatesFor(payload,discovery);
-    if(discovery.active_posture===requested&&payload.search_posture===latestMeta)return payload;
-    return {...payload,search_posture:latestMeta,trade_discovery:{...discovery,candidates:orderedCandidates(canonical,view),spotlights:view.spotlights||discovery.spotlights,active_posture:requested}};
-  }
-  function applyCurrentWorkspace(){
-    if(applyingWorkspace||typeof fsfflOpportunityState==='undefined'||!fsfflOpportunityState.payload)return false;
-    const updated=applyServerPostureView(fsfflOpportunityState.payload);
-    if(updated===fsfflOpportunityState.payload)return false;
-    applyingWorkspace=true;
-    try{fsfflOpportunityState.payload=updated;if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace()}finally{applyingWorkspace=false}
-    return true;
-  }
-  function currentCandidates(){
-    try{return typeof oppTradeRows==='function'?oppTradeRows():fsfflOpportunityState?.payload?.trade_discovery?.candidates||[]}catch(_){return[]}
-  }
-  function uniqueOptions(intent){
-    const rows=currentCandidates(),map=new Map();
-    rows.forEach(row=>{
-      if(intent==='position'&&row.target_position)map.set(String(row.target_position),String(row.target_position));
-      if(intent==='shop')(row.send||[]).forEach(item=>{if(item.asset_kind==='player')map.set(String(item.asset_ref),String(item.label||item.asset_ref))});
-      if(intent==='target')(row.receive||[]).forEach(item=>{if(item.asset_kind==='player')map.set(String(item.asset_ref),String(item.label||item.asset_ref))});
-    });
-    return [...map.entries()].map(([value,label])=>({value,label})).sort((a,b)=>a.label.localeCompare(b.label));
-  }
-  function intentSelection(){return{intent:selectedIntent(),value:selectedIntentValue()}}
+  function canonicalCandidatesFor(payload,discovery){const key=workspaceKey(payload);const freshServerPayload=!discovery?.active_posture;if(freshServerPayload||canonicalWorkspaceKey!==key||!Array.isArray(canonicalCandidates)){canonicalWorkspaceKey=key;canonicalCandidates=Array.isArray(discovery?.candidates)?discovery.candidates:[]}return canonicalCandidates}
+  function orderedCandidates(canonical,view){if(Array.isArray(view?.candidate_indices)){const ordered=[];for(const raw of view.candidate_indices){const index=Number(raw);if(Number.isInteger(index)&&index>=0&&index<canonical.length)ordered.push(canonical[index])}if(ordered.length===view.candidate_indices.length)return ordered}return Array.isArray(view?.candidates)?view.candidates:canonical}
+  function applyServerPostureView(payload){const discovery=payload&&payload.trade_discovery,views=discovery&&discovery.posture_views;if(!views||typeof views!=='object')return payload;const requested=selectedPosture(),view=views[requested]||views[DEFAULT];if(!view)return payload;latestMeta=view.posture||payload.search_posture||null;const canonical=canonicalCandidatesFor(payload,discovery);if(discovery.active_posture===requested&&payload.search_posture===latestMeta)return payload;return {...payload,search_posture:latestMeta,trade_discovery:{...discovery,candidates:orderedCandidates(canonical,view),spotlights:view.spotlights||discovery.spotlights,active_posture:requested}}}
+  function applyCurrentWorkspace(){if(applyingWorkspace||typeof fsfflOpportunityState==='undefined'||!fsfflOpportunityState.payload)return false;const updated=applyServerPostureView(fsfflOpportunityState.payload);if(updated===fsfflOpportunityState.payload)return false;applyingWorkspace=true;try{fsfflOpportunityState.payload=updated;if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace()}finally{applyingWorkspace=false}return true}
+  function currentCandidates(){try{return typeof oppTradeRows==='function'?oppTradeRows():fsfflOpportunityState?.payload?.trade_discovery?.candidates||[]}catch(_){return[]}}
+  function uniqueOptions(intent){const map=new Map();currentCandidates().forEach(row=>{if(intent==='position'&&row.target_position)map.set(String(row.target_position),String(row.target_position));if(intent==='shop')(row.send||[]).forEach(item=>{if(item.asset_kind==='player')map.set(String(item.asset_ref),String(item.label||item.asset_ref))});if(intent==='target')(row.receive||[]).forEach(item=>{if(item.asset_kind==='player')map.set(String(item.asset_ref),String(item.label||item.asset_ref))})});return [...map.entries()].map(([value,label])=>({value,label})).sort((a,b)=>a.label.localeCompare(b.label))}
   function broadcastIntent(){window.dispatchEvent(new CustomEvent('fsffl:market-intent-changed',{detail:intentSelection()}))}
-
-  window.fsfflOpportunityPosture={selectedPosture,applyWorkspace:applyServerPostureView,applyCurrentWorkspace};
-  window.fsfflMarketIntent={selected:intentSelection,clear:()=>{clearIntent();broadcastIntent();queueRender()}};
-
-  function activeOpportunityScreen(){
-    const screen=document.querySelector('#generic-screen');if(!screen||screen.hidden)return null;
-    let active=false;try{active=Boolean(window.state?.route==='opportunities'||state?.route==='opportunities')}catch(_){active=false}
-    if(!active&&!document.querySelector('[data-route="opportunities"].active'))return null;
-    return screen.querySelector('.panel');
-  }
-  function consumerLabel(value,fallback){return CONSUMER_LABELS[value]||fallback||String(value||'').replaceAll('_',' ')}
-  function stateLabel(value){const text=String(value||'unknown').replaceAll('_',' ');return text.charAt(0).toUpperCase()+text.slice(1)}
-
-  function installStyles(){
-    if(document.getElementById('opp-posture-style'))return;
-    const style=document.createElement('style');style.id='opp-posture-style';style.textContent=`
-      .opp-posture-control{margin:0 0 13px;padding:14px 15px;border:1px solid rgba(104,168,224,.22);border-radius:15px;background:linear-gradient(120deg,rgba(19,48,75,.9),rgba(8,20,33,.97));box-shadow:inset 3px 0 0 rgba(84,174,255,.78)}
-      .opp-posture-control label{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,360px);gap:15px;align-items:center}.opp-posture-copy{display:grid;gap:3px}.opp-posture-kicker{font-size:7px;text-transform:uppercase;letter-spacing:.12em;color:#72a9d6}.opp-posture-title{font-size:14px;font-weight:850;letter-spacing:-.025em;color:#e8f4ff}.opp-posture-copy small{font-size:8px;line-height:1.35;color:#8198ad}
-      .opp-posture-control select{width:100%;min-height:43px;border:1px solid rgba(104,168,224,.24);border-radius:10px;background:#0b1827;color:#edf7ff;padding:0 34px 0 11px;font-weight:760}.opp-posture-specific{margin-top:9px;padding-top:9px;border-top:1px solid rgba(137,171,205,.09)}.opp-posture-specific label{grid-template-columns:minmax(0,1fr) minmax(230px,360px)}.opp-posture-specific span{font-size:8px;color:#93aac0}
-      .opp-posture-methods{margin-top:8px;border-top:1px solid rgba(137,171,205,.08)}.opp-posture-methods summary{padding-top:8px;font-size:7px;color:#6f879d;cursor:pointer}.opp-posture-methods p{margin:5px 0 0;font-size:7px;line-height:1.45;color:#667d91}
-      @media(max-width:760px){.opp-posture-control{padding:12px}.opp-posture-control label,.opp-posture-specific label{grid-template-columns:1fr;gap:8px}.opp-posture-title{font-size:12px}.opp-posture-control select{min-height:44px;font-size:12px}}
-    `;document.head.appendChild(style);
-  }
-  function primaryValue(){const intent=selectedIntent();return intent?`intent:${intent}`:`posture:${selectedPosture()}`}
-  function primaryOptions(options){
-    const postureRows=options.map(row=>`<option value="posture:${String(row.value)}"${primaryValue()===`posture:${row.value}`?' selected':''}>${consumerLabel(row.value,row.label)}</option>`).join('');
-    const intentRows=Object.entries(LOCAL_INTENTS).map(([value,label])=>`<option value="intent:${value}"${primaryValue()===`intent:${value}`?' selected':''}>${label}</option>`).join('');
-    return `<optgroup label="Strategic direction">${postureRows}</optgroup><optgroup label="Specific market task">${intentRows}</optgroup>`;
-  }
-  function specificMarkup(intent){
-    if(!['position','shop','target'].includes(intent))return'';
-    const rows=uniqueOptions(intent),selected=selectedIntentValue(),prompt={position:'Choose the position to improve',shop:'Choose a player to shop',target:'Choose a player to target'}[intent];
-    const options=rows.map(row=>`<option value="${row.value}"${row.value===selected?' selected':''}>${row.label}</option>`).join('');
-    return `<div class="opp-posture-specific"><label><span>${prompt}</span><select id="opp-intent-value"><option value="">Any ${intent==='position'?'position':'player'}</option>${options}</select></label></div>`;
-  }
-  function renderControl(){
-    const panel=activeOpportunityScreen();if(!panel||!latestMeta)return;installStyles();
-    let control=panel.querySelector('#opp-posture-control');const deck=panel.querySelector('.ns-market-deck');
-    if(!control){control=document.createElement('div');control.id='opp-posture-control';control.className='opp-posture-control'}
-    if(deck&&control.parentElement!==deck)deck.prepend(control);else if(!deck&&control.parentElement!==panel)panel.prepend(control);
-    const options=Array.isArray(latestMeta.available_postures)?latestMeta.available_postures:[],intent=selectedIntent(),selected=selectedPosture(),calculated=stateLabel(latestMeta.calculated_competitive_state),effective=consumerLabel(latestMeta.effective_posture,String(latestMeta.effective_posture||'balanced'));
-    const defaultCopy=intent?`Narrowing the current opportunity set to ${LOCAL_INTENTS[intent].toLowerCase()}.`:selected===DEFAULT?`FSFFL is leaning on your ${calculated.toLowerCase()} competitive profile.`:`You are steering the scan toward ${consumerLabel(selected)}.`;
-    const markup='<label><span class="opp-posture-copy"><span class="opp-posture-kicker">Market focus</span><span class="opp-posture-title">What are you trying to do?</span><small>'+defaultCopy+'</small></span><select id="opp-posture-select" aria-label="What are you trying to do?">'+primaryOptions(options)+'</select></label>'+specificMarkup(intent)+'<details class="opp-posture-methods"><summary>How this changes suggestions</summary><p>Your calculated competitive state stays '+calculated+'. Strategic choices change Trade Finder discovery order only, using server-published posture views. Position, shop, target and consolidation choices only narrow the already-returned candidate set in Market. Current Value, Decision truth and acceptance uncertainty are unchanged. Background search lens: '+effective+'.</p></details>';
-    if(control.innerHTML===markup)return;control.innerHTML=markup;
-    control.querySelector('#opp-posture-select')?.addEventListener('change',event=>{
-      const raw=String(event.target.value||''),[kind,value]=raw.split(':');
-      if(kind==='posture'){clearIntent();rememberPosture(value||DEFAULT);applyCurrentWorkspace()}else if(kind==='intent'){rememberIntent(value||'','')}
-      broadcastIntent();queueRender();
-    });
-    control.querySelector('#opp-intent-value')?.addEventListener('change',event=>{rememberIntent(intent,event.target.value||'');broadcastIntent();queueRender()});
-  }
-
-  const observer=new MutationObserver(()=>queueRender());
-  function observe(){const screen=document.querySelector('#generic-screen');if(!screen)return;observer.observe(screen,{subtree:true,childList:true});observerStarted=true}
-  function renderSafely(){renderQueued=false;if(observerStarted){observer.disconnect();observerStarted=false}try{applyCurrentWorkspace();renderControl()}finally{observe()}}
-  function queueRender(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(renderSafely)}
-  document.addEventListener('click',event=>{if(event.target?.closest?.('[data-route="opportunities"]'))queueRender()});
-  window.addEventListener('fsffl:product-context-updated',queueRender);
-  window.addEventListener('fsffl:market-rendered',queueRender);
-  document.addEventListener('DOMContentLoaded',()=>{observe();queueRender()});
+  window.fsfflOpportunityPosture={selectedPosture,applyWorkspace:applyServerPostureView,applyCurrentWorkspace};window.fsfflMarketIntent={selected:intentSelection,clear:()=>{clearIntent();broadcastIntent();queueRender()}};
+  function activeOpportunityScreen(){const screen=document.querySelector('#generic-screen');if(!screen||screen.hidden)return null;let active=false;try{active=Boolean(window.state?.route==='opportunities'||state?.route==='opportunities')}catch(_){active=false}if(!active&&!document.querySelector('[data-route="opportunities"].active'))return null;return screen.querySelector('.panel')}
+  const consumerLabel=(value,fallback)=>CONSUMER_LABELS[value]||fallback||String(value||'').replaceAll('_',' ');function stateLabel(value){const text=String(value||'unknown').replaceAll('_',' ');return text.charAt(0).toUpperCase()+text.slice(1)}
+  function installStyles(){if(document.getElementById('opp-posture-style'))return;const style=document.createElement('style');style.id='opp-posture-style';style.textContent='.opp-posture-control{margin:0 0 13px;padding:14px 15px;border:1px solid rgba(104,168,224,.22);border-radius:15px;background:linear-gradient(120deg,rgba(19,48,75,.9),rgba(8,20,33,.97));box-shadow:inset 3px 0 0 rgba(84,174,255,.78)}.opp-posture-control label{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,360px);gap:15px;align-items:center}.opp-posture-copy{display:grid;gap:3px}.opp-posture-kicker{font-size:7px;text-transform:uppercase;letter-spacing:.12em;color:#72a9d6}.opp-posture-title{font-size:14px;font-weight:850;color:#e8f4ff}.opp-posture-copy small{font-size:8px;line-height:1.35;color:#8198ad}.opp-posture-control select{width:100%;min-height:43px;border:1px solid rgba(104,168,224,.24);border-radius:10px;background:#0b1827;color:#edf7ff;padding:0 34px 0 11px;font-weight:760}.opp-posture-specific{margin-top:9px;padding-top:9px;border-top:1px solid rgba(137,171,205,.09)}.opp-posture-specific label{grid-template-columns:minmax(0,1fr) minmax(230px,360px)}.opp-posture-specific span{font-size:8px;color:#93aac0}.opp-posture-methods{margin-top:8px;border-top:1px solid rgba(137,171,205,.08)}.opp-posture-methods summary{padding-top:8px;font-size:7px;color:#6f879d;cursor:pointer}.opp-posture-methods p{margin:5px 0 0;font-size:7px;line-height:1.45;color:#667d91}@media(max-width:760px){.opp-posture-control{padding:12px}.opp-posture-control label,.opp-posture-specific label{grid-template-columns:1fr;gap:8px}.opp-posture-title{font-size:12px}.opp-posture-control select{min-height:44px;font-size:12px}}';document.head.appendChild(style)}
+  const primaryValue=()=>selectedIntent()?`intent:${selectedIntent()}`:`posture:${selectedPosture()}`;function primaryOptions(options){return `<optgroup label="Strategic direction">${options.map(row=>`<option value="posture:${String(row.value)}"${primaryValue()===`posture:${row.value}`?' selected':''}>${consumerLabel(row.value,row.label)}</option>`).join('')}</optgroup><optgroup label="Specific market task">${Object.entries(LOCAL_INTENTS).map(([value,label])=>`<option value="intent:${value}"${primaryValue()===`intent:${value}`?' selected':''}>${label}</option>`).join('')}</optgroup>`}
+  function specificMarkup(intent){if(!['position','shop','target'].includes(intent))return'';const rows=uniqueOptions(intent),selected=selectedIntentValue(),prompt={position:'Choose the position to improve',shop:'Choose a player to shop',target:'Choose a player to target'}[intent];return `<div class="opp-posture-specific"><label><span>${prompt}</span><select id="opp-intent-value"><option value="">Any ${intent==='position'?'position':'player'}</option>${rows.map(row=>`<option value="${row.value}"${row.value===selected?' selected':''}>${row.label}</option>`).join('')}</select></label></div>`}
+  function controlMarkup(){const options=Array.isArray(latestMeta?.available_postures)?latestMeta.available_postures:[],intent=selectedIntent(),selected=selectedPosture(),calculated=stateLabel(latestMeta?.calculated_competitive_state),effective=consumerLabel(latestMeta?.effective_posture,String(latestMeta?.effective_posture||'balanced')),copy=intent?`Showing opportunities for: ${LOCAL_INTENTS[intent].toLowerCase()}.`:selected===DEFAULT?`Using your ${calculated.toLowerCase()} competitive profile.`:`Showing the ${consumerLabel(selected)} search lens.`;return '<label><span class="opp-posture-copy"><span class="opp-posture-kicker">Market focus</span><span class="opp-posture-title">What are you trying to do?</span><small>'+copy+'</small></span><select id="opp-posture-select" aria-label="What are you trying to do?">'+primaryOptions(options)+'</select></label>'+specificMarkup(intent)+'<details class="opp-posture-methods"><summary>How this changes suggestions</summary><p>Your calculated competitive state stays '+calculated+'. Strategic choices change Trade Finder discovery order only, using server-published posture views. Position, shop, target and consolidation choices only narrow the already-returned candidate set in Market. Current Value, Decision truth and acceptance uncertainty are unchanged. Background search lens: '+effective+'.</p></details>'}
+  function wireControl(control){if(control.dataset.intentWired==='true')return;control.dataset.intentWired='true';control.addEventListener('change',event=>{const select=event.target.closest('select');if(!select)return;if(select.id==='opp-posture-select'){const raw=String(select.value||''),separator=raw.indexOf(':'),kind=separator>=0?raw.slice(0,separator):raw,value=separator>=0?raw.slice(separator+1):'';if(kind==='posture'){clearIntent();rememberPosture(value||DEFAULT);applyCurrentWorkspace()}else if(kind==='intent'){rememberIntent(value||'','')}broadcastIntent();queueRender()}else if(select.id==='opp-intent-value'){rememberIntent(selectedIntent(),select.value||'');broadcastIntent();queueRender()}},true)}
+  function renderControl(){const panel=activeOpportunityScreen();if(!panel||!latestMeta)return;installStyles();let control=panel.querySelector('#opp-posture-control');const deck=panel.querySelector('.ns-market-deck');if(!control){control=document.createElement('div');control.id='opp-posture-control';control.className='opp-posture-control'}if(deck&&control.parentElement!==deck)deck.prepend(control);else if(!deck&&control.parentElement!==panel)panel.prepend(control);const markup=controlMarkup();if(control.innerHTML===markup)return;control.innerHTML=markup;control.dataset.intentWired='';wireControl(control)}
+  const observer=new MutationObserver(()=>queueRender());function observe(){const screen=document.querySelector('#generic-screen');if(!screen)return;observer.observe(screen,{subtree:true,childList:true});observerStarted=true}function renderSafely(){renderQueued=false;if(observerStarted){observer.disconnect();observerStarted=false}try{applyCurrentWorkspace();renderControl()}finally{observe()}}function queueRender(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(renderSafely)}
+  document.addEventListener('click',event=>{if(event.target?.closest?.('[data-route="opportunities"]'))queueRender()});window.addEventListener('fsffl:product-context-updated',queueRender);window.addEventListener('fsffl:market-rendered',queueRender);document.addEventListener('DOMContentLoaded',()=>{observe();queueRender()});
 })();
