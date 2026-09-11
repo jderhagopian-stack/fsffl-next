@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import Field, field_validator, model_validator
 
-from fsffl.persistence.contracts import canonical_fingerprint
 from fsffl.state.models import FrozenModel, Position
 
 from .models import ForecastHorizon, ForecastMetric, ForecastObservation
@@ -142,7 +143,13 @@ def normalized_projection_fingerprint(
             key=lambda item: (item.player_id, item.metric.value, item.external_id),
         )
     ]
-    return canonical_fingerprint(payload)
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def revision_from_forecast_observations(
