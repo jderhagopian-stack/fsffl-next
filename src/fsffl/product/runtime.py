@@ -148,6 +148,7 @@ class LiveForecastEvidence:
     failed_sources: tuple[str, ...]
     uncertainty_ready: bool
     runtime_result: LiveForecastRuntimeResult
+    evidence_basis: str = "live_full_season"
     model_version: str = "next8-live-forecast-evidence-v3"
 
 
@@ -196,6 +197,7 @@ def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvide
         failed_sources=result.failed_sources,
         uncertainty_ready=uncertainty_ready,
         runtime_result=result,
+        evidence_basis="live_full_season",
     )
 
 
