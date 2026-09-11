@@ -6,6 +6,7 @@ from fsffl.state.models import FrozenModel, LeagueState
 
 from .current_runtime import LiveForecastRuntimeResult
 from .league_scoring import derive_league_fantasy_point_forecasts
+from .live_ensemble import LiveEnsembleCoverage
 from .models import ForecastHorizon, ForecastObservation
 from .regular_season import derive_fantasy_regular_season_forecasts
 from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
@@ -26,6 +27,7 @@ class PreseasonForecastBaseline(FrozenModel):
     league_id: str
     season: int
     raw_ensemble: tuple[ForecastObservation, ...]
+    coverage: LiveEnsembleCoverage
     successful_source_ids: tuple[str, ...]
     evaluation_as_of: datetime
     source_runtime_model_version: str
@@ -66,6 +68,7 @@ def baseline_from_runtime(
         league_id=league_state.league.league_id,
         season=league_state.league.season,
         raw_ensemble=result.raw_ensemble,
+        coverage=result.coverage,
         successful_source_ids=tuple(sorted(set(result.successful_source_ids))),
         evaluation_as_of=result.evaluation_as_of,
         source_runtime_model_version=result.model_version,
@@ -102,7 +105,7 @@ def build_runtime_from_preseason_baseline(
         raw_ensemble=baseline.raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
         fantasy_regular_season_forecasts=fantasy_regular_season,
-        coverage=None,
+        coverage=baseline.coverage,
         successful_source_ids=baseline.successful_source_ids,
         failed_sources=("live_full_season_sources_unavailable; using immutable preseason baseline",),
         evaluation_as_of=baseline.evaluation_as_of,
