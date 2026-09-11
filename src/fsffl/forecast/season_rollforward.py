@@ -12,6 +12,27 @@ from .models import ForecastDistribution, ForecastHorizon, ForecastObservation
 ROLL_FORWARD_MODEL_VERSION = "next2-completed-actuals-plus-ros-v1"
 
 
+def _validated_actuals_by_key(
+    completed_actuals: tuple[RealizedOutcome, ...],
+) -> dict[tuple[object, ...], list[RealizedOutcome]]:
+    grouped: dict[tuple[object, ...], list[RealizedOutcome]] = defaultdict(list)
+    for actual in completed_actuals:
+        grouped[(actual.player_id, actual.position, actual.metric)].append(actual)
+
+    for key, rows in grouped.items():
+        ordered = sorted(rows, key=lambda item: (item.period_start, item.period_end))
+        previous: RealizedOutcome | None = None
+        for current in ordered:
+            if previous is not None and current.period_start < previous.period_end:
+                raise ValueError(
+                    "completed actual periods overlap for player/metric; "
+                    f"cannot compose season outlook safely: {key}"
+                )
+            previous = current
+        grouped[key] = ordered
+    return grouped
+
+
 def compose_completed_actuals_with_ros(
     *,
     completed_actuals: tuple[RealizedOutcome, ...],
@@ -21,9 +42,10 @@ def compose_completed_actuals_with_ros(
     """Compose known completed production with a non-overlapping ROS forecast.
 
     Known actuals are constants, so only ROS uncertainty remains uncertain. WEEK
-    projections are never accepted here. The function fails closed on temporal
-    overlap or evidence finalized after the ROS information cutoff; it does not
-    infer how much of an ambiguous provider total belongs to completed games.
+    projections are never accepted here. The function fails closed on overlap among
+    actual records, overlap with the ROS period, or evidence finalized after the ROS
+    information cutoff; it never infers how much of an ambiguous provider total
+    belongs to completed games.
     """
 
     if season_start.tzinfo is None:
@@ -34,9 +56,7 @@ def compose_completed_actuals_with_ros(
     if any(item.horizon != ForecastHorizon.REST_OF_SEASON for item in ros_forecasts):
         raise ValueError("season roll-forward requires REST_OF_SEASON forecasts only")
 
-    actuals_by_key: dict[tuple[object, ...], list[RealizedOutcome]] = defaultdict(list)
-    for actual in completed_actuals:
-        actuals_by_key[(actual.player_id, actual.position, actual.metric)].append(actual)
+    actuals_by_key = _validated_actuals_by_key(completed_actuals)
 
     output: list[ForecastObservation] = []
     for ros in ros_forecasts:
