@@ -30,15 +30,24 @@ def test_exact_market_simulation_is_reused_without_duplicate_run() -> None:
     assert "simulation reused" in handoff
     assert "fsfflAdoptHandoffSimulation" in handoff
     assert "artifactMatchesCurrent" in source
+    assert "ensureAnalysisHost" in source
     assert "if(lastSimulation)return" in source
     assert "scenario_simulation_count" in source
 
-def test_counter_action_has_working_frontier_path() -> None:
+def test_counter_action_has_working_visible_frontier_path() -> None:
     source = _read(SCRIPT)
     assert "Build a counter" in source
     assert "document.querySelector('#explore-price')?.click()" in source
-    assert "trade-counter-paths" in source
+    assert "revealFrontier" in source
+    assert "#trade-frontier-result" in source
+    assert "ns-trade-show-methods" in source
     assert "feasibility_shape==='mutual_gain_candidate'" in source
+
+def test_trade_center_does_not_rank_cross_unit_upsides_with_display_weights() -> None:
+    source = _read(SCRIPT)
+    assert "material_gains" in source
+    assert "playoff_probability*10" not in source
+    assert "roster_adjusted_market_delta/1000" not in source
 
 def test_trade_center_preserves_authority_boundaries() -> None:
     source = _read(SCRIPT)
