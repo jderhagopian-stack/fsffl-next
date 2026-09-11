@@ -75,11 +75,14 @@ class PostgresProjectionHistoryStore:
                     json.dumps(snapshot.raw_payload) if snapshot.raw_payload is not None else None,
                 ),
             )
+            # A later duplicate pull with identical normalized content intentionally
+            # resolves to the first retained revision. Retrieval time alone is not a
+            # meaningful forecast change and therefore does not create history noise.
             cursor.execute(
                 """select id from fsffl.projection_snapshot
                    where provider=%s and season=%s and horizon=%s
                      and coalesce(week, 0)=coalesce(%s, 0)
-                     and period_start=%s and period_end=%s and effective_at=%s
+                     and period_start=%s and period_end=%s
                      and content_fingerprint=%s and source_version=%s""",
                 (
                     snapshot.provider,
@@ -88,7 +91,6 @@ class PostgresProjectionHistoryStore:
                     snapshot.week,
                     snapshot.period_start,
                     snapshot.period_end,
-                    snapshot.effective_at,
                     snapshot.content_fingerprint,
                     snapshot.source_version,
                 ),
