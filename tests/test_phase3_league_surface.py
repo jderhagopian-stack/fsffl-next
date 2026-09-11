@@ -60,10 +60,15 @@ def test_legacy_league_position_modules_no_longer_render_competing_surfaces() ->
 def test_phase3_league_cache_generation_preserves_hosted_recovery_scripts() -> None:
     source = _source(INDEX)
 
-    assert "session_recovery.js?v=20260910-phase3-league2" in source
-    assert "mobile_safari_recovery.js?v=20260910-phase3-league2" in source
-    assert "league_comparison.js?v=20260910-phase3-league2" not in source
-    assert "product_shell.js?v=20260910-phase3-league2" in source
+    assert "/static/session_recovery.js?v=" in source
+    assert "/static/mobile_safari_recovery.js?v=" in source
+    assert "/static/product_shell.js?v=" in source
+    versions = {
+        token.split("?v=")[1].split('"')[0]
+        for token in source.split()
+        if "?v=" in token
+    }
+    assert len(versions) == 1
 
 
 def test_league_asset_order_never_mixes_pick_count_with_cardinal_value() -> None:
