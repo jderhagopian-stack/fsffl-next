@@ -7,7 +7,7 @@
     {route:'league',label:'Home',short:'Home',question:'What matters now?',icon:'home'},
     {route:'my_team',label:'Franchise',short:'Franchise',question:'What is driving my team?',icon:'franchise',teamScoped:true},
     {route:'league_comparison',label:'League',short:'League',question:'How does this league fit together?',icon:'league'},
-    {route:'opportunities',label:'Market',short:'Market',question:'What should I do?',icon:'market',teamScoped:true},
+    {route:'opportunities',label:'Market',short:'Market',question:'What should I do?',icon:'market'},
   ];
   const DECISIONS=[
     {route:'trade_center',label:'Trade Center',description:'Build, simulate and work a specific deal.',icon:'trade',teamScoped:true},
