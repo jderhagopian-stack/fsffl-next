@@ -69,9 +69,10 @@ def test_posture_ui_selects_only_server_owned_views() -> None:
     index = (ROOT / "src/fsffl/product/static/index.html").read_text()
     workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
 
-    assert "const views=discovery&&discovery.posture_views" in script
+    assert "views=discovery&&discovery.posture_views" in script
     assert "fsffl.tradeFinderPosture" in script
-    assert "This changes Trade Finder discovery order only" in script
+    assert "Strategic choices change Trade Finder discovery order only" in script
+    assert "server-published posture views" in script
     assert "opportunity_posture_ui.js?v=" in index
     assert '"posture_views": posture_views' in workspace
     assert '"owner_strategic_posture_is_search_lens_only": True' in workspace
