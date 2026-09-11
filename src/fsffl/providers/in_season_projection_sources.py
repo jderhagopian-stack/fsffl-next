@@ -260,7 +260,7 @@ _RAZZBALL_REQUIRED_BY_POSITION = {
 
 class RazzballRestOfSeasonProjectionSource:
     provider_name = "razzball"
-    source_version = "razzball-rest-of-season-projections-html-v1"
+    source_version = "razzball-rest-of-season-projections-html-v2:season-verified"
     usage_class = "beta-personal-research-requires-commercial-review"
     position_urls = RazzballLiveProjectionSource.position_urls
 
@@ -268,7 +268,7 @@ class RazzballRestOfSeasonProjectionSource:
         self._http_get_text = http_get_text or _razzball_ros_get_text
         self._clock = clock or (lambda: datetime.now(UTC))
 
-    def fetch_latest(self) -> RazzballProjectionSnapshot:
+    def fetch_latest(self, *, season: int) -> RazzballProjectionSnapshot:
         captured = self._clock()
         if captured.tzinfo is None:
             raise ValueError("live Razzball clock must be timezone-aware")
@@ -282,6 +282,10 @@ class RazzballRestOfSeasonProjectionSource:
             )
             if not re.search(r"Rest\s+of\s+Season", page_text, re.IGNORECASE):
                 raise ValueError(f"Razzball {position} response did not identify rest-of-season projections")
+            if not re.search(rf"\b{season}\b", page_text):
+                raise ValueError(
+                    f"Razzball {position} response did not identify requested {season} season"
+                )
             updated = parse_razzball_updated_at(page_text)
             effective = updated if effective is None else max(effective, updated)
             for raw in parsed:
@@ -300,7 +304,7 @@ class RazzballRestOfSeasonProjectionSource:
             raise ValueError("Razzball effective timestamp cannot be in the future")
         return RazzballProjectionSnapshot(
             provider_name=self.provider_name,
-            source_url="razzball:rest-of-season",
+            source_url=f"razzball:{season}:rest-of-season",
             captured_at=captured.astimezone(UTC),
             effective_at=effective.astimezone(UTC),
             rows=tuple(rows),
