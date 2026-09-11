@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 INDEX = Path("src/fsffl/product/static/index.html")
-RELEASE = "20260911-market-visual1"
+RELEASE = "20260911-market-intent1"
 
 
 def _source(path: Path) -> str:
@@ -14,9 +14,11 @@ def test_north_star_release_busts_eager_static_cache() -> None:
     assert "20260910-phase3-visual2" not in source
     assert "20260911-northstar3" not in source
     assert "20260911-market-authority1" not in source
+    assert "20260911-market-visual1" not in source
     assert source.count(f"?v={RELEASE}") >= 10
     assert f"north_star_app.js?v={RELEASE}" in source
     assert f"north_star_app.css?v={RELEASE}" in source
     assert f"north_star_market.js?v={RELEASE}" in source
     assert f"north_star_market.css?v={RELEASE}" in source
+    assert f"opportunity_posture_ui.js?v={RELEASE}" in source
     assert f"product_shell.js?v={RELEASE}" in source
