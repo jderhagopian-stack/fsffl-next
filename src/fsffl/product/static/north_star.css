@@ -27,7 +27,7 @@
 /* The shared visual grammar favors one dominant takeaway, a compact signal rail,
    a graphic diagnostic, then supporting evidence. It deliberately avoids a wall
    of same-weight cards. */
-.home-attention,.franchise-shell,.league-structure-panel{max-width:1180px;margin-inline:auto}
+.home-attention,.franchise-shell,.league-structure-panel{max-width:1180px!important;margin-inline:auto!important}
 .home-priority,.franchise-hero,.league-takeaway,.league-pressure{
   position:relative;
   overflow:hidden;
@@ -298,7 +298,7 @@
   .franchise-hero{border-radius:17px!important}.franchise-hero-main{padding:20px!important}.franchise-hero-main h3{font-size:clamp(1.65rem,8vw,2.15rem)!important}.franchise-outlook{margin:0 10px 10px;padding:16px!important}
   .franchise-section{padding:14px!important;border-radius:16px!important}
   .franchise-section-head{align-items:flex-start!important;gap:5px!important}
-  .franchise-position-row{grid-template-columns:72px minmax(110px,1fr) 78px!important;gap:8px!important;min-height:61px}.franchise-position-label span,.franchise-position-value span{font-size:9px!important}.franchise-position-value strong{font-size:1.05rem!important}
+  .franchise-position-row{grid-template-columns:64px minmax(0,1fr) 68px!important;gap:8px!important;min-height:61px}.franchise-position-label span,.franchise-position-value span{font-size:9px!important}.franchise-position-value strong{font-size:1.05rem!important}
   .franchise-diagnosis-grid{grid-template-columns:1fr!important}.franchise-focus:first-child{grid-column:auto}.franchise-focus{min-height:0!important;padding:17px!important}
   .league-structure-panel{margin-inline:-2px}
   .league-takeaway{border-radius:16px!important;padding:17px!important}
