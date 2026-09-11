@@ -129,28 +129,37 @@ def current_snapshot_from_razzball(snapshot: RazzballProjectionSnapshot) -> Curr
     )
 
 
-def normalize_current_projection_snapshot(
+def normalize_projection_snapshot(
     snapshot: CurrentProjectionSnapshot,
     *,
     league_state: LeagueState,
-    season: int,
+    horizon: ForecastHorizon,
+    period_start: datetime,
+    period_end: datetime,
     evaluation_as_of: datetime,
 ) -> tuple[ForecastObservation, ...]:
-    """Resolve one current provider snapshot into canonical full-season observations.
+    """Resolve one provider snapshot into canonical observations for one explicit horizon.
 
-    The provider's own effective timestamp remains in provenance. `evaluation_as_of`
-    is the common FSFFL cutoff used to compare multiple current providers that were
-    published on different dates. This keeps like-for-like ensemble grouping intact
-    without pretending their source publication times were identical.
+    The caller owns the canonical period identity. This function never guesses whether
+    a provider row is season, ROS, or weekly evidence; that semantic choice must be made
+    by the horizon-specific acquisition path before normalization.
     """
 
-    if evaluation_as_of.tzinfo is None:
-        raise ValueError("evaluation_as_of must be timezone-aware")
+    for name, value in (
+        ("period_start", period_start),
+        ("period_end", period_end),
+        ("evaluation_as_of", evaluation_as_of),
+    ):
+        if value.tzinfo is None:
+            raise ValueError(f"{name} must be timezone-aware")
+    period_start = period_start.astimezone(UTC)
+    period_end = period_end.astimezone(UTC)
     evaluation_as_of = evaluation_as_of.astimezone(UTC)
+    if period_end <= period_start:
+        raise ValueError("projection period_end must be after period_start")
     if snapshot.effective_at > evaluation_as_of:
         raise ValueError("provider snapshot cannot postdate evaluation_as_of")
 
-    period_start, period_end = canonical_season_window(season)
     exact_index, loose_index = _player_indexes(league_state)
     observations: list[ForecastObservation] = []
 
@@ -183,7 +192,7 @@ def normalize_current_projection_snapshot(
                 ForecastObservation(
                     player_id=player.player_id,
                     position=player.position,
-                    horizon=ForecastHorizon.SEASON,
+                    horizon=horizon,
                     metric=metric,
                     period_start=period_start,
                     period_end=period_end,
@@ -200,4 +209,30 @@ def normalize_current_projection_snapshot(
             observations,
             key=lambda item: (item.player_id, item.metric.value, item.source),
         )
+    )
+
+
+def normalize_current_projection_snapshot(
+    snapshot: CurrentProjectionSnapshot,
+    *,
+    league_state: LeagueState,
+    season: int,
+    evaluation_as_of: datetime,
+) -> tuple[ForecastObservation, ...]:
+    """Resolve one current provider snapshot into canonical full-season observations.
+
+    The provider's own effective timestamp remains in provenance. `evaluation_as_of`
+    is the common FSFFL cutoff used to compare multiple current providers that were
+    published on different dates. This keeps like-for-like ensemble grouping intact
+    without pretending their source publication times were identical.
+    """
+
+    period_start, period_end = canonical_season_window(season)
+    return normalize_projection_snapshot(
+        snapshot,
+        league_state=league_state,
+        horizon=ForecastHorizon.SEASON,
+        period_start=period_start,
+        period_end=period_end,
+        evaluation_as_of=evaluation_as_of,
     )

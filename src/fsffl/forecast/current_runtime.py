@@ -9,7 +9,7 @@ from fsffl.providers.cbs_live import CBSLiveProjectionSource
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource
 from fsffl.providers.nfl_fantasy_live import NFLFantasyLiveProjectionSource
-from fsffl.providers.razzball_live import RazzballLiveProjectionSource
+from fsffl.providers.razzball_season_live import RazzballSeasonProjectionSource
 from fsffl.state.models import FrozenModel, LeagueState
 
 from .current_normalization import current_snapshot_from_razzball, normalize_current_projection_snapshot
@@ -42,14 +42,16 @@ class LiveForecastRuntimeResult(FrozenModel):
 
 
 def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher, ...]:
-    razzball = RazzballLiveProjectionSource()
+    razzball = RazzballSeasonProjectionSource()
     fftoday = FFTodayLiveProjectionSource()
     cbs = CBSLiveProjectionSource()
     nfl_fantasy = NFLFantasyLiveProjectionSource()
     return (
         NamedCurrentProjectionFetcher(
             source_id="razzball",
-            fetch=lambda season: current_snapshot_from_razzball(razzball.fetch_latest()),
+            fetch=lambda season: current_snapshot_from_razzball(
+                razzball.fetch_latest(season=season)
+            ),
         ),
         NamedCurrentProjectionFetcher(
             source_id="fftoday",
@@ -95,8 +97,6 @@ def _fetch_current_snapshots(
             except Exception as exc:
                 failed.append(f"{source_id}: {type(exc).__name__}: {exc}")
 
-    # Completion order is intentionally discarded. All downstream behavior remains
-    # deterministic and source-id ordered exactly as before the parallel acquisition.
     snapshots.sort(key=lambda item: item[0])
     failed.sort()
     return snapshots, failed
