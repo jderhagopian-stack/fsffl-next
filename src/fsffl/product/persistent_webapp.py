@@ -7,6 +7,7 @@ from fsffl.persistence import persistence_store_from_env, state_snapshot_store_f
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
 from .behavioral_runtime import BehavioralRuntimeCoordinator
+from .forecast_resilience import make_resilient_forecast_loader
 from .hosted_connect import install_hosted_connect_routes
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
 from .phase1_latency import install_phase1_latency_routes
@@ -31,10 +32,12 @@ _full_refresh_seconds = max(
     1,
     int(os.getenv("FSFFL_FULL_PROVIDER_REFRESH_SECONDS", "3600")),
 )
+_forecast_loader = make_resilient_forecast_loader(_persistence_store)
 
 app = create_app(
     runtime_store=_runtime_store,
     behavioral_coordinator=_behavioral_coordinator,
+    forecast_loader=_forecast_loader,
 )
 install_hosted_connect_routes(
     app,
