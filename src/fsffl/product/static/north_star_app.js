@@ -11,6 +11,15 @@
   const words=value=>String(value||'').replaceAll('_',' ');
   const initials=name=>String(name||'?').split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase();
 
+  function installNorthStarMarketAssets(){
+    if(!document.querySelector('link[data-ns-market]')){
+      const link=document.createElement('link');link.rel='stylesheet';link.href='/static/north_star_market.css?v=20260910-phase3-visual2';link.dataset.nsMarket='true';document.head.appendChild(link);
+    }
+    if(!document.querySelector('script[data-ns-market]')){
+      const script=document.createElement('script');script.src='/static/north_star_market.js?v=20260910-phase3-visual2';script.defer=true;script.dataset.nsMarket='true';document.head.appendChild(script);
+    }
+  }
+
   function ring(value,label,sub){
     const percent=pct(value);if(percent==null)return'';
     return `<div class="ns-app-ring" style="--ns-ring:${percent.toFixed(1)}" role="img" aria-label="${esc(label)} ${Math.round(percent)} percent"><div><strong>${Math.round(percent)}%</strong><span>${esc(label)}</span>${sub?`<small>${esc(sub)}</small>`:''}</div></div>`;
@@ -90,7 +99,7 @@
     const franchise=document.querySelector('.franchise-header>div>p:last-child');if(franchise&&franchise.textContent.length>170&&!franchise.classList.contains('ns-supporting-detail'))franchise.classList.add('ns-supporting-detail');
   }
 
-  function enhance(){queued=false;enhanceHome();enhanceFranchise();leagueAtlas();compressLeagueLists();simplifyPrimaryLanguage()}
+  function enhance(){queued=false;installNorthStarMarketAssets();enhanceHome();enhanceFranchise();leagueAtlas();compressLeagueLists();simplifyPrimaryLanguage()}
   function schedule(){if(queued)return;queued=true;requestAnimationFrame(enhance)}
   const observer=new MutationObserver(schedule);
   if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',()=>{observer.observe(document.body,{childList:true,subtree:true});schedule()},{once:true});else{observer.observe(document.body,{childList:true,subtree:true});schedule()}
