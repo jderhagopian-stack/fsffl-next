@@ -57,3 +57,29 @@ def test_app_shell_loads_market_visual_assets_once() -> None:
     assert "north_star_market.js?v=" in source
     assert "link[data-ns-market]" in source
     assert "script[data-ns-market]" in source
+
+
+def test_market_shell_is_route_scoped_and_cleaned_up() -> None:
+    source = _source(MARKET)
+
+    assert "function onMarketRoute()" in source
+    assert "if(!onMarketRoute()||state()?.payload?.status!=='ready')" in source
+    assert "panel.classList.remove('ns-market-shell')" in source
+    assert "if(!onMarketRoute())return" in source
+
+
+def test_market_descendant_enhancements_reapply_after_workspace_rerenders() -> None:
+    source = _source(MARKET)
+
+    assert "if(panel.classList.contains('ns-market-shell'))return" not in source
+    assert "summary&&!summary.classList.contains('ns-market-summary')" in source
+    assert "note&&!note.classList.contains('ns-market-supporting')" in source
+
+
+def test_featured_market_spotlight_matches_complete_trade_package() -> None:
+    source = _source(MARKET)
+
+    assert "leadSend=assetRefs(lead.send).join('|')" in source
+    assert "leadReceive=assetRefs(lead.receive).join('|')" in source
+    assert "assetRefs(row.send).join('|')===leadSend" in source
+    assert "assetRefs(row.receive).join('|')===leadReceive" in source
