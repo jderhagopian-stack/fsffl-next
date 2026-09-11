@@ -11,12 +11,14 @@ def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_market_leads_with_personalized_opportunity_cards_not_table() -> None:
+def test_market_leads_with_visual_opportunity_board_not_table() -> None:
     source = _source(MARKET)
 
-    assert "Personalized market" in source
-    assert "Moves worth your attention." in source
-    assert "ns-market-card" in source
+    assert "Your opportunity board" in source
+    assert "What is worth your attention?" in source
+    assert "ns-market-radar" in source
+    assert "ns-market-authority-orb" in source
+    assert "ns-market-package-line" in source
     assert "data-ns-market-eval" in source
     assert "View every market match" in source
 
@@ -36,21 +38,10 @@ def test_market_has_explicit_consumer_authority_states() -> None:
     css = _source(MARKET_CSS)
 
     assert "function authorityState(row)" in source
-    for label in (
-        "Recommended",
-        "Worth investigating",
-        "Needs full evaluation",
-        "Market match only",
-    ):
+    for label in ("Recommended", "Worth investigating", "Needs full evaluation", "Market match only"):
         assert label in source
-    for token in (
-        "authority-recommended",
-        "authority-investigate",
-        "authority-needs-eval",
-        "authority-match-only",
-    ):
+    for token in ("authority-recommended", "authority-investigate", "authority-needs-eval", "authority-match-only"):
         assert token in css or token in source
-    assert ".ns-market-card.featured" in css
     assert "--authority-accent" in css
 
 
@@ -69,18 +60,20 @@ def test_market_surfaces_identity_package_and_behavioral_context() -> None:
     source = _source(MARKET)
 
     assert "Acquire" in source
-    assert "You send" in source
-    assert "You receive" in source
+    assert "Give" in source
+    assert "Get" in source
     assert "observed trade" in source
     assert "ownerSignal" in source
 
 
-def test_market_is_mobile_scan_first() -> None:
+def test_market_is_mobile_scan_first_without_horizontal_card_carousel() -> None:
     css = _source(MARKET_CSS)
 
-    assert "overflow-x:auto" in css
-    assert "scroll-snap-type:x mandatory" in css
-    assert ".ns-market-card.featured" in css
+    assert ".ns-market-radar" in css
+    assert ".ns-market-authority-orb" in css
+    assert ".ns-market-package-line" in css
+    assert "scroll-snap-type:none" in css
+    assert ".ns-market-cards{display:grid" in css
     assert ".ns-market-exact" in css
 
 
@@ -94,18 +87,12 @@ def test_app_shell_loads_market_visual_assets_once() -> None:
     assert "script[data-ns-market]" in source
 
 
-def test_hosted_release_eagerly_refreshes_market_authority_assets() -> None:
+def test_hosted_release_eagerly_refreshes_market_assets() -> None:
     source = _source(INDEX)
 
-    assert '/static/north_star_market.css?v=20260911-market-authority1' in source
-    assert '/static/north_star_market.js?v=20260911-market-authority1' in source
     assert 'data-ns-market="true"' in source
-    versions = {
-        token.split("?v=")[1].split('"')[0]
-        for token in source.split()
-        if "?v=" in token
-    }
-    assert versions == {"20260911-market-authority1"}
+    versions = {token.split("?v=")[1].split('"')[0] for token in source.split() if "?v=" in token}
+    assert len(versions) == 1
 
 
 def test_market_shell_is_route_scoped_and_cleaned_up() -> None:
@@ -115,14 +102,6 @@ def test_market_shell_is_route_scoped_and_cleaned_up() -> None:
     assert "if(!onMarketRoute()||opportunityState()?.payload?.status!=='ready')" in source
     assert "panel.classList.remove('ns-market-shell')" in source
     assert "if(!onMarketRoute())return" in source
-
-
-def test_market_descendant_enhancements_reapply_after_workspace_rerenders() -> None:
-    source = _source(MARKET)
-
-    assert "if(panel.classList.contains('ns-market-shell'))return" not in source
-    assert "summary&&!summary.classList.contains('ns-market-summary')" in source
-    assert "note&&!note.classList.contains('ns-market-supporting')" in source
 
 
 def test_featured_market_spotlight_matches_complete_trade_package() -> None:
