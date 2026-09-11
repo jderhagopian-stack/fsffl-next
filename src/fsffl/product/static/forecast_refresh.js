@@ -9,8 +9,42 @@ function setForecastRefreshMessage(message){
   if(title)title.textContent=message;
 }
 
+function refreshFailureMessage(context=state?.context){
+  if(context?.forecast_ready){
+    return 'Intelligence refresh unavailable. Your current projections are still in place. Try again later.';
+  }
+  return 'Intelligence refresh unavailable. We could not validate enough projection sources. Try again later.';
+}
+
+function clearRefreshTechnicalDetail(){
+  document.querySelector('#runtime-refresh-error-detail')?.remove();
+}
+
+function setRefreshTechnicalDetail(error){
+  clearRefreshTechnicalDetail();
+  const grid=document.querySelector('#runtime-stage-grid');
+  const message=String(error||'').trim();
+  if(!grid||!message)return;
+  const node=document.createElement('div');
+  node.id='runtime-refresh-error-detail';
+  node.className='runtime-stage unavailable';
+  const mark=document.createElement('span');
+  mark.className='runtime-stage-mark';
+  mark.textContent='!';
+  const copy=document.createElement('div');
+  const heading=document.createElement('strong');
+  heading.textContent='Refresh diagnostics';
+  const detail=document.createElement('small');
+  detail.textContent=message;
+  detail.style.overflowWrap='anywhere';
+  detail.style.whiteSpace='normal';
+  copy.append(heading,detail);
+  node.append(mark,copy);
+  grid.appendChild(node);
+}
+
 function phaseMessage(payload){
-  if(payload?.error)return `Intelligence refresh failed: ${payload.error}`;
+  if(payload?.error)return refreshFailureMessage();
   if(payload?.message)return payload.message;
   return 'Checking intelligence refresh status…';
 }
@@ -88,6 +122,7 @@ async function settleCompletedJob(){
   fsfflSessionStartedJobId=null;
   fsfflSettledStateId=context.state_id||null;
   applyContext();
+  clearRefreshTechnicalDetail();
   setTimeout(()=>{
     reflectAuthoritativeValueReadiness(context);
     reflectRefreshAction(context);
@@ -106,7 +141,8 @@ function settleFailedJob(payload){
   fsfflCurrentJobId=null;
   fsfflJobStateId=null;
   fsfflSessionStartedJobId=null;
-  setForecastRefreshMessage(phaseMessage(payload));
+  setForecastRefreshMessage(refreshFailureMessage());
+  setRefreshTechnicalDetail(payload?.error);
   reflectRefreshAction(state.context);
 }
 
@@ -116,6 +152,7 @@ async function manualIntelligenceRefresh(){
   fsfflCurrentJobId=null;
   fsfflJobStateId=null;
   fsfflSessionStartedJobId=null;
+  clearRefreshTechnicalDetail();
   await maybeStartIntelligenceJob({manual:true});
 }
 
@@ -145,7 +182,7 @@ async function pollIntelligenceJob(){
     }
   }catch(error){
     console.error('Unable to poll FSFFL intelligence job',error);
-    setForecastRefreshMessage(`Unable to check server job status (${error.message}). Retrying…`);
+    setForecastRefreshMessage('Unable to check intelligence refresh status. Retrying…');
     reflectRefreshAction(state.context);
   }
 }
@@ -166,7 +203,8 @@ async function maybeStartIntelligenceJob({manual=false}={}){
 
   fsfflJobStartInFlight=true;
   fsfflSettledStateId=null;
-  setForecastRefreshMessage('Starting server-side intelligence refresh…');
+  clearRefreshTechnicalDetail();
+  setForecastRefreshMessage('Starting intelligence refresh…');
   reflectRefreshAction(state.context,{running:true});
   try{
     const payload=await api('/api/intelligence/jobs',{method:'POST'});
@@ -177,7 +215,8 @@ async function maybeStartIntelligenceJob({manual=false}={}){
   }catch(error){
     console.error('Unable to start FSFFL intelligence job',error);
     fsfflSettledStateId=stateId;
-    setForecastRefreshMessage(`Unable to start intelligence refresh (${error.message}). Use Refresh Intelligence to retry.`);
+    setForecastRefreshMessage('Unable to start intelligence refresh. Try again later.');
+    setRefreshTechnicalDetail(error.message);
   }finally{
     fsfflJobStartInFlight=false;
     reflectRefreshAction(state.context,{running:Boolean(fsfflCurrentJobId)});
