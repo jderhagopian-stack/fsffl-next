@@ -26,7 +26,7 @@ def test_full_product_navigation_shell_is_exposed() -> None:
         "Players & Assets",
         "League",
         "Trade Center",
-        "Market",
+        "Opportunities",
         "What-If",
         "Simulator",
         "Analytics Terminal",
