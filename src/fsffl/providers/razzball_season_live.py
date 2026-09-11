@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Callable
 
@@ -22,7 +23,8 @@ class RazzballSeasonProjectionSource:
     The legacy live source supplemented season rows with fumbles from ROS position
     pages. Fumbles lacked a second full-season source and therefore never acquired
     authoritative ensemble coverage, but the cross-horizon read was still an
-    evidence-boundary smell. This source keeps SEASON acquisition horizon-pure.
+    evidence-boundary smell. This source keeps SEASON acquisition horizon-pure and
+    verifies the page still identifies itself as the requested season projection.
     """
 
     provider_name = "razzball"
@@ -34,12 +36,18 @@ class RazzballSeasonProjectionSource:
         self._http_get_text = http_get_text or _default_get_text
         self._clock = clock or (lambda: datetime.now(UTC))
 
-    def fetch_latest(self) -> RazzballProjectionSnapshot:
+    def fetch_latest(self, *, season: int) -> RazzballProjectionSnapshot:
         captured_at = self._clock()
         if captured_at.tzinfo is None:
             raise ValueError("live Razzball clock must return a timezone-aware datetime")
         html = self._http_get_text(self.source_url)
         rows, page_text = _extract_projection_rows(html)
+        if not re.search(
+            rf"\b{season}\s+(?:Fantasy\s+Football\s+)?Projections\b",
+            page_text,
+            re.IGNORECASE,
+        ):
+            raise ValueError("Razzball response did not match requested full-season horizon")
         effective_at = _parse_updated_at(page_text)
         if effective_at > captured_at:
             raise ValueError("Razzball effective timestamp cannot be in the future")
