@@ -6,11 +6,12 @@ window.fsfflMobileSafariRecoveryDisabled=true;
 (function(){
   const LEAGUE_KEY='fsffl:last-sleeper-league';
   const TEAM_KEY='fsffl:last-team';
+  const VISIBLE_POLL_MS=1500;
+  const HIDDEN_POLL_MS=2500;
+  const IMPORT_DEADLINE_MS=180000;
   let interactiveConnectInFlight=false;
-  let restoreInFlight=false;
-  let activeLeagueId=null;
-  let activeOperation=null;
-  let activeConnectPromise=null;
+  let restorePromise=null;
+  let activeTask=null;
 
   const now=()=>window.performance?.now?.()??Date.now();
   const recordLatency=(operation,started,outcome='success',detail=null)=>{
@@ -42,6 +43,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const isTransportError=error=>/Load failed|Failed to fetch|Network request failed|network error/i.test(String(error?.message||''));
   const contextMatchesLeague=(context,leagueId)=>context?.league_id===`sleeper:${leagueId}`;
+  const usableContext=(context,leagueId)=>contextMatchesLeague(context,leagueId)&&Boolean(context?.state_id);
 
   async function resilientApi(path,options={},attempts=2){
     let lastError=null;
@@ -70,6 +72,15 @@ window.fsfflMobileSafariRecoveryDisabled=true;
   }
 
   async function startBackgroundImport(leagueId,operation='connect'){
+    // A connect request is unnecessary once canonical persisted state is already usable.
+    // Returning it immediately prevents a restore fallback from attaching itself to a
+    // secondary refresh job that may still be hydrating intelligence.
+    if(operation==='connect'){
+      try{
+        const context=await resilientApi('/api/product-context',{},2);
+        if(usableContext(context,leagueId))return {status:'completed',operation:'connect',league_external_id:leagueId};
+      }catch(_){}
+    }
     const existing=await recoverCurrentJob(leagueId,operation);
     if(existing&&['queued','running'].includes(existing.status))return existing;
     const endpoint=operation==='refresh'
@@ -90,42 +101,51 @@ window.fsfflMobileSafariRecoveryDisabled=true;
 
   async function performBackgroundImport(leagueId,onProgress,operation='connect'){
     let job=await startBackgroundImport(leagueId,operation);
-    const deadline=Date.now()+120000;
+    const deadline=Date.now()+IMPORT_DEADLINE_MS;
     let consecutiveTransportFailures=0;
     while(Date.now()<deadline){
       onProgress?.(job);
       if(job?.status==='completed')return resilientApi('/api/product-context',{},3);
       if(job?.status==='failed')throw new Error(job.error||'Sleeper league import failed');
-      await sleep(document.visibilityState==='hidden'?1200:550);
+      await sleep(document.visibilityState==='hidden'?HIDDEN_POLL_MS:VISIBLE_POLL_MS);
       try{
         job=await api('/api/connect/sleeper/background/current');
         consecutiveTransportFailures=0;
+        if(job?.league_external_id&&job.league_external_id!==leagueId){
+          throw new Error('Another league import replaced this job. Please try again.');
+        }
+        if(job?.operation&&job.operation!==operation){
+          // Never treat a refresh as completion of connect (or vice versa). The old
+          // flow could bind a connect waiter to a long-running refresh and eventually
+          // show the 120-second blocking failure despite usable canonical state.
+          throw new Error('Another league update is already in progress.');
+        }
       }catch(error){
         if(!isTransportError(error))throw error;
         consecutiveTransportFailures+=1;
         if(consecutiveTransportFailures>=8)throw new Error('Connection to the server was interrupted. Please try again.');
       }
     }
-    throw new Error('League import is taking longer than expected. Please try again in a moment.');
+    throw new Error('League import is still running. Your saved league will remain available while FSFFL finishes syncing.');
   }
 
-  function waitForBackgroundImport(leagueId,onProgress,operation='connect'){
-    if(
-      activeConnectPromise&&
-      activeLeagueId===leagueId&&
-      activeOperation===operation
-    )return activeConnectPromise;
-    const run=performBackgroundImport(leagueId,onProgress,operation);
-    activeLeagueId=leagueId;
-    activeOperation=operation;
-    activeConnectPromise=run;
-    run.finally(()=>{
-      if(activeConnectPromise===run){
-        activeConnectPromise=null;
-        activeLeagueId=null;
-        activeOperation=null;
+  async function waitForBackgroundImport(leagueId,onProgress,operation='connect'){
+    if(activeTask){
+      if(activeTask.leagueId===leagueId&&activeTask.operation===operation)return activeTask.promise;
+      // Serialize hosted work in this browser. Different operations are not allowed
+      // to create competing poll loops or race the single server-side current-job slot.
+      try{await activeTask.promise}catch(_){}
+      if(operation==='connect'){
+        try{
+          const context=await resilientApi('/api/product-context',{},2);
+          if(usableContext(context,leagueId))return context;
+        }catch(_){}
       }
-    }).catch(()=>{});
+    }
+    const run=performBackgroundImport(leagueId,onProgress,operation);
+    const task={leagueId,operation,promise:run};
+    activeTask=task;
+    run.finally(()=>{if(activeTask===task)activeTask=null}).catch(()=>{});
     return run;
   }
 
@@ -155,24 +175,21 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
       publishSyncState('current');
     }catch(error){
-      // Stored state remains usable. Revalidation failure should not evict the user
-      // from an already-restored league session.
+      // Values and behavioral intelligence are secondary to canonical league state.
+      // Revalidation failure must never evict a usable restored session.
       publishSyncState('stale','Refresh unavailable. Continuing with the last valid stored league.');
       console.warn('FSFFL background league refresh failed; using stored state',error);
     }
   }
 
-  async function restoreSavedSession(){
-    if(restoreInFlight)return false;
+  async function doRestoreSavedSession(){
     const leagueId=localStorage.getItem(LEAGUE_KEY);
     if(!leagueId)return false;
     const started=now();
-    restoreInFlight=true;
     try{
-      // Stale-while-revalidate: let the durable runtime restore itself and render
-      // immediately before any provider acquisition begins.
+      // Stale-while-revalidate: render durable canonical state before provider work.
       let context=await resilientApi('/api/product-context',{},3);
-      if(contextMatchesLeague(context,leagueId)&&context.state_id){
+      if(usableContext(context,leagueId)){
         context=await restoreSelectedTeam(context);
         applyConnectedContext(context);
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
@@ -181,8 +198,8 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         return true;
       }
 
-      // First connection (or a missing durable snapshot) still uses the governed
-      // server-owned import path and waits only because no usable league exists yet.
+      // First connection (or missing durable snapshot) waits because there is no
+      // canonical league state to present yet.
       context=await waitForBackgroundImport(leagueId,null,'connect');
       context=await restoreSelectedTeam(context);
       applyConnectedContext(context);
@@ -194,13 +211,25 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       recordLatency('restore_ready',started,'failed',String(error?.message||error));
       console.error('Unable to restore previous FSFFL session',error);
       return false;
-    }finally{
-      restoreInFlight=false;
     }
+  }
+
+  function restoreSavedSession(){
+    // All callers join the same restore promise. This is important on iOS/Safari,
+    // where load/resume/API recovery hooks can fire nearly together.
+    if(restorePromise)return restorePromise;
+    const run=doRestoreSavedSession();
+    restorePromise=run;
+    run.finally(()=>{if(restorePromise===run)restorePromise=null}).catch(()=>{});
+    return run;
   }
 
   async function interactiveConnect(){
     if(interactiveConnectInFlight)return;
+    if(restorePromise){
+      const restored=await restorePromise.catch(()=>false);
+      if(restored)return;
+    }
     const leagueId=window.prompt('Enter your Sleeper league ID');
     if(!leagueId?.trim())return;
     const normalized=leagueId.trim();
@@ -218,6 +247,17 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       publishSyncState('current');
       recordLatency('first_connect_ready',started,'success');
     }catch(error){
+      // One last canonical-state check prevents a secondary background failure from
+      // becoming a blocking league-connect error after the league is already usable.
+      try{
+        const context=await resilientApi('/api/product-context',{},2);
+        if(usableContext(context,normalized)){
+          applyConnectedContext(await restoreSelectedTeam(context));
+          publishSyncState('stale','League loaded. Some background data is still refreshing.');
+          recordLatency('first_connect_ready',started,'success','canonical_state_recovered');
+          return;
+        }
+      }catch(_){}
       recordLatency('first_connect_ready',started,'failed',String(error?.message||error));
       window.alert(`Could not connect league: ${error.message}`);
     }finally{
