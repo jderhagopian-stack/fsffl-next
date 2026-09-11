@@ -34,6 +34,9 @@ if TYPE_CHECKING:
     from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
 
 
+CURRENT_TEAM_ANALYTICS_VIEW_VERSION = "next7-team-view-v4:position-strength-age"
+
+
 @dataclass(frozen=True)
 class DurableRuntimeSnapshot:
     league_state: LeagueState
@@ -188,7 +191,14 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         if simulation_record is not None:
             try:
                 candidate = decode_simulation(dict(simulation_record.payload))
-                if candidate.league_view.context.league_state_id == league_state.state_id:
+                has_current_team_views = all(
+                    view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
+                    for view in candidate.team_views
+                )
+                if (
+                    candidate.league_view.context.league_state_id == league_state.state_id
+                    and has_current_team_views
+                ):
                     simulation = candidate
             except (TypeError, ValueError):
                 simulation = None
