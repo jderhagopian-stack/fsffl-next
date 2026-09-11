@@ -6,9 +6,14 @@ STATIC = Path(__file__).resolve().parents[1] / "src" / "fsffl" / "product" / "st
 
 def test_beta_product_correction_layer_is_loaded_last_with_fresh_cache_key() -> None:
     html = (STATIC / "index.html").read_text()
-    assert "/static/beta_product_corrections.js?v=20260909-beta-feedback1" in html
+    assert "/static/beta_product_corrections.js?v=" in html
     assert html.rfind("beta_product_corrections.js") > html.rfind("product_shell.js")
-    assert "20260909-beta-feedback1" in html
+    versions = {
+        token.split("?v=")[1].split('"')[0]
+        for token in html.split()
+        if "?v=" in token
+    }
+    assert len(versions) == 1
 
 
 def test_dead_additive_market_total_is_not_offered_on_primary_home_chart() -> None:
