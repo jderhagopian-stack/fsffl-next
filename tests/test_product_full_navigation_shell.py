@@ -24,7 +24,7 @@ def test_full_product_navigation_shell_is_exposed() -> None:
         "Home",
         "Franchise",
         "Players & Assets",
-        "League Comparison",
+        "League",
         "Trade Center",
         "Opportunities",
         "What-If",

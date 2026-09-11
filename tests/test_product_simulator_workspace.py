@@ -69,10 +69,11 @@ def test_simulator_is_first_class_team_scoped_product_route() -> None:
     index = INDEX.read_text(encoding="utf-8")
     assert "{route:'simulator',label:'Simulator',teamScoped:true}" in shell
     assert "ensureSimulatorScript" in shell
-    assert "/static/simulator.js" in shell
+    assert "'/static/simulator.js'" in shell
     assert "route==='simulator'" in shell
     assert "'what_if','simulator','analytics'" in shell
-    assert "20260910-phase3-franchise1" in shell
+    assert "const fsfflStaticVersion=" in shell
+    assert "script.src=`${path}?v=${fsfflStaticVersion}`" in shell
     assert '?v=' in index
     assert '/static/simulator.js?v=' not in index
     assert '/static/opportunities.js?v=' not in index

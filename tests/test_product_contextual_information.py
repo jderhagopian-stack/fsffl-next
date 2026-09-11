@@ -17,16 +17,17 @@ def test_franchise_adds_position_and_league_context_without_new_score() -> None:
     assert "*10000" not in source.replace(" ", "")
 
 
-def test_league_comparison_adds_state_title_and_read_only_ranks() -> None:
+def test_league_structure_adds_state_position_and_read_only_context() -> None:
     source = (ROOT / "src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
-    assert "championship_probability" in source
     assert "api('/api/league/team-views')" in source
-    assert "competitive_state" in source
-    assert "lcRank" in source
-    assert "Title odds" in source
-    assert "separate from owner strategic posture" in source
-    assert "does not calculate new scores or rankings" in source
-    assert "does not create a new master score" in source
+    assert "calculated_competitive_state" in source
+    assert "position_strengths" in source
+    assert "league_rank" in source
+    assert "strength_index" in source
+    assert "Calculated state comes from Team Utility and Simulation" in source
+    assert "owner strategic posture is separate" in source
+    assert "does not create trade recommendations" in source
+    assert "hidden power rating" in source
 
 
 def test_franchise_keeps_primary_action_paths_available_without_dashboard_duplication() -> None:

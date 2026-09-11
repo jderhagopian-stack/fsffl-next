@@ -112,9 +112,8 @@ def _forecast(player_id: str, *, as_of=AS_OF) -> ForecastObservation:
     )
 
 
-def test_team_view_preserves_roster_age_starter_and_pick_identity() -> None:
-    state = _state()
-    lineup = OptimizedTeamLineup(
+def _lineup() -> OptimizedTeamLineup:
+    return OptimizedTeamLineup(
         team_id="a",
         as_of=AS_OF,
         horizon=ForecastHorizon.SEASON,
@@ -132,12 +131,16 @@ def test_team_view_preserves_roster_age_starter_and_pick_identity() -> None:
         unavailable_player_ids=("p3",),
         model_version="lineup-test",
     )
+
+
+def test_team_view_preserves_roster_age_starter_and_pick_identity() -> None:
+    state = _state()
     view = build_team_analytics_view(
         state,
         context=_context(state),
         team_id="a",
         forecasts=(_forecast("p1"), _forecast("p2")),
-        optimized_lineup=lineup,
+        optimized_lineup=_lineup(),
     )
 
     assert [row.player_id for row in view.players] == ["p1", "p2", "p3"]
@@ -147,6 +150,48 @@ def test_team_view_preserves_roster_age_starter_and_pick_identity() -> None:
     assert starter.age_years == 28.0
     assert next(row for row in view.players if row.player_id == "p3").roster_slot == RosterSlot.TAXI
     assert [row.pick.pick_id for row in view.draft_picks] == ["pick-a"]
+
+
+def test_team_view_age_summaries_use_known_canonical_ages_only() -> None:
+    state = _state()
+    player_states = tuple(
+        item.model_copy(update={"age_years": None}) if item.player_id == "p2" else item
+        for item in state.player_states
+    )
+    state = state.model_copy(update={"player_states": player_states})
+    view = build_team_analytics_view(
+        state,
+        context=_context(state),
+        team_id="a",
+        optimized_lineup=_lineup(),
+    )
+
+    assert view.roster_average_age == 25.0
+    assert view.known_age_count == 2
+    assert view.starter_average_age == 28.0
+    assert view.known_starter_age_count == 1
+
+
+def test_team_view_age_summaries_remain_unavailable_without_known_ages() -> None:
+    state = _state()
+    player_states = tuple(
+        item.model_copy(update={"age_years": None})
+        if item.player_id in {"p1", "p2", "p3"}
+        else item
+        for item in state.player_states
+    )
+    state = state.model_copy(update={"player_states": player_states})
+    view = build_team_analytics_view(
+        state,
+        context=_context(state),
+        team_id="a",
+        optimized_lineup=_lineup(),
+    )
+
+    assert view.roster_average_age is None
+    assert view.known_age_count == 0
+    assert view.starter_average_age is None
+    assert view.known_starter_age_count == 0
 
 
 def test_team_view_filters_future_forecast_observations() -> None:

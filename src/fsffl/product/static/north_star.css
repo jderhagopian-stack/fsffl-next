@@ -1,0 +1,86 @@
+:root{
+  --ns-surface:#0a1322;
+  --ns-surface-raised:#101d30;
+  --ns-surface-emphasis:#132640;
+  --ns-line:rgba(151,181,219,.18);
+  --ns-text-soft:#9fb0c5;
+  --ns-positive:#3bd399;
+  --ns-warning:#e8b957;
+  --ns-risk:#ef7474;
+  --ns-action:#59a7ff;
+  --ns-radius:18px;
+  --ns-shadow:0 18px 44px rgba(0,0,0,.22);
+}
+
+/* Phase 3 shared product vocabulary. These styles express hierarchy only;
+   authoritative facts continue to come from State/Forecast/Value/Decision/Analytics. */
+.ns-signal-positive{border-color:rgba(59,211,153,.36)!important}
+.ns-signal-warning{border-color:rgba(232,185,87,.36)!important}
+.ns-signal-risk{border-color:rgba(239,116,116,.36)!important}
+.ns-signal-action{border-color:rgba(89,167,255,.4)!important}
+
+/* League: the conclusion and structural map should read before supporting detail. */
+.league-structure-panel{max-width:1180px;margin:0 auto}
+.league-structure-hero{gap:12px!important}
+.league-takeaway{
+  position:relative;
+  overflow:hidden;
+  min-height:168px;
+  border-color:rgba(89,167,255,.45)!important;
+  background:radial-gradient(circle at 90% 10%,rgba(89,167,255,.18),transparent 42%),linear-gradient(145deg,#112945,#0b1728)!important;
+  box-shadow:var(--ns-shadow)!important;
+}
+.league-takeaway:before{
+  content:"NOW";
+  display:block;
+  width:max-content;
+  margin-bottom:10px;
+  padding:4px 8px;
+  border:1px solid rgba(89,167,255,.32);
+  border-radius:999px;
+  color:#8fc4ff;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.league-takeaway strong{font-size:clamp(1.08rem,2.2vw,1.35rem)!important;letter-spacing:-.015em}
+.league-position-section{border-color:rgba(89,167,255,.28)!important}
+.league-edge-matrix{background:linear-gradient(180deg,rgba(14,27,46,.9),rgba(8,16,28,.96))}
+.league-edge-cell.leader{box-shadow:inset 0 0 0 1px rgba(59,211,153,.24),0 0 22px rgba(59,211,153,.05)!important}
+.league-edge-row.managed{box-shadow:inset 3px 0 0 rgba(89,167,255,.65)}
+.league-pressure{
+  border-color:rgba(89,167,255,.36)!important;
+  background:linear-gradient(110deg,rgba(17,39,65,.96),rgba(9,18,31,.98))!important;
+  box-shadow:var(--ns-shadow)!important;
+}
+.league-pressure .secondary-button{min-height:44px}
+.league-state-lane,.league-age-row,.league-asset-row,.league-depth-row{transition:transform .16s ease,border-color .16s ease}
+.league-state-lane.contender{background:linear-gradient(90deg,rgba(59,211,153,.07),transparent)}
+.league-state-lane.rebuilding{background:linear-gradient(90deg,rgba(239,116,116,.06),transparent)}
+.league-detail summary{min-height:48px;display:flex;align-items:center}
+
+@media(max-width:900px){
+  .league-structure-hero{display:flex!important;flex-direction:column!important}
+  .league-takeaway{order:-1;min-height:0;padding:18px!important}
+  .league-structure-hero>div:first-child{padding:4px 2px 8px!important;border:0!important;background:transparent!important;box-shadow:none!important}
+  .league-structure-hero>div:first-child .lead{max-width:42rem}
+  .league-position-section{margin-top:8px!important}
+}
+
+@media(max-width:560px){
+  .league-structure-panel{margin-inline:-2px}
+  .league-takeaway{border-radius:16px!important;padding:17px!important}
+  .league-takeaway strong{font-size:1.18rem!important;line-height:1.32!important}
+  .league-takeaway span{font-size:11px!important}
+  .league-structure-hero>div:first-child h2{font-size:1.55rem!important;margin-top:2px!important}
+  .league-structure-hero>div:first-child .lead{font-size:12px!important;line-height:1.45!important}
+  .league-section-heading{gap:6px!important;margin-bottom:11px!important}
+  .league-section-heading h3{font-size:1.02rem!important;line-height:1.25}
+  .league-section-heading>small{font-size:10px!important}
+  .league-position-section{padding:13px!important}
+  .league-pressure{gap:11px!important}
+  .league-supply-team{min-height:42px}
+  .league-two-column{gap:10px!important}
+  .league-section{margin:10px 0!important}
+  .league-detail{margin:10px 0!important}
+}

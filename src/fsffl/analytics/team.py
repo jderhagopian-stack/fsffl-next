@@ -60,7 +60,11 @@ class TeamAnalyticsView(FrozenModel):
     position_strengths: tuple[LeagueRelativePositionStrength, ...] = ()
     utility: TeamUtilityVector | None = None
     owner_posture: OwnerStrategicPosture | None = None
-    view_model_version: str = "next7-team-view-v3:position-strength"
+    roster_average_age: float | None = None
+    starter_average_age: float | None = None
+    known_age_count: int = 0
+    known_starter_age_count: int = 0
+    view_model_version: str = "next7-team-view-v4:position-strength-age"
 
     @model_validator(mode="after")
     def validate_view(self) -> "TeamAnalyticsView":
@@ -76,6 +80,10 @@ class TeamAnalyticsView(FrozenModel):
             raise ValueError("team utility must match analytics team")
         if len({row.player_id for row in self.players}) != len(self.players):
             raise ValueError("team analytics players must be unique")
+        if self.known_age_count < 0 or self.known_starter_age_count < 0:
+            raise ValueError("team analytics age counts cannot be negative")
+        if self.known_starter_age_count > self.known_age_count:
+            raise ValueError("known starter age count cannot exceed known roster age count")
         return self
 
 
@@ -103,6 +111,20 @@ def _season_fantasy_points_projection(observations: tuple[ForecastObservation, .
     return selected.distribution.mean
 
 
+def _average_known_age(rows: tuple[PlayerAnalyticsRow, ...] | list[PlayerAnalyticsRow]) -> tuple[float | None, int]:
+    """Aggregate canonical point-in-time player ages for read-only Analytics.
+
+    This is a transparent arithmetic summary, not a dynasty-value adjustment or a
+    competitive-state input. Missing ages remain missing and are reported through
+    the evidence count rather than imputed in Presentation.
+    """
+
+    known = [row.age_years for row in rows if row.age_years is not None]
+    if not known:
+        return None, 0
+    return sum(known) / len(known), len(known)
+
+
 def build_team_analytics_view(
     league_state: LeagueState,
     *,
@@ -114,7 +136,7 @@ def build_team_analytics_view(
     position_strengths: tuple[LeagueRelativePositionStrength, ...] = (),
     utility: TeamUtilityVector | None = None,
     owner_posture: OwnerStrategicPosture | None = None,
-    view_model_version: str = "next7-team-view-v3:position-strength",
+    view_model_version: str = "next7-team-view-v4:position-strength-age",
 ) -> TeamAnalyticsView:
     """Join authoritative team evidence into a read-only analytics view."""
 
@@ -219,6 +241,9 @@ def build_team_analytics_view(
             row.player_id,
         )
     )
+    roster_average_age, known_age_count = _average_known_age(player_rows)
+    starter_rows = [row for row in player_rows if row.projected_starter]
+    starter_average_age, known_starter_age_count = _average_known_age(starter_rows)
 
     return TeamAnalyticsView(
         context=context,
@@ -230,5 +255,9 @@ def build_team_analytics_view(
         position_strengths=tuple(sorted(position_strengths, key=lambda row: row.position.value)),
         utility=utility,
         owner_posture=owner_posture,
+        roster_average_age=roster_average_age,
+        starter_average_age=starter_average_age,
+        known_age_count=known_age_count,
+        known_starter_age_count=known_starter_age_count,
         view_model_version=view_model_version,
     )
