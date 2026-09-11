@@ -3,12 +3,17 @@ from __future__ import annotations
 import logging
 import os
 
-from fsffl.persistence import persistence_store_from_env, state_snapshot_store_from_env
+from fsffl.persistence import (
+    persistence_store_from_env,
+    projection_history_store_from_env,
+    state_snapshot_store_from_env,
+)
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
 from .behavioral_runtime import BehavioralRuntimeCoordinator
 from .forecast_resilience import make_resilient_forecast_loader
 from .hosted_connect import install_hosted_connect_routes
+from .in_season_forecast_routes import install_in_season_forecast_routes
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
 from .phase1_latency import install_phase1_latency_routes
 from .runtime import default_sleeper_state_loader
@@ -21,6 +26,7 @@ from .webapp import create_app
 logging.getLogger("fsffl.product.performance").setLevel(logging.INFO)
 
 _persistence_store = persistence_store_from_env()
+_projection_history_store = projection_history_store_from_env()
 _state_snapshot_store = state_snapshot_store_from_env()
 _runtime_store = PersistentPrivateBetaRuntimeStore(
     _persistence_store,
@@ -49,5 +55,11 @@ install_hosted_connect_routes(
         league_external_id=league_id
     ),
     full_refresh_seconds=_full_refresh_seconds,
+)
+install_in_season_forecast_routes(
+    app,
+    runtime_store=_runtime_store,
+    persistence_store=_persistence_store,
+    projection_history_store=_projection_history_store,
 )
 install_phase1_latency_routes(app, persistence_store=_persistence_store)
