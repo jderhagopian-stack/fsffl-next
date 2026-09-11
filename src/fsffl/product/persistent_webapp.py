@@ -11,7 +11,7 @@ from fsffl.persistence import (
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
 from . import webapp as _webapp
-from .behavioral_runtime import BehavioralRuntimeCoordinator
+from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
 from .forecast_resilience import make_resilient_forecast_loader
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
@@ -26,6 +26,7 @@ from .runtime import default_sleeper_state_loader
 # wall-clock phase timings; ensure Render emits those INFO records so latency work
 # can target measured bottlenecks without adding technical noise to product UI.
 logging.getLogger("fsffl.product.performance").setLevel(logging.INFO)
+_logger = logging.getLogger("fsffl.product.performance")
 
 _persistence_store = persistence_store_from_env()
 _projection_history_store = projection_history_store_from_env()
@@ -34,7 +35,27 @@ _runtime_store = PersistentPrivateBetaRuntimeStore(
     _persistence_store,
     state_snapshot_store=_state_snapshot_store,
 )
-_behavioral_coordinator = BehavioralRuntimeCoordinator(max_workers=2)
+
+# Hosted Behavioral persistence performs an idempotent deploy-before-migration
+# schema safety bootstrap when its Postgres adapter is first constructed. Build the
+# shared adapter while the Render process is starting rather than on the first user
+# status/Market request. Failure remains non-fatal: the coordinator will retry its
+# normal factory later and Behavioral evidence will fail closed rather than blocking
+# the rest of the product.
+try:
+    _behavioral_store = default_behavioral_store()
+except Exception as exc:  # pragma: no cover - hosted infrastructure guard
+    _behavioral_store = None
+    _logger.warning("FSFFL Behavioral store prewarm unavailable; runtime will retry: %s", exc)
+
+_behavioral_coordinator = BehavioralRuntimeCoordinator(
+    store_factory=(
+        (lambda: _behavioral_store)
+        if _behavioral_store is not None
+        else default_behavioral_store
+    ),
+    max_workers=2,
+)
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
     1,

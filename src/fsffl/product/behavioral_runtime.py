@@ -44,6 +44,8 @@ BehavioralWork = Callable[[LeagueState, str], BehavioralSyncResult]
 BehavioralStoreFactory = Callable[[], object]
 _profile_cache_lock = RLock()
 _profile_cache: dict[tuple[str, str], OwnerBehaviorProfile] = {}
+_hosted_store_lock = RLock()
+_hosted_postgres_stores: dict[str, PostgresBehavioralIntelligenceStore] = {}
 
 
 def cached_behavior_profile_for_team(
@@ -91,11 +93,26 @@ def default_behavioral_cache_path() -> Path:
 
 
 def default_behavioral_store():
-    """Use hosted Postgres when configured; retain SQLite for local/test workflows."""
+    """Reuse one hosted Postgres store per process; retain SQLite for local/tests.
+
+    Constructing the hosted Postgres adapter performs its deploy-before-migration
+    schema safety bootstrap. Reconstructing that adapter on request therefore also
+    repeats PostgreSQL DDL, including CREATE INDEX IF NOT EXISTS. Keep exactly one
+    adapter for each configured database URL so that safety bootstrap happens once
+    per web process rather than during restore/status/Behavioral request paths.
+
+    This is connection/bootstrap reuse only. The store remains evidence persistence;
+    no Behavioral inference, model truth, or cache validity rule changes here.
+    """
 
     database_url = os.getenv("FSFFL_DATABASE_URL", "").strip()
     if database_url:
-        return PostgresBehavioralIntelligenceStore(database_url)
+        with _hosted_store_lock:
+            store = _hosted_postgres_stores.get(database_url)
+            if store is None:
+                store = PostgresBehavioralIntelligenceStore(database_url)
+                _hosted_postgres_stores[database_url] = store
+            return store
     return BehavioralIntelligenceStore(default_behavioral_cache_path())
 
 
