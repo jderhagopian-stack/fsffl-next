@@ -3,6 +3,7 @@ from pathlib import Path
 
 NORTH_STAR = Path("src/fsffl/product/static/north_star.css")
 INDEX = Path("src/fsffl/product/static/index.html")
+PRODUCT_SHELL = Path("src/fsffl/product/static/product_shell.js")
 
 
 def _source(path: Path) -> str:
@@ -59,12 +60,20 @@ def test_visual_system_respects_reduced_motion() -> None:
 def test_north_star_release_cache_generation_is_coherent() -> None:
     source = _source(INDEX)
 
-    assert "/static/north_star.css?v=20260910-phase3-visual1" in source
-    assert "/static/session_recovery.js?v=20260910-phase3-visual1" in source
-    assert "/static/mobile_safari_recovery.js?v=20260910-phase3-visual1" in source
+    assert "/static/north_star.css?v=20260910-phase3-visual2" in source
+    assert "/static/session_recovery.js?v=20260910-phase3-visual2" in source
+    assert "/static/mobile_safari_recovery.js?v=20260910-phase3-visual2" in source
     versions = {
         token.split("?v=")[1].split('"')[0]
         for token in source.split()
         if "?v=" in token
     }
-    assert versions == {"20260910-phase3-visual1"}
+    assert versions == {"20260910-phase3-visual2"}
+
+
+def test_lazy_product_modules_share_the_north_star_release_generation() -> None:
+    source = _source(PRODUCT_SHELL)
+
+    assert "const fsfflStaticVersion='20260910-phase3-visual2'" in source
+    assert "'/static/my_team_dashboard.js'" in source
+    assert "script.src=`${path}?v=${fsfflStaticVersion}`" in source
