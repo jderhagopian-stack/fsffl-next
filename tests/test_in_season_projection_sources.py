@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 
+import pytest
+
 from fsffl.providers.in_season_projection_sources import (
     CBSInSeasonProjectionSource,
     FFTodayWeeklyProjectionSource,
@@ -92,7 +94,7 @@ def _table(headers: list[str], values: list[str], heading: str) -> str:
     )
 
 
-def _razzball_ros_html(position: str) -> str:
+def _razzball_ros_html(position: str, *, season: int = 2026) -> str:
     if position == "QB":
         headers = ["Name", "Team", "Pass Yds", "Pass TD", "Int", "Rush Yds", "Run TD"]
         values = ["Test QB", "NYG", "3000", "20", "8", "300", "3"]
@@ -102,7 +104,7 @@ def _razzball_ros_html(position: str) -> str:
     else:
         headers = ["Name", "Team", "Rec", "Rec Yds", "Rec TD"]
         values = [f"Test {position}", "NYG", "60", "850", "6"]
-    return _table(headers, values, "Rest of Season Projections")
+    return _table(headers, values, f"{season} Rest of Season Projections")
 
 
 def test_razzball_ros_uses_position_specific_rest_of_season_tables():
@@ -113,10 +115,23 @@ def test_razzball_ros_uses_position_specific_rest_of_season_tables():
         position = re.search(r"projections-(qb|rb|wr|te)-restofseason", url).group(1).upper()
         return _razzball_ros_html(position)
 
-    snapshot = RazzballRestOfSeasonProjectionSource(http_get_text=get, clock=lambda: NOW).fetch_latest()
+    snapshot = RazzballRestOfSeasonProjectionSource(http_get_text=get, clock=lambda: NOW).fetch_latest(
+        season=2026
+    )
     assert {row["Pos"] for row in snapshot.rows} == {"QB", "RB", "WR", "TE"}
     assert len(urls) == 4
     assert all("restofseason" in url for url in urls)
+
+
+def test_razzball_ros_rejects_current_page_for_wrong_requested_season():
+    def get(url: str) -> str:
+        position = re.search(r"projections-(qb|rb|wr|te)-restofseason", url).group(1).upper()
+        return _razzball_ros_html(position, season=2026)
+
+    with pytest.raises(ValueError, match="requested 2025 season"):
+        RazzballRestOfSeasonProjectionSource(http_get_text=get, clock=lambda: NOW).fetch_latest(
+            season=2025
+        )
 
 
 def test_full_season_razzball_source_never_reads_ros_pages_and_verifies_season():
