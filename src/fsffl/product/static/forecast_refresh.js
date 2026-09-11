@@ -13,7 +13,7 @@ function refreshFailureMessage(context=state?.context){
   if(context?.forecast_ready){
     return 'Intelligence refresh unavailable. Your current projections are still in place. Try again later.';
   }
-  return 'Intelligence refresh unavailable. We could not validate enough projection sources. Try again later.';
+  return 'Intelligence refresh unavailable. We could not complete the refresh. Try again later.';
 }
 
 function clearRefreshTechnicalDetail(){
