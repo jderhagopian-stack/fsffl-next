@@ -1,0 +1,164 @@
+/* Phase 3 North Star recomposition.
+ * Presentation only: this file changes hierarchy, composition and visual grammar.
+ * It creates no State, Forecast, Value, Decision, Search, Simulation or Behavioral truth.
+ */
+:root{
+  --ns3-ink:#07101c;
+  --ns3-panel:#0b1625;
+  --ns3-panel-2:#101e31;
+  --ns3-line:rgba(169,195,226,.16);
+  --ns3-line-strong:rgba(169,195,226,.28);
+  --ns3-fg:#f6f9fc;
+  --ns3-muted:#94a9bf;
+  --ns3-blue:#69b7ff;
+  --ns3-green:#49d7a3;
+  --ns3-amber:#f1c86c;
+  --ns3-red:#ff8080;
+}
+
+/* Product shell: flatter, calmer, more editorial. */
+.fsffl-product-architecture .main-panel{background:radial-gradient(circle at 80% 0%,rgba(36,84,132,.12),transparent 28%),linear-gradient(180deg,#07101c 0%,#09131f 100%)}
+.fsffl-product-architecture .screen{padding-top:clamp(18px,2.5vw,34px)}
+.fsffl-product-architecture .eyebrow{font-size:9px!important;letter-spacing:.18em!important;font-weight:850!important;color:#86a8ca!important}
+.fsffl-product-architecture .primary-button{border-radius:999px!important;min-height:46px;padding-inline:20px!important;box-shadow:none!important}
+.fsffl-product-architecture .secondary-button,.fsffl-product-architecture .text-button{border-radius:999px!important}
+
+/* HOME — one editorial story, then a compact intelligence strip. */
+#league-screen>.hero-row{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,.35fr);gap:30px;align-items:end;padding:12px 0 28px!important;border-bottom:1px solid var(--ns3-line)}
+#league-screen>.hero-row h1{font-size:clamp(2.85rem,7vw,5.9rem)!important;line-height:.88!important;letter-spacing:-.07em!important;max-width:880px!important;margin:7px 0 16px!important}
+#league-screen>.hero-row .lead{font-size:clamp(.95rem,1.3vw,1.08rem)!important;line-height:1.62!important;max-width:620px!important}
+.home-attention{margin-top:28px!important}
+.home-command-head{display:grid!important;grid-template-columns:1fr auto;align-items:start!important;padding-bottom:13px!important;border-bottom:1px solid var(--ns3-line);margin-bottom:0!important}
+.home-command-head h2{font-size:clamp(1.25rem,2vw,1.55rem)!important;margin:3px 0!important;letter-spacing:-.03em!important}
+.home-state-pill{align-self:start!important;background:transparent!important;border:1px solid var(--ns3-line-strong)!important;color:#b7c8da!important}
+.home-priority{
+  min-height:340px!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1.65fr) minmax(220px,.35fr)!important;
+  align-items:end!important;
+  gap:32px!important;
+  margin-top:0!important;
+  padding:clamp(30px,5vw,58px)!important;
+  border:0!important;
+  border-radius:0 0 28px 28px!important;
+  background:linear-gradient(118deg,rgba(22,61,98,.96),rgba(9,25,43,.96) 56%,rgba(7,16,28,.99))!important;
+  box-shadow:0 30px 70px rgba(0,0,0,.25)!important;
+}
+.home-priority:before{content:"01";position:absolute;right:32px;top:20px;font-size:clamp(4rem,10vw,8.5rem);line-height:1;font-weight:900;letter-spacing:-.08em;color:rgba(255,255,255,.035);pointer-events:none}
+.home-priority:after{width:540px!important;height:540px!important;right:-230px!important;top:-220px!important;background:radial-gradient(circle,rgba(105,183,255,.2),rgba(105,183,255,0) 68%)!important}
+.home-priority-copy{align-self:end!important;max-width:880px!important}
+.home-priority-kicker{display:block;color:#9ecfff!important;font-size:10px!important;margin-bottom:13px}
+.home-priority h3{font-size:clamp(2.7rem,6vw,5.6rem)!important;line-height:.9!important;max-width:880px!important;letter-spacing:-.07em!important;margin:0 0 20px!important}
+.home-priority p{font-size:clamp(1rem,1.45vw,1.15rem)!important;line-height:1.62!important;color:#d4e0ec!important;max-width:720px!important}
+.home-priority small{max-width:600px;color:#86a3bd!important}
+.home-priority>.primary-button{justify-self:end!important;align-self:end!important;min-width:0!important;background:#f4f8fc!important;color:#08111d!important;font-weight:800!important;padding-inline:22px!important}
+.home-current{margin-top:34px!important;border:0!important;border-radius:0!important;background:transparent!important;padding:0!important;box-shadow:none!important}
+.home-current .home-section-title{border-bottom:1px solid var(--ns3-line);padding-bottom:12px!important;margin-bottom:0!important}
+.home-current .home-section-title h3,.home-next .home-section-title h3{font-size:clamp(1.3rem,2.2vw,1.75rem)!important}
+.home-pulse-list{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));border-top:0!important}
+.home-pulse-row{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:space-between!important;min-height:210px!important;padding:24px 22px 18px!important;border:0!important;border-right:1px solid var(--ns3-line)!important;background:transparent!important}
+.home-pulse-row:last-child{border-right:0!important}
+.home-pulse-row>div{display:flex!important;flex-direction:column!important;gap:9px!important}
+.home-pulse-row span{font-size:9px!important;letter-spacing:.14em!important}
+.home-pulse-row strong{font-size:clamp(1.45rem,2.7vw,2.25rem)!important;line-height:1.02!important;letter-spacing:-.045em!important}
+.home-pulse-row small{font-size:12px!important;line-height:1.55!important;max-width:30ch}
+.home-pulse-row>button{align-self:flex-start!important;margin-top:20px!important;padding:0!important;color:#9ecfff!important;font-weight:750!important}
+.home-next{margin-top:34px!important;border-top:1px solid var(--ns3-line);padding-top:18px}
+.home-workflows{display:grid!important;grid-template-columns:1.55fr 1fr 1fr!important;gap:0!important;border-top:1px solid var(--ns3-line);border-bottom:1px solid var(--ns3-line)}
+.home-workflow,.home-workflow:first-child{min-height:132px!important;border:0!important;border-right:1px solid var(--ns3-line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:22px!important}
+.home-workflow:last-child{border-right:0!important}
+.home-workflow:hover{transform:none!important;background:rgba(105,183,255,.045)!important}
+.home-workflow strong{font-size:1rem!important}.home-workflow small{font-size:11px!important;line-height:1.5!important}
+.home-evidence-note{max-width:760px!important;margin-top:18px!important}
+.home-system-status{border:0!important;border-top:1px solid var(--ns3-line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding-inline:0!important}
+
+/* FRANCHISE — a diagnosis spread, not a dashboard of cards. */
+#generic-screen>.panel:has(.franchise-shell){background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.franchise-shell{gap:0!important}
+.franchise-header{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:24px;padding:8px 2px 22px!important;border-bottom:1px solid var(--ns3-line)}
+.franchise-header h2{font-size:clamp(2.8rem,7vw,5.4rem)!important;line-height:.9!important;letter-spacing:-.07em!important;margin:7px 0 15px!important}
+.franchise-header>div>p:last-child{font-size:clamp(.92rem,1.25vw,1.05rem)!important;max-width:680px!important}
+.franchise-state{align-self:start!important;border-radius:999px!important;background:transparent!important;padding:7px 10px!important}
+.franchise-tabs{margin:16px 0 22px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;gap:22px!important}
+.franchise-tabs button{min-height:34px!important;padding:0 0 7px!important;border-radius:0!important;background:transparent!important;border-bottom:1px solid transparent!important;color:#8096ad!important}
+.franchise-tabs button[aria-selected="true"]{background:transparent!important;box-shadow:none!important;color:#f4f8fc!important;border-bottom-color:#78bdff!important}
+.franchise-hero{min-height:410px!important;grid-template-columns:minmax(0,1.55fr) minmax(280px,.45fr)!important;border:0!important;border-radius:0!important;background:linear-gradient(118deg,rgba(20,55,91,.94),rgba(9,24,42,.97) 58%,rgba(7,16,28,.99))!important;box-shadow:0 32px 76px rgba(0,0,0,.26)!important;overflow:hidden}
+.franchise-hero:before{content:"FRANCHISE";position:absolute;left:clamp(26px,4vw,48px);bottom:-10px;font-size:clamp(4.5rem,12vw,10rem);font-weight:900;line-height:.75;letter-spacing:-.08em;color:rgba(255,255,255,.025);pointer-events:none}
+.franchise-hero-main{padding:clamp(30px,5vw,54px)!important;align-self:end!important}
+.franchise-hero-main h3{font-size:clamp(2.8rem,6vw,5.2rem)!important;line-height:.89!important;letter-spacing:-.07em!important;max-width:800px!important;margin:10px 0 22px!important}
+.franchise-hero-main p{font-size:clamp(.98rem,1.35vw,1.12rem)!important;line-height:1.62!important;max-width:720px!important}
+.franchise-hero-actions{margin-top:26px!important}
+.franchise-outlook{margin:0!important;padding:34px 26px!important;border:0!important;border-left:1px solid rgba(255,255,255,.12)!important;border-radius:0!important;background:rgba(4,12,22,.32)!important;backdrop-filter:none!important;align-content:end!important;gap:12px!important}
+.franchise-outlook>span{font-size:9px;text-transform:uppercase;letter-spacing:.16em;color:#8da8c1}
+.franchise-outlook>strong{font-size:clamp(2.45rem,5vw,4rem)!important;line-height:.9!important}
+.franchise-outlook>small{color:#8da8c1!important}
+.franchise-outlook>div{padding-top:16px!important;margin-top:3px!important}
+.franchise-outlook>div b{font-size:1.55rem!important}
+.franchise-section{margin-top:34px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.franchise-section-head{padding:0 2px 14px!important;border-bottom:1px solid var(--ns3-line)}
+.franchise-section-head h3{font-size:clamp(1.5rem,2.8vw,2.15rem)!important;margin:4px 0!important;letter-spacing:-.04em!important}
+.franchise-position-map{gap:0!important}
+.franchise-position-row{grid-template-columns:120px minmax(0,1fr) 180px!important;min-height:82px!important;padding:16px 2px!important;border-bottom:1px solid var(--ns3-line)!important}
+.franchise-position-label strong{font-size:1.05rem!important}.franchise-position-label span{font-size:10px!important}
+.franchise-position-track{height:8px!important;background:rgba(255,255,255,.055)!important}
+.franchise-position-track>span{background:linear-gradient(90deg,#2d6ea6,#79c3ff)!important;box-shadow:none!important}
+.franchise-position-value{text-align:right!important}.franchise-position-value strong{font-size:1.55rem!important}.franchise-position-value span{font-size:10px!important}
+.franchise-diagnosis-grid{display:grid!important;grid-template-columns:1.45fr 1fr 1fr!important;gap:0!important;margin-top:36px!important;border-top:1px solid var(--ns3-line);border-bottom:1px solid var(--ns3-line)}
+.franchise-focus,.franchise-focus:first-child{min-height:250px!important;border:0!important;border-right:1px solid var(--ns3-line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:28px 24px!important}
+.franchise-focus:last-child{border-right:0!important}
+.franchise-focus:first-child{background:linear-gradient(180deg,rgba(255,128,128,.055),transparent)!important}
+.franchise-focus h3{font-size:clamp(1.75rem,3.2vw,2.65rem)!important;line-height:.98!important;letter-spacing:-.05em!important;margin:11px 0 14px!important}
+.franchise-focus p{font-size:12px!important;line-height:1.6!important;color:#9eb0c2!important;max-width:38ch}
+.franchise-focus button{padding:0!important;border:0!important;background:transparent!important;color:#9ecfff!important;font-weight:750!important;text-align:left!important}
+.franchise-assets,.franchise-picks,.franchise-roster,.franchise-depth{border-radius:0!important}
+
+/* LEAGUE — structural atlas language, flatter and more information-dense. */
+#generic-screen>.panel.league-structure-panel{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.league-structure-hero{border-bottom:1px solid var(--ns3-line)!important;padding-bottom:26px!important;margin-bottom:26px!important}
+.league-structure-hero h2{font-size:clamp(2.8rem,7vw,5rem)!important;line-height:.91!important;letter-spacing:-.065em!important}
+.league-takeaway{min-height:230px!important;border:0!important;border-radius:0!important;background:linear-gradient(140deg,rgba(19,54,89,.94),rgba(8,22,38,.98))!important;padding:28px!important}
+.league-takeaway strong{font-size:clamp(1.5rem,3vw,2.35rem)!important;line-height:1.05!important}
+.league-pressure{border:0!important;border-top:1px solid var(--ns3-line)!important;border-bottom:1px solid var(--ns3-line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.league-position-section,.league-edge-matrix,.league-state-lane,.league-age-row,.league-asset-row,.league-depth-row{border-radius:0!important}
+
+@media(max-width:900px){
+  #league-screen>.hero-row{grid-template-columns:1fr!important}
+  .home-priority{grid-template-columns:1fr!important;min-height:300px!important}
+  .home-priority>.primary-button{justify-self:start!important}
+  .home-pulse-list{grid-template-columns:1fr!important}
+  .home-pulse-row{min-height:0!important;border-right:0!important;border-bottom:1px solid var(--ns3-line)!important;padding-inline:2px!important}
+  .home-workflows{grid-template-columns:1fr!important}
+  .home-workflow,.home-workflow:first-child{border-right:0!important;border-bottom:1px solid var(--ns3-line)!important}
+  .home-workflow:last-child{border-bottom:0!important}
+  .franchise-hero{grid-template-columns:1fr!important;min-height:0!important}
+  .franchise-outlook{border-left:0!important;border-top:1px solid rgba(255,255,255,.12)!important;display:grid!important;grid-template-columns:1fr 1fr;align-items:end!important}
+  .franchise-outlook>span,.franchise-outlook>strong,.franchise-outlook>small{grid-column:1/-1}
+  .franchise-diagnosis-grid{grid-template-columns:1fr!important}
+  .franchise-focus,.franchise-focus:first-child{min-height:0!important;border-right:0!important;border-bottom:1px solid var(--ns3-line)!important;padding-inline:2px!important}
+  .franchise-focus:last-child{border-bottom:0!important}
+}
+
+@media(max-width:680px){
+  .fsffl-product-architecture .screen{padding-top:12px}
+  #league-screen>.hero-row{padding-bottom:20px!important}
+  #league-screen>.hero-row h1{font-size:clamp(2.6rem,15vw,4.2rem)!important;max-width:8ch!important}
+  .home-command-head{grid-template-columns:1fr!important;gap:10px!important}
+  .home-priority{padding:26px 20px!important;border-radius:0 0 22px 22px!important}
+  .home-priority:before{right:14px;top:14px;font-size:5rem}
+  .home-priority h3{font-size:clamp(2.5rem,13vw,4.2rem)!important}
+  .home-pulse-row strong{font-size:1.8rem!important}
+  .franchise-header{grid-template-columns:1fr!important}
+  .franchise-header h2{font-size:clamp(2.6rem,14vw,4.5rem)!important}
+  .franchise-tabs{width:100%!important;gap:16px!important}
+  .franchise-hero-main{padding:28px 20px!important}
+  .franchise-hero-main h3{font-size:clamp(2.55rem,13vw,4.15rem)!important}
+  .franchise-outlook{padding:24px 20px!important}
+  .franchise-position-row{grid-template-columns:56px minmax(0,1fr) 78px!important;gap:10px!important;min-height:72px!important}
+  .franchise-position-label span,.franchise-position-value span{display:none!important}
+  .franchise-position-value strong{font-size:1.2rem!important}
+  .league-structure-hero h2{font-size:clamp(2.6rem,14vw,4.3rem)!important}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .home-workflow,.franchise-tabs button{transition:none!important}
+}
