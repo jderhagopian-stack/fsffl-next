@@ -48,6 +48,7 @@ def _evidence_from_baseline(
         ),
         uncertainty_ready=uncertainty_ready,
         runtime_result=result,
+        evidence_basis="preseason_baseline",
     )
 
 
