@@ -87,9 +87,6 @@ class CBSInSeasonProjectionSource:
         return CurrentProjectionSnapshot(
             provider=self.provider_name,
             captured_at=captured,
-            # CBS does not expose a stable publication timestamp on these pages.
-            # Retrieval time is retained honestly; content fingerprints suppress
-            # unchanged duplicate pulls in durable history.
             effective_at=captured,
             rows=tuple(rows),
             source_version=source_version,
@@ -147,8 +144,6 @@ class FFTodayWeeklyProjectionSource:
         return CurrentProjectionSnapshot(
             provider=self.provider_name,
             captured_at=captured,
-            # The public weekly grid exposes the target week but not a stable
-            # provider-issued timestamp, so retrieval time is the honest cutoff.
             effective_at=captured,
             rows=tuple(rows),
             source_version=self.source_version,
@@ -255,6 +250,12 @@ _RAZZBALL_CANONICAL_COLUMNS = {
     "Rec TD",
     "Fum Lst",
 }
+_RAZZBALL_REQUIRED_BY_POSITION = {
+    "QB": {"Name", "Team", "Pass Yds", "Pass TD", "Int", "Rush Yds", "Run TD"},
+    "RB": {"Name", "Team", "Rush Yds", "Run TD", "Rec", "Rec Yds", "Rec TD"},
+    "WR": {"Name", "Team", "Rec", "Rec Yds", "Rec TD"},
+    "TE": {"Name", "Team", "Rec", "Rec Yds", "Rec TD"},
+}
 
 
 class RazzballRestOfSeasonProjectionSource:
@@ -275,15 +276,22 @@ class RazzballRestOfSeasonProjectionSource:
         effective: datetime | None = None
         for position, url in self.position_urls.items():
             html = self._http_get_text(url)
-            parsed, page_text = razzball_table_rows(html, {"Name", "Team"})
-            if "Rest of Season" not in page_text:
+            parsed, page_text = razzball_table_rows(
+                html,
+                _RAZZBALL_REQUIRED_BY_POSITION[position],
+            )
+            if not re.search(r"Rest\s+of\s+Season", page_text, re.IGNORECASE):
                 raise ValueError(f"Razzball {position} response did not identify rest-of-season projections")
             updated = parse_razzball_updated_at(page_text)
             effective = updated if effective is None else max(effective, updated)
             for raw in parsed:
                 if not raw.get("Name") or not raw.get("Team"):
                     continue
-                row = {key: value for key, value in raw.items() if key in _RAZZBALL_CANONICAL_COLUMNS or key in {"Name", "Team"}}
+                row = {
+                    key: value
+                    for key, value in raw.items()
+                    if key in _RAZZBALL_CANONICAL_COLUMNS or key in {"Name", "Team"}
+                }
                 row["Pos"] = position
                 rows.append(row)
         if not rows or effective is None:
