@@ -12,6 +12,20 @@ Clock = Callable[[], datetime]
 
 
 @dataclass(frozen=True)
+class SleeperNflState:
+    season: int
+    week: int
+    season_type: str
+    captured_at: datetime
+
+    @property
+    def completed_through_week(self) -> int:
+        if self.season_type.lower() in {"post", "postseason", "off"}:
+            return 18
+        return max(0, self.week - 1)
+
+
+@dataclass(frozen=True)
 class SleeperWeeklyStatLine:
     player_id: str
     season: int
@@ -31,10 +45,33 @@ class SleeperWeeklyStatsSource:
     provider_name = "sleeper_stats"
     source_version = "sleeper-weekly-nfl-stats-v1"
     base_url = "https://api.sleeper.app/v1/stats/nfl/regular"
+    state_url = "https://api.sleeper.app/v1/state/nfl"
 
     def __init__(self, *, http_get_json: JsonGetter | None = None, clock: Clock | None = None) -> None:
         self._http_get_json = http_get_json or _default_get_json
         self._clock = clock or (lambda: datetime.now(UTC))
+
+    def fetch_nfl_state(self) -> SleeperNflState:
+        captured = self._clock()
+        if captured.tzinfo is None:
+            raise ValueError("Sleeper stats clock must be timezone-aware")
+        payload = self._http_get_json(self.state_url)
+        if not isinstance(payload, Mapping):
+            raise ValueError("Sleeper NFL state response must be an object")
+        try:
+            season = int(payload["season"])
+            week = int(payload["week"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("Sleeper NFL state lacks season/week identity") from exc
+        season_type = str(payload.get("season_type") or "regular")
+        if not 0 <= week <= 22:
+            raise ValueError("Sleeper NFL state week is outside supported range")
+        return SleeperNflState(
+            season=season,
+            week=week,
+            season_type=season_type,
+            captured_at=captured.astimezone(UTC),
+        )
 
     def fetch_week(self, *, season: int, week: int) -> tuple[SleeperWeeklyStatLine, ...]:
         if season < 2000:
@@ -99,8 +136,10 @@ def _rows(payload: Any) -> tuple[Mapping[str, Any], ...]:
 
 
 def _default_get_json(url: str) -> Any:
-    if not url.startswith(f"{SleeperWeeklyStatsSource.base_url}/"):
-        raise ValueError("Sleeper weekly stats source only permits fixed regular-season URLs")
+    allowed_state = url == SleeperWeeklyStatsSource.state_url
+    allowed_stats = url.startswith(f"{SleeperWeeklyStatsSource.base_url}/")
+    if not (allowed_state or allowed_stats):
+        raise ValueError("Sleeper weekly stats source only permits fixed NFL state/stats URLs")
     request = Request(url, headers={"User-Agent": "fsffl-next/0.1"})
     with urlopen(request, timeout=30) as response:  # nosec B310 - fixed HTTPS provider base
         return json.loads(response.read().decode("utf-8"))
