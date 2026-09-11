@@ -1,0 +1,40 @@
+/* North Star personalized Market. Presentation only. */
+.ns-market-shell{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.ns-market-shell>.panel-header{align-items:end;padding:4px 2px 14px;border-bottom:1px solid var(--nsa-line)}
+.ns-market-shell>.panel-header h2{font-size:clamp(2.2rem,6vw,4.2rem);letter-spacing:-.065em;line-height:.92;margin:4px 0}
+.ns-market-shell>.lead{max-width:680px;font-size:13px;line-height:1.55;color:#9aafc3}
+.ns-market-summary{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;border-top:1px solid var(--nsa-line);border-bottom:1px solid var(--nsa-line);margin:20px 0!important}
+.ns-market-summary>div{border:0!important;border-right:1px solid var(--nsa-line)!important;border-radius:0!important;background:transparent!important;padding:16px 14px!important}
+.ns-market-summary>div:last-child{border-right:0!important}.ns-market-summary strong{font-size:1.65rem!important;letter-spacing:-.05em}.ns-market-summary span{font-size:9px!important;text-transform:uppercase;letter-spacing:.08em}
+.ns-market-shell .opp-controls{margin:18px 0}.ns-market-shell .opp-tabs{padding:4px;border:1px solid var(--nsa-line);border-radius:13px;background:rgba(8,17,29,.72)}
+.ns-market-shell .opp-tabs button{border:0!important;background:transparent!important;border-radius:9px!important;font-size:11px}.ns-market-shell .opp-tabs button.active{background:#17324f!important;color:#d8ebff!important}
+.ns-market-shell #opp-search{border-radius:999px!important}
+.ns-market-supporting{display:none!important}
+
+.ns-market-deck{margin-top:10px}
+.ns-market-head{display:flex;align-items:end;justify-content:space-between;gap:18px;padding-bottom:13px;border-bottom:1px solid var(--nsa-line)}
+.ns-market-head h3{font-size:clamp(1.45rem,3vw,2.2rem);letter-spacing:-.045em;margin:3px 0}.ns-market-head p:not(.eyebrow){font-size:11px;color:#8299b0;margin:4px 0 0}.ns-market-head>span{font-size:10px;color:#8097ad;white-space:nowrap}
+.ns-market-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.ns-market-card{border:1px solid var(--nsa-line);border-radius:17px;background:linear-gradient(150deg,rgba(13,27,45,.94),rgba(7,16,28,.99));overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.12)}
+.ns-market-card.featured{grid-column:1/-1;border-color:rgba(66,219,155,.32);background:radial-gradient(circle at 88% 8%,rgba(66,219,155,.09),transparent 28%),linear-gradient(145deg,#102a35,#091827 65%)}
+.ns-market-card-main{display:block;width:100%;border:0;background:transparent;color:inherit;text-align:left;padding:17px;font:inherit;cursor:pointer}
+.ns-market-card-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.ns-market-target,.ns-market-decision{font-size:8px;text-transform:uppercase;letter-spacing:.11em;color:#7f99b2}.ns-market-decision{padding:4px 7px;border:1px solid var(--nsa-line);border-radius:999px}.ns-market-card.support .ns-market-decision{color:#83e8bb;border-color:rgba(66,219,155,.28)}.ns-market-card.decline .ns-market-decision{color:#f39aa0;border-color:rgba(242,111,120,.28)}
+.ns-market-title{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:11px;align-items:center;margin:15px 0}.ns-market-title>div{min-width:0}.ns-market-title small{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:#7790a8}.ns-market-title h3{font-size:clamp(1.25rem,2.7vw,1.9rem);letter-spacing:-.045em;line-height:1;margin:3px 0 4px;overflow:hidden;text-overflow:ellipsis}.ns-market-title p{font-size:10px;color:#8399ae;margin:0}.ns-market-title>b{font-size:24px;font-weight:400;color:#6eaee9}
+.ns-market-identity{width:44px;height:44px;border-radius:50%;display:grid;place-content:center;background:linear-gradient(145deg,#1d4770,#10273f);color:#b9ddff;font-size:10px;font-weight:850;border:1px solid rgba(98,176,249,.26)}
+.ns-market-package{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:13px;border-top:1px solid rgba(157,185,217,.10)}.ns-market-package>div>small{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:#718aa3;margin-bottom:6px}
+.ns-market-assets{display:grid;gap:5px}.ns-market-assets>span{display:flex;align-items:center;gap:6px;min-width:0}.ns-market-assets i{width:22px;height:22px;border-radius:50%;display:grid;place-content:center;background:#15283c;color:#95c8f5;font-size:7px;font-style:normal;font-weight:800}.ns-market-assets b{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ns-market-assets.receive i{background:rgba(66,219,155,.12);color:#77e7b7}
+.ns-market-signals{display:flex;flex-wrap:wrap;gap:5px;margin-top:13px}.ns-market-signals span{font-size:8px;color:#8198ae;padding:5px 7px;background:rgba(255,255,255,.035);border-radius:999px}
+.ns-market-detail{border-top:1px solid rgba(157,185,217,.09);padding:0 17px}.ns-market-detail summary{min-height:38px;display:flex;align-items:center;color:#86bff1;font-size:9px;cursor:pointer}.ns-market-detail>div{padding-bottom:13px;color:#8096ac;font-size:10px;line-height:1.45}.ns-market-detail ul{margin:0 0 8px;padding-left:16px}.ns-market-detail p{margin:7px 0}
+.ns-market-exact{margin-top:14px;border-top:1px solid var(--nsa-line)}.ns-market-exact>summary{padding:14px 2px;color:#7fa8cf;font-size:10px;cursor:pointer}.ns-market-exact:not([open])>.table-wrap{display:none}
+
+.ns-market-result{border-color:rgba(85,170,255,.28)!important;background:linear-gradient(145deg,rgba(15,36,60,.92),rgba(8,17,29,.98))!important}.ns-market-result-icon{display:inline-grid;place-content:center;width:30px;height:30px;border-radius:50%;background:rgba(85,170,255,.12);color:#80c2ff;margin-bottom:7px}.ns-market-result .opp-result-metrics{gap:0!important;border-top:1px solid var(--nsa-line);border-bottom:1px solid var(--nsa-line)}.ns-market-result .opp-result-metrics>div{border:0!important;border-right:1px solid var(--nsa-line)!important;border-radius:0!important;background:transparent!important;padding:13px!important}.ns-market-result .opp-result-metrics>div:last-child{border-right:0!important}.ns-market-result .opp-result-metrics strong{font-size:1.25rem;letter-spacing:-.04em}
+
+@media(max-width:760px){
+  .ns-market-shell>.panel-header{padding-top:2px}.ns-market-shell>.panel-header h2{font-size:2.35rem}.ns-market-shell>.lead{font-size:11px}
+  .ns-market-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ns-market-summary>div:nth-child(2){border-right:0!important}.ns-market-summary>div:nth-child(-n+2){border-bottom:1px solid var(--nsa-line)!important}.ns-market-summary strong{font-size:1.45rem!important}
+  .ns-market-shell .opp-controls{align-items:stretch!important}.ns-market-shell .opp-tabs{display:grid;grid-template-columns:1fr 1fr;overflow:visible}.ns-market-shell #opp-search{min-height:42px}
+  .ns-market-head{align-items:start}.ns-market-head p:not(.eyebrow){max-width:30ch}.ns-market-head>span{display:none}
+  .ns-market-cards{display:flex;overflow-x:auto;gap:9px;margin-right:-14px;padding-right:14px;scroll-snap-type:x mandatory}.ns-market-card,.ns-market-card.featured{grid-column:auto;min-width:min(86vw,390px);scroll-snap-align:start}.ns-market-card.featured{border-color:rgba(66,219,155,.36)}
+  .ns-market-package{grid-template-columns:1fr}.ns-market-title h3{font-size:1.35rem}.ns-market-card-main{padding:15px}.ns-market-detail{padding-inline:15px}
+  .ns-market-result .opp-result-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ns-market-result .opp-result-metrics>div{border-bottom:1px solid var(--nsa-line)!important}.ns-market-result .opp-result-metrics>div:nth-child(2n){border-right:0!important}
+}
