@@ -10,7 +10,7 @@ def test_refresh_failure_copy_is_consumer_safe_and_keeps_diagnostics_drilldown()
     source = REFRESH_JS.read_text(encoding="utf-8")
 
     assert "Intelligence refresh unavailable. Your current projections are still in place. Try again later." in source
-    assert "Intelligence refresh unavailable. We could not validate enough projection sources. Try again later." in source
+    assert "Intelligence refresh unavailable. We could not complete the refresh. Try again later." in source
     assert "setForecastRefreshMessage(`Intelligence refresh failed: ${payload.error}`)" not in source
     assert "setRefreshTechnicalDetail(payload?.error)" in source
     assert "runtime-refresh-error-detail" in source
