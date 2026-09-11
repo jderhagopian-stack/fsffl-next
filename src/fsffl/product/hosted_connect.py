@@ -22,6 +22,7 @@ from .webapp import ConnectSleeperLeagueRequest, require_beta_user
 
 _logger = logging.getLogger("fsffl.product.persistence")
 _SYNC_SCOPE_KIND = "league_refresh"
+_ACTIVE_STATUSES = {"queued", "running"}
 
 
 class LeagueConnectStatus(StrEnum):
@@ -80,6 +81,7 @@ class LeagueConnectCoordinator:
             if (
                 current is not None
                 and current.league_external_id == league_external_id
+                and current.operation == operation
                 and current.status in {LeagueConnectStatus.QUEUED, LeagueConnectStatus.RUNNING}
             ):
                 return current
@@ -182,6 +184,33 @@ def _job_payload(job: LeagueConnectJob | None) -> dict[str, object]:
     }
 
 
+def _already_ready_payload(league_external_id: str) -> dict[str, object]:
+    """Return connect completion without attaching the browser to secondary refresh work."""
+
+    now = datetime.now(UTC).isoformat()
+    return {
+        "job_id": None,
+        "league_external_id": league_external_id,
+        "status": LeagueConnectStatus.COMPLETED.value,
+        "operation": "connect",
+        "message": "League is ready from stored state.",
+        "error": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def _active_job_conflict(
+    current: LeagueConnectJob | None,
+    *,
+    league_external_id: str,
+    operation: str,
+) -> bool:
+    if current is None or current.status.value not in _ACTIVE_STATUSES:
+        return False
+    return current.league_external_id != league_external_id or current.operation != operation
+
+
 def _matches_sleeper_league(league_state: LeagueState | None, league_external_id: str) -> bool:
     if league_state is None:
         return False
@@ -250,10 +279,23 @@ def install_hosted_connect_routes(
 
         runtime = runtime_store.get(user_id)
         already_loaded = _matches_sleeper_league(runtime.league_state, league_external_id)
+        if already_loaded:
+            # Canonical persisted league state is sufficient to enter the product.
+            # A refresh/intelligence job must never hold a connect caller hostage.
+            return _already_ready_payload(league_external_id)
+
+        current = jobs.current(user_id)
+        if _active_job_conflict(
+            current,
+            league_external_id=league_external_id,
+            operation="connect",
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Another league operation is already in progress",
+            )
 
         def work() -> None:
-            if already_loaded:
-                return
             league_state = state_loader(league_external_id)
             runtime_store.set_league_state(user_id, league_state)
             behavioral_coordinator.start(
@@ -285,6 +327,19 @@ def install_hosted_connect_routes(
         runtime = runtime_store.get(user_id)
         if not _matches_sleeper_league(runtime.league_state, league_external_id):
             raise HTTPException(status_code=409, detail="Requested league is not loaded")
+
+        current = jobs.current(user_id)
+        if _active_job_conflict(
+            current,
+            league_external_id=league_external_id,
+            operation="refresh",
+        ):
+            # Do not launch overlapping provider work or replace the current-job slot.
+            # Stored canonical state remains usable while the existing operation finishes.
+            raise HTTPException(
+                status_code=409,
+                detail="Another league operation is already in progress",
+            )
 
         previous_state = runtime.league_state
         previous_fingerprint = (
