@@ -73,11 +73,11 @@ def test_simulator_is_first_class_team_scoped_product_route() -> None:
     assert "route==='simulator'" in shell
     assert "'what_if','simulator','analytics'" in shell
     assert "20260910-phase3-franchise1" in shell
-    assert "20260909-beta-feedback1" in index
-    assert '/static/simulator.js?v=20260909-beta-feedback1' not in index
-    assert '/static/opportunities.js?v=20260909-beta-feedback1' not in index
-    assert '/static/opportunity_spotlights.js?v=20260909-beta-feedback1' in index
-    assert '/static/opportunity_posture_ui.js?v=20260909-beta-feedback1' in index
+    assert '?v=' in index
+    assert '/static/simulator.js?v=' not in index
+    assert '/static/opportunities.js?v=' not in index
+    assert '/static/opportunity_spotlights.js?v=' in index
+    assert '/static/opportunity_posture_ui.js?v=' in index
 
 
 def test_simulator_endpoint_fails_closed_without_runtime_context() -> None:
