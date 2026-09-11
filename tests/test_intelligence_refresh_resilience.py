@@ -20,4 +20,5 @@ def test_refresh_failure_copy_is_consumer_safe_and_keeps_diagnostics_drilldown()
 def test_refresh_failure_does_not_weaken_authoritative_source_minimum():
     source = CURRENT_RUNTIME.read_text(encoding="utf-8")
 
-    assert "requires at least 2 independent sources" in source
+    assert "minimum_independent_sources: int = 2" in source
+    assert "if len(batches) < minimum_independent_sources:" in source
