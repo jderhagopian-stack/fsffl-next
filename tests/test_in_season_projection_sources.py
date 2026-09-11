@@ -119,7 +119,7 @@ def test_razzball_ros_uses_position_specific_rest_of_season_tables():
     assert all("restofseason" in url for url in urls)
 
 
-def test_full_season_razzball_source_never_reads_ros_pages():
+def test_full_season_razzball_source_never_reads_ros_pages_and_verifies_season():
     calls = []
     headers = [
         "Name",
@@ -135,12 +135,14 @@ def test_full_season_razzball_source_never_reads_ros_pages():
         "Rec TD",
     ]
     values = ["Test RB", "RB", "NYG", "0", "0", "0", "1000", "8", "40", "350", "3"]
-    html = _table(headers, values, "2026 Season Projections")
+    html = _table(headers, values, "2026 Fantasy Football Projections")
 
     def get(url: str) -> str:
         calls.append(url)
         return html
 
-    snapshot = RazzballSeasonProjectionSource(http_get_text=get, clock=lambda: NOW).fetch_latest()
+    snapshot = RazzballSeasonProjectionSource(http_get_text=get, clock=lambda: NOW).fetch_latest(
+        season=2026
+    )
     assert len(snapshot.rows) == 1
     assert calls == ["https://football.razzball.com/projections/"]
