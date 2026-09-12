@@ -5,7 +5,7 @@ DETAIL = ROOT / "north_star_opportunity_detail.js"
 HANDOFF = ROOT / "north_star_opportunity_handoff.js"
 CSS = ROOT / "north_star_opportunity_detail.css"
 INDEX = ROOT / "index.html"
-RELEASE = "20260911-market-trade4"
+RELEASE = "20260912-market-trade5"
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
