@@ -5,7 +5,7 @@ SCRIPT = ROOT / "north_star_trade_center.js"
 CSS = ROOT / "north_star_trade_center.css"
 INDEX = ROOT / "index.html"
 HANDOFF = ROOT / "trade_workflow_handoff.js"
-RELEASE = "20260911-market-trade2"
+RELEASE = "20260911-market-latency3"
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
