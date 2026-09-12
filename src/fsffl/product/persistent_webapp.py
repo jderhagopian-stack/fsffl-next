@@ -23,6 +23,7 @@ from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
 from .phase1_latency import install_phase1_latency_routes
 from .runtime import default_sleeper_state_loader
+from .scenario_cache import configure_scenario_cache_persistence
 
 
 # Hosted private-beta observability only. The coordinator already records exact
@@ -38,6 +39,7 @@ _runtime_store = PersistentPrivateBetaRuntimeStore(
     _persistence_store,
     state_snapshot_store=_state_snapshot_store,
 )
+configure_scenario_cache_persistence(_persistence_store)
 
 # Hosted Behavioral persistence performs an idempotent deploy-before-migration
 # schema safety bootstrap when its Postgres adapter is first constructed. Build the
