@@ -15,6 +15,7 @@ on:
       - 'scripts/run_forecast_trajectory_shape_audit.py'
       - 'scripts/run_forecast_trajectory_challengers.py'
       - 'scripts/run_forecast_trajectory_challengers_entry.py'
+      - 'scripts/run_hierarchical_trajectory_state_research.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
       - 'src/fsffl/research/**'
@@ -32,6 +33,7 @@ on:
       - 'scripts/run_forecast_trajectory_shape_audit.py'
       - 'scripts/run_forecast_trajectory_challengers.py'
       - 'scripts/run_forecast_trajectory_challengers_entry.py'
+      - 'scripts/run_hierarchical_trajectory_state_research.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
 
@@ -77,6 +79,12 @@ jobs:
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
+      - name: Research hierarchical trajectory-state Forecast challenger
+        run: |
+          python scripts/run_hierarchical_trajectory_state_research.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --dynastyprocess-repo artifacts/dynastyprocess-data \
+            --output-dir artifacts/multiyear-intrinsic-model-a
       - name: Verify repository tests
         run: |
           python -m pip install -e '.[dev,web]'
@@ -103,5 +111,8 @@ jobs:
             artifacts/multiyear-intrinsic-model-a/forecast_trajectory_shape_group_diagnostics.csv
             artifacts/multiyear-intrinsic-model-a/forecast_trajectory_challengers_results.json
             artifacts/multiyear-intrinsic-model-a/forecast_trajectory_challengers_report.md
+            artifacts/multiyear-intrinsic-model-a/hierarchical_trajectory_state_results.json
+            artifacts/multiyear-intrinsic-model-a/hierarchical_trajectory_state_report.md
+            artifacts/multiyear-intrinsic-model-a/hierarchical_trajectory_state_weights.csv
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
