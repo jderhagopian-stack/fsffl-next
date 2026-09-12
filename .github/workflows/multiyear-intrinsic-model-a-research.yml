@@ -17,6 +17,7 @@ on:
       - 'scripts/run_forecast_trajectory_challengers_entry.py'
       - 'scripts/run_hierarchical_trajectory_state_research.py'
       - 'scripts/run_player_specific_trajectory_residual_research.py'
+      - 'scripts/run_within_player_trajectory_innovation_research.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
       - 'src/fsffl/research/**'
@@ -36,6 +37,7 @@ on:
       - 'scripts/run_forecast_trajectory_challengers_entry.py'
       - 'scripts/run_hierarchical_trajectory_state_research.py'
       - 'scripts/run_player_specific_trajectory_residual_research.py'
+      - 'scripts/run_within_player_trajectory_innovation_research.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
 
@@ -93,6 +95,12 @@ jobs:
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
+      - name: Research within-player trajectory innovation dynamics
+        run: |
+          python scripts/run_within_player_trajectory_innovation_research.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --dynastyprocess-repo artifacts/dynastyprocess-data \
+            --output-dir artifacts/multiyear-intrinsic-model-a
       - name: Verify repository tests
         run: |
           python -m pip install -e '.[dev,web]'
@@ -126,5 +134,10 @@ jobs:
             artifacts/multiyear-intrinsic-model-a/player_specific_trajectory_residual_report.md
             artifacts/multiyear-intrinsic-model-a/player_specific_trajectory_residual_states.csv
             artifacts/multiyear-intrinsic-model-a/player_specific_trajectory_residual_adjustments.csv
+            artifacts/multiyear-intrinsic-model-a/within_player_trajectory_innovation_results.json
+            artifacts/multiyear-intrinsic-model-a/within_player_trajectory_innovation_report.md
+            artifacts/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv
+            artifacts/multiyear-intrinsic-model-a/within_player_trajectory_innovation_adjustments.csv
+            artifacts/multiyear-intrinsic-model-a/within_player_trajectory_level_plus_innovation_adjustments.csv
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
