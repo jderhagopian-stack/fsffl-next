@@ -4,6 +4,31 @@ Status: research-only companion to `MULTIYEAR_INTRINSIC_VALUE_STUDY.md`.
 
 This inventory classifies existing FSFFL NEXT evidence by the role it may play in the intrinsic-value study. It does not promote any model or coefficient.
 
+## Immediate evidence-sufficiency finding
+
+The current hosted persistence layer is **not yet populated with historical projection or historical-artifact rows**. The deployed schema is ready for point-in-time projection history, but the current `projection_snapshot`, `projection_observation`, and `historical_artifact` tables contain zero rows.
+
+That means the hosted database cannot presently support a reliable multi-year intrinsic benchmark, replacement-policy winner, or time-preference fit by itself.
+
+The repository does contain two valuable research evidence sources:
+
+1. a modern public historical projection benchmark covering 2024 training and 2025 chronological holdout season projections/outcomes; and
+2. a much larger historical career-transition panel used by the Forecast career calibration.
+
+The first is sufficient for an initial **season-level replacement-policy benchmark** if the eligible player universe is reconstructed carefully. It is not, by itself, sufficient to identify multi-year discounting or long-horizon franchise economics.
+
+The second can support point-in-time-safe career-path reconstruction only if the career calibration is refit inside each chronological fold using evidence available before that fold. The existing all-years-through-2025 career artifact must not be applied backward to 2024 as though it were contemporaneous evidence.
+
+Therefore current research status is:
+
+- **replacement benchmark:** feasible as a bounded 2024→2025 study, with evidence-strength caveats;
+- **multi-year intrinsic comparison:** reconstructable in research, but not yet directly observed/persisted;
+- **time-preference identification:** not yet supported strongly enough to fit a production parameter;
+- **market-independence test:** feasible only after a point-in-time historical intrinsic panel and contemporaneous market panel overlap;
+- **production promotion:** prohibited at this stage.
+
+If broader historical reconstruction cannot materially increase the chronological evidence base, the study should retain the simpler transparent governed Model A rather than forcing Model B parameters.
+
 ## Existing evidence families
 
 ### Forecast / realized-outcome infrastructure
@@ -15,6 +40,12 @@ Available architecture already supports:
 - multi-year career-transition evidence by position/cohort;
 - survival probability separated from conditional production;
 - multi-year annual forecast points with season offsets and cumulative survival/production metadata.
+
+Current evidence caveat:
+
+- the durable projection-history schema exists, but the current hosted history is empty;
+- the modern public projection benchmark currently uses only 2024 and 2025 season projections;
+- historical career-transition evidence is substantially deeper, but point-in-time fold-specific calibration must be reconstructed for this study.
 
 Use in intrinsic study:
 
@@ -156,4 +187,4 @@ Before fitting Model B, build a research-only point-in-time row contract contain
 - provenance/evidence cutoff metadata
 - fold assignment generated strictly from chronology
 
-No model fitting should begin until the historical row builder can prove that every feature was knowable at its row’s `as_of` timestamp.
+No Model B fitting should begin until the historical row builder can prove that every feature was knowable at its row’s `as_of` timestamp and the evidence-sufficiency gate confirms that the relevant parameter is identifiable.
