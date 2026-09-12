@@ -29,7 +29,7 @@ from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_fo
 from .trade_value_adapter import cardinal_market_profiles
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v9:negotiation-feasibility"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v10:explicit-partial-decision-contract"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -204,6 +204,19 @@ def build_private_beta_trade_analysis(
         "state_id_before": scenario.before.state_id,
         "state_id_after_trade": scenario.after.state_id,
         "state_id_after": legal_after.state_id,
+        # `decision` below is intentionally the existing fast bilateral consequence
+        # classification, not the final dynasty trade disposition. This first-class
+        # contract prevents API/product consumers from treating it as comprehensive.
+        "decision_completeness": {
+            "status": "partial_pre_simulation",
+            "simulation_backed": False,
+            "final_disposition_available": False,
+            "decision_scope": "bilateral_roster_consequence_classification",
+            "missing_authorities": (
+                "NEXT-4 Simulation competitive outcomes",
+                "NEXT-5 material assessment and final trade disposition",
+            ),
+        },
         "evaluation": evaluation.model_dump(mode="json") if evaluation is not None else None,
         "decision": decision.model_dump(mode="json") if decision is not None else None,
         "negotiation_feasibility": negotiation_feasibility.model_dump(mode="json") if negotiation_feasibility is not None else None,
@@ -230,6 +243,7 @@ def build_private_beta_trade_analysis(
             "behavioral_evidence": behavioral_view is not None,
             "acceptance_probability": False,
             "provisional_fsffl_value_used_for_decision": False,
+            "final_trade_disposition": False,
         },
         "warnings": warnings,
         "model_version": _PRODUCT_MODEL_VERSION,
