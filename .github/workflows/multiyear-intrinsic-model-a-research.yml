@@ -7,6 +7,7 @@ on:
     paths:
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark.py'
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark_entry.py'
+      - 'scripts/run_multiyear_intrinsic_model_a_repair.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
       - 'src/fsffl/research/**'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark.py'
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark_entry.py'
+      - 'scripts/run_multiyear_intrinsic_model_a_repair.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
 
@@ -38,9 +40,9 @@ jobs:
         run: Rscript scripts/extract_career_transition_panel.R
       - name: Clone point-in-time market-history source
         run: git clone --filter=blob:none https://github.com/dynastyprocess/data.git artifacts/dynastyprocess-data
-      - name: Run research-only Model A chronological benchmark
+      - name: Run research-only Model A repair benchmark
         run: |
-          python scripts/run_multiyear_intrinsic_model_a_benchmark_entry.py \
+          python scripts/run_multiyear_intrinsic_model_a_repair.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
@@ -52,11 +54,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pr131-model-a-intrinsic-benchmark
+          name: pr131-model-a-intrinsic-repair
           path: |
-            artifacts/multiyear-intrinsic-model-a/model_a_benchmark_results.json
-            artifacts/multiyear-intrinsic-model-a/model_a_benchmark_report.md
-            artifacts/multiyear-intrinsic-model-a/model_a_point_in_time_rows.csv
-            artifacts/multiyear-intrinsic-model-a/fold_forecast_calibration.csv
+            artifacts/multiyear-intrinsic-model-a/model_a_repair_results.json
+            artifacts/multiyear-intrinsic-model-a/model_a_repair_report.md
+            artifacts/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv
+            artifacts/multiyear-intrinsic-model-a/model_a_uncertainty_diagnostics.csv
+            artifacts/multiyear-intrinsic-model-a/model_a_appreciation_decomposition.csv
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
