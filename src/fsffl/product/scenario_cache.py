@@ -21,7 +21,7 @@ from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_CACHE_MODEL_VERSION = "next8-scenario-cache-v2:durable-exact-state-forecast"
+_CACHE_MODEL_VERSION = "next8-scenario-cache-v3:durable-exact-state-forecast-loader"
 _MAX_ENTRIES = 64
 _lock = RLock()
 _cache: OrderedDict[str, LiveSimulationAnalyticsResult] = OrderedDict()
@@ -36,8 +36,9 @@ def configure_scenario_cache_persistence(store: PersistenceStore | None) -> None
     """Attach optional fail-open persistence to exact scenario reuse.
 
     Persistence never becomes Simulation authority. Only an artifact whose exact
-    changed State, exact forecast fingerprint and Simulation model version match is
-    reusable. Any storage error falls through to the authoritative Simulation loader.
+    changed State, exact forecast fingerprint, loader/configuration identity and
+    Simulation model version match is reusable. Any storage error falls through to
+    the authoritative Simulation loader.
     """
 
     global _persistence
@@ -72,9 +73,51 @@ def _forecast_fingerprint(evidence: LiveForecastEvidence) -> str:
 
 
 def _loader_identity(loader: SimulationLoader) -> str:
+    """Process-local loader identity for the cheapest in-memory reuse boundary."""
+
     module = getattr(loader, "__module__", type(loader).__module__)
     qualname = getattr(loader, "__qualname__", type(loader).__qualname__)
     return f"{module}:{qualname}:{id(loader)}"
+
+
+def _durable_loader_identity(loader: SimulationLoader) -> str:
+    """Stable implementation/configuration identity for cross-process reuse.
+
+    A loader may publish an explicit stable identity when runtime configuration is
+    material. Plain functions fall back to their module/qualname plus bytecode,
+    constants and defaults, so an implementation change cannot silently reuse a
+    durable result produced by older Simulation code under the same public model
+    version.
+    """
+
+    explicit = getattr(loader, "__fsffl_cache_identity__", None)
+    if explicit is not None:
+        return canonical_fingerprint("explicit", str(explicit))
+
+    module = getattr(loader, "__module__", type(loader).__module__)
+    qualname = getattr(loader, "__qualname__", type(loader).__qualname__)
+    code = getattr(loader, "__code__", None)
+    if code is None:
+        return canonical_fingerprint("callable", module, qualname)
+    return canonical_fingerprint(
+        "function",
+        module,
+        qualname,
+        code.co_code.hex(),
+        code.co_consts,
+        getattr(loader, "__defaults__", None),
+        getattr(loader, "__kwdefaults__", None),
+    )
+
+
+def _durable_forecast_fingerprint(
+    evidence: LiveForecastEvidence,
+    simulation_loader: SimulationLoader,
+) -> str:
+    return canonical_fingerprint(
+        _forecast_fingerprint(evidence),
+        _durable_loader_identity(simulation_loader),
+    )
 
 
 def scenario_cache_key(
@@ -93,13 +136,17 @@ def scenario_cache_key(
     return digest.hexdigest()
 
 
-def _durable_key(league_state: LeagueState, evidence: LiveForecastEvidence) -> ArtifactKey:
-    forecast_fingerprint = _forecast_fingerprint(evidence)
+def _durable_key(
+    league_state: LeagueState,
+    evidence: LiveForecastEvidence,
+    simulation_loader: SimulationLoader,
+) -> ArtifactKey:
+    durable_fingerprint = _durable_forecast_fingerprint(evidence, simulation_loader)
     return ArtifactKey(
         artifact_kind=SIMULATION_ARTIFACT_KIND,
         scope_kind=LEAGUE_SCOPE_KIND,
         scope_id=league_state.state_id,
-        input_fingerprint=canonical_fingerprint(league_state.state_id, forecast_fingerprint),
+        input_fingerprint=canonical_fingerprint(league_state.state_id, durable_fingerprint),
         model_version=SIMULATION_MODEL_VERSION,
     )
 
@@ -107,12 +154,15 @@ def _durable_key(league_state: LeagueState, evidence: LiveForecastEvidence) -> A
 def _load_durable(
     league_state: LeagueState,
     evidence: LiveForecastEvidence,
+    simulation_loader: SimulationLoader,
 ) -> LiveSimulationAnalyticsResult | None:
     store = _persistence
     if store is None:
         return None
     try:
-        record = store.get_reusable_artifact(_durable_key(league_state, evidence))
+        record = store.get_reusable_artifact(
+            _durable_key(league_state, evidence, simulation_loader)
+        )
         if record is None:
             return None
         result = decode_simulation(dict(record.payload))
@@ -131,6 +181,7 @@ def _load_durable(
 def _persist_durable(
     league_state: LeagueState,
     evidence: LiveForecastEvidence,
+    simulation_loader: SimulationLoader,
     result: LiveSimulationAnalyticsResult,
 ) -> None:
     store = _persistence
@@ -140,7 +191,9 @@ def _persist_durable(
         store.put_artifact(
             simulation_artifact(
                 league_state_id=league_state.state_id,
-                forecast_fingerprint=_forecast_fingerprint(evidence),
+                forecast_fingerprint=_durable_forecast_fingerprint(
+                    evidence, simulation_loader
+                ),
                 result=result,
             )
         )
@@ -158,13 +211,14 @@ def run_cached_scenario_simulation(
     *,
     simulation_loader: SimulationLoader,
 ) -> tuple[LiveSimulationAnalyticsResult, bool]:
-    """Reuse only an exact changed-State + forecast + Simulation result.
+    """Reuse only an exact changed-State + forecast + loader Simulation result.
 
     A process-local hit is cheapest. On a process miss, the runtime may reuse the
     same exact authoritative artifact from durable persistence, including after a
-    Render restart. If neither exists, the authoritative 50,000-run Simulation runs
-    normally and its exact output is retained for later reuse. No approximation,
-    interpolation or reduced Simulation count is permitted here.
+    Render restart, only when the stable loader/configuration identity also matches.
+    If neither exists, the authoritative 50,000-run Simulation runs normally and its
+    exact output is retained for later reuse. No approximation, interpolation or
+    reduced Simulation count is permitted here.
     """
 
     global _hits, _misses, _durable_hits
@@ -177,7 +231,7 @@ def run_cached_scenario_simulation(
             return cached, True
         _misses += 1
 
-    durable = _load_durable(league_state, evidence)
+    durable = _load_durable(league_state, evidence, simulation_loader)
     if durable is not None:
         with _lock:
             _cache[key] = durable
@@ -205,7 +259,7 @@ def run_cached_scenario_simulation(
         _cache.move_to_end(key)
         while len(_cache) > _MAX_ENTRIES:
             _cache.popitem(last=False)
-    _persist_durable(league_state, evidence, result)
+    _persist_durable(league_state, evidence, simulation_loader, result)
     return result, False
 
 
