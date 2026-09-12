@@ -26,10 +26,11 @@ from fsffl.trade_decision import (
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
 
+from .trade_decision_dimensions import build_trade_decision_dimensions
 from .trade_value_adapter import cardinal_market_profiles
 
 
-_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v10:explicit-partial-decision-contract"
+_PRODUCT_MODEL_VERSION = "next8-trade-analysis-v11:separate-decision-dimensions"
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -197,6 +198,20 @@ def build_private_beta_trade_analysis(
     warnings.append("Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted.")
     warnings.append("Package concentration is measured separately from cuts, lineup impact and Simulation. The current 0%-15% residual premium interval is only a provisional Decision robustness guard and is not added to FSFFL Value.")
 
+    focal_scenario_delta = None
+    if evaluation is not None:
+        focal_side = evaluation.side_a if evaluation.side_a.team_id == focal_team_id else evaluation.side_b
+        focal_scenario_delta = focal_side.delta
+    decision_dimensions = build_trade_decision_dimensions(
+        focal_team_id=focal_team_id,
+        scenario_delta=focal_scenario_delta,
+        economic_net=economic_net,
+        roster_adjusted_market_net=roster_adjusted_market_net,
+        material_assessment=None,
+        position_strength=position_strength,
+        simulation_backed=False,
+    )
+
     return {
         "proposal": proposal.model_dump(mode="json"),
         "focal_team_id": focal_team_id,
@@ -217,6 +232,7 @@ def build_private_beta_trade_analysis(
                 "NEXT-5 material assessment and final trade disposition",
             ),
         },
+        "decision_dimensions": decision_dimensions,
         "evaluation": evaluation.model_dump(mode="json") if evaluation is not None else None,
         "decision": decision.model_dump(mode="json") if decision is not None else None,
         "negotiation_feasibility": negotiation_feasibility.model_dump(mode="json") if negotiation_feasibility is not None else None,
