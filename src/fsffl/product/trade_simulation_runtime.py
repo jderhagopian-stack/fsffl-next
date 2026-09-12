@@ -28,11 +28,12 @@ from .behavioral_runtime import cached_behavior_profile_for_team
 from .runtime import LiveForecastEvidence
 from .scenario_cache import run_cached_scenario_simulation
 from .simulation_runtime import LiveSimulationAnalyticsResult
+from .trade_decision_dimensions import build_trade_decision_dimensions
 from .trade_value_adapter import cardinal_market_profiles
 
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v7:intrinsic-disposition-completeness"
+_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v8:separate-decision-dimensions"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -182,6 +183,7 @@ def build_post_trade_simulation_comparison(
     )
 
     comparisons = []
+    focal_scenario_delta = None
     for team_id in (focal_team_id, counterparty_team_id):
         baseline_utility = _utility_for_team(baseline, team_id)
         changed_utility = _utility_for_team(changed, team_id)
@@ -190,7 +192,19 @@ def build_post_trade_simulation_comparison(
             changed_utility,
             model_version=f"{_PRODUCT_MODEL_VERSION}:team-delta",
         )
+        if team_id == focal_team_id:
+            focal_scenario_delta = delta
         comparisons.append(delta.model_dump(mode="json"))
+
+    decision_dimensions = build_trade_decision_dimensions(
+        focal_team_id=focal_team_id,
+        scenario_delta=focal_scenario_delta,
+        economic_net=economic_net,
+        roster_adjusted_market_net=roster_adjusted_market_net,
+        material_assessment=material_assessment,
+        position_strength=None,
+        simulation_backed=True,
+    )
 
     counterparty_profile = cached_behavior_profile_for_team(league_state, counterparty_team_id)
     focal_profile = cached_behavior_profile_for_team(league_state, focal_team_id)
@@ -218,6 +232,7 @@ def build_post_trade_simulation_comparison(
             "decision_scope": "complete_trade_disposition",
             "missing_authorities": (),
         },
+        "decision_dimensions": decision_dimensions,
         "team_deltas": comparisons,
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "evaluation": evaluation.model_dump(mode="json"),
@@ -243,6 +258,7 @@ def build_post_trade_simulation_comparison(
             "intrinsic_franchise_value": "NEXT-3 Value, consumed once by NEXT-5 materiality/disposition",
             "competitive_outcomes": "NEXT-4 Simulation",
             "scenario_delta": "NEXT-4 Team Utility",
+            "decision_dimensions": "presentation/API contract over existing source authorities; no weighting or blending",
             "materiality_and_disposition": "NEXT-5 Trade Decision",
             "package_economic_guard": "NEXT-5 Trade Decision bounded provisional prior",
             "behavioral_fit": "Behavioral Intelligence directional inference only",
