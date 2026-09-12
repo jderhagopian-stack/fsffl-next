@@ -4,7 +4,7 @@ ROOT = Path("src/fsffl/product/static")
 SCRIPT = ROOT / "market_trade_recomposition.js"
 CSS = ROOT / "market_trade_recomposition.css"
 INDEX = ROOT / "index.html"
-RELEASE = "20260911-market-trade4"
+RELEASE = "20260912-market-trade5"
 
 
 def _read(path: Path) -> str:
