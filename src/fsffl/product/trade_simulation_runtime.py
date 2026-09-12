@@ -33,7 +33,7 @@ from .trade_value_adapter import cardinal_market_profiles
 
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v8:separate-decision-dimensions"
+_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v9:decision-completeness-fail-closed"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -205,6 +205,16 @@ def build_post_trade_simulation_comparison(
         position_strength=None,
         simulation_backed=True,
     )
+    missing_dimensions = tuple(decision_dimensions["confidence"]["missing_dimensions"])
+    decision_complete = not missing_dimensions
+    completeness_status = (
+        "complete_simulation_backed" if decision_complete else "simulation_backed_incomplete"
+    )
+    decision_scope = (
+        "complete_trade_disposition"
+        if decision_complete
+        else "simulation_backed_trade_disposition_incomplete"
+    )
 
     counterparty_profile = cached_behavior_profile_for_team(league_state, counterparty_team_id)
     focal_profile = cached_behavior_profile_for_team(league_state, focal_team_id)
@@ -226,11 +236,11 @@ def build_post_trade_simulation_comparison(
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,
         "decision_completeness": {
-            "status": "complete_simulation_backed",
+            "status": completeness_status,
             "simulation_backed": True,
-            "final_disposition_available": True,
-            "decision_scope": "complete_trade_disposition",
-            "missing_authorities": (),
+            "final_disposition_available": decision_complete,
+            "decision_scope": decision_scope,
+            "missing_authorities": missing_dimensions,
         },
         "decision_dimensions": decision_dimensions,
         "team_deltas": comparisons,
@@ -249,7 +259,7 @@ def build_post_trade_simulation_comparison(
         "behavioral_fit": behavioral_fit.model_dump(mode="json") if behavioral_fit is not None else None,
         "availability": {
             "competitive_outcomes": True,
-            "final_trade_disposition": True,
+            "final_trade_disposition": decision_complete,
         },
         "authority": {
             "state_transition": "NEXT-5 Trade Decision",
