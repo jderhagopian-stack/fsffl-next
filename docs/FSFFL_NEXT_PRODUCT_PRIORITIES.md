@@ -218,6 +218,40 @@ Examples of useful disagreement:
 - League Market > Broad Market > Intrinsic can indicate a potential sell-high environment.
 - Team Utility can then determine whether that market opportunity actually fits the focal franchise.
 
+## Projected Player Career Trajectories — first-class Forecast/product capability
+
+FSFFL should expose a governed, player-specific view of how a career is expected to develop over time rather than reducing dynasty analysis to a single current projection or age curve.
+
+The underlying trajectory belongs to **Forecast authority** and should estimate year-by-year production, survival/attrition, development/plateau/decline, and uncertainty using only empirically supported inputs. Candidate evidence includes:
+- age and NFL experience;
+- position;
+- player archetype when it can be defined and validated without circularity;
+- historical production, usage, efficiency, and statistical profile;
+- development path and career stage;
+- durability / injury history when governed point-in-time evidence and calibration support its use;
+- role, opportunity, draft/career pedigree, team/contract context, or other football evidence only where they add validated incremental signal;
+- position- and career-state-specific historical analog/cohort evidence.
+
+The end-state product should present the trajectory visually and probabilistically, not as false precision. Desired outputs include:
+- median year-by-year projected production path;
+- plausible upside/downside or percentile bands;
+- survival / meaningful-role probability where appropriate;
+- expected development, peak, plateau, and decline shape;
+- confidence/uncertainty and evidence coverage;
+- concise explanation of the major evidence driving the curve.
+
+The player-facing trajectory should not be productized as a polished curve until multi-year Forecast path/horizon consistency is sufficiently validated. Once governed, the same Forecast trajectory should feed rather than duplicate truth across:
+- FSFFL Intrinsic Value;
+- player drill-down/profile experiences;
+- My Team age/value-duration and roster-risk views;
+- Trade Center long-term consequences;
+- buy-low / sell-high and opportunity discovery;
+- rookie/development analysis;
+- aging-risk alerts;
+- future Analytics and reporting surfaces.
+
+Do not create a separate presentation-layer career model, generic age bonus/penalty, or unsupported injury/archetype adjustment. Presentation visualizes Forecast-owned trajectory truth; it does not invent it.
+
 ## Decision-intelligence sequence inside Phase 3
 
 The current Decision/Value work should follow this sequence so the reason for the intrinsic-value research is not lost:
@@ -286,6 +320,7 @@ Core product work is not done because the screens look better or because backend
 - the North Star visual/interaction grammar is recognizably present across major surfaces;
 - advanced provenance/method detail is available but secondary;
 - Broad Market, FSFFL Intrinsic, League Market, and Team Utility are conceptually and technically separated where available;
+- governed multi-year player trajectories can be exposed when Forecast path/horizon consistency is sufficiently validated, with uncertainty rather than false precision;
 - the live beta produces recognizable, useful Behavioral owner insights where evidence exists;
 - Trade Finder regularly surfaces credible acquisition paths beyond trivial cardinal matches;
 - Trade Center explains why a deal helps/hurts each side in plain English;
@@ -353,7 +388,9 @@ Current focus includes diagnosing compressed expected-win distributions by separ
 - fallback/projection coverage;
 - expected-win spread.
 
-Do not “fix” compressed results with arbitrary presentation multipliers. Correct the earliest authoritative layer where evidence shows the distortion originates.
+Multi-year Forecast validation also includes trajectory-shape / horizon-consistency calibration so player-specific career paths remain reliable as information is recursively propagated into farther seasons.
+
+Do not “fix” compressed results or multi-year trajectory problems with arbitrary presentation multipliers. Correct the earliest authoritative layer where evidence shows the distortion originates.
 
 ---
 
@@ -595,16 +632,17 @@ Rules:
 1. Finish private-beta/runtime stabilization.
 2. Finish Persistent League State & Incremental Sync and prove restore/revalidation behavior.
 3. Continue the coordinated Phase 3 program: North Star UI/product transformation plus existing intelligence online.
-4. Within Phase 3 Decision intelligence: complete Intrinsic Value Model A research/benchmarking, then strategic conflict resolution, bounded Trade Grades, directional Owner Intelligence, and League Market Value.
-5. Connect Broad Market / Intrinsic / League Market disagreement to Trade Finder, Trade Center, and Team Utility while continuing commercial-latency work.
-6. Build Historical Intelligence after the core live beta is demonstrably useful.
-7. Build League History, Lore, Franchise Timeline, and personality experiences.
-8. Build FSFFL Publications as polished narrative products over governed outputs.
-9. Expand Analytics / investigation surfaces.
-10. Add scenario / future experiences.
-11. Continue Product Validation, Performance, Forecast/Simulation validation, and Parameter Recalibration across all phases.
-12. Grow the longer-term FSFFL Evidence Warehouse and proprietary intelligence flywheel.
-13. Complete commercialization hardening before broad launch.
+4. Within Phase 3 Decision intelligence: complete Intrinsic Value Model A research/benchmarking, including governed multi-year Forecast trajectory/horizon validation; then strategic conflict resolution, bounded Trade Grades, directional Owner Intelligence, and League Market Value.
+5. Productize player-specific career trajectories once the Forecast path is sufficiently validated, and connect the same governed trajectory into Intrinsic Value, player/team views, Trade Center, and opportunity discovery rather than creating duplicate truth.
+6. Connect Broad Market / Intrinsic / League Market disagreement to Trade Finder, Trade Center, and Team Utility while continuing commercial-latency work.
+7. Build Historical Intelligence after the core live beta is demonstrably useful.
+8. Build League History, Lore, Franchise Timeline, and personality experiences.
+9. Build FSFFL Publications as polished narrative products over governed outputs.
+10. Expand Analytics / investigation surfaces.
+11. Add scenario / future experiences.
+12. Continue Product Validation, Performance, Forecast/Simulation validation, and Parameter Recalibration across all phases.
+13. Grow the longer-term FSFFL Evidence Warehouse and proprietary intelligence flywheel.
+14. Complete commercialization hardening before broad launch.
 
 ---
 
