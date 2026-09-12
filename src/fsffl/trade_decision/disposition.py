@@ -45,7 +45,7 @@ class TradeDecisionDisposition(FrozenModel):
     material_assessment_model_version: str
     negotiation_model_version: str
     strategic_context_model_version: str
-    model_version: str = "next5-trade-disposition-v4"
+    model_version: str = "next5-trade-disposition-v5"
 
     @model_validator(mode="after")
     def validate_disposition(self) -> "TradeDecisionDisposition":
@@ -61,12 +61,18 @@ class TradeDecisionDisposition(FrozenModel):
         return self
 
 
+# These are separate action-facing evidence dimensions, not a weighted score.
+# Market value measures current tradable economics; intrinsic value measures the
+# existing Value-owned long-term franchise/dynasty economic coordinate. Including
+# both here lets a material conflict resolve to COUNTER_OR_REVIEW rather than
+# silently allowing near-term/market gains to hide a long-term franchise-value loss.
 _METRICS = (
     "expected_wins",
     "playoff_probability",
     "championship_probability",
     "largest_single_player_lineup_drop",
     "market_value",
+    "intrinsic_value",
 )
 
 
@@ -135,7 +141,7 @@ def decide_trade_disposition(
     *,
     focal_team_id: str,
     package_economics: PackageEconomicAssessment | None = None,
-    model_version: str = "next5-trade-disposition-v4",
+    model_version: str = "next5-trade-disposition-v5",
 ) -> TradeDecisionDisposition:
     """Produce the focal team's action disposition from material evidence.
 
@@ -144,6 +150,10 @@ def decide_trade_disposition(
     already available and materially helps the focal team without a material loss,
     the focal action is support; whether the counterparty should agree is a separate
     question surfaced by negotiation feasibility.
+
+    Current market economics and long-term intrinsic franchise value remain distinct
+    Value-owned coordinates. They enter action synthesis once as categorical
+    materiality directions; they are never blended into a master score.
     """
 
     if not model_version.strip():
