@@ -8,11 +8,13 @@ LATENCY_PY = Path("src/fsffl/product/latency_observability.py")
 WORKSPACE_CACHE_PY = Path("src/fsffl/product/opportunity_workspace_cache.py")
 
 
-def test_identical_inflight_gets_are_coalesced_but_mutations_are_not() -> None:
+def test_identical_inflight_gets_are_coalesced_and_invalidated_by_mutations() -> None:
     source = APP_JS.read_text(encoding="utf-8")
 
     assert "const fsfflInFlightGets=new Map()" in source
-    assert "if(method!=='GET')return run()" in source
+    assert "let fsfflReadGeneration=0" in source
+    assert "fsfflReadGeneration+=1" in source
+    assert "`${fsfflReadGeneration}|${path}|${JSON.stringify(headers)}`" in source
     assert "const pending=run().finally" in source
     assert "fsfflInFlightGets.delete(key)" in source
 
@@ -36,13 +38,16 @@ def test_player_browse_hands_off_to_distinct_waiver_workspace() -> None:
     assert "event.stopImmediatePropagation()" in source
 
 
-def test_build_counter_invokes_frontier_even_if_legacy_button_was_disabled() -> None:
+def test_build_counter_runs_once_then_reveals_completed_frontier() -> None:
     source = POSTURE_JS.read_text(encoding="utf-8")
 
     assert "function runCounterDirectly" in source
+    assert "frontier?.textContent?.trim()" in source
     assert "action.disabled=false" in source
     assert "window.exploreTradeFrontier" in source
-    assert "void runner()" in source
+    assert "Promise.resolve(runner()).then" in source
+    assert "root.classList.add('ns-trade-show-methods')" in source
+    assert "#trade-frontier-result" in source
 
 
 def test_render_captured_logger_receives_endpoint_and_market_cache_timings() -> None:
