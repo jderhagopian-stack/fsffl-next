@@ -46,9 +46,10 @@ jobs:
             --output-dir artifacts/multiyear-intrinsic-model-a
       - name: Verify repository tests
         run: |
-          python -m pip install -e '.[dev]'
+          python -m pip install -e '.[dev,web]'
           python -m pytest -q
       - name: Upload research audit artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pr131-model-a-intrinsic-benchmark
