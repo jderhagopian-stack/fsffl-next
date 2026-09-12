@@ -116,8 +116,6 @@ def group_lookup(result, dimension, value):
 
 def direct_acceptance(baseline, challenger):
     b, c = baseline["overall"], challenger["overall"]
-    # A shape challenger must improve the target it claims to fix without worsening
-    # near-horizon revision calibration. Uncertainty-only repair is judged separately.
     if challenger["name"] == "uncertainty_propagation":
         near_gap_b = abs(b["near_80_coverage"] - 0.80)
         far_gap_b = abs(b["far_80_coverage"] - 0.80)
@@ -135,40 +133,46 @@ def direct_acceptance(baseline, challenger):
 
 def model_a_with_uncertainty(rows, seasons, market_repo):
     """Retest Model A with means unchanged and structurally propagated Forecast SD only."""
-    original_paths = base.forecast_paths
     def patched(rows_arg, season, rc_arg):
         return forecast_paths_variant(rows_arg, season, rc_arg, carry_uncertainty=True, preserve_percentile=False)
-    base.forecast_paths = patched
-    # repair module holds its own imported base; patch the exact module used by repair.
+
     repair_base = repair.load_base()
     repair.install_repair_candidate(repair_base)
     repair_base.forecast_paths = patched
-    # Keep the already-selected context-valid candidate, not the exploratory eligible-slot candidate.
     candidate = "marginal_lineup_opportunity"
-    all_fold_rows, fold_rows, all_details = [], {}, []
+    all_fold_rows, fold_rows = [], {}
     fold_metrics = []
     prior_rows = []
-    for season in seasons[1:]:
+
+    # Match the canonical repair benchmark exactly: the first supported fold seeds
+    # the affine control and is not itself scored as an out-of-time holdout.
+    for season in seasons:
         _, eval_rows, details = repair_base.evaluate_fold(rows, season, repair.PRIMARY_CONTEXT, candidate, rc)
-        training = list(prior_rows)
-        affine = repair_base.fit_affine(training)
-        parts = repair.component_variance(details)
-        scale = repair.uncertainty_scale(training)
-        fm = repair.fold_metrics(repair_base, eval_rows, affine, scale, parts)
-        fm["season"] = season
-        fold_metrics.append(fm)
         fold_rows[season] = eval_rows
-        all_fold_rows.extend(eval_rows)
-        all_details.extend(details)
+        if prior_rows:
+            affine = repair_base.fit_affine(prior_rows)
+            parts = repair.component_variance(details)
+            scale = repair.uncertainty_scale(prior_rows)
+            fm = repair.fold_metrics(repair_base, eval_rows, affine, scale, parts)
+            fm["season"] = season
+            fold_metrics.append(fm)
+            all_fold_rows.extend(eval_rows)
         prior_rows.extend(eval_rows)
+
     scarcity = repair.context_shift(repair_base, rows, seasons[1:], candidate, rc)
-    checks = repair.scenario_checks(repair_base, all_fold_rows, fold_rows, scarcity)
+    scored_fold_rows = {season: fold_rows[season] for season in seasons[1:] if season in fold_rows}
+    checks = repair.scenario_checks(repair_base, all_fold_rows, scored_fold_rows, scarcity)
+    n = sum(int(f["n"]) for f in fold_metrics)
+    def wavg(key):
+        return sum(float(f[key]) * int(f["n"]) for f in fold_metrics) / n if n else math.nan
+    model_a_mae = wavg("model_a_mae")
+    affine_mae = wavg("affine_mae")
     return {
-        "n": len(all_fold_rows),
-        "model_a_mae": mean(f["model_a_mae"] for f in fold_metrics),
-        "affine_mae": mean(f["affine_mae"] for f in fold_metrics),
-        "mae_improvement": mean(f["mae_improvement"] for f in fold_metrics),
-        "coverage": mean(f["model_a_coverage"] for f in fold_metrics),
+        "n": n,
+        "model_a_mae": model_a_mae,
+        "affine_mae": affine_mae,
+        "mae_improvement": (affine_mae - model_a_mae) / affine_mae if affine_mae else math.nan,
+        "coverage": wavg("model_a_coverage"),
         "economic_checks_passed": sum(1 for x in checks.values() if x.get("pass")),
         "economic_checks": checks,
         "note": "Model A means/economics unchanged; only Forecast SD recursion differs.",
@@ -241,7 +245,7 @@ def main():
         lines.extend([
             "", "## Model A unchanged-economics retest for accepted uncertainty repair", "",
             f"- MAE: **{x['model_a_mae']:.3f}** vs affine **{x['affine_mae']:.3f}**.",
-            f"- Mean relative MAE improvement: **{x['mae_improvement']:.1%}**.",
+            f"- Relative MAE improvement: **{x['mae_improvement']:.1%}**.",
             f"- Calibrated nominal-80% coverage: **{x['coverage']:.1%}**.",
             f"- Economic checks passed: **{x['economic_checks_passed']}/6**.",
             f"- Appreciation/decline: `{json.dumps(x['economic_checks']['expected_appreciation_decline'], sort_keys=True)}`",
