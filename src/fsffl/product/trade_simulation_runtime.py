@@ -32,7 +32,7 @@ from .trade_value_adapter import cardinal_market_profiles
 
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v6:behavioral-fit-scenario-cache"
+_PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v7:intrinsic-disposition-completeness"
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -178,7 +178,7 @@ def build_post_trade_simulation_comparison(
         strategic_context,
         focal_team_id=focal_team_id,
         package_economics=package_economics,
-        model_version="next5-trade-disposition-v3:simulated-product-view",
+        model_version="next5-trade-disposition-v5:intrinsic-action-facing-simulated-product-view",
     )
 
     comparisons = []
@@ -211,6 +211,13 @@ def build_post_trade_simulation_comparison(
         "baseline_simulation_count": baseline.simulation_result.simulation_count,
         "scenario_simulation_count": changed.simulation_result.simulation_count,
         "scenario_cache_hit": cache_hit,
+        "decision_completeness": {
+            "status": "complete_simulation_backed",
+            "simulation_backed": True,
+            "final_disposition_available": True,
+            "decision_scope": "complete_trade_disposition",
+            "missing_authorities": (),
+        },
         "team_deltas": comparisons,
         "roster_legality": [item.model_dump(mode="json") for item in trade_team_resolutions],
         "evaluation": evaluation.model_dump(mode="json"),
@@ -225,10 +232,15 @@ def build_post_trade_simulation_comparison(
         "material_assessment": material_assessment.model_dump(mode="json"),
         "disposition": disposition.model_dump(mode="json"),
         "behavioral_fit": behavioral_fit.model_dump(mode="json") if behavioral_fit is not None else None,
+        "availability": {
+            "competitive_outcomes": True,
+            "final_trade_disposition": True,
+        },
         "authority": {
             "state_transition": "NEXT-5 Trade Decision",
             "mandatory_roster_cuts": "NEXT-5 Trade Decision",
             "market_value": "NEXT-3 Value",
+            "intrinsic_franchise_value": "NEXT-3 Value, consumed once by NEXT-5 materiality/disposition",
             "competitive_outcomes": "NEXT-4 Simulation",
             "scenario_delta": "NEXT-4 Team Utility",
             "materiality_and_disposition": "NEXT-5 Trade Decision",
