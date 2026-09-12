@@ -9,7 +9,7 @@ from typing import Callable
 from .runtime import UserRuntimeContext
 
 
-_logger = logging.getLogger("fsffl.product.performance")
+_logger = logging.getLogger("uvicorn.error")
 _MAX_ENTRIES = 16
 
 WorkspaceBuilder = Callable[..., dict[str, object]]
@@ -62,7 +62,7 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
     The lock deliberately covers a miss build so duplicate concurrent requests for
     one hosted beta process cannot perform the same CPU-heavy work twice. Market
     workspace generation is already synchronous; serializing its rare cache misses
-    is preferable to multiplying CPU work on the 0.15-vCPU beta instance.
+    is preferable to multiplying CPU work on the tiny beta instance.
     """
 
     cache: OrderedDict[tuple[object, ...], dict[str, object]] = OrderedDict()

@@ -29,7 +29,8 @@ def test_market_exposes_consumer_owner_intent_control() -> None:
         assert label in source
     assert "Market focus" in source
     assert "How this changes suggestions" in source
-    assert "deck.prepend(control)" in source
+    assert "nav.insertAdjacentElement('afterend',control)" in source
+    assert "currentMarketMode()!=='opportunities'" in source
 
 
 def test_strategic_owner_intent_uses_server_published_posture_ordering_not_ui_score() -> None:

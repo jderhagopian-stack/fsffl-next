@@ -6,7 +6,9 @@ from time import monotonic
 from fastapi import FastAPI, Request
 
 
-_logger = logging.getLogger("fsffl.product.performance")
+# Uvicorn's error logger is guaranteed to have the hosted server handlers attached.
+# Keep timing at INFO so Render captures it alongside request lifecycle records.
+_logger = logging.getLogger("uvicorn.error")
 _TARGET_PATHS = frozenset(
     {
         "/api/product-context",
