@@ -8,6 +8,7 @@ on:
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark.py'
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark_entry.py'
       - 'scripts/run_multiyear_intrinsic_model_a_repair.py'
+      - 'scripts/run_multiyear_intrinsic_model_a_repair_entry.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
       - 'src/fsffl/research/**'
@@ -18,6 +19,7 @@ on:
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark.py'
       - 'scripts/run_multiyear_intrinsic_model_a_benchmark_entry.py'
       - 'scripts/run_multiyear_intrinsic_model_a_repair.py'
+      - 'scripts/run_multiyear_intrinsic_model_a_repair_entry.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
 
@@ -42,7 +44,7 @@ jobs:
         run: git clone --filter=blob:none https://github.com/dynastyprocess/data.git artifacts/dynastyprocess-data
       - name: Run research-only Model A repair benchmark
         run: |
-          python scripts/run_multiyear_intrinsic_model_a_repair.py \
+          python scripts/run_multiyear_intrinsic_model_a_repair_entry.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
