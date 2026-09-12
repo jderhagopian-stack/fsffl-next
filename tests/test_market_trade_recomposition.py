@@ -32,7 +32,7 @@ def test_market_focus_uses_touch_friendly_controls_without_new_scoring() -> None
     assert "ns-focus-choice" in source
     assert "select.dispatchEvent(new Event('change',{bubbles:true}))" in source
     assert "touch-action:manipulation" in css
-    assert "market_gap_ratio*" not in source
+    assert "applyServerPostureView" not in source
     assert "acceptance_probability" not in source
 
 
