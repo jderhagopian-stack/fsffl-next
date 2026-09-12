@@ -11,6 +11,7 @@ on:
       - 'scripts/run_multiyear_intrinsic_model_a_repair_entry.py'
       - 'scripts/run_forecast_update_reliability_audit.py'
       - 'scripts/run_forecast_update_reliability_audit_entry.py'
+      - 'scripts/run_forecast_update_gain_calibration_audit.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
       - 'src/fsffl/research/**'
@@ -24,6 +25,7 @@ on:
       - 'scripts/run_multiyear_intrinsic_model_a_repair_entry.py'
       - 'scripts/run_forecast_update_reliability_audit.py'
       - 'scripts/run_forecast_update_reliability_audit_entry.py'
+      - 'scripts/run_forecast_update_gain_calibration_audit.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
 
@@ -52,9 +54,9 @@ jobs:
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
-      - name: Run Forecast update reliability audit
+      - name: Run Forecast update reliability and gain-calibration audit
         run: |
-          python scripts/run_forecast_update_reliability_audit_entry.py \
+          python scripts/run_forecast_update_gain_calibration_audit.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
