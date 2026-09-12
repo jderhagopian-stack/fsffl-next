@@ -63,5 +63,5 @@ def test_render_captured_logger_receives_endpoint_and_market_cache_timings() -> 
 def test_static_release_token_advanced_for_repairs() -> None:
     source = INDEX_HTML.read_text(encoding="utf-8")
 
-    assert "20260911-market-latency3" in source
-    assert "20260911-market-trade2" not in source
+    assert "20260911-market-trade4" in source
+    assert "20260911-market-latency3" not in source
