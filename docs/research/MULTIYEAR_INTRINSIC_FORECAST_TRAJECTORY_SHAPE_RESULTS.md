@@ -200,7 +200,7 @@ The uncertainty-only challenger leaves the two failing mean-based economic check
 - expected appreciation/decline: approximately **44.6% direction / -0.269 correlation — FAIL**;
 - economic-usefulness checks: **4/6**.
 
-The existing calibrated Model A uncertainty gate already passed at **87.3%**. In the research-only retest with recursive player-state variance carried forward, calibrated Model A coverage remains within gate at approximately **87.5%**.
+The existing calibrated Model A uncertainty gate already passed at **87.3%**. In the finalized research-only retest with recursive player-state variance carried forward, calibrated Model A coverage remains within gate at **87.2%**.
 
 Therefore the frozen production-promotion gate remains **NOT CLEARED**.
 
