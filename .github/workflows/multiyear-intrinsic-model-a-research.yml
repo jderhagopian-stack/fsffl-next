@@ -14,6 +14,7 @@ on:
       - 'scripts/run_forecast_update_gain_calibration_audit.py'
       - 'scripts/run_forecast_trajectory_shape_audit.py'
       - 'scripts/run_forecast_trajectory_challengers.py'
+      - 'scripts/run_forecast_trajectory_challengers_entry.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
       - 'src/fsffl/research/**'
@@ -30,6 +31,7 @@ on:
       - 'scripts/run_forecast_update_gain_calibration_audit.py'
       - 'scripts/run_forecast_trajectory_shape_audit.py'
       - 'scripts/run_forecast_trajectory_challengers.py'
+      - 'scripts/run_forecast_trajectory_challengers_entry.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
 
@@ -71,7 +73,7 @@ jobs:
             --output-dir artifacts/multiyear-intrinsic-model-a
       - name: Validate narrow Forecast trajectory challengers
         run: |
-          python scripts/run_forecast_trajectory_challengers.py \
+          python scripts/run_forecast_trajectory_challengers_entry.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
