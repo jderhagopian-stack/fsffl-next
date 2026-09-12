@@ -11,7 +11,7 @@ SIM_RUNTIME = ROOT / "product" / "trade_simulation_runtime.py"
 
 
 def _side(*, intrinsic: MaterialityDirection) -> SideMaterialAssessment:
-    neutral = MaterialityDirection.NEUTRAL
+    neutral = MaterialityDirection.IMMATERIAL
     return SideMaterialAssessment(
         team_id="team-a",
         expected_wins=neutral,
