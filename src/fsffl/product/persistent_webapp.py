@@ -10,12 +10,15 @@ from fsffl.persistence import (
 )
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
+from . import opportunity_workspace as _opportunity_workspace
 from . import webapp as _webapp
 from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
+from .focused_opportunity_routes import install_focused_opportunity_routes
 from .forecast_resilience import make_resilient_forecast_loader
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
 from .latency_observability import install_latency_observability
+from .opportunity_search_cache import make_cached_opportunity_search
 from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
 from .phase1_latency import install_phase1_latency_routes
@@ -63,6 +66,15 @@ _full_refresh_seconds = max(
 )
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
 
+# Build the expensive structural candidate catalog once per exact authoritative
+# runtime. The normal Market workspace and subsequent Market Focus requests share
+# that exact catalog; focus changes Search selection/order without rebuilding the
+# same package universe or changing Value/Decision authority.
+_cached_opportunity_search = make_cached_opportunity_search(
+    _opportunity_workspace.build_roster_aware_trade_candidates
+)
+_opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity_search
+
 # Market navigation can issue the same workspace request repeatedly while the
 # authoritative runtime is unchanged. Reuse the exact server-produced workspace
 # instead of repeating Search + bounded Decision work. This wrapper is hosted-
@@ -92,6 +104,13 @@ install_in_season_forecast_routes(
     runtime_store=_runtime_store,
     persistence_store=_persistence_store,
     projection_history_store=_projection_history_store,
+)
+install_focused_opportunity_routes(
+    app,
+    runtime_store=_runtime_store,
+    workspace_builder=_webapp.build_opportunity_workspace,
+    candidate_builder=_cached_opportunity_search,
+    require_user=_webapp.require_beta_user,
 )
 install_phase1_latency_routes(app, persistence_store=_persistence_store)
 install_latency_observability(app)
