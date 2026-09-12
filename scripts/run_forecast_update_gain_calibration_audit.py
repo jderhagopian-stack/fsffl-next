@@ -3,12 +3,12 @@ from __future__ import annotations
 import csv
 import importlib.util
 import json
-import math
 import sys
 from dataclasses import replace
 from pathlib import Path
 
 MIN_CELL_ROWS = 100
+_GAIN_CACHE: dict[tuple[int, int, str, int], dict[str, object]] = {}
 
 
 def _load_registered(path: Path, name: str):
@@ -47,32 +47,35 @@ def _fit_gain(rows, *, position: str | None = None, horizon: int | None = None):
     return {"n": len(subset), "raw_alpha": raw, "alpha": max(0.0, raw)}
 
 
-def _rolling_gain(audit_rows, new_fold: int, position: str, horizon: int):
+def _rolling_gain(audit_rows, new_fold: int, position_name: str, horizon: int):
+    cache_key = (id(audit_rows), new_fold, position_name, horizon)
+    cached = _GAIN_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     training = [
         r for r in audit_rows
         if int(r["new_fold"]) < new_fold and int(r["target_season"]) <= new_fold - 1
     ]
-    cell = _fit_gain(training, position=position, horizon=horizon)
-    position = _fit_gain(training, position=position)
+    cell = _fit_gain(training, position=position_name, horizon=horizon)
+    position_fit = _fit_gain(training, position=position_name)
     horizon_fit = _fit_gain(training, horizon=horizon)
     pooled = _fit_gain(training)
     if int(cell["n"]) >= MIN_CELL_ROWS:
-        chosen, scope = cell, f"position_horizon:{position and ''}{position if isinstance(position,str) else ''}"
-        # scope string is replaced below; retaining branch structure avoids any
-        # dependence of the fitted value on presentation metadata.
-        scope = f"position_horizon"
-    elif int(position["n"]) >= MIN_CELL_ROWS:
-        chosen, scope = position, "position"
+        chosen, scope = cell, "position_horizon"
+    elif int(position_fit["n"]) >= MIN_CELL_ROWS:
+        chosen, scope = position_fit, "position"
     elif int(horizon_fit["n"]) >= MIN_CELL_ROWS:
         chosen, scope = horizon_fit, "horizon"
     else:
         chosen, scope = pooled, "global"
-    return {
+    result = {
         "alpha": float(chosen["alpha"]),
         "raw_alpha": float(chosen["raw_alpha"]),
         "n": int(chosen["n"]),
         "scope": scope,
     }
+    _GAIN_CACHE[cache_key] = result
+    return result
 
 
 def _annotate(audit_rows):
@@ -148,9 +151,9 @@ def _report_gains(output_dir: Path):
             row[key] = float(row[key])
     final_fold = max(int(r["new_fold"]) for r in rows)
     table = {}
-    for position in audit.base.POSITIONS if hasattr(audit, "base") else ("QB", "RB", "WR", "TE"):
-        table[position] = {
-            str(h): _rolling_gain(rows, final_fold, position, h)
+    for position_name in ("QB", "RB", "WR", "TE"):
+        table[position_name] = {
+            str(h): _rolling_gain(rows, final_fold, position_name, h)
             for h in (0, 1)
         }
     payload = json.loads(results_path.read_text(encoding="utf-8"))
@@ -160,11 +163,11 @@ def _report_gains(output_dir: Path):
     )
     results_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     lines = ["", "## Final-fold position × shared-horizon gain calibration", ""]
-    for position in ("QB", "RB", "WR", "TE"):
+    for position_name in ("QB", "RB", "WR", "TE"):
         for h in (0, 1):
-            fit = table[position][str(h)]
+            fit = table[position_name][str(h)]
             lines.append(
-                f"- {position}, shared horizon {h}: gain={fit['alpha']:.3f} "
+                f"- {position_name}, shared horizon {h}: gain={fit['alpha']:.3f} "
                 f"(raw={fit['raw_alpha']:.3f}, n={fit['n']}, scope={fit['scope']})"
             )
     report_path.write_text(report_path.read_text(encoding="utf-8") + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
