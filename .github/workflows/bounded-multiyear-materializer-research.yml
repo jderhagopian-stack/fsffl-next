@@ -6,6 +6,7 @@ on:
     branches: [research/bounded-multiyear-materializer-shadow]
     paths:
       - 'scripts/run_bounded_multiyear_forecast_materializer_research.py'
+      - 'scripts/run_bounded_multiyear_forecast_materializer_entry.py'
       - 'scripts/extract_career_transition_panel.R'
       - 'scripts/run_career_calibration.py'
       - 'scripts/run_multiyear_intrinsic_model_a_repair.py'
@@ -35,7 +36,7 @@ jobs:
       - name: Run frozen bounded materializer candidate
         run: |
           mkdir -p artifacts/bounded-multiyear-materializer
-          python scripts/run_bounded_multiyear_forecast_materializer_research.py \
+          python scripts/run_bounded_multiyear_forecast_materializer_entry.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --output-dir artifacts/bounded-multiyear-materializer
       - name: Verify repository tests
