@@ -26,6 +26,9 @@ def test_value_lens_uses_governed_intrinsic_api_and_does_not_rebrand_legacy_valu
     assert "fsffl_cardinal_values" not in script
     assert "older generic “FSFFL Value”" in script
     assert "is not this Intrinsic value" in script
+    assert "FSFFL Cardinal Value" in script
+    assert "replaceTextWithin(document.querySelector('.franchise-shell'),'FSFFL Value','FSFFL Cardinal Value')" in script
+    assert "replaceTextWithin(document.querySelector('.league-structure-panel'),'Total FSFFL value','Total FSFFL Cardinal Value')" in script
 
 
 def test_value_lens_comparison_is_rank_only_and_not_a_fake_common_scale():
