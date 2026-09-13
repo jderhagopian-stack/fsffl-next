@@ -29,9 +29,6 @@ from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
 
 
-# Hosted private-beta observability only. The coordinator already records exact
-# wall-clock phase timings; ensure Render emits those INFO records so latency work
-# can target measured bottlenecks without adding technical noise to product UI.
 logging.getLogger("fsffl.product.performance").setLevel(logging.INFO)
 _logger = logging.getLogger("fsffl.product.performance")
 
@@ -44,12 +41,6 @@ _runtime_store = PersistentPrivateBetaRuntimeStore(
 )
 configure_scenario_cache_persistence(_persistence_store)
 
-# Hosted Behavioral persistence performs an idempotent deploy-before-migration
-# schema safety bootstrap when its Postgres adapter is first constructed. Build the
-# shared adapter while the Render process is starting rather than on the first user
-# status/Market request. Failure remains non-fatal: the coordinator will retry its
-# normal factory later and Behavioral evidence will fail closed rather than blocking
-# the rest of the product.
 try:
     _behavioral_store = default_behavioral_store()
 except Exception as exc:  # pragma: no cover - hosted infrastructure guard
@@ -71,19 +62,11 @@ _full_refresh_seconds = max(
 )
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
 
-# Build the expensive structural candidate catalog once per exact authoritative
-# runtime. The normal Market workspace and subsequent Market Focus requests share
-# that exact catalog; focus changes Search selection/order without rebuilding the
-# same package universe or changing Value/Decision authority.
 _cached_opportunity_search = make_cached_opportunity_search(
     _opportunity_workspace.build_roster_aware_trade_candidates
 )
 _opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity_search
 
-# Market navigation can issue the same workspace request repeatedly while the
-# authoritative runtime is unchanged. Reuse the exact server-produced workspace
-# instead of repeating Search + bounded Decision work. This wrapper is hosted-
-# composition infrastructure only; the original builder remains authoritative.
 _webapp.build_opportunity_workspace = make_cached_opportunity_workspace(
     _webapp.build_opportunity_workspace
 )
@@ -121,6 +104,7 @@ install_focused_opportunity_routes(
 install_progressive_delivery_routes(
     app,
     runtime_store=_runtime_store,
+    workspace_builder=_webapp.build_opportunity_workspace,
     require_user=_webapp.require_beta_user,
 )
 install_quick_frontier_routes(
