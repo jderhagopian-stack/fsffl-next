@@ -147,14 +147,14 @@ const event={{target:{{closest:(selector)=>selector==='#analyze-trade'?button:nu
 (async()=>{{
   const running=listeners.click(event);
   if(calls[0]!=='/api/trade-center/quick')throw new Error('quick stage did not start first');
-  resolvers['/api/trade-center/quick'].resolve({{economics:null}});
+  resolvers['/api/trade-center/quick'].resolve({{state_id_before:'state-old',economics:null}});
   await new Promise(resolve=>setImmediate(resolve));
   if(!host.innerHTML.includes('Quick view ready'))throw new Error('quick view did not render');
   if(!calls.includes('/api/trade-center/analyze'))throw new Error('deeper analysis did not start');
   state.context.state_id='state-new';
   listeners['fsffl:product-context-updated']();
   if(button.textContent!=='Analyze Trade'||button.disabled)throw new Error('context invalidation did not reset action button');
-  resolvers['/api/trade-center/analyze'].resolve({{decision_completeness:{{}}}});
+  resolvers['/api/trade-center/analyze'].resolve({{state_id_before:'state-old',decision_completeness:{{}}}});
   await running;
   if(analysisRenders!==0)throw new Error('stale analysis rendered after context change');
   if(simulationRenders!==0||calls.includes('/api/trade-center/simulate'))throw new Error('stale flow advanced to simulation');
