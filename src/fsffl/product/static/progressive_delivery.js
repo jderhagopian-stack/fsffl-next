@@ -32,6 +32,12 @@
     node.dataset.kind=kind;node.textContent=message;
   }
 
+  function resetTradeForContext(){
+    tradeGeneration+=1;activeTradeKey=null;
+    const button=document.querySelector('#analyze-trade');
+    if(button){button.textContent='Analyze Trade';try{if(typeof updateAnalyzeTradeState==='function')updateAnalyzeTradeState()}catch(_){button.disabled=false}}
+  }
+
   async function runProgressiveTrade(event){
     const button=event.target?.closest?.('#analyze-trade');if(!button||button.disabled)return;
     event.preventDefault();event.stopImmediatePropagation();
@@ -63,7 +69,7 @@
       if(document.querySelector('.fsffl-progressive-answer'))appendProgress(`Deeper analysis could not finish: ${error.message}. The quick package evidence above remains valid for its stated scope.`,'error');
       else if(host)host.innerHTML=`<div class="chart-empty"><p>Trade analysis is unavailable: ${esc(error.message)}</p></div>`;
     }finally{
-      if(generation===tradeGeneration){activeTradeKey=null;button.textContent='Analyze Trade';try{if(typeof updateAnalyzeTradeState==='function')updateAnalyzeTradeState()}catch(_){}}
+      if(generation===tradeGeneration){activeTradeKey=null;button.textContent='Analyze Trade';try{if(typeof updateAnalyzeTradeState==='function')updateAnalyzeTradeState()}catch(_){button.disabled=false}}
     }
   }
 
@@ -117,7 +123,7 @@
     setTimeout(()=>clearInterval(timer),15000);
   }
 
-  window.addEventListener('fsffl:product-context-updated',()=>{tradeGeneration+=1;activeTradeKey=null});
+  window.addEventListener('fsffl:product-context-updated',resetTradeForContext);
   installTrade();installMarket();
   window.fsfflProgressiveDelivery={version:VERSION,installMarketWrapper};
 })();
