@@ -59,7 +59,6 @@ def test_value_lens_is_lazy_and_does_not_add_an_intrinsic_request_to_first_paint
     assert "function activate(panel)" in script
     assert "load()" in script
     assert "api('/api/value/intrinsic-v1')" in script
-    # Eager bootstrap only attaches static assets; it performs no API request.
     assert "/api/value/intrinsic-v1" not in bootstrap
     assert "the lens itself performs no API work until the customer opens its tab" in bootstrap
 
@@ -151,10 +150,11 @@ def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
     html = _text("index.html")
     bootstrap = _text("league_position_strength.js")
     experience = _text("intrinsic_value_experience.js")
-    version = "20260913-phase3-intrinsic2"
-    assert f'/static/league_position_strength.js?v={version}' in html
-    assert '/static/league_position_strength.js?v=20260912-market-trade5' not in html
-    assert f"const version='{version}'" in bootstrap
-    assert f"const VERSION='{version}'" in experience
+    shell_version = "20260913-phase3-latency1"
+    experience_version = "20260913-phase3-intrinsic2"
+    assert f'/static/league_position_strength.js?v={shell_version}' in html
+    assert '/static/league_position_strength.js?v=20260913-phase3-intrinsic2' not in html
+    assert f"const version='{experience_version}'" in bootstrap
+    assert f"const VERSION='{experience_version}'" in experience
     assert f'/static/intrinsic_value_experience.css?v=${{version}}' in bootstrap
     assert f'/static/intrinsic_value_experience.js?v=${{version}}' in bootstrap
