@@ -6,7 +6,7 @@ PERSISTENT = ROOT / "persistent_webapp.py"
 QUICK_ROUTE = ROOT / "quick_frontier_routes.py"
 QUICK_JS = ROOT / "static/quick_counter_frontier.js"
 INDEX = ROOT / "static/index.html"
-RELEASE = "20260913-phase3-intrinsic2"
+RELEASE = "20260913-phase3-latency1"
 
 
 def _read(path: Path) -> str:
@@ -21,9 +21,10 @@ def test_exact_scenario_cache_reuses_durable_authoritative_artifacts() -> None:
         "decode_simulation",
         "simulation_artifact",
         "put_artifact",
-        "tier=durable",
-        "No approximation",
+        "cache=durable",
+        "no approximation",
         '"durable_hits"',
+        '"coalesced_hits"',
     ):
         assert phrase in source
     assert "simulation_count" not in source
@@ -33,6 +34,7 @@ def test_hosted_runtime_enables_scenario_persistence_without_new_authority() -> 
     source = _read(PERSISTENT)
     assert "configure_scenario_cache_persistence(_persistence_store)" in source
     assert "install_quick_frontier_routes" in source
+    assert "install_progressive_delivery_routes" in source
 
 
 def test_quick_frontier_is_same_governed_engine_with_bounded_first_slice() -> None:
