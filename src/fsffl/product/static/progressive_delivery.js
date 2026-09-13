@@ -9,16 +9,19 @@
   let tradeGeneration=0;
   let activeTradeKey=null;
 
-  function contextKey(){const c=window.state?.context||{};return`${c.league_id||''}|${c.team_id||''}|${c.state_id||''}`}
-  function stableDraft(){if(typeof window.tradeDraftPayload!=='function')return null;const p=window.tradeDraftPayload();return{counterparty_team_id:p.counterparty_team_id,focal_asset_refs:[...(p.focal_asset_refs||[])].sort(),counterparty_asset_refs:[...(p.counterparty_asset_refs||[])].sort()}}
+  function productState(){try{return typeof state!=='undefined'?state:null}catch(_){return null}}
+  function opportunityStore(){try{return typeof fsfflOpportunityState!=='undefined'?fsfflOpportunityState:null}catch(_){return null}}
+  function contextKey(){const c=productState()?.context||{};return`${c.league_id||''}|${c.team_id||''}|${c.state_id||''}`}
+  function stableDraft(){try{if(typeof tradeDraftPayload!=='function')return null;const p=tradeDraftPayload();return{counterparty_team_id:p.counterparty_team_id,focal_asset_refs:[...(p.focal_asset_refs||[])].sort(),counterparty_asset_refs:[...(p.counterparty_asset_refs||[])].sort()}}catch(_){return null}}
   function draftKey(){const p=stableDraft();return p?`${contextKey()}|${p.counterparty_team_id}|${p.focal_asset_refs.join(',')}|${p.counterparty_asset_refs.join(',')}`:null}
   function currentTrade(generation,key){return generation===tradeGeneration&&key===draftKey()}
-  function esc(value){return typeof window.escapeHtml==='function'?window.escapeHtml(value):String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
+  function esc(value){try{return typeof escapeHtml==='function'?escapeHtml(value):String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}catch(_){return String(value??'')}}
+  function request(path,options){return api(path,options)}
 
   function renderQuickTrade(result){
     const host=document.querySelector('#trade-analysis-empty');if(!host)return;
     const sides=[result.economics?.side_a,result.economics?.side_b].filter(Boolean);
-    const sideCards=sides.map(side=>`<article class="fsffl-progressive-side"><strong>${esc(window.tradeTeamName?.(side.team_id)||side.team_id)}</strong><div><span>Market evidence sent</span><b>${esc(window.fmtNumber?.(side.sent_market?.mean_value,2)??side.sent_market?.mean_value??'—')}</b></div><div><span>Market evidence received</span><b>${esc(window.fmtNumber?.(side.received_market?.mean_value,2)??side.received_market?.mean_value??'—')}</b></div></article>`).join('');
+    const sideCards=sides.map(side=>{let team=side.team_id;try{if(typeof tradeTeamName==='function')team=tradeTeamName(side.team_id)}catch(_){}const format=value=>{try{return typeof fmtNumber==='function'?fmtNumber(value,2):value??'—'}catch(_){return value??'—'}};return`<article class="fsffl-progressive-side"><strong>${esc(team)}</strong><div><span>Market evidence sent</span><b>${esc(format(side.sent_market?.mean_value))}</b></div><div><span>Market evidence received</span><b>${esc(format(side.received_market?.mean_value))}</b></div></article>`}).join('');
     host.innerHTML=`<section class="fsffl-progressive-answer" data-progressive-stage="quick"><header><div><p class="eyebrow">Quick view ready</p><h3>Package evidence is ready while the deeper roster analysis runs.</h3></div><span class="status-chip">Partial</span></header><p>Canonical ownership and the proposed changed state are valid. These package economics come from the existing governed Value/Trade economics path; they are not a final trade recommendation.</p><div class="fsffl-progressive-sides">${sideCards||'<p>Package Value evidence is currently unavailable.</p>'}</div><div class="fsffl-progressive-next"><strong>Still calculating</strong><span>Roster and lineup consequences → full 50,000-run season simulation</span></div></section>`;
   }
 
@@ -36,60 +39,61 @@
     if(activeTradeKey===key)return;
     const generation=++tradeGeneration;activeTradeKey=key;
     button.disabled=true;button.textContent='Checking trade…';
-    if(typeof window.invalidateTradeScenario==='function')window.invalidateTradeScenario();
+    try{if(typeof invalidateTradeScenario==='function')invalidateTradeScenario()}catch(_){}
     const host=document.querySelector('#trade-analysis-empty');if(host)host.innerHTML='<div class="fsffl-progressive-loading"><p class="eyebrow">Checking this trade</p><h3>Building the quick governed view…</h3></div>';
     try{
-      const quick=await window.api('/api/trade-center/quick',{method:'POST',body:JSON.stringify(payload)});
+      const quick=await request('/api/trade-center/quick',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
       renderQuickTrade(quick);
       button.textContent='Full roster analysis running…';
 
-      const analysis=await window.api('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(payload)});
+      const analysis=await request('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
-      window.renderTradeAnalysis?.(analysis);
+      if(typeof renderTradeAnalysis==='function')renderTradeAnalysis(analysis);
       ['#simulate-trade','#explore-price'].forEach(selector=>{const action=document.querySelector(selector);if(action)action.disabled=false});
       appendProgress('Roster analysis ready. Full 50,000-run season simulation running…');
       button.textContent='Full simulation running…';
 
-      const simulation=await window.api('/api/trade-center/simulate',{method:'POST',body:JSON.stringify(payload)});
+      const simulation=await request('/api/trade-center/simulate',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
-      window.renderTradeSimulationResult?.(simulation);
+      if(typeof renderTradeSimulationResult==='function')renderTradeSimulationResult(simulation);
       appendProgress(simulation.scenario_cache_hit?'Full analysis ready · exact prior simulation reused.':'Full analysis ready · 50,000-run simulation complete.','ready');
     }catch(error){
       if(!currentTrade(generation,key))return;
       if(document.querySelector('.fsffl-progressive-answer'))appendProgress(`Deeper analysis could not finish: ${error.message}. The quick package evidence above remains valid for its stated scope.`,'error');
       else if(host)host.innerHTML=`<div class="chart-empty"><p>Trade analysis is unavailable: ${esc(error.message)}</p></div>`;
     }finally{
-      if(generation===tradeGeneration){activeTradeKey=null;button.textContent='Analyze Trade';if(typeof window.updateAnalyzeTradeState==='function')window.updateAnalyzeTradeState()}
+      if(generation===tradeGeneration){activeTradeKey=null;button.textContent='Analyze Trade';try{if(typeof updateAnalyzeTradeState==='function')updateAnalyzeTradeState()}catch(_){}}
     }
   }
 
   function installTrade(){window.addEventListener('click',runProgressiveTrade,true)}
 
   function installMarketWrapper(){
-    if(marketInstalled||typeof window.loadOpportunityWorkspace!=='function'||typeof window.oppContextSnapshot!=='function')return;
+    let available=false;try{available=typeof loadOpportunityWorkspace==='function'&&typeof oppContextSnapshot==='function'}catch(_){}
+    if(marketInstalled||!available)return;
     marketInstalled=true;
     const progressive=async function({showLoading=true}={}){
-      const store=window.fsfflOpportunityState;if(!store||store.loading)return;
-      const captured=window.oppContextSnapshot(),requestId=++store.requestSequence;
-      store.loading=true;window.oppCancelRetry?.();if(showLoading)window.oppLoading?.();
-      const contextStillCurrent=()=>requestId===store.requestSequence&&window.oppContextSnapshot().key===captured.key;
+      const store=opportunityStore();if(!store||store.loading)return;
+      const captured=oppContextSnapshot(),requestId=++store.requestSequence;
+      store.loading=true;try{oppCancelRetry()}catch(_){}if(showLoading)try{oppLoading()}catch(_){}
+      const contextStillCurrent=()=>requestId===store.requestSequence&&oppContextSnapshot().key===captured.key;
       try{
         const sideEvidence=Promise.all([
-          window.api('/api/behavioral/profiles').catch(()=>({status:'unavailable',profiles:[]})),
-          captured.teamId?window.api('/api/my-team').catch(()=>null):Promise.resolve(null),
+          request('/api/behavioral/profiles').catch(()=>({status:'unavailable',profiles:[]})),
+          captured.teamId?request('/api/my-team').catch(()=>null):Promise.resolve(null),
         ]);
-        const quick=await window.api('/api/opportunities/workspace/quick');
-        if(!contextStillCurrent()||!window.oppPayloadMatchesCapturedContext(quick,captured))return;
+        const quick=await request('/api/opportunities/workspace/quick');
+        if(!contextStillCurrent()||!oppPayloadMatchesCapturedContext(quick,captured))return;
         const[behavior,team]=await sideEvidence;if(!contextStillCurrent())return;
         store.payload=quick;store.behavior=behavior;store.team=team;store.loading=false;
-        window.renderOpportunityWorkspace?.();
+        renderOpportunityWorkspace();
         const panel=document.querySelector('#generic-screen .panel');
         panel?.insertAdjacentHTML('afterbegin','<div class="fsffl-market-progress"><strong>Quick view ready</strong><span>More bilateral trade evidence is loading.</span></div>');
 
-        window.api('/api/opportunities/workspace').then(full=>{
-          if(!contextStillCurrent()||!window.oppPayloadMatchesCapturedContext(full,captured))return;
-          store.payload=full;window.renderOpportunityWorkspace?.();
+        request('/api/opportunities/workspace').then(full=>{
+          if(!contextStillCurrent()||!oppPayloadMatchesCapturedContext(full,captured))return;
+          store.payload=full;renderOpportunityWorkspace();
           const current=document.querySelector('#generic-screen .panel');
           current?.insertAdjacentHTML('afterbegin','<div class="fsffl-market-progress ready"><strong>Updated analysis ready</strong><span>Bounded bilateral Decision evidence has been added.</span></div>');
         }).catch(()=>{
@@ -97,17 +101,17 @@
           const current=document.querySelector('#generic-screen .panel');
           current?.insertAdjacentHTML('afterbegin','<div class="fsffl-market-progress"><strong>Quick view remains available</strong><span>Deeper bilateral evidence could not finish.</span></div>');
         });
-      }catch(error){if(contextStillCurrent())window.oppError?.(error.message)}finally{if(requestId===store.requestSequence)store.loading=false}
+      }catch(error){if(contextStillCurrent())try{oppError(error.message)}catch(_){}}finally{if(requestId===store.requestSequence)store.loading=false}
     };
     window.loadOpportunityWorkspace=progressive;window.renderFsfflOpportunities=progressive;
-    try{loadOpportunityWorkspace=progressive}catch(_){/* global binding may be read-only in some browsers */}
+    try{loadOpportunityWorkspace=progressive}catch(_){/* lexical global may not be assignable */}
   }
 
   function installMarket(){
-    const original=window.ensureOpportunitiesScript;
+    let original=null;try{original=typeof ensureOpportunitiesScript==='function'?ensureOpportunitiesScript:null}catch(_){}
     if(typeof original==='function'&&!original.__fsfflProgressive){
       const wrapped=function(){return original().then(()=>{installMarketWrapper()})};wrapped.__fsfflProgressive=true;
-      window.ensureOpportunitiesScript=wrapped;try{ensureOpportunitiesScript=wrapped}catch(_){/* global binding fallback */}
+      window.ensureOpportunitiesScript=wrapped;try{ensureOpportunitiesScript=wrapped}catch(_){/* fallback polling below */}
     }
     const timer=setInterval(()=>{installMarketWrapper();if(marketInstalled)clearInterval(timer)},50);
     setTimeout(()=>clearInterval(timer),15000);
