@@ -7,17 +7,25 @@ from typing import Mapping
 
 from pydantic import field_validator, model_validator
 
-from fsffl.forecast.intrinsic_v1 import (
-    ForecastEvidenceStrength,
-    IntrinsicV1PlayerForecastPath,
-)
+from fsffl.forecast.intrinsic_v1 import ForecastEvidenceStrength, IntrinsicV1PlayerForecastPath
 from fsffl.forecast.models import ForecastDistribution
 from fsffl.state.models import FrozenModel, LeagueRules, Position, RosterSlot
+from fsffl.value.models import (
+    IntrinsicDynastyValueEstimate,
+    ValueAssetKind,
+    ValueDistribution,
+    ValueScale,
+)
 
 
 INTRINSIC_VALUE_V1_VERSION = "intrinsic-value-v1"
 INTRINSIC_VALUE_V1_WEIGHTS: tuple[float, float, float] = (1.0, 0.85, 0.70)
 REPLACEMENT_CONTEXT_VERSION = "marginal-lineup-opportunity-v1"
+INTRINSIC_VALUE_V1_SCALE = ValueScale(
+    scale_id="fsffl_intrinsic_surplus",
+    version="1",
+    unit_label="weighted expected fantasy-point surplus above replacement",
+)
 
 
 class IntrinsicV1Confidence(StrEnum):
@@ -79,27 +87,15 @@ def _required_counts(rules: LeagueRules) -> dict[RosterSlot, int]:
 
 
 def _replacement_for_horizon(
-    *,
-    paths: Mapping[str, IntrinsicV1PlayerForecastPath],
-    horizon_index: int,
-    rules: LeagueRules,
+    *, paths: Mapping[str, IntrinsicV1PlayerForecastPath], horizon_index: int, rules: LeagueRules
 ) -> dict[Position, ForecastDistribution]:
-    """Return the weakest selected league starter at each skill position.
-
-    This is the transparent marginal-lineup-opportunity replacement context used
-    by Model A: fixed starters are filled first, then FLEX, then SUPERFLEX from
-    the best remaining eligible players. Scarcity therefore comes from league
-    structure rather than a positional bonus.
-    """
-
     counts = _required_counts(rules)
     eligible = {Position.QB, Position.RB, Position.WR, Position.TE}
-    records: list[tuple[str, Position, ForecastDistribution]] = []
-    for player_id, path in paths.items():
-        if path.position not in eligible:
-            continue
-        records.append((player_id, path.position, path.horizons[horizon_index].distribution))
-
+    records = [
+        (player_id, path.position, path.horizons[horizon_index].distribution)
+        for player_id, path in paths.items()
+        if path.position in eligible
+    ]
     selected: list[tuple[str, Position, ForecastDistribution]] = []
     used: set[str] = set()
 
@@ -110,11 +106,7 @@ def _replacement_for_horizon(
         (Position.TE, RosterSlot.TE),
     ):
         need = counts.get(slot, 0)
-        pool = sorted(
-            (row for row in records if row[1] == position),
-            key=lambda row: row[2].mean,
-            reverse=True,
-        )
+        pool = sorted((row for row in records if row[1] == position), key=lambda row: row[2].mean, reverse=True)
         if need and len(pool) < need:
             raise ValueError(f"insufficient {position.value} forecasts for replacement context")
         for row in pool[:need]:
@@ -134,11 +126,7 @@ def _replacement_for_horizon(
         used.add(row[0])
 
     superflex_need = counts.get(RosterSlot.SUPERFLEX, 0)
-    sf_pool = sorted(
-        (row for row in records if row[0] not in used),
-        key=lambda row: row[2].mean,
-        reverse=True,
-    )
+    sf_pool = sorted((row for row in records if row[0] not in used), key=lambda row: row[2].mean, reverse=True)
     if superflex_need and len(sf_pool) < superflex_need:
         raise ValueError("insufficient forecasts for SUPERFLEX replacement context")
     selected.extend(sf_pool[:superflex_need])
@@ -153,14 +141,9 @@ def _replacement_for_horizon(
 
 
 def build_marginal_lineup_replacement_paths(
-    *,
-    paths: Mapping[str, IntrinsicV1PlayerForecastPath],
-    rules: LeagueRules,
+    *, paths: Mapping[str, IntrinsicV1PlayerForecastPath], rules: LeagueRules
 ) -> tuple[dict[Position, ForecastDistribution], ...]:
-    return tuple(
-        _replacement_for_horizon(paths=paths, horizon_index=index, rules=rules)
-        for index in range(3)
-    )
+    return tuple(_replacement_for_horizon(paths=paths, horizon_index=index, rules=rules) for index in range(3))
 
 
 def _confidence(path: IntrinsicV1PlayerForecastPath) -> IntrinsicV1Confidence:
@@ -181,11 +164,9 @@ def estimate_intrinsic_value_v1(
 ) -> IntrinsicValueV1Estimate:
     if player_path.player_id not in all_player_paths:
         raise ValueError("player path must be present in all_player_paths")
-
     replacement_paths = build_marginal_lineup_replacement_paths(paths=all_player_paths, rules=rules)
     contributions: list[IntrinsicV1HorizonContribution] = []
     variance = 0.0
-
     for index, weight in enumerate(INTRINSIC_VALUE_V1_WEIGHTS):
         horizon = player_path.horizons[index]
         replacement = replacement_paths[index][player_path.position]
@@ -202,14 +183,8 @@ def estimate_intrinsic_value_v1(
                 forecast_evidence_strength=horizon.evidence_strength,
             )
         )
-        # Transparent local linearization: uncertainty only contributes while the
-        # expected player output is above replacement. No survival/scarcity term
-        # is multiplied again here; both already live in Forecast/replacement.
         if surplus > 0:
-            variance += weight**2 * (
-                horizon.distribution.stddev**2 + replacement.stddev**2
-            )
-
+            variance += weight**2 * (horizon.distribution.stddev**2 + replacement.stddev**2)
     return IntrinsicValueV1Estimate(
         player_id=player_path.player_id,
         league_id=league_id,
@@ -220,4 +195,21 @@ def estimate_intrinsic_value_v1(
         forecast_policy_version=player_path.policy_version,
         base_forecast_model_version=player_path.base_forecast_model_version,
         horizons=tuple(contributions),
+    )
+
+
+def as_intrinsic_dynasty_value_estimate(
+    estimate: IntrinsicValueV1Estimate,
+) -> IntrinsicDynastyValueEstimate:
+    """Bridge v1 into the existing Value/Decision contract without rescaling it."""
+
+    return IntrinsicDynastyValueEstimate(
+        asset_id=estimate.player_id,
+        asset_kind=ValueAssetKind.PLAYER,
+        distribution=ValueDistribution(mean=estimate.value, stddev=estimate.standard_deviation),
+        scale=INTRINSIC_VALUE_V1_SCALE,
+        as_of=estimate.evaluation_as_of,
+        model_version=estimate.model_version,
+        conversion_model_version=estimate.replacement_context_version,
+        forecast_model_versions=(estimate.base_forecast_model_version, estimate.forecast_policy_version),
     )
