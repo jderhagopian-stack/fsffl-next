@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+from time import monotonic
 from typing import Any
 
 from fsffl.behavioral.models import OwnerBehaviorProfile
@@ -31,6 +33,7 @@ from .trade_value_adapter import cardinal_market_profiles
 
 
 _PRODUCT_MODEL_VERSION = "next8-trade-analysis-v11:separate-decision-dimensions"
+_logger = logging.getLogger("uvicorn.error")
 
 
 def _fallback_vector(team_id: str, *, as_of, reason: str) -> TeamUtilityVector:
@@ -94,11 +97,13 @@ def build_private_beta_trade_analysis(
     focal_team_id: str,
     counterparty_behavior_profile: OwnerBehaviorProfile | None = None,
 ) -> dict[str, object]:
+    total_started = monotonic()
     league_state = runtime.league_state
     if league_state is None:
         raise ValueError("trade analysis requires a loaded league state")
 
     scenario = apply_bilateral_trade(league_state, proposal)
+    state_validated = monotonic()
     side_a_id = proposal.side_a.team_id
     side_b_id = proposal.side_b.team_id
     counterparty_team_id = side_b_id if focal_team_id == side_a_id else side_a_id
@@ -126,6 +131,7 @@ def build_private_beta_trade_analysis(
             package_concentration,
             prior=live_bounded_package_premium_prior(as_of=proposal.as_of),
         )
+    package_ready = monotonic()
 
     protected = _projected_starter_map(scenario.after, forecasts, (side_a_id, side_b_id))
     roster_resolution = resolve_mandatory_roster_cuts(
@@ -136,6 +142,7 @@ def build_private_beta_trade_analysis(
     legal_after = roster_resolution.league_state
     trade_team_resolutions = tuple(item for item in roster_resolution.resolutions if item.team_id in {side_a_id, side_b_id})
     position_strength = _position_strength_comparison(scenario.before, legal_after, forecasts, team_id=focal_team_id)
+    lineup_ready = monotonic()
 
     if forecasts:
         before_a, error_before_a = _assemble_resilience_vector(scenario.before, forecasts, team_id=side_a_id)
@@ -163,6 +170,7 @@ def build_private_beta_trade_analysis(
         roster_consequences_ready = any(side.delta.resilience is not None for side in (evaluation.side_a, evaluation.side_b))
     else:
         warnings.append("Roster consequence analysis is waiting for current NEXT-2 forecast evidence.")
+    decision_ready = monotonic()
 
     economics = None
     economic_net = None
@@ -211,6 +219,17 @@ def build_private_beta_trade_analysis(
         position_strength=position_strength,
         simulation_backed=False,
     )
+    finalized = monotonic()
+    _logger.info(
+        "FSFFL Trade analysis phases state_validation=%.3fs package_economics=%.3fs lineup_and_legality=%.3fs roster_decision=%.3fs finalize=%.3fs total=%.3fs state=%s",
+        state_validated - total_started,
+        package_ready - state_validated,
+        lineup_ready - package_ready,
+        decision_ready - lineup_ready,
+        finalized - decision_ready,
+        finalized - total_started,
+        scenario.before.state_id,
+    )
 
     return {
         "proposal": proposal.model_dump(mode="json"),
@@ -219,9 +238,6 @@ def build_private_beta_trade_analysis(
         "state_id_before": scenario.before.state_id,
         "state_id_after_trade": scenario.after.state_id,
         "state_id_after": legal_after.state_id,
-        # `decision` below is intentionally the existing fast bilateral consequence
-        # classification, not the final dynasty trade disposition. This first-class
-        # contract prevents API/product consumers from treating it as comprehensive.
         "decision_completeness": {
             "status": "partial_pre_simulation",
             "simulation_backed": False,
