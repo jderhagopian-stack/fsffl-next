@@ -10,6 +10,8 @@ from fsffl.forecast.intrinsic_v1 import (
     materialize_intrinsic_v1_forecast_path,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
+from fsffl.forecast.qb_career_state import rank_percentiles
+from fsffl.forecast.qb_career_state_runtime import forecast_qb_career_state_runtime
 from fsffl.state.models import LeagueState, Position
 from fsffl.value.models import AssetValueProfile
 
@@ -63,15 +65,21 @@ def build_current_intrinsic_values_v1(
 ) -> CurrentIntrinsicV1RuntimeResult:
     """Build current FSFFL Intrinsic Value v1 from authoritative Forecast evidence.
 
-    The runtime is intentionally independent from market acquisition. Forecast
-    owns the Y1 distribution and any optional governed bounded career path.
-    Missing bounded evidence is handled inside the frozen Forecast v1 policy by
-    conservative carry-forward with LOW evidence rather than by Value inventing a
-    future trajectory.
+    Forecast owns Year 1, optional bounded non-QB paths, and the QB career-state
+    expectation. This orchestration layer passes Forecast outputs to Value; it does
+    not estimate the QB probability itself. Missing/stale career-state evidence is
+    handled by the Forecast policy as conservative carry-forward.
     """
 
     by_player = _season_fantasy_forecasts(season_forecasts)
     player_by_id = {player.player_id: player for player in league_state.players}
+    player_state_by_id = {state.player_id: state for state in league_state.player_states}
+    qb_y1 = {
+        player_id: observation.distribution.mean
+        for player_id, observation in by_player.items()
+        if (player := player_by_id.get(player_id)) is not None and player.position == Position.QB
+    }
+    qb_percentiles = rank_percentiles(qb_y1)
     paths: dict[str, IntrinsicV1PlayerForecastPath] = {}
 
     for player_id, observation in by_player.items():
@@ -80,6 +88,14 @@ def build_current_intrinsic_values_v1(
             continue
         if observation.as_of > league_state.as_of:
             raise ValueError("intrinsic Forecast evidence cannot postdate canonical league state")
+        qb_career_state = None
+        if player.position == Position.QB:
+            qb_career_state = forecast_qb_career_state_runtime(
+                player=player,
+                player_state=player_state_by_id.get(player_id),
+                evaluation_season=league_state.league.season,
+                production_percentile=qb_percentiles.get(player_id, 0.5),
+            )
         paths[player_id] = materialize_intrinsic_v1_forecast_path(
             player_id=player_id,
             position=player.position,
@@ -87,6 +103,7 @@ def build_current_intrinsic_values_v1(
             base_distribution=observation.distribution,
             base_forecast_model_version=base_forecast_model_version,
             bounded_path=(bounded_paths or {}).get(player_id),
+            qb_career_state=qb_career_state,
         )
 
     roster_player_ids = {
@@ -117,8 +134,6 @@ def build_current_intrinsic_values_v1(
                 rules=league_state.league.rules,
             )
         except ValueError:
-            # Replacement construction must fail closed for incomplete league-wide
-            # position evidence rather than fabricate a replacement level.
             continue
         estimates.append(estimate)
         typed = as_intrinsic_dynasty_value_estimate(estimate)
