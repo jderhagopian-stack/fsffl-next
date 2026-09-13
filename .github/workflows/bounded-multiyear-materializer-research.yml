@@ -9,7 +9,7 @@ on:
       - 'scripts/run_bounded_multiyear_forecast_materializer_entry.py'
       - 'scripts/extract_career_transition_panel.R'
       - 'scripts/run_career_calibration.py'
-      - 'scripts/run_multiyear_intrinsic_model_a_repair.py'
+      - 'scripts/run_multiyear_intrinsic_model_a_benchmark.py'
       - 'src/fsffl/forecast/career.py'
       - 'src/fsffl/forecast/career_calibration.py'
       - '.github/workflows/bounded-multiyear-materializer-research.yml'
@@ -36,6 +36,7 @@ jobs:
       - name: Run frozen bounded materializer candidate
         run: |
           mkdir -p artifacts/bounded-multiyear-materializer
+          sed -i 's/run_multiyear_intrinsic_model_a_repair.py/run_multiyear_intrinsic_model_a_benchmark.py/' scripts/run_bounded_multiyear_forecast_materializer_research.py
           python scripts/run_bounded_multiyear_forecast_materializer_entry.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --output-dir artifacts/bounded-multiyear-materializer
