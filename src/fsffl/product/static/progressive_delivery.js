@@ -63,7 +63,7 @@
       const simulation=await request('/api/trade-center/simulate',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
       if(typeof renderTradeSimulationResult==='function')renderTradeSimulationResult(simulation);
-      appendProgress(simulation.scenario_cache_hit?'Full analysis ready · exact prior simulation reused.':'Full analysis ready · 50,000-run simulation complete.','ready');
+      appendProgress(simulation.scenario_cache_hit?'Full analysis ready · exact Simulation result reused.':'Full analysis ready · 50,000-run simulation complete.','ready');
     }catch(error){
       if(!currentTrade(generation,key))return;
       if(document.querySelector('.fsffl-progressive-answer'))appendProgress(`Deeper analysis could not finish: ${error.message}. The quick package evidence above remains valid for its stated scope.`,'error');
