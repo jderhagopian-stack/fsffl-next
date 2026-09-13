@@ -61,12 +61,7 @@ def _rules(superflex: bool = True) -> LeagueRules:
     ]
     if superflex:
         lineup.append(LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1))
-    return LeagueRules(
-        team_count=2,
-        roster_size=8,
-        lineup=tuple(lineup),
-        scoring=(),
-    )
+    return LeagueRules(team_count=2, roster_size=8, lineup=tuple(lineup), scoring=())
 
 
 def test_frozen_position_horizon_policy():
@@ -106,32 +101,8 @@ def test_missing_bounded_evidence_falls_back_without_fake_precision():
     assert path.horizons[1].cumulative_survival_probability is None
 
 
-def test_model_a_is_weighted_replacement_adjusted_surplus_and_low_confidence_for_qb():
-    paths = {
-        "qb1": _path("qb1", Position.QB, 300.0),
-        "qb2": _path("qb2", Position.QB, 250.0),
-        "qb3": _path("qb3", Position.QB, 200.0),
-        "rb1": _path("rb1", Position.RB, 200.0),
-        "rb2": _path("rb2", Position.RB, 150.0),
-        "wr1": _path("wr1", Position.WR, 220.0),
-        "wr2": _path("wr2", Position.WR, 140.0),
-        "te1": _path("te1", Position.TE, 160.0),
-        "te2": _path("te2", Position.TE, 100.0),
-    }
-    estimate = estimate_intrinsic_value_v1(
-        player_path=paths["qb1"],
-        all_player_paths=paths,
-        league_id="league",
-        rules=_rules(superflex=True),
-    )
-    assert estimate.value >= 0
-    assert estimate.confidence == IntrinsicV1Confidence.LOW
-    assert tuple(point.weight for point in estimate.horizons) == INTRINSIC_VALUE_V1_WEIGHTS
-    assert estimate.value == pytest.approx(sum(point.weighted_surplus for point in estimate.horizons))
-
-
-def test_superflex_structurally_lowers_qb_replacement_and_raises_qb_intrinsic_value():
-    paths = {
+def _league_paths():
+    return {
         "qb1": _path("qb1", Position.QB, 300.0),
         "qb2": _path("qb2", Position.QB, 250.0),
         "qb3": _path("qb3", Position.QB, 200.0),
@@ -143,16 +114,25 @@ def test_superflex_structurally_lowers_qb_replacement_and_raises_qb_intrinsic_va
         "te1": _path("te1", Position.TE, 160.0),
         "te2": _path("te2", Position.TE, 100.0),
     }
+
+
+def test_model_a_is_weighted_replacement_adjusted_surplus_and_low_confidence_for_qb():
+    paths = _league_paths()
+    estimate = estimate_intrinsic_value_v1(
+        player_path=paths["qb1"], all_player_paths=paths, league_id="league", rules=_rules(True)
+    )
+    assert estimate.value >= 0
+    assert estimate.confidence == IntrinsicV1Confidence.LOW
+    assert tuple(point.weight for point in estimate.horizons) == INTRINSIC_VALUE_V1_WEIGHTS
+    assert estimate.value == pytest.approx(sum(point.weighted_surplus for point in estimate.horizons))
+
+
+def test_superflex_structurally_lowers_qb_replacement_and_raises_qb_intrinsic_value():
+    paths = _league_paths()
     one_qb = estimate_intrinsic_value_v1(
-        player_path=paths["qb1"],
-        all_player_paths=paths,
-        league_id="league",
-        rules=_rules(superflex=False),
+        player_path=paths["qb1"], all_player_paths=paths, league_id="league", rules=_rules(False)
     )
     superflex = estimate_intrinsic_value_v1(
-        player_path=paths["qb1"],
-        all_player_paths=paths,
-        league_id="league",
-        rules=_rules(superflex=True),
+        player_path=paths["qb1"], all_player_paths=paths, league_id="league", rules=_rules(True)
     )
-    assert superflex.value < one_qb.value
+    assert superflex.value > one_qb.value
