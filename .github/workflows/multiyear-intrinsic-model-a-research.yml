@@ -18,6 +18,7 @@ on:
       - 'scripts/run_hierarchical_trajectory_state_research.py'
       - 'scripts/run_player_specific_trajectory_residual_research.py'
       - 'scripts/run_within_player_trajectory_innovation_research.py'
+      - 'scripts/run_value_owned_economic_residual_identification.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
       - 'src/fsffl/research/**'
@@ -38,6 +39,7 @@ on:
       - 'scripts/run_hierarchical_trajectory_state_research.py'
       - 'scripts/run_player_specific_trajectory_residual_research.py'
       - 'scripts/run_within_player_trajectory_innovation_research.py'
+      - 'scripts/run_value_owned_economic_residual_identification.py'
       - 'scripts/extract_career_transition_panel.R'
       - '.github/workflows/multiyear-intrinsic-model-a-research.yml'
 
@@ -101,6 +103,12 @@ jobs:
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --dynastyprocess-repo artifacts/dynastyprocess-data \
             --output-dir artifacts/multiyear-intrinsic-model-a
+      - name: Identify Value-owned economic residual
+        run: |
+          python scripts/run_value_owned_economic_residual_identification.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --dynastyprocess-repo artifacts/dynastyprocess-data \
+            --output-dir artifacts/multiyear-intrinsic-model-a
       - name: Verify repository tests
         run: |
           python -m pip install -e '.[dev,web]'
@@ -139,5 +147,11 @@ jobs:
             artifacts/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv
             artifacts/multiyear-intrinsic-model-a/within_player_trajectory_innovation_adjustments.csv
             artifacts/multiyear-intrinsic-model-a/within_player_trajectory_level_plus_innovation_adjustments.csv
+            artifacts/multiyear-intrinsic-model-a/value_residual_identification_results.json
+            artifacts/multiyear-intrinsic-model-a/value_residual_identification_report.md
+            artifacts/multiyear-intrinsic-model-a/value_residual_identification_rows.csv
+            artifacts/multiyear-intrinsic-model-a/value_residual_fold_diagnostics.csv
+            artifacts/multiyear-intrinsic-model-a/value_residual_model_b_rows.csv
+            artifacts/multiyear-intrinsic-model-a/value_residual_model_b_gammas.csv
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
