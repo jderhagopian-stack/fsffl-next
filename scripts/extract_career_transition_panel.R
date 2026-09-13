@@ -35,6 +35,9 @@ stats_points <- pick_col(stats, c("fantasyPoints", "fantasy_points", "fantasy_po
 players_id <- pick_col(players, c("gsis_id", "player_id"))
 birth_col <- pick_col(players, c("birth_date", "birthdate", "date_of_birth"))
 entry_col <- pick_col(players, c("rookie_season", "entry_year", "draft_year"), required = FALSE)
+draft_year_col <- pick_col(players, c("draft_year"), required = FALSE)
+draft_round_col <- pick_col(players, c("draft_round", "draft_round_number"), required = FALSE)
+draft_pick_col <- pick_col(players, c("draft_pick", "draft_number", "draft_pick_number"), required = FALSE)
 
 base <- data.frame(
   player_id = as.character(stats[[stats_id]]),
@@ -50,8 +53,6 @@ base <- base[
   , drop = FALSE
 ]
 
-# This historical object should already be one regular-season row per player-season.
-# Fail loudly rather than silently choosing among duplicates.
 key <- paste(base$player_id, base$season, sep = "|")
 if (anyDuplicated(key)) {
   dupes <- unique(key[duplicated(key)])
@@ -68,6 +69,9 @@ if (!is.null(entry_col)) {
 } else {
   identity$entry_season <- NA_integer_
 }
+identity$draft_year <- if (!is.null(draft_year_col)) suppressWarnings(as.integer(players[[draft_year_col]])) else NA_integer_
+identity$draft_round <- if (!is.null(draft_round_col)) suppressWarnings(as.integer(players[[draft_round_col]])) else NA_integer_
+identity$draft_pick <- if (!is.null(draft_pick_col)) suppressWarnings(as.integer(players[[draft_pick_col]])) else NA_integer_
 identity <- identity[!is.na(identity$player_id) & nzchar(trimws(identity$player_id)), , drop = FALSE]
 identity <- identity[!duplicated(identity$player_id), , drop = FALSE]
 
@@ -79,14 +83,9 @@ base$experience_basis <- ifelse(!is.na(base$entry_season), "player_entry_season"
 base$entry_season_used <- ifelse(!is.na(base$entry_season), base$entry_season, base$first_observed_season)
 base$experience_years <- pmax(0L, base$season - base$entry_season_used)
 
-# Season age is measured at September 1 because this calibration is intended to
-# roll preseason/full-season football forecasts into the next season.
 season_date <- as.Date(sprintf("%d-09-01", base$season))
 base$age_years <- as.numeric(season_date - base$birth_date) / 365.2425
 
-# Prior-production percentile is empirical within each position-season and is
-# retained as a continuous feature; later calibration can choose data-supported
-# pooling rather than hardcoding a production cutoff here.
 base$prior_production_percentile <- NA_real_
 groups <- split(seq_len(nrow(base)), paste(base$season, base$position, sep = "|"))
 for (idx in groups) {
@@ -109,7 +108,8 @@ panel$age_year_floor <- ifelse(is.na(panel$age_years), NA_integer_, floor(panel$
 keep <- c(
   "player_id", "season", "position", "fantasy_points", "next_fantasy_points",
   "survived_next_season", "age_years", "age_year_floor", "experience_years",
-  "experience_basis", "is_rookie_cohort", "prior_production_percentile"
+  "experience_basis", "is_rookie_cohort", "prior_production_percentile",
+  "draft_year", "draft_round", "draft_pick"
 )
 panel <- panel[, keep, drop = FALSE]
 panel <- panel[order(panel$season, panel$position, panel$player_id), ]
@@ -124,5 +124,6 @@ cat("Seasons:", min(panel$season), "through", max(panel$season), "\n")
 cat("Positions:", paste(sort(unique(panel$position)), collapse = ", "), "\n")
 cat("Rows with known age:", sum(!is.na(panel$age_years)), "of", nrow(panel), "\n")
 cat("Rows using explicit player entry season:", sum(panel$experience_basis == "player_entry_season"), "of", nrow(panel), "\n")
+cat("Rows with draft pick evidence:", sum(!is.na(panel$draft_pick)), "of", nrow(panel), "\n")
 cat("Next-season survival rate:", round(mean(panel$survived_next_season), 4), "\n")
 print(tail(coverage, 20))
