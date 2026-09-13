@@ -11,9 +11,11 @@ from fsffl.forecast.intrinsic_v1 import (
 from fsffl.forecast.models import ForecastDistribution
 from fsffl.state.models import PlayerState, PlayerStatus, Position, Provenance
 from fsffl.value.intrinsic_v2 import (
+    INTRINSIC_CALIBRATION_VERSION,
     INTRINSIC_DISPLAY_SCALE_VERSION,
     INTRINSIC_TERMINAL_MODEL_VERSION,
     INTRINSIC_VALUE_V2_VERSION,
+    IntrinsicV2EvidenceState,
     estimate_intrinsic_value_v2,
     intrinsic_display_value,
 )
@@ -67,22 +69,28 @@ def test_fundamental_value_includes_post_y3_continuation():
     assert estimate.raw_terminal_value > 0
     assert estimate.raw_fundamental_career_value > estimate.raw_discounted_y1_y3
     assert estimate.terminal.model_version == INTRINSIC_TERMINAL_MODEL_VERSION
+    assert estimate.terminal.calibration_version == INTRINSIC_CALIBRATION_VERSION
 
 
-def test_pedigree_is_residual_terminal_information_not_forecast_replacement():
+def test_pedigree_is_residual_value_after_forecast_not_terminal_replacement():
     path = _path(Position.RB)
     early = estimate_intrinsic_value_v2(player_path=path, player_state=_state(draft_number=20))
     late = estimate_intrinsic_value_v2(player_path=path, player_state=_state(draft_number=220))
     assert early.raw_discounted_y1_y3 == late.raw_discounted_y1_y3
-    assert early.raw_terminal_value > late.raw_terminal_value
+    assert early.raw_terminal_value == late.raw_terminal_value
+    assert early.terminal.pedigree_forecast_explained == late.terminal.pedigree_forecast_explained
+    assert early.terminal.pedigree_residual_value > late.terminal.pedigree_residual_value
     assert early.fundamental_value > late.fundamental_value
 
 
-def test_missing_pedigree_uses_governed_position_baseline_not_zero():
+def test_missing_pedigree_is_neutral_and_explicitly_partial_not_known_undrafted():
     estimate = estimate_intrinsic_value_v2(player_path=_path(Position.TE), player_state=_state())
     assert estimate.raw_terminal_value > 0
-    assert estimate.terminal.pedigree_band is None
+    assert estimate.terminal.pedigree_score is None
     assert estimate.terminal.pedigree_residual_value == 0
+    assert estimate.residual_fundamental_value == 0
+    assert estimate.evidence_state == IntrinsicV2EvidenceState.PARTIAL
+    assert "no residual pedigree adjustment is fabricated" in estimate.evidence_note
 
 
 def test_positive_developmental_forecast_has_nonzero_asset_value():
@@ -94,13 +102,16 @@ def test_positive_developmental_forecast_has_nonzero_asset_value():
     assert estimate.display_value > 0
 
 
-def test_display_scale_is_strictly_monotone_and_bounded():
-    inputs = (0.0, 1.0, 10.0, 25.0, 50.0, 100.0, 170.0, 300.0)
+def test_display_scale_is_strictly_monotone_across_reference_tiers_and_bounded():
+    inputs = (0.0, 2.54, 11.48, 27.05, 46.87, 65.97, 92.31, 120.44, 200.0, 350.0)
     values = [intrinsic_display_value(value) for value in inputs]
     assert values[0] == 0
     assert values == sorted(values)
     assert len(set(values)) == len(values)
     assert all(0 <= value <= 10_000 for value in values)
+    assert 7900 <= intrinsic_display_value(65.97299494625445) <= 8100
+    assert 9400 <= intrinsic_display_value(120.44077383478454) <= 9600
+    assert intrinsic_display_value(350.0) < 10_000
 
 
 def test_versioning_and_determinism_are_explicit():
@@ -110,6 +121,7 @@ def test_versioning_and_determinism_are_explicit():
     second = estimate_intrinsic_value_v2(player_path=path, player_state=state)
     assert first == second
     assert first.model_version == INTRINSIC_VALUE_V2_VERSION
+    assert first.calibration_version == INTRINSIC_CALIBRATION_VERSION
     assert first.display_scale_version == INTRINSIC_DISPLAY_SCALE_VERSION
 
 
@@ -119,3 +131,25 @@ def test_player_state_preserves_optional_pit_career_and_pedigree_evidence():
     assert state.draft_year == 2024
     assert state.draft_round == 2
     assert state.draft_number == 42
+
+
+def test_uncertainty_changes_uncertainty_not_base_career_mean():
+    low = estimate_intrinsic_value_v2(
+        player_path=_path(Position.WR, means=(100, 90, 80), sds=(5, 5, 5)),
+        player_state=_state(),
+    )
+    high = estimate_intrinsic_value_v2(
+        player_path=_path(Position.WR, means=(100, 90, 80), sds=(50, 50, 50)),
+        player_state=_state(),
+    )
+    assert low.raw_fundamental_career_value == high.raw_fundamental_career_value
+    assert low.fundamental_stddev < high.fundamental_stddev
+
+
+def test_no_market_team_or_replacement_input_is_required():
+    estimate = estimate_intrinsic_value_v2(
+        player_path=_path(Position.QB, means=(250, 230, 205), sds=(30, 40, 50)),
+        player_state=_state(draft_number=10),
+    )
+    assert estimate.fundamental_value > 0
+    assert estimate.display_value > 0
