@@ -14,10 +14,13 @@ _TARGET_PATHS = frozenset(
         "/api/product-context",
         "/api/my-team",
         "/api/opportunities/workspace",
+        "/api/opportunities/workspace/quick",
         "/api/opportunities/trade",
         "/api/trade-center/browser",
+        "/api/trade-center/quick",
         "/api/trade-center/analyze",
         "/api/trade-center/simulate",
+        "/api/trade-center/frontier/quick",
         "/api/trade-center/frontier",
     }
 )

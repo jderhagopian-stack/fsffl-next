@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+from time import monotonic
 from typing import Any, Callable
 
 from fsffl.forecast.models import ForecastHorizon
@@ -34,6 +36,7 @@ from .trade_value_adapter import cardinal_market_profiles
 
 SimulationLoader = Callable[[Any, LiveForecastEvidence], LiveSimulationAnalyticsResult]
 _PRODUCT_MODEL_VERSION = "next8-post-trade-simulation-v9:decision-completeness-fail-closed"
+_logger = logging.getLogger("uvicorn.error")
 
 
 def _utility_for_team(result: LiveSimulationAnalyticsResult, team_id: str):
@@ -71,14 +74,14 @@ def build_post_trade_simulation_comparison(
 ) -> dict[str, object]:
     """Compare baseline and legal changed-roster outcomes and produce NEXT-5 disposition.
 
-    Simulation remains authoritative for competitive outcomes. NEXT-5 consumes the
-    before/after Team Utility vectors, cardinal market economics, actual mandatory
-    cut cost and the bounded package-economics guard. Behavioral Intelligence may
-    add a directional fit inference for the counterparty, but cannot alter Value,
+    Simulation remains authoritative for competitive outcomes. Behavioral
+    Intelligence may add directional fit evidence but cannot alter Value,
     Simulation, materiality, negotiation feasibility or disposition. Exact repeated
-    changed States may reuse the prior authoritative Simulation result.
+    or concurrent identical changed States may reuse/share the same authoritative
+    Simulation result; no lower-fidelity result is introduced.
     """
 
+    total_started = monotonic()
     league_state = runtime.league_state
     forecast_evidence = runtime.forecast_evidence
     baseline = runtime.simulation_analytics
@@ -113,11 +116,13 @@ def build_post_trade_simulation_comparison(
         market_values=market_values,
     )
     legal_after = roster_resolution.league_state
+    prepared = monotonic()
     changed, cache_hit = run_cached_scenario_simulation(
         legal_after,
         forecast_evidence,
         simulation_loader=simulation_loader,
     )
+    simulated = monotonic()
 
     baseline_a = _utility_for_team(baseline, side_a_id)
     baseline_b = _utility_for_team(baseline, side_b_id)
@@ -224,6 +229,16 @@ def build_post_trade_simulation_comparison(
         focal_team_id=focal_team_id,
         counterparty_profile=counterparty_profile,
         focal_owner_id=focal_profile.owner_id if focal_profile is not None else None,
+    )
+    postprocessed = monotonic()
+    _logger.info(
+        "FSFFL post-trade Simulation phases preparation=%.3fs simulation_or_reuse=%.3fs postprocessing=%.3fs total=%.3fs cache_hit=%s state=%s",
+        prepared - total_started,
+        simulated - prepared,
+        postprocessed - simulated,
+        postprocessed - total_started,
+        cache_hit,
+        legal_after.state_id,
     )
 
     return {
