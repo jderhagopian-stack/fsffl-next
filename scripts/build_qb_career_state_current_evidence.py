@@ -5,13 +5,13 @@ from __future__ import annotations
 This is an offline build step. It uses only nflverse football/draft identity data and
 writes the prior-season role features required by the already-validated challenger.
 The production runtime consumes the compact artifact and never downloads historical
-stats on a request path.
+stats on a request path. Evidence is keyed by GSIS identity; live State preserves
+that provider identity from the Sleeper player payload when available.
 """
 
 import argparse
 import csv
 import json
-import math
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
@@ -61,32 +61,27 @@ def rank_percentiles(items: list[tuple[str, float]]) -> dict[str, float]:
     return out
 
 
-def player_metadata(cache: Path) -> tuple[dict[str, dict], dict[str, str]]:
+def player_metadata(cache: Path) -> dict[str, dict]:
     path = download(PLAYERS_URL, cache / "players.csv")
     by_gsis: dict[str, dict] = {}
-    sleeper_by_gsis: dict[str, str] = {}
     with path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        for raw in reader:
+        for raw in csv.DictReader(handle):
             gsis = str(raw.get("gsis_id") or raw.get("player_id") or "").strip()
             if not gsis:
                 continue
-            sleeper = str(raw.get("sleeper_id") or "").strip()
             pick = safe_float(raw.get("draft_number") or raw.get("draft_pick") or raw.get("draft_overall"), 0.0)
             rnd = safe_float(raw.get("draft_round"), 0.0)
             undrafted = pick <= 0 and rnd <= 0
             if pick <= 0 and rnd > 0:
                 pick = min(260.0, (rnd - 1.0) * 32.0 + 16.0)
             pick_pct = 0.0 if undrafted else max(0.0, min(1.0, 1.0 - (pick - 1.0) / 259.0))
-            rookie = safe_float(raw.get("rookie_year") or raw.get("entry_year") or raw.get("draft_year"), 0.0)
+            rookie = safe_float(raw.get("rookie_year") or raw.get("rookie_season") or raw.get("entry_year") or raw.get("draft_year"), 0.0)
             by_gsis[gsis] = {
                 "draft_pick_pct": pick_pct,
                 "rookie_year": int(rookie) if rookie > 0 else None,
                 "display_name": str(raw.get("display_name") or raw.get("full_name") or raw.get("football_name") or "").strip(),
             }
-            if sleeper:
-                sleeper_by_gsis[gsis] = sleeper
-    return by_gsis, sleeper_by_gsis
+    return by_gsis
 
 
 def season_qb_stats(season: int, cache: Path) -> dict[str, dict[str, float]]:
@@ -124,15 +119,12 @@ def main() -> None:
     args = parser.parse_args()
     evaluation_season = args.evaluation_season
     prior_season = evaluation_season - 1
-    metadata, sleeper_by_gsis = player_metadata(args.cache)
+    metadata = player_metadata(args.cache)
 
-    # Established-starter seasons use the same historical definition as research:
-    # top 32 by pass attempts in that season with attempts > 0.
     established_count: defaultdict[str, int] = defaultdict(int)
     prior2: dict[str, dict[str, float]] = {}
     prior1: dict[str, dict[str, float]] = {}
-    start_year = 1999
-    for season in range(start_year, prior_season + 1):
+    for season in range(1999, prior_season + 1):
         rows = season_qb_stats(season, args.cache)
         ranked = sorted(rows.items(), key=lambda kv: (-kv[1].get("attempts", 0.0), kv[0]))
         for pid, row in ranked[:32]:
@@ -145,9 +137,6 @@ def main() -> None:
 
     evidence: dict[str, dict] = {}
     for gsis, row in prior1.items():
-        sleeper = sleeper_by_gsis.get(gsis)
-        if not sleeper:
-            continue
         prev = prior2.get(gsis)
         opp = float(row.get("opportunity_pct", 0.0))
         games = float(row.get("games_pct", 0.0))
@@ -161,8 +150,7 @@ def main() -> None:
         meta = metadata.get(gsis, {})
         rookie_year = meta.get("rookie_year")
         experience = max(0, evaluation_season - int(rookie_year)) if rookie_year else 0
-        evidence[f"sleeper:player:{sleeper}"] = {
-            "gsis_id": gsis,
+        evidence[gsis] = {
             "display_name": meta.get("display_name", ""),
             "experience": experience,
             "draft_pick_pct": float(meta.get("draft_pick_pct", 0.0)),
@@ -177,6 +165,7 @@ def main() -> None:
     payload = {
         "artifact_version": ARTIFACT_VERSION,
         "model_version": MODEL_VERSION,
+        "identity_key": "gsis_id",
         "evaluation_season": evaluation_season,
         "feature_cutoff_season": prior_season,
         "sources": {
