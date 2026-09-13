@@ -1,58 +1,71 @@
 # FSFFL Intrinsic Value v1 — Production Decision
 
-Status: **PRODUCTION CANDIDATE — PROMOTE V1 AFTER MANAGEMENT REVIEW**  
+Status: **PRODUCTION CANDIDATE — READY FOR MANAGEMENT MERGE REVIEW**  
 Production PR: #133  
-Base main: `f38e2f029a0d9563986635012336434a3f9beb63`
+Base main validated: `f38e2f029a0d9563986635012336434a3f9beb63`
 
 ## Decision
 
-FSFFL should no longer wait for a theoretically perfect universal Year-2/Year-3 Forecast before exposing an Intrinsic Value coordinate. The best currently supported v1 combines the authoritative current-season Forecast with a frozen, position/horizon-aware deep-horizon policy and the transparent Model A economic transform.
+Promote FSFFL Intrinsic Value v1 after final green CI and explicit management approval. The production candidate combines authoritative current-season Forecast, the frozen position/horizon deep-Forecast policy, the validated Forecast-owned QB career-state model, and transparent Model A replacement-adjusted economics.
 
-This is intentionally a v1. It is versioned, bounded, market-independent, and explicit about lower-confidence horizons.
+The candidate remains market-independent, versioned, bounded, and explicit about evidence strength. No Model B, market anchor, named-player override, QB premium, or Team Utility change is included.
 
 ## Frozen Forecast-input policy
 
 | Position | Year 1 | Year 2 | Year 3 |
 | --- | --- | --- | --- |
-| QB | authoritative current | conservative carry-forward | conservative carry-forward |
+| QB | authoritative current | QB career-state probability × Y1 conditional production when governed evidence is valid; otherwise carry fallback | same |
 | RB | authoritative current | bounded career transition when governed evidence is available | bounded career transition when governed evidence is available |
 | WR | authoritative current | conservative carry-forward | bounded career transition when governed evidence is available |
 | TE | authoritative current | bounded career transition when governed evidence is available | bounded career transition when governed evidence is available |
 
-When a horizon calls for bounded transition evidence but Forecast does not have governed evidence for that player/state, Forecast does **not** invent a transition. It falls that horizon back to conservative Year-1 carry-forward and records low evidence strength.
+Missing, stale, ambiguous, or incomplete deep-horizon evidence fails closed to conservative carry-forward. The same contract applies to every player.
 
-The same rule applies to every player. There is no elite-player, QB, market-rank, team-fit, contender, owner-preference, or player-name override.
+## QB career-state contract
 
-For carry-forward horizons, the mean stays at the authoritative Year-1 mean. Uncertainty is not allowed to contract: if a governed bounded path exists diagnostically, v1 uses the larger of current and bounded-path standard deviation. Carry-forward horizons do not claim a cumulative survival estimate that their mean does not actually use.
+The QB target is a meaningful starting role, defined as **at least 200 pass attempts in the target NFL season**.
 
-## Why the methods differ by position/horizon
+The production model is a single pooled standardized maximum-likelihood logistic regression with a horizon indicator and these features: age, NFL experience, draft-pick percentile, prior games participation, prior passing-opportunity share, two-year role mean, two-year role volatility, established-starter seasons, current production percentile, and forecast horizon.
 
-The single bounded materializer was not uniformly superior. On the 9,975-path governed historical panel:
+It does not use an elite label, market/dynasty value, QB-premium rule, named-player override, contract feature, or a second conditional-production model. Conditional starter production remains the authoritative Year-1 mean.
 
-- QB bounded transitions were worse than carry-forward at both Y2 and Y3, including materially worse elite-QB results.
-- RB bounded transitions improved both Y2 and Y3.
-- WR bounded transitions were worse at Y2 but better at Y3.
-- TE bounded transitions were better at both horizons.
+Versions:
+- QB model: `qb-career-state-logit-v1`;
+- QB evidence: `qb-career-state-evidence-v1`;
+- Forecast policy: `intrinsic-v1-forecast-policy-2`;
+- Intrinsic model: `intrinsic-value-v1`;
+- replacement context: `marginal-lineup-opportunity-v1`;
+- raw scale: `fsffl_intrinsic_surplus` version `1`.
 
-The v1 policy therefore selects between only the already-tested bounded materializer and conservative carry-forward. It does not introduce a fourth Forecast family.
+## Historical validation
 
-## Hybrid Forecast validation
+The career-state challenger improves the QB carry-forward baseline materially:
 
-Frozen hybrid versus pure carry-forward on 9,975 complete historical paths:
+- all-QB cumulative MAE: **127.773 → 107.884** (~15.6% better);
+- all-QB Y2 MAE: **64.701 → 57.162** (~11.7% better);
+- all-QB Y3 MAE: **74.221 → 62.019** (~16.4% better);
+- elite-QB cumulative MAE: **187.841 → 158.933** (~15.4% better);
+- all-QB cumulative Spearman: **0.7086 → 0.7240**;
+- deployment-shaped chronological folds: **6/6 wins**;
+- probability/trajectory bound violations: **0**.
 
-| Metric | Carry-forward | Hybrid v1 | Change |
-| --- | ---: | ---: | ---: |
-| Year-2 MAE | 35.301 | **34.683** | **1.75% better** |
-| Year-3 MAE | 36.251 | **32.942** | **9.13% better** |
-| Cumulative MAE | 89.469 | **88.439** | **1.15% better** |
-| Year-2 Spearman | — | **0.530** | stable |
-| Year-3 Spearman | — | **0.470** | stable |
+Calibration is strong: Y2 Brier **0.1203** versus 0.2410 baseline with ROC-AUC **0.910** and ECE **0.046**; Y3 Brier **0.1384** versus 0.2285 with ROC-AUC **0.875** and ECE **0.049**.
 
-Hybrid cumulative error improved versus carry-forward in 10/18 historical folds. The worst fold was about 2.9% worse. This is less universal than the downstream Model A result and is why deep-horizon evidence is surfaced as confidence rather than presented as equally strong Forecast truth.
+## Effect on Intrinsic Value v1
 
-The bounded-materializer research already demonstrated approximately 81.5% Y2 and 82.3% Y3 coverage for nominal 80% intervals, with zero structural bound violations. V1 retains production's already-correct recursive uncertainty propagation.
+On 9,430 out-of-time player/fold observations:
 
-## Model A economic calculation
+- affine control MAE: **26.968**;
+- prior Intrinsic v1 MAE: **20.307**;
+- QB-integrated Intrinsic v1 MAE: **19.981**;
+- improvement versus affine: **25.9%**;
+- incremental improvement versus prior Intrinsic v1: **1.6%**.
+
+QB MAE improves from **56.932 to 54.350** and QB Spearman from **0.521 to 0.565**. RB, WR, and TE outputs are numerically unchanged by the QB integration.
+
+The prior disclosed elite-QB carry-forward weakness is therefore **superseded by the validated QB career-state integration**. Elite-QB forecasting is still not perfect, but it is no longer evidence for retaining generic QB carry-forward as the v1 production policy.
+
+## Model A economics
 
 For each horizon:
 
@@ -62,131 +75,67 @@ Then:
 
 `raw intrinsic = 1.00 × surplus_Y1 + 0.85 × surplus_Y2 + 0.70 × surplus_Y3`
 
-The raw coordinate is **weighted expected fantasy-point surplus above replacement**. It is not normalized to market value.
+The raw coordinate is weighted expected fantasy-point surplus above replacement. Replacement is determined from actual league lineup structure: fixed position starters, then FLEX, then SUPERFLEX. Value does not apply QB survival again because Forecast already incorporates meaningful-starter probability in the expected QB mean.
 
-Replacement is determined from the league's actual lineup structure: fixed position starters, then FLEX, then SUPERFLEX. This is the only scarcity mechanism. Survival is not multiplied again in Value because bounded Forecast means already incorporate it.
+## Current-player safety shadows
 
-## Affine versus Intrinsic v1
+A frozen live shadow workflow tested Josh Allen, Drake Maye, Dak Prescott, Daniel Jones, Malik Willis, and Lamar Jackson. All six produced valid governed career-state paths; all satisfied `0 <= P(Y3) <= P(Y2) <= 1`; no named-player tuning followed inspection.
 
-The hybrid Forecast policy was reconstructed through the same Model A economics on 9,430 chronological out-of-time player/fold observations across 17 holdouts.
+Representative P(Y2)/P(Y3):
 
-| Model | MAE | Relative to affine |
-| --- | ---: | ---: |
-| Affine production control | 37.891 | — |
-| Carry-forward Model A | 29.833 | 21.3% better |
-| Pure bounded Model A | 29.509 | 22.1% better |
-| **Hybrid Intrinsic v1** | **28.685** | **24.3% better** |
+- Josh Allen: **0.945 / 0.922**;
+- Drake Maye: **0.927 / 0.897**;
+- Dak Prescott: **0.864 / 0.814**;
+- Daniel Jones: **0.627 / 0.536**;
+- Malik Willis: **0.361 / 0.280**;
+- Lamar Jackson: **0.915 / 0.881**.
 
-Hybrid Intrinsic v1 beat affine in **17/17 chronological holdouts**. Its weakest fold still improved by about 13.8%.
+The backup/uncertain example remained at zero Intrinsic surplus in the test replacement context, showing that nonzero role probability does not mechanically create franchise value.
 
-The absolute MAEs in this reconstruction differ from the canonical PR #131 Model A benchmark because the hybrid comparison uses the bounded-materializer universe and reconstructed replacement panel. The key result is the stable relative advantage, which is essentially the same as canonical Model A's ~24.7% improvement.
-
-## Position results
-
-Hybrid Model A versus affine on the out-of-time reconstruction:
-
-| Position | n | Hybrid MAE | Affine MAE | Relative change |
-| --- | ---: | ---: | ---: | ---: |
-| QB | 1,106 | 89.944 | 95.904 | **6.2% better** |
-| RB | 2,922 | 11.820 | 28.531 | **58.6% better** |
-| WR | 3,716 | 27.834 | 29.898 | **6.9% better** |
-| TE | 1,686 | 18.806 | 29.967 | **37.2% better** |
-
-### Elite-QB limitation
-
-Elite QB remains the clearest limitation. On 260 elite-QB observations, hybrid Model A MAE was approximately **164.2 versus 161.0 affine**, about 2% worse, with rank correlation around 0.24.
-
-V1 does **not** repair this with a QB premium or superstar rule. Instead, QB Y2/Y3 use conservative carry-forward and therefore receive **LOW** deep-horizon evidence/confidence. This is treated as a known limitation rather than a blocker because:
-
-1. the failed bounded transition is no longer used for QB means;
-2. overall QB error still improves versus affine;
-3. overall Model A improvement is large and chronologically stable;
-4. the weakness is explicit and versioned rather than hidden;
-5. future QB Forecast improvements can replace the horizon policy without changing Value architecture.
-
-## Structural scarcity
-
-The reconstructed SF-versus-1QB check remains structurally correct: QB intrinsic surplus gains materially in Superflex while non-QB values are essentially unchanged. No QB premium is applied; the effect is created by marginal lineup opportunity.
+Full current-player values, provenance, historical metrics, calibration, artifact IDs, limitations, and readiness evidence are preserved in `docs/research/QB_CAREER_STATE_INTRINSIC_V1_READINESS.md`.
 
 ## Confidence / completeness
 
-Forecast horizon evidence is categorical rather than a fake probability:
-
 - **HIGH** — authoritative current-season Forecast.
-- **MODERATE** — governed bounded career-transition output.
-- **LOW** — conservative carry-forward or bounded-evidence fallback.
+- **MODERATE** — governed bounded career transition or governed QB career-state evidence.
+- **LOW** — conservative carry-forward/fallback.
 
-Intrinsic v1 confidence is deliberately conservative: if either deep horizon is LOW, the estimate is LOW; two governed bounded horizons are MODERATE. This makes QB values LOW confidence in v1 and also makes WR values LOW because Y2 intentionally carries forward.
+QB deep horizons now receive MODERATE evidence when a valid career-state artifact row is available. Missing/stale evidence falls back to LOW carry-forward rather than fabricating a probability.
 
-The estimate still exists. Low confidence means “useful estimate with weaker long-horizon evidence,” not “pretend no value can be produced.”
+## Authority boundaries
 
-## Uncertainty
+The candidate preserves the governed architecture:
 
-V1 exposes a raw standard deviation using a transparent local linearization of player and replacement Forecast uncertainty on horizons where expected surplus is positive. It does not create a new survival multiplier, scarcity multiplier, or market-derived confidence term.
+- Forecast owns QB career-state inference and evidence provenance;
+- Value consumes Forecast and owns replacement economics;
+- Broad Market Value does not enter Intrinsic;
+- League Market Value remains a separate nullable coordinate;
+- Team Utility remains downstream;
+- strategic posture remains separate from calculated competitive state;
+- no duplicate survival/career-state calculation exists in Value.
 
-No fake numeric confidence probability is emitted.
+## Operational behavior
 
-## Current-player behavior
+The QB evidence is a compact, season-scoped, versioned artifact built offline from prior football data. Runtime inference is a deterministic logistic calculation and lookup. There is no request-time historical scan, model fit, external historical provider dependency, database migration, or simulation.
 
-The production candidate is designed to accept today's authoritative Y1 Forecast immediately. Where the runtime supplies governed bounded career-transition points, the frozen position/horizon policy uses them. Where that evidence is not yet materialized for a current player, the same contract produces a complete v1 path through conservative carry-forward and records LOW evidence.
+Artifact/model version mismatches raise; stale seasons, missing age, unknown identity, and ambiguous identity fail closed. The 2026 artifact cannot silently serve a 2027 request.
 
-Representative policy behavior is therefore deterministic:
+## Validation evidence
 
-- elite / young / veteran QB: Y1 authoritative; Y2/Y3 carry; LOW confidence;
-- RB: Y1 authoritative; Y2/Y3 bounded if available, otherwise explicit carry fallback; MODERATE when both bounded;
-- WR: Y1 authoritative; Y2 carry; Y3 bounded if available; LOW confidence;
-- TE: Y1 authoritative; Y2/Y3 bounded if available; MODERATE when both bounded;
-- replacement-level players: same policy; Model A naturally produces zero or near-zero surplus when they do not clear replacement.
+- QB historical integration: workflow run `34761412908`, artifact `10318986847`, **PASS**.
+- Current-player shadows: workflow run `34758807311`, artifact `10318023067`, **PASS**.
+- Full CI at QB integration head `d0db2b3dcccb66fde3bd792cc42a6853569175c5`: run `34761415721`, **1,160 passed**, 2 unrelated dependency deprecation warnings.
 
-No current-player value was hand-tuned and no famous-player example was used to select the policy. The hosted beta remains on `f38e2f...`; PR #133 is not deployed or merged.
+## Known limitations
 
-## Raw versus display coordinate
+The evidence artifact must be regenerated/versioned for future seasons; conditional starter production remains the conservative Year-1 mean; the QB challenger does not create a new deep-horizon variance model; strict identity resolution can reduce coverage; and this work does not claim to solve League Market Value, owner behavior, trade acceptance, or Team Utility.
 
-V1 creates **no market-like display normalization**. The authoritative value is the raw weighted surplus coordinate on scale:
-
-- scale id: `fsffl_intrinsic_surplus`
-- version: `1`
-- units: weighted expected fantasy-point surplus above replacement.
-
-A later presentation-only monotone display coordinate may be added without changing the economics. Broad Market Value must never be used to anchor that transformation.
-
-## Three-value product contract
-
-The production candidate explicitly preserves separate nullable coordinates:
-
-- `broad_market_value`
-- `intrinsic_value`
-- `league_market_value`
-
-League Market Value remains unimplemented rather than being silently substituted with another coordinate. Team Utility remains downstream.
-
-Intrinsic v1 can also be converted into the repository's existing `IntrinsicDynastyValueEstimate` / `AssetValueProfile` contract on its own explicit ValueScale. That lets Decision consume the new intrinsic dimension without a new composite score or broad redesign.
-
-## Operational/versioning behavior
-
-Versions are explicit:
-
-- Forecast policy: `intrinsic-v1-forecast-policy-1`
-- Intrinsic model: `intrinsic-value-v1`
-- replacement context: `marginal-lineup-opportunity-v1`
-- raw scale: `fsffl_intrinsic_surplus` version `1`.
-
-Future evidence can replace QB deep-horizon treatment, bounded transition calibration, annual weights, or replacement calibration by versioning those components rather than redesigning the product.
-
-The current candidate adds deterministic in-process calculations and no external provider call, database migration, or expensive simulation. Cache keys that persist v1 estimates must include the intrinsic model version, Forecast policy/base model versions, replacement-context version, league scoring/lineup state, and evaluation cutoff.
+Those limitations are explicit and do not justify a market anchor, manual QB premium, player override, or new Value family for v1.
 
 ## Production recommendation
 
-**PROMOTE V1**, subject to management review and clean PR validation.
+**MERGE PR #133 once final CI is green and management explicitly approves the merge.**
 
-Why:
+The QB career-state addition materially improves QB and elite-QB trajectory accuracy, improves integrated Intrinsic v1, leaves non-QB outputs unchanged, passes current-player safety shadows, remains lightweight operationally, and preserves all authority boundaries.
 
-1. it is materially better than the affine production control;
-2. it wins all 17 comparable chronological Model A holdouts;
-3. it removes the failed generic QB transition rather than hiding that failure;
-4. it is transparent and economically interpretable;
-5. it exposes weak horizons as LOW confidence instead of refusing to estimate value;
-6. it preserves Market / Intrinsic / League Market / Team Utility boundaries;
-7. it is explicitly versioned so future Forecast improvements can replace v1 inputs cleanly.
-
-Known limitations are not being declared solved. In particular, elite-QB long-horizon economics remain weaker than desired and appreciation/decline remains an imperfect diagnostic. V1 ships those limitations honestly rather than adding unsupported complexity.
+PR #133 must remain unmerged until management gives explicit approval.
