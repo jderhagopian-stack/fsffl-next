@@ -4,7 +4,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='20260913-fundamental-intrinsic-v3';
+  const VERSION='20260913-fundamental-intrinsic-v4';
   const TAB='value_lens';
   const MARKET_SCALE='dynasty-market-percentile';
   const MARKET_CARDINAL_SCALE='fsffl-market-cardinal';
@@ -41,15 +41,13 @@
     return{kind:'aligned',label:'Roughly aligned',copy:'FSFFL Intrinsic and the broad market place this player in a similar part of their respective value distributions.'};
   }
 
-  function mainDriver(estimate){
-    const horizons=(estimate?.horizons||[]).filter(row=>finite(row?.weighted_mean));
-    const lead=horizons.length?[...horizons].sort((a,b)=>b.weighted_mean-a.weighted_mean)[0]:null;
+  function mainDriver(estimate,presentation){
+    if(presentation?.key_driver)return presentation.key_driver;
     const terminal=estimate?.terminal;
     if(terminal&&finite(terminal.continuation_value)){
-      const pedigree=terminal.pedigree_band?` Draft pedigree is ${terminal.pedigree_band} and contributes only through its validated residual effect on post-Year-3 continuation.`:' No pedigree residual is applied because governed pedigree evidence is unavailable.';
-      return `Years 1–3 contribute ${Math.round(estimate.raw_discounted_y1_y3||0)} discounted production units; the governed post-Year-3 continuation contributes ${Math.round(terminal.continuation_value)}.${pedigree}`;
+      const pedigree=finite(terminal.pedigree_residual_value)?` Residual draft pedigree contributes ${terminal.pedigree_residual_value>=0?'+':''}${terminal.pedigree_residual_value.toFixed(1)} fundamental-value units after removing the portion explained by Forecast.`:' Exact draft-pick pedigree is unavailable, so no residual adjustment is fabricated.';
+      return `Years 1–3 contribute ${Math.round(estimate.raw_discounted_y1_y3||0)} discounted football units; governed post-Year-3 continuation contributes ${Math.round(terminal.continuation_value)}.${pedigree}`;
     }
-    if(lead)return`Year ${lead.horizon_year} is the largest near-term contributor to the governed career-value profile.`;
     return'Long-horizon contribution detail is unavailable.';
   }
 
@@ -57,14 +55,15 @@
     const hasIntrinsic=(payload?.estimates||[]).length>0;
     return `<div class="value-lens-coordinates" aria-label="FSFFL value coordinates">
       <article><span>Broad Market Value</span><strong>What the wider dynasty market prices</strong><p>Primary magnitude uses the governed 0–10,000 market-cardinal coordinate; market percentile remains secondary context.</p><small>External market evidence · separate from FSFFL fundamentals</small></article>
-      <article class="primary"><span>FSFFL Intrinsic Value</span><strong>${hasIntrinsic?'What FSFFL believes the dynasty asset is fundamentally worth':'Currently unavailable'}</strong><p>Independent long-term football value: governed Y1–Y3 Forecast distributions plus an empirically calibrated post-Y3 continuation value.</p><small>${hasIntrinsic?`Model ${esc(payload.model_version||'intrinsic-fundamental-career-value-v3')}`:'No substitute value is fabricated'}</small></article>
+      <article class="primary"><span>FSFFL Intrinsic Value</span><strong>${hasIntrinsic?'What FSFFL believes the dynasty asset is fundamentally worth':'Currently unavailable'}</strong><p>Independent long-term football value: governed Y1–Y3 Forecast distributions, calibrated post-Y3 continuation, and only validated residual fundamental evidence.</p><small>${hasIntrinsic?`Model ${esc(payload.model_version||'intrinsic-fundamental-career-value-v4')}`:'No substitute value is fabricated'}</small></article>
       <article class="unavailable"><span>League Market Value</span><strong>Not production-ready</strong><p>How this specific league appears to price the asset. It will remain a separate price coordinate.</p><small>Unavailable by design</small></article>
       <article><span>Team Utility</span><strong>What the asset does for this franchise</strong><p>Roster fit, lineup replacement, competitive timing and transaction consequences remain downstream.</p><small>Use Franchise Diagnosis and Trade Center</small></article>
     </div>`;
   }
 
   function rowHtml(row){
-    const cmp=row.comparison,estimate=row.estimate,available=!!estimate;
+    const cmp=row.comparison,estimate=row.estimate,presentation=row.presentation,available=!!estimate&&presentation?.availability!=='UNAVAILABLE';
+    const evidence=presentation?.evidence_state||estimate?.evidence_state||'unavailable';
     return `<details class="value-lens-player" data-signal="${cmp.kind}">
       <summary>
         <span class="value-lens-player-name"><strong>${esc(row.player.full_name)}</strong><small>${esc(row.player.position)}${finite(row.player.age_years)?` · age ${row.player.age_years}`:''}</small></span>
@@ -73,17 +72,17 @@
         <span class="value-lens-signal"><small>Read</small><strong>${esc(cmp.label)}</strong></span>
       </summary>
       <div class="value-lens-player-detail">
-        <div><span>Why this read</span><p>${esc(cmp.copy)}</p><p>${esc(available?mainDriver(estimate):'FSFFL Intrinsic is unavailable for this player; no fallback value is shown.')}</p></div>
-        <div><span>Confidence</span><strong>${esc(available?confidenceLabel(estimate.confidence):'Unavailable')}</strong><p>${estimate?.confidence==='low'?'Deep-horizon Forecast evidence is weaker, so use this as directional evidence rather than false precision.':available?'The estimate uses governed Forecast and historical continuation evidence; uncertainty remains explicit.':'No Intrinsic estimate is available.'}</p></div>
-        ${available?`<details class="value-lens-provenance"><summary>Evidence & provenance</summary><p><b>Displayed Intrinsic:</b> ${valueNumber(estimate.display_value)} / 10,000<br><b>Fundamental coordinate:</b> ${finite(estimate.fundamental_value)?estimate.fundamental_value.toFixed(1):'—'} normalized career units<br><b>Raw expected career value:</b> ${finite(estimate.raw_fundamental_career_value)?estimate.raw_fundamental_career_value.toFixed(1):'—'} discounted football units<br><b>Terminal model:</b> ${esc(estimate.terminal?.model_version||'—')}<br><b>Intrinsic model:</b> ${esc(estimate.model_version||'—')}<br><b>Forecast policy:</b> ${esc(estimate.forecast_policy_version||'—')}<br><b>Base Forecast:</b> ${esc(estimate.base_forecast_model_version||'—')}<br><b>As of:</b> ${esc(estimate.evaluation_as_of||'—')}</p></details>`:''}
+        <div><span>Why this read</span><p>${esc(cmp.copy)}</p><p>${esc(available?mainDriver(estimate,presentation):(presentation?.reason||'FSFFL Intrinsic is unavailable for this player; no fallback value is shown.'))}</p></div>
+        <div><span>Confidence</span><strong>${esc(available?confidenceLabel(estimate.confidence):'Unavailable')}</strong><p>${available?`Evidence state: ${esc(words(evidence))}. ${esc(presentation?.reason||estimate.evidence_note||'Uncertainty remains explicit.')}`:'No Intrinsic estimate is available.'}</p></div>
+        ${available?`<details class="value-lens-provenance"><summary>Evidence & provenance</summary><p><b>Displayed Intrinsic:</b> ${valueNumber(estimate.display_value)} / 10,000<br><b>Fundamental coordinate:</b> ${finite(estimate.fundamental_value)?estimate.fundamental_value.toFixed(1):'—'} fundamental units<br><b>Raw expected career production:</b> ${finite(estimate.raw_fundamental_career_value)?estimate.raw_fundamental_career_value.toFixed(1):'—'} discounted football units<br><b>Residual fundamental contribution:</b> ${finite(estimate.residual_fundamental_value)?estimate.residual_fundamental_value.toFixed(1):'—'}<br><b>Uncertainty:</b> ${finite(estimate.fundamental_stddev)?estimate.fundamental_stddev.toFixed(1):'—'} fundamental units<br><b>Terminal model:</b> ${esc(estimate.terminal?.model_version||'—')}<br><b>Calibration:</b> ${esc(estimate.calibration_version||'—')}<br><b>Intrinsic model:</b> ${esc(estimate.model_version||'—')}<br><b>Display scale:</b> ${esc(estimate.display_scale_version||'—')}<br><b>Forecast policy:</b> ${esc(estimate.forecast_policy_version||'—')}<br><b>Base Forecast:</b> ${esc(estimate.base_forecast_model_version||'—')}<br><b>As of:</b> ${esc(estimate.evaluation_as_of||'—')}</p></details>`:''}
       </div>
     </details>`;
   }
 
   function render(payload){
     const host=document.querySelector('[data-franchise-view="value_lens"]');if(!host)return;
-    const players=currentPlayers(),estimates=payload?.estimates||[],byId=new Map(estimates.map(row=>[row.player_id,row])),ranks=percentileMap(estimates),cardinals=marketCardinalMap();
-    const rows=players.map(player=>{const estimate=byId.get(player.player_id)||null,intrinsicRank=ranks.get(player.player_id)??null,marketRank=marketPercentile(player),marketValue=cardinals.get(player.player_id)??null;return{player,estimate,intrinsicRank,marketRank,marketValue,comparison:comparison(intrinsicRank,marketRank,!!estimate)}})
+    const players=currentPlayers(),estimates=payload?.estimates||[],byId=new Map(estimates.map(row=>[row.player_id,row])),fallbackRanks=percentileMap(estimates),presentById=new Map((payload?.players||[]).map(row=>[row.player_id,row])),cardinals=marketCardinalMap();
+    const rows=players.map(player=>{const estimate=byId.get(player.player_id)||null,presentation=presentById.get(player.player_id)||null,intrinsicRank=presentation?.percentile??fallbackRanks.get(player.player_id)??null,marketRank=marketPercentile(player),marketValue=cardinals.get(player.player_id)??null,available=!!estimate&&presentation?.availability!=='UNAVAILABLE';return{player,estimate,presentation,intrinsicRank,marketRank,marketValue,comparison:comparison(intrinsicRank,marketRank,available)}})
       .sort((a,b)=>{const ad=finite(a.intrinsicRank)&&finite(a.marketRank)?Math.abs(a.intrinsicRank-a.marketRank):-1,bd=finite(b.intrinsicRank)&&finite(b.marketRank)?Math.abs(b.intrinsicRank-b.marketRank):-1;return bd-ad||String(a.player.full_name).localeCompare(String(b.player.full_name))});
     const comparable=rows.filter(row=>row.estimate&&finite(row.intrinsicRank)&&finite(row.marketRank)),disagree=comparable.filter(row=>Math.abs(row.intrinsicRank-row.marketRank)>=.07).length;
     host.innerHTML=`<div class="value-lens-shell">
@@ -94,7 +93,7 @@
         <div class="value-lens-players">${rows.length?rows.map(rowHtml).join(''):'<p class="franchise-empty">No roster players are available for this franchise.</p>'}</div>
       </section>
       <section class="value-lens-actions"><div><strong>How to use this</strong><p>If FSFFL is higher than the broad market, investigate whether the market may be underpricing the football asset. If the market is higher, investigate what the market may be pricing that FSFFL fundamentals do not support. Finish the decision with acquisition cost, League Market and Team Utility.</p></div><button type="button" class="secondary-button" data-value-lens-market>Open Market</button><button type="button" class="secondary-button" data-value-lens-trade>Open Trade Center</button></section>
-      <details class="value-lens-methods"><summary>What exactly is FSFFL Intrinsic Value?</summary><p>Fundamental Intrinsic is a market-independent long-term dynasty asset coordinate. It discounts the governed Year 1–3 Forecast distributions and adds an empirically calibrated post-Year-3 continuation value. The continuation model was validated on point-in-time football evidence; only draft pedigree retained robust incremental information on the final long-horizon target, so separate age/experience bonuses are not layered on top of Forecast. Replacement surplus, Broad Market, League Market, Team Utility and owner behavior are not Intrinsic inputs.</p><p>The 0–10,000 number is a separate monotonic presentation normalization of that fundamental coordinate. It makes the coordinate readable beside Market Value; it does not train Intrinsic to market prices.</p></details>
+      <details class="value-lens-methods"><summary>What exactly is FSFFL Intrinsic Value?</summary><p>Fundamental Intrinsic is a market-independent long-term dynasty asset coordinate. It discounts the governed Year 1–3 Forecast distributions, adds an empirically calibrated post-Year-3 continuation value, then adds only residual draft-pedigree information that remains after conditioning on the complete Forecast mean/uncertainty vector. Chronological validation selected pedigree as the smallest stable cross-position residual bundle; survival remains primarily Forecast-owned and separate age/experience bonuses were not promoted. Replacement surplus, Broad Market, League Market, Team Utility and owner behavior are not Intrinsic inputs.</p><p>The 0–10,000 number is a separate monotonic normalization anchored to the frozen football-only Intrinsic distribution. It makes the coordinate readable beside Market Value; it does not train Intrinsic to market prices.</p></details>
     </div>`;
     host.querySelector('[data-value-lens-market]')?.addEventListener('click',()=>window.setRoute?.('opportunities'));
     host.querySelector('[data-value-lens-trade]')?.addEventListener('click',()=>window.setRoute?.('trade_center'));
