@@ -1,0 +1,54 @@
+name: QB Career State Intrinsic V1 Research
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/multiyear-intrinsic-value-study]
+    paths:
+      - 'scripts/run_qb_career_state_intrinsic_v1_research.py'
+      - 'scripts/run_career_persistence_feature_layer_research.py'
+      - 'scripts/run_career_persistence_feature_layer_research_v2.py'
+      - 'scripts/run_career_calibration.py'
+      - 'scripts/extract_career_transition_panel.R'
+      - '.github/workflows/qb-career-state-intrinsic-v1-research.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Extract governed career transition panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Install research dependency
+        run: python -m pip install 'numpy>=1.26,<3'
+      - name: Run frozen QB career-state challenger
+        run: |
+          python scripts/run_qb_career_state_intrinsic_v1_research.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/qb-career-state
+      - name: Verify repository tests
+        run: |
+          python -m pip install -e '.[dev,web]'
+          python -m pytest -q
+      - name: Upload QB career-state research artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qb-career-state-intrinsic-v1-research
+          path: |
+            artifacts/qb-career-state/qb_career_state_results.json
+            artifacts/qb-career-state/qb_career_state_report.md
+            artifacts/qb-career-state/qb_career_state_model.json
+            artifacts/qb-career-state/qb_career_state_holdout_predictions.csv
+            artifacts/next2-career/career_transition_coverage.csv
+          retention-days: 14
