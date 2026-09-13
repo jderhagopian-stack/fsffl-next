@@ -15,6 +15,8 @@
   function stableDraft(){try{if(typeof tradeDraftPayload!=='function')return null;const p=tradeDraftPayload();return{counterparty_team_id:p.counterparty_team_id,focal_asset_refs:[...(p.focal_asset_refs||[])].sort(),counterparty_asset_refs:[...(p.counterparty_asset_refs||[])].sort()}}catch(_){return null}}
   function draftKey(){const p=stableDraft();return p?`${contextKey()}|${p.counterparty_team_id}|${p.focal_asset_refs.join(',')}|${p.counterparty_asset_refs.join(',')}`:null}
   function currentTrade(generation,key){return generation===tradeGeneration&&key===draftKey()}
+  function responseMatchesState(result,expectedStateId){return !expectedStateId||result?.state_id_before===expectedStateId}
+  function currentStateId(){return productState()?.context?.state_id||null}
   function esc(value){try{return typeof escapeHtml==='function'?escapeHtml(value):String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}catch(_){return String(value??'')}}
   function request(path,options){return api(path,options)}
 
@@ -41,7 +43,7 @@
   async function runProgressiveTrade(event){
     const button=event.target?.closest?.('#analyze-trade');if(!button||button.disabled)return;
     event.preventDefault();event.stopImmediatePropagation();
-    const key=draftKey(),payload=stableDraft();if(!key||!payload)return;
+    const key=draftKey(),payload=stableDraft(),startingStateId=currentStateId();if(!key||!payload)return;
     if(activeTradeKey===key)return;
     const generation=++tradeGeneration;activeTradeKey=key;
     button.disabled=true;button.textContent='Checking trade…';
@@ -50,11 +52,14 @@
     try{
       const quick=await request('/api/trade-center/quick',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
+      if(!responseMatchesState(quick,startingStateId))throw new Error('League data changed while this trade was starting. Run the analysis again on the updated league state.');
+      const flowStateId=quick.state_id_before||startingStateId;
       renderQuickTrade(quick);
       button.textContent='Full roster analysis running…';
 
       const analysis=await request('/api/trade-center/analyze',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
+      if(!responseMatchesState(analysis,flowStateId))throw new Error('League data changed during roster analysis. The earlier quick view remains scoped to the prior state; run this trade again.');
       if(typeof renderTradeAnalysis==='function')renderTradeAnalysis(analysis);
       ['#simulate-trade','#explore-price'].forEach(selector=>{const action=document.querySelector(selector);if(action)action.disabled=false});
       appendProgress('Roster analysis ready. Full 50,000-run season simulation running…');
@@ -62,6 +67,7 @@
 
       const simulation=await request('/api/trade-center/simulate',{method:'POST',body:JSON.stringify(payload)});
       if(!currentTrade(generation,key))return;
+      if(!responseMatchesState(simulation,flowStateId))throw new Error('League data changed before the full simulation finished. The prior-stage evidence remains scoped to the earlier state; run this trade again.');
       if(typeof renderTradeSimulationResult==='function')renderTradeSimulationResult(simulation);
       appendProgress(simulation.scenario_cache_hit?'Full analysis ready · exact Simulation result reused.':'Full analysis ready · 50,000-run simulation complete.','ready');
     }catch(error){
