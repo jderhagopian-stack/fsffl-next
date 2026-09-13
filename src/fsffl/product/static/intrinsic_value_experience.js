@@ -4,10 +4,10 @@
  */
 (function(){
   'use strict';
-  const VERSION='20260913-phase3-intrinsic1';
+  const VERSION='20260913-phase3-intrinsic2';
   const TAB='value_lens';
   const MARKET_SCALE='dynasty-market-percentile';
-  let cached=null,cachedStateId=null,inFlight=null;
+  let cached=null,cachedStateId=null,inFlight=null,requestGeneration=0;
 
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const finite=value=>typeof value==='number'&&Number.isFinite(value);
@@ -93,13 +93,15 @@
 
   function renderUnavailable(message){const host=document.querySelector('[data-franchise-view="value_lens"]');if(!host)return;host.innerHTML=`<div class="value-lens-shell"><header class="value-lens-hero"><div><p class="eyebrow">Value Lens</p><h3>FSFFL Intrinsic Value is unavailable right now.</h3><p>${esc(message||'Governed Forecast or Intrinsic evidence is not available for the current league state.')}</p></div></header><div class="value-lens-unavailable"><strong>No substitute number is shown.</strong><p>Broad Market, the older beta FSFFL value, League Market and Team Utility are different coordinates. FSFFL will not silently use one in place of Intrinsic.</p></div></div>`}
 
+  function requestIsCurrent(generation,sid){return generation===requestGeneration&&sid===stateId()}
   async function load(){
     const host=document.querySelector('[data-franchise-view="value_lens"]');if(!host)return;
-    const sid=stateId();if(cached&&cachedStateId===sid){render(cached);return}
+    const sid=stateId(),generation=requestGeneration;if(cached&&cachedStateId===sid){render(cached);return}
     host.innerHTML='<div class="value-lens-loading"><p class="eyebrow">Value Lens</p><h3>Loading governed Intrinsic evidence…</h3><p>Your Franchise view remains usable while this secondary lens loads.</p></div>';
-    if(inFlight)return inFlight;
-    inFlight=(async()=>{try{const result=await api('/api/value/intrinsic-v1');cached=result;cachedStateId=sid;render(result)}catch(error){renderUnavailable(error?.message||String(error))}finally{inFlight=null}})();
-    return inFlight;
+    if(inFlight?.generation===generation&&inFlight?.stateId===sid)return inFlight.promise;
+    const promise=(async()=>{try{const result=await api('/api/value/intrinsic-v1');if(!requestIsCurrent(generation,sid))return;cached=result;cachedStateId=sid;render(result)}catch(error){if(!requestIsCurrent(generation,sid))return;renderUnavailable(error?.message||String(error))}finally{if(inFlight?.generation===generation&&inFlight?.stateId===sid)inFlight=null}})();
+    inFlight={generation,stateId:sid,promise};
+    return promise;
   }
 
   function activate(panel){panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.franchiseTab===TAB)));panel.querySelectorAll('[data-franchise-view]').forEach(section=>section.hidden=section.dataset.franchiseView!==TAB);load()}
@@ -116,7 +118,7 @@
     if(!shell.querySelector(`[data-franchise-view="${TAB}"]`)){const section=document.createElement('section');section.className='franchise-view value-lens-view';section.dataset.franchiseView=TAB;section.hidden=true;section.innerHTML='<div class="value-lens-loading"><p class="eyebrow">Value Lens</p><h3>Open this lens to compare Market and Intrinsic.</h3></div>';const firstView=shell.querySelector('[data-franchise-view]');firstView?.parentNode?.insertBefore(section,null)}
   }
 
-  function reset(){cached=null;cachedStateId=null;inFlight=null;setTimeout(inject,0)}
+  function reset(){requestGeneration+=1;cached=null;cachedStateId=null;inFlight=null;setTimeout(inject,0)}
   const observer=new MutationObserver(()=>inject());
   function install(){observer.observe(document.body,{childList:true,subtree:true});inject();window.addEventListener('fsffl:product-context-updated',reset)}
   if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',install,{once:true});else install();
