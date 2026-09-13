@@ -31,23 +31,34 @@ def test_value_lens_preserves_four_value_coordinates_and_unavailability():
     assert "will not silently use one in place of Intrinsic" in script
 
 
-def test_value_lens_uses_governed_intrinsic_api_and_does_not_rebrand_legacy_value():
+def test_value_lens_uses_governed_intrinsic_api_and_market_cardinal_magnitude():
     script = _text("intrinsic_value_experience.js")
     assert "api('/api/value/intrinsic-v1')" in script
     assert "provisional_fsffl_values" not in script
-    assert "fsffl_cardinal_values" not in script
-    assert "older generic “FSFFL Value”" in script
-    assert "is not this Intrinsic value" in script
+    assert "fsffl_cardinal_values" in script
+    assert "MARKET_CARDINAL_SCALE='fsffl-market-cardinal'" in script
     assert "FSFFL Cardinal Value" in script
     assert "replaceTextWithin(document.querySelector('.franchise-shell'),'FSFFL Value','FSFFL Cardinal Value')" in script
-    assert "replaceTextWithin(document.querySelector('.league-structure-panel'),'Total FSFFL value','Total FSFFL Cardinal Value')" in script
 
 
-def test_value_lens_comparison_is_rank_only_and_not_a_fake_common_scale():
+def test_value_lens_shows_dynasty_values_primarily_and_rank_secondarily():
     script = _text("intrinsic_value_experience.js")
-    assert "percentile rank only as a presentation aid" in script
-    assert "Broad Market and Intrinsic use different units" in script
-    assert "does <strong>not</strong> subtract the raw numbers" in script
+    assert "intrinsic_dynasty_value" in script
+    assert "Broad Market Value" in script
+    assert "weighted surplus points" in script
+    assert "0–10,000" in script
+    assert "rank—not raw point subtraction" in script
+    assert "market-independent monotonic transform" in script
+    assert " pts`" not in script
+
+
+def test_value_lens_disagreement_remains_rank_based_and_not_a_master_score():
+    script = _text("intrinsic_value_experience.js")
+    assert "const delta=intrinsicRank-marketRank" in script
+    assert "FSFFL materially higher" in script
+    assert "FSFFL moderately higher" in script
+    assert "Broad market moderately higher" in script
+    assert "Broad market materially higher" in script
     assert "not an automatic buy signal" in script
     assert "not an automatic sell signal" in script
 
@@ -63,14 +74,23 @@ def test_value_lens_is_lazy_and_does_not_add_an_intrinsic_request_to_first_paint
     assert "the lens itself performs no API work until the customer opens its tab" in bootstrap
 
 
-def test_value_lens_surfaces_confidence_and_provenance_secondarily():
+def test_value_lens_surfaces_confidence_provenance_and_raw_internal_value_secondarily():
     script = _text("intrinsic_value_experience.js")
     assert "Confidence" in script
     assert "Evidence & provenance" in script
+    assert "raw_intrinsic_value" in script
     assert "forecast_policy_version" in script
     assert "base_forecast_model_version" in script
     assert "replacement_context_version" in script
     assert "What exactly is FSFFL Intrinsic Value?" in script
+
+
+def test_value_lens_distinguishes_valid_zero_from_unavailable():
+    script = _text("intrinsic_value_experience.js")
+    assert "Valid zero:" in script
+    assert "this is not missing evidence" in script
+    assert "Missing Forecast or replacement evidence is shown as <strong>Unavailable</strong>" in script
+    assert "availability==='available'" in script
 
 
 def test_value_lens_has_intentional_mobile_layout():
@@ -100,6 +120,7 @@ const listeners={{}};
 let calls=0,resolvers=[];
 global.window=global;
 global.state={{context:{{state_id:'state-old'}}}};
+global.fsfflMyTeamState={{view:{{players:[]}},values:{{fsffl_cardinal_values:[]}}}};
 global.document={{
   readyState:'complete',body:{{}},
   querySelector:(selector)=>selector==='[data-franchise-view=\"value_lens\"]'?host:null,
@@ -117,12 +138,12 @@ vm.runInThisContext(fs.readFileSync({script_path},'utf8'),{{filename:'intrinsic_
   const loading=host.innerHTML;
   state.context.state_id='state-new';
   listeners['fsffl:product-context-updated']();
-  resolvers.shift()({{model_version:'stale-model',estimates:[{{player_id:'stale',value:999}}]}});
+  resolvers.shift()({{model_version:'stale-model',players:[{{player_id:'stale',availability:'available',intrinsic_dynasty_value:999,percentile:.9}}]}});
   await first;
   if(host.innerHTML!==loading)throw new Error('obsolete request mutated the DOM');
   const second=window.fsfflIntrinsicValueExperience.load();
   if(calls!==2)throw new Error('obsolete request repopulated cache or blocked a new request');
-  resolvers.shift()({{model_version:'current-model',estimates:[{{player_id:'current',value:10}}]}});
+  resolvers.shift()({{model_version:'current-model',display_scale:{{version:'1'}},players:[{{player_id:'current',availability:'available',intrinsic_dynasty_value:5000,percentile:.5}}]}});
   await second;
   if(!host.innerHTML.includes('current-model'))throw new Error('current-context response did not render');
   if(host.innerHTML.includes('stale-model'))throw new Error('stale response remained visible');
@@ -151,9 +172,8 @@ def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
     bootstrap = _text("league_position_strength.js")
     experience = _text("intrinsic_value_experience.js")
     shell_version = "20260913-phase3-latency1"
-    experience_version = "20260913-phase3-intrinsic2"
+    experience_version = "20260913-intrinsic-dynasty-scale1"
     assert f'/static/league_position_strength.js?v={shell_version}' in html
-    assert '/static/league_position_strength.js?v=20260913-phase3-intrinsic2' not in html
     assert f"const version='{experience_version}'" in bootstrap
     assert f"const VERSION='{experience_version}'" in experience
     assert f'/static/intrinsic_value_experience.css?v=${{version}}' in bootstrap
