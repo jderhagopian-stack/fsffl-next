@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import logging
 from collections import OrderedDict
+from concurrent.futures import Future
 from threading import RLock
+from time import monotonic
 from typing import Callable
 
 from fsffl.persistence.contracts import ArtifactKey, PersistenceStore, canonical_fingerprint
@@ -21,13 +23,15 @@ from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
-_CACHE_MODEL_VERSION = "next8-scenario-cache-v3:durable-exact-state-forecast-loader"
+_CACHE_MODEL_VERSION = "next8-scenario-cache-v4:durable-exact-state-forecast-loader-inflight"
 _MAX_ENTRIES = 64
 _lock = RLock()
 _cache: OrderedDict[str, LiveSimulationAnalyticsResult] = OrderedDict()
+_inflight: dict[str, Future[LiveSimulationAnalyticsResult]] = {}
 _hits = 0
 _misses = 0
 _durable_hits = 0
+_coalesced_hits = 0
 _persistence: PersistenceStore | None = None
 _logger = logging.getLogger("uvicorn.error")
 
@@ -81,14 +85,7 @@ def _loader_identity(loader: SimulationLoader) -> str:
 
 
 def _durable_loader_identity(loader: SimulationLoader) -> str:
-    """Stable implementation/configuration identity for cross-process reuse.
-
-    A loader may publish an explicit stable identity when runtime configuration is
-    material. Plain functions fall back to their module/qualname plus bytecode,
-    constants and defaults, so an implementation change cannot silently reuse a
-    durable result produced by older Simulation code under the same public model
-    version.
-    """
+    """Stable implementation/configuration identity for cross-process reuse."""
 
     explicit = getattr(loader, "__fsffl_cache_identity__", None)
     if explicit is not None:
@@ -205,62 +202,114 @@ def _persist_durable(
         )
 
 
+def _remember(key: str, result: LiveSimulationAnalyticsResult) -> None:
+    _cache[key] = result
+    _cache.move_to_end(key)
+    while len(_cache) > _MAX_ENTRIES:
+        _cache.popitem(last=False)
+
+
 def run_cached_scenario_simulation(
     league_state: LeagueState,
     evidence: LiveForecastEvidence,
     *,
     simulation_loader: SimulationLoader,
 ) -> tuple[LiveSimulationAnalyticsResult, bool]:
-    """Reuse only an exact changed-State + forecast + loader Simulation result.
+    """Reuse or coalesce only an exact changed-State + forecast + loader result.
 
-    A process-local hit is cheapest. On a process miss, the runtime may reuse the
-    same exact authoritative artifact from durable persistence, including after a
-    Render restart, only when the stable loader/configuration identity also matches.
-    If neither exists, the authoritative 50,000-run Simulation runs normally and its
-    exact output is retained for later reuse. No approximation, interpolation or
-    reduced Simulation count is permitted here.
+    Exactly matching concurrent cold requests share one authoritative 50,000-run
+    Simulation. Followers wait for that exact run; no approximation or reduced run
+    count is introduced. Near-repeats with a different State, forecast fingerprint,
+    loader/configuration identity, or Simulation model remain cache misses.
     """
 
-    global _hits, _misses, _durable_hits
+    global _hits, _misses, _durable_hits, _coalesced_hits
+    total_started = monotonic()
     key = scenario_cache_key(league_state, evidence, simulation_loader)
+    lookup_finished = monotonic()
+    leader = False
     with _lock:
         cached = _cache.get(key)
         if cached is not None:
             _cache.move_to_end(key)
             _hits += 1
+            _logger.info(
+                "FSFFL scenario phases cache=memory key=%.3fs total=%.3fs state=%s",
+                lookup_finished - total_started,
+                monotonic() - total_started,
+                league_state.state_id,
+            )
             return cached, True
-        _misses += 1
-
-    durable = _load_durable(league_state, evidence, simulation_loader)
-    if durable is not None:
-        with _lock:
-            _cache[key] = durable
-            _cache.move_to_end(key)
-            while len(_cache) > _MAX_ENTRIES:
-                _cache.popitem(last=False)
+        pending = _inflight.get(key)
+        if pending is None:
+            pending = Future()
+            _inflight[key] = pending
+            _misses += 1
+            leader = True
+        else:
+            _coalesced_hits += 1
             _hits += 1
-            _durable_hits += 1
+
+    if not leader:
+        wait_started = monotonic()
+        result = pending.result()
         _logger.info(
-            "FSFFL scenario simulation cache_hit=true tier=durable state=%s",
+            "FSFFL scenario phases cache=coalesced key=%.3fs wait=%.3fs total=%.3fs state=%s",
+            lookup_finished - total_started,
+            monotonic() - wait_started,
+            monotonic() - total_started,
             league_state.state_id,
         )
-        return durable, True
+        return result, True
 
-    result = simulation_loader(league_state, evidence)
-    if result.league_view.context.league_state_id != league_state.state_id:
-        raise ValueError("scenario Simulation result must match the exact changed LeagueState")
+    try:
+        durable_started = monotonic()
+        durable = _load_durable(league_state, evidence, simulation_loader)
+        durable_finished = monotonic()
+        if durable is not None:
+            with _lock:
+                _remember(key, durable)
+                _hits += 1
+                _durable_hits += 1
+            pending.set_result(durable)
+            _logger.info(
+                "FSFFL scenario phases cache=durable key=%.3fs durable=%.3fs total=%.3fs state=%s",
+                lookup_finished - total_started,
+                durable_finished - durable_started,
+                monotonic() - total_started,
+                league_state.state_id,
+            )
+            return durable, True
 
-    with _lock:
-        existing = _cache.get(key)
-        if existing is not None:
-            _cache.move_to_end(key)
-            return existing, True
-        _cache[key] = result
-        _cache.move_to_end(key)
-        while len(_cache) > _MAX_ENTRIES:
-            _cache.popitem(last=False)
-    _persist_durable(league_state, evidence, simulation_loader, result)
-    return result, False
+        simulation_started = monotonic()
+        result = simulation_loader(league_state, evidence)
+        simulation_finished = monotonic()
+        if result.league_view.context.league_state_id != league_state.state_id:
+            raise ValueError("scenario Simulation result must match the exact changed LeagueState")
+
+        with _lock:
+            _remember(key, result)
+        persistence_started = monotonic()
+        _persist_durable(league_state, evidence, simulation_loader, result)
+        persistence_finished = monotonic()
+        pending.set_result(result)
+        _logger.info(
+            "FSFFL scenario phases cache=miss key=%.3fs durable=%.3fs simulation_50k=%.3fs persistence=%.3fs total=%.3fs state=%s",
+            lookup_finished - total_started,
+            durable_finished - durable_started,
+            simulation_finished - simulation_started,
+            persistence_finished - persistence_started,
+            monotonic() - total_started,
+            league_state.state_id,
+        )
+        return result, False
+    except BaseException as exc:
+        pending.set_exception(exc)
+        raise
+    finally:
+        with _lock:
+            if _inflight.get(key) is pending:
+                _inflight.pop(key, None)
 
 
 def scenario_cache_status() -> dict[str, object]:
@@ -271,6 +320,8 @@ def scenario_cache_status() -> dict[str, object]:
             "hits": _hits,
             "misses": _misses,
             "durable_hits": _durable_hits,
+            "coalesced_hits": _coalesced_hits,
+            "inflight": len(_inflight),
             "persistence_enabled": _persistence is not None,
             "model_version": _CACHE_MODEL_VERSION,
             "authority": "performance-only exact-result reuse",
@@ -278,11 +329,12 @@ def scenario_cache_status() -> dict[str, object]:
 
 
 def clear_scenario_cache() -> None:
-    """Clear disposable process memory only; durable exact artifacts remain reusable."""
+    """Clear disposable completed process memory; running exact work is not cancelled."""
 
-    global _hits, _misses, _durable_hits
+    global _hits, _misses, _durable_hits, _coalesced_hits
     with _lock:
         _cache.clear()
         _hits = 0
         _misses = 0
         _durable_hits = 0
+        _coalesced_hits = 0
