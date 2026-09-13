@@ -57,7 +57,7 @@ class IntrinsicV1PlayerForecastPath(FrozenModel):
         return self
 
 
-# Frozen from the governed bounded-materializer historical comparison.  The
+# Frozen from the governed bounded-materializer historical comparison. The
 # policy varies only by position and horizon, never by player identity/market.
 _INTRINSIC_V1_METHOD_POLICY: dict[Position, dict[int, IntrinsicV1ForecastMethod]] = {
     Position.QB: {
@@ -110,13 +110,16 @@ def materialize_intrinsic_v1_forecast_path(
 ) -> IntrinsicV1PlayerForecastPath:
     """Materialize the governed three-year Forecast input used by Intrinsic v1.
 
-    ``bounded_path`` is Forecast-owned career-transition evidence.  Value never
-    constructs it.  When a horizon calls for bounded evidence but that evidence
-    is unavailable, v1 fails *that horizon* conservatively to Year-1 carry-forward
-    and records low evidence strength instead of inventing a trajectory.
+    ``bounded_path`` is Forecast-owned career-transition evidence. Existing
+    ``MultiYearForecastPoint.season_offset`` values 1 and 2 correspond to v1
+    Years 2 and 3. Value never constructs that path.
+
+    When a horizon calls for bounded evidence but that evidence is unavailable,
+    v1 fails that horizon conservatively to Year-1 carry-forward and records low
+    evidence strength instead of inventing a trajectory.
     """
 
-    bounded_by_year = {point.horizon_year: point for point in (bounded_path or ())}
+    bounded_by_year = {point.season_offset + 1: point for point in (bounded_path or ())}
     horizons: list[IntrinsicV1ForecastHorizon] = [
         IntrinsicV1ForecastHorizon(
             horizon_year=1,
@@ -141,7 +144,10 @@ def materialize_intrinsic_v1_forecast_path(
                     evidence_strength=ForecastEvidenceStrength.MODERATE,
                     cumulative_survival_probability=bounded.cumulative_survival_probability,
                     evidence_model_version=bounded.transition_model_version,
-                    provenance_note="governed bounded empirical career-transition path",
+                    provenance_note=(
+                        "governed bounded empirical career-transition path; "
+                        "horizon selected independently from authoritative Year 1"
+                    ),
                 )
             )
             continue
