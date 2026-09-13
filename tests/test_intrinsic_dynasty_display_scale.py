@@ -27,7 +27,7 @@ def test_display_transform_is_deterministic_strictly_monotone_and_bounded():
     displayed = [intrinsic_dynasty_display_value(value) for value in raw_values]
     assert displayed == [intrinsic_dynasty_display_value(value) for value in raw_values]
     assert all(0 <= value < 10000 for value in displayed)
-    assert all(left < right for left, right in zip(displayed, displayed[1:], strict=True))
+    assert all(left < right for left, right in zip(displayed, displayed[1:]))
 
 
 def test_display_transform_has_useful_dynasty_tier_spacing():
