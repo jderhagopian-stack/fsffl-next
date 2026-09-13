@@ -18,6 +18,15 @@ from .fallback import (
     PROVISIONAL_POSITION_FLOOR_SOURCE,
     attach_provisional_position_floor_forecasts,
 )
+from .intrinsic_v1 import (
+    INTRINSIC_V1_FORECAST_POLICY_VERSION,
+    ForecastEvidenceStrength,
+    IntrinsicV1ForecastHorizon,
+    IntrinsicV1ForecastMethod,
+    IntrinsicV1PlayerForecastPath,
+    intrinsic_v1_method,
+    materialize_intrinsic_v1_forecast_path,
+)
 from .models import (
     ForecastBundle,
     ForecastDistribution,
@@ -32,10 +41,15 @@ __all__ = [
     "CareerTransitionSample",
     "ForecastBundle",
     "ForecastDistribution",
+    "ForecastEvidenceStrength",
     "ForecastHorizon",
     "ForecastMetric",
     "ForecastObservation",
     "ForecastScore",
+    "INTRINSIC_V1_FORECAST_POLICY_VERSION",
+    "IntrinsicV1ForecastHorizon",
+    "IntrinsicV1ForecastMethod",
+    "IntrinsicV1PlayerForecastPath",
     "MultiYearForecastPoint",
     "PROVISIONAL_POSITION_FLOOR_MODEL_VERSION",
     "PROVISIONAL_POSITION_FLOOR_SOURCE",
@@ -45,6 +59,8 @@ __all__ = [
     "build_multi_year_forecast",
     "equal_weight_ensemble",
     "fit_career_transition_evidence",
+    "intrinsic_v1_method",
+    "materialize_intrinsic_v1_forecast_path",
     "score_point_forecast",
     "select_transition_samples",
 ]

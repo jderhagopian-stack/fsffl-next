@@ -17,6 +17,7 @@ from .focused_opportunity_routes import install_focused_opportunity_routes
 from .forecast_resilience import make_resilient_forecast_loader
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
+from .intrinsic_value_routes import install_intrinsic_value_v1_routes
 from .latency_observability import install_latency_observability
 from .opportunity_search_cache import make_cached_opportunity_search
 from .opportunity_workspace_cache import make_cached_opportunity_workspace
@@ -108,6 +109,7 @@ install_in_season_forecast_routes(
     persistence_store=_persistence_store,
     projection_history_store=_projection_history_store,
 )
+install_intrinsic_value_v1_routes(app, runtime_store=_runtime_store)
 install_focused_opportunity_routes(
     app,
     runtime_store=_runtime_store,
