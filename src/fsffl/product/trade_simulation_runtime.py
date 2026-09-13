@@ -74,8 +74,10 @@ def build_post_trade_simulation_comparison(
 ) -> dict[str, object]:
     """Compare baseline and legal changed-roster outcomes and produce NEXT-5 disposition.
 
-    Simulation remains authoritative for competitive outcomes. Exact repeated or
-    concurrent identical changed States may reuse/share the same authoritative
+    Simulation remains authoritative for competitive outcomes. Behavioral
+    Intelligence may add directional fit evidence but cannot alter Value,
+    Simulation, materiality, negotiation feasibility or disposition. Exact repeated
+    or concurrent identical changed States may reuse/share the same authoritative
     Simulation result; no lower-fidelity result is introduced.
     """
 
