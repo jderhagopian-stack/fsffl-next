@@ -64,7 +64,7 @@ def test_value_lens_surfaces_long_horizon_provenance_without_replacement_context
     assert "Evidence & provenance" in script
     assert "forecast_policy_version" in script
     assert "base_forecast_model_version" in script
-    assert "terminal.model_version" in script
+    assert "terminal?.model_version" in script
     assert "post-Year-3 continuation" in script
     assert "replacement_context_version" not in script
 
