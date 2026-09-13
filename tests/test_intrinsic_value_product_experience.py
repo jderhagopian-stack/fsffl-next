@@ -37,6 +37,8 @@ def test_value_lens_uses_fundamental_intrinsic_api_and_market_cardinal_magnitude
     assert "estimate.display_value" in script
     assert "fundamental_value" in script
     assert "raw_fundamental_career_value" in script
+    assert "payload?.players" in script
+    assert "presentation?.availability" in script
 
 
 def test_value_lens_states_comparable_presentation_but_independent_derivation():
@@ -65,6 +67,8 @@ def test_value_lens_surfaces_long_horizon_provenance_without_replacement_context
     assert "forecast_policy_version" in script
     assert "base_forecast_model_version" in script
     assert "terminal?.model_version" in script
+    assert "calibration_version" in script
+    assert "residual_fundamental_value" in script
     assert "post-Year-3 continuation" in script
     assert "replacement_context_version" not in script
 
@@ -101,7 +105,7 @@ def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
     bootstrap = _text("league_position_strength.js")
     experience = _text("intrinsic_value_experience.js")
     shell_version = "20260913-phase3-latency1"
-    experience_version = "20260913-fundamental-intrinsic-v3"
+    experience_version = "20260913-fundamental-intrinsic-v4"
     assert f'/static/league_position_strength.js?v={shell_version}' in html
     assert f"const version='{experience_version}'" in bootstrap
     assert f"const VERSION='{experience_version}'" in experience
