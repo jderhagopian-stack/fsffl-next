@@ -6,6 +6,7 @@ PERSISTENT = ROOT / "persistent_webapp.py"
 QUICK_ROUTE = ROOT / "quick_frontier_routes.py"
 QUICK_JS = ROOT / "static/quick_counter_frontier.js"
 INDEX = ROOT / "static/index.html"
+RELEASE = "20260913-phase3-intrinsic2"
 
 
 def _read(path: Path) -> str:
@@ -55,6 +56,6 @@ def test_counter_client_returns_quick_results_before_optional_full_expansion() -
 
 def test_quick_counter_asset_is_loaded_with_current_static_generation() -> None:
     source = _read(INDEX)
-    assert "quick_counter_frontier.js?v=20260912-market-trade5" in source
+    assert f"quick_counter_frontier.js?v={RELEASE}" in source
     assert source.index("trade_center.js") < source.index("quick_counter_frontier.js")
     assert source.index("quick_counter_frontier.js") < source.index("market_trade_recomposition.js")
