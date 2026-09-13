@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import shutil
 import subprocess
 
@@ -10,6 +11,13 @@ STATIC = Path(__file__).resolve().parents[1] / "src" / "fsffl" / "product" / "st
 
 def _text(name: str) -> str:
     return (STATIC / name).read_text(encoding="utf-8")
+
+
+def _node() -> str:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed in this test environment")
+    return node
 
 
 def test_value_lens_preserves_four_value_coordinates_and_unavailability():
@@ -75,13 +83,78 @@ def test_value_lens_has_intentional_mobile_layout():
 
 
 def test_value_lens_browser_script_parses():
-    node = shutil.which("node")
-    if node is None:
-        pytest.skip("node is not installed in this test environment")
     result = subprocess.run(
-        [node, "--check", str(STATIC / "intrinsic_value_experience.js")],
+        [_node(), "--check", str(STATIC / "intrinsic_value_experience.js")],
         check=False,
         capture_output=True,
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_value_lens_discards_stale_response_and_current_context_still_renders():
+    script_path = json.dumps(str(STATIC / "intrinsic_value_experience.js"))
+    harness = f"""
+const fs=require('fs'),vm=require('vm');
+const host={{innerHTML:'',querySelector:()=>null}};
+const listeners={{}};
+let calls=0,resolvers=[];
+global.window=global;
+global.state={{context:{{state_id:'state-old'}}}};
+global.document={{
+  readyState:'complete',body:{{}},
+  querySelector:(selector)=>selector==='[data-franchise-view=\"value_lens\"]'?host:null,
+  createTreeWalker:()=>({{nextNode:()=>false}})
+}};
+global.NodeFilter={{SHOW_TEXT:4}};
+global.MutationObserver=class{{constructor(cb){{this.cb=cb}} observe(){{}}}};
+global.addEventListener=(name,handler)=>{{listeners[name]=handler}};
+global.setTimeout=(fn)=>{{fn();return 1}};
+global.api=()=>{{calls+=1;return new Promise(resolve=>resolvers.push(resolve))}};
+vm.runInThisContext(fs.readFileSync({script_path},'utf8'),{{filename:'intrinsic_value_experience.js'}});
+(async()=>{{
+  const first=window.fsfflIntrinsicValueExperience.load();
+  if(calls!==1)throw new Error(`expected one request, got ${{calls}}`);
+  const loading=host.innerHTML;
+  state.context.state_id='state-new';
+  listeners['fsffl:product-context-updated']();
+  resolvers.shift()({{model_version:'stale-model',estimates:[{{player_id:'stale',value:999}}]}});
+  await first;
+  if(host.innerHTML!==loading)throw new Error('obsolete request mutated the DOM');
+  const second=window.fsfflIntrinsicValueExperience.load();
+  if(calls!==2)throw new Error('obsolete request repopulated cache or blocked a new request');
+  resolvers.shift()({{model_version:'current-model',estimates:[{{player_id:'current',value:10}}]}});
+  await second;
+  if(!host.innerHTML.includes('current-model'))throw new Error('current-context response did not render');
+  if(host.innerHTML.includes('stale-model'))throw new Error('stale response remained visible');
+}})().catch(error=>{{console.error(error);process.exit(1)}});
+"""
+    result = subprocess.run(
+        [_node(), "-e", harness],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_value_lens_request_generation_guard_is_authoritative():
+    script = _text("intrinsic_value_experience.js")
+    assert "requestGeneration=0" in script
+    assert "requestIsCurrent(generation,sid)" in script
+    assert "if(!requestIsCurrent(generation,sid))return" in script
+    assert "requestGeneration+=1" in script
+    assert "if(inFlight?.generation===generation&&inFlight?.stateId===sid)inFlight=null" in script
+
+
+def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
+    html = _text("index.html")
+    bootstrap = _text("league_position_strength.js")
+    experience = _text("intrinsic_value_experience.js")
+    version = "20260913-phase3-intrinsic2"
+    assert f'/static/league_position_strength.js?v={version}' in html
+    assert '/static/league_position_strength.js?v=20260912-market-trade5' not in html
+    assert f"const version='{version}'" in bootstrap
+    assert f"const VERSION='{version}'" in experience
+    assert f'/static/intrinsic_value_experience.css?v=${{version}}' in bootstrap
+    assert f'/static/intrinsic_value_experience.js?v=${{version}}' in bootstrap
