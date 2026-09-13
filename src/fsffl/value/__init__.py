@@ -13,6 +13,7 @@ from .history import (
     calculate_market_movement,
 )
 from .intrinsic import ForecastValueMapping, estimate_intrinsic_player_value
+from .intrinsic_runtime import CurrentIntrinsicV1RuntimeResult, build_current_intrinsic_values_v1
 from .intrinsic_v1 import (
     INTRINSIC_VALUE_V1_SCALE,
     INTRINSIC_VALUE_V1_VERSION,
@@ -75,12 +76,13 @@ from .transaction_evidence import (
 
 __all__ = [
     "AssetValueProfile", "CalibrationEvidenceKind", "CalibrationFitMetadata", "CalibrationObservation",
-    "CalibrationPanel", "DataRightsClass", "ForecastValueInput", "ForecastValueMapping",
-    "INTRINSIC_VALUE_V1_SCALE", "INTRINSIC_VALUE_V1_VERSION", "INTRINSIC_VALUE_V1_WEIGHTS",
-    "IntrinsicDynastyValueEstimate", "IntrinsicV1Confidence", "IntrinsicV1HorizonContribution",
-    "IntrinsicValueV1Estimate", "MarketBaselineMethod", "MarketContextCalibration", "MarketContextFitPolicy",
-    "MarketEvidenceKind", "MarketMovement", "MarketMovementStatus", "MarketObservation", "MarketPriceEstimate",
-    "MarketSignalKind", "MarketSourceBatchResult", "MarketSourceBenchmarkResult", "MarketSourceDefinition",
+    "CalibrationPanel", "CurrentIntrinsicV1RuntimeResult", "DataRightsClass", "ForecastValueInput",
+    "ForecastValueMapping", "INTRINSIC_VALUE_V1_SCALE", "INTRINSIC_VALUE_V1_VERSION",
+    "INTRINSIC_VALUE_V1_WEIGHTS", "IntrinsicDynastyValueEstimate", "IntrinsicV1Confidence",
+    "IntrinsicV1HorizonContribution", "IntrinsicValueV1Estimate", "MarketBaselineMethod",
+    "MarketContextCalibration", "MarketContextFitPolicy", "MarketEvidenceKind", "MarketMovement",
+    "MarketMovementStatus", "MarketObservation", "MarketPriceEstimate", "MarketSignalKind",
+    "MarketSourceBatchResult", "MarketSourceBenchmarkResult", "MarketSourceDefinition",
     "MarketSourceRegistry", "MarketSourceStatus", "MarketValueHistoryStore", "MarketValueSnapshot",
     "MultiAssetTradeObservation", "OneForOneEnsembleBenchmark", "OneForOneSourceBenchmark",
     "OneForOneTradeBenchmarkResult", "OneForOneTradeObservation", "PackageAssetKind", "PackageAssetLeg",
@@ -89,8 +91,9 @@ __all__ = [
     "TransactionDirection", "TransactionPriceEstimate", "TransactionPriceMapping", "ValueAssetKind",
     "ValueDistribution", "ValueScale", "apply_market_context", "as_intrinsic_dynasty_value_estimate",
     "benchmark_market_sources_against_one_for_one_trades", "benchmark_market_sources_against_transactions",
-    "build_marginal_lineup_replacement_paths", "build_market_calibration_panel_batch", "calculate_market_movement",
-    "comparable_values", "estimate_intrinsic_player_value", "estimate_intrinsic_value_v1", "estimate_market_price",
+    "build_current_intrinsic_values_v1", "build_marginal_lineup_replacement_paths",
+    "build_market_calibration_panel_batch", "calculate_market_movement", "comparable_values",
+    "estimate_intrinsic_player_value", "estimate_intrinsic_value_v1", "estimate_market_price",
     "estimate_pick_value", "estimate_transaction_price", "fit_market_context_calibration",
     "next3_market_source_registry_v1", "normalize_sleeper_one_for_one_trades", "normalize_sleeper_package_trades",
 ]
