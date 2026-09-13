@@ -1,4 +1,8 @@
 from pathlib import Path
+import shutil
+import subprocess
+
+import pytest
 
 
 STATIC = Path(__file__).resolve().parents[1] / "src" / "fsffl" / "product" / "static"
@@ -68,3 +72,16 @@ def test_value_lens_has_intentional_mobile_layout():
     assert ".value-lens-coordinates{grid-template-columns:1fr}" in css
     assert ".value-lens-player summary{grid-template-columns:1fr 1fr" in css
     assert ".franchise-tabs{overflow-x:auto" in css
+
+
+def test_value_lens_browser_script_parses():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed in this test environment")
+    result = subprocess.run(
+        [node, "--check", str(STATIC / "intrinsic_value_experience.js")],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
