@@ -10,6 +10,7 @@ from fsffl.forecast.intrinsic_v1 import (
     materialize_intrinsic_v1_forecast_path,
 )
 from fsffl.forecast.models import ForecastDistribution
+from fsffl.forecast.qb_career_state import QBCareerStateForecast
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot
 from fsffl.value.intrinsic_v1 import (
     INTRINSIC_VALUE_V1_WEIGHTS,
@@ -40,7 +41,7 @@ def _bounded(y2: float, y3: float) -> tuple[MultiYearForecastPoint, ...]:
     )
 
 
-def _path(player_id: str, position: Position, mean: float, bounded=True):
+def _path(player_id: str, position: Position, mean: float, bounded=True, qb_state=None):
     return materialize_intrinsic_v1_forecast_path(
         player_id=player_id,
         position=position,
@@ -48,6 +49,7 @@ def _path(player_id: str, position: Position, mean: float, bounded=True):
         base_distribution=ForecastDistribution(mean=mean, stddev=10.0),
         base_forecast_model_version="forecast-test-v1",
         bounded_path=_bounded(mean * 0.9, mean * 0.8) if bounded else None,
+        qb_career_state=qb_state,
     )
 
 
@@ -65,8 +67,8 @@ def _rules(superflex: bool = True) -> LeagueRules:
 
 
 def test_frozen_position_horizon_policy():
-    assert intrinsic_v1_method(Position.QB, 2) == IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD
-    assert intrinsic_v1_method(Position.QB, 3) == IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD
+    assert intrinsic_v1_method(Position.QB, 2) == IntrinsicV1ForecastMethod.QB_CAREER_STATE
+    assert intrinsic_v1_method(Position.QB, 3) == IntrinsicV1ForecastMethod.QB_CAREER_STATE
     assert intrinsic_v1_method(Position.RB, 2) == IntrinsicV1ForecastMethod.BOUNDED_CAREER_TRANSITION
     assert intrinsic_v1_method(Position.RB, 3) == IntrinsicV1ForecastMethod.BOUNDED_CAREER_TRANSITION
     assert intrinsic_v1_method(Position.WR, 2) == IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD
@@ -75,7 +77,28 @@ def test_frozen_position_horizon_policy():
     assert intrinsic_v1_method(Position.TE, 3) == IntrinsicV1ForecastMethod.BOUNDED_CAREER_TRANSITION
 
 
-def test_qb_uses_carry_forward_even_when_bounded_path_exists():
+def test_qb_career_state_scales_only_mean_and_does_not_double_survival():
+    state = QBCareerStateForecast(
+        model_version="qb-career-state-logit-v1",
+        evidence_version="qb-career-state-evidence-v1",
+        evaluation_season=2026,
+        feature_cutoff_season=2025,
+        production_percentile=0.9,
+        year2_probability=0.8,
+        year3_probability=0.7,
+    )
+    path = _path("qb1", Position.QB, 300.0, qb_state=state)
+    assert [point.distribution.mean for point in path.horizons] == [300.0, 240.0, 210.0]
+    assert path.horizons[1].method == IntrinsicV1ForecastMethod.QB_CAREER_STATE
+    assert path.horizons[2].evidence_strength == ForecastEvidenceStrength.MODERATE
+    assert path.horizons[1].distribution.stddev == 10.0
+    assert path.horizons[2].distribution.stddev == 10.0
+    assert path.horizons[1].meaningful_starter_probability == 0.8
+    assert path.horizons[2].meaningful_starter_probability == 0.7
+    assert path.horizons[1].cumulative_survival_probability is None
+
+
+def test_qb_missing_career_state_fails_closed_to_prior_carry_forward():
     path = _path("qb1", Position.QB, 300.0)
     assert [point.distribution.mean for point in path.horizons] == [300.0, 300.0, 300.0]
     assert path.horizons[1].method == IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD
