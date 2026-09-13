@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 from threading import Event, Lock
+import json
 import shutil
 import subprocess
 import time
@@ -19,6 +20,13 @@ RELEASE = "20260913-phase3-latency1"
 
 def _text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _node() -> str:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed in this test environment")
+    return node
 
 
 def test_market_quick_path_uses_same_workspace_builder_without_decision_enrichment() -> None:
@@ -71,6 +79,7 @@ def test_progressive_results_are_context_guarded_and_duplicate_trade_clicks_are_
     assert "contextStillCurrent" in script
     assert "oppPayloadMatchesCapturedContext(quick,captured)" in script
     assert "oppPayloadMatchesCapturedContext(full,captured)" in script
+    assert "resetTradeForContext" in script
 
 
 def test_market_quick_result_renders_before_full_decision_request_finishes() -> None:
@@ -101,11 +110,58 @@ def test_progressive_mobile_layout_keeps_first_answer_compact() -> None:
 
 
 def test_progressive_browser_script_parses() -> None:
-    node = shutil.which("node")
-    if node is None:
-        pytest.skip("node is not installed in this test environment")
     result = subprocess.run(
-        [node, "--check", str(STATIC / "progressive_delivery.js")],
+        [_node(), "--check", str(STATIC / "progressive_delivery.js")],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_context_change_discards_stale_trade_analysis_and_resets_action_button() -> None:
+    script_path = json.dumps(str(STATIC / "progressive_delivery.js"))
+    harness = f"""
+const fs=require('fs'),vm=require('vm');
+const listeners={{}},resolvers={{}},calls=[];
+let analysisRenders=0,simulationRenders=0;
+let draft={{counterparty_team_id:'team-b',focal_asset_refs:['p1'],counterparty_asset_refs:['p2']}};
+const button={{disabled:false,textContent:'Analyze Trade'}};
+const host={{innerHTML:'',querySelector:()=>null,appendChild:()=>{{}}}};
+global.window=global;
+global.state={{context:{{league_id:'league',team_id:'team-a',state_id:'state-old'}}}};
+global.tradeDraftPayload=()=>draft;
+global.invalidateTradeScenario=()=>{{}};
+global.updateAnalyzeTradeState=()=>{{button.disabled=false}};
+global.renderTradeAnalysis=()=>{{analysisRenders+=1}};
+global.renderTradeSimulationResult=()=>{{simulationRenders+=1}};
+global.document={{
+  querySelector:(selector)=>selector==='#trade-analysis-empty'?host:selector==='#analyze-trade'?button:null,
+  createElement:()=>({{className:'',dataset:{{}},textContent:''}})
+}};
+global.addEventListener=(name,handler)=>{{listeners[name]=handler}};
+global.setInterval=()=>1;global.clearInterval=()=>{{}};global.setTimeout=()=>1;
+global.api=(path)=>{{calls.push(path);return new Promise((resolve,reject)=>{{resolvers[path]={{resolve,reject}}}})}};
+vm.runInThisContext(fs.readFileSync({script_path},'utf8'),{{filename:'progressive_delivery.js'}});
+const event={{target:{{closest:(selector)=>selector==='#analyze-trade'?button:null}},preventDefault:()=>{{}},stopImmediatePropagation:()=>{{}}}};
+(async()=>{{
+  const running=listeners.click(event);
+  if(calls[0]!=='/api/trade-center/quick')throw new Error('quick stage did not start first');
+  resolvers['/api/trade-center/quick'].resolve({{economics:null}});
+  await new Promise(resolve=>setImmediate(resolve));
+  if(!host.innerHTML.includes('Quick view ready'))throw new Error('quick view did not render');
+  if(!calls.includes('/api/trade-center/analyze'))throw new Error('deeper analysis did not start');
+  state.context.state_id='state-new';
+  listeners['fsffl:product-context-updated']();
+  if(button.textContent!=='Analyze Trade'||button.disabled)throw new Error('context invalidation did not reset action button');
+  resolvers['/api/trade-center/analyze'].resolve({{decision_completeness:{{}}}});
+  await running;
+  if(analysisRenders!==0)throw new Error('stale analysis rendered after context change');
+  if(simulationRenders!==0||calls.includes('/api/trade-center/simulate'))throw new Error('stale flow advanced to simulation');
+}})().catch(error=>{{console.error(error);process.exit(1)}});
+"""
+    result = subprocess.run(
+        [_node(), "-e", harness],
         check=False,
         capture_output=True,
         text=True,
