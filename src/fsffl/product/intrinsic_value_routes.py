@@ -26,7 +26,7 @@ def install_intrinsic_value_v1_routes(
             result = build_current_intrinsic_values_v1(
                 context.league_state,
                 season_forecasts=context.forecast_evidence.league_scored_forecasts,
-                base_forecast_model_version=context.forecast_evidence.model_version,
+                base_forecast_model_version=context.forecast_evidence.runtime_result.model_version,
             )
         except Exception as exc:
             raise HTTPException(
