@@ -14,12 +14,8 @@ PIT proxy for the authoritative Y1 Forecast rank used by production.
 
 import argparse
 import json
-import math
-import statistics
 import time
 from pathlib import Path
-
-import numpy as np
 
 import run_career_persistence_feature_layer_research as study
 import run_qb_career_state_intrinsic_v1_research as qb
@@ -97,9 +93,13 @@ def main() -> None:
         "age_experience": "current source-season",
         "reason": "match Intrinsic v1 live-time evidence availability; prevents relying on uncompleted current-season role totals",
     }
-    result["operations"]["deployment_check_seconds"] = time.perf_counter() - t0
+    result["deployment_operations"] = {
+        "derived_rows": len(rows),
+        "qb_examples": len(examples),
+        "deployment_check_seconds": time.perf_counter() - t0,
+    }
     (args.output_dir / "qb_career_state_deployment_results.json").write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
-    print(json.dumps({k: result[k] for k in ("status", "gates", "overall", "elite", "state", "folds", "trajectory", "operations")}, indent=2))
+    print(json.dumps({k: result[k] for k in ("status", "gates", "overall", "elite", "state", "folds", "trajectory", "deployment_operations")}, indent=2))
     if result["status"] != "PASS":
         raise SystemExit(2)
 
