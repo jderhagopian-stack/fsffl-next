@@ -46,11 +46,8 @@ def intrinsic_dynasty_display_value(raw_intrinsic: float) -> float:
     for (left_raw, left_display), (right_raw, right_display) in zip(
         _DISPLAY_ANCHORS,
         _DISPLAY_ANCHORS[1:],
-        strict=True,
     ):
         if raw <= right_raw:
-            if right_raw == left_raw:
-                return left_display
             fraction = (raw - left_raw) / (right_raw - left_raw)
             return left_display + fraction * (right_display - left_display)
 
