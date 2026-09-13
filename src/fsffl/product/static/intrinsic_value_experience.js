@@ -66,7 +66,7 @@
       <div class="value-lens-player-detail">
         <div><span>Why this read</span><p>${esc(cmp.copy)}</p><p>${esc(estimate?mainDriver(estimate):'FSFFL Intrinsic is unavailable for this player; no fallback value is shown.')}</p></div>
         <div><span>Confidence</span><strong>${esc(estimate?confidenceLabel(estimate.confidence):'Unavailable')}</strong><p>${estimate?.confidence==='low'?'Long-horizon evidence is weaker, so use this as directional evidence rather than precise certainty.':estimate?'The estimate uses governed Forecast evidence; uncertainty still matters.':'No Intrinsic estimate is available.'}</p></div>
-        ${estimate?`<details class="value-lens-provenance"><summary>Evidence & provenance</summary><p><b>Intrinsic model:</b> ${esc(estimate.model_version||payload?.model_version||'—')}<br><b>Forecast policy:</b> ${esc(estimate.forecast_policy_version||'—')}<br><b>Base Forecast:</b> ${esc(estimate.base_forecast_model_version||'—')}<br><b>Replacement context:</b> ${esc(estimate.replacement_context_version||'—')}<br><b>As of:</b> ${esc(estimate.evaluation_as_of||'—')}</p></details>`:''}
+        ${estimate?`<details class="value-lens-provenance"><summary>Evidence & provenance</summary><p><b>Intrinsic model:</b> ${esc(estimate.model_version||'—')}<br><b>Forecast policy:</b> ${esc(estimate.forecast_policy_version||'—')}<br><b>Base Forecast:</b> ${esc(estimate.base_forecast_model_version||'—')}<br><b>Replacement context:</b> ${esc(estimate.replacement_context_version||'—')}<br><b>As of:</b> ${esc(estimate.evaluation_as_of||'—')}</p></details>`:''}
       </div>
     </details>`;
   }
