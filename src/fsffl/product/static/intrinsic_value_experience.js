@@ -85,7 +85,7 @@
         <div class="value-lens-players">${rows.length?rows.map(rowHtml).join(''):'<p class="franchise-empty">No roster players are available for this franchise.</p>'}</div>
       </section>
       <section class="value-lens-actions"><div><strong>How to use this</strong><p>If FSFFL is higher than the broad market, investigate whether the player can be acquired near broad-market cost. If the market is higher, investigate whether the market is paying for value FSFFL’s football economics do not support. Finish the decision with league price and team context when available.</p></div><button type="button" class="secondary-button" data-value-lens-market>Open Market</button><button type="button" class="secondary-button" data-value-lens-trade>Open Trade Center</button></section>
-      <details class="value-lens-methods"><summary>What exactly is FSFFL Intrinsic Value?</summary><p>Intrinsic v1 is a raw, market-independent coordinate. It combines Year 1, Year 2 and Year 3 expected fantasy-point surplus above replacement with weights 1.00, 0.85 and 0.70. Quarterback career-state probabilities live in Forecast; replacement economics live in Value. Market evidence is not an Intrinsic input.</p><p><strong>Important:</strong> the older generic “FSFFL Value” shown in parts of the private beta is a separate beta coordinate and is not this Intrinsic value.</p></details>
+      <details class="value-lens-methods"><summary>What exactly is FSFFL Intrinsic Value?</summary><p>Intrinsic v1 is a raw, market-independent coordinate. It combines Year 1, Year 2 and Year 3 expected fantasy-point surplus above replacement with weights 1.00, 0.85 and 0.70. Quarterback career-state probabilities live in Forecast; replacement economics live in Value. Market evidence is not an Intrinsic input.</p><p><strong>Important:</strong> the older generic “FSFFL Value” shown in parts of the private beta is a separate beta coordinate and is not this Intrinsic value. This slice labels governed Cardinal evidence explicitly as <strong>FSFFL Cardinal Value</strong> wherever it decorates the current Franchise/League view.</p></details>
     </div>`;
     host.querySelector('[data-value-lens-market]')?.addEventListener('click',()=>window.setRoute?.('opportunities'));
     host.querySelector('[data-value-lens-trade]')?.addEventListener('click',()=>window.setRoute?.('trade_center'));
@@ -104,7 +104,11 @@
 
   function activate(panel){panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.franchiseTab===TAB)));panel.querySelectorAll('[data-franchise-view]').forEach(section=>section.hidden=section.dataset.franchiseView!==TAB);load()}
 
+  function replaceTextWithin(root,from,to){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{if(node.parentElement?.closest('.value-lens-view'))return;if(node.nodeValue?.includes(from))node.nodeValue=node.nodeValue.replaceAll(from,to)})}
+  function clarifyLegacyLabels(){replaceTextWithin(document.querySelector('.franchise-shell'),'FSFFL Value','FSFFL Cardinal Value');replaceTextWithin(document.querySelector('.league-structure-panel'),'Total FSFFL value','Total FSFFL Cardinal Value')}
+
   function inject(){
+    clarifyLegacyLabels();
     const shell=document.querySelector('.franchise-shell');if(!shell||shell.dataset.valueLensInstalled===VERSION)return;
     const tabs=shell.querySelector('.franchise-tabs');if(!tabs)return;
     shell.dataset.valueLensInstalled=VERSION;
