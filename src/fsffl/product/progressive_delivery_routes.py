@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from time import monotonic
+from typing import Callable
 
 from fastapi import Depends, FastAPI, HTTPException
 
@@ -14,13 +15,13 @@ from fsffl.trade_decision import (
     summarize_package_concentration,
 )
 
-from .opportunity_workspace import build_opportunity_workspace
 from .runtime import PrivateBetaRuntimeStore
 from .trade_value_adapter import cardinal_market_profiles
 from .webapp import AnalyzeTradeRequest, _proposal_from_request
 
 
 _logger = logging.getLogger("uvicorn.error")
+WorkspaceBuilder = Callable[..., dict[str, object]]
 
 
 def _dump(value):
@@ -119,6 +120,7 @@ def install_progressive_delivery_routes(
     app: FastAPI,
     *,
     runtime_store: PrivateBetaRuntimeStore,
+    workspace_builder: WorkspaceBuilder,
     require_user,
 ) -> None:
     """Install Phase 3 fast-first, full-fidelity-follow-up endpoints."""
@@ -127,7 +129,7 @@ def install_progressive_delivery_routes(
     def opportunity_workspace_quick(user_id: str = Depends(require_user)) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
         started = monotonic()
-        result = build_opportunity_workspace(runtime, bilateral_evaluation_limit=0)
+        result = workspace_builder(runtime, bilateral_evaluation_limit=0)
         completed = monotonic()
         _logger.info(
             "FSFFL progressive Market quick timing total=%.3fs state=%s status=%s candidates=%s",
