@@ -113,11 +113,11 @@ keep <- c(
 )
 panel <- panel[, keep, drop = FALSE]
 panel <- panel[order(panel$season, panel$position, panel$player_id), ]
-write.csv(panel, file.path(out_dir, "career_transition_panel.csv"), row.names = FALSE)
+write.csv(panel, file.path(out_dir, "career_transition_panel.csv"), row.names = FALSE, na = "")
 
 coverage <- aggregate(player_id ~ season + position, data = panel, FUN = length)
 names(coverage)[3] <- "player_seasons"
-write.csv(coverage, file.path(out_dir, "career_transition_coverage.csv"), row.names = FALSE)
+write.csv(coverage, file.path(out_dir, "career_transition_coverage.csv"), row.names = FALSE, na = "")
 
 cat("Career transition rows:", nrow(panel), "\n")
 cat("Seasons:", min(panel$season), "through", max(panel$season), "\n")
