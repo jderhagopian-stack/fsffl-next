@@ -7,16 +7,18 @@ from pydantic import field_validator, model_validator
 
 from fsffl.forecast.career import MultiYearForecastPoint
 from fsffl.forecast.models import ForecastDistribution
+from fsffl.forecast.qb_career_state import QBCareerStateForecast
 from fsffl.state.models import FrozenModel, Position
 
 
-INTRINSIC_V1_FORECAST_POLICY_VERSION = "intrinsic-v1-forecast-policy-1"
+INTRINSIC_V1_FORECAST_POLICY_VERSION = "intrinsic-v1-forecast-policy-2"
 
 
 class IntrinsicV1ForecastMethod(StrEnum):
     AUTHORITATIVE_CURRENT = "authoritative_current"
     BOUNDED_CAREER_TRANSITION = "bounded_career_transition"
     CONSERVATIVE_CARRY_FORWARD = "conservative_carry_forward"
+    QB_CAREER_STATE = "qb_career_state"
 
 
 class ForecastEvidenceStrength(StrEnum):
@@ -31,6 +33,7 @@ class IntrinsicV1ForecastHorizon(FrozenModel):
     method: IntrinsicV1ForecastMethod
     evidence_strength: ForecastEvidenceStrength
     cumulative_survival_probability: float | None = None
+    meaningful_starter_probability: float | None = None
     evidence_model_version: str | None = None
     provenance_note: str
 
@@ -57,12 +60,10 @@ class IntrinsicV1PlayerForecastPath(FrozenModel):
         return self
 
 
-# Frozen from the governed bounded-materializer historical comparison. The
-# policy varies only by position and horizon, never by player identity/market.
 _INTRINSIC_V1_METHOD_POLICY: dict[Position, dict[int, IntrinsicV1ForecastMethod]] = {
     Position.QB: {
-        2: IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD,
-        3: IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD,
+        2: IntrinsicV1ForecastMethod.QB_CAREER_STATE,
+        3: IntrinsicV1ForecastMethod.QB_CAREER_STATE,
     },
     Position.RB: {
         2: IntrinsicV1ForecastMethod.BOUNDED_CAREER_TRANSITION,
@@ -87,16 +88,17 @@ def intrinsic_v1_method(position: Position, horizon_year: int) -> IntrinsicV1For
     return _INTRINSIC_V1_METHOD_POLICY[position][horizon_year]
 
 
-def _carry_distribution(
-    base: ForecastDistribution,
-    bounded: ForecastDistribution | None,
-) -> ForecastDistribution:
-    # Keep the conservative mean while refusing to claim less uncertainty than
-    # either the authoritative current forecast or the available transition path.
+def _carry_distribution(base: ForecastDistribution, bounded: ForecastDistribution | None) -> ForecastDistribution:
     return ForecastDistribution(
         mean=base.mean,
         stddev=max(base.stddev, bounded.stddev if bounded is not None else base.stddev),
     )
+
+
+def _qb_state_distribution(base: ForecastDistribution, probability: float) -> ForecastDistribution:
+    # Historical validation changed only expected mean. Preserve authoritative Y1
+    # uncertainty rather than inventing an unvalidated deep-horizon variance rule.
+    return ForecastDistribution(mean=base.mean * probability, stddev=base.stddev)
 
 
 def materialize_intrinsic_v1_forecast_path(
@@ -107,16 +109,15 @@ def materialize_intrinsic_v1_forecast_path(
     base_distribution: ForecastDistribution,
     base_forecast_model_version: str,
     bounded_path: tuple[MultiYearForecastPoint, ...] | None = None,
+    qb_career_state: QBCareerStateForecast | None = None,
 ) -> IntrinsicV1PlayerForecastPath:
     """Materialize the governed three-year Forecast input used by Intrinsic v1.
 
-    ``bounded_path`` is Forecast-owned career-transition evidence. Existing
-    ``MultiYearForecastPoint.season_offset`` values 1 and 2 correspond to v1
-    Years 2 and 3. Value never constructs that path.
-
-    When a horizon calls for bounded evidence but that evidence is unavailable,
-    v1 fails that horizon conservatively to Year-1 carry-forward and records low
-    evidence strength instead of inventing a trajectory.
+    QB deep-horizon means use the Forecast-owned career-state model when valid
+    season-scoped PIT evidence is available. The model predicts meaningful-starting-
+    role probability only; conditional starter production remains the conservative
+    authoritative Year-1 mean. Missing/stale QB evidence fails closed to the prior
+    conservative carry-forward treatment. No survival probability is applied again.
     """
 
     bounded_by_year = {point.season_offset + 1: point for point in (bounded_path or ())}
@@ -135,6 +136,24 @@ def materialize_intrinsic_v1_forecast_path(
     for year in (2, 3):
         configured = intrinsic_v1_method(position, year)
         bounded = bounded_by_year.get(year)
+        if configured == IntrinsicV1ForecastMethod.QB_CAREER_STATE and qb_career_state is not None:
+            probability = qb_career_state.year2_probability if year == 2 else qb_career_state.year3_probability
+            horizons.append(
+                IntrinsicV1ForecastHorizon(
+                    horizon_year=year,
+                    distribution=_qb_state_distribution(base_distribution, probability),
+                    method=configured,
+                    evidence_strength=ForecastEvidenceStrength.MODERATE,
+                    meaningful_starter_probability=probability,
+                    evidence_model_version=qb_career_state.model_version,
+                    provenance_note=(
+                        f"Forecast-owned QB meaningful-starter probability; PIT football features through "
+                        f"{qb_career_state.feature_cutoff_season}; conditional production = authoritative Year-1 mean; "
+                        f"evidence={qb_career_state.evidence_version}; no second survival adjustment"
+                    ),
+                )
+            )
+            continue
         if configured == IntrinsicV1ForecastMethod.BOUNDED_CAREER_TRANSITION and bounded is not None:
             horizons.append(
                 IntrinsicV1ForecastHorizon(
@@ -145,8 +164,7 @@ def materialize_intrinsic_v1_forecast_path(
                     cumulative_survival_probability=bounded.cumulative_survival_probability,
                     evidence_model_version=bounded.transition_model_version,
                     provenance_note=(
-                        "governed bounded empirical career-transition path; "
-                        "horizon selected independently from authoritative Year 1"
+                        "governed bounded empirical career-transition path; horizon selected independently from authoritative Year 1"
                     ),
                 )
             )
@@ -155,16 +173,15 @@ def materialize_intrinsic_v1_forecast_path(
         horizons.append(
             IntrinsicV1ForecastHorizon(
                 horizon_year=year,
-                distribution=_carry_distribution(
-                    base_distribution,
-                    bounded.distribution if bounded is not None else None,
-                ),
+                distribution=_carry_distribution(base_distribution, bounded.distribution if bounded is not None else None),
                 method=IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD,
                 evidence_strength=ForecastEvidenceStrength.LOW,
                 cumulative_survival_probability=None,
                 evidence_model_version=bounded.transition_model_version if bounded is not None else None,
                 provenance_note=(
-                    "frozen v1 conservative carry-forward"
+                    "QB career-state evidence unavailable/stale; conservative carry-forward fallback"
+                    if configured == IntrinsicV1ForecastMethod.QB_CAREER_STATE
+                    else "frozen v1 conservative carry-forward"
                     if configured == IntrinsicV1ForecastMethod.CONSERVATIVE_CARRY_FORWARD
                     else "bounded transition evidence unavailable; conservative carry-forward fallback"
                 ),
