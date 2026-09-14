@@ -41,9 +41,7 @@ class CurrentIntrinsicV2RuntimeResult:
         return self.valued_roster_player_count / self.roster_player_count
 
 
-def _season_fantasy_forecasts(
-    observations: tuple[ForecastObservation, ...],
-) -> dict[str, ForecastObservation]:
+def _season_fantasy_forecasts(observations: tuple[ForecastObservation, ...]) -> dict[str, ForecastObservation]:
     selected: dict[str, ForecastObservation] = {}
     for observation in observations:
         if observation.horizon != ForecastHorizon.SEASON or observation.metric != ForecastMetric.FANTASY_POINTS:
@@ -65,19 +63,15 @@ def build_current_intrinsic_values_v2(
     """Build Fundamental Intrinsic from football evidence plus league-wide structure.
 
     Structural economics consumes only lineup rules and the governed Y1 production
-    distribution. It never consumes one team's roster, replacement surplus, market,
-    owner behavior, or transaction evidence.
+    distribution. Production v6 uses player-specific starter relevance within each
+    position rather than a blanket positional multiplier. It never consumes one
+    team's roster, replacement surplus, market, owner behavior, or transaction evidence.
     """
 
     by_player = _season_fantasy_forecasts(season_forecasts)
     player_by_id = {player.player_id: player for player in league_state.players}
     state_by_id = {state.player_id: state for state in league_state.player_states}
-    forecast_means: dict[Position, list[float]] = {
-        Position.QB: [],
-        Position.RB: [],
-        Position.WR: [],
-        Position.TE: [],
-    }
+    forecast_means: dict[Position, list[float]] = {Position.QB: [], Position.RB: [], Position.WR: [], Position.TE: []}
     paths: dict[str, IntrinsicV1PlayerForecastPath] = {}
     for player_id, observation in by_player.items():
         player = player_by_id.get(player_id)
@@ -96,16 +90,12 @@ def build_current_intrinsic_values_v2(
             qb_career_state=(qb_career_states or {}).get(player_id),
         )
 
-    structural = structural_position_economics_for_league(
-        league_state,
-        forecast_means=forecast_means,
-    )
+    structural = structural_position_economics_for_league(league_state, forecast_means=forecast_means)
     roster_player_ids = {
         entry.player_id
         for team_state in league_state.team_states
         for entry in team_state.roster
-        if entry.player_id in player_by_id
-        and player_by_id[entry.player_id].position in {Position.QB, Position.RB, Position.WR, Position.TE}
+        if entry.player_id in player_by_id and player_by_id[entry.player_id].position in {Position.QB, Position.RB, Position.WR, Position.TE}
     }
     estimates: list[IntrinsicValueV2Estimate] = []
     profiles: list[AssetValueProfile] = []
@@ -115,19 +105,13 @@ def build_current_intrinsic_values_v2(
         estimate = estimate_intrinsic_value_v2(
             player_path=paths[player_id],
             player_state=state_by_id.get(player_id),
-            structural_factor=economics.relative_pressure,
             structural_starter_demand=economics.selected_starters,
             structural_effective_supply=economics.effective_supply,
+            structural_supply_curve=tuple(forecast_means[position]),
         )
         estimates.append(estimate)
         typed = as_intrinsic_dynasty_value_estimate(estimate)
-        profiles.append(
-            AssetValueProfile(
-                asset_id=player_id,
-                asset_kind=typed.asset_kind,
-                intrinsic_value=typed,
-            )
-        )
+        profiles.append(AssetValueProfile(asset_id=player_id, asset_kind=typed.asset_kind, intrinsic_value=typed))
 
     valued_ids = roster_player_ids.intersection({estimate.player_id for estimate in estimates})
     return CurrentIntrinsicV2RuntimeResult(
