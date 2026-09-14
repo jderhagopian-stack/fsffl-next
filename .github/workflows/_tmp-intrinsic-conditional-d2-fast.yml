@@ -1,0 +1,56 @@
+name: Temporary Intrinsic Conditional D2 Fast
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_intrinsic_explicit_state_conditional_quality.py'
+      - '.github/workflows/_tmp-intrinsic-conditional-d2-fast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [conditional, shrunk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FSFFL_CONDITIONAL_D2_VARIANT: ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - run: Rscript scripts/extract_career_transition_panel.R
+      - name: Download immutable evidence
+        run: |
+          mkdir -p artifacts/forecast-state/frozen-pr131 artifacts/forecast-state/frozen-qb
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/pr131.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          unzip -q /tmp/pr131.zip -d artifacts/forecast-state/frozen-pr131
+          unzip -q /tmp/qb.zip -d artifacts/forecast-state/frozen-qb
+      - name: Run challenger
+        run: |
+          mkdir -p artifacts/conditional-d2-fast/${{ matrix.variant }}
+          python scripts/run_intrinsic_explicit_state_conditional_quality.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/conditional-d2-fast/${{ matrix.variant }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: intrinsic-conditional-d2-${{ matrix.variant }}
+          path: artifacts/conditional-d2-fast/${{ matrix.variant }}/*.json
+          retention-days: 30
