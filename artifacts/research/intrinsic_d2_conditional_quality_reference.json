@@ -1,0 +1,69 @@
+{
+  "research_question": "Does restoring player-specific Forecast quality within frozen future career-state probabilities materially repair D2?",
+  "validated_head": "bc118bfe7459534ff1941339d2d4f134abed12a2",
+  "immutable_inputs": {
+    "pit_forecast_artifact_id": 10318004415,
+    "qb_state_artifact_id": 10317272576
+  },
+  "historical_competition": {
+    "run_id": 34904435312,
+    "artifact_id": 10372632144,
+    "digest": "sha256:562b495a51ce2bf2b94853346040d26cb4ef3c56d12895cfc970a6245d548f89",
+    "holdouts": 6758,
+    "folds": 12,
+    "A": {"mae": 23.260999150260382, "correlation": 0.5839239697722916},
+    "frozen_D2": {"mae": 34.8680766793218, "correlation": 0.5823167297162949, "fold_wins_vs_A": 0},
+    "conditional_D2": {"mae": 30.749237092037834, "correlation": 0.5884449498891406, "fold_wins_vs_A": 0},
+    "shrunk_conditional_D2": {"mae": 33.8104063089168, "correlation": 0.5872364824303752, "fold_wins_vs_A": 0},
+    "conditional_position_mae": {"QB": 61.63477330882785, "RB": 34.35501925271585, "WR": 28.72419180910546, "TE": 11.128824529245323},
+    "conditional_group_mae": {"young": 47.82595833426627, "developmental": 24.319366196840818, "prime": 29.705370995419393, "aging": 24.697376487961783, "fringe": 14.117675039626846, "elite": 109.5106533817921},
+    "generic_uncertainty_control": {
+      "frozen_D2_mae": 75.34359715692396,
+      "conditional_D2_mae": 81.9343068416414,
+      "shrunk_D2_mae": 77.75161679008646,
+      "target_mean": 78.54182421837858
+    }
+  },
+  "current_sanity": {
+    "run_id": 34904434864,
+    "artifact_id": 10371682273,
+    "digest": "sha256:628277147fe84f993924a8bb59736fd0c495aabb161d3afaaed506af6a81c2f7",
+    "conditional_raw": {
+      "Bijan Robinson": 454.2229278749806,
+      "Sam Darnold": 57.75036242156102,
+      "Jaxon Smith-Njigba": 269.39894648478924,
+      "Quinshon Judkins": 242.6592398121036,
+      "Brock Bowers": 146.64466461263746,
+      "KC Concepcion": 88.36395505289892,
+      "Trey McBride": 137.48723857747893
+    }
+  },
+  "synthetic": {
+    "run_id": 34904628668,
+    "artifact_id": 10371603749,
+    "digest": "sha256:5eb8ec8d4c2389bf3d1450df0d970778d4b8ffe58a3993f1c5f010198ee4ff9e",
+    "same_state_higher_quality": 79.67139153376253,
+    "same_state_lower_quality": 65.1773450673733,
+    "same_state_quality_ratio": 1.2223785956823934,
+    "stable_starting_qb": 147.19988414833435,
+    "weak_path_high_variance_backup_qb": 10.543035679380495,
+    "credible_developmental_qb": 47.004900020069876,
+    "strong_upside_developmental_wr": 59.526229650018706,
+    "weak_upside_developmental_wr": 15.517400503585876,
+    "generic_variance_uplift_pct_with_fixed_state_probabilities": 16.095780560906235,
+    "generic_variance_no_free_option_gate": false
+  },
+  "decision": "NEEDS_ONE_SPECIFIC_FIX",
+  "next_defect": "Within-state quality conditioning still lets generic Forecast dispersion reprice quality even though explicit state probabilities already own upside/downside state incidence; within-state player quality must be made variance-neutral without erasing player-specific level differences.",
+  "leakage": {
+    "broad_market": false,
+    "league_market": false,
+    "trade_prices": false,
+    "transactions": false,
+    "owner_behavior": false,
+    "team_roster": false,
+    "team_needs": false,
+    "team_specific_replacement": false,
+    "named_player_tuning": false
+  }
+}
