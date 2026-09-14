@@ -1,0 +1,58 @@
+name: Temporary Forecast Role Opportunity Foundation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/extract_career_role_opportunity_panel.R'
+      - 'scripts/run_forecast_role_opportunity_foundation.py'
+      - '.github/workflows/_tmp-forecast-role-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  role-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Build PIT career and role panels
+        run: |
+          Rscript scripts/extract_career_transition_panel.R
+          Rscript scripts/extract_career_role_opportunity_panel.R
+      - name: Download immutable Forecast evidence
+        run: |
+          mkdir -p artifacts/forecast-state/frozen-pr131 artifacts/forecast-state/frozen-qb
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/pr131.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          unzip -q /tmp/pr131.zip -d artifacts/forecast-state/frozen-pr131
+          unzip -q /tmp/qb.zip -d artifacts/forecast-state/frozen-qb
+      - name: Calibrate role opportunity state foundation and rerun frozen D2
+        run: |
+          python scripts/run_forecast_role_opportunity_foundation.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --role-panel artifacts/forecast-role/career_role_opportunity_panel.csv \
+            --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/forecast-role
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forecast-role-opportunity-foundation
+          path: |
+            artifacts/forecast-role/*.json
+            artifacts/forecast-role/*coverage.csv
+          retention-days: 30
