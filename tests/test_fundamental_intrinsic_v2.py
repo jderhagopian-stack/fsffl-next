@@ -61,15 +61,26 @@ def test_state_conditioned_aging_reduces_late_rb_continuation():
     assert late.raw_terminal_value < prime.raw_terminal_value
 
 
-def test_structural_factor_converts_football_value_into_economic_value():
-    path = _path(Position.QB, means=(300.0, 260.0, 230.0), sds=(30.0, 35.0, 40.0))
-    neutral = estimate_intrinsic_value_v2(player_path=path, player_state=_state(), structural_factor=1.0)
-    pressured = estimate_intrinsic_value_v2(player_path=path, player_state=_state(), structural_factor=1.8, structural_starter_demand=24, structural_effective_supply=37.0)
-    assert pressured.pre_structural_fundamental_value == neutral.pre_structural_fundamental_value
-    assert pressured.fundamental_value == neutral.pre_structural_fundamental_value * 1.8
-    assert pressured.fundamental_stddev == neutral.raw_fundamental_stddev * 1.8
-    assert pressured.structural_starter_demand == 24
-    assert pressured.structural_effective_supply == 37.0
+def test_player_specific_starter_relevance_replaces_blanket_position_multiplier():
+    pool = (330.0, 300.0, 280.0, 260.0, 240.0, 220.0)
+    elite = estimate_intrinsic_value_v2(
+        player_path=_path(Position.QB, means=(330.0, 300.0, 280.0), sds=(30.0, 35.0, 40.0)),
+        player_state=_state(),
+        structural_starter_demand=2,
+        structural_effective_supply=5.0,
+        structural_supply_curve=pool,
+    )
+    ordinary = estimate_intrinsic_value_v2(
+        player_path=_path(Position.QB, means=(240.0, 220.0, 200.0), sds=(30.0, 35.0, 40.0)),
+        player_state=_state(),
+        structural_starter_demand=2,
+        structural_effective_supply=5.0,
+        structural_supply_curve=pool,
+    )
+    assert elite.structural_factor > ordinary.structural_factor
+    assert elite.structural_factor <= 1.0
+    assert ordinary.structural_factor < 1.0
+    assert "no blanket positional multiplier" in elite.evidence_note
 
 
 def test_missing_pedigree_is_neutral_not_undrafted():
