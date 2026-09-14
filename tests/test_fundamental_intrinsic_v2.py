@@ -97,8 +97,8 @@ def test_positive_developmental_forecast_has_nonzero_asset_value():
 
 
 def test_display_scale_is_concave_below_apex_monotone_and_bounded():
-    apex_raw = 1540.989083049095
-    inputs = (0.0, 25.0, 100.0, 300.0, apex_raw / 2.0, 1200.0, apex_raw, 1800.0, 2200.0, 3000.0)
+    apex_raw = 897.9723670871264
+    inputs = (0.0, 25.0, 100.0, 300.0, apex_raw / 2.0, 700.0, apex_raw, 1200.0, 1800.0, 3000.0)
     values = [intrinsic_display_value(value) for value in inputs]
     assert values[0] == 0
     assert values == sorted(values)
