@@ -1,84 +1,82 @@
-# Latest Intrinsic Result — D2 Career-State Validation
+# Latest Intrinsic Result — Forecast Career-State Calibration
 
 ## Decision
 
-**KEEP A. Do not promote D2. Do not merge PR #138 yet.**
+**KEEP A AS TEMPORARY INCUMBENT. Do not promote repaired Forecast states + D2. Do not merge PR #138.**
 
-D2 successfully proves the core concept we were testing: future dynasty option value can come from explicit probabilities of entering valuable football states rather than from generic Forecast variance. It also materially fixes the first D implementation's within-state compression problem.
+This workstream kept A/B/C/D/D2 frozen and changed only Forecast-owned career-state research. The explicit-state concept remains sound: D2 still prevents generic Forecast variance from becoming free dynasty option value. The attempted Forecast repair, however, does not make D2 competitive with A.
 
-However, the underlying career-state probabilities/taxonomy are not calibrated well enough to support D2 as the production Intrinsic primitive. The remaining defect belongs in **Forecast career-state calibration**, especially RB/WR/TE. Do not invent another Value transformation.
-
-## Exact validated state
+## Exact research state
 
 - main: `53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76`
-- D2 chronological research head: `0952aff12e9743f6bf1e584c9af339c8b0d5f87c`
-- final validated PR head before management-artifact-only commits: `1bb4d40c50cd5048d038e168a4ebc2cf8889a100`
-- PR #138: open, unmerged, mergeable
-- PR #137: still superseded and unmerged
-- unresolved review threads: 0
+- Forecast calibration evidence head: `029f4e5ba6ac0308981e9d990f59f411840ddb7c`
+- PR #138 remains open/unmerged
+- PR #137 remains superseded/unmerged
+- unresolved review threads at the last exact check: 0
 
-## What D2 is
+## What was calibrated
 
-D2 values the expected neutral-format franchise contribution across explicit future career states (`out`, `depth`, `usable`, `starter`, `premium`, `elite`). Generic Forecast standard deviation cannot move probability mass into a better state. Within a state, D2 uses the bounded smooth neutral contribution of the state-conditioned production distribution, while current-season contribution remains player-specific.
+A governed Forecast contract now exists for player/horizon career-state distributions, including state probabilities, upward/downward transition probability, survival, state-conditioned production, confidence/evidence quality, model version and provenance.
 
-## Chronological result
+Three bounded six-state taxonomy constructions were tested chronologically: existing-style k-means production states, balanced quantiles and starter-tail quantiles. K-means was least bad; none earned production promotion.
 
-On 6,758 holdouts across 12 chronological folds, using D2's smooth realized neutral-contribution target:
+Transitions used chronological historical football evidence only: position, current state, age, experience and draft-capital tier with hierarchical shrinkage. Existing governed QB meaningful-starter probabilities were retained rather than rebuilt.
 
-| Candidate | MAE |
+## Calibration result
+
+There are two important views of the evidence.
+
+**When both current and future states are defined from realized historical production**, the research transition model calibrates fairly well on 7,072 observations:
+
+- upward: **20.7% predicted vs 19.0% realized**
+- downward: **47.9% vs 49.7%**
+- persistence: **31.4% vs 31.2%**
+- Brier: **0.1164**
+- log loss: **1.4537**
+
+But that is not the coordinate D2 actually consumes. D2 must infer current state from the **Forecast Y1 mean**. On the inference-aligned population (4,102 observations), the same model is badly biased:
+
+- upward: **21.8% predicted vs 36.3% realized**
+- downward: **49.1% predicted vs 29.2% realized**
+- persistence: **29.1% vs 34.5%**
+- Brier: **0.1348**
+- log loss: **1.7010**
+
+The bias appears at every position: QB upward 20.5% vs 31.9%, RB 21.0% vs 34.1%, WR 22.8% vs 37.6%, TE 21.8% vs 39.9%. Young players are especially affected: 30.5% upward predicted vs 47.3% realized, while downward is 43.1% vs only 21.0% realized.
+
+This explains the earlier D2 defect. Historical transitions were learned from **realized-current production states**, but live D2 assigns state from **Forecast Y1 production**. Those state anchors are not exchangeable.
+
+## D2 downstream result
+
+Frozen D2 improved only trivially:
+
+| Model | Realized-contribution MAE |
 |---|---:|
 | **A** | **23.26** |
-| B | 28.31 |
-| C | 29.11 |
-| first D, aligned to D2 target | 31.68 |
-| **D2** | **34.87** |
+| D2 before Forecast repair | 34.87 |
+| D2 with repaired research transitions | **34.79** |
 
-D2 beat A in **0/12 folds**. It was worse than A at QB, RB, WR and TE, and worse for young, developmental, prime, aging and fringe players. It improved only the elite-tail MAE (98.9 vs A 113.3).
+D2 still beat A in **0/12 chronological folds**. Developmental MAE worsened from 35.45 to **37.31** and young MAE from 53.60 to **55.12**. Elite, aging, WR and TE results improved somewhat, but not enough to offset the remaining state-anchor problem.
 
-The most important developmental results were poor: developmental MAE **35.4 vs A 7.6**, young **53.6 vs 37.4**, fringe **19.8 vs 6.1**.
+## Synthetic and current sanity
 
-## Transition calibration
+The D2 synthetic gates remain passed because D2 itself was not changed:
 
-The transition probabilities are unchanged from first-generation D and remain the core blocker:
+- stable starter QB **11.46** > weak-path high-variance backup **1.43**
+- credible developmental QB **10.81**
+- strong-upside WR **8.05** > weak-upside WR **1.44**
+- elite TE **15.69** >> fringe TE **0.25**
 
-- upward transition: **29.1% predicted vs 37.3% realized**
-- downward transition: **33.7% predicted vs 27.3% realized**
-- multiclass Brier: **0.1215** on 3,997 state outcomes
+Current live sanity used FFToday + Razzball. Bijan > Darnold and JSN > Judkins are coherent; QB ordering is sensible. But KC Concepcion still narrowly exceeds Brock Bowers, and Trey McBride remains above Bowers. More fundamentally, nearly every headline player still maps to `elite` from Forecast Y1, which mechanically leaves no upward transition and exaggerates decline probability from the top state.
 
-D2 therefore underestimates real development and overestimates role loss. Changing the Value contribution function cannot repair this.
+Runtime remains trivial: about **0.048 seconds for 334 players**, or ~**2.6 ms** for an 18-player roster once reusable state tables are available.
 
-## Synthetic gate
+## Architectural conclusion
 
-D2 **passes the conceptual synthetic gate**:
+The next defect is **not another Intrinsic problem** and not a reason to create D3.
 
-- stable starting QB: **11.46**
-- high-variance backup with weak upward path: **1.43**
-- developmental QB with credible starter path: **10.81**
-- WR with strong upward path: **8.05**
-- similar WR with weak upward path: **1.44**
-- elite young TE: **15.69**
-- fringe TE: **0.25**
+Forecast needs a point-in-time **current-state anchor calibrated in the same Forecast/role coordinate used at inference**. The next research should reconstruct or learn that anchor from PIT forecast-like and/or role evidence, especially for RB/WR/TE, while retaining the existing governed QB meaningful-starter model. Then rerun the exact frozen D2 experiment.
 
-This confirms that D2 does **not** recreate C's generic-variance-as-free-upside pathology. Credible option value comes from explicit state probability.
+TE-premium scoring propagation remains a separate upstream integration task.
 
-## Current-player sanity
-
-D2 materially reduces within-state compression. First-generation D, for example, gave Kyle Pitts and Trey McBride the same value (~6.54); D2 separates McBride **53.5**, Bowers **32.8**, Pitts **21.9** using player-specific current contribution plus bounded future states.
-
-But the state model still produces important sanity failures. Nearly the whole target set is classified `elite`. Bijan **217.3 > Darnold 40.3** and the QB ordering is sensible, but Judkins **120.5** narrowly remains above JSN **120.1**, KC Concepcion **36.3 > Brock Bowers 32.8**, and McBride **53.5 > Bowers 32.8**. Those are state-model evidence problems, not a reason to add another Value curve.
-
-Runtime is commercially trivial once state tables are cached: ~**0.046 seconds for 334 players** in the research sanity run.
-
-## Final gates
-
-- CI on `1bb4d40...`: **success — 1,195 passed, 2 non-blocking deprecation warnings**
-- Fundamental Intrinsic Calibration on `1bb4d40...`: **success**
-- D2 chronological workflow: **success**
-- D2 current/synthetic sanity workflow: **success**
-- leakage: no Broad Market, League Market, actual trades, owner behavior, team roster, specific replacement, or Team Utility inputs
-
-## Next exact action
-
-Keep **A** as the current Intrinsic primitive. Do not build D3 or another Value transformation. Improve the **Forecast-owned career-state taxonomy and transition calibration**, particularly RB/WR/TE upward-development and role-loss probabilities, then rerun this exact frozen D2 experiment. TE-premium scoring propagation remains a separate upstream integration repair.
-
-**PR #138 remains unmerged pending management approval and the previously identified TE-premium integration repair.**
+**PR #138 remains unmerged pending explicit management approval.**
