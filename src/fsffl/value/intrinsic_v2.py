@@ -10,88 +10,86 @@ from fsffl.forecast.intrinsic_v1 import ForecastEvidenceStrength, IntrinsicV1Pla
 from fsffl.state.models import FrozenModel, PlayerState, Position
 from fsffl.value.models import IntrinsicDynastyValueEstimate, ValueAssetKind, ValueDistribution, ValueScale
 
+from .intrinsic_economics import INTRINSIC_STRUCTURAL_ECONOMICS_VERSION
 
-INTRINSIC_VALUE_V2_VERSION = "intrinsic-fundamental-career-value-v5"
+
+INTRINSIC_VALUE_V2_VERSION = "intrinsic-fundamental-economic-value-v6"
 INTRINSIC_VALUE_V2_WEIGHTS: tuple[float, float, float] = (1.0, 0.85, 0.85**2)
-INTRINSIC_TERMINAL_MODEL_VERSION = "intrinsic-career-continuation-residual-v3"
-INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v5"
-INTRINSIC_CALIBRATION_VERSION = "fundamental-intrinsic-shared-career-v5c"
+INTRINSIC_TERMINAL_MODEL_VERSION = "intrinsic-career-continuation-residual-v4"
+INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-economic-reference"
+INTRINSIC_CALIBRATION_VERSION = "fundamental-intrinsic-production-parity-v1"
 
-# The v4 calibration normalized each position separately before fitting the
-# residual pedigree term. These football-only anchors remain solely to convert
-# that already-validated residual contribution back into shared fantasy-point
-# units. They no longer normalize the final Fundamental Intrinsic coordinate.
+# Production-parity calibration still residualizes draft pedigree in normalized
+# position units. These football-only anchors exist solely to convert that
+# validated residual contribution back into shared football-production units;
+# they do not normalize the final cross-position coordinate.
 _POSITION_RESIDUAL_UNIT_ANCHOR: dict[Position, float] = {
-    Position.QB: 1047.4444288312498,
-    Position.RB: 412.1524660625,
-    Position.WR: 439.8505064812502,
-    Position.TE: 291.60519133749995,
+    Position.QB: 1016.0174027306249,
+    Position.RB: 407.56763725000013,
+    Position.WR: 416.2464794999999,
+    Position.TE: 278.95638595624996,
 }
 
-# Parent continuation factors from the reproducible PIT calibration.
+# Parent post-Y3 factors recalibrated against the exact deployed Forecast horizon
+# policy: PIT Model-A Y1; QB career-state when frozen PIT evidence exists; bounded
+# RB/TE transitions; WR Y2 carry-forward and bounded Y3.
 _POSITION_CONTINUATION_COEFFICIENT: dict[Position, float] = {
-    Position.QB: 4.081432648866086,
-    Position.RB: 4.751362988643172,
-    Position.WR: 5.255557710367663,
-    Position.TE: 4.229937041212303,
+    Position.QB: 3.04477622642943,
+    Position.RB: 4.303817924177665,
+    Position.WR: 6.143984964367542,
+    Position.TE: 5.817300974838888,
 }
 
-# Chronologically validated aging-only non-QB continuation cells. Young/prime
-# players retain the parent factor; QB retains its parent because its governed
-# Y2/Y3 Forecast already consumes the QB career-state model. The selected repair
-# improved shared-unit MAE in all nine chronological folds and improved the 30+
-# RB/WR/TE diagnostics without introducing a standalone youth bonus.
+# Aging-only cells from the same production-parity calibration. They are not
+# forced monotonic. The recalibrated evidence itself resolves the prior oddities:
+# WR veteran and late tails taper below younger cohorts and TE late < veteran.
 _AGING_CONTINUATION_COEFFICIENT: dict[tuple[Position, str], float] = {
-    (Position.RB, "veteran"): 4.288215381859406,
-    (Position.RB, "late"): 2.5207667155683695,
-    (Position.WR, "veteran"): 6.266997237225151,
-    (Position.WR, "late"): 1.7824123309693336,
-    (Position.TE, "veteran"): 3.3838536404247157,
-    (Position.TE, "late"): 3.7081860928620243,
+    (Position.RB, "veteran"): 3.950333600958593,
+    (Position.RB, "late"): 2.7510651150227448,
+    (Position.WR, "veteran"): 6.004984105473204,
+    (Position.WR, "late"): 2.6770751749625927,
+    (Position.TE, "veteran"): 5.618822091672501,
+    (Position.TE, "late"): 4.858769764287097,
 }
 
-# Pedigree remains the same validated residual-only signal. The residualizer is
-# conditioned on governed Y1/Y2/Y3 Forecast means/uncertainty plus position.
+# Pedigree remains the only promoted residual signal. Coefficients are refitted
+# against the production-parity Y1/Y2/Y3 Forecast mean/uncertainty vector.
 _PEDIGREE_RESIDUALIZER: tuple[float, ...] = (
-    0.2484781735505464,
-    -0.12700456930531967,
-    -0.06841075885449754,
-    0.03180806595946706,
-    1.1280967595880664,
-    0.1363146597623892,
-    -0.09238759750627423,
-    -0.19708700895188297,
-    -0.14843554731856134,
-    -0.18572704938326556,
+    0.20196416032092881,
+    -0.3623290279557141,
+    0.13015925666996386,
+    1.1964187061171963,
+    2.492600343793169,
+    -1.5201173612975936,
+    -0.17258143695061712,
+    -0.14174301358417163,
+    -0.10544604937416151,
+    -0.13242423855480032,
 )
-_PEDIGREE_RESIDUAL_INTERCEPT = -1.0825294742668998
-_PEDIGREE_RESIDUAL_COEFFICIENT = 28.187525270792843
+_PEDIGREE_RESIDUAL_INTERCEPT = -2.2638022612451145
+_PEDIGREE_RESIDUAL_COEFFICIENT = 28.101305498458085
 
-# Versioned football-only display anchors. Raw values are now shared discounted
-# career fantasy-point magnitude. The reference universe is the historical half
-# of repaired PIT predictions at or above the pooled median (107.339), excluding
-# the fringe half without position quotas, roster rules, market prices, or named-
-# player tuning. Output tiers deliberately reserve 9,000+ for the extreme apex
-# tail rather than equating p90 among all NFL players with an apex asset.
+# Stable football/rules-only customer scale. The reference universe is the top
+# 216 predicted economic assets per PIT season: 12 teams x 18 active roster
+# places, with no positional quota. The raw cut points therefore emerge from a
+# dynasty-relevant roster-capacity universe rather than the full NFL population,
+# current-player values, or any market source.
 _DISPLAY_ANCHORS: tuple[tuple[float, int], ...] = (
     (0.0, 0),
-    (10.524529721618592, 1000),
-    (46.1764651911168, 2500),
-    (107.33902767034948, 4000),
-    (148.59960572685094, 5000),
-    (200.2200043195422, 6000),
-    (276.92014727861124, 7000),
-    (404.18990857971215, 8000),
-    (529.1259104990676, 8500),
-    (640.190364644663, 8800),
-    (789.6239953076092, 9000),
+    (121.44812067567622, 2000),
+    (153.5200104805043, 4500),
+    (241.62841665403283, 6500),
+    (398.4623347230747, 8000),
+    (860.2953473881821, 9000),
+    (1431.1653907320676, 9400),
+    (1783.2893275391143, 9700),
 )
-_DISPLAY_TAIL_SCALE = 700.0
+_DISPLAY_TAIL_SCALE = 1783.2893275391143
 
 INTRINSIC_VALUE_V2_SCALE = ValueScale(
-    scale_id="fsffl_intrinsic_fundamental_career",
-    version="5",
-    unit_label="shared football-only discounted long-term fundamental dynasty career value",
+    scale_id="fsffl_intrinsic_fundamental_economic",
+    version="6",
+    unit_label="league-structural long-term fundamental dynasty asset value",
 )
 
 
@@ -141,9 +139,13 @@ class IntrinsicValueV2Estimate(FrozenModel):
     raw_terminal_value: float
     raw_fundamental_career_value: float
     raw_fundamental_stddev: float
+    pre_structural_fundamental_value: float
     fundamental_value: float
     fundamental_stddev: float
     residual_fundamental_value: float = 0.0
+    structural_factor: float = 1.0
+    structural_starter_demand: int = 0
+    structural_effective_supply: float = 0.0
     display_value: int
     confidence: IntrinsicV2Confidence
     evidence_state: IntrinsicV2EvidenceState
@@ -151,6 +153,7 @@ class IntrinsicValueV2Estimate(FrozenModel):
     model_version: str = INTRINSIC_VALUE_V2_VERSION
     calibration_version: str = INTRINSIC_CALIBRATION_VERSION
     display_scale_version: str = INTRINSIC_DISPLAY_SCALE_VERSION
+    structural_economics_version: str = INTRINSIC_STRUCTURAL_ECONOMICS_VERSION
     forecast_policy_version: str
     base_forecast_model_version: str
     terminal: IntrinsicV2TerminalContribution
@@ -167,8 +170,10 @@ class IntrinsicValueV2Estimate(FrozenModel):
     def require_contract(self) -> "IntrinsicValueV2Estimate":
         if tuple(point.horizon_year for point in self.horizons) != (1, 2, 3):
             raise ValueError("Fundamental Intrinsic requires exactly Year 1, Year 2, and Year 3 Forecast inputs")
-        if self.fundamental_value < 0 or not 0 <= self.display_value <= 10_000:
+        if self.fundamental_value < 0 or self.pre_structural_fundamental_value < 0 or not 0 <= self.display_value <= 10_000:
             raise ValueError("Fundamental Intrinsic values must be non-negative and display-bounded")
+        if self.structural_factor <= 0 or self.structural_starter_demand < 0 or self.structural_effective_supply < 0:
+            raise ValueError("structural economics must be positive/non-negative")
         return self
 
 
@@ -231,7 +236,7 @@ def _continuation_factor(position: Position, player_state: PlayerState | None) -
 
 
 def intrinsic_display_value(fundamental_value: float) -> int:
-    """Map shared football-only Fundamental Intrinsic magnitude onto 0-10,000."""
+    """Map economic Fundamental Intrinsic magnitude onto the customer 0-10,000 scale."""
     if fundamental_value <= 0:
         return 0
     for (x0, y0), (x1, y1) in zip(_DISPLAY_ANCHORS, _DISPLAY_ANCHORS[1:]):
@@ -247,17 +252,24 @@ def estimate_intrinsic_value_v2(
     *,
     player_path: IntrinsicV1PlayerForecastPath,
     player_state: PlayerState | None = None,
+    structural_factor: float = 1.0,
+    structural_starter_demand: int = 0,
+    structural_effective_supply: float = 0.0,
 ) -> IntrinsicValueV2Estimate:
-    """Estimate team-independent long-term dynasty asset worth from football fundamentals.
+    """Estimate team-independent long-term dynasty asset worth from fundamentals.
 
-    The final raw coordinate is shared discounted football-production magnitude,
-    not within-position excellence. Years 1-3 consume governed Forecast once.
-    Post-Year-3 continuation preserves the validated parent relationship to Y3 but
-    uses chronologically validated aging cells for veteran/late non-QBs. Pedigree
-    remains a residual-only signal and is converted back to the same shared football
-    units before addition. Market, replacement, Team Utility, owner behavior, and
-    transaction outcomes remain absent.
+    Football production remains Forecast-owned. Value discounts governed Y1-Y3,
+    adds the validated state-conditioned continuation and residual draft pedigree,
+    then applies one deterministic league-wide positional-economic conversion from
+    lineup demand versus production-concentration supply. No individual team,
+    replacement surplus, market price, owner behavior, or transaction evidence is
+    accepted by this estimator.
     """
+    if structural_factor <= 0:
+        raise ValueError("structural_factor must be positive")
+    if structural_starter_demand < 0 or structural_effective_supply < 0:
+        raise ValueError("structural demand/supply must be non-negative")
+
     residual_unit_anchor = _POSITION_RESIDUAL_UNIT_ANCHOR[player_path.position]
     contributions: list[IntrinsicV2HorizonContribution] = []
     y1_y3_mean = 0.0
@@ -305,7 +317,17 @@ def estimate_intrinsic_value_v2(
         normalized_pedigree_value = _PEDIGREE_RESIDUAL_INTERCEPT + _PEDIGREE_RESIDUAL_COEFFICIENT * pedigree_residual
         pedigree_value = normalized_pedigree_value * residual_unit_anchor / 100.0
 
-    fundamental = max(0.0, raw_career + pedigree_value)
+    pre_structural = max(0.0, raw_career + pedigree_value)
+    fundamental = pre_structural * structural_factor
+    fundamental_stddev = raw_stddev * structural_factor
+    economic_residual = pedigree_value * structural_factor
+    evidence_note += (
+        f" League-wide structural factor {structural_factor:.3f} converts football contribution into asset economics "
+        f"from {structural_starter_demand} neutral starters and {structural_effective_supply:.1f} effective production-supply units."
+        if structural_starter_demand > 0 and structural_effective_supply > 0
+        else " Structural factor is neutral because league-wide structural evidence was not supplied."
+    )
+
     terminal = IntrinsicV2TerminalContribution(
         year3_forecast_mean=y3.mean,
         year3_forecast_stddev=y3.stddev,
@@ -326,9 +348,13 @@ def estimate_intrinsic_value_v2(
         raw_terminal_value=continuation,
         raw_fundamental_career_value=raw_career,
         raw_fundamental_stddev=raw_stddev,
+        pre_structural_fundamental_value=pre_structural,
         fundamental_value=fundamental,
-        fundamental_stddev=raw_stddev,
-        residual_fundamental_value=pedigree_value,
+        fundamental_stddev=fundamental_stddev,
+        residual_fundamental_value=economic_residual,
+        structural_factor=structural_factor,
+        structural_starter_demand=structural_starter_demand,
+        structural_effective_supply=structural_effective_supply,
         display_value=intrinsic_display_value(fundamental),
         confidence=_confidence(player_path),
         evidence_state=evidence_state,
