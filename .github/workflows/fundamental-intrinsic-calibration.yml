@@ -15,6 +15,7 @@ on:
       - 'scripts/run_fundamental_intrinsic_reference_distribution.py'
       - 'scripts/run_intrinsic_structural_audit_fast.py'
       - 'scripts/run_intrinsic_growth_state_audit.py'
+      - 'scripts/run_intrinsic_distribution_growth_audit.py'
       - 'src/fsffl/forecast/intrinsic_v1.py'
       - 'src/fsffl/forecast/non_qb_career_state.py'
       - 'src/fsffl/value/intrinsic_economics.py'
@@ -83,6 +84,13 @@ jobs:
       - name: Test bounded career-state growth challenger
         run: |
           python scripts/run_intrinsic_growth_state_audit.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Check distributional growth calibration
+        run: |
+          python scripts/run_intrinsic_distribution_growth_audit.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
