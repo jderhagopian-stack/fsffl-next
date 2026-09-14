@@ -1,0 +1,29 @@
+name: Temporary Current Marginal Franchise Sanity
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/_tmp_current_marginal_franchise_sanity.py'
+      - '.github/workflows/_tmp-current-marginal-franchise-sanity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - run: python scripts/_tmp_current_marginal_franchise_sanity.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-marginal-franchise-sanity
+          path: artifacts/current-marginal-sanity/current_marginal_franchise_sanity.json
+          retention-days: 7
