@@ -16,7 +16,7 @@ from .intrinsic_economics import INTRINSIC_STRUCTURAL_ECONOMICS_VERSION
 INTRINSIC_VALUE_V2_VERSION = "intrinsic-fundamental-economic-value-v6"
 INTRINSIC_VALUE_V2_WEIGHTS: tuple[float, float, float] = (1.0, 0.85, 0.85**2)
 INTRINSIC_TERMINAL_MODEL_VERSION = "intrinsic-career-continuation-residual-v4"
-INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-economic-reference"
+INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-linear-economic-apex"
 INTRINSIC_CALIBRATION_VERSION = "fundamental-intrinsic-production-parity-v1"
 
 # Production-parity calibration still residualizes draft pedigree in normalized
@@ -61,24 +61,16 @@ _PEDIGREE_RESIDUALIZER: tuple[float, ...] = (
 _PEDIGREE_RESIDUAL_INTERCEPT = -2.2638022612451145
 _PEDIGREE_RESIDUAL_COEFFICIENT = 28.101305498458085
 
-# Stable football/rules-only customer scale. Raw cut points come from the top
-# 216 predicted economic assets per PIT season (12 teams x 18 active roster
-# places), with no positional quota. The display bands then give those fixed
-# dynasty-reference quantiles semantic meaning: lower-roster assets stay low,
-# the median rosterable asset is around 5,000, the upper quartile starts around
-# 6,500, elite begins around the p90 raw magnitude, and 9,000+ is reserved for
-# the extreme tail. No current player or market coordinate participates.
-_DISPLAY_ANCHORS: tuple[tuple[float, int], ...] = (
-    (0.0, 0),
-    (121.44812067567622, 1000),
-    (153.5200104805043, 3000),
-    (241.62841665403283, 5000),
-    (398.4623347230747, 6500),
-    (860.2953473881821, 8000),
-    (1431.1653907320676, 9000),
-    (1783.2893275391143, 9500),
-)
-_DISPLAY_TAIL_SCALE = 1783.2893275391143
+# Customer display is a cardinal rescaling of the completed economic raw rather
+# than a percentile leaderboard. 9,500 corresponds to the all-positive PIT
+# economic-raw p99 from the production-parity evidence (9,975 examples). Below
+# that robust elite anchor the mapping is linear, preserving economic magnitude
+# ratios; only the extreme tail compresses asymptotically toward 10,000. This
+# reference uses no fixed league roster capacity, current-player quantiles,
+# named players, or market coordinate.
+_DISPLAY_APEX_RAW = 1540.989083049095
+_DISPLAY_APEX_VALUE = 9500
+_DISPLAY_TAIL_SCALE = _DISPLAY_APEX_RAW
 
 INTRINSIC_VALUE_V2_SCALE = ValueScale(
     scale_id="fsffl_intrinsic_fundamental_economic",
@@ -233,13 +225,12 @@ def intrinsic_display_value(fundamental_value: float) -> int:
     """Map economic Fundamental Intrinsic magnitude onto the customer 0-10,000 scale."""
     if fundamental_value <= 0:
         return 0
-    for (x0, y0), (x1, y1) in zip(_DISPLAY_ANCHORS, _DISPLAY_ANCHORS[1:]):
-        if fundamental_value <= x1:
-            fraction = (fundamental_value - x0) / (x1 - x0)
-            return min(10_000, max(0, round(y0 + fraction * (y1 - y0))))
-    x_apex, y_apex = _DISPLAY_ANCHORS[-1]
-    tail = y_apex + (10_000 - y_apex) * (1.0 - exp(-(fundamental_value - x_apex) / _DISPLAY_TAIL_SCALE))
-    return min(9_999, max(y_apex, round(tail)))
+    if fundamental_value <= _DISPLAY_APEX_RAW:
+        return min(_DISPLAY_APEX_VALUE, round(_DISPLAY_APEX_VALUE * fundamental_value / _DISPLAY_APEX_RAW))
+    tail = _DISPLAY_APEX_VALUE + (10_000 - _DISPLAY_APEX_VALUE) * (
+        1.0 - exp(-(fundamental_value - _DISPLAY_APEX_RAW) / _DISPLAY_TAIL_SCALE)
+    )
+    return min(9_999, max(_DISPLAY_APEX_VALUE, round(tail)))
 
 
 def estimate_intrinsic_value_v2(
