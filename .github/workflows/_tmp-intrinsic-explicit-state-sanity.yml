@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/run_intrinsic_explicit_state_sanity.py'
       - 'scripts/run_intrinsic_explicit_state_sanity_cached.py'
+      - 'scripts/run_intrinsic_explicit_state_sanity_d2.py'
       - '.github/workflows/_tmp-intrinsic-explicit-state-sanity.yml'
   workflow_dispatch:
 
@@ -37,9 +38,9 @@ jobs:
           gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
           unzip -q /tmp/pr131.zip -d artifacts/explicit-state-sanity/frozen-pr131
           unzip -q /tmp/qb.zip -d artifacts/explicit-state-sanity/frozen-qb
-      - name: Run current, synthetic, format and runtime sanity
+      - name: Run D2 current, synthetic, format and runtime sanity
         run: |
-          python scripts/run_intrinsic_explicit_state_sanity_cached.py \
+          python scripts/run_intrinsic_explicit_state_sanity_d2.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/explicit-state-sanity/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/explicit-state-sanity/frozen-qb/qb_career_state_deployment_results.json \
