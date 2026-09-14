@@ -19,4 +19,11 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install -e .
-      - run: python scripts/_tmp_current_intrinsic_sanity.py
+      - name: Run current-player sanity validation
+        run: python scripts/_tmp_current_intrinsic_sanity.py | tee current_intrinsic_sanity.md
+      - name: Upload current-player sanity evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-intrinsic-sanity
+          path: current_intrinsic_sanity.md
+          retention-days: 14
