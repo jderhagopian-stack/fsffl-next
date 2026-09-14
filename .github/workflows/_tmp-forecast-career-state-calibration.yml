@@ -8,6 +8,7 @@ on:
       - 'scripts/run_forecast_career_state_strict_compare.py'
       - 'scripts/run_forecast_career_state_taxonomy_strict_audit.py'
       - 'scripts/run_forecast_career_state_current_sanity.py'
+      - 'artifacts/research/intrinsic_d2_frozen_reference.json'
       - '.github/workflows/_tmp-forecast-career-state-calibration.yml'
   workflow_dispatch:
 
@@ -42,6 +43,7 @@ jobs:
           unzip -q /tmp/qb.zip -d artifacts/forecast-state/frozen-qb
       - name: Calibrate Forecast career states and rerun frozen D2
         run: |
+          sed -i 's#artifacts/management/latest_intrinsic_result.json#artifacts/research/intrinsic_d2_frozen_reference.json#' scripts/run_forecast_career_state_calibration.py
           python scripts/run_forecast_career_state_calibration.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
