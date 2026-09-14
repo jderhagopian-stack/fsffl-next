@@ -93,13 +93,20 @@ def install(form, base):
 
     def metrics_with_developmental(rows, key):
         result = original_metrics(rows, key)
-        target_median = base.quantile([r["target"] for r in rows], 0.50)
+        target_values = [r["target"] for r in rows]
+        target_mean = base.mean(target_values)
+        target_median = base.quantile(target_values, 0.50)
         developmental = [
             r for r in rows
             if base.age_band(r["position"], r["age"]) == "young" and r["target"] < target_median
         ]
+        result["mean_target"] = target_mean
+        result["normalized_mae"] = result["mae"] / max(1e-9, target_mean)
         result["developmental_n"] = len(developmental)
         result["developmental_mae"] = base.mean(abs(r[key] - r["target"]) for r in developmental)
+        result["developmental_normalized_mae"] = result["developmental_mae"] / max(
+            1e-9, base.mean(r["target"] for r in developmental)
+        )
         result["developmental_mean_prediction"] = base.mean(r[key] for r in developmental)
         result["developmental_mean_target"] = base.mean(r["target"] for r in developmental)
         return result
