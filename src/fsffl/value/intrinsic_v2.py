@@ -202,7 +202,7 @@ def intrinsic_display_value(fundamental_value: float) -> int:
     """Map frozen football-only Fundamental Intrinsic onto 0-10,000."""
     if fundamental_value <= 0:
         return 0
-    for (x0, y0), (x1, y1) in zip(_DISPLAY_ANCHORS, _DISPLAY_ANCHORS[1:], strict=True):
+    for (x0, y0), (x1, y1) in zip(_DISPLAY_ANCHORS, _DISPLAY_ANCHORS[1:]):
         if fundamental_value <= x1:
             fraction = (fundamental_value - x0) / (x1 - x0)
             return min(10_000, max(0, round(y0 + fraction * (y1 - y0))))
