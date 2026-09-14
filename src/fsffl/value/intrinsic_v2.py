@@ -10,7 +10,7 @@ from fsffl.forecast.intrinsic_v1 import ForecastEvidenceStrength, IntrinsicV1Pla
 from fsffl.state.models import FrozenModel, PlayerState, Position
 from fsffl.value.models import IntrinsicDynastyValueEstimate, ValueAssetKind, ValueDistribution, ValueScale
 
-from .intrinsic_economics import INTRINSIC_STRUCTURAL_ECONOMICS_VERSION
+from .intrinsic_economics import INTRINSIC_STRUCTURAL_ECONOMICS_VERSION, production_rank_relevance
 
 
 INTRINSIC_VALUE_V2_VERSION = "intrinsic-fundamental-economic-value-v6"
@@ -19,10 +19,6 @@ INTRINSIC_TERMINAL_MODEL_VERSION = "intrinsic-career-continuation-residual-v4"
 INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-sqrt-economic-apex"
 INTRINSIC_CALIBRATION_VERSION = "fundamental-intrinsic-production-parity-v1"
 
-# Production-parity calibration still residualizes draft pedigree in normalized
-# position units. These football-only anchors exist solely to convert that
-# validated residual contribution back into shared football-production units;
-# they do not normalize the final cross-position coordinate.
 _POSITION_RESIDUAL_UNIT_ANCHOR: dict[Position, float] = {
     Position.QB: 1016.0174027306249,
     Position.RB: 407.56763725000013,
@@ -61,13 +57,8 @@ _PEDIGREE_RESIDUALIZER: tuple[float, ...] = (
 _PEDIGREE_RESIDUAL_INTERCEPT = -2.2638022612451145
 _PEDIGREE_RESIDUAL_COEFFICIENT = 28.101305498458085
 
-# Customer display is a monotonic concave rescaling of the completed economic
-# raw, not a percentile leaderboard. 9,500 corresponds to the all-positive PIT
-# economic-raw p99 from the production-parity evidence (9,975 examples). Below
-# that robust elite anchor a square-root transform handles the heavy right tail
-# without imposing roster-percentile buckets; only the extreme tail compresses
-# asymptotically toward 10,000. This reference uses no fixed league roster
-# capacity, current-player quantiles, named players, or market coordinate.
+# Recalibrated after the structural conversion is finalized. The transform is
+# presentation-only and never changes player ordering or raw economics.
 _DISPLAY_APEX_RAW = 1540.989083049095
 _DISPLAY_APEX_VALUE = 9500
 _DISPLAY_TAIL_SCALE = _DISPLAY_APEX_RAW
@@ -158,8 +149,8 @@ class IntrinsicValueV2Estimate(FrozenModel):
             raise ValueError("Fundamental Intrinsic requires exactly Year 1, Year 2, and Year 3 Forecast inputs")
         if self.fundamental_value < 0 or self.pre_structural_fundamental_value < 0 or not 0 <= self.display_value <= 10_000:
             raise ValueError("Fundamental Intrinsic values must be non-negative and display-bounded")
-        if self.structural_factor <= 0 or self.structural_starter_demand < 0 or self.structural_effective_supply < 0:
-            raise ValueError("structural economics must be positive/non-negative")
+        if self.structural_factor < 0 or self.structural_starter_demand < 0 or self.structural_effective_supply < 0:
+            raise ValueError("structural economics must be non-negative")
         return self
 
 
@@ -179,11 +170,7 @@ def _pedigree_score(player_state: PlayerState | None) -> float | None:
     return max(0.0, 1.0 - log1p(pick) / log1p(260.0))
 
 
-def _forecast_conditioning_vector(
-    player_path: IntrinsicV1PlayerForecastPath,
-    *,
-    anchor: float,
-) -> tuple[float, ...]:
+def _forecast_conditioning_vector(player_path: IntrinsicV1PlayerForecastPath, *, anchor: float) -> tuple[float, ...]:
     means = tuple(max(0.0, point.distribution.mean) / anchor for point in player_path.horizons)
     sds = tuple(point.distribution.stddev / anchor for point in player_path.horizons)
     return (
@@ -222,7 +209,6 @@ def _continuation_factor(position: Position, player_state: PlayerState | None) -
 
 
 def intrinsic_display_value(fundamental_value: float) -> int:
-    """Map economic Fundamental Intrinsic magnitude onto the customer 0-10,000 scale."""
     if fundamental_value <= 0:
         return 0
     if fundamental_value <= _DISPLAY_APEX_RAW:
@@ -237,21 +223,20 @@ def estimate_intrinsic_value_v2(
     *,
     player_path: IntrinsicV1PlayerForecastPath,
     player_state: PlayerState | None = None,
-    structural_factor: float = 1.0,
+    structural_factor: float | None = None,
     structural_starter_demand: int = 0,
     structural_effective_supply: float = 0.0,
+    structural_supply_curve: tuple[float, ...] = (),
 ) -> IntrinsicValueV2Estimate:
-    """Estimate team-independent long-term dynasty asset worth from fundamentals.
+    """Estimate independent dynasty asset worth from governed football outcomes.
 
-    Football production remains Forecast-owned. Value discounts governed Y1-Y3,
-    adds the validated state-conditioned continuation and residual draft pedigree,
-    then applies one deterministic league-wide positional-economic conversion from
-    lineup demand versus production-concentration supply. No individual team,
-    replacement surplus, market price, owner behavior, or transaction evidence is
-    accepted by this estimator.
+    Production runtime uses player-specific starter relevance derived only from
+    league lineup demand and the governed positional Y1 production distribution.
+    Forecast variance is retained as uncertainty but does not receive an upside
+    premium because the distributional structural challenger failed validation.
     """
-    if structural_factor <= 0:
-        raise ValueError("structural_factor must be positive")
+    if structural_factor is not None and structural_factor < 0:
+        raise ValueError("structural_factor must be non-negative")
     if structural_starter_demand < 0 or structural_effective_supply < 0:
         raise ValueError("structural demand/supply must be non-negative")
 
@@ -303,15 +288,40 @@ def estimate_intrinsic_value_v2(
         pedigree_value = normalized_pedigree_value * residual_unit_anchor / 100.0
 
     pre_structural = max(0.0, raw_career + pedigree_value)
-    fundamental = pre_structural * structural_factor
-    fundamental_stddev = raw_stddev * structural_factor
-    economic_residual = pedigree_value * structural_factor
-    evidence_note += (
-        f" League-wide structural factor {structural_factor:.3f} converts football contribution into asset economics "
-        f"from {structural_starter_demand} neutral starters and {structural_effective_supply:.1f} effective production-supply units."
-        if structural_starter_demand > 0 and structural_effective_supply > 0
-        else " Structural factor is neutral because league-wide structural evidence was not supplied."
-    )
+
+    if structural_supply_curve and structural_starter_demand > 0:
+        relevant_y1_y3 = 0.0
+        for weight, horizon in zip(INTRINSIC_VALUE_V2_WEIGHTS, player_path.horizons, strict=True):
+            mean = max(0.0, horizon.distribution.mean)
+            relevance = production_rank_relevance(
+                mean,
+                forecast_means=structural_supply_curve,
+                starter_demand=structural_starter_demand,
+            )
+            relevant_y1_y3 += weight * mean * relevance
+        y3_mean = max(0.0, y3.mean)
+        y3_relevance = production_rank_relevance(
+            y3_mean,
+            forecast_means=structural_supply_curve,
+            starter_demand=structural_starter_demand,
+        )
+        relevant_continuation = y3_mean * y3_relevance * terminal_weight * applied_factor
+        structural_core = relevant_y1_y3 + relevant_continuation
+        residual_ratio = pedigree_value / raw_career if raw_career > 1e-9 else 0.0
+        fundamental = max(0.0, structural_core * (1.0 + residual_ratio))
+        realized_structural_factor = fundamental / pre_structural if pre_structural > 1e-9 else 0.0
+        economic_residual = fundamental - structural_core
+        evidence_note += (
+            f" Player-specific starter relevance converts each forecast horizon using {structural_starter_demand} neutral "
+            f"{player_path.position.value} starter slots against the governed positional production curve; no blanket positional multiplier is applied."
+        )
+    else:
+        realized_structural_factor = 1.0 if structural_factor is None else structural_factor
+        fundamental = pre_structural * realized_structural_factor
+        economic_residual = pedigree_value * realized_structural_factor
+        evidence_note += " Structural conversion is neutral because no governed positional supply curve was supplied."
+
+    fundamental_stddev = raw_stddev * realized_structural_factor
 
     terminal = IntrinsicV2TerminalContribution(
         year3_forecast_mean=y3.mean,
@@ -337,7 +347,7 @@ def estimate_intrinsic_value_v2(
         fundamental_value=fundamental,
         fundamental_stddev=fundamental_stddev,
         residual_fundamental_value=economic_residual,
-        structural_factor=structural_factor,
+        structural_factor=realized_structural_factor,
         structural_starter_demand=structural_starter_demand,
         structural_effective_supply=structural_effective_supply,
         display_value=intrinsic_display_value(fundamental),
