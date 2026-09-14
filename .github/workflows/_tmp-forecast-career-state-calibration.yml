@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/run_forecast_career_state_calibration.py'
       - 'scripts/run_forecast_career_state_strict_compare.py'
+      - 'scripts/run_forecast_career_state_current_sanity.py'
       - '.github/workflows/_tmp-forecast-career-state-calibration.yml'
   workflow_dispatch:
 
@@ -16,7 +17,7 @@ permissions:
 jobs:
   calibrate-state:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -48,6 +49,14 @@ jobs:
       - name: Compare repaired calibration on exact D2 population
         run: |
           python scripts/run_forecast_career_state_strict_compare.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
+            --calibration-json artifacts/forecast-state/forecast_career_state_calibration.json \
+            --output-dir artifacts/forecast-state
+      - name: Run repaired-state current D2 sanity
+        run: |
+          python scripts/run_forecast_career_state_current_sanity.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
