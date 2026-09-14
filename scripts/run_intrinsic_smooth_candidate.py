@@ -49,6 +49,7 @@ def softplus(z):
 
 def install(form, base):
     hard = base.marginal_at_x
+    original_metrics = base.metrics
 
     if form == "C1_softplus":
         def value_at_x(x, baseline):
@@ -90,8 +91,22 @@ def install(form, base):
             return value_at_x(mu, baseline)
         return base.mean(value_at_x(max(0.0, mu + sd * z), baseline) for z in ZNODES)
 
+    def metrics_with_developmental(rows, key):
+        result = original_metrics(rows, key)
+        target_median = base.quantile([r["target"] for r in rows], 0.50)
+        developmental = [
+            r for r in rows
+            if base.age_band(r["position"], r["age"]) == "young" and r["target"] < target_median
+        ]
+        result["developmental_n"] = len(developmental)
+        result["developmental_mae"] = base.mean(abs(r[key] - r["target"]) for r in developmental)
+        result["developmental_mean_prediction"] = base.mean(r[key] for r in developmental)
+        result["developmental_mean_target"] = base.mean(r["target"] for r in developmental)
+        return result
+
     base.marginal_at_x = value_at_x
     base.expected_marginal = expected
+    base.metrics = metrics_with_developmental
     base.MODEL_VERSION = f"intrinsic-smooth-format-normalized-franchise-{form}-v1"
     return definition
 
@@ -113,6 +128,7 @@ def main():
     payload["parameter_provenance"] = {
         "C1_C3_width": "max(5 fantasy points, half neutral weakest-slot IQR, 10% neutral weakest-slot median), recomputed from format-wide supply",
         "C2_prior": "Jeffreys 0.5 pseudocount over a neutral team-count-sized frontier; mathematical smoothing policy, not market-fitted",
+        "developmental_group": "young career-state observations below the holdout realized-contribution median; diagnostic only, never a fitting target",
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
