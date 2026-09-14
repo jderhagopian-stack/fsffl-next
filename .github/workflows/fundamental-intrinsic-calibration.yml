@@ -1,4 +1,5 @@
 name: Fundamental Intrinsic Calibration
+# Final v6 merge gate: production-parity calibration and structural-economics evidence.
 
 on:
   workflow_dispatch:
