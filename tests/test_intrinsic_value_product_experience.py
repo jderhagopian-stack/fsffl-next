@@ -50,13 +50,14 @@ def test_value_lens_states_comparable_presentation_but_independent_derivation():
     assert "Team Utility" in script
 
 
-def test_value_lens_explains_v6_structural_economics_and_cardinal_scale_without_market_leakage():
+def test_value_lens_explains_v6_structural_economics_and_scale_without_market_leakage():
     script = _text("intrinsic_value_experience.js")
     assert "league-format starter pressure and effective positional production supply" in script
     assert "not an arbitrary position bonus" in script
-    assert "cardinal rescaling of the completed economic coordinate" in script
+    assert "monotonic concave translation of the completed economic coordinate" in script
+    assert "square-root transform" in script
     assert "all-positive PIT economic-raw p99" in script
-    assert "never fit to market prices or a fixed league roster count" in script
+    assert "never fit to market prices, named players or a fixed league roster count" in script
 
 
 def test_value_lens_is_lazy_and_does_not_add_intrinsic_request_to_first_paint():
