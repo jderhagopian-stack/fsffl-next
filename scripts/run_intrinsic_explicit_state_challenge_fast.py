@@ -18,19 +18,27 @@ def load_base():
 
 def main():
     base = load_base()
+    cache = {}
 
     def state_contribution(position, state, samples, baseline, marginal):
-        values = samples.get((position, state), ())
-        if not values or state == "out":
+        if state == "out":
             return 0.0
-        # D is a state-probability primitive. Use the empirical conditional mean
-        # production of the explicit state; do not re-integrate a generic tail or
-        # repeatedly average thousands of equivalent sample contributions.
-        conditional_mean = base.mean(values)
-        return marginal.marginal_at_x(conditional_mean, baseline[position])
+        key = (id(samples), id(baseline), position, state)
+        if key in cache:
+            return cache[key]
+        values = samples.get((position, state), ())
+        if not values:
+            result = 0.0
+        else:
+            # Preserve bounded within-state production dispersion, but compute it
+            # once per state/context. Generic player Forecast SD cannot move mass
+            # across states; uncertainty only exists inside the explicit state.
+            result = base.mean(marginal.marginal_at_x(v, baseline[position]) for v in values)
+        cache[key] = result
+        return result
 
     base.state_contribution = state_contribution
-    base.MODEL_VERSION = "intrinsic-explicit-career-state-v1-fast-state-mean"
+    base.MODEL_VERSION = "intrinsic-explicit-career-state-v1-cached-within-state"
     base.main()
 
 
