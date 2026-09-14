@@ -24,6 +24,6 @@ jobs:
       - run: python scripts/_tmp_current_marginal_franchise_sanity.py
       - uses: actions/upload-artifact@v4
         with:
-          name: current-marginal-franchise-sanity
-          path: artifacts/current-marginal-sanity/current_marginal_franchise_sanity.json
+          name: current-three-way-intrinsic-sanity
+          path: artifacts/current-marginal-sanity/current_three_way_intrinsic_sanity.json
           retention-days: 7
