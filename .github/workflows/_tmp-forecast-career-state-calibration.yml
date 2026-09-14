@@ -56,6 +56,7 @@ jobs:
             --output-dir artifacts/forecast-state
       - name: Run repaired-state current D2 sanity
         run: |
+          sed -i 's/baseline={k.value:v for k,v in base0.items()}/baseline=base0/' scripts/run_forecast_career_state_current_sanity.py
           python scripts/run_forecast_career_state_current_sanity.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
