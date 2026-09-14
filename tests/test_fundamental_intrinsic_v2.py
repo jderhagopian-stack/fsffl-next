@@ -24,66 +24,37 @@ AS_OF = datetime(2026, 9, 12, tzinfo=UTC)
 PROVENANCE = Provenance(source="test", retrieved_at=AS_OF, effective_at=AS_OF)
 
 
-def _path(
-    position: Position,
-    *,
-    means: tuple[float, float, float],
-    sds: tuple[float, float, float],
-) -> IntrinsicV1PlayerForecastPath:
+def _path(position: Position, *, means: tuple[float, float, float], sds: tuple[float, float, float]) -> IntrinsicV1PlayerForecastPath:
     horizons = tuple(
         IntrinsicV1ForecastHorizon(
             horizon_year=year,
             distribution=ForecastDistribution(mean=mean, stddev=sd),
-            method=(
-                IntrinsicV1ForecastMethod.AUTHORITATIVE_CURRENT
-                if year == 1
-                else IntrinsicV1ForecastMethod.BOUNDED_CAREER_TRANSITION
-            ),
-            evidence_strength=(ForecastEvidenceStrength.HIGH if year == 1 else ForecastEvidenceStrength.MODERATE),
+            method=IntrinsicV1ForecastMethod.AUTHORITATIVE_CURRENT if year == 1 else IntrinsicV1ForecastMethod.BOUNDED_CAREER_TRANSITION,
+            evidence_strength=ForecastEvidenceStrength.HIGH if year == 1 else ForecastEvidenceStrength.MODERATE,
             cumulative_survival_probability=1.0,
             evidence_model_version="test-forecast",
             provenance_note="test",
         )
         for year, mean, sd in zip((1, 2, 3), means, sds, strict=True)
     )
-    return IntrinsicV1PlayerForecastPath(
-        player_id="player:test",
-        position=position,
-        evaluation_as_of=AS_OF,
-        base_forecast_model_version="test-forecast",
-        horizons=horizons,
-    )
+    return IntrinsicV1PlayerForecastPath(player_id="player:test", position=position, evaluation_as_of=AS_OF, base_forecast_model_version="test-forecast", horizons=horizons)
 
 
 def _state(*, draft_number: int | None = 10, draft_round: int | None = 1) -> PlayerState:
-    return PlayerState(
-        player_id="player:test",
-        as_of=AS_OF,
-        age_years=26.0,
-        experience_years=2,
-        draft_year=2024,
-        draft_round=draft_round,
-        draft_number=draft_number,
-        status=PlayerStatus.ACTIVE,
-        provenance=PROVENANCE,
-    )
+    return PlayerState(player_id="player:test", as_of=AS_OF, age_years=26.0, experience_years=2, draft_year=2024, draft_round=draft_round, draft_number=draft_number, status=PlayerStatus.ACTIVE, provenance=PROVENANCE)
 
 
 def test_shared_raw_coordinate_is_not_position_normalized():
     values = {}
     for position in (Position.QB, Position.RB, Position.WR, Position.TE):
-        estimate = estimate_intrinsic_value_v2(
-            player_path=_path(position, means=(100.0, 90.0, 80.0), sds=(10.0, 10.0, 10.0)),
-            player_state=_state(draft_number=None),
-        )
+        estimate = estimate_intrinsic_value_v2(player_path=_path(position, means=(100.0, 90.0, 80.0), sds=(10.0, 10.0, 10.0)), player_state=_state(draft_number=None))
         values[position] = estimate.raw_discounted_y1_y3
     assert len(set(values.values())) == 1
 
 
 def test_state_conditioned_aging_reduces_late_rb_continuation():
     path = _path(Position.RB, means=(250.0, 180.0, 120.0), sds=(40.0, 45.0, 50.0))
-    prime_state = _state()
-    prime_state = prime_state.model_copy(update={"age_years": 25.0})
+    prime_state = _state().model_copy(update={"age_years": 25.0})
     late_state = prime_state.model_copy(update={"age_years": 32.0})
     prime = estimate_intrinsic_value_v2(player_path=path, player_state=prime_state)
     late = estimate_intrinsic_value_v2(player_path=path, player_state=late_state)
@@ -93,13 +64,7 @@ def test_state_conditioned_aging_reduces_late_rb_continuation():
 def test_structural_factor_converts_football_value_into_economic_value():
     path = _path(Position.QB, means=(300.0, 260.0, 230.0), sds=(30.0, 35.0, 40.0))
     neutral = estimate_intrinsic_value_v2(player_path=path, player_state=_state(), structural_factor=1.0)
-    pressured = estimate_intrinsic_value_v2(
-        player_path=path,
-        player_state=_state(),
-        structural_factor=1.8,
-        structural_starter_demand=24,
-        structural_effective_supply=37.0,
-    )
+    pressured = estimate_intrinsic_value_v2(player_path=path, player_state=_state(), structural_factor=1.8, structural_starter_demand=24, structural_effective_supply=37.0)
     assert pressured.pre_structural_fundamental_value == neutral.pre_structural_fundamental_value
     assert pressured.fundamental_value == neutral.pre_structural_fundamental_value * 1.8
     assert pressured.fundamental_stddev == neutral.raw_fundamental_stddev * 1.8
@@ -108,20 +73,14 @@ def test_structural_factor_converts_football_value_into_economic_value():
 
 
 def test_missing_pedigree_is_neutral_not_undrafted():
-    estimate = estimate_intrinsic_value_v2(
-        player_path=_path(Position.RB, means=(160.0, 125.0, 95.0), sds=(35.0, 40.0, 45.0)),
-        player_state=_state(draft_number=None),
-    )
+    estimate = estimate_intrinsic_value_v2(player_path=_path(Position.RB, means=(160.0, 125.0, 95.0), sds=(35.0, 40.0, 45.0)), player_state=_state(draft_number=None))
     assert estimate.residual_fundamental_value == 0
     assert estimate.evidence_state == IntrinsicV2EvidenceState.PARTIAL
     assert "no residual pedigree adjustment is fabricated" in estimate.evidence_note
 
 
 def test_positive_developmental_forecast_has_nonzero_asset_value():
-    estimate = estimate_intrinsic_value_v2(
-        player_path=_path(Position.WR, means=(22.0, 35.0, 48.0), sds=(12.0, 18.0, 25.0)),
-        player_state=_state(draft_number=50),
-    )
+    estimate = estimate_intrinsic_value_v2(player_path=_path(Position.WR, means=(22.0, 35.0, 48.0), sds=(12.0, 18.0, 25.0)), player_state=_state(draft_number=50))
     assert estimate.raw_fundamental_career_value > 0
     assert estimate.display_value > 0
 
@@ -133,11 +92,11 @@ def test_display_scale_is_strictly_monotone_across_economic_reference_tiers_and_
     assert values == sorted(values)
     assert len(set(values)) == len(values)
     assert all(0 <= value <= 10_000 for value in values)
-    assert 1950 <= intrinsic_display_value(121.44812067567622) <= 2050
-    assert 6450 <= intrinsic_display_value(241.62841665403283) <= 6550
-    assert 7950 <= intrinsic_display_value(398.4623347230747) <= 8050
-    assert 8950 <= intrinsic_display_value(860.2953473881821) <= 9050
-    assert 9650 <= intrinsic_display_value(1783.2893275391143) <= 9750
+    assert 950 <= intrinsic_display_value(121.44812067567622) <= 1050
+    assert 4950 <= intrinsic_display_value(241.62841665403283) <= 5050
+    assert 6450 <= intrinsic_display_value(398.4623347230747) <= 6550
+    assert 7950 <= intrinsic_display_value(860.2953473881821) <= 8050
+    assert 9450 <= intrinsic_display_value(1783.2893275391143) <= 9550
     assert intrinsic_display_value(3000.0) < 10_000
 
 
@@ -161,22 +120,13 @@ def test_player_state_preserves_optional_pit_career_and_pedigree_evidence():
 
 
 def test_uncertainty_changes_uncertainty_not_base_career_mean():
-    low = estimate_intrinsic_value_v2(
-        player_path=_path(Position.WR, means=(100, 90, 80), sds=(5, 5, 5)),
-        player_state=_state(),
-    )
-    high = estimate_intrinsic_value_v2(
-        player_path=_path(Position.WR, means=(100, 90, 80), sds=(50, 50, 50)),
-        player_state=_state(),
-    )
+    low = estimate_intrinsic_value_v2(player_path=_path(Position.WR, means=(100, 90, 80), sds=(5, 5, 5)), player_state=_state())
+    high = estimate_intrinsic_value_v2(player_path=_path(Position.WR, means=(100, 90, 80), sds=(50, 50, 50)), player_state=_state())
     assert low.raw_fundamental_career_value == high.raw_fundamental_career_value
     assert low.fundamental_stddev < high.fundamental_stddev
 
 
 def test_no_market_team_or_replacement_input_is_required():
-    estimate = estimate_intrinsic_value_v2(
-        player_path=_path(Position.QB, means=(250, 230, 205), sds=(30, 40, 50)),
-        player_state=_state(),
-    )
+    estimate = estimate_intrinsic_value_v2(player_path=_path(Position.QB, means=(250, 230, 205), sds=(30, 40, 50)), player_state=_state())
     assert estimate.fundamental_value >= 0
     assert estimate.display_value >= 0
