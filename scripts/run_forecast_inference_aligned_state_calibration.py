@@ -58,8 +58,6 @@ def load_forecasts(path:Path):
 
 def gaussian_state_mass(mu,sd,bounds,scale):
     sd=max(EPS,sd*scale)
-    # State intervals: out <=0; then positive production separated by the four
-    # position-specific positive-state boundaries. The final interval is elite.
     cuts=(0.0,*bounds)
     cdfs=[norm_cdf((c-mu)/sd) for c in cuts]
     vals=[cdfs[0]]
@@ -73,7 +71,6 @@ def exp_band(cal,exp):return cal.exp_band(exp)
 def draft_band(cal,pick):return cal.draft_band(pick)
 
 class PersistenceModel:
-    """P(current realized state | prior PIT football evidence), hierarchically shrunk."""
     def __init__(self,rows,cutoff,bounds,cal,shrink=35.0):
         self.cal=cal;self.shrink=shrink;self.levels=[defaultdict(lambda:defaultdict(float)) for _ in range(5)]
         by={(r.player_id,r.season):r for r in rows}
@@ -108,7 +105,6 @@ class CurrentStateAnchor:
 
 
 def state_anchor_metrics(records,cal):
-    # records: (row, probs, bounds)
     brier=[];ll=[];distance=[];correct=0;pred_prev=defaultdict(float);obs_prev=defaultdict(float);conf=defaultdict(lambda:defaultdict(int))
     bypos=defaultdict(list);byage=defaultdict(list);byexp=defaultdict(list)
     for r,p,b in records:
@@ -148,7 +144,6 @@ def fit_anchor(rows,forecasts,cutoff,bounds,cal):
     return CurrentStateAnchor(rows,forecasts,cutoff,bounds,cal,scale,w),{'sd_scale':scale,'persistence_weight':w,'candidate_count':len(candidates)}
 
 class AlignedTransitionModel:
-    """Next-state transitions learned from the same inferred current-state coordinate used at deployment."""
     def __init__(self,rows,forecasts,cutoff,bounds,cal,anchor,shrink=40.0):
         self.cal=cal;self.shrink=shrink;self.levels=[defaultdict(lambda:defaultdict(float)) for _ in range(5)]
         for r in rows:
@@ -185,15 +180,10 @@ class AlignedTransitionModel:
 
 
 def transition_metrics(records,cal):
-    # records: row,pcur,pnext,bounds
     brier=[];ll=[];up_p=[];up_y=[];dn_p=[];dn_y=[];stay_p=[];stay_y=[];bypos=defaultdict(list);byage=defaultdict(list)
     for r,pcur,pnext,b in records:
         cur_obs=cal.state_for(r.points,b[r.position]);nxt_obs=cal.state_for(r.next_points,b[r.position]);ci=sidx(cur_obs);ni=sidx(nxt_obs)
         brier.append(sum((pnext[s]-(1 if s==nxt_obs else 0))**2 for s in STATE_NAMES)/len(STATE_NAMES));ll.append(-math.log(max(EPS,pnext[nxt_obs])))
-        # Coherent event probability integrates uncertainty in the inferred current state.
-        joint_up=joint_dn=joint_stay=0.0
-        # pnext is a marginal; use current-state uncertainty with an ordered approximation
-        # anchored to its expected index for calibration diagnostics.
         expected_cur=sum(pcur[s]*sidx(s) for s in STATE_NAMES)
         joint_up=sum(pnext[s] for s in STATE_NAMES if sidx(s)>expected_cur+.5)
         joint_dn=sum(pnext[s] for s in STATE_NAMES if sidx(s)<expected_cur-.5)
@@ -224,7 +214,7 @@ def main():
     ap=argparse.ArgumentParser();ap.add_argument('--career-panel',type=Path,required=True);ap.add_argument('--model-a-rows',type=Path,required=True);ap.add_argument('--qb-results',type=Path,required=True);ap.add_argument('--output-dir',type=Path,required=True);a=ap.parse_args();a.output_dir.mkdir(parents=True,exist_ok=True)
     root=Path(__file__).parent;cal=load(root/'run_forecast_career_state_calibration.py','aligned_cal');legacy=load(root/'run_fundamental_intrinsic_residual_calibration.py','aligned_legacy');parity=load(root/'run_fundamental_intrinsic_production_parity.py','aligned_parity');marg=load(root/'run_intrinsic_marginal_franchise_challenge.py','aligned_marg')
     rows=cal.load_rows(a.career_panel);forecasts=load_forecasts(a.model_a_rows);qb_probs=parity.load_qb_probabilities(a.qb_results);examples,_=parity.build_examples(panel_path=a.career_panel,model_rows_path=a.model_a_rows,qb_results_path=a.qb_results,legacy=legacy);by={(r.player_id,r.season):r for r in rows};_,forecast_baselines,_=marg.contexts_from_forecasts(parity,a.model_a_rows);_,actual_baselines=marg.contexts_from_actual(legacy.load_rows(a.career_panel))
-    frozen=json.loads(Path('artifacts/research/intrinsic_d2_frozen_reference.json').read_text())
+    frozen=json.loads(Path('artifacts/research/intrinsic_d2_frozen_reference.json').read_text());km=frozen['key_metrics'];a_fold=km['A_fold_mae'];a_mae=km['overall_mae']['A'];old_d2_mae=km['overall_mae']['D2']
 
     taxonomy_runs=[]
     for taxonomy in ('kmeans','quantile_balanced','quantile_starter_tail'):
@@ -235,7 +225,6 @@ def main():
         taxonomy_runs.append({'taxonomy':taxonomy,'score':score,'old_y1_anchor':om,'new_anchor':am,'transition':tmx,'folds':folds})
     selected=min(taxonomy_runs,key=lambda x:x['score']);taxonomy=selected['taxonomy']
 
-    # Frozen-D2 downstream test: only Forecast-owned current/future state probabilities change.
     eval_rows=[];fold_mae={}
     for season in FOLDS:
         bounds,anchor,tm,params,anchors,trans=fit_fold(rows,forecasts,season,taxonomy,cal,qb_probs);samples=cal.state_samples(rows,season,bounds);baseline=forecast_baselines[season]
@@ -284,8 +273,8 @@ def main():
     def mae(rs):return mean(r['error'] for r in rs)
     targets=[r['target'] for r in eval_rows];q25=cal.quantile(targets,.25);q50=cal.quantile(targets,.5);q90=cal.quantile(targets,.9)
     groups={'young':[r for r in eval_rows if cal.age_band(r['position'],r['age'])=='young'],'prime':[r for r in eval_rows if cal.age_band(r['position'],r['age'])=='prime'],'aging':[r for r in eval_rows if cal.age_band(r['position'],r['age'])=='aging'],'developmental':[r for r in eval_rows if cal.age_band(r['position'],r['age'])=='young' and r['target']<q50],'fringe':[r for r in eval_rows if r['target']<=q25],'elite':[r for r in eval_rows if r['target']>=q90]}
-    new_d2={'n':len(eval_rows),'mae':mae(eval_rows),'fold_mae':fold_mae,'fold_wins_vs_A':sum(v<float(frozen['A_fold_mae'][s]) for s,v in fold_mae.items()),'position_mae':{p:mae([r for r in eval_rows if r['position']==p]) for p in POSITIONS},'group_mae':{g:mae(v) for g,v in groups.items() if v}}
-    payload={'model_version':'forecast-inference-aligned-career-state-v1','selected_taxonomy':taxonomy,'taxonomy_runs':taxonomy_runs,'current_state_reference':'realized current-season production state is label only; inference uses PIT Forecast Y1 distribution plus prior-season realized production, age, experience, draft evidence','transition_training':'fractional transition counts conditioned on the same inferred current-state distribution used at inference','A_mae':frozen['A_mae'],'old_D2':frozen['old_D2'],'new_D2':new_d2,'parameter_provenance':{'taxonomy':'empirically fitted chronological position-specific thresholds','anchor_sd_scale':'empirically selected from bounded four-value grid inside each chronological training fold','anchor_persistence_weight':'empirically selected from bounded four-value grid inside each chronological training fold','persistence_and_transition_frequencies':'empirically fitted with hierarchical shrinkage','dirichlet_alpha':'provisional prior 0.5','QB_future_meaningful_mass':'existing governed QB career-state evidence','D2':'frozen unchanged'},'leakage_check':{'future_current_label_used_at_inference':False,'market':False,'transactions':False,'owner_behavior':False,'team_roster':False,'team_utility':False}}
+    new_d2={'n':len(eval_rows),'mae':mae(eval_rows),'fold_mae':fold_mae,'fold_wins_vs_A':sum(v<float(a_fold[s]) for s,v in fold_mae.items()),'position_mae':{p:mae([r for r in eval_rows if r['position']==p]) for p in POSITIONS},'group_mae':{g:mae(v) for g,v in groups.items() if v}}
+    payload={'model_version':'forecast-inference-aligned-career-state-v1','selected_taxonomy':taxonomy,'taxonomy_runs':taxonomy_runs,'current_state_reference':'realized current-season production state is label only; inference uses PIT Forecast Y1 distribution plus prior-season realized production, age, experience, draft evidence','transition_training':'fractional transition counts conditioned on the same inferred current-state distribution used at inference','A_mae':a_mae,'old_D2':{'mae':old_d2_mae,'fold_wins_vs_A':km['D2_fold_wins_vs_A'],'position_mae':km['position_mae']['D2'],'group_mae':km['group_mae']['D2']},'new_D2':new_d2,'parameter_provenance':{'taxonomy':'empirically fitted chronological position-specific thresholds','anchor_sd_scale':'empirically selected from bounded four-value grid inside each chronological training fold','anchor_persistence_weight':'empirically selected from bounded four-value grid inside each chronological training fold','persistence_and_transition_frequencies':'empirically fitted with hierarchical shrinkage','dirichlet_alpha':'provisional prior 0.5','QB_future_meaningful_mass':'existing governed QB career-state evidence','D2':'frozen unchanged'},'leakage_check':{'future_current_label_used_at_inference':False,'market':False,'transactions':False,'owner_behavior':False,'team_roster':False,'team_utility':False}}
     (a.output_dir/'forecast_inference_aligned_state_calibration.json').write_text(json.dumps(payload,indent=2,sort_keys=True));print(json.dumps({'selected_taxonomy':taxonomy,'old_anchor':selected['old_y1_anchor'],'new_anchor':selected['new_anchor'],'transition':selected['transition'],'A_mae':payload['A_mae'],'old_D2_mae':payload['old_D2']['mae'],'new_D2':new_d2},indent=2,sort_keys=True))
 
 if __name__=='__main__':main()
