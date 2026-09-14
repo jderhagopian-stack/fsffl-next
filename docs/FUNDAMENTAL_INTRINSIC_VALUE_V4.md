@@ -189,6 +189,41 @@ For roster players, v2 explicitly publishes:
 
 Unavailable Forecast evidence never becomes zero and never receives a fake percentile.
 
+## Current-player sanity validation
+
+Final validation used the durable current Forecast artifact and matching canonical State snapshot to exercise the governed Forecast path, continuation model, pedigree residual and 0-10,000 normalization together.
+
+| Player | Pos | Y1 | Y2 | Y3 | post-Y3 | residual | raw Intrinsic | display | evidence |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| Josh Allen | QB | 388.1 | 367.8 | 359.2 | 900.4 | +4.7 | 182.3 | 9793 | complete |
+| Lamar Jackson | QB | 329.1 | 303.5 | 293.1 | 734.5 | -1.8 | 144.6 | 9646 | complete |
+| Drake Maye | QB | 334.8 | 313.7 | 304.9 | 764.3 | +8.9 | 160.3 | 9717 | complete |
+| Dak Prescott | QB | 312.4 | 274.0 | 259.5 | 650.5 | -8.7 | 123.3 | 9520 | complete |
+| Sam Darnold | QB | 287.6 | 216.5 | 194.6 | 487.6 | +9.4 | 114.4 | 9393 | complete |
+| Drew Lock | QB | 2.8 | 0.1 | 0.1 | 0.2 | +1.0 | 1.3 | 513 | complete |
+| Bijan Robinson | RB | 331.2 | 266.7 | 214.8 | 626.6 | +3.2 | 328.2 | 9974 | complete |
+| Quinshon Judkins | RB | 210.5 | 160.6 | 122.5 | 357.4 | +0.1 | 192.5 | 9821 | complete |
+| Rhamondre Stevenson | RB | 165.1 | 106.7 | 69.0 | 201.2 | -4.5 | 118.5 | 9466 | complete |
+| Tyler Allgeier | RB | 89.6 | 72.2 | 46.6 | 136.1 | -2.9 | 74.9 | 8339 | complete |
+| Jonathon Brooks | RB | 165.5 | 126.3 | 101.7 | 296.7 | +0.5 | 156.5 | 9701 | complete |
+| Derrick Henry | RB | 259.2 | 162.8 | 102.6 | 299.2 | -2.9 | 184.1 | 9799 | complete |
+| Trevor Etienne | RB | 7.6 | 5.8 | 4.4 | 12.8 | +0.0 | 6.9 | 1734 | partial |
+| CeeDee Lamb | WR | 214.5 | 214.5 | 89.2 | 288.0 | +3.7 | 174.0 | 9768 | complete |
+| Tee Higgins | WR | 183.6 | 183.6 | 76.4 | 246.6 | +1.3 | 147.2 | 9659 | complete |
+| Zay Flowers | WR | 197.8 | 197.8 | 87.0 | 280.8 | +2.9 | 164.2 | 9733 | complete |
+| DeVonta Smith | WR | 185.6 | 185.6 | 77.2 | 249.2 | +7.0 | 154.4 | 9692 | complete |
+| KC Concepcion | WR | 123.1 | 123.1 | 77.5 | 250.1 | +4.6 | 125.9 | 9538 | complete |
+| Jaxon Smith-Njigba | WR | 246.4 | 246.4 | 114.5 | 369.5 | +2.0 | 208.5 | 9858 | complete |
+| Troy Franklin | WR | 42.4 | 42.4 | 23.0 | 74.1 | -0.4 | 38.1 | 5613 | complete |
+| Devin Duvernay | WR | 1.5 | 1.5 | 0.6 | 2.0 | +1.3 | 2.4 | 954 | complete |
+| Brock Bowers | TE | 189.2 | 180.2 | 133.2 | 346.0 | +2.9 | 271.9 | 9943 | complete |
+| Kyle Pitts | TE | 146.4 | 108.2 | 80.0 | 207.7 | +10.0 | 182.8 | 9795 | complete |
+| Dallas Goedert | TE | 125.6 | 77.6 | 48.0 | 124.6 | -0.7 | 119.6 | 9484 | complete |
+| Elijah Arroyo | TE | 55.2 | 52.6 | 38.8 | 100.9 | +2.8 | 81.2 | 8579 | complete |
+| Ja'Tavion Sanders | TE | 13.2 | 12.6 | 9.3 | 24.1 | +1.3 | 20.0 | 3597 | complete |
+
+The qualitative requirements are satisfied: elite young QBs and premium WR/TE assets remain apex, aging players decline through governed Forecast trajectories, KC Concepcion is clearly not waiver-level, Tyler Allgeier and Dallas Goedert retain meaningful dynasty value, and genuine fringe controls stay low.
+
 ## Performance
 
 The calculation is deterministic arithmetic over already-governed Forecast distributions plus fixed calibration coefficients. It requires no Simulation, no provider request, no market lookup, and no 50,000-run work. The Franchise Value Lens remains lazy-loaded.
