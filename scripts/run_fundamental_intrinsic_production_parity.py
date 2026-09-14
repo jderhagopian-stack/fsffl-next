@@ -84,7 +84,6 @@ def build_examples(*, panel_path: Path, model_rows_path: Path, qb_results_path: 
     qb_probs = load_qb_probabilities(qb_results_path)
     examples = []
     structural_by_season = {}
-
     for season, position_pools in pools.items():
         structural_by_season[season] = structural_position_economics(
             team_count=CANONICAL_TEAM_COUNT,
@@ -93,7 +92,6 @@ def build_examples(*, panel_path: Path, model_rows_path: Path, qb_results_path: 
             superflex_slots=CANONICAL_SUPERFLEX,
             forecast_means=position_pools,
         )
-
     for (season, player_id), horizons in sorted(model.items()):
         if 0 not in horizons or horizons[0]["position"] not in POSITIONS:
             continue
@@ -110,7 +108,6 @@ def build_examples(*, panel_path: Path, model_rows_path: Path, qb_results_path: 
         means = [base.mean]
         sds = [base.stddev]
         survival = 1.0
-
         if position == Position.QB:
             probs = qb_probs.get((season, player_id))
             if probs is None:
@@ -133,7 +130,6 @@ def build_examples(*, panel_path: Path, model_rows_path: Path, qb_results_path: 
             else:
                 means.extend((b2.distribution.mean, b3.distribution.mean))
                 sds.extend((b2.distribution.stddev, b3.distribution.stddev))
-
         realized = 0.0
         for offset in range(REALIZED_HORIZON):
             actual = by_key.get((player_id, season + offset))
@@ -194,10 +190,7 @@ def economic_validation(examples, structural_by_season, legacy, v5c):
         "new_mae": new_mae,
         "mae_gain": (old_mae - new_mae) / old_mae if old_mae > 0 else 0.0,
         "position": {
-            p: {
-                "old_mae": mean(r["old_error"] for r in by_pos[p]),
-                "new_mae": mean(r["new_error"] for r in by_pos[p]),
-            }
+            p: {"old_mae": mean(r["old_error"] for r in by_pos[p]), "new_mae": mean(r["new_error"] for r in by_pos[p])}
             for p in POSITIONS if by_pos[p]
         },
     }
@@ -253,18 +246,11 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-
     legacy = load_module(Path(__file__).with_name("run_fundamental_intrinsic_residual_calibration.py"), "intrinsic_parity_legacy")
     v5c = load_module(Path(__file__).with_name("run_fundamental_intrinsic_v5c_calibration.py"), "intrinsic_parity_v5c")
-    examples, structural = build_examples(
-        panel_path=args.career_panel,
-        model_rows_path=args.model_a_rows,
-        qb_results_path=args.qb_results,
-        legacy=legacy,
-    )
+    examples, structural = build_examples(panel_path=args.career_panel, model_rows_path=args.model_a_rows, qb_results_path=args.qb_results, legacy=legacy)
     if len(examples) < 1000:
         raise SystemExit(f"insufficient production-parity examples: {len(examples)}")
-
     bundles = [()]
     for size in range(1, len(legacy.FACTOR_NAMES) + 1):
         bundles.extend(itertools.combinations(legacy.FACTOR_NAMES, size))
@@ -272,13 +258,11 @@ def main():
     selected = legacy.choose_bundle(residual_results)
     if list(selected.get("factors", [])) != ["pedigree"]:
         raise SystemExit(f"production-parity residual selection changed: {selected.get('factors')}")
-
     football_validation = v5c.evaluate(examples, legacy)
     economic = economic_validation(examples, structural, legacy, v5c)
     fitted = v5c.old_fit(examples, legacy)
     tapers = v5c.fit_tapers(examples)
     anchors, _cont, residualizers, residual_coeffs = fitted
-
     records = []
     by_season = defaultdict(list)
     for e in examples:
@@ -288,19 +272,18 @@ def main():
         record = {"season": e.season, "position": e.position, "football_raw": repaired, "structural_factor": sf, "economic_raw": economic_raw}
         records.append(record)
         by_season[e.season].append(record)
-
     reference = []
     for season, season_rows in by_season.items():
         reference.extend(sorted((r["economic_raw"] for r in season_rows), reverse=True)[: CANONICAL_TEAM_COUNT * CANONICAL_ROSTER_SIZE])
     display_anchors = [
         (0.0, 0),
-        (q(reference, 0.05), 2000),
-        (q(reference, 0.20), 4500),
-        (q(reference, 0.50), 6500),
-        (q(reference, 0.75), 8000),
-        (q(reference, 0.90), 9000),
-        (q(reference, 0.97), 9400),
-        (q(reference, 0.99), 9700),
+        (q(reference, 0.05), 1000),
+        (q(reference, 0.20), 3000),
+        (q(reference, 0.50), 5000),
+        (q(reference, 0.75), 6500),
+        (q(reference, 0.90), 8000),
+        (q(reference, 0.97), 9000),
+        (q(reference, 0.99), 9500),
     ]
     displays = [display_value(r["economic_raw"], display_anchors) for r in records]
     relevant_displays = [display_value(v, display_anchors) for v in reference]
@@ -308,7 +291,6 @@ def main():
         position: distribution([display_value(r["economic_raw"], display_anchors) for r in records if r["position"] == position])
         for position in POSITIONS
     }
-
     structural_summary = {}
     for season, factors in structural.items():
         structural_summary[str(season)] = {
@@ -320,7 +302,6 @@ def main():
             }
             for p in (Position.QB, Position.RB, Position.WR, Position.TE)
         }
-
     payload = {
         "model_version": MODEL_VERSION,
         "example_count": len(examples),
