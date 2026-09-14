@@ -85,18 +85,17 @@ def test_positive_developmental_forecast_has_nonzero_asset_value():
     assert estimate.display_value > 0
 
 
-def test_display_scale_is_strictly_monotone_across_economic_reference_tiers_and_bounded():
-    inputs = (0.0, 121.45, 153.53, 241.64, 398.47, 860.30, 1431.17, 1783.30, 2200.0, 3000.0)
+def test_display_scale_is_cardinal_linear_below_apex_monotone_and_bounded():
+    apex_raw = 1540.989083049095
+    inputs = (0.0, 100.0, 300.0, apex_raw / 2.0, 1200.0, apex_raw, 1800.0, 2200.0, 3000.0)
     values = [intrinsic_display_value(value) for value in inputs]
     assert values[0] == 0
     assert values == sorted(values)
     assert len(set(values)) == len(values)
     assert all(0 <= value <= 10_000 for value in values)
-    assert 950 <= intrinsic_display_value(121.44812067567622) <= 1050
-    assert 4950 <= intrinsic_display_value(241.62841665403283) <= 5050
-    assert 6450 <= intrinsic_display_value(398.4623347230747) <= 6550
-    assert 7950 <= intrinsic_display_value(860.2953473881821) <= 8050
-    assert 9450 <= intrinsic_display_value(1783.2893275391143) <= 9550
+    assert 9450 <= intrinsic_display_value(apex_raw) <= 9550
+    assert 4700 <= intrinsic_display_value(apex_raw / 2.0) <= 4800
+    assert abs(intrinsic_display_value(400.0) - 2 * intrinsic_display_value(200.0)) <= 1
     assert intrinsic_display_value(3000.0) < 10_000
 
 
