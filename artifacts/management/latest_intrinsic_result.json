@@ -1,49 +1,70 @@
 {
-  "experiment_name": "FSFFL NEXT — D2 explicit career-state Intrinsic validation",
+  "experiment_name": "FSFFL NEXT — Forecast career-state calibration for frozen D2 Intrinsic",
   "exact_main_sha": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
-  "exact_pr_head": "1bb4d40c50cd5048d038e168a4ebc2cf8889a100",
-  "exact_research_head": "0952aff12e9743f6bf1e584c9af339c8b0d5f87c",
-  "candidates": {
-    "A": "PR #138 incumbent: discounted structurally relevant expected career production",
-    "B": "hard neutral marginal franchise contribution",
-    "C": "smooth marginal franchise contribution using continuous Forecast uncertainty",
-    "D": "first explicit career-state challenger with hard state-conditioned neutral contribution",
-    "D2": "explicit career-state probabilities plus state-conditioned smooth neutral contribution; generic Forecast SD cannot move probability mass across states"
+  "exact_pr_head": "029f4e5ba6ac0308981e9d990f59f411840ddb7c",
+  "exact_research_head": "029f4e5ba6ac0308981e9d990f59f411840ddb7c",
+  "state_taxonomy": {
+    "states": ["out", "depth", "usable", "starter", "premium", "elite"],
+    "candidates_tested": ["kmeans", "quantile_balanced", "quantile_starter_tail"],
+    "selected_for_research": "kmeans",
+    "selection_note": "K-means was best of the three both on broad realized-current-state calibration and on the D2 inference-aligned audit, but no taxonomy was calibrated well enough in Forecast inference space to promote."
   },
-  "selected_candidate": "A",
-  "recommendation": "KEEP A. D2 is not promoted. It proves explicit-state option value can eliminate generic-variance-as-free-upside and fixes much of the within-state compression defect, but the current state taxonomy/transition probabilities are materially miscalibrated. The next work belongs in Forecast career-state calibration, especially RB/WR/TE. PR #138 remains unmerged.",
-  "key_metrics": {
-    "chronological_holdouts": 6758,
-    "chronological_folds": 12,
-    "comparison_target": "D2 smooth realized neutral-format contribution target",
-    "overall_mae": {
-      "A": 23.260999150260382,
-      "B": 28.30679195220559,
-      "C": 29.11265270698615,
-      "D_first_generation_aligned_to_D2_target": 31.68282611982821,
-      "D2": 34.8680766793218
-    },
-    "D2_fold_wins_vs_A": 0,
-    "position_mae": {
-      "A": {"QB": 54.53770715148201, "RB": 24.711020449306947, "WR": 19.801893628415307, "TE": 9.03015976898946},
-      "D2": {"QB": 62.19860478549211, "RB": 39.70169947415171, "WR": 33.33642445784579, "TE": 14.713421758471325}
-    },
-    "group_mae": {
-      "A": {"young": 37.433100897808494, "developmental": 7.615216628561309, "prime": 21.906206904077035, "aging": 19.088033676712755, "fringe": 6.076229844618247, "elite": 113.26105777671312},
-      "D2": {"young": 53.59980502735349, "developmental": 35.4467848390922, "prime": 34.158817453711045, "aging": 27.47183494306925, "fringe": 19.82158994071448, "elite": 98.85804809204716}
-    },
-    "D2_fold_mae": {"2011": 38.33680541251587, "2012": 35.446105767451805, "2013": 36.50407576265922, "2014": 36.09122371271236, "2015": 37.97616857519206, "2016": 36.12977264166213, "2017": 32.4584846387977, "2018": 38.79487535300759, "2019": 35.273928429695715, "2020": 30.274604064892646, "2021": 31.93709108239277, "2022": 30.208194674159103},
-    "A_fold_mae": {"2011": 26.125287321558925, "2012": 24.432214071442118, "2013": 25.626973561646906, "2014": 24.61352447004582, "2015": 24.24851878088482, "2016": 24.09738041005797, "2017": 20.74254007800592, "2018": 28.17629936994664, "2019": 23.27549996101391, "2020": 20.721698018858593, "2021": 20.426803235938127, "2022": 17.676889927505897},
-    "state_calibration": {
+  "before_after_transition_calibration": {
+    "previous_D2_headline": {
       "n": 3997,
-      "multiclass_brier": 0.12153960842543732,
       "upward_predicted": 0.29065574854916476,
       "upward_realized": 0.3727795846885164,
       "downward_predicted": 0.3371858662444381,
-      "downward_realized": 0.27295471603702776
+      "downward_realized": 0.27295471603702776,
+      "multiclass_brier": 0.12153960842543732
     },
-    "generic_uncertainty_control": {"n": 1382, "D2_mean": 106.14479482841323, "target_mean": 78.54182421837858, "D2_mae": 75.34359715692396},
-    "runtime": {"full_pool_n": 334, "full_pool_seconds": 0.045693489000001364, "per_player_ms": 0.13680685329341727, "roster18_estimated_ms": 2.462523359281511}
+    "repaired_model_broad_realized_state_population": {
+      "n": 7072,
+      "upward_predicted": 0.20707998422155943,
+      "upward_realized": 0.19046945701357465,
+      "downward_predicted": 0.47851615739857495,
+      "downward_realized": 0.4973133484162896,
+      "persistence_predicted": 0.3144038583798663,
+      "persistence_realized": 0.31221719457013575,
+      "brier": 0.11643885180441112,
+      "log_loss": 1.453717855933011,
+      "upward_ece": 0.018119511657336978,
+      "downward_ece": 0.024451271422428054
+    },
+    "repaired_model_D2_inference_aligned_population": {
+      "n": 4102,
+      "upward_predicted": 0.21765093454335988,
+      "upward_realized": 0.3632374451487079,
+      "downward_predicted": 0.4913559211431299,
+      "downward_realized": 0.2915650901999025,
+      "persistence_predicted": 0.29099314431351153,
+      "persistence_realized": 0.34519746465138956,
+      "brier": 0.1348340897567605,
+      "log_loss": 1.7010497408584857,
+      "upward_ece": 0.14561460901567042,
+      "downward_ece": 0.19979083094322636
+    }
+  },
+  "key_probability_metrics": {
+    "inference_aligned_by_position": {
+      "QB": {"n": 571, "brier": 0.12242398565354509, "up_pred": 0.20549205826001105, "up_obs": 0.318739054290718, "down_pred": 0.4955312520239765, "down_obs": 0.28896672504378285},
+      "RB": {"n": 1158, "brier": 0.13685072984582922, "up_pred": 0.20985327142407875, "up_obs": 0.34110535405872194, "down_pred": 0.48563177132081964, "down_obs": 0.30397236614853196},
+      "WR": {"n": 1499, "brier": 0.13607485758471705, "up_pred": 0.22832823361894877, "up_obs": 0.3762508338892595, "down_pred": 0.48960019357686657, "down_obs": 0.28418945963975983},
+      "TE": {"n": 874, "brier": 0.1381418577724221, "up_pred": 0.21761333835984753, "up_obs": 0.39931350114416475, "down_pred": 0.49922352661578023, "down_obs": 0.2894736842105263}
+    },
+    "young": {"n": 719, "up_pred": 0.30494054780342916, "up_obs": 0.4728789986091794, "down_pred": 0.4312261920023767, "down_obs": 0.21001390820584145},
+    "experience_1_2": {"n": 1500, "up_pred": 0.2753316517065559, "up_obs": 0.44333333333333336, "down_pred": 0.46275887066417204, "down_obs": 0.25}
+  },
+  "chronological_results": {
+    "target": "frozen D2 smooth realized neutral-format contribution",
+    "A_mae": 23.260999150260382,
+    "D2_before_mae": 34.8680766793218,
+    "D2_with_research_repaired_states_mae": 34.79425153269338,
+    "D2_fold_wins_vs_A": 0,
+    "folds": 12,
+    "holdouts": 6758,
+    "repaired_position_mae": {"QB": 66.42985662921843, "RB": 41.34756804980551, "WR": 31.549233239946034, "TE": 12.741717524186658},
+    "repaired_group_mae": {"young": 55.11513604212993, "developmental": 37.307453950102456, "prime": 34.401042333295756, "aging": 26.116238635773577, "fringe": 19.477923591318284, "elite": 95.41415889354563}
   },
   "synthetic_gate_results": {
     "stable_starting_qb": 11.46216317853451,
@@ -54,32 +75,37 @@
     "elite_young_te": 15.688265462868758,
     "fringe_te": 0.24894808957082948,
     "aging_productive_rb": 12.00940246566613,
-    "generic_variance_pathology_fixed": true,
-    "credible_developmental_upside_preserved": true
+    "note": "D2 is frozen, so these explicit-state synthetic regression gates remain unchanged and continue to pass: generic variance cannot create upside without state probability."
   },
   "current_player_sanity_summary": {
-    "evaluation": "measurement-only D2 sanity on governed current Forecast path",
-    "headline": "D2 fixes within-state compression but exposes state-model calibration problems; most named current players are classified elite.",
-    "comparisons": {
-      "Bijan_vs_Darnold": "Bijan 217.33 > Darnold 40.34 — coherent",
-      "Judkins_vs_JSN": "Judkins 120.48 > JSN 120.10 — essentially tied but still reversed from desired recurring sanity ordering",
-      "KC_vs_Bowers": "KC Concepcion 36.31 > Brock Bowers 32.79 — not coherent",
-      "McBride_vs_Bowers": "Trey McBride 53.47 > Brock Bowers 32.79 — questionable",
-      "elite_QB_order": "Josh Allen 141.22 > Drake Maye 98.19 > Lamar Jackson 90.31 > Dak Prescott 64.43 > Sam Darnold 40.34 — coherent",
-      "within_state_compression": "materially improved: first-generation D gave Pitts and McBride identical 6.54; D2 separates McBride 53.47, Bowers 32.79, Pitts 21.92 using player-specific current production plus bounded future states"
-    }
+    "evaluation_as_of": "2026-09-14",
+    "successful_sources": ["fftoday", "razzball"],
+    "failed_sources": ["CBS projection-page validation", "NFL Fantasy projection-content validation"],
+    "headlines": {
+      "Bijan_vs_Darnold": "Bijan 206.99 > Darnold 39.47 — coherent",
+      "JSN_vs_Judkins": "JSN 117.89 > Judkins 112.23 — coherent",
+      "Bowers_vs_KC": "KC Concepcion 31.17 > Brock Bowers 30.38 — still incoherent",
+      "Bowers_vs_McBride": "Trey McBride 51.80 > Brock Bowers 30.38 — still questionable",
+      "QB_order": "Allen > Maye > Lamar > Dak > Darnold — coherent"
+    },
+    "state_anchor_problem": "Most headline players still map to elite from Forecast Y1 mean; this suppresses upward probability and mechanically creates excessive modeled decline from the top state.",
+    "runtime": {"full_pool_n": 334, "full_pool_seconds": 0.047866145000000415, "per_player_ms": 0.14331181137724675, "roster18_estimated_ms": 2.5796126047904413}
   },
-  "major_defects": [
-    "Career-state probabilities are under-calibrated upward (29.1% predicted vs 37.3% realized) and over-calibrated downward (33.7% vs 27.3%).",
-    "The six-state production taxonomy is too coarse in the current live sanity population: nearly all named high-usage players classify as elite, limiting meaningful role discrimination.",
-    "D2 loses to A in all 12 chronological folds, all four positions, young/developmental, prime, aging and fringe groups; it only improves the elite-tail MAE.",
-    "D2 remains materially worse than first-generation D on the common D2 target (34.87 vs 31.68 MAE), despite fixing within-state compression.",
-    "TE-premium scoring propagation remains a separate integration issue and was not repaired inside Intrinsic."
-  ],
+  "D2_before_after": {
+    "before_mae": 34.8680766793218,
+    "after_mae": 34.79425153269338,
+    "absolute_improvement": 0.07382514662841877,
+    "relative_improvement_percent": 0.2117,
+    "fold_wins_vs_A_before": 0,
+    "fold_wins_vs_A_after": 0,
+    "conclusion": "Probability calibration improved on realized-current-state history but did not transfer to Forecast-Y1 state inference and did not materially improve D2."
+  },
+  "recommendation": "KEEP A AS TEMPORARY INCUMBENT; FORECAST STATES IMPROVED BUT NOT ENOUGH. Do not promote repaired states + D2 and do not redesign Intrinsic.",
+  "major_remaining_defect": "Forecast current-state anchoring is not calibrated in the same PIT coordinate used at inference. Historical transitions are learned from realized current production states, while D2 assigns current state from Forecast Y1 mean. On that inference-aligned population, upward movement remains severely underpredicted and downward movement severely overpredicted across QB/RB/WR/TE. The next work should build/validate a PIT Forecast-space or role-evidence current-state anchor, especially for RB/WR/TE, before rerunning frozen D2.",
   "leakage_check": {"broad_market": false, "league_market": false, "actual_trades": false, "owner_behavior": false, "team_roster": false, "specific_replacement": false, "team_utility": false},
-  "CI": {"validated_head": "1bb4d40c50cd5048d038e168a4ebc2cf8889a100", "run_id": 34885734437, "status": "success", "tests": 1195, "warnings": 2},
-  "calibration": {"validated_head": "1bb4d40c50cd5048d038e168a4ebc2cf8889a100", "run_id": 34885734422, "status": "success", "D2_chronological_run_id": 34879514394, "D2_current_sanity_run_id": 34885734415},
+  "CI": {"validated_research_head": "029f4e5ba6ac0308981e9d990f59f411840ddb7c", "run_id": 34891021296, "status": "success"},
+  "calibration": {"forecast_state_run_id": 34891021192, "forecast_state_artifact_id": 10366638343, "status": "success", "fundamental_intrinsic_calibration": "running at management-artifact write time; prior exact research heads green"},
   "unresolved_review_threads": 0,
-  "mergeability": {"pr": 138, "state": "open", "merged": false, "mergeable": true, "validated_head": "1bb4d40c50cd5048d038e168a4ebc2cf8889a100", "main_current_at_validation": true, "pr_137_superseded_unmerged": true},
-  "next_required_action": "Do not create another Value transform. Keep A as the Intrinsic primitive. Improve Forecast-owned career-state taxonomy and transition calibration—especially RB/WR/TE upward development and role-loss probabilities—then rerun the exact frozen D2 experiment. Separately repair/verify TE-premium scoring propagation upstream of Intrinsic. Do not merge PR #138 without management approval."
+  "mergeability": {"pr": 138, "state": "open", "merged": false, "mergeable": true, "main_current_at_research_validation": true, "pr_137_superseded_unmerged": true},
+  "next_required_action": "Do not create D3 and do not alter D2. Keep A as the temporary Intrinsic primitive. In Forecast, calibrate the current career-state anchor in point-in-time Forecast/role space so inference-state assignment and transition training share the same coordinate; prioritize RB/WR/TE and retain the governed QB meaningful-starter model. Then rerun this exact frozen D2 experiment. TE-premium scoring propagation remains a separate upstream integration repair."
 }
