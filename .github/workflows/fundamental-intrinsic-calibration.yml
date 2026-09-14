@@ -9,6 +9,7 @@ on:
       - 'scripts/run_career_calibration.py'
       - 'scripts/run_fundamental_intrinsic_residual_calibration.py'
       - 'scripts/run_fundamental_intrinsic_v5_calibration.py'
+      - 'scripts/run_fundamental_intrinsic_v5b_calibration.py'
       - 'src/fsffl/forecast/non_qb_career_state.py'
       - 'src/fsffl/forecast/qb_career_state.py'
       - 'src/fsffl/value/intrinsic_v2.py'
@@ -36,9 +37,14 @@ jobs:
           python scripts/run_fundamental_intrinsic_residual_calibration.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --output-dir artifacts/fundamental-intrinsic
-      - name: Calibrate bounded shared-scale Intrinsic repair
+      - name: Calibrate linear state-conditioned candidate
         run: |
           python scripts/run_fundamental_intrinsic_v5_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Calibrate age-band continuation candidate
+        run: |
+          python scripts/run_fundamental_intrinsic_v5b_calibration.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --output-dir artifacts/fundamental-intrinsic
       - name: Upload calibration evidence
@@ -51,5 +57,6 @@ jobs:
             artifacts/fundamental-intrinsic/fundamental_intrinsic_residual_calibration.md
             artifacts/fundamental-intrinsic/fundamental_intrinsic_v5_calibration.json
             artifacts/fundamental-intrinsic/fundamental_intrinsic_v5_calibration.md
+            artifacts/fundamental-intrinsic/fundamental_intrinsic_v5b_calibration.json
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
