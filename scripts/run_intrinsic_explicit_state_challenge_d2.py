@@ -16,7 +16,8 @@ def main():
     base=load_base();cache={}
 
     def c2_at_x(x,baseline,marginal):
-        return (base.TEAM_COUNT*marginal.marginal_at_x(x,baseline)+0.5*max(0.0,x))/(base.TEAM_COUNT+1.0)
+        n=float(marginal.TEAM_COUNT)
+        return (n*marginal.marginal_at_x(x,baseline)+0.5*max(0.0,x))/(n+1.0)
 
     def state_contribution(position,state,samples,baseline,marginal):
         if state=='out':return 0.0
@@ -28,8 +29,6 @@ def main():
         return result
 
     def d_explicit(e,boundaries,transitions,samples,baseline,qb_probs,marginal):
-        # Current-season production remains player-specific. Future option value is
-        # entirely probability-weighted through explicit states; generic SD is not used.
         total=c2_at_x(max(0.0,e.means[0]),baseline[e.position],marginal)
         probs={}
         for h in (1,2):
