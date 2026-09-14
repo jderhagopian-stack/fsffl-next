@@ -40,9 +40,7 @@ def _path(position: Position, means=(100.0, 90.0, 80.0), sds=(15.0, 18.0, 20.0))
                 horizon_year=index + 1,
                 distribution=ForecastDistribution(mean=mean, stddev=sd),
                 method=methods[index],
-                evidence_strength=(
-                    ForecastEvidenceStrength.HIGH if index == 0 else ForecastEvidenceStrength.MODERATE
-                ),
+                evidence_strength=ForecastEvidenceStrength.HIGH if index == 0 else ForecastEvidenceStrength.MODERATE,
                 provenance_note="test",
             )
             for index, (mean, sd) in enumerate(zip(means, sds, strict=True))
@@ -50,12 +48,12 @@ def _path(position: Position, means=(100.0, 90.0, 80.0), sds=(15.0, 18.0, 20.0))
     )
 
 
-def _state(*, draft_number: int | None = None, draft_round: int | None = None):
+def _state(*, age: float = 24.0, experience: int = 2, draft_number: int | None = None, draft_round: int | None = None):
     return PlayerState(
         player_id="player:test",
         as_of=AS_OF,
-        age_years=24.0,
-        experience_years=2,
+        age_years=age,
+        experience_years=experience,
         draft_year=2024,
         draft_round=draft_round,
         draft_number=draft_number,
@@ -70,6 +68,37 @@ def test_fundamental_value_includes_post_y3_continuation():
     assert estimate.raw_fundamental_career_value > estimate.raw_discounted_y1_y3
     assert estimate.terminal.model_version == INTRINSIC_TERMINAL_MODEL_VERSION
     assert estimate.terminal.calibration_version == INTRINSIC_CALIBRATION_VERSION
+
+
+def test_aging_non_qb_continuation_tapers_without_youth_bonus():
+    path = _path(Position.RB, means=(200.0, 150.0, 100.0))
+    prime = estimate_intrinsic_value_v2(player_path=path, player_state=_state(age=25, experience=3, draft_number=40))
+    veteran = estimate_intrinsic_value_v2(player_path=path, player_state=_state(age=28, experience=6, draft_number=40))
+    late = estimate_intrinsic_value_v2(player_path=path, player_state=_state(age=32, experience=10, draft_number=40))
+    assert prime.terminal.applied_factor == prime.terminal.position_baseline_factor
+    assert veteran.terminal.applied_factor < prime.terminal.applied_factor
+    assert late.terminal.applied_factor < veteran.terminal.applied_factor
+    assert late.raw_terminal_value < veteran.raw_terminal_value < prime.raw_terminal_value
+
+
+def test_qb_continuation_keeps_validated_parent_factor():
+    path = _path(Position.QB, means=(300.0, 270.0, 240.0))
+    young = estimate_intrinsic_value_v2(player_path=path, player_state=_state(age=24, experience=2, draft_number=7))
+    old = estimate_intrinsic_value_v2(player_path=path, player_state=_state(age=35, experience=13, draft_number=7))
+    assert young.terminal.applied_factor == young.terminal.position_baseline_factor
+    assert old.terminal.applied_factor == old.terminal.position_baseline_factor
+
+
+def test_final_raw_coordinate_is_shared_football_magnitude_not_position_normalized():
+    means = (300.0, 270.0, 240.0)
+    qb = estimate_intrinsic_value_v2(player_path=_path(Position.QB, means=means), player_state=_state(draft_number=None))
+    te = estimate_intrinsic_value_v2(player_path=_path(Position.TE, means=means), player_state=_state(draft_number=None))
+    # With missing pedigree and prime-age parent continuation, differences come
+    # from football-career continuation only; no per-position divide-to-100 exists.
+    assert qb.fundamental_value == qb.raw_fundamental_career_value
+    assert te.fundamental_value == te.raw_fundamental_career_value
+    assert qb.fundamental_value > 500
+    assert te.fundamental_value > 500
 
 
 def test_pedigree_is_residual_value_after_forecast_not_terminal_replacement():
@@ -103,15 +132,15 @@ def test_positive_developmental_forecast_has_nonzero_asset_value():
 
 
 def test_display_scale_is_strictly_monotone_across_reference_tiers_and_bounded():
-    inputs = (0.0, 2.54, 11.48, 27.05, 46.87, 65.97, 92.31, 120.44, 200.0, 350.0)
+    inputs = (0.0, 10.53, 46.18, 107.34, 148.60, 200.22, 276.92, 404.19, 529.13, 640.20, 789.63, 1200.0, 2000.0)
     values = [intrinsic_display_value(value) for value in inputs]
     assert values[0] == 0
     assert values == sorted(values)
     assert len(set(values)) == len(values)
     assert all(0 <= value <= 10_000 for value in values)
-    assert 7900 <= intrinsic_display_value(65.97299494625445) <= 8100
-    assert 9400 <= intrinsic_display_value(120.44077383478454) <= 9600
-    assert intrinsic_display_value(350.0) < 10_000
+    assert 7900 <= intrinsic_display_value(404.18990857971215) <= 8100
+    assert 8950 <= intrinsic_display_value(789.6239953076092) <= 9050
+    assert intrinsic_display_value(2000.0) < 10_000
 
 
 def test_versioning_and_determinism_are_explicit():
