@@ -16,7 +16,7 @@ from .intrinsic_economics import INTRINSIC_STRUCTURAL_ECONOMICS_VERSION, product
 INTRINSIC_VALUE_V2_VERSION = "intrinsic-fundamental-economic-value-v6"
 INTRINSIC_VALUE_V2_WEIGHTS: tuple[float, float, float] = (1.0, 0.85, 0.85**2)
 INTRINSIC_TERMINAL_MODEL_VERSION = "intrinsic-career-continuation-residual-v4"
-INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-sqrt-economic-apex"
+INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-sqrt-nonlinear-economic-apex"
 INTRINSIC_CALIBRATION_VERSION = "fundamental-intrinsic-production-parity-v1"
 
 _POSITION_RESIDUAL_UNIT_ANCHOR: dict[Position, float] = {
@@ -57,9 +57,11 @@ _PEDIGREE_RESIDUALIZER: tuple[float, ...] = (
 _PEDIGREE_RESIDUAL_INTERCEPT = -2.2638022612451145
 _PEDIGREE_RESIDUAL_COEFFICIENT = 28.101305498458085
 
-# Recalibrated after the structural conversion is finalized. The transform is
-# presentation-only and never changes player ordering or raw economics.
-_DISPLAY_APEX_RAW = 1540.989083049095
+# Presentation-only anchor recalibrated after the nonlinear structural
+# conversion was finalized. 9,500 corresponds to the all-positive PIT p99 of
+# the repaired economic raw (8,647 positive examples out of 9,975). The scale
+# is not fitted to named players, market values, or a fixed roster percentile.
+_DISPLAY_APEX_RAW = 897.9723670871264
 _DISPLAY_APEX_VALUE = 9500
 _DISPLAY_TAIL_SCALE = _DISPLAY_APEX_RAW
 
