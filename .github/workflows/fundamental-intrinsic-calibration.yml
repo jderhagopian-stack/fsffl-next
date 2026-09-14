@@ -10,8 +10,7 @@ on:
       - 'scripts/run_fundamental_intrinsic_residual_calibration.py'
       - 'scripts/run_fundamental_intrinsic_v5_calibration.py'
       - 'scripts/run_fundamental_intrinsic_v5b_calibration.py'
-      - 'src/fsffl/forecast/non_qb_career_state.py'
-      - 'src/fsffl/forecast/qb_career_state.py'
+      - 'scripts/run_fundamental_intrinsic_v5c_calibration.py'
       - 'src/fsffl/value/intrinsic_v2.py'
       - '.github/workflows/fundamental-intrinsic-calibration.yml'
 
@@ -34,29 +33,20 @@ jobs:
         run: Rscript scripts/extract_career_transition_panel.R
       - name: Reproduce Fundamental Intrinsic v4 calibration
         run: |
-          python scripts/run_fundamental_intrinsic_residual_calibration.py \
-            --career-panel artifacts/next2-career/career_transition_panel.csv \
-            --output-dir artifacts/fundamental-intrinsic
-      - name: Calibrate linear state-conditioned candidate
+          python scripts/run_fundamental_intrinsic_residual_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
+      - name: Calibrate broad state-conditioned candidates
         run: |
-          python scripts/run_fundamental_intrinsic_v5_calibration.py \
-            --career-panel artifacts/next2-career/career_transition_panel.csv \
-            --output-dir artifacts/fundamental-intrinsic
-      - name: Calibrate age-band continuation candidate
-        run: |
-          python scripts/run_fundamental_intrinsic_v5b_calibration.py \
-            --career-panel artifacts/next2-career/career_transition_panel.csv \
-            --output-dir artifacts/fundamental-intrinsic
+          python scripts/run_fundamental_intrinsic_v5_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
+          python scripts/run_fundamental_intrinsic_v5b_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
+      - name: Calibrate isolated aging-taper candidate
+        run: python scripts/run_fundamental_intrinsic_v5c_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
       - name: Upload calibration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fundamental-intrinsic-calibration
           path: |
-            artifacts/fundamental-intrinsic/fundamental_intrinsic_residual_calibration.json
-            artifacts/fundamental-intrinsic/fundamental_intrinsic_residual_calibration.md
-            artifacts/fundamental-intrinsic/fundamental_intrinsic_v5_calibration.json
-            artifacts/fundamental-intrinsic/fundamental_intrinsic_v5_calibration.md
-            artifacts/fundamental-intrinsic/fundamental_intrinsic_v5b_calibration.json
+            artifacts/fundamental-intrinsic/*.json
+            artifacts/fundamental-intrinsic/*.md
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
