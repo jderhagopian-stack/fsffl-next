@@ -52,7 +52,7 @@ jobs:
           unzip -q /tmp/qb.zip -d artifacts/fundamental-intrinsic/frozen-qb
       - name: Validate production Forecast parity and structural economics
         run: |
-          python scripts/run_fundamental_intrinsic_production_parity.py \
+          PYTHONPATH=src python scripts/run_fundamental_intrinsic_production_parity.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
