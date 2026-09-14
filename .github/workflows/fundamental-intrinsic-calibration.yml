@@ -8,7 +8,9 @@ on:
       - 'scripts/extract_career_transition_panel.R'
       - 'scripts/run_career_calibration.py'
       - 'scripts/run_fundamental_intrinsic_residual_calibration.py'
+      - 'scripts/run_fundamental_intrinsic_v5_calibration.py'
       - 'src/fsffl/forecast/non_qb_career_state.py'
+      - 'src/fsffl/forecast/qb_career_state.py'
       - 'src/fsffl/value/intrinsic_v2.py'
       - '.github/workflows/fundamental-intrinsic-calibration.yml'
 
@@ -29,9 +31,14 @@ jobs:
           python-version: '3.11'
       - name: Build PIT football career panel
         run: Rscript scripts/extract_career_transition_panel.R
-      - name: Calibrate Fundamental Intrinsic residual economics
+      - name: Reproduce Fundamental Intrinsic v4 calibration
         run: |
           python scripts/run_fundamental_intrinsic_residual_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Calibrate bounded shared-scale Intrinsic repair
+        run: |
+          python scripts/run_fundamental_intrinsic_v5_calibration.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --output-dir artifacts/fundamental-intrinsic
       - name: Upload calibration evidence
@@ -42,5 +49,7 @@ jobs:
           path: |
             artifacts/fundamental-intrinsic/fundamental_intrinsic_residual_calibration.json
             artifacts/fundamental-intrinsic/fundamental_intrinsic_residual_calibration.md
+            artifacts/fundamental-intrinsic/fundamental_intrinsic_v5_calibration.json
+            artifacts/fundamental-intrinsic/fundamental_intrinsic_v5_calibration.md
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
