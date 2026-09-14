@@ -8,8 +8,6 @@ on:
       - 'scripts/extract_career_transition_panel.R'
       - 'scripts/run_career_calibration.py'
       - 'scripts/run_fundamental_intrinsic_residual_calibration.py'
-      - 'scripts/run_fundamental_intrinsic_v5_calibration.py'
-      - 'scripts/run_fundamental_intrinsic_v5b_calibration.py'
       - 'scripts/run_fundamental_intrinsic_v5c_calibration.py'
       - 'src/fsffl/value/intrinsic_v2.py'
       - '.github/workflows/fundamental-intrinsic-calibration.yml'
@@ -31,22 +29,24 @@ jobs:
           python-version: '3.11'
       - name: Build PIT football career panel
         run: Rscript scripts/extract_career_transition_panel.R
-      - name: Reproduce Fundamental Intrinsic v4 calibration
+      - name: Reproduce Fundamental Intrinsic v4 baseline
         run: |
-          python scripts/run_fundamental_intrinsic_residual_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
-      - name: Calibrate broad state-conditioned candidates
+          python scripts/run_fundamental_intrinsic_residual_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Calibrate selected bounded shared-scale repair
         run: |
-          python scripts/run_fundamental_intrinsic_v5_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
-          python scripts/run_fundamental_intrinsic_v5b_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
-      - name: Calibrate isolated aging-taper candidate
-        run: python scripts/run_fundamental_intrinsic_v5c_calibration.py --career-panel artifacts/next2-career/career_transition_panel.csv --output-dir artifacts/fundamental-intrinsic
+          python scripts/run_fundamental_intrinsic_v5c_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/fundamental-intrinsic
       - name: Upload calibration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: fundamental-intrinsic-calibration
           path: |
-            artifacts/fundamental-intrinsic/*.json
-            artifacts/fundamental-intrinsic/*.md
+            artifacts/fundamental-intrinsic/fundamental_intrinsic_residual_calibration.json
+            artifacts/fundamental-intrinsic/fundamental_intrinsic_residual_calibration.md
+            artifacts/fundamental-intrinsic/fundamental_intrinsic_v5c_calibration.json
             artifacts/next2-career/career_transition_coverage.csv
           retention-days: 14
