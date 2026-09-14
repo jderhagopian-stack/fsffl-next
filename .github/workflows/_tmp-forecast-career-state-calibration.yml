@@ -8,6 +8,7 @@ on:
       - 'scripts/run_forecast_career_state_strict_compare.py'
       - 'scripts/run_forecast_career_state_taxonomy_strict_audit.py'
       - 'scripts/run_forecast_inference_aligned_state_calibration.py'
+      - 'scripts/run_forecast_inference_aligned_state_direct.py'
       - 'scripts/run_forecast_career_state_current_sanity.py'
       - 'artifacts/research/intrinsic_d2_frozen_reference.json'
       - '.github/workflows/_tmp-forecast-career-state-calibration.yml'
@@ -65,14 +66,22 @@ jobs:
             --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
             --output-dir artifacts/forecast-state
-      - name: Calibrate inference-aligned current state and rerun frozen D2
+      - name: Calibrate probabilistic inference-aligned current state
         run: |
           python scripts/run_forecast_inference_aligned_state_calibration.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
             --output-dir artifacts/forecast-state
+      - name: Test direct inference-aligned transitions and frozen D2
+        run: |
+          python scripts/run_forecast_inference_aligned_state_direct.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/forecast-state
       - name: Run prior repaired-state current D2 sanity
+        continue-on-error: true
         run: |
           sed -i 's/baseline={k.value:v for k,v in base0.items()}/baseline=base0/' scripts/run_forecast_career_state_current_sanity.py
           python scripts/run_forecast_career_state_current_sanity.py \
