@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping, Sequence
 
-from fsffl.state.models import LeagueState, Position, Slot
+from fsffl.state.models import LeagueState, Position, RosterSlot
 
 
 INTRINSIC_STRUCTURAL_ECONOMICS_VERSION = "intrinsic-structural-starter-pressure-v1"
@@ -148,17 +148,17 @@ def structural_position_economics_for_league(
     flex = 0
     superflex = 0
     for requirement in league_state.league.rules.lineup:
-        if requirement.slot == Slot.QB:
+        if requirement.slot == RosterSlot.QB:
             direct[Position.QB] += requirement.count
-        elif requirement.slot == Slot.RB:
+        elif requirement.slot == RosterSlot.RB:
             direct[Position.RB] += requirement.count
-        elif requirement.slot == Slot.WR:
+        elif requirement.slot == RosterSlot.WR:
             direct[Position.WR] += requirement.count
-        elif requirement.slot == Slot.TE:
+        elif requirement.slot == RosterSlot.TE:
             direct[Position.TE] += requirement.count
-        elif requirement.slot == Slot.FLEX:
+        elif requirement.slot == RosterSlot.FLEX:
             flex += requirement.count
-        elif requirement.slot == Slot.SUPERFLEX:
+        elif requirement.slot == RosterSlot.SUPERFLEX:
             superflex += requirement.count
     return structural_position_economics(
         team_count=len(league_state.teams),
