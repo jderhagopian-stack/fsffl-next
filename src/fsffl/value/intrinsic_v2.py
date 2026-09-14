@@ -30,9 +30,6 @@ _POSITION_RESIDUAL_UNIT_ANCHOR: dict[Position, float] = {
     Position.TE: 278.95638595624996,
 }
 
-# Parent post-Y3 factors recalibrated against the exact deployed Forecast horizon
-# policy: PIT Model-A Y1; QB career-state when frozen PIT evidence exists; bounded
-# RB/TE transitions; WR Y2 carry-forward and bounded Y3.
 _POSITION_CONTINUATION_COEFFICIENT: dict[Position, float] = {
     Position.QB: 3.04477622642943,
     Position.RB: 4.303817924177665,
@@ -40,9 +37,6 @@ _POSITION_CONTINUATION_COEFFICIENT: dict[Position, float] = {
     Position.TE: 5.817300974838888,
 }
 
-# Aging-only cells from the same production-parity calibration. They are not
-# forced monotonic. The recalibrated evidence itself resolves the prior oddities:
-# WR veteran and late tails taper below younger cohorts and TE late < veteran.
 _AGING_CONTINUATION_COEFFICIENT: dict[tuple[Position, str], float] = {
     (Position.RB, "veteran"): 3.950333600958593,
     (Position.RB, "late"): 2.7510651150227448,
@@ -52,8 +46,6 @@ _AGING_CONTINUATION_COEFFICIENT: dict[tuple[Position, str], float] = {
     (Position.TE, "late"): 4.858769764287097,
 }
 
-# Pedigree remains the only promoted residual signal. Coefficients are refitted
-# against the production-parity Y1/Y2/Y3 Forecast mean/uncertainty vector.
 _PEDIGREE_RESIDUALIZER: tuple[float, ...] = (
     0.20196416032092881,
     -0.3623290279557141,
@@ -69,20 +61,22 @@ _PEDIGREE_RESIDUALIZER: tuple[float, ...] = (
 _PEDIGREE_RESIDUAL_INTERCEPT = -2.2638022612451145
 _PEDIGREE_RESIDUAL_COEFFICIENT = 28.101305498458085
 
-# Stable football/rules-only customer scale. The reference universe is the top
-# 216 predicted economic assets per PIT season: 12 teams x 18 active roster
-# places, with no positional quota. The raw cut points therefore emerge from a
-# dynasty-relevant roster-capacity universe rather than the full NFL population,
-# current-player values, or any market source.
+# Stable football/rules-only customer scale. Raw cut points come from the top
+# 216 predicted economic assets per PIT season (12 teams x 18 active roster
+# places), with no positional quota. The display bands then give those fixed
+# dynasty-reference quantiles semantic meaning: lower-roster assets stay low,
+# the median rosterable asset is around 5,000, the upper quartile starts around
+# 6,500, elite begins around the p90 raw magnitude, and 9,000+ is reserved for
+# the extreme tail. No current player or market coordinate participates.
 _DISPLAY_ANCHORS: tuple[tuple[float, int], ...] = (
     (0.0, 0),
-    (121.44812067567622, 2000),
-    (153.5200104805043, 4500),
-    (241.62841665403283, 6500),
-    (398.4623347230747, 8000),
-    (860.2953473881821, 9000),
-    (1431.1653907320676, 9400),
-    (1783.2893275391143, 9700),
+    (121.44812067567622, 1000),
+    (153.5200104805043, 3000),
+    (241.62841665403283, 5000),
+    (398.4623347230747, 6500),
+    (860.2953473881821, 8000),
+    (1431.1653907320676, 9000),
+    (1783.2893275391143, 9500),
 )
 _DISPLAY_TAIL_SCALE = 1783.2893275391143
 
