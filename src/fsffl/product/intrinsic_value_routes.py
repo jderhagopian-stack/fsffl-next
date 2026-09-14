@@ -34,16 +34,21 @@ def _percentiles(estimates) -> dict[str, float]:
 
 def _key_driver(estimate) -> str:
     terminal = estimate.terminal
+    structure = (
+        f" League-wide lineup demand versus effective production supply applies a {estimate.structural_factor:.2f}x positional-economic conversion."
+        if estimate.structural_starter_demand > 0 and estimate.structural_effective_supply > 0
+        else ""
+    )
     if terminal.pedigree_score is not None:
         direction = "adds" if terminal.pedigree_residual_value >= 0 else "reduces"
         return (
             f"Governed Years 1-3 Forecast plus post-Year-3 continuation; residual draft pedigree "
-            f"{direction} {abs(terminal.pedigree_residual_value):.1f} fundamental-value units after "
-            "removing the portion explained by Forecast."
+            f"{direction} {abs(terminal.pedigree_residual_value):.1f} pre-structural football units after "
+            f"removing the portion explained by Forecast.{structure}"
         )
     return (
         "Governed Years 1-3 Forecast plus post-Year-3 continuation; exact draft-pick pedigree is "
-        "unavailable, so no residual pedigree adjustment is fabricated."
+        f"unavailable, so no residual pedigree adjustment is fabricated.{structure}"
     )
 
 
@@ -158,6 +163,11 @@ def install_intrinsic_value_v1_routes(
                     "reason": estimate.evidence_note,
                     "confidence": estimate.confidence.value,
                     "raw_fundamental_intrinsic": estimate.fundamental_value,
+                    "pre_structural_football_value": estimate.pre_structural_fundamental_value,
+                    "structural_factor": estimate.structural_factor,
+                    "structural_starter_demand": estimate.structural_starter_demand,
+                    "structural_effective_supply": estimate.structural_effective_supply,
+                    "structural_economics_version": estimate.structural_economics_version,
                     "intrinsic_value": estimate.display_value,
                     "percentile": percentile_by_id.get(player_id),
                     "uncertainty": estimate.fundamental_stddev,
@@ -172,7 +182,7 @@ def install_intrinsic_value_v1_routes(
 
         return {
             "coordinate": "FSFFL Intrinsic Value",
-            "definition": "team-independent fundamental long-term dynasty asset worth from football fundamentals",
+            "definition": "team-independent long-term dynasty asset worth from football fundamentals transformed through league-wide lineup-demand and production-supply economics",
             "model_version": result.model_version,
             "forecast_policy_version": result.forecast_policy_version,
             "base_forecast_model_version": result.base_forecast_model_version,
