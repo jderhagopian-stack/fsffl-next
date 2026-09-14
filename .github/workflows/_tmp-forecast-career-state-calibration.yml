@@ -7,6 +7,7 @@ on:
       - 'scripts/run_forecast_career_state_calibration.py'
       - 'scripts/run_forecast_career_state_strict_compare.py'
       - 'scripts/run_forecast_career_state_taxonomy_strict_audit.py'
+      - 'scripts/run_forecast_inference_aligned_state_calibration.py'
       - 'scripts/run_forecast_career_state_current_sanity.py'
       - 'artifacts/research/intrinsic_d2_frozen_reference.json'
       - '.github/workflows/_tmp-forecast-career-state-calibration.yml'
@@ -41,7 +42,7 @@ jobs:
           gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
           unzip -q /tmp/pr131.zip -d artifacts/forecast-state/frozen-pr131
           unzip -q /tmp/qb.zip -d artifacts/forecast-state/frozen-qb
-      - name: Calibrate Forecast career states and rerun frozen D2
+      - name: Reproduce prior Forecast state baseline
         run: |
           sed -i 's#artifacts/management/latest_intrinsic_result.json#artifacts/research/intrinsic_d2_frozen_reference.json#' scripts/run_forecast_career_state_calibration.py
           python scripts/run_forecast_career_state_calibration.py \
@@ -49,7 +50,7 @@ jobs:
             --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
             --output-dir artifacts/forecast-state
-      - name: Compare repaired calibration on exact D2 population
+      - name: Compare prior calibration on exact D2 population
         run: |
           python scripts/run_forecast_career_state_strict_compare.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
@@ -57,14 +58,21 @@ jobs:
             --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
             --calibration-json artifacts/forecast-state/forecast_career_state_calibration.json \
             --output-dir artifacts/forecast-state
-      - name: Audit taxonomy directly in Forecast inference space
+      - name: Audit prior taxonomy directly in Forecast inference space
         run: |
           python scripts/run_forecast_career_state_taxonomy_strict_audit.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
             --output-dir artifacts/forecast-state
-      - name: Run repaired-state current D2 sanity
+      - name: Calibrate inference-aligned current state and rerun frozen D2
+        run: |
+          python scripts/run_forecast_inference_aligned_state_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/forecast-state/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/forecast-state/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/forecast-state
+      - name: Run prior repaired-state current D2 sanity
         run: |
           sed -i 's/baseline={k.value:v for k,v in base0.items()}/baseline=base0/' scripts/run_forecast_career_state_current_sanity.py
           python scripts/run_forecast_career_state_current_sanity.py \
