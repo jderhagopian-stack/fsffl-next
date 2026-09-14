@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from bisect import bisect_right
 from dataclasses import dataclass
 from typing import Mapping, Sequence
 
 from fsffl.state.models import LeagueState, Position, RosterSlot
 
 
-INTRINSIC_STRUCTURAL_ECONOMICS_VERSION = "intrinsic-structural-starter-pressure-v1"
+INTRINSIC_STRUCTURAL_ECONOMICS_VERSION = "intrinsic-structural-starter-relevance-v2"
 _INTRINSIC_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
 
 
@@ -20,14 +21,38 @@ class PositionStructuralEconomics:
 
 
 def _effective_supply(values: Sequence[float]) -> float:
-    """Production-concentration effective count (inverse Herfindahl / participation ratio)."""
-
     positive = [max(0.0, float(value)) for value in values if float(value) > 0.0]
     if not positive:
         return 0.0
     total = sum(positive)
     squares = sum(value * value for value in positive)
     return (total * total / squares) if squares > 0.0 else 0.0
+
+
+def production_rank_relevance(
+    production: float,
+    *,
+    forecast_means: Sequence[float],
+    starter_demand: int,
+) -> float:
+    """Return league-wide starter relevance for one production magnitude.
+
+    Players at or above the neutral starter-demand frontier receive full structural
+    relevance. Production below that frontier is discounted smoothly as
+    `starter_demand / production_rank`. This is a lineup-demand/supply conversion,
+    not replacement-value subtraction: no replacement score is removed and no
+    team roster, market price, owner, or transaction information is accepted.
+    """
+
+    value = max(0.0, float(production))
+    if value <= 0.0 or starter_demand <= 0:
+        return 0.0
+    pool = sorted(max(0.0, float(v)) for v in forecast_means if float(v) > 0.0)
+    if not pool:
+        return 1.0
+    greater = len(pool) - bisect_right(pool, value)
+    rank = 1 + greater
+    return min(1.0, starter_demand / rank)
 
 
 def _select_neutral_starters(
@@ -38,14 +63,6 @@ def _select_neutral_starters(
     superflex_slots: int,
     forecast_means: Mapping[Position, Sequence[float]],
 ) -> dict[Position, int]:
-    """Fill a neutral league-wide lineup from governed Y1 production.
-
-    Narrow eligibility is filled before broader eligibility. Because direct
-    position slots are disjoint, FLEX is a strict subset of SUPERFLEX, and every
-    asset can be used once, this deterministic greedy ordering preserves the
-    league's eligibility constraints without consulting any team's roster.
-    """
-
     pools = {
         position: sorted((max(0.0, float(v)) for v in forecast_means.get(position, ())), reverse=True)
         for position in _INTRINSIC_POSITIONS
@@ -96,21 +113,15 @@ def structural_position_economics(
     superflex_slots: int,
     forecast_means: Mapping[Position, Sequence[float]],
 ) -> dict[Position, PositionStructuralEconomics]:
-    """Convert common football production into league-structural asset economics.
+    """Materialize neutral starter demand and structural diagnostics.
 
-    The only inputs are lineup demand and the governed Y1 football-production
-    distribution. Effective supply uses production concentration rather than raw
-    player counts, so a long tail of negligible projections cannot manufacture
-    fake depth. The relative factor is each position's neutral starter pressure
-    divided by the pooled pressure across QB/RB/WR/TE. No market, team roster,
-    owner, replacement-value, or transaction input is accepted.
+    `relative_pressure` is retained as an audit/diagnostic field for compatibility,
+    but production Intrinsic v6 no longer multiplies every player at a position by
+    that uniform factor. Production uses player-specific `production_rank_relevance`.
     """
 
     if team_count <= 0:
-        return {
-            position: PositionStructuralEconomics(position, 0, 0.0, 0.0, 1.0)
-            for position in _INTRINSIC_POSITIONS
-        }
+        return {position: PositionStructuralEconomics(position, 0, 0.0, 0.0, 1.0) for position in _INTRINSIC_POSITIONS}
     selected = _select_neutral_starters(
         team_count=team_count,
         direct_slots=direct_slots,
@@ -129,13 +140,7 @@ def structural_position_economics(
         effective = supply[position]
         pressure = count / effective if count > 0 and effective > 0.0 else 0.0
         relative = pressure / pooled_pressure if pressure > 0.0 and pooled_pressure > 0.0 else 1.0
-        result[position] = PositionStructuralEconomics(
-            position=position,
-            selected_starters=count,
-            effective_supply=effective,
-            starter_pressure=pressure,
-            relative_pressure=relative,
-        )
+        result[position] = PositionStructuralEconomics(position, count, effective, pressure, relative)
     return result
 
 
