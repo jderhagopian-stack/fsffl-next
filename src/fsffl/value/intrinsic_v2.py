@@ -16,7 +16,7 @@ from .intrinsic_economics import INTRINSIC_STRUCTURAL_ECONOMICS_VERSION
 INTRINSIC_VALUE_V2_VERSION = "intrinsic-fundamental-economic-value-v6"
 INTRINSIC_VALUE_V2_WEIGHTS: tuple[float, float, float] = (1.0, 0.85, 0.85**2)
 INTRINSIC_TERMINAL_MODEL_VERSION = "intrinsic-career-continuation-residual-v4"
-INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-linear-economic-apex"
+INTRINSIC_DISPLAY_SCALE_VERSION = "intrinsic-dynasty-display-v6-sqrt-economic-apex"
 INTRINSIC_CALIBRATION_VERSION = "fundamental-intrinsic-production-parity-v1"
 
 # Production-parity calibration still residualizes draft pedigree in normalized
@@ -61,13 +61,13 @@ _PEDIGREE_RESIDUALIZER: tuple[float, ...] = (
 _PEDIGREE_RESIDUAL_INTERCEPT = -2.2638022612451145
 _PEDIGREE_RESIDUAL_COEFFICIENT = 28.101305498458085
 
-# Customer display is a cardinal rescaling of the completed economic raw rather
-# than a percentile leaderboard. 9,500 corresponds to the all-positive PIT
+# Customer display is a monotonic concave rescaling of the completed economic
+# raw, not a percentile leaderboard. 9,500 corresponds to the all-positive PIT
 # economic-raw p99 from the production-parity evidence (9,975 examples). Below
-# that robust elite anchor the mapping is linear, preserving economic magnitude
-# ratios; only the extreme tail compresses asymptotically toward 10,000. This
-# reference uses no fixed league roster capacity, current-player quantiles,
-# named players, or market coordinate.
+# that robust elite anchor a square-root transform handles the heavy right tail
+# without imposing roster-percentile buckets; only the extreme tail compresses
+# asymptotically toward 10,000. This reference uses no fixed league roster
+# capacity, current-player quantiles, named players, or market coordinate.
 _DISPLAY_APEX_RAW = 1540.989083049095
 _DISPLAY_APEX_VALUE = 9500
 _DISPLAY_TAIL_SCALE = _DISPLAY_APEX_RAW
@@ -226,7 +226,7 @@ def intrinsic_display_value(fundamental_value: float) -> int:
     if fundamental_value <= 0:
         return 0
     if fundamental_value <= _DISPLAY_APEX_RAW:
-        return min(_DISPLAY_APEX_VALUE, round(_DISPLAY_APEX_VALUE * fundamental_value / _DISPLAY_APEX_RAW))
+        return min(_DISPLAY_APEX_VALUE, round(_DISPLAY_APEX_VALUE * (fundamental_value / _DISPLAY_APEX_RAW) ** 0.5))
     tail = _DISPLAY_APEX_VALUE + (10_000 - _DISPLAY_APEX_VALUE) * (
         1.0 - exp(-(fundamental_value - _DISPLAY_APEX_RAW) / _DISPLAY_TAIL_SCALE)
     )
