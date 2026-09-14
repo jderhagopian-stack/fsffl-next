@@ -12,6 +12,7 @@ on:
       - 'scripts/run_fundamental_intrinsic_v5c_calibration.py'
       - 'scripts/run_fundamental_intrinsic_production_parity.py'
       - 'scripts/run_fundamental_intrinsic_parameter_scale_audit.py'
+      - 'scripts/run_fundamental_intrinsic_reference_distribution.py'
       - 'src/fsffl/value/intrinsic_economics.py'
       - 'src/fsffl/value/intrinsic_v2.py'
       - 'src/fsffl/value/intrinsic_v2_runtime.py'
@@ -64,6 +65,13 @@ jobs:
       - name: Audit frozen parameters and customer scale
         run: |
           python scripts/run_fundamental_intrinsic_parameter_scale_audit.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Report league-derived dynasty reference cohorts
+        run: |
+          python scripts/run_fundamental_intrinsic_reference_distribution.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
             --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
