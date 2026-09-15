@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 VARIANT=os.environ.get("FSFFL_CONDITIONAL_D2_VARIANT","conditional").strip().lower()
-if VARIANT not in {"conditional","shrunk"}: raise RuntimeError(VARIANT)
+if VARIANT not in {"conditional","shrunk","central"}: raise RuntimeError(VARIANT)
 NORMAL=statistics.NormalDist(); JEFFREYS_REFERENCE_MASS=.5
 
 
@@ -53,10 +53,16 @@ def main():
                 pa=0. if za==-math.inf else NORMAL.cdf(za); pb=1. if zb==math.inf else NORMAL.cdf(zb)
                 m=max(0.,pb-pa); num=(mu-float(b))*m+sd*(phi(za)-phi(zb)); em+=float(p)*max(0.,num/mass)
             n=float(marginal.TEAM_COUNT); return (n*em+.5*max(0.,ex))/(n+1.),mass
+        def projected_central_c2(mu,lo,hi,neutral,marginal):
+            x=max(0.,mu,lo)
+            if math.isfinite(hi): x=min(x,hi)
+            return c2_at_x(x,neutral,marginal)
         def quality(e,h,state,bounds,samples,baseline,marginal):
             ref=reference(e.position,state,samples,baseline,marginal)
             if state=="out": return 0.
-            lo,hi=interval(state,bounds[e.position]); player,mass=conditional_c2(max(0.,float(e.means[h])),max(0.,float(e.sds[h])),lo,hi,baseline[e.position],marginal)
+            mu=max(0.,float(e.means[h])); sd=max(0.,float(e.sds[h])); lo,hi=interval(state,bounds[e.position])
+            if VARIANT=="central": return projected_central_c2(mu,lo,hi,baseline[e.position],marginal)
+            player,mass=conditional_c2(mu,sd,lo,hi,baseline[e.position],marginal)
             if mass<=1e-10: return ref
             if VARIANT=="conditional": return player
             w=mass/(mass+JEFFREYS_REFERENCE_MASS); return w*player+(1.-w)*ref
