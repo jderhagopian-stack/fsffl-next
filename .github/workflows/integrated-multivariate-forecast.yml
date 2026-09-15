@@ -1,0 +1,69 @@
+name: Research Integrated Multivariate Forecast
+
+on:
+  pull_request:
+    branches: [research/persistence-first-forecast-calibration]
+    paths:
+      - 'scripts/run_integrated_multivariate_forecast.py'
+      - 'artifacts/research/integrated_multivariate_forecast_protocol.md'
+      - '.github/workflows/integrated-multivariate-forecast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  frozen-integrated-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research tooling
+        run: python -m pip install -e . pandas scikit-learn nflreadpy pyarrow
+      - name: Build frozen PIT career panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Build strict-PIT usage panel
+        run: Rscript scripts/extract_forecast_usage_panel.R
+      - name: Download frozen authoritative research evidence
+        run: |
+          mkdir -p artifacts/integrated/frozen/model-a artifacts/integrated/frozen/qb artifacts/integrated/frozen/forecast artifacts/integrated/frozen/event artifacts/integrated/frozen/persistence
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/model-a.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10408705946/zip > /tmp/forecast.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10416382295/zip > /tmp/event.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10419402765/zip > /tmp/persistence.zip
+          unzip -q /tmp/model-a.zip -d artifacts/integrated/frozen/model-a
+          unzip -q /tmp/qb.zip -d artifacts/integrated/frozen/qb
+          unzip -q /tmp/forecast.zip -d artifacts/integrated/frozen/forecast
+          unzip -q /tmp/event.zip -d artifacts/integrated/frozen/event
+          unzip -q /tmp/persistence.zip -d artifacts/integrated/frozen/persistence
+      - name: Run frozen integrated multivariate Forecast evaluation
+        run: |
+          python scripts/run_integrated_multivariate_forecast.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --model-a-rows artifacts/integrated/frozen/model-a/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/integrated/frozen/qb/qb_career_state_deployment_results.json \
+            --prior-forecast-json artifacts/integrated/frozen/forecast/forecast-disappearance/final/forecast_disappearance_development_results.json \
+            --prior-event-json artifacts/integrated/frozen/event/event-time/results/event_time_absence_cause_results.json \
+            --prior-persistence-json artifacts/integrated/frozen/persistence/persistence-first/results/persistence_first_forecast_calibration_results.json \
+            --output-dir artifacts/integrated-multivariate/results
+      - name: Upload frozen integrated evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-multivariate-forecast
+          path: |
+            artifacts/integrated-multivariate/results/integrated_multivariate_forecast_results.json
+            artifacts/integrated-multivariate/results/integrated_multivariate_oos_rows.csv
+            artifacts/research/integrated_multivariate_forecast_protocol.md
+          retention-days: 14
