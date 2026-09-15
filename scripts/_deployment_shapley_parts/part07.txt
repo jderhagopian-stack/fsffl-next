@@ -1,0 +1,73 @@
+            d,_=b.marginal(e.position,max(0.0,e.means[0]));hard_n+=1
+            if d<=1e-12:hard_zero_n+=1
+        for e in targets:
+            shap=phi_by_h[0][e.player_id][0];hard=hard_by_h[0][e.player_id][0];probs_by={}
+            for h in (1,2):
+                pr=explicit.state_distribution_for_example(e,boundaries,transitions,qb_probs,h);probs_by[h]=pr
+                vals=phi_by_h[h][e.player_id];hvals=hard_by_h[h][e.player_id]
+                shap += (DISCOUNT**h)*sum(pr[st]*vals[1+STATE_NAMES.index(st)] for st in STATE_NAMES)
+                hard += (DISCOUNT**h)*sum(pr[st]*hvals[1+STATE_NAMES.index(st)] for st in STATE_NAMES)
+            base=keys[(season,e.player_id)]
+            out_rows.append({"season":season,"player_id":e.player_id,"position":e.position,"age":e.age,"experience":e.experience,
+                             "target":float(base["target"]),"A":float(base["A"]),"D":float(base["D"]),"Hard":hard,"Shapley":shap,
+                             "phi_y1":phi_by_h[0][e.player_id][0],"hard_y1":hard_by_h[0][e.player_id][0],
+                             "state_probs_y2":probs_by[1],"state_probs_y3":probs_by[2]})
+    ms={k:metrics(out_rows,k) for k in ("A","D","Hard","Shapley")}
+    folds=sorted({r["season"] for r in out_rows})
+    wins=sum(ms["Shapley"]["fold_mae"][str(s)]<ms["A"]["fold_mae"][str(s)] for s in folds);losses=len(folds)-wins
+    hard_wins=sum(ms["Hard"]["fold_mae"][str(s)]<ms["A"]["fold_mae"][str(s)] for s in folds)
+    tierout={k:{"value":tier_value[k],"n":tier_n[k],"share_of_total":tier_value[k]/system_total if system_total else 0.0} for k in sorted(tier_value)}
+    return {"rows":out_rows,"metrics":ms,"fold_wins_vs_A":wins,"fold_losses_vs_A":losses,
+            "hard_fold_wins_vs_A":hard_wins,"hard_fold_losses_vs_A":len(folds)-hard_wins,
+            "season_diagnostics":season_diag,"low_end_allocation":tierout,
+            "tier_definition":"within-season full-supply Y1 Shapley rank bands: bottom20 near_zero; 20-50 depth; 50-80 starter; 80-95 premium; top5 elite; diagnostic only",
+            "hard_control_zero_share_of_full_supply":hard_zero_n/hard_n if hard_n else 0.0,
+            "runtime_seconds":time.time()-runtime_start,"holdouts":len(out_rows),"folds":len(folds)}
+
+
+def current_diagnostics(args):
+    # Live diagnostic only; failure is reported rather than contaminating historical result.
+    try:
+        from urllib.request import urlopen
+        from fsffl.forecast.current_runtime import build_current_live_forecasts
+        from fsffl.forecast.non_qb_career_state import build_non_qb_bounded_paths
+        from fsffl.forecast.qb_career_state_runtime import build_qb_career_state_forecasts
+        from fsffl.value.intrinsic_v2_runtime import build_current_intrinsic_values_v2
+        from fsffl.state.models import League,LeagueRules,LeagueState,LineupRequirement,Player,PlayerState,PlayerStatus,Position,Provenance,ProviderRef,RosterSlot,ScoringRule,Team,TeamState
+        now=datetime.now(UTC)
+        with urlopen("https://api.sleeper.app/v1/players/nfl",timeout=30) as response:raw_players=json.load(response)
+        provenance=Provenance(source="sleeper:players:nfl:deployment-shapley-research",retrieved_at=now,effective_at=now)
+        pmap={"QB":Position.QB,"RB":Position.RB,"WR":Position.WR,"TE":Position.TE};players=[];states=[]
+        def fl(v):
+            try:return float(v)
+            except:return None
+        def it(v):
+            try:return int(v)
+            except:return None
+        for external_id,raw in raw_players.items():
+            pos=pmap.get(str(raw.get("position") or "").upper());team=str(raw.get("team") or "").upper().strip()
+            if pos is None or not team:continue
+            name=str(raw.get("full_name") or " ".join(filter(None,[raw.get("first_name"),raw.get("last_name")])) or external_id);pid=f"sleeper:player:{external_id}"
+            players.append(Player(player_id=pid,full_name=name,position=pos,nfl_team=team,provider_refs=(ProviderRef(provider="sleeper",external_id=str(external_id)),)))
+            kwargs=dict(player_id=pid,as_of=now,age_years=fl(raw.get("age")),nfl_team=team,status=PlayerStatus.ACTIVE if str(raw.get("status") or "").lower()=="active" else PlayerStatus.UNKNOWN,provenance=provenance)
+            # Newer research branch PlayerState may include these optional fields.
+            for field,key in [("experience_years","years_exp"),("draft_year","draft_year"),("draft_round","draft_round"),("draft_number","draft_number")]:
+                if field in PlayerState.model_fields:
+                    val=it(raw.get(key));
+                    if val is not None:kwargs[field]=val
+            states.append(PlayerState(**kwargs))
+        teams=tuple(Team(team_id=f"t{i}",league_id="sanity",display_name=f"T{i}") for i in range(12));team_states=tuple(TeamState(team_id=t.team_id,roster=()) for t in teams)
+        rules=LeagueRules(team_count=12,roster_size=18,lineup=(LineupRequirement(slot=RosterSlot.QB,count=1),LineupRequirement(slot=RosterSlot.RB,count=2),LineupRequirement(slot=RosterSlot.WR,count=3),LineupRequirement(slot=RosterSlot.TE,count=1),LineupRequirement(slot=RosterSlot.FLEX,count=1),LineupRequirement(slot=RosterSlot.SUPERFLEX,count=1)),scoring=(ScoringRule(stat="pass_yd",points=.04),ScoringRule(stat="pass_td",points=4),ScoringRule(stat="pass_int",points=-2),ScoringRule(stat="rush_yd",points=.1),ScoringRule(stat="rush_td",points=6),ScoringRule(stat="rec",points=.5),ScoringRule(stat="rec_yd",points=.1),ScoringRule(stat="rec_td",points=6),ScoringRule(stat="fum_lost",points=-2)))
+        state=LeagueState(league=League(league_id="sanity",name="sanity",season=2026,rules=rules),as_of=now,teams=teams,team_states=team_states,players=tuple(players),player_states=tuple(states),provenance=(provenance,))
+        live=build_current_live_forecasts(state,minimum_independent_sources=2)
+        state=state.model_copy(update={"as_of":live.evaluation_as_of,"player_states":tuple(ps.model_copy(update={"as_of":live.evaluation_as_of}) for ps in state.player_states)})
+        bounded=build_non_qb_bounded_paths(state,season_forecasts=live.fantasy_point_forecasts);qb=build_qb_career_state_forecasts(state,season_forecasts=live.fantasy_point_forecasts)
+        inc=build_current_intrinsic_values_v2(state,season_forecasts=live.fantasy_point_forecasts,base_forecast_model_version=live.model_version,bounded_paths=bounded,qb_career_states=qb)
+        pby={p.player_id:p for p in state.players};eby={e.player_id:e for e in inc.estimates}
+        # frozen named career-state probabilities from research artifact, if present
+        frozen=json.loads(Path("artifacts/management/latest_intrinsic_result.json").read_text())
+        sanity={r["player"]:r for r in frozen.get("current_player_sanity",[])}
+        targets=set(sanity)
+        named=[(pid,e) for pid,e in eby.items() if pby.get(pid) and pby[pid].full_name in targets]
+        # fit state intervals from historical PIT panel through 2025
+        here=Path(__file__).parent

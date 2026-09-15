@@ -1,0 +1,73 @@
+    legacy=load_module(here/"run_fundamental_intrinsic_residual_calibration.py","shapley_legacy")
+    parity=load_module(here/"run_fundamental_intrinsic_production_parity.py","shapley_parity")
+    explicit=load_module(here/"run_intrinsic_explicit_state_challenge.py","shapley_explicit")
+    examples,_=parity.build_examples(panel_path=args.career_panel,model_rows_path=args.model_a_rows,qb_results_path=args.qb_results,legacy=legacy)
+    panel=legacy.load_rows(args.career_panel);qb_probs=parity.load_qb_probabilities(args.qb_results)
+    central_rows=json.loads(args.central_rows.read_text())
+    if isinstance(central_rows,dict):central_rows=central_rows.get("rows",central_rows)
+    keys={(int(r["season"]),r["player_id"]):r for r in central_rows}
+    supply_byseason=defaultdict(list);eval_byseason=defaultdict(list)
+    for e in examples:
+        supply_byseason[e.season].append(e)
+        if (e.season,e.player_id) in keys:
+            eval_byseason[e.season].append(e)
+    out_rows=[];season_diag={};runtime_start=time.time();caps=subset_caps()
+    # Allocation shares are computed over the FULL PIT supply, not just scored holdouts.
+    tier_value=defaultdict(float);tier_n=defaultdict(int);system_total=0.0
+    hard_zero_n=hard_n=0
+    for season in sorted(eval_byseason):
+        targets=eval_byseason[season];supply=supply_byseason[season]
+        target_ids={e.player_id for e in targets}
+        boundaries=explicit.fit_state_boundaries(panel,season)
+        transitions=explicit.fit_transition_counts(panel,season,boundaries)
+        phi_by_h={};se_by_h={};cp_by_h={};diag_by_h={};hard_by_h={}
+        for h in (0,1,2):
+            players=[(e.player_id,e.position,max(0.0,e.means[h])) for e in supply]
+            scenarios={pid:[w] for pid,_,w in players}
+            # Only evaluated rights need counterfactual state values; every other right
+            # remains in the full PIT supply at its governed central horizon production.
+            for e in targets:
+                base=max(0.0,e.means[h])
+                scenarios[e.player_id]=[base] if h==0 else [base]+[projected_central(e.means[h],st,boundaries[e.position]) for st in STATE_NAMES]
+            est,se,cp,diag=mc_scenarios(players,scenarios,caps,perms=MC_PERMUTATIONS,seed=MC_SEED+season*10+h)
+            phi_by_h[h]=est;se_by_h[h]=se;cp_by_h[h]=cp;diag_by_h[h]=diag
+            # Exact final-lineup marginal control for evaluated rights/scenarios.
+            hard_by_h[h]={}
+            byid={pid:(pos,w) for pid,pos,w in players}
+            for e in targets:
+                b=Basis(caps)
+                for pid,pos,w in sorted((row for row in players if row[0]!=e.player_id),key=lambda x:(-x[2],x[0])):
+                    b.add(pid,pos,w)
+                vals=[]
+                for x in scenarios[e.player_id]:
+                    d,_=b.marginal(e.position,x);vals.append(d)
+                hard_by_h[h][e.player_id]=vals
+        # convergence + MC standard-error diagnostics, baseline scenario only.
+        conv=[];rel_se=[];abs_se=[]
+        for h in (0,1,2):
+            for e in targets:
+                a=cp_by_h[h][e.player_id][0];b=phi_by_h[h][e.player_id][0];se=se_by_h[h][e.player_id][0]
+                abs_se.append(se)
+                if b>1.0:
+                    conv.append(abs(b-a)/max(1.0,abs(b)));rel_se.append(se/max(1.0,abs(b)))
+        season_diag[str(season)]={
+            "supply_n":len(supply),"holdout_n":len(targets),
+            "convergence_median_rel_change_64_to_128":quantile(conv,.5),
+            "convergence_p95_rel_change_64_to_128":quantile(conv,.95),
+            "baseline_mc_se_median":quantile(abs_se,.5),"baseline_mc_se_p95":quantile(abs_se,.95),
+            "baseline_mc_relative_se_p95":quantile(rel_se,.95),
+            "max_efficiency_residual":max(abs(diag_by_h[h]["efficiency_residual"]) for h in (0,1,2)),
+        }
+        # Full-supply Y1 value distribution. Rank bands are diagnostics, not model rules.
+        all_phi=[phi_by_h[0][e.player_id][0] for e in supply]
+        q20,q50,q80,q95=(quantile(all_phi,p) for p in (.20,.50,.80,.95))
+        for e in supply:
+            v=phi_by_h[0][e.player_id][0];system_total+=v
+            tier="near_zero" if v<=q20 else "depth" if v<=q50 else "starter" if v<=q80 else "premium" if v<=q95 else "elite"
+            tier_value[tier]+=v;tier_n[tier]+=1
+        # Hard-control zero prevalence across full supply at Y1.
+        y1players=[(e.player_id,e.position,max(0.0,e.means[0])) for e in supply]
+        for e in supply:
+            b=Basis(caps)
+            for pid,pos,w in sorted((row for row in y1players if row[0]!=e.player_id),key=lambda x:(-x[2],x[0])):
+                b.add(pid,pos,w)

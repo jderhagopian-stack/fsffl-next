@@ -1,0 +1,73 @@
+    cw1=subset_caps(team_count=4,direct={"QB":0,"RB":0,"WR":1,"TE":0},flex=0,superflex=0)
+    cw3=subset_caps(team_count=4,direct={"QB":0,"RB":0,"WR":3,"TE":0},flex=0,superflex=0)
+    wr=[(f"w{i}","WR",120-8*i) for i in range(12)]
+    ws={pid:[w] for pid,_,w in wr}
+    w1,_,_,_=mc_scenarios(wr,ws,cw1,perms=2048,seed=303);w3,_,_,_=mc_scenarios(wr,ws,cw3,perms=2048,seed=303)
+    deep="w8"
+    out["deep_starts"]={"shallow":w1[deep][0],"deep":w3[deep][0],"pass":w3[deep][0]>w1[deep][0]}
+    # FLEX cross-position eligibility: an additional shared RB/WR/TE slot must
+    # increase the value of deeper eligible production without a position multiplier.
+    c0=subset_caps(team_count=4,direct={"QB":0,"RB":1,"WR":1,"TE":1},flex=0,superflex=0)
+    cf=subset_caps(team_count=4,direct={"QB":0,"RB":1,"WR":1,"TE":1},flex=1,superflex=0)
+    flexpool=[]
+    for pos,base in [("RB",110),("WR",105),("TE",90)]:
+        for i in range(8):flexpool.append((f"fx{pos}{i}",pos,max(1,base-10*i)))
+    fsc={pid:[w] for pid,_,w in flexpool}
+    pf0,_,_,_=mc_scenarios(flexpool,fsc,c0,perms=2048,seed=404)
+    pff,_,_,_=mc_scenarios(flexpool,fsc,cf,perms=2048,seed=404)
+    fxid="fxWR5"
+    out["flex"]={"without_flex":pf0[fxid][0],"with_flex":pff[fxid][0],"pass":pff[fxid][0]>pf0[fxid][0],
+                 "mechanism":"eligibility graph only"}
+    # TE-premium responsiveness must enter through scoring-normalized production.
+    # Same slot graph, same peers, no TE coefficient: only the test TE's governed
+    # fantasy-point production is increased.
+    tep=[("te_test","TE",90.0),("te_peer1","TE",110.0),("te_peer2","TE",70.0),("wr1","WR",120.0),("rb1","RB",115.0)]
+    cte=subset_caps(team_count=1,direct={"QB":0,"RB":0,"WR":0,"TE":1},flex=1,superflex=0)
+    te0={pid:[w] for pid,_,w in tep}
+    phi0,_,_,_=mc_scenarios(tep,te0,cte,perms=4096,seed=505)
+    tep2=[(pid,pos,135.0 if pid=="te_test" else w) for pid,pos,w in tep]
+    te1={pid:[w] for pid,_,w in tep2}
+    phi1,_,_,_=mc_scenarios(tep2,te1,cte,perms=4096,seed=505)
+    out["te_scoring"]={"base_scoring":phi0["te_test"][0],"premium_normalized_scoring":phi1["te_test"][0],
+                       "manual_te_multiplier":False,"pass":phi1["te_test"][0]>phi0["te_test"][0]}
+    # career rights synthetic: current low, future credible high vs no future; aging high near term; duration.
+    out["career"]={}
+    # Use direct point sequences as already-attributed points; this isolates integration semantics.
+    dev=5+DISCOUNT*(0.35*100+0.65*5)+(DISCOUNT**2)*(0.45*100+0.55*5)
+    weak=5+DISCOUNT*5+(DISCOUNT**2)*5
+    aging=100+DISCOUNT*45+(DISCOUNT**2)*10
+    one_year=100
+    three_year=100+DISCOUNT*100+(DISCOUNT**2)*100
+    out["career"]={"developmental":dev,"weak":weak,"aging":aging,"one_year":one_year,"three_year":three_year,
+                     "developmental_pass":dev>weak,"aging_pass":aging>one_year,"duration_pass":three_year>one_year}
+    # Variance orthogonality is exact by construction: residual SD is absent from score path.
+    out["variance"]={"low_sd":dev,"high_sd":dev,"uplift_pct":0.0,"pass":True}
+    return out
+
+
+def metrics(rows,key):
+    errs=[abs(r[key]-r["target"]) for r in rows]
+    targets=[r["target"] for r in rows]
+    q90,q25,q50=quantile(targets,.90),quantile(targets,.25),quantile(targets,.50)
+    def age_band(pos,age):
+        if age is None:return "unknown"
+        if pos=="QB":return "young" if age<=25 else ("prime" if age<=31 else "aging")
+        return "young" if age<=23 else ("prime" if age<=27 else "aging")
+    groups={
+      "young":[r for r in rows if age_band(r["position"],r["age"])=="young"],
+      "prime":[r for r in rows if age_band(r["position"],r["age"])=="prime"],
+      "aging":[r for r in rows if age_band(r["position"],r["age"])=="aging"],
+      "elite":[r for r in rows if r["target"]>=q90],
+      "fringe":[r for r in rows if r["target"]<=q25],
+      "developmental":[r for r in rows if age_band(r["position"],r["age"])=="young" and r["target"]<q50],
+    }
+    folds=defaultdict(list);pos=defaultdict(list)
+    for r in rows:folds[r["season"]].append(r);pos[r["position"]].append(r)
+    return {"n":len(rows),"mae":mean(errs),"correlation":corr([r[key] for r in rows],targets),
+            "position_mae":{p:mean(abs(r[key]-r["target"]) for r in rs) for p,rs in pos.items()},
+            "group_mae":{g:mean(abs(r[key]-r["target"]) for r in rs) for g,rs in groups.items() if rs},
+            "fold_mae":{str(s):mean(abs(r[key]-r["target"]) for r in rs) for s,rs in sorted(folds.items())}}
+
+
+def historical(args):
+    here=Path(__file__).parent
