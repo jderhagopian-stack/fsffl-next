@@ -1,0 +1,101 @@
+name: Research Intrinsic Constitution and Forecast Calibration
+
+on:
+  pull_request:
+    branches: [research/shapley-precision-target-decomposition]
+    paths:
+      - 'scripts/run_intrinsic_constitution_shapley_validation.py'
+      - 'scripts/run_intrinsic_constitution_shapley_validation_v2.py'
+      - 'scripts/run_forecast_low_end_career_calibration.py'
+      - 'artifacts/research/intrinsic_constitution_shapley_test_plan.md'
+      - 'artifacts/research/forecast_low_end_calibration_protocol.md'
+      - '.github/workflows/intrinsic-constitution-research.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  track-a-constitution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Build PIT football career panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Download frozen PR 140 decomposition evidence
+        run: |
+          mkdir -p artifacts/constitution/frozen-pr140
+          gh api repos/${{ github.repository }}/actions/artifacts/10382432938/zip > /tmp/pr140.zip
+          unzip -q /tmp/pr140.zip -d artifacts/constitution/frozen-pr140
+      - name: Run frozen Shapley constitutional validation
+        run: |
+          mkdir -p artifacts/constitution/track-a
+          python scripts/run_intrinsic_constitution_shapley_validation_v2.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --decomp-rows artifacts/constitution/frozen-pr140/shapley-decomp/results/shapley_target_decomposition_rows.json \
+            --output artifacts/constitution/track-a/intrinsic_constitution_shapley_validation.json
+      - name: Upload Track A evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-constitution-track-a
+          path: |
+            artifacts/constitution/track-a/*.json
+            artifacts/research/intrinsic_constitution_shapley_test_plan.md
+            artifacts/next2-career/career_transition_coverage.csv
+          retention-days: 14
+
+  track-b-forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Build PIT football career panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Download frozen PIT Forecast evidence
+        run: |
+          mkdir -p artifacts/forecast-calibration/frozen-pr131 artifacts/forecast-calibration/frozen-qb
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/pr131.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          unzip -q /tmp/pr131.zip -d artifacts/forecast-calibration/frozen-pr131
+          unzip -q /tmp/qb.zip -d artifacts/forecast-calibration/frozen-qb
+      - name: Run Forecast low-end calibration
+        run: |
+          mkdir -p artifacts/forecast-calibration/track-b
+          python scripts/run_forecast_low_end_career_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/forecast-calibration/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/forecast-calibration/frozen-qb/qb_career_state_deployment_results.json \
+            --output artifacts/forecast-calibration/track-b/forecast_low_end_career_calibration.json
+      - name: Upload Track B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-low-end-track-b
+          path: |
+            artifacts/forecast-calibration/track-b/*.json
+            artifacts/research/forecast_low_end_calibration_protocol.md
+            artifacts/next2-career/career_transition_coverage.csv
+          retention-days: 14
