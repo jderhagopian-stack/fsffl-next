@@ -1,0 +1,65 @@
+name: Research Event-Time Absence Cause Evidence
+
+on:
+  pull_request:
+    branches: [research/pit-role-availability-evidence]
+    paths:
+      - 'scripts/reconstruct_event_time_absence_cause_evidence.py'
+      - 'artifacts/research/event_time_roster_transaction_absence_cause_protocol.md'
+      - '.github/workflows/event-time-absence-cause-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reconstruct-event-time-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install evidence tooling
+        run: python -m pip install 'nflreadpy>=0.1.2' pandas pyarrow numpy
+      - name: Build frozen career-transition panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Download authoritative E2 evidence artifact
+        run: |
+          mkdir -p artifacts/event-time/frozen-e2
+          gh api repos/${{ github.repository }}/actions/artifacts/10411185876/zip > /tmp/e2.zip
+          unzip -q /tmp/e2.zip -d artifacts/event-time/frozen-e2
+          test -f artifacts/event-time/frozen-e2/pit-role-availability/pit_role_availability_evidence_results.json
+          test -f artifacts/event-time/frozen-e2/pit-role-availability/missing_row_contexts.csv
+      - name: Run frozen event-time evidence reconstruction
+        run: |
+          python scripts/reconstruct_event_time_absence_cause_evidence.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --prior-e2-json artifacts/event-time/frozen-e2/pit-role-availability/pit_role_availability_evidence_results.json \
+            --prior-missing-csv artifacts/event-time/frozen-e2/pit-role-availability/missing_row_contexts.csv \
+            --output-dir artifacts/event-time/results
+      - name: Upload event-time evidence reconstruction
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: event-time-absence-cause-evidence
+          path: |
+            artifacts/event-time/results/event_time_absence_cause_results.json
+            artifacts/event-time/results/absence_cause_rows.csv
+            artifacts/event-time/results/resolution_by_position.csv
+            artifacts/event-time/results/resolution_by_era.csv
+            artifacts/event-time/results/resolution_by_era_position.csv
+            artifacts/event-time/results/resolution_by_season.csv
+            artifacts/event-time/results/descriptive_discrimination.csv
+            artifacts/event-time/results/incremental_information.json
+            artifacts/event-time/results/source_coverage_by_era_position.csv
+            artifacts/event-time/results/source_columns.json
+            artifacts/research/event_time_roster_transaction_absence_cause_protocol.md
+          retention-days: 14
