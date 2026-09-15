@@ -1,0 +1,73 @@
+        legacy=load_module(here/"run_fundamental_intrinsic_residual_calibration.py","current_shapley_legacy")
+        explicit=load_module(here/"run_intrinsic_explicit_state_challenge.py","current_shapley_explicit")
+        panel=legacy.load_rows(args.career_panel);boundaries=explicit.fit_state_boundaries(panel,2026)
+        caps=subset_caps();phi_by_h={}
+        for h in (0,1,2):
+            pool=[(pid,e.position.value,max(0.0,e.horizons[h].forecast_mean)) for pid,e in eby.items() if len(e.horizons)>h]
+            scenario={pid:[w] for pid,pos,w in pool}
+            for pid,e in named:
+                mu=e.horizons[h].forecast_mean
+                if h==0:scenario[pid]=[max(0.0,mu)]
+                else:scenario[pid]=[max(0.0,mu)]+[projected_central(mu,s,boundaries[e.position.value]) for s in STATE_NAMES]
+            est,_,_,_=mc_scenarios(pool,scenario,caps,perms=MC_PERMUTATIONS,seed=MC_SEED+900+h);phi_by_h[h]=est
+        rows=[]
+        for pid,e in named:
+            name=pby[pid].full_name;f=sanity[name]
+            score=phi_by_h[0][pid][0]
+            for h,key in [(1,"y2_state_probs"),(2,"y3_state_probs")]:
+                pr=f.get(key,{})
+                score+=(DISCOUNT**h)*sum(float(pr.get(s,0))*phi_by_h[h][pid][1+STATE_NAMES.index(s)] for s in STATE_NAMES)
+            rows.append({"player":name,"position":e.position.value,"deployment_shapley":score,"means":[hz.forecast_mean for hz in e.horizons],"state_probability_source":"frozen latest_intrinsic_result.json"})
+        rows.sort(key=lambda r:(-r["deployment_shapley"],r["player"]))
+        return {"available":True,"evaluation_as_of":live.evaluation_as_of.isoformat(),"sources":list(live.successful_source_ids),"pool_n":len(eby),"rows":rows}
+    except Exception as exc:
+        return {"available":False,"reason":f"{type(exc).__name__}: {exc}"}
+
+
+def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument("--career-panel",type=Path,required=True)
+    ap.add_argument("--model-a-rows",type=Path,required=True)
+    ap.add_argument("--qb-results",type=Path,required=True)
+    ap.add_argument("--central-rows",type=Path,required=True)
+    ap.add_argument("--output-dir",type=Path,required=True)
+    args=ap.parse_args();args.output_dir.mkdir(parents=True,exist_ok=True)
+    started=time.time()
+    fixture=fixture_validation()
+    if not all(fixture[k] for k in ("efficiency_pass","symmetry_pass","dummy_pass","additivity_pass","mc_convergence_pass","mixed_fixture_pass")):
+        raise SystemExit("A1 mathematical correctness failed: "+json.dumps(fixture,sort_keys=True))
+    structural=structural_tests()
+    hist=historical(args)
+    current=current_diagnostics(args)
+    # predeclared bounded stability summary
+    conv=[d["convergence_p95_rel_change_64_to_128"] for d in hist["season_diagnostics"].values()]
+    convergence={"permutations":MC_PERMUTATIONS,"checkpoint":MC_CHECKPOINT,"seed":MC_SEED,
+                 "median_season_p95_rel_change":quantile(conv,.5),"worst_season_p95_rel_change":max(conv) if conv else 0.0,
+                 "acceptance_rule":"informational challenger gate: worst season p95 relative 64->128 change <= 0.20 for baseline phi > 1 point",
+                 "pass":(max(conv) if conv else 0.0)<=0.20}
+    # recommendation rules: stop if math/convergence/variance fail, fringe absurd (>10% total to bottom quintile), or historical correlation <0.20.
+    near=hist["low_end_allocation"].get("near_zero",{}).get("share_of_total",0.0)
+    variance_ok=bool(structural["variance"]["pass"])
+    catastrophic=hist["metrics"]["Shapley"]["correlation"]<0.20
+    fringe_absurd=near>0.10
+    if not convergence["pass"] or not variance_ok or catastrophic or fringe_absurd:
+        recommendation="REJECT SHAPLEY DEPLOYMENT CHALLENGER IN CURRENT FORM"
+    else:
+        recommendation="RETAIN SHAPLEY DEPLOYMENT CHALLENGER FOR MANAGEMENT REVIEW; DO NOT PROMOTE"
+    payload={
+      "model_version":"deployment-shapley-intrinsic-bounded-research-v1",
+      "governance":"research-only challenger; holding effects fixed to zero; no market/team/owner inputs",
+      "unit":"discounted expected structurally attributable startable fantasy points over three governed Forecast horizons",
+      "discount":DISCOUNT,"horizons":3,
+      "mc":convergence,"A1_fixtures":fixture,"A2_A3_structural":structural,"A4_historical":{k:v for k,v in hist.items() if k!="rows"},
+      "A5_current":current,
+      "A6_simulation_status":"NEUTRAL SIMULATION VALIDATION UNAVAILABLE WITHOUT ADDITIONAL ROSTER ASSUMPTIONS.",
+      "leakage":{"market":False,"league_market":False,"transactions":False,"owner":False,"actual_team_roster":False,"team_needs":False,"team_specific_replacement":False,"holding_effects":False,"generic_residual_sd":False},
+      "stop_flags":{"convergence_fail":not convergence["pass"],"fringe_absurd":fringe_absurd,"generic_variance_fail":not variance_ok,"historical_catastrophic":catastrophic},
+      "recommendation":recommendation,"total_runtime_seconds":time.time()-started,
+    }
+    (args.output_dir/"deployment_shapley_research.json").write_text(json.dumps(payload,indent=2,sort_keys=True))
+    (args.output_dir/"deployment_shapley_historical_rows.json").write_text(json.dumps(hist["rows"],indent=2,sort_keys=True))
+    print(json.dumps({"recommendation":recommendation,"mc":convergence,"historical":hist["metrics"],"fold_wins_vs_A":hist["fold_wins_vs_A"],"low_end":hist["low_end_allocation"],"current_available":current.get("available")},indent=2,sort_keys=True))
+
+if __name__=="__main__":main()
