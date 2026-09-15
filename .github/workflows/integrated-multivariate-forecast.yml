@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install research tooling
-        run: python -m pip install -e . pandas scikit-learn
+        run: python -m pip install -e . pandas scikit-learn nflreadpy
       - name: Build frozen PIT career panel
         run: Rscript scripts/extract_career_transition_panel.R
       - name: Build strict-PIT usage panel
