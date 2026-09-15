@@ -1,0 +1,73 @@
+
+def fixture_validation():
+    results={}
+    caps=subset_caps(team_count=1,direct={"QB":1,"RB":0,"WR":0,"TE":0},flex=0,superflex=0)
+    players=[("a","QB",10.0),("b","QB",6.0),("c","QB",0.0)]
+    exact=exact_shapley(players,caps)
+    results["single_slot_exact"]={"phi":exact,"efficiency":sum(exact.values()),"game":full_game_value(players,caps)}
+    results["efficiency_pass"]=abs(sum(exact.values())-full_game_value(players,caps))<1e-9
+    # symmetry
+    symplayers=[("a","QB",8.0),("b","QB",8.0)]
+    sym=exact_shapley(symplayers,caps)
+    results["symmetry_pass"]=abs(sym["a"]-sym["b"])<1e-9
+    results["dummy_pass"]=abs(exact["c"])<1e-9
+    # additivity: two one-slot games, same player set, sum characteristic functions.
+    p=[("a","QB",10.0),("b","QB",4.0)]
+    phi1=exact_shapley(p,caps)
+    p2=[("a","QB",3.0),("b","QB",9.0)]
+    phi2=exact_shapley(p2,caps)
+    # exact Shapley of W1+W2 by permutation
+    sums={"a":0.0,"b":0.0};n=0
+    for perm in permutations(["a","b"]):
+        s=[];v1=v2=0.0
+        for pid in perm:
+            before1=full_game_value([(x,dict(p)[x] if False else "QB",0) for x in []],caps) if False else 0
+            s.append(pid)
+            set1=[row for row in p if row[0] in s];set2=[row for row in p2 if row[0] in s]
+            nv1=full_game_value(set1,caps);nv2=full_game_value(set2,caps)
+            sums[pid]+=(nv1-v1)+(nv2-v2);v1,v2=nv1,nv2
+        n+=1
+    phisum={k:v/n for k,v in sums.items()}
+    results["additivity_pass"]=all(abs(phisum[k]-(phi1[k]+phi2[k]))<1e-9 for k in phisum)
+    # MC convergence to exact small case
+    scenarios={pid:[w] for pid,_,w in players}
+    mc,se,cp,diag=mc_scenarios(players,scenarios,caps,perms=2048,seed=777)
+    results["mc_exact_max_abs_error"]=max(abs(mc[pid][0]-exact[pid]) for pid in exact)
+    results["mc_convergence_pass"]=results["mc_exact_max_abs_error"]<0.2
+    # solver vs brute-force assignment intuition fixture: one RB direct + flex + SF mixed.
+    caps2=subset_caps(team_count=1,direct={"QB":1,"RB":1,"WR":0,"TE":0},flex=1,superflex=1)
+    mix=[("q1","QB",20),("q2","QB",15),("r1","RB",18),("r2","RB",17),("w1","WR",16),("t1","TE",2)]
+    results["mixed_fixture_value"]=full_game_value(mix,caps2)
+    results["mixed_fixture_expected"]=20+18+17+16
+    results["mixed_fixture_pass"]=abs(results["mixed_fixture_value"]-71)<1e-9
+    return results
+
+
+def structural_tests():
+    out={}
+    # Elite > ordinary and fringe boundedness in 1QB-like single-position game.
+    caps=subset_caps(team_count=4,direct={"QB":1,"RB":0,"WR":0,"TE":0},flex=0,superflex=0)
+    vals=[100,80,60,40,20,10,5,1]
+    players=[(f"q{i}","QB",v) for i,v in enumerate(vals)]
+    sc={pid:[w] for pid,_,w in players}
+    phi,se,cp,diag=mc_scenarios(players,sc,caps,perms=4096,seed=101)
+    pvals={pid:phi[pid][0] for pid,_,_ in players}
+    out["elite_gt_ordinary"]={"elite":pvals["q0"],"ordinary":pvals["q3"],"pass":pvals["q0"]>pvals["q3"]}
+    out["fringe"]={"top":pvals["q0"],"near_zero":pvals["q7"],"near_zero_share":pvals["q7"]/diag["full_value"],"pass":pvals["q7"]<0.02*diag["full_value"]}
+    # Hard frontier cliff vs Shapley around frontier.
+    full=full_game_value(players,caps)
+    hard={pid:full-full_game_value([row for row in players if row[0]!=pid],caps) for pid,_,_ in players}
+    out["frontier"]={"hard_q3":hard["q3"],"hard_q4":hard["q4"],"shapley_q3":pvals["q3"],"shapley_q4":pvals["q4"],"pass":hard["q4"]==0 and pvals["q4"]>0}
+    # 1QB vs SF endogenous QB response in mixed pool.
+    mix=[]
+    for i,v in enumerate([300,270,240,210,180,150,120,90]):mix.append((f"q{i}","QB",v))
+    for pos,base in [("RB",220),("WR",210),("TE",150)]:
+        for i in range(12):mix.append((f"{pos}{i}",pos,max(5,base-12*i)))
+    scen={pid:[w] for pid,_,w in mix}
+    c1=subset_caps(team_count=4,direct={"QB":1,"RB":2,"WR":2,"TE":1},flex=1,superflex=0)
+    csf=subset_caps(team_count=4,direct={"QB":1,"RB":2,"WR":2,"TE":1},flex=1,superflex=1)
+    p1,_,_,_=mc_scenarios(mix,scen,c1,perms=1024,seed=202)
+    ps,_,_,_=mc_scenarios(mix,scen,csf,perms=1024,seed=202)
+    qb="q4"
+    out["superflex"]={"one_qb":p1[qb][0],"superflex":ps[qb][0],"pass":ps[qb][0]>p1[qb][0]}
+    # shallow vs deep WR
