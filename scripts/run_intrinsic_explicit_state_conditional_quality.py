@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 VARIANT = os.environ.get("FSFFL_CONDITIONAL_D2_VARIANT", "conditional").strip().lower()
-if VARIANT not in {"conditional", "shrunk"}:
+if VARIANT not in {"conditional", "shrunk", "central"}:
     raise RuntimeError(f"unsupported FSFFL_CONDITIONAL_D2_VARIANT={VARIANT!r}")
 NORMAL = statistics.NormalDist()
 JEFFREYS_REFERENCE_MASS = 0.5
@@ -76,10 +76,22 @@ def main():
         n=float(marginal.TEAM_COUNT)
         return (n*expected_marginal+0.5*max(0.0,ex))/(n+1.0),mass
 
+    def projected_central_c2(mu, lo, hi, neutral_baseline, marginal):
+        # Parameter-free constrained location estimate: project the governed Forecast
+        # mean onto the production interval for the explicit career state. The state
+        # probability owns state incidence; this term owns only central quality
+        # conditional on that state and therefore intentionally does not consume SD.
+        x = max(0.0, mu, lo)
+        if math.isfinite(hi):
+            x = min(x, hi)
+        return c2_at_x(x, neutral_baseline, marginal)
+
     def conditional_player_contribution(e,h,state,boundaries,samples,baseline,marginal):
         reference=reference_state_contribution(e.position,state,samples,baseline,marginal)
         if state == "out": return 0.0,1.0
         mu=max(0.0,float(e.means[h])); sd=max(0.0,float(e.sds[h])); lo,hi=state_interval(state,boundaries[e.position])
+        if VARIANT == "central":
+            return projected_central_c2(mu,lo,hi,baseline[e.position],marginal),1.0
         player,mass=conditional_c2(mu,sd,lo,hi,baseline[e.position],marginal)
         if mass <= 1e-10: return reference,mass
         if VARIANT == "conditional": return player,mass
@@ -119,7 +131,12 @@ def main():
     base.d_explicit=d_explicit
     base.d_terminal=d_terminal
     base.hard_targets=smooth_targets
-    base.MODEL_VERSION=("intrinsic-explicit-career-state-v2-conditional-player-quality" if VARIANT == "conditional" else "intrinsic-explicit-career-state-v2-shrunk-conditional-player-quality")
+    if VARIANT == "conditional":
+        base.MODEL_VERSION="intrinsic-explicit-career-state-v2-conditional-player-quality"
+    elif VARIANT == "shrunk":
+        base.MODEL_VERSION="intrinsic-explicit-career-state-v2-shrunk-conditional-player-quality"
+    else:
+        base.MODEL_VERSION="intrinsic-explicit-career-state-v2-central-conditional-player-quality"
     base.main()
 
 
