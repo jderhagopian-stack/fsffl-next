@@ -1,0 +1,125 @@
+{
+  "research_question": "Can player-specific quality within a future career state be represented without generic Forecast dispersion manufacturing additional option value already represented by explicit state probabilities?",
+  "candidate": {
+    "name": "parameter-free state-restricted central Forecast mean",
+    "description": "For each future state, project the player's governed horizon Forecast mean onto that state's production interval and value that central location with the existing neutral structural contribution function. Explicit state probability owns state incidence; within-state quality consumes no Forecast SD.",
+    "new_fitted_parameters": 0,
+    "discount": 0.85
+  },
+  "validated_head": "ba36aff0a1ec05be75a55cb734c0a51c37ff3b4c",
+  "run": {
+    "run_id": 34911775732,
+    "artifact_id": 10375000671,
+    "artifact_digest": "sha256:6e4d76956834921d852f0b4ae85596d2001fc3610a740ee961ec1b66f2db1260",
+    "pit_forecast_artifact_id": 10318004415,
+    "qb_state_artifact_id": 10317272576
+  },
+  "synthetic": {
+    "variance_gate_pct": 5.0,
+    "direct_conditional": {
+      "low_generic_variance": 51.53526505899059,
+      "high_generic_variance": 59.8302682343671,
+      "generic_variance_uplift_pct": 16.095780560906235,
+      "variance_gate_pass": false
+    },
+    "central": {
+      "low_generic_variance": 45.11,
+      "high_generic_variance": 45.11,
+      "generic_variance_uplift_pct": 0.0,
+      "variance_gate_pass": true,
+      "higher_within_state_quality": 88.01596153846154,
+      "lower_within_state_quality": 55.10625,
+      "within_state_quality_ratio": 1.597204700709294,
+      "better_state_probabilities": 75.72838942307692,
+      "worse_state_probabilities": 38.683918269230766,
+      "state_probability_ratio": 1.9576194142492378,
+      "stable_starting_qb": 151.0830048076923,
+      "weak_path_high_variance_backup_qb": 10.582985576923075,
+      "credible_developmental_qb": 46.029639423076915,
+      "strong_upside_developmental_wr": 49.64346153846154,
+      "weak_upside_developmental_wr": 10.940673076923076
+    }
+  },
+  "chronological_validation": {
+    "holdouts": 6758,
+    "folds": 12,
+    "A_benchmark": {
+      "mae": 23.260999150260382,
+      "correlation": 0.5839239697722916
+    },
+    "frozen_D2": {
+      "mae": 34.8680766793218,
+      "correlation": 0.5823167297162949,
+      "fold_wins_vs_A": 0
+    },
+    "direct_conditional_D2": {
+      "mae": 30.749237092037834,
+      "correlation": 0.5884449498891406,
+      "fold_wins_vs_A": 0
+    },
+    "central_D2": {
+      "mae": 28.866822584988448,
+      "correlation": 0.5321228569042744,
+      "fold_wins_vs_A": 0,
+      "fold_losses_vs_A": 12,
+      "fold_wins_vs_direct_conditional_D2": 10,
+      "fold_losses_vs_direct_conditional_D2": 2,
+      "mae_improvement_vs_direct": 1.8824145070493863,
+      "mae_improvement_pct_vs_direct": 6.121825076228691,
+      "direct_to_A_gap_closed_pct": 25.138283821715273,
+      "position_mae": {
+        "QB": 52.95029379151826,
+        "RB": 31.916101403579482,
+        "WR": 27.957222923827405,
+        "TE": 12.03306087248928
+      },
+      "group_mae": {
+        "young": 47.13335141669174,
+        "developmental": 23.93600666147736,
+        "prime": 28.04509927631272,
+        "aging": 21.880486012790687,
+        "fringe": 13.272821057677483,
+        "elite": 113.42748428348358
+      },
+      "generic_uncertainty_control_mae": 68.20304197830461,
+      "generic_uncertainty_control_mean": 86.05087003291774,
+      "generic_uncertainty_control_target_mean": 78.54182421837858
+    }
+  },
+  "current_player_sanity": {
+    "Bijan Robinson": 311.85124464304045,
+    "Sam Darnold": 24.151160766315435,
+    "Jaxon Smith-Njigba": 158.5890410718503,
+    "Quinshon Judkins": 84.021843081205,
+    "Brock Bowers": 53.26823504389111,
+    "KC Concepcion": 24.197251620996173,
+    "Trey McBride": 70.9501346979652,
+    "Josh Allen": 253.55845661020535,
+    "Drake Maye": 113.929892992623,
+    "Lamar Jackson": 96.77727305142164,
+    "Derrick Henry": 113.10809887015874,
+    "Rhamondre Stevenson": 20.218559902508055,
+    "Tyler Allgeier": 11.224706298217875,
+    "Troy Franklin": 12.921287585152626,
+    "Ja'Tavion Sanders": 6.271105999379112,
+    "diagnostics": {
+      "Bijan_over_Darnold": true,
+      "JSN_over_Judkins": true,
+      "Bowers_over_KC": true,
+      "Bowers_over_McBride": false,
+      "elite_QB_Josh_Allen_over_Drake_Maye": true
+    }
+  },
+  "leakage": {
+    "broad_market": false,
+    "league_market": false,
+    "transactions": false,
+    "owner_behavior": false,
+    "team_roster": false,
+    "team_specific_replacement": false,
+    "team_needs": false,
+    "named_player_tuning": false
+  },
+  "decision": "STOP_PATCHING_D2_REOPEN_PRIMITIVE_ARCHITECTURE",
+  "reason": "Variance orthogonality is cleanly repaired and the central candidate improves MAE versus direct conditional D2 in aggregate and in 10/12 folds, but it remains at 28.87 MAE, loses all 12 folds to benchmark A, materially worsens correlation to 0.5321, and introduces no evidence that further local D2 patching will solve the remaining economic/empirical gap. No current Intrinsic primitive is promoted by this result."
+}
