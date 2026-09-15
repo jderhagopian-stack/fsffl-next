@@ -1,0 +1,63 @@
+name: Research Forecast Disappearance Development Final
+
+on:
+  pull_request:
+    branches: [research/intrinsic-constitution-forecast-calibration]
+    paths:
+      - 'scripts/extract_forecast_usage_panel.R'
+      - 'scripts/run_forecast_disappearance_development_calibration.py'
+      - 'artifacts/research/forecast_disappearance_development_frozen_protocol.md'
+      - '.github/workflows/forecast-disappearance-development-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  frozen-forecast-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Build frozen PIT career panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Build strict-PIT usage panel
+        run: Rscript scripts/extract_forecast_usage_panel.R
+      - name: Download frozen authoritative research evidence
+        run: |
+          mkdir -p artifacts/forecast-disappearance/frozen/model-a artifacts/forecast-disappearance/frozen/qb artifacts/forecast-disappearance/frozen/pr141
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/model-a.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10398436026/zip > /tmp/pr141.zip
+          unzip -q /tmp/model-a.zip -d artifacts/forecast-disappearance/frozen/model-a
+          unzip -q /tmp/qb.zip -d artifacts/forecast-disappearance/frozen/qb
+          unzip -q /tmp/pr141.zip -d artifacts/forecast-disappearance/frozen/pr141
+      - name: Run frozen chronological challengers
+        run: |
+          python scripts/run_forecast_disappearance_development_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --model-a-rows artifacts/forecast-disappearance/frozen/model-a/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/forecast-disappearance/frozen/qb/qb_career_state_deployment_results.json \
+            --prior-track-b-json artifacts/forecast-disappearance/frozen/pr141/forecast-calibration/track-b/forecast_low_end_career_calibration.json \
+            --output artifacts/forecast-disappearance/final/forecast_disappearance_development_results.json
+      - name: Upload frozen Forecast results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-disappearance-development-final
+          path: |
+            artifacts/forecast-disappearance/final/forecast_disappearance_development_results.json
+            artifacts/research/forecast_disappearance_development_frozen_protocol.md
+          retention-days: 14
