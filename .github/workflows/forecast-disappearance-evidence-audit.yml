@@ -1,0 +1,49 @@
+name: Research Forecast Disappearance Evidence Audit
+
+on:
+  pull_request:
+    branches: [research/intrinsic-constitution-forecast-calibration]
+    paths:
+      - 'scripts/audit_forecast_disappearance_evidence.R'
+      - 'scripts/audit_missing_future_row_semantics.py'
+      - 'artifacts/research/forecast_disappearance_development_evidence_audit_protocol.md'
+      - '.github/workflows/forecast-disappearance-evidence-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build frozen PIT career panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Audit source schema and evidence coverage
+        run: Rscript scripts/audit_forecast_disappearance_evidence.R
+      - name: Audit missing-row semantics
+        run: |
+          python scripts/audit_missing_future_row_semantics.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output artifacts/forecast-disappearance/evidence-audit/missing_row_semantics.json
+      - name: Upload evidence audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-disappearance-evidence-audit
+          path: |
+            artifacts/forecast-disappearance/evidence-audit/candidate_evidence_coverage.csv
+            artifacts/forecast-disappearance/evidence-audit/pedigree_evidence_coverage.csv
+            artifacts/forecast-disappearance/evidence-audit/historical_stats_columns.txt
+            artifacts/forecast-disappearance/evidence-audit/players_columns.txt
+            artifacts/forecast-disappearance/evidence-audit/missing_row_semantics.json
+            artifacts/research/forecast_disappearance_development_evidence_audit_protocol.md
+          retention-days: 14
