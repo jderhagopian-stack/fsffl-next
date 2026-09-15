@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+import argparse
+import bisect
+import importlib.util
+import json
+import math
+import random
+import statistics
+import sys
+import time
+from collections import defaultdict
+from datetime import UTC, datetime
+from itertools import permutations
+from pathlib import Path
+from typing import Iterable
+
+POSITIONS = ("QB", "RB", "WR", "TE")
+POS_INDEX = {p:i for i,p in enumerate(POSITIONS)}
+STATE_NAMES = ("out", "depth", "usable", "starter", "premium", "elite")
+DISCOUNT = 0.85
+TEAM_COUNT = 12
+DIRECT = {"QB":1,"RB":2,"WR":3,"TE":1}
+FLEX = 1
+SUPERFLEX = 1
+MC_PERMUTATIONS = 128
+MC_CHECKPOINT = 64
+MC_SEED = 20260914
+
+
+def load_module(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(path)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules[name] = m
+    spec.loader.exec_module(m)
+    return m
+
+
+def mean(xs):
+    xs=list(xs)
+    return sum(xs)/len(xs) if xs else 0.0
+
+
+def quantile(xs,p):
+    xs=sorted(xs)
+    if not xs:return 0.0
+    z=p*(len(xs)-1);lo=int(math.floor(z));hi=int(math.ceil(z))
+    if lo==hi:return xs[lo]
+    f=z-lo
+    return xs[lo]*(1-f)+xs[hi]*f
+
+
+def corr(xs,ys):
+    xs=list(xs);ys=list(ys)
+    if len(xs)<2:return 0.0
+    mx,my=mean(xs),mean(ys)
+    dx=[x-mx for x in xs];dy=[y-my for y in ys]
+    den=math.sqrt(sum(x*x for x in dx)*sum(y*y for y in dy))
+    return sum(x*y for x,y in zip(dx,dy))/den if den>1e-12 else 0.0
+
+
+def rank_corr(xs,ys):
+    def ranks(vals):
+        order=sorted(range(len(vals)),key=lambda i:(vals[i],i))
+        out=[0.0]*len(vals);i=0
+        while i<len(order):
+            j=i+1
+            while j<len(order) and vals[order[j]]==vals[order[i]]:j+=1
+            r=(i+j-1)/2+1
+            for k in order[i:j]:out[k]=r
+            i=j
