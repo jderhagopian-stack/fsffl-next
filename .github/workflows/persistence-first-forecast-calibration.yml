@@ -1,0 +1,68 @@
+name: Research Persistence-First Forecast Calibration
+
+on:
+  pull_request:
+    branches: [research/event-time-absence-cause-evidence]
+    paths:
+      - 'scripts/run_persistence_first_forecast_calibration.py'
+      - 'artifacts/research/persistence_first_forecast_calibration_frozen_protocol.md'
+      - '.github/workflows/persistence-first-forecast-calibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  frozen-persistence-first-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research tooling
+        run: python -m pip install -e . 'nflreadpy>=0.1.2' pandas pyarrow numpy scikit-learn
+      - name: Build frozen PIT career panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Build strict-PIT usage panel
+        run: Rscript scripts/extract_forecast_usage_panel.R
+      - name: Download frozen authoritative research evidence
+        run: |
+          mkdir -p artifacts/persistence-first/frozen/model-a artifacts/persistence-first/frozen/qb artifacts/persistence-first/frozen/pr142 artifacts/persistence-first/frozen/pr144
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/model-a.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10408705946/zip > /tmp/pr142.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10416382295/zip > /tmp/pr144.zip
+          unzip -q /tmp/model-a.zip -d artifacts/persistence-first/frozen/model-a
+          unzip -q /tmp/qb.zip -d artifacts/persistence-first/frozen/qb
+          unzip -q /tmp/pr142.zip -d artifacts/persistence-first/frozen/pr142
+          unzip -q /tmp/pr144.zip -d artifacts/persistence-first/frozen/pr144
+      - name: Run frozen persistence-first chronological evaluation
+        run: |
+          python scripts/run_persistence_first_forecast_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --model-a-rows artifacts/persistence-first/frozen/model-a/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/persistence-first/frozen/qb/qb_career_state_deployment_results.json \
+            --prior-forecast-json artifacts/persistence-first/frozen/pr142/forecast-disappearance/final/forecast_disappearance_development_results.json \
+            --prior-event-json artifacts/persistence-first/frozen/pr144/event-time/results/event_time_absence_cause_results.json \
+            --output-dir artifacts/persistence-first/results
+      - name: Upload frozen persistence-first evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: persistence-first-forecast-calibration
+          path: |
+            artifacts/persistence-first/results/persistence_first_forecast_calibration_results.json
+            artifacts/persistence-first/results/persistence_first_prediction_rows.csv
+            artifacts/persistence-first/results/fold_metrics.json
+            artifacts/persistence-first/results/canonical_fact_contract.json
+            artifacts/research/persistence_first_forecast_calibration_frozen_protocol.md
+          retention-days: 14
