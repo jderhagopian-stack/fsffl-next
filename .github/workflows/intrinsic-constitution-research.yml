@@ -5,6 +5,7 @@ on:
     branches: [research/shapley-precision-target-decomposition]
     paths:
       - 'scripts/run_intrinsic_constitution_shapley_validation.py'
+      - 'scripts/run_intrinsic_constitution_shapley_validation_v2.py'
       - 'scripts/run_forecast_low_end_career_calibration.py'
       - 'artifacts/research/intrinsic_constitution_shapley_test_plan.md'
       - 'artifacts/research/forecast_low_end_calibration_protocol.md'
@@ -41,7 +42,7 @@ jobs:
       - name: Run frozen Shapley constitutional validation
         run: |
           mkdir -p artifacts/constitution/track-a
-          python scripts/run_intrinsic_constitution_shapley_validation.py \
+          python scripts/run_intrinsic_constitution_shapley_validation_v2.py \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --decomp-rows artifacts/constitution/frozen-pr140/shapley-decomp/results/shapley_target_decomposition_rows.json \
             --output artifacts/constitution/track-a/intrinsic_constitution_shapley_validation.json
