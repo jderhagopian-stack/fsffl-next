@@ -1,0 +1,49 @@
+name: Research PIT Role Availability Evidence Reconstruction
+
+on:
+  pull_request:
+    branches: [research/forecast-disappearance-development]
+    paths:
+      - 'scripts/reconstruct_pit_role_availability_evidence.py'
+      - 'artifacts/research/pit_role_availability_evidence_reconstruction_protocol.md'
+      - '.github/workflows/pit-role-availability-evidence-reconstruction.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconstruct-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install evidence tooling
+        run: python -m pip install 'nflreadpy>=0.1.2' pandas pyarrow numpy
+      - name: Build frozen career-transition panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Reconstruct strict PIT role and availability evidence
+        run: |
+          python scripts/reconstruct_pit_role_availability_evidence.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/pit-role-availability
+      - name: Upload evidence reconstruction
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pit-role-availability-evidence-reconstruction
+          path: |
+            artifacts/pit-role-availability/pit_role_availability_evidence_results.json
+            artifacts/pit-role-availability/coverage_by_season_position.csv
+            artifacts/pit-role-availability/descriptive_discrimination.csv
+            artifacts/pit-role-availability/missing_row_contexts.csv
+            artifacts/pit-role-availability/era_position_coverage.csv
+            artifacts/pit-role-availability/source_columns.json
+            artifacts/research/pit_role_availability_evidence_reconstruction_protocol.md
+          retention-days: 14
