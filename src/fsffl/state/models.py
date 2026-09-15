@@ -120,6 +120,10 @@ class PlayerState(FrozenModel):
     player_id: str
     as_of: datetime
     age_years: float | None = Field(default=None, ge=0)
+    experience_years: int | None = Field(default=None, ge=0)
+    draft_year: int | None = Field(default=None, ge=1900)
+    draft_round: int | None = Field(default=None, ge=1)
+    draft_number: int | None = Field(default=None, ge=1)
     nfl_team: str | None = None
     status: PlayerStatus = PlayerStatus.UNKNOWN
     provenance: Provenance

@@ -149,3 +149,25 @@ Phase 3 is still not complete.
 After this PR is merged and actually deployed, use the new hosted phase timings to run a **fresh 50k Simulation execution optimization** slice focused only on the dominant measured stage. Candidate techniques may include deterministic preprocessing reuse, unchanged-team distribution reuse or safe vectorization, but only if the phase evidence supports them and only with identical Simulation semantics and 50,000-run fidelity.
 
 If hosted measurements instead show the quick Market structural Search path is still not low-single-digit, the next bounded performance step should target the structural candidate catalog itself rather than reintroducing Decision work into first paint.
+
+## Fundamental Intrinsic v4 production candidate — PR #138
+
+PR #138 supersedes the obsolete PR #137 surplus-over-replacement/display architecture. PR #137 must remain unmerged. Fundamental Intrinsic v4 defines FSFFL Intrinsic as **team-independent long-term dynasty asset worth derived from football fundamentals** rather than lineup surplus.
+
+The authoritative chain is now:
+
+`canonical State -> governed Forecast career distribution -> discounted career value -> residual fundamental information -> Fundamental Intrinsic -> independent display normalization`
+
+Canonical State preserves age, NFL experience, draft year, draft round and exact draft number when available. Value does not bypass State to read provider JSON. Forecast now owns the governed non-QB RB/WR/TE Y2/Y3 career-transition path as well as the QB career-state path, so age, attrition, role trajectory and career persistence are represented upstream rather than re-awarded inside Value.
+
+Chronological calibration used 8,196 usable six-season career-value examples and 4,979 holdout predictions across nine scored folds. After conditioning every candidate on the complete governed Y1/Y2/Y3 Forecast mean and uncertainty vector plus position, **draft pedigree only** was selected as the parsimonious residual bundle. It improved chronological MAE by about 1.97%, won 9/9 folds and was positive at QB/RB/WR/TE. Experience, survival/longevity and larger bundles were not promoted because they were unstable across positions and/or overlapped materially with Forecast authority.
+
+Beyond-Year-3 value is not an arbitrary youth adjustment. Position-specific continuation coefficients are fitted against a six-season discounted realized-production target and applied to governed Y3 production. The raw football-only coordinate is then normalized to 0–10,000 using fixed calibration-population Fundamental Intrinsic quantiles. Broad Market, League Market, Team Utility, replacement surplus, owner behavior and transaction outcomes are excluded from both the raw Intrinsic coordinate and the display-scale fit.
+
+`/api/value/intrinsic-v2` is the production-candidate contract. It publishes explicit availability/evidence state, confidence, raw Fundamental Intrinsic, normalized 0–10,000 Intrinsic Value, uncertainty, drivers and provenance. Missing Forecast evidence must remain unavailable rather than becoming a fake zero/percentile; missing exact pedigree yields a partial base estimate with a neutral residual rather than a fabricated penalty.
+
+Final current-player sanity validation on the PR #138 production candidate showed healthy qualitative separation, including: Josh Allen 9,793; Lamar Jackson 9,646; Drake Maye 9,717; Bijan Robinson 9,974; Quinshon Judkins 9,821; Tyler Allgeier 8,339; CeeDee Lamb 9,768; KC Concepcion 9,538; Brock Bowers 9,943; Kyle Pitts 9,795; Dallas Goedert 9,484. Genuine fringe controls remained low: Drew Lock 513, Devin Duvernay 954, Trevor Etienne 1,734 and Ja'Tavion Sanders 3,597.
+
+Normal Intrinsic lookup remains lightweight deterministic arithmetic over existing governed Forecast evidence and frozen calibration coefficients. It does not invoke 50,000-run Simulation, market lookup or provider I/O. The Franchise Value Lens remains lazy-loaded and presents Broad Market Value and FSFFL Intrinsic Value as readable dynasty-value magnitudes, with unavailable evidence explicit.
+
+Remaining limitations: the continuation target currently reaches six seasons rather than an unbounded career; exact draft number is required for the residual pedigree adjustment; Forecast does not yet publish cross-horizon covariance, so Intrinsic uncertainty uses the conservative current propagation rule; and the display normalization should only be recalibrated when the underlying football-only evidence population materially improves, never to chase market prices.

@@ -1,0 +1,57 @@
+{
+  "experiment_name": "Frozen D2 benchmark reference for Forecast career-state calibration",
+  "source_research_head": "0952aff12e9743f6bf1e584c9af339c8b0d5f87c",
+  "key_metrics": {
+    "overall_mae": {
+      "A": 23.260999150260382,
+      "D2": 34.8680766793218
+    },
+    "D2_fold_wins_vs_A": 0,
+    "A_fold_mae": {
+      "2011": 26.125287321558925,
+      "2012": 24.432214071442118,
+      "2013": 25.626973561646906,
+      "2014": 24.61352447004582,
+      "2015": 24.24851878088482,
+      "2016": 24.09738041005797,
+      "2017": 20.74254007800592,
+      "2018": 28.17629936994664,
+      "2019": 23.27549996101391,
+      "2020": 20.721698018858593,
+      "2021": 20.426803235938127,
+      "2022": 17.676889927505897
+    },
+    "position_mae": {
+      "D2": {
+        "QB": 62.19860478549211,
+        "RB": 39.70169947415171,
+        "WR": 33.33642445784579,
+        "TE": 14.713421758471325
+      }
+    },
+    "group_mae": {
+      "D2": {
+        "young": 53.59980502735349,
+        "developmental": 35.4467848390922,
+        "prime": 34.158817453711045,
+        "aging": 27.47183494306925,
+        "fringe": 19.82158994071448,
+        "elite": 98.85804809204716
+      }
+    },
+    "state_calibration": {
+      "n": 3997,
+      "multiclass_brier": 0.12153960842543732,
+      "upward_predicted": 0.29065574854916476,
+      "upward_realized": 0.3727795846885164,
+      "downward_predicted": 0.3371858662444381,
+      "downward_realized": 0.27295471603702776
+    }
+  },
+  "governance": {
+    "purpose": "Immutable benchmark input for Forecast career-state calibration research only",
+    "market_inputs_used": false,
+    "team_inputs_used": false,
+    "mutable_management_artifact_used": false
+  }
+}

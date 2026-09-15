@@ -99,6 +99,16 @@ def _age_years(raw_age: Any) -> float | None:
     return age if age >= 0 else None
 
 
+def _integer(raw_value: Any, *, minimum: int = 0) -> int | None:
+    if isinstance(raw_value, bool) or raw_value is None or raw_value == "":
+        return None
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        return None
+    return value if value >= minimum else None
+
+
 def _attach_current_fantasy_player_universe(
     state: LeagueState,
     raw_players: Any,
@@ -155,6 +165,10 @@ def _attach_current_fantasy_player_universe(
             player_id=player_id,
             as_of=effective_at,
             age_years=_age_years(raw.get("age")),
+            experience_years=_integer(raw.get("years_exp"), minimum=0),
+            draft_year=_integer(raw.get("draft_year"), minimum=1900),
+            draft_round=_integer(raw.get("draft_round"), minimum=1),
+            draft_number=_integer(raw.get("draft_number"), minimum=1),
             nfl_team=nfl_team,
             status=status,
             provenance=provenance,
@@ -248,8 +262,6 @@ def _normalize_nfl_byes(
         teams.update((home, away))
         teams_by_week.setdefault(week, set()).update((home, away))
 
-    # A complete NFL regular-season schedule exposes all 32 teams. Fail closed
-    # rather than deriving false byes from a partial provider response.
     if len(teams) != 32 or not teams_by_week:
         return (), provenance
 

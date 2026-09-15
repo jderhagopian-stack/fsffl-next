@@ -79,6 +79,18 @@ class SleeperNormalizer:
         return age if age >= 0 else None
 
     @staticmethod
+    def _integer(raw_value: Any, *, minimum: int = 0) -> int | None:
+        """Preserve explicit provider integer evidence and fail missing/invalid values to None."""
+
+        if isinstance(raw_value, bool) or raw_value is None or raw_value == "":
+            return None
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            return None
+        return value if value >= minimum else None
+
+    @staticmethod
     def _points(row: Mapping[str, Any]) -> float | None:
         raw = row.get("custom_points")
         if raw is None:
@@ -298,6 +310,10 @@ class SleeperNormalizer:
                     player_id=player_id,
                     as_of=as_of,
                     age_years=self._age_years(raw.get("age")),
+                    experience_years=self._integer(raw.get("years_exp"), minimum=0),
+                    draft_year=self._integer(raw.get("draft_year"), minimum=1900),
+                    draft_round=self._integer(raw.get("draft_round"), minimum=1),
+                    draft_number=self._integer(raw.get("draft_number"), minimum=1),
                     nfl_team=str(nfl_team) if nfl_team else None,
                     status=status,
                     provenance=provenance,
