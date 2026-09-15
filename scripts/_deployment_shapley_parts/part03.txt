@@ -1,0 +1,72 @@
+
+
+def full_game_value(players,caps):
+    b=Basis(caps)
+    for pid,pos,w in sorted(players,key=lambda x:(-x[2],x[0])):
+        b.add(pid,pos,w)
+    return b.total
+
+
+def exact_shapley(players,caps):
+    sums={pid:0.0 for pid,_,_ in players};n=0
+    for perm in permutations(players):
+        b=Basis(caps)
+        for pid,pos,w in perm:
+            sums[pid]+=b.add(pid,pos,w)
+        n+=1
+    return {pid:v/n for pid,v in sums.items()}
+
+
+def mc_scenarios(players,scenario_values,caps,perms=MC_PERMUTATIONS,seed=MC_SEED):
+    """Estimate phi_i(x) for arbitrary scenario x values of each i.
+
+    Predecessors are drawn by the random permutation of all other baseline players.
+    The basis is advanced with each player's baseline weight after scenario marginals
+    are measured, so every scenario estimate is a faithful Shapley marginal estimate
+    for the game where only that player's own weight is replaced by x.
+    """
+    rng=random.Random(seed)
+    ids=[p[0] for p in players]
+    byid={pid:(pos,float(w)) for pid,pos,w in players}
+    sums={pid:[0.0]*len(scenario_values[pid]) for pid in ids}
+    sumsq={pid:[0.0]*len(scenario_values[pid]) for pid in ids}
+    cp=None
+    for r in range(1,perms+1):
+        order=ids[:];rng.shuffle(order);b=Basis(caps)
+        for pid in order:
+            pos,w=byid[pid]
+            for j,x in enumerate(scenario_values[pid]):
+                d,_=b.marginal(pos,x);sums[pid][j]+=d;sumsq[pid][j]+=d*d
+            b.add(pid,pos,w)
+        if r==MC_CHECKPOINT:
+            cp={pid:[v/r for v in vals] for pid,vals in sums.items()}
+    estimates={pid:[v/perms for v in vals] for pid,vals in sums.items()}
+    se={}
+    for pid in ids:
+        arr=[]
+        for s,ss in zip(sums[pid],sumsq[pid]):
+            m=s/perms
+            var=max(0.0,(ss-perms*m*m)/(perms-1)) if perms>1 else 0.0
+            arr.append(math.sqrt(var/perms))
+        se[pid]=arr
+    full=full_game_value(players,caps)
+    eff=sum(estimates[pid][0] for pid in ids)
+    # baseline scenario index 0 MUST be the player's actual baseline weight.
+    return estimates,se,cp,{"full_value":full,"baseline_phi_sum":eff,"efficiency_residual":eff-full}
+
+
+def state_interval(state,boundaries):
+    _centers,thresholds=boundaries
+    if state=="out":return (-math.inf,0.0)
+    positive=STATE_NAMES[1:];i=positive.index(state)
+    lo=0.0 if i==0 else float(thresholds[i-1])
+    hi=math.inf if i==len(positive)-1 else float(thresholds[i])
+    return lo,hi
+
+
+def projected_central(mu,state,boundaries):
+    if state=="out":return 0.0
+    lo,hi=state_interval(state,boundaries)
+    x=max(0.0,float(mu),lo)
+    if math.isfinite(hi):x=min(x,hi)
+    return x
