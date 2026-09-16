@@ -49,6 +49,8 @@ class CurrentI1SourceFact:
             raise ValueError("games cannot be negative")
         if self.opportunity_per_game is not None and self.opportunity_per_game < 0:
             raise ValueError("opportunity_per_game cannot be negative")
+        if self.role_band is not None and self.role_band not in {"weak", "established"}:
+            raise ValueError("current I1 role band must be weak or established when covered")
         if not self.source_player_id.strip() or not self.display_name.strip() or not self.source_version.strip():
             raise ValueError("current I1 source fact identity/version cannot be blank")
 
@@ -79,6 +81,8 @@ class CurrentI1FactsArtifact:
             raise ValueError("current I1 facts must describe the immediately completed source season")
         if not self.state_boundary_version.strip() or not self.source_version.strip():
             raise ValueError("current I1 facts artifact versions cannot be blank")
+        if any(row.source_season != self.completed_source_season for row in self.rows):
+            raise ValueError("every current I1 source row must match the artifact completed source season")
         ids = [row.source_player_id for row in self.rows]
         if len(ids) != len(set(ids)):
             raise ValueError("current I1 source player ids must be unique")
@@ -149,10 +153,32 @@ class CurrentI1MappingResult:
     unmapped_player_ids: tuple[str, ...]
     ambiguous_player_ids: tuple[str, ...]
     source_rows_unmatched: tuple[str, ...]
+    evaluation_season: int
+    completed_source_season: int
 
     @property
     def mapped_count(self) -> int:
         return len(self.inputs)
+
+    def target_season(self, horizon: int) -> int:
+        """Return the calendar season predicted by an I1 horizon.
+
+        I1 horizons are relative to the completed source season, not to the
+        evaluation season. For an in-season evaluation, horizon 1 therefore
+        targets the evaluation season itself. Callers must preserve this
+        coordinate rather than relabeling horizon 1 as the following season.
+        """
+
+        if horizon not in (1, 2):
+            raise ValueError("I1 current-facts horizon must be 1 or 2")
+        return self.completed_source_season + horizon
+
+    @property
+    def target_seasons(self) -> tuple[int, int]:
+        return (self.target_season(1), self.target_season(2))
+
+    def target_is_after_evaluation(self, horizon: int) -> bool:
+        return self.target_season(horizon) > self.evaluation_season
 
 
 def map_current_i1_facts(
@@ -164,16 +190,20 @@ def map_current_i1_facts(
     Stable provider identity wins. Exact normalized-name + position is a fallback
     only when it resolves uniquely on both sides. Missing or ambiguous evidence is
     returned explicitly and never converted to zero production or non-persistence.
+
+    The returned model inputs retain research-time horizon semantics: horizon h
+    predicts completed_source_season + h. The mapper does not reinterpret those
+    horizons relative to the live evaluation season.
     """
 
     if artifact.evaluation_season != league_state.league.season:
         raise ValueError("current I1 facts evaluation season does not match league season")
 
-    by_provider: dict[tuple[str, str], CurrentI1SourceFact] = {}
+    by_provider: dict[tuple[str, str], list[CurrentI1SourceFact]] = {}
     by_name_position: dict[tuple[str, Position], list[CurrentI1SourceFact]] = {}
     for row in artifact.rows:
         if row.identity_provider and row.identity_external_id:
-            by_provider[(row.identity_provider.lower(), row.identity_external_id)] = row
+            by_provider.setdefault((row.identity_provider.lower(), row.identity_external_id), []).append(row)
         by_name_position.setdefault((_normalize_name(row.display_name), row.position), []).append(row)
 
     mapped: dict[str, tuple[I1ForecastInput, I1ForecastInput]] = {}
@@ -187,9 +217,11 @@ def map_current_i1_facts(
             continue
         candidates: list[CurrentI1SourceFact] = []
         for ref in player.provider_refs:
-            hit = by_provider.get((ref.provider.lower(), ref.external_id))
-            if hit is not None and hit.position == player.position:
-                candidates.append(hit)
+            candidates.extend(
+                item
+                for item in by_provider.get((ref.provider.lower(), ref.external_id), [])
+                if item.position == player.position
+            )
         candidates = list({item.source_player_id: item for item in candidates}.values())
         if not candidates:
             candidates = by_name_position.get((_normalize_name(player.full_name), player.position), [])
@@ -229,7 +261,11 @@ def map_current_i1_facts(
         mapped_source_ids=mapped_source,
         unmapped_player_ids=tuple(sorted(unmapped)),
         ambiguous_player_ids=tuple(sorted(ambiguous)),
-        source_rows_unmatched=tuple(sorted(row.source_player_id for row in artifact.rows if row.source_player_id not in used_source)),
+        source_rows_unmatched=tuple(
+            sorted(row.source_player_id for row in artifact.rows if row.source_player_id not in used_source)
+        ),
+        evaluation_season=artifact.evaluation_season,
+        completed_source_season=artifact.completed_source_season,
     )
 
 
