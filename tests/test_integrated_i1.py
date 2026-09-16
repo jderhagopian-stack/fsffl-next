@@ -46,7 +46,10 @@ def _evidence(player_id: str, *, rich: bool, role_band: str = "depth") -> Canoni
 def _rows() -> tuple[I1TrainingRow, ...]:
     rows = []
     states = list(STATE_NAMES)
-    for index in range(240):
+    # 960 rows ensure the synthetic rich-evidence subset independently clears
+    # the frozen I1 MINN=100 / MINC=15 gates for every ordered threshold.
+    # This changes only the test fixture, not the frozen production model.
+    for index in range(960):
         target = states[index % len(states)]
         current = states[1 + (index % 5)]
         position = (Position.QB, Position.RB, Position.WR, Position.TE)[index % 4]
