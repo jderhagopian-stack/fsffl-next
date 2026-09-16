@@ -221,7 +221,8 @@ jobs:
       - name: Commit frozen runtime activation bundle
         if: github.event_name == 'pull_request' && success()
         run: |
-          if git diff --quiet -- src/fsffl/value/private_beta_activation_data.py; then
+          if git ls-files --error-unmatch src/fsffl/value/private_beta_activation_data.py >/dev/null 2>&1 \
+             && git diff --quiet -- src/fsffl/value/private_beta_activation_data.py; then
             echo 'runtime activation bundle unchanged'
             exit 0
           fi
