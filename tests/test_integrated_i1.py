@@ -6,6 +6,7 @@ from fsffl.forecast.football_state import (
     ProviderStatusMapping,
     canonical_status_flags,
 )
+from fsffl.forecast.i1_config import FROZEN_I1_REGULARIZATION, I1RegularizationPolicy
 from fsffl.forecast.integrated_i1 import (
     I1_C,
     I1ForecastInput,
@@ -83,8 +84,22 @@ def _rows() -> tuple[I1TrainingRow, ...]:
     return tuple(rows)
 
 
-def test_i1_c_is_frozen() -> None:
-    assert I1_C == 0.25
+def test_i1_c_is_governed_and_frozen_at_current_candidate() -> None:
+    assert FROZEN_I1_REGULARIZATION.default_c == 0.25
+    assert FROZEN_I1_REGULARIZATION.c_for("persistence.rich") == 0.25
+    assert FROZEN_I1_REGULARIZATION.c_for("conditional.reduced.elite") == 0.25
+    assert I1_C == FROZEN_I1_REGULARIZATION.default_c
+
+
+def test_i1_regularization_policy_supports_future_governed_component_update() -> None:
+    future = I1RegularizationPolicy(
+        version="future-management-authorized-example",
+        default_c=0.25,
+        component_c={"persistence.rich": 0.5, "conditional.rich.elite": 0.125},
+    )
+    assert future.c_for("persistence.rich") == 0.5
+    assert future.c_for("conditional.rich.elite") == 0.125
+    assert future.c_for("persistence.reduced") == 0.25
 
 
 def test_i1_probabilities_are_calibrated_coordinates_not_score() -> None:
