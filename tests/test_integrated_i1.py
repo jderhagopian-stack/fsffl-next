@@ -6,6 +6,7 @@ from fsffl.forecast.football_state import (
     ProviderStatusMapping,
     canonical_status_flags,
 )
+from fsffl.forecast.i1_artifact import FrozenI1Artifact, freeze_i1_model
 from fsffl.forecast.i1_config import FROZEN_I1_REGULARIZATION, I1RegularizationPolicy
 from fsffl.forecast.integrated_i1 import (
     I1_C,
@@ -84,6 +85,19 @@ def _rows() -> tuple[I1TrainingRow, ...]:
     return tuple(rows)
 
 
+def _input(*, rich: bool, horizon: int = 1) -> I1ForecastInput:
+    return I1ForecastInput(
+        position=Position.WR,
+        age_band="young",
+        current_state="usable",
+        horizon=horizon,
+        current_points=70,
+        prior_points=50,
+        experience_years=2,
+        evidence=_evidence("test", rich=rich),
+    )
+
+
 def test_i1_c_is_governed_and_frozen_at_current_candidate() -> None:
     assert FROZEN_I1_REGULARIZATION.default_c == 0.25
     assert FROZEN_I1_REGULARIZATION.c_for("persistence.rich") == 0.25
@@ -104,17 +118,7 @@ def test_i1_regularization_policy_supports_future_governed_component_update() ->
 
 def test_i1_probabilities_are_calibrated_coordinates_not_score() -> None:
     model = IntegratedI1Model(_rows())
-    item = I1ForecastInput(
-        position=Position.WR,
-        age_band="young",
-        current_state="usable",
-        horizon=1,
-        current_points=70,
-        prior_points=50,
-        experience_years=2,
-        evidence=_evidence("test", rich=True),
-    )
-    result = model.predict(item)
+    result = model.predict(_input(rich=True))
     assert set(result.probabilities) == set(STATE_NAMES)
     assert abs(sum(result.probabilities.values()) - 1.0) < 1e-12
     assert abs(result.persistence_probability - (1 - result.probabilities["out"])) < 1e-12
@@ -124,19 +128,27 @@ def test_i1_probabilities_are_calibrated_coordinates_not_score() -> None:
 
 def test_missing_roster_evidence_uses_reduced_path_not_inferred_death() -> None:
     model = IntegratedI1Model(_rows())
-    item = I1ForecastInput(
-        position=Position.WR,
-        age_band="young",
-        current_state="usable",
-        horizon=2,
-        current_points=70,
-        prior_points=50,
-        experience_years=2,
-        evidence=_evidence("test", rich=False),
-    )
-    result = model.predict(item)
+    result = model.predict(_input(rich=False, horizon=2))
     assert result.evidence_path == "reduced"
     assert result.probabilities["out"] < 1.0
+
+
+def test_frozen_artifact_round_trip_matches_fitted_model() -> None:
+    model = IntegratedI1Model(_rows())
+    artifact = freeze_i1_model(model, metadata={"fixture": True})
+    loaded = FrozenI1Artifact.from_dict(artifact.to_dict())
+    for rich in (True, False):
+        for horizon in (1, 2):
+            item = _input(rich=rich, horizon=horizon)
+            expected = model.predict(item)
+            actual = loaded.predict(item)
+            assert actual.evidence_path == expected.evidence_path
+            assert actual.model_version == expected.model_version
+            assert abs(actual.persistence_probability - expected.persistence_probability) <= 1e-12
+            assert abs(actual.anticipated_points - expected.anticipated_points) <= 1e-12
+            assert actual.state_means == expected.state_means
+            for state in STATE_NAMES:
+                assert abs(actual.probabilities[state] - expected.probabilities[state]) <= 1e-12
 
 
 def test_provider_specific_codes_map_to_identical_canonical_features() -> None:
