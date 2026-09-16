@@ -42,6 +42,9 @@ def subset_caps_from_rules(rules: LeagueRules) -> tuple[tuple[tuple[int, ...], i
     return tuple(caps)
 
 
+ReplacementPlan = tuple[int | None, float | None, str | None] | None
+
+
 class _Basis:
     def __init__(self, caps: tuple[tuple[tuple[int, ...], int], ...]) -> None:
         self.caps = caps
@@ -62,12 +65,18 @@ class _Basis:
         counts = self.counts.copy(); counts[outgoing] -= 1; counts[incoming] += 1
         return self._valid_counts(counts)
 
-    def marginal(self, position: str, weight: float) -> tuple[float, tuple[int | None, float | None, str | None] | None]:
-        candidate = max(0.0, float(weight)); incoming = POSITION_INDEX[position]
-        if candidate <= 0:
-            return 0.0, None
+    def replacement_plan(self, position: str) -> ReplacementPlan:
+        """Return the lineup-feasibility plan for an incoming position.
+
+        The plan depends only on the current basis and incoming position, not on the
+        candidate scenario weight. Future-state Shapley evaluates multiple weights
+        for that identical basis, so resolving the plan once avoids repeating the
+        same structural feasibility search without changing any economic semantics.
+        """
+
+        incoming = POSITION_INDEX[position]
         if self._can_add(incoming):
-            return candidate, (None, None, None)
+            return (None, None, None)
         best: tuple[float, str, int] | None = None
         for outgoing in range(4):
             if not self.by_position[outgoing] or not self._can_swap(outgoing, incoming):
@@ -76,10 +85,26 @@ class _Basis:
             option = (old_weight, old_id, outgoing)
             if best is None or option < best:
                 best = option
-        if best is None or candidate <= best[0] + 1e-12:
-            return 0.0, None
+        if best is None:
+            return None
         old_weight, old_id, outgoing = best
-        return candidate - old_weight, (outgoing, old_weight, old_id)
+        return (outgoing, old_weight, old_id)
+
+    @staticmethod
+    def marginal_from_plan(weight: float, plan: ReplacementPlan) -> tuple[float, ReplacementPlan]:
+        candidate = max(0.0, float(weight))
+        if candidate <= 0 or plan is None:
+            return 0.0, None
+        if plan[0] is None:
+            return candidate, plan
+        outgoing, old_weight, old_id = plan
+        assert outgoing is not None and old_weight is not None and old_id is not None
+        if candidate <= old_weight + 1e-12:
+            return 0.0, None
+        return candidate - old_weight, plan
+
+    def marginal(self, position: str, weight: float) -> tuple[float, ReplacementPlan]:
+        return self.marginal_from_plan(weight, self.replacement_plan(position))
 
     def add(self, player_id: str, position: str, weight: float) -> float:
         delta, replacement = self.marginal(position, weight)
@@ -137,8 +162,9 @@ def monte_carlo_shapley_scenarios(
         order = player_ids[:]; rng.shuffle(order); basis = _Basis(caps)
         for player_id in order:
             position, baseline = by_id[player_id]
+            plan = basis.replacement_plan(position)
             for index, scenario in enumerate(scenario_values[player_id]):
-                marginal, _ = basis.marginal(position, scenario)
+                marginal, _ = basis.marginal_from_plan(scenario, plan)
                 sums[player_id][index] += marginal
                 sums_sq[player_id][index] += marginal * marginal
             basis.add(player_id, position, baseline)
