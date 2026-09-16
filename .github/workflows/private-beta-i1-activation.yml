@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/build_private_beta_i1_activation.py'
+      - 'scripts/extract_private_beta_completed_source_points.R'
       - '.github/workflows/private-beta-i1-activation.yml'
       - 'src/fsffl/forecast/i1_artifact.py'
       - 'src/fsffl/forecast/i1_current_facts.py'
@@ -61,6 +62,12 @@ jobs:
           Rscript research_ref/scripts/extract_career_transition_panel.R
           Rscript research_ref/scripts/extract_forecast_usage_panel.R
 
+      - name: Extract frozen-coordinate completed-source points
+        run: |
+          Rscript scripts/extract_private_beta_completed_source_points.R \
+            artifacts/next2-career/cache/player_stats_seasonal.RData \
+            /tmp/private_beta_completed_source_points.csv
+
       - name: Prefetch completed-source beta data with retries
         run: |
           python - <<'PY'
@@ -93,75 +100,16 @@ jobs:
               raise RuntimeError(f'prefetch failed for {label}') from last
 
           for season in (2020, 2021, 2022, 2024, 2025):
-              retry(f'player_stats_reg_{season}', lambda season=season: nfl.load_player_stats([season], summary_level='reg'))
-          retry('player_stats_week_2025', lambda: nfl.load_player_stats([2025], summary_level='week'))
+              retry(
+                  f'player_stats_reg_{season}',
+                  lambda season=season: nfl.load_player_stats([season], summary_level='reg'),
+              )
+          retry(
+              'player_stats_week_2025',
+              lambda: nfl.load_player_stats([2025], summary_level='week'),
+          )
           retry('players', nfl.load_players)
           retry('rosters_2025', lambda: nfl.load_rosters([2025]))
-          PY
-
-      - name: Diagnose completed-source scoring coordinate
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import nflreadpy as nfl
-          import pandas as pd
-          from nflreadpy.config import update_config
-
-          update_config(
-              cache_mode='filesystem',
-              cache_dir=Path('/tmp/nflreadpy-cache'),
-              cache_duration=86400,
-              timeout=180,
-              verbose=False,
-          )
-          frame = nfl.load_player_stats([2020, 2021, 2022], summary_level='reg')
-          reg = frame.to_pandas() if hasattr(frame, 'to_pandas') else pd.DataFrame(frame)
-          career = pd.read_csv('artifacts/next2-career/career_transition_panel.csv')
-          frozen = career[career['season'].isin([2020, 2021, 2022])][['player_id','season','position','fantasy_points']].copy()
-          cols = ['player_id','season','position_group','fantasy_points','fantasy_points_ppr']
-          component_names = [
-              'passing_yards','passing_tds','passing_interceptions',
-              'rushing_yards','receiving_yards','rushing_tds','receiving_tds',
-              'special_teams_tds','passing_2pt_conversions','rushing_2pt_conversions',
-              'receiving_2pt_conversions','sack_fumbles_lost','rushing_fumbles_lost',
-              'receiving_fumbles_lost','receptions',
-          ]
-          cols.extend(name for name in component_names if name in reg.columns)
-          current = reg[reg['position_group'].isin(['QB','RB','WR','TE'])][cols].copy()
-          merged = frozen.merge(current, on=['player_id','season'], how='inner', suffixes=('_frozen','_current'))
-          merged['standard_diff'] = merged['fantasy_points_frozen'] - merged['fantasy_points_current']
-          merged['ppr_diff'] = merged['fantasy_points_frozen'] - merged['fantasy_points_ppr']
-          required = set(component_names[:-1])
-          if required.issubset(reg.columns):
-              merged['recomputed_standard'] = (
-                  merged['passing_yards'] / 25.0
-                  + 4.0 * merged['passing_tds']
-                  - 2.0 * merged['passing_interceptions']
-                  + (merged['rushing_yards'] + merged['receiving_yards']) / 10.0
-                  + 6.0 * (merged['rushing_tds'] + merged['receiving_tds'] + merged['special_teams_tds'])
-                  + 2.0 * (merged['passing_2pt_conversions'] + merged['rushing_2pt_conversions'] + merged['receiving_2pt_conversions'])
-                  - 2.0 * (merged['sack_fumbles_lost'] + merged['rushing_fumbles_lost'] + merged['receiving_fumbles_lost'])
-              )
-              merged['current_formula_diff'] = merged['fantasy_points_current'] - merged['recomputed_standard']
-              print('current formula max abs diff:', float(merged['current_formula_diff'].abs().max()))
-          print('overlap rows:', len(merged))
-          print('standard max abs diff:', float(merged['standard_diff'].abs().max()))
-          print('standard mean abs diff:', float(merged['standard_diff'].abs().mean()))
-          print('ppr max abs diff:', float(merged['ppr_diff'].abs().max()))
-          print('ppr mean abs diff:', float(merged['ppr_diff'].abs().mean()))
-          summary = merged.assign(abs_diff=merged['standard_diff'].abs()).groupby(['season','position_frozen']).agg(
-              rows=('abs_diff','size'),
-              mismatches=('abs_diff', lambda x: int((x > 1e-6).sum())),
-              mean_abs_diff=('abs_diff','mean'),
-              max_abs_diff=('abs_diff','max'),
-          ).reset_index()
-          print('\nby season/position:\n', summary.to_string(index=False))
-          detail_cols = [
-              'player_id','season','position_frozen','fantasy_points_frozen',
-              'fantasy_points_current','standard_diff','fantasy_points_ppr','ppr_diff',
-          ] + [name for name in component_names if name in merged.columns]
-          top = merged.assign(abs_diff=merged['standard_diff'].abs()).sort_values('abs_diff', ascending=False).head(30)
-          print('\ntop coordinate differences:\n', top[detail_cols].to_string(index=False))
           PY
 
       - name: Build 2026 private-beta activation artifacts
@@ -170,6 +118,7 @@ jobs:
             --research-root research_ref \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --source-points-csv /tmp/private_beta_completed_source_points.csv \
             --output-dir artifacts/implementation/private-beta-activation \
             --evaluation-season 2026
 
@@ -192,11 +141,15 @@ jobs:
           assert facts.completed_source_season == 2025
           assert facts.source_season_complete is True
           assert len(facts.rows) == report['current_fact_rows']
+          coordinate = report['current_fact_metadata']['research_coordinate_validation']
+          assert coordinate['status'] == 'PASS'
+          assert coordinate['max_abs_fantasy_points_diff'] <= 1e-12
           print(json.dumps({
               'status': 'PASS',
               'current_fact_rows': len(facts.rows),
               'providers': report['current_fact_metadata']['providers'],
-              'coordinate_validation': report['current_fact_metadata']['research_coordinate_validation'],
+              'coordinate_validation': coordinate,
+              'secondary_source_drift_audit': report['current_fact_metadata']['secondary_source_drift_audit'],
               'zero_fact_basis_counts': report['current_fact_metadata']['zero_fact_basis_counts'],
           }, indent=2, sort_keys=True))
           PY
