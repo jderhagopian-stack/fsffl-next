@@ -1,0 +1,107 @@
+name: Validate frozen I1 + Shapley implementation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/fsffl/forecast/football_state.py'
+      - 'src/fsffl/forecast/integrated_i1.py'
+      - 'src/fsffl/value/shapley_intrinsic.py'
+      - 'scripts/validate_i1_production_parity.py'
+      - 'scripts/validate_i1_production_parity_v2.py'
+      - 'tests/test_integrated_i1.py'
+      - 'tests/test_shapley_intrinsic.py'
+      - 'artifacts/implementation/forecast_intrinsic_i1_validation_protocol.md'
+      - 'pyproject.toml'
+      - '.github/workflows/forecast-intrinsic-i1-implementation-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  implementation-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout implementation
+        uses: actions/checkout@v4
+      - name: Checkout frozen research oracle
+        uses: actions/checkout@v4
+        with:
+          ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+          path: research_ref
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install implementation and validation tooling
+        run: python -m pip install -e . pytest pandas nflreadpy pyarrow
+      - name: Run production unit tests
+        run: pytest -q tests/test_integrated_i1.py tests/test_shapley_intrinsic.py
+      - name: Build frozen PIT football panels from research oracle
+        run: |
+          Rscript research_ref/scripts/extract_career_transition_panel.R
+          Rscript research_ref/scripts/extract_forecast_usage_panel.R
+      - name: Download frozen authoritative research artifacts
+        run: |
+          mkdir -p artifacts/implementation/frozen/model-a \
+                   artifacts/implementation/frozen/qb \
+                   artifacts/implementation/frozen/forecast \
+                   artifacts/implementation/frozen/event \
+                   artifacts/implementation/frozen/persistence \
+                   artifacts/implementation/frozen/integrated \
+                   artifacts/implementation/frozen/downstream
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/model-a.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10408705946/zip > /tmp/forecast.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10416382295/zip > /tmp/event.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10419402765/zip > /tmp/persistence.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10422596781/zip > /tmp/integrated.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10423228014/zip > /tmp/downstream.zip
+          unzip -q /tmp/model-a.zip -d artifacts/implementation/frozen/model-a
+          unzip -q /tmp/qb.zip -d artifacts/implementation/frozen/qb
+          unzip -q /tmp/forecast.zip -d artifacts/implementation/frozen/forecast
+          unzip -q /tmp/event.zip -d artifacts/implementation/frozen/event
+          unzip -q /tmp/persistence.zip -d artifacts/implementation/frozen/persistence
+          unzip -q /tmp/integrated.zip -d artifacts/implementation/frozen/integrated
+          unzip -q /tmp/downstream.zip -d artifacts/implementation/frozen/downstream
+      - name: Run frozen research parity validation
+        run: |
+          mkdir -p artifacts/implementation/results
+          python scripts/validate_i1_production_parity_v2.py \
+            --research-root research_ref \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --model-a-rows artifacts/implementation/frozen/model-a/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/implementation/frozen/qb/qb_career_state_deployment_results.json \
+            --prior-forecast-json artifacts/implementation/frozen/forecast/forecast-disappearance/final/forecast_disappearance_development_results.json \
+            --prior-event-json artifacts/implementation/frozen/event/event-time/results/event_time_absence_cause_results.json \
+            --prior-persistence-json artifacts/implementation/frozen/persistence/persistence-first/results/persistence_first_forecast_calibration_results.json \
+            --integrated-results artifacts/implementation/frozen/integrated/integrated-multivariate/results/integrated_multivariate_forecast_results.json \
+            --downstream-results artifacts/implementation/frozen/downstream/integrated-downstream/results/integrated_forecast_shapley_downstream_results.json \
+            --downstream-rows artifacts/implementation/frozen/downstream/integrated-downstream/results/integrated_forecast_shapley_rows.json \
+            --output artifacts/implementation/results/production_parity.json
+      - name: Re-run locked 10-point Constitution oracle
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts/10382432938/zip > /tmp/decomp.zip
+          mkdir -p artifacts/implementation/frozen/decomp
+          unzip -q /tmp/decomp.zip -d artifacts/implementation/frozen/decomp
+          python research_ref/scripts/run_intrinsic_constitution_shapley_validation_v2.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --decomp-rows artifacts/implementation/frozen/decomp/shapley-decomp/results/shapley_target_decomposition_rows.json \
+            --output artifacts/implementation/results/constitution.json
+      - name: Upload implementation validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-intrinsic-i1-implementation-validation
+          path: |
+            artifacts/implementation/results/*.json
+            artifacts/implementation/forecast_intrinsic_i1_validation_protocol.md
+          retention-days: 14
