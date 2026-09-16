@@ -53,7 +53,9 @@ def _rows() -> tuple[I1TrainingRow, ...]:
     rows = []
     states = list(STATE_NAMES)
     # 960 balanced synthetic rows ensure rich and reduced paths independently
-    # clear the frozen I1 MINN=100 / MINC=15 gates for every threshold.
+    # clear the frozen I1 MINN=100 / MINC=15 gates for every threshold. Rich
+    # membership varies by complete state-cycle block so it is independent of
+    # the target-state residue itself.
     for index in range(960):
         target = states[index % len(states)]
         current = states[1 + (index % 5)]
@@ -61,7 +63,7 @@ def _rows() -> tuple[I1TrainingRow, ...]:
         points = float(20 + (index % 8) * 25)
         evidence = _evidence(
             str(index),
-            rich=index % 3 != 0,
+            rich=(index // len(states)) % 3 != 0,
             position=position,
         )
         rows.append(
