@@ -18,10 +18,16 @@ from fsffl.forecast.integrated_i1 import (
 from fsffl.state.models import Position
 
 
-def _evidence(player_id: str, *, rich: bool, role_band: str = "depth") -> CanonicalFootballStateEvidence:
+def _evidence(
+    player_id: str,
+    *,
+    rich: bool,
+    position: Position = Position.WR,
+    role_band: str = "depth",
+) -> CanonicalFootballStateEvidence:
     return CanonicalFootballStateEvidence(
         player_id=player_id,
-        position=Position.WR,
+        position=position,
         age_years=23,
         experience_years=2,
         current_fantasy_points=70,
@@ -46,15 +52,18 @@ def _evidence(player_id: str, *, rich: bool, role_band: str = "depth") -> Canoni
 def _rows() -> tuple[I1TrainingRow, ...]:
     rows = []
     states = list(STATE_NAMES)
-    # 960 rows ensure the synthetic rich-evidence subset independently clears
-    # the frozen I1 MINN=100 / MINC=15 gates for every ordered threshold.
-    # This changes only the test fixture, not the frozen production model.
+    # 960 balanced synthetic rows ensure rich and reduced paths independently
+    # clear the frozen I1 MINN=100 / MINC=15 gates for every threshold.
     for index in range(960):
         target = states[index % len(states)]
         current = states[1 + (index % 5)]
         position = (Position.QB, Position.RB, Position.WR, Position.TE)[index % 4]
         points = float(20 + (index % 8) * 25)
-        evidence = _evidence(str(index), rich=index % 3 != 0) if position == Position.WR else None
+        evidence = _evidence(
+            str(index),
+            rich=index % 3 != 0,
+            position=position,
+        )
         rows.append(
             I1TrainingRow(
                 position=position,
