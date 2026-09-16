@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/build_private_beta_i1_activation.py'
+      - 'scripts/build_private_beta_i1_activation_resolved.py'
       - 'scripts/extract_private_beta_completed_source_points.R'
       - '.github/workflows/private-beta-i1-activation.yml'
       - 'src/fsffl/forecast/i1_artifact.py'
@@ -114,7 +115,7 @@ jobs:
 
       - name: Build 2026 private-beta activation artifacts
         run: |
-          python scripts/build_private_beta_i1_activation.py \
+          python scripts/build_private_beta_i1_activation_resolved.py \
             --research-root research_ref \
             --career-panel artifacts/next2-career/career_transition_panel.csv \
             --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
@@ -151,6 +152,7 @@ jobs:
               'coordinate_validation': coordinate,
               'secondary_source_drift_audit': report['current_fact_metadata']['secondary_source_drift_audit'],
               'zero_fact_basis_counts': report['current_fact_metadata']['zero_fact_basis_counts'],
+              'stable_id_bridge': report['current_fact_metadata']['identity_resolution'].get('stable_id_bridge', {}),
           }, indent=2, sort_keys=True))
           PY
 
