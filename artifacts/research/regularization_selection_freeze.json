@@ -1,9 +1,10 @@
 {
   "study": "regularization-developmental-calibration-v1",
   "authority": "research-only selection freeze under management directive dated 2026-09-15",
+  "final_disposition": "KEEP C=0.25 AS-IS",
   "global_frozen": true,
   "global_C": 0.25,
-  "global_disposition": "NO GLOBAL CHALLENGER QUALIFIES; RETAIN PROVISIONAL C=0.25",
+  "global_disposition": "NO GLOBAL CHALLENGER QUALIFIES; RETAIN C=0.25",
   "global_selection_basis": {
     "primary_grid": [0.0625, 0.125, 0.25, 0.5, 1.0],
     "bounded_extension": 0.03125,
@@ -40,7 +41,7 @@
       "0.5": 0.6366559485530546,
       "1.0": 0.6366559485530546
     },
-    "reason": "C=0.0625 is an interior minimum for aggregate factual state Brier after the preauthorized lower-bound extension worsens again at C=0.03125. However, neither C=0.0625 nor C=0.125 satisfies the predeclared global-change rule requiring at least four of five secondary measures to be no worse than C=0.25; both materially worsen anticipated-production MAE and absolute bias and do not meet the secondary breadth requirement. No global change is therefore authorized by Phase C."
+    "reason": "C=0.0625 is an interior minimum for aggregate factual state Brier after the preauthorized lower-bound extension worsens again at C=0.03125. However, neither C=0.0625 nor C=0.125 satisfies the predeclared global-change rule requiring at least four of five secondary measures to be no worse than C=0.25; both materially worsen anticipated-production MAE and absolute bias and do not meet the secondary breadth requirement. No global change is authorized by Phase C."
   },
   "stage_frozen": true,
   "developmental_C": null,
@@ -80,15 +81,30 @@
       "additional_true_hits": -9,
       "additional_false_positives": -11
     },
-    "reason": "Both authorized less-regularized developmental treatments fail the first predeclared stage-aware promotion requirement: neither catches additional factual developmental useful+ successes. Each loses nine real hits relative to C=0.25 and worsens both developmental useful+ Brier and developmental factual state Brier. The management hypothesis that higher developmental C would recover genuine breakouts is not supported by the rolling evidence."
+    "reason": "Both authorized less-regularized developmental treatments fail the first predeclared stage-aware promotion requirement: neither catches additional factual developmental useful+ successes. Each loses nine real hits relative to C=0.25 and worsens both developmental useful+ Brier and developmental factual state Brier."
   },
   "confirmation_authorized": true,
-  "confirmation_candidate": {
-    "global_C": 0.25,
-    "developmental_C": null,
+  "confirmation_complete": true,
+  "confirmation": {
     "source_season": 2023,
     "horizon": 1,
-    "target_season": 2024
+    "target_season": 2024,
+    "rows": 558,
+    "resolved": 521,
+    "resolved_share": 0.9336917562724014,
+    "state_brier": 0.1138097504406518,
+    "state_logloss": 1.3729390372262569,
+    "production_mae": 35.471917100194574,
+    "production_bias": -2.910995530406975,
+    "developmental_rows": 28,
+    "developmental_successes": 11,
+    "developmental_true_hits": 8,
+    "developmental_false_positives": 9,
+    "developmental_recall": 0.7272727272727273,
+    "developmental_state_brier": 0.10388731522324225,
+    "developmental_useful_brier": 0.236946630004695,
+    "interpretation": "The genuinely untouched 2023-H1 to 2024 confirmation is well resolved and does not reveal a reason to overturn the frozen selection. Overall losses are better than the rolling-selection averages, and developmental recall remains coherent at 8 of 11 factual successes."
   },
+  "final_reason": "The expanded strict-PIT evidence shows no alternative regularization setting with a clear, repeatable holistic advantage over C=0.25. Stronger regularization modestly improves some probability losses and developmental recall but imposes clear production-error and bias costs; weaker regularization improves production MAE but worsens state calibration. A separate less-regularized developmental treatment moves in the wrong direction, losing real developmental hits. The untouched 2023-H1 confirmation is coherent. C=0.25 therefore survives the stronger calibration study as the governed balanced setting.",
   "production_change_authorized": false
 }
