@@ -164,3 +164,6 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
     assert contract.coverage.player_count == 0
     assert "completed_source_player_mapping" in contract.coverage.missing_required_fact_families
+
+
+# This focused file intentionally triggers the lightweight activation/API diagnostic workflow.
