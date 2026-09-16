@@ -5,13 +5,21 @@ on:
     branches: [main]
     paths:
       - 'src/fsffl/forecast/football_state.py'
+      - 'src/fsffl/forecast/i1_artifact.py'
+      - 'src/fsffl/forecast/i1_config.py'
+      - 'src/fsffl/forecast/i1_current_facts.py'
       - 'src/fsffl/forecast/integrated_i1.py'
       - 'src/fsffl/value/shapley_intrinsic.py'
+      - 'scripts/check_i1_artifact_parity.py'
       - 'scripts/validate_i1_production_parity.py'
       - 'scripts/validate_i1_production_parity_v2.py'
+      - 'tests/test_i1_artifact.py'
+      - 'tests/test_i1_current_facts.py'
       - 'tests/test_integrated_i1.py'
       - 'tests/test_shapley_intrinsic.py'
       - 'artifacts/implementation/forecast_intrinsic_i1_validation_protocol.md'
+      - 'artifacts/implementation/i1_final_fit_current_adapter_protocol.md'
+      - 'artifacts/implementation/live_2026_i1_shapley_horizon_alignment_concern.md'
       - 'pyproject.toml'
       - '.github/workflows/forecast-intrinsic-i1-implementation-validation.yml'
   workflow_dispatch:
@@ -47,7 +55,12 @@ jobs:
       - name: Install implementation and validation tooling
         run: python -m pip install -e . pytest pandas nflreadpy pyarrow
       - name: Run production unit tests
-        run: pytest -q tests/test_integrated_i1.py tests/test_shapley_intrinsic.py
+        run: >-
+          pytest -q
+          tests/test_integrated_i1.py
+          tests/test_i1_artifact.py
+          tests/test_i1_current_facts.py
+          tests/test_shapley_intrinsic.py
       - name: Build frozen PIT football panels from research oracle
         run: |
           Rscript research_ref/scripts/extract_career_transition_panel.R
@@ -108,4 +121,5 @@ jobs:
           path: |
             artifacts/implementation/results/*.json
             artifacts/implementation/forecast_intrinsic_i1_validation_protocol.md
+            artifacts/implementation/live_2026_i1_shapley_horizon_alignment_concern.md
           retention-days: 14
