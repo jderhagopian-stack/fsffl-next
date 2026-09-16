@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from fsffl.forecast.football_state import (
     CanonicalFootballStateEvidence,
     CanonicalRoleEvidence,
@@ -10,6 +12,7 @@ from fsffl.forecast.i1_artifact import FrozenI1Artifact, freeze_i1_model
 from fsffl.forecast.i1_config import FROZEN_I1_REGULARIZATION, I1RegularizationPolicy
 from fsffl.forecast.integrated_i1 import (
     I1_C,
+    I1_DIRECT_HORIZONS,
     I1ForecastInput,
     I1TrainingRow,
     IntegratedI1Model,
@@ -85,6 +88,13 @@ def _rows() -> tuple[I1TrainingRow, ...]:
     return tuple(rows)
 
 
+def _h3_rows() -> tuple[I1TrainingRow, ...]:
+    # The validated h=3 extension is a direct fit from completed-source facts.
+    # It uses the same I1 family but is fit on h=3 rows rather than mixing h=3
+    # into the already-validated h=1/h=2 deployment fit.
+    return tuple(replace(row, horizon=3) for row in _rows())
+
+
 def _input(*, rich: bool, horizon: int = 1) -> I1ForecastInput:
     return I1ForecastInput(
         position=Position.WR,
@@ -103,6 +113,7 @@ def test_i1_c_is_governed_and_frozen_at_current_candidate() -> None:
     assert FROZEN_I1_REGULARIZATION.c_for("persistence.rich") == 0.25
     assert FROZEN_I1_REGULARIZATION.c_for("conditional.reduced.elite") == 0.25
     assert I1_C == FROZEN_I1_REGULARIZATION.default_c
+    assert I1_DIRECT_HORIZONS == (1, 2, 3)
 
 
 def test_i1_regularization_policy_supports_future_governed_component_update() -> None:
@@ -133,6 +144,19 @@ def test_missing_roster_evidence_uses_reduced_path_not_inferred_death() -> None:
     assert result.probabilities["out"] < 1.0
 
 
+def test_direct_h3_uses_same_nonrecursive_i1_family() -> None:
+    model = IntegratedI1Model(_h3_rows())
+    item = _input(rich=False, horizon=3)
+    result = model.predict(item)
+    features = feature_vector_for_validation(item, rich=False)
+
+    assert features["h=3"] == 1
+    assert "h=1" not in features and "h=2" not in features
+    assert result.evidence_path == "reduced"
+    assert result.anticipated_points >= 0
+    assert abs(sum(result.probabilities.values()) - 1.0) < 1e-12
+
+
 def test_frozen_artifact_round_trip_matches_fitted_model() -> None:
     model = IntegratedI1Model(_rows())
     artifact = freeze_i1_model(model, metadata={"fixture": True})
@@ -149,6 +173,22 @@ def test_frozen_artifact_round_trip_matches_fitted_model() -> None:
             assert actual.state_means == expected.state_means
             for state in STATE_NAMES:
                 assert abs(actual.probabilities[state] - expected.probabilities[state]) <= 1e-12
+
+
+def test_direct_h3_frozen_artifact_round_trip_matches_fitted_model() -> None:
+    model = IntegratedI1Model(_h3_rows())
+    artifact = freeze_i1_model(model, metadata={"fixture": True, "direct_horizon": 3})
+    loaded = FrozenI1Artifact.from_dict(artifact.to_dict())
+    for rich in (True, False):
+        item = _input(rich=rich, horizon=3)
+        expected = model.predict(item)
+        actual = loaded.predict(item)
+        assert actual.evidence_path == expected.evidence_path
+        assert abs(actual.persistence_probability - expected.persistence_probability) <= 1e-12
+        assert abs(actual.anticipated_points - expected.anticipated_points) <= 1e-12
+        assert actual.state_means == expected.state_means
+        for state in STATE_NAMES:
+            assert abs(actual.probabilities[state] - expected.probabilities[state]) <= 1e-12
 
 
 def test_provider_specific_codes_map_to_identical_canonical_features() -> None:
