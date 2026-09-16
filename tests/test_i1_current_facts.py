@@ -83,11 +83,16 @@ def _row(
     )
 
 
-def _artifact(*rows: CurrentI1SourceFact, evaluation_season: int = 2026) -> CurrentI1FactsArtifact:
+def _artifact(
+    *rows: CurrentI1SourceFact,
+    evaluation_season: int = 2026,
+    source_season_complete: bool = True,
+) -> CurrentI1FactsArtifact:
     return CurrentI1FactsArtifact(
         schema_version=I1_CURRENT_FACTS_SCHEMA_VERSION,
         evaluation_season=evaluation_season,
         completed_source_season=evaluation_season - 1,
+        source_season_complete=source_season_complete,
         state_boundary_version="bounds-v1",
         source_version="facts-v1",
         rows=tuple(rows),
@@ -113,16 +118,20 @@ def test_mapping_prefers_stable_identity_then_unique_name_fallback_and_preserves
 
     assert result.mapped_count == 2
     assert result.mapped_source_ids == {"p1": "s1", "p2": "s2"}
-    assert result.target_seasons == (2026, 2027)
+    assert result.target_seasons == (2026, 2027, 2028)
     assert result.target_season(1) == result.evaluation_season
     assert result.target_is_after_evaluation(1) is False
     assert result.target_is_after_evaluation(2) is True
+    assert result.target_is_after_evaluation(3) is True
     for player_id in ("p1", "p2"):
-        horizon_1, horizon_2 = result.inputs[player_id]
-        assert (horizon_1.horizon, horizon_2.horizon) == (1, 2)
+        horizon_1, horizon_2, horizon_3 = result.inputs[player_id]
+        assert (horizon_1.horizon, horizon_2.horizon, horizon_3.horizon) == (1, 2, 3)
         assert horizon_1.evidence.roster_coverage is False
         assert horizon_1.evidence.injury_coverage is False
         assert horizon_1.evidence.participation_coverage is False
+        # Direct h=3 uses the identical completed-source facts, never an h=1/h=2 prediction.
+        assert horizon_3.current_points == horizon_2.current_points == horizon_1.current_points == 180.0
+        assert horizon_3.prior_points == horizon_2.prior_points == horizon_1.prior_points == 145.0
 
 
 def test_missing_source_fact_fails_closed_without_inventing_zero() -> None:
@@ -158,6 +167,11 @@ def test_source_rows_must_match_declared_completed_source_season() -> None:
         _artifact(_row("s1", "Wrong Season", source_season=2024))
 
 
+def test_partial_active_season_cannot_be_declared_completed_source() -> None:
+    with pytest.raises(ValueError, match="partial active season"):
+        _artifact(_row("s1", "Partial Season"), source_season_complete=False)
+
+
 def test_role_band_is_governed_when_role_evidence_is_present() -> None:
     with pytest.raises(ValueError, match="role band"):
         _row("s1", "Bad Role", role_band="alpha")
@@ -174,5 +188,6 @@ def test_only_supported_i1_horizons_have_calendar_targets() -> None:
         _league_state(Player(player_id="p1", full_name="Mapped", position=Position.WR)),
         _artifact(_row("s1", "Mapped")),
     )
-    with pytest.raises(ValueError, match="horizon must be 1 or 2"):
-        result.target_season(3)
+    assert result.target_season(3) == 2028
+    with pytest.raises(ValueError, match="horizon must be 1, 2, or 3"):
+        result.target_season(4)
