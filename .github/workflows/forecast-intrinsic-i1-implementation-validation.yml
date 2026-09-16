@@ -16,6 +16,10 @@ on:
       - '.github/workflows/forecast-intrinsic-i1-implementation-validation.yml'
   workflow_dispatch:
 
+concurrency:
+  group: forecast-intrinsic-i1-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   actions: read
