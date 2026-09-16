@@ -20,7 +20,10 @@ from fsffl.state.models import Position
 POSITIONS = ("QB", "RB", "WR", "TE")
 FROZEN_SOURCE_MAX = 2022
 H3_SOURCE_MAX = 2021
-CURRENT_SOURCE_URL = "nflverse:nflreadpy+Sleeper"
+CURRENT_SOURCE_COORDINATE = (
+    "Fantasy-Football-Analytics-Textbook/player_stats_seasonal.RData"
+    "+nflverse/nflreadpy+Sleeper"
+)
 SLEEPER_PLAYERS_URL = "https://api.sleeper.app/v1/players/nfl"
 
 
@@ -66,31 +69,44 @@ def _final_records(*, panel, by, usage, ev, base, pf, bounds, horizons, source_m
             if target_season > 2024:
                 continue
             truth = pf.target_truth(
-                base, by, ev["roster_year"], ev["injury_map"], x.player_id,
-                x.season, x.position, horizon, bounds,
+                base,
+                by,
+                ev["roster_year"],
+                ev["injury_map"],
+                x.player_id,
+                x.season,
+                x.position,
+                horizon,
+                bounds,
             )
             if not truth["resolved"]:
                 continue
             target = by.get((x.player_id, target_season))
-            rows.append({
-                "position": x.position,
-                "age": band,
-                "current": current,
-                "h": horizon,
-                "points": max(0.0, float(target.points)) if target is not None else 0.0,
-                "srcpts": max(0.0, float(x.points)),
-                "prev": prior_points,
-                "exp": x.experience,
-                "u": usage.get((x.player_id, x.season)),
-                "e": source_ev,
-                "cov": bool(source_ev and float(source_ev.get("roster_weeks", 0) or 0) > 0),
-                "persist": int(truth["persist"]),
-                "state": truth["state"],
-            })
+            rows.append(
+                {
+                    "position": x.position,
+                    "age": band,
+                    "current": current,
+                    "h": horizon,
+                    "points": max(0.0, float(target.points)) if target is not None else 0.0,
+                    "srcpts": max(0.0, float(x.points)),
+                    "prev": prior_points,
+                    "exp": x.experience,
+                    "u": usage.get((x.player_id, x.season)),
+                    "e": source_ev,
+                    "cov": bool(source_ev and float(source_ev.get("roster_weeks", 0) or 0) > 0),
+                    "persist": int(truth["persist"]),
+                    "state": truth["state"],
+                }
+            )
     return rows
 
 
-def _roundtrip_check(model: IntegratedI1Model, artifact: FrozenI1Artifact, training_rows) -> dict[str, float | int]:
+def _roundtrip_check(
+    model: IntegratedI1Model,
+    artifact: FrozenI1Artifact,
+    training_rows,
+) -> dict[str, float | int]:
     max_prob = 0.0
     max_points = 0.0
     sampled = 0
@@ -111,17 +127,28 @@ def _roundtrip_check(model: IntegratedI1Model, artifact: FrozenI1Artifact, train
             actual = artifact.predict(item)
         except ValueError:
             continue
-        max_prob = max(max_prob, max(
-            abs(float(expected.probabilities[k]) - float(actual.probabilities[k]))
-            for k in expected.probabilities
-        ))
-        max_points = max(max_points, abs(expected.anticipated_points - actual.anticipated_points))
+        max_prob = max(
+            max_prob,
+            max(
+                abs(float(expected.probabilities[k]) - float(actual.probabilities[k]))
+                for k in expected.probabilities
+            ),
+        )
+        max_points = max(
+            max_points,
+            abs(expected.anticipated_points - actual.anticipated_points),
+        )
         sampled += 1
     if sampled < 1 or max_prob > 1e-10 or max_points > 1e-8:
         raise RuntimeError(
-            f"frozen artifact roundtrip failed: sampled={sampled} max_prob={max_prob} max_points={max_points}"
+            "frozen artifact roundtrip failed: "
+            f"sampled={sampled} max_prob={max_prob} max_points={max_points}"
         )
-    return {"sampled": sampled, "max_probability_diff": max_prob, "max_anticipated_points_diff": max_points}
+    return {
+        "sampled": sampled,
+        "max_probability_diff": max_prob,
+        "max_anticipated_points_diff": max_points,
+    }
 
 
 def _sleepers() -> dict[str, dict]:
@@ -146,41 +173,166 @@ def _source_age(birth_date, source_season: int):
     return max(0.0, (date(source_season, 9, 1) - born).days / 365.2425)
 
 
-def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: int):
+def _load_frozen_coordinate_points(path: Path) -> pd.DataFrame:
+    frame = pd.read_csv(path)
+    required = {"player_id", "season", "position", "fantasy_points"}
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise RuntimeError(f"frozen-coordinate source is missing columns: {missing}")
+    frame = frame[list(required)].copy()
+    frame["player_id"] = frame["player_id"].astype(str).str.strip()
+    frame["season"] = pd.to_numeric(frame["season"], errors="raise").astype(int)
+    frame["position"] = frame["position"].astype(str).str.upper()
+    frame["fantasy_points"] = pd.to_numeric(frame["fantasy_points"], errors="raise")
+    frame = frame[
+        frame["player_id"].ne("")
+        & frame["position"].isin(POSITIONS)
+        & frame["fantasy_points"].notna()
+    ].copy()
+    duplicate = frame.duplicated(["player_id", "season"], keep=False)
+    if duplicate.any():
+        sample = frame.loc[duplicate, ["player_id", "season"]].head(10).to_dict("records")
+        raise RuntimeError(f"duplicate frozen-coordinate player-season rows: {sample}")
+    return frame
+
+
+def _coordinate_validation(
+    *,
+    career_csv: Path,
+    source_points: pd.DataFrame,
+    runtime_stats: pd.DataFrame,
+) -> tuple[dict[str, object], dict[str, object]]:
+    seasons = [2020, 2021, 2022]
+    career = pd.read_csv(career_csv)
+    frozen = career[career["season"].isin(seasons)][
+        ["player_id", "season", "position", "fantasy_points"]
+    ].copy()
+    candidate = source_points[source_points["season"].isin(seasons)][
+        ["player_id", "season", "position", "fantasy_points"]
+    ].copy()
+    frozen["player_id"] = frozen["player_id"].astype(str)
+    candidate["player_id"] = candidate["player_id"].astype(str)
+    frozen_keys = set(zip(frozen["player_id"], frozen["season"], frozen["position"]))
+    candidate_keys = set(zip(candidate["player_id"], candidate["season"], candidate["position"]))
+    if frozen_keys != candidate_keys:
+        missing = sorted(frozen_keys - candidate_keys)[:10]
+        extra = sorted(candidate_keys - frozen_keys)[:10]
+        raise RuntimeError(
+            "frozen completed-source coordinate does not reproduce research row coverage: "
+            f"missing={missing}; extra={extra}"
+        )
+    compare = frozen.merge(
+        candidate,
+        on=["player_id", "season", "position"],
+        how="inner",
+        suffixes=("_research", "_source"),
+    )
+    compare["abs_diff"] = (
+        compare["fantasy_points_research"] - compare["fantasy_points_source"]
+    ).abs()
+    max_diff = float(compare["abs_diff"].max()) if not compare.empty else math.inf
+    mean_diff = float(compare["abs_diff"].mean()) if not compare.empty else math.inf
+    if len(compare) != len(frozen) or max_diff > 1e-12:
+        raise RuntimeError(
+            "frozen completed-source scoring coordinate failed exact research parity: "
+            f"rows={len(compare)}/{len(frozen)} max_diff={max_diff}"
+        )
+    exact = {
+        "source": "Fantasy-Football-Analytics-Textbook/player_stats_seasonal.RData",
+        "rows": int(len(compare)),
+        "expected_rows": int(len(frozen)),
+        "max_abs_fantasy_points_diff": max_diff,
+        "mean_abs_fantasy_points_diff": mean_diff,
+        "seasons": seasons,
+        "acceptance_tolerance": 1e-12,
+        "status": "PASS",
+    }
+
+    pid = _col(runtime_stats, "player_id", "gsis_id")
+    season_col = _col(runtime_stats, "season")
+    points_col = _col(runtime_stats, "fantasy_points", "fantasyPoints")
+    runtime = runtime_stats[runtime_stats[season_col].isin(seasons)][
+        [pid, season_col, points_col]
+    ].copy()
+    runtime.columns = ["player_id", "season", "runtime_points"]
+    runtime["player_id"] = runtime["player_id"].astype(str)
+    audit = candidate[["player_id", "season", "fantasy_points"]].merge(
+        runtime,
+        on=["player_id", "season"],
+        how="inner",
+    )
+    if audit.empty:
+        drift = {
+            "source": "current nflverse/nflreadpy",
+            "overlap_rows": 0,
+            "max_abs_fantasy_points_diff": None,
+            "mean_abs_fantasy_points_diff": None,
+            "acceptance_gate": False,
+        }
+    else:
+        audit["abs_diff"] = (audit["fantasy_points"] - audit["runtime_points"]).abs()
+        drift = {
+            "source": "current nflverse/nflreadpy",
+            "overlap_rows": int(len(audit)),
+            "max_abs_fantasy_points_diff": float(audit["abs_diff"].max()),
+            "mean_abs_fantasy_points_diff": float(audit["abs_diff"].mean()),
+            "acceptance_gate": False,
+            "note": (
+                "Audit only. Current nflverse stat corrections may differ from the frozen "
+                "research data vintage and are not substituted for the governed research coordinate."
+            ),
+        }
+    return exact, drift
+
+
+def _build_current_facts(
+    *,
+    career_csv: Path,
+    source_points_csv: Path,
+    base,
+    bounds,
+    evaluation_season: int,
+):
     source_season = evaluation_season - 1
     prior_season = source_season - 1
 
-    reg = _pandas(nfl.load_player_stats([2020, 2021, 2022, prior_season, source_season], summary_level="reg"))
+    source_points = _load_frozen_coordinate_points(source_points_csv)
+    if not (source_points["season"] == source_season).any():
+        raise RuntimeError(
+            f"frozen completed-source coordinate has no rows for completed season {source_season}"
+        )
+
+    reg = _pandas(
+        nfl.load_player_stats(
+            [2020, 2021, 2022, prior_season, source_season],
+            summary_level="reg",
+        )
+    )
     weekly = _pandas(nfl.load_player_stats([source_season], summary_level="week"))
     players = _pandas(nfl.load_players())
     rosters = _pandas(nfl.load_rosters([source_season]))
     sleeper = _sleepers()
 
-    pid = _col(reg, "player_id", "gsis_id")
-    season_col = _col(reg, "season")
-    points_col = _col(reg, "fantasy_points", "fantasyPoints")
     position_col = _col(reg, "position_group", "position")
     reg = reg[reg[position_col].astype(str).isin(POSITIONS)].copy()
+    coordinate_validation, runtime_drift_audit = _coordinate_validation(
+        career_csv=career_csv,
+        source_points=source_points,
+        runtime_stats=reg,
+    )
 
-    career = pd.read_csv(career_csv)
-    frozen = career[career["season"].isin([2020, 2021, 2022])][["player_id", "season", "fantasy_points"]].copy()
-    current = reg[reg[season_col].isin([2020, 2021, 2022])][[pid, season_col, points_col]].copy()
-    current.columns = ["player_id", "season", "candidate_points"]
-    compare = frozen.merge(current, on=["player_id", "season"], how="inner")
-    if compare.empty:
-        raise RuntimeError("no overlapping rows to validate completed-source fantasy-points coordinate")
-    compare["abs_diff"] = (compare["fantasy_points"] - compare["candidate_points"]).abs()
-    max_diff = float(compare["abs_diff"].max())
-    mean_diff = float(compare["abs_diff"].mean())
-    if max_diff > 1e-6:
-        raise RuntimeError(
-            f"nflreadpy fantasy_points does not reproduce frozen research coordinate: max_diff={max_diff}"
-        )
-
-    source_rows = reg[reg[season_col] == source_season].copy()
-    prior_rows = reg[reg[season_col] == prior_season].copy()
-    source_by = {str(r[pid]): r for _, r in source_rows.iterrows() if pd.notna(r[pid])}
-    prior_by = {str(r[pid]): float(r[points_col]) for _, r in prior_rows.iterrows() if pd.notna(r[pid])}
+    source_rows = source_points[source_points["season"] == source_season].copy()
+    prior_rows = source_points[source_points["season"] == prior_season].copy()
+    source_by = {
+        str(row["player_id"]): row
+        for _, row in source_rows.iterrows()
+        if pd.notna(row["player_id"])
+    }
+    prior_by = {
+        str(row["player_id"]): float(row["fantasy_points"])
+        for _, row in prior_rows.iterrows()
+        if pd.notna(row["player_id"])
+    }
 
     w_pid = _col(weekly, "player_id", "gsis_id")
     w_pos = _col(weekly, "position_group", "position")
@@ -188,7 +340,7 @@ def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: i
     w_carries = _col(weekly, "carries", "rushing_attempts", required=False)
     w_targets = _col(weekly, "targets", required=False)
     weekly = weekly[weekly[w_pos].astype(str).isin(POSITIONS)].copy()
-    role: dict[str, tuple[float, float]] = {}
+    role: dict[str, tuple[str, float, float]] = {}
     for player_id, group in weekly.groupby(w_pid):
         position = str(group.iloc[0][w_pos])
         games = float(len(group))
@@ -201,27 +353,48 @@ def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: i
             )
         else:
             total = float(group[w_targets].fillna(0).sum()) if w_targets else 0.0
-        role[str(player_id)] = (games, total / games if games > 0 else 0.0)
+        role[str(player_id)] = (position, games, total / games if games > 0 else 0.0)
 
     median_by_pos: dict[str, float] = {}
     for pos in POSITIONS:
         vals = []
-        for player_id, (games, opg) in role.items():
+        for player_id, (role_position, games, opg) in role.items():
             row = source_by.get(player_id)
-            if games > 0 and row is not None and str(row[position_col]) == pos:
+            if (
+                games > 0
+                and row is not None
+                and str(row["position"]) == pos
+                and role_position == pos
+            ):
                 vals.append(opg)
         median_by_pos[pos] = float(pd.Series(vals).median()) if vals else 0.0
 
     p_id = _col(players, "gsis_id", "player_id")
     p_birth = _col(players, "birth_date", "birthdate", required=False)
-    p_rookie = _col(players, "rookie_season", "entry_year", "draft_year", required=False)
-    player_by = {str(r[p_id]): r for _, r in players.iterrows() if pd.notna(r[p_id])}
+    p_rookie = _col(
+        players,
+        "rookie_season",
+        "entry_year",
+        "draft_year",
+        required=False,
+    )
+    player_by = {
+        str(row[p_id]): row
+        for _, row in players.iterrows()
+        if pd.notna(row[p_id])
+    }
 
     r_id = _col(rosters, "gsis_id", "gsis_it", "player_id")
-    roster_ids = {str(v) for v in rosters[r_id].dropna().astype(str)}
+    roster_ids = {str(value) for value in rosters[r_id].dropna().astype(str)}
 
     rows = []
-    counts = {"stats": 0, "roster_zero": 0, "rookie_zero": 0, "unsupported": 0}
+    counts = {
+        "frozen_coordinate_stats": 0,
+        "roster_zero": 0,
+        "rookie_zero": 0,
+        "unsupported": 0,
+    }
+    source_version = f"private-beta-completed-source-{source_season}-frozen-coordinate-v2"
     for sleeper_id, raw in sorted(sleeper.items()):
         position = str(raw.get("position") or "").upper()
         team = raw.get("team")
@@ -234,6 +407,8 @@ def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: i
             or sleeper_id
         ).strip()
         source = source_by.get(gsis) if gsis else None
+        if source is not None and str(source["position"]) != position:
+            source = None
         identity = player_by.get(gsis) if gsis else None
         rookie_season = None
         if identity is not None and p_rookie and pd.notna(identity[p_rookie]):
@@ -247,11 +422,18 @@ def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: i
         games = opportunity = None
         role_band = None
         if source is not None:
-            points = max(0.0, float(source[points_col]))
-            counts["stats"] += 1
+            points = max(0.0, float(source["fantasy_points"]))
+            counts["frozen_coordinate_stats"] += 1
             if gsis in role:
-                games, opportunity = role[gsis]
-                role_band = "weak" if opportunity < median_by_pos.get(position, 0.0) else "established"
+                role_position, games, opportunity = role[gsis]
+                if role_position == position:
+                    role_band = (
+                        "weak"
+                        if opportunity < median_by_pos.get(position, 0.0)
+                        else "established"
+                    )
+                else:
+                    games = opportunity = None
         elif gsis and gsis in roster_ids:
             points = 0.0
             games, opportunity, role_band = 0.0, 0.0, "weak"
@@ -265,26 +447,33 @@ def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: i
 
         birth = identity[p_birth] if identity is not None and p_birth else None
         age = _source_age(birth, source_season)
-        experience = max(0, source_season - rookie_season) if rookie_season is not None else None
-        prior = prior_by.get(gsis) if gsis else None
+        experience = (
+            max(0, source_season - rookie_season)
+            if rookie_season is not None
+            else None
+        )
+        prior_raw = prior_by.get(gsis) if gsis else None
+        prior = None if prior_raw is None else max(0.0, float(prior_raw))
         current_state = base.state_for_points(points, bounds[position])
-        rows.append({
-            "source_player_id": f"sleeper:{sleeper_id}",
-            "display_name": display_name,
-            "position": position,
-            "source_season": source_season,
-            "current_fantasy_points": points,
-            "prior_fantasy_points": prior,
-            "age_years": age,
-            "experience_years": experience,
-            "current_state": current_state,
-            "games": games,
-            "opportunity_per_game": opportunity,
-            "role_band": role_band,
-            "source_version": f"private-beta-completed-source-{source_season}-v1",
-            "identity_provider": "sleeper",
-            "identity_external_id": sleeper_id,
-        })
+        rows.append(
+            {
+                "source_player_id": f"sleeper:{sleeper_id}",
+                "display_name": display_name,
+                "position": position,
+                "source_season": source_season,
+                "current_fantasy_points": points,
+                "prior_fantasy_points": prior,
+                "age_years": age,
+                "experience_years": experience,
+                "current_state": current_state,
+                "games": games,
+                "opportunity_per_game": opportunity,
+                "role_band": role_band,
+                "source_version": source_version,
+                "identity_provider": "sleeper",
+                "identity_external_id": sleeper_id,
+            }
+        )
 
     artifact = {
         "schema_version": I1_CURRENT_FACTS_SCHEMA_VERSION,
@@ -292,17 +481,21 @@ def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: i
         "completed_source_season": source_season,
         "source_season_complete": True,
         "state_boundary_version": "i1-final-boundaries-source-2012-2022-v1",
-        "source_version": f"private-beta-completed-source-{source_season}-v1",
+        "source_version": source_version,
         "rows": rows,
         "metadata": {
-            "providers": ["nflverse/nflreadpy", "Sleeper"],
+            "providers": [
+                "Fantasy-Football-Analytics-Textbook/player_stats_seasonal.RData",
+                "nflverse/nflreadpy",
+                "Sleeper",
+            ],
             "provider_neutral_contract": True,
-            "research_coordinate_validation": {
-                "overlap_rows": int(len(compare)),
-                "max_abs_fantasy_points_diff": max_diff,
-                "mean_abs_fantasy_points_diff": mean_diff,
-                "seasons": [2020, 2021, 2022],
-            },
+            "research_coordinate_validation": coordinate_validation,
+            "secondary_source_drift_audit": runtime_drift_audit,
+            "scoring_coordinate": (
+                "frozen research fantasyPoints coordinate; standard/non-PPR semantics; "
+                "current nflverse revisions retained only as a non-authoritative drift audit"
+            ),
             "coverage_policy": {
                 "roster_continuity": False,
                 "injury_practice": False,
@@ -312,8 +505,10 @@ def _build_current_facts(*, career_csv: Path, base, bounds, evaluation_season: i
                 "reduced_path_authorized": True,
             },
             "zero_fact_basis_counts": counts,
-            "rights_classification": "acceptable_for_beta_but_must_be_replaced_or_cleared_before_commercial_launch",
-            "source_note": CURRENT_SOURCE_URL,
+            "rights_classification": (
+                "acceptable_for_beta_but_must_be_replaced_or_cleared_before_commercial_launch"
+            ),
+            "source_note": CURRENT_SOURCE_COORDINATE,
         },
     }
     return artifact
@@ -324,6 +519,7 @@ def main() -> None:
     parser.add_argument("--research-root", type=Path, required=True)
     parser.add_argument("--career-panel", type=Path, required=True)
     parser.add_argument("--usage-panel", type=Path, required=True)
+    parser.add_argument("--source-points-csv", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--evaluation-season", type=int, default=2026)
     args = parser.parse_args()
@@ -334,10 +530,22 @@ def main() -> None:
     validator = _load(root / "validate_i1_production_parity.py", "activation_validator")
 
     rs = args.research_root / "scripts"
-    pf = _load(rs / "run_persistence_first_forecast_calibration.py", "activation_pf")
-    legacy = _load(rs / "run_fundamental_intrinsic_residual_calibration.py", "activation_legacy")
-    base = _load(rs / "run_intrinsic_explicit_state_challenge.py", "activation_base")
-    evt = _load(rs / "reconstruct_event_time_absence_cause_evidence.py", "activation_evt")
+    pf = _load(
+        rs / "run_persistence_first_forecast_calibration.py",
+        "activation_pf",
+    )
+    legacy = _load(
+        rs / "run_fundamental_intrinsic_residual_calibration.py",
+        "activation_legacy",
+    )
+    base = _load(
+        rs / "run_intrinsic_explicit_state_challenge.py",
+        "activation_base",
+    )
+    evt = _load(
+        rs / "reconstruct_event_time_absence_cause_evidence.py",
+        "activation_evt",
+    )
 
     panel = legacy.load_rows(args.career_panel)
     by = {(row.player_id, row.season): row for row in panel}
@@ -346,12 +554,26 @@ def main() -> None:
     bounds = base.fit_state_boundaries(panel, FROZEN_SOURCE_MAX + 1)
 
     records_h12 = _final_records(
-        panel=panel, by=by, usage=usage, ev=ev, base=base, pf=pf,
-        bounds=bounds, horizons=(1, 2), source_max=FROZEN_SOURCE_MAX,
+        panel=panel,
+        by=by,
+        usage=usage,
+        ev=ev,
+        base=base,
+        pf=pf,
+        bounds=bounds,
+        horizons=(1, 2),
+        source_max=FROZEN_SOURCE_MAX,
     )
     records_h3 = _final_records(
-        panel=panel, by=by, usage=usage, ev=ev, base=base, pf=pf,
-        bounds=bounds, horizons=(3,), source_max=H3_SOURCE_MAX,
+        panel=panel,
+        by=by,
+        usage=usage,
+        ev=ev,
+        base=base,
+        pf=pf,
+        bounds=bounds,
+        horizons=(3,),
+        source_max=H3_SOURCE_MAX,
     )
     rows_h12 = validator.training_rows_from_research(records_h12, Position)
     rows_h3 = validator.training_rows_from_research(records_h3, Position)
@@ -359,11 +581,20 @@ def main() -> None:
     model_h3 = IntegratedI1Model(rows_h3)
     artifact_h12 = freeze_i1_model(
         model_h12,
-        metadata={"fit": "final-h1-h2", "source_season_max": FROZEN_SOURCE_MAX, "training_rows": len(rows_h12)},
+        metadata={
+            "fit": "final-h1-h2",
+            "source_season_max": FROZEN_SOURCE_MAX,
+            "training_rows": len(rows_h12),
+        },
     )
     artifact_h3 = freeze_i1_model(
         model_h3,
-        metadata={"fit": "final-direct-h3", "source_season_max": H3_SOURCE_MAX, "training_rows": len(rows_h3), "recursive": False},
+        metadata={
+            "fit": "final-direct-h3",
+            "source_season_max": H3_SOURCE_MAX,
+            "training_rows": len(rows_h3),
+            "recursive": False,
+        },
     )
     checks = {
         "h1_h2": _roundtrip_check(model_h12, artifact_h12, rows_h12),
@@ -371,6 +602,7 @@ def main() -> None:
     }
     current = _build_current_facts(
         career_csv=args.career_panel,
+        source_points_csv=args.source_points_csv,
         base=base,
         bounds=bounds,
         evaluation_season=args.evaluation_season,
@@ -380,7 +612,8 @@ def main() -> None:
     artifact_h12.dump(args.output_dir / "frozen_i1_h12.json")
     artifact_h3.dump(args.output_dir / "frozen_i1_h3.json")
     (args.output_dir / "current_i1_facts_2026.json").write_text(
-        json.dumps(current, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(current, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     report = {
         "status": "PASS",
@@ -394,7 +627,8 @@ def main() -> None:
         "reduced_path_authorized": True,
     }
     (args.output_dir / "private_beta_activation_build_report.json").write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     print(json.dumps(report, indent=2, sort_keys=True))
 
