@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   NFLREADPY_CACHE: filesystem
@@ -154,61 +154,6 @@ jobs:
           }, indent=2, sort_keys=True))
           PY
 
-      - name: Generate runtime activation bundle module
-        if: github.event_name == 'pull_request'
-        env:
-          ACTIVATION_WORKFLOW_RUN_ID: ${{ github.run_id }}
-        run: |
-          python - <<'PY'
-          import base64
-          import hashlib
-          import json
-          import os
-          import zlib
-          from pathlib import Path
-
-          root = Path('artifacts/implementation/private-beta-activation')
-          names = (
-              'frozen_i1_h12.json',
-              'frozen_i1_h3.json',
-              'current_i1_facts_2026.json',
-              'private_beta_activation_build_report.json',
-          )
-          payloads = {name: (root / name).read_bytes() for name in names}
-          hashes = {name: hashlib.sha256(payload).hexdigest() for name, payload in payloads.items()}
-          manifest = json.dumps(hashes, sort_keys=True, separators=(',', ':')).encode('utf-8')
-          bundle_hash = hashlib.sha256(manifest).hexdigest()
-          encoded = {
-              name: base64.b64encode(zlib.compress(payload, level=9)).decode('ascii')
-              for name, payload in payloads.items()
-          }
-          target = Path('src/fsffl/value/private_beta_activation_data.py')
-          target.write_text(
-              'from __future__ import annotations\n\n'
-              'import base64\nimport hashlib\nimport zlib\n\n'
-              '# Generated only after the governed private-beta activation build passes.\n'
-              '# Runtime consumers see provider-neutral JSON through the frozen schemas.\n\n'
-              f'ACTIVATION_WORKFLOW_RUN_ID = {int(os.environ["ACTIVATION_WORKFLOW_RUN_ID"])}\n'
-              f'ACTIVATION_BUNDLE_SHA256 = {bundle_hash!r}\n'
-              f'ACTIVATION_ARTIFACT_SHA256 = {hashes!r}\n'
-              f'_COMPRESSED_ARTIFACTS = {encoded!r}\n\n'
-              'def activation_artifact_text(name: str) -> str:\n'
-              '    try:\n'
-              '        encoded = _COMPRESSED_ARTIFACTS[name]\n'
-              '        expected = ACTIVATION_ARTIFACT_SHA256[name]\n'
-              '    except KeyError as exc:\n'
-              '        raise ValueError(f"missing private-beta activation artifact: {name}") from exc\n'
-              '    raw = zlib.decompress(base64.b64decode(encoded, validate=True))\n'
-              '    actual = hashlib.sha256(raw).hexdigest()\n'
-              '    if actual != expected:\n'
-              '        raise ValueError(f"private-beta activation artifact digest mismatch: {name}")\n'
-              '    return raw.decode("utf-8")\n',
-              encoding='utf-8',
-          )
-          print('runtime activation bundle:', bundle_hash)
-          print('artifact hashes:', json.dumps(hashes, indent=2, sort_keys=True))
-          PY
-
       - name: Upload private-beta activation artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -217,17 +162,3 @@ jobs:
           path: artifacts/implementation/private-beta-activation/*
           if-no-files-found: warn
           retention-days: 14
-
-      - name: Commit frozen runtime activation bundle
-        if: github.event_name == 'pull_request' && success()
-        run: |
-          if git ls-files --error-unmatch src/fsffl/value/private_beta_activation_data.py >/dev/null 2>&1 \
-             && git diff --quiet -- src/fsffl/value/private_beta_activation_data.py; then
-            echo 'runtime activation bundle unchanged'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/fsffl/value/private_beta_activation_data.py
-          git commit -m 'chore: freeze private-beta activation bundle'
-          git push origin HEAD:${{ github.head_ref }}
