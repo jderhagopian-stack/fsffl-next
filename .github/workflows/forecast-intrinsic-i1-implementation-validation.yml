@@ -9,12 +9,15 @@ on:
       - 'src/fsffl/forecast/i1_config.py'
       - 'src/fsffl/forecast/i1_current_facts.py'
       - 'src/fsffl/forecast/integrated_i1.py'
+      - 'src/fsffl/value/live_intrinsic_calendar.py'
       - 'src/fsffl/value/shapley_intrinsic.py'
       - 'scripts/check_i1_artifact_parity.py'
+      - 'scripts/validate_i1_h3_research_parity.py'
       - 'scripts/validate_i1_production_parity.py'
       - 'scripts/validate_i1_production_parity_v2.py'
       - 'tests/test_i1_current_facts.py'
       - 'tests/test_integrated_i1.py'
+      - 'tests/test_live_intrinsic_calendar.py'
       - 'tests/test_shapley_intrinsic.py'
       - 'artifacts/implementation/forecast_intrinsic_i1_validation_protocol.md'
       - 'artifacts/implementation/i1_final_fit_current_adapter_protocol.md'
@@ -40,11 +43,16 @@ jobs:
     steps:
       - name: Checkout implementation
         uses: actions/checkout@v4
-      - name: Checkout frozen research oracle
+      - name: Checkout frozen h1/h2 research oracle
         uses: actions/checkout@v4
         with:
           ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
           path: research_ref
+      - name: Checkout frozen direct-h3 research oracle
+        uses: actions/checkout@v4
+        with:
+          ref: 744952af01140daa0cbdbff9b0683018d4db0e0d
+          path: h3_research_ref
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: release
@@ -58,12 +66,13 @@ jobs:
           pytest -q
           tests/test_integrated_i1.py
           tests/test_i1_current_facts.py
+          tests/test_live_intrinsic_calendar.py
           tests/test_shapley_intrinsic.py
       - name: Build frozen PIT football panels from research oracle
         run: |
           Rscript research_ref/scripts/extract_career_transition_panel.R
           Rscript research_ref/scripts/extract_forecast_usage_panel.R
-      - name: Download frozen authoritative research artifacts
+      - name: Download frozen authoritative h1/h2 research artifacts
         run: |
           mkdir -p artifacts/implementation/frozen/model-a \
                    artifacts/implementation/frozen/qb \
@@ -86,7 +95,7 @@ jobs:
           unzip -q /tmp/persistence.zip -d artifacts/implementation/frozen/persistence
           unzip -q /tmp/integrated.zip -d artifacts/implementation/frozen/integrated
           unzip -q /tmp/downstream.zip -d artifacts/implementation/frozen/downstream
-      - name: Run frozen research parity validation
+      - name: Run frozen h1/h2 research parity validation
         run: |
           mkdir -p artifacts/implementation/results
           python scripts/validate_i1_production_parity_v2.py \
@@ -102,6 +111,14 @@ jobs:
             --downstream-results artifacts/implementation/frozen/downstream/integrated-downstream/results/integrated_forecast_shapley_downstream_results.json \
             --downstream-rows artifacts/implementation/frozen/downstream/integrated-downstream/results/integrated_forecast_shapley_rows.json \
             --output artifacts/implementation/results/production_parity.json
+      - name: Run frozen direct-h3 research parity validation
+        run: |
+          python scripts/validate_i1_h3_research_parity.py \
+            --research-root h3_research_ref \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --forecast-freeze h3_research_ref/artifacts/research/live_forecast_horizon_final_forecast_freeze.json \
+            --output artifacts/implementation/results/h3_production_parity.json
       - name: Re-run locked 10-point Constitution oracle
         run: |
           gh api repos/${{ github.repository }}/actions/artifacts/10382432938/zip > /tmp/decomp.zip
