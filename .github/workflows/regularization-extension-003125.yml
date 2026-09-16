@@ -1,0 +1,64 @@
+name: Research Regularization Extension 0.03125
+
+on:
+  pull_request:
+    branches: [research/integrated-multivariate-forecast]
+    paths:
+      - '.github/workflows/regularization-extension-003125.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  extension:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research tooling
+        run: python -m pip install -e . pandas scikit-learn nflreadpy pyarrow
+      - name: Rebuild the same strict-PIT evidence bundle
+        run: |
+          Rscript scripts/extract_career_transition_panel.R
+          Rscript scripts/extract_forecast_usage_panel.R
+          mkdir -p artifacts/regularization-extension/frozen/qb \
+                   artifacts/regularization-extension/frozen/event \
+                   artifacts/regularization-extension/frozen/persistence \
+                   artifacts/regularization-extension/frozen/integrated
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10416382295/zip > /tmp/event.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10419402765/zip > /tmp/persistence.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10422858437/zip > /tmp/integrated.zip
+          unzip -q /tmp/qb.zip -d artifacts/regularization-extension/frozen/qb
+          unzip -q /tmp/event.zip -d artifacts/regularization-extension/frozen/event
+          unzip -q /tmp/persistence.zip -d artifacts/regularization-extension/frozen/persistence
+          unzip -q /tmp/integrated.zip -d artifacts/regularization-extension/frozen/integrated
+      - name: Run the one preauthorized bounded extension
+        run: |
+          mkdir -p artifacts/regularization-extension/results
+          python scripts/run_regularization_single_c.py \
+            --C 0.03125 \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --qb-results artifacts/regularization-extension/frozen/qb/qb_career_state_deployment_results.json \
+            --prior-integrated-json artifacts/regularization-extension/frozen/integrated/integrated-multivariate/results/integrated_multivariate_forecast_results.json \
+            --prior-event-json artifacts/regularization-extension/frozen/event/event-time/results/event_time_absence_cause_results.json \
+            --prior-persistence-json artifacts/regularization-extension/frozen/persistence/persistence-first/results/persistence_first_forecast_calibration_results.json \
+            --output-dir artifacts/regularization-extension/results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regularization-extension-C-0.03125
+          path: artifacts/regularization-extension/results/*
+          if-no-files-found: warn
+          retention-days: 14
