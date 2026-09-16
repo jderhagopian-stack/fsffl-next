@@ -1,0 +1,88 @@
+name: Research Live Forecast Calendar Shapley Downstream
+
+on:
+  pull_request:
+    branches: [research/regularization-developmental-calibration]
+    paths:
+      - 'artifacts/research/live_forecast_horizon_final_forecast_freeze.json'
+      - '.github/workflows/live-forecast-calendar-shapley-downstream.yml'
+      - 'scripts/run_live_calendar_shapley_downstream.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  downstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gate on final Forecast freeze
+        id: gate
+        run: |
+          if [ ! -f artifacts/research/live_forecast_horizon_final_forecast_freeze.json ]; then
+            echo 'authorized=false' >> "$GITHUB_OUTPUT"
+            echo 'Final Forecast coordinate is not frozen; downstream Shapley remains unread.'
+            exit 0
+          fi
+          python - <<'PY'
+          import json
+          d=json.load(open('artifacts/research/live_forecast_horizon_final_forecast_freeze.json'))
+          if not d.get('forecast_frozen'):
+              raise SystemExit('forecast_frozen is not true')
+          if d.get('downstream_shapley_accessed'):
+              raise SystemExit('freeze must be pre-downstream')
+          PY
+          echo 'authorized=true' >> "$GITHUB_OUTPUT"
+      - name: Checkout authoritative implementation consumer without modifying it
+        if: steps.gate.outputs.authorized == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: implementation/forecast-intrinsic-i1-shapley
+          path: implementation_ref
+      - uses: r-lib/actions/setup-r@v2
+        if: steps.gate.outputs.authorized == 'true'
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.authorized == 'true'
+        with:
+          python-version: '3.11'
+      - name: Install research and implementation dependencies
+        if: steps.gate.outputs.authorized == 'true'
+        run: python -m pip install -e implementation_ref pandas numpy scikit-learn nflreadpy pyarrow
+      - name: Run frozen 2048-permutation calendar-alignment diagnostic
+        if: steps.gate.outputs.authorized == 'true'
+        run: |
+          mkdir -p artifacts/live-forecast-horizon/downstream
+          python scripts/run_live_calendar_shapley_downstream.py \
+            --implementation-root implementation_ref \
+            --forecast-freeze artifacts/research/live_forecast_horizon_final_forecast_freeze.json \
+            --output artifacts/live-forecast-horizon/downstream/calendar_shapley_results.json
+      - name: Build career panel for locked Constitution oracle
+        if: steps.gate.outputs.authorized == 'true'
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Re-run locked 10-point Intrinsic Constitution unchanged
+        if: steps.gate.outputs.authorized == 'true'
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts/10382432938/zip > /tmp/decomp.zip
+          mkdir -p artifacts/live-forecast-horizon/frozen-decomp
+          unzip -q /tmp/decomp.zip -d artifacts/live-forecast-horizon/frozen-decomp
+          python scripts/run_intrinsic_constitution_shapley_validation_v2.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --decomp-rows artifacts/live-forecast-horizon/frozen-decomp/shapley-decomp/results/shapley_target_decomposition_rows.json \
+            --output artifacts/live-forecast-horizon/downstream/constitution_results.json
+      - name: Upload downstream evidence
+        if: steps.gate.outputs.authorized == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-forecast-calendar-shapley-downstream
+          path: |
+            artifacts/live-forecast-horizon/downstream/*.json
+            artifacts/research/live_forecast_horizon_final_forecast_freeze.json
+          if-no-files-found: error
+          retention-days: 14
