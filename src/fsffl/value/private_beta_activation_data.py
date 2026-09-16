@@ -10,16 +10,16 @@ from ._private_beta_activation_h12 import BZ2_BASE64 as H12_BZ2_BASE64
 from ._private_beta_activation_h3 import BZ2_BASE64 as H3_BZ2_BASE64
 from ._private_beta_activation_report import BZ2_BASE64 as REPORT_BZ2_BASE64
 
-# Generated from successful private-beta activation workflow run 35127295366.
+# Generated from successful private-beta activation workflow run 35130479520.
 # Runtime consumers see provider-neutral JSON only through the frozen schemas.
-ACTIVATION_WORKFLOW_RUN_ID = 35127295366
+ACTIVATION_WORKFLOW_RUN_ID = 35130479520
 ACTIVATION_ARTIFACT_SHA256 = {
     "frozen_i1_h12.json": "6ad9d0e52235e711985a27ec6af6764268841f57188b444b857e173b7019a905",
     "frozen_i1_h3.json": "844391290ba14fc7c2ee84e1211b8963271df839b60c562214fefe757cd84b4d",
-    "current_i1_facts_2026.json": "4ee0719c40dfc067c23e76d09dda8e501fa95014dbc2162d10ee571882f07edf",
-    "private_beta_activation_build_report.json": "6ba83ea44546f597f0726d7c7dc9d9e4140f034b0b397e97f2501292879b9127",
+    "current_i1_facts_2026.json": "6e10c0b7772c01af569759aaebab1a600e572e214b98b66339b2221bd178b709",
+    "private_beta_activation_build_report.json": "3bbc92613cf630c07d33fb87d2dd13a30eef19f8688f5f4ddef85933dbe83513",
 }
-ACTIVATION_BUNDLE_SHA256 = "e3e8e62c6fc77bb80cdce1bfc0d33472ca6e3f13ebb9094c24f54d5ccd69ac21"
+ACTIVATION_BUNDLE_SHA256 = "9a2130bab2a7eda7667d1008fda95f4911bbcfa9e96fe5daa77afda97468bc02"
 _COMPRESSED_ARTIFACTS = {
     "frozen_i1_h12.json": H12_BZ2_BASE64,
     "frozen_i1_h3.json": H3_BZ2_BASE64,
