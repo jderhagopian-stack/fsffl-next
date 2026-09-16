@@ -72,7 +72,7 @@ def _row_names(row: pd.Series, name_columns: tuple[str, ...]) -> set[str]:
 
 
 def _roster_identity_index(source_season: int) -> tuple[dict[tuple[str, str], set[str]], set[str]]:
-    """Build a 2025-roster-limited name/position -> GSIS index.
+    """Build a completed-source-roster-limited name/position -> GSIS index.
 
     The bridge never invents a player id. It recovers an nflverse stable id only
     when the completed-source roster contains exactly one matching player after
@@ -123,7 +123,10 @@ def _roster_identity_index(source_season: int) -> tuple[dict[tuple[str, str], se
         gsis = str(raw_id).strip()
         if not gsis or gsis not in roster_ids:
             continue
-        position = str(row[player_position_col] or "").upper()
+        raw_position = row[player_position_col]
+        if pd.isna(raw_position):
+            continue
+        position = str(raw_position).upper()
         if position not in POSITIONS:
             continue
         known_ids.add(gsis)
