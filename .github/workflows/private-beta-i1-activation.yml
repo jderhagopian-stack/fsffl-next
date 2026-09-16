@@ -1,0 +1,93 @@
+name: Build private-beta I1 activation artifacts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/build_private_beta_i1_activation.py'
+      - '.github/workflows/private-beta-i1-activation.yml'
+      - 'src/fsffl/forecast/i1_artifact.py'
+      - 'src/fsffl/forecast/i1_current_facts.py'
+      - 'src/fsffl/forecast/integrated_i1.py'
+  workflow_dispatch:
+
+concurrency:
+  group: private-beta-i1-activation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-activation-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout implementation
+        uses: actions/checkout@v4
+
+      - name: Checkout frozen research oracle
+        uses: actions/checkout@v4
+        with:
+          ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+          path: research_ref
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install activation tooling
+        run: python -m pip install -e . pytest pandas nflreadpy pyarrow
+
+      - name: Build frozen PIT football panels
+        run: |
+          Rscript research_ref/scripts/extract_career_transition_panel.R
+          Rscript research_ref/scripts/extract_forecast_usage_panel.R
+
+      - name: Build 2026 private-beta activation artifacts
+        run: |
+          python scripts/build_private_beta_i1_activation.py \
+            --research-root research_ref \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --output-dir artifacts/implementation/private-beta-activation \
+            --evaluation-season 2026
+
+      - name: Verify artifact load and schema
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from fsffl.forecast.i1_artifact import FrozenI1Artifact
+          from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact
+
+          root = Path('artifacts/implementation/private-beta-activation')
+          FrozenI1Artifact.load(root / 'frozen_i1_h12.json')
+          FrozenI1Artifact.load(root / 'frozen_i1_h3.json')
+          facts = CurrentI1FactsArtifact.load(root / 'current_i1_facts_2026.json')
+          report = json.loads((root / 'private_beta_activation_build_report.json').read_text())
+          assert report['status'] == 'PASS'
+          assert report['model_changes'] is False
+          assert facts.evaluation_season == 2026
+          assert facts.completed_source_season == 2025
+          assert facts.source_season_complete is True
+          assert len(facts.rows) == report['current_fact_rows']
+          print(json.dumps({
+              'status': 'PASS',
+              'current_fact_rows': len(facts.rows),
+              'providers': report['current_fact_metadata']['providers'],
+              'coordinate_validation': report['current_fact_metadata']['research_coordinate_validation'],
+              'zero_fact_basis_counts': report['current_fact_metadata']['zero_fact_basis_counts'],
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload private-beta activation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-beta-i1-activation
+          path: artifacts/implementation/private-beta-activation/*
+          retention-days: 14
