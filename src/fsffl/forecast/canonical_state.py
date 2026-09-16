@@ -29,13 +29,14 @@ class CanonicalFootballState:
     current_state: str
     horizon: int
     current_fantasy_points: float
-    experience_years: float
+    experience_years: float | None = None
     prior_fantasy_points: float | None = None
 
     role_band: str | None = None
     opportunity_per_game: float | None = None
     games: float | None = None
 
+    roster_weeks: float | None = None
     active_share: float | None = None
     released_share: float | None = None
     practice_share: float | None = None
@@ -80,15 +81,14 @@ class CanonicalFootballState:
             raise ValueError(f"unsupported career state: {self.current_state}")
         if self.current_fantasy_points < 0:
             raise ValueError("current_fantasy_points cannot be negative")
-        if self.experience_years < 0:
+        if self.experience_years is not None and self.experience_years < 0:
             raise ValueError("experience_years cannot be negative")
 
     @property
     def has_full_i1_evidence(self) -> bool:
-        # Frozen research routing used roster evidence coverage to select the rich
-        # model. Availability/participation stay features within that route and
-        # have their own explicit coverage indicators.
-        return self.roster_evidence_coverage
+        # Exact frozen research routing: the rich path exists only when factual
+        # source-season roster evidence contains at least one observed roster week.
+        return self.roster_evidence_coverage and float(self.roster_weeks or 0.0) > 0.0
 
     def coverage_flags(self) -> Mapping[str, bool]:
         return {
@@ -102,12 +102,7 @@ class CanonicalFootballState:
 def canonical_coverage_report(rows: tuple[CanonicalFootballState, ...]) -> dict[str, object]:
     n = len(rows)
     if not n:
-        return {
-            "players": 0,
-            "full_i1_evidence": 0,
-            "full_i1_evidence_share": 0.0,
-            "coverage": {},
-        }
+        return {"players": 0, "full_i1_evidence": 0, "full_i1_evidence_share": 0.0, "coverage": {}}
     families = ("roster", "availability", "usage", "participation")
     counts = {name: sum(bool(row.coverage_flags()[name]) for row in rows) for name in families}
     full = sum(row.has_full_i1_evidence for row in rows)
@@ -115,8 +110,5 @@ def canonical_coverage_report(rows: tuple[CanonicalFootballState, ...]) -> dict[
         "players": n,
         "full_i1_evidence": full,
         "full_i1_evidence_share": full / n,
-        "coverage": {
-            name: {"count": counts[name], "share": counts[name] / n}
-            for name in families
-        },
+        "coverage": {name: {"count": counts[name], "share": counts[name] / n} for name in families},
     }
