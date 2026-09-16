@@ -10,6 +10,7 @@ from fsffl.state.models import Position
 
 from .i1_config import FROZEN_I1_REGULARIZATION
 from .integrated_i1 import (
+    I1_MODEL_VERSION,
     I1ForecastInput,
     I1ForecastResult,
     IntegratedI1Model,
@@ -69,6 +70,8 @@ class FrozenPath:
 
 @dataclass(frozen=True)
 class FrozenStateMeans:
+    """Only supported cells are serialized, preserving I1's frozen fallback minima."""
+
     position_horizon_state: Mapping[str, float]
     position_state: Mapping[str, float]
     horizon_state: Mapping[str, float]
@@ -110,6 +113,8 @@ class FrozenI1Artifact:
             raise ValueError("I1 artifact regularization policy version does not match production governance")
         if abs(float(self.regularization_default_c) - FROZEN_I1_REGULARIZATION.default_c) > 1e-15:
             raise ValueError("I1 artifact C does not match governed production candidate")
+        if self.evidence_source_seasons != (2012, 2022):
+            raise ValueError("I1 artifact must preserve the frozen 2012-2022 calibration source era")
 
     def predict(
         self,
@@ -164,13 +169,18 @@ class FrozenI1Artifact:
     @classmethod
     def from_dict(cls, raw: Mapping[str, object]) -> "FrozenI1Artifact":
         state_means = raw["state_means"]
-        assert isinstance(state_means, Mapping)
+        if not isinstance(state_means, Mapping):
+            raise ValueError("I1 artifact state_means must be a mapping")
         seasons = raw["evidence_source_seasons"]
-        assert isinstance(seasons, (list, tuple)) and len(seasons) == 2
-        rich = raw["rich"]; reduced = raw["reduced"]
-        assert isinstance(rich, Mapping) and isinstance(reduced, Mapping)
+        if not isinstance(seasons, (list, tuple)) or len(seasons) != 2:
+            raise ValueError("I1 artifact evidence_source_seasons must contain two seasons")
+        rich = raw["rich"]
+        reduced = raw["reduced"]
+        if not isinstance(rich, Mapping) or not isinstance(reduced, Mapping):
+            raise ValueError("I1 artifact paths must be mappings")
         metadata = raw.get("metadata", {})
-        assert isinstance(metadata, Mapping)
+        if not isinstance(metadata, Mapping):
+            raise ValueError("I1 artifact metadata must be a mapping")
         return cls(
             artifact_schema_version=str(raw["artifact_schema_version"]),
             model_version=str(raw["model_version"]),
@@ -210,17 +220,17 @@ def freeze_i1_model(
 
     return FrozenI1Artifact(
         artifact_schema_version=I1_ARTIFACT_SCHEMA_VERSION,
-        model_version=model.predict.__self__.__class__.__name__ + ":" + FROZEN_I1_REGULARIZATION.version,
+        model_version=I1_MODEL_VERSION,
         regularization_policy_version=FROZEN_I1_REGULARIZATION.version,
         regularization_default_c=FROZEN_I1_REGULARIZATION.default_c,
         evidence_source_seasons=evidence_source_seasons,
         rich=_freeze_path(model.rich),
         reduced=_freeze_path(model.reduced),
         state_means=FrozenStateMeans(
-            position_horizon_state=_mean_table(model.means.by_position_horizon_state),
-            position_state=_mean_table(model.means.by_position_state),
-            horizon_state=_mean_table(model.means.by_horizon_state),
-            state=_mean_table(model.means.by_state),
+            position_horizon_state=_mean_table(model.means.by_position_horizon_state, minimum=10),
+            position_state=_mean_table(model.means.by_position_state, minimum=10),
+            horizon_state=_mean_table(model.means.by_horizon_state, minimum=10),
+            state=_mean_table(model.means.by_state, minimum=5),
         ),
         metadata=dict(metadata or {}),
     )
@@ -244,10 +254,14 @@ def _freeze_path(path) -> FrozenPath:
     )
 
 
-def _mean_table(table: Mapping[tuple[object, ...], list[float]]) -> dict[str, float]:
+def _mean_table(
+    table: Mapping[tuple[object, ...], list[float]],
+    *,
+    minimum: int,
+) -> dict[str, float]:
     output: dict[str, float] = {}
     for key, values in table.items():
-        if values:
+        if len(values) >= minimum:
             output["|".join(str(part) for part in key)] = sum(float(value) for value in values) / len(values)
     return output
 
