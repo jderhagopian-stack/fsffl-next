@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import math
+import random
+
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot
 from fsffl.value.shapley_intrinsic import (
     FROZEN_INTRINSIC_DISCOUNT,
     FROZEN_SHAPLEY_PERMUTATIONS,
     FutureStateForecast,
     PlayerIntrinsicForecast,
+    ShapleyScenarioResult,
+    _Basis,
     build_intrinsic_shapley_estimates,
+    full_game_value,
     monte_carlo_shapley_scenarios,
     subset_caps_from_rules,
 )
@@ -25,6 +31,58 @@ def _rules() -> LeagueRules:
             LineupRequirement(slot=RosterSlot.SUPERFLEX, count=1),
         ),
         scoring=(),
+    )
+
+
+def _legacy_scenario_loop(
+    players: list[tuple[str, str, float]],
+    scenario_values: dict[str, tuple[float, ...]],
+    caps: tuple[tuple[tuple[int, ...], int], ...],
+    *,
+    permutations: int,
+    seed: int,
+) -> ShapleyScenarioResult:
+    """Frozen pre-optimization loop retained only as an exact equivalence oracle."""
+
+    rng = random.Random(seed)
+    player_ids = [row[0] for row in players]
+    by_id = {player_id: (position, float(weight)) for player_id, position, weight in players}
+    sums = {player_id: [0.0] * len(scenario_values[player_id]) for player_id in player_ids}
+    sums_sq = {player_id: [0.0] * len(scenario_values[player_id]) for player_id in player_ids}
+    for _ in range(permutations):
+        order = player_ids[:]
+        rng.shuffle(order)
+        basis = _Basis(caps)
+        for player_id in order:
+            position, baseline = by_id[player_id]
+            for index, scenario in enumerate(scenario_values[player_id]):
+                marginal, _ = basis.marginal(position, scenario)
+                sums[player_id][index] += marginal
+                sums_sq[player_id][index] += marginal * marginal
+            basis.add(player_id, position, baseline)
+    estimates = {
+        player_id: tuple(value / permutations for value in values)
+        for player_id, values in sums.items()
+    }
+    standard_errors: dict[str, tuple[float, ...]] = {}
+    for player_id in player_ids:
+        row: list[float] = []
+        for total, total_sq in zip(sums[player_id], sums_sq[player_id], strict=True):
+            mean = total / permutations
+            variance = max(
+                0.0,
+                (total_sq - permutations * mean * mean) / (permutations - 1),
+            ) if permutations > 1 else 0.0
+            row.append(math.sqrt(variance / permutations))
+        standard_errors[player_id] = tuple(row)
+    full = full_game_value(players, caps)
+    return ShapleyScenarioResult(
+        estimates=estimates,
+        standard_errors=standard_errors,
+        full_value=full,
+        efficiency_residual=sum(estimates[player_id][0] for player_id in player_ids) - full,
+        permutations=permutations,
+        seed=seed,
     )
 
 
@@ -48,6 +106,49 @@ def test_shapley_efficiency_and_zero_dummy() -> None:
     assert abs(result.efficiency_residual) < 1e-8
     assert abs(result.estimates["c"][0]) < 1e-12
     assert result.estimates["a"][0] > result.estimates["b"][0]
+
+
+def test_scenario_plan_optimization_is_bit_for_bit_equivalent_to_frozen_loop() -> None:
+    rules = _rules()
+    caps = subset_caps_from_rules(rules)
+    players = [
+        ("q1", "QB", 315.0),
+        ("q2", "QB", 280.0),
+        ("q3", "QB", 220.0),
+        ("r1", "RB", 210.0),
+        ("r2", "RB", 175.0),
+        ("r3", "RB", 120.0),
+        ("w1", "WR", 230.0),
+        ("w2", "WR", 190.0),
+        ("w3", "WR", 150.0),
+        ("w4", "WR", 90.0),
+        ("t1", "TE", 165.0),
+        ("t2", "TE", 95.0),
+    ]
+    scenarios = {
+        player_id: (
+            weight,
+            0.0,
+            weight * 0.25,
+            weight * 0.5,
+            weight,
+            weight * 1.2,
+            weight * 1.5,
+        )
+        for player_id, _position, weight in players
+    }
+    legacy = _legacy_scenario_loop(players, scenarios, caps, permutations=64, seed=20260915)
+    optimized = monte_carlo_shapley_scenarios(
+        players,
+        scenarios,
+        caps,
+        permutations=64,
+        seed=20260915,
+    )
+    assert optimized.estimates == legacy.estimates
+    assert optimized.standard_errors == legacy.standard_errors
+    assert optimized.full_value == legacy.full_value
+    assert optimized.efficiency_residual == legacy.efficiency_residual
 
 
 def test_future_rights_are_discounted_without_holding_cost() -> None:
