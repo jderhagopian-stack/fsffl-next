@@ -1,0 +1,103 @@
+{
+  "status": "RESEARCH_ONLY_FINAL_FORECAST_FREEZE_PRE_DOWNSTREAM",
+  "forecast_frozen": true,
+  "downstream_shapley_accessed": false,
+  "disposition": "LIVE THREE-YEAR COORDINATE VALIDATED",
+  "architecture": "I1",
+  "global_C": 0.25,
+  "direct_h3": {
+    "status": "VALIDATED_RESEARCH_COORDINATE",
+    "recursive": false,
+    "source_semantics": "completed season S",
+    "target_semantics": "direct factual S+3"
+  },
+  "calendar_ownership": {
+    "evaluation_year_E": "existing governed live/current-season Forecast",
+    "evaluation_year_plus_1": "completed-source I1 direct h=2",
+    "evaluation_year_plus_2": "completed-source I1 direct h=3",
+    "completed_source_h1": "same-calendar-year diagnostic/reference only; never relabeled or double-counted"
+  },
+  "selection_history": {
+    "source_seasons": [2014, 2015, 2016, 2017, 2018, 2019, 2020],
+    "resolved_n": 2479,
+    "aggregate": {
+      "baseline_state_brier": 0.1348319947116657,
+      "i1_state_brier": 0.1344364316154898,
+      "baseline_state_logloss": 1.751379777522389,
+      "i1_state_logloss": 1.744191458415861,
+      "baseline_production_mae": 53.98147264826988,
+      "i1_production_mae": 52.33513382267298,
+      "baseline_production_bias": -7.026411716402557,
+      "i1_production_bias": -9.376770832595706
+    },
+    "fitted_fold_pattern": "production MAE improved in all three fitted folds; state Brier/log loss improved in 2019 and 2020 and were slightly worse in 2018",
+    "developmental": "recall improved from 0.97297 to 0.98198 while false positives fell from 111 to 109",
+    "temporary_absence": "state Brier slightly improved; persistence Brier slightly worsened"
+  },
+  "untouched_confirmation": {
+    "source_season": 2021,
+    "target_season": 2024,
+    "resolved_n": 392,
+    "unresolved_n": 222,
+    "baseline": {
+      "state_brier": 0.12680752044194749,
+      "state_logloss": 1.5918251063652438,
+      "persistence_brier": 0.09425743530882245,
+      "useful_brier": 0.2080061339391323,
+      "starter_brier": 0.20472145443732367,
+      "premium_brier": 0.17307767470790172,
+      "production_mae": 44.60549360659235,
+      "production_bias": 4.866552740774558,
+      "production_rmse": 63.157887904779926
+    },
+    "i1": {
+      "state_brier": 0.12514939732124092,
+      "state_logloss": 1.5817884318153415,
+      "persistence_brier": 0.09508654781880128,
+      "useful_brier": 0.20096986346743792,
+      "starter_brier": 0.19949718058497898,
+      "premium_brier": 0.16417360290541974,
+      "production_mae": 42.905541288350925,
+      "production_bias": 3.1973780630085704,
+      "production_rmse": 60.724013383208785
+    },
+    "headline_changes": {
+      "state_brier_pct": -1.3075905237541985,
+      "state_logloss_pct": -0.6305136481243201,
+      "production_mae_pct": -3.811082852786063,
+      "production_rmse_pct": -3.8536350760186577,
+      "useful_brier_pct": -3.382722585360576,
+      "starter_brier_pct": -2.551893677535455,
+      "premium_brier_pct": -5.144552477671738,
+      "persistence_brier_pct": 0.8796255778256157
+    },
+    "developmental": {
+      "successes": 7,
+      "baseline_true_hits": 6,
+      "i1_true_hits": 6,
+      "baseline_false_positives": 17,
+      "i1_false_positives": 15,
+      "baseline_state_brier": 0.12374043313063926,
+      "i1_state_brier": 0.12223398447646429
+    },
+    "temporary_absence": {
+      "n": 271,
+      "baseline_state_brier": 0.1268856415883758,
+      "i1_state_brier": 0.12540132183720018,
+      "baseline_persistence_brier": 0.09240817590960704,
+      "i1_persistence_brier": 0.09397877166245357
+    },
+    "subgroup_cautions": [
+      "QB production MAE and state quality improve, but production bias moves from near zero to approximately -7 points on average.",
+      "RB state Brier/log loss are slightly worse while production MAE improves.",
+      "TE state Brier/log loss and production MAE are modestly worse in the confirmation fold; TE had improved across the broader selection history, so this is a stability caution rather than a coherent cross-era failure.",
+      "Persistence Brier is slightly worse overall even though broader state/threshold calibration and production accuracy improve."
+    ]
+  },
+  "selection_judgment": "Direct h=3 meets the frozen protocol: it shows a coherent and repeatable production-accuracy advantage, aggregate state/log-loss improvement, stronger starter/premium calibration, no developmental false-optimism regression, stable temporary-absence state safety, and coherent untouched confirmation. The remaining subgroup reversals are modest and mixed rather than material safety failures. Longer-horizon uncertainty and the TE/RB/QB-bias cautions must remain visible in implementation/reporting.",
+  "candidate_B": "EXCLUDED_PRE_RESULTS_INSUFFICIENT_HISTORICAL_IN_SEASON_PIT_ARCHIVE",
+  "candidate_C": "CALENDAR_OWNERSHIP_COMPOSITION_ACCEPTED_FOR_POST_FREEZE_DOWNSTREAM_SEMANTIC_TEST",
+  "production_authority_changed": false,
+  "implementation_pr_147_modified": false,
+  "live_2026_outcomes_used_for_selection": false
+}
