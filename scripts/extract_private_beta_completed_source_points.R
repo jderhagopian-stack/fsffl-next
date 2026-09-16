@@ -40,9 +40,21 @@ stats_points <- pick_col(
   stats,
   c("fantasyPoints", "fantasy_points", "fantasy_points_ppr", "fantasyPoints_ppr")
 )
+stats_name <- pick_col(
+  stats,
+  c("player_display_name", "display_name", "player_name", "full_name", "name"),
+  required = FALSE
+)
+
+display_name <- if (is.null(stats_name)) {
+  rep(NA_character_, nrow(stats))
+} else {
+  as.character(stats[[stats_name]])
+}
 
 out <- data.frame(
   player_id = as.character(stats[[stats_id]]),
+  display_name = display_name,
   season = suppressWarnings(as.integer(stats[[stats_season]])),
   position = as.character(stats[[stats_position]]),
   fantasy_points = suppressWarnings(as.numeric(stats[[stats_points]])),
@@ -71,4 +83,5 @@ write.csv(out, out_path, row.names = FALSE, na = "")
 cat("Frozen-coordinate source rows:", nrow(out), "\n")
 cat("Frozen-coordinate seasons:", min(out$season), "through", max(out$season), "\n")
 cat("Frozen-coordinate 2025 rows:", sum(out$season == 2025L), "\n")
+cat("Frozen-coordinate 2025 rows with display name:", sum(out$season == 2025L & !is.na(out$display_name) & nzchar(trimws(out$display_name))), "\n")
 cat("Frozen-coordinate positions:", paste(sort(unique(out$position)), collapse = ", "), "\n")
