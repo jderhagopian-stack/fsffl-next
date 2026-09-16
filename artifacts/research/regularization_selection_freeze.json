@@ -3,7 +3,7 @@
   "authority": "research-only selection freeze under management directive dated 2026-09-15",
   "global_frozen": true,
   "global_C": 0.25,
-  "global_disposition": "NO GLOBAL CHALLENGER QUALIFIES; RETAIN PROVISIONAL C=0.25 FOR STAGE-AWARE TESTING",
+  "global_disposition": "NO GLOBAL CHALLENGER QUALIFIES; RETAIN PROVISIONAL C=0.25",
   "global_selection_basis": {
     "primary_grid": [0.0625, 0.125, 0.25, 0.5, 1.0],
     "bounded_extension": 0.03125,
@@ -42,8 +42,53 @@
     },
     "reason": "C=0.0625 is an interior minimum for aggregate factual state Brier after the preauthorized lower-bound extension worsens again at C=0.03125. However, neither C=0.0625 nor C=0.125 satisfies the predeclared global-change rule requiring at least four of five secondary measures to be no worse than C=0.25; both materially worsen anticipated-production MAE and absolute bias and do not meet the secondary breadth requirement. No global change is therefore authorized by Phase C."
   },
-  "stage_frozen": false,
+  "stage_frozen": true,
   "developmental_C": null,
-  "confirmation_authorized": false,
+  "stage_disposition": "NO CAREER-STAGE-AWARE CHALLENGER QUALIFIES; RETAIN GLOBAL C=0.25 FOR DEVELOPMENTAL AND ESTABLISHED ROWS",
+  "stage_selection_basis": {
+    "developmental_rows": 750,
+    "developmental_successes": 311,
+    "global_control": {
+      "C": 0.25,
+      "true_hits": 207,
+      "false_positives": 242,
+      "recall": 0.6655948553054662,
+      "developmental_useful_brier": 0.2587881319591213,
+      "developmental_state_brier": 0.12148105528768702,
+      "overall_state_brier": 0.1215142354490264,
+      "production_mae": 38.17041723262885
+    },
+    "developmental_C_0.5": {
+      "true_hits": 198,
+      "false_positives": 236,
+      "recall": 0.6366559485530546,
+      "developmental_useful_brier": 0.25926908202291105,
+      "developmental_state_brier": 0.1223003534722995,
+      "overall_state_brier": 0.12158455744930784,
+      "production_mae": 38.14728628015817,
+      "additional_true_hits": -9,
+      "additional_false_positives": -6
+    },
+    "developmental_C_1.0": {
+      "true_hits": 198,
+      "false_positives": 231,
+      "recall": 0.6366559485530546,
+      "developmental_useful_brier": 0.2601257312063927,
+      "developmental_state_brier": 0.12332828291126274,
+      "overall_state_brier": 0.1216727866870307,
+      "production_mae": 38.13445521779261,
+      "additional_true_hits": -9,
+      "additional_false_positives": -11
+    },
+    "reason": "Both authorized less-regularized developmental treatments fail the first predeclared stage-aware promotion requirement: neither catches additional factual developmental useful+ successes. Each loses nine real hits relative to C=0.25 and worsens both developmental useful+ Brier and developmental factual state Brier. The management hypothesis that higher developmental C would recover genuine breakouts is not supported by the rolling evidence."
+  },
+  "confirmation_authorized": true,
+  "confirmation_candidate": {
+    "global_C": 0.25,
+    "developmental_C": null,
+    "source_season": 2023,
+    "horizon": 1,
+    "target_season": 2024
+  },
   "production_change_authorized": false
 }
