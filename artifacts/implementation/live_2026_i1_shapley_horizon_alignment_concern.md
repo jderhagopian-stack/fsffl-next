@@ -1,79 +1,82 @@
-# FSFFL NEXT — Live 2026 I1 / Shapley horizon-alignment concern
+# FSFFL NEXT - Live 2026 I1 / Shapley horizon alignment
 
-Status: **MODEL CONCERN — BLOCKS LIVE SHAPLEY WIRING UNTIL MANAGEMENT/RESEARCH RESOLVES THE TIME COORDINATE**
+Status: **RESOLVED BY AUTHORIZED RESEARCH HANDOFF; NO LONGER A MODEL-CALENDAR BLOCKER**
 
-Authority: implementation finding only. This document does not alter Forecast, Shapley, W, discount, B4, the Intrinsic Constitution, or production authority.
+Authority: implementation reconciliation only. This document does not itself promote Forecast, Shapley, W, discount, B4, the Intrinsic Constitution, or production authority.
 
 Production base at discovery: `53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76`
 Implementation PR: #147
-Frozen research oracle: PR #146 head `c12402df1b7fa0bfbb3d994bdcf791d80e103a0c`
+Original frozen h1/h2 research oracle: PR #146 head `c12402df1b7fa0bfbb3d994bdcf791d80e103a0c`
+Calendar-resolution research handoff: PR #150 head `c629371356836ae57c5df71fe9db2c83356ece8f`
+Frozen direct-h3 research oracle used by implementation parity: `744952af01140daa0cbdbff9b0683018d4db0e0d`
 
-## 1. What was discovered
+## 1. Original concern
 
-The frozen research and the live current-season adapter are each internally coherent, but they use different calendar anchors when the product is evaluated during an active season.
+The original implementation correctly identified a live-calendar mismatch. With completed 2025 facts during a live 2026 evaluation, frozen I1 h=1 targets 2026 and h=2 targets 2027, while a live three-year Intrinsic presentation needs 2026, 2027 and 2028.
 
-In the frozen research coordinate, a source-season row at season `S` produces:
+Implementation therefore stopped rather than relabeling h=1, feeding a forward projection back into I1, treating partial-season facts as completed, recursively chaining forecasts, or inventing an h=3 extrapolation.
 
-- current / Year-1 Shapley from realized production in season `S`;
-- I1 horizon 1 from the same season-`S` facts, targeting season `S+1`, used as Year 2;
-- I1 horizon 2 from the same season-`S` facts, targeting season `S+2`, used as Year 3.
+That stop was correct at discovery time.
 
-This is not an interpretation added by implementation. The frozen downstream research explicitly computes Shapley at `h=0` from source-season current points and uses I1 `h=1` and `h=2` for the two discounted future years.
+## 2. Authorized research resolution
 
-The production protocol correctly prohibits substituting a forward projection for completed realized I1 source facts. Therefore an in-season 2026 evaluation uses the immediately completed 2025 season as the factual I1 source coordinate.
+The bounded management-authorized live-coordinate study in research PR #150 returned the disposition `LIVE THREE-YEAR COORDINATE VALIDATED` and handed back the smallest permitted implementation change.
 
-That means the current adapter's I1 targets are:
+For evaluation season `E`, using the most recent completed factual source season `S = E-1`, the governed live coordinate is now:
 
-- source 2025 + horizon 1 = **2026**;
-- source 2025 + horizon 2 = **2027**.
+- Year 1 / `E`: existing governed live/current-season Forecast;
+- Year 2 / `E+1`: completed-source direct I1 `h=2`;
+- Year 3 / `E+2`: completed-source direct I1 `h=3`;
+- completed-source I1 `h=1`: diagnostic/reference only because it also targets `E`.
 
-But a live 2026 three-year Intrinsic presentation naturally needs calendar years:
+For a live 2026 request sourced from completed 2025 facts, that means:
 
-- Year 1 = **2026** current-season value;
-- Year 2 = **2027**;
-- Year 3 = **2028**.
+- 2026 = governed live/current-season Forecast;
+- 2027 = direct I1 h=2;
+- 2028 = direct I1 h=3;
+- direct I1 h=1 -> 2026 diagnostic only and excluded from Shapley.
 
-Accordingly, the frozen live inputs do not currently supply a research-authorized 2028 I1 coordinate. I1 horizon 1 cannot honestly be relabeled Year 2: it targets 2026, the evaluation season itself.
+The research handoff explicitly preserves the frozen I1 family, global `C=0.25`, Shapley W, 0.85 discount, B4, 2,048-permutation reference, and all ten Intrinsic Constitution principles. Direct h=3 is trained against factual `S+3`; it is not recursive and does not reuse h1/h2 predictions as inputs.
 
-## 2. Why implementation is not papering over it
+## 3. Implementation applied in PR #147
 
-The following apparent fixes would change model semantics or invent evidence and are therefore outside this implementation chat's authority:
+PR #147 now implements the research handoff without creating a parallel Forecast or Intrinsic architecture:
 
-- relabeling 2025->2026 I1 horizon 1 as live 2027 / Year 2;
-- feeding the live 2026 forward projection into I1 as though it were completed realized 2026 production;
-- annualizing partial 2026 production and treating it as the completed source season without research authorization;
-- recursively feeding an I1 forecast back into I1 to manufacture a third horizon;
-- extrapolating a new horizon 3 / 2028 model;
-- applying a youth, development, market, Value, or Shapley adjustment to compensate.
+- the frozen I1 family supports direct horizons 1, 2 and 3;
+- the completed-source current-facts adapter produces explicit target seasons for all three horizons and rejects partial source seasons;
+- the live-calendar composition layer assigns Year 1 to governed live Forecast, Year 2 to h=2 and Year 3 to h=3;
+- h=1 is retained only as a diagnostic coordinate and is hard-excluded from the Shapley consumer;
+- calendar-coherence tests lock 2025 -> 2026 / 2027 / 2028 ownership and prevent double counting;
+- direct-h3 implementation parity is checked against the frozen PR #150 research oracle.
 
-Any of those would cross the frozen Forecast boundary rather than implement the selected candidate faithfully.
+## 4. Validation result
 
-## 3. Safe implementation action taken
+On implementation head `f70c484225b09a1d82ebd1483b415648c07af5ba`, the dedicated validation workflow completed successfully on 2026-09-16.
 
-`fsffl.forecast.i1_current_facts` now exposes the exact calendar target for each I1 horizon and preserves the rule that horizons are relative to the completed source season, not the live evaluation year.
+The following stages passed:
 
-For a 2026 evaluation sourced from completed 2025 facts, the adapter therefore reports target seasons `(2026, 2027)` and explicitly identifies that horizon 1 is not after the evaluation season. Tests lock this behavior so downstream code cannot accidentally shift the labels without a visible code change.
+- production unit tests;
+- frozen h1/h2 research parity;
+- frozen direct-h3 research parity;
+- locked 10-point Intrinsic Constitution rerun;
+- validation-evidence upload.
 
-Identity collisions and missing source facts also remain fail-closed; the adapter does not invent zero production or choose an ambiguous provider row.
+Therefore the former calendar/horizon MODEL CONCERN is resolved for implementation purposes.
 
-## 4. Production wiring consequence
+## 5. What remains blocked
 
-Do **not** wire the new frozen Shapley engine into `/api/value` or downstream Team Utility / Decision / Search yet.
+Resolution of this concern does **not** authorize live production activation.
 
-The existing `/api/value/intrinsic-v1` replacement/surplus contract remains untouched. Shapley values must not be inserted into those old fields, and a Shapley-native production endpoint should not be activated until the live calendar-horizon coordinate is resolved.
+Separate blockers/boundaries remain:
 
-This is intentionally a stop at the authoritative integration boundary, not a parallel implementation path.
+1. **Current canonical evidence and commercial-source readiness.** PR #147 does not yet demonstrate an approved production source path for every completed-source I1 fact family at acceptable live coverage. Research/validation-source rights are not asserted as commercially cleared. Missing evidence must remain fail-closed.
+2. **Product/API authority.** The existing `/api/value/intrinsic-v1` contract represents the older replacement/surplus semantics. Frozen Shapley values must not be inserted into those fields. A Shapley-native production contract and any downstream Team Utility / Decision / Search wiring require explicit management approval.
 
-## 5. Decision required outside implementation
+## 6. Current disposition
 
-Management/research must determine the governed live time coordinate before implementation can complete the 2026 three-year Shapley route. The decision must specify, without using live player outcomes to tune the model, how an in-season evaluation obtains research-valid Year-2 and Year-3 coordinates when I1 itself is trained from completed source-season facts at horizons 1 and 2.
-
-Implementation will then apply that decision without reopening the frozen economic architecture.
-
-## 6. Current disposition of this concern
-
-- Forecast I1 implementation/parity work may continue.
-- Canonical current-facts adapter hardening may continue.
-- Shapley engine unit/economic validation may continue.
-- Live 2026 Shapley API/runtime wiring is **BLOCKED BY MODEL CONCERN**.
-- No merge, deploy, or production-authority promotion is authorized by this finding.
+- Live calendar/time-coordinate concern: **RESOLVED**.
+- Direct h3 implementation/research parity: **PASS**.
+- Locked Constitution rerun: **PASS**.
+- Production source/commercial readiness: **UNRESOLVED / BLOCKING ACTIVATION**.
+- Product/API promotion authority: **NOT YET GRANTED**.
+- PR #147 remains draft, unmerged and undeployed.
