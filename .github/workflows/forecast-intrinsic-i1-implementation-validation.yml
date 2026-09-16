@@ -1,7 +1,12 @@
 name: Validate frozen I1 + Shapley implementation
 
+# Run the expensive frozen research-parity / Constitution suite only when the
+# private-beta candidate is explicitly promoted from draft to ready-for-review,
+# or when manually dispatched. Ordinary activation/API/adapter commits use CI
+# plus focused tests; this workflow does not change any model semantics.
 on:
   pull_request:
+    types: [ready_for_review]
     branches: [main]
     paths:
       - 'src/fsffl/forecast/football_state.py'
