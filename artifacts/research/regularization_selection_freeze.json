@@ -1,0 +1,110 @@
+{
+  "study": "regularization-developmental-calibration-v1",
+  "authority": "research-only selection freeze under management directive dated 2026-09-15",
+  "final_disposition": "KEEP C=0.25 AS-IS",
+  "global_frozen": true,
+  "global_C": 0.25,
+  "global_disposition": "NO GLOBAL CHALLENGER QUALIFIES; RETAIN C=0.25",
+  "global_selection_basis": {
+    "primary_grid": [0.0625, 0.125, 0.25, 0.5, 1.0],
+    "bounded_extension": 0.03125,
+    "resolved_rows": 8738,
+    "state_brier": {
+      "0.03125": 0.12152612346613911,
+      "0.0625": 0.12136235120443704,
+      "0.125": 0.12137543786140255,
+      "0.25": 0.12151423544902616,
+      "0.5": 0.12172733635917103,
+      "1.0": 0.12203339910079909
+    },
+    "state_logloss": {
+      "0.03125": 1.5312681851856538,
+      "0.0625": 1.5263368548628145,
+      "0.125": 1.5252279846075367,
+      "0.25": 1.527402288378987,
+      "0.5": 1.5369968475665667,
+      "1.0": 1.555102373334977
+    },
+    "production_mae": {
+      "0.03125": 39.87720932902726,
+      "0.0625": 39.12199228832246,
+      "0.125": 38.57310607544247,
+      "0.25": 38.17041723262888,
+      "0.5": 37.88926416291959,
+      "1.0": 37.68508873137311
+    },
+    "developmental_recall": {
+      "0.03125": 0.7588424437299035,
+      "0.0625": 0.7331189710610932,
+      "0.125": 0.7009646302250804,
+      "0.25": 0.6655948553054662,
+      "0.5": 0.6366559485530546,
+      "1.0": 0.6366559485530546
+    },
+    "reason": "C=0.0625 is an interior minimum for aggregate factual state Brier after the preauthorized lower-bound extension worsens again at C=0.03125. However, neither C=0.0625 nor C=0.125 satisfies the predeclared global-change rule requiring at least four of five secondary measures to be no worse than C=0.25; both materially worsen anticipated-production MAE and absolute bias and do not meet the secondary breadth requirement. No global change is authorized by Phase C."
+  },
+  "stage_frozen": true,
+  "developmental_C": null,
+  "stage_disposition": "NO CAREER-STAGE-AWARE CHALLENGER QUALIFIES; RETAIN GLOBAL C=0.25 FOR DEVELOPMENTAL AND ESTABLISHED ROWS",
+  "stage_selection_basis": {
+    "developmental_rows": 750,
+    "developmental_successes": 311,
+    "global_control": {
+      "C": 0.25,
+      "true_hits": 207,
+      "false_positives": 242,
+      "recall": 0.6655948553054662,
+      "developmental_useful_brier": 0.2587881319591213,
+      "developmental_state_brier": 0.12148105528768702,
+      "overall_state_brier": 0.1215142354490264,
+      "production_mae": 38.17041723262885
+    },
+    "developmental_C_0.5": {
+      "true_hits": 198,
+      "false_positives": 236,
+      "recall": 0.6366559485530546,
+      "developmental_useful_brier": 0.25926908202291105,
+      "developmental_state_brier": 0.1223003534722995,
+      "overall_state_brier": 0.12158455744930784,
+      "production_mae": 38.14728628015817,
+      "additional_true_hits": -9,
+      "additional_false_positives": -6
+    },
+    "developmental_C_1.0": {
+      "true_hits": 198,
+      "false_positives": 231,
+      "recall": 0.6366559485530546,
+      "developmental_useful_brier": 0.2601257312063927,
+      "developmental_state_brier": 0.12332828291126274,
+      "overall_state_brier": 0.1216727866870307,
+      "production_mae": 38.13445521779261,
+      "additional_true_hits": -9,
+      "additional_false_positives": -11
+    },
+    "reason": "Both authorized less-regularized developmental treatments fail the first predeclared stage-aware promotion requirement: neither catches additional factual developmental useful+ successes. Each loses nine real hits relative to C=0.25 and worsens both developmental useful+ Brier and developmental factual state Brier."
+  },
+  "confirmation_authorized": true,
+  "confirmation_complete": true,
+  "confirmation": {
+    "source_season": 2023,
+    "horizon": 1,
+    "target_season": 2024,
+    "rows": 558,
+    "resolved": 521,
+    "resolved_share": 0.9336917562724014,
+    "state_brier": 0.1138097504406518,
+    "state_logloss": 1.3729390372262569,
+    "production_mae": 35.471917100194574,
+    "production_bias": -2.910995530406975,
+    "developmental_rows": 28,
+    "developmental_successes": 11,
+    "developmental_true_hits": 8,
+    "developmental_false_positives": 9,
+    "developmental_recall": 0.7272727272727273,
+    "developmental_state_brier": 0.10388731522324225,
+    "developmental_useful_brier": 0.236946630004695,
+    "interpretation": "The genuinely untouched 2023-H1 to 2024 confirmation is well resolved and does not reveal a reason to overturn the frozen selection. Overall losses are better than the rolling-selection averages, and developmental recall remains coherent at 8 of 11 factual successes."
+  },
+  "final_reason": "The expanded strict-PIT evidence shows no alternative regularization setting with a clear, repeatable holistic advantage over C=0.25. Stronger regularization modestly improves some probability losses and developmental recall but imposes clear production-error and bias costs; weaker regularization improves production MAE but worsens state calibration. A separate less-regularized developmental treatment moves in the wrong direction, losing real developmental hits. The untouched 2023-H1 confirmation is coherent. C=0.25 therefore survives the stronger calibration study as the governed balanced setting.",
+  "production_change_authorized": false
+}

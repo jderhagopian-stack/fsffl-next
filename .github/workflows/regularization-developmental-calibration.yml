@@ -1,0 +1,111 @@
+name: Research Regularization Developmental Calibration
+
+on:
+  pull_request:
+    branches: [research/integrated-multivariate-forecast]
+    paths:
+      - 'scripts/run_regularization_developmental_calibration.py'
+      - 'artifacts/research/regularization_developmental_calibration_protocol.md'
+      - 'artifacts/research/regularization_selection_freeze.json'
+      - '.github/workflows/regularization-developmental-calibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  bounded-calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research tooling
+        run: python -m pip install -e . pandas scikit-learn nflreadpy pyarrow
+      - name: Build current strict-PIT panels
+        run: |
+          Rscript scripts/extract_career_transition_panel.R
+          Rscript scripts/extract_forecast_usage_panel.R
+      - name: Download frozen prior research evidence
+        run: |
+          mkdir -p artifacts/regularization/frozen/qb \
+                   artifacts/regularization/frozen/event \
+                   artifacts/regularization/frozen/persistence \
+                   artifacts/regularization/frozen/integrated
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10416382295/zip > /tmp/event.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10419402765/zip > /tmp/persistence.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10422858437/zip > /tmp/integrated.zip
+          unzip -q /tmp/qb.zip -d artifacts/regularization/frozen/qb
+          unzip -q /tmp/event.zip -d artifacts/regularization/frozen/event
+          unzip -q /tmp/persistence.zip -d artifacts/regularization/frozen/persistence
+          unzip -q /tmp/integrated.zip -d artifacts/regularization/frozen/integrated
+      - name: Run primary global C rolling study
+        run: |
+          mkdir -p artifacts/regularization/global
+          python scripts/run_regularization_developmental_calibration.py \
+            --mode global \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --qb-results artifacts/regularization/frozen/qb/qb_career_state_deployment_results.json \
+            --prior-integrated-json artifacts/regularization/frozen/integrated/integrated-multivariate/results/integrated_multivariate_forecast_results.json \
+            --prior-event-json artifacts/regularization/frozen/event/event-time/results/event_time_absence_cause_results.json \
+            --prior-persistence-json artifacts/regularization/frozen/persistence/persistence-first/results/persistence_first_forecast_calibration_results.json \
+            --output-dir artifacts/regularization/global
+      - name: Run stage-aware study only after global freeze
+        run: |
+          if [ -f artifacts/research/regularization_selection_freeze.json ] && \
+             python -c 'import json; d=json.load(open("artifacts/research/regularization_selection_freeze.json")); raise SystemExit(0 if d.get("global_frozen") else 1)'; then
+            mkdir -p artifacts/regularization/stage
+            python scripts/run_regularization_developmental_calibration.py \
+              --mode stage \
+              --freeze artifacts/research/regularization_selection_freeze.json \
+              --career-panel artifacts/next2-career/career_transition_panel.csv \
+              --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+              --qb-results artifacts/regularization/frozen/qb/qb_career_state_deployment_results.json \
+              --prior-integrated-json artifacts/regularization/frozen/integrated/integrated-multivariate/results/integrated_multivariate_forecast_results.json \
+              --prior-event-json artifacts/regularization/frozen/event/event-time/results/event_time_absence_cause_results.json \
+              --prior-persistence-json artifacts/regularization/frozen/persistence/persistence-first/results/persistence_first_forecast_calibration_results.json \
+              --output-dir artifacts/regularization/stage
+          else
+            echo 'Global selection not frozen; stage-aware study intentionally not run.'
+          fi
+      - name: Run untouched 2023-H1 confirmation only after stage freeze
+        run: |
+          if [ -f artifacts/research/regularization_selection_freeze.json ] && \
+             python -c 'import json; d=json.load(open("artifacts/research/regularization_selection_freeze.json")); raise SystemExit(0 if d.get("stage_frozen") else 1)'; then
+            mkdir -p artifacts/regularization/confirmation
+            python scripts/run_regularization_developmental_calibration.py \
+              --mode confirm \
+              --freeze artifacts/research/regularization_selection_freeze.json \
+              --career-panel artifacts/next2-career/career_transition_panel.csv \
+              --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+              --qb-results artifacts/regularization/frozen/qb/qb_career_state_deployment_results.json \
+              --prior-integrated-json artifacts/regularization/frozen/integrated/integrated-multivariate/results/integrated_multivariate_forecast_results.json \
+              --prior-event-json artifacts/regularization/frozen/event/event-time/results/event_time_absence_cause_results.json \
+              --prior-persistence-json artifacts/regularization/frozen/persistence/persistence-first/results/persistence_first_forecast_calibration_results.json \
+              --output-dir artifacts/regularization/confirmation
+          else
+            echo 'Stage selection not frozen; untouched confirmation intentionally not run.'
+          fi
+      - name: Upload bounded calibration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regularization-developmental-calibration
+          path: |
+            artifacts/regularization/global/*
+            artifacts/regularization/stage/*
+            artifacts/regularization/confirmation/*
+            artifacts/research/regularization_developmental_calibration_protocol.md
+            artifacts/research/regularization_selection_freeze.json
+          if-no-files-found: warn
+          retention-days: 14
