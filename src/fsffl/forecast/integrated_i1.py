@@ -18,7 +18,8 @@ I1_RANDOM_SEED = 20260915
 I1_MAX_ITER = 2000
 I1_MIN_TRAINING_ROWS = 100
 I1_MIN_BINARY_CLASS = 15
-I1_MODEL_VERSION = f"integrated-i1-{FROZEN_I1_REGULARIZATION.version}"
+I1_MODEL_VERSION = f"integrated-i1-{FROZEN_I1_REGULARIZATION.version}-direct-h3"
+I1_DIRECT_HORIZONS = (1, 2, 3)
 
 STATE_NAMES = ("out", "depth", "usable", "starter", "premium", "elite")
 POSITIVE_STATES = STATE_NAMES[1:]
@@ -120,8 +121,8 @@ class I1TrainingRow:
             raise ValueError("I1 supports QB/RB/WR/TE only")
         if self.current_state not in STATE_NAMES or self.target_state not in STATE_NAMES:
             raise ValueError("unknown I1 career state")
-        if self.horizon not in (1, 2):
-            raise ValueError("I1 frozen horizons are 1 and 2")
+        if self.horizon not in I1_DIRECT_HORIZONS:
+            raise ValueError("I1 direct horizons are 1, 2, and 3")
         if self.target_points < 0 or self.current_points < 0:
             raise ValueError("fantasy production cannot be negative")
 
@@ -140,6 +141,16 @@ class I1ForecastInput:
     prior_points: float | None
     experience_years: int | None
     evidence: CanonicalFootballStateEvidence | None = None
+
+    def __post_init__(self) -> None:
+        if self.position not in POSITIONS:
+            raise ValueError("I1 supports QB/RB/WR/TE only")
+        if self.current_state not in STATE_NAMES:
+            raise ValueError("unknown I1 career state")
+        if self.horizon not in I1_DIRECT_HORIZONS:
+            raise ValueError("I1 direct horizons are 1, 2, and 3")
+        if self.current_points < 0 or (self.prior_points is not None and self.prior_points < 0):
+            raise ValueError("fantasy production cannot be negative")
 
 
 @dataclass(frozen=True)
@@ -287,6 +298,10 @@ class IntegratedI1Model:
 
     The model is fit only from governed historical football outcomes. Value,
     Shapley, market and owner data are neither accepted nor referenced here.
+
+    Direct h=3 uses this exact model family on h=3 training rows only. Existing
+    h=1/h=2 deployment remains fit on its existing h=1/h=2 training set so the
+    validated direct h=3 extension does not retune nearer horizons.
     """
 
     def __init__(self, rows: Iterable[I1TrainingRow]) -> None:
