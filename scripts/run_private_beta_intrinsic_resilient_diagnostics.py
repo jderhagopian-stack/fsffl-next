@@ -140,6 +140,52 @@ def _provider_only_report(base, output_json: Path, output_md: Path, *, league_id
     )
 
 
+def _augment_live_sanity_without_persistence(
+    base,
+    output_json: Path,
+    output_md: Path,
+    *,
+    league_id: str | None,
+) -> None:
+    """Keep the player sanity/display evidence visible when Actions lacks DB access.
+
+    This is deliberately not promoted to governed Forecast authority. The base
+    diagnostic still enforces the normal two-independent-source live Forecast gate,
+    exercises the Shapley-native endpoint, and produces the full player sanity board.
+    The report then records that persistence-backed resilience remains a separate
+    authority check rather than hiding the useful candidate diagnostics.
+    """
+
+    base.run(output_json, output_md)
+    report = json.loads(output_json.read_text(encoding="utf-8"))
+    live = report.get("live_forecast", {})
+    successful = list(live.get("successful_sources", [])) if isinstance(live, dict) else []
+    failed = list(live.get("failed_sources", [])) if isinstance(live, dict) else []
+    report["status"] = "LIVE_SANITY_PASS_PERSISTENCE_AUTHORITY_PENDING"
+    report["provider_health"] = {
+        "status": "AVAILABLE",
+        "successful_source_ids": successful,
+        "failed_sources": failed,
+        "error": None,
+        "probe_seconds": live.get("forecast_acquisition_seconds") if isinstance(live, dict) else None,
+    }
+    report["governed_forecast"] = {
+        "evaluated": False,
+        "reason": (
+            "The full sanity board and endpoint smoke used the governed two-source live Forecast path, "
+            "but this GitHub runner has no FSFFL_DATABASE_URL and therefore did not exercise the "
+            "hosted make_resilient_forecast_loader persistence fallback."
+        ),
+        "league_id_configured": bool(league_id),
+        "sanity_board_basis": "direct_live_two_source_forecast",
+    }
+    output_json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with output_md.open("a", encoding="utf-8") as handle:
+        handle.write("\n## Persistence authority note\n\n")
+        handle.write("The player sanity board and endpoint smoke above used valid two-source live Forecast evidence.\n\n")
+        handle.write("This GitHub runner does not have `FSFFL_DATABASE_URL`, so it did not prove the hosted persistence-backed fallback in this run. That authority check remains separate and must not be inferred from provider health alone.\n")
+
+
 def run(
     output_json: Path,
     output_md: Path,
@@ -163,6 +209,15 @@ def run(
                 + ", ".join(missing)
             )
         _provider_only_report(base, output_json, output_md, league_id=configured_league_id)
+        provider_report = json.loads(output_json.read_text(encoding="utf-8"))
+        provider_health = provider_report.get("provider_health", {})
+        if isinstance(provider_health, dict) and provider_health.get("status") == "AVAILABLE":
+            _augment_live_sanity_without_persistence(
+                base,
+                output_json,
+                output_md,
+                league_id=configured_league_id,
+            )
         return
 
     _retarget_state(base, configured_league_id)
