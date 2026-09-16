@@ -43,8 +43,9 @@ from fsffl.value.private_beta_activation_data import (
 )
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 
-_DIAGNOSTIC_RULES_VERSION = "management-12t-half-ppr-superflex-v1"
+_DIAGNOSTIC_RULES_VERSION = "management-12t-half-ppr-superflex-v2:full-current-universe"
 _SLEEPER_PLAYERS_URL = "https://api.sleeper.app/v1/players/nfl"
+_SUPPORTED_POSITIONS = {"QB", "RB", "WR", "TE"}
 
 
 def _load_sleeper_players() -> dict[str, dict[str, object]]:
@@ -82,10 +83,28 @@ def _diagnostic_rules() -> LeagueRules:
     )
 
 
+def _float_or_none(value: object) -> float | None:
+    try:
+        if value is None or str(value).strip() == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _build_diagnostic_state(
     facts: CurrentI1FactsArtifact,
     sleeper_players: dict[str, dict[str, object]],
 ) -> tuple[LeagueState, dict[str, dict[str, object]], dict[str, object]]:
+    """Build the diagnostic State from the full current Sleeper skill universe.
+
+    Completed-source facts are deliberately *not* used to decide who enters State.
+    The governed Year-1 Forecast therefore owns the live player universe, and the
+    runtime loader must fail closed if any projected player lacks a unique completed-
+    source mapping. This prevents missing I1 facts from disappearing before coverage
+    is measured.
+    """
+
     now = datetime.now(UTC)
     provenance = Provenance(
         source="private-beta-management-diagnostic",
@@ -93,34 +112,48 @@ def _build_diagnostic_state(
         effective_at=now,
         source_version=_DIAGNOSTIC_RULES_VERSION,
     )
+    facts_by_sleeper = {
+        str(row.identity_external_id): row
+        for row in facts.rows
+        if row.identity_provider and row.identity_provider.lower() == "sleeper" and row.identity_external_id
+    }
     players: list[Player] = []
     states: list[PlayerState] = []
     raw_status: dict[str, dict[str, object]] = {}
     source_by_player: dict[str, object] = {}
-    for row in facts.rows:
-        external_id = row.identity_external_id
-        sleeper = sleeper_players.get(str(external_id), {}) if external_id else {}
-        player_id = f"diag:{row.source_player_id}"
+
+    for sleeper_id, sleeper in sorted(sleeper_players.items()):
+        position_raw = str(sleeper.get("position") or "").upper()
         nfl_team = str(sleeper.get("team") or "").strip().upper() or None
+        if position_raw not in _SUPPORTED_POSITIONS or nfl_team is None:
+            continue
+        position = Position(position_raw)
+        display_name = str(
+            sleeper.get("full_name")
+            or " ".join(filter(None, (sleeper.get("first_name"), sleeper.get("last_name"))))
+            or sleeper_id
+        ).strip()
+        player_id = f"diag:sleeper:{sleeper_id}"
+        refs = [ProviderRef(provider="sleeper", external_id=sleeper_id)]
+        gsis_id = str(sleeper.get("gsis_id") or "").strip()
+        if gsis_id:
+            refs.append(ProviderRef(provider="gsis", external_id=gsis_id))
         players.append(
             Player(
                 player_id=player_id,
-                full_name=row.display_name,
-                position=row.position,
+                full_name=display_name,
+                position=position,
                 nfl_team=nfl_team,
-                provider_refs=(
-                    ProviderRef(
-                        provider=str(row.identity_provider or "sleeper"),
-                        external_id=str(external_id or row.source_player_id),
-                    ),
-                ),
+                provider_refs=tuple(refs),
             )
         )
+        source = facts_by_sleeper.get(sleeper_id)
+        age = source.age_years if source is not None else _float_or_none(sleeper.get("age"))
         states.append(
             PlayerState(
                 player_id=player_id,
                 as_of=now,
-                age_years=row.age_years,
+                age_years=age,
                 nfl_team=nfl_team,
                 provenance=provenance,
             )
@@ -131,7 +164,8 @@ def _build_diagnostic_state(
             "practice_participation": sleeper.get("practice_participation"),
             "team": sleeper.get("team"),
         }
-        source_by_player[player_id] = row
+        if source is not None:
+            source_by_player[player_id] = source
 
     teams = tuple(
         Team(team_id=f"t{index}", league_id="management-diagnostic", display_name=f"Team {index}")
@@ -197,7 +231,7 @@ def _archetypes(row, status: dict[str, object]) -> set[str]:
         output.add("elite")
     if row.role_band == "established" and row.current_state in {"starter", "premium", "elite"}:
         output.add("established")
-    if row.experience_years is not None and 1 <= row.experience_years <= 3 and row.current_state in {"depth", "usable", "starter"}:
+    if row.experience_years is not None and 1 <= row.experience_years <= 3 and row.current_state != "out":
         output.add("developmental")
     if row.experience_years == 0:
         output.add("rookie")
@@ -207,7 +241,9 @@ def _archetypes(row, status: dict[str, object]) -> set[str]:
         output.add("injured_or_temporarily_absent")
     if row.current_state == "depth":
         output.add("backup")
-    if row.current_state == "out" or row.role_band == "weak":
+    if row.current_state == "out" or (
+        row.role_band == "weak" and row.current_state in {"depth", "usable"}
+    ):
         output.add("fringe")
     return output
 
@@ -219,10 +255,12 @@ def _rank_rows(contract, state: LeagueState, source_by_player: dict[str, object]
     rows: list[dict[str, object]] = []
     for overall_rank, estimate in enumerate(ordered, start=1):
         player = by_player[estimate.player_id]
+        source = source_by_player.get(estimate.player_id)
+        if source is None:
+            raise RuntimeError(f"served Shapley player lacks completed-source diagnostic evidence: {estimate.player_id}")
         positional_counter[player.position.value] += 1
         evidence_paths = [item.uncertainty.evidence_path for item in estimate.contributions[1:]]
         evidence_path = "rich" if evidence_paths and all(path == "rich" for path in evidence_paths) else "reduced"
-        source = source_by_player[estimate.player_id]
         raw = estimate.raw_intrinsic_value
         rows.append(
             {
@@ -372,7 +410,7 @@ def run(output_json: Path, output_md: Path) -> None:
     }
     starter_rows = [row for row in rows if row["current_state"] in {"starter", "premium", "elite"}]
     bench_rows = [row for row in rows if row["current_state"] in {"usable", "depth"}]
-    fringe_rows = [row for row in rows if row["current_state"] == "out" or row["role_band"] == "weak"]
+    fringe_rows = [row for row in rows if "fringe" in row["archetypes"]]
     group_distributions = {
         "starter": _distribution([float(row["display_0_10000"]) for row in starter_rows]),
         "bench": _distribution([float(row["display_0_10000"]) for row in bench_rows]),
@@ -386,6 +424,10 @@ def run(output_json: Path, output_md: Path) -> None:
         "diagnostic_rules_version": _DIAGNOSTIC_RULES_VERSION,
         "activation_bundle_sha256": ACTIVATION_BUNDLE_SHA256,
         "activation_workflow_run_id": ACTIVATION_WORKFLOW_RUN_ID,
+        "diagnostic_universe": {
+            "team_assigned_qb_rb_wr_te_players": len(state.players),
+            "players_with_completed_source_facts": len(source_by_player),
+        },
         "contract": {
             "status": contract.status.value,
             "player_count": contract.coverage.player_count,
@@ -413,12 +455,12 @@ def run(output_json: Path, output_md: Path) -> None:
             "archetype_policy": {
                 "elite": "canonical completed-source current_state=elite",
                 "established": "canonical role_band=established and state starter/premium/elite",
-                "developmental": "1-3 years experience and state depth/usable/starter",
+                "developmental": "1-3 years experience and completed-source state other than out",
                 "rookie": "experience_years=0",
                 "aging": "governed I1 age_band=aging",
                 "injured_or_temporarily_absent": "explicit current Sleeper injury/status/practice metadata only; never inferred from missing data",
                 "backup": "canonical current_state=depth",
-                "fringe": "canonical current_state=out or role_band=weak",
+                "fringe": "canonical current_state=out, or weak role evidence while depth/usable; never assigned to premium/elite solely from role_band",
             },
         },
         "display_scale_diagnostic": {
@@ -451,6 +493,7 @@ def run(output_json: Path, output_md: Path) -> None:
         "",
         "## Coverage and latency",
         "",
+        f"- Diagnostic State universe: {len(state.players)} current team-assigned QB/RB/WR/TE players; completed-source facts available for {len(source_by_player)} before Forecast scoping.",
         f"- Contract status: `{contract.status.value}`; players: {contract.coverage.player_count}; target years: {contract.target_years}.",
         f"- Live Forecast sources: {', '.join(forecast_evidence.successful_source_ids)}; failures: {', '.join(forecast_evidence.failed_sources) or 'none'}.",
         f"- Forecast acquisition: {forecast_seconds:.3f}s; contract cold: {cold_seconds:.3f}s; warm cache: {warm_seconds:.6f}s.",
