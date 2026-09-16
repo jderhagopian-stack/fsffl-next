@@ -18,10 +18,17 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  NFLREADPY_CACHE: filesystem
+  NFLREADPY_CACHE_DIR: /tmp/nflreadpy-cache
+  NFLREADPY_CACHE_DURATION: '86400'
+  NFLREADPY_TIMEOUT: '180'
+  NFLREADPY_VERBOSE: 'False'
+
 jobs:
   build-activation-artifacts:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout implementation
         uses: actions/checkout@v4
@@ -54,6 +61,43 @@ jobs:
         run: |
           Rscript research_ref/scripts/extract_career_transition_panel.R
           Rscript research_ref/scripts/extract_forecast_usage_panel.R
+
+      - name: Prefetch completed-source beta data with retries
+        run: |
+          python - <<'PY'
+          import time
+          import nflreadpy as nfl
+          from nflreadpy.config import update_config
+
+          update_config(
+              cache_mode='filesystem',
+              cache_dir='/tmp/nflreadpy-cache',
+              cache_duration=86400,
+              timeout=180,
+              verbose=False,
+          )
+
+          def retry(label, fn, attempts=4):
+              last = None
+              for attempt in range(1, attempts + 1):
+                  try:
+                      print(f'prefetch {label}: attempt {attempt}/{attempts}', flush=True)
+                      value = fn()
+                      print(f'prefetch {label}: ok', flush=True)
+                      return value
+                  except Exception as exc:
+                      last = exc
+                      print(f'prefetch {label}: {type(exc).__name__}: {exc}', flush=True)
+                      if attempt < attempts:
+                          time.sleep(5 * attempt)
+              raise RuntimeError(f'prefetch failed for {label}') from last
+
+          for season in (2020, 2021, 2022, 2024, 2025):
+              retry(f'player_stats_reg_{season}', lambda season=season: nfl.load_player_stats([season], summary_level='reg'))
+          retry('player_stats_week_2025', lambda: nfl.load_player_stats([2025], summary_level='week'))
+          retry('players', nfl.load_players)
+          retry('rosters_2025', lambda: nfl.load_rosters([2025]))
+          PY
 
       - name: Build 2026 private-beta activation artifacts
         run: |
