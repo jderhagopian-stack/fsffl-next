@@ -32,6 +32,13 @@ jobs:
           ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
           path: research_ref
 
+      - name: Remove unrelated broken runner apt source
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                     /etc/apt/sources.list.d/azure-cli.list \
+                     /etc/apt/sources.list.d/microsoft-prod.sources \
+                     /etc/apt/sources.list.d/azure-cli.sources || true
+
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: release
@@ -86,8 +93,10 @@ jobs:
           PY
 
       - name: Upload private-beta activation artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: private-beta-i1-activation
           path: artifacts/implementation/private-beta-activation/*
+          if-no-files-found: warn
           retention-days: 14
