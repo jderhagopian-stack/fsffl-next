@@ -1,0 +1,47 @@
+name: Research Live Forecast h3 Fast Shard
+
+on:
+  pull_request:
+    branches: [research/regularization-developmental-calibration]
+    paths:
+      - 'scripts/run_live_forecast_h3_fast.py'
+      - '.github/workflows/live-forecast-h3-fast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  h3-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research tooling
+        run: python -m pip install -e . pandas numpy scikit-learn nflreadpy pyarrow
+      - name: Build strict-PIT source panels
+        run: |
+          Rscript scripts/extract_career_transition_panel.R
+          Rscript scripts/extract_forecast_usage_panel.R
+      - name: Run h3-only selection shard
+        run: |
+          mkdir -p artifacts/live-forecast-horizon/h3-fast
+          python scripts/run_live_forecast_h3_fast.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --output-dir artifacts/live-forecast-horizon/h3-fast
+      - name: Upload h3 selection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-forecast-h3-selection-fast
+          path: artifacts/live-forecast-horizon/h3-fast/*
+          if-no-files-found: warn
+          retention-days: 14
