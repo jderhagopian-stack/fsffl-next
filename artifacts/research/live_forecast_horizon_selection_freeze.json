@@ -1,0 +1,95 @@
+{
+  "status": "RESEARCH_ONLY_PRE_CONFIRMATION_FREEZE",
+  "selection_frozen": true,
+  "confirmation_accessed": false,
+  "decision": "ADVANCE_DIRECT_H3_TO_UNTOUCHED_CONFIRMATION",
+  "candidate": "direct_i1_h3",
+  "architecture": "I1",
+  "global_C": 0.25,
+  "selection_source_seasons": [2014, 2015, 2016, 2017, 2018, 2019, 2020],
+  "untouched_confirmation": {
+    "source_season": 2021,
+    "target_season": 2024,
+    "accessed_before_freeze": false
+  },
+  "selection_evidence": {
+    "resolved_n": 2479,
+    "baseline": {
+      "state_brier": 0.1348319947116657,
+      "state_logloss": 1.751379777522389,
+      "persistence_brier": 0.10300566782816657,
+      "useful_brier": 0.2125455462240236,
+      "starter_brier": 0.23682073810114475,
+      "premium_brier": 0.2278420746520672,
+      "production_mae": 53.98147264826988,
+      "production_bias": -7.026411716402557
+    },
+    "i1_h3": {
+      "state_brier": 0.1344364316154898,
+      "state_logloss": 1.744191458415861,
+      "persistence_brier": 0.1033281666676366,
+      "useful_brier": 0.21320291283543008,
+      "starter_brier": 0.23373780698466302,
+      "premium_brier": 0.22125344250224532,
+      "production_mae": 52.33513382267298,
+      "production_bias": -9.376770832595706
+    },
+    "aggregate_delta_i1_minus_baseline": {
+      "state_brier": -0.0003955630961759,
+      "state_logloss": -0.007188319106528,
+      "persistence_brier": 0.00032249883947003,
+      "useful_brier": 0.00065736661140648,
+      "starter_brier": -0.00308293111648173,
+      "premium_brier": -0.00658863214982188,
+      "production_mae": -1.6463388255969,
+      "production_bias": -2.350359116193149
+    },
+    "fitted_fold_pattern": {
+      "2018": {
+        "production_mae_delta": -4.9094172283682695,
+        "state_brier_delta": 0.000055048402020335674,
+        "state_logloss_delta": 0.010029452439919151
+      },
+      "2019": {
+        "production_mae_delta": -3.617155932833704,
+        "state_brier_delta": -0.0018482562537280034,
+        "state_logloss_delta": -0.03738701174336789
+      },
+      "2020": {
+        "production_mae_delta": -2.4018046789513434,
+        "state_brier_delta": -0.0007892109732791641,
+        "state_logloss_delta": -0.018936751815074926
+      }
+    },
+    "developmental": {
+      "baseline_recall": 0.972972972972973,
+      "i1_recall": 0.9819819819819819,
+      "baseline_false_positives": 111,
+      "i1_false_positives": 109,
+      "baseline_state_brier": 0.14066486625924907,
+      "i1_state_brier": 0.13957089833903422
+    },
+    "temporary_absence": {
+      "baseline_state_brier": 0.13434438888265357,
+      "i1_state_brier": 0.1342617815192008,
+      "baseline_persistence_brier": 0.096412877250597,
+      "i1_persistence_brier": 0.09696638033955833
+    },
+    "pre_confirmation_cautions": [
+      "Aggregate h3 state and production performance improves only modestly; this is not a final promotion decision.",
+      "The 2018 fitted fold improves production MAE but slightly worsens state Brier and state log loss.",
+      "QB production MAE improves materially, but average QB production bias becomes more negative; this requires confirmation review.",
+      "RB and aging-player state Brier are slightly worse than the empirical baseline in selection history.",
+      "Persistence and useful-threshold Brier are slightly worse in aggregate even though starter/premium/state scores and production MAE improve."
+    ]
+  },
+  "selection_reason": "The direct h=3 candidate shows enough coherent forecasting signal to justify the predeclared untouched confirmation: production MAE improves in every fitted selection fold, state/log-loss improve in two of three fitted folds, aggregate state calibration and production MAE improve, developmental capture is not harmed, and temporary-absence state safety is stable. The signal is not uniformly superior, so this freeze advances h=3 only to confirmation and does not authorize production, Shapley integration, or promotion.",
+  "calendar_hypothesis_if_confirmed": {
+    "evaluation_year": "existing governed live/current-season Forecast",
+    "evaluation_year_plus_1": "completed-source I1 direct h=2",
+    "evaluation_year_plus_2": "completed-source I1 direct h=3",
+    "completed_source_h1": "same-calendar-year diagnostic/reference only; never relabeled or double-counted"
+  },
+  "production_authority_changed": false,
+  "implementation_pr_147_modified": false
+}
