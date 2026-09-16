@@ -25,7 +25,8 @@ def test_current_i1_policy_is_frozen_point_25_but_supports_governed_component_ov
     assert future.c_for("persistence.full") == 0.4
     assert future.c_for("conditional.full") == 0.2
     assert future.c_for("persistence.reduced") == 0.25
-    with pytest.raises(ValueError): I1RegularizationPolicy(default_c=0.0)
+    with pytest.raises(ValueError):
+        I1RegularizationPolicy(default_c=0.0)
 
 
 def test_missing_roster_evidence_fails_closed_into_reduced_feature_path():
@@ -35,11 +36,23 @@ def test_missing_roster_evidence_fails_closed_into_reduced_feature_path():
     assert "released_share" not in x
 
 
+def test_roster_coverage_flag_without_observed_roster_weeks_still_fails_closed():
+    candidate = row(roster_evidence_coverage=True, roster_weeks=None, active_share=1.0)
+    assert not candidate.has_full_i1_evidence
+    assert "active_share" not in feature_dict(candidate)
+
+
 def test_canonical_coverage_is_explicit_not_inferred():
-    report = canonical_coverage_report((row(), row(player_id="p2", roster_evidence_coverage=True)))
+    report = canonical_coverage_report((row(), row(player_id="p2", roster_evidence_coverage=True, roster_weeks=17.0)))
     assert report["players"] == 2
     assert report["full_i1_evidence"] == 1
     assert report["full_i1_evidence_share"] == 0.5
+
+
+def test_unknown_experience_is_not_invented():
+    x = feature_dict(row(experience_years=None))
+    assert x["e=unknown"] == 1.0
+    assert x["exp"] == 0.0
 
 
 def test_shapley_is_roster_neutral_positive_and_deterministic():
@@ -59,4 +72,5 @@ def test_shapley_is_roster_neutral_positive_and_deterministic():
 
 def test_frozen_career_discount_cannot_be_silently_changed():
     assert career_intrinsic_value(10.0, (10.0, 10.0)) == pytest.approx(10 + FROZEN_DISCOUNT*10 + FROZEN_DISCOUNT**2*10)
-    with pytest.raises(ValueError): career_intrinsic_value(10.0, (10.0,), discount=0.9)
+    with pytest.raises(ValueError):
+        career_intrinsic_value(10.0, (10.0,), discount=0.9)
