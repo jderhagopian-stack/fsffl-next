@@ -27,6 +27,7 @@ from .progressive_delivery_routes import install_progressive_delivery_routes
 from .quick_frontier_routes import install_quick_frontier_routes
 from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
+from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
 
 
 # Hosted private-beta observability only. The coordinator already records exact
@@ -111,6 +112,7 @@ install_in_season_forecast_routes(
     projection_history_store=_projection_history_store,
 )
 install_intrinsic_value_v1_routes(app, runtime_store=_runtime_store)
+install_shapley_intrinsic_routes(app, runtime_store=_runtime_store)
 install_focused_opportunity_routes(
     app,
     runtime_store=_runtime_store,
