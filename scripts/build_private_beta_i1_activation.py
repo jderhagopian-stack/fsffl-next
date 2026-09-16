@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import json
 import math
+import re
 import sys
 import urllib.request
 from datetime import date
@@ -52,6 +53,10 @@ def _col(frame: pd.DataFrame, *names: str, required: bool = True) -> str | None:
     if required:
         raise RuntimeError(f"missing expected column {names}; available={list(frame.columns)}")
     return None
+
+
+def _normalize_name(value: object) -> str:
+    return " ".join(re.sub(r"[^a-z0-9 ]+", "", str(value or "").lower()).split())
 
 
 def _final_records(*, panel, by, usage, ev, base, pf, bounds, horizons, source_max):
@@ -179,8 +184,14 @@ def _load_frozen_coordinate_points(path: Path) -> pd.DataFrame:
     missing = sorted(required - set(frame.columns))
     if missing:
         raise RuntimeError(f"frozen-coordinate source is missing columns: {missing}")
-    frame = frame[list(required)].copy()
+    columns = ["player_id", "season", "position", "fantasy_points"]
+    if "display_name" in frame.columns:
+        columns.insert(1, "display_name")
+    frame = frame[columns].copy()
+    if "display_name" not in frame.columns:
+        frame["display_name"] = ""
     frame["player_id"] = frame["player_id"].astype(str).str.strip()
+    frame["display_name"] = frame["display_name"].fillna("").astype(str).str.strip()
     frame["season"] = pd.to_numeric(frame["season"], errors="raise").astype(int)
     frame["position"] = frame["position"].astype(str).str.upper()
     frame["fantasy_points"] = pd.to_numeric(frame["fantasy_points"], errors="raise")
@@ -333,6 +344,34 @@ def _build_current_facts(
         for _, row in prior_rows.iterrows()
         if pd.notna(row["player_id"])
     }
+    source_by_name_position: dict[tuple[str, str], list[pd.Series]] = {}
+    for _, row in source_rows.iterrows():
+        normalized = _normalize_name(row.get("display_name", ""))
+        position = str(row["position"])
+        if normalized:
+            source_by_name_position.setdefault((normalized, position), []).append(row)
+
+    current_sleeper_rows: list[tuple[str, dict, str, str, str]] = []
+    current_name_counts: dict[tuple[str, str], int] = {}
+    current_gsis_counts: dict[str, int] = {}
+    for sleeper_id, raw in sorted(sleeper.items()):
+        position = str(raw.get("position") or "").upper()
+        team = raw.get("team")
+        if position not in POSITIONS or not team:
+            continue
+        gsis = str(raw.get("gsis_id") or "").strip()
+        display_name = str(
+            raw.get("full_name")
+            or " ".join(filter(None, (raw.get("first_name"), raw.get("last_name"))))
+            or sleeper_id
+        ).strip()
+        normalized = _normalize_name(display_name)
+        current_sleeper_rows.append((sleeper_id, raw, position, gsis, display_name))
+        if normalized:
+            key = (normalized, position)
+            current_name_counts[key] = current_name_counts.get(key, 0) + 1
+        if gsis:
+            current_gsis_counts[gsis] = current_gsis_counts.get(gsis, 0) + 1
 
     w_pid = _col(weekly, "player_id", "gsis_id")
     w_pos = _col(weekly, "position_group", "position")
@@ -394,22 +433,47 @@ def _build_current_facts(
         "rookie_zero": 0,
         "unsupported": 0,
     }
-    source_version = f"private-beta-completed-source-{source_season}-frozen-coordinate-v2"
-    for sleeper_id, raw in sorted(sleeper.items()):
-        position = str(raw.get("position") or "").upper()
-        team = raw.get("team")
-        if position not in POSITIONS or not team:
-            continue
-        gsis = str(raw.get("gsis_id") or "").strip()
-        display_name = str(
-            raw.get("full_name")
-            or " ".join(filter(None, (raw.get("first_name"), raw.get("last_name"))))
-            or sleeper_id
-        ).strip()
-        source = source_by.get(gsis) if gsis else None
-        if source is not None and str(source["position"]) != position:
+    identity_resolution = {
+        "direct_unique_gsis": 0,
+        "unique_name_position_fallback": 0,
+        "ambiguous_name_position": 0,
+        "ambiguous_gsis": 0,
+        "source_stat_rows": int(len(source_rows)),
+        "source_stat_rows_with_display_name": int(source_rows["display_name"].astype(str).str.strip().ne("").sum()),
+    }
+    used_source_ids: set[str] = set()
+    source_version = f"private-beta-completed-source-{source_season}-frozen-coordinate-v3"
+    for sleeper_id, raw, position, gsis, display_name in current_sleeper_rows:
+        normalized = _normalize_name(display_name)
+        source = None
+        resolution = None
+        if gsis and current_gsis_counts.get(gsis, 0) == 1:
+            direct = source_by.get(gsis)
+            if direct is not None and str(direct["position"]) == position:
+                source = direct
+                resolution = "direct_unique_gsis"
+        elif gsis and current_gsis_counts.get(gsis, 0) > 1:
+            identity_resolution["ambiguous_gsis"] += 1
+
+        if source is None and normalized:
+            key = (normalized, position)
+            candidates = source_by_name_position.get(key, [])
+            if current_name_counts.get(key, 0) == 1 and len(candidates) == 1:
+                source = candidates[0]
+                resolution = "unique_name_position_fallback"
+            elif candidates and (current_name_counts.get(key, 0) != 1 or len(candidates) != 1):
+                identity_resolution["ambiguous_name_position"] += 1
+
+        source_key = str(source["player_id"]) if source is not None else None
+        if source_key and source_key in used_source_ids:
             source = None
+            source_key = None
+            resolution = None
+            identity_resolution["ambiguous_name_position"] += 1
+
         identity = player_by.get(gsis) if gsis else None
+        if identity is None and source_key:
+            identity = player_by.get(source_key)
         rookie_season = None
         if identity is not None and p_rookie and pd.notna(identity[p_rookie]):
             try:
@@ -424,8 +488,17 @@ def _build_current_facts(
         if source is not None:
             points = max(0.0, float(source["fantasy_points"]))
             counts["frozen_coordinate_stats"] += 1
-            if gsis in role:
-                role_position, games, opportunity = role[gsis]
+            if resolution:
+                identity_resolution[resolution] += 1
+            if source_key:
+                used_source_ids.add(source_key)
+            role_id = None
+            if gsis and gsis in role:
+                role_id = gsis
+            elif source_key and source_key in role:
+                role_id = source_key
+            if role_id is not None:
+                role_position, games, opportunity = role[role_id]
                 if role_position == position:
                     role_band = (
                         "weak"
@@ -452,7 +525,7 @@ def _build_current_facts(
             if rookie_season is not None
             else None
         )
-        prior_raw = prior_by.get(gsis) if gsis else None
+        prior_raw = prior_by.get(source_key) if source_key else None
         prior = None if prior_raw is None else max(0.0, float(prior_raw))
         current_state = base.state_for_points(points, bounds[position])
         rows.append(
@@ -475,6 +548,10 @@ def _build_current_facts(
             }
         )
 
+    identity_resolution["unique_source_stat_rows_used"] = len(used_source_ids)
+    identity_resolution["source_stat_rows_not_in_current_universe"] = max(0, len(source_rows) - len(used_source_ids))
+    identity_resolution["current_team_assigned_skill_players"] = len(current_sleeper_rows)
+
     artifact = {
         "schema_version": I1_CURRENT_FACTS_SCHEMA_VERSION,
         "evaluation_season": evaluation_season,
@@ -492,6 +569,7 @@ def _build_current_facts(
             "provider_neutral_contract": True,
             "research_coordinate_validation": coordinate_validation,
             "secondary_source_drift_audit": runtime_drift_audit,
+            "identity_resolution": identity_resolution,
             "scoring_coordinate": (
                 "frozen research fantasyPoints coordinate; standard/non-PPR semantics; "
                 "current nflverse revisions retained only as a non-authoritative drift audit"
