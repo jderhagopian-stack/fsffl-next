@@ -34,8 +34,9 @@ def test_frozen_constants() -> None:
 
 
 def test_shapley_efficiency_and_zero_dummy() -> None:
+    # LeagueRules governs team_count >= 2; use the smallest valid structural game.
     rules = LeagueRules(
-        team_count=1,
+        team_count=2,
         roster_size=3,
         lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
         scoring=(),
