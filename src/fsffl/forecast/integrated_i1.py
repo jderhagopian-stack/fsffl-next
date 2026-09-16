@@ -11,13 +11,14 @@ from sklearn.linear_model import LogisticRegression
 from fsffl.state.models import Position
 
 from .football_state import CanonicalFootballStateEvidence
+from .i1_config import FROZEN_I1_REGULARIZATION
 
-I1_C = 0.25
+I1_C = FROZEN_I1_REGULARIZATION.default_c
 I1_RANDOM_SEED = 20260915
 I1_MAX_ITER = 2000
 I1_MIN_TRAINING_ROWS = 100
 I1_MIN_BINARY_CLASS = 15
-I1_MODEL_VERSION = "integrated-i1-c0.25-v1"
+I1_MODEL_VERSION = f"integrated-i1-{FROZEN_I1_REGULARIZATION.version}"
 
 STATE_NAMES = ("out", "depth", "usable", "starter", "premium", "elite")
 POSITIVE_STATES = STATE_NAMES[1:]
@@ -152,10 +153,11 @@ class I1ForecastResult:
 
 
 class _BinaryModel:
-    def __init__(self) -> None:
+    def __init__(self, component: str) -> None:
+        self.component = component
         self.vectorizer = DictVectorizer(sort=True)
         self.model = LogisticRegression(
-            C=I1_C,
+            C=FROZEN_I1_REGULARIZATION.c_for(component),
             solver="lbfgs",
             max_iter=I1_MAX_ITER,
             random_state=I1_RANDOM_SEED,
@@ -179,8 +181,12 @@ class _BinaryModel:
 
 
 class _OrderedPositiveStateModel:
-    def __init__(self) -> None:
-        self.models = tuple(_BinaryModel() for _ in range(4))
+    def __init__(self, path: str) -> None:
+        names = ("useful", "starter", "premium", "elite")
+        self.models = tuple(
+            _BinaryModel(f"conditional.{path}.{name}")
+            for name in names
+        )
 
     def fit(self, features: list[dict[str, object]], states: list[str]) -> None:
         thresholds = (
@@ -213,9 +219,9 @@ class _OrderedPositiveStateModel:
 
 
 class _I1PathModel:
-    def __init__(self) -> None:
-        self.persistence = _BinaryModel()
-        self.positive_states = _OrderedPositiveStateModel()
+    def __init__(self, path: str) -> None:
+        self.persistence = _BinaryModel(f"persistence.{path}")
+        self.positive_states = _OrderedPositiveStateModel(path)
 
     def fit(self, rows: list[I1TrainingRow], *, rich: bool) -> None:
         features = [_feature_vector(row, rich=rich) for row in rows]
@@ -285,8 +291,8 @@ class IntegratedI1Model:
 
     def __init__(self, rows: Iterable[I1TrainingRow]) -> None:
         self.training_rows = tuple(rows)
-        self.rich = _I1PathModel()
-        self.reduced = _I1PathModel()
+        self.rich = _I1PathModel("rich")
+        self.reduced = _I1PathModel("reduced")
         rich_rows = [
             row
             for row in self.training_rows
