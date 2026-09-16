@@ -9,6 +9,7 @@ on:
       - 'src/fsffl/product/shapley_intrinsic_routes.py'
       - 'src/fsffl/product/persistent_webapp.py'
       - 'src/fsffl/value/private_beta_activation_data.py'
+      - 'src/fsffl/value/_private_beta_activation_*.py'
       - 'src/fsffl/value/shapley_intrinsic.py'
       - 'src/fsffl/value/shapley_intrinsic_contract.py'
       - 'src/fsffl/value/live_intrinsic_calendar.py'
@@ -34,7 +35,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install package and focused test tooling
-        run: python -m pip install -e . pytest
+        run: python -m pip install -e '.[web]' pytest
       - name: Run focused activation/API/optimization tests
         run: >-
           pytest -q
