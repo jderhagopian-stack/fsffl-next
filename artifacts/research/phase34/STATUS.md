@@ -212,3 +212,37 @@ The A2+B+D result commit is the commit containing this status update; its exact 
 Exact next unexecuted step: management decision whether to test C or proceed to the current-player sentinel / downstream Intrinsic audit.
 
 **A2+B+D STOP:** A2+C, A2+B+C+D, current-player sentinels, Shapley/Intrinsic diagnostics, promotion, merge, and deployment remain unexecuted.
+
+## 9. Phase 3/4 final historical challenger - A2+C+D completed
+
+Parent result commit: `4f1aad4589d80e0d2725d5a757d36254bbd21e36`
+
+Authorized and executed combination: `A2+C+D` only. The frozen joint A2/C/D probability model was genuinely refit under the predeclared blocked chronology. B was not run or included.
+
+Execution identifiers:
+
+- local research run: `a2cd-only-20260917-final-challenger-01`;
+- Phase 2 workflow run: `35196266697`;
+- Phase 2 workflow head: `cbf723945e5442d654482fcfeb2a53cd7dc4b178`;
+- Phase 2 artifact: `future-state-resolution-phase2-final`, artifact ID `10486530017`;
+- Phase 2 artifact ZIP SHA-256: `f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff`;
+- governing fast-harness blob: `6906a11d8fbec7a62bc392b627963a393413a61e`;
+- persisted A2+D metrics SHA-256: `3c9da92e7bfc37e7fc2430a8db3564e76aafbf06e9c81d858d61c6eb1e15d79a`;
+- persisted A2+D row checkpoint SHA-256: `778b01c1d021a96eefa2fed7d75bae7c5a424fe40e755156d8f3a07834d0b703`;
+- persisted A2+B+D metrics SHA-256: `ad65270afacb3f9f0b7b3a40c2164c33e4c27cf010c0c3e958218347fa4761bc`;
+- persisted A2+B+D row checkpoint SHA-256: `6841fb0bb6406bbbf39a535e7708458eb91159236a301e00df2df4e36e7af103`.
+
+Persisted A2+C+D artifacts:
+
+- `artifacts/research/phase34/phase34_a2cd_metrics.json` - aggregate and subgroup comparisons, age-bin persistence calibration, elite/premium tail calibration, and frozen C role/production-memory diagnostics; SHA-256 `0f73a8ef168a0a52eb0a6f8b0ee66067f66c9ca24a9f0db13df77e2c00c63440`;
+- `artifacts/research/phase34/phase34_a2cd_prediction_checkpoint_f32.npz` - 15,504 compressed row-level predictions; SHA-256 `7923cc45f91844f5e6e2a8580058e8d6f9f9e57e4b8799dade97ce22a4eedc94`.
+
+C adds small but repeatable out-of-sample information on top of A2+D. Validation and holdout both improve persistence Brier/log loss, state Brier, overall points MAE, and active-player MAE. The frozen C role-loss and production-memory diagnostics also improve in both blocks. The main replicated gain is QB-centered; small subgroup regressions remain, and validation state log loss worsens slightly. Bias does not show a material holdout regression.
+
+Historical challenger recommendation: `A2+C+D`. C earns inclusion; B remains deferred.
+
+The A2+C+D result commit is the commit containing this status update; its exact SHA is the branch head and is reported after persistence because a commit cannot embed its own SHA.
+
+Exact next unexecuted step: management sentinel review.
+
+**A2+C+D STOP:** current-player sentinels, Shapley/Intrinsic diagnostics, production implementation, promotion, PR #147 changes, merge, and deployment remain unexecuted.
