@@ -153,3 +153,32 @@ The A2+B result commit is the commit containing this status update; its exact SH
 Exact next unexecuted stage: `A2+C`.
 
 **RESUME STOP:** A2+C, A2+D, A2+B+C+D, named-player sentinels, Shapley/Intrinsic diagnostics, promotion, merge, and deployment remain unexecuted.
+
+## 7. Phase 3/4 continuation - A2+D completed
+
+Parent result commit: `71e06c47e2a4c2654deb711a11e8040ce9689aa7`
+
+Authorized and executed combination: `A2+D` only.
+
+Execution identifiers:
+
+- local research run: `a2d-only-20260917-recovery-01`;
+- Phase 2 workflow run: `35196266697`;
+- Phase 2 workflow head: `cbf723945e5442d654482fcfeb2a53cd7dc4b178`;
+- Phase 2 artifact: `future-state-resolution-phase2-final`, artifact ID `10486530017`;
+- Phase 2 artifact ZIP SHA-256: `f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff`;
+- governing fast-harness blob: `6906a11d8fbec7a62bc392b627963a393413a61e`;
+- frozen standalone comparison metrics blob: `3333092460a874e4413000c3448a99043779c430`;
+- persisted A2+B metrics SHA-256: `8e4df6e356908fc0548ef518efbe5157b2038462c3da0e61007d425ca78f32d7`;
+- persisted A2+B row checkpoint SHA-256: `4add65267ed03bfacdadaa96ef11886732771466ba729f32cc0acf57166d7db0`.
+
+Persisted A2+D artifacts:
+
+- `artifacts/research/phase34/phase34_a2d_metrics.json` - overall and subgroup metrics, frozen aggregate comparisons, age-bin persistence calibration, elite/premium tail calibration, and pairwise A2/A2+B deltas; SHA-256 `3c9da92e7bfc37e7fc2430a8db3564e76aafbf06e9c81d858d61c6eb1e15d79a`;
+- `artifacts/research/phase34/phase34_a2d_prediction_checkpoint_f32.npz` - 15,504 compressed row-level predictions; SHA-256 `778b01c1d021a96eefa2fed7d75bae7c5a424fe40e755156d8f3a07834d0b703`.
+
+The A2+D result commit is the commit containing this status update; its exact SHA is the branch head and is recorded in the execution report because a commit cannot embed its own SHA.
+
+Exact next unexecuted step: management review and authorization decision among `A2+B+D`, deferring B, or proceeding to C.
+
+**A2+D STOP:** A2+B+D, A2+C, A2+B+C+D, current-player sentinels, Shapley/Intrinsic diagnostics, promotion, merge, and deployment remain unexecuted.
