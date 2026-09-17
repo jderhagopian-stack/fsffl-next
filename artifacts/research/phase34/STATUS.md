@@ -274,3 +274,20 @@ The routing-study result commit is the commit containing this status update; its
 Exact next unexecuted step: management sentinel review.
 
 **POSITION-ROUTING STOP:** no larger routing study, current-player sentinel, Shapley/Intrinsic diagnostic, production implementation, promotion, PR #147 change, merge, or deployment was performed.
+
+## 11. Current-player sentinel and downstream Intrinsic diagnostic completed
+
+Authorized scope: current-player sentinel diagnostic only, using the recovered durable checkpoint and the fixed position route. No model quantities were changed, no named-player tuning was performed, and no production authority was exercised.
+
+Execution identifier: `current-player-sentinel-20260917-01`.
+
+Persisted artifacts:
+
+- `artifacts/research/phase34/phase34_current_player_sentinel_diagnostic.json` - full 335-player checkpoint, eight named sentinels, Forecast/Shapley decomposition, universal and fixed-route comparisons, and management interpretation. SHA-256 `7d3de0c6dd58dcf0e83f744c7ef36e67de2f37a4a98f7d7bb286ad6a56f67f91`.
+- `artifacts/research/phase34/FSFFL_NEXT_Current_Player_Sentinel_Diagnostic_Report.pdf` - management-ready five-page sentinel report plus two-page appendix with position-balanced top-10 samples (40 additional player rows) and full-universe distribution summaries. SHA-256 `8fed52121615823b20e3906dd159a6d6868fa4a6b4c6a463e65e370ec5b4b667`.
+
+Finding: the Forecast is defensible on the sentinel board. A2 resolves the frozen baseline's extreme-age QB persistence failure; C adds a small QB refinement; D provides credible conditional-production redistribution; and the fixed route preserves coherent young-player and aging-player economics. No immediate separate downstream Intrinsic/Shapley defect audit is warranted.
+
+Exact next unexecuted step: management Forecast-selection and implementation-authorization decision for the fixed position route. No promotion, PR #147 edit, main-branch edit, merge, deployment, or authority change occurred.
+
+**CURRENT-PLAYER SENTINEL STOP:** management decision required.
