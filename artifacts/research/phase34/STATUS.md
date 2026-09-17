@@ -182,3 +182,33 @@ The A2+D result commit is the commit containing this status update; its exact SH
 Exact next unexecuted step: management review and authorization decision among `A2+B+D`, deferring B, or proceeding to C.
 
 **A2+D STOP:** A2+B+D, A2+C, A2+B+C+D, current-player sentinels, Shapley/Intrinsic diagnostics, promotion, merge, and deployment remain unexecuted.
+
+## 8. Phase 3/4 continuation - A2+B+D completed
+
+Parent result commit: `6e5271039fdf7c330914b6305b33ec9a854ff06b`
+
+Authorized and executed combination: `A2+B+D` only.
+
+Execution identifiers:
+
+- local research run: `a2bd-only-20260917-recovery-01`;
+- Phase 2 workflow run: `35196266697`;
+- Phase 2 workflow head: `cbf723945e5442d654482fcfeb2a53cd7dc4b178`;
+- Phase 2 artifact: `future-state-resolution-phase2-final`, artifact ID `10486530017`;
+- Phase 2 artifact ZIP SHA-256: `f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff`;
+- governing fast-harness blob: `6906a11d8fbec7a62bc392b627963a393413a61e`;
+- persisted A2+B metrics SHA-256: `8e4df6e356908fc0548ef518efbe5157b2038462c3da0e61007d425ca78f32d7`;
+- persisted A2+B row checkpoint SHA-256: `4add65267ed03bfacdadaa96ef11886732771466ba729f32cc0acf57166d7db0`;
+- persisted A2+D metrics SHA-256: `3c9da92e7bfc37e7fc2430a8db3564e76aafbf06e9c81d858d61c6eb1e15d79a`;
+- persisted A2+D row checkpoint SHA-256: `778b01c1d021a96eefa2fed7d75bae7c5a424fe40e755156d8f3a07834d0b703`.
+
+Persisted A2+B+D artifacts:
+
+- `artifacts/research/phase34/phase34_a2bd_metrics.json` - aggregate and subgroup comparisons, A2+D and A2+B pairwise deltas, age persistence calibration, elite/premium tail calibration, and probability-identity verification; SHA-256 `ad65270afacb3f9f0b7b3a40c2164c33e4c27cf010c0c3e958218347fa4761bc`;
+- `artifacts/research/phase34/phase34_a2bd_prediction_checkpoint_f32.npz` - 15,504 compressed row-level predictions; SHA-256 `6841fb0bb6406bbbf39a535e7708458eb91159236a301e00df2df4e36e7af103`.
+
+The A2+B+D result commit is the commit containing this status update; its exact SHA is the branch head and is recorded in the execution report because a commit cannot embed its own SHA.
+
+Exact next unexecuted step: management decision whether to test C or proceed to the current-player sentinel / downstream Intrinsic audit.
+
+**A2+B+D STOP:** A2+C, A2+B+C+D, current-player sentinels, Shapley/Intrinsic diagnostics, promotion, merge, and deployment remain unexecuted.
