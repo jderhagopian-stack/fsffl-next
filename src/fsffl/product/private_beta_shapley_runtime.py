@@ -24,6 +24,11 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
+from .i1_scoring_bridge import (
+    FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
+    LeagueScoringNormalizedI1Predictor,
+    build_future_i1_position_scoring_multipliers,
+)
 from .runtime import UserRuntimeContext, league_material_fingerprint
 
 _SUPPORTED_POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
@@ -88,7 +93,9 @@ def _scoped_state(league_state: LeagueState, player_ids: set[str]) -> LeagueStat
     )
 
 
-def _provenance() -> CompletedSourceFactProvenance:
+def _provenance(
+    scoring_multipliers: dict[Position, float] | None = None,
+) -> CompletedSourceFactProvenance:
     metadata = dict(_FACTS.metadata)
     providers = metadata.get("providers", ())
     if not isinstance(providers, (list, tuple)):
@@ -109,8 +116,17 @@ def _provenance() -> CompletedSourceFactProvenance:
             "rights_classification": str(metadata.get("rights_classification", "unclassified")),
             "activation_bundle_sha256": ACTIVATION_BUNDLE_SHA256,
             "activation_workflow_run_id": ACTIVATION_WORKFLOW_RUN_ID,
+            "future_i1_scoring_bridge_version": FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
         }
     )
+    if scoring_multipliers is not None:
+        for position, multiplier in sorted(
+            scoring_multipliers.items(),
+            key=lambda item: item[0].value,
+        ):
+            fact_coverage[
+                f"future_i1_scoring_multiplier_{position.value.lower()}"
+            ] = float(multiplier)
     return CompletedSourceFactProvenance(
         source_version=_FACTS.source_version,
         schema_version=_FACTS.schema_version,
@@ -132,7 +148,11 @@ def _missing_fact_families() -> tuple[str, ...]:
     return tuple(sorted(name for key, name in families if coverage.get(key) is not True))
 
 
-def _cache_key(context: UserRuntimeContext, year_one: tuple[ForecastObservation, ...]) -> str:
+def _cache_key(
+    context: UserRuntimeContext,
+    year_one: tuple[ForecastObservation, ...],
+    scoring_multipliers: dict[Position, float],
+) -> str:
     assert context.league_state is not None
     payload = {
         "activation_bundle": ACTIVATION_BUNDLE_SHA256,
@@ -148,6 +168,16 @@ def _cache_key(context: UserRuntimeContext, year_one: tuple[ForecastObservation,
             }
             for item in sorted(year_one, key=lambda observation: observation.player_id)
         ],
+        "future_i1_scoring_bridge": {
+            "version": FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
+            "multipliers": {
+                position.value: multiplier
+                for position, multiplier in sorted(
+                    scoring_multipliers.items(),
+                    key=lambda item: item[0].value,
+                )
+            },
+        },
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
@@ -188,7 +218,22 @@ class PrivateBetaShapleyContractLoader:
                 missing_required_fact_families=("current_year_forecast",),
             )
 
-        key = _cache_key(context, year_one)
+        evidence = context.forecast_evidence
+        assert evidence is not None
+        try:
+            scoring_multipliers = build_future_i1_position_scoring_multipliers(
+                raw_forecasts=evidence.raw_forecasts,
+                league_year_one=year_one,
+                rules=league_state.league.rules,
+            )
+        except ValueError as exc:
+            return build_unavailable_shapley_intrinsic_contract(
+                evaluation_season=league_state.league.season,
+                reason=f"Future I1 league-scoring normalization unavailable: {exc}",
+                missing_required_fact_families=("future_i1_league_scoring_coordinate",),
+            )
+
+        key = _cache_key(context, year_one, scoring_multipliers)
         with self._lock:
             if key == self._cached_key and self._cached_contract is not None:
                 return self._cached_contract
@@ -209,11 +254,19 @@ class PrivateBetaShapleyContractLoader:
         if mapping.mapped_count != len(year_one_ids):
             raise ValueError("completed-source mapping coverage does not equal governed Year-1 Forecast coverage")
 
+        h12 = LeagueScoringNormalizedI1Predictor(
+            _H12,
+            multipliers=scoring_multipliers,
+        )
+        h3 = LeagueScoringNormalizedI1Predictor(
+            _H3,
+            multipliers=scoring_multipliers,
+        )
         calendar = compose_live_intrinsic_calendar(
             live_year_one_forecasts=year_one,
             mapping=mapping,
-            h1_h2_predictor=_H12,
-            h3_predictor=_H3,
+            h1_h2_predictor=h12,
+            h3_predictor=h3,
         )
         result = build_live_calendar_shapley_estimates(
             calendar,
@@ -221,7 +274,7 @@ class PrivateBetaShapleyContractLoader:
         )
         contract = build_shapley_intrinsic_contract(
             result,
-            completed_source_provenance=_provenance(),
+            completed_source_provenance=_provenance(scoring_multipliers),
             missing_required_fact_families=_missing_fact_families(),
         )
         with self._lock:

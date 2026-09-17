@@ -22,7 +22,7 @@ from .shapley_intrinsic import (
     SHAPLEY_INTRINSIC_MODEL_VERSION,
 )
 
-SHAPLEY_INTRINSIC_CONTRACT_VERSION = "intrinsic-shapley-contract-v1"
+SHAPLEY_INTRINSIC_CONTRACT_VERSION = "intrinsic-shapley-contract-v2:effective-horizon-seeds"
 SHAPLEY_INTRINSIC_ENDPOINT_PATH = "/api/value/intrinsic-shapley-v1"
 RAW_INTRINSIC_QUANTITY = "raw_governed_shapley_marginal_fantasy_points"
 
@@ -115,6 +115,11 @@ class ShapleyIntrinsicContract(FrozenModel):
     discount: float = FROZEN_INTRINSIC_DISCOUNT
     permutations: int = FROZEN_SHAPLEY_PERMUTATIONS
     seed: int = FROZEN_SHAPLEY_SEED
+    horizon_seeds: tuple[int, int, int] = (
+        FROZEN_SHAPLEY_SEED,
+        FROZEN_SHAPLEY_SEED + 1,
+        FROZEN_SHAPLEY_SEED + 2,
+    )
     quantity_semantics: str = RAW_INTRINSIC_QUANTITY
     display_scaling_applied: bool = False
     diagnostic_h1_included: bool = False
@@ -272,6 +277,7 @@ def build_shapley_intrinsic_contract(
         discount=result.discount,
         permutations=result.permutations,
         seed=result.seed,
+        horizon_seeds=(result.seed, result.seed + 1, result.seed + 2),
         completed_source_provenance=completed_source_provenance,
         coverage=ShapleyIntrinsicCoverage(
             player_count=player_count,
