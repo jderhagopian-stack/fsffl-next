@@ -124,3 +124,32 @@ PY
 After that, compute only the remaining predeclared combinations and diagnostics, then the sentinel report, then the management PDF. Do not modify PR #147, merge, deploy, or change production authority.
 
 **CHECKPOINT STOP:** no further A/B/C/D experimentation was performed after this status file was prepared.
+
+## 6. Phase 3/4 resume - A2+B completed
+
+Resume branch: `research/future-state-resolution-phase34-resume`
+
+Recovery checkpoint: `9494de9fd8cae596bec9382a0c5db4176c4b06f0`
+
+Authorized and executed combination: `A2+B` only.
+
+Execution identifiers:
+
+- local research run: `a2b-only-20260917-recovery-01`;
+- Phase 2 workflow run: `35196266697`;
+- Phase 2 workflow head: `cbf723945e5442d654482fcfeb2a53cd7dc4b178`;
+- Phase 2 artifact: `future-state-resolution-phase2-final`, artifact ID `10486530017`;
+- Phase 2 artifact ZIP SHA-256: `f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff`;
+- governing fast-harness blob: `6906a11d8fbec7a62bc392b627963a393413a61e`;
+- standalone comparison metrics blob: `3333092460a874e4413000c3448a99043779c430`.
+
+Persisted A2+B artifacts:
+
+- `artifacts/research/phase34/phase34_a2b_metrics.json` - overall, position, horizon, position-horizon, stage, and age/persistence calibration metrics; SHA-256 `8e4df6e356908fc0548ef518efbe5157b2038462c3da0e61007d425ca78f32d7`;
+- `artifacts/research/phase34/phase34_a2b_prediction_checkpoint_f32.npz` - 15,504 compressed row-level predictions; SHA-256 `4add65267ed03bfacdadaa96ef11886732771466ba729f32cc0acf57166d7db0`.
+
+The A2+B result commit is the commit containing this status update; its exact SHA is the branch head and is recorded in the execution report because a commit cannot embed its own SHA.
+
+Exact next unexecuted stage: `A2+C`.
+
+**RESUME STOP:** A2+C, A2+D, A2+B+C+D, named-player sentinels, Shapley/Intrinsic diagnostics, promotion, merge, and deployment remain unexecuted.
