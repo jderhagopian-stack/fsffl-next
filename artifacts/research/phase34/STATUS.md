@@ -246,3 +246,31 @@ The A2+C+D result commit is the commit containing this status update; its exact 
 Exact next unexecuted step: management sentinel review.
 
 **A2+C+D STOP:** current-player sentinels, Shapley/Intrinsic diagnostics, production implementation, promotion, PR #147 changes, merge, and deployment remain unexecuted.
+
+## 10. Fixed position-routing study completed
+
+Parent result commit: `75d7474dbca20d7c5898b2687231e85b5a5c8135`
+
+Authorized and executed routing only:
+
+- QB -> persisted `A2+C+D` predictions;
+- RB/WR/TE -> persisted `A2+D` predictions.
+
+No model was refit, no alternative route was evaluated, and no current-player or downstream Intrinsic work was performed. All 15,504 rows matched one-to-one on `source_season`, `player_id`, `position`, and `horizon`; 1,911 QB rows and 13,593 non-QB rows were routed without drops or duplicates.
+
+Execution identifier: `position-routing-20260917-fixed-qb-a2cd-01`.
+
+Persisted routing-study artifacts:
+
+- `artifacts/research/phase34/phase34_position_routing_metrics.json` - routed, universal A2+D, universal A2+C+D, and frozen-baseline comparisons with subgroup and calibration diagnostics; SHA-256 `e3bd9d1537cd6c078f465bcfaf297c58cda78a04b3bf67eae322d7e3753cd1cb`;
+- `artifacts/research/phase34/phase34_position_routing_checkpoint_f32.npz` - 15,504 compressed routed row-level predictions; SHA-256 `e1c1c6f6e8ea337e24b18abf84be5fe429a7706df1dbf8be30f8316823337cb8`.
+
+Decision-gate result: the fixed position-routing hypothesis earns further architectural consideration. Aggregate points MAE is essentially tied with universal A2+C+D while the route removes the repeated young RB, WR, and TE stage regressions in both validation and holdout. Active-player MAE improves slightly in both blocks. Probability and tail calibration changes are small and mixed, with no material new calibration harm. The route gives back some universal-C gains in older non-QB cohorts, so the evidence is corroborating rather than proof of a general routing architecture.
+
+Recommended historical Forecast contender entering sentinel review: fixed position route `QB=A2+C+D; RB/WR/TE=A2+D`, with universal A2+C+D retained as the comparison benchmark.
+
+The routing-study result commit is the commit containing this status update; its exact SHA is the branch head and is reported after persistence because a commit cannot embed its own SHA.
+
+Exact next unexecuted step: management sentinel review.
+
+**POSITION-ROUTING STOP:** no larger routing study, current-player sentinel, Shapley/Intrinsic diagnostic, production implementation, promotion, PR #147 change, merge, or deployment was performed.
