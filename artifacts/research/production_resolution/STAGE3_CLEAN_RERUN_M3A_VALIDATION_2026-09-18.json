@@ -1,0 +1,147 @@
+{
+  "study": "FSFFL NEXT Stage 3 clean reproducibility rerun - M3a",
+  "status": "CLEAN_RERUN_M3A_COMPLETE_RESEARCH_ONLY",
+  "comparator": "M1a + M2",
+  "validation_blocks": {
+    "Y2": [
+      2020,
+      2021
+    ],
+    "Y3": [
+      2019,
+      2020
+    ]
+  },
+  "final_holdout_evaluated": false,
+  "literal_sequence": true,
+  "sequence_parent_head": "caf289d1021d789942ee633d553b1ab57d0c4bf1",
+  "runner_control": "M3a-only execution path after persisted M2 checkpoint; no M3b model/adjustment object computed.",
+  "metrics": {
+    "Y2": {
+      "M2_mae": 31.024502551810425,
+      "M3a_mae": 31.05956183421586,
+      "delta": 0.035059282405429035,
+      "ci95": [
+        -0.01826476271512158,
+        0.08291023202224551
+      ],
+      "chronological": {
+        "Y2_2020": 0.04712863985508481,
+        "Y2_2021": 0.02336340670097284
+      },
+      "elite90_delta": -0.08313544751860108,
+      "extreme95_delta": -0.14508292516528934,
+      "stress": {
+        "ascending": -0.035099262645033186,
+        "aging_declining": 0.08846157538981159,
+        "nonpersistent": 0.10124344337470502,
+        "role_loss": 0.3163036141703983,
+        "stable_prime": 0.00885624676186821
+      }
+    },
+    "Y3": {
+      "M2_mae": 30.645794222827178,
+      "M3a_mae": 30.659051349325754,
+      "delta": 0.01325712649857621,
+      "ci95": [
+        -0.01723890820010266,
+        0.04109899076030716
+      ],
+      "chronological": {
+        "Y3_2019": 0.005709513101319397,
+        "Y3_2020": 0.02048761328250559
+      },
+      "elite90_delta": 0.006148177148612208,
+      "extreme95_delta": 0.18494933633103391,
+      "stress": {
+        "ascending": -0.0033509336540238433,
+        "aging_declining": 0.07033276831855255,
+        "nonpersistent": 0.05522755343584362,
+        "role_loss": 0.053014293890874455,
+        "stable_prime": -0.005756697458367228
+      }
+    }
+  },
+  "coefficients": [
+    {
+      "horizon": 2,
+      "source": 2020,
+      "m3a": [
+        -0.03004376168746012,
+        0.01959420695549754,
+        -0.004133222975528294,
+        0.005856675523707269
+      ]
+    },
+    {
+      "horizon": 2,
+      "source": 2021,
+      "m3a": [
+        -0.03454519170407755,
+        0.02130633435535547,
+        -0.004581678298216671,
+        0.006065791088653772
+      ]
+    },
+    {
+      "horizon": 3,
+      "source": 2019,
+      "m3a": [
+        -0.029195897229415266,
+        0.00007097644342562038,
+        0.0009367193087522086,
+        0.012466550252021574
+      ]
+    },
+    {
+      "horizon": 3,
+      "source": 2020,
+      "m3a": [
+        -0.030231642523708524,
+        0.0008619008175080782,
+        0.0027867154137399333,
+        0.013798119784063617
+      ]
+    }
+  ],
+  "coverage": {
+    "Y2": {
+      "prod_delta": 0.7444168734491315,
+      "prod_slope2": 0.5467328370554178
+    },
+    "Y3": {
+      "prod_delta": 0.7270386266094421,
+      "prod_slope2": 0.5210300429184549
+    }
+  },
+  "era_stability": {
+    "Y2": {
+      "M2_mae": 32.93310368236641,
+      "M3a_mae": 32.98506024679595
+    },
+    "Y3": {
+      "M2_mae": 32.17229952424245,
+      "M3a_mae": 32.199392681485634
+    }
+  },
+  "invariants": {
+    "rows": 2374,
+    "final_holdout_rows_present": false,
+    "named_current_players_used": false,
+    "state_probabilities_changed": false,
+    "max_m1a_parity_error": 2.842170943040401e-14
+  },
+  "reproducibility_vs_prior": {
+    "classification_same": true,
+    "all_common_row_audit_fields_exact": true,
+    "core_metrics_exact": true,
+    "qualitative_conclusion": "M3a does not advance; no replicated aggregate gain and clear lower-tail harm."
+  },
+  "hashes": {
+    "clean_runner": "15802aebd41bcb3468162799777643309e3701a09a4318597c57a9871f2d622e",
+    "clean_result_json": "d916f15c7ed6453b2ee4f61e2f237caa6b3e3577b82bb0bc4cecb5cd11857b57",
+    "clean_row_audit": "1f0043e5fa1ed583442c4287f4376d20cb65493800fc8c2fd1a5f41c1a0b0973",
+    "prior_result_json": "975e061738d068aa22f0347e455993f21abe47c72b3e3667300176d85edfb5f0",
+    "prior_row_audit": "22ba1638fb7e86146ad228c6d803c9ff1693d19f9dd36744bdefe0de37204767"
+  }
+}
