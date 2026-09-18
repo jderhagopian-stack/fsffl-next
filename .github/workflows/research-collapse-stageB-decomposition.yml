@@ -1,0 +1,98 @@
+name: research-collapse-stageB-decomposition
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/research-collapse-stageB-decomposition.yml'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  decompose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check pandas==2.2.3 numpy==2.1.3
+      - name: Decompose source-time roster signal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/p2 /tmp/out
+          gh api -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/actions/artifacts/10486530017/zip > /tmp/p2.zip
+          unzip -q /tmp/p2.zip -d /tmp/p2
+          python - <<'PY'
+          import pandas as pd, numpy as np, pathlib, urllib.request, json, hashlib, datetime, glob
+          q=glob.glob('/tmp/p2/**/phase2_q3_age_state_rows.csv',recursive=True)[0]
+          d=pd.read_csv(q); d=d[(d.source_season>=2014)&(d.source_season<=2020)].copy()
+          roster=[]; hashes={}
+          for y in range(2014,2021):
+              u=f'https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_{y}.csv'
+              raw=urllib.request.urlopen(u).read();hashes[str(y)]=hashlib.sha256(raw).hexdigest()
+              p=f'/tmp/r{y}.csv';open(p,'wb').write(raw);x=pd.read_csv(p,low_memory=False)
+              x=x[x.gsis_id.notna()].copy();x['week']=pd.to_numeric(x.week,errors='coerce');x=x[x.week.notna()].sort_values(['gsis_id','week'])
+              for pid,g in x.groupby('gsis_id'):
+                  g=g.drop_duplicates('week',keep='last').sort_values('week'); weeks=g.week.astype(int).tolist()
+                  active=(g.status.astype(str)=='ACT').tolist(); n=len(active); non=[not a for a in active]
+                  # runs of non-active weeks
+                  runs=[];start=None
+                  for i,v in enumerate(non+[False]):
+                      if v and start is None:start=i
+                      if not v and start is not None:runs.append((start,i-1));start=None
+                  last_non=max([i for i,v in enumerate(non) if v],default=-1)
+                  last4=non[max(0,n-4):]; firsthalf=non[:max(1,n//2)]; secondhalf=non[max(1,n//2):]
+                  final4_active=sum(active[max(0,n-4):])
+                  recovered=(sum(non)>0 and final4_active>=3 and (last_non < max(0,n-3)))
+                  late_det=(sum(secondhalf)/max(1,len(secondhalf)) >= .25 and sum(secondhalf)/max(1,len(secondhalf)) > sum(firsthalf)/max(1,len(firsthalf))+.10)
+                  roster.append(dict(player_id=pid,source_season=y,weeks=n,nonactive_share=sum(non)/n if n else np.nan,
+                    nonactive_weeks=sum(non),max_nonactive_run=max([b-a+1 for a,b in runs],default=0),nonactive_run_count=len(runs),
+                    isolated_nonactive_weeks=sum(1 for a,b in runs if a==b),last_nonactive_index=last_non,
+                    last4_nonactive_share=sum(last4)/max(1,len(last4)),firsthalf_nonactive_share=sum(firsthalf)/max(1,len(firsthalf)),
+                    secondhalf_nonactive_share=sum(secondhalf)/max(1,len(secondhalf)),final_status=str(g.iloc[-1].status),
+                    recovered_to_sustained_active=bool(recovered),late_deterioration=bool(late_det)))
+          r=pd.DataFrame(roster);z=d.merge(r,on=['player_id','source_season'],how='left')
+          # continuous bins, no assumed threshold
+          bins=[-1e-9,.05,.10,.20,.30,.40,.50,.75,1.00001];labs=['0-5','5-10','10-20','20-30','30-40','40-50','50-75','75-100']
+          z['share_bin']=pd.cut(z.nonactive_share,bins=bins,labels=labs,include_lowest=True)
+          # age quartiles within position/source season to avoid global-age confounding
+          z['age_q']=z.groupby(['position','source_season']).age.transform(lambda s: pd.qcut(s,4,labels=['Q1','Q2','Q3','Q4'],duplicates='drop') if s.nunique()>=4 else pd.Series([None]*len(s),index=s.index))
+          summaries=[]
+          def emit(groupcols,label):
+              for keys,g in z.groupby(groupcols,dropna=False,observed=True):
+                  if not isinstance(keys,tuple):keys=(keys,)
+                  row={'analysis':label,'n':len(g),'role_loss_rate':float(g.role_loss.mean()),'target_present_rate':float(g.target_present.mean())}
+                  row.update(dict(zip(groupcols,keys)));summaries.append(row)
+          emit(['horizon','share_bin'],'continuous_share')
+          emit(['horizon','position','share_bin'],'position_share')
+          emit(['horizon','age_q','share_bin'],'age_share')
+          emit(['horizon','source_season','share_bin'],'chronology_share')
+          emit(['horizon','recovered_to_sustained_active'],'recovery')
+          emit(['horizon','late_deterioration'],'late_deterioration')
+          # duration / repeated vs isolated / recency
+          z['run_severity']=pd.cut(z.max_nonactive_run,[-1,0,1,2,4,99],labels=['0','1','2','3-4','5+'])
+          z['run_pattern']=np.select([(z.nonactive_run_count==0),(z.nonactive_run_count==1)&(z.max_nonactive_run==1),(z.nonactive_run_count==1)&(z.max_nonactive_run>1),(z.nonactive_run_count>=2)],['none','isolated_single','single_stretch','repeated_stretches'],default='other')
+          z['recency_bin']=pd.cut(z.last4_nonactive_share,[-1e-9,.00001,.25,.50,.75,1.00001],labels=['0','<=25','25-50','50-75','75-100'])
+          emit(['horizon','run_severity'],'run_severity')
+          emit(['horizon','run_pattern'],'run_pattern')
+          emit(['horizon','recency_bin'],'recency')
+          out=pathlib.Path('/tmp/out')
+          pd.DataFrame(summaries).to_csv(out/'stageB_decomposition_summary.csv',index=False)
+          z.to_csv(out/'stageB_decomposition_rows.csv',index=False)
+          # simple monotonic association: weighted linear slope of rate by bin midpoint + threshold jumps
+          curve=[]
+          for h,g in z.groupby('horizon'):
+              for metric in ['nonactive_share','last4_nonactive_share','secondhalf_nonactive_share','max_nonactive_run']:
+                  qbins=pd.qcut(g[metric].rank(method='first'),10,labels=False,duplicates='drop')
+                  for b,a in g.groupby(qbins):
+                      curve.append({'horizon':int(h),'metric':metric,'decile':int(b),'n':len(a),'mean_signal':float(a[metric].mean()),'role_loss_rate':float(a.role_loss.mean()),'target_present_rate':float(a.target_present.mean())})
+          pd.DataFrame(curve).to_csv(out/'continuous_signal_curves.csv',index=False)
+          meta={'phase2_artifact_id':10486530017,'weekly_roster_sha256':hashes,'source_seasons':'2014-2020','cutoff':'source-season only','model_fitting':False,'stage_c_open':False,'created_utc':datetime.datetime.now(datetime.timezone.utc).isoformat()}
+          (out/'stageB_decomposition_provenance.json').write_text(json.dumps(meta,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: collapse-stageB-decomposition
+          path: /tmp/out/
