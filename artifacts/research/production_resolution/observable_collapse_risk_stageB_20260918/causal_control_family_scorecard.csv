@@ -1,0 +1,12 @@
+family,status,matched_result,population_result,position_chronology,reproducible_current,stageC_recommendation
+prolonged_repeated_availability,PARTIAL,"high-leverage cases nearly equal matched controls overall; max-run +0.067 weeks, run-count +0.052","upper burden quartile materially higher role-loss, but signal noisy","heterogeneous by position and year",YES,DO_NOT_ADVANCE_ALONE
+late_availability_deterioration,FAIL_HIGH_LEVERAGE,"late share and late delta slightly lower-risk than matched controls","upper late-burden quartile higher role-loss","chronology/position unstable",YES,DO_NOT_ADVANCE
+late_depth_chart_role_erosion,PASS_BOUNDED,"late depth rank +0.238 and last4 starter share -0.186 versus matched non-collapse controls","late-depth-rank quartiles show strongly ordered role-loss: ~14.8%,21.9%,30.3%,41.7%","strongest QB; positive WR; weak RB; insufficient/adverse TE; positive 2015-18 and 2020, near-neutral 2014/2019",YES,ADVANCE_TO_STAGE_C_ELIGIBILITY_AS_POSITION_AWARE_CONTINUOUS_FAMILY
+age_retirement_proxy,FAIL,"age percentile essentially identical to matched controls (-0.001 risk-direction difference)","older quartile not higher role-loss in this population","no stable positive pattern",YES,DO_NOT_ADVANCE
+production_deterioration_proxy,FAIL,"ratio unstable and not directionally cleaner in high-leverage matched cases","population relationship U-shaped rather than monotone","not a clean structural-risk family",YES,DO_NOT_ADVANCE
+temporary_recoverable_injury,UNRESOLVED,"roster status cannot reliably distinguish temporary from persistent physical cause",NA,NA,PARTIAL,DO_NOT_ADVANCE
+persistent_physical_risk,UNRESOLVED,"availability proxy discriminates population but not high-leverage matched cases",NA,"heterogeneous",PARTIAL,DO_NOT_ADVANCE_WITHOUT_CAUSAL_SOURCE
+contract_roster_security,DEPENDENCY,"no point-in-time historical contract snapshot was frozen for matched controls",NA,NA,"current data available but historical PIT reconstruction not established",DO_NOT_ADVANCE
+credible_successor_pressure,PARTIAL_PROXY,"QB late depth erosion strongly discriminates, but successor identity/credibility not separately encoded",NA,"QB evidence strongest",PARTIAL,"SUBSUME ONLY AS ROLE_EROSION UNTIL SEPARATELY REPRODUCIBLE"
+future_shock,NOT_PREDICTIVE,"post-cutoff by definition",NA,NA,NO,NEVER_FEATURE
+unresolved,NOT_PREDICTIVE,"insufficient source-time evidence",NA,NA,NO,NEVER_FEATURE
