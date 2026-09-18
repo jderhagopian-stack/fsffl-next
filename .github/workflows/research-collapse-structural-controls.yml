@@ -1,19 +1,18 @@
 name: research-collapse-structural-controls
 on:
-  push:
-    branches: [research/future-state-resolution-phase34-resume]
+  pull_request:
+    branches: [main]
     paths:
       - '.github/workflows/research-collapse-structural-controls.yml'
       - 'artifacts/research/production_resolution/observable_collapse_risk_stageB_20260918/RUN'
 permissions:
-  contents: write
+  contents: read
   actions: read
 jobs:
   controls:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: {ref: research/future-state-resolution-phase34-resume}
       - name: Build PIT roster-status controls
         env:
           GH_TOKEN: ${{ github.token }}
@@ -43,16 +42,13 @@ jobs:
               for sig in ['final_nonactive','any_material_nonactive']:
                   for val in [False,True]:
                       a=g[g[sig]==val];rows.append({'horizon':int(h),'signal':sig,'signal_value':bool(val),'n':len(a),'role_loss_rate':float(a.role_loss.mean()) if len(a) else None,'target_present_rate':float(a.target_present.mean()) if len(a) else None})
-          out=pathlib.Path('artifacts/research/production_resolution/observable_collapse_risk_stageB_20260918');out.mkdir(parents=True,exist_ok=True)
+          out=pathlib.Path('/tmp/output');out.mkdir()
           pd.DataFrame(rows).to_csv(out/'roster_status_control_summary.csv',index=False)
           z[z.role_loss.eq(1)].to_csv(out/'collapse_roster_status_features.csv',index=False)
           meta={'phase2_artifact_id':10486530017,'weekly_roster_sha256':hashes,'created_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'cutoff_interpretation':'source-season completion; only source-season weekly roster observations used','model_fitting':False}
           (out/'roster_status_provenance.json').write_text(json.dumps(meta,indent=2)+'\n')
           PY
-      - name: Commit controls
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add artifacts/research/production_resolution/observable_collapse_risk_stageB_20260918/
-          git commit -m "research: persist collapse structural roster controls" || exit 0
-          git push
+      - uses: actions/upload-artifact@v4
+        with:
+          name: collapse-structural-controls
+          path: /tmp/output/
