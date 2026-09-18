@@ -1,0 +1,20 @@
+{
+  "coordinate_id": "replacement-identity-materialization-v1:2026-09-18T17:06:21Z",
+  "directive_sha256": "adcd83f7e7a102a6526e97ba8d1309f9da09e8d2541d2da6008f2ee05d4e1666",
+  "files": {
+    "CHECKPOINT.md": "7225aacb048698d41b48505ad0ae9b46bb53b794ccd4fee33f241a868403c5f8",
+    "FSFFL_NEXT_Replacement_Identity_Materialization_Coordinate_Report.pdf": "a33fd300fea0cbae4645557c564fa055dbed2cde821d64501d68bc1f97ac8f57",
+    "RECONSTRUCTION.md": "8f4568fd157116673058222c9649aa4a520e390eb06ff0a7edcc4a7ee7d71150",
+    "collision_unmatched_audit.json": "b947b51c9630e654d0998b8fc03ced93ccfad60e22a4e1527917aded6e5257cc",
+    "manifest.json": "210701d50795c98b12e0eb1742a8ac4f3df8e1381483796e6bec63a883fe1a12",
+    "pit_coverage_audit.json": "0b1c761f7fc9508a8bdda5a10c32f42a9e511e703d5ed73cf3462b73d42d54b3",
+    "provider_identity_snapshot.json": "504cb0ea8ba479398dc543978274053ff3397db34c8cfb1c2e373bc49f0473ea",
+    "reload_verification.json": "5f697a04f276e460c2ec7369c4355b50660d8a33cfb3d879b11009276665fe23",
+    "replacement_identity_materialization_coordinate.json": "95fd6565a908b044ca234898cc801749abb2b6aa62a84c2d3c917445d369cda1",
+    "sentinel_identity_audit.json": "57cc19f1d7189ed5549277d98737f5b2b3653d9d8a39dac7e83bca69ba81dbeb"
+  },
+  "scripts": {
+    "scripts/research_build_replacement_identity_coordinate.py": "4317bf5f80a1e3ebd581954e6ed8b56f6e6d4faf897a6f5a78a6e50ae3038c70",
+    "scripts/research_generate_replacement_identity_coordinate_report.py": "2589a25ff262ac1f9b5dc370e62ba5bde010daa2245660806ef61f946e731a3a"
+  }
+}
