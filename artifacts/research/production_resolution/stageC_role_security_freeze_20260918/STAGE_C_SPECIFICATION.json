@@ -1,0 +1,38 @@
+{
+  "stage": "C",
+  "status": "FROZEN_BEFORE_CANDIDATE_EVALUATION",
+  "frozen_utc": "2026-09-18",
+  "starting_stageB_checkpoint": "44f6f27029a587552646c845584d1eecfcde0d8a",
+  "baseline": "B2a unchanged",
+  "eligible_family": "continuous late depth-chart role / starting-job security erosion",
+  "source": "source-season nflverse weekly depth charts; only observations legally available by source-season forecast cutoff",
+  "position_horizon_scope": {
+    "QB": ["Y2","Y3"],
+    "WR": ["Y2","Y3"],
+    "RB": [],
+    "TE": []
+  },
+  "scope_rationale": "Stage B matched evidence was consistent/strong for QB and supportive across horizons for WR; RB was near-neutral after Y1 and TE sparse/adverse. The governed Forecast repair concerns future Y2/Y3.",
+  "continuous_inputs": {
+    "absolute_late_role": "mean depth_team over final four available source-season weekly depth-chart observations",
+    "persistent_starting_security": "share of final four available observations with depth_team == 1",
+    "within_season_deterioration": "late-half starter share minus early-half starter share"
+  },
+  "feature_direction": {
+    "absolute_late_role": "higher rank number = greater erosion risk",
+    "persistent_starting_security": "lower share = greater erosion risk",
+    "within_season_deterioration": "more negative = greater erosion risk"
+  },
+  "thresholds": "NONE; no quartile/depth-rank/25%-availability threshold",
+  "missing_data": "No structural-risk adjustment when the required depth-chart evidence is missing or insufficient; missingness is not pessimistically imputed.",
+  "architecture_placement": "Adjustment may act only through existing future persistence / active-state / opportunity-state probability machinery. It may not directly suppress conditional-production magnitude.",
+  "estimation": "Estimate permitted coefficients only inside the existing legal chronological Forecast training framework, with training-fold-only standardization and existing governed regularization/bounds. No named-player calibration, current-board tuning, threshold search, broad hyperparameter search, or target-period information.",
+  "excluded_families": ["generic availability burden","late availability deterioration","temporary/recoverable injury label","persistent physical-risk label without causal source","age/retirement proxy","generic production deterioration","contract/roster-security anecdotes","explicit successor narrative as separate feature"],
+  "candidate_definitions": {
+    "S1": "B2a conditional-production architecture unchanged + frozen Stage-C role/security adjustment to existing future persistence/state/opportunity machinery",
+    "S2": "Only permissible if an already-developed richer conditional-production component can be paired with this exact frozen Stage-C machinery without any new model-family/feature/tuning choice"
+  },
+  "evaluation_freeze": "Pre-holdout chronological evidence only for candidate selection. Untouched holdout and preserved current board remain sealed until a candidate and pre-holdout conclusion are frozen.",
+  "stageC_open": true,
+  "model_fitting_authorized_after_this_checkpoint_only": true
+}
