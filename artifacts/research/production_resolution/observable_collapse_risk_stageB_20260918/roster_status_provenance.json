@@ -1,0 +1,17 @@
+{
+  "phase2_artifact_id": 10486530017,
+  "weekly_roster_sha256": {
+    "2014": "331022cd3b0c69d99c581f02b6fde6853e87ac431739c4b49841ee6e02893d6c",
+    "2015": "198904f48eeebafc1f34028a00c1b8c0fc135aba04fc4b276e636ef87709751a",
+    "2016": "ab05dfeffe6f9a1d969133cd6740f1625d135bfad672aaa916adb609ab662883",
+    "2017": "fd3fe005b676fe0ad8d88c50701d71adef4287501397c33f479c9765cd8c45d4",
+    "2018": "c3bca1ee53e63e21b964f1bb42c251e25b7b4b8c55210730dd4ded2f9d4a709a",
+    "2019": "af6aa7b8aa7850c47fe307d548d66fa7c1cac88fe11e5951c781974cb6909e03",
+    "2020": "0b948cca8735a2417cbda14464f4532aeee58d871e2fcd8464a23e969e45789e"
+  },
+  "created_utc": "2026-09-18T23:10:22.536153+00:00",
+  "cutoff_interpretation": "source-season completion; only source-season weekly roster observations used",
+  "model_fitting": false,
+  "workflow_run_id": 35404601164,
+  "workflow_artifact_id": 10571592164
+}
