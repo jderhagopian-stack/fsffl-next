@@ -1,0 +1,661 @@
+{
+  "study": "FSFFL NEXT final holdout evaluation",
+  "status": "FINAL_HOLDOUT_CONSUMED_ONCE_FROZEN_CANDIDATE_SURVIVED_FINAL_EXAM_RESEARCH_ONLY",
+  "start_head": "c337df306c5c6f5f4c484e633dd73455923b27d0",
+  "candidate": {
+    "baseline": "fixed routed Forecast + frozen M1a continuous within-state magnitude",
+    "selected": "fixed routed Forecast + frozen M1a + frozen two-prior-season consistency adjustment",
+    "routing": "QB=A2+C+D; RB/WR/TE=A2+D",
+    "features": {
+      "prior2_mean_age_state_z": "mean(z[t-1], z[t-2])",
+      "prior2_abs_gap_age_state_z": "abs(z[t-1] - z[t-2])",
+      "prior2_coverage": "explicit; uncovered continuous values are zero"
+    },
+    "scope": "conditional-production means only; persistence and state probabilities unchanged",
+    "excluded": [
+      "M1b",
+      "M2",
+      "M3a",
+      "M3b",
+      "role-quality/security",
+      "third prior season",
+      "hard repeated-elite tier",
+      "new interaction",
+      "named-player rule"
+    ]
+  },
+  "holdout": {
+    "Y2": {
+      "source_seasons": [
+        2022,
+        2023
+      ],
+      "target_seasons": [
+        2024,
+        2025
+      ],
+      "rows": 1154
+    },
+    "Y3": {
+      "source_seasons": [
+        2021,
+        2022
+      ],
+      "target_seasons": [
+        2024,
+        2025
+      ],
+      "rows": 1210
+    },
+    "total_rows": 2364,
+    "consumed_once": true
+  },
+  "pre_holdout_reconstruction_lock": {
+    "validation_rows": 2374,
+    "max_probability_diff": 5.0488810909854465e-9,
+    "max_state_mean_diff": 0.000004309392267032308,
+    "max_m1a_adjustment_diff": 5.011657394637936e-9,
+    "max_consistency_adjustment_diff": 4.994338276276267e-13,
+    "max_m1a_points_diff": 0.000004974690341441601,
+    "max_candidate_points_diff": 0.000004979564238283274,
+    "source2022_synthesis_parity": {
+      "n": 596,
+      "max_source_points_diff": 0,
+      "max_current_resid_z_diff": 8.881784197001252e-16,
+      "max_prior_points_diff": 0,
+      "max_state_pct_diff": 0,
+      "max_target_points_diff": 0,
+      "source_state_mismatches": 0,
+      "target_state_mismatches": 0
+    },
+    "note": "Frozen code paths were parity-checked against already-persisted validation outputs before holdout outcomes were evaluated."
+  },
+  "fit_metadata": [
+    {
+      "horizon": 2,
+      "source_season": 2022,
+      "train_n": 5276,
+      "train_source_seasons": [
+        2005,
+        2020
+      ],
+      "prior2_coverage": 0.4916603487490523,
+      "m1a_coef": 0.08348118432020514,
+      "transform": {
+        "mean_mu": 0.1811066240705311,
+        "mean_sd": 0.8308361974661007,
+        "gap_mu": 1.1057105277853179,
+        "gap_sd": 0.9144324596496857
+      },
+      "raw_coefficients": {
+        "mean_global": 0.10351821819382007,
+        "gap_global": 0.029263522430590078,
+        "coverage_global": 0.01685991621698061,
+        "mean_dev_QB": 0.15172148323717716,
+        "gap_dev_QB": 0.01174576734746409,
+        "mean_dev_RB": -0.05754123963765477,
+        "gap_dev_RB": -0.033194485890858834,
+        "mean_dev_WR": 0.009526607484607758,
+        "gap_dev_WR": -0.00973266976779781,
+        "mean_dev_TE": -0.00018863289031192422,
+        "gap_dev_TE": 0.06044491074178229
+      },
+      "effective_position_slopes": {
+        "QB": {
+          "mean": 0.2552397014309972,
+          "gap": 0.04100928977805417
+        },
+        "RB": {
+          "mean": 0.045976978556165296,
+          "gap": -0.003930963460268756
+        },
+        "WR": {
+          "mean": 0.11304482567842783,
+          "gap": 0.019530852662792267
+        },
+        "TE": {
+          "mean": 0.10332958530350814,
+          "gap": 0.08970843317237237
+        }
+      }
+    },
+    {
+      "horizon": 2,
+      "source_season": 2023,
+      "train_n": 5621,
+      "train_source_seasons": [
+        2005,
+        2021
+      ],
+      "prior2_coverage": 0.49742038783134673,
+      "m1a_coef": 0.08430467759836367,
+      "transform": {
+        "mean_mu": 0.1822298813938343,
+        "mean_sd": 0.8253713096603589,
+        "gap_mu": 1.1061422713530542,
+        "gap_sd": 0.9108658377560112
+      },
+      "raw_coefficients": {
+        "mean_global": 0.10959281998437514,
+        "gap_global": 0.03173309829302371,
+        "coverage_global": 0.021292346297413754,
+        "mean_dev_QB": 0.15963353760881002,
+        "gap_dev_QB": 0.014848158265044185,
+        "mean_dev_RB": -0.0627738289288025,
+        "gap_dev_RB": -0.03029978810737382,
+        "mean_dev_WR": 0.005979902531413742,
+        "gap_dev_WR": -0.009345310531867315,
+        "mean_dev_TE": 0.006753208772955389,
+        "gap_dev_TE": 0.05653003866721987
+      },
+      "effective_position_slopes": {
+        "QB": {
+          "mean": 0.26922635759318514,
+          "gap": 0.0465812565580679
+        },
+        "RB": {
+          "mean": 0.04681899105557265,
+          "gap": 0.0014333101856498914
+        },
+        "WR": {
+          "mean": 0.11557272251578889,
+          "gap": 0.022387787761156394
+        },
+        "TE": {
+          "mean": 0.11634602875733054,
+          "gap": 0.08826313696024357
+        }
+      }
+    },
+    {
+      "horizon": 3,
+      "source_season": 2021,
+      "train_n": 3620,
+      "train_source_seasons": [
+        2005,
+        2018
+      ],
+      "prior2_coverage": 0.4654696132596685,
+      "m1a_coef": 0.08224900423129726,
+      "transform": {
+        "mean_mu": 0.21140374800299241,
+        "mean_sd": 0.8387313656064831,
+        "gap_mu": 1.0944704966678631,
+        "gap_sd": 0.9006349314165824
+      },
+      "raw_coefficients": {
+        "mean_global": 0.08363199854928052,
+        "gap_global": 0.01565516708070969,
+        "coverage_global": 0.01271926099364759,
+        "mean_dev_QB": 0.1944532904409776,
+        "gap_dev_QB": 0.008964484158534207,
+        "mean_dev_RB": -0.09828137579440535,
+        "gap_dev_RB": -0.025861629050053566,
+        "mean_dev_WR": -0.006759819589847798,
+        "gap_dev_WR": 0.004930076533465454,
+        "mean_dev_TE": -0.0057800965074443645,
+        "gap_dev_TE": 0.027622235438764377
+      },
+      "effective_position_slopes": {
+        "QB": {
+          "mean": 0.2780852889902581,
+          "gap": 0.024619651239243895
+        },
+        "RB": {
+          "mean": -0.014649377245124828,
+          "gap": -0.010206461969343876
+        },
+        "WR": {
+          "mean": 0.07687217895943273,
+          "gap": 0.020585243614175144
+        },
+        "TE": {
+          "mean": 0.07785190204183616,
+          "gap": 0.04327740251947407
+        }
+      }
+    },
+    {
+      "horizon": 3,
+      "source_season": 2022,
+      "train_n": 3909,
+      "train_source_seasons": [
+        2005,
+        2019
+      ],
+      "prior2_coverage": 0.468406242005628,
+      "m1a_coef": 0.08343925230795868,
+      "transform": {
+        "mean_mu": 0.21080321569763882,
+        "mean_sd": 0.8361808275533635,
+        "gap_mu": 1.09633259024936,
+        "gap_sd": 0.8939487551390722
+      },
+      "raw_coefficients": {
+        "mean_global": 0.0834069200700278,
+        "gap_global": 0.01324923074413433,
+        "coverage_global": 0.009397701733970466,
+        "mean_dev_QB": 0.19975858250345496,
+        "gap_dev_QB": 0.01885787649764488,
+        "mean_dev_RB": -0.11638684296598506,
+        "gap_dev_RB": -0.01625589502223091,
+        "mean_dev_WR": 0.0016407259416074712,
+        "gap_dev_WR": 0.0036724703047364173,
+        "mean_dev_TE": -0.0016055454090500507,
+        "gap_dev_TE": 0.006974778963983807
+      },
+      "effective_position_slopes": {
+        "QB": {
+          "mean": 0.2831655025734828,
+          "gap": 0.03210710724177921
+        },
+        "RB": {
+          "mean": -0.03297992289595726,
+          "gap": -0.0030066642780965814
+        },
+        "WR": {
+          "mean": 0.08504764601163527,
+          "gap": 0.016921701048870745
+        },
+        "TE": {
+          "mean": 0.08180137466097775,
+          "gap": 0.020224009708118135
+        }
+      }
+    }
+  ],
+  "metrics": {
+    "Y2": {
+      "overall": {
+        "baseline": {
+          "n": 1154,
+          "mae": 32.341564068495586,
+          "bias": 0.28308768525909794
+        },
+        "candidate": {
+          "n": 1154,
+          "mae": 32.053824822907586,
+          "bias": 0.7898427142893424
+        },
+        "delta_mae": -0.28773924558799263,
+        "ci95": [
+          -0.603108403433606,
+          0.013194059266354276
+        ]
+      },
+      "conditional_active": {
+        "baseline": {
+          "n": 716,
+          "mae": 39.483443603458994,
+          "bias": -12.186223639913768
+        },
+        "candidate": {
+          "n": 716,
+          "mae": 38.99246106160593,
+          "bias": -11.396694459826273
+        },
+        "delta_mae": -0.4909825418530714,
+        "ci95": [
+          -1.0401967833377537,
+          0.011327933543307632
+        ]
+      },
+      "positions": {
+        "QB": {
+          "n": 154,
+          "baseline_mae": 62.50859019485305,
+          "candidate_mae": 60.94975349928122,
+          "delta_mae": -1.5588366955718278,
+          "ci95": [
+            -3.814870529311824,
+            0.4489240664672666
+          ]
+        },
+        "RB": {
+          "n": 322,
+          "baseline_mae": 37.74988636656658,
+          "candidate_mae": 37.749332080690166,
+          "delta_mae": -0.0005542858764193513,
+          "ci95": [
+            -0.09325404194292003,
+            0.09294301018698135
+          ]
+        },
+        "WR": {
+          "n": 441,
+          "baseline_mae": 25.87110083048592,
+          "candidate_mae": 25.745993753554753,
+          "delta_mae": -0.12510707693116555,
+          "ci95": [
+            -0.30208872716431023,
+            0.04318241694840972
+          ]
+        },
+        "TE": {
+          "n": 237,
+          "baseline_mae": 17.431321387163702,
+          "candidate_mae": 17.27672418331716,
+          "delta_mae": -0.15459720384654416,
+          "ci95": [
+            -0.4794643948019554,
+            0.12628185924362417
+          ]
+        }
+      },
+      "gt90": {
+        "n": 115,
+        "baseline_mae": 60.01237144475595,
+        "candidate_mae": 57.65834133682491,
+        "delta_mae": -2.3540301079310364,
+        "mae_ci95": [
+          -4.6837616208418495,
+          -0.49130539228024794
+        ],
+        "baseline_bias": -20.975802075215675,
+        "candidate_bias": -18.074967989954718,
+        "delta_bias": 2.9008340852609567,
+        "bias_ci95": [
+          1.1302538598346115,
+          5.1810329092686604
+        ]
+      },
+      "gt95": {
+        "n": 59,
+        "baseline_mae": 66.75180542812788,
+        "candidate_mae": 62.9496160497608,
+        "delta_mae": -3.802189378367078,
+        "mae_ci95": [
+          -8.220816083515603,
+          -0.5979276703669726
+        ],
+        "baseline_bias": -27.007039158142618,
+        "candidate_bias": -22.120995748428996,
+        "delta_bias": 4.886043409713625,
+        "bias_ci95": [
+          1.5963760531867117,
+          9.158372243884447
+        ]
+      },
+      "nonpersistent": {
+        "n": 438,
+        "baseline_mae": 20.666710764765426,
+        "candidate_mae": 20.711213985218063,
+        "delta_mae": 0.04450322045263842,
+        "ci95": [
+          -0.09581127806549282,
+          0.23951298113697914
+        ]
+      },
+      "role_loss": {
+        "n": 118,
+        "baseline_mae": 39.7084095911532,
+        "candidate_mae": 39.78798580686636,
+        "delta_mae": 0.07957621571317176,
+        "ci95": [
+          -0.5544619066993876,
+          0.8975229791672839
+        ]
+      },
+      "prior2_covered": {
+        "n": 693,
+        "share": 0.6005199306759099,
+        "baseline_mae": 31.7483674324835,
+        "candidate_mae": 31.269217231316773,
+        "delta_mae": -0.4791502011667294,
+        "ci95": [
+          -1.0265291899584283,
+          0.026111183644752185
+        ]
+      },
+      "prior2_missing": {
+        "n": 461,
+        "share": 0.39948006932409014,
+        "baseline_mae": 33.23328916341178,
+        "candidate_mae": 33.23328916341178,
+        "delta_mae": 0
+      },
+      "chronological": {
+        "2022": {
+          "n": 596,
+          "baseline_mae": 32.109329282587275,
+          "candidate_mae": 31.75733485951032,
+          "delta": -0.3519944230769496,
+          "covered_n": 361
+        },
+        "2023": {
+          "n": 558,
+          "baseline_mae": 32.58961412656252,
+          "candidate_mae": 32.370505859081014,
+          "delta": -0.21910826748150816,
+          "covered_n": 332
+        }
+      },
+      "calibration": {
+        "persist_brier": 0.17493813122823917,
+        "persist_logloss": 0.5208126720497908,
+        "persist_bias": -0.026638663281252084,
+        "state_brier": 0.646528361687979,
+        "state_logloss": 1.3526495889197678
+      }
+    },
+    "Y3": {
+      "overall": {
+        "baseline": {
+          "n": 1210,
+          "mae": 29.418629682331318,
+          "bias": 0.9191629189661896
+        },
+        "candidate": {
+          "n": 1210,
+          "mae": 29.26161971357117,
+          "bias": 1.278894831232678
+        },
+        "delta_mae": -0.15700996876013845,
+        "ci95": [
+          -0.4156960896006954,
+          0.06242516335823351
+        ]
+      },
+      "conditional_active": {
+        "baseline": {
+          "n": 578,
+          "mae": 41.1412996720215,
+          "bias": -18.520213794538705
+        },
+        "candidate": {
+          "n": 578,
+          "mae": 40.78444161073863,
+          "bias": -17.79531117062743
+        },
+        "delta_mae": -0.3568580612828721,
+        "ci95": [
+          -0.9075282180922967,
+          0.10895230911495965
+        ]
+      },
+      "positions": {
+        "QB": {
+          "n": 153,
+          "baseline_mae": 61.710400742212,
+          "candidate_mae": 60.74129072292471,
+          "delta_mae": -0.9691100192872925,
+          "ci95": [
+            -3.004858690126901,
+            0.8031331479301118
+          ]
+        },
+        "RB": {
+          "n": 343,
+          "baseline_mae": 32.069958508558614,
+          "candidate_mae": 32.09953913097415,
+          "delta_mae": 0.029580622415534254,
+          "ci95": [
+            -0.0037036372343997744,
+            0.06032316432547342
+          ]
+        },
+        "WR": {
+          "n": 467,
+          "baseline_mae": 23.504050963225104,
+          "candidate_mae": 23.439953993372225,
+          "delta_mae": -0.06409696985287949,
+          "ci95": [
+            -0.14551704673397603,
+            0.009813066558788362
+          ]
+        },
+        "TE": {
+          "n": 247,
+          "baseline_mae": 16.91685438785719,
+          "candidate_mae": 16.828105003986558,
+          "delta_mae": -0.08874938387062871,
+          "ci95": [
+            -0.21385168882658273,
+            0.021328957670426765
+          ]
+        }
+      },
+      "gt90": {
+        "n": 120,
+        "baseline_mae": 59.10140817118273,
+        "candidate_mae": 57.935962553918564,
+        "delta_mae": -1.1654456172641783,
+        "mae_ci95": [
+          -3.314965435747207,
+          0.4057198387232827
+        ],
+        "baseline_bias": -26.00131051798087,
+        "candidate_bias": -24.170234996637145,
+        "delta_bias": 1.8310755213437253,
+        "bias_ci95": [
+          0.2732220988615957,
+          3.870325245414474
+        ]
+      },
+      "gt95": {
+        "n": 61,
+        "baseline_mae": 62.95150648593872,
+        "candidate_mae": 60.12003033020176,
+        "delta_mae": -2.8314761557369765,
+        "mae_ci95": [
+          -6.980148866053376,
+          -0.20132122634854713
+        ],
+        "baseline_bias": -32.03151626959888,
+        "candidate_bias": -28.795758984400198,
+        "delta_bias": 3.235757285198679,
+        "bias_ci95": [
+          0.5907958404795501,
+          7.222039914539416
+        ]
+      },
+      "nonpersistent": {
+        "n": 632,
+        "baseline_mae": 18.697580229734903,
+        "candidate_mae": 18.723342725338913,
+        "delta_mae": 0.025762495604007223,
+        "ci95": [
+          -0.07623093159414791,
+          0.1250643718751095
+        ]
+      },
+      "role_loss": {
+        "n": 113,
+        "baseline_mae": 32.56102414079324,
+        "candidate_mae": 32.51408875377995,
+        "delta_mae": -0.046935387013296574,
+        "ci95": [
+          -0.5978646612133985,
+          0.29773360247297453
+        ]
+      },
+      "prior2_covered": {
+        "n": 712,
+        "share": 0.5884297520661157,
+        "baseline_mae": 29.808209305271625,
+        "candidate_mae": 29.541380566227012,
+        "delta_mae": -0.2668287390446173,
+        "ci95": [
+          -0.7230205889882878,
+          0.11064539003697987
+        ]
+      },
+      "prior2_missing": {
+        "n": 498,
+        "share": 0.4115702479338843,
+        "baseline_mae": 28.861640341902582,
+        "candidate_mae": 28.861640341902582,
+        "delta_mae": 0
+      },
+      "chronological": {
+        "2021": {
+          "n": 614,
+          "baseline_mae": 28.976720555089525,
+          "candidate_mae": 28.84440223839778,
+          "delta": -0.13231831669174077,
+          "covered_n": 351
+        },
+        "2022": {
+          "n": 596,
+          "baseline_mae": 29.87388505838242,
+          "candidate_mae": 29.69143771651826,
+          "delta": -0.18244734186415887,
+          "covered_n": 361
+        }
+      },
+      "calibration": {
+        "persist_brier": 0.17992732973585898,
+        "persist_logloss": 0.535740794468826,
+        "persist_bias": -0.017711703256072853,
+        "state_brier": 0.5611366946965458,
+        "state_logloss": 1.1999715271859124
+      }
+    }
+  },
+  "failure_scan": {
+    "broad": "none; candidate MAE improves numerically at both horizons",
+    "chronological": "none; all four holdout source-season point estimates improve",
+    "position": "no material failure; Y3 RB worsens only +0.030 MAE with uncertainty spanning zero; other position point estimates improve",
+    "high_end": "no failure; >90th bias improves clearly at both horizons, and >95th MAE/bias improve clearly at both horizons",
+    "lower_tail": "no material failure; non-persistence and role-loss changes are small with intervals spanning zero",
+    "calibration": "unchanged because candidate does not alter probabilities",
+    "systematic_bias": "overall bias shifts modestly more positive (+0.507 Y2, +0.360 Y3) while high-end underforecast is reduced materially"
+  },
+  "interpretation": {
+    "classification": "SURVIVED_FINAL_EXAM",
+    "post_holdout_tuning": false,
+    "candidate_switching": false,
+    "rationale": [
+      "Overall MAE improves numerically at both horizons and every holdout source season improves.",
+      "Overall clustered intervals cross zero, so this is not described as a broad statistical victory.",
+      "The preselected high-end correction survives: >90th bias improves clearly at both horizons; >95th MAE and bias improve clearly at both horizons.",
+      "No important new lower-tail, position, or calibration failure appears.",
+      "Per the predeclared framework, the historical candidate survived the final exam; only separately authorized current-player sentinels may follow."
+    ]
+  },
+  "uncertainty_note": "Paired two-way source-season/player cluster bootstrap; each horizon has only two source-season clusters, so intervals are descriptive and should not be overinterpreted as high-cluster-count asymptotics.",
+  "provenance": {
+    "directive_pdf_sha256": "528d7d8e809c911eebe0c4c9fee20f0f6c741fd68fcecee996f4408052325789",
+    "phase2_q3_age_state_rows_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+    "phase2_player_season_panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+    "frozen_consistency_result_sha256": "3f08a6d4806dfbc1c3c4947cdf354c14b3b720a17b57e9c928dc63bcb87f51bf",
+    "frozen_consistency_validation_audit_sha256": "04ac0f236784492c4af06ca684edec66a5d318b44110a1ce50c28c083ebfd96e",
+    "holdout_row_audit_csv_sha256": "2df09a5388c363fe913da9eeae6eb46bad84931157a9e13f34ceede284ae9a89",
+    "holdout_row_audit_gzip_sha256": "f0ae43de2b304f6d35e8296d01ef1387715ffe88579b801f81086cae19fd6992",
+    "local_result_json_sha256": "4263807553eacf0a48b5aa1f0032f6c84bd845411ab920e16a8a9719688f1553",
+    "phase34_harness_blob": "6906a11d8fbec7a62bc392b627963a393413a61e",
+    "consistency_checkpoint_blob": "922d7777cb8e0fa48e076fd0ad386af9b5bab939"
+  },
+  "recomputation": [
+    "Reproduce the persisted validation outputs first and lock the code path before reading holdout outcomes.",
+    "Evaluate only Y2 source seasons 2022-2023 and Y3 source seasons 2021-2022.",
+    "For source 2023 H2, reconstruct source-state facts from the frozen Phase 2 panel with the same PIT state-boundary/residual semantics; parity-test that code path on source 2022.",
+    "Fit routed probabilities with A2+D for RB/WR/TE and A2+C+D for QB; H2 pools eligible H1/H2 transitions and H3 is direct.",
+    "Treat out-state production mean as zero; use frozen hierarchical positive-state means/SDs.",
+    "Refit frozen M1a at each cutoff on positive source/target states only using BayesianRidge(fit_intercept=False).",
+    "Build only the frozen t-1/t-2 age/state residual mean, absolute gap, and coverage using PIT residuals. Standardize covered values using training-only population moments (ddof=0).",
+    "Fit the predeclared global mean/gap/coverage plus position mean/gap deviation BayesianRidge to target residual-z after M1a.",
+    "Adjust positive-state conditional means only. Do not alter state probabilities.",
+    "After this evaluation, the final holdout is permanently consumed and may not be reused as pristine development evidence."
+  ]
+}
