@@ -16,177 +16,28 @@ jobs:
   persist:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      SOURCE_RUN_ID: '35330898624'
-      SOURCE_ARTIFACT_ID: '10541375155'
-      SOURCE_ARTIFACT_ZIP_SHA256: 'c23fed641c4ad689513510022f187e6ea05cab2dc88d457d545be9afc1f49ee7'
-      SOURCE_HEAD_SHA: '92eb9cb4cc1f5c61909e55d6c5491eb0292d4bb6'
-      EXPECTED_UNIVERSE_SHA256: 'c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f'
-      EXPECTED_MANIFEST_SHA256: '828126f0476c2bf18a84344e5a9672cda518b105e2ceff5b035766ffa50249a6'
-      EXPECTED_COORDINATE_ID: 'year1-current-governed-2026:2026-09-18T09:42:31.889752+00:00'
-      DEST_DIR: 'artifacts/research/production_resolution/governed_year1_current_2026_20260918T094231Z'
-
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Download the already-frozen data-refresh artifact
+      - name: Download the already-completed data refresh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           rm -rf /tmp/fsffl-year1-frozen
           mkdir -p /tmp/fsffl-year1-frozen
-          gh run download "$SOURCE_RUN_ID"             --repo "$GITHUB_REPOSITORY"             --name governed-year1-evaluation-universe             --dir /tmp/fsffl-year1-frozen
+          gh run download 35330898624 --repo "$GITHUB_REPOSITORY" --name governed-year1-evaluation-universe --dir /tmp/fsffl-year1-frozen
 
-      - name: Verify the frozen artifact before repository persistence
+      - name: Verify and stage the exact frozen coordinate
         run: |
-          python - <<'PY'
-          import hashlib
-          import json
-          import os
-          from pathlib import Path
-
-          root = Path('/tmp/fsffl-year1-frozen')
-          universe_path = root / 'governed_year1_universe.json'
-          manifest_path = root / 'governed_year1_universe_manifest.json'
-          verification_path = root / 'reload_verification.json'
-          report_path = root / 'report.md'
-          for path in (universe_path, manifest_path, verification_path, report_path):
-              if not path.is_file():
-                  raise SystemExit(f'missing frozen artifact file: {path}')
-
-          def sha256(path: Path) -> str:
-              return hashlib.sha256(path.read_bytes()).hexdigest()
-
-          u_sha = sha256(universe_path)
-          m_sha = sha256(manifest_path)
-          if u_sha != os.environ['EXPECTED_UNIVERSE_SHA256']:
-              raise SystemExit(f'universe SHA mismatch: {u_sha}')
-          if m_sha != os.environ['EXPECTED_MANIFEST_SHA256']:
-              raise SystemExit(f'manifest SHA mismatch: {m_sha}')
-
-          universe = json.loads(universe_path.read_text(encoding='utf-8'))
-          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-          verification = json.loads(verification_path.read_text(encoding='utf-8'))
-
-          expected_positions = {'QB': 61, 'RB': 88, 'TE': 64, 'WR': 122}
-          if universe['coordinate_id'] != os.environ['EXPECTED_COORDINATE_ID']:
-              raise SystemExit('coordinate id mismatch')
-          if universe['row_count'] != 335 or len(universe['rows']) != 335:
-              raise SystemExit('row count mismatch')
-          if universe['position_counts'] != expected_positions:
-              raise SystemExit(f'position count mismatch: {universe["position_counts"]}')
-          if manifest['artifact_sha256'] != u_sha or manifest['row_count'] != 335:
-              raise SystemExit('manifest does not verify universe')
-          if verification['status'] != 'PASS':
-              raise SystemExit('reload verification is not PASS')
-          if verification['artifact_sha256_first_write'] != u_sha:
-              raise SystemExit('first-write verification hash mismatch')
-          if verification['artifact_sha256_fresh_reload'] != u_sha:
-              raise SystemExit('fresh-reload verification hash mismatch')
-          if verification['row_count_fresh_reload'] != 335:
-              raise SystemExit('fresh-reload row count mismatch')
-          if universe['source_governance']['successful_source_ids'] != ['fftoday', 'razzball']:
-              raise SystemExit('governed source set mismatch')
-          if universe['downstream_coordinate']['mapped_completed_source_players'] != 335:
-              raise SystemExit('completed-source mapping coverage mismatch')
-
-          print(f'Verified frozen coordinate {universe["coordinate_id"]}')
-          print(f'Universe SHA-256 {u_sha}; rows={universe["row_count"]}; positions={universe["position_counts"]}')
-          PY
-
-      - name: Persist the complete frozen coordinate
-        run: |
-          rm -rf "$DEST_DIR"
-          mkdir -p "$DEST_DIR"
-          cp /tmp/fsffl-year1-frozen/governed_year1_universe.json "$DEST_DIR/"
-          cp /tmp/fsffl-year1-frozen/governed_year1_universe_manifest.json "$DEST_DIR/"
-          cp /tmp/fsffl-year1-frozen/reload_verification.json "$DEST_DIR/"
-          cp /tmp/fsffl-year1-frozen/report.md "$DEST_DIR/"
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          dest = Path(os.environ['DEST_DIR'])
-          source = {
-              'schema_version': 'fsffl-governed-year1-persistence-source-v1',
-              'coordinate_id': os.environ['EXPECTED_COORDINATE_ID'],
-              'source_workflow_run_id': int(os.environ['SOURCE_RUN_ID']),
-              'source_workflow_head_sha': os.environ['SOURCE_HEAD_SHA'],
-              'source_artifact_id': int(os.environ['SOURCE_ARTIFACT_ID']),
-              'source_artifact_name': 'governed-year1-evaluation-universe',
-              'source_artifact_zip_sha256': os.environ['SOURCE_ARTIFACT_ZIP_SHA256'],
-              'universe_sha256': os.environ['EXPECTED_UNIVERSE_SHA256'],
-              'manifest_sha256': os.environ['EXPECTED_MANIFEST_SHA256'],
-              'note': 'Exact bytes copied from the already-completed data-refresh workflow; no live provider refetch occurred in this persistence step.',
-          }
-          (dest / 'source_run.json').write_text(
-              json.dumps(source, sort_keys=True, separators=(',', ':'), ensure_ascii=False) + '\n',
-              encoding='utf-8',
-          )
-          PY
-
-      - name: Fresh-read the repository copy and verify exact identity
-        run: |
-          python - <<'PY'
-          import hashlib
-          import json
-          import os
-          from pathlib import Path
-
-          dest = Path(os.environ['DEST_DIR'])
-          universe_path = dest / 'governed_year1_universe.json'
-          manifest_path = dest / 'governed_year1_universe_manifest.json'
-
-          def sha256(path: Path) -> str:
-              return hashlib.sha256(path.read_bytes()).hexdigest()
-
-          u_sha = sha256(universe_path)
-          m_sha = sha256(manifest_path)
-          universe = json.loads(universe_path.read_text(encoding='utf-8'))
-
-          if u_sha != os.environ['EXPECTED_UNIVERSE_SHA256']:
-              raise SystemExit('repository-copy universe hash changed')
-          if m_sha != os.environ['EXPECTED_MANIFEST_SHA256']:
-              raise SystemExit('repository-copy manifest hash changed')
-          if len(universe['rows']) != 335:
-              raise SystemExit('repository-copy row count changed')
-
-          checkpoint = f"""# FSFFL NEXT - New Governed Downstream Evaluation Universe Checkpoint
-
-Status: **PASS - ROW-COMPLETE CURRENT YEAR-1 COORDINATE DURABLY PERSISTED AND RELOADED**
-
-- Coordinate: `{universe['coordinate_id']}`
-- Freeze as-of: `{universe['freeze_as_of']}`
-- Row count: **{universe['row_count']}**
-- Position counts: `{universe['position_counts']}`
-- Successful governed live sources: `{universe['source_governance']['successful_source_ids']}`
-- Failed/ignored sources: `{universe['source_governance']['failed_sources']}`
-- Universe path: `{dest / 'governed_year1_universe.json'}`
-- Manifest path: `{dest / 'governed_year1_universe_manifest.json'}`
-- Universe SHA-256: `{u_sha}`
-- Manifest SHA-256: `{m_sha}`
-- Source workflow run: `{os.environ['SOURCE_RUN_ID']}`
-- Source artifact id: `{os.environ['SOURCE_ARTIFACT_ID']}`
-- Source artifact ZIP digest: `{os.environ['SOURCE_ARTIFACT_ZIP_SHA256']}`
-- Exact repository-copy reload: **PASS**
-- No live refetch occurred during persistence; these are the exact bytes produced by the completed data-refresh run.
-- No Intrinsic/Shapley evaluation was executed.
-- Frozen Forecast candidate, settled Intrinsic/Shapley architecture, `main`, and PR #147 were not modified by this task.
-
-**STOP.** This checkpoint establishes the new governed downstream Year-1 coordinate only. Do not run Intrinsic/Shapley or inspect final downstream rankings without a new management authorization.
-"""
-          (dest / 'CHECKPOINT.md').write_text(checkpoint, encoding='utf-8')
-          print(checkpoint)
-          PY
+          python scripts/research_persist_frozen_year1_universe.py             --source-dir /tmp/fsffl-year1-frozen             --dest-dir artifacts/research/production_resolution/governed_year1_current_2026_20260918T094231Z
 
       - name: Commit the durable coordinate to the research branch
         run: |
           git config user.name "fsffl-research-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add "$DEST_DIR"
+          git add artifacts/research/production_resolution/governed_year1_current_2026_20260918T094231Z
           git diff --cached --stat
           git commit -m "research: persist governed Year-1 evaluation universe"
           git push origin "HEAD:${GITHUB_REF_NAME}"
