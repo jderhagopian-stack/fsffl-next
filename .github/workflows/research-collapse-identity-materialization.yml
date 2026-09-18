@@ -1,0 +1,49 @@
+name: research-collapse-identity-materialization
+on:
+  push:
+    branches:
+      - research/future-state-resolution-phase34-resume
+    paths:
+      - 'artifacts/research/production_resolution/observable_collapse_risk_stageA_20260918/collapse_player_ids.csv'
+      - '.github/workflows/research-collapse-identity-materialization.yml'
+permissions:
+  contents: write
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/future-state-resolution-phase34-resume
+      - name: Materialize versioned nflverse registry identities
+        shell: python
+        run: |
+          import csv, hashlib, json, pathlib, urllib.request, datetime
+          url='https://github.com/nflverse/nflverse-data/releases/download/players/players.csv'
+          raw=urllib.request.urlopen(url).read()
+          out=pathlib.Path('artifacts/research/production_resolution/observable_collapse_risk_stageA_20260918')
+          (out/'nflverse_players_snapshot.csv').write_bytes(raw)
+          sha=hashlib.sha256(raw).hexdigest()
+          ids=[r['player_id'] for r in csv.DictReader(open(out/'collapse_player_ids.csv'))]
+          rows=list(csv.DictReader(raw.decode('utf-8-sig').splitlines()))
+          by={r.get('gsis_id'):r for r in rows if r.get('gsis_id')}
+          name_fields=['display_name','full_name','football_name','short_name']
+          mapped=[]
+          for pid in ids:
+              r=by.get(pid,{})
+              name=next((r.get(f) for f in name_fields if r.get(f)),None)
+              mapped.append({'player_id':pid,'canonical_name':name or '', 'resolved':bool(name)})
+          with open(out/'collapse_identity_mapping.csv','w',newline='') as f:
+              w=csv.DictWriter(f,fieldnames=['player_id','canonical_name','resolved']);w.writeheader();w.writerows(mapped)
+          meta={'source_url':url,'retrieved_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                'sha256':sha,'bytes':len(raw),'registry_rows':len(rows),'requested_ids':len(ids),
+                'resolved_ids':sum(x['resolved'] for x in mapped),'unresolved_ids':[x['player_id'] for x in mapped if not x['resolved']],
+                'primary_key':'gsis_id'}
+          (out/'nflverse_registry_provenance.json').write_text(json.dumps(meta,indent=2)+'\n')
+      - name: Commit deterministic identity materialization
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/research/production_resolution/observable_collapse_risk_stageA_20260918/
+          git commit -m "research: materialize nflverse collapse identities" || exit 0
+          git push
