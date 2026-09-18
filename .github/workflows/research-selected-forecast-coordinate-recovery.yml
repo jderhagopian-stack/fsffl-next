@@ -1,0 +1,65 @@
+name: research-selected-forecast-coordinate-recovery
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/research-selected-forecast-coordinate-recovery.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+      - uses: r-lib/actions/setup-r@v2
+        with: {r-version: release}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -e . pandas scikit-learn nflreadpy pyarrow
+      - name: Build frozen PIT panels
+        run: |
+          Rscript scripts/extract_career_transition_panel.R
+          Rscript scripts/extract_forecast_usage_panel.R
+      - name: Download exact frozen authoritative inputs
+        run: |
+          mkdir -p /tmp/f/{model-a,qb,forecast,event,persistence,integrated}
+          for pair in "10318004415 model-a" "10317272576 qb" "10408705946 forecast" "10416382295 event" "10419402765 persistence" "10422596781 integrated"; do
+            set -- $pair; gh api repos/${{ github.repository }}/actions/artifacts/$1/zip > /tmp/$2.zip; unzip -q /tmp/$2.zip -d /tmp/f/$2
+          done
+      - name: Export exact selected I1 player-keyed internal coordinate
+        run: |
+          python - <<'PY'
+          import importlib.util,json,sys,glob,hashlib,pathlib,pandas as pd
+          def load(p,n):
+            s=importlib.util.spec_from_file_location(n,p);m=importlib.util.module_from_spec(s);sys.modules[n]=m;s.loader.exec_module(m);return m
+          H=pathlib.Path('scripts');im=load(H/'run_integrated_multivariate_forecast.py','im');pf=load(H/'run_persistence_first_forecast_calibration.py','pf');prior=load(H/'run_forecast_low_end_career_calibration.py','prior');legacy=load(H/'run_fundamental_intrinsic_residual_calibration.py','legacy');parity=load(H/'run_fundamental_intrinsic_production_parity.py','parity');base=load(H/'run_intrinsic_explicit_state_challenge.py','base');evt=load(H/'reconstruct_event_time_absence_cause_evidence.py','evt')
+          def one(pat): return pathlib.Path(glob.glob(pat,recursive=True)[0])
+          career=pathlib.Path('artifacts/next2-career/career_transition_panel.csv');usagep=pathlib.Path('artifacts/forecast-disappearance/final/forecast_usage_panel.csv')
+          model=one('/tmp/f/model-a/**/model_a_repair_point_in_time_rows.csv');qbfile=one('/tmp/f/qb/**/*results*.json');F=one('/tmp/f/forecast/**/*results*.json');E=one('/tmp/f/event/**/*results*.json');P=one('/tmp/f/persistence/**/*results*.json');I=one('/tmp/f/integrated/**/*results*.json')
+          sel=json.loads(I.read_text()); assert sel['holdout']['selected']=='I1'; C=float(sel['C']['I1'])
+          f=json.loads(F.read_text());e=json.loads(E.read_text());p=json.loads(P.read_text());assert abs(f['summaries']['low_end']['c0_']['state_brier']-.17558645736306655)<1e-10;assert abs(e['overall_resolution']['resolved_share']-685/925)<1e-10;assert p['conclusion']=='P4. TWO-STAGE PERSISTENCE-FIRST DECOMPOSITION DOES NOT IMPROVE THE PROBLEM'
+          examples,_=parity.build_examples(panel_path=career,model_rows_path=model,qb_results_path=qbfile,legacy=legacy);panel=legacy.load_rows(career);by={(r.player_id,r.season):r for r in panel};usage=pf.load_usage(usagep);qb=parity.load_qb_probabilities(qbfile);ev=pf.source_evidence_map(evt,list(range(2012,2025)))
+          rows=[]
+          for season in sorted({x.season for x in examples}):
+            if season>2020: continue
+            supply=[x for x in examples if x.season==season and (x.player_id,season) in by]
+            if not supply: continue
+            bounds=base.fit_state_boundaries(panel,season);c0=base.fit_transition_counts(panel,season,bounds);R=im.records(pf,base,panel,by,season,bounds,usage,ev);B=im.fitmodel(R,C,'I1')
+            for ex in supply:
+              x=by[(ex.player_id,season)];cur=base.state_for_points(x.points,bounds[ex.position]);age=base.age_band(ex.position,ex.age);u=usage.get((ex.player_id,season));se=ev['source'].get((ex.player_id,season));pr=by.get((ex.player_id,season-1));prev=None if pr is None else float(pr.points)
+              for h in (1,2):
+                _,p0=prior.probs(base,c0,ex,bounds,qb,h);inp={'position':ex.position,'age':age,'current':cur,'h':h,'srcpts':float(x.points),'prev':prev,'exp':ex.experience,'u':u,'e':se};probs,path=im.pred(B,inp,p0)
+                rows.append({'player_id':ex.player_id,'source_season':season,'horizon':h,'position':ex.position,'path':path,**{f'p_{s}':probs[s] for s in im.STATES},'persist':1-probs['out'],'useful':sum(probs[s] for s in im.USE),'starter':sum(probs[s] for s in im.START),'premium':sum(probs[s] for s in im.PREM)})
+          out=pathlib.Path('/tmp/out');out.mkdir();df=pd.DataFrame(rows);assert not df.duplicated(['player_id','source_season','horizon']).any();assert ((df[[f'p_{s}' for s in im.STATES]].sum(axis=1)-1).abs()<1e-10).all()
+          df.to_csv(out/'selected_forecast_internal_probabilities.csv',index=False)
+          raw=(out/'selected_forecast_internal_probabilities.csv').read_bytes()
+          meta={'selected_code_commit':'c12402df1b7fa0bfbb3d994bdcf791d80e103a0c','selected_arch':'I1','selected_C':C,'rows':len(df),'unique_keys':int(df[['player_id','source_season','horizon']].drop_duplicates().shape[0]),'sha256':hashlib.sha256(raw).hexdigest(),'source_artifact_ids':[10318004415,10317272576,10408705946,10416382295,10419402765,10422596781],'holdout_used':False,'current_board_used':False,'refit_for_selection':False,'replay_note':'chronological deterministic replay of frozen selected code; exports already-computed I1 probability vector; seasons <=2020 only'}
+          (out/'provenance.json').write_text(json.dumps(meta,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with: {name: selected-forecast-internal-coordinate, path: /tmp/out/}
