@@ -294,8 +294,7 @@ def parity_check(rebuilt: pd.DataFrame, q3: pd.DataFrame) -> dict:
         "left_only": int((m["_merge"] == "left_only").sum()),
         "right_only": int((m["_merge"] == "right_only").sum()),
         "source_state_mismatch": int((both.source_state_new != both.source_state_old).sum()),
-        "target_state_mismatch": int(((both.target_state_new.replace({"out":"missing"}) != both.target_state_old) &
-                                      ~(both.target_state_new.eq("out") & both.target_state_old.eq("missing"))).sum()),
+        "target_state_mismatch": int((both.target_state_new.replace({"missing":"out"}) != both.target_state_old.replace({"missing":"out"})).sum()),
         "max_source_points_diff": mdiff("source_points"),
         "max_target_points_diff": mdiff("target_points"),
         "max_current_age_state_resid_z_diff": mdiff("current_age_state_resid_z"),
