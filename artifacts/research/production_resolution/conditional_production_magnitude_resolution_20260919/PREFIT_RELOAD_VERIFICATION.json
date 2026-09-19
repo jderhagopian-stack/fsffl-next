@@ -1,0 +1,26 @@
+{
+  "schema_version": "fsffl-conditional-production-prefit-reload-verification-v1",
+  "pass": false,
+  "specification_git_blob_sha": "7e9b6ce921c6c369393ca7ffabcc8f920afea8ce",
+  "implementation_git_blob_sha": "7051bc84b76d555d229223080d3dd7c6bb683642",
+  "local_expected_implementation_git_blob_sha": "7ccbb33de75ba4aca2535e2dbe3f07d9c91fcb39",
+  "implementation_sha256": "5a9439fcd51debec42e973ace7ac758b6c298370dad7c9b596480d9200331447",
+  "checks": {
+    "spec_status": "PREFIT_FROZEN",
+    "candidates": [
+      "P0",
+      "P1",
+      "P2"
+    ],
+    "current_board_influence": false,
+    "no_route_changes": true,
+    "code_git_blob_sha": "7051bc84b76d555d229223080d3dd7c6bb683642",
+    "code_expected_git_blob_sha": "7ccbb33de75ba4aca2535e2dbe3f07d9c91fcb39",
+    "code_has_P1": true,
+    "code_has_P2": true,
+    "code_has_selection": true,
+    "code_has_current_names": false
+  },
+  "successful_challenger_fits_before_checkpoint": 0,
+  "current_board_rematerializations_before_checkpoint": 0
+}
