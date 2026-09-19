@@ -1,0 +1,83 @@
+{
+  "schema_version": "fsffl-forecast-deployment-spec-recovery-artifact-manifest-v1",
+  "outcome": "C",
+  "branch": "research/future-state-resolution-phase34-resume",
+  "starting_head": "2f2d5f056126e8a7fd08751414be7374acb3d3c1",
+  "manifest_parent_head": "b064fad0b12e939e56177e32257c8f587203af8d",
+  "protected_refs_at_start": {
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    }
+  },
+  "commits_created_before_manifest": [
+    {
+      "sha": "d6e152e33daec9b1d6040561fb1af8a5c08d2538",
+      "purpose": "initial recovery search ledger"
+    },
+    {
+      "sha": "5d6ba249fd2113c8c4ca928e6515b360f21e5876",
+      "purpose": "unresolved deployment specification"
+    },
+    {
+      "sha": "7aa18df8280640daf7a196fd8c80e7d5008c96ed",
+      "purpose": "Outcome C machine-readable result"
+    },
+    {
+      "sha": "f8112ed8071624ed754b87073c6f063a338a942b",
+      "purpose": "plain-English management summary"
+    },
+    {
+      "sha": "90d03b62a14e4fea1cdc9194f4aab67f557142f7",
+      "purpose": "search-ledger exact commit-identity correction"
+    },
+    {
+      "sha": "b064fad0b12e939e56177e32257c8f587203af8d",
+      "purpose": "visually verified management PDF persistence"
+    }
+  ],
+  "files": [
+    {
+      "path": "artifacts/research/production_resolution/routed_forecast_final_resolution_20260918/deployment_spec_recovery_20260918/RECOVERY_SEARCH_LEDGER.json",
+      "role": "exhaustive bounded repository/Library/history search record"
+    },
+    {
+      "path": "artifacts/research/production_resolution/routed_forecast_final_resolution_20260918/deployment_spec_recovery_20260918/UNRESOLVED_DEPLOYMENT_SPECIFICATION.json",
+      "role": "precise B2a, R1/R2 and cutoff unresolved-field ledger"
+    },
+    {
+      "path": "artifacts/research/production_resolution/routed_forecast_final_resolution_20260918/deployment_spec_recovery_20260918/FINAL_OUTCOME.json",
+      "role": "machine-readable Outcome C"
+    },
+    {
+      "path": "artifacts/research/production_resolution/routed_forecast_final_resolution_20260918/deployment_spec_recovery_20260918/MANAGEMENT_SUMMARY.md",
+      "role": "plain-English management summary"
+    },
+    {
+      "path": "artifacts/research/production_resolution/routed_forecast_final_resolution_20260918/deployment_spec_recovery_20260918/FSFFL_NEXT_Forecast_Deployment_Specification_Recovery_Outcome_C_2026-09-18.pdf",
+      "role": "management PDF",
+      "bytes": 6725,
+      "sha256": "b6c730e627309453c6983aac3faf95b49365db6668fb68967ac9055f22d638b8",
+      "git_blob_sha": "a20ad5f7c34e4acc9e18e0bc56f019f351900d60",
+      "visual_verification": "PASS - rendered at 180 DPI; two pages inspected with no clipping/overlap"
+    }
+  ],
+  "absent_required_artifact": {
+    "name": "ARCHITECTURE_SPECIFICATION.json",
+    "recorded_sha256": "197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc",
+    "recovered": false
+  },
+  "execution_accounting": {
+    "fits": 0,
+    "refits": 0,
+    "parity_fit_replays": 0,
+    "hyperparameter_searches": 0,
+    "reverse_engineering_attempts": 0,
+    "current_player_board_runs": 0,
+    "current_player_credibility_inspections": 0,
+    "main_or_pr147_changes": 0
+  },
+  "note": "The final branch head is the commit that persists this manifest; re-fetch the branch after this write for the exact terminal SHA."
+}
