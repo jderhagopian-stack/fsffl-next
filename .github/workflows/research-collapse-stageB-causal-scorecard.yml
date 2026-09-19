@@ -1,0 +1,109 @@
+name: research-collapse-stageB-causal-scorecard
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/research-collapse-stageB-causal-scorecard.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  scorecard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --disable-pip-version-check pandas==2.2.3 numpy==2.1.3
+      - name: Build Stage-B causal/control scorecard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/p2 /tmp/out
+          gh api -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/actions/artifacts/10486530017/zip > /tmp/p2.zip
+          unzip -q /tmp/p2.zip -d /tmp/p2
+          python - <<'PY'
+          import pandas as pd,numpy as np,pathlib,urllib.request,hashlib,json,datetime,glob
+          q=glob.glob('/tmp/p2/**/phase2_q3_age_state_rows.csv',recursive=True)[0]
+          allrows=pd.read_csv(q)
+          d=allrows[(allrows.source_season>=2014)&(allrows.source_season<=2020)].copy()
+          lev=pd.read_csv('artifacts/research/production_resolution/observable_collapse_risk_stageB_20260918/frozen_50pct_leverage_coordinates.csv')
+          # unique source coordinate panel for prior production
+          base=allrows.sort_values('horizon').drop_duplicates(['player_id','source_season'])
+          prior=base[['player_id','source_season','source_points']].copy();prior.source_season+=1;prior=prior.rename(columns={'source_points':'prior_source_points'})
+          # roster availability
+          rr=[]; rh={}; dh={}
+          for y in range(2014,2021):
+            u=f'https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_{y}.csv'
+            raw=urllib.request.urlopen(u).read();rh[str(y)]=hashlib.sha256(raw).hexdigest();p=f'/tmp/r{y}.csv';open(p,'wb').write(raw)
+            x=pd.read_csv(p,low_memory=False);x=x[x.gsis_id.notna()].copy();x.week=pd.to_numeric(x.week,errors='coerce');x=x[x.week.notna()].sort_values(['gsis_id','week'])
+            for pid,g in x.groupby('gsis_id'):
+              g=g.drop_duplicates('week',keep='last').sort_values('week');a=(g.status.astype(str)=='ACT').tolist();n=len(a);non=[not v for v in a]
+              runs=[];s=None
+              for i,v in enumerate(non+[False]):
+                if v and s is None:s=i
+                if not v and s is not None:runs.append((s,i-1));s=None
+              half=max(1,n//2);early=sum(non[:half])/max(1,len(non[:half]));late=sum(non[half:])/max(1,len(non[half:]))
+              rr.append({'player_id':pid,'source_season':y,'nonactive_share':sum(non)/n if n else np.nan,'max_nonactive_run':max([b-a+1 for a,b in runs],default=0),'nonactive_run_count':len(runs),'late_nonactive_share':late,'availability_late_delta':late-early})
+            # legacy depth chart
+            u=f'https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_{y}.csv'
+            raw=urllib.request.urlopen(u).read();dh[str(y)]=hashlib.sha256(raw).hexdigest();p=f'/tmp/d{y}.csv';open(p,'wb').write(raw)
+          roster=pd.DataFrame(rr)
+          # depth features
+          dd=[]
+          for y in range(2014,2021):
+            x=pd.read_csv(f'/tmp/d{y}.csv',low_memory=False);x=x[x.gsis_id.notna()].copy();x.week=pd.to_numeric(x.week,errors='coerce');x.depth_team=pd.to_numeric(x.depth_team,errors='coerce');x=x[x.week.notna()&x.depth_team.notna()].sort_values(['gsis_id','week'])
+            for pid,g in x.groupby('gsis_id'):
+              # one best rank per week
+              w=g.groupby('week',as_index=False).depth_team.min().sort_values('week');n=len(w);half=max(1,n//2);early=w.iloc[:half];late=w.iloc[half:];last4=w.tail(4)
+              dd.append({'player_id':pid,'source_season':y,'depth_weeks':n,'starter_share':float((w.depth_team==1).mean()),'early_starter_share':float((early.depth_team==1).mean()),'late_starter_share':float((late.depth_team==1).mean()) if len(late) else np.nan,'last4_starter_share':float((last4.depth_team==1).mean()),'mean_depth_rank':float(w.depth_team.mean()),'late_depth_rank':float(late.depth_team.mean()) if len(late) else np.nan,'starter_share_delta':float((late.depth_team==1).mean()-(early.depth_team==1).mean()) if len(late) else np.nan})
+          depth=pd.DataFrame(dd)
+          z=d.merge(prior,on=['player_id','source_season'],how='left').merge(roster,on=['player_id','source_season'],how='left').merge(depth,on=['player_id','source_season'],how='left')
+          z['production_change']=(z.source_points-z.prior_source_points)/z.prior_source_points.replace(0,np.nan)
+          # age percentile within pos-season; no hard age threshold
+          z['age_pct']=z.groupby(['position','source_season']).age.rank(pct=True)
+          # high-leverage source coords
+          L=lev.merge(z.sort_values('horizon').drop_duplicates(['player_id','source_season'])[['player_id','source_season','nonactive_share','max_nonactive_run','nonactive_run_count','late_nonactive_share','availability_late_delta','starter_share','early_starter_share','late_starter_share','last4_starter_share','mean_depth_rank','late_depth_rank','starter_share_delta','production_change','age_pct']],on=['player_id','source_season'],how='left')
+          # matched non-collapse controls: nearest 5 within same pos/source-season/horizon, standardized age/experience/source_points; summarize family signals
+          matches=[]
+          metrics=['nonactive_share','max_nonactive_run','nonactive_run_count','late_nonactive_share','availability_late_delta','starter_share_delta','last4_starter_share','late_depth_rank','production_change','age_pct']
+          # use each leverage coordinate against both governed horizons where it is role-loss; preserves source coordinate emphasis without inventing missing original horizon membership
+          for _,lr in lev.iterrows():
+            cand=z[(z.player_id==lr.player_id)&(z.source_season==lr.source_season)&(z.role_loss==1)]
+            for _,case in cand.iterrows():
+              pool=z[(z.source_season==case.source_season)&(z.position==case.position)&(z.horizon==case.horizon)&(z.role_loss==0)].copy()
+              if not len(pool):continue
+              cols=['age','experience','source_points'];dist=np.zeros(len(pool))
+              for c in cols:
+                sd=pool[c].std()
+                if pd.notna(sd) and sd>0:dist+=((pool[c]-case[c])/sd).fillna(0).to_numpy()**2
+              pool=pool.assign(_dist=dist).nsmallest(5,'_dist')
+              for _,ctl in pool.iterrows():
+                row={'case_player_id':case.player_id,'case_source_season':int(case.source_season),'horizon':int(case.horizon),'position':case.position,'control_player_id':ctl.player_id,'distance':float(ctl._dist),'leverage':float(lr.leverage)}
+                for m in metrics:row['case_'+m]=case.get(m);row['control_'+m]=ctl.get(m)
+                matches.append(row)
+          M=pd.DataFrame(matches)
+          # weighted matched differences; sign normalized so positive = more structural risk in cases
+          direction={'nonactive_share':1,'max_nonactive_run':1,'nonactive_run_count':1,'late_nonactive_share':1,'availability_late_delta':1,'starter_share_delta':-1,'last4_starter_share':-1,'late_depth_rank':1,'production_change':-1,'age_pct':1}
+          sc=[]
+          for m in metrics:
+            a=M.dropna(subset=['case_'+m,'control_'+m]).copy()
+            if not len(a):continue
+            a['diff']=(a['case_'+m]-a['control_'+m])*direction[m]
+            w=a.leverage/a.groupby(['case_player_id','case_source_season','horizon']).leverage.transform('count')
+            sc.append({'family_metric':m,'matched_pairs':len(a),'unique_cases':a[['case_player_id','case_source_season','horizon']].drop_duplicates().shape[0],'weighted_case_minus_control_risk_direction':float(np.average(a['diff'],weights=w)),'case_mean':float(np.average(a['case_'+m],weights=w)),'control_mean':float(np.average(a['control_'+m],weights=w))})
+          # population discrimination by quartiles, descriptive only
+          pop=[]
+          for m in metrics:
+            for h,g in z.dropna(subset=[m]).groupby('horizon'):
+              try:qv=pd.qcut(g[m].rank(method='first'),4,labels=False)
+              except:continue
+              for qn,a in g.groupby(qv):
+                pop.append({'metric':m,'horizon':int(h),'quartile':int(qn),'n':len(a),'role_loss_rate':float(a.role_loss.mean()),'mean_signal':float(a[m].mean())})
+          out=pathlib.Path('/tmp/out')
+          L.to_csv(out/'high_leverage_structured_evidence.csv',index=False);M.to_csv(out/'matched_control_pairs.csv',index=False);pd.DataFrame(sc).to_csv(out/'causal_control_scorecard.csv',index=False);pd.DataFrame(pop).to_csv(out/'population_quartile_discrimination.csv',index=False)
+          meta={'phase2_artifact_id':10486530017,'leverage_coordinate_commit':'e2b64490650310fe03de8f78ebc548d9b6f56d84','roster_sha256':rh,'depth_chart_sha256':dh,'matching':'same position/source-season/horizon; 5 nearest non-role-loss controls by standardized age, experience, source_points','no_model_fitting':True,'stage_c_open':False,'created_utc':datetime.datetime.now(datetime.timezone.utc).isoformat()}
+          (out/'provenance.json').write_text(json.dumps(meta,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with: {name: collapse-stageB-causal-scorecard, path: /tmp/out/}

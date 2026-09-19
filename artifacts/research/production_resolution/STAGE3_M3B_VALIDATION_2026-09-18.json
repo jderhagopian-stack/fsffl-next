@@ -1,0 +1,267 @@
+{
+  "study": "FSFFL NEXT Stage 3 M3b opportunity-trajectory standalone validation",
+  "status": "STAGE3_M3B_COMPLETE_RESEARCH_ONLY",
+  "eligibility": "ELIGIBLE — Stage 0 Preflight B froze opportunity_delta_log plus explicit coverage as the only permitted M3b feature family.",
+  "baseline": "M1a + M2 + M3a representation",
+  "validation_blocks": {
+    "Y2": [
+      2020,
+      2021
+    ],
+    "Y3": [
+      2019,
+      2020
+    ]
+  },
+  "final_holdout_evaluated": false,
+  "method": {
+    "description": "Incremental BayesianRidge on target residual-z minus M1a+M2+M3a prediction. Uses only Stage-0-frozen opportunity_delta_log = log1p(opportunity_per_game_t) - log1p(opportunity_per_game_t-1), plus explicit coverage. Continuous values are standardized from pre-cutoff training only. No snaps/routes/share/red-zone or retrospective substitutes were introduced.",
+    "features": [
+      "opportunity_delta_log_z",
+      "opportunity_delta_coverage"
+    ],
+    "state_probabilities_changed": false,
+    "named_current_players_used": false
+  },
+  "fit_metadata": [
+    {
+      "horizon": 2,
+      "source_season": 2020,
+      "train_n": 4533,
+      "coverage": 0.7597617471872932,
+      "opp_mean": 0.10671817171528296,
+      "opp_sd": 0.612280467921695,
+      "coefs": [
+        0.019039663230850646,
+        0.00528684694548621
+      ]
+    },
+    {
+      "horizon": 2,
+      "source_season": 2021,
+      "train_n": 4900,
+      "coverage": 0.76,
+      "opp_mean": 0.10396349433165197,
+      "opp_sd": 0.6082887382428329,
+      "coefs": [
+        0.015551520345714111,
+        0.0040896919900403625
+      ]
+    },
+    {
+      "horizon": 3,
+      "source_season": 2019,
+      "train_n": 3058,
+      "coverage": 0.7488554610856769,
+      "opp_mean": 0.13906803681157753,
+      "opp_sd": 0.6317396263850878,
+      "coefs": [
+        0.0005726126563955126,
+        0.0000025583918404188523
+      ]
+    },
+    {
+      "horizon": 3,
+      "source_season": 2020,
+      "train_n": 3318,
+      "coverage": 0.7471368294153105,
+      "opp_mean": 0.13237091293866732,
+      "opp_sd": 0.619082059232717,
+      "coefs": [
+        0.0005308392199870011,
+        0.00002765878720675004
+      ]
+    }
+  ],
+  "validation": {
+    "Y2": {
+      "overall": {
+        "M3a_mae": 31.05956183421586,
+        "M3b_mae": 31.06872021715074,
+        "delta": 0.009158382934881758,
+        "ci95": [
+          -0.0013619842109199119,
+          0.02100693957970353
+        ]
+      },
+      "chronological": {
+        "Y2_2020_delta": 0.010173613882234587,
+        "Y2_2021_delta": 0.008174567928890264
+      },
+      "elite90": {
+        "M3a_mae": 56.35251799887183,
+        "M3b_mae": 56.36528569420242,
+        "delta": 0.012767695330595253,
+        "ci95": [
+          -0.03970720356217288,
+          0.05786206080524955
+        ]
+      },
+      "extreme95": {
+        "M3a_mae": 62.58702827839037,
+        "M3b_mae": 62.55509067228067,
+        "delta": -0.03193760610970742,
+        "ci95": [
+          -0.14222361188976784,
+          0.048940575970997845
+        ]
+      },
+      "stress": {
+        "ascending": {
+          "delta_mae": 0.0021694135745379014,
+          "ci95": [
+            -0.02887975598015523,
+            0.03923372162585648
+          ]
+        },
+        "aging_declining": {
+          "delta_mae": -0.003256133356897047,
+          "ci95": [
+            -0.01927056261926499,
+            0.019571843669192224
+          ]
+        },
+        "nonpersistent": {
+          "delta_mae": 0.0004885802017538603,
+          "ci95": [
+            -0.009296210695011464,
+            0.010732782129886835
+          ]
+        },
+        "role_loss": {
+          "delta_mae": 0.07037964764834147,
+          "ci95": [
+            0.01920929497444452,
+            0.13508008706448166
+          ]
+        },
+        "stable_prime": {
+          "delta_mae": 0.011154746451963633,
+          "ci95": [
+            -0.04096316080982732,
+            0.05502495111514289
+          ]
+        }
+      },
+      "opportunity_coverage": 0.7444168734491315
+    },
+    "Y3": {
+      "overall": {
+        "M3a_mae": 30.659051349325754,
+        "M3b_mae": 30.658723017682696,
+        "delta": -0.0003283316430539693,
+        "ci95": [
+          -0.0006429394767221669,
+          -0.00003297874627666621
+        ]
+      },
+      "chronological": {
+        "Y3_2019_delta": -0.000287296876382735,
+        "Y3_2020_delta": -0.0003676422598646314
+      },
+      "elite90": {
+        "M3a_mae": 64.72419270119529,
+        "M3b_mae": 64.72323619160751,
+        "delta": -0.0009565095877881284,
+        "ci95": [
+          -0.002644016681590257,
+          0.00030840907159342693
+        ]
+      },
+      "extreme95": {
+        "M3a_mae": 68.86594750322838,
+        "M3b_mae": 68.86455184619764,
+        "delta": -0.0013956570307405314,
+        "ci95": [
+          -0.004215277777975228,
+          0.0003515509225315998
+        ]
+      },
+      "stress": {
+        "ascending": {
+          "delta_mae": -0.0007883717023875481,
+          "ci95": [
+            -0.0015194114359258816,
+            -0.00017271114090780887
+          ]
+        },
+        "aging_declining": {
+          "delta_mae": -0.00017145335699875414,
+          "ci95": [
+            -0.0006427695332958286,
+            0.000472527590150318
+          ]
+        },
+        "nonpersistent": {
+          "delta_mae": -0.00031215964083303334,
+          "ci95": [
+            -0.0005535252679614007,
+            -0.000038230242640571926
+          ]
+        },
+        "role_loss": {
+          "delta_mae": -0.0006724151493940403,
+          "ci95": [
+            -0.003147870499405988,
+            0.0008452968114303684
+          ]
+        },
+        "stable_prime": {
+          "delta_mae": -0.0006436766532487148,
+          "ci95": [
+            -0.0021634170098459747,
+            0.0005760054290051106
+          ]
+        }
+      },
+      "opportunity_coverage": 0.7270386266094421
+    }
+  },
+  "era_stability": {
+    "Y2": {
+      "M3a_mae": 32.98506024679595,
+      "M3b_mae": 32.988050233423984,
+      "delta": 0.002989986628035846
+    },
+    "Y3": {
+      "M3a_mae": 32.199392681485634,
+      "M3b_mae": 32.19942151598384,
+      "delta": 0.00002883449820489958
+    }
+  },
+  "sample_size_sensitivity": {
+    "Y2": {
+      "full_mae": 31.06872021715074,
+      "recent_half_mae": 31.03008539745589,
+      "mae_change_recent_minus_full": -0.038634819694852496,
+      "mean_abs_forecast_shift": 0.28341677845992075,
+      "max_abs_forecast_shift": 3.0390848194655575
+    },
+    "Y3": {
+      "full_mae": 30.658723017682696,
+      "recent_half_mae": 30.685640998298254,
+      "mae_change_recent_minus_full": 0.026917980615557724,
+      "mean_abs_forecast_shift": 0.18380328999700576,
+      "max_abs_forecast_shift": 4.441734733611526
+    }
+  },
+  "invariants": {
+    "rows": 2374,
+    "max_m1a_parity_error_vs_stage2": 2.842170943040401e-14,
+    "max_baseline_reconstruction_error": 8.450749078292574e-8,
+    "probability_sums_max_abs_error": 2.000000165480742e-10,
+    "floor_events": 0,
+    "state_order_inversion_rows": 0,
+    "final_holdout_rows_present": false
+  },
+  "interpretation": "M3B_DOES_NOT_EARN_GENERAL_ADVANCEMENT — adequate governed PIT coverage exists, but Y2 worsens numerically in both validation seasons and clearly worsens realized role-loss. Y3 shows a statistically detectable but practically near-zero improvement (~0.00033 MAE) with near-zero fitted coefficients and no supporting development-era gain. Because horizon-specific M3b was not predeclared and evidence is not replicated across Y2/Y3 as a meaningful effect, do not preserve it as an independent candidate signal for M4/M5.",
+  "hashes": {
+    "input_panel": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+    "input_phase2": "ce0f1369487a09f39057dce9eb4dfc804a8c06f041df5e2531880d1e1381534e",
+    "input_stage1": "eb6ffd6c2ad71aa7c4459e432cf78153432dcaa59a4d5b49bbec1b496ff560a3",
+    "runner": "4886662ba146bccb89a6fdda29f956ed0a2cd77786c3b1864bbba820ae545944",
+    "local_result_json": "2d66274cdbc0b016734f13a3e1499b674c9af47f094c6591a66544459ce962ba",
+    "local_row_audit": "22ba1638fb7e86146ad228c6d803c9ff1693d19f9dd36744bdefe0de37204767"
+  },
+  "persistence_note": "Standalone deterministic summary persisted. Full row audit remains local and is referenced by hash; no manual sharding workaround is used."
+}

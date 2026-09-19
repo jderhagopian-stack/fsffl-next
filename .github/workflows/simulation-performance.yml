@@ -1,0 +1,26 @@
+name: Simulation Performance
+
+on:
+  push:
+    branches:
+      - next-8-product-layer
+    paths:
+      - 'src/fsffl/team_utility/**'
+      - 'src/fsffl/product/simulation_runtime.py'
+      - 'scripts/benchmark_simulation_performance.py'
+      - '.github/workflows/simulation-performance.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install FSFFL NEXT
+        run: pip install -e .
+      - name: Benchmark 50k production-sized simulation
+        run: python scripts/benchmark_simulation_performance.py

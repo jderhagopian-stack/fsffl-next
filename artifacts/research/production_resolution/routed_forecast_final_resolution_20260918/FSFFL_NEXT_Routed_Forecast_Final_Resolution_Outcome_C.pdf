@@ -1,0 +1,147 @@
+%PDF-1.4
+%ASCII
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R /F3 11 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 3086 >>
+stream
+BT /F2 18 Tf 54 740 Td (FSFFL NEXT) Tj ET
+BT /F2 18 Tf 54 714 Td (Routed Forecast - Final Resolution Study) Tj ET
+BT /F1 11 Tf 54 688 Td (Management Outcome Report | 18 Sep 2026) Tj ET
+BT /F2 14 Tf 54 669 Td (OUTCOME C - UNRESOLVED REPRODUCIBILITY BOUNDARY) Tj ET
+BT /F1 9.3 Tf 54 644 Td (The routing study stopped at Stage 0. The exact historical candidate coordinate) Tj ET
+BT /F1 9.3 Tf 54 631 Td (required for legal routing selection is not durably reproducible from the surviving) Tj ET
+BT /F1 9.3 Tf 54 618 Td (repository artifacts.) Tj ET
+BT /F2 13 Tf 54 597 Td (Executive summary) Tj ET
+BT /F1 9.3 Tf 54 574 Td (The interrupted research branch recovered cleanly. Before this continuation wrote) Tj ET
+BT /F1 9.3 Tf 54 561 Td (anything, research/future-state-resolution-phase34-resume was exactly at the prior) Tj ET
+BT /F1 9.3 Tf 54 548 Td (Stage C Outcome B commit 11399fb1fbfb89d99e38250d31b72dc2dbbc78fa, with zero later) Tj ET
+BT /F1 9.3 Tf 54 535 Td (commits. No Routed Forecast final-resolution work had been durably completed or) Tj ET
+BT /F1 9.3 Tf 54 522 Td (lost.) Tj ET
+BT /F1 9.3 Tf 54 506 Td (Stage 0 then audited the frozen candidate evidence. Earlier work recorded a) Tj ET
+BT /F1 9.3 Tf 54 493 Td (41,344-row aligned prediction file for Candidate B, R1 and R2 and preserved its) Tj ET
+BT /F1 9.3 Tf 54 480 Td (SHA-256, but that row-level file is not committed on the live branch. B2a and H2) Tj ET
+BT /F1 9.3 Tf 54 467 Td (survive as method/result checkpoints rather than an exact aligned row coordinate or) Tj ET
+BT /F1 9.3 Tf 54 454 Td (complete frozen fitted artifacts sufficient to reproduce row outputs without) Tj ET
+BT /F1 9.3 Tf 54 441 Td (refitting.) Tj ET
+BT /F1 9.3 Tf 54 425 Td (Because routing requires candidate-by-position and candidate-by-career-state) Tj ET
+BT /F1 9.3 Tf 54 412 Td (comparisons on identical chronological rows, aggregate summaries cannot legally) Tj ET
+BT /F1 9.3 Tf 54 399 Td (substitute for the missing coordinate. The study therefore stops at the) Tj ET
+BT /F1 9.3 Tf 54 386 Td (reproducibility boundary rather than inventing a workaround.) Tj ET
+BT /F2 13 Tf 54 365 Td (Recovered evidence) Tj ET
+BT /F1 9.3 Tf 64 342 Td (- Live research boundary: Stage C Outcome B at 11399fb1...; no later routed-study) Tj ET
+BT /F1 9.3 Tf 64 329 Td (commit existed before recovery.) Tj ET
+BT /F1 9.3 Tf 64 313 Td (- B2a: definition and aggregate pre-holdout behavior survive in the B2 and corrected) Tj ET
+BT /F1 9.3 Tf 64 300 Td (rejection-audit checkpoints.) Tj ET
+BT /F1 9.3 Tf 64 284 Td (- R1/R2: hybrid provenance audit records aligned prediction evidence with 41,344) Tj ET
+BT /F1 9.3 Tf 64 271 Td (rows and prior metric parity.) Tj ET
+BT /F1 9.3 Tf 64 255 Td (- H2: family definition and aggregate mid/validation results survive; exact aligned) Tj ET
+BT /F1 9.3 Tf 64 242 Td (row outputs and complete fold-specific fitted restoration artifacts do not.) Tj ET
+BT /F1 9.3 Tf 64 226 Td (- Protected state: main 53ff3a3c...; PR #147 open/unmerged at 3e63cd616...; no) Tj ET
+BT /F1 9.3 Tf 64 213 Td (production authority changed.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R /F3 11 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 3045 >>
+stream
+BT /F2 13 Tf 54 735 Td (Exact Stage 0 failure) Tj ET
+BT /F1 9.3 Tf 54 712 Td (The prior hybrid provenance audit names recombination_prediction_rows.csv, reports) Tj ET
+BT /F1 9.3 Tf 54 699 Td (41,344 rows, and records SHA-256:) Tj ET
+BT /F3 7.5 Tf 54 683 Td (dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b) Tj ET
+BT /F1 9.3 Tf 54 671 Td (Comparison of the B3 result commit 86043a6610bc4dce79a159502f24cb70a762fabc to the) Tj ET
+BT /F1 9.3 Tf 54 658 Td (final hybrid result commit 8839cfad99ec4850782d5bc720784d0672012472 shows only two) Tj ET
+BT /F1 9.3 Tf 54 645 Td (added files: the hybrid Stage 0 provenance Markdown and final checkpoint Markdown.) Tj ET
+BT /F1 9.3 Tf 54 632 Td (The aligned row CSV was not committed.) Tj ET
+BT /F1 9.3 Tf 54 616 Td (The current final candidate universe also requires B2a and H2 on the same legal) Tj ET
+BT /F1 9.3 Tf 54 603 Td (pre-holdout coordinate. Their durable summaries do not contain the row-level) Tj ET
+BT /F1 9.3 Tf 54 590 Td (predictions or complete frozen fold-specific fitted parameters required to reproduce) Tj ET
+BT /F1 9.3 Tf 54 577 Td (exact outputs without a new refit.) Tj ET
+BT /F2 13 Tf 54 556 Td (Smallest missing dependency) Tj ET
+BT /F1 9.3 Tf 54 533 Td (An exact, aligned, pre-holdout row-level candidate coordinate for B2a, R1, R2 and H2) Tj ET
+BT /F1 9.3 Tf 54 520 Td (- or the exact frozen fitted artifacts/parameters plus source rows sufficient to) Tj ET
+BT /F1 9.3 Tf 54 507 Td (reproduce those predictions without refitting or making a new methodological choice.) Tj ET
+BT /F2 13 Tf 54 486 Td (Why summaries are insufficient) Tj ET
+BT /F1 9.3 Tf 54 463 Td (The unresolved question is whether different already-developed treatments are) Tj ET
+BT /F1 9.3 Tf 54 450 Td (systematically superior for populations identifiable at the forecast cutoff. Legal) Tj ET
+BT /F1 9.3 Tf 54 437 Td (routing requires the same historical player rows, source-time position/career-state) Tj ET
+BT /F1 9.3 Tf 54 424 Td (evidence, fold membership, horizon, candidate prediction and realized outcome.) Tj ET
+BT /F1 9.3 Tf 54 411 Td (Aggregate MAE summaries cannot produce cell sample sizes, fold stability,) Tj ET
+BT /F1 9.3 Tf 54 398 Td (position-only routing, position x career-state routing or the complexity challenger.) Tj ET
+BT /F2 13 Tf 54 377 Td (What was not done) Tj ET
+BT /F1 9.3 Tf 64 354 Td (- No candidate parity was claimed on an invented or substitute coordinate.) Tj ET
+BT /F1 9.3 Tf 64 338 Td (- No career-state definitions or routing cells were selected.) Tj ET
+BT /F1 9.3 Tf 64 322 Td (- No position-only or position x career-state challenger was fit or evaluated.) Tj ET
+BT /F1 9.3 Tf 64 306 Td (- No holdout or current-player board was used for routing discovery or tuning.) Tj ET
+BT /F1 9.3 Tf 64 290 Td (- No Forecast model was refit or rerun in this continuation.) Tj ET
+BT /F1 9.3 Tf 64 274 Td (- No main, PR #147, production, Intrinsic/Shapley, Constitution, C=0.25, merge,) Tj ET
+BT /F1 9.3 Tf 64 261 Td (deployment or promotion change occurred.) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 9 0 R /F2 10 0 R /F3 11 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2074 >>
+stream
+BT /F2 13 Tf 54 735 Td (Management implication) Tj ET
+BT /F1 9.3 Tf 54 712 Td (Do not interpret Outcome C as evidence that B2a won the routing study. The study) Tj ET
+BT /F1 9.3 Tf 54 699 Td (never reached routing selection. B2a remains the protected provisional fallback) Tj ET
+BT /F1 9.3 Tf 54 686 Td (because that was the governed starting state, not because this final study proved it) Tj ET
+BT /F1 9.3 Tf 54 673 Td (superior.) Tj ET
+BT /F1 9.3 Tf 54 657 Td (The bounded next decision is procedural: recover the exact missing candidate) Tj ET
+BT /F1 9.3 Tf 54 644 Td (coordinate and resume at Stage 0 parity, or accept the reproducibility boundary and) Tj ET
+BT /F1 9.3 Tf 54 631 Td (move forward with the already-protected B2a fallback. This report authorizes neither) Tj ET
+BT /F1 9.3 Tf 54 618 Td (production promotion nor a new Forecast research family.) Tj ET
+BT /F2 13 Tf 54 597 Td (Durable repository record) Tj ET
+BT /F1 9.3 Tf 64 574 Td (- Recovery note commit: da88ba09f92eb9cd35db201e88a88be61286ee1c) Tj ET
+BT /F1 9.3 Tf 64 558 Td (- Stage 0 boundary commit: 4f5a41d69c59f4853eeb7f4985a0b5391cff33d3) Tj ET
+BT /F1 9.3 Tf 64 542 Td (- Machine-readable Outcome C commit: 1c0ae590e232958830aa317fbe92baa6784ea1be) Tj ET
+BT /F1 9.3 Tf 64 526 Td (- Plain-English management summary commit: fac381fb345d51e3ab64d1f58bf40b58b8952a31) Tj ET
+BT /F2 13 Tf 54 505 Td (Execution accounting) Tj ET
+BT /F1 9.3 Tf 54 482 Td (Model reruns: 0. Model refits: 0. Current-board runs: 0. Holdout routing runs: 0.) Tj ET
+BT /F1 9.3 Tf 54 466 Td (The earlier hybrid study explicitly noted that its prior wall-clock runtime was not) Tj ET
+BT /F1 9.3 Tf 54 453 Td (durably recoverable. This continuation does not invent a historical runtime figure.) Tj ET
+BT /F1 9.3 Tf 54 440 Td (Its work was repository recovery, artifact/provenance inspection and fail-closed) Tj ET
+BT /F1 9.3 Tf 54 427 Td (checkpointing only.) Tj ET
+BT /F2 14 Tf 54 411 Td (STOP FOR MANAGEMENT REVIEW) Tj ET
+BT /F1 9.3 Tf 54 386 Td (No further Forecast research action is authorized by this continuation.) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+10 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+11 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000016 00000 n 
+0000000065 00000 n 
+0000000134 00000 n 
+0000000282 00000 n 
+0000003419 00000 n 
+0000003567 00000 n 
+0000006663 00000 n 
+0000006811 00000 n 
+0000008936 00000 n 
+0000009006 00000 n 
+0000009082 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+9151
+%%EOF

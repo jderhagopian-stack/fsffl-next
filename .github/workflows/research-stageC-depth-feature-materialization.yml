@@ -1,0 +1,44 @@
+name: research-stageC-depth-feature-materialization
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/research-stageC-depth-feature-materialization.yml']
+permissions:
+  contents: read
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --disable-pip-version-check pandas==2.2.3
+      - name: Materialize frozen Stage-C inputs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/out
+          python - <<'PY'
+          import pandas as pd, pathlib, urllib.request, hashlib, json, datetime
+          rows=[]; hashes={}
+          for y in range(2005,2023):
+            u=f'https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_{y}.csv'
+            try: raw=urllib.request.urlopen(u).read()
+            except Exception: continue
+            hashes[str(y)]=hashlib.sha256(raw).hexdigest();p=f'/tmp/d{y}.csv';open(p,'wb').write(raw)
+            x=pd.read_csv(p,low_memory=False);x=x[x.gsis_id.notna()].copy()
+            x.week=pd.to_numeric(x.week,errors='coerce');x.depth_team=pd.to_numeric(x.depth_team,errors='coerce')
+            x=x[x.week.notna()&x.depth_team.notna()].sort_values(['gsis_id','week'])
+            for pid,g in x.groupby('gsis_id'):
+              w=g.groupby('week',as_index=False).depth_team.min().sort_values('week')
+              n=len(w)
+              if n==0: continue
+              half=max(1,n//2); early=w.iloc[:half]; late=w.iloc[half:]; last4=w.tail(4)
+              rows.append({'player_id':pid,'source_season':y,'depth_weeks':n,
+                'late_depth_rank':float(last4.depth_team.mean()),
+                'last4_starter_share':float((last4.depth_team==1).mean()),
+                'starter_share_delta':float((late.depth_team==1).mean()-(early.depth_team==1).mean()) if len(late) else None})
+          out=pathlib.Path('/tmp/out');pd.DataFrame(rows).to_csv(out/'stageC_depth_features.csv',index=False)
+          (out/'stageC_depth_feature_provenance.json').write_text(json.dumps({'source':'nflverse weekly depth_charts releases','source_seasons_requested':'2005-2022','snapshot_sha256':hashes,'formula':'frozen Stage-C specification at 524d689bac3783c6dc31b70ce253bf0262c05e2e','created_utc':datetime.datetime.now(datetime.timezone.utc).isoformat()},indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with: {name: stageC-depth-features, path: /tmp/out/}

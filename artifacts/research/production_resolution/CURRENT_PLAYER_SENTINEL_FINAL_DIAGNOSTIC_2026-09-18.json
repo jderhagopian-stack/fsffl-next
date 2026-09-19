@@ -1,0 +1,435 @@
+{
+  "study": "FSFFL NEXT current-player sentinel final diagnostic",
+  "status": "FORECAST_DIAGNOSTIC_COMPLETE_DOWNSTREAM_REPRODUCIBILITY_BLOCKER_STOPPED",
+  "overall_classification": "AMBIGUOUS_INCOMPLETE_REQUIRED_INTRINSIC_SHAPLEY_RERUN_NOT_REPRODUCIBLE_FROM_PERSISTED_EVIDENCE",
+  "start_head": "0240061f0048401748d61276f2f1b1d1e483bcf1",
+  "frozen_candidate": "fixed routed Forecast + frozen M1a + exact frozen two-prior-season consistency",
+  "routing": "QB=A2+C+D; RB/WR/TE=A2+D",
+  "annual_discount": 0.85,
+  "forecast_fit": {
+    "Y2": {
+      "training_rows": 5974,
+      "source_seasons": [
+        2005,
+        2022
+      ],
+      "m1a_coef": 0.07939942531895901,
+      "prior2_coverage": 0.5033478406427854,
+      "transform": {
+        "mean_mu": 0.18051735619583884,
+        "mean_sd": 0.8250069242245336,
+        "gap_mu": 1.109345052497919,
+        "gap_sd": 0.9101986764652646
+      },
+      "consistency_coefficients": [
+        0.104407393,
+        0.0256567937,
+        0.026386248,
+        0.158161626,
+        -0.0501651272,
+        -0.00347923962,
+        -0.000109866463,
+        0.0189868866,
+        -0.0249518009,
+        -0.0206613761,
+        0.0522830842
+      ]
+    },
+    "Y3": {
+      "training_rows": 4781,
+      "source_seasons": [
+        2005,
+        2022
+      ],
+      "m1a_coef": 0.07812314495946265,
+      "prior2_coverage": 0.486299937251621,
+      "transform": {
+        "mean_mu": 0.2161366754026284,
+        "mean_sd": 0.828655291462875,
+        "gap_mu": 1.104921589465751,
+        "gap_sd": 0.891872970017528
+      },
+      "consistency_coefficients": [
+        0.0896474572,
+        0.00230448058,
+        0.0208369151,
+        0.180179816,
+        -0.057293661,
+        -0.00910620769,
+        -0.0241324898,
+        0.0336007196,
+        -0.0225647051,
+        -0.00887356736,
+        0.000142033387
+      ]
+    }
+  },
+  "sentinels": [
+    {
+      "player": "Aaron Rodgers",
+      "position": "QB",
+      "age": 41.75034394956775,
+      "Y1": 344.21,
+      "Y2": {
+        "persistence": 0.6654237810780526,
+        "meaningful_active": 0.6510130485802864,
+        "conditional_active_points": 174.804362849,
+        "points": 116.319025,
+        "m1a_points_delta": -0.916369,
+        "consistency_points_delta": 1.017234,
+        "delta_vs_prior_routed": 0.100865,
+        "major_probs": {
+          "out": 0.33457621892194744,
+          "premium": 0.1824738580563042,
+          "elite": 0.3542264722590911
+        }
+      },
+      "Y3": {
+        "persistence": 0.3682583259723382,
+        "meaningful_active": 0.3532750545725654,
+        "conditional_active_points": 161.636916,
+        "points": 59.524132,
+        "m1a_points_delta": -0.475489,
+        "consistency_points_delta": 0.39501,
+        "delta_vs_prior_routed": -0.080479,
+        "major_probs": {
+          "out": 0.6317416740276618,
+          "premium": 0.0937112480056054,
+          "elite": 0.18084024725306364
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.9946093336908887,
+        "Y2_points": 190.3679043796578,
+        "Y3_persistence": 0.9826396652347581,
+        "Y3_points": 177.71999194202147
+      },
+      "prior_routed_intrinsic_reference": 328.5340335097643
+    },
+    {
+      "player": "Sam Darnold",
+      "position": "QB",
+      "age": 28.241510777086457,
+      "Y1": 382.94,
+      "Y2": {
+        "persistence": 0.9519405621660114,
+        "meaningful_active": 0.939149292913197,
+        "conditional_active_points": 234.399,
+        "points": 223.134221,
+        "m1a_points_delta": -0.145246,
+        "consistency_points_delta": 4.65222,
+        "delta_vs_prior_routed": 4.506974,
+        "major_probs": {
+          "out": 0.04805943783398858,
+          "premium": 0.10479698512936639,
+          "elite": 0.7751029262189421
+        }
+      },
+      "Y3": {
+        "persistence": 0.9018752449946973,
+        "meaningful_active": 0.8685981266848312,
+        "conditional_active_points": 219.101,
+        "points": 197.601634,
+        "m1a_points_delta": -0.130695,
+        "consistency_points_delta": 3.127794,
+        "delta_vs_prior_routed": 2.997099,
+        "major_probs": {
+          "out": 0.09812475500530271,
+          "premium": 0.11062156500757274,
+          "elite": 0.6844132658898979
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.997167889300579,
+        "Y2_points": 211.7375182127067,
+        "Y3_persistence": 0.9846311703753117,
+        "Y3_points": 185.41882299439467
+      },
+      "prior_routed_intrinsic_reference": 520.8274337535855
+    },
+    {
+      "player": "Bijan Robinson",
+      "position": "RB",
+      "age": 23.587068865205993,
+      "Y1": 480.45,
+      "Y2": {
+        "persistence": 0.9543845103131953,
+        "meaningful_active": 0.9467595205297122,
+        "conditional_active_points": 188.695,
+        "points": 180.087437,
+        "m1a_points_delta": 7.562601,
+        "consistency_points_delta": 4.208719,
+        "delta_vs_prior_routed": 11.771321,
+        "major_probs": {
+          "out": 0.04561548968680473,
+          "premium": 0.14487649847537862,
+          "elite": 0.7606474747439901
+        }
+      },
+      "Y3": {
+        "persistence": 0.9046954996664549,
+        "meaningful_active": 0.8872502036214093,
+        "conditional_active_points": 169.155,
+        "points": 153.034184,
+        "m1a_points_delta": 6.425787,
+        "consistency_points_delta": 1.686085,
+        "delta_vs_prior_routed": 8.111873,
+        "major_probs": {
+          "out": 0.0953045003335451,
+          "premium": 0.19646169164039579,
+          "elite": 0.6166880645803597
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.9852343746463792,
+        "Y2_points": 154.35595751640926,
+        "Y3_persistence": 0.9537690386150691,
+        "Y3_points": 126.4632355036689
+      },
+      "prior_routed_intrinsic_reference": 588.0283530865349
+    },
+    {
+      "player": "Jahmyr Gibbs",
+      "position": "RB",
+      "age": 23.452911421863558,
+      "Y1": 460.3,
+      "Y2": {
+        "persistence": 0.9580139082396565,
+        "meaningful_active": 0.9505634521519509,
+        "conditional_active_points": 188.812,
+        "points": 180.884188,
+        "m1a_points_delta": 7.326008,
+        "consistency_points_delta": 4.782997,
+        "delta_vs_prior_routed": 12.109005,
+        "major_probs": {
+          "out": 0.041986091760343514,
+          "premium": 0.14898836401581003,
+          "elite": 0.7612003007550442
+        }
+      },
+      "Y3": {
+        "persistence": 0.9127890947562477,
+        "meaningful_active": 0.8948681792794603,
+        "conditional_active_points": 167.521,
+        "points": 152.910902,
+        "m1a_points_delta": 6.21992,
+        "consistency_points_delta": 1.504228,
+        "delta_vs_prior_routed": 7.724147,
+        "major_probs": {
+          "out": 0.0872109052437523,
+          "premium": 0.20174461289562803,
+          "elite": 0.615131512342932
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.9861277323798397,
+        "Y2_points": 153.20385033348413,
+        "Y3_persistence": 0.9521475998941724,
+        "Y3_points": 126.05223122100847
+      },
+      "prior_routed_intrinsic_reference": 566.3376242442514
+    },
+    {
+      "player": "Puka Nacua",
+      "position": "WR",
+      "age": 24.260593988925166,
+      "Y1": 401.5,
+      "Y2": {
+        "persistence": 0.9353106172874992,
+        "meaningful_active": 0.9236898280688844,
+        "conditional_active_points": 184.342,
+        "points": 172.417045,
+        "m1a_points_delta": 9.019589,
+        "consistency_points_delta": 3.131069,
+        "delta_vs_prior_routed": 12.150657,
+        "major_probs": {
+          "out": 0.0646893827125008,
+          "premium": 0.11330733400460781,
+          "elite": 0.776848839867544
+        }
+      },
+      "Y3": {
+        "persistence": 0.8714571807141351,
+        "meaningful_active": 0.8576970609374212,
+        "conditional_active_points": 169.4,
+        "points": 147.624445,
+        "m1a_points_delta": 7.523037,
+        "consistency_points_delta": 1.6287,
+        "delta_vs_prior_routed": 9.151736,
+        "major_probs": {
+          "out": 0.12854281928586486,
+          "premium": 0.16822772241656725,
+          "elite": 0.639124026392888
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.9824061104244791,
+        "Y2_points": 143.33294581565093,
+        "Y3_persistence": 0.9542115188263526,
+        "Y3_points": 118.20645721075012
+      },
+      "prior_routed_intrinsic_reference": 500.25530161512313
+    },
+    {
+      "player": "Christian McCaffrey",
+      "position": "RB",
+      "age": 29.235371020623283,
+      "Y1": 433.45,
+      "Y2": {
+        "persistence": 0.8020265261236744,
+        "meaningful_active": 0.7827088398796592,
+        "conditional_active_points": 147.867,
+        "points": 118.593335,
+        "m1a_points_delta": 5.812778,
+        "consistency_points_delta": 4.13503,
+        "delta_vs_prior_routed": 9.947809,
+        "major_probs": {
+          "out": 0.19797347387632558,
+          "premium": 0.23083148491469238,
+          "elite": 0.420139627799586
+        }
+      },
+      "Y3": {
+        "persistence": 0.5273032642296117,
+        "meaningful_active": 0.508951730707874,
+        "conditional_active_points": 124.066,
+        "points": 65.420333,
+        "m1a_points_delta": 3.233272,
+        "consistency_points_delta": 1.150779,
+        "delta_vs_prior_routed": 4.384052,
+        "major_probs": {
+          "out": 0.4726967357703883,
+          "premium": 0.20981650364907495,
+          "elite": 0.20031521463510688
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.9747124178709239,
+        "Y2_points": 122.240974595723,
+        "Y3_persistence": 0.9764397585650892,
+        "Y3_points": 103.34543159300118
+      },
+      "prior_routed_intrinsic_reference": 447.8653267847622
+    },
+    {
+      "player": "Brock Bowers",
+      "position": "TE",
+      "age": 22.719152343990636,
+      "Y1": 223.65,
+      "Y2": {
+        "persistence": 0.9648344997893534,
+        "meaningful_active": 0.9592561102025062,
+        "conditional_active_points": 127.286,
+        "points": 122.809872,
+        "m1a_points_delta": 1.217667,
+        "consistency_points_delta": 0,
+        "delta_vs_prior_routed": 1.217667,
+        "major_probs": {
+          "out": 0.03516550021064657,
+          "premium": 0.10532312556713537,
+          "elite": 0.8248117870916566
+        }
+      },
+      "Y3": {
+        "persistence": 0.9450309433665732,
+        "meaningful_active": 0.9340389424859319,
+        "conditional_active_points": 117.394,
+        "points": 110.940936,
+        "m1a_points_delta": 1.101759,
+        "consistency_points_delta": 0,
+        "delta_vs_prior_routed": 1.101759,
+        "major_probs": {
+          "out": 0.05496905663342677,
+          "premium": 0.14414458454146978,
+          "elite": 0.7208336488864864
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.9955733236982318,
+        "Y2_points": 114.23850730008806,
+        "Y3_persistence": 0.9665129688377371,
+        "Y3_points": 102.37472338396603
+      },
+      "prior_routed_intrinsic_reference": 267.70844604054156
+    },
+    {
+      "player": "Trey McBride",
+      "position": "TE",
+      "age": 25.7773944707968,
+      "Y1": 258.8,
+      "Y2": {
+        "persistence": 0.9373903649197513,
+        "meaningful_active": 0.9285825416798341,
+        "conditional_active_points": 139.864,
+        "points": 131.107238,
+        "m1a_points_delta": 8.330528,
+        "consistency_points_delta": 3.021953,
+        "delta_vs_prior_routed": 11.35248,
+        "major_probs": {
+          "out": 0.06260963508024875,
+          "premium": 0.07952103286001841,
+          "elite": 0.8227948891141889
+        }
+      },
+      "Y3": {
+        "persistence": 0.8761335121889688,
+        "meaningful_active": 0.8641192655798435,
+        "conditional_active_points": 130.292,
+        "points": 114.153518,
+        "m1a_points_delta": 7.341623,
+        "consistency_points_delta": 1.595962,
+        "delta_vs_prior_routed": 8.937585,
+        "major_probs": {
+          "out": 0.12386648781103116,
+          "premium": 0.1151197610687089,
+          "elite": 0.7044757937580438
+        }
+      },
+      "orig_I1": {
+        "Y2_persistence": 0.9893325693063925,
+        "Y2_points": 111.59455230603669,
+        "Y3_persistence": 0.9658084712789636,
+        "Y3_points": 94.80001047358644
+      },
+      "prior_routed_intrinsic_reference": 298.97981194070593
+    }
+  ],
+  "forecast_classification": "PASS_FORECAST_LAYER",
+  "forecast_findings": [
+    "Aaron Rodgers remains strongly age-attenuated: 66.5% Y2 and 36.8% Y3 persistence; consistency adds only about +1.0/+0.4 expected points and does not restore near-prime tail behavior.",
+    "Bijan, Gibbs and Puka retain materially more elite magnitude than original compressed I1 while preserving regression and nonzero out risk.",
+    "McCaffrey is distinctly age-attenuated versus young elite RBs: 80.2% Y2 and 52.7% Y3 persistence with 118.6/65.4 unconditional points.",
+    "Bowers and McBride remain coherent on the same TE scale; Bowers has no two-prior consistency contribution because genuine two-prior coverage is unavailable."
+  ],
+  "downstream_blocker": {
+    "classification": "EXECUTION_REPRODUCIBILITY_BLOCKER_NOT_DOWNSTREAM_MODEL_FAILURE",
+    "prior_governed_year1_universe_players": 335,
+    "persisted_detailed_player_entries": 39,
+    "persisted_named_sentinels": 8,
+    "persisted_universe_checkpoint_entries": 31,
+    "prior_live_forecast_material_sha256": "70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706",
+    "activation_artifact_id": 10467264159,
+    "activation_artifact_sha256": "3866d65353c27cab66f83d701b0af7f892310a71187d02206c49f77181a95ca5",
+    "reason": "The exact full 335-player governed Y1 live forecast material needed for lineup-substitution Shapley is not durably available in the repo/activation artifact. Recomputing on the 39-player sample, scaling old Shapley values, or substituting a newly scraped live universe would change the governed evidence coordinate and is not an authorized workaround.",
+    "prior_routed_intrinsic_reference_only": {
+      "Aaron_Rodgers": 328.5340335097643,
+      "Sam_Darnold": 520.8274337535855,
+      "Bijan_Robinson": 588.0283530865349,
+      "Jahmyr_Gibbs": 566.3376242442514,
+      "Puka_Nacua": 500.25530161512313,
+      "Christian_McCaffrey": 447.8653267847622,
+      "Brock_Bowers": 267.70844604054156,
+      "Trey_McBride": 298.97981194070593
+    },
+    "formal_named_ordering_red_flag_evaluable": false
+  },
+  "hashes": {
+    "directive_pdf": "39cfba8976908aff94a6b0ec3605133f93a92fda7e33c19ec1cd72b2dc7f1839",
+    "forecast_audit_csv": "3da269663542c43091deda8941a2ddcb05a05a49d3dc3c09efdd703480adfefd",
+    "current_i1_facts": "dbea7f754e0910a83a85518880a5e3f649579116a205f9d30d8a4c9f39a7932d",
+    "phase2_panel": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+    "phase2_q3_rows": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+    "prior_sentinel_json_blob": "b261ae3a3b8bfd958a8f607dbee7d79003f9cf5d"
+  },
+  "stop_boundary": "STOP. Do not tune, redesign, implement, promote, merge, deploy, or invent a reduced-universe/downstream approximation."
+}

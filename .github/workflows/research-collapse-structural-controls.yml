@@ -1,0 +1,59 @@
+name: research-collapse-structural-controls
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/research-collapse-structural-controls.yml'
+      - 'artifacts/research/production_resolution/observable_collapse_risk_stageB_20260918/RUN'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install bounded research dependency
+        run: python -m pip install --disable-pip-version-check pandas==2.2.3
+      - name: Build PIT roster-status controls
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/p2
+          gh api -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/actions/artifacts/10486530017/zip > /tmp/p2.zip
+          unzip -q /tmp/p2.zip -d /tmp/p2
+          python - <<'PY'
+          import pandas as pd, pathlib, urllib.request, json, hashlib, datetime, glob
+          q=glob.glob('/tmp/p2/**/phase2_q3_age_state_rows.csv',recursive=True)[0]
+          d=pd.read_csv(q); d=d[(d.source_season>=2014)&(d.source_season<=2020)].copy()
+          rs=[]; hashes={}
+          for y in range(2014,2021):
+              u=f'https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_{y}.csv'
+              raw=urllib.request.urlopen(u).read(); hashes[str(y)]=hashlib.sha256(raw).hexdigest()
+              p=f'/tmp/roster_{y}.csv';open(p,'wb').write(raw)
+              x=pd.read_csv(p,low_memory=False); x=x[x.gsis_id.notna()].copy()
+              x['week_num']=pd.to_numeric(x['week'],errors='coerce');x=x.sort_values(['gsis_id','week_num'])
+              for pid,g in x.groupby('gsis_id'):
+                  st=g['status'].astype(str); final=g.iloc[-1]
+                  rs.append({'player_id':pid,'source_season':y,'roster_final_status':final.get('status'),'roster_final_status_desc':final.get('status_description_abbr'),'roster_final_team':final.get('team'),'roster_nonactive_share':float((st!='ACT').mean()),'roster_weeks':len(g)})
+          r=pd.DataFrame(rs);z=d.merge(r,on=['player_id','source_season'],how='left')
+          z['final_nonactive']=z.roster_final_status.notna() & (z.roster_final_status!='ACT');z['any_material_nonactive']=z.roster_nonactive_share.fillna(0)>=0.25
+          rows=[]
+          for h,g in z.groupby('horizon'):
+              for sig in ['final_nonactive','any_material_nonactive']:
+                  for val in [False,True]:
+                      a=g[g[sig]==val];rows.append({'horizon':int(h),'signal':sig,'signal_value':bool(val),'n':len(a),'role_loss_rate':float(a.role_loss.mean()) if len(a) else None,'target_present_rate':float(a.target_present.mean()) if len(a) else None})
+          out=pathlib.Path('/tmp/output');out.mkdir()
+          pd.DataFrame(rows).to_csv(out/'roster_status_control_summary.csv',index=False)
+          z[z.role_loss.eq(1)].to_csv(out/'collapse_roster_status_features.csv',index=False)
+          meta={'phase2_artifact_id':10486530017,'weekly_roster_sha256':hashes,'created_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'cutoff_interpretation':'source-season completion; only source-season weekly roster observations used','model_fitting':False}
+          (out/'roster_status_provenance.json').write_text(json.dumps(meta,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: collapse-structural-controls
+          path: /tmp/output/

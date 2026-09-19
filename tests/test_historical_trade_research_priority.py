@@ -1,0 +1,178 @@
+from fsffl.runtime.historical_trade_composition import (
+    HistoricalTradeComposition,
+    HistoricalTradeCompositionClass,
+)
+from fsffl.runtime.historical_trade_research_priority import (
+    HistoricalEvidenceAlignment,
+    HistoricalEvidenceDirection,
+    HistoricalResearchEvidenceProfile,
+    classify_historical_evidence_alignment,
+    prioritize_historical_trade_evidence_cases,
+    summarize_historical_research_evidence,
+)
+
+
+def composition(transaction_id: str, kind: HistoricalTradeCompositionClass) -> HistoricalTradeComposition:
+    counts = {
+        HistoricalTradeCompositionClass.PLAYER_ONLY: (2, 0, 0),
+        HistoricalTradeCompositionClass.PLAYERS_AND_PICKS: (2, 2, 0),
+    }[kind]
+    return HistoricalTradeComposition(
+        transaction_id=transaction_id,
+        team_count=2,
+        player_count=counts[0],
+        pick_count=counts[1],
+        faab_transfer_count=counts[2],
+        composition_class=kind,
+    )
+
+
+def profile(
+    transaction_id: str,
+    current: HistoricalEvidenceDirection,
+    future: HistoricalEvidenceDirection,
+    current_confidence: float = 0.8,
+    future_confidence: float = 0.8,
+) -> HistoricalResearchEvidenceProfile:
+    return HistoricalResearchEvidenceProfile(
+        transaction_id=transaction_id,
+        current_impact_direction=current,
+        future_value_direction=future,
+        current_impact_confidence=current_confidence,
+        future_value_confidence=future_confidence,
+        provenance=("point-in-time research fixture",),
+    )
+
+
+def test_alignment_distinguishes_agreement_conflict_and_unknown() -> None:
+    assert classify_historical_evidence_alignment(
+        profile("aligned", HistoricalEvidenceDirection.FAVORS_TEAM_A, HistoricalEvidenceDirection.FAVORS_TEAM_A)
+    ) == HistoricalEvidenceAlignment.ALIGNED
+    assert classify_historical_evidence_alignment(
+        profile("conflicted", HistoricalEvidenceDirection.FAVORS_TEAM_A, HistoricalEvidenceDirection.FAVORS_TEAM_B)
+    ) == HistoricalEvidenceAlignment.CONFLICTED
+    assert classify_historical_evidence_alignment(
+        profile("unknown", HistoricalEvidenceDirection.UNKNOWN, HistoricalEvidenceDirection.FAVORS_TEAM_B)
+    ) == HistoricalEvidenceAlignment.NEUTRAL_OR_UNKNOWN
+
+
+def test_research_priority_prefers_aligned_clean_high_confidence_cases() -> None:
+    compositions = (
+        composition("conflicted-player", HistoricalTradeCompositionClass.PLAYER_ONLY),
+        composition("aligned-mixed", HistoricalTradeCompositionClass.PLAYERS_AND_PICKS),
+        composition("aligned-player-low", HistoricalTradeCompositionClass.PLAYER_ONLY),
+        composition("aligned-player-high", HistoricalTradeCompositionClass.PLAYER_ONLY),
+    )
+    profiles = (
+        profile(
+            "conflicted-player",
+            HistoricalEvidenceDirection.FAVORS_TEAM_A,
+            HistoricalEvidenceDirection.FAVORS_TEAM_B,
+            0.95,
+            0.95,
+        ),
+        profile(
+            "aligned-mixed",
+            HistoricalEvidenceDirection.FAVORS_TEAM_A,
+            HistoricalEvidenceDirection.FAVORS_TEAM_A,
+            0.95,
+            0.95,
+        ),
+        profile(
+            "aligned-player-low",
+            HistoricalEvidenceDirection.FAVORS_TEAM_B,
+            HistoricalEvidenceDirection.FAVORS_TEAM_B,
+            0.55,
+            0.55,
+        ),
+        profile(
+            "aligned-player-high",
+            HistoricalEvidenceDirection.FAVORS_TEAM_A,
+            HistoricalEvidenceDirection.FAVORS_TEAM_A,
+            0.9,
+            0.85,
+        ),
+    )
+
+    ranked = prioritize_historical_trade_evidence_cases(
+        compositions=compositions,
+        evidence_profiles=profiles,
+    )
+
+    assert [row.transaction_id for row in ranked] == [
+        "aligned-player-high",
+        "aligned-player-low",
+        "aligned-mixed",
+        "conflicted-player",
+    ]
+    assert ranked[0].evidence_strength == 0.85
+
+    inventory = summarize_historical_research_evidence(priorities=ranked)
+    assert inventory.profiled_trade_count == 4
+    assert inventory.alignment_counts == {
+        "aligned": 3,
+        "conflicted": 1,
+        "neutral_or_unknown": 0,
+    }
+    assert inventory.aligned_transaction_ids == (
+        "aligned-mixed",
+        "aligned-player-high",
+        "aligned-player-low",
+    )
+    assert inventory.conflicted_transaction_ids == ("conflicted-player",)
+    assert inventory.minimum_evidence_strength == 0.55
+    assert inventory.maximum_evidence_strength == 0.95
+
+
+def test_research_inventory_handles_empty_batch_without_inventing_strength() -> None:
+    inventory = summarize_historical_research_evidence(priorities=())
+    assert inventory.profiled_trade_count == 0
+    assert inventory.alignment_counts == {
+        "aligned": 0,
+        "conflicted": 0,
+        "neutral_or_unknown": 0,
+    }
+    assert inventory.minimum_evidence_strength is None
+    assert inventory.maximum_evidence_strength is None
+
+
+def test_real_kirk_freiermuth_case_is_research_conflicted_not_forced() -> None:
+    kirk_freiermuth = profile(
+        "862758969872125952",
+        HistoricalEvidenceDirection.FAVORS_TEAM_A,
+        HistoricalEvidenceDirection.FAVORS_TEAM_B,
+        current_confidence=0.8,
+        future_confidence=0.8,
+    )
+    assert classify_historical_evidence_alignment(kirk_freiermuth) == HistoricalEvidenceAlignment.CONFLICTED
+
+
+def test_real_garoppolo_pierce_case_is_research_conflicted_not_forced() -> None:
+    # Team A received Jimmy Garoppolo on 2022-11-13. Contemporary 2QB redraft
+    # evidence favored Garoppolo for immediate utility, while the younger rookie WR
+    # carried the stronger long-horizon dynasty case. The research queue must keep
+    # that conflict visible rather than turning either ranking into a grade.
+    garoppolo_pierce = profile(
+        "897547497647054848",
+        HistoricalEvidenceDirection.FAVORS_TEAM_A,
+        HistoricalEvidenceDirection.FAVORS_TEAM_B,
+        current_confidence=0.85,
+        future_confidence=0.7,
+    )
+    assert classify_historical_evidence_alignment(garoppolo_pierce) == HistoricalEvidenceAlignment.CONFLICTED
+
+
+def test_real_davis_robinson_pickett_beckham_case_is_research_aligned() -> None:
+    # 2023-03-12 transaction 940755540299366400 exchanged Gabe Davis + Brian
+    # Robinson for Kenny Pickett + Odell Beckham Jr. Pre-trade dynasty evidence
+    # favored the Davis/Robinson package, and the available 2023 current-impact
+    # outlook also favored that side. This is a research-priority positive control,
+    # not an authoritative trade grade or a substitute for team-specific Decision.
+    davis_robinson = profile(
+        "940755540299366400",
+        HistoricalEvidenceDirection.FAVORS_TEAM_A,
+        HistoricalEvidenceDirection.FAVORS_TEAM_A,
+        current_confidence=0.7,
+        future_confidence=0.85,
+    )
+    assert classify_historical_evidence_alignment(davis_robinson) == HistoricalEvidenceAlignment.ALIGNED

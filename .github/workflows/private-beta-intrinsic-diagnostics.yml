@@ -1,0 +1,72 @@
+name: Private-beta Intrinsic live diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_private_beta_intrinsic_diagnostics.py'
+      - 'scripts/run_private_beta_intrinsic_resilient_diagnostics.py'
+      - 'src/fsffl/forecast/preseason_baseline.py'
+      - 'src/fsffl/product/forecast_resilience.py'
+      - 'src/fsffl/product/private_beta_shapley_runtime.py'
+      - 'src/fsffl/product/shapley_intrinsic_routes.py'
+      - 'src/fsffl/product/persistent_webapp.py'
+      - 'src/fsffl/value/private_beta_activation_data.py'
+      - 'src/fsffl/value/_private_beta_activation_*.py'
+      - 'src/fsffl/value/shapley_intrinsic.py'
+      - 'src/fsffl/value/shapley_intrinsic_contract.py'
+      - 'src/fsffl/value/live_intrinsic_calendar.py'
+      - 'tests/test_preseason_forecast_baseline.py'
+      - 'tests/test_private_beta_shapley_runtime.py'
+      - 'tests/test_shapley_intrinsic.py'
+      - '.github/workflows/private-beta-intrinsic-diagnostics.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: private-beta-intrinsic-diagnostics-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  live-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # If repository management supplies these values, the workflow exercises the
+      # exact hosted persistence-backed Forecast authority. When they are absent,
+      # the diagnostic reports raw provider health only and does not misclassify a
+      # transient provider outage as governed Forecast unavailability.
+      FSFFL_DATABASE_URL: ${{ secrets.FSFFL_DATABASE_URL }}
+      FSFFL_DIAGNOSTIC_LEAGUE_ID: ${{ vars.FSFFL_DIAGNOSTIC_LEAGUE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package and focused test tooling
+        run: python -m pip install -e '.[web]' pytest
+      - name: Run focused activation/API/Forecast-resilience tests
+        run: >-
+          pytest -q
+          tests/test_preseason_forecast_baseline.py
+          tests/test_private_beta_shapley_runtime.py
+          tests/test_shapley_intrinsic.py
+          tests/test_shapley_intrinsic_contract.py
+      - name: Run governed Forecast / Intrinsic diagnostics
+        run: |
+          python scripts/run_private_beta_intrinsic_resilient_diagnostics.py \
+            --allow-provider-only \
+            --output-json artifacts/implementation/private-beta-live-diagnostics.json \
+            --output-md artifacts/implementation/private-beta-live-diagnostics.md
+      - name: Upload management diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-beta-intrinsic-live-diagnostics
+          path: |
+            artifacts/implementation/private-beta-live-diagnostics.json
+            artifacts/implementation/private-beta-live-diagnostics.md
+          if-no-files-found: warn
+          retention-days: 14

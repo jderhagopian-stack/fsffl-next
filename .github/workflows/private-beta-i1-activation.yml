@@ -1,0 +1,166 @@
+name: Build private-beta I1 activation artifacts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/build_private_beta_i1_activation.py'
+      - 'scripts/build_private_beta_i1_activation_resolved.py'
+      - 'scripts/extract_private_beta_completed_source_points.R'
+      - '.github/workflows/private-beta-i1-activation.yml'
+      - 'src/fsffl/forecast/i1_artifact.py'
+      - 'src/fsffl/forecast/i1_current_facts.py'
+      - 'src/fsffl/forecast/integrated_i1.py'
+  workflow_dispatch:
+
+concurrency:
+  group: private-beta-i1-activation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NFLREADPY_CACHE: filesystem
+  NFLREADPY_CACHE_DURATION: '86400'
+  NFLREADPY_TIMEOUT: '180'
+  NFLREADPY_VERBOSE: 'False'
+
+jobs:
+  build-activation-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout implementation
+        uses: actions/checkout@v4
+
+      - name: Checkout frozen research oracle
+        uses: actions/checkout@v4
+        with:
+          ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+          path: research_ref
+
+      - name: Remove unrelated broken runner apt source
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                     /etc/apt/sources.list.d/azure-cli.list \
+                     /etc/apt/sources.list.d/microsoft-prod.sources \
+                     /etc/apt/sources.list.d/azure-cli.sources || true
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install activation tooling
+        run: python -m pip install -e . pytest pandas nflreadpy pyarrow
+
+      - name: Build frozen PIT football panels
+        run: |
+          Rscript research_ref/scripts/extract_career_transition_panel.R
+          Rscript research_ref/scripts/extract_forecast_usage_panel.R
+
+      - name: Extract frozen-coordinate completed-source points
+        run: |
+          Rscript scripts/extract_private_beta_completed_source_points.R \
+            artifacts/next2-career/cache/player_stats_seasonal.RData \
+            /tmp/private_beta_completed_source_points.csv
+
+      - name: Prefetch completed-source beta data with retries
+        run: |
+          python - <<'PY'
+          import time
+          from pathlib import Path
+          import nflreadpy as nfl
+          from nflreadpy.config import update_config
+
+          update_config(
+              cache_mode='filesystem',
+              cache_dir=Path('/tmp/nflreadpy-cache'),
+              cache_duration=86400,
+              timeout=180,
+              verbose=False,
+          )
+
+          def retry(label, fn, attempts=4):
+              last = None
+              for attempt in range(1, attempts + 1):
+                  try:
+                      print(f'prefetch {label}: attempt {attempt}/{attempts}', flush=True)
+                      value = fn()
+                      print(f'prefetch {label}: ok', flush=True)
+                      return value
+                  except Exception as exc:
+                      last = exc
+                      print(f'prefetch {label}: {type(exc).__name__}: {exc}', flush=True)
+                      if attempt < attempts:
+                          time.sleep(5 * attempt)
+              raise RuntimeError(f'prefetch failed for {label}') from last
+
+          for season in (2020, 2021, 2022, 2024, 2025):
+              retry(
+                  f'player_stats_reg_{season}',
+                  lambda season=season: nfl.load_player_stats([season], summary_level='reg'),
+              )
+          retry(
+              'player_stats_week_2025',
+              lambda: nfl.load_player_stats([2025], summary_level='week'),
+          )
+          retry('players', nfl.load_players)
+          retry('rosters_2025', lambda: nfl.load_rosters([2025]))
+          PY
+
+      - name: Build 2026 private-beta activation artifacts
+        run: |
+          python scripts/build_private_beta_i1_activation_resolved.py \
+            --research-root research_ref \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --source-points-csv /tmp/private_beta_completed_source_points.csv \
+            --output-dir artifacts/implementation/private-beta-activation \
+            --evaluation-season 2026
+
+      - name: Verify artifact load and schema
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from fsffl.forecast.i1_artifact import FrozenI1Artifact
+          from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact
+
+          root = Path('artifacts/implementation/private-beta-activation')
+          FrozenI1Artifact.load(root / 'frozen_i1_h12.json')
+          FrozenI1Artifact.load(root / 'frozen_i1_h3.json')
+          facts = CurrentI1FactsArtifact.load(root / 'current_i1_facts_2026.json')
+          report = json.loads((root / 'private_beta_activation_build_report.json').read_text())
+          assert report['status'] == 'PASS'
+          assert report['model_changes'] is False
+          assert facts.evaluation_season == 2026
+          assert facts.completed_source_season == 2025
+          assert facts.source_season_complete is True
+          assert len(facts.rows) == report['current_fact_rows']
+          coordinate = report['current_fact_metadata']['research_coordinate_validation']
+          assert coordinate['status'] == 'PASS'
+          assert coordinate['max_abs_fantasy_points_diff'] <= 1e-12
+          print(json.dumps({
+              'status': 'PASS',
+              'current_fact_rows': len(facts.rows),
+              'providers': report['current_fact_metadata']['providers'],
+              'coordinate_validation': coordinate,
+              'secondary_source_drift_audit': report['current_fact_metadata']['secondary_source_drift_audit'],
+              'zero_fact_basis_counts': report['current_fact_metadata']['zero_fact_basis_counts'],
+              'stable_id_bridge': report['current_fact_metadata']['identity_resolution'].get('stable_id_bridge', {}),
+          }, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload private-beta activation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-beta-i1-activation
+          path: artifacts/implementation/private-beta-activation/*
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fsffl-next"
+version = "0.1.0"
+description = "FSFFL NEXT dynasty decision-intelligence platform"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.8,<3",
+  "scikit-learn>=1.5,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+]
+web = [
+  "fastapi[standard]>=0.115,<1",
+  "psycopg[binary]>=3.2,<4",
+]
+
+[tool.fastapi]
+entrypoint = "fsffl.product.persistent_webapp:app"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fsffl"]

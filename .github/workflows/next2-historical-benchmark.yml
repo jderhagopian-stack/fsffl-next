@@ -1,0 +1,37 @@
+name: NEXT-2 Historical Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [next-2-forecast-engine]
+    paths:
+      - 'scripts/extract_modern_projection_panel.R'
+      - 'scripts/run_modern_projection_benchmark.py'
+      - '.github/workflows/next2-historical-benchmark.yml'
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Extract 2024-2025 public historical projection panel
+        run: Rscript scripts/extract_modern_projection_panel.R
+      - name: Run chronological benchmark
+        run: python scripts/run_modern_projection_benchmark.py
+      - name: Upload research results
+        uses: actions/upload-artifact@v4
+        with:
+          name: next2-modern-historical-benchmark
+          path: |
+            artifacts/next2-benchmark/modern_projection_panel.csv
+            artifacts/next2-benchmark/source_coverage.csv
+            artifacts/next2-benchmark/benchmark_results.json
+            artifacts/next2-benchmark/benchmark_report.md
+          retention-days: 14

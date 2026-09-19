@@ -1,0 +1,254 @@
+{
+  "study": "FSFFL NEXT governed Year-1 universe recovery",
+  "date": "2026-09-18",
+  "authority": "research only; evidence recovery only; no Shapley rerun",
+  "status": "EXACT_RECOVERY_FAILED_WITHIN_AUTHORIZED_DURABLE_SURFACES",
+  "classification": {
+    "recovered": false,
+    "repo_history": "PROVABLY_NOT_PERSISTED_AS_A_SEPARATE_FULL_335_PLAYER_ARTIFACT_AROUND_THE_SENTINEL_COMMIT",
+    "durable_research_artifacts": "NOT_PRESENT; PRIOR_SENTINEL_JSON_CONTAINS_39_DETAILED_PLAYER_RECORDS_AND_ONLY_HASH/COUNT_FOR_FULL_YEAR1_MATERIAL",
+    "reviewed_workflow_artifacts": "NO_EXACT_335_PLAYER_YEAR1_MATERIAL",
+    "external_or_ephemeral_runtime": "POSSIBLE_IN_PRINCIPLE_BUT_NOT_DURABLY_REFERENCED_OR_PROVABLY_EQUIVALENT_WITH_CURRENT_TOOLING",
+    "downstream_rerun_authorized": false
+  },
+  "live_recovery_start": {
+    "research_branch": "research/future-state-resolution-phase34-resume",
+    "head": "3365a85c0296c79c4c128d034a4b59b87b4871eb",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63",
+      "base": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76"
+    },
+    "recovered_checkpoint": "artifacts/research/production_resolution/CURRENT_PLAYER_SENTINEL_FINAL_DIAGNOSTIC_CHECKPOINT_2026-09-18.md"
+  },
+  "target_coordinate": {
+    "governed_year1_players": 335,
+    "live_forecast_material_sha256": "70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706",
+    "activation_bundle_manifest_sha256": "ff1cb410153cf63a6f25b76b250f08b3d79728061a90ef9c4734687f50922516",
+    "activation_workflow_run_id": 35145456513,
+    "current_i1_facts_sha256": "dbea7f754e0910a83a85518880a5e3f649579116a205f9d30d8a4c9f39a7932d",
+    "successful_live_sources": [
+      "fftoday",
+      "razzball"
+    ],
+    "position_scoring_multipliers": {
+      "QB": 1,
+      "RB": 1.1096291012838801,
+      "WR": 1.2852339285775058,
+      "TE": 1.3491679768796634
+    }
+  },
+  "repository_history_search": {
+    "sentinel_parent": "62f2368864545e89fd9000b067be243714b3ec0a",
+    "sentinel_commit": "1012215b784bc1e9846378df0f1c9285886da779",
+    "sentinel_commit_message": "Research: complete current-player sentinel diagnostic",
+    "compare_summary": {
+      "ahead_by": 1,
+      "files": [
+        {
+          "path": "artifacts/research/phase34/FSFFL_NEXT_Current_Player_Sentinel_Diagnostic_Report.pdf",
+          "status": "added"
+        },
+        {
+          "path": "artifacts/research/phase34/STATUS.md",
+          "status": "modified"
+        },
+        {
+          "path": "artifacts/research/phase34/phase34_current_player_sentinel_diagnostic.json",
+          "status": "added"
+        }
+      ],
+      "deleted_renamed_moved_full_universe_artifact": false
+    },
+    "path_history": {
+      "artifacts/research/phase34/phase34_current_player_sentinel_diagnostic.json": [
+        "1012215b784bc1e9846378df0f1c9285886da779"
+      ],
+      "artifacts/research/phase34/FSFFL_NEXT_Current_Player_Sentinel_Diagnostic_Report.pdf": [
+        "1012215b784bc1e9846378df0f1c9285886da779"
+      ],
+      "artifacts/implementation/private-beta-live-diagnostics.json": [],
+      "artifacts/implementation/private-beta-live-diagnostics.md": []
+    },
+    "finding": "The full governed Year-1 material was not added, deleted, renamed, or moved in the sentinel commit. The branch tree before and after the commit contains no separate full-universe CSV/JSON/NPZ/parquet artifact."
+  },
+  "durable_research_artifact_search": {
+    "prior_sentinel_json": {
+      "path": "artifacts/research/phase34/phase34_current_player_sentinel_diagnostic.json",
+      "git_blob_sha": "b261ae3a3b8bfd958a8f607dbee7d79003f9cf5d",
+      "recorded_file_sha256": "7d3de0c6dd58dcf0e83f744c7ef36e67de2f37a4a98f7d7bb286ad6a56f67f91",
+      "detailed_player_records": 39,
+      "named_sentinels": 8,
+      "universe_checkpoint_records": 31,
+      "full_material_present": false,
+      "full_material_reference_only": {
+        "governed_year1_players": 335,
+        "live_forecast_material_sha256": "70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706"
+      }
+    },
+    "prior_report_pdf": {
+      "path": "artifacts/research/phase34/FSFFL_NEXT_Current_Player_Sentinel_Diagnostic_Report.pdf",
+      "git_blob_sha": "3054a52984ec0bab01227b85cf83fcf93cd44dfd",
+      "recorded_file_sha256": "8fed52121615823b20e3906dd159a6d6868fa4a6b4c6a463e65e370ec5b4b667",
+      "status_description": "management-ready five-page report plus two-page appendix with position-balanced samples and full-universe distribution summaries",
+      "full_year1_vector_present": false
+    },
+    "activation_runtime_embedding": {
+      "path": "src/fsffl/value/private_beta_activation_data.py",
+      "run_id": 35145456513,
+      "artifacts": {
+        "frozen_i1_h12.json": "6ad9d0e52235e711985a27ec6af6764268841f57188b444b857e173b7019a905",
+        "frozen_i1_h3.json": "844391290ba14fc7c2ee84e1211b8963271df839b60c562214fefe757cd84b4d",
+        "current_i1_facts_2026.json": "dbea7f754e0910a83a85518880a5e3f649579116a205f9d30d8a4c9f39a7932d",
+        "private_beta_activation_build_report.json": "1e373b488a7e578d91e0d5d09df441c4deb3d8fa3e192394ab99eb5f3bb83ae0"
+      },
+      "contains_governed_year1_live_forecast": false
+    }
+  },
+  "workflow_artifact_search": {
+    "activation": {
+      "run_id": 35145456513,
+      "artifact_id": 10467264159,
+      "artifact_name": "private-beta-i1-activation",
+      "artifact_zip_sha256": "3866d65353c27cab66f83d701b0af7f892310a71187d02206c49f77181a95ca5",
+      "files": [
+        "current_i1_facts_2026.json",
+        "frozen_i1_h3.json",
+        "frozen_i1_h12.json",
+        "private_beta_activation_build_report.json"
+      ],
+      "current_fact_rows": 752,
+      "governed_year1_live_forecast_present": false
+    },
+    "intrinsic_live_diagnostics_reviewed": [
+      {
+        "run_id": 35129554541,
+        "run_number": 8,
+        "conclusion": "success",
+        "artifact_id": 10460394100,
+        "artifact_sha256": "ade4ecda86ce0e030a0e659d5a2c0521f4e3ed826917f734c3f95d737f83647a",
+        "player_count": 108,
+        "full_rows_persisted": false
+      },
+      {
+        "run_id": 35130203324,
+        "run_number": 9,
+        "conclusion": "success",
+        "artifact_id": 10460856823,
+        "artifact_sha256": "5f8c40c3cfdf02207796a7b4a86c2ce577b62a69eecda757eda4c308a97ae83b",
+        "player_count": 108,
+        "full_rows_persisted": false
+      },
+      {
+        "run_id": 35130365664,
+        "run_number": 10,
+        "conclusion": "success",
+        "artifact_id": 10460806975,
+        "artifact_sha256": "57181cfde36da630ad74584bfeba03168c941a5b09cd80fdd6758d2889c20964",
+        "player_count": 108,
+        "full_rows_persisted": false
+      },
+      {
+        "run_id": 35137181222,
+        "run_number": 13,
+        "conclusion": "cancelled",
+        "artifact_id": 10464330625,
+        "artifact_size_bytes": 1204,
+        "content_class": "provider-health/partial diagnostic only"
+      },
+      {
+        "run_id": 35137223644,
+        "run_number": 14,
+        "conclusion": "success",
+        "artifact_id": 10463267641,
+        "artifact_sha256": "cc7ea7dd691b3233d81a22ce9fd18931cbac7eda69cf76c484eda0761af6eee2",
+        "content_class": "PROVIDER_HEALTH_ONLY"
+      },
+      {
+        "run_id": 35138692449,
+        "run_number": 18,
+        "conclusion": "success",
+        "artifact_id": 10463769400,
+        "artifact_sha256": "957e18d8ecf52148e436f1cd7c0f0503bc00d0ff8fc9b344698bd1ab715a3f5b",
+        "content_class": "PROVIDER_HEALTH_ONLY"
+      },
+      {
+        "run_id": 35144270992,
+        "run_number": 19,
+        "conclusion": "failure",
+        "artifact_id": 10466323583,
+        "artifact_sha256": "378be08eca2ca34e90e708eba797afac36bf93896bee61d4e9c364c3d4030cbf",
+        "content_class": "small diagnostic artifact; live Forecast reached mapping gate but Shapley unavailable"
+      },
+      {
+        "run_id": 35145330522,
+        "run_number": 20,
+        "conclusion": "cancelled",
+        "artifact_id": 10467685119,
+        "artifact_size_bytes": 1204
+      },
+      {
+        "run_id": 35145357839,
+        "run_number": 21,
+        "conclusion": "cancelled",
+        "artifact_id": 10467730054,
+        "artifact_size_bytes": 1204
+      },
+      {
+        "run_id": 35145456442,
+        "run_number": 22,
+        "conclusion": "failure",
+        "artifact_id": 10466531824,
+        "artifact_sha256": "30501aa0a9d0c03ab2a8327156a369b25375b67faa145b2de6905bab2e4f5590",
+        "content_class": "PROVIDER_HEALTH_ONLY"
+      },
+      {
+        "run_id": 35147970623,
+        "run_number": 31,
+        "conclusion": "failure",
+        "artifact_id": 10468355045,
+        "artifact_sha256": "e4867c76d7294868870879b096a8134f6668261943b21eeff8e5f30780cd0f72",
+        "content_class": "small diagnostic artifact; only one independent live source reached runtime"
+      },
+      {
+        "run_id": 35168227551,
+        "run_number": 32,
+        "conclusion": "failure",
+        "artifact_id": 10475576886,
+        "artifact_sha256": "730db3d1abbf28027e427a94d81e524ba81ce296cc79b8aa6ed9cdce35391949",
+        "content_class": "PROVIDER_HEALTH_ONLY"
+      }
+    ],
+    "workflow_definition_finding": "The private-beta diagnostic script persists only top-30, top-by-position, archetype examples, distributions and summary metadata; it does not serialize the complete live Year-1 row vector. Therefore even successful diagnostic artifacts are not a durable equivalent of the required 335-player coordinate."
+  },
+  "reference_chain_search": {
+    "live_material_hash_locations": "The exact target SHA-256 is recorded as a reference in the prior sentinel result/checkpoint, but no repository path or workflow artifact object is associated with that hash.",
+    "sentinel_commit_workflow_runs": [],
+    "current_project_library_search": "No prior raw 335-player universe artifact was found; only the recovery directive matched the exact universe/hash terms.",
+    "deterministic_recompute": "A fresh provider fetch would create a new evidence coordinate and is expressly prohibited. Existing durable inputs are insufficient to deterministically regenerate the exact live Year-1 rows."
+  },
+  "minimum_missing_evidence": {
+    "required_object": "Exact 335-player governed Year-1 league-scored Forecast material, or a canonical equivalent whose identity is proven against SHA-256 70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706.",
+    "required_fields": [
+      "exact 335 player identities and positions",
+      "governed Year-1 forecast mean/current_points for every player",
+      "the provenance/as-of/source/model coordinate needed to prove this is the original live evidence",
+      "sufficient canonical material to reconstruct the same player ordering/substitution universe without a fresh live fetch"
+    ],
+    "already_available": [
+      "12-team lineup/scoring legality",
+      "settled 0.85 annual discount and Shapley architecture",
+      "completed-source current I1 facts and activation hashes",
+      "recorded future-I1 position scoring multipliers",
+      "frozen Forecast candidate and Y2/Y3 machinery"
+    ]
+  },
+  "integrity": {
+    "directive_pdf_sha256": "9f2a605d76bb33ecedd860724ad0103570204ecd8880189a2f592780f2f2d269",
+    "target_live_material_sha256_reproduced": false,
+    "reason_not_reproduced": "No persisted raw/canonical object corresponding to the target hash was recovered. Hash-only references are not sufficient to reconstruct bytes or prove an alternative representation equivalent."
+  },
+  "stop_boundary": "STOP. Exact recovery failed within the authorized durable surfaces. Do not run Intrinsic/Shapley, do not substitute a reduced or fresh universe, and do not tune, redesign, implement, promote, merge or deploy."
+}

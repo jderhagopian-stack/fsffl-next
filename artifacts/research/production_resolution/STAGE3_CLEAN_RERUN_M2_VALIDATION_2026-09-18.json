@@ -1,0 +1,154 @@
+{
+  "study": "FSFFL NEXT Stage 3 clean reproducibility rerun - M2",
+  "status": "CLEAN_RERUN_M2_COMPLETE_RESEARCH_ONLY",
+  "comparator": "M1a",
+  "validation_blocks": {
+    "Y2": [
+      2020,
+      2021
+    ],
+    "Y3": [
+      2019,
+      2020
+    ]
+  },
+  "final_holdout_evaluated": false,
+  "literal_sequence": true,
+  "runner_control": "M2-only execution path; no M3a or M3b model/adjustment objects computed.",
+  "metrics": {
+    "Y2": {
+      "M1a_mae": 31.02096281391476,
+      "M2_mae": 31.024502551810425,
+      "delta": 0.003539737895672863,
+      "ci95": [
+        -0.010051918595343884,
+        0.025314706686140477
+      ],
+      "position_delta": {
+        "QB": -0.016688853422238914,
+        "RB": 0.02219785501966953,
+        "WR": -0.0032663283685605564,
+        "TE": 0.002799414106013921
+      },
+      "extreme95": {
+        "M1a_mae": 62.75337046284872,
+        "M2_mae": 62.73211120355566,
+        "M1a_bias": -32.68960785576037,
+        "M2_bias": -32.531899686213634
+      },
+      "chronological": {
+        "Y2_2020": 0.009290643196255223,
+        "Y2_2021": -0.002033207794635895
+      }
+    },
+    "Y3": {
+      "M1a_mae": 30.652270720982425,
+      "M2_mae": 30.645794222827178,
+      "delta": -0.006476498155252438,
+      "ci95": [
+        -0.01816259124122061,
+        0.0003434345257029352
+      ],
+      "position_delta": {
+        "QB": -0.0025199564389091216,
+        "RB": -0.008195423376839093,
+        "WR": -0.006461608290766918,
+        "TE": -0.006529056807869748
+      },
+      "extreme95": {
+        "M1a_mae": 68.6916908089397,
+        "M2_mae": 68.68099816689735,
+        "M1a_bias": -43.06282232264748,
+        "M2_bias": -43.100638400501
+      },
+      "chronological": {
+        "Y3_2019": -0.011252544734687842,
+        "Y3_2020": -0.0019011258018402093
+      }
+    }
+  },
+  "coefficients": [
+    {
+      "horizon": 2,
+      "source": 2020,
+      "m2": [
+        -0.030504740148355493,
+        -0.012263654400872126,
+        -0.014470639549400123,
+        0.0036549934652177086
+      ]
+    },
+    {
+      "horizon": 2,
+      "source": 2021,
+      "m2": [
+        -0.003600980723103578,
+        -0.0017444354472039604,
+        -0.0016768964430342714,
+        -0.001175119660312299
+      ]
+    },
+    {
+      "horizon": 3,
+      "source": 2019,
+      "m2": [
+        -0.007457421255591253,
+        -0.01148212291953465,
+        -0.0045832234356309315,
+        -0.0023646673313026663
+      ]
+    },
+    {
+      "horizon": 3,
+      "source": 2020,
+      "m2": [
+        -0.0023874397630158895,
+        -0.0032773512306021515,
+        -0.0016202674309038296,
+        -0.001071318925190247
+      ]
+    }
+  ],
+  "stress": {
+    "Y2": {
+      "ascending": 0.011215651508358513,
+      "stable_prime": -0.011654574253377473,
+      "aging_declining": -0.0144527690632546,
+      "nonpersistent": 0.005396428344570829,
+      "role_loss": 0.0625245724266068
+    },
+    "Y3": {
+      "ascending": -0.015112728305036589,
+      "stable_prime": 0.0028394840247673034,
+      "aging_declining": -0.023795947795116266,
+      "nonpersistent": -0.01305763063119182,
+      "role_loss": 0.006219497763868476
+    }
+  },
+  "invariants": {
+    "rows": 2374,
+    "validation_row_counts": {
+      "Y2_2020": 595,
+      "Y2_2021": 614,
+      "Y3_2019": 570,
+      "Y3_2020": 595
+    },
+    "final_holdout_rows_present": false,
+    "named_current_players_used": false,
+    "state_probabilities_changed": false,
+    "max_m1a_parity_error": 2.842170943040401e-14
+  },
+  "reproducibility_vs_prior": {
+    "classification_same": true,
+    "core_metrics_exact": true,
+    "coefficients_exact": true,
+    "qualitative_conclusion": "M2 does not add clear replicated signal."
+  },
+  "hashes": {
+    "clean_runner": "15802aebd41bcb3468162799777643309e3701a09a4318597c57a9871f2d622e",
+    "clean_result_json": "0a7cbb737b8c062a1841e82ec52a053a3474c056b489f7fdfc4050a163b816a5",
+    "clean_row_audit": "250d19ae2e391b7039611d61feb03fba17132a6e42f5e9092c1b2019ef6bedca",
+    "prior_result_json": "536fca987e5719ee5e132ac892c0bbcc2d713f693b29b94ff96cf33e8d9b10d1",
+    "prior_row_audit": "22ba1638fb7e86146ad228c6d803c9ff1693d19f9dd36744bdefe0de37204767"
+  }
+}

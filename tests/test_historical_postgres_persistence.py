@@ -1,0 +1,299 @@
+from __future__ import annotations
+
+import hashlib
+import json
+from datetime import UTC, datetime, timedelta, timezone
+
+import pytest
+
+from fsffl.analytics.historical_persistence import (
+    HistoricalArtifactIdentity,
+    HistoricalArtifactKind,
+    HistoricalInvalidationRequest,
+    HistoricalSyncCheckpoint,
+)
+from fsffl.analytics.historical_postgres import PostgresHistoricalPersistence
+from fsffl.analytics.historical_trade import (
+    EvidenceCompleteness,
+    GradeResult,
+    GradeStatus,
+    HistoricalTradeReport,
+    RetrospectiveOutcomeComponents,
+)
+
+
+NOW = datetime(2026, 9, 10, 7, 0, tzinfo=UTC)
+
+
+class FakeDatabase:
+    def __init__(self) -> None:
+        self.artifacts: dict[str, dict[str, object]] = {}
+        self.dependencies: dict[str, dict[str, str]] = {}
+        self.checkpoints: dict[tuple[str, str], dict[str, object]] = {}
+
+    def connect(self):
+        return FakeConnection(self)
+
+
+class FakeConnection:
+    def __init__(self, database: FakeDatabase) -> None:
+        self.database = database
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def cursor(self):
+        return FakeCursor(self.database)
+
+
+class FakeCursor:
+    def __init__(self, database: FakeDatabase) -> None:
+        self.database = database
+        self.rows: list[dict[str, object]] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def execute(self, sql: str, params=()) -> None:
+        normalized = " ".join(sql.split())
+        self.rows = []
+        if normalized.startswith("insert into fsffl.historical_artifact "):
+            key = params[0]
+            self.database.artifacts.setdefault(
+                key,
+                {
+                    "artifact_key": key,
+                    "league_id": params[1],
+                    "transaction_id": params[2],
+                    "artifact_kind": params[3],
+                    "artifact_version": params[4],
+                    "as_of": params[5],
+                    "dependency_fingerprint": params[6],
+                    "identity_payload": json.loads(params[7]),
+                    "report_payload": json.loads(params[8]),
+                },
+            )
+            return
+        if normalized.startswith("select identity_payload, report_payload from fsffl.historical_artifact where artifact_key"):
+            row = self.database.artifacts.get(params[0])
+            if row:
+                self.rows = [{"identity_payload": row["identity_payload"], "report_payload": row["report_payload"]}]
+            return
+        if (
+            normalized.startswith("select identity_payload, report_payload from fsffl.historical_artifact")
+            and "artifact_version=%s" in normalized
+        ):
+            league_id, transaction_id, artifact_kind, artifact_version, as_of, dependency_fingerprint = params
+            for row in self.database.artifacts.values():
+                if (
+                    row["league_id"] == league_id
+                    and row["transaction_id"] == transaction_id
+                    and row["artifact_kind"] == artifact_kind
+                    and row["artifact_version"] == artifact_version
+                    and row["as_of"] == as_of
+                    and row["dependency_fingerprint"] == dependency_fingerprint
+                ):
+                    self.rows = [{"identity_payload": row["identity_payload"], "report_payload": row["report_payload"]}]
+                    break
+            return
+        if normalized.startswith("insert into fsffl.historical_artifact_dependency"):
+            self.database.dependencies.setdefault(params[0], {})[params[1]] = params[2]
+            return
+        if normalized.startswith("select a.artifact_key, a.identity_payload from fsffl.historical_artifact"):
+            league_id, component, version, derived = params[:4]
+            allowed_transactions = set(params[4]) if len(params) == 5 else None
+            for key, row in self.database.artifacts.items():
+                if row["league_id"] != league_id or row["artifact_kind"] not in set(derived):
+                    continue
+                if allowed_transactions is not None and row["transaction_id"] not in allowed_transactions:
+                    continue
+                if self.database.dependencies.get(key, {}).get(component) == version:
+                    self.rows.append({"artifact_key": key, "identity_payload": row["identity_payload"]})
+            return
+        if normalized.startswith("delete from fsffl.historical_artifact"):
+            for key in params[0]:
+                self.database.artifacts.pop(key, None)
+                self.database.dependencies.pop(key, None)
+            return
+        if normalized.startswith("select league_id, provider, last_completed_at"):
+            row = self.database.checkpoints.get((params[0], params[1]))
+            if row:
+                self.rows = [dict(row)]
+            return
+        if normalized.startswith("insert into fsffl.historical_sync_checkpoint"):
+            key = (params[0], params[1])
+            previous = self.database.checkpoints.get(key)
+            if previous is not None and params[2] < previous["last_completed_at"]:
+                return
+            self.database.checkpoints[key] = {
+                "league_id": params[0],
+                "provider": params[1],
+                "last_completed_at": params[2],
+                "provider_cursor": params[3],
+                "model_version": params[4],
+            }
+            self.rows = [{"last_completed_at": params[2]}]
+            return
+        raise AssertionError(f"unexpected SQL: {normalized}")
+
+    def fetchone(self):
+        return self.rows[0] if self.rows else None
+
+    def fetchall(self):
+        return list(self.rows)
+
+
+def _report(*, lesson: str = "Keep the evidence.") -> HistoricalTradeReport:
+    not_graded = GradeResult(
+        status=GradeStatus.NOT_GRADED,
+        confidence=0.0,
+        reason="Test fixture has no governed score.",
+    )
+    return HistoricalTradeReport(
+        transaction_id="tx-1",
+        trade_date=NOW,
+        teams=("a", "b"),
+        assets_by_team={"a": ("p1",), "b": ("p2",)},
+        point_in_time_grade=not_graded,
+        point_in_time_evidence=(),
+        final_outcome_grade=not_graded,
+        outcome_components=RetrospectiveOutcomeComponents(
+            evidence=EvidenceCompleteness(required_items=(), available_items=()),
+        ),
+        lessons=(lesson,),
+    )
+
+
+def _identity(*, artifact_version: str, decision_version: str) -> HistoricalArtifactIdentity:
+    return HistoricalArtifactIdentity(
+        league_id="sleeper:123",
+        transaction_id="tx-1",
+        artifact_kind=HistoricalArtifactKind.FINAL_REPORT,
+        artifact_version=artifact_version,
+        as_of=NOW,
+        dependency_fingerprint=f"decision={decision_version}|pick_coordinate=v3",
+    )
+
+
+def _legacy_key(identity: HistoricalArtifactIdentity) -> str:
+    encoded = json.dumps(
+        identity.model_dump(mode="json"),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _store(database: FakeDatabase) -> PostgresHistoricalPersistence:
+    return PostgresHistoricalPersistence("postgresql://test", connect_factory=database.connect)
+
+
+def test_historical_report_round_trips_under_exact_immutable_identity() -> None:
+    database = FakeDatabase()
+    store = _store(database)
+    identity = _identity(artifact_version="report-v1", decision_version="v5")
+    report = _report()
+
+    store.put(identity, report)
+
+    assert store.get(identity) == report
+    assert next(iter(database.dependencies.values())) == {"decision": "v5", "pick_coordinate": "v3"}
+
+    with pytest.raises(ValueError, match="immutable"):
+        store.put(identity, _report(lesson="Conflicting rewrite."))
+
+
+def test_equivalent_as_of_instants_share_one_historical_identity_key() -> None:
+    database = FakeDatabase()
+    store = _store(database)
+    utc_identity = _identity(artifact_version="report-v1", decision_version="v5")
+    offset_identity = utc_identity.model_copy(
+        update={"as_of": NOW.astimezone(timezone(timedelta(hours=-4)))}
+    )
+
+    store.put(utc_identity, _report())
+
+    assert store.get(offset_identity) == _report()
+    assert len(database.artifacts) == 1
+
+
+def test_precanonicalization_offset_key_remains_readable_without_duplicate_write() -> None:
+    database = FakeDatabase()
+    store = _store(database)
+    utc_identity = _identity(artifact_version="report-v1", decision_version="v5")
+    offset_identity = utc_identity.model_copy(
+        update={"as_of": NOW.astimezone(timezone(timedelta(hours=-4)))}
+    )
+    report = _report()
+    legacy_key = _legacy_key(offset_identity)
+    database.artifacts[legacy_key] = {
+        "artifact_key": legacy_key,
+        "league_id": offset_identity.league_id,
+        "transaction_id": offset_identity.transaction_id,
+        "artifact_kind": offset_identity.artifact_kind.value,
+        "artifact_version": offset_identity.artifact_version,
+        "as_of": offset_identity.as_of,
+        "dependency_fingerprint": offset_identity.dependency_fingerprint,
+        "identity_payload": offset_identity.model_dump(mode="json"),
+        "report_payload": report.model_dump(mode="json"),
+    }
+
+    assert store.get(utc_identity) == report
+    store.put(utc_identity, report)
+    assert len(database.artifacts) == 1
+    assert legacy_key in database.artifacts
+
+
+def test_dependency_invalidation_removes_only_matching_derived_version() -> None:
+    database = FakeDatabase()
+    store = _store(database)
+    old = _identity(artifact_version="report-v1", decision_version="v5")
+    current = _identity(artifact_version="report-v2", decision_version="v6")
+    store.put(old, _report())
+    store.put(current, _report())
+
+    removed = store.invalidate(
+        HistoricalInvalidationRequest(
+            league_id="sleeper:123",
+            dependency_component="decision",
+            old_version="v5",
+            new_version="v6",
+        )
+    )
+
+    assert removed == (old,)
+    assert store.get(old) is None
+    assert store.get(current) == _report()
+
+
+def test_historical_sync_checkpoint_survives_restart_and_never_moves_backward() -> None:
+    database = FakeDatabase()
+    first = _store(database)
+    checkpoint = HistoricalSyncCheckpoint(
+        league_id="sleeper:123",
+        provider="sleeper",
+        last_completed_at=NOW,
+        provider_cursor="cursor-7",
+    )
+    first.put_checkpoint(checkpoint)
+
+    restarted = _store(database)
+    assert restarted.get_checkpoint("sleeper:123", "sleeper") == checkpoint
+
+    with pytest.raises(ValueError, match="cannot move backward"):
+        restarted.put_checkpoint(
+            HistoricalSyncCheckpoint(
+                league_id="sleeper:123",
+                provider="sleeper",
+                last_completed_at=NOW - timedelta(minutes=1),
+                provider_cursor="cursor-6",
+            )
+        )
+    assert restarted.get_checkpoint("sleeper:123", "sleeper") == checkpoint

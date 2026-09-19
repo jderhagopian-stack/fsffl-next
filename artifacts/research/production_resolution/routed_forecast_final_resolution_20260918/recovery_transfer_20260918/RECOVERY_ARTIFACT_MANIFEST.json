@@ -1,0 +1,177 @@
+{
+  "study": "Routed Forecast - Final Resolution Study",
+  "recovery_date": "2026-09-18",
+  "recovery_outcome": "A",
+  "label": "RECOVERY_PARITY_PROVEN_STAGE0_COMPLETE",
+  "protected_state": {
+    "branch": "research/future-state-resolution-phase34-resume",
+    "starting_head": "1ae54cb4012e68bec8b39445eeaf8033728e48cd",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    }
+  },
+  "authoritative_library_artifacts": [
+    {
+      "filename": "recombination_prediction_rows.csv",
+      "library_path": "/FSFFL NEXT/recombination_prediction_rows.csv",
+      "file_id": "file_00000000af4081f5b9a6e5cc41359ac0",
+      "library_file_id": "libfile_79ee6da6b59081918b04ad6db54c8c12",
+      "bytes": 16071418,
+      "sha256": "dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b",
+      "rows": 41344,
+      "candidates": [
+        "B",
+        "FrozenForecast",
+        "R1",
+        "R2"
+      ],
+      "folds": [
+        "early",
+        "mid",
+        "non_pristine",
+        "validation"
+      ],
+      "horizons": [
+        2,
+        3
+      ],
+      "raw_byte_hash_verified": true,
+      "expected_hash_match": true
+    },
+    {
+      "filename": "hybrid_prediction_rows.csv",
+      "library_path": "/FSFFL NEXT/hybrid_prediction_rows.csv",
+      "file_id": "file_000000004f7081f5b2fff363d0ba7acc",
+      "library_file_id": "libfile_024acab719d881919d8c03db971f6f87",
+      "bytes": 2411645,
+      "sha256": "67e1306982074c91bc666daed306ad688cbfa90dd8c73d59087cd8b770707fb2",
+      "rows": 10212,
+      "candidates": [
+        "B",
+        "H1",
+        "H2",
+        "R2"
+      ],
+      "folds": [
+        "mid",
+        "validation"
+      ],
+      "horizons": [
+        2,
+        3
+      ],
+      "raw_byte_hash_verified": true
+    },
+    {
+      "filename": "corrected_aligned_candidate_rows.csv",
+      "library_path": "/FSFFL NEXT/corrected_aligned_candidate_rows.csv",
+      "file_id": "file_00000000f14c81f5a4208c822326a29f",
+      "library_file_id": "libfile_8b18288ec6548191b65693f7ea293fa2",
+      "bytes": 3956615,
+      "sha256": "2c5878a431523cf0f33b5d29a48585324318d97b1b615a16ce0c1aa4f167277e",
+      "rows": 28275,
+      "candidates": [
+        "B",
+        "B2a",
+        "B2b",
+        "B3",
+        "H2",
+        "R1",
+        "R2"
+      ],
+      "folds": [
+        "early",
+        "mid",
+        "validation"
+      ],
+      "horizons": [
+        2,
+        3
+      ],
+      "raw_byte_hash_verified": true
+    },
+    {
+      "filename": "b2_prediction_rows.csv",
+      "library_path": "/FSFFL NEXT/b2_prediction_rows.csv",
+      "file_id": "file_00000000d95881f5ab25ebd83dbcd3ef",
+      "library_file_id": "libfile_51fa1c46afa881918460789815548c84",
+      "bytes": 3753657,
+      "sha256": "9eda45f36786c0c73a190566b9eb14d199a604427112c890488f2d5a2cdaacb6",
+      "rows": 16689,
+      "candidates": [
+        "B",
+        "B2a",
+        "B2b"
+      ],
+      "folds": [
+        "early",
+        "holdout",
+        "mid",
+        "validation"
+      ],
+      "horizons": [
+        2,
+        3
+      ],
+      "raw_byte_hash_verified": true
+    }
+  ],
+  "preholdout_alignment": {
+    "key": [
+      "fold",
+      "horizon",
+      "source_season",
+      "player_id",
+      "position"
+    ],
+    "B2a_rows": 4287,
+    "R1_rows": 4287,
+    "R2_rows": 4287,
+    "H2_rows": 2553,
+    "B2a_R1_R2_keysets_identical": true,
+    "H2_keyset_subset_of_B2a": true,
+    "H2_missing_early_rows": 1734,
+    "H2_missing_early_explanation": "documented hybrid chronology: no leakage-free early hybrid-training block; H2 evaluated only mid and validation",
+    "duplicate_keys": {
+      "B2a": 0,
+      "R1": 0,
+      "R2": 0,
+      "H2": 0
+    },
+    "prediction_parity_max_abs_delta": {
+      "corrected_vs_b2_B2a": 5.684341886080802e-14,
+      "corrected_vs_recombination_R1": 2.842170943040401e-14,
+      "corrected_vs_recombination_R2": 5.684341886080802e-14,
+      "corrected_vs_hybrid_H2": 2.842170943040401e-14
+    }
+  },
+  "durable_metric_parity": {
+    "corrected_selection_checkpoint": true,
+    "B2_role_loss_checkpoint": true,
+    "hybrid_H2_checkpoint": true,
+    "recombination_provenance_checkpoint": true
+  },
+  "recovered_compact_coordinate": {
+    "local_name": "routed_forecast_aligned_candidate_coordinate_compact_v1.csv",
+    "rows": 4287,
+    "columns": 18,
+    "bytes": 858072,
+    "sha256": "8095788e1b48028c50b65d7fba51ac48a41daceeaa6459ae3a219723ce30b1eb",
+    "note": "deterministic wide alignment produced only from recovered exact rows; no model computation/refit"
+  },
+  "provenance_note": "Candidate-specific source_pct/top10/top5 fields differ across historical studies because their percentile universes differed. Recovery does not choose a canonical career-state percentile coordinate. Common source-time identity/age/experience/state/points fields align and the original routed study must freeze any career-state rule before using such fields.",
+  "preservation": {
+    "mode": "library-backed lossless artifacts with branch-side cryptographic/stable-ID manifest",
+    "note": "Exact original bytes remain in the user's /FSFFL NEXT Library. This branch manifest records stable Library identifiers, sizes and SHA-256 hashes so later execution can recover the exact bytes rather than relying on filenames or summaries."
+  },
+  "execution": {
+    "model_reruns": 0,
+    "model_refits": 0,
+    "holdout_routing_runs": 0,
+    "current_board_runs": 0
+  },
+  "next_boundary": "Stage 0 parity is complete. Next governed step under the original Routed Forecast directive is candidate alignment / pre-identifiable career-state definition; this recovery-only directive does not authorize a new methodological choice there."
+}
