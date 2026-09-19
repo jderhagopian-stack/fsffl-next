@@ -1,0 +1,21 @@
+{
+  "schema_version": "fsffl-source-coordinate-audit-verifier-v1",
+  "pass": true,
+  "hash_pass": true,
+  "position_ratio_pass": true,
+  "semantic_mismatch_pass": true,
+  "downstream_gate_pass": true,
+  "classification": "A - COORDINATE MISMATCH IDENTIFIED",
+  "runtime_seconds": 0.0050321689996053465,
+  "environment": {
+    "python": "3.13.5",
+    "pandas": "2.2.3",
+    "numpy": "2.3.5"
+  },
+  "model_fits": 0,
+  "tuning_actions": 0,
+  "route_changes": 0,
+  "production_changes": 0,
+  "verifier_sha256": "87f6a93fb406661a58577decabce0dfdd032b97755a9f29c734110e8303db08e",
+  "result_sha256": "07526078417765a7c2a48bd361d7dfcaa3b7d5b84a62783d7ca4a12ede139188"
+}
