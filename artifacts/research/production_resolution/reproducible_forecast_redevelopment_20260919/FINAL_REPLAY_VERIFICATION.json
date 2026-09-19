@@ -1,0 +1,16 @@
+{
+  "schema_version": "fsffl-redeveloped-forecast-replay-checkpoint-v1",
+  "pass": true,
+  "rows": 20610,
+  "max_probability_diff": 4.996003610813204e-16,
+  "max_point_diff": 1.4210854715202004e-13,
+  "probability_tolerance": 1e-10,
+  "point_tolerance": 1e-8,
+  "route_mismatches": 0,
+  "replay_result_sha256": "1ea9585849d69520ed9ea52a8e9bec037ce52ca14235bf3b9c9041d1e3351987",
+  "package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "replay_coordinate_sha256": "410f66e80f90cb103424ecbf650ab3eab762c94ca8c62a23f1e8e96d51ea82a5",
+  "fresh_path": true,
+  "refit_during_replay": false,
+  "current_player_materialization_authorized": true
+}
