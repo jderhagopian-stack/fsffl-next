@@ -1,0 +1,16 @@
+{
+  "schema_version": "fsffl-redevelopment-prefit-reload-verification-v3",
+  "pass": true,
+  "specification_git_blob_sha": "6e709c76566067c62925fe5cb61f092e3658be03",
+  "implementation_git_blob_sha": "81ef4f4208bb8cf1d2f84535102275e8cff6b27f",
+  "local_expected_implementation_git_blob_sha": "81ef4f4208bb8cf1d2f84535102275e8cff6b27f",
+  "correction_commits": [
+    "7e4522f06fa24a4a7fef318a0c475380e5dafe23",
+    "c4a0590a9404b54b5be816907b4930c4bec88801"
+  ],
+  "correction_scope": "Sparse-to-dense representation only for BayesianRidge input; no methodological field changed.",
+  "prior_failed_attempt": "5f9c60c683fdd3ee644280b66167092d7b6be26d",
+  "successful_candidate_fits_before_checkpoint": 0,
+  "candidate_results_viewed_before_checkpoint": 0,
+  "fitting_authorized_after_this_checkpoint": true
+}
