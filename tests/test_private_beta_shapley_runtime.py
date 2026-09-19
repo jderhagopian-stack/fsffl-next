@@ -503,8 +503,8 @@ def _runtime_scoring_case(
     *,
     scoring: tuple[ScoringRule, ...],
 ):
-    facts = json.loads(activation_artifact_text("current_i1_facts_2026.json"))
-    row = next(item for item in facts["rows"] if item["position"] == position.value)
+    source = _selected_source_for_position(position)
+    player_id = str(source["player_id"])
     now = datetime(2026, 9, 10, 21, 36, tzinfo=UTC)
     provenance = Provenance(
         source="two-source-fixture",
@@ -513,11 +513,11 @@ def _runtime_scoring_case(
         source_version="two-source-fixture-v1",
     )
     player = Player(
-        player_id=f"runtime-{position.value.lower()}",
-        full_name=row["display_name"],
+        player_id=player_id,
+        full_name=str(source["player_name"]),
         position=position,
         provider_refs=(
-            ProviderRef(provider=row["identity_provider"], external_id=row["identity_external_id"]),
+            ProviderRef(provider="sleeper", external_id=player_id.split(":")[-1]),
         ),
     )
     slot = {
@@ -543,44 +543,20 @@ def _runtime_scoring_case(
         players=(player,),
         player_states=(PlayerState(player_id=player.player_id, as_of=now, provenance=provenance),),
     )
-    metric_values = (
-        (
-            (ForecastMetric.PASS_YARDS, 4000.0),
-            (ForecastMetric.PASS_TD, 30.0),
-            (ForecastMetric.INTERCEPTIONS, 10.0),
-            (ForecastMetric.RUSH_YARDS, 400.0),
-            (ForecastMetric.RUSH_TD, 4.0),
-        )
-        if position == Position.QB
-        else (
-            (ForecastMetric.RUSH_YARDS, 120.0),
-            (ForecastMetric.RUSH_TD, 1.0),
-            (ForecastMetric.RECEPTIONS, 80.0),
-            (ForecastMetric.REC_YARDS, 1000.0),
-            (ForecastMetric.REC_TD, 8.0),
-        )
+    base = ForecastObservation(
+        player_id=player_id,
+        position=position,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=now,
+        period_end=now + timedelta(days=150),
+        distribution=ForecastDistribution(mean=float(source["source_points"]), stddev=1.0),
+        source="fsffl:preseason_baseline_league_scored",
+        model_version="authority-fixture-v1",
+        as_of=now,
+        provenance=provenance,
     )
-    raw = tuple(
-        ForecastObservation(
-            player_id=player.player_id,
-            position=position,
-            horizon=ForecastHorizon.SEASON,
-            metric=metric,
-            period_start=now,
-            period_end=now + timedelta(days=150),
-            distribution=ForecastDistribution(mean=mean, stddev=1.0),
-            source="fsffl:live_equal_weight",
-            model_version="next2-live-equal-weight-v1",
-            as_of=now,
-            provenance=Provenance(
-                source="fsffl:live_equal_weight[fftoday,razzball]",
-                retrieved_at=now,
-                effective_at=now,
-                source_version="next2-live-equal-weight-v1",
-            ),
-        )
-        for metric, mean in metric_values
-    )
+    raw = _raw_forecasts(base)
     scored = derive_league_fantasy_point_forecasts(
         raw,
         rules=rules,
@@ -610,7 +586,6 @@ def _runtime_scoring_case(
         year_one_loader=lambda _state: evidence
     )(context)
     return contract, scored[0]
-
 
 @pytest.mark.parametrize(
     ("position", "variant_scoring"),
