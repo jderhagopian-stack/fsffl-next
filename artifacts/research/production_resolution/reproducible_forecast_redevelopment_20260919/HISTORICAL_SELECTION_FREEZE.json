@@ -1,0 +1,212 @@
+{
+  "schema_version": "fsffl-redeveloped-forecast-historical-freeze-v1",
+  "date": "2026-09-19",
+  "status": "HISTORICAL_SELECTION_FROZEN_BEFORE_CURRENT_PLAYER_MATERIALIZATION",
+  "selection_data_window": {
+    "source_seasons": [
+      2014,
+      2020
+    ],
+    "blocks": {
+      "early": [
+        2014,
+        2016
+      ],
+      "mid": [
+        2017,
+        2018
+      ],
+      "validation": [
+        2019,
+        2020
+      ]
+    }
+  },
+  "current_player_outputs_seen": false,
+  "later_replication_2021_2022_seen_before_freeze": false,
+  "prefit_spec": {
+    "specification_commit": "38350e009c5555ff87a8c75e121bb11ea2b34ce7",
+    "specification_git_blob_sha": "b871adc642c96ecd7c5d95a513981ca05b26840a",
+    "implementation_commit": "9070cfdecb5e458730e3f2eb9f112e04e6eccefc",
+    "implementation_git_blob_sha": "4f8c3ffebf50d257bdd3f9fac5f33c8770b1222e",
+    "final_reload_verification_commit": "237d575612edaedc7cbf1e2fff17b309e939c63e",
+    "parity_commit": "1c5b01a68d9fb905eb73ab574c602b13e59f599b"
+  },
+  "source_reconstruction": {
+    "pass": true,
+    "rows": 30078,
+    "source_state_mismatch": 0,
+    "target_state_mismatch": 0,
+    "max_current_age_state_resid_z_diff": 8.881784197001252e-16,
+    "max_prior_age_state_resid_z_diff": 8.881784197001252e-16
+  },
+  "selected_route": {
+    "Y2": {
+      "kind": "universal",
+      "default": "D1",
+      "cells": "D1 for every position x career-stage cell"
+    },
+    "Y3": {
+      "kind": "position_x_career",
+      "cells": {
+        "QB|developmental": "D0",
+        "QB|established": "D1",
+        "QB|veteran": "D1",
+        "RB|developmental": "D1",
+        "RB|established": "D0",
+        "RB|veteran": "D0",
+        "WR|developmental": "D1",
+        "WR|established": "D1",
+        "WR|veteran": "D0",
+        "TE|developmental": "D1",
+        "TE|established": "D1",
+        "TE|veteran": "D0"
+      }
+    }
+  },
+  "selection_evidence": {
+    "Y2": {
+      "universal_D0_to_D1_block_gain": {
+        "early": 0.6072980255942821,
+        "mid": 1.0578360913404132,
+        "validation": 1.0394344353184308
+      },
+      "D0_mae": 33.650997323786214,
+      "D1_selected_mae": 32.787990254847806,
+      "selected_gain": 0.8630070689383991,
+      "bootstrap_ci95": [
+        0.432530681491817,
+        1.3067669961399337
+      ],
+      "position_route_advanced": false,
+      "career_route_advanced": false
+    },
+    "Y3": {
+      "universal_D0_to_D1_block_gain": {
+        "early": 0.31254572881376724,
+        "mid": 0.34631946558351295,
+        "validation": 0.29363906500645887
+      },
+      "D0_mae": 31.85578770731449,
+      "universal_D1_mae": 31.539173184797455,
+      "selected_route_mae": 31.399941535670347,
+      "selected_gain_vs_D0": 0.4558461716441433,
+      "bootstrap_ci95_vs_D0": [
+        0.14585574272057908,
+        0.7926908706991179
+      ],
+      "career_route_gain_vs_position_by_block": {
+        "early": 0.06283608790445003,
+        "mid": 0.27179068669583795,
+        "validation": 0.11988663664591764
+      },
+      "position_route_advanced": false,
+      "career_route_advanced": true
+    }
+  },
+  "cohort_tradeoffs": {
+    "Y2": {
+      "top10_mae": [
+        59.318,
+        58.049
+      ],
+      "top5_mae": [
+        64.672,
+        62.861
+      ],
+      "age_le25_mae": [
+        36.757,
+        35.808
+      ],
+      "developmental_mae": [
+        33.989,
+        33.223
+      ],
+      "role_loss_mae": [
+        41.547,
+        42.701
+      ],
+      "deep_collapse_mae": [
+        28.116,
+        27.72
+      ],
+      "note": "D1 improves broad, high-end, young/developmental and deep-collapse accuracy but worsens retrospective role-loss stress by about 1.15 points. Role-loss is retained as an explicit tradeoff/stress test and is not used retrospectively to override the predeclared routing rule."
+    },
+    "Y3": {
+      "top10_D0_to_selected": [
+        62.473,
+        61.538
+      ],
+      "top5_D0_to_selected": [
+        61.994,
+        61.831
+      ],
+      "age_le25_D0_to_selected": [
+        36.767,
+        36.237
+      ],
+      "developmental_D0_to_selected": [
+        33.609,
+        33.387
+      ],
+      "role_loss_D0_to_selected": [
+        38.382,
+        37.76
+      ],
+      "deep_collapse_D0_to_selected": [
+        24.45,
+        24.097
+      ]
+    }
+  },
+  "candidate_rejections": {
+    "Y2_position_route": "Rejected by predeclared aggregate chronology rule; it would worsen mid and validation relative to universal D1.",
+    "Y2_career_route": "Rejected by predeclared aggregate chronology rule; it would worsen mid relative to the simpler position/universal path.",
+    "Y3_position_route": "Rejected by predeclared aggregate chronology rule; validation was worse than universal D1.",
+    "Y3_universal_D1": "Supported universally but superseded by the predeclared career-stage route because the career route improved early, mid and validation aggregate error versus the simpler position route and was not an effective tie."
+  },
+  "durable_artifacts": {
+    "historical_predictions": {
+      "library_file_id": "libfile_e76ec792af288191bc7e5ab8e03e42a0",
+      "rows": 10336,
+      "sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709"
+    },
+    "fit_log": {
+      "library_file_id": "libfile_da4a131c3cf88191b0467b9c61706036",
+      "sha256": "9a8fd8a7730082515b0158ea2128c3ecfd69dc7fd20da1f632559438861d69bf"
+    },
+    "routing_selection": {
+      "library_file_id": "libfile_89be029e74d88191afcc9016bfe59907",
+      "sha256": "f11c077bf7f01077ad3551a202fee10c29078f55386d63a79a3af66a94146daa"
+    },
+    "scorecard": {
+      "library_file_id": "libfile_f640d213507081918cf08f698da398a9",
+      "sha256": "92013412d9e21ffc6852effd925a8dce1797abc2a0aae9065a7e3204a35b755e"
+    },
+    "parity": {
+      "library_file_id": "libfile_daf64e0fce6081918fe0f4511b09ef6e",
+      "sha256": "847c2e1264ba36228ea7af10d7e242bfa8b7cd7c50cb86d75ba92558952e9525"
+    }
+  },
+  "final_cutoff_rule": {
+    "Y2": {
+      "max_source_season": 2023,
+      "max_target_season": 2025
+    },
+    "Y3": {
+      "max_source_season": 2022,
+      "max_target_season": 2025
+    }
+  },
+  "fitted_package_schema": "fsffl-redeveloped-forecast-fit-v1",
+  "replay_tolerance": {
+    "probabilities": 1e-10,
+    "points": 1e-8
+  },
+  "next_steps_locked": [
+    "Post-freeze 2021-2022 historical replication may be inspected descriptively but cannot alter the selection.",
+    "Fit the selected treatment(s) once at the governed final cutoffs.",
+    "Persist and reload/replay the fitted package before any current board.",
+    "Only after replay passes may the governed 335-player board be materialized once."
+  ]
+}
