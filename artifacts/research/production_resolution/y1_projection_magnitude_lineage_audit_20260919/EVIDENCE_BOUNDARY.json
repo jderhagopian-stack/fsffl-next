@@ -1,0 +1,110 @@
+{
+  "schema_version": "fsffl-y1-projection-magnitude-lineage-evidence-boundary-v1",
+  "stage": "Stage 0 - exact Y1 artifacts and lineage",
+  "result": "STOP_EVIDENCE_BOUNDARY",
+  "final_classification_section_label": "D - EVIDENCE BOUNDARY",
+  "note_on_directive_label": "Stage 0 text says to stop with Outcome C if an exact board cannot be tied to durable provenance, while Section 10 defines evidence-boundary classification as D. This checkpoint follows the explicit final four-way taxonomy and records D.",
+  "current_board": {
+    "row_complete": true,
+    "rows": 335,
+    "coordinate_id": "year1-current-governed-2026:2026-09-18T09:42:31.889752+00:00",
+    "sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+    "workflow_run_id": 35330898624,
+    "workflow_artifact_id": 10541375155,
+    "workflow_zip_sha256": "c23fed641c4ad689513510022f187e6ea05cab2dc88d457d545be9afc1f49ee7",
+    "provider_ids": [
+      "fftoday",
+      "razzball"
+    ],
+    "provider_level_raw_rows_persisted": false,
+    "persisted_pre_score_detail": "Post-normalization equal-weight ensemble metric means only.",
+    "arithmetic_check": "Required named players' stored half-PPR Year-1 totals reproduce exactly from persisted ensemble metric means and league scoring coefficients.",
+    "limitation": "The individual FFToday and Razzball normalized stat rows, exact per-provider values, and enough provider-vintage semantics to audit them separately are not in the row-complete artifact or its four-file Actions ZIP."
+  },
+  "prior_board": {
+    "requested_semantic_object": "PR147-era governed, league-scored current-season Year-1 Forecast quantity with Bijan 329.24 / Gibbs 328.02 / McCaffrey 315.36.",
+    "named_values_recovered": true,
+    "named_values_source": "FSFFL_NEXT_PR147_Supplemental_Forecast_I1_Diagnostic_Handoff(1).pdf",
+    "pr147_head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63",
+    "named_y1": {
+      "Sam Darnold": 281.73,
+      "Bijan Robinson": 329.24,
+      "Jahmyr Gibbs": 328.02,
+      "Aaron Rodgers": 243.7,
+      "Christian McCaffrey": 315.36
+    },
+    "full_335_vector_recovered": false,
+    "target_material_sha256": "70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706",
+    "durable_sentinel_detail_rows": 39,
+    "provider_level_raw_rows_recovered": false,
+    "prior_recovery_result": "A prior dedicated recovery study already proved the exact 335-player Year-1 vector was not present in repository history, the persisted sentinel files, activation bundle, or the reviewed workflow artifacts.",
+    "activation_run_id": 35145456513,
+    "activation_artifact_id": 10467264159,
+    "activation_zip_sha256": "3866d65353c27cab66f83d701b0af7f892310a71187d02206c49f77181a95ca5",
+    "activation_contents": [
+      "current_i1_facts_2026.json",
+      "frozen_i1_h12.json",
+      "frozen_i1_h3.json",
+      "private_beta_activation_build_report.json"
+    ],
+    "activation_contains_year1_board": false
+  },
+  "partial_named_bridge": {
+    "Bijan Robinson": {
+      "old": 329.24,
+      "current": 479.9,
+      "absolute_change": 150.66,
+      "percent_change": 0.4575993196452435
+    },
+    "Jahmyr Gibbs": {
+      "old": 328.02,
+      "current": 460.25,
+      "absolute_change": 132.23,
+      "percent_change": 0.40311566367904406
+    },
+    "Christian McCaffrey": {
+      "old": 315.36,
+      "current": 433.5,
+      "absolute_change": 118.14,
+      "percent_change": 0.3746194824961948
+    },
+    "Sam Darnold": {
+      "old": 281.73,
+      "current": 383.06,
+      "absolute_change": 101.33,
+      "percent_change": 0.35967060660916483
+    },
+    "Aaron Rodgers": {
+      "old": 243.7,
+      "current": 344.31,
+      "absolute_change": 100.61,
+      "percent_change": 0.4128436602379977
+    }
+  },
+  "why_no_attribution": "The named deltas are directly observable, but assigning them to provider vintage, source coverage, weighting, stat interpretation, player matching, season semantics, or availability assumptions requires the missing provider-level/old row-level evidence. The directive forbids guessing or using a fresh provider fetch.",
+  "missing_minimum_dependencies": [
+    "Exact old 335-player persisted-baseline Year-1 object, or a canonical equivalent proven to reproduce SHA-256 70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706, including row-level source provenance.",
+    "Exact normalized pre-ensemble FFToday and Razzball rows used for the current 2026-09-18T09:42:31.889752Z coordinate, including provider-effective timestamps/season semantics."
+  ],
+  "prohibited_substitutes": [
+    "fresh web/provider fetch",
+    "current provider refetch",
+    "algebraic inversion from ensemble mean/stddev",
+    "39-player sentinel subset",
+    "older 108-player coordinate",
+    "memory reconstruction"
+  ],
+  "stages_not_executed": {
+    "Stage1": "provider-level arithmetic trace blocked by missing pre-ensemble provider rows",
+    "Stage2": "full 335 old-vs-new bridge blocked by missing old 335 vector",
+    "Stage3": "not reached after Stage0 hard stop",
+    "Stage4": "not reached after Stage0 hard stop"
+  },
+  "execution_accounting": {
+    "model_fits": 0,
+    "forecast_tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0,
+    "fresh_provider_fetches": 0
+  }
+}
