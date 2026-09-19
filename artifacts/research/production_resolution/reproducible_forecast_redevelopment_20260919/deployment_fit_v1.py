@@ -78,7 +78,6 @@ def score_prob(layer_pkg,r):
     return {s:out[s]/z for s in rv.STATES}
 
 def zval(pkg,k,x): return (float(x)-float(pkg['scalers'][k]['mean']))/float(pkg['scalers'][k]['sd'])
-
 def prod_feat(pkg,r,state=None):
     vals={
         'source_log':zval(pkg,'source_log',math.log1p(max(0.0,float(r.source_points)))),
