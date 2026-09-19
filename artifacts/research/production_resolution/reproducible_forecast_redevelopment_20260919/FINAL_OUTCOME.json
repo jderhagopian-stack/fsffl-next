@@ -1,0 +1,98 @@
+{
+  "schema_version": "fsffl-reproducible-forecast-redevelopment-final-outcome-v1",
+  "date": "2026-09-19",
+  "directive": "FSFFL NEXT Forecast Reproducible Deployment Redevelopment Directive",
+  "outcome": "B",
+  "label": "RESEARCH_RESULT_NOT_READY_FOR_PROMOTION",
+  "reasoning": [
+    "The bounded D0/D1/D2 redevelopment completed historical selection without current-player tuning.",
+    "Historical evidence selected universal D1 for Y2 and position x broad-career-stage D0/D1 routing for Y3.",
+    "The final horizon-specific deployment fit was exactly reload/replay reproducible within the frozen tolerances.",
+    "The one-time 335-player current-board inspection then exposed a material systematic credibility defect: upper-tail production conditional on remaining active is compressed far below the governed Y1 coordinate.",
+    "All 33 top-10% source producers have conditional-active production below 60% of Y1 at both Y2 and Y3; the same is true for all 14 age<=25 top-10% players.",
+    "Because the defect appears even while active probabilities remain high, it cannot be explained as survival decline alone.",
+    "Per the directive, current-player outputs are inspection only. No coefficient, feature, route, cutoff, hyperparameter, or model family was changed after seeing the board."
+  ],
+  "frozen_historical_selection": {
+    "Y2": "universal D1",
+    "Y3": {
+      "kind": "position_x_broad_career_stage",
+      "route": {
+        "QB|developmental": "D0",
+        "QB|established": "D1",
+        "QB|veteran": "D1",
+        "RB|developmental": "D1",
+        "RB|established": "D0",
+        "RB|veteran": "D0",
+        "WR|developmental": "D1",
+        "WR|established": "D1",
+        "WR|veteran": "D0",
+        "TE|developmental": "D1",
+        "TE|established": "D1",
+        "TE|veteran": "D0"
+      }
+    }
+  },
+  "final_fit": {
+    "package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "Y2_cutoff": {
+      "max_source_season": 2023,
+      "max_target_season": 2025
+    },
+    "Y3_cutoff": {
+      "max_source_season": 2022,
+      "max_target_season": 2025
+    },
+    "production_model_fits": 3,
+    "state_layer_fits": 4,
+    "alternate_final_refits": 0,
+    "fit_shopping": false
+  },
+  "replay": {
+    "rows": 20610,
+    "max_probability_diff": 4.996003610813204e-16,
+    "max_point_diff": 1.4210854715202004e-13,
+    "route_mismatches": 0,
+    "pass": true
+  },
+  "current_board": {
+    "rows": 335,
+    "materialization_count": 1,
+    "exact_age_completion_rows": 35,
+    "mapped_identities": 300,
+    "unmatched_cold_start_identities": 35,
+    "post_materialization_tuning_actions": 0,
+    "csv_sha256": "cbcf22a1dbe12ffcf944806e97b7bfcab4759e0b720c61b2ed4dbcfb7bbe9aa3",
+    "xlsx_sha256": "4a36ddb41269bcd5901d7241ae020b8b266c69322d115eaad9a78893c443c178"
+  },
+  "decisive_current_evidence": {
+    "top10": {
+      "n": 33,
+      "Y2_median_active": 0.9339417993183364,
+      "Y2_median_conditional_ratio": 0.4516903262058822,
+      "Y3_median_active": 0.8725203346213969,
+      "Y3_median_conditional_ratio": 0.3970394264492829
+    },
+    "young_top10": {
+      "n": 14,
+      "Y2_median_active": 0.9518600093182122,
+      "Y2_median_conditional_ratio": 0.4749750258894669,
+      "Y3_median_active": 0.9074708517307629,
+      "Y3_median_conditional_ratio": 0.43083299927287677
+    },
+    "all_top10_conditional_below_60pct_both_horizons": true,
+    "all_young_top10_conditional_below_60pct_both_horizons": true
+  },
+  "promotion_eligible": false,
+  "implementation_authorized": false,
+  "next_action": "STOP_FOR_MANAGEMENT_REVIEW",
+  "prohibited_follow_on_without_new_authority": [
+    "current-player tuning",
+    "new candidate family",
+    "outside data",
+    "implementation",
+    "promotion",
+    "merge",
+    "deployment"
+  ]
+}
