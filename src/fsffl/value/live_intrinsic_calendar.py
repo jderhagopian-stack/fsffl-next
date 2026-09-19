@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Mapping, Protocol
+from typing import Callable, Mapping, Protocol
 
 from fsffl.forecast.i1_config import FROZEN_I1_REGULARIZATION
 from fsffl.forecast.i1_current_facts import CurrentI1MappingResult
@@ -30,6 +30,9 @@ class I1Predictor(Protocol):
         *,
         fallback_probabilities: Mapping[str, float] | None = None,
     ) -> I1ForecastResult: ...
+
+
+FutureI1ResultTranslator = Callable[[str, I1ForecastResult], I1ForecastResult]
 
 
 @dataclass(frozen=True)
@@ -151,6 +154,7 @@ def compose_live_intrinsic_calendar(
     mapping: CurrentI1MappingResult,
     h1_h2_predictor: I1Predictor,
     h3_predictor: I1Predictor,
+    future_i1_result_translator: FutureI1ResultTranslator | None = None,
 ) -> LiveIntrinsicCalendarResult:
     """Compose the management-authorized live three-year Forecast coordinate.
 
@@ -187,6 +191,10 @@ def compose_live_intrinsic_calendar(
         h1 = h1_h2_predictor.predict(h1_input)
         h2 = h1_h2_predictor.predict(h2_input)
         h3 = h3_predictor.predict(h3_input)
+        if future_i1_result_translator is not None:
+            h1 = future_i1_result_translator(player_id, h1)
+            h2 = future_i1_result_translator(player_id, h2)
+            h3 = future_i1_result_translator(player_id, h3)
         source_season = mapping.completed_source_season
         output.append(
             LiveThreeYearPlayerCoordinate(
