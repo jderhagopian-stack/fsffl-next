@@ -1,0 +1,38 @@
+{
+  "schema_version": "fsffl-redevelopment-prefit-reload-verification-v1",
+  "pass": true,
+  "branch_start_before_spec": "0dcdd76d34ef10fe9b2f2222d003fd4ffa139bc7",
+  "specification_commit": "53794cbdce0c5d2762f5f461c93c42c45a858606",
+  "implementation_commit": "49e44f2cdff491e61773f45a2b194bbccb468744",
+  "specification_git_blob_sha": "062859f6ef26171d554dbe2a8a7150a98c1e8134",
+  "implementation_git_blob_sha": "5ff9445df69539f3aa266ebdd383d64b45850fda",
+  "checks": {
+    "spec_status": "PREFIT_FROZEN_SPECIFICATION",
+    "candidates": [
+      "D0",
+      "D1",
+      "D2"
+    ],
+    "final_cutoff": {
+      "Y2": {
+        "max_source_season": 2023,
+        "max_target_season": 2025
+      },
+      "Y3": {
+        "max_source_season": 2022,
+        "max_target_season": 2025
+      },
+      "performance_independent": true
+    },
+    "current_players_forbidden": true,
+    "code_has_bayes": true,
+    "code_has_probability_layer": true,
+    "code_has_route_selection": true,
+    "code_has_parity_gate": true,
+    "code_has_final_fit": true,
+    "code_has_current_names": false
+  },
+  "fitting_authorized_after_this_checkpoint": true,
+  "fits_before_checkpoint": 0,
+  "current_player_materializations_before_checkpoint": 0
+}
