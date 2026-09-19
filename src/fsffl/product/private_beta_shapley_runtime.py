@@ -7,6 +7,7 @@ from typing import Callable
 
 from fsffl.forecast.i1_artifact import FrozenI1Artifact
 from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact, map_current_i1_facts
+from fsffl.forecast.league_scoring import derive_league_fantasy_point_forecasts
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import LeagueState, Position
 from fsffl.value.live_intrinsic_calendar import (
