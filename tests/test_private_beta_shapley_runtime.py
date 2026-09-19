@@ -662,7 +662,7 @@ def test_authoritative_runtime_propagates_supported_scoring_family_to_intrinsic_
 
 
 def test_te_premium_outside_governed_scoring_coverage_fails_closed() -> None:
-    raw = _raw_wr(
+    raw = _raw_forecasts(
         _fixture()[1].model_copy(update={"position": Position.TE})
     )
     te_premium_rules = LeagueRules(
