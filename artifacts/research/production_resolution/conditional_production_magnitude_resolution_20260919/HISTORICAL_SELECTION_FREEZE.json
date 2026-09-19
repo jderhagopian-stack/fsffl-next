@@ -1,0 +1,126 @@
+{
+  "schema_version": "fsffl-conditional-production-historical-selection-freeze-v1",
+  "date": "2026-09-19",
+  "status": "NO_CHALLENGER_CLEARS_PROMOTION_STANDARD",
+  "control_parity": {
+    "pass": true,
+    "rows": 10336,
+    "max_conditional_diff": 1.5631940186722204e-13,
+    "max_unconditional_diff": 5.684341886080802e-14,
+    "max_active_probability_diff": 0,
+    "tolerance": 1e-8
+  },
+  "selection_window": {
+    "source_seasons": [
+      2014,
+      2020
+    ],
+    "blocks": {
+      "early": [
+        2014,
+        2016
+      ],
+      "mid": [
+        2017,
+        2018
+      ],
+      "validation": [
+        2019,
+        2020
+      ]
+    }
+  },
+  "current_board_influence": false,
+  "P1": {
+    "status": "REJECTED",
+    "mechanism": "Single learned convex source-magnitude anchor toward source points.",
+    "Y2": {
+      "result": "No change from P0 across the entire selection window because every fitted Y2 anchor coefficient was negative and predeclared clipping set w=0.",
+      "top5_abs_retention_bias_P0": 0.04814813053056845,
+      "top5_abs_retention_bias_P1": 0.04814813053056845,
+      "top5_improvement": 0
+    },
+    "Y3": {
+      "top5_abs_retention_bias_P0": 0.052063036046068364,
+      "top5_abs_retention_bias_P1": 0.03738027516464173,
+      "top5_improvement": 0.014682760881426636,
+      "top10_abs_retention_bias_P0": 0.007470404633531391,
+      "top10_abs_retention_bias_P1": 0.005171594882850807,
+      "young_top10_abs_retention_bias_P0": 0.04159314562542564,
+      "young_top10_abs_retention_bias_P1": 0.030193239584411967,
+      "overall_unconditional_MAE_P0": 31.399941535670347,
+      "overall_unconditional_MAE_P1": 31.293278381818812
+    },
+    "chronology": {
+      "improved_top5_cells": 3,
+      "total_cells": 6,
+      "improved_cells": [
+        "Y3 early",
+        "Y3 mid",
+        "Y3 validation"
+      ],
+      "Y2_cells_changed": 0
+    },
+    "rejection_reason": "Fails the predeclared two-horizon calibration standard: no Y2 top-tail improvement, only 3/6 chronology cells improve, and mean two-horizon top5 bias reduction is 0.00734 < 0.01."
+  },
+  "P2": {
+    "status": "REJECTED",
+    "mechanism": "Relative log-retention target with the same routed feature families and state probabilities.",
+    "Y2": {
+      "top5_abs_retention_bias_P0": 0.04814813053056845,
+      "top5_abs_retention_bias_P2": 0.0732285132490778,
+      "top5_improvement": -0.02508038271850934,
+      "top10_abs_retention_bias_P0": 0.0050701704750384475,
+      "top10_abs_retention_bias_P2": 0.02198419048337662,
+      "young_top10_abs_retention_bias_P0": 0.012708114206795173,
+      "young_top10_abs_retention_bias_P2": 0.03612990972154286,
+      "overall_unconditional_MAE_P0": 32.787990254847806,
+      "overall_unconditional_MAE_P2": 32.5436477337951
+    },
+    "Y3": {
+      "top5_abs_retention_bias_P0": 0.052063036046068364,
+      "top5_abs_retention_bias_P2": 0.0877972088572943,
+      "top5_improvement": -0.03573417281122593,
+      "top10_abs_retention_bias_P0": 0.007470404633531391,
+      "top10_abs_retention_bias_P2": 0.05273779205406653,
+      "young_top10_abs_retention_bias_P0": 0.04159314562542564,
+      "young_top10_abs_retention_bias_P2": 0.07301210068543126,
+      "overall_unconditional_MAE_P0": 31.399941535670347,
+      "overall_unconditional_MAE_P2": 30.475786533564516
+    },
+    "chronology": {
+      "improved_top5_cells": 3,
+      "total_cells": 6,
+      "note": "Despite broad-MAE gains, upper-tail calibration worsened materially overall and several chronology cells deteriorated beyond the predeclared guardrail."
+    },
+    "rejection_reason": "Fails the primary defect metric at both horizons and worsens young top-tail conditional calibration; broad MAE improvement cannot override failure on the targeted defect."
+  },
+  "selection_decision": {
+    "passing_candidates": [],
+    "winner": null,
+    "frozen_result": "P0 remains the reproducible Outcome-B baseline; no targeted challenger advances.",
+    "next_step": "Outcome B. Do not final-fit a challenger and do not rematerialize the current 335-player board."
+  },
+  "post_freeze_replication": {
+    "source_seasons": [
+      2021,
+      2022
+    ],
+    "role": "descriptive only after selection freeze",
+    "note": "Recorded separately; cannot change the no-winner selection."
+  },
+  "execution_accounting": {
+    "authoritative_fold_pairs": 18,
+    "control_production_fits": 36,
+    "P1_anchor_fits": 18,
+    "P2_retention_model_fits": 27,
+    "state_layer_objects": 36,
+    "hyperparameter_grid_searches": 0,
+    "current_player_tuning_actions": 0,
+    "new_current_board_materializations": 0,
+    "aborted_identical_monolithic_execution_attempts": 1,
+    "aborted_attempt_outputs_written": 0,
+    "aborted_attempt_results_inspected": 0,
+    "retained_candidate_fit_wall_seconds_sum": 89.12310767173767
+  }
+}
