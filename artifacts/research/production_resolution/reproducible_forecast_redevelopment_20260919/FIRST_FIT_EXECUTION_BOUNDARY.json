@@ -1,0 +1,14 @@
+{
+  "schema_version": "fsffl-redevelopment-first-fit-execution-boundary-v1",
+  "status": "FAILED_BEFORE_ESTIMATOR_FIT",
+  "parity_passed": true,
+  "attempted_stage": "First rolling D0 production fit",
+  "exception": "TypeError: Sparse data was passed for X, but dense data is required.",
+  "cause": "DictVectorizer emits scipy sparse matrix; sklearn 1.8.0 BayesianRidge requires dense X.",
+  "evidence_viewed_before_failure": "None. No candidate prediction, coefficient, metric, route comparison, or current-player output existed.",
+  "correction_class": "Representation-only implementation fix. Convert DictVectorizer output to dense float64 before BayesianRidge fit/predict; feature values/order, estimator, target, regularization, cutoffs, routing rules, and hyperparameters remain unchanged.",
+  "successful_D0_fits": 0,
+  "successful_D1_fits": 0,
+  "candidate_metrics_inspected": 0,
+  "current_player_materializations": 0
+}
