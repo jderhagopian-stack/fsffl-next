@@ -25,10 +25,10 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
-from .i1_scoring_bridge import (
-    FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
-    LeagueScoringNormalizedI1Predictor,
-    build_future_i1_position_scoring_multipliers,
+from .i1_player_scoring_candidate import (
+    FUTURE_I1_PLAYER_SCORING_VERSION,
+    build_future_i1_player_scoring_multipliers,
+    translate_future_i1_result_for_player,
 )
 from .runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
 
@@ -94,9 +94,42 @@ def _scoped_state(league_state: LeagueState, player_ids: set[str]) -> LeagueStat
     )
 
 
+def _preseason_source_ids(year_one_evidence: LiveForecastEvidence) -> tuple[str, ...]:
+    source_ids = tuple(sorted(set(year_one_evidence.successful_source_ids)))
+    if len(source_ids) < 2:
+        raise ValueError(
+            "preserved preseason Year-1 authority requires at least two independent source ids"
+        )
+    coverage = getattr(year_one_evidence.runtime_result, "coverage", None)
+    if coverage is None:
+        raise ValueError("preserved preseason Year-1 authority lacks source-coverage lineage")
+    independent = tuple(sorted(set(coverage.independent_source_ids)))
+    if independent != source_ids:
+        raise ValueError(
+            "preserved preseason Year-1 source ids do not match governed independent-source coverage"
+        )
+    if int(coverage.minimum_independent_sources) < 2:
+        raise ValueError("preserved preseason Year-1 coverage weakens the two-source authority")
+    if not year_one_evidence.raw_forecasts:
+        raise ValueError("preserved preseason Year-1 authority has no frozen raw stat ensemble")
+    return source_ids
+
+
+def _player_multiplier_digest(scoring_multipliers: dict[str, float]) -> str:
+    encoded = json.dumps(
+        {
+            player_id: float(multiplier)
+            for player_id, multiplier in sorted(scoring_multipliers.items())
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 def _provenance(
     year_one_evidence: LiveForecastEvidence,
-    scoring_multipliers: dict[Position, float] | None = None,
+    scoring_multipliers: dict[str, float] | None = None,
 ) -> CompletedSourceFactProvenance:
     metadata = dict(_FACTS.metadata)
     providers = metadata.get("providers", ())
@@ -112,33 +145,33 @@ def _provenance(
                 if isinstance(value, (bool, float, int, str)) or value is None
             }
         )
+    source_ids = _preseason_source_ids(year_one_evidence)
     fact_coverage.update(
         {
             "provider_neutral_contract": bool(metadata.get("provider_neutral_contract", False)),
             "rights_classification": str(metadata.get("rights_classification", "unclassified")),
             "activation_bundle_sha256": ACTIVATION_BUNDLE_SHA256,
             "activation_workflow_run_id": ACTIVATION_WORKFLOW_RUN_ID,
-            "future_i1_scoring_bridge_version": FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
+            "future_i1_scoring_version": FUTURE_I1_PLAYER_SCORING_VERSION,
+            "future_i1_scoring_method": "player_specific_year1_league_standard_ratio",
             "year1_forecast_evidence_basis": year_one_evidence.evidence_basis,
             "year1_forecast_evaluation_as_of": year_one_evidence.runtime_result.evaluation_as_of.isoformat(),
             "year1_forecast_runtime_model_version": year_one_evidence.runtime_result.model_version,
+            "year1_forecast_source_ids": ",".join(source_ids),
+            "year1_forecast_source_count": len(source_ids),
         }
     )
     if scoring_multipliers is not None:
-        for position, multiplier in sorted(
-            scoring_multipliers.items(),
-            key=lambda item: item[0].value,
-        ):
-            fact_coverage[
-                f"future_i1_scoring_multiplier_{position.value.lower()}"
-            ] = float(multiplier)
+        fact_coverage["future_i1_scoring_player_count"] = len(scoring_multipliers)
+        fact_coverage["future_i1_scoring_multiplier_sha256"] = _player_multiplier_digest(
+            scoring_multipliers
+        )
     return CompletedSourceFactProvenance(
         source_version=_FACTS.source_version,
         schema_version=_FACTS.schema_version,
         providers=tuple(str(item) for item in providers),
         fact_family_coverage=fact_coverage,
     )
-
 
 def _missing_fact_families() -> tuple[str, ...]:
     coverage = _FACTS.metadata.get("coverage_policy", {})
@@ -156,7 +189,8 @@ def _missing_fact_families() -> tuple[str, ...]:
 def _cache_key(
     context: UserRuntimeContext,
     year_one: tuple[ForecastObservation, ...],
-    scoring_multipliers: dict[Position, float],
+    scoring_multipliers: dict[str, float],
+    source_ids: tuple[str, ...],
 ) -> str:
     assert context.league_state is not None
     payload = {
@@ -173,14 +207,12 @@ def _cache_key(
             }
             for item in sorted(year_one, key=lambda observation: observation.player_id)
         ],
-        "future_i1_scoring_bridge": {
-            "version": FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
-            "multipliers": {
-                position.value: multiplier
-                for position, multiplier in sorted(
-                    scoring_multipliers.items(),
-                    key=lambda item: item[0].value,
-                )
+        "preseason_source_ids": source_ids,
+        "future_i1_scoring": {
+            "version": FUTURE_I1_PLAYER_SCORING_VERSION,
+            "player_multipliers": {
+                player_id: multiplier
+                for player_id, multiplier in sorted(scoring_multipliers.items())
             },
         },
     }
@@ -255,7 +287,16 @@ class PrivateBetaShapleyContractLoader:
             )
 
         try:
-            scoring_multipliers = build_future_i1_position_scoring_multipliers(
+            source_ids = _preseason_source_ids(evidence)
+        except ValueError as exc:
+            return build_unavailable_shapley_intrinsic_contract(
+                evaluation_season=league_state.league.season,
+                reason=f"Preserved preseason Year-1 source lineage unavailable: {exc}",
+                missing_required_fact_families=("preseason_year1_source_lineage",),
+            )
+
+        try:
+            scoring_multipliers = build_future_i1_player_scoring_multipliers(
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
                 rules=league_state.league.rules,
@@ -263,11 +304,11 @@ class PrivateBetaShapleyContractLoader:
         except ValueError as exc:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
-                reason=f"Future I1 league-scoring normalization unavailable: {exc}",
-                missing_required_fact_families=("future_i1_league_scoring_coordinate",),
+                reason=f"Future I1 player-specific league scoring unavailable: {exc}",
+                missing_required_fact_families=("future_i1_player_scoring_coordinate",),
             )
 
-        key = _cache_key(context, year_one, scoring_multipliers)
+        key = _cache_key(context, year_one, scoring_multipliers, source_ids)
         with self._lock:
             if key == self._cached_key and self._cached_contract is not None:
                 return self._cached_contract
@@ -288,19 +329,22 @@ class PrivateBetaShapleyContractLoader:
         if mapping.mapped_count != len(year_one_ids):
             raise ValueError("completed-source mapping coverage does not equal governed Year-1 Forecast coverage")
 
-        h12 = LeagueScoringNormalizedI1Predictor(
-            _H12,
-            multipliers=scoring_multipliers,
-        )
-        h3 = LeagueScoringNormalizedI1Predictor(
-            _H3,
-            multipliers=scoring_multipliers,
-        )
+        def translate_future_result(
+            player_id: str,
+            result,
+        ):
+            return translate_future_i1_result_for_player(
+                player_id,
+                result,
+                multipliers=scoring_multipliers,
+            )
+
         calendar = compose_live_intrinsic_calendar(
             live_year_one_forecasts=year_one,
             mapping=mapping,
-            h1_h2_predictor=h12,
-            h3_predictor=h3,
+            h1_h2_predictor=_H12,
+            h3_predictor=_H3,
+            future_i1_result_translator=translate_future_result,
         )
         result = build_live_calendar_shapley_estimates(
             calendar,
