@@ -1,0 +1,223 @@
+{
+  "schema_version": "fsffl-bounded-final-fit-prefit-manifest-v1",
+  "date": "2026-09-18",
+  "task": "Forecast Bounded Final Fit + Current-Player Credibility Gate",
+  "gate_status": "FAIL_STOP_BEFORE_MODEL_EXECUTION",
+  "outcome_if_not_resolved": "C_REPRODUCIBILITY_FITTING_BOUNDARY",
+  "repository": {
+    "task_start_head": "9d45d8968f9a90bc5c830e82e5f22369c958fc34",
+    "branch_tree_repair": {
+      "reason": "Prior binary artifact persistence had accidentally replaced the research tree with a seven-entry tree.",
+      "intact_base_commit": "37c40b87df242e94d05caf0e894c66a999ae249c",
+      "repair_commit": "7b962a6406c0132e6991d33ebad7b1cff9e9c494",
+      "method": "Restored the intact base tree and overlaid only the already-intended prior gate PDF and manifest. No model artifact or production code was changed."
+    },
+    "live_prefit_head": "19f6c6983cf673b833c35684ff2c8090ba3eff8b",
+    "concurrent_commit_note": "19f6c6983... is an unrelated observable-collapse provenance update layered after the tree repair and is preserved.",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    }
+  },
+  "frozen_route": {
+    "spec_path": "artifacts/research/production_resolution/routed_forecast_final_resolution_20260918/post_recovery_20260918/FROZEN_ROUTING_SPEC.json",
+    "git_blob_sha": "cf491183c0aee7bc54128c0c7ffc778240f4e103",
+    "default": "B2a",
+    "routes": [
+      {
+        "position": "QB",
+        "experience_bucket": "4-8",
+        "horizon": 2,
+        "treatment": "R2"
+      },
+      {
+        "position": "QB",
+        "experience_bucket": "4-8",
+        "horizon": 3,
+        "treatment": "R2"
+      },
+      {
+        "position": "QB",
+        "experience_bucket": "9+",
+        "horizon": 2,
+        "treatment": "R2"
+      }
+    ],
+    "all_other_cells": "B2a"
+  },
+  "recovered_inputs": [
+    {
+      "name": "governed_year1_universe.json",
+      "purpose": "frozen 335-player Y1 raw-points population",
+      "rows": 335,
+      "sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+      "row_material_sha256": "b0e2ddae9296c9b3695534fffd7abdd37a8ecc004ba24687b6574dc654ef49d8"
+    },
+    {
+      "name": "replacement_identity_materialization_coordinate.json",
+      "purpose": "approved current identity/history bridge",
+      "rows": 335,
+      "sha256": "95fd6565a908b044ca234898cc801749abb2b6aa62a84c2d3c917445d369cda1",
+      "row_material_sha256": "1803ee0200b8d1d39dfd719934bd683765727bef997f2a1f1ee44d2a6444af56",
+      "population_sha256": "095d09458bfe021e7b7075281e8430573514c6d1e5c2dae3d25430f555ceba4b",
+      "mapping_counts": {
+        "DIRECT_ID": 73,
+        "EXACT_NAME_POSITION": 227,
+        "UNMATCHED": 35
+      },
+      "prior2_covered": 199
+    },
+    {
+      "name": "b2_prediction_rows.csv",
+      "purpose": "historical B/B2a/B2b rolling-fold prediction evidence",
+      "rows": 16689,
+      "sha256": "9eda45f36786c0c73a190566b9eb14d199a604427112c890488f2d5a2cdaacb6",
+      "source_seasons": [
+        2014,
+        2022
+      ],
+      "candidates": [
+        "B",
+        "B2a",
+        "B2b"
+      ]
+    },
+    {
+      "name": "recombination_prediction_rows.csv",
+      "purpose": "historical B/FrozenForecast/R1/R2 rolling-fold predictions and state-conditional outputs",
+      "rows": 41344,
+      "sha256": "dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b",
+      "source_seasons": [
+        2014,
+        2022
+      ],
+      "candidates": [
+        "B",
+        "FrozenForecast",
+        "R1",
+        "R2"
+      ]
+    },
+    {
+      "name": "conditional_repair_prediction_rows.csv",
+      "purpose": "historical Candidate-B ancestor evidence",
+      "rows": 22252,
+      "sha256": "4298b40667906fca5a88ad823313e57c0c5971b5eef9c6b38f55f5f5155bd3f5",
+      "source_seasons": [
+        2014,
+        2022
+      ],
+      "candidates": [
+        "A",
+        "B",
+        "C",
+        "carry_forward"
+      ]
+    },
+    {
+      "name": "phase2_player_season_panel.csv",
+      "purpose": "historical PIT source panel referenced by B/R2 execution and current-history coordinate",
+      "sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+      "row_count": "not durably enumerated in the recovered pre-fit manifests inspected here"
+    },
+    {
+      "name": "phase2_q3_age_state_rows.csv",
+      "purpose": "historical PIT age/state residual evidence",
+      "sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+      "row_count": "not durably enumerated in the recovered pre-fit manifests inspected here"
+    },
+    {
+      "name": "selected_forecast_internal_probabilities.csv",
+      "purpose": "player-keyed frozen I1 historical probability coordinate; evidence for fixed probability machinery, not a B2a/R2 fitted production package",
+      "rows": 12920,
+      "sha256": "41593ad6a90e3fcb76704d72e57e76b8b4b0b6e377bdcf05ed1df16e05f86244",
+      "source_seasons": [
+        2005,
+        2020
+      ]
+    }
+  ],
+  "recovered_recipe_evidence": {
+    "B2a": {
+      "known": [
+        "Starts from Candidate B conditional-active production.",
+        "Five-bin monotone nonlinear within-position production-percentile correction in log-point space.",
+        "Partial pooling by position/horizon using n/(n+50) shrinkage toward the global bin effect.",
+        "Persistence/state probabilities are not changed.",
+        "Cold-start rookies remain separated from realized-NFL-history fitting."
+      ],
+      "missing_required_for_exact_fit": [
+        "The exact five bin boundary construction/edge values and tie handling.",
+        "The exact monotonicity-enforcement algorithm when empirical bin effects violate order.",
+        "The exact Candidate-B fitted design/estimator that B2a augments or replaces.",
+        "The exact log-point target/residual construction and any floor/back-transform details beyond what can be inferred from historical outputs.",
+        "A durable final-fit implementation or parameterization that converts the frozen description into one unambiguous estimator."
+      ],
+      "conclusion": "UNDER_SPECIFIED_FOR_DEPLOYMENT_STYLE_REFIT"
+    },
+    "R2": {
+      "known": [
+        "Frozen A2/routed persistence and D/integrated-I1 ordered state probabilities remain fixed.",
+        "R1 estimates player-specific conditional production separately/partially pooled inside positive future states.",
+        "R2 is R1 plus the already-governed two-prior-season consistency evidence only where genuine coverage exists.",
+        "Eligible source-time evidence includes position, horizon, current magnitude/percentile or residual, age/experience where governed, current state, prior-history coverage, and frozen two-prior terms.",
+        "The two-prior component itself is durably specified as a no-intercept BayesianRidge residual-z adjustment using mean/gap/coverage plus position deviations, with training-only centering/scaling and neutral zero continuous values when uncovered."
+      ],
+      "missing_required_for_exact_fit": [
+        "The exact R1 state-conditional learner estimator/formula.",
+        "Its exact design matrix and basis transformations.",
+        "Its regularization hyperparameters.",
+        "The exact partial-pooling hierarchy, shrinkage weights, minimum-support/fallback rules by position/horizon/state.",
+        "The exact state-conditional training target transformation/back-transform.",
+        "The prior ARCHITECTURE_SPECIFICATION.json named by the Stage-0 provenance audit (SHA-256 197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc) is not present in the live repository or FSFFL NEXT Library search/list surfaces."
+      ],
+      "conclusion": "UNDER_SPECIFIED_FOR_DEPLOYMENT_STYLE_REFIT"
+    },
+    "current_cutoff": {
+      "known": [
+        "Historical rolling evaluation fit transforms inside each chronological cutoff.",
+        "The two-prior consistency experiment uses source_season+horizon <= evaluation_source_season for eligible training transitions.",
+        "The older current sentinel intentionally used its own frozen completed-source coordinate and cannot be substituted."
+      ],
+      "missing_required_for_exact_fit": [
+        "No durable B2a/R2 deployment rule uniquely resolves the final 2026 materialization cutoff/training endpoint from the historical rolling studies.",
+        "Choosing a common endpoint (for example, whether each horizon may use its latest separately observable source season or must use a common completed-source endpoint) would be a new training-window/cutoff decision."
+      ],
+      "conclusion": "CURRENT_CUTOFF_NOT_UNIQUELY_DERIVABLE"
+    }
+  },
+  "lost_or_missing_durable_objects": [
+    {
+      "object": "ARCHITECTURE_SPECIFICATION.json from ordered-state recombination run",
+      "recorded_sha256": "197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc",
+      "status": "HASH_AND_EXISTENCE_RECORDED_BUT_BYTES_NOT_RECOVERED"
+    },
+    {
+      "object": "B2a exact fitted-model specification/effects package",
+      "status": "NOT_DURABLY_AVAILABLE"
+    },
+    {
+      "object": "R1/R2 exact fitted-estimator specification/coefficients package",
+      "status": "NOT_DURABLY_AVAILABLE"
+    }
+  ],
+  "gate_decision": {
+    "pass": false,
+    "reason": "The directive requires an exact mechanical deployment instantiation. Completing B2a and R2 would require choosing or reconstructing missing basis/estimator/regularization/pooling details and a final training cutoff. Those are prohibited new methodological choices.",
+    "action": "STOP_BEFORE_FIT"
+  },
+  "execution_accounting_at_prefit_stop": {
+    "B2a_fits": 0,
+    "R2_fits": 0,
+    "deterministic_verification_reruns": 0,
+    "candidate_comparisons": 0,
+    "hyperparameter_searches": 0,
+    "coefficient_tuning_iterations": 0,
+    "current_player_tuning_actions": 0,
+    "holdout_selection_runs": 0,
+    "current_player_board_materializations": 0,
+    "production_downstream_changes": 0
+  }
+}
