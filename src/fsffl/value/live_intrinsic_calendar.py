@@ -160,11 +160,13 @@ def compose_live_intrinsic_calendar(
 
     Calendar ownership is explicit and non-overlapping:
       * Year 1 / E: governed live current-season Forecast;
-      * Year 2 / E+1: completed-source direct I1 h=2;
-      * Year 3 / E+2: completed-source direct I1 h=3.
+      * Year 2 / E+1: authoritative direct selected-future Forecast h=2;
+      * Year 3 / E+2: authoritative direct selected-future Forecast h=3.
 
     Completed-source h=1 is predicted only for diagnostics/parity and is never
-    consumed as Year 1 or by the Shapley conversion.
+    consumed as Year 1 or by the Shapley conversion. The optional provider is
+    identity-aware and lets the production runtime replace legacy I1 for Y2/Y3
+    without changing the frozen diagnostic h=1 path.
     """
 
     if mapping.unmapped_player_ids or mapping.ambiguous_player_ids:
@@ -189,8 +191,12 @@ def compose_live_intrinsic_calendar(
             raise ValueError("direct I1 horizons must share completed-source factual inputs")
 
         h1 = h1_h2_predictor.predict(h1_input)
-        h2 = h1_h2_predictor.predict(h2_input)
-        h3 = h3_predictor.predict(h3_input)
+        if future_y2_y3_result_provider is None:
+            h2 = h1_h2_predictor.predict(h2_input)
+            h3 = h3_predictor.predict(h3_input)
+        else:
+            h2 = future_y2_y3_result_provider(player_id, 2)
+            h3 = future_y2_y3_result_provider(player_id, 3)
         if future_i1_result_translator is not None:
             h1 = future_i1_result_translator(player_id, h1)
             h2 = future_i1_result_translator(player_id, h2)
