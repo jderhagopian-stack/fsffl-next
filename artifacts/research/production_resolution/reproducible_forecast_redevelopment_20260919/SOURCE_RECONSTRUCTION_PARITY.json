@@ -1,0 +1,19 @@
+{
+  "rebuilt_rows": 30078,
+  "governed_rows": 30078,
+  "matched_rows": 30078,
+  "left_only": 0,
+  "right_only": 0,
+  "source_state_mismatch": 0,
+  "target_state_mismatch": 0,
+  "max_source_points_diff": 0,
+  "max_target_points_diff": 0,
+  "max_current_age_state_resid_z_diff": 8.881784197001252e-16,
+  "max_prior_age_state_resid_z_diff": 8.881784197001252e-16,
+  "pass": true,
+  "implementation_git_blob_sha": "0d7b4ddfd7ac57b7045b33e8d25360534bfd45fa",
+  "panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+  "governed_q3_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+  "fits_performed": 0,
+  "note": "Parity verification completed before any D0/D1 fit."
+}
