@@ -1,0 +1,165 @@
+{
+  "schema_version": "fsffl-fresh-y1-provider-capture-preexecution-v1",
+  "directive_date": "2026-09-19",
+  "task": "One bounded fresh provider-capture diagnostic of current acquisition -> parsing -> normalization -> equal-weight ensemble -> league scoring.",
+  "evidence_status": "FRESH_DIAGNOSTIC_ONLY_NOT_HISTORICAL_RECONSTRUCTION",
+  "non_substitutable_for_missing_2026_09_18_evidence": true,
+  "pre_network_state": {
+    "research_branch": "research/future-state-resolution-phase34-resume",
+    "research_head": "c2a819d5ede9c50516d9d8e2b2769c858187b65d",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    }
+  },
+  "requested_season": 2026,
+  "expected_horizon_semantics": "Full NFL season; canonical season window 2026-09-01T00:00:00Z through 2027-03-01T00:00:00Z. Razzball season source rejects responses not identifying the requested 2026 full-season projection.",
+  "league_scoring_contract": [
+    {
+      "stat": "pass_yd",
+      "points": 0.04
+    },
+    {
+      "stat": "pass_td",
+      "points": 4
+    },
+    {
+      "stat": "pass_int",
+      "points": -2
+    },
+    {
+      "stat": "rush_yd",
+      "points": 0.1
+    },
+    {
+      "stat": "rush_td",
+      "points": 6
+    },
+    {
+      "stat": "rec",
+      "points": 0.5
+    },
+    {
+      "stat": "rec_yd",
+      "points": 0.1
+    },
+    {
+      "stat": "rec_td",
+      "points": 6
+    },
+    {
+      "stat": "fum_lost",
+      "points": -2
+    }
+  ],
+  "minimum_independent_sources": 2,
+  "current_player_identity_source": {
+    "provider": "Sleeper global players endpoint",
+    "url": "https://api.sleeper.app/v1/players/nfl",
+    "builder": "scripts/research_freeze_governed_year1_universe.py",
+    "blob_sha": "61507814dbb1bcb1767ad766b7a35c82e24828c1"
+  },
+  "provider_paths": [
+    {
+      "provider": "fftoday",
+      "class": "FFTodayLiveProjectionSource",
+      "source_version": "fftoday-season-projections-html-v5",
+      "usage_class": "beta-personal-research-requires-commercial-review",
+      "url_pattern": "https://www.fftoday.com/rankings/playerproj.php?LeagueID=&PosID={10|20|30|40}&Season=2026[&cur_page=N]&order_by=FFPts&sort_order=DESC",
+      "requested_semantics": "2026 season projection",
+      "acquisition_blob_sha": "00fc14ca089a2eeb70bd4c5a291f7b7d8ed66955"
+    },
+    {
+      "provider": "razzball",
+      "class": "RazzballSeasonProjectionSource",
+      "source_version": "razzball-season-projections-html-v3:horizon-isolated",
+      "usage_class": "beta-personal-research-requires-commercial-review",
+      "source_url": "https://football.razzball.com/projections/",
+      "requested_semantics": "2026 full-season projection; rest-of-season position pages are not read by this source",
+      "acquisition_blob_sha": "18b04936f1ac962bd64cdbfd74e701be54e27097",
+      "parser_blob_sha": "2ce26d1da76d53e5ebf6dc3ffcff0bf5a03a4f5a"
+    },
+    {
+      "provider": "cbs",
+      "class": "CBSLiveProjectionSource",
+      "source_version": "cbs-season-projections-html-v5:horizon-verified",
+      "url_pattern": "https://www.cbssports.com/fantasy/football/stats/{POSITION}/2026/season/projections/nonppr/",
+      "acquisition_blob_sha": "ae8750f2954839c95f25f1f2076f16b3d9deeb7f"
+    },
+    {
+      "provider": "nfl_fantasy",
+      "class": "NFLFantasyLiveProjectionSource",
+      "source_version": "nfl-fantasy-season-projections-html-v3",
+      "url_pattern": "https://fantasy.nfl.com/research/projections?...",
+      "acquisition_blob_sha": "da243e384ca8e4ed0918ce8e3333233ed667f08b"
+    }
+  ],
+  "executing_code": [
+    {
+      "path": "scripts/run_fresh_y1_provider_capture_audit.py",
+      "blob_sha": "40c0e1d1e8bef673f23ccbda5d516ecbafe0a63d",
+      "role": "diagnostic wrapper and durable capture"
+    },
+    {
+      "path": "src/fsffl/providers/fftoday_live.py",
+      "blob_sha": "00fc14ca089a2eeb70bd4c5a291f7b7d8ed66955",
+      "role": "FFToday acquisition and parsing"
+    },
+    {
+      "path": "src/fsffl/providers/razzball_live.py",
+      "blob_sha": "2ce26d1da76d53e5ebf6dc3ffcff0bf5a03a4f5a",
+      "role": "Razzball table parsing/accessor"
+    },
+    {
+      "path": "src/fsffl/providers/razzball_season_live.py",
+      "blob_sha": "18b04936f1ac962bd64cdbfd74e701be54e27097",
+      "role": "Razzball full-season horizon gate"
+    },
+    {
+      "path": "src/fsffl/forecast/current_normalization.py",
+      "blob_sha": "cb7663268d4c1d779e62ad289ad53144603eed92",
+      "role": "provider-to-canonical normalization and identity matching"
+    },
+    {
+      "path": "src/fsffl/forecast/current_runtime.py",
+      "blob_sha": "b3642acd45138a121db3253f85d880ed87bd8d51",
+      "role": "current provider orchestration"
+    },
+    {
+      "path": "src/fsffl/forecast/live_ensemble.py",
+      "blob_sha": "1b7645d422004f12aabef613b7d32639ba8bdd04",
+      "role": "2-source coverage gate and equal-weight authority"
+    },
+    {
+      "path": "src/fsffl/forecast/ensemble.py",
+      "blob_sha": "31bc0181dead7209fd42da5d549810856c9ecd5c",
+      "role": "like-for-like weighted/equal-weight arithmetic"
+    },
+    {
+      "path": "src/fsffl/forecast/league_scoring.py",
+      "blob_sha": "043021bc11408468f37b788b095aa94abf2c94d3",
+      "role": "league-scoring bridge"
+    },
+    {
+      "path": ".github/workflows/research-fresh-provider-y1-diagnostic.yml",
+      "blob_sha": "22c27a5d5ab7f2638f45246873693714603be0b8",
+      "role": "single gated execution/persistence workflow"
+    }
+  ],
+  "raw_evidence_policy": {
+    "raw_html_bytes_persisted": false,
+    "reason": "Existing provider usage classification is beta-personal-research-requires-commercial-review. The workflow instead persists the exact parser-input SHA/byte length plus lossless parser tables/text_parts and complete parsed provider rows, sufficient to reproduce every normalized row without republishing full HTML.",
+    "substitute": "Lossless parser-table/text-part JSON plus parsed provider row JSON, each hashed."
+  },
+  "execution_guards": {
+    "model_fits": 0,
+    "tuning_actions": 0,
+    "provider_weight_changes": 0,
+    "provider_replacements": 0,
+    "route_changes": 0,
+    "production_changes": 0,
+    "historical_2026_09_18_reconstruction": false
+  }
+}
