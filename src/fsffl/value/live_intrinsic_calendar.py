@@ -154,6 +154,7 @@ def compose_live_intrinsic_calendar(
     mapping: CurrentI1MappingResult,
     h1_h2_predictor: I1Predictor,
     h3_predictor: I1Predictor,
+    future_y2_y3_result_provider: FutureY2Y3ResultProvider | None = None,
     future_i1_result_translator: FutureI1ResultTranslator | None = None,
 ) -> LiveIntrinsicCalendarResult:
     """Compose the management-authorized live three-year Forecast coordinate.
