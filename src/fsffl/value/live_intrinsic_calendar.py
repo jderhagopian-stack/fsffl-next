@@ -199,6 +199,11 @@ def compose_live_intrinsic_calendar(
                     stddev=max(0.0, float(live.distribution.stddev)),
                     source=live.source,
                     model_version=live.model_version,
+                    authority=(
+                        "preserved_preseason_year1_forecast"
+                        if live.source.startswith("fsffl:preseason_baseline")
+                        else "governed_live_current_season_forecast"
+                    ),
                 ),
                 diagnostic_h1=CompletedSourceI1Coordinate(
                     source_season=source_season,
