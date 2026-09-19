@@ -178,7 +178,8 @@
     "covered_history_scaling": "Prior-history continuous features are centered/scaled on covered training rows only. Uncovered transformed value=0 with explicit coverage flag.",
     "categorical_encoding": "DictVectorizer(sort=True), one-hot keys encoded as numeric 1 values.",
     "deterministic_row_order": "Sort by source_season, player_id, position, horizon before vectorization/fitting.",
-    "bayesianridge_matrix": "DictVectorizer(sort=True) output is converted to dense float64 with .toarray() immediately before BayesianRidge fit and prediction. This is representation-only; feature names/order/values are unchanged."
+    "bayesianridge_matrix": "DictVectorizer(sort=True) output is converted to dense float64 with .toarray() immediately before BayesianRidge fit and prediction. This is representation-only; feature names/order/values are unchanged.",
+    "prior1_nonnegative_rule": "Both scaler fitting and row transformation use log1p(max(prior1_points,0)). Negative fantasy-point totals are clamped to zero before log transform."
   },
   "D0": {
     "name": "Reproducible magnitude baseline",
