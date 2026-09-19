@@ -8,8 +8,10 @@ import redevelopment_v1 as rv
 
 SCHEMA='fsffl-redeveloped-forecast-fit-v1'
 
+
 def _route(sel,h,p,cs):
     return sel[str(int(h))]['selected_route'][f'{p}|{cs}']
+
 
 def fit_once(rows: pd.DataFrame, sel: dict):
     package={
@@ -56,14 +58,13 @@ def fit_once(rows: pd.DataFrame, sel: dict):
     package['fit_counts']=fit_counts
     return package,pd.DataFrame(audit)
 
+
 def vec(feat,names): return np.asarray([float(feat.get(n,0.0)) for n in names],dtype=float)
 def sigmoid(z):
     if z>=0: return 1/(1+math.exp(-z))
     ez=math.exp(z); return ez/(1+ez)
 
-def score_bin(pkg,feat):
-    return sigmoid(float(pkg['intercept'][0])+float(np.dot(np.asarray(pkg['coef'],float),vec(feat,pkg['features']))))
-
+def score_bin(pkg,feat): return sigmoid(float(pkg['intercept'][0])+float(np.dot(np.asarray(pkg['coef'],float),vec(feat,pkg['features']))))
 def score_prob(layer_pkg,r):
     add_c=bool(layer_pkg['add_c'])
     p=score_bin(layer_pkg['persistence'],rv.prob_features(r,age_mode='a2',add_c=add_c,add_d=False))
@@ -131,5 +132,4 @@ def main():
         (out/'FINAL_FIT_MANIFEST.json').write_text(json.dumps({'package_sha256':hashlib.sha256(raw.encode()).hexdigest(),'audit_sha256':rv.sha256_file(out/'FINAL_FIT_REPLAY_COORDINATE.csv'),'audit_rows':len(audit),'fit_counts':package['fit_counts']},indent=2)+'\n')
     else:
         package=json.loads(Path(args.package).read_text()); audit=pd.read_csv(args.audit); result=replay(rows,package,audit); (out/'FINAL_REPLAY_VERIFICATION.json').write_text(json.dumps(result,indent=2)+'\n'); print(json.dumps(result,indent=2))
-
 if __name__=='__main__': main()
