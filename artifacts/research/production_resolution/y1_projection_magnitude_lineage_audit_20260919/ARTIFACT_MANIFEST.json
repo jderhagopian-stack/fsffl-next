@@ -35,6 +35,18 @@
     "evidence_boundary": {
       "library_file_id": "libfile_d83508b15390819192990822545ed471",
       "sha256": "e5679b8558c39bdd3872d42beb540f51d48427f67f43d7c168b86a304217692f"
+    },
+    "audit_verifier": {
+      "library_file_id": "libfile_59ae22cd686c81919b1c93be90f893a9",
+      "sha256": "3ba545f67375d47560b7d88950264d75eac38e2413d5056ec6520c18e3add393",
+      "code_version": "fsffl-y1-lineage-audit-verifier-v1"
+    },
+    "final_audit_verification": {
+      "library_file_id": "libfile_df57361cf5ac819198952e4703ed5bd2",
+      "sha256": "015196e3cea64e5d21da6362596299070eb296c716c3ec3bde1c130fc3317889",
+      "pass": true,
+      "runtime_seconds": 0.0009861879999562007,
+      "python": "3.13.5"
     }
   },
   "required_outputs_not_producible_without_guessing": [
