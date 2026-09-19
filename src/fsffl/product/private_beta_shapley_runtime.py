@@ -25,7 +25,7 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
-from .i1_player_scoring_candidate import (
+from .i1_player_scoring import (
     FUTURE_I1_PLAYER_SCORING_VERSION,
     build_future_i1_player_scoring_multipliers,
     translate_future_i1_result_for_player,
