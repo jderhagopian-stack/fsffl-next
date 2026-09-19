@@ -441,7 +441,7 @@ class ProductionModel:
         }
         for k,v in raw.items(): self.scalers[k]=Scaler.fit(v)
         cov=train[train.prior1_coverage==1]
-        self.scalers["prior1_log"]=Scaler.fit(np.log1p(cov.prior1_points.to_numpy(float))) if len(cov) else Scaler(0.0,1.0)
+        self.scalers["prior1_log"]=Scaler.fit(np.log1p(np.maximum(cov.prior1_points.to_numpy(float),0.0))) if len(cov) else Scaler(0.0,1.0)
         if self.candidate=="D1":
             c2=train[train.prior2_coverage==1]
             self.scalers["prior2_mean"]=Scaler.fit(c2.prior2_mean_age_state_z.to_numpy(float)) if len(c2) else Scaler(0.0,1.0)
