@@ -14,6 +14,7 @@ from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
 
 PRESEASON_BASELINE_MODEL_VERSION = "next2-preseason-baseline-v1"
 PRESEASON_FALLBACK_RUNTIME_VERSION = "next2-current-runtime-v5:preseason-baseline-fallback"
+PRESEASON_AUTHORITY_RUNTIME_VERSION = "next2-current-runtime-v6:preseason-baseline-authority"
 
 
 class PreseasonForecastBaseline(FrozenModel):
