@@ -1,0 +1,50 @@
+name: Research postprocess fresh Y1 provider diagnostic
+
+on:
+  push:
+    branches:
+      - research/future-state-resolution-phase34-resume
+    paths:
+      - artifacts/research/production_resolution/fresh_provider_capture_y1_pipeline_diagnostic_20260919/POSTPROCESS_TRIGGER.txt
+
+permissions:
+  contents: write
+
+jobs:
+  postprocess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+        with:
+          ref: research/future-state-resolution-phase34-resume
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install repository runtime
+        run: python -m pip install -e .
+      - name: Derive diagnostic artifacts from captured evidence only
+        run: |
+          python scripts/postprocess_fresh_y1_provider_capture.py             --capture-dir artifacts/research/production_resolution/fresh_provider_capture_y1_pipeline_diagnostic_20260919/capture_35434414661             --prior-y1 artifacts/research/production_resolution/governed_year1_current_2026_20260918T094231Z/governed_year1_universe.json
+      - name: Verify derived outputs
+        run: |
+          D="artifacts/research/production_resolution/fresh_provider_capture_y1_pipeline_diagnostic_20260919/capture_35434414661/derived"
+          test -f "$D/FINAL_OUTCOME.json"
+          test -f "$D/NAMED_PLAYER_CAUSAL_TRACE.json"
+          test -f "$D/PROVIDER_TO_CANONICAL_MAPPING_AUDIT.json"
+          test -f "$D/PARSER_AND_SEMANTIC_VALIDATION.json"
+          test -f "$D/PROVIDER_POPULATION_DIAGNOSTICS.json"
+          test -f "$D/PROVIDER_DISAGREEMENT_DIAGNOSTICS.json"
+          test -f "$D/FRESH_VS_20260918_POST_ENSEMBLE.json"
+          test -f "$D/ARTIFACT_MANIFEST.json"
+          cat "$D/FINAL_OUTCOME.json"
+      - name: Persist derived diagnostic artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/research/production_resolution/fresh_provider_capture_y1_pipeline_diagnostic_20260919/capture_35434414661/derived
+          git commit -m "research: persist fresh Y1 provider diagnostic analysis"
+          git push origin HEAD:research/future-state-resolution-phase34-resume
