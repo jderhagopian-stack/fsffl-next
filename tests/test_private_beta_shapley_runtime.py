@@ -286,7 +286,7 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
     )(context)
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
     assert contract.coverage.player_count == 0
-    assert "completed_source_player_mapping" in contract.coverage.missing_required_fact_families
+    assert "selected_future_forecast_coordinate" in contract.coverage.missing_required_fact_families
 
 
 # This focused file intentionally triggers the lightweight activation/API diagnostic workflow.
@@ -476,6 +476,9 @@ def test_contract_future_i1_provenance_contains_exactly_one_player_scoring_trans
     coverage = contract.completed_source_provenance.fact_family_coverage
     assert coverage["future_i1_scoring_version"] == FUTURE_I1_PLAYER_SCORING_VERSION
     assert coverage["future_i1_scoring_method"] == "player_specific_year1_league_standard_ratio"
+    assert coverage["future_forecast_authority"] == "selected_routed_forecast"
+    assert coverage["selected_future_forecast_version"] == SELECTED_FUTURE_FORECAST_VERSION
+    assert coverage["selected_future_forecast_routing"] == "QB=A2+C+D;RB/WR/TE=A2+D"
     assert coverage["future_i1_scoring_player_count"] == 1
     assert coverage["year1_forecast_source_ids"] == "fftoday,razzball"
     assert coverage["year1_forecast_source_count"] == 2
@@ -634,6 +637,7 @@ def test_authoritative_runtime_propagates_supported_scoring_family_to_intrinsic_
         assert variant_contribution.raw_shapley_contribution == pytest.approx(
             standard_contribution.raw_shapley_contribution * ratio
         )
+        assert SELECTED_FUTURE_FORECAST_VERSION in variant_contribution.provenance.model_version
         assert variant_contribution.provenance.model_version.count(
             FUTURE_I1_PLAYER_SCORING_VERSION
         ) == 1
