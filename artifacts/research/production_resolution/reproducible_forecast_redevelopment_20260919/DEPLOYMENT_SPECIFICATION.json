@@ -177,7 +177,8 @@
     "continuous_scaling": "Training-only mean and population SD (ddof=0). If SD<1e-12 use 1.0.",
     "covered_history_scaling": "Prior-history continuous features are centered/scaled on covered training rows only. Uncovered transformed value=0 with explicit coverage flag.",
     "categorical_encoding": "DictVectorizer(sort=True), one-hot keys encoded as numeric 1 values.",
-    "deterministic_row_order": "Sort by source_season, player_id, position, horizon before vectorization/fitting."
+    "deterministic_row_order": "Sort by source_season, player_id, position, horizon before vectorization/fitting.",
+    "bayesianridge_matrix": "DictVectorizer(sort=True) output is converted to dense float64 with .toarray() immediately before BayesianRidge fit and prediction. This is representation-only; feature names/order/values are unchanged."
   },
   "D0": {
     "name": "Reproducible magnitude baseline",
