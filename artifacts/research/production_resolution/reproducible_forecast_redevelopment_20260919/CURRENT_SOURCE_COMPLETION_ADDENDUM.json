@@ -1,0 +1,45 @@
+{
+  "schema_version": "fsffl-redeveloped-forecast-current-source-completion-v1",
+  "status": "FROZEN_BEFORE_CURRENT_BOARD",
+  "purpose": "Resolve only current-source fields required by the already-frozen materialization contract before any Y2/Y3 current-player output is generated.",
+  "model_or_route_changed": false,
+  "current_player_predictions_seen": false,
+  "exact_age_completion": {
+    "source_path": "artifacts/research/production_resolution/governed_exact_age_completion_20260918/exact_age_completion_35.psv",
+    "row_count": 35,
+    "rows_sha256": "06b5188ead67f52f62c34117bb861a2dc3a920dc83162a9ce2ba50970df692cf",
+    "joined_year1_sha256": "5dee244f794cd504a84d1575ed1d5fca5b467e604f682018a850363f7fbd5c0f",
+    "rule": "Replace only the 35 previously-null 2026 age_years values by exact player+position match. Do not modify any other Y1 field."
+  },
+  "experience_completion": {
+    "standard": "For mapped players use 2026 experience from the governed historical panel: 2026-entry_season_used, equivalently the latest governed experience plus elapsed seasons.",
+    "mapped_with_2025_panel_row": 293,
+    "mapped_without_2025_panel_row_but_prior_panel_history": 5,
+    "mapped_without_any_panel_row": 2,
+    "two_no_panel_rows": [
+      {
+        "current_player_id": "sleeper:12467",
+        "player": "Jordan James",
+        "position": "RB",
+        "historical_gsis_id": "00-0040177"
+      },
+      {
+        "current_player_id": "sleeper:12511",
+        "player": "Will Howard",
+        "position": "QB",
+        "historical_gsis_id": "00-0040203"
+      }
+    ],
+    "deterministic_fallback_for_two_no_panel_rows": "The approved provider identity snapshot proves both are on the governed 2025 NFL roster. With no earlier governed panel history, set first_observed/entry season to 2025 solely for the experience feature, giving experience=1 for the 2026 source season.",
+    "unmatched_cold_start_rows": 35,
+    "unmatched_rule": "experience=0; prior-history coverage=0; no projection is substituted as observed NFL history."
+  },
+  "prior_history": {
+    "prior1": "Coverage=1 only with a genuine 2025 Phase-2 player-season row; otherwise 0.",
+    "prior2": "Coverage=1 only when genuine 2025 and 2024 PIT age/state residuals are both available; otherwise 0.",
+    "qb_memory": "Use genuine 2025 PIT age/state residual only where available; otherwise missing/neutral with coverage=0.",
+    "missing_role_usage": "If no genuine 2025 row, role=unknown and opportunity/games missing."
+  },
+  "performance_independent": true,
+  "named_player_tuning": false
+}
