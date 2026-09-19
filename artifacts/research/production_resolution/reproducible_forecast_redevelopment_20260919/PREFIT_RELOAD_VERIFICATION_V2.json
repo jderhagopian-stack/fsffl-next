@@ -1,0 +1,12 @@
+{
+  "schema_version": "fsffl-redevelopment-prefit-reload-verification-v2",
+  "pass": true,
+  "specification_git_blob_sha": "062859f6ef26171d554dbe2a8a7150a98c1e8134",
+  "implementation_git_blob_sha": "0d7b4ddfd7ac57b7045b33e8d25360534bfd45fa",
+  "local_expected_implementation_git_blob_sha": "0d7b4ddfd7ac57b7045b33e8d25360534bfd45fa",
+  "correction_commit": "242f91573c1d1390fcb45ec880da68b0b7042619",
+  "correction_scope": "Parity-test normalization only: persisted historical target label 'missing' is normalized to model state 'out' for equality testing. No estimator, feature, target, cutoff, routing, or hyperparameter changed.",
+  "fits_before_checkpoint": 0,
+  "current_player_materializations_before_checkpoint": 0,
+  "fitting_authorized_after_this_checkpoint": true
+}
