@@ -15,7 +15,7 @@ from fsffl.forecast.models import (
     ForecastMetric,
     ForecastObservation,
 )
-from fsffl.product.i1_player_scoring_candidate import (
+from fsffl.product.i1_player_scoring import (
     FUTURE_I1_PLAYER_SCORING_VERSION,
     build_future_i1_player_scoring_multipliers,
     translate_future_i1_result_for_player,
@@ -658,3 +658,19 @@ def test_authoritative_runtime_propagates_supported_scoring_family_to_intrinsic_
         assert FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION not in (
             variant_contribution.provenance.model_version
         )
+
+
+
+def test_te_premium_outside_governed_scoring_coverage_fails_closed() -> None:
+    raw = _raw_wr(
+        _fixture()[1].model_copy(update={"position": Position.TE})
+    )
+    te_premium_rules = LeagueRules(
+        team_count=2,
+        roster_size=18,
+        lineup=(LineupRequirement(slot=RosterSlot.TE, count=1),),
+        scoring=FROZEN_I1_STANDARD_SCORING
+        + (ScoringRule(stat="bonus_rec_te", points=0.5),),
+    )
+    with pytest.raises(ValueError, match="unsupported rules"):
+        derive_league_fantasy_point_forecasts(raw, rules=te_premium_rules)
