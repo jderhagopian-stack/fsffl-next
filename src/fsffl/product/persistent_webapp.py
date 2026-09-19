@@ -14,7 +14,10 @@ from . import opportunity_workspace as _opportunity_workspace
 from . import webapp as _webapp
 from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
 from .focused_opportunity_routes import install_focused_opportunity_routes
-from .forecast_resilience import make_resilient_forecast_loader
+from .forecast_resilience import (
+    make_preseason_baseline_authority_loader,
+    make_resilient_forecast_loader,
+)
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
 from .intrinsic_value_routes import install_intrinsic_value_v1_routes
@@ -72,7 +75,9 @@ _full_refresh_seconds = max(
     int(os.getenv("FSFFL_FULL_PROVIDER_REFRESH_SECONDS", "3600")),
 )
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
-_shapley_intrinsic_loader = PrivateBetaShapleyContractLoader()
+_shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
+    year_one_loader=make_preseason_baseline_authority_loader(_persistence_store),
+)
 
 # Build the expensive structural candidate catalog once per exact authoritative
 # runtime. The normal Market workspace and subsequent Market Focus requests share
