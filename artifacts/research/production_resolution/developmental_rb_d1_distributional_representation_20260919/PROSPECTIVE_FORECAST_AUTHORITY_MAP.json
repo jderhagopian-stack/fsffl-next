@@ -1,0 +1,24 @@
+{
+  "schema_version": "fsffl-prospective-forecast-authority-map-v1",
+  "status": "RESEARCH_ONLY_NOT_IMPLEMENTED",
+  "general_selection_methodology": {
+    "proper_distributional_scoring": "earned as part of future Forecast candidate selection/validation",
+    "ordinary_MAE": "retained as guardrail"
+  },
+  "prospective_route_changes_already_earned_in_prior_stage": {
+    "Y3_QB_developmental": "D0 -> D1",
+    "Y3_RB_established": "D0 -> D1"
+  },
+  "unchanged_from_prior_stage": {
+    "WR": "current P0 representation",
+    "TE": "current P0 representation"
+  },
+  "developmental_RB": {
+    "Y2": "retain current D1 production control; no new representation earned",
+    "Y3": "retain current D1 production control pending further management-authorized Forecast research",
+    "unresolved_issue": "supported high-source tail remains prematurely mean-reverted",
+    "D1R": "rejected by preregistered gates and locked replication"
+  },
+  "implementation_authorized": false,
+  "pr147_change_authorized": false
+}
