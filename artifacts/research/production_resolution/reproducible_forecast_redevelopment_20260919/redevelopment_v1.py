@@ -477,15 +477,15 @@ class ProductionModel:
         if len(tr)<100: raise RuntimeError("insufficient production training rows")
         self._fit_scalers(tr)
         X=[self._features(r) for r in tr.itertuples()]
-        self.model.fit(self.vec.fit_transform(X),tr.target_points.to_numpy(float))
+        self.model.fit(self.vec.fit_transform(X).toarray(),tr.target_points.to_numpy(float))
         self.fit_n=len(tr)
         return self
     def predict_active(self,r):
         if self.candidate!="D0": raise ValueError("D0 only")
-        return max(0.0,float(self.model.predict(self.vec.transform([self._features(r)]))[0]))
+        return max(0.0,float(self.model.predict(self.vec.transform([self._features(r)]).toarray())[0]))
     def predict_state(self,r,state):
         if self.candidate!="D1": raise ValueError("D1 only")
-        return max(0.0,float(self.model.predict(self.vec.transform([self._features(r,state)]))[0]))
+        return max(0.0,float(self.model.predict(self.vec.transform([self._features(r,state)]).toarray())[0]))
     def package(self):
         return {
             "candidate":self.candidate,"horizon":self.horizon,"fit_n":self.fit_n,
