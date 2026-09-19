@@ -1,0 +1,116 @@
+{
+  "schema_version": "fsffl-source-coordinate-extrapolation-audit-final-outcome-v1",
+  "date": "2026-09-19",
+  "directive": "FSFFL NEXT Forecast Source-Coordinate & Extrapolation Audit Directive",
+  "outcome": "A",
+  "label": "COORDINATE_MISMATCH_IDENTIFIED",
+  "conclusion": "Historical P0 source_points and current governed 2026 Y1 fantasy_points are not semantically equivalent in a material way. P0 was trained on frozen standard/non-PPR fantasy points, while the current 2026 Y1 source coordinate is connected-league half-PPR. The Outcome-B current materializer passed the half-PPR Y1 value directly into P0 as source_points.",
+  "decisive_evidence": {
+    "historical_contract": "Frozen I1 research coordinate is standard/non-PPR. Reception coefficient is 0.",
+    "current_contract": "Governed current Year-1 uses management 12-team half-PPR scoring. Reception coefficient is 0.5.",
+    "position_half_ppr_to_standard_ratios": {
+      "QB": 1,
+      "RB": 1.1097054683463108,
+      "WR": 1.2852485043404789,
+      "TE": 1.3491829664184194
+    },
+    "governed_cross_check": "The position ratios mechanically reconstructed from current raw projection receptions exactly match the already-governed future-I1 position scoring multipliers stored in the current Year-1 universe.",
+    "direct_materialization_error": "The frozen current-board materializer assigns league-scored y1_points to source_points without first returning the input to the historical standard-scoring coordinate."
+  },
+  "secondary_semantic_differences": [
+    "Historical source points are realized season totals and embed missed games/partial seasons; current Y1 is a forward-looking full-season projection coordinate.",
+    "Historical source panel is a broad realized player-season population including zero/negative and low-games seasons; current board is a 335-player projection-covered subset that fails closed on undercovered projection rows.",
+    "Historical seasons 1999-2025 are not era/schedule-normalized; current Y1 is a 2026 full-season projection."
+  ],
+  "quantified_effect": {
+    "current_scoring_shift": {
+      "QB": {
+        "half_ppr_p90": 431.63,
+        "standard_equivalent_p90": 431.63
+      },
+      "RB": {
+        "half_ppr_p90": 350.44,
+        "standard_equivalent_p90": 319.66
+      },
+      "WR": {
+        "half_ppr_p90": 269.88,
+        "standard_equivalent_p90": 212.42
+      },
+      "TE": {
+        "half_ppr_p90": 203.57,
+        "standard_equivalent_p90": 152.17
+      }
+    },
+    "accounting_only_known_board": {
+      "warning": "Not a corrected forecast because P0 was also fed the half-PPR source_points.",
+      "top10": {
+        "n": 33,
+        "Y2_conditional_to_Y1_half_ppr": 0.4516903262058822,
+        "Y2_conditional_to_Y1_standard_denominator_only": 0.5707600410752284,
+        "Y3_conditional_to_Y1_half_ppr": 0.3970394264492829,
+        "Y3_conditional_to_Y1_standard_denominator_only": 0.5107566510500929
+      },
+      "young_top10": {
+        "n": 14,
+        "Y2_conditional_to_Y1_half_ppr": 0.4749750258894669,
+        "Y2_conditional_to_Y1_standard_denominator_only": 0.5843645178110961,
+        "Y3_conditional_to_Y1_half_ppr": 0.43083299927287677,
+        "Y3_conditional_to_Y1_standard_denominator_only": 0.5387033124117089
+      }
+    }
+  },
+  "stage_gates": {
+    "stage1_semantic_equivalence": "FAIL",
+    "stage2_distribution_support": "NOT_EXECUTED",
+    "stage3_response_surface": "NOT_EXECUTED",
+    "stage4_diagnostic_counterfactuals": "NOT_EXECUTED",
+    "reason": "The directive conditions Stage 2 on semantic comparability. Formal support/extrapolation analysis on mixed standard and half-PPR source coordinates would be invalid."
+  },
+  "descriptive_nonclassification_note": {
+    "after_scoring_unit_normalization_current_standard_p90_to_selection_window_historical_p90": {
+      "QB": 1.4115519451639065,
+      "RB": 2.001878757514111,
+      "WR": 1.5142916191562157,
+      "TE": 1.708160287349871
+    },
+    "interpretation": "This suggests a support/availability question may remain after the coordinate is corrected, but it is not classified as Outcome B in this audit because the prerequisite semantic-equivalence gate failed."
+  },
+  "smallest_governed_correction": [
+    "From the already-governed raw 2026 FFToday/Razzball stat ensemble, freeze a second Year-1 source coordinate scored under the existing FROZEN_I1_STANDARD_SCORING rules.",
+    "Use that standard-scored coordinate as P0 source_points and as the current side of historical/current production-calibration comparisons.",
+    "Keep the connected-league half-PPR Year-1 board as a separate league/presentation coordinate.",
+    "Do not compare or ratio standard-trained P0 future point quantities directly against half-PPR Year-1 points.",
+    "Before any further Forecast repair, explicitly govern how future P0 point outputs are converted to league half-PPR units, then rerun this audit from Stage 1 and proceed to Stage 2 only if semantic comparability passes."
+  ],
+  "named_examples_status": "Explanation-only table persisted. Named players were not used to choose any correction.",
+  "execution_accounting": {
+    "model_fits": 0,
+    "candidate_selections": 0,
+    "hyperparameter_searches": 0,
+    "current_player_tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0,
+    "new_external_data_families": 0,
+    "current_board_rematerializations": 0,
+    "final_verifier_runtime_seconds": 0.0050321689996053465
+  },
+  "audit_verification": {
+    "pass": true,
+    "verifier_sha256": "87f6a93fb406661a58577decabce0dfdd032b97755a9f29c734110e8303db08e",
+    "result_sha256": "07526078417765a7c2a48bd361d7dfcaa3b7d5b84a62783d7ca4a12ede139188"
+  },
+  "protected_state": {
+    "main_expected": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147_expected": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "P0_changed": false,
+    "production_authority_changed": false,
+    "intrinsic_shapley_changed": false,
+    "global_C_changed": false
+  },
+  "implementation_authorized": false,
+  "next_action": "STOP_FOR_MANAGEMENT_REVIEW"
+}
