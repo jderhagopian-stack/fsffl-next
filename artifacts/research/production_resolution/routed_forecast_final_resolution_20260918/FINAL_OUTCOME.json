@@ -1,0 +1,43 @@
+{
+  "study": "Routed Forecast - Final Resolution Study",
+  "date": "2026-09-18",
+  "outcome": "C",
+  "label": "UNRESOLVED_REPRODUCIBILITY_BOUNDARY",
+  "research_branch": "research/future-state-resolution-phase34-resume",
+  "recovered_stage_c_head": "11399fb1fbfb89d99e38250d31b72dc2dbbc78fa",
+  "recovery_note_commit": "da88ba09f92eb9cd35db201e88a88be61286ee1c",
+  "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "pr147": {
+    "state": "open",
+    "merged": false,
+    "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+  },
+  "stage0": {
+    "status": "FAIL_CLOSED",
+    "recombination_rows_reported": 41344,
+    "recombination_rows_sha256": "dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b",
+    "missing_dependency": "durable exact aligned pre-holdout row-level B2a/R1/R2/H2 predictions, or exact frozen fitted artifacts plus source rows sufficient to reproduce them without refit/model-selection choices",
+    "model_reruns": 0,
+    "model_refits": 0
+  },
+  "completed_in_this_continuation": [
+    "live repository/protected-ref recovery",
+    "durable continuation-boundary recovery note",
+    "Stage 0 artifact/provenance audit",
+    "reproducibility-boundary determination"
+  ],
+  "not_performed": [
+    "candidate parity on exact aligned rows",
+    "career-state definition/freeze",
+    "routing-cell selection",
+    "position-only routing challenger",
+    "position x career-state routing analysis",
+    "routed holdout evaluation",
+    "current-player board diagnostic",
+    "implementation",
+    "promotion",
+    "merge",
+    "deployment"
+  ],
+  "stop": true
+}
