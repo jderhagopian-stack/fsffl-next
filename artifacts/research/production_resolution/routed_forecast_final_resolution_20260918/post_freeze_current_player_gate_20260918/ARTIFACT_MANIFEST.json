@@ -1,0 +1,44 @@
+{
+  "study": "Forecast Post-Freeze Current-Player Credibility Gate",
+  "date": "2026-09-18",
+  "outcome": "C - REPRODUCIBILITY / COORDINATE BOUNDARY",
+  "starting_head": "4a6ede2a67ef0f6408dafb65dafef7942e016b28",
+  "durable_commits": {
+    "reproducibility_boundary": "b4a97a4bd85ca18a7142b36979bd0a91c5c1fd39",
+    "final_outcome_json": "37c40b87df242e94d05caf0e894c66a999ae249c",
+    "management_pdf": "f9b19058c0dd3c207e9d90c754a78cd2ce43c9a4"
+  },
+  "management_pdf": {
+    "path": "artifacts/research/production_resolution/routed_forecast_final_resolution_20260918/post_freeze_current_player_gate_20260918/FSFFL_NEXT_Forecast_Current_Player_Credibility_Gate_Outcome_C_2026-09-18.pdf",
+    "bytes": 5698,
+    "sha256": "da635b8c6e8dcfb095fd10e7cad32544197f623697dd65d3c087c9cacec4ab52",
+    "git_blob_sha": "3cd67340687e3a770be787081aaa7e8e3e58f365",
+    "pages": 2,
+    "render_verified": true
+  },
+  "frozen_inputs": {
+    "final_route_head": "4a6ede2a67ef0f6408dafb65dafef7942e016b28",
+    "governed_year1_sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+    "governed_year1_rows": 335,
+    "replacement_identity_coordinate_sha256": "95fd6565a908b044ca234898cc801749abb2b6aa62a84c2d3c917445d369cda1",
+    "replacement_identity_rows": 335
+  },
+  "missing_dependency": "Durable final-current-cutoff fitted B2a/R2 treatment package or row-complete 335-player materialization produced from that already-fitted package.",
+  "required_board_generated": false,
+  "reason_board_not_generated": "Producing final-route Y2/Y3 fields would require a prohibited new fit/re-estimation of B2a and/or R2.",
+  "execution": {
+    "model_reruns": 0,
+    "model_refits": 0,
+    "coefficient_reestimation": 0,
+    "tuning_actions": 0,
+    "board_runs": 0,
+    "credibility_judgments": 0,
+    "main_changes": 0,
+    "pr147_changes": 0,
+    "production_changes": 0
+  },
+  "runtime": {
+    "model_execution": "not applicable; no model executed",
+    "diagnostic_wall_clock": "not durably instrumented; not invented"
+  }
+}
