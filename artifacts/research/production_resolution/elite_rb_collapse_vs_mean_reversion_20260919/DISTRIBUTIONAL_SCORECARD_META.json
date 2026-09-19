@@ -1,0 +1,21 @@
+{
+  "selection_crps_gain_d0_minus_d1": {
+    "developmental": {
+      "mean_gain": 0.05474537453057637,
+      "ci95": [
+        0.03510727968137457,
+        0.07390438211560761
+      ],
+      "n": 79
+    },
+    "established": {
+      "mean_gain": 0.05278209113866011,
+      "ci95": [
+        0.025863840750753878,
+        0.07749557560228394
+      ],
+      "n": 33
+    }
+  },
+  "interpretation": "Positive D0-minus-D1 CRPS means D1 better distributional forecast. No route change is authorized."
+}

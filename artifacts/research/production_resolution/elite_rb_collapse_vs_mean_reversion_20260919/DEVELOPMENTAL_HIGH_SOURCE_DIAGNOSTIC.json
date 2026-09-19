@@ -1,0 +1,39 @@
+{
+  "selection_window": "2014-2020",
+  "cohort": "RB top-decile, developmental, Y3, high source-magnitude band",
+  "high_band_rule": "source_points > 225.5; cutoff is the frozen 2014-2020 developmental top-decile 67th percentile and was set before current-player overlay",
+  "n": 26,
+  "active_n": 25,
+  "historical_source_points_median": 273.0,
+  "historical_active_share": 0.9615384615384616,
+  "historical_active_retention_median": 0.6980234260614934,
+  "historical_active_retention_mean": 0.6426463339970033,
+  "p0_conditional_retention_median_active": 0.5202401147115076,
+  "p0_conditional_retention_mean_active": 0.5169814248292655,
+  "p0_minus_realized_conditional_bias_mean": -0.12566490916773787,
+  "bootstrap_ci95_bias": [
+    -0.24223853577106985,
+    -0.005871646415005122
+  ],
+  "spearman_source_vs_realized_active_retention": {
+    "rho": -0.36692307692307696,
+    "p": 0.07119741360699854
+  },
+  "all_developmental_active_spearman": {
+    "realized": {
+      "rho": 0.0277029688652021,
+      "p": 0.817316534661953
+    },
+    "p0_conditional": {
+      "rho": -0.8319733743063742,
+      "p": 1.3979491133644107e-19
+    }
+  },
+  "postfreeze_high_band": {
+    "n": 3,
+    "active_n": 3,
+    "realized_active_retention_median": 0.7276650841605524,
+    "p0_conditional_retention_median": 0.4988108332043629,
+    "p0_minus_realized_conditional_bias_mean": -0.20937890392445582
+  }
+}

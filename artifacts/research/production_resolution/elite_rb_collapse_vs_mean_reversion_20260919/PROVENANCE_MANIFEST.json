@@ -1,0 +1,112 @@
+{
+  "schema_version": "fsffl-elite-rb-collapse-vs-mean-reversion-diagnostic-v1",
+  "date": "2026-09-19",
+  "classification": "C. DISTRIBUTIONAL REPRESENTATION CONCERN - RESEARCH REQUIRED BEFORE MERGE",
+  "live_state": {
+    "repository": "jderhagopian-stack/fsffl-next",
+    "pr_147_head_at_start": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+    "pr_147_open": true,
+    "pr_147_merged": false,
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "research_branch": "research/future-state-resolution-phase34-resume",
+    "research_start_head": "740bf845f287d1f050eab68f835472ccf401bab3"
+  },
+  "frozen_authority": {
+    "p0_fitted_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+    "historical_predictions_rows": 10336,
+    "selection_source_seasons": [
+      2014,
+      2020
+    ],
+    "postfreeze_source_seasons": [
+      2021,
+      2022
+    ],
+    "p0_raw_preseason_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "standard_y1_board_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9",
+    "connected_league_y1_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+    "corrected_p0_board_sha256": "f93126db045ff97b9a605645f158452bc57afa10a93f6e40f44c8af4881fc4a2"
+  },
+  "cohort_rules": {
+    "top_decile": "position == RB and source_percentile >= 0.90",
+    "top_5_percent": "position == RB and source_percentile >= 0.95",
+    "developmental": "career_stage == developmental",
+    "established": "career_stage == established",
+    "veteran": "career_stage == veteran",
+    "collapse_active": "active and realized retention < 0.40",
+    "middle_active": "active and 0.40 <= realized retention < 0.60",
+    "productive_survivor": "active and realized retention >= 0.60",
+    "decision_productive": "realized retention >= 0.70",
+    "action_proxy": "P0 expected retention < 0.60 => downgrade; otherwise hold",
+    "source_magnitude_bands": "stage-specific tertiles computed from frozen 2014-2020 top-decile source points before current-player overlay"
+  },
+  "key_results": {
+    "current_top_decile_rb_y3_conditional_retention_median": 0.5620034892826515,
+    "selection_top10_rb_y3_active_retention_median": 0.5493384184554573,
+    "selection_developmental_y3_active_retention_median": 0.6441050743380667,
+    "selection_established_y3_active_middle_band_share": 0.045454545454545456,
+    "developmental_high_band_y3_p0_minus_realized_conditional_bias_mean": -0.12566490916773787,
+    "developmental_high_band_bias_bootstrap_ci95": [
+      -0.24223853577106985,
+      -0.005871646415005122
+    ],
+    "developmental_y3_source_vs_realized_spearman_rho": 0.0277029688652021,
+    "developmental_y3_source_vs_p0_conditional_spearman_rho": -0.8319733743063742,
+    "postfreeze_top10_rb_y3_active_retention_median": 0.7312917329958191,
+    "postfreeze_developmental_y3_active_retention_median": 0.7276650841605524,
+    "distributional_crps_d1_gain_selection_developmental": {
+      "mean_gain": 0.05474537453057637,
+      "ci95": [
+        0.03510727968137457,
+        0.07390438211560761
+      ],
+      "n": 79
+    },
+    "distributional_crps_d1_gain_selection_established": {
+      "mean_gain": 0.05278209113866011,
+      "ci95": [
+        0.025863840750753878,
+        0.07749557560228394
+      ],
+      "n": 33
+    },
+    "formal_two_component_bic_supported": false
+  },
+  "prohibitions_observed": {
+    "refit": false,
+    "retrain": false,
+    "retune": false,
+    "reselect": false,
+    "route_change": false,
+    "coefficient_change": false,
+    "scoring_change": false,
+    "production_code_change": false,
+    "pr147_write": false,
+    "main_write": false,
+    "merge": false,
+    "deploy": false
+  },
+  "artifact_sha256": {
+    "PROVENANCE_MANIFEST.json": "0d471785e09a9030c7a2b2d4c77bb9297a67eaef8f00de24f410b518cd8a6abd",
+    "CURRENT_TOP_DECILE_RB_OVERLAY.csv": "1a226c13e9caf937fdbf3dadf3bd704cbd4286abb25e3faafea86468619eddaf",
+    "DEV_SOURCE_MAGNITUDE_RELATION.png": "58679c762816081b1ae5e2107d883338925c496b5fc60eb19508abc16ce426e5",
+    "HISTORICAL_OUTCOME_DISTRIBUTIONS.csv": "63c05a3958031c355fdbf6d7e17aef266add8e7de1e6c75bbe7ed85a4ef02933",
+    "POINT_MAE_D0_D1_BY_BLOCK.csv": "6c64e6c686ca4585b168dc96337f8fe17be7ee5d72f3ba13f2162eccd105e952",
+    "DISTRIBUTIONAL_CRPS_BY_BLOCK.csv": "34f9bed8a4354b6558a53e2b545a258755c5971179f41d89a7fe7d5315a2fe4c",
+    "STATE_DECOMPOSITION.csv": "6e305939e50e0077ad46caecc03c707b957baed10e775d5091c3e5598ca5cd68",
+    "DISTRIBUTIONAL_SCORECARD_META.json": "fe12ea5e869e44a3f8ccc84a02851976b047cc5a9cf97ffd6eef74b705b330c3",
+    "RESEARCH_DIAGNOSTIC_METHOD.md": "509c3ec101315f0e7edb870310f1c0b906793f58e75929a2b4f2271ca6c69f17",
+    "RETENTION_ROWS.csv": "637b49f2d6fe87ff55273f5e7e9bb28efadb986f5021d6cea7b0afb47178678f",
+    "Y3_OUTCOME_SHAPE.png": "d43d6049659fbd167d4d5a35e81f89b1281832a9cbed7006a2261bd42ed8a594",
+    "DECISION_ERROR_BALANCE.png": "f10e36491cc403bbea46611f76cfb5625a050d62e2830eb32a512df36fee5505",
+    "OUT_OF_TIME_REPLICATION.csv": "366e6e7a46116193edf114cda361c24bfd8614288fe89ea44c2492ee2187c573",
+    "DEVELOPMENTAL_HIGH_SOURCE_DIAGNOSTIC.json": "60f18a351be30f18ad5a50c39c0896e3874bb261a3f2997579a470399eccb2f4",
+    "SOURCE_MAGNITUDE_BANDS.csv": "33c9f056b981bea441cb728a81e36baf76b8b118a749c447475522b9fd660027",
+    "MULTIMODALITY_DIAGNOSTICS.json": "c9781e10bb6e1f65eefaacce4f810e30bde32193e226f48546d4d15a1196ea3d",
+    "ASYMMETRIC_DECISION_LOSS.csv": "0e1af00b766d36fa02e3796a1997603e2c689fc95ba9484dfea2b075a264cd59",
+    "SOURCE_MAGNITUDE_BAND_DEFINITIONS.csv": "0b37474531c6acfaeb69a63993a2950e55850532c02926ae532cad3be5af6ba9",
+    "FINAL_CLASSIFICATION.md": "8054d75e1c5615e4c937ab8051e8854728921c9fdafe578be115fd03c2d9d6f4",
+    "CRPS_D0_D1_BY_BLOCK.png": "13ef0a954d1c90439efdc49f3ccefc031bede185696d2dc65d49c63e4d34d5df"
+  }
+}
