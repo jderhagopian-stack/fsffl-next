@@ -1,0 +1,45 @@
+{
+  "schema_version": "fsffl-premerge-elite-rb-y3-diagnostic-manifest-v1",
+  "date": "2026-09-19",
+  "classification": "B. PLAUSIBLE BUT UNCERTAIN - MANAGEMENT JUDGMENT REQUIRED",
+  "live_state": {
+    "pr_number": 147,
+    "starting_pr_head": "923ad519acd3af9fc801c27999e27ae8e5a8a7c2",
+    "validated_code_head": "be637c1d6f92751ea456e0f7c1fbe0edac0c864f",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "research": "740bf845f287d1f050eab68f835472ccf401bab3",
+    "pr_open": true,
+    "merged": false,
+    "mergeable": true
+  },
+  "frozen_authority": {
+    "p0_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "corrected_p0_source_coordinate_sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+    "frozen_preseason_raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "standard_y1_board_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9",
+    "connected_league_y1_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+    "final_corrected_p0_board_sha256": "f93126db045ff97b9a605645f158452bc57afa10a93f6e40f44c8af4881fc4a2"
+  },
+  "starting_board_reproduced": true,
+  "governed_cohort_rule": "position == RB and source_percentile >= 0.90, where source_percentile is the within-source-season x position average-rank percentile",
+  "cohort_n": 9,
+  "historical_inputs": {
+    "frozen_prediction_library_file_id": "libfile_e76ec792af288191bc7e5ab8e03e42a0",
+    "frozen_prediction_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+    "phase2_workflow_run": 35196266697,
+    "phase2_artifact_id": 10486530017,
+    "player_season_panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+    "q3_age_state_rows_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063"
+  },
+  "prohibitions_observed": {
+    "refit": false,
+    "retrain": false,
+    "retune": false,
+    "reselect": false,
+    "route_change": false,
+    "scoring_change": false,
+    "implementation_code_change": false,
+    "merge": false,
+    "deploy": false
+  }
+}

@@ -1,0 +1,482 @@
+{
+  "schema_version": "fsffl-premerge-elite-rb-y3-diagnostic-evidence-v1",
+  "date": "2026-09-19",
+  "aggregate_current_decomposition": {
+    "production_state_mean_points": 916.1733051311,
+    "state_composition_points": 121.2603805125,
+    "persistence_disappearance_points": 252.1708361741,
+    "total_decline_points": 1289.6045218176,
+    "shares": {
+      "production_state_mean": 0.71042966,
+      "state_composition": 0.09402912,
+      "persistence_disappearance": 0.19554122
+    }
+  },
+  "current_Y3_feature_contributions": {
+    "Jahmyr Gibbs": {
+      "route": "D1",
+      "state_means": {
+        "depth": 13.6125020861,
+        "usable": 22.1637290704,
+        "starter": 39.4718528743,
+        "premium": 90.572283388,
+        "elite": 199.161164354
+      },
+      "elite_state": {
+        "intercept": 60.2594148516,
+        "age_experience": 6.2220282137,
+        "future_state_baseline": 116.7627672363,
+        "position_baseline": 0.2949147893,
+        "prior1_history": 1.7964666675,
+        "prior2_history": 0.1799806555,
+        "source_magnitude": 19.4540965412,
+        "source_percentile": 1.5294032746,
+        "source_state_baseline": -7.3379078757
+      }
+    },
+    "Bijan Robinson": {
+      "route": "D1",
+      "state_means": {
+        "depth": 12.6751385687,
+        "usable": 21.2196075106,
+        "starter": 38.4245347651,
+        "premium": 89.6664563705,
+        "elite": 198.0367179466
+      },
+      "elite_state": {
+        "intercept": 60.2594148516,
+        "age_experience": 5.8639522476,
+        "future_state_baseline": 116.7627672363,
+        "position_baseline": 0.2949147893,
+        "prior1_history": 1.8026344361,
+        "prior2_history": -0.4380969998,
+        "source_magnitude": 19.3450435746,
+        "source_percentile": 1.4839956865,
+        "source_state_baseline": -7.3379078757
+      }
+    },
+    "Chase Brown": {
+      "route": "D1",
+      "state_means": {
+        "depth": 6.1822120011,
+        "usable": 14.679873942,
+        "starter": 31.9516835276,
+        "premium": 82.5012275066,
+        "elite": 189.9084155171
+      },
+      "elite_state": {
+        "intercept": 60.2594148516,
+        "age_experience": 0.8947347593,
+        "future_state_baseline": 116.7627672363,
+        "position_baseline": 0.2949147893,
+        "prior1_history": 1.6539308059,
+        "prior2_history": -0.8145904821,
+        "source_magnitude": 16.8927860982,
+        "source_percentile": 1.3023653342,
+        "source_state_baseline": -7.3379078757
+      }
+    },
+    "Christian McCaffrey": {
+      "route": "D0",
+      "common_mean": 125.5895021407,
+      "contributions": {
+        "intercept": 92.6543488555,
+        "age_experience": -4.2430496053,
+        "position_baseline": -19.1559651026,
+        "prior1_history": 13.3927022255,
+        "source_magnitude": 27.0613498285,
+        "source_percentile": 26.4459868894,
+        "source_state_baseline": -10.5658709503
+      }
+    },
+    "Derrick Henry": {
+      "route": "D0",
+      "common_mean": 101.9467103042,
+      "contributions": {
+        "intercept": 92.6543488555,
+        "age_experience": -24.4296184723,
+        "position_baseline": -19.1559651026,
+        "prior1_history": 12.2354347591,
+        "source_magnitude": 25.5971353332,
+        "source_percentile": 25.6112458815,
+        "source_state_baseline": -10.5658709503
+      }
+    },
+    "Jonathan Taylor": {
+      "route": "D0",
+      "common_mean": 133.3862029699,
+      "contributions": {
+        "intercept": 92.6543488555,
+        "age_experience": 7.2655069496,
+        "position_baseline": -19.1559651026,
+        "prior1_history": 13.462628875,
+        "source_magnitude": 24.9490494691,
+        "source_percentile": 24.7765048737,
+        "source_state_baseline": -10.5658709503
+      }
+    },
+    "James Cook": {
+      "route": "D0",
+      "common_mean": 126.3798863383,
+      "contributions": {
+        "intercept": 92.6543488555,
+        "age_experience": 3.7264615052,
+        "position_baseline": -19.1559651026,
+        "prior1_history": 12.3814147837,
+        "source_magnitude": 24.232474389,
+        "source_percentile": 23.1070228579,
+        "source_state_baseline": -10.5658709503
+      }
+    },
+    "Kenneth Walker": {
+      "route": "D0",
+      "common_mean": 132.5931584414,
+      "contributions": {
+        "intercept": 92.6543488555,
+        "age_experience": 15.0148662538,
+        "position_baseline": -19.1559651026,
+        "prior1_history": 8.714765631,
+        "source_magnitude": 23.6587319039,
+        "source_percentile": 22.27228185,
+        "source_state_baseline": -10.5658709503
+      }
+    },
+    "Javonte Williams": {
+      "route": "D0",
+      "common_mean": 133.6249368569,
+      "contributions": {
+        "intercept": 92.6543488555,
+        "age_experience": 15.2398118557,
+        "position_baseline": -19.1559651026,
+        "prior1_history": 10.5903894302,
+        "source_magnitude": 23.4246819262,
+        "source_percentile": 21.4375408422,
+        "source_state_baseline": -10.5658709503
+      }
+    }
+  },
+  "diagnostic_only_counterfactuals": {
+    "all_active_mass_at_elite": {
+      "Jahmyr Gibbs": {
+        "factual_conditional": 165.9421120786,
+        "counterfactual": 199.161164354,
+        "state_mix_loss": 33.2190522754
+      },
+      "Bijan Robinson": {
+        "factual_conditional": 162.6438097984,
+        "counterfactual": 198.0367179466,
+        "state_mix_loss": 35.3929081482
+      },
+      "Chase Brown": {
+        "factual_conditional": 137.2599954281,
+        "counterfactual": 189.9084155171,
+        "state_mix_loss": 52.6484200889
+      },
+      "note": "D0 players are unchanged because all positive states share one conditional mean."
+    },
+    "neutralize_D1_prior2_feature_family": {
+      "Jahmyr Gibbs": {
+        "factual_conditional": 165.9421120786,
+        "counterfactual": 165.7621314231,
+        "change": -0.1799806555
+      },
+      "Bijan Robinson": {
+        "factual_conditional": 162.6438097984,
+        "counterfactual": 163.0819067982,
+        "change": 0.4380969998
+      },
+      "Chase Brown": {
+        "factual_conditional": 137.2599954281,
+        "counterfactual": 138.0745859102,
+        "change": 0.8145904821
+      },
+      "note": "All coefficients and all other inputs frozen. No positive-state floor binds. Prior2 is not a material driver."
+    }
+  },
+  "current_full_RB_distribution": {
+    "deciles": [
+      {
+        "decile": 1,
+        "n": 9,
+        "median_source_points": 17.5,
+        "Y2_conditional_retention": 2.942616963,
+        "Y3_conditional_retention": 2.5942456502,
+        "Y3_active": 0.4457580395,
+        "Y3_D0_n": 1,
+        "Y3_D1_n": 8
+      },
+      {
+        "decile": 2,
+        "n": 9,
+        "median_source_points": 23.65,
+        "Y2_conditional_retention": 2.0948277348,
+        "Y3_conditional_retention": 1.9854356352,
+        "Y3_active": 0.5545252008,
+        "Y3_D0_n": 0,
+        "Y3_D1_n": 9
+      },
+      {
+        "decile": 3,
+        "n": 9,
+        "median_source_points": 41.95,
+        "Y2_conditional_retention": 2.0109889652,
+        "Y3_conditional_retention": 1.5629786875,
+        "Y3_active": 0.489534781,
+        "Y3_D0_n": 1,
+        "Y3_D1_n": 8
+      },
+      {
+        "decile": 4,
+        "n": 9,
+        "median_source_points": 54,
+        "Y2_conditional_retention": 1.1252676806,
+        "Y3_conditional_retention": 0.891448191,
+        "Y3_active": 0.592496892,
+        "Y3_D0_n": 3,
+        "Y3_D1_n": 6
+      },
+      {
+        "decile": 5,
+        "n": 9,
+        "median_source_points": 66.65,
+        "Y2_conditional_retention": 1.0859752968,
+        "Y3_conditional_retention": 0.7491569587,
+        "Y3_active": 0.551135301,
+        "Y3_D0_n": 6,
+        "Y3_D1_n": 3
+      },
+      {
+        "decile": 6,
+        "n": 9,
+        "median_source_points": 110.8,
+        "Y2_conditional_retention": 0.9308473565,
+        "Y3_conditional_retention": 0.8141832115,
+        "Y3_active": 0.6593035908,
+        "Y3_D0_n": 2,
+        "Y3_D1_n": 7
+      },
+      {
+        "decile": 7,
+        "n": 9,
+        "median_source_points": 144.1,
+        "Y2_conditional_retention": 0.7984763207,
+        "Y3_conditional_retention": 0.7214498818,
+        "Y3_active": 0.767362917,
+        "Y3_D0_n": 5,
+        "Y3_D1_n": 4
+      },
+      {
+        "decile": 8,
+        "n": 9,
+        "median_source_points": 168.5,
+        "Y2_conditional_retention": 0.7595566926,
+        "Y3_conditional_retention": 0.6332206865,
+        "Y3_active": 0.7770207173,
+        "Y3_D0_n": 5,
+        "Y3_D1_n": 4
+      },
+      {
+        "decile": 9,
+        "n": 9,
+        "median_source_points": 202.25,
+        "Y2_conditional_retention": 0.7464950307,
+        "Y3_conditional_retention": 0.6510825909,
+        "Y3_active": 0.8757036054,
+        "Y3_D0_n": 4,
+        "Y3_D1_n": 5
+      },
+      {
+        "decile": 10,
+        "n": 9,
+        "median_source_points": 241.85,
+        "Y2_conditional_retention": 0.6635538507,
+        "Y3_conditional_retention": 0.5620034893,
+        "Y3_active": 0.831494642,
+        "Y3_D0_n": 6,
+        "Y3_D1_n": 3
+      }
+    ],
+    "by_career": {
+      "developmental": {
+        "n": 57,
+        "Y3_conditional_retention_median": 1.1552735248,
+        "Y3_active_median": 0.6593035908,
+        "top10_n": 3
+      },
+      "established": {
+        "n": 26,
+        "Y3_conditional_retention_median": 0.5956187032,
+        "Y3_active_median": 0.7157086902,
+        "top10_n": 4
+      },
+      "veteran": {
+        "n": 6,
+        "Y3_conditional_retention_median": 0.4291767303,
+        "Y3_active_median": 0.214321214,
+        "top10_n": 2
+      }
+    },
+    "by_route": {
+      "D0": {
+        "n": 32,
+        "median_source_points": 151.475,
+        "Y3_conditional_retention_median": 0.5857376587,
+        "Y3_active_median": 0.6520723066,
+        "top10_n": 6
+      },
+      "D1": {
+        "n": 57,
+        "median_source_points": 54.2,
+        "Y3_conditional_retention_median": 1.1552735248,
+        "Y3_active_median": 0.6593035908,
+        "top10_n": 3
+      }
+    },
+    "top10_by_position": {
+      "QB": {
+        "n": 6,
+        "Y3_conditional_retention_median": 0.7736616456,
+        "Y3_active_median": 0.8972546006,
+        "below_0_60_share": 0
+      },
+      "RB": {
+        "n": 9,
+        "Y3_conditional_retention_median": 0.5620034893,
+        "Y3_active_median": 0.831494642,
+        "below_0_60_share": 0.8888888889
+      },
+      "WR": {
+        "n": 12,
+        "Y3_conditional_retention_median": 0.7082793308,
+        "Y3_active_median": 0.8305416949,
+        "below_0_60_share": 0
+      },
+      "TE": {
+        "n": 6,
+        "Y3_conditional_retention_median": 0.7934885133,
+        "Y3_active_median": 0.9362537787,
+        "below_0_60_share": 0
+      }
+    }
+  },
+  "frozen_historical_comparators": {
+    "selection_window_RB_Y3_top10": {
+      "window": "2014-2020",
+      "rows": 115,
+      "active_n": 96,
+      "realized_active_share": 0.8347826087,
+      "predicted_active_probability_median": 0.8401024931,
+      "predicted_active_retention_median": 0.5999638844,
+      "realized_active_retention_median": 0.5493384185,
+      "realized_active_retention_p25": 0.2548734373,
+      "realized_active_retention_p75": 0.8252724133,
+      "realized_below_0_60_share": 0.5104166667,
+      "active_source_points_median": 200.2,
+      "active_source_points_p90": 287.5,
+      "active_source_points_max": 357.2
+    },
+    "selection_window_RB_Y3_top5": {
+      "rows": 58,
+      "active_n": 50,
+      "predicted_active_retention_median": 0.5338272205,
+      "realized_active_retention_median": 0.6267388434,
+      "mean_retention_bias_pred_minus_realized": -0.0730068006
+    },
+    "selection_window_top10_by_career": {
+      "developmental": {
+        "rows": 79,
+        "active_n": 72,
+        "predicted_retention_median": 0.6123262256,
+        "realized_retention_median": 0.6441050743,
+        "source_points_p90": 295.27,
+        "source_points_max": 357.2
+      },
+      "established": {
+        "rows": 33,
+        "active_n": 22,
+        "predicted_retention_median": 0.5867072305,
+        "realized_retention_median": 0.3019914651,
+        "source_points_p90": 260.42,
+        "source_points_max": 320.1
+      },
+      "veteran": {
+        "rows": 3,
+        "active_n": 2,
+        "predicted_retention_median": 0.4577056428,
+        "realized_retention_median": 0.5011290022,
+        "source_points_max": 180.2
+      }
+    },
+    "final_fit_2005_2022_RB_Y3_top10_active": {
+      "top10_rows": 302,
+      "active_n": 248,
+      "realized_retention_median": 0.5826324097,
+      "realized_retention_mean": 0.5913936375,
+      "realized_below_0_60_share": 0.5080645161,
+      "source_points_p90": 284.77,
+      "source_points_max": 429.1,
+      "developmental": {
+        "active_n": 158,
+        "retention_median": 0.6568066373,
+        "source_points_p90": 288.68,
+        "source_points_max": 357.2
+      },
+      "established": {
+        "active_n": 88,
+        "retention_median": 0.3798712577,
+        "source_points_p90": 280.34,
+        "source_points_max": 429.1
+      },
+      "veteran": {
+        "active_n": 2,
+        "retention_median": 0.5011290022,
+        "source_points_max": 180.2
+      }
+    },
+    "post_freeze_2021_2022_RB_Y3_top10": {
+      "rows": 35,
+      "active_n": 28,
+      "predicted_active_retention_median": 0.5529939479,
+      "realized_active_retention_median": 0.731291733,
+      "note": "Descriptive replication only; frozen selection explicitly excluded it."
+    },
+    "selection_window_top10_active_realized_retention_median": {
+      "QB": 0.7521501828,
+      "RB": 0.5493384185,
+      "WR": 0.7024047195,
+      "TE": 0.6141304348
+    },
+    "Y3_RB_route_selection": {
+      "developmental": {
+        "route": "D1",
+        "D0_minus_D1_MAE_gain": {
+          "early": 0.27897,
+          "mid": 0.18235,
+          "validation": 0.22936
+        }
+      },
+      "established": {
+        "route": "D0",
+        "D0_minus_D1_MAE_gain": {
+          "early": -0.52583,
+          "mid": -0.77082,
+          "validation": 0.00957
+        }
+      },
+      "veteran": {
+        "route": "D0",
+        "support_counts": {
+          "early": 17,
+          "mid": 18,
+          "validation": 14
+        },
+        "minimum_per_block": 20,
+        "D0_minus_D1_MAE_gain": {
+          "early": -0.7167,
+          "mid": -0.7559,
+          "validation": -1.5504
+        }
+      }
+    }
+  }
+}
