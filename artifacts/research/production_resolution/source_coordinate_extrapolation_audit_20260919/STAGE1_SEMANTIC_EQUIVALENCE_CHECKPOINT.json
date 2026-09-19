@@ -1,0 +1,212 @@
+{
+  "schema_version": "fsffl-source-coordinate-semantic-equivalence-checkpoint-v1",
+  "stage": "Stage 1 - semantic coordinate equivalence audit",
+  "result": "FAIL_MATERIAL_SEMANTIC_MISMATCH",
+  "decisive_mismatch": {
+    "historical_unit": "Frozen I1 standard/non-PPR season fantasy points. Reception coefficient = 0.",
+    "current_unit": "Connected-league half-PPR season fantasy points. Reception coefficient = 0.5.",
+    "direct_handoff_error": "The Outcome-B current materializer passes league-scored y1_points directly as P0 source_points even though D0/D1 were fitted on the historical standard/non-PPR coordinate.",
+    "evidence_paths": [
+      "scripts/extract_phase2_future_state_panel.R",
+      "artifacts/research/future_state_phase2_empirical_protocol.md",
+      "src/fsffl/product/i1_scoring_bridge.py",
+      "scripts/research_freeze_governed_year1_universe.py",
+      "src/fsffl/forecast/league_scoring.py",
+      "/FSFFL NEXT/reproducible_forecast_redevelopment_20260919/materialize_current_board_v1.py"
+    ]
+  },
+  "scoring_rules": {
+    "historical": {
+      "pass_yd": 0.04,
+      "pass_td": 4,
+      "pass_int": -2,
+      "rush_yd": 0.1,
+      "rush_td": 6,
+      "rec": 0,
+      "rec_yd": 0.1,
+      "rec_td": 6,
+      "fum_lost": -2
+    },
+    "current": {
+      "pass_yd": 0.04,
+      "pass_td": 4,
+      "pass_int": -2,
+      "rush_yd": 0.1,
+      "rush_td": 6,
+      "rec": 0.5,
+      "rec_yd": 0.1,
+      "rec_td": 6,
+      "fum_lost": -2
+    }
+  },
+  "quantified_scoring_effect": {
+    "QB": {
+      "n": 61,
+      "aggregate_half_ppr_to_standard_ratio": 1,
+      "half_ppr_p90": 431.63,
+      "standard_equivalent_p90": 431.63
+    },
+    "RB": {
+      "n": 88,
+      "aggregate_half_ppr_to_standard_ratio": 1.1097054683463108,
+      "mean_reception_bonus_points": 17.491477272727273,
+      "half_ppr_p90": 350.44,
+      "standard_equivalent_p90": 319.66
+    },
+    "WR": {
+      "n": 122,
+      "aggregate_half_ppr_to_standard_ratio": 1.2852485043404789,
+      "mean_reception_bonus_points": 34.31352459016394,
+      "half_ppr_p90": 269.88,
+      "standard_equivalent_p90": 212.42
+    },
+    "TE": {
+      "n": 64,
+      "aggregate_half_ppr_to_standard_ratio": 1.3491829664184194,
+      "mean_reception_bonus_points": 30,
+      "half_ppr_p90": 203.57,
+      "standard_equivalent_p90": 152.17
+    }
+  },
+  "governed_cross_check": "The independently persisted future-I1 position scoring multipliers in governed_year1_universe.json exactly equal the aggregate half-PPR/standard ratios above: QB 1.0, RB 1.1097054683463108, WR 1.2852485043404789, TE 1.3491829664184196.",
+  "secondary_semantic_differences": [
+    {
+      "dimension": "realized vs projected / availability",
+      "historical": "Realized season totals; realized missed games and partial seasons are embedded in the point total.",
+      "current": "Forward-looking full-season provider stat projections over the canonical season window; no explicit games adjustment in the league-scoring layer.",
+      "status": "NONIDENTICAL_SEMANTICS"
+    },
+    {
+      "dimension": "population/support construction",
+      "historical": "Broad realized player-season panel; zero/negative and partial seasons are retained.",
+      "current": "335-player projection-covered subset with independent-source and scoring-completeness gates; 485 players are excluded from the frozen universe and undercovered groups fail closed.",
+      "status": "NONIDENTICAL_SUPPORT_POPULATION"
+    },
+    {
+      "dimension": "schedule/era",
+      "historical": "Raw season totals across 1999-2025 without season-length/era normalization.",
+      "current": "2026 full-season projected totals; scoring code explicitly does not scale to the fantasy schedule.",
+      "status": "NONNORMALIZED_ERA_DIFFERENCE"
+    }
+  ],
+  "historical_availability_evidence": {
+    "QB": {
+      "rows": 2078,
+      "games_median": 7,
+      "share_games_lt10": 0.6039461020211742,
+      "zero_point_rows": 20,
+      "negative_point_rows": 128
+    },
+    "RB": {
+      "rows": 4619,
+      "games_median": 11,
+      "share_games_lt10": 0.4349426282745183,
+      "zero_point_rows": 84,
+      "negative_point_rows": 10
+    },
+    "WR": {
+      "rows": 5645,
+      "games_median": 12,
+      "share_games_lt10": 0.3881310894596989,
+      "zero_point_rows": 224,
+      "negative_point_rows": 6
+    },
+    "TE": {
+      "rows": 3150,
+      "games_median": 9,
+      "share_games_lt10": 0.5028571428571429,
+      "zero_point_rows": 125,
+      "negative_point_rows": 4
+    }
+  },
+  "accounting_only_effect_on_known_outcomeB_board": {
+    "warning": "This is not a corrected forecast. It changes only the denominator to the historical standard scoring unit; P0 was still fed half-PPR source_points.",
+    "top10": {
+      "n": 33,
+      "Y2_median_conditional_ratio_half_ppr": 0.4516903262058822,
+      "Y2_median_conditional_ratio_standard_denominator_only": 0.5707600410752284,
+      "Y3_median_conditional_ratio_half_ppr": 0.3970394264492829,
+      "Y3_median_conditional_ratio_standard_denominator_only": 0.5107566510500929
+    },
+    "young_top10": {
+      "n": 14,
+      "Y2_median_conditional_ratio_half_ppr": 0.4749750258894669,
+      "Y2_median_conditional_ratio_standard_denominator_only": 0.5843645178110961,
+      "Y3_median_conditional_ratio_half_ppr": 0.43083299927287677,
+      "Y3_median_conditional_ratio_standard_denominator_only": 0.5387033124117089
+    }
+  },
+  "descriptive_only_after_unit_normalization": {
+    "note": "Not a Stage-2 support classification because semantic equivalence failed. These numbers only show that additional support questions may remain after scoring correction.",
+    "selection_window_2014_2020_current_standard_p90_to_historical_p90": {
+      "QB": 1.4115519451639065,
+      "RB": 2.001878757514111,
+      "WR": 1.5142916191562157,
+      "TE": 1.708160287349871
+    }
+  },
+  "downstream_gate": {
+    "Stage2": "NOT_EXECUTED",
+    "Stage3": "NOT_EXECUTED",
+    "Stage4": "NOT_EXECUTED",
+    "reason": "Directive makes Stage 2 conditional on Stage 1 semantic comparability. Proceeding would classify extrapolation on mixed standard and half-PPR point coordinates."
+  },
+  "smallest_governed_correction": [
+    "Freeze a second current 2026 Year-1 source coordinate scored with the already-governed FROZEN_I1_STANDARD_SCORING rules from the existing raw FFToday/Razzball stat ensemble.",
+    "Use the standard-scored current coordinate, not the league half-PPR coordinate, as P0 source_points and for all historical/current production-calibration comparisons.",
+    "Keep the existing half-PPR Year-1 board as a separate league/presentation coordinate.",
+    "Do not ratio standard-trained P0 Y2/Y3 points against half-PPR Y1. A league-scoring conversion for P0 future point outputs must be explicitly governed before use.",
+    "After the corrected source coordinate is durably frozen, rerun this audit beginning with semantic equivalence and then Stage 2 support analysis before any further model repair."
+  ],
+  "artifacts": {
+    "coordinate_lineage": {
+      "library_file_id": "libfile_8a96181669b08191b855d20342d3a2aa",
+      "sha256": "985758dffd707be44a2109583efc3bdaad04839488eed7a68d525c326228ae42"
+    },
+    "scoring_matrix": {
+      "library_file_id": "libfile_19c2ee7c30e881918cddfbc436551218",
+      "sha256": "b1c1735c041c535813e4b93ac7df32350e5521f73b121fe662a5820170a313d0"
+    },
+    "current_player_effect": {
+      "library_file_id": "libfile_820afc79f9988191b88ecb7525a94632",
+      "sha256": "b0beaf6166755fbce0d633b4b401d0866314d5231fcd0b1f2c2469a90320ec53"
+    },
+    "position_effect": {
+      "library_file_id": "libfile_d152098979b88191924ad60661d0d24b",
+      "sha256": "c3afc16096eb7b9360e38f3b68a6cc2e643564c4d8c43bd41bce5ed4dae51eb6"
+    },
+    "historical_availability": {
+      "library_file_id": "libfile_6bd855147334819191a6b8019c65d333",
+      "sha256": "7ff3ca1ab86ac9627c69d7fbab1c4dd53f6cd113fc2f143b583de67ddbb82e9c"
+    },
+    "accounting_only_effect": {
+      "library_file_id": "libfile_e88531edd5d08191ac31cbed82099985",
+      "sha256": "2e9b6900cf555d5a34452083155d012452418f927f658b559d572511c8cf7c2f"
+    },
+    "examples": {
+      "library_file_id": "libfile_c836a29f5a088191a6380d3999558768",
+      "sha256": "1fe5070f3b2abd4bdb8d2de7babb97f92221fbad3418ed61486e1d3a6b9916e6"
+    },
+    "example_components": {
+      "library_file_id": "libfile_abff7a3486808191a75e670a72e672c9",
+      "sha256": "4b22a9036e26350631313c6d92c07e3fe982c162b7ffa9fddb4c56490285c3b5"
+    },
+    "semantic_audit": {
+      "library_file_id": "libfile_eb0bb469d154819188069eccf596890d",
+      "sha256": "a2bcbc329a955474a698e1aebe0d70253a85b563a9bba4a4b212cba6b765b23f"
+    },
+    "downstream_gate": {
+      "library_file_id": "libfile_dc55f7866ca48191afb39be643776c52",
+      "sha256": "3e50d65738dea957c31c34370348acc36e2f6940e7b0f8dea975a3a701605276"
+    }
+  },
+  "execution_accounting": {
+    "model_fits": 0,
+    "candidate_selections": 0,
+    "hyperparameter_searches": 0,
+    "current_player_tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0
+  },
+  "classification": "A - COORDINATE MISMATCH IDENTIFIED"
+}
