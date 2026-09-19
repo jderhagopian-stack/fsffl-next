@@ -1,0 +1,80 @@
+{
+  "schema_version": "fsffl-forecast-deployment-spec-recovery-outcome-v1",
+  "study": "Forecast Deployment-Specification Recovery",
+  "directive_date": "2026-09-18",
+  "execution_date": "2026-09-19",
+  "outcome": "C",
+  "label": "SPECIFICATION_NOT_RECOVERABLE_FROM_DURABLE_EVIDENCE",
+  "conclusion": "Exhaustive bounded recovery did not recover an authoritative deployment-grade B2a recipe, R1/R2 recipe, or a unique final 2026 training-cutoff rule. Completing them would require new methodological choices or reverse engineering, both prohibited.",
+  "exact_missing_dependencies": {
+    "B2a": [
+      "five-bin edge/tie construction",
+      "monotonicity enforcement",
+      "exact fast-track Candidate-B base estimator/design",
+      "feature transforms",
+      "target/log-space application and inverse transform",
+      "floors/caps/missing-value behavior",
+      "deterministic implementation details"
+    ],
+    "R1_R2": [
+      "exact R1 estimator/model family",
+      "design matrix/transforms",
+      "regularization",
+      "position/horizon/state pooling and shrinkage",
+      "support/fallback rules",
+      "target/back-transform",
+      "state-combination/order logic",
+      "exact R2 integration of the frozen two-prior component",
+      "missing ARCHITECTURE_SPECIFICATION.json bytes"
+    ],
+    "final_cutoff": "No authoritative post-selection rule resolves common source<=2022 versus horizon-specific latest-observable source endpoints for the 2026 deployment fit."
+  },
+  "architecture_spec_lead": {
+    "filename": "ARCHITECTURE_SPECIFICATION.json",
+    "expected_sha256": "197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc",
+    "recovered": false,
+    "search_scope": "current research tree, inspected historical commit trees, relevant research branch trees, GitHub code/commit search, FSFFL NEXT Library, and available prior/current generated artifacts"
+  },
+  "durable_evidence_retained": {
+    "b2_prediction_rows": {
+      "rows": 16689,
+      "sha256": "9eda45f36786c0c73a190566b9eb14d199a604427112c890488f2d5a2cdaacb6"
+    },
+    "recombination_prediction_rows": {
+      "rows": 41344,
+      "sha256": "dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b"
+    },
+    "conditional_repair_prediction_rows": {
+      "rows": 22252,
+      "sha256": "4298b40667906fca5a88ad823313e57c0c5971b5eef9c6b38f55f5f5155bd3f5"
+    }
+  },
+  "frozen_route_changed": false,
+  "verification": {
+    "historical_replay_performed": false,
+    "reason": "Exact recipe was not recovered; a replay would require choosing/reconstructing missing implementation details."
+  },
+  "execution_accounting": {
+    "model_fits": 0,
+    "model_refits": 0,
+    "deterministic_fit_replays": 0,
+    "hyperparameter_searches": 0,
+    "reverse_engineering_attempts": 0,
+    "candidate_selections": 0,
+    "final_cutoff_choices": 0,
+    "current_player_board_materializations": 0,
+    "current_player_credibility_judgments": 0,
+    "production_changes": 0
+  },
+  "protected_state": {
+    "starting_research_head": "2f2d5f056126e8a7fd08751414be7374acb3d3c1",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    }
+  },
+  "next_management_boundary": "Management must choose between authorizing a newly governed reconstruction/specification study or reverting to an earlier fully reproducible Forecast architecture. This recovery task does not choose between those paths.",
+  "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+}
