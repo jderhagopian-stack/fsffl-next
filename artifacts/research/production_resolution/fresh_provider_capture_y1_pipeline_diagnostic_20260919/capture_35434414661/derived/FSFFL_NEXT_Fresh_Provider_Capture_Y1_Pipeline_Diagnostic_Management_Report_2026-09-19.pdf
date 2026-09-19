@@ -1,0 +1,152 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3755 >>
+stream
+BT /F2 19 Tf 230 738 Td (FSFFL NEXT) Tj ET
+BT /F2 16 Tf 132 712 Td (Fresh Provider Capture & Y1 Pipeline Diagnostic) Tj ET
+BT /F1 11 Tf 214 691 Td (Management Report - 19 Sep 2026) Tj ET
+BT /F2 13 Tf 54 663 Td (Outcome B - Provider evidence itself is extreme / semantically unsuitable) Tj ET
+BT /F1 10 Tf 54 636 Td (Bottom line: the current FSFFL arithmetic is not creating the extreme Year-1 totals. Fresh) Tj ET
+BT /F1 10 Tf 54 623 Td (Razzball evidence is already extreme before normalization or averaging. FFToday is) Tj ET
+BT /F1 10 Tf 54 610 Td (materially lower and looks like ordinary full-season projection data. FSFFL preserves the) Tj ET
+BT /F1 10 Tf 54 597 Td (provider stats, takes the exact equal-weight mean, and scores that mean correctly under the) Tj ET
+BT /F1 10 Tf 54 584 Td (league rules.) Tj ET
+BT /F1 10 Tf 54 566 Td (The key governance concern is upstream evidence suitability, especially Razzball horizon) Tj ET
+BT /F1 10 Tf 54 553 Td (semantics. The captured page identifies itself as 2026 projections but also says: "Updated) Tj ET
+BT /F1 10 Tf 54 540 Td (from NFL Preseason through rest of season." That page should not continue as an expected) Tj ET
+BT /F1 10 Tf 54 527 Td (full-season Forecast input until management governs the source/horizon meaning.) Tj ET
+BT /F2 14 Tf 54 509 Td (What was executed) Tj ET
+BT /F1 10 Tf 62 481 Td (- Recovered the already-completed Stage 0 state; code-path discovery was not repeated.) Tj ET
+BT /F1 10 Tf 62 466 Td (- Confirmed the protected repository state before execution: main unchanged; PR #147 still) Tj ET
+BT /F1 10 Tf 62 453 Td (  open and held.) Tj ET
+BT /F1 10 Tf 62 438 Td (- Persisted a pre-execution capture manifest before provider network access.) Tj ET
+BT /F1 10 Tf 62 423 Td (- Ran one governed fresh capture. FFToday and Razzball succeeded. CBS and NFL Fantasy) Tj ET
+BT /F1 10 Tf 62 410 Td (  failed their full-season/content gates and were not substituted into the two-source) Tj ET
+BT /F1 10 Tf 62 397 Td (  ensemble.) Tj ET
+BT /F1 10 Tf 62 382 Td (- Persisted parser-table substitutes, provider parsed rows, provider-specific normalized) Tj ET
+BT /F1 10 Tf 62 369 Td (  rows, the equal-weight ensemble, the league-scored Y1 board, mapping/parser audits,) Tj ET
+BT /F1 10 Tf 62 356 Td (  named-player traces, and population diagnostics.) Tj ET
+BT /F1 10 Tf 62 341 Td (- Performed zero Forecast fits, zero tuning, zero route changes, zero production changes,) Tj ET
+BT /F1 10 Tf 62 328 Td (  zero merges, zero deploys, and zero promotion actions.) Tj ET
+BT /F2 14 Tf 54 313 Td (Why the result is clear) Tj ET
+BT /F1 10 Tf 54 285 Td (All three pipeline parity checks were exact across the fresh 335-player board:) Tj ET
+BT /F1 10 Tf 62 267 Td (- Raw provider row -> normalized canonical stats: maximum absolute discrepancy 0.0.) Tj ET
+BT /F1 10 Tf 62 252 Td (- Normalized providers -> equal-weight ensemble: maximum absolute discrepancy 0.0.) Tj ET
+BT /F1 10 Tf 62 237 Td (- Ensemble raw stats -> league-scored Year 1: maximum absolute discrepancy 0.0.) Tj ET
+BT /F2 13 Tf 54 222 Td (Concrete example: Bijan Robinson) Tj ET
+BT /F1 10 Tf 62 195 Td (- Fresh FFToday: 324.9 half-PPR; 1,402 rush yd; 707 rec yd; 84 receptions.) Tj ET
+BT /F1 10 Tf 62 180 Td (- Fresh Razzball: 646.3 half-PPR recomputed from raw stats; 2,904 rush yd; 1,313 rec yd;) Tj ET
+BT /F1 10 Tf 62 167 Td (  142 receptions.) Tj ET
+BT /F1 10 Tf 62 152 Td (- FSFFL equal-weight ensemble: 485.6 half-PPR.) Tj ET
+BT /F1 10 Tf 54 137 Td (This is the causal pattern the audit was designed to distinguish: Razzball is already) Tj ET
+BT /F1 10 Tf 54 124 Td (extreme, and FSFFL produces the mathematical midpoint of ordinary FFToday evidence and) Tj ET
+BT /F1 10 Tf 54 111 Td (extreme Razzball evidence.) Tj ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3078 >>
+stream
+BT /F2 15 Tf 54 738 Td (Population-level provider evidence) Tj ET
+BT /F1 10 Tf 54 709 Td (Fresh Razzball raw rows crossed clearly extreme season-total thresholds before FSFFL) Tj ET
+BT /F1 10 Tf 54 696 Td (normalization:) Tj ET
+BT /F1 10 Tf 62 678 Td (- 31 players with more than 5,000 passing yards.) Tj ET
+BT /F1 10 Tf 62 663 Td (- 20 players with more than 2,000 rushing yards.) Tj ET
+BT /F1 10 Tf 62 648 Td (- 12 players with more than 2,000 receiving yards.) Tj ET
+BT /F1 10 Tf 54 633 Td (These are provider-side totals. Provider-native fantasy-point columns are not reused as raw) Tj ET
+BT /F1 10 Tf 54 620 Td (stats, per-game data are not multiplied into season totals, and the league-scoring) Tj ET
+BT /F1 10 Tf 54 607 Td (recomposition check is exact.) Tj ET
+BT /F2 14 Tf 54 589 Td (Named fresh Y1 outputs) Tj ET
+BT /F1 10 Tf 62 561 Td (- Bijan Robinson: 485.60 half-PPR.) Tj ET
+BT /F1 10 Tf 62 546 Td (- Jahmyr Gibbs: 460.25 half-PPR.) Tj ET
+BT /F1 10 Tf 62 531 Td (- Christian McCaffrey: 433.45 half-PPR.) Tj ET
+BT /F1 10 Tf 62 516 Td (- Puka Nacua: 401.45 half-PPR.) Tj ET
+BT /F1 10 Tf 62 501 Td (- Sam Darnold: 383.06 half-PPR.) Tj ET
+BT /F1 10 Tf 62 486 Td (- Aaron Rodgers: 344.29 half-PPR.) Tj ET
+BT /F2 14 Tf 54 471 Td (Provider and horizon interpretation) Tj ET
+BT /F1 10 Tf 54 443 Td (FFToday: materially lower fresh evidence consistent with ordinary season-projection) Tj ET
+BT /F1 10 Tf 54 430 Td (magnitudes for the named players.) Tj ET
+BT /F1 10 Tf 54 412 Td (Razzball: raw table rows themselves contain unusually large passing, rushing, and receiving) Tj ET
+BT /F1 10 Tf 54 399 Td (totals. The page metadata also says "Updated from NFL Preseason through rest of season.") Tj ET
+BT /F1 10 Tf 54 386 Td (This is a material provider-evidence / horizon-semantic issue for this use case.) Tj ET
+BT /F1 10 Tf 54 368 Td (FSFFL pipeline: no material acquisition, parsing, normalization, mapping, ensemble, or) Tj ET
+BT /F1 10 Tf 54 355 Td (scoring defect was found in the controlled fresh run. The pipeline faithfully preserves and) Tj ET
+BT /F1 10 Tf 54 342 Td (averages the evidence it receives.) Tj ET
+BT /F2 14 Tf 54 324 Td (Important limitation) Tj ET
+BT /F1 10 Tf 54 296 Td (This fresh capture diagnoses the current executable pipeline only. It is not a) Tj ET
+BT /F1 10 Tf 54 283 Td (reconstruction of the missing 18 Sep 2026 provider rows. The result explains why the current) Tj ET
+BT /F1 10 Tf 54 270 Td (board is extreme, but it does not prove that the same provider evidence was returned on 18) Tj ET
+BT /F1 10 Tf 54 257 Td (Sep. The September 18 historical coordinate remains unrecovered.) Tj ET
+BT /F2 14 Tf 54 239 Td (Governed next question) Tj ET
+BT /F1 10 Tf 54 211 Td (Do not change weights, repair player projections, or refit Forecast in this workstream. The) Tj ET
+BT /F1 10 Tf 54 198 Td (smallest next management decision is a governed Razzball evidence-suitability /) Tj ET
+BT /F1 10 Tf 54 185 Td (horizon-validation rule before this page can continue serving as expected full-season) Tj ET
+BT /F1 10 Tf 54 172 Td (Forecast input.) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 1935 >>
+stream
+BT /F2 15 Tf 54 738 Td (Execution provenance) Tj ET
+BT /F1 9 Tf 54 709 Td (Research branch: research/future-state-resolution-phase34-resume) Tj ET
+BT /F1 9 Tf 54 695 Td (Pre-execution manifest head: ff14f367440b394238564835b4fe65f84ae656f7) Tj ET
+BT /F1 9 Tf 54 681 Td (Fresh capture workflow run: 35434414661) Tj ET
+BT /F1 9 Tf 54 667 Td (Fresh capture execution SHA: b655b0eaa9d23a4c43a541f90651025e78b63fbb) Tj ET
+BT /F1 9 Tf 54 653 Td (Derived-analysis head before report: 30afee5d27d2f2eeec1e0d9d7b1178519cdc1135) Tj ET
+BT /F1 9 Tf 54 639 Td (main: 53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76) Tj ET
+BT /F1 9 Tf 54 625 Td (PR #147 held head: 3e63cd61602d0832acf0a30dcc5bee0b13ceeb63) Tj ET
+BT /F1 9 Tf 54 611 Td (Capture start: 2026-09-19T09:20:35.049901+00:00) Tj ET
+BT /F1 9 Tf 54 597 Td (Capture complete: 2026-09-19T09:20:38.183096+00:00) Tj ET
+BT /F1 9 Tf 54 583 Td (Capture runtime: 3.133 seconds) Tj ET
+BT /F1 9 Tf 54 569 Td (Successful fresh provider captures: 1) Tj ET
+BT /F1 9 Tf 54 555 Td (Forecast fits / tuning / route / production changes: 0 / 0 / 0 / 0) Tj ET
+BT /F2 14 Tf 54 541 Td (Durable result) Tj ET
+BT /F1 10 Tf 54 513 Td (Classification: B - PROVIDER EVIDENCE ITSELF IS EXTREME / SEMANTICALLY UNSUITABLE.) Tj ET
+BT /F1 10 Tf 54 495 Td (Fresh FFToday is ordinary. Fresh Razzball rows are extreme before FSFFL normalization.) Tj ET
+BT /F1 10 Tf 54 482 Td (Equal-weight arithmetic and league scoring reproduce exactly. No material FSFFL arithmetic) Tj ET
+BT /F1 10 Tf 54 469 Td (inflation was found.) Tj ET
+BT /F1 10 Tf 54 451 Td (Fresh data is not a reconstruction of 2026-09-18.) Tj ET
+BT /F2 14 Tf 54 433 Td (Hard stop) Tj ET
+BT /F1 10 Tf 54 405 Td (Diagnostic complete. Stop for management review. Do not repair the Y1 materializer, change) Tj ET
+BT /F1 10 Tf 54 392 Td (providers, refit Forecast, rerun the P0 credibility gate, or reopen Intrinsic/Shapley in) Tj ET
+BT /F1 10 Tf 54 379 Td (this task.) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 9 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R] /Count 3 >>
+endobj
+10 0 obj
+<< /Type /Catalog /Pages 9 0 R >>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000154 00000 n 
+0000003960 00000 n 
+0000004096 00000 n 
+0000007225 00000 n 
+0000007361 00000 n 
+0000009347 00000 n 
+0000009483 00000 n 
+0000009552 00000 n 
+trailer
+<< /Size 11 /Root 10 0 R >>
+startxref
+9602
+%%EOF
