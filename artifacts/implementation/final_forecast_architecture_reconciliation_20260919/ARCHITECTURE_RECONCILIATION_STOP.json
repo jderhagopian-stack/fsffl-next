@@ -1,0 +1,192 @@
+{
+  "schema_version": "fsffl-final-forecast-architecture-reconciliation-stop-v1",
+  "date": "2026-09-19",
+  "directive": "FINAL FORECAST ARCHITECTURE RECONCILIATION + Y1/Y2/Y3 SANITY GATE",
+  "classification": "STOP - ARCHITECTURE RECONCILIATION FAILURE",
+  "live_refs": {
+    "pr_147": {
+      "branch": "implementation/forecast-intrinsic-i1-shapley",
+      "state": "open",
+      "merged": false,
+      "mergeable": true,
+      "head": "2893c2b462692142a950b85b8ffda9cf63215e93",
+      "base": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76"
+    },
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "research": {
+      "branch": "research/future-state-resolution-phase34-resume",
+      "head": "3bbdf8ce75eff05e26c154b2c38c70d425a4a5d2"
+    }
+  },
+  "complete_selected_forecast": {
+    "year1": {
+      "source_authority": "immutable preseason raw-stat baseline",
+      "frozen_sources": [
+        "fftoday",
+        "razzball"
+      ],
+      "raw_observations": 1675,
+      "players": 335,
+      "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+      "league_scoring": "directly score the frozen raw-stat baseline under league rules",
+      "standard_coordinate": "independently direct-score the same raw-stat baseline under frozen standard/non-PPR compatibility scoring",
+      "status": "AUTHORITATIVE_AND_WIRED"
+    },
+    "future_state_route": {
+      "selected_routing": {
+        "QB": "A2+C+D",
+        "RB": "A2+D",
+        "WR": "A2+D",
+        "TE": "A2+D"
+      },
+      "A2": "exact-age persistence/survival form: continuous position-specific exact age plus late-career hinges (QB >37; RB/WR/TE >31) and young-TE hinge (<24)",
+      "C": "multi-season age/state-adjusted residual memory in permitted probability-model cohorts; selected routing retains C only for QB",
+      "D": "within-current-state location calibration in conditional positive-state transition models: centered percentile plus upper/lower tail hinges",
+      "probabilities": "persistence plus ordered positive-state probabilities; frozen routed probabilities",
+      "status": "AUTHORITATIVE_BUT_NOT_WIRED"
+    },
+    "future_production": {
+      "route_modes": {
+        "Y2": "universal D1",
+        "Y3": {
+          "QB|developmental": "D0",
+          "QB|established": "D1",
+          "QB|veteran": "D1",
+          "RB|developmental": "D1",
+          "RB|established": "D0",
+          "RB|veteran": "D0",
+          "WR|developmental": "D1",
+          "WR|established": "D1",
+          "WR|veteran": "D0",
+          "TE|developmental": "D1",
+          "TE|established": "D1",
+          "TE|veteran": "D0"
+        }
+      },
+      "D0": "single conditional-active production level",
+      "D1": "state-conditioned positive-state production means combined with frozen state probabilities",
+      "M1a": "continuous within-state magnitude correction: BayesianRidge(fit_intercept=False) on target residual-z from current residual-z; changes positive-state conditional means only",
+      "two_prior_consistency": "frozen prior2 mean age/state residual-z + absolute gap + coverage; regularized global effects plus position deviations; changes conditional production only",
+      "selected_candidate": "fixed routed Forecast + M1a + exact two-prior-season consistency adjustment",
+      "rejected_or_excluded": [
+        "M1b",
+        "M2",
+        "M3a",
+        "M3b",
+        "role/security",
+        "third prior season",
+        "hard repeated-elite tier",
+        "new interaction",
+        "named-player override",
+        "P1 residual magnitude anchor",
+        "P2 relative log-retention target"
+      ],
+      "status": "AUTHORITATIVE_BUT_NOT_WIRED"
+    },
+    "future_league_scoring": {
+      "method": "player-specific league-Y1 / standard-Y1 ratio from each player's same frozen preseason stat mix; translate scoring-dependent future point quantities only",
+      "probabilities_changed": false,
+      "persistence_changed": false,
+      "status": "AUTHORITATIVE_AND_WIRED_BUT_APPLIED_TO_WRONG_UPSTREAM_FUTURE_PRODUCER"
+    },
+    "calendar_intrinsic": {
+      "calendar": "Y1 + direct Y2 + direct Y3; diagnostic h1 excluded from Intrinsic",
+      "intrinsic": "frozen Shapley calendar with 0.85 discount and governed lineup scarcity",
+      "status": "STRUCTURALLY_WIRED_BUT_CONSUMES_WRONG_Y2_Y3_AUTHORITY"
+    }
+  },
+  "p0_reconciliation": {
+    "repository_scope": "P0 is the retained control/deployment package for the frozen Outcome-B future conditional-production architecture and selected route. It is not the entire Forecast.",
+    "owns_or_carries": [
+      "routed future state/probability layers used by the diagnostic replay",
+      "D0/D1 route selection and conditional-production models",
+      "future conditional/expected point materialization on the standard compatibility coordinate"
+    ],
+    "does_not_own": [
+      "the FFToday+Razzball frozen preseason source capture",
+      "Year-1 league scoring",
+      "player-specific future league-scoring translation",
+      "three-year calendar composition",
+      "Intrinsic/Shapley"
+    ],
+    "later_selected_surrounding_layers": [
+      "M1a continuous within-state magnitude",
+      "two-prior-season consistency adjustment",
+      "player-specific downstream league-scoring translation"
+    ],
+    "diagnostic_replay_note": "The corrected P0/preseason gate replayed the persisted package over the preserved preseason standard coordinate without fit/tuning; its own manifest explicitly recorded that PR147 runtime Forecast authority was not modified."
+  },
+  "wiring_discrepancy": {
+    "required_y2_y3_authority": "selected routed Forecast + frozen M1a + frozen two-prior-season consistency",
+    "actual_pr147_y2_y3_authority": "embedded legacy FrozenI1Artifact _H12/_H3 from the private-beta activation bundle",
+    "current_runtime_trace": [
+      "PrivateBetaShapleyContractLoader loads frozen_i1_h12.json and frozen_i1_h3.json as _H12/_H3",
+      "compose_live_intrinsic_calendar is called with h1_h2_predictor=_H12 and h3_predictor=_H3",
+      "the new player-specific scoring translator runs only after those legacy I1 predictions"
+    ],
+    "legacy_activation_build": "scripts/build_private_beta_i1_activation.py fits IntegratedI1Model and freezes FrozenI1Artifact; it is not a serialization of the selected A2+C+D/A2+D + M1a + two-prior production-resolution candidate.",
+    "post_durability_gate_compare": "Between the durability-stop head 1fd76ac589b3d801e85a7f8963b27018f75916e6 and current head, later commits added corrected-P0 diagnostics and player-specific scoring, but no selected routed Forecast runtime producer/package replaced _H12/_H3.",
+    "consequence": "The selected authoritative Years2/3 model decision remains bypassed. A downstream scoring-unit correction cannot cure an upstream model-authority substitution."
+  },
+  "year1_lineage": {
+    "production_record_id": 145,
+    "source_artifact_id": 94,
+    "sources": [
+      "fftoday",
+      "razzball"
+    ],
+    "raw_observations": 1675,
+    "players": 335,
+    "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "league_y1_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+    "standard_y1_board_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9",
+    "status": "PASS"
+  },
+  "sanity_gate": {
+    "architecture_reconciliation": "FAIL",
+    "final_335_player_y1_y2_y3_materialization": "NOT_RUN_BY_DIRECTIVE_STOP_RULE",
+    "final_board_summary_statistics": "NOT_AVAILABLE_AS_FINAL_AUTHORITY",
+    "outlier_inspection": "NOT_RUN_AS_FINAL_GATE",
+    "cross_horizon_final_semantics": "NOT_RUN_AS_FINAL_GATE",
+    "downstream_final_propagation": "BLOCKED_BY_WRONG_Y2_Y3_AUTHORITY",
+    "prior_diagnostic_only_evidence": {
+      "corrected_p0_board_players": 335,
+      "corrected_p0_horizon_rows": 670,
+      "classification": "PASS_FOR_MANAGEMENT_PROMOTION_REVIEW",
+      "note": "Useful diagnostic evidence only. It did not modify PR147 runtime authority and therefore is not the directive's final wired Forecast board."
+    }
+  },
+  "workflows_at_reconciliation": {
+    "ci": {
+      "run_number": 2103,
+      "run_id": 35453971126,
+      "conclusion": "success",
+      "result": "1243 passed, 2 warnings in 11.88s"
+    },
+    "activation_artifacts": {
+      "run_number": 102,
+      "run_id": 35453970993,
+      "conclusion": "success",
+      "status_details": "artifact/schema verification PASS; current_fact_rows=756; research-coordinate parity PASS; model_changes=false"
+    },
+    "live_diagnostics": {
+      "run_number": 83,
+      "run_id": 35453970996,
+      "conclusion": "failure",
+      "focused_tests": "35 passed in 3.76s",
+      "frozen_coordinate_credibility": "PASS",
+      "failure_reason": "live-provider acquisition had only Razzball; FFToday 403, CBS response rejected as not full-season, NFL Fantasy no projection content; two-source live ensemble requirement failed"
+    },
+    "workflow_interpretation": "The activation workflow is now terminal success. Live-provider health remains a separate current-acquisition failure. Neither result repairs the architecture reconciliation failure."
+  },
+  "stop_boundary": {
+    "merge": false,
+    "deploy": false,
+    "main_modified": false,
+    "refit": false,
+    "retune": false,
+    "model_selection_reopened": false,
+    "scoring_coverage_broadened": false,
+    "reason": "Directive requires an immediate stop when any previously selected authoritative Forecast layer is missing/bypassed/replaced. That condition is proven for Years2/3."
+  }
+}
