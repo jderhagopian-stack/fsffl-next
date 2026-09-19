@@ -1,0 +1,21 @@
+{
+  "schema_version": "fsffl-forecast-wide-source-replay-pointers-v1",
+  "historical_predictions": {
+    "library_file_id": "libfile_e76ec792af288191bc7e5ab8e03e42a0",
+    "sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+    "rows": 10336,
+    "source_seasons": [
+      2014,
+      2022
+    ]
+  },
+  "fitted_package": {
+    "library_file_id": "libfile_aaa8c63f86e08191a89f092f02367472",
+    "sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7"
+  },
+  "frozen_selection_sha": "75eb29f739253a4b70b404c04304c7c0ebec1fe1",
+  "deployment_spec_sha": "b871adc642c96ecd7c5d95a513981ca05b26840a",
+  "prior_rb_diagnostic_head": "d536c2297eba4bc0647dd624ef66774a3c750382",
+  "pr147_head_held_fixed": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "main_head": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76"
+}
