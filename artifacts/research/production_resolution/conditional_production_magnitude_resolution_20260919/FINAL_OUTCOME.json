@@ -1,0 +1,93 @@
+{
+  "schema_version": "fsffl-conditional-production-magnitude-resolution-final-outcome-v1",
+  "date": "2026-09-19",
+  "directive": "FSFFL NEXT Forecast Conditional-Production Magnitude Resolution Directive",
+  "outcome": "B",
+  "label": "TARGETED_RESOLUTION_DOES_NOT_CLEAR_PROMOTION",
+  "starting_outcome": "B_RESEARCH_RESULT_NOT_READY_FOR_PROMOTION",
+  "stage0": {
+    "baseline_recovered": true,
+    "starting_head": "67e73c6d6edd9ff6bfe80218eb12ea409041ddc1",
+    "final_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "durable_control_parity_preserved": true
+  },
+  "stage1_mechanism": {
+    "primary": "ABSOLUTE_TARGET_LEVEL_WITH_SUBLINEAR_SOURCE_ENCODING_AND_REGULARIZED_POOLING",
+    "persistence_primary_cause": false,
+    "state_combination_primary_cause": false,
+    "explanation": "P0 transfers high-end magnitude weakly because source magnitude enters through log1p(points) plus a bounded percentile, while pooled intercept/state-level terms dominate. The current Y1 upper tail sits materially above the historical realized source scale; most current compression appears before state recombination.",
+    "historical_support": {
+      "Y2_top5_underprediction_points": -12.742106300230029,
+      "Y3_top5_underprediction_points": -14.196929348001644,
+      "Y2_top5_retention_bias": -0.04814813053056845,
+      "Y3_top5_retention_bias": -0.052063036046068364,
+      "Y2_young_top10_retention_bias": -0.012708114206795173,
+      "Y3_young_top10_retention_bias": -0.04159314562542564
+    }
+  },
+  "candidates": {
+    "P0": {
+      "status": "CONTROL_RETAINED"
+    },
+    "P1": {
+      "status": "REJECTED",
+      "Y2_top5_abs_retention_bias_improvement": 0,
+      "Y3_top5_abs_retention_bias_improvement": 0.014682760881426636,
+      "improved_chronology_cells": 3,
+      "total_chronology_cells": 6,
+      "reason": "Y2 learned anchor weight clips to zero throughout the selection window, so the correction does not replicate across both horizons."
+    },
+    "P2": {
+      "status": "REJECTED",
+      "Y2_top5_abs_retention_bias_change": 0.02508038271850934,
+      "Y3_top5_abs_retention_bias_change": 0.03573417281122593,
+      "broad_unconditional_MAE_change": {
+        "Y2": -0.24434252105270815,
+        "Y3": -0.9241550021058309
+      },
+      "reason": "Broad MAE improves, but the targeted top-tail and young-top-tail retention calibration worsens materially at both horizons."
+    }
+  },
+  "selection": {
+    "passing_candidates": [],
+    "winner": null,
+    "historical_selection_freeze_commit": "6bc47116f031fa0a250d16c4a9e70a4bece76224",
+    "rejection_ledger_commit": "12ea4137141385632874cc303388759e85f0e09a"
+  },
+  "downstream_gates": {
+    "challenger_final_fit_performed": false,
+    "challenger_reload_replay_performed": false,
+    "second_current_board_materialization_performed": false,
+    "reason": "No bounded challenger cleared historical selection. Directive requires Outcome B and stop before final fit/current-board gate."
+  },
+  "execution_accounting": {
+    "retained_historical_prediction_rows": 10336,
+    "authoritative_fold_pairs": 18,
+    "control_production_fits": 36,
+    "P1_anchor_fits": 18,
+    "P2_retention_model_fits": 27,
+    "hyperparameter_grid_searches": 0,
+    "route_searches": 0,
+    "external_data_searches": 0,
+    "current_player_tuning_actions": 0,
+    "new_current_board_materializations": 0,
+    "aborted_identical_monolithic_execution_attempts": 1,
+    "aborted_attempt_outputs_written": 0,
+    "aborted_attempt_results_inspected": 0,
+    "retained_candidate_fit_wall_seconds_sum": 89.12310767173767
+  },
+  "protected_state": {
+    "main_expected": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147_expected": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "production_authority_changed": false,
+    "intrinsic_shapley_changed": false,
+    "global_C_changed": false
+  },
+  "promotion_eligible": false,
+  "implementation_authorized": false,
+  "next_action": "STOP_FOR_MANAGEMENT_REVIEW"
+}
