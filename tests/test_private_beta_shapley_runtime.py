@@ -103,23 +103,25 @@ def _fixture() -> tuple[LeagueState, ForecastObservation]:
 def _raw_forecasts(observation: ForecastObservation) -> tuple[ForecastObservation, ...]:
     # A scoring-neutral raw stat reconstructs the exact frozen standard/non-PPR
     # P0 coordinate while still exercising direct scoring from raw evidence.
-    return (
+    metrics = (
+        (ForecastMetric.RUSH_YARDS, float(observation.distribution.mean) * 10.0),
+        (ForecastMetric.RUSH_TD, 0.0),
+    )
+    return tuple(
         ForecastObservation(
             player_id=observation.player_id,
             position=observation.position,
             horizon=observation.horizon,
-            metric=ForecastMetric.RUSH_YARDS,
+            metric=metric,
             period_start=observation.period_start,
             period_end=observation.period_end,
-            distribution=ForecastDistribution(
-                mean=float(observation.distribution.mean) * 10.0,
-                stddev=1.0,
-            ),
+            distribution=ForecastDistribution(mean=mean, stddev=1.0),
             source="raw-fixture",
             model_version="raw-fixture-v1",
             as_of=observation.as_of,
             provenance=observation.provenance,
-        ),
+        )
+        for metric, mean in metrics
     )
 
 
@@ -531,11 +533,13 @@ def _runtime_scoring_case(
         metric_values = (
             (ForecastMetric.PASS_YARDS, remaining / 0.04),
             (ForecastMetric.PASS_TD, pass_td),
+            (ForecastMetric.INTERCEPTIONS, 0.0),
         )
     else:
         metric_values = (
             (ForecastMetric.RECEPTIONS, 80.0),
             (ForecastMetric.REC_YARDS, source.standard_y1_points / 0.1),
+            (ForecastMetric.REC_TD, 0.0),
         )
 
     raw = tuple(
