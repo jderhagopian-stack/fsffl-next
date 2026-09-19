@@ -1,0 +1,111 @@
+{
+  "schema_version": "fsffl-conditional-production-magnitude-resolution-artifact-manifest-v1",
+  "date": "2026-09-19",
+  "outcome": "B",
+  "repo_artifacts": {
+    "stage0": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/STAGE0_CONTINUATION_MANIFEST.json",
+    "stage1": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/STAGE1_MECHANISM_CHECKPOINT.json",
+    "candidate_spec": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/PREFIT_CANDIDATE_SPECIFICATION.json",
+    "candidate_code": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/magnitude_resolution_v1.py",
+    "prefit_reload": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/PREFIT_RELOAD_VERIFICATION_V2.json",
+    "selection_freeze": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/HISTORICAL_SELECTION_FREEZE.json",
+    "rejection_ledger": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/REJECTION_LEDGER.md",
+    "final_outcome": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/FINAL_OUTCOME.json",
+    "management_summary": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/MANAGEMENT_SUMMARY.md"
+  },
+  "immutable_identity": {
+    "baseline_final_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "candidate_spec_git_blob_sha": "7e9b6ce921c6c369393ca7ffabcc8f920afea8ce",
+    "candidate_code_git_blob_sha": "7ccbb33de75ba4aca2535e2dbe3f07d9c91fcb39",
+    "candidate_code_sha256": "5a9439fcd51debec42e973ace7ac758b6c298370dad7c9b596480d9200331447"
+  },
+  "library_artifacts": {
+    "stage1_mechanism": {
+      "library_file_id": "libfile_375ae00d0ae48191b133947324ac2dad",
+      "sha256": "1734481f2af3e45ec9207847cbd2b9286589631a3655a6245ed8de512cb0d1e0"
+    },
+    "stage1_historical_tiers": {
+      "library_file_id": "libfile_0d028306180c8191b3cce18fb76dde6b",
+      "sha256": "72117ad24bbba6e789ed2905d27d0a096b38ca0cb0f7c8fc912a0beeef5e42ac"
+    },
+    "stage1_historical_cohorts": {
+      "library_file_id": "libfile_fe30d5c638ec8191bc5dd63ac2e4adc7",
+      "sha256": "44be2da53ab02d8f3cbf823101489a8c6d438dfab8da876ebb3f5365b9027647"
+    },
+    "stage1_source_scale": {
+      "library_file_id": "libfile_1ce94130187481919f672cc93fda116d",
+      "sha256": "5a4ad44a296033fbf8ec5daf7f48ad4b0cbaf30c4f3fa2d1930107ac62fbe088"
+    },
+    "stage1_current_waterfall": {
+      "library_file_id": "libfile_3859cd29524c8191bce2a637e9c2b116",
+      "sha256": "4b14eb50e31fe9644808e27a89195720584f7374ee1294ccbcf192e7f107ab0a"
+    },
+    "stage1_current_contributions": {
+      "library_file_id": "libfile_3616d5ffaf588191a7e8c27d4e9dc265",
+      "sha256": "bfc25e7e34a04b4ad76ce3847a645806d660b7ff957dc066d30aec2efcfc5ae6"
+    },
+    "candidate_code": {
+      "library_file_id": "libfile_c6d900b1f00c819184dd0794ba8e26fa",
+      "sha256": "5a9439fcd51debec42e973ace7ac758b6c298370dad7c9b596480d9200331447"
+    },
+    "historical_predictions": {
+      "library_file_id": "libfile_c11fa25466c08191b0890e9693f1185c",
+      "sha256": "1b68151d59ef9d3b40330a57108693f9c7f938fd330546a43c37d1a541a1673a",
+      "rows": 10336
+    },
+    "historical_scorecard": {
+      "library_file_id": "libfile_007b5e5192f0819191d476439b17303e",
+      "sha256": "42a09b976a1f2efd9575730c2387b0c642efe1059440af868df9e0ac57456072"
+    },
+    "retention_deciles": {
+      "library_file_id": "libfile_b626385d82748191a7567523808ddb60",
+      "sha256": "469f570958ce6b2b7d52d0c14ed2d1db2dce5d60273e6635158d57fae6e4f541"
+    },
+    "fit_log": {
+      "library_file_id": "libfile_1b6d8cca0f4881919d150fa7a5b69e01",
+      "sha256": "bfd198253168d60f91d8bb0035e2ba207b646e18109d24c22ee9203f71ec73ad"
+    },
+    "P0_control_parity": {
+      "library_file_id": "libfile_c2b4d3c312f48191b4acee2cf5dd9e12",
+      "sha256": "c562bed8e46c621403f627860bfaa1263f89d7ec7900f884a8175e3ae9ef0c85"
+    },
+    "selection_decision": {
+      "library_file_id": "libfile_b670f623c94c819193253e40d7caeab3",
+      "sha256": "2b6de8779f60639e90307772a46ac945e1c72f20f3159262638de5c530f2f49b"
+    },
+    "post_freeze_scorecard": {
+      "library_file_id": "libfile_aea807eb2cdc81919c88a961ce03016d",
+      "sha256": "d0db01d9b9b2dfe924395fc1ed546e53a353e3887e60caa3fc3559758076a0aa"
+    }
+  },
+  "execution_accounting": {
+    "candidate_families_total": 3,
+    "challengers_fitted": 2,
+    "authoritative_fold_pairs": 18,
+    "control_production_fits": 36,
+    "P1_anchor_fits": 18,
+    "P2_retention_model_fits": 27,
+    "hyperparameter_grid_searches": 0,
+    "route_searches": 0,
+    "external_data_searches": 0,
+    "current_player_tuning_actions": 0,
+    "second_current_board_materializations": 0,
+    "challenger_final_fits": 0,
+    "challenger_replay_runs": 0,
+    "retained_candidate_fit_wall_seconds_sum": 89.12310767173767,
+    "aborted_identical_monolithic_execution_attempts": 1,
+    "aborted_attempt_results_inspected": 0
+  },
+  "protected_state": {
+    "main_expected": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147_expected": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "production_authority_changed": false
+  },
+  "board_disposition": "No second 335-player CSV/XLSX was generated because no challenger cleared historical selection; directive requires stopping before final fit/replay/current-board rematerialization.",
+  "management_pdf": "Generated after final repository checkpoint and persisted to Library/chat.",
+  "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+}
