@@ -208,16 +208,11 @@ def run(
                 "governed Forecast diagnostic requires hosted persistence context; missing "
                 + ", ".join(missing)
             )
+        # A runner without hosted persistence may report raw-provider health,
+        # but it must never substitute a fresh live Forecast for the preserved
+        # preseason authority. The frozen-coordinate board and focused P0 runtime
+        # tests are the offline authority checks in this workflow.
         _provider_only_report(base, output_json, output_md, league_id=configured_league_id)
-        provider_report = json.loads(output_json.read_text(encoding="utf-8"))
-        provider_health = provider_report.get("provider_health", {})
-        if isinstance(provider_health, dict) and provider_health.get("status") == "AVAILABLE":
-            _augment_live_sanity_without_persistence(
-                base,
-                output_json,
-                output_md,
-                league_id=configured_league_id,
-            )
         return
 
     _retarget_state(base, configured_league_id)
