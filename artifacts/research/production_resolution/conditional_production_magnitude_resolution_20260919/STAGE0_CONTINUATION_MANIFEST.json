@@ -1,0 +1,85 @@
+{
+  "schema_version": "fsffl-conditional-production-magnitude-resolution-continuation-v1",
+  "directive": "FSFFL NEXT Forecast Conditional-Production Magnitude Resolution Directive",
+  "directive_date": "2026-09-19",
+  "starting_outcome": "B_RESEARCH_RESULT_NOT_READY_FOR_PROMOTION",
+  "starting_research_head": "67e73c6d6edd9ff6bfe80218eb12ea409041ddc1",
+  "live_state_verified": {
+    "branch_relation_to_start": "identical",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    }
+  },
+  "recovered_baseline": {
+    "deployment_spec_git_blob_sha": "b871adc642c96ecd7c5d95a513981ca05b26840a",
+    "historical_selection_freeze_git_blob_sha": "75eb29f739253a4b70b404c04304c7c0ebec1fe1",
+    "final_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "final_replay_coordinate_sha256": "410f66e80f90cb103424ecbf650ab3eab762c94ca8c62a23f1e8e96d51ea82a5",
+    "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+    "routing_selection_sha256": "f11c077bf7f01077ad3551a202fee10c29078f55386d63a79a3af66a94146daa",
+    "historical_scorecard_sha256": "92013412d9e21ffc6852effd925a8dce1797abc2a0aae9065a7e3204a35b755e",
+    "current_board_sha256": "cbcf22a1dbe12ffcf944806e97b7bfcab4759e0b720c61b2ed4dbcfb7bbe9aa3",
+    "credibility_analysis_sha256": "70d3b0a1aecf461f0cbb3c0f1fbb350c19b69a167b02c2ff4be831cc42d236d2",
+    "replay": {
+      "rows": 20610,
+      "max_probability_diff": 4.996003610813204e-16,
+      "max_point_diff": 1.4210854715202004e-13,
+      "route_mismatches": 0,
+      "pass": true
+    },
+    "frozen_route": {
+      "Y2": "universal D1",
+      "Y3": {
+        "QB|developmental": "D0",
+        "QB|established": "D1",
+        "QB|veteran": "D1",
+        "RB|developmental": "D1",
+        "RB|established": "D0",
+        "RB|veteran": "D0",
+        "WR|developmental": "D1",
+        "WR|established": "D1",
+        "WR|veteran": "D0",
+        "TE|developmental": "D1",
+        "TE|established": "D1",
+        "TE|veteran": "D0"
+      }
+    },
+    "final_cutoff": {
+      "Y2": {
+        "max_source_season": 2023,
+        "max_target_season": 2025
+      },
+      "Y3": {
+        "max_source_season": 2022,
+        "max_target_season": 2025
+      }
+    }
+  },
+  "minimum_deterministic_checks": {
+    "durable_hashes_match_prior_manifest": true,
+    "replay_checkpoint_pass": true,
+    "route_identity_match": true,
+    "no_refit_performed": true
+  },
+  "study_boundary": {
+    "allowed": "Investigate and repair only conditional-active production magnitude using maximum two predeclared challengers P1/P2 plus frozen P0 control.",
+    "current_board_status": "KNOWN_DIAGNOSTIC_NOT_SELECTION_EVIDENCE",
+    "prohibited": [
+      "named-player tuning",
+      "hidden ensemble",
+      "new external data family",
+      "player-specific exception",
+      "manual elite multiplier",
+      "fourth broad Forecast family",
+      "routing reopen unless mathematically incompatible"
+    ]
+  },
+  "execution_accounting_at_stage0": {
+    "new_model_fits": 0,
+    "current_board_rematerializations": 0,
+    "tuning_actions": 0
+  }
+}
