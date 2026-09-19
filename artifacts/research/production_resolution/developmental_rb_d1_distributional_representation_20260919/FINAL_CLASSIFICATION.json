@@ -1,0 +1,50 @@
+{
+  "schema_version": "fsffl-developmental-rb-d1-distributional-representation-final-v1",
+  "classification": "D. STRUCTURAL CONCERN CONFIRMED BUT NO SAFE CHALLENGER",
+  "control": "P0/D1 remains frozen production control",
+  "existing_alternative_D0": "does not resolve the high-source developmental-RB Y3 bias and is already inferior to D1 on prior distributional evidence",
+  "new_candidate": "D1R",
+  "preholdout_result": "FAIL_PREHOLDOUT",
+  "preholdout_reasons": [
+    "Y2 mid-block raw CRPS worsened and pooled CRPS 95% interval crossed zero.",
+    "Y3 pooled CRPS gain 95% interval crossed zero.",
+    "Y3 high-source mean conditional-retention bias worsened from about -0.1257 under D1 to about -0.1359 under D1R rather than improving by the preregistered >=0.05."
+  ],
+  "locked_replication": {
+    "evaluated_once": true,
+    "candidate_changed_after_holdout": false,
+    "developmental_RB_Y2": {
+      "n": 213,
+      "crps_gain": 0.145802,
+      "crps_ci95": [
+        -0.297704,
+        0.505731
+      ],
+      "mae_gain": 0.575092
+    },
+    "developmental_RB_Y3": {
+      "n": 213,
+      "crps_gain": 0.067772,
+      "crps_ci95": [
+        -0.284,
+        0.35531
+      ],
+      "mae_gain": 0.444366
+    },
+    "high_source_Y3_active": {
+      "n": 3,
+      "realized_retention_median": 0.727665,
+      "d1_retention_median": 0.498811,
+      "d1r_retention_median": 0.482449,
+      "d1_mean_retention_bias": -0.209379,
+      "d1r_mean_retention_bias": -0.223625
+    },
+    "interpretation": "Locked replication does not rescue the preregistered candidate; high-source bias again moves in the wrong direction."
+  },
+  "state_calibration": "unchanged exactly by construction",
+  "current_player_evidence_used_for_fit_or_selection": false,
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "merge": false,
+  "deploy": false
+}
