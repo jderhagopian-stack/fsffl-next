@@ -25,6 +25,11 @@ from fsffl.product.i1_scoring_bridge import (
     FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
 )
 from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
+from fsffl.product.selected_future_forecast import (
+    SELECTED_FUTURE_FORECAST_VERSION,
+    selected_future_source_player_ids,
+    selected_future_source_row,
+)
 from fsffl.product.runtime import UserRuntimeContext
 from fsffl.state.models import (
     League,
