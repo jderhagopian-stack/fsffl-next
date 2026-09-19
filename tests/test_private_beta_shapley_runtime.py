@@ -250,7 +250,6 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
     state, observation = _fixture()
     unknown_player = state.players[0].model_copy(
         update={
-            "player_id": "unknown",
             "full_name": "No Completed Source Match",
             "provider_refs": (),
         }
@@ -261,32 +260,19 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
             "players": (unknown_player,),
             "player_states": (
                 PlayerState(
-                    player_id="unknown",
+                    player_id=observation.player_id,
                     as_of=now,
                     provenance=state.player_states[0].provenance,
                 ),
             ),
         }
     )
-    unknown_forecast = observation.model_copy(update={"player_id": "unknown"})
-    evidence = SimpleNamespace(
-        raw_forecasts=tuple(
-            raw.model_copy(update={"player_id": "unknown"})
-            for raw in _raw_forecasts(observation)
-        ),
-        league_scored_forecasts=(unknown_forecast,),
-    )
-    context = UserRuntimeContext(
-        user_id="user",
-        league_state=unknown_state,
-        forecast_evidence=cast(Any, evidence),
-    )
     contract = PrivateBetaShapleyContractLoader(
-        year_one_loader=lambda _state: _authority_evidence(unknown_forecast)
+        year_one_loader=lambda _state: _authority_evidence(observation)
     )(context)
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
     assert contract.coverage.player_count == 0
-    assert "selected_future_forecast_coordinate" in contract.coverage.missing_required_fact_families
+    assert "completed_source_player_mapping" in contract.coverage.missing_required_fact_families
 
 
 # This focused file intentionally triggers the lightweight activation/API diagnostic workflow.
