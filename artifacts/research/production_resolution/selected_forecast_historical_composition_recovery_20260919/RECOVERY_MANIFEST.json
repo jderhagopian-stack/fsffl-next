@@ -1,0 +1,257 @@
+{
+  "schema_version": "fsffl-selected-forecast-historical-composition-recovery-v1",
+  "date": "2026-09-19",
+  "classification": "PARTIAL RECOVERY - MANAGEMENT DECISION REQUIRED",
+  "live_refs": {
+    "research_head_before_persistence": "3bbdf8ce75eff05e26c154b2c38c70d425a4a5d2",
+    "pr147_head": "948c1bc82c1208e0bc7caf0064993d76838a9d87",
+    "pr147": "open_unmerged",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76"
+  },
+  "protected_actions": {
+    "pr147_runtime_changed": false,
+    "main_changed": false,
+    "refit": false,
+    "retrain": false,
+    "retune": false,
+    "reselect": false,
+    "new_composition": false,
+    "merge": false,
+    "deploy": false
+  },
+  "recovered_historical_execution": {
+    "candidate": "fixed routed Forecast + frozen M1a + exact frozen two-prior-season consistency",
+    "routing": "QB=A2+C+D; RB/WR/TE=A2+D",
+    "board": {
+      "players": 335,
+      "rows": 670,
+      "canonical_sha256": "723f14076f5d0b8801cfff731c8a533494a9d8bbf98531bf25e2d45a16ce1fe8"
+    },
+    "gate_b": {
+      "sentinels": 8,
+      "max_abs_numeric_diff": 0,
+      "tolerance": 0.000001
+    },
+    "m1a": {
+      "fit": "BayesianRidge(fit_intercept=False) of target within-state residual-z on current within-state residual-z",
+      "formula": "m1a_z=beta_h*current_resid_z; mean_after_m1a(state)=max(0,base_mean(state)+m1a_z*frozen_training_state_sd(state)); positive states only",
+      "Y2": {
+        "training_rows": 5974,
+        "beta": 0.07939942531895901
+      },
+      "Y3": {
+        "training_rows": 4781,
+        "beta": 0.07812314495946265
+      }
+    },
+    "prior2": {
+      "fit": "BayesianRidge(fit_intercept=False) on target residual-z remaining after M1a",
+      "features": "mean(z[t-1],z[t-2]), abs(z[t-1]-z[t-2]), explicit coverage; training-only ddof=0 standardization on covered rows; global effects + position mean/gap deviations",
+      "uncovered": "continuous values=0; coverage=0",
+      "Y2_transform": {
+        "mean_mu": 0.18051735619583884,
+        "mean_sd": 0.8250069242245336,
+        "gap_mu": 1.109345052497919,
+        "gap_sd": 0.9101986764652646
+      },
+      "Y3_transform": {
+        "mean_mu": 0.2161366754026284,
+        "mean_sd": 0.828655291462875,
+        "gap_mu": 1.104921589465751,
+        "gap_sd": 0.891872970017528
+      },
+      "coefficient_order": [
+        "mean_global",
+        "gap_global",
+        "coverage_global",
+        "mean_dev_QB",
+        "gap_dev_QB",
+        "mean_dev_RB",
+        "gap_dev_RB",
+        "mean_dev_WR",
+        "gap_dev_WR",
+        "mean_dev_TE",
+        "gap_dev_TE"
+      ],
+      "Y2_coefficients": [
+        0.104407393,
+        0.0256567937,
+        0.026386248,
+        0.158161626,
+        -0.0501651272,
+        -0.00347923962,
+        -0.000109866463,
+        0.0189868866,
+        -0.0249518009,
+        -0.0206613761,
+        0.0522830842
+      ],
+      "Y3_coefficients": [
+        0.0896474572,
+        0.00230448058,
+        0.0208369151,
+        0.180179816,
+        -0.057293661,
+        -0.00910620769,
+        -0.0241324898,
+        0.0336007196,
+        -0.0225647051,
+        -0.00887356736,
+        0.000142033387
+      ],
+      "formula": "consistency_z=dot(frozen coefficients, standardized prior2 feature vector); final_mean(state)=max(0,mean_after_m1a(state)+consistency_z*frozen_training_state_sd(state)); positive states only"
+    },
+    "final_points": "expected_points=sum(probability[state]*final_mean[state]); out mean=0; persistence=1-P(out); conditional_active=expected_points/persistence"
+  },
+  "surviving_library_artifacts": [
+    {
+      "name": "CHECKSUMS.txt",
+      "library_file_id": "libfile_1c36277d4dc4819194850d3b9d8b27fe",
+      "evidence": "recovered canonical JSONs copied byte-for-byte; 335 Y1 / 670 board / 35 age rows and governed hashes"
+    },
+    {
+      "name": "replacement_board.json",
+      "library_file_id": "libfile_cb7c4e3992d08191a51aa20f8b910307",
+      "rows": 670,
+      "canonical_sha256": "723f14076f5d0b8801cfff731c8a533494a9d8bbf98531bf25e2d45a16ce1fe8",
+      "evidence": "per-row probabilities, final state_means, current_resid_z, m1a_z_contribution, prior2 mean/gap/coverage, two_prior_z_contribution, expected_points"
+    },
+    {
+      "name": "governed_year1_universe_age_complete.json",
+      "library_file_id": "libfile_dae78ced2d1c8191b01411c46c94865a",
+      "rows": 335,
+      "canonical_sha256": "5dee244f794cd504a84d1575ed1d5fca5b467e604f682018a850363f7fbd5c0f"
+    },
+    {
+      "name": "current_player_sentinel_frozen_forecast_audit.csv",
+      "library_file_id": "libfile_00049f2803608191bc3cff84a358651b",
+      "evidence": "full-precision eight-sentinel M1a/consistency contributions"
+    }
+  ],
+  "chatgpt_document_inventory": [
+    {
+      "name": "FSFFL_NEXT_Identity_Materialization_Dependency_Recovery_Report(1).pdf",
+      "library_file_id": "libfile_d17afa5f16408191bab8a1f564d4fed2",
+      "support": "lines 17-66, pages 1-2: exact candidate, fit procedures, final coefficients/transforms"
+    },
+    {
+      "name": "FSFFL_NEXT_Work_After_Reset_Y2Y3_Parity_Shapley_Directive(1).pdf",
+      "library_file_id": "libfile_f0c79fc5f32c8191a6d87e8cf57a64c8",
+      "support": "lines 12-51: frozen model, Gate A fields, Gate B parity"
+    },
+    {
+      "name": "FSFFL_NEXT_Multi_Year_Consistency_Experiment_Results(1).pdf",
+      "library_file_id": "libfile_102b0b971af48191aa1cb9e0ae2e2070",
+      "support": "lines 80-98, page 3: M1a then prior2 deterministic recomputation order"
+    },
+    {
+      "name": "FSFFL_NEXT_Final_Holdout_Evaluation_Directive(1).pdf",
+      "library_file_id": "libfile_bddca38de7bc8191bfb821d70748cc60",
+      "support": "lines 15-34: fixed routed + M1a + two-prior candidate frozen before holdout"
+    },
+    {
+      "name": "FSFFL_NEXT_Full_335_Player_Projection_Board_Summary.md",
+      "library_file_id": "libfile_18d830772fd48191b949a1266bbcb0d5",
+      "support": "lines 1-20: exact 335/670 artifacts and hashes"
+    },
+    {
+      "name": "FSFFL_NEXT_Provenance_Closure_Request(1).pdf",
+      "library_file_id": "libfile_d8858cc0b2808191ab04d9b8d36f1d85",
+      "support": "recovery required exact 670-row hash, no new model"
+    },
+    {
+      "name": "FSFFL_NEXT_Management_Authorization_Close_Legacy_Parity_Loop(1).pdf",
+      "library_file_id": "libfile_c1f4490239348191939e991b39cdb4c0",
+      "support": "replacement-coordinate board + exact sentinel authority without model change"
+    }
+  ],
+  "repository_inventory": [
+    {
+      "path": "artifacts/research/production_resolution/STAGE2_M1A_VALIDATION_2026-09-18.json",
+      "support": "exact M1a method"
+    },
+    {
+      "path": "artifacts/research/production_resolution/STAGE2_M1A_M1B_CHECKPOINT_2026-09-18.md",
+      "support": "exact M1a equation"
+    },
+    {
+      "path": "artifacts/research/production_resolution/MULTI_YEAR_CONSISTENCY_EXPERIMENT_2026-09-18.json",
+      "support": "exact prior2 representation/fit/order/application"
+    },
+    {
+      "path": "artifacts/research/production_resolution/FINAL_HOLDOUT_EVALUATION_2026-09-18.json",
+      "support": "frozen candidate and reconstruction checks"
+    },
+    {
+      "path": "artifacts/research/production_resolution/CURRENT_PLAYER_SENTINEL_FINAL_DIAGNOSTIC_2026-09-18.json",
+      "support": "full-precision final fit and separate M1a/consistency deltas"
+    },
+    {
+      "path": "artifacts/research/production_resolution/IDENTITY_MATERIALIZATION_DEPENDENCY_RECOVERY_2026-09-18.json",
+      "support": "exact final-current fit procedure/parameters"
+    },
+    {
+      "path": "artifacts/research/production_resolution/governed_exact_age_completion_20260918/FINAL_DIAGNOSTIC.md",
+      "support": "Gate A 670-row execution and Gate B max diff 0.0"
+    },
+    {
+      "path": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/DEPLOYMENT_SPECIFICATION.json",
+      "support": "later D0/D1 redevelopment; D1 embeds prior2; no M1a"
+    },
+    {
+      "path": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/FINAL_OUTCOME.json",
+      "support": "later redevelopment Outcome B / not promotion eligible"
+    }
+  ],
+  "chronology": [
+    {
+      "time": "2026-09-18T01:41:01Z",
+      "event": "multi-year consistency experiment persisted",
+      "commit": "82ec03803843ded2b6bc817355fb344f5d096409"
+    },
+    {
+      "time": "2026-09-18T03:50:09Z",
+      "event": "final current-player sentinel diagnostic persisted",
+      "commit": "c885f5d5e4f76efbc30da96c74a723a2c51b41f3"
+    },
+    {
+      "time": "2026-09-18T19:22:26Z",
+      "event": "age-to-Shapley final diagnostic records 670-row board execution",
+      "commit": "4ea39b9b03e25fbc92550b0d709f8e0cc440445a"
+    },
+    {
+      "time": "2026-09-18T19:54:38Z",
+      "event": "surviving replacement_board.json recovered to Library with exact canonical hash"
+    },
+    {
+      "time": "2026-09-19T04:44:43Z",
+      "event": "D0/D1 redevelopment deployment specification first frozen",
+      "commit": "53794cbdce0c5d2762f5f461c93c42c45a858606"
+    },
+    {
+      "time": "2026-09-19T04:54:27Z",
+      "event": "D0/D1 historical selection frozen",
+      "commit": "7130beb75ec22fdaaeb25377e7fc071a8edf7c1c"
+    }
+  ],
+  "d0_d1_recovery_result": {
+    "historically_in_board": false,
+    "reason": "D0/D1 deployment specification postdates the September 18 board by more than nine hours.",
+    "D1_prior2": "D1 directly embeds prior2_mean_z, prior2_gap_z, prior2_coverage and position deviations in its fitted production BayesianRidge.",
+    "M1a_in_D0_D1": false,
+    "final_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "outcome": "B - RESEARCH_RESULT_NOT_READY_FOR_PROMOTION"
+  },
+  "unresolved_choices": [
+    "Whether September 18 routed+M1a+separate-prior2 remains future-production authority or September 19 D0/D1 replaces it.",
+    "If D0/D1 replaces it, whether/how M1a is retained and what residual/state-SD coordinate it uses; no historical artifact defines M1a after D0/D1.",
+    "If D1 is used, whether the separate prior2 layer is removed or reformulated; D1 already consumes the prior2 signal internally, so stacking the old layer would be an ungoverned double-use absent a new rule."
+  ],
+  "replay_status": {
+    "new_replay_in_this_audit": false,
+    "rationale": "No historically valid D0/D1->M1a->separate-prior2 composition exists to replay; inventing one is prohibited.",
+    "prior_verified_execution": "Gate A exact board hash; Gate B max numeric sentinel difference 0.0.",
+    "board_recovery": "The surviving 670-row board was recovered byte-for-byte and hash-verified, not reverse-engineered."
+  },
+  "conclusion": "The September 18 historical board-producing composition is substantially recovered. What remains unresolved is not a lost historical formula but a later cross-generation authority/composition decision. Therefore management must decide before implementation."
+}
