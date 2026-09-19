@@ -1,0 +1,372 @@
+{
+  "schema_version": "fsffl-forecast-redevelopment-deployment-spec-v1",
+  "status": "PREFIT_FROZEN_SPECIFICATION",
+  "directive_sha256": "15efef9594c94d86103177037a4de7755adea3b8e67d9eb1252c5b85fbe75554",
+  "authority": {
+    "research_only": true,
+    "main_write": false,
+    "pr147_write": false,
+    "production_authority_change": false,
+    "current_player_tuning": false,
+    "external_data_family": false,
+    "bounded_candidates": [
+      "D0",
+      "D1",
+      "D2"
+    ]
+  },
+  "environment": {
+    "python": "3.13.5",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scipy": "1.17.0",
+    "scikit_learn": "1.8.0"
+  },
+  "governed_inputs": {
+    "phase2_workflow_run": 35196266697,
+    "phase2_artifact_id": 10486530017,
+    "phase2_zip_sha256": "f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff",
+    "player_season_panel": {
+      "path": "future-state-phase2/phase2_player_season_panel.csv",
+      "sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+      "rows": 15492,
+      "seasons": [
+        1999,
+        2025
+      ],
+      "positions": [
+        "QB",
+        "RB",
+        "WR",
+        "TE"
+      ]
+    },
+    "historical_q3_rows": {
+      "path": "future-state-phase2/phase2_q3_age_state_rows.csv",
+      "sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+      "rows": 31218,
+      "source_seasons": [
+        2005,
+        2022
+      ],
+      "horizons": [
+        1,
+        2,
+        3
+      ]
+    },
+    "governed_current_year1": {
+      "rows": 335,
+      "sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+      "use_before_historical_freeze": false
+    },
+    "current_identity_history": {
+      "rows": 335,
+      "sha256": "95fd6565a908b044ca234898cc801749abb2b6aa62a84c2d3c917445d369cda1",
+      "use_before_historical_freeze": false
+    }
+  },
+  "common_state_probability_layer": {
+    "purpose": "Fixed shared persistence and ordered future-state probability layer. Redevelopment changes conditional production only.",
+    "states": [
+      "out",
+      "depth",
+      "usable",
+      "starter",
+      "premium",
+      "elite"
+    ],
+    "routing": {
+      "QB": "A2+C+D",
+      "RB": "A2+D",
+      "WR": "A2+D",
+      "TE": "A2+D"
+    },
+    "probability_estimator": {
+      "family": "sklearn.linear_model.LogisticRegression",
+      "C": 0.25,
+      "solver": "lbfgs",
+      "max_iter": 2000,
+      "random_state": 20260915,
+      "vectorizer": "sklearn.feature_extraction.DictVectorizer(sort=True)",
+      "minimum_rows": 100,
+      "minimum_each_binary_class": 15
+    },
+    "persistence_features": {
+      "categorical": [
+        "position",
+        "source_state",
+        "horizon",
+        "experience_band",
+        "coarse_age_band"
+      ],
+      "continuous": {
+        "experience_capped_15_div10": "min(max(experience,0),15)/10",
+        "source_log_points_div6": "log1p(max(source_points,0))/6",
+        "prior_log_points_div6": "log1p(max(prior1_points,0))/6; 0 if uncovered",
+        "source_minus_prior_div100_clipped": "clip((source_points-prior1_points_or_0)/100,-2,2)",
+        "prior1_coverage": "1 if genuine previous-season row exists else 0",
+        "opportunity_coverage": "1 only for governed weak/established source role with games/opportunity coverage",
+        "log_opportunity_per_game_div4": "log1p(max(opportunity_per_game,0))/4 when covered else 0",
+        "log_games_div3": "log1p(max(games,0))/3 when covered else 0"
+      },
+      "A2_exact_age": {
+        "QB": [
+          "(age-31)/5",
+          "max(0,age-37)/5"
+        ],
+        "RB": [
+          "(age-27)/5",
+          "max(0,age-31)/5"
+        ],
+        "WR": [
+          "(age-27)/5",
+          "max(0,age-31)/5"
+        ],
+        "TE": [
+          "(age-27)/5",
+          "max(0,age-31)/5",
+          "max(0,24-age)/5"
+        ]
+      },
+      "C_QB_only": "For QB prime/aging only: prior_age_state_resid_z from previous completed season, plus explicit coverage; unsupported/missing -> 0 with coverage 0."
+    },
+    "ordered_positive_state_features": {
+      "common": "Same common source features, coarse age rather than A2 exact-age terms.",
+      "C_QB_only": "Same QB prior_age_state_resid_z memory feature and coverage.",
+      "D_state_percentile": "Within source_season x position x source_state percentile = (average_rank(source_points)-0.5)/cell_n. Add centered 2*(pct-0.5) position-specific term; for premium/elite add max(0,(pct-0.8)/0.2) and max(0,(0.2-pct)/0.2)."
+    },
+    "ordered_thresholds": [
+      "P(usable|active) = P(state rank >= usable)",
+      "P(starter|active) = P(state rank >= starter)",
+      "P(premium|active) = P(state rank >= premium)",
+      "P(elite|active) = P(state rank >= elite)"
+    ],
+    "monotonicity": "At prediction, cumulative ordered probabilities are clipped to [0,1] and each successive threshold is min(previous_threshold,current_prediction). State masses are consecutive differences.",
+    "current_C_materialization": "For a 2026 board, QB C memory is the 2025 age-band x state residual computed point-in-time from completed seasons strictly before 2025, using the frozen Phase-2 age-state residual definition. This new redevelopment does not target the lost sentinel scalar.",
+    "historical_fit_rule": {
+      "Y2": "For evaluation source t: train pooled h1/h2 rows with source_season<t and source_season+horizon<=t-1. For final 2026 fit: pooled h1/h2 rows with source_season<=2023 and target season<=2025.",
+      "Y3": "For evaluation source t: train h3 rows with source_season<t and source_season+3<=t-1. For final 2026 fit: h3 rows with source_season<=2022 and target season<=2025."
+    }
+  },
+  "source_coordinate": {
+    "eligible_source_states": [
+      "depth",
+      "usable",
+      "starter",
+      "premium",
+      "elite"
+    ],
+    "source_percentile": "Within source_season x position over eligible source players, average-rank percentile (rank-0.5)/n.",
+    "prior1_points": "Fantasy points from exact previous completed season for same player/position; otherwise uncovered.",
+    "age": "Source-season age_years from governed panel.",
+    "experience": "Source-season experience_years from governed panel.",
+    "career_stage": {
+      "developmental": "experience 0-3",
+      "established": "experience 4-8",
+      "veteran": "experience 9+"
+    },
+    "target_active": "A target player-season row exists and realized target_state is positive; missing target row is out/non-persistent.",
+    "deep_collapse_stress": "target_points <= 0.25 * source_points, including non-persistent zero-point outcomes. Reporting only; never a route input."
+  },
+  "production_preprocessing": {
+    "target_space": "linear fantasy points",
+    "target_population": "Only target-active rows are used to fit D0/D1 conditional-production models.",
+    "prediction_floor": 0,
+    "prediction_cap": null,
+    "continuous_scaling": "Training-only mean and population SD (ddof=0). If SD<1e-12 use 1.0.",
+    "covered_history_scaling": "Prior-history continuous features are centered/scaled on covered training rows only. Uncovered transformed value=0 with explicit coverage flag.",
+    "categorical_encoding": "DictVectorizer(sort=True), one-hot keys encoded as numeric 1 values.",
+    "deterministic_row_order": "Sort by source_season, player_id, position, horizon before vectorization/fitting."
+  },
+  "D0": {
+    "name": "Reproducible magnitude baseline",
+    "estimator": {
+      "family": "sklearn.linear_model.BayesianRidge",
+      "max_iter": 300,
+      "tol": 0.000001,
+      "alpha_1": 0.000001,
+      "alpha_2": 0.000001,
+      "lambda_1": 0.000001,
+      "lambda_2": 0.000001,
+      "compute_score": false,
+      "fit_intercept": true,
+      "copy_X": true,
+      "verbose": false
+    },
+    "fit_separately_by_horizon": [
+      2,
+      3
+    ],
+    "categorical_features": [
+      "position",
+      "source_state"
+    ],
+    "continuous_features": [
+      "log1p(source_points)",
+      "source_percentile",
+      "age",
+      "min(experience,15)",
+      "covered log1p(prior1_points)"
+    ],
+    "coverage_flags": [
+      "prior1_coverage"
+    ],
+    "partial_pooling": "Single shared horizon model plus ridge-regularized position deviations for every continuous feature. No player-specific coefficients.",
+    "position_deviations": [
+      "source_log",
+      "source_percentile",
+      "age",
+      "experience",
+      "prior1_log"
+    ],
+    "output": "conditional_active_points=max(0,prediction); expected_points=p_active_from_shared_state_layer*conditional_active_points"
+  },
+  "D1": {
+    "name": "State-conditional richer model",
+    "estimator": "Same explicit BayesianRidge settings as D0, fit separately by horizon.",
+    "base_features": "All D0 source features.",
+    "future_state_features": [
+      "future_state one-hot for depth/usable/starter/premium/elite",
+      "position x future_state one-hot",
+      "future_state x standardized source_log",
+      "future_state x standardized source_percentile"
+    ],
+    "prior2_consistency": {
+      "coverage": "1 only when both t-1 and t-2 point-in-time age-band x state residuals exist for same player.",
+      "raw_mean": "mean(z_tminus1,z_tminus2)",
+      "raw_gap": "abs(z_tminus1-z_tminus2)",
+      "transform": "Training-only covered-row mean/SD, ddof=0; transformed values 0 when uncovered.",
+      "features": [
+        "prior2_mean_z",
+        "prior2_gap_z",
+        "prior2_coverage",
+        "position deviations for mean_z and gap_z"
+      ]
+    },
+    "partial_pooling": "One shared horizon model across positions and all positive future states. State, position-state, state-magnitude, and position-deviation terms are regularized jointly; no separate tiny-cell models.",
+    "output": "Predict a nonnegative conditional point mean for each positive future state, then expected_points=sum(shared_state_probability[state]*conditional_points[state]); out-state production=0."
+  },
+  "D2_routing": {
+    "candidates_only": [
+      "D0",
+      "D1"
+    ],
+    "selection_order": [
+      "universal",
+      "position_only",
+      "position_x_career_stage"
+    ],
+    "chronological_blocks": {
+      "early": [
+        2014,
+        2015,
+        2016
+      ],
+      "mid": [
+        2017,
+        2018
+      ],
+      "validation": [
+        2019,
+        2020
+      ]
+    },
+    "universal_rule": "D1 becomes the preferred universal treatment for a horizon only if paired mean absolute-error gain D0-D1 is >0 in each early, mid, and validation block. Otherwise D0 is the universal default for that horizon.",
+    "cell_support_rule": "A route cell is eligible only if it has >=20 identical-observation evaluation rows in each of early, mid, and validation and >=4 distinct source seasons overall.",
+    "cell_assignment_rule": "Eligible position or position x career-stage cell routes to D1 only if D0-D1 paired mean absolute-error gain is >0 in every chronological block for that horizon. Otherwise that cell uses D0.",
+    "position_route_rule": "Construct using the cell assignment rule. It may replace the universal treatment only if its aggregate D0/route paired mean absolute-error gain is nonnegative in every chronological block for that horizon and strictly positive in at least one block.",
+    "career_route_rule": "Test only after position routing. It may replace position-only routing only if its aggregate paired mean absolute-error gain versus position routing is nonnegative in every chronological block for that horizon and strictly positive in at least one block. If effectively identical (all absolute block gains <0.05 points), prefer position-only.",
+    "sparse_rule": "Weak, mixed, or unsupported cells use D0.",
+    "current_players_forbidden": true
+  },
+  "historical_evaluation": {
+    "selection_source_seasons": [
+      2014,
+      2020
+    ],
+    "blocks": {
+      "early": [
+        2014,
+        2016
+      ],
+      "mid": [
+        2017,
+        2018
+      ],
+      "validation": [
+        2019,
+        2020
+      ]
+    },
+    "post_freeze_non_selection_replication": {
+      "Y2": [
+        2021,
+        2022
+      ],
+      "Y3": [
+        2021,
+        2022
+      ],
+      "note": "These years have been inspected previously and are descriptive replication only; they cannot change the selected route."
+    },
+    "metrics": [
+      "unconditional MAE and signed bias",
+      "conditional-active MAE and bias",
+      "Y2/Y3 separately",
+      "QB/RB/WR/TE",
+      "chronological blocks/source seasons",
+      "top10 and top5 source producers by position-season percentile",
+      "age<=25",
+      "career developmental/established/veteran",
+      "prime-established = career established and governed age_band=prime",
+      "role_loss existing governed label",
+      "deep_collapse defined above",
+      "persistence Brier/logloss and six-state Brier/logloss for shared state layer",
+      "systematic over/underprediction rate"
+    ],
+    "uncertainty": {
+      "method": "Deterministic two-way multiplicative cluster bootstrap on paired row-level absolute-error differences with independent source-season and player exponential(1) weights; normalize by weighted row sum.",
+      "repetitions": 5000,
+      "seed": 20260919,
+      "use": "Descriptive 95% percentile interval; routing selection remains governed by predeclared chronological sign/support rules, not by CI shopping."
+    }
+  },
+  "final_cutoff_2026": {
+    "Y2": {
+      "max_source_season": 2023,
+      "max_target_season": 2025
+    },
+    "Y3": {
+      "max_source_season": 2022,
+      "max_target_season": 2025
+    },
+    "performance_independent": true
+  },
+  "serialization": {
+    "specification_file": "DEPLOYMENT_SPECIFICATION.json",
+    "implementation_file": "redevelopment_v1.py",
+    "fitted_package": "FINAL_FITTED_PACKAGE.json",
+    "package_contents": [
+      "vectorizer feature_names",
+      "training scaler statistics",
+      "BayesianRidge coefficients/intercept/noise precision/hyperparameters",
+      "state-probability vectorizers and logistic coefficients/intercepts",
+      "route table",
+      "data hashes",
+      "environment versions"
+    ],
+    "float_encoding": "JSON decimal strings generated from Python float repr; arrays converted to JSON numeric lists.",
+    "hashing": "SHA-256 over exact UTF-8 bytes of each JSON/CSV/code artifact; package manifest records hashes.",
+    "replay_tolerance": {
+      "probabilities": 1e-10,
+      "points": 1e-8
+    }
+  },
+  "stop_conditions": [
+    "If historical source/target reconstruction fails parity with governed rows beyond declared tolerance, stop Outcome C.",
+    "If no bounded candidate/routing earns support, Outcome B and stop; do not open another family.",
+    "If final fitted package fails reload/replay tolerance, Outcome C and stop before current players.",
+    "After current-player inspection, any material systematic credibility defect yields Outcome B without tuning."
+  ]
+}
