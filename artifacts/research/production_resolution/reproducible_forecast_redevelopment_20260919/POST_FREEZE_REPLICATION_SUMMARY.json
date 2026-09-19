@@ -1,0 +1,99 @@
+{
+  "schema_version": "fsffl-redeveloped-forecast-post-freeze-replication-v1",
+  "frozen_selection_commit": "7130beb75ec22fdaaeb25377e7fc071a8edf7c1c",
+  "selection_changed": false,
+  "source_seasons": [
+    2021,
+    2022
+  ],
+  "library_artifact": {
+    "library_file_id": "libfile_d169ea1d3e1c81918d33d865c840823e",
+    "sha256": "86312ed1b8641ec7d88044a400862685159a3aecddf5953ec05d75f2059d92d1"
+  },
+  "Y2": {
+    "n": 1210,
+    "D0_mae": 31.0275116920968,
+    "D1_route_mae": 30.175458769075203,
+    "gain": 0.852052923021597,
+    "source2021": [
+      29.93523666838218,
+      29.04402996186722
+    ],
+    "source2022": [
+      32.15277488766856,
+      31.341058244957246
+    ],
+    "top10": [
+      56.31853651229594,
+      54.562019160843874
+    ],
+    "top5": [
+      62.275012755678745,
+      59.910535950146524
+    ],
+    "age_le25": [
+      34.37970574990373,
+      32.73678348513669
+    ],
+    "developmental": [
+      30.604174660046358,
+      29.31543746998525
+    ],
+    "role_loss": [
+      40.11516622477963,
+      41.71473835931543
+    ],
+    "deep_collapse": [
+      24.596121301312635,
+      23.69105557797384
+    ]
+  },
+  "Y3": {
+    "n": 1210,
+    "D0_mae": 29.171605855411674,
+    "D1_mae": 28.86413855723645,
+    "selected_route_mae": 28.793581432915754,
+    "gain_vs_D0": 0.3780244224959203,
+    "source2021": [
+      28.86516117749459,
+      28.572218415835
+    ],
+    "source2022": [
+      29.48731052210082,
+      29.021585081799
+    ],
+    "top10": [
+      57.489,
+      56.885
+    ],
+    "top5": [
+      62.529,
+      60.543
+    ],
+    "age_le25": [
+      35.678,
+      34.825
+    ],
+    "developmental": [
+      30.791,
+      30.406
+    ],
+    "established": [
+      26.836,
+      26.475
+    ],
+    "veteran": [
+      27.754,
+      27.35
+    ],
+    "role_loss": [
+      32.426,
+      32.118
+    ],
+    "deep_collapse": [
+      21.224,
+      20.684
+    ]
+  },
+  "interpretation": "Descriptive post-freeze replication supports the already-frozen route. It is not used for selection and cannot alter the route."
+}
