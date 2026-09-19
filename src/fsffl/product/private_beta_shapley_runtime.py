@@ -7,7 +7,6 @@ from typing import Callable
 
 from fsffl.forecast.i1_artifact import FrozenI1Artifact
 from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact, map_current_i1_facts
-from fsffl.forecast.league_scoring import derive_league_fantasy_point_forecasts
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import LeagueState, Position
 from fsffl.value.live_intrinsic_calendar import (
@@ -28,15 +27,8 @@ from fsffl.value.shapley_intrinsic_contract import (
 
 from .i1_player_scoring import (
     FUTURE_I1_PLAYER_SCORING_VERSION,
-    player_scoring_multipliers,
+    build_future_i1_player_scoring_multipliers,
     translate_future_i1_result_for_player,
-)
-from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
-from .selected_future_forecast import (
-    SELECTED_FUTURE_FORECAST_PACKAGE_SHA256,
-    SELECTED_FUTURE_FORECAST_SOURCE_SHA256,
-    SELECTED_FUTURE_FORECAST_VERSION,
-    SelectedFutureForecast,
 )
 from .runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
 
@@ -52,8 +44,8 @@ def _json_artifact(name: str) -> dict[str, object]:
 
 
 _H12 = FrozenI1Artifact.from_dict(_json_artifact("frozen_i1_h12.json"))
+_H3 = FrozenI1Artifact.from_dict(_json_artifact("frozen_i1_h3.json"))
 _FACTS = CurrentI1FactsArtifact.from_dict(_json_artifact("current_i1_facts_2026.json"))
-_SELECTED_FUTURE = SelectedFutureForecast()
 _REPORT = _json_artifact("private_beta_activation_build_report.json")
 if _REPORT.get("status") != "PASS" or _REPORT.get("model_changes") is not False:
     raise ValueError("embedded private-beta activation bundle is not a governed PASS artifact")
@@ -162,11 +154,6 @@ def _provenance(
             "activation_workflow_run_id": ACTIVATION_WORKFLOW_RUN_ID,
             "future_i1_scoring_version": FUTURE_I1_PLAYER_SCORING_VERSION,
             "future_i1_scoring_method": "player_specific_year1_league_standard_ratio",
-            "future_forecast_authority": "selected_routed_forecast",
-            "selected_future_forecast_version": SELECTED_FUTURE_FORECAST_VERSION,
-            "selected_future_forecast_package_sha256": SELECTED_FUTURE_FORECAST_PACKAGE_SHA256,
-            "selected_future_forecast_source_sha256": SELECTED_FUTURE_FORECAST_SOURCE_SHA256,
-            "selected_future_forecast_routing": "QB=A2+C+D;RB/WR/TE=A2+D",
             "year1_forecast_evidence_basis": year_one_evidence.evidence_basis,
             "year1_forecast_evaluation_as_of": year_one_evidence.runtime_result.evaluation_as_of.isoformat(),
             "year1_forecast_runtime_model_version": year_one_evidence.runtime_result.model_version,
@@ -208,11 +195,6 @@ def _cache_key(
     assert context.league_state is not None
     payload = {
         "activation_bundle": ACTIVATION_BUNDLE_SHA256,
-        "selected_future_forecast": {
-            "version": SELECTED_FUTURE_FORECAST_VERSION,
-            "package_sha256": SELECTED_FUTURE_FORECAST_PACKAGE_SHA256,
-            "source_sha256": SELECTED_FUTURE_FORECAST_SOURCE_SHA256,
-        },
         "league": league_material_fingerprint(context.league_state),
         "forecast": [
             {
@@ -239,12 +221,10 @@ def _cache_key(
 
 
 class PrivateBetaShapleyContractLoader:
-    """Attach the selected frozen future Forecast to the hosted Value contract.
+    """Attach the validated completed-source bundle to the hosted Value contract.
 
-    This class is product composition only. It does not fit, tune or alter the
-    selected A2/C/D + D0/D1 future Forecast, the scoring translation, Shapley,
-    B4, the calendar coordinate or the raw Value contract. Legacy FrozenI1Artifact
-    remains diagnostic h1 only; it is not the authoritative Y2/Y3 producer. The one-entry
+    This class is product composition only. It does not fit, tune or alter I1,
+    Shapley, B4, the calendar coordinate or the raw Value contract. The one-entry
     cache reuses an identical immutable contract until league facts or the governed
     Year-1 Forecast evidence changes.
     """
@@ -316,25 +296,16 @@ class PrivateBetaShapleyContractLoader:
             )
 
         try:
-            standard_rules = league_state.league.rules.model_copy(
-                update={"scoring": FROZEN_I1_STANDARD_SCORING}
-            )
-            standard_year_one = derive_league_fantasy_point_forecasts(
-                evidence.raw_forecasts,
-                rules=standard_rules,
-                source="fsffl:selected_future_standard_year1",
-                model_version=SELECTED_FUTURE_FORECAST_VERSION,
-            )
-            scoring_multipliers = player_scoring_multipliers(
-                standard_year_one=standard_year_one,
+            scoring_multipliers = build_future_i1_player_scoring_multipliers(
+                raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
+                rules=league_state.league.rules,
             )
-            _SELECTED_FUTURE.assert_standard_year_one(standard_year_one)
         except ValueError as exc:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
-                reason=f"Selected future Forecast/scoring coordinate unavailable: {exc}",
-                missing_required_fact_families=("selected_future_forecast_coordinate",),
+                reason=f"Future I1 player-specific league scoring unavailable: {exc}",
+                missing_required_fact_families=("future_i1_player_scoring_coordinate",),
             )
 
         key = _cache_key(context, year_one, scoring_multipliers, source_ids)
@@ -358,9 +329,6 @@ class PrivateBetaShapleyContractLoader:
         if mapping.mapped_count != len(year_one_ids):
             raise ValueError("completed-source mapping coverage does not equal governed Year-1 Forecast coverage")
 
-        def selected_future_result(player_id: str, horizon: int):
-            return _SELECTED_FUTURE.predict(player_id, horizon)
-
         def translate_future_result(
             player_id: str,
             result,
@@ -375,8 +343,7 @@ class PrivateBetaShapleyContractLoader:
             live_year_one_forecasts=year_one,
             mapping=mapping,
             h1_h2_predictor=_H12,
-            h3_predictor=_H12,
-            future_y2_y3_result_provider=selected_future_result,
+            h3_predictor=_H3,
             future_i1_result_translator=translate_future_result,
         )
         result = build_live_calendar_shapley_estimates(
