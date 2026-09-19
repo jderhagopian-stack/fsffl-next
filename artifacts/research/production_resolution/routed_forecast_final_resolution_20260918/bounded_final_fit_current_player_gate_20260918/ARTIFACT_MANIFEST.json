@@ -1,0 +1,52 @@
+{
+  "schema_version": "fsffl-bounded-final-fit-current-player-gate-artifact-manifest-v1",
+  "study": "Forecast Bounded Final Fit + Current-Player Credibility Gate",
+  "date": "2026-09-18",
+  "outcome": "C_REPRODUCIBILITY_FITTING_BOUNDARY",
+  "durable_commits": {
+    "prefit_manifest": "4c90abd1f43c92b493ef72dd0517c2f46417be81",
+    "fitting_boundary": "04305f36a1491abd02c8621bb7050e7ea9b16de0",
+    "final_outcome": "19985052d034b7bb0653158830574f9185913d3e",
+    "branch_tree_repair": "7b962a6406c0132e6991d33ebad7b1cff9e9c494"
+  },
+  "management_pdf": {
+    "filename": "FSFFL_NEXT_Forecast_Bounded_Final_Fit_Current_Player_Gate_Outcome_C_2026-09-18.pdf",
+    "library_path": "/FSFFL NEXT/FSFFL_NEXT_Forecast_Bounded_Final_Fit_Current_Player_Gate_Outcome_C_2026-09-18.pdf",
+    "library_file_id": "libfile_9464b6bfd5048191a698cf3ed7f7e69f",
+    "file_id": "file_00000000179c81f593e6d5c37fc75415",
+    "sha256": "2c3c41eec88fb210154e77199bb420688930358717340e95f46f05ecf04e8a85",
+    "bytes": 6854,
+    "pages": 2,
+    "render_verified": true
+  },
+  "current_player_board": {
+    "generated": false,
+    "reason": "Pre-fit frozen-recipe gate failed before authorized model execution; generating a board would require an approximated or newly chosen B2a/R2 fit."
+  },
+  "recovered_historical_artifacts": {
+    "b2_prediction_rows": {
+      "rows": 16689,
+      "sha256": "9eda45f36786c0c73a190566b9eb14d199a604427112c890488f2d5a2cdaacb6"
+    },
+    "recombination_prediction_rows": {
+      "rows": 41344,
+      "sha256": "dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b"
+    },
+    "candidate_B_prediction_rows": {
+      "rows": 22252,
+      "sha256": "4298b40667906fca5a88ad823313e57c0c5971b5eef9c6b38f55f5f5155bd3f5"
+    }
+  },
+  "execution_accounting": {
+    "B2a_fits": 0,
+    "R2_fits": 0,
+    "deterministic_verification_reruns": 0,
+    "candidate_comparisons": 0,
+    "hyperparameter_searches": 0,
+    "coefficient_tuning_iterations": 0,
+    "current_player_tuning_actions": 0,
+    "holdout_selection_runs": 0,
+    "board_materializations": 0,
+    "production_downstream_changes": 0
+  }
+}
