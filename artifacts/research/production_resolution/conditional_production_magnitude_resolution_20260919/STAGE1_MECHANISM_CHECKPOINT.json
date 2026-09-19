@@ -1,0 +1,156 @@
+{
+  "schema_version": "fsffl-conditional-production-stage1-mechanism-checkpoint-v1",
+  "stage": "Stage 1 - compression waterfall / mechanism decomposition",
+  "candidate_fitting_performed": false,
+  "current_board_used_for_selection": false,
+  "finding": {
+    "primary": "ABSOLUTE_TARGET_LEVEL_WITH_SUBLINEAR_SOURCE_ENCODING_AND_REGULARIZED_POOLING",
+    "explanation": "The frozen D1 learner predicts linear future fantasy-point levels from log1p(source_points), bounded within-position percentile, state/position baselines, age/experience and history terms. In the current upper tail, source percentile is saturated and log magnitude grows slowly, while intercept + future-state baseline dominate. The current governed Y1 upper tail is materially above the historical realized source scale, so the model extrapolates toward historically typical future point levels rather than preserving source magnitude.",
+    "persistence_root_cause": false,
+    "state_combination_primary": false,
+    "floor_or_cap_primary": false,
+    "back_transform_primary": false
+  },
+  "historical_evidence": {
+    "Y2_top10": {
+      "n": 370,
+      "predicted_retention": 0.7332377370138814,
+      "realized_retention": 0.7281675665388427,
+      "retention_bias": 0.0050701704750384475,
+      "conditional_bias_points": -2.3667071698798314
+    },
+    "Y2_top5": {
+      "n": 186,
+      "predicted_retention": 0.6738952767404459,
+      "realized_retention": 0.7220434072710146,
+      "retention_bias": -0.04814813053056845,
+      "conditional_bias_points": -12.742106300230029
+    },
+    "Y2_young_top10": {
+      "n": 154,
+      "predicted_retention": 0.7662619844152299,
+      "realized_retention": 0.778970098622025,
+      "retention_bias": -0.012708114206795173,
+      "conditional_bias_points": -5.888706431129936
+    },
+    "Y3_top10": {
+      "n": 345,
+      "predicted_retention": 0.6528791264985864,
+      "realized_retention": 0.6603495311321177,
+      "retention_bias": -0.007470404633531391,
+      "conditional_bias_points": -4.23252781605372
+    },
+    "Y3_top5": {
+      "n": 178,
+      "predicted_retention": 0.5940327751660361,
+      "realized_retention": 0.6460958112121045,
+      "retention_bias": -0.052063036046068364,
+      "conditional_bias_points": -14.196929348001644
+    },
+    "Y3_young_top10": {
+      "n": 148,
+      "predicted_retention": 0.6946570431047213,
+      "realized_retention": 0.736250188730147,
+      "retention_bias": -0.04159314562542564,
+      "conditional_bias_points": -11.221517877929804
+    }
+  },
+  "source_scale_shift": {
+    "QB": {
+      "historical_p90": 305.784,
+      "current_p90": 431.63,
+      "ratio": 1.4115519451639065,
+      "historical_top10_median": 337.86,
+      "current_top10_median": 458.145
+    },
+    "RB": {
+      "historical_p90": 159.68,
+      "current_p90": 350.44,
+      "ratio": 2.1946392785571147,
+      "historical_top10_median": 197.1,
+      "current_top10_median": 374.3
+    },
+    "WR": {
+      "historical_p90": 140.32,
+      "current_p90": 269.88,
+      "ratio": 1.9233181299885975,
+      "historical_top10_median": 165.45,
+      "current_top10_median": 299.125
+    },
+    "TE": {
+      "historical_p90": 89.09,
+      "current_p90": 203.57,
+      "ratio": 2.2849927040071836,
+      "historical_top10_median": 118.2,
+      "current_top10_median": 219.375
+    }
+  },
+  "current_top10_D1_waterfall": {
+    "Y2": {
+      "median_source_points": 358.7,
+      "median_active_probability": 0.9339417993183364,
+      "median_elite_state_to_source": 0.5357188629678151,
+      "median_conditional_to_source": 0.4516903262058822,
+      "median_state_mix_loss_points": 25.43126896624574,
+      "median_source_magnitude_contribution": 12.743865086969565,
+      "median_source_percentile_contribution": 7.758728649101459,
+      "median_intercept_contribution": 61.514145794575896,
+      "median_future_state_baseline_contribution": 70.73132526133685,
+      "fraction_of_total_compression_present_before_state_mix": 0.8467498554594454
+    },
+    "Y3_D1_rows": {
+      "n": 23,
+      "median_elite_state_to_source": 0.5347201346016309,
+      "median_conditional_to_source": 0.41759883411058374,
+      "median_state_mix_loss_points": 36.64654372675187,
+      "median_source_magnitude_contribution": 19.90527813769013,
+      "median_source_percentile_contribution": 1.0221509217367724,
+      "median_intercept_contribution": 60.25941485161436,
+      "median_future_state_baseline_contribution": 54.67661509607218,
+      "fraction_of_total_compression_present_before_state_mix": 0.7988992684927323
+    }
+  },
+  "mechanism_conclusion": [
+    "Historical overall top-decile retention is broadly calibrated, but historically supported underprediction remains in the top 5% and young top tail.",
+    "Most current compression is already present in raw state-conditioned production means before state probabilities are mixed.",
+    "State mixing adds a secondary compression layer, but persistence/state probabilities are not the primary defect.",
+    "No output cap is present; floor effect is zero for the reported upper-tail rows; no nonlinear back-transform exists because the baseline target is linear fantasy points.",
+    "The exact architectural pressure is weak high-end magnitude transfer: source magnitude is represented by log1p(points) plus a percentile bounded near 1, with regularized pooled coefficients."
+  ],
+  "challenger_relevance": {
+    "P1_residual_magnitude_anchor": true,
+    "P2_relative_log_retention_target": true,
+    "note": "Both are directly connected to the identified mechanism and preserve persistence/state probabilities, frozen route, current inputs and final cutoffs."
+  },
+  "artifacts": {
+    "mechanism_json": {
+      "library_file_id": "libfile_375ae00d0ae48191b133947324ac2dad",
+      "sha256": "1734481f2af3e45ec9207847cbd2b9286589631a3655a6245ed8de512cb0d1e0"
+    },
+    "historical_tiers": {
+      "library_file_id": "libfile_0d028306180c8191b3cce18fb76dde6b",
+      "sha256": "72117ad24bbba6e789ed2905d27d0a096b38ca0cb0f7c8fc912a0beeef5e42ac"
+    },
+    "historical_cohorts": {
+      "library_file_id": "libfile_fe30d5c638ec8191bc5dd63ac2e4adc7",
+      "sha256": "44be2da53ab02d8f3cbf823101489a8c6d438dfab8da876ebb3f5365b9027647"
+    },
+    "source_scale": {
+      "library_file_id": "libfile_1ce94130187481919f672cc93fda116d",
+      "sha256": "5a4ad44a296033fbf8ec5daf7f48ad4b0cbaf30c4f3fa2d1930107ac62fbe088"
+    },
+    "current_waterfall": {
+      "library_file_id": "libfile_3859cd29524c8191bce2a637e9c2b116",
+      "sha256": "4b14eb50e31fe9644808e27a89195720584f7374ee1294ccbcf192e7f107ab0a"
+    },
+    "current_contributions": {
+      "library_file_id": "libfile_3616d5ffaf588191a7e8c27d4e9dc265",
+      "sha256": "bfc25e7e34a04b4ad76ce3847a645806d660b7ff957dc066d30aec2efcfc5ae6"
+    }
+  },
+  "execution_accounting": {
+    "candidate_fits": 0,
+    "current_board_rematerializations": 0,
+    "current_player_tuning_actions": 0
+  }
+}
