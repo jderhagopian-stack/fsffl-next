@@ -1,0 +1,230 @@
+{
+  "schema_version": "fsffl-redeveloped-forecast-current-credibility-gate-v1",
+  "date": "2026-09-19",
+  "status": "COMPLETE_ONE_TIME_CURRENT_BOARD_INSPECTION",
+  "board": {
+    "rows": 335,
+    "materialization_count": 1,
+    "model_changes_after_materialization": 0,
+    "tuning_actions_after_materialization": 0,
+    "csv_sha256": "cbcf22a1dbe12ffcf944806e97b7bfcab4759e0b720c61b2ed4dbcfb7bbe9aa3",
+    "xlsx_sha256": "4a36ddb41269bcd5901d7241ae020b8b266c69322d115eaad9a78893c443c178"
+  },
+  "reproducibility_gate": {
+    "package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "replay_rows": 20610,
+    "max_probability_diff": 4.996003610813204e-16,
+    "max_point_diff": 1.4210854715202004e-13,
+    "route_mismatches": 0,
+    "probability_tolerance": 1e-10,
+    "point_tolerance": 1e-8,
+    "pass": true
+  },
+  "cohorts": {
+    "top10": {
+      "n": 33,
+      "Y2": {
+        "median_active_probability": 0.9339417993183364,
+        "median_conditional_to_y1_ratio": 0.4516903262058822,
+        "median_expected_to_y1_ratio": 0.4130308391587891,
+        "conditional_below_60pct_share": 1,
+        "conditional_below_50pct_share": 0.7575757575757576,
+        "expected_decline_gt40_share": 1,
+        "expected_decline_gt50_share": 0.7878787878787878
+      },
+      "Y3": {
+        "median_active_probability": 0.8725203346213969,
+        "median_conditional_to_y1_ratio": 0.3970394264492829,
+        "median_expected_to_y1_ratio": 0.3405435136113888,
+        "conditional_below_60pct_share": 1,
+        "conditional_below_50pct_share": 0.8181818181818182,
+        "expected_decline_gt40_share": 1,
+        "expected_decline_gt50_share": 0.9393939393939394
+      }
+    },
+    "top5": {
+      "n": 16,
+      "Y2": {
+        "median_active_probability": 0.9490494382724817,
+        "median_conditional_to_y1_ratio": 0.44498100661895895,
+        "median_expected_to_y1_ratio": 0.4076746891077347,
+        "conditional_below_60pct_share": 1,
+        "conditional_below_50pct_share": 0.75,
+        "expected_decline_gt40_share": 1,
+        "expected_decline_gt50_share": 0.8125
+      },
+      "Y3": {
+        "median_active_probability": 0.8989491922346098,
+        "median_conditional_to_y1_ratio": 0.39420249758894926,
+        "median_expected_to_y1_ratio": 0.34034758933496045,
+        "conditional_below_60pct_share": 1,
+        "conditional_below_50pct_share": 0.8125,
+        "expected_decline_gt40_share": 1,
+        "expected_decline_gt50_share": 1
+      }
+    },
+    "young_top10": {
+      "n": 14,
+      "Y2": {
+        "median_active_probability": 0.9518600093182122,
+        "median_conditional_to_y1_ratio": 0.4749750258894669,
+        "median_expected_to_y1_ratio": 0.4441813456164537,
+        "conditional_below_60pct_share": 1,
+        "conditional_below_50pct_share": 0.6428571428571429
+      },
+      "Y3": {
+        "median_active_probability": 0.9074708517307629,
+        "median_conditional_to_y1_ratio": 0.43083299927287677,
+        "median_expected_to_y1_ratio": 0.3789162920970617,
+        "conditional_below_60pct_share": 1,
+        "conditional_below_50pct_share": 0.7857142857142857
+      }
+    },
+    "top10_by_position": {
+      "QB": {
+        "n": 6,
+        "Y2": {
+          "median_active": 0.9527153240320407,
+          "median_conditional_ratio": 0.5843645178110961
+        },
+        "Y3": {
+          "median_active": 0.9174584850331267,
+          "median_conditional_ratio": 0.5286918325989128
+        }
+      },
+      "RB": {
+        "n": 9,
+        "Y2": {
+          "median_active": 0.9335606226087312,
+          "median_conditional_ratio": 0.4039118990697534
+        },
+        "Y3": {
+          "median_active": 0.8455192031264507,
+          "median_conditional_ratio": 0.366020328447727
+        }
+      },
+      "WR": {
+        "n": 12,
+        "Y2": {
+          "median_active": 0.9251954568720571,
+          "median_conditional_ratio": 0.4497312469546758
+        },
+        "Y3": {
+          "median_active": 0.8497450249938384,
+          "median_conditional_ratio": 0.39506012604418944
+        }
+      },
+      "TE": {
+        "n": 6,
+        "Y2": {
+          "median_active": 0.9582721445456839,
+          "median_conditional_ratio": 0.476030978712727
+        },
+        "Y3": {
+          "median_active": 0.9208744080518044,
+          "median_conditional_ratio": 0.44853275260935244
+        }
+      }
+    }
+  },
+  "named_examples": {
+    "Bijan Robinson": {
+      "Y1": 479.9,
+      "Y2": {
+        "active_probability": 0.9543321866155589,
+        "conditional_active_points": 171.58823308932617,
+        "expected_points": 163.75164969532972,
+        "conditional_ratio": 0.3575466415697565
+      },
+      "Y3": {
+        "active_probability": 0.9075146793884012,
+        "conditional_active_points": 155.77149789779546,
+        "expected_points": 141.36492075988795,
+        "conditional_ratio": 0.32459115919523956
+      }
+    },
+    "Jahmyr Gibbs": {
+      "Y1": 460.25,
+      "Y2": {
+        "active_probability": 0.9571522698451144,
+        "conditional_active_points": 171.64339329365163,
+        "expected_points": 164.28862817648775,
+        "conditional_ratio": 0.3729340495255875
+      },
+      "Y3": {
+        "active_probability": 0.9129069567489744,
+        "conditional_active_points": 155.0454051731798,
+        "expected_points": 141.54202884744726,
+        "conditional_ratio": 0.33687214594933146
+      }
+    },
+    "Puka Nacua": {
+      "Y1": 401.5,
+      "Y2": {
+        "active_probability": 0.9412431537113612,
+        "conditional_active_points": 155.9608902033888,
+        "expected_points": 146.79712794624584,
+        "conditional_ratio": 0.3884455546784279
+      },
+      "Y3": {
+        "active_probability": 0.8892273611472442,
+        "conditional_active_points": 145.11044397980586,
+        "expected_points": 129.0361771095174,
+        "conditional_ratio": 0.3614207820170009
+      }
+    },
+    "Christian McCaffrey": {
+      "Y1": 433.5,
+      "Y2": {
+        "active_probability": 0.8405895058527163,
+        "conditional_active_points": 160.48866414259032,
+        "expected_points": 134.9045666143984,
+        "conditional_ratio": 0.3702160649194702
+      },
+      "Y3": {
+        "active_probability": 0.6227301111081025,
+        "conditional_active_points": 132.61724948515004,
+        "expected_points": 82.58480914507177,
+        "conditional_ratio": 0.3059221441410612
+      }
+    },
+    "Aaron Rodgers": {
+      "Y1": 344.31,
+      "Y2": {
+        "active_probability": 0.6726051152543813,
+        "conditional_active_points": 90.8510845338172,
+        "expected_points": 61.1069835727864,
+        "conditional_ratio": 0.26386147554240713
+      },
+      "Y3": {
+        "active_probability": 0.3747497455971824,
+        "conditional_active_points": 90.38699628532981,
+        "expected_points": 33.87288521814598,
+        "conditional_ratio": 0.2625179259022673
+      }
+    },
+    "Sam Darnold": {
+      "Y1": 383.06,
+      "Y2": {
+        "active_probability": 0.9476652682321586,
+        "conditional_active_points": 201.8727979278461,
+        "expected_points": 191.30898375472051,
+        "conditional_ratio": 0.5269822953851621
+      },
+      "Y3": {
+        "active_probability": 0.9036683243882756,
+        "conditional_active_points": 193.4881857519131,
+        "expected_points": 174.84882981021633,
+        "conditional_ratio": 0.5051192673831302
+      }
+    }
+  },
+  "explicit_answer": {
+    "healthy_young_elite_compressed_even_when_model_expects_active": true,
+    "explanation": "Yes. All 14 age<=25 top-10% source producers remain relatively likely to be active (median 95.2% Y2 / 90.7% Y3) while their median conditional-active production falls to only 47.5% / 43.1% of Y1. The pattern is cross-position rather than isolated."
+  },
+  "defect_classification": "MATERIAL_SYSTEMATIC_UPPER_TAIL_CONDITIONAL_PRODUCTION_COMPRESSION",
+  "longevity_note": "No separate broad longevity-inflation defect is needed to reach the decision; the decisive failure is conditional production magnitude.",
+  "outcome": "B",
+  "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+}
