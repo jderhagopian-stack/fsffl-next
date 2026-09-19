@@ -5,11 +5,19 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any, cast
 
+from fsffl.forecast.integrated_i1 import I1ForecastInput, I1ForecastResult, STATE_NAMES
+from fsffl.forecast.league_scoring import derive_league_fantasy_point_forecasts
 from fsffl.forecast.models import (
     ForecastDistribution,
     ForecastHorizon,
     ForecastMetric,
     ForecastObservation,
+)
+from fsffl.product.i1_scoring_bridge import (
+    FROZEN_I1_STANDARD_SCORING,
+    FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
+    LeagueScoringNormalizedI1Predictor,
+    build_future_i1_position_scoring_multipliers,
 )
 from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from fsffl.product.runtime import UserRuntimeContext
@@ -288,3 +296,158 @@ def test_contract_exposes_preseason_year_one_provenance() -> None:
     year_one = contract.estimates[0].contributions[0]
     assert year_one.provenance.authority == "preserved_preseason_year1_forecast"
     assert year_one.provenance.source == "fsffl:preseason_baseline_league_scored"
+
+
+def test_frozen_i1_standard_scoring_contract_is_explicit_non_ppr() -> None:
+    assert tuple((rule.stat, rule.points) for rule in FROZEN_I1_STANDARD_SCORING) == (
+        ("pass_yd", 0.04),
+        ("pass_td", 4.0),
+        ("pass_int", -2.0),
+        ("rush_yd", 0.1),
+        ("rush_td", 6.0),
+        ("rec_yd", 0.1),
+        ("rec_td", 6.0),
+        ("fum_lost", -2.0),
+    )
+    assert all(rule.stat != "rec" for rule in FROZEN_I1_STANDARD_SCORING)
+
+
+def test_same_raw_forecast_builds_standard_and_half_ppr_coordinates() -> None:
+    now = datetime(2026, 9, 10, 21, 36, tzinfo=UTC)
+    provenance = Provenance(
+        source="fixture",
+        retrieved_at=now,
+        effective_at=now,
+        source_version="fixture-v1",
+    )
+    raw = tuple(
+        ForecastObservation(
+            player_id="wr1",
+            position=Position.WR,
+            horizon=ForecastHorizon.SEASON,
+            metric=metric,
+            period_start=now,
+            period_end=now + timedelta(days=150),
+            distribution=ForecastDistribution(mean=mean, stddev=1.0),
+            source="same-raw",
+            model_version="same-raw-v1",
+            as_of=now,
+            provenance=provenance,
+        )
+        for metric, mean in (
+            (ForecastMetric.RECEPTIONS, 80.0),
+            (ForecastMetric.REC_YARDS, 1000.0),
+            (ForecastMetric.REC_TD, 10.0),
+            (ForecastMetric.FUMBLES_LOST, 2.0),
+        )
+    )
+    league_rules = LeagueRules(
+        team_count=2,
+        roster_size=18,
+        lineup=(),
+        scoring=(
+            ScoringRule(stat="rec", points=0.5),
+            ScoringRule(stat="rec_yd", points=0.1),
+            ScoringRule(stat="rec_td", points=6.0),
+            ScoringRule(stat="fum_lost", points=-1.0),
+        ),
+    )
+    league = derive_league_fantasy_point_forecasts(raw, rules=league_rules)
+    assert len(league) == 1
+    assert league[0].distribution.mean == 198.0
+
+    multipliers = build_future_i1_position_scoring_multipliers(
+        raw_forecasts=raw,
+        league_year_one=league,
+        rules=league_rules,
+    )
+    # Standard/non-PPR = 100 receiving yards points + 60 TD points - 4 fumble points.
+    assert multipliers == {Position.WR: pytest.approx(198.0 / 156.0)}
+
+
+class _CoordinatePredictor:
+    def __init__(self) -> None:
+        self.seen = None
+
+    def predict(self, item, *, fallback_probabilities=None):
+        self.seen = item
+        probabilities = {
+            "out": 0.10,
+            "depth": 0.10,
+            "usable": 0.20,
+            "starter": 0.30,
+            "premium": 0.20,
+            "elite": 0.10,
+        }
+        means = {state: float(index * 25) for index, state in enumerate(STATE_NAMES)}
+        anticipated = sum(probabilities[state] * means[state] for state in STATE_NAMES)
+        return I1ForecastResult(
+            probabilities=probabilities,
+            persistence_probability=0.90,
+            anticipated_points=anticipated,
+            state_means=means,
+            evidence_path="reduced",
+            model_version="frozen-standard-fixture",
+        )
+
+
+def test_future_i1_bridge_scales_outputs_once_and_preserves_standard_inputs() -> None:
+    predictor = _CoordinatePredictor()
+    wrapped = LeagueScoringNormalizedI1Predictor(
+        predictor,
+        multipliers={Position.WR: 1.25},
+    )
+    item = I1ForecastInput(
+        position=Position.WR,
+        age_band="young",
+        current_state="starter",
+        horizon=2,
+        current_points=150.0,
+        prior_points=125.0,
+        experience_years=2,
+        evidence=None,
+    )
+
+    result = wrapped.predict(item)
+
+    assert predictor.seen is item
+    assert predictor.seen.current_points == 150.0
+    assert predictor.seen.prior_points == 125.0
+    assert result.probabilities == {
+        "out": 0.10,
+        "depth": 0.10,
+        "usable": 0.20,
+        "starter": 0.30,
+        "premium": 0.20,
+        "elite": 0.10,
+    }
+    for index, state in enumerate(STATE_NAMES):
+        assert result.state_means[state] == pytest.approx(index * 25.0 * 1.25)
+    expected = sum(result.probabilities[state] * result.state_means[state] for state in STATE_NAMES)
+    assert result.anticipated_points == pytest.approx(expected)
+    assert result.model_version.count(FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION) == 1
+
+
+def test_current_i1_facts_are_locked_to_standard_research_coordinate() -> None:
+    facts = json.loads(activation_artifact_text("current_i1_facts_2026.json"))
+    report = json.loads(activation_artifact_text("private_beta_activation_build_report.json"))
+    metadata = facts["metadata"]
+
+    assert "standard/non-PPR semantics" in metadata["scoring_coordinate"]
+    coordinate = metadata["research_coordinate_validation"]
+    assert coordinate["status"] == "PASS"
+    assert coordinate["max_abs_fantasy_points_diff"] <= 1e-12
+    assert report["current_fact_metadata"]["research_coordinate_validation"] == coordinate
+
+
+def test_contract_future_i1_provenance_contains_exactly_one_scoring_bridge() -> None:
+    state, observation = _fixture()
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )(_context(state, observation))
+    future = contract.estimates[0].contributions[1:]
+    assert len(future) == 2
+    for item in future:
+        assert item.provenance.model_version.count(
+            FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION
+        ) == 1
