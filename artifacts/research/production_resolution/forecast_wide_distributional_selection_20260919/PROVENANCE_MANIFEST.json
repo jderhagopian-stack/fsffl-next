@@ -1,0 +1,110 @@
+{
+  "schema_version": "fsffl-forecast-wide-distributional-selection-provenance-v1",
+  "date": "2026-09-19",
+  "live_state_at_start": {
+    "research_head": "d536c2297eba4bc0647dd624ef66774a3c750382",
+    "pr147_head": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+    "main_head": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76"
+  },
+  "durable_stage_commits": {
+    "prereg_initial": "4ef91b0e7b13a784eb0c685f26584f4065f05ca4",
+    "prereg_final": "637fdee5efa3af48698277c8d30fcd3f140d5c0d",
+    "selection_freeze_before_holdout": "03d783fa1d8d941f8708cbdc9d8c28120b97aa2e"
+  },
+  "frozen_input_hashes": {
+    "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+    "p0_fitted_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7"
+  },
+  "locked_replication_touched_once": true,
+  "production_changes": false,
+  "pr147_modified": false,
+  "merge": false,
+  "deploy": false,
+  "classification": "C. FORECAST SELECTION METHODOLOGY REVISION EARNED",
+  "artifacts": {
+    "PREREGISTERED_EVALUATION_RULES.md": {
+      "sha256": "3d04b3155a8c2dd5d84640b938c8816c99907cbc88f62d9e72dd0284b3991656",
+      "bytes": 2176
+    },
+    "SELECTION_BLOCK_CANDIDATE_METRICS.csv": {
+      "sha256": "6b050b47f7d495585d6d10de0c5b169ecd03ab354c1803471dcd5d4ddde670d1",
+      "bytes": 20603
+    },
+    "SELECTION_CELL_DECISIONS_PRE_REPLICATION.csv": {
+      "sha256": "cda325abdf91c31fce47ad5031b184b184e371eb5602ddb7aca89d9407bf3243",
+      "bytes": 6620
+    },
+    "SELECTION_OUTCOME_SHAPE.csv": {
+      "sha256": "d19002577497c896befae7afeb3ceed71321be1ade72df9408c826a834e0501c",
+      "bytes": 3252
+    },
+    "SELECTION_STATE_CALIBRATION.csv": {
+      "sha256": "d135d9372453a6e47525d763ee352d380f188d95dbf1ee9f6255e9f73278804f",
+      "bytes": 2291
+    },
+    "SELECTION_HIGH_SOURCE_BIAS.csv": {
+      "sha256": "06ecdad70ef10f18e256e5d702f8a7c6103e9f1523291ec94da44ef188c4f3f2",
+      "bytes": 2583
+    },
+    "PROVISIONAL_POSITION_DISPOSITIONS_PRE_REPLICATION.csv": {
+      "sha256": "399bf9d191f693c8daf52293c0fd2ceb119949c0c39e652b097bf35b0323eab8",
+      "bytes": 348
+    },
+    "SELECTION_POSITION_HORIZON_CONTROL.csv": {
+      "sha256": "731a53c450f275cbe8ed8b6f93869915a1c615a39f909f896f11cd8ac00ab164",
+      "bytes": 4735
+    },
+    "LOCKED_2021_2022_CELL_REPLICATION.csv": {
+      "sha256": "692021ed3d9774cbde8ecd8afb92943e09893461fdf456f7147cff776d0c3cb5",
+      "bytes": 6800
+    },
+    "LOCKED_2021_2022_STATE_CALIBRATION.csv": {
+      "sha256": "ed4e935d5b9b52b1f77f26add19318021ebe3c79cb4a99cb8e8ff1da8ba11d56",
+      "bytes": 762
+    },
+    "LOCKED_2021_2022_OUTCOME_SHAPE.csv": {
+      "sha256": "c435d72a8280a9c2b51bc3c832f43b12aa621bb0611e2aad8d65e0fbe99893dc",
+      "bytes": 1913
+    },
+    "FINAL_CELL_DECISIONS.csv": {
+      "sha256": "97257ffe06cc5adb135c954703296c7cdedf40eb81bed474adc4cbc15f4ce9cb",
+      "bytes": 10497
+    },
+    "FINAL_POSITION_DISPOSITIONS.csv": {
+      "sha256": "32f3a33022151c3e2d81f5e6b66e71dd350274a42a80f247702598ba5d57f599",
+      "bytes": 253
+    },
+    "POSITION_AGGREGATE_P0_VS_EARNED_ROUTE.csv": {
+      "sha256": "014e75ac73a29fd2465636ab27bc4db1534de217dbc4d4c7d6e2e8aeaf6b154e",
+      "bytes": 1891
+    },
+    "POINT_VS_PROPER_SCORE_DISAGREEMENT.csv": {
+      "sha256": "ba0c685cae908006dc3a5728775befdbcc590ec9103c8ac6d804fb8d8d947e12",
+      "bytes": 4587
+    },
+    "POSITION_HORIZON_CANDIDATE_SUMMARY.csv": {
+      "sha256": "9c7800771d79cedcf33b390d2c1107ec2e3766e59e13b754fca0dd18e9672bd5",
+      "bytes": 2115
+    },
+    "COVERAGE_AND_LOG_SCORE_NOTE.json": {
+      "sha256": "fb8c1ed8b19bc8673ea41ac20cd500822fb8dfbb73758bfef3f562ad42e63b58",
+      "bytes": 966
+    },
+    "RB_ANCHOR_REPRODUCTION.json": {
+      "sha256": "18743de6778b3a35d37561d59c37eaed34dcd98e38998096214ced65a589a0bd",
+      "bytes": 745
+    },
+    "SOURCE_REPLAY_POINTERS.json": {
+      "sha256": "c90965e70e6a3eb6587d99d1443bfa6dd858999499bc4f51b7741b54109ffa36",
+      "bytes": 845
+    },
+    "FINAL_CLASSIFICATION.json": {
+      "sha256": "6b19314bdf783178faac602c3f805f4fcba0b69374f3bdb2e3e66ef4186cfeeb",
+      "bytes": 985
+    },
+    "FINAL_RESEARCH_CONCLUSION.md": {
+      "sha256": "8452d6c43ef2aa187816afa87e04846e7fdfe43f47dec6faabb291b9fd5c5e6c",
+      "bytes": 1956
+    }
+  }
+}
