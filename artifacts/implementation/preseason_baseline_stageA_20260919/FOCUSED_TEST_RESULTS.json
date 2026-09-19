@@ -1,0 +1,31 @@
+{
+  "schema_version": "fsffl-preseason-baseline-authority-focused-tests-v1",
+  "date": "2026-09-19",
+  "validated_implementation_head": "a0648e1b0f4d03569bf2f6c098f7c81b3878630b",
+  "focused_workflow": {
+    "run_id": 35444335811,
+    "job_id": 105900566750,
+    "command": "pytest -q tests/test_preseason_forecast_baseline.py tests/test_private_beta_shapley_runtime.py tests/test_shapley_intrinsic.py tests/test_shapley_intrinsic_contract.py",
+    "result": "PASS",
+    "passed": 25,
+    "duration_seconds": 3.08
+  },
+  "repository_ci": {
+    "run_id": 35444335817,
+    "job_id": 105900566470,
+    "result": "PASS",
+    "passed": 1223,
+    "warnings": 2,
+    "duration_seconds": 8.61
+  },
+  "governed_invariants_verified": [
+    "Concrete preserved-baseline materialization executes through governed scoring/runtime code.",
+    "Preserved baseline authority remains independent of a healthy live/current Forecast path.",
+    "Anomalous live/current evidence does not alter frozen Intrinsic Year-1 while baseline evidence is unchanged.",
+    "Baseline-derived Year-1 provenance is labeled preserved_preseason_year1_forecast and preseason_baseline.",
+    "Missing preserved baseline fails the frozen Year-1 contract closed.",
+    "Invalid single-source baseline fails the >=2-independent-source validity rule.",
+    "Baseline evaluation timestamp and source provenance are retained through the authority path."
+  ],
+  "model_selection_or_research_rerun": false
+}
