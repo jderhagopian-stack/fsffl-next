@@ -123,9 +123,9 @@
       "commits": {
         "00cb6bc8b9c600d8b547f9e957e9e7349c829b2f": "only FAST_TRACK_COMPARISON.md added",
         "8a08d83f703e015b334230dc2ae77f82afe4b060": "only B2 bounded-refinement checkpoint added",
-        "86043a6610bc4dce79bd0a91c5c1fd39": "B3 checkpoint lineage inspected separately; no deployment spec persisted",
         "962d99f999cfb38390b1d36377964b99f7cdc4ca": "only hybrid Stage-0 provenance audit added",
-        "8839cfad99ec4850782d5bc720784d0672012472": "only hybrid final checkpoint added"
+        "8839cfad99ec4850782d5bc720784d0672012472": "only hybrid final checkpoint added",
+        "86043a6610bc4dce79a159502f24cb70a762fabc": "only B3 checkpoint added"
       },
       "note": "The actual B/R1/R2 recombination execution was local/ephemeral; the durable commit lineage contains reports/checkpoints, not the executable specification package."
     },
