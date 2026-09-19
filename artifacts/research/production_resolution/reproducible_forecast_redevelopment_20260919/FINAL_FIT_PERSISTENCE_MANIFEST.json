@@ -1,0 +1,56 @@
+{
+  "schema_version": "fsffl-redeveloped-forecast-final-fit-persistence-v1",
+  "historical_freeze_commit": "7130beb75ec22fdaaeb25377e7fc071a8edf7c1c",
+  "final_fit_harness_commit": "0140a815031e0ec41c5fb1f0d403454f2eeb587b",
+  "one_time_final_fit_completed": true,
+  "final_fit_runtime": {
+    "wall_seconds": 26.43,
+    "max_rss_kb": 285164
+  },
+  "fit_counts": {
+    "state_layer_fits": 4,
+    "production_model_fits": 3
+  },
+  "fitted_horizons": {
+    "Y2": {
+      "max_source_season": 2023,
+      "max_target_season": 2025,
+      "state_train_n": 21168,
+      "prod_train_n": 10584,
+      "required_treatments": [
+        "D1"
+      ]
+    },
+    "Y3": {
+      "max_source_season": 2022,
+      "max_target_season": 2025,
+      "state_train_n": 10026,
+      "prod_train_n": 10026,
+      "required_treatments": [
+        "D0",
+        "D1"
+      ]
+    }
+  },
+  "artifacts": {
+    "package": {
+      "library_file_id": "libfile_aaa8c63f86e08191a89f092f02367472",
+      "sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+      "bytes": 108000
+    },
+    "replay_coordinate": {
+      "library_file_id": "libfile_4ebf8a380ec081919f00662c3da49dfb",
+      "sha256": "410f66e80f90cb103424ecbf650ab3eab762c94ca8c62a23f1e8e96d51ea82a5",
+      "rows": 20610
+    },
+    "manifest": {
+      "library_file_id": "libfile_00707694af58819184f7d1407c206d04"
+    },
+    "runtime": {
+      "library_file_id": "libfile_ac179ab3faf08191b5ebc55afee87175"
+    }
+  },
+  "current_player_board_materialized": false,
+  "alternate_final_refits": 0,
+  "fit_shopping": false
+}
