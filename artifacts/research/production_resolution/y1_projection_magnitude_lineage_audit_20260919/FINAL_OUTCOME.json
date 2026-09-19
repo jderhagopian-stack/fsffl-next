@@ -1,0 +1,63 @@
+{
+  "schema_version": "fsffl-y1-projection-magnitude-lineage-final-outcome-v1",
+  "date": "2026-09-19",
+  "outcome": "D",
+  "label": "EVIDENCE_BOUNDARY",
+  "stage_reached": "STAGE_0_ONLY",
+  "management_question_answer": "The observed old-to-current Y1 jump is real in the surviving named outputs, and the current board's aggregate arithmetic is internally reproducible. However, the exact cause cannot be determined from durable evidence because the old 335-player vector/provider inputs are not recoverable and the current artifact omits the individual pre-ensemble FFToday/Razzball rows. Therefore the current 479.9-class object cannot be fully certified or rejected under this directive.",
+  "current_board_findings": {
+    "row_complete": true,
+    "rows": 335,
+    "current_coordinate_sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+    "aggregate_arithmetic_reproduces_stored_y1_for_required_named_players": true,
+    "exact_provider_separate_arithmetic_reproducible": false,
+    "source_vintage_consistency_provable": false
+  },
+  "prior_board_findings": {
+    "exact_named_values_recovered": true,
+    "exact_row_complete_335_recovered": false,
+    "old_material_target_sha256": "70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706",
+    "exact_old_provider_rows_recovered": false
+  },
+  "observed_named_changes": {
+    "Bijan Robinson": "+150.66 points / +45.76%",
+    "Jahmyr Gibbs": "+132.23 / +40.31%",
+    "Christian McCaffrey": "+118.14 / +37.46%",
+    "Sam Darnold": "+101.33 / +35.97%",
+    "Aaron Rodgers": "+100.61 / +41.28%"
+  },
+  "exact_attribution_available": false,
+  "smallest_missing_dependency": [
+    "Exact old 335-player persisted-baseline Y1 object or canonical equivalent matching SHA-256 70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706, with row-level source provenance.",
+    "Exact normalized pre-ensemble FFToday and Razzball rows underlying the current 2026-09-18T09:42:31.889752Z coordinate, including effective timestamps and season semantics."
+  ],
+  "prohibited_next_steps": [
+    "Do not reconstruct old provider rows from memory or named outputs.",
+    "Do not algebraically invert current ensemble mean/stddev to invent provider rows.",
+    "Do not fresh-fetch FFToday/Razzball to stand in for the frozen 2026-09-18 evidence.",
+    "Do not fix the Y1 board, implement the standard-scoring coordinate correction, refit Forecast, or rerun the extrapolation audit in this task."
+  ],
+  "incomplete_required_outputs": [
+    "Full old-vs-new 335-player comparison cannot be produced because the old row-complete 335 vector is absent.",
+    "Provider-level raw-stat decomposition cannot be produced because separate provider rows were not persisted.",
+    "Provider disagreement/vintage audit cannot be completed for the same reason.",
+    "Expected-season vs conditional/full-health semantic determination cannot be proven from the surviving aggregate artifact alone."
+  ],
+  "partial_outputs_preserved": [
+    "Current row-complete universe identity and workflow provenance.",
+    "Current named-player aggregate-stat arithmetic.",
+    "Exact surviving PR147 named Y1 values.",
+    "Partial named old-vs-current deltas.",
+    "Current distribution context only, explicitly not used as Stage-3 evidence."
+  ],
+  "execution_accounting": {
+    "model_fits": 0,
+    "forecast_tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0,
+    "fresh_provider_fetches": 0
+  },
+  "promotion_eligible": false,
+  "implementation_authorized": false,
+  "next_action": "STOP_FOR_MANAGEMENT_REVIEW"
+}
