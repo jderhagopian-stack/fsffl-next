@@ -1,0 +1,30 @@
+{
+  "schema_version": "fsffl-redeveloped-forecast-current-source-materialization-v1",
+  "status": "FROZEN_BEFORE_CURRENT_BOARD",
+  "historical_freeze_commit": "7130beb75ec22fdaaeb25377e7fc071a8edf7c1c",
+  "current_board_source": {
+    "y1": "Governed 335-player raw 2026 Y1 fantasy-point board, existing durable artifact only.",
+    "identity_history": "Approved 335-row replacement identity/history coordinate, existing durable artifact only."
+  },
+  "source_season_for_current_prediction": 2026,
+  "materialization": {
+    "position": "Governed current-board position.",
+    "age": "2026 age from approved identity coordinate.",
+    "experience": "2026 NFL experience from approved identity/history coordinate; career buckets 0-3,4-8,9+.",
+    "source_points": "Governed raw Y1 fantasy-point projection on the same scoring coordinate.",
+    "source_state": "Apply PIT state boundaries fitted from completed historical fantasy points through 2025, using the frozen 1-D log-space state-boundary algorithm.",
+    "source_percentile": "Average-rank percentile of Y1 source_points within current-board position; (rank-0.5)/n.",
+    "state_percentile": "Average-rank percentile of Y1 source_points within current-board position x source_state; used only by the shared D ordered-state layer.",
+    "prior1_points": "2025 completed-season fantasy points from approved history when mapped; otherwise uncovered.",
+    "prior1_coverage": "1 only with genuine 2025 player history; else 0.",
+    "source_role_band": "Most recent completed 2025 governed role band when mapped; otherwise unknown.",
+    "games": "2025 completed-season games when mapped; otherwise missing.",
+    "opportunity_per_game": "2025 completed-season governed opportunity_per_game when mapped; otherwise missing.",
+    "prior_age_state_resid_z": "2025 PIT position x coarse-age-band x state residual for QB C-memory, computed using seasons strictly before 2025; missing/unsupported -> 0 plus coverage=0.",
+    "prior2_consistency": "D1 uses the genuine 2025 and 2024 PIT age-band x state residuals; coverage=1 only if both exist. No history backfill or projection substitution.",
+    "cold_start": "Projection-only or unmatched players keep all prior-history coverage flags at 0. Y1 projection is never treated as an observed NFL prior season."
+  },
+  "current_outputs_forbidden_until_final_fit_replay_pass": true,
+  "player_specific_rules": false,
+  "named_players_used": false
+}
