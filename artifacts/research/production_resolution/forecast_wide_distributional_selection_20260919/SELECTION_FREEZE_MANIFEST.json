@@ -1,0 +1,10 @@
+{
+  "schema_version": "fsffl-forecast-wide-stage1-selection-freeze-v1",
+  "selection_only": true,
+  "holdout_touched": false,
+  "source_seasons": [2014, 2020],
+  "rb_anchor_reproduced": true,
+  "preregistered_rule_commit": "637fdee5efa3af48698277c8d30fcd3f140d5c0d",
+  "provisional_position_dispositions_sha256": "399bf9d191f693c8daf52293c0fd2ceb119949c0c39e652b097bf35b0323eab8",
+  "selection_cell_decisions_sha256": "cda325abdf91c31fce47ad5031b184b184e371eb5602ddb7aca89d9407bf3243"
+}
