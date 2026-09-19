@@ -1,0 +1,58 @@
+{
+  "schema_version": "fsffl-y1-projection-magnitude-lineage-artifact-manifest-v1",
+  "date": "2026-09-19",
+  "outcome": "D",
+  "repo_artifacts": {
+    "audit_start": "artifacts/research/production_resolution/y1_projection_magnitude_lineage_audit_20260919/AUDIT_START_MANIFEST.json",
+    "evidence_boundary": "artifacts/research/production_resolution/y1_projection_magnitude_lineage_audit_20260919/EVIDENCE_BOUNDARY.json",
+    "final_outcome": "artifacts/research/production_resolution/y1_projection_magnitude_lineage_audit_20260919/FINAL_OUTCOME.json",
+    "management_summary": "artifacts/research/production_resolution/y1_projection_magnitude_lineage_audit_20260919/MANAGEMENT_SUMMARY.md",
+    "artifact_manifest": "artifacts/research/production_resolution/y1_projection_magnitude_lineage_audit_20260919/ARTIFACT_MANIFEST.json"
+  },
+  "current_authoritative_inputs": {
+    "current_universe_repo_path": "artifacts/research/production_resolution/governed_year1_current_2026_20260918T094231Z/governed_year1_universe.json",
+    "current_universe_git_blob_sha": "96db6a2d66593ca1ed05d92a2928c452f48606a1",
+    "current_universe_sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+    "current_workflow_zip_sha256": "c23fed641c4ad689513510022f187e6ea05cab2dc88d457d545be9afc1f49ee7",
+    "current_rows": 335,
+    "prior_target_material_sha256": "70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706",
+    "prior_activation_zip_sha256": "3866d65353c27cab66f83d701b0af7f892310a71187d02206c49f77181a95ca5"
+  },
+  "library_artifacts": {
+    "recovered_current_aggregate_arithmetic": {
+      "library_file_id": "libfile_2b2b6ba8a15081919309ff4e42aa796b",
+      "sha256": "6e7175c5cb0ea99af270ecba9812514340774502745018d68f689e6fdd883b63"
+    },
+    "recovered_named_old_vs_current_partial": {
+      "library_file_id": "libfile_b5cc67943a5481919f9b7fbd80e8b5ed",
+      "sha256": "54598ff8d828a8bd3d4bf06d7786206d9f4821358880a20fa4bf298795a039b8"
+    },
+    "current_335_distribution_context_only": {
+      "library_file_id": "libfile_81819b689c50819191aaf7a08642846f",
+      "sha256": "b3b2deb2539d850e56017687ece9e077e5d1084be55811c164d72712665ef097",
+      "warning": "Context-only; Stage 3 was not executed and this table was not used for classification."
+    },
+    "evidence_boundary": {
+      "library_file_id": "libfile_d83508b15390819192990822545ed471",
+      "sha256": "e5679b8558c39bdd3872d42beb540f51d48427f67f43d7c168b86a304217692f"
+    }
+  },
+  "required_outputs_not_producible_without_guessing": [
+    "Full old-vs-new 335-player comparison export.",
+    "Provider-level raw-stat decomposition for the old and current boards.",
+    "Provider disagreement/vintage attribution.",
+    "Definitive expected-season versus conditional/full-health semantic classification."
+  ],
+  "reason": "The exact old 335-player Y1 vector is not durably recoverable, and the current row-complete artifact omits separate pre-ensemble provider rows. The directive prohibits reconstructing these missing objects.",
+  "execution_accounting": {
+    "model_fits": 0,
+    "forecast_tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0,
+    "fresh_provider_fetches": 0,
+    "old_board_reconstructions": 0,
+    "provider_row_inversions": 0
+  },
+  "management_pdf": "FSFFL_NEXT_Forecast_Y1_Projection_Magnitude_Lineage_Audit_Outcome_D_2026-09-19.pdf - generated after final repository-state verification.",
+  "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+}
