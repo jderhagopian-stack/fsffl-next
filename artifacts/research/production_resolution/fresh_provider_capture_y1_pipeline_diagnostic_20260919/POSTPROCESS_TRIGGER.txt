@@ -1,0 +1,1 @@
+derive diagnostics from captured evidence only - no provider network - 2026-09-19
