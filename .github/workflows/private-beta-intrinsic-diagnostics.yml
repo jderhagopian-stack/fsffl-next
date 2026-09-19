@@ -6,6 +6,10 @@ on:
     paths:
       - 'scripts/run_private_beta_intrinsic_diagnostics.py'
       - 'scripts/run_private_beta_intrinsic_resilient_diagnostics.py'
+      - 'scripts/run_preseason_coordinate_credibility_board.py'
+      - 'artifacts/implementation/preseason_baseline_stageA_20260919/PRESEASON_BASELINE_Y1_BOARD.json'
+      - 'artifacts/implementation/forecast_source_coordinate_20260919/STANDARD_COORDINATE_Y1_BOARD.json'
+      - 'artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json'
       - 'src/fsffl/forecast/preseason_baseline.py'
       - 'src/fsffl/product/forecast_resilience.py'
       - 'src/fsffl/product/private_beta_shapley_runtime.py'
@@ -54,6 +58,14 @@ jobs:
           tests/test_private_beta_shapley_runtime.py
           tests/test_shapley_intrinsic.py
           tests/test_shapley_intrinsic_contract.py
+      - name: Run frozen-coordinate credibility board
+        run: |
+          python scripts/run_preseason_coordinate_credibility_board.py \
+            --league-board artifacts/implementation/preseason_baseline_stageA_20260919/PRESEASON_BASELINE_Y1_BOARD.json \
+            --standard-board artifacts/implementation/forecast_source_coordinate_20260919/STANDARD_COORDINATE_Y1_BOARD.json \
+            --league-rules artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json \
+            --output-json artifacts/implementation/current-player-credibility-board.json \
+            --output-md artifacts/implementation/current-player-credibility-board.md
       - name: Run governed Forecast / Intrinsic diagnostics
         run: |
           python scripts/run_private_beta_intrinsic_resilient_diagnostics.py \
@@ -68,5 +80,7 @@ jobs:
           path: |
             artifacts/implementation/private-beta-live-diagnostics.json
             artifacts/implementation/private-beta-live-diagnostics.md
+            artifacts/implementation/current-player-credibility-board.json
+            artifacts/implementation/current-player-credibility-board.md
           if-no-files-found: warn
           retention-days: 14
