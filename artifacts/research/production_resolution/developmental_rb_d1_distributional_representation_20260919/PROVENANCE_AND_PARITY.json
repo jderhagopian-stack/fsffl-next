@@ -1,0 +1,31 @@
+{
+  "schema_version": "fsffl-dev-rb-d1-distributional-research-v1",
+  "date": "2026-09-19",
+  "repository": "jderhagopian-stack/fsffl-next",
+  "research_start_head": "fba0d2a6959c605496bdbc0bf442c916c056ff51",
+  "pr147_head": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "main_head": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "phase2_artifact_id": 10486530017,
+  "phase2_zip_sha256": "f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff",
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "p0_fitted_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "historical_prediction_rows": 10336,
+  "historical_rebuild_rows": 10336,
+  "historical_rebuild_max_pred_D1_abs_diff": 5.684341886080802e-14,
+  "historical_rebuild_exact_key_match": true,
+  "current_p0_parity_players": [
+    "Jahmyr Gibbs",
+    "Chase Brown",
+    "Bijan Robinson"
+  ],
+  "current_p0_parity_max_abs_diff": 0.0,
+  "selection_seasons": [
+    2014,
+    2020
+  ],
+  "locked_replication_seasons": [
+    2021,
+    2022
+  ],
+  "locked_replication_touched_before_preh_holdout_freeze": false
+}
