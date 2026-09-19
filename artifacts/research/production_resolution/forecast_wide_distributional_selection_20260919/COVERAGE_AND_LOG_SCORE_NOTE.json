@@ -1,0 +1,18 @@
+{
+  "schema_version": "fsffl-forecast-wide-coverage-availability-v1",
+  "log_score": {
+    "status": "NOT_VALID_UNDER_FROZEN_SERIALIZATION",
+    "reason": "D0/D1 serialize deterministic state-conditional point means without a governed within-state predictive density; adding smoothing would create a new representation choice."
+  },
+  "predictive_interval_coverage": {
+    "status": "NOT_AVAILABLE_AS_CANDIDATE_SPECIFIC_GOVERNED_OUTPUT",
+    "reason": "Frozen serialization contains shared state probabilities and deterministic conditional means, not within-state variance/quantile intervals."
+  },
+  "calibration_available": [
+    "active-vs-out Brier score",
+    "active-vs-out log loss",
+    "six-state multiclass Brier score",
+    "six-state multiclass log loss"
+  ],
+  "candidate_specificity": "State calibration is shared by D0/D1 and therefore diagnoses the probability layer but does not itself choose between D0/D1 conditional-production representations."
+}
