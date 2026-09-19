@@ -1,0 +1,74 @@
+{
+  "schema_version": "fsffl-standard-vs-half-ppr-coordinate-audit-v1",
+  "date": "2026-09-19",
+  "source_baseline": {
+    "record_id": 145,
+    "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "evaluation_as_of": "2026-09-10T21:36:41.346326Z"
+  },
+  "player_identity_population": {
+    "standard_rows": 335,
+    "standard_unique_ids": 335,
+    "league_rows": 335,
+    "league_unique_ids": 335,
+    "parity": "PASS"
+  },
+  "hashes": {
+    "standard_board_sha256": "3f9d07bff0a81d8c78d842145e905f49600822e944557d173ba4556ff99810f6",
+    "league_half_ppr_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae"
+  },
+  "standard_scoring": [
+    [
+      "pass_yd",
+      0.04
+    ],
+    [
+      "pass_td",
+      4
+    ],
+    [
+      "pass_int",
+      -2
+    ],
+    [
+      "rush_yd",
+      0.1
+    ],
+    [
+      "rush_td",
+      6
+    ],
+    [
+      "rec_yd",
+      0.1
+    ],
+    [
+      "rec_td",
+      6
+    ],
+    [
+      "fum_lost",
+      -2
+    ]
+  ],
+  "position_ratios": {
+    "QB": 1.04575952979839,
+    "RB": 1.11430683937932,
+    "WR": 1.2899047488253,
+    "TE": 1.35877076106381
+  },
+  "lineage_classification": "NO_SCORING_UNIT_DEFECT",
+  "lineage": [
+    "Research P0/current-state assignment reads x.points from the frozen career-transition fantasyPoints coordinate.",
+    "I1 current_points/prior_points features read the same frozen coordinate.",
+    "I1 target_points/state means are fit in the same frozen coordinate.",
+    "2025 current facts are extracted from the same frozen source and exact-parity validated against 2020-2022 research rows.",
+    "Frozen I1 artifacts preserve standard/non-PPR coefficients/state means without league scoring substitution.",
+    "Runtime maps completed-source facts into I1 unchanged.",
+    "LeagueScoringNormalizedI1Predictor converts only I1 output point quantities using a position ratio derived from the same baseline universe; probabilities and input features are unchanged.",
+    "Calendar/Shapley consumes already-bridged Year2/Year3 values; no second league-scoring conversion exists."
+  ],
+  "semantic_change_required": false,
+  "model_fit_required": false,
+  "provider_refetch_required": false
+}
