@@ -30,7 +30,7 @@ def _evidence_from_baseline(
     league_state: LeagueState,
     *,
     baseline,
-    live_failure: Exception,
+    live_failure: Exception | None = None,
 ) -> LiveForecastEvidence:
     result = build_runtime_from_preseason_baseline(league_state, baseline)
     uncertainty_ready = bool(result.fantasy_point_forecasts) and all(
@@ -44,12 +44,53 @@ def _evidence_from_baseline(
         ),
         successful_source_ids=result.successful_source_ids,
         failed_sources=(
-            f"live_full_season_refresh: {type(live_failure).__name__}: {live_failure}",
+            ()
+            if live_failure is None
+            else (
+                f"live_full_season_refresh: {type(live_failure).__name__}: {live_failure}",
+            )
         ),
         uncertainty_ready=uncertainty_ready,
         runtime_result=result,
         evidence_basis="preseason_baseline",
     )
+
+
+def make_preseason_baseline_authority_loader(
+    persistence_store: PersistenceStore | None,
+) -> ForecastLoader:
+    """Load the immutable preseason coordinate for consumers that require frozen Year 1.
+
+    This loader never calls live providers. The ordinary resilient/live Forecast path
+    remains separate so current-season/provider-health evidence can continue to refresh
+    without silently replacing the frozen preseason coordinate.
+    """
+
+    def load(league_state: LeagueState) -> LiveForecastEvidence:
+        if persistence_store is None:
+            raise ValueError("preserved preseason Year-1 authority requires persistence")
+        scope_id = preseason_scope_id(league_state)
+        existing = persistence_store.get_latest_reusable_artifact(
+            artifact_kind=PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND,
+            scope_kind=LEAGUE_SEASON_SCOPE_KIND,
+            scope_id=scope_id,
+            model_version=PRESEASON_BASELINE_MODEL_VERSION,
+        )
+        if existing is None:
+            raise ValueError(
+                "valid preserved preseason Year-1 baseline is unavailable for "
+                f"{scope_id}"
+            )
+        baseline = decode_preseason_forecast_baseline(dict(existing.payload))
+        evidence = _evidence_from_baseline(
+            league_state,
+            baseline=baseline,
+        )
+        if evidence.evidence_basis != "preseason_baseline":
+            raise ValueError("preserved Year-1 authority returned an unexpected evidence basis")
+        return evidence
+
+    return load
 
 
 def make_resilient_forecast_loader(
