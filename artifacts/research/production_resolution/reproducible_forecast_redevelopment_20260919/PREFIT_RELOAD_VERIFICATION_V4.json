@@ -1,0 +1,16 @@
+{
+  "schema_version": "fsffl-redevelopment-prefit-reload-verification-v4",
+  "pass": true,
+  "specification_git_blob_sha": "b871adc642c96ecd7c5d95a513981ca05b26840a",
+  "implementation_git_blob_sha": "4f8c3ffebf50d257bdd3f9fac5f33c8770b1222e",
+  "local_expected_implementation_git_blob_sha": "4f8c3ffebf50d257bdd3f9fac5f33c8770b1222e",
+  "correction_commits": [
+    "9070cfdecb5e458730e3f2eb9f112e04e6eccefc",
+    "38350e009c5555ff87a8c75e121bb11ea2b34ce7"
+  ],
+  "prior_partial_run_discard": "e4336431124da7d9a3ce6094bdd463adc27319eb",
+  "successful_candidate_fits_retained": 0,
+  "candidate_selection_results_retained": 0,
+  "current_player_materializations": 0,
+  "restart_from_scratch_required": true
+}
