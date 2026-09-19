@@ -1,0 +1,104 @@
+{
+  "schema_version": "fsffl-reproducible-forecast-redevelopment-artifact-manifest-v1",
+  "date": "2026-09-19",
+  "outcome": "B",
+  "repo_artifacts": {
+    "deployment_specification": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/DEPLOYMENT_SPECIFICATION.json",
+    "implementation": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/redevelopment_v1.py",
+    "prefit_reload_verification": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/PREFIT_RELOAD_VERIFICATION_V4.json",
+    "source_reconstruction_parity": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/SOURCE_RECONSTRUCTION_PARITY.json",
+    "historical_selection_freeze": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/HISTORICAL_SELECTION_FREEZE.json",
+    "rejection_ledger": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/REJECTION_LEDGER.md",
+    "current_source_spec": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/CURRENT_SOURCE_MATERIALIZATION_SPEC.json",
+    "current_source_completion": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/CURRENT_SOURCE_COMPLETION_ADDENDUM.json",
+    "final_fit_harness": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/deployment_fit_v1.py",
+    "final_fit_persistence": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/FINAL_FIT_PERSISTENCE_MANIFEST.json",
+    "final_replay": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/FINAL_REPLAY_VERIFICATION.json",
+    "current_gate": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/CURRENT_BOARD_CREDIBILITY_GATE.json",
+    "final_outcome": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/FINAL_OUTCOME.json",
+    "management_summary": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/MANAGEMENT_SUMMARY.md"
+  },
+  "library_artifacts": {
+    "historical_predictions": {
+      "library_file_id": "libfile_e76ec792af288191bc7e5ab8e03e42a0",
+      "sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709"
+    },
+    "routing_selection": {
+      "library_file_id": "libfile_89be029e74d88191afcc9016bfe59907",
+      "sha256": "f11c077bf7f01077ad3551a202fee10c29078f55386d63a79a3af66a94146daa"
+    },
+    "historical_scorecard": {
+      "library_file_id": "libfile_f640d213507081918cf08f698da398a9",
+      "sha256": "92013412d9e21ffc6852effd925a8dce1797abc2a0aae9065a7e3204a35b755e"
+    },
+    "final_fitted_package": {
+      "library_file_id": "libfile_aaa8c63f86e08191a89f092f02367472",
+      "sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7"
+    },
+    "final_replay_coordinate": {
+      "library_file_id": "libfile_4ebf8a380ec081919f00662c3da49dfb",
+      "sha256": "410f66e80f90cb103424ecbf650ab3eab762c94ca8c62a23f1e8e96d51ea82a5",
+      "rows": 20610
+    },
+    "final_replay_verification": {
+      "library_file_id": "libfile_586d8ff8c04c8191a93ed0d188d04716",
+      "sha256": "1ea9585849d69520ed9ea52a8e9bec037ce52ca14235bf3b9c9041d1e3351987"
+    },
+    "current_board_raw": {
+      "library_file_id": "libfile_66828a5a923c8191b68b821ebae7bdec",
+      "sha256": "cbcf22a1dbe12ffcf944806e97b7bfcab4759e0b720c61b2ed4dbcfb7bbe9aa3",
+      "rows": 335
+    },
+    "current_board_export_csv": {
+      "library_file_id": "libfile_97241431af30819192066120c8223a5f",
+      "sha256": "cbcf22a1dbe12ffcf944806e97b7bfcab4759e0b720c61b2ed4dbcfb7bbe9aa3",
+      "rows": 335
+    },
+    "current_board_export_xlsx": {
+      "library_file_id": "libfile_f8217d01a0c88191ba6dfbc0aed7e6e3",
+      "sha256": "4a36ddb41269bcd5901d7241ae020b8b266c69322d115eaad9a78893c443c178"
+    },
+    "current_cohort_summary": {
+      "library_file_id": "libfile_a418e2b71e148191998dc4879a0dbfa6",
+      "sha256": "ad8184791861d4e7569a1e0cb13c01287c06ba69edc55ffe86506ae65c081351"
+    },
+    "named_examples": {
+      "library_file_id": "libfile_4468b27ee9a08191bbad46687d08d71d",
+      "sha256": "430113078bda28551863fcb1fc162475d08266c3bfe37b851592e4a2471ed078"
+    },
+    "credibility_analysis": {
+      "library_file_id": "libfile_01c7eadba8e88191a8b5cf2aff63a8e1",
+      "sha256": "70d3b0a1aecf461f0cbb3c0f1fbb350c19b69a167b02c2ff4be831cc42d236d2"
+    },
+    "current_materializer_code": {
+      "library_file_id": "libfile_94c0901f0c108191abf1eaec2c08fe78",
+      "sha256": "53d7a3cdadf089d1e54be9b8221cd885eed94c96f3a6d6867e4aa446a5287ea7"
+    },
+    "exact_age_completion_copy": {
+      "library_file_id": "libfile_ff9b85dd7fd08191b24de0bdc5b73b34",
+      "source_governed_rows_sha256": "06b5188ead67f52f62c34117bb861a2dc3a920dc83162a9ce2ba50970df692cf"
+    }
+  },
+  "execution_accounting": {
+    "historical_successful_fit_cycles_retained": "18 rolling horizon fits after pre-result implementation corrections; earlier partial run discarded before selection",
+    "final_state_layer_fits": 4,
+    "final_production_model_fits": 3,
+    "alternate_final_refits": 0,
+    "current_board_materializations": 1,
+    "current_player_tuning_actions": 0,
+    "post_board_model_changes": 0,
+    "new_external_data_families": 0,
+    "named_player_selection_inputs": 0
+  },
+  "protected_state": {
+    "main_expected": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147_expected": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "production_authority_changed": false
+  },
+  "management_pdf": "Generated after this final repository packaging commit so the PDF can report the exact final branch head; persisted to the FSFFL NEXT Library and delivered in chat.",
+  "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+}
