@@ -1,0 +1,22 @@
+{
+  "schema_version": "fsffl-dev-rb-d1r-preholdout-decision-v1",
+  "candidate": "D1R",
+  "holdout_touched": false,
+  "Y2": {
+    "decision": "FAIL_PREHOLDOUT",
+    "reasons": [
+      "mid-block raw CRPS worsens (gain -0.0863)",
+      "pooled CRPS 95% CI crosses zero"
+    ]
+  },
+  "Y3": {
+    "decision": "FAIL_PREHOLDOUT",
+    "reasons": [
+      "pooled CRPS 95% CI crosses zero",
+      "high-source mean retention bias worsens from -0.1257 to -0.1359 rather than improving by >=0.05"
+    ]
+  },
+  "state_calibration": "IDENTICAL_BY_CONSTRUCTION",
+  "selection_result": "D1R DOES NOT EARN RESEARCH AUTHORITY",
+  "holdout_rule": "Evaluate 2021-2022 once for required locked replication reporting; it cannot rescue or modify this frozen pre-holdout failure."
+}
