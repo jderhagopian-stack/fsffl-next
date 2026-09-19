@@ -134,10 +134,11 @@ def _future_provenance(
     year_index: int,
 ) -> tuple[ShapleyHorizonProvenance, ShapleyHorizonUncertainty]:
     item = coordinate.year_2 if year_index == 2 else coordinate.year_3
+    is_p0 = item.result.model_version.startswith("p0-redeveloped-v1:")
     return (
         ShapleyHorizonProvenance(
-            authority="completed_source_direct_i1",
-            source="canonical_completed_source_facts",
+            authority=("frozen_p0_future_forecast" if is_p0 else "completed_source_direct_i1"),
+            source=("standard_non_ppr_p0_then_player_scoring" if is_p0 else "canonical_completed_source_facts"),
             model_version=item.result.model_version,
             source_season=item.source_season,
             direct_i1_horizon=item.horizon,
@@ -158,6 +159,7 @@ def build_shapley_intrinsic_contract(
     *,
     completed_source_provenance: CompletedSourceFactProvenance | None = None,
     missing_required_fact_families: tuple[str, ...] = (),
+    forecast_model_version: str | None = None,
 ) -> ShapleyIntrinsicContract:
     """Translate frozen calendar/Shapley output into a versioned API contract.
 
@@ -230,31 +232,49 @@ def build_shapley_intrinsic_contract(
             )
 
         diagnostic = coordinate.diagnostic_h1
+        if diagnostic is None:
+            diagnostic_evidence = DiagnosticH1Evidence(
+                target_season=coordinate.evaluation_season,
+                anticipated_points=0.0,
+                provenance=ShapleyHorizonProvenance(
+                    authority="diagnostic_h1_not_materialized",
+                    source="none",
+                    model_version="diagnostic-h1-unavailable:p0-direct-calendar",
+                    diagnostic_only=True,
+                    included_in_intrinsic=False,
+                ),
+                uncertainty=ShapleyHorizonUncertainty(
+                    evidence_path="not_materialized",
+                ),
+                included_in_intrinsic=False,
+            )
+        else:
+            diagnostic_evidence = DiagnosticH1Evidence(
+                target_season=diagnostic.target_season,
+                anticipated_points=diagnostic.result.anticipated_points,
+                provenance=ShapleyHorizonProvenance(
+                    authority="completed_source_direct_i1_diagnostic",
+                    source="canonical_completed_source_facts",
+                    model_version=diagnostic.result.model_version,
+                    source_season=diagnostic.source_season,
+                    direct_i1_horizon=diagnostic.horizon,
+                    regularization_policy_version=diagnostic.regularization_policy_version,
+                    regularization_c=diagnostic.regularization_c,
+                    diagnostic_only=True,
+                    included_in_intrinsic=False,
+                ),
+                uncertainty=ShapleyHorizonUncertainty(
+                    state_entropy=diagnostic.state_entropy,
+                    evidence_path=diagnostic.result.evidence_path,
+                ),
+                included_in_intrinsic=False,
+            )
         payload.append(
             ShapleyIntrinsicPlayerEstimate(
                 player_id=player_id,
                 raw_intrinsic_value=estimate.value,
                 contributions=contributions,
-                diagnostic_h1=DiagnosticH1Evidence(
-                    target_season=diagnostic.target_season,
-                    anticipated_points=diagnostic.result.anticipated_points,
-                    provenance=ShapleyHorizonProvenance(
-                        authority="completed_source_direct_i1_diagnostic",
-                        source="canonical_completed_source_facts",
-                        model_version=diagnostic.result.model_version,
-                        source_season=diagnostic.source_season,
-                        direct_i1_horizon=diagnostic.horizon,
-                        regularization_policy_version=diagnostic.regularization_policy_version,
-                        regularization_c=diagnostic.regularization_c,
-                        diagnostic_only=True,
-                        included_in_intrinsic=False,
-                    ),
-                    uncertainty=ShapleyHorizonUncertainty(
-                        state_entropy=diagnostic.state_entropy,
-                        evidence_path=diagnostic.result.evidence_path,
-                    ),
-                    included_in_intrinsic=False,
-                ),
+                diagnostic_h1=diagnostic_evidence,
             )
         )
 
@@ -271,6 +291,7 @@ def build_shapley_intrinsic_contract(
     return ShapleyIntrinsicContract(
         status=status,
         status_reason=reason,
+        forecast_model_version=forecast_model_version or I1_MODEL_VERSION,
         evaluation_season=calendar.evaluation_season,
         completed_source_season=calendar.completed_source_season,
         target_years=(calendar.evaluation_season, calendar.evaluation_season + 1, calendar.evaluation_season + 2),
@@ -297,12 +318,14 @@ def build_unavailable_shapley_intrinsic_contract(
     evaluation_season: int,
     reason: str,
     missing_required_fact_families: tuple[str, ...],
+    forecast_model_version: str = I1_MODEL_VERSION,
 ) -> ShapleyIntrinsicContract:
     if not reason.strip():
         raise ValueError("unavailable Shapley Intrinsic contract requires a reason")
     return ShapleyIntrinsicContract(
         status=ShapleyIntrinsicAvailability.UNAVAILABLE,
         status_reason=reason,
+        forecast_model_version=forecast_model_version,
         evaluation_season=evaluation_season,
         completed_source_season=evaluation_season - 1,
         target_years=(evaluation_season, evaluation_season + 1, evaluation_season + 2),

@@ -91,6 +91,22 @@ def player_scoring_multipliers(
     return multipliers
 
 
+def derive_future_i1_standard_year_one(
+    *,
+    raw_forecasts: tuple[ForecastObservation, ...],
+    rules: LeagueRules,
+) -> tuple[ForecastObservation, ...]:
+    """Direct-score the frozen raw stat vector on the governed standard/non-PPR coordinate."""
+
+    standard_rules = rules.model_copy(update={"scoring": FROZEN_I1_STANDARD_SCORING})
+    return derive_league_fantasy_point_forecasts(
+        raw_forecasts,
+        rules=standard_rules,
+        source="fsffl:p0_frozen_standard_scoring:player_specific",
+        model_version=FUTURE_I1_PLAYER_SCORING_VERSION,
+    )
+
+
 def build_future_i1_player_scoring_multipliers(
     *,
     raw_forecasts: tuple[ForecastObservation, ...],
@@ -99,12 +115,9 @@ def build_future_i1_player_scoring_multipliers(
 ) -> dict[str, float]:
     """Build player-specific translation from the governed frozen Year-1 stat vector."""
 
-    standard_rules = rules.model_copy(update={"scoring": FROZEN_I1_STANDARD_SCORING})
-    standard_year_one = derive_league_fantasy_point_forecasts(
-        raw_forecasts,
-        rules=standard_rules,
-        source="fsffl:i1_frozen_standard_scoring:player_specific",
-        model_version=FUTURE_I1_PLAYER_SCORING_VERSION,
+    standard_year_one = derive_future_i1_standard_year_one(
+        raw_forecasts=raw_forecasts,
+        rules=rules,
     )
     return player_scoring_multipliers(
         standard_year_one=standard_year_one,

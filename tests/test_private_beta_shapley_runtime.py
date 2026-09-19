@@ -24,6 +24,7 @@ from fsffl.product.i1_scoring_bridge import (
     FROZEN_I1_STANDARD_SCORING,
     FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
 )
+from fsffl.product.p0_forecast_runtime import P0_FORECAST_VERSION, frozen_p0_source_rows
 from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from fsffl.product.runtime import UserRuntimeContext
 from fsffl.state.models import (
@@ -49,9 +50,8 @@ from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 
 
 def _fixture() -> tuple[LeagueState, ForecastObservation]:
-    facts = json.loads(activation_artifact_text("current_i1_facts_2026.json"))
-    row = facts["rows"][0]
-    position = Position(row["position"])
+    source = next(item for item in frozen_p0_source_rows() if item.position == "QB")
+    position = Position.QB
     now = datetime(2026, 9, 16, 12, tzinfo=UTC)
     provenance = Provenance(
         source="fixture",
@@ -61,26 +61,17 @@ def _fixture() -> tuple[LeagueState, ForecastObservation]:
     )
     player = Player(
         player_id="canonical-player",
-        full_name=row["display_name"],
+        full_name=source.player_name,
         position=position,
         provider_refs=(
-            ProviderRef(provider=row["identity_provider"], external_id=row["identity_external_id"]),
+            ProviderRef(provider="sleeper", external_id=source.sleeper_external_id),
         ),
     )
     rules = LeagueRules(
         team_count=2,
         roster_size=18,
         lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
-        scoring=(
-            ScoringRule(stat="pass_yd", points=0.04),
-            ScoringRule(stat="pass_td", points=4.0),
-            ScoringRule(stat="pass_int", points=-2.0),
-            ScoringRule(stat="rush_yd", points=0.1),
-            ScoringRule(stat="rush_td", points=6.0),
-            ScoringRule(stat="rec_yd", points=0.1),
-            ScoringRule(stat="rec_td", points=6.0),
-            ScoringRule(stat="fum_lost", points=-2.0),
-        ),
+        scoring=FROZEN_I1_STANDARD_SCORING,
     )
     state = LeagueState(
         league=League(league_id="league", name="Fixture", season=2026, rules=rules),
@@ -100,7 +91,7 @@ def _fixture() -> tuple[LeagueState, ForecastObservation]:
         metric=ForecastMetric.FANTASY_POINTS,
         period_start=now,
         period_end=now + timedelta(days=100),
-        distribution=ForecastDistribution(mean=250.0, stddev=25.0),
+        distribution=ForecastDistribution(mean=source.standard_y1_points, stddev=25.0),
         source="governed-live-fixture",
         model_version="fixture-forecast-v1",
         as_of=now,
@@ -110,33 +101,25 @@ def _fixture() -> tuple[LeagueState, ForecastObservation]:
 
 
 def _raw_forecasts(observation: ForecastObservation) -> tuple[ForecastObservation, ...]:
-    if observation.position == Position.QB:
-        metrics = (
-            (ForecastMetric.PASS_YARDS, 4000.0),
-            (ForecastMetric.PASS_TD, 25.0),
-            (ForecastMetric.INTERCEPTIONS, 5.0),
-        )
-    else:
-        metrics = (
-            (ForecastMetric.RECEPTIONS, 80.0),
-            (ForecastMetric.REC_YARDS, 1300.0),
-            (ForecastMetric.REC_TD, 20.0),
-        )
-    return tuple(
+    # A scoring-neutral raw stat reconstructs the exact frozen standard/non-PPR
+    # P0 coordinate while still exercising direct scoring from raw evidence.
+    return (
         ForecastObservation(
             player_id=observation.player_id,
             position=observation.position,
             horizon=observation.horizon,
-            metric=metric,
+            metric=ForecastMetric.RUSH_YARDS,
             period_start=observation.period_start,
             period_end=observation.period_end,
-            distribution=ForecastDistribution(mean=mean, stddev=1.0),
+            distribution=ForecastDistribution(
+                mean=float(observation.distribution.mean) * 10.0,
+                stddev=1.0,
+            ),
             source="raw-fixture",
             model_version="raw-fixture-v1",
             as_of=observation.as_of,
             provenance=observation.provenance,
-        )
-        for metric, mean in metrics
+        ),
     )
 
 
@@ -202,7 +185,9 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     assert contract.coverage.year_1_forecast_players == 1
     assert contract.coverage.year_2_i1_players == 1
     assert contract.coverage.year_3_i1_players == 1
-    assert contract.coverage.reduced_or_fallback_players == 1
+    assert contract.coverage.rich_path_players == 1
+    assert contract.coverage.reduced_or_fallback_players == 0
+    assert contract.forecast_model_version == P0_FORECAST_VERSION
     assert contract.estimates[0].diagnostic_h1.included_in_intrinsic is False
     assert [item.provenance.direct_i1_horizon for item in contract.estimates[0].contributions] == [None, 2, 3]
     assert contract.horizon_seeds == (contract.seed, contract.seed + 1, contract.seed + 2)
@@ -225,18 +210,22 @@ def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
     assert third is first
 
 
-def test_loader_invalidates_only_when_preseason_authority_changes() -> None:
+def test_loader_fails_closed_when_preseason_standard_coordinate_drifts() -> None:
     state, observation = _fixture()
-    box = {"observation": observation}
+    changed = observation.model_copy(
+        update={
+            "distribution": ForecastDistribution(
+                mean=observation.distribution.mean + 1.0,
+                stddev=25.0,
+            )
+        }
+    )
     loader = PrivateBetaShapleyContractLoader(
-        year_one_loader=lambda _state: _authority_evidence(box["observation"])
+        year_one_loader=lambda _state: _authority_evidence(changed)
     )
-    first = loader(_context(state, observation))
-    box["observation"] = observation.model_copy(
-        update={"distribution": ForecastDistribution(mean=251.0, stddev=25.0)}
-    )
-    second = loader(_context(state, observation))
-    assert second is not first
+    contract = loader(_context(state, observation))
+    assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert "p0_future_forecast_coordinate" in contract.coverage.missing_required_fact_families
 
 
 def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_source_mapping() -> None:
@@ -279,7 +268,7 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
     )(context)
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
     assert contract.coverage.player_count == 0
-    assert "completed_source_player_mapping" in contract.coverage.missing_required_fact_families
+    assert "p0_future_forecast_coordinate" in contract.coverage.missing_required_fact_families
 
 
 # This focused file intentionally triggers the lightweight activation/API diagnostic workflow.
@@ -496,8 +485,7 @@ def _runtime_scoring_case(
     *,
     scoring: tuple[ScoringRule, ...],
 ):
-    facts = json.loads(activation_artifact_text("current_i1_facts_2026.json"))
-    row = next(item for item in facts["rows"] if item["position"] == position.value)
+    source = next(item for item in frozen_p0_source_rows() if item.position == position.value)
     now = datetime(2026, 9, 10, 21, 36, tzinfo=UTC)
     provenance = Provenance(
         source="two-source-fixture",
@@ -507,10 +495,10 @@ def _runtime_scoring_case(
     )
     player = Player(
         player_id=f"runtime-{position.value.lower()}",
-        full_name=row["display_name"],
+        full_name=source.player_name,
         position=position,
         provider_refs=(
-            ProviderRef(provider=row["identity_provider"], external_id=row["identity_external_id"]),
+            ProviderRef(provider="sleeper", external_id=source.sleeper_external_id),
         ),
     )
     slot = {
@@ -536,23 +524,20 @@ def _runtime_scoring_case(
         players=(player,),
         player_states=(PlayerState(player_id=player.player_id, as_of=now, provenance=provenance),),
     )
-    metric_values = (
-        (
-            (ForecastMetric.PASS_YARDS, 4000.0),
-            (ForecastMetric.PASS_TD, 30.0),
-            (ForecastMetric.INTERCEPTIONS, 10.0),
-            (ForecastMetric.RUSH_YARDS, 400.0),
-            (ForecastMetric.RUSH_TD, 4.0),
+
+    if position == Position.QB:
+        pass_td = min(10.0, source.standard_y1_points / 8.0)
+        remaining = max(0.0, source.standard_y1_points - 4.0 * pass_td)
+        metric_values = (
+            (ForecastMetric.PASS_YARDS, remaining / 0.04),
+            (ForecastMetric.PASS_TD, pass_td),
         )
-        if position == Position.QB
-        else (
-            (ForecastMetric.RUSH_YARDS, 120.0),
-            (ForecastMetric.RUSH_TD, 1.0),
+    else:
+        metric_values = (
             (ForecastMetric.RECEPTIONS, 80.0),
-            (ForecastMetric.REC_YARDS, 1000.0),
-            (ForecastMetric.REC_TD, 8.0),
+            (ForecastMetric.REC_YARDS, source.standard_y1_points / 0.1),
         )
-    )
+
     raw = tuple(
         ForecastObservation(
             player_id=player.player_id,
@@ -643,9 +628,10 @@ def test_authoritative_runtime_propagates_supported_scoring_family_to_intrinsic_
     ratio = variant_y1.distribution.mean / standard_y1.distribution.mean
     standard_estimate = standard_contract.estimates[0]
     variant_estimate = variant_contract.estimates[0]
-    assert variant_estimate.diagnostic_h1.anticipated_points == pytest.approx(
-        standard_estimate.diagnostic_h1.anticipated_points * ratio
-    )
+    assert standard_estimate.diagnostic_h1.included_in_intrinsic is False
+    assert variant_estimate.diagnostic_h1.included_in_intrinsic is False
+    assert standard_estimate.diagnostic_h1.anticipated_points == 0.0
+    assert variant_estimate.diagnostic_h1.anticipated_points == 0.0
     for year_index in (2, 3):
         standard_contribution = standard_estimate.contributions[year_index - 1]
         variant_contribution = variant_estimate.contributions[year_index - 1]

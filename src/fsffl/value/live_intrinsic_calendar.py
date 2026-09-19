@@ -20,7 +20,7 @@ from .shapley_intrinsic import (
     build_intrinsic_shapley_estimates,
 )
 
-LIVE_INTRINSIC_CALENDAR_VERSION = "live-intrinsic-calendar-v1:year1-live-h2-h3-direct"
+LIVE_INTRINSIC_CALENDAR_VERSION = "live-intrinsic-calendar-v2:preseason-y1-p0-y2-y3-direct"
 
 
 class I1Predictor(Protocol):
@@ -52,8 +52,8 @@ class CompletedSourceI1Coordinate:
     target_season: int
     result: I1ForecastResult
     diagnostic_only: bool
-    regularization_policy_version: str = FROZEN_I1_REGULARIZATION.version
-    regularization_c: float = FROZEN_I1_REGULARIZATION.default_c
+    regularization_policy_version: str | None = FROZEN_I1_REGULARIZATION.version
+    regularization_c: float | None = FROZEN_I1_REGULARIZATION.default_c
 
     @property
     def state_entropy(self) -> float:
@@ -70,7 +70,7 @@ class LiveThreeYearPlayerCoordinate:
     position: Position
     evaluation_season: int
     year_1: LiveYearOneCoordinate
-    diagnostic_h1: CompletedSourceI1Coordinate
+    diagnostic_h1: CompletedSourceI1Coordinate | None
     year_2: CompletedSourceI1Coordinate
     year_3: CompletedSourceI1Coordinate
     calendar_version: str = LIVE_INTRINSIC_CALENDAR_VERSION
@@ -78,10 +78,11 @@ class LiveThreeYearPlayerCoordinate:
     def __post_init__(self) -> None:
         if self.year_1.target_season != self.evaluation_season:
             raise ValueError("live Year 1 must target the evaluation season")
-        if self.diagnostic_h1.target_season != self.evaluation_season or self.diagnostic_h1.horizon != 1:
-            raise ValueError("completed-source h=1 must target the evaluation season and remain diagnostic")
-        if not self.diagnostic_h1.diagnostic_only:
-            raise ValueError("completed-source h=1 must be diagnostic only")
+        if self.diagnostic_h1 is not None:
+            if self.diagnostic_h1.target_season != self.evaluation_season or self.diagnostic_h1.horizon != 1:
+                raise ValueError("completed-source h=1 must target the evaluation season and remain diagnostic")
+            if not self.diagnostic_h1.diagnostic_only:
+                raise ValueError("completed-source h=1 must be diagnostic only")
         if self.year_2.horizon != 2 or self.year_2.target_season != self.evaluation_season + 1:
             raise ValueError("live Year 2 must be completed-source direct h=2")
         if self.year_3.horizon != 3 or self.year_3.target_season != self.evaluation_season + 2:
@@ -241,6 +242,80 @@ def compose_live_intrinsic_calendar(
         forecasts=tuple(output),
         evaluation_season=mapping.evaluation_season,
         completed_source_season=mapping.completed_source_season,
+    )
+
+
+def compose_live_intrinsic_calendar_from_future_results(
+    *,
+    live_year_one_forecasts: tuple[ForecastObservation, ...],
+    future_results: Mapping[str, Mapping[int, I1ForecastResult]],
+    future_source_season: int,
+) -> LiveIntrinsicCalendarResult:
+    """Compose preserved preseason Y1 plus exact externally materialized P0 Y2/Y3.
+
+    The promoted P0 path intentionally has no legacy completed-source h=1
+    predictor. Diagnostic h=1 therefore remains absent and excluded from Intrinsic.
+    """
+
+    year_one = _year_one_index(live_year_one_forecasts)
+    if set(year_one) != set(future_results):
+        missing_future = sorted(set(year_one) - set(future_results))
+        extra_future = sorted(set(future_results) - set(year_one))
+        raise ValueError(
+            "P0 future result coverage must exactly match governed Year-1 coverage; "
+            f"missing={missing_future}; extra={extra_future}"
+        )
+
+    evaluation_season = int(future_source_season)
+    output: list[LiveThreeYearPlayerCoordinate] = []
+    for player_id in sorted(year_one):
+        live = year_one[player_id]
+        by_horizon = future_results[player_id]
+        if set(by_horizon) != {2, 3}:
+            raise ValueError(f"P0 future results must contain direct Y2/Y3 only for {player_id}")
+        output.append(
+            LiveThreeYearPlayerCoordinate(
+                player_id=player_id,
+                position=live.position,
+                evaluation_season=evaluation_season,
+                year_1=LiveYearOneCoordinate(
+                    target_season=evaluation_season,
+                    anticipated_points=max(0.0, float(live.distribution.mean)),
+                    stddev=max(0.0, float(live.distribution.stddev)),
+                    source=live.source,
+                    model_version=live.model_version,
+                    authority=(
+                        "preserved_preseason_year1_forecast"
+                        if live.source.startswith("fsffl:preseason_baseline")
+                        else "governed_live_current_season_forecast"
+                    ),
+                ),
+                diagnostic_h1=None,
+                year_2=CompletedSourceI1Coordinate(
+                    source_season=evaluation_season,
+                    horizon=2,
+                    target_season=evaluation_season + 1,
+                    result=by_horizon[2],
+                    diagnostic_only=False,
+                    regularization_policy_version=None,
+                    regularization_c=None,
+                ),
+                year_3=CompletedSourceI1Coordinate(
+                    source_season=evaluation_season,
+                    horizon=3,
+                    target_season=evaluation_season + 2,
+                    result=by_horizon[3],
+                    diagnostic_only=False,
+                    regularization_policy_version=None,
+                    regularization_c=None,
+                ),
+            )
+        )
+
+    return LiveIntrinsicCalendarResult(
+        forecasts=tuple(output),
+        evaluation_season=evaluation_season,
+        completed_source_season=evaluation_season,
     )
 
 
