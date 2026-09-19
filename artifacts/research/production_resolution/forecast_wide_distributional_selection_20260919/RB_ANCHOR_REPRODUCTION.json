@@ -1,0 +1,17 @@
+{
+  "schema_version": "fsffl-rb-anchor-reproduction-v1",
+  "source": "previous durable elite-RB diagnostic",
+  "selection_window": "2014-2020",
+  "developmental_y3_high_source_rule": "source_points > 225.5",
+  "n": 26,
+  "active_n": 25,
+  "realized_active_median_retention": 0.6980234260614934,
+  "p0_conditional_active_median_retention": 0.5202401147115076,
+  "mean_p0_minus_realized_bias": -0.12566490916773787,
+  "bootstrap_ci95": [
+    -0.24223853577106985,
+    -0.005871646415005122
+  ],
+  "postfreeze_active_median_retention": 0.7276650841605524,
+  "note": "This exact anchor is carried forward unchanged. A raw float tertile recomputation can produce 225.49999999999997; the governed prior rule is the durable rounded threshold >225.5."
+}
