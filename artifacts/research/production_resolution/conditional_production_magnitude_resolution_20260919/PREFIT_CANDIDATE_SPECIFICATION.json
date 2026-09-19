@@ -1,0 +1,149 @@
+{
+  "schema_version": "fsffl-conditional-production-targeted-challengers-v1",
+  "status": "PREFIT_FROZEN",
+  "mechanism_checkpoint_commit": "20bf67badcdb816585bf992e802dd1f2cb918c26",
+  "control_P0": {
+    "definition": "Exact frozen Outcome-B conditional-production architecture and selected route. Persistence and ordered-state probabilities unchanged.",
+    "Y2_route": "universal D1",
+    "Y3_route": {
+      "QB|developmental": "D0",
+      "QB|established": "D1",
+      "QB|veteran": "D1",
+      "RB|developmental": "D1",
+      "RB|established": "D0",
+      "RB|veteran": "D0",
+      "WR|developmental": "D1",
+      "WR|established": "D1",
+      "WR|veteran": "D0",
+      "TE|developmental": "D1",
+      "TE|established": "D1",
+      "TE|veteran": "D0"
+    }
+  },
+  "challenger_P1": {
+    "name": "Residual magnitude anchor",
+    "logical_connection": "Stage 1 showed weak high-end magnitude transfer: the absolute-level learner uses sublinear log source magnitude plus a bounded percentile and converges toward historical level baselines. P1 adds only one learned continuous source anchor.",
+    "state_and_route": "Identical to P0.",
+    "baseline_models": "Fit the exact P0 D0/D1 production models and frozen state layers inside each legal rolling-origin training fold.",
+    "training_population": "Target-active training rows only, using the same horizon-specific production training population as P0.",
+    "baseline_training_prediction": "For each active training row, compute the P0 conditional-active forecast under the frozen route and the fold's fitted state probabilities.",
+    "residual_target": "y = target_points - P0_conditional_active_points",
+    "anchor_feature": "x = source_points - P0_conditional_active_points",
+    "estimator": {
+      "family": "sklearn.linear_model.BayesianRidge",
+      "fit_intercept": false,
+      "max_iter": 300,
+      "tol": 0.000001,
+      "alpha_1": 0.000001,
+      "alpha_2": 0.000001,
+      "lambda_1": 0.000001,
+      "lambda_2": 0.000001,
+      "compute_score": false,
+      "copy_X": true,
+      "verbose": false
+    },
+    "coefficient_rule": "Fit one horizon-level coefficient w_raw to y~x with no intercept; freeze w=clip(w_raw,0,1). No grid or threshold search.",
+    "prediction": "P1_conditional = max(0, P0_conditional + w*(source_points-P0_conditional)); expected=P_active*P1_conditional.",
+    "monotonicity": "w is constrained to [0,1], so the correction is a convex pull toward source magnitude rather than an elite-only multiplier.",
+    "pooling": "One shared w per horizon across all positions, states and career stages.",
+    "floors_caps": "Zero floor only; no cap.",
+    "seed": "No stochastic optimization; sklearn BayesianRidge deterministic for fixed rows."
+  },
+  "challenger_P2": {
+    "name": "Relative log-retention target",
+    "logical_connection": "Stage 1 showed an absolute-target scale problem under a shifted current source magnitude distribution. P2 models future production relative to source magnitude directly without an arbitrary denominator floor.",
+    "state_and_route": "Identical to P0.",
+    "training_population": "Target-active rows only, same legal horizon-specific training rows as P0.",
+    "target_transform": "delta = log1p(target_points) - log1p(source_points)",
+    "input_features": "Exactly the allowed P0 feature set for the routed treatment: D0 cells use D0 features; D1 cells use D1 state-conditioned features including the frozen two-prior signal where covered.",
+    "preprocessing": "Reuse exact P0 training-only scalers, one-hot encoding order, nonnegative prior1 log rule and deterministic row order.",
+    "estimator": "Same exact BayesianRidge hyperparameters as P0, fit separately by horizon and required routed treatment (D0 or D1).",
+    "inverse_transform": "conditional_points = max(0, expm1(log1p(source_points)+predicted_delta)).",
+    "state_combination": "D1 routed cells predict one transformed conditional point level per positive future state, then combine with the unchanged positive-state probabilities. D0 routed cells predict one conditional-active level.",
+    "pooling": "Same shared/partially pooled P0 feature structure; no player-specific coefficient.",
+    "floors_caps": "Zero floor only; no cap; log1p makes the transformation prospectively safe at low source production.",
+    "seed": "No stochastic optimization; sklearn BayesianRidge deterministic for fixed rows."
+  },
+  "historical_evaluation": {
+    "selection_source_seasons": [
+      2014,
+      2020
+    ],
+    "chronological_blocks": {
+      "early": [
+        2014,
+        2016
+      ],
+      "mid": [
+        2017,
+        2018
+      ],
+      "validation": [
+        2019,
+        2020
+      ]
+    },
+    "strict_rolling_origin": true,
+    "current_board_influence": false,
+    "primary_metrics": [
+      "conditional-active MAE and signed bias on target-active rows",
+      "unconditional MAE and signed bias on all rows",
+      "predicted-vs-realized conditional retention by source percentile/decile",
+      "top10, top5 and young-top10 retention calibration",
+      "position/horizon calibration"
+    ],
+    "secondary_metrics": [
+      "overall/position MAE and bias",
+      "developmental",
+      "prime established",
+      "veteran",
+      "role-loss stress",
+      "deep-collapse stress",
+      "non-role-loss",
+      "chronological block/fold stability"
+    ],
+    "post_selection_replication": [
+      2021,
+      2022
+    ]
+  },
+  "selection_rule": {
+    "step1_upper_tail": {
+      "requirement": "At both Y2 and Y3, aggregate absolute top-5 retention bias must improve by at least 0.01 retention units versus P0.",
+      "chronology": "Across the six horizon x early/mid/validation cells, absolute top-5 retention bias must improve in at least five and may not worsen by more than 0.01 in any cell.",
+      "top10_guardrail": "Aggregate top-10 absolute retention bias may not worsen by more than 0.01 at either horizon."
+    },
+    "step2_young_guardrail": {
+      "young_top10_absolute_retention_bias": "May not worsen by more than 0.01 at either horizon.",
+      "young_top10_conditional_mae": "May not worsen by more than 1.0 fantasy point at either horizon.",
+      "developmental_unconditional_mae": "May not worsen by more than 0.75 fantasy points at either horizon."
+    },
+    "step3_broad_guardrails": {
+      "overall_unconditional_mae": "May not worsen by more than 0.50 fantasy points at either horizon.",
+      "chronological_unconditional_mae": "No early/mid/validation block may worsen by more than 1.0 point at either horizon.",
+      "major_position_unconditional_mae": "No QB/RB/WR/TE horizon aggregate may worsen by more than 1.0 point.",
+      "overall_conditional_active_mae": "May not worsen by more than 0.50 points at either horizon."
+    },
+    "step4_meaningful_calibration_gain": "Average reduction in absolute top-5 retention bias across Y2 and Y3 must be at least 0.01.",
+    "role_loss": "Stress test only; report cost explicitly and do not use as a hindsight veto unless it triggers a broad guardrail already listed.",
+    "winner_if_multiple_pass": "Choose the candidate with the lower sum of absolute Y2+Y3 top-5 retention bias. If candidates are within 0.005 total retention-bias units and within 0.25 points total Y2+Y3 unconditional MAE, prefer simpler P1.",
+    "no_route_changes": true,
+    "no_current_player_selection": true
+  },
+  "serialization": {
+    "prediction_rows": "CSV with P0/P1/P2 conditional and unconditional predictions plus frozen probabilities/route and cohort flags.",
+    "scorecard": "JSON plus CSV tables.",
+    "fitted_candidate_package": "Winning candidate only after historical freeze.",
+    "hashes": "SHA-256 over exact bytes.",
+    "replay_tolerances": {
+      "probabilities": 1e-10,
+      "points": 1e-8
+    }
+  },
+  "stop_rules": [
+    "If P0 historical parity with durable control rows fails, stop Outcome C before comparing challengers.",
+    "If neither P1 nor P2 clears the predeclared selection rule, Outcome B and stop without final/current refit.",
+    "If a winner clears historical rules, freeze it before final fit and before a second current-board materialization.",
+    "No third challenger or route reopen."
+  ]
+}
