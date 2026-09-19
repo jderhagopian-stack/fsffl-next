@@ -5,6 +5,8 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any, cast
 
+import pytest
+
 from fsffl.forecast.integrated_i1 import I1ForecastInput, I1ForecastResult, STATE_NAMES
 from fsffl.forecast.league_scoring import derive_league_fantasy_point_forecasts
 from fsffl.forecast.models import (
