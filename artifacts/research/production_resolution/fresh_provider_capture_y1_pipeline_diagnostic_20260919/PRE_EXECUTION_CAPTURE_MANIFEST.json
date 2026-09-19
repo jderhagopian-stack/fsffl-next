@@ -6,7 +6,7 @@
   "non_substitutable_for_missing_2026_09_18_evidence": true,
   "pre_network_state": {
     "research_branch": "research/future-state-resolution-phase34-resume",
-    "research_head": "c2a819d5ede9c50516d9d8e2b2769c858187b65d",
+    "research_head": "ff14f367440b394238564835b4fe65f84ae656f7",
     "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
     "pr147": {
       "state": "open",
@@ -99,7 +99,7 @@
   "executing_code": [
     {
       "path": "scripts/run_fresh_y1_provider_capture_audit.py",
-      "blob_sha": "40c0e1d1e8bef673f23ccbda5d516ecbafe0a63d",
+      "blob_sha": "bfeb09d8a9a973ef767ad33cde9fab781bd799a7",
       "role": "diagnostic wrapper and durable capture"
     },
     {
@@ -161,5 +161,13 @@
     "route_changes": 0,
     "production_changes": 0,
     "historical_2026_09_18_reconstruction": false
-  }
+  },
+  "preexecution_attempts": [
+    {
+      "workflow_run_id": 35434274258,
+      "head_sha": "8ee28f581db7f45b35f7b075c99c0060080a43fa",
+      "result": "FAILED_BEFORE_NETWORK_CAPTURE",
+      "reason": "ModuleNotFoundError on activation data import; provider acquisition did not begin."
+    }
+  ]
 }
