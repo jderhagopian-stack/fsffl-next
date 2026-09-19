@@ -139,6 +139,27 @@ def _context(state: LeagueState, observation: ForecastObservation) -> UserRuntim
     )
 
 
+def _authority_evidence(observation: ForecastObservation):
+    year_one = observation.model_copy(
+        update={
+            "source": "fsffl:preseason_baseline_league_scored",
+            "model_version": "authority-fixture-v1",
+        }
+    )
+    return cast(
+        Any,
+        SimpleNamespace(
+            raw_forecasts=_raw_forecasts(year_one),
+            league_scored_forecasts=(year_one,),
+            evidence_basis="preseason_baseline",
+            runtime_result=SimpleNamespace(
+                evaluation_as_of=year_one.as_of,
+                model_version="authority-fixture-v1",
+            ),
+        ),
+    )
+
+
 def test_pinned_activation_bundle_round_trips_and_has_stable_digest() -> None:
     assert len(ACTIVATION_BUNDLE_SHA256) == 64
     report = json.loads(activation_artifact_text("private_beta_activation_build_report.json"))
@@ -151,7 +172,9 @@ def test_pinned_activation_bundle_round_trips_and_has_stable_digest() -> None:
 
 def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> None:
     state, observation = _fixture()
-    loader = PrivateBetaShapleyContractLoader()
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )
     contract = loader(_context(state, observation))
 
     assert contract.status == ShapleyIntrinsicAvailability.DEGRADED
@@ -169,17 +192,33 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     assert abs(reconstructed - contract.estimates[0].raw_intrinsic_value) <= 1e-9
 
 
-def test_loader_reuses_identical_contract_and_invalidates_on_forecast_change() -> None:
+def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
     state, observation = _fixture()
-    loader = PrivateBetaShapleyContractLoader()
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )
     first = loader(_context(state, observation))
     second = loader(_context(state, observation))
-    changed = observation.model_copy(
+    changed_live = observation.model_copy(
+        update={"distribution": ForecastDistribution(mean=999.0, stddev=25.0)}
+    )
+    third = loader(_context(state, changed_live))
+    assert first is second
+    assert third is first
+
+
+def test_loader_invalidates_only_when_preseason_authority_changes() -> None:
+    state, observation = _fixture()
+    box = {"observation": observation}
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(box["observation"])
+    )
+    first = loader(_context(state, observation))
+    box["observation"] = observation.model_copy(
         update={"distribution": ForecastDistribution(mean=251.0, stddev=25.0)}
     )
-    third = loader(_context(state, changed))
-    assert first is second
-    assert third is not first
+    second = loader(_context(state, observation))
+    assert second is not first
 
 
 def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_source_mapping() -> None:
@@ -217,10 +256,35 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
         league_state=unknown_state,
         forecast_evidence=cast(Any, evidence),
     )
-    contract = PrivateBetaShapleyContractLoader()(context)
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(unknown_forecast)
+    )(context)
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
     assert contract.coverage.player_count == 0
     assert "completed_source_player_mapping" in contract.coverage.missing_required_fact_families
 
 
 # This focused file intentionally triggers the lightweight activation/API diagnostic workflow.
+
+
+def test_loader_fails_closed_without_preseason_authority_loader() -> None:
+    state, observation = _fixture()
+    contract = PrivateBetaShapleyContractLoader()(_context(state, observation))
+    assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert "preseason_year1_forecast" in contract.coverage.missing_required_fact_families
+
+
+def test_contract_exposes_preseason_year_one_provenance() -> None:
+    state, observation = _fixture()
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )(_context(state, observation))
+
+    assert contract.completed_source_provenance is not None
+    coverage = contract.completed_source_provenance.fact_family_coverage
+    assert coverage["year1_forecast_evidence_basis"] == "preseason_baseline"
+    assert coverage["year1_forecast_runtime_model_version"] == "authority-fixture-v1"
+    assert coverage["year1_forecast_evaluation_as_of"] == observation.as_of.isoformat()
+    year_one = contract.estimates[0].contributions[0]
+    assert year_one.provenance.authority == "preserved_preseason_year1_forecast"
+    assert year_one.provenance.source == "fsffl:preseason_baseline_league_scored"
