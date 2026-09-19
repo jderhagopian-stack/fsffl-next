@@ -1,0 +1,28 @@
+{
+  "schema_version": "fsffl-developmental-rb-d1-mechanism-summary-v1",
+  "scope": "frozen 2014-2020 developmental top-decile RB; controlled +10% source-points perturbation",
+  "y2": {
+    "production_model_only_conditional_points_elasticity_median": 0.0752,
+    "state_mix_only_conditional_points_elasticity_median": -0.1054,
+    "combined_conditional_points_elasticity_median": -0.0266,
+    "combined_conditional_points_elasticity_mean": -0.0149,
+    "mean_retention_change_for_10pct_source_increase": -0.06577
+  },
+  "y3": {
+    "production_model_only_conditional_points_elasticity_median": 0.0504,
+    "state_mix_only_conditional_points_elasticity_median": -0.0911,
+    "combined_conditional_points_elasticity_median": -0.034,
+    "combined_conditional_points_elasticity_mean": -0.0392,
+    "mean_retention_change_for_10pct_source_increase": -0.05892,
+    "source_percentile_plus_0_05_conditional_points_change_median": 0.41,
+    "state_percentile_plus_0_05_conditional_points_change_median": 1.075
+  },
+  "exact_mechanism": [
+    "D1 conditional state means are fitted in raw future-point space, with source magnitude entering mostly through standardized log1p(source_points); the learned RB source elasticity is strongly sub-unit.",
+    "The shared ordered-state layer also includes dpts=clip((source_points-prior1_points)/100,-2,2). For RB, ordered-threshold dpts coefficients are negative, so a large current-season spike versus prior history shifts active-state mass downward even while source points rise.",
+    "Because conditional points rise little or can fall while the retention denominator rises one-for-one, conditional retention falls sharply with source magnitude.",
+    "Prior1/prior2 terms are comparatively small and do not explain the main slope."
+  ],
+  "state_probability_layer_changed": false,
+  "collapse_probability_suppressed": false
+}
