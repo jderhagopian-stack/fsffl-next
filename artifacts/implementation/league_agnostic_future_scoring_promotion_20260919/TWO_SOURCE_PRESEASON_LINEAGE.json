@@ -1,0 +1,95 @@
+{
+  "schema_version": "fsffl-league-agnostic-scoring-promotion-preseason-lineage-v1",
+  "date": "2026-09-19",
+  "status": "PASS",
+  "authority_boundary": "read-only verification; no provider refetch, baseline rewrite, or persistence mutation",
+  "exact_baseline_record": {
+    "persistence_project": "gldxkbqcprzuffgmamxl",
+    "schema": "fsffl",
+    "table": "derived_artifact",
+    "id": 145,
+    "artifact_kind": "preseason_forecast_baseline",
+    "scope_kind": "league_season",
+    "scope_id": "sleeper:1312071960615731200:2026",
+    "model_version": "next2-preseason-baseline-v1",
+    "computed_at": "2026-09-10T21:36:41.346326Z",
+    "evaluation_as_of": "2026-09-10T21:36:41.346326Z",
+    "payload_sha256": "cea4126d353f85f1e1fe66bfba4214e204277f487be04462dbe18fb59ae0f387",
+    "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "source_artifact_id": 94,
+    "source_runtime_model_version": "next2-current-runtime-v4:parallel-provider-ingestion"
+  },
+  "two_frozen_sources": [
+    {
+      "source_id": "fftoday",
+      "role": "independent_projection"
+    },
+    {
+      "source_id": "razzball",
+      "role": "independent_projection"
+    }
+  ],
+  "source_artifact_reconciliation": {
+    "source_artifact_id": 94,
+    "source_artifact_kind": "current_forecast_evidence",
+    "baseline_raw_equals_source_raw": true,
+    "baseline_raw_count": 1675,
+    "source_raw_count": 1675,
+    "baseline_sources": [
+      "fftoday",
+      "razzball"
+    ],
+    "source_sources": [
+      "fftoday",
+      "razzball"
+    ],
+    "baseline_evaluation_as_of": "2026-09-10T21:36:41.346326Z",
+    "source_evaluation_as_of": "2026-09-10T21:36:41.346326Z",
+    "baseline_runtime_version": "next2-current-runtime-v4:parallel-provider-ingestion",
+    "source_runtime_version": "next2-current-runtime-v4:parallel-provider-ingestion"
+  },
+  "frozen_ensemble_provenance": {
+    "raw_rows": 1675,
+    "players": 335,
+    "positions": {
+      "QB": 61,
+      "RB": 89,
+      "WR": 121,
+      "TE": 64
+    },
+    "provenance_source": "fsffl:live_equal_weight[fftoday,razzball]",
+    "provenance_source_version": "next2-live-equal-weight-v1",
+    "effective_at": "2026-09-10T13:32:43Z",
+    "retrieved_at": "2026-09-10T21:36:34.049700Z",
+    "metric_counts": {
+      "interceptions": 61,
+      "pass_td": 61,
+      "pass_yards": 61,
+      "rec_td": 274,
+      "rec_yards": 274,
+      "receptions": 274,
+      "rush_td": 335,
+      "rush_yards": 335
+    }
+  },
+  "governed_ensemble_method": {
+    "independent_sources_required_per_player_metric_group": 2,
+    "aggregate_sources_excluded_when_components_present": true,
+    "weighting": "equal weight across eligible independent source observations",
+    "undercovered_groups_fail_closed": true,
+    "implementation": [
+      "src/fsffl/forecast/live_ensemble.py",
+      "src/fsffl/forecast/ensemble.py"
+    ]
+  },
+  "year1_materialization": {
+    "direct_scoring_from_frozen_raw_ensemble": true,
+    "position_multiplier_used": false,
+    "runtime_file": "src/fsffl/forecast/preseason_baseline.py",
+    "scored_source": "fsffl:preseason_baseline_league_scored",
+    "board_players": 335,
+    "board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+    "standard_coordinate_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9"
+  },
+  "persistence_note": "projection_snapshot/projection_observation tables contain no retained provider-row snapshots for this capture. Exact durable lineage is baseline record 145 -> source artifact 94, with exact raw-array equality, two source IDs, timestamps/runtime version, and every combined raw observation carrying the component provenance fftoday+razzball. No attempt was made to recreate missing individual provider rows."
+}
