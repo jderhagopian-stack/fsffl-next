@@ -1,0 +1,14 @@
+{
+  "schema_version": "fsffl-redevelopment-partial-run-discard-v1",
+  "status": "PARTIAL_RUN_DISCARDED_BEFORE_CANDIDATE_SELECTION",
+  "discovered_issue": "Prior1 training-scaler implementation used log1p(raw prior points) while the frozen specification and prediction transform use log1p(max(prior points,0)). Negative historical fantasy points therefore produced NaNs in scaler construction.",
+  "partial_prediction_rows_written": 4634,
+  "partial_extent": "2014 Y2/Y3, 2015 Y2/Y3, 2016 Y2/Y3, 2017 Y2/Y3, and partial 2018 Y2 only",
+  "routing_selection_completed": false,
+  "historical_scorecard_completed": false,
+  "comparative_MAE_or_routing_result_used": false,
+  "current_player_output_used": false,
+  "action": "Discard all partial predictions/fits. Correct scaler clamp only, reload-verify code/spec, and restart all historical fits from scratch.",
+  "successful_but_discarded_candidate_fits": 18,
+  "methodological_change": false
+}
