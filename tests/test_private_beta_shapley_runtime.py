@@ -53,10 +53,18 @@ from fsffl.value.private_beta_activation_data import (
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 
 
+def _selected_source_for_position(position: Position) -> dict[str, object]:
+    for player_id in selected_future_source_player_ids():
+        row = dict(selected_future_source_row(player_id))
+        if row["position"] == position.value:
+            return row
+    raise AssertionError(f"missing governed selected Forecast source row for {position.value}")
+
+
 def _fixture() -> tuple[LeagueState, ForecastObservation]:
-    facts = json.loads(activation_artifact_text("current_i1_facts_2026.json"))
-    row = facts["rows"][0]
-    position = Position(row["position"])
+    source = _selected_source_for_position(Position.QB)
+    position = Position(str(source["position"]))
+    player_id = str(source["player_id"])
     now = datetime(2026, 9, 16, 12, tzinfo=UTC)
     provenance = Provenance(
         source="fixture",
@@ -65,27 +73,18 @@ def _fixture() -> tuple[LeagueState, ForecastObservation]:
         source_version="fixture-v1",
     )
     player = Player(
-        player_id="canonical-player",
-        full_name=row["display_name"],
+        player_id=player_id,
+        full_name=str(source["player_name"]),
         position=position,
         provider_refs=(
-            ProviderRef(provider=row["identity_provider"], external_id=row["identity_external_id"]),
+            ProviderRef(provider="sleeper", external_id=player_id.split(":")[-1]),
         ),
     )
     rules = LeagueRules(
         team_count=2,
         roster_size=18,
         lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
-        scoring=(
-            ScoringRule(stat="pass_yd", points=0.04),
-            ScoringRule(stat="pass_td", points=4.0),
-            ScoringRule(stat="pass_int", points=-2.0),
-            ScoringRule(stat="rush_yd", points=0.1),
-            ScoringRule(stat="rush_td", points=6.0),
-            ScoringRule(stat="rec_yd", points=0.1),
-            ScoringRule(stat="rec_td", points=6.0),
-            ScoringRule(stat="fum_lost", points=-2.0),
-        ),
+        scoring=FROZEN_I1_STANDARD_SCORING,
     )
     state = LeagueState(
         league=League(league_id="league", name="Fixture", season=2026, rules=rules),
@@ -105,7 +104,7 @@ def _fixture() -> tuple[LeagueState, ForecastObservation]:
         metric=ForecastMetric.FANTASY_POINTS,
         period_start=now,
         period_end=now + timedelta(days=100),
-        distribution=ForecastDistribution(mean=250.0, stddev=25.0),
+        distribution=ForecastDistribution(mean=float(source["source_points"]), stddev=25.0),
         source="governed-live-fixture",
         model_version="fixture-forecast-v1",
         as_of=now,
@@ -115,17 +114,21 @@ def _fixture() -> tuple[LeagueState, ForecastObservation]:
 
 
 def _raw_forecasts(observation: ForecastObservation) -> tuple[ForecastObservation, ...]:
+    source = selected_future_source_row(observation.player_id)
+    source_points = float(source["source_points"])
     if observation.position == Position.QB:
+        pass_td = min(10.0, source_points / 8.0) if source_points > 0 else 0.0
+        pass_yards = max(0.0, source_points - 4.0 * pass_td) / 0.04
         metrics = (
-            (ForecastMetric.PASS_YARDS, 4000.0),
-            (ForecastMetric.PASS_TD, 25.0),
-            (ForecastMetric.INTERCEPTIONS, 5.0),
+            (ForecastMetric.PASS_YARDS, pass_yards),
+            (ForecastMetric.PASS_TD, pass_td),
+            (ForecastMetric.INTERCEPTIONS, 0.0),
         )
     else:
         metrics = (
             (ForecastMetric.RECEPTIONS, 80.0),
-            (ForecastMetric.REC_YARDS, 1300.0),
-            (ForecastMetric.REC_TD, 20.0),
+            (ForecastMetric.REC_YARDS, source_points / 0.1),
+            (ForecastMetric.REC_TD, 0.0),
         )
     return tuple(
         ForecastObservation(
@@ -143,7 +146,6 @@ def _raw_forecasts(observation: ForecastObservation) -> tuple[ForecastObservatio
         )
         for metric, mean in metrics
     )
-
 
 def _context(state: LeagueState, observation: ForecastObservation) -> UserRuntimeContext:
     evidence = SimpleNamespace(
