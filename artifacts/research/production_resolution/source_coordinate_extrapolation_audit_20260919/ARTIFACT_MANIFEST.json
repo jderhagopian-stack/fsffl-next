@@ -1,0 +1,118 @@
+{
+  "schema_version": "fsffl-source-coordinate-extrapolation-audit-artifact-manifest-v1",
+  "date": "2026-09-19",
+  "outcome": "A",
+  "repo_artifacts": {
+    "audit_start": "artifacts/research/production_resolution/source_coordinate_extrapolation_audit_20260919/AUDIT_START_MANIFEST.json",
+    "semantic_checkpoint": "artifacts/research/production_resolution/source_coordinate_extrapolation_audit_20260919/STAGE1_SEMANTIC_EQUIVALENCE_CHECKPOINT.json",
+    "verifier_code": "artifacts/research/production_resolution/source_coordinate_extrapolation_audit_20260919/source_coordinate_audit_verifier_v1.py",
+    "final_verification": "artifacts/research/production_resolution/source_coordinate_extrapolation_audit_20260919/FINAL_AUDIT_VERIFICATION.json",
+    "final_outcome": "artifacts/research/production_resolution/source_coordinate_extrapolation_audit_20260919/FINAL_OUTCOME.json",
+    "management_summary": "artifacts/research/production_resolution/source_coordinate_extrapolation_audit_20260919/MANAGEMENT_SUMMARY.md",
+    "artifact_manifest": "artifacts/research/production_resolution/source_coordinate_extrapolation_audit_20260919/ARTIFACT_MANIFEST.json"
+  },
+  "library_artifacts": {
+    "coordinate_lineage": {
+      "library_file_id": "libfile_8a96181669b08191b855d20342d3a2aa",
+      "sha256": "985758dffd707be44a2109583efc3bdaad04839488eed7a68d525c326228ae42"
+    },
+    "scoring_equivalence_matrix": {
+      "library_file_id": "libfile_19c2ee7c30e881918cddfbc436551218",
+      "sha256": "b1c1735c041c535813e4b93ac7df32350e5521f73b121fe662a5820170a313d0"
+    },
+    "current_player_scoring_effect": {
+      "library_file_id": "libfile_820afc79f9988191b88ecb7525a94632",
+      "sha256": "b0beaf6166755fbce0d633b4b401d0866314d5231fcd0b1f2c2469a90320ec53"
+    },
+    "position_scoring_effect": {
+      "library_file_id": "libfile_d152098979b88191924ad60661d0d24b",
+      "sha256": "c3afc16096eb7b9360e38f3b68a6cc2e643564c4d8c43bd41bce5ed4dae51eb6"
+    },
+    "historical_availability": {
+      "library_file_id": "libfile_6bd855147334819191a6b8019c65d333",
+      "sha256": "7ff3ca1ab86ac9627c69d7fbab1c4dd53f6cd113fc2f143b583de67ddbb82e9c"
+    },
+    "accounting_only_ratio_effect": {
+      "library_file_id": "libfile_e88531edd5d08191ac31cbed82099985",
+      "sha256": "2e9b6900cf555d5a34452083155d012452418f927f658b559d572511c8cf7c2f"
+    },
+    "named_examples_coordinate_effect": {
+      "library_file_id": "libfile_44322c9d258c8191a640604cc3496490",
+      "sha256": "ea2a3439efa1f7228dd15b5b56fb472788cd167f5646c69d56fb73af48044499"
+    },
+    "descriptive_scale_after_scoring_normalization": {
+      "library_file_id": "libfile_cd3045a64544819184d4e09421c6b22a",
+      "sha256": "954fc1f9a3a44b7528575fa7d5601ce4de779e7aa43052e2ecbc4f03f4b33ea1"
+    },
+    "semantic_audit": {
+      "library_file_id": "libfile_eb0bb469d154819188069eccf596890d",
+      "sha256": "a2bcbc329a955474a698e1aebe0d70253a85b563a9bba4a4b212cba6b765b23f"
+    },
+    "downstream_gate": {
+      "library_file_id": "libfile_dc55f7866ca48191afb39be643776c52",
+      "sha256": "3e50d65738dea957c31c34370348acc36e2f6940e7b0f8dea975a3a701605276"
+    },
+    "named_and_mechanical_examples": {
+      "library_file_id": "libfile_c836a29f5a088191a6380d3999558768",
+      "sha256": "1fe5070f3b2abd4bdb8d2de7babb97f92221fbad3418ed61486e1d3a6b9916e6"
+    },
+    "example_P0_components": {
+      "library_file_id": "libfile_abff7a3486808191a75e670a72e672c9",
+      "sha256": "4b22a9036e26350631313c6d92c07e3fe982c162b7ffa9fddb4c56490285c3b5"
+    },
+    "verifier_code": {
+      "library_file_id": "libfile_83f58f7c820881919d572747def3af29",
+      "sha256": "87f6a93fb406661a58577decabce0dfdd032b97755a9f29c734110e8303db08e"
+    },
+    "final_verification": {
+      "library_file_id": "libfile_9e4ac6fae6708191a9234a969aa6e3eb",
+      "sha256": "07526078417765a7c2a48bd361d7dfcaa3b7d5b84a62783d7ca4a12ede139188"
+    },
+    "audit_workbook": {
+      "library_file_id": "libfile_211d4e321b4c81918801aa172ef54137",
+      "sha256": "84467c4681592ec883b99118fa61e6eda64fe920185da52e02513a4b4e0149be"
+    }
+  },
+  "baseline_inputs": {
+    "P0_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "historical_panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+    "historical_q3_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+    "current_year1_sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+    "frozen_current_board_sha256": "cbcf22a1dbe12ffcf944806e97b7bfcab4759e0b720c61b2ed4dbcfb7bbe9aa3"
+  },
+  "downstream_disposition": {
+    "stage2": "NOT_EXECUTED",
+    "stage3": "NOT_EXECUTED",
+    "stage4": "NOT_EXECUTED",
+    "formal_row_level_support_export": "NOT_EXECUTED",
+    "response_surface_data_plots": "NOT_EXECUTED",
+    "reason": "Stage 1 failed semantic equivalence; directive gates Stage 2-4 behind comparability."
+  },
+  "execution_accounting": {
+    "model_fits": 0,
+    "candidate_selections": 0,
+    "hyperparameter_searches": 0,
+    "current_player_tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0,
+    "external_data_families_added": 0,
+    "current_board_rematerializations": 0,
+    "final_verifier_runtime_seconds": 0.0050321689996053465,
+    "audit_verifier_environment": {
+      "python": "3.13.5",
+      "pandas": "2.2.3",
+      "numpy": "2.3.5"
+    }
+  },
+  "protected_state": {
+    "main_expected": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147_expected": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "production_authority_changed": false
+  },
+  "management_pdf": "Generated after this repository packaging commit so it can report the exact final research head; persisted to the FSFFL NEXT Library and delivered in chat.",
+  "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+}
