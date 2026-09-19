@@ -1,0 +1,220 @@
+{
+  "schema_version": "fsffl-forecast-deployment-spec-recovery-ledger-v1",
+  "directive_date": "2026-09-18",
+  "execution_date": "2026-09-19",
+  "purpose": "Recovery only: locate authoritative deployment-grade B2a and R1/R2 fitting specifications and the mechanically governed final training cutoff. No final fit, model selection, reverse engineering, or current-player materialization.",
+  "starting_state": {
+    "research_branch": "research/future-state-resolution-phase34-resume",
+    "research_head": "2f2d5f056126e8a7fd08751414be7374acb3d3c1",
+    "relation_to_prior_bounded_final_fit_head": "identical",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "research_tree": {
+      "sha": "553b3dd068b1f21f34872bb6a14bd3b196f87115",
+      "entries": 997,
+      "truncated": false
+    }
+  },
+  "searches": [
+    {
+      "surface": "research branch current tree",
+      "scope": "recursive 997-entry tree",
+      "queries": [
+        "ARCHITECTURE_SPECIFICATION.json",
+        "B2/B2a spec/config/model/fit",
+        "R1/R2 spec/config/model/fit",
+        "recombination spec/config/model/fit",
+        "conditional-production spec/config/model/fit"
+      ],
+      "result": "No ARCHITECTURE_SPECIFICATION.json and no deployment-grade B2a/R1/R2 specification/configuration artifact found."
+    },
+    {
+      "surface": "historical commit trees",
+      "commits": [
+        {
+          "sha": "8a08d83f703e015b334230dc2ae77f82afe4b060",
+          "meaning": "B2 bounded-refinement checkpoint",
+          "tree": "a46dc8e231e5070f8d01d6a4f27aa1dba94125e3",
+          "entries": 921
+        },
+        {
+          "sha": "8839cfad99ec4850782d5bc720784d0672012472",
+          "meaning": "ordered-state/hybrid-era final checkpoint",
+          "tree": "4d5bde726f9bfdb6d67e2bd7c7e0ee2662b2ba31",
+          "entries": 926
+        }
+      ],
+      "result": "Neither tree contains ARCHITECTURE_SPECIFICATION.json or an obvious B2/R1/R2 deployment spec/config artifact."
+    },
+    {
+      "surface": "relevant research branches",
+      "branches": [
+        [
+          "research/bounded-multiyear-materializer-shadow",
+          "9aaa8bab8bce6cfbe6cac3caf11ecba4f17cfa3c",
+          785
+        ],
+        [
+          "research/forecast-disappearance-development",
+          "724ae9a6c6e9585702ffaf5808aaeb7e1af1bd3b",
+          858
+        ],
+        [
+          "research/future-state-resolution-phase2",
+          "b4e5e7f47712f842f2101ede87337c263db545cd",
+          827
+        ],
+        [
+          "research/integrated-multivariate-forecast",
+          "c12402df1b7fa0bfbb3d994bdcf791d80e103a0c",
+          872
+        ],
+        [
+          "research/persistence-first-forecast-calibration",
+          "f19b197e7650813062bd2dcb7b13eb18cb2b16ca",
+          867
+        ],
+        [
+          "research/intrinsic-constitution-forecast-calibration",
+          "5a37d831ed759a76d26742e5295e863d150dbaf0",
+          850
+        ],
+        [
+          "research/live-forecast-time-coordinate-horizon",
+          "c629371356836ae57c5df71fe9db2c83356ece8f",
+          897
+        ],
+        [
+          "research/pit-role-availability-evidence",
+          "6401d7b3d6fcdae3f6bdea6c3b0348881a2473e7",
+          861
+        ],
+        [
+          "research/regularization-developmental-calibration",
+          "b693d53b46e7a4a586847e05abffdfb9796cda96",
+          884
+        ],
+        [
+          "research/stable-player-level-readiness",
+          "26aca439deed9f20e6e68c432a6d7d61fe0ee74b",
+          779
+        ]
+      ],
+      "result": "Recursive branch-tree scans found no ARCHITECTURE_SPECIFICATION.json or deployment-grade B2/R1/R2 spec/config artifact."
+    },
+    {
+      "surface": "GitHub code/commit search",
+      "queries": [
+        "ARCHITECTURE_SPECIFICATION.json",
+        "197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc"
+      ],
+      "result": "No matching code or commit-search result."
+    },
+    {
+      "surface": "GitHub tags/releases",
+      "result": "No repository tags or releases returned by the reachable repository endpoints."
+    },
+    {
+      "surface": "relevant commit diffs",
+      "commits": {
+        "00cb6bc8b9c600d8b547f9e957e9e7349c829b2f": "only FAST_TRACK_COMPARISON.md added",
+        "8a08d83f703e015b334230dc2ae77f82afe4b060": "only B2 bounded-refinement checkpoint added",
+        "86043a6610bc4dce79bd0a91c5c1fd39": "B3 checkpoint lineage inspected separately; no deployment spec persisted",
+        "962d99f999cfb38390b1d36377964b99f7cdc4ca": "only hybrid Stage-0 provenance audit added",
+        "8839cfad99ec4850782d5bc720784d0672012472": "only hybrid final checkpoint added"
+      },
+      "note": "The actual B/R1/R2 recombination execution was local/ephemeral; the durable commit lineage contains reports/checkpoints, not the executable specification package."
+    },
+    {
+      "surface": "FSFFL NEXT Library",
+      "scope": "Recursive /FSFFL NEXT listing; 795 files across 5 pages plus exact semantic searches",
+      "exact_queries": [
+        "ARCHITECTURE_SPECIFICATION.json",
+        "197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc",
+        "B2a five-bin monotone nonlinear within-position production-percentile correction",
+        "R1/R2 ordered-state conditional production partial pooling regularization support fallback",
+        "Candidate B estimator conditional-active production",
+        "BayesianRidge state-conditional R1/R2",
+        "DictVectorizer state-conditional R1/R2"
+      ],
+      "result": "No exact architecture-specification bytes, B2a implementation/config, R1/R2 implementation/config, notebook, Python script, YAML/TOML, or coefficient package found. Library contains directives, reports, metrics CSVs, and prediction-row CSVs only for these studies."
+    },
+    {
+      "surface": "prior-chat/current sandbox generated artifacts",
+      "result": "No ARCHITECTURE_SPECIFICATION.json or exact deployment recipe found. Existing recovered CSVs and management artifacts contain predictions/provenance, not the lost estimator definitions."
+    }
+  ],
+  "durable_prediction_artifacts": [
+    {
+      "name": "b2_prediction_rows.csv",
+      "library_path": "/FSFFL NEXT/b2_prediction_rows.csv",
+      "rows": 16689,
+      "bytes": 3753657,
+      "sha256": "9eda45f36786c0c73a190566b9eb14d199a604427112c890488f2d5a2cdaacb6",
+      "candidates": [
+        "B",
+        "B2a",
+        "B2b"
+      ]
+    },
+    {
+      "name": "recombination_prediction_rows.csv",
+      "library_path": "/FSFFL NEXT/recombination_prediction_rows.csv",
+      "rows": 41344,
+      "bytes": 16071418,
+      "sha256": "dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b",
+      "candidates": [
+        "B",
+        "FrozenForecast",
+        "R1",
+        "R2"
+      ]
+    },
+    {
+      "name": "conditional_repair_prediction_rows.csv",
+      "library_path": "/FSFFL NEXT/conditional_repair_prediction_rows.csv",
+      "rows": 22252,
+      "bytes": 4626947,
+      "sha256": "4298b40667906fca5a88ad823313e57c0c5971b5eef9c6b38f55f5f5155bd3f5",
+      "candidates": [
+        "A",
+        "B",
+        "C",
+        "carry_forward"
+      ]
+    }
+  ],
+  "recorded_missing_artifact": {
+    "name": "ARCHITECTURE_SPECIFICATION.json",
+    "recorded_sha256": "197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc",
+    "recorded_by": "hybrid_final_resolution_20260918/STAGE0_PROVENANCE_AUDIT.md",
+    "status": "Exact bytes not found on current tree, inspected historical trees, relevant research branches, GitHub code/commit search, FSFFL NEXT Library, or current/prior generated-artifact surfaces."
+  },
+  "cutoff_evidence": [
+    {
+      "source": "Forecast Production-Resolution Research Stage-0 preflight / revised protocol",
+      "evidence": "Raw Phase-2 panel extends through 2025; latest PIT-reconstructable source season is h1=2024, h2=2023, h3=2022. Preferred final holdout uses h2 sources 2022-2023 and h3 sources 2021-2022."
+    },
+    {
+      "source": "older frozen current-player sentinel/reproducibility checkpoints",
+      "evidence": "Prior selected routed current materialization used completed-source rows through 2022 for its production-resolution fit, while target-outcome availability was through 2025."
+    },
+    {
+      "conclusion": "These are compatible historical precedents for different tasks but do not uniquely specify the post-selection B2a/R2 deployment training endpoint. Choosing between a common source<=2022 endpoint and a horizon-specific latest-observable endpoint would be a new methodological choice."
+    }
+  ],
+  "verification": {
+    "deterministic_historical_replay_performed": false,
+    "reason": "The directive permits replay only after exact frozen recipe recovery. Deployment-grade recipe was not recovered.",
+    "model_fits": 0,
+    "model_refits": 0,
+    "hyperparameter_searches": 0,
+    "reverse_engineering_attempts": 0,
+    "current_player_board_materializations": 0,
+    "current_player_inspections": 0
+  }
+}
