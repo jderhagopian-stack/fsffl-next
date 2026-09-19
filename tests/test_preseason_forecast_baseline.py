@@ -35,6 +35,9 @@ from fsffl.state.models import (
     LeagueMatchup,
     LeagueRules,
     LeagueState,
+    Player,
+    PlayerState,
+    Position,
     Provenance,
     ScoringRule,
     Team,
@@ -83,8 +86,20 @@ def _state(*, scored: bool = False) -> LeagueState:
         as_of=NOW,
         teams=teams,
         team_states=(TeamState(team_id="a", roster=()), TeamState(team_id="b", roster=())),
-        players=(),
-        player_states=(),
+        players=(
+            Player(
+                player_id="p1",
+                full_name="Fixture Quarterback",
+                position=Position.QB,
+            ),
+        ),
+        player_states=(
+            PlayerState(
+                player_id="p1",
+                as_of=NOW,
+                provenance=_provenance(),
+            ),
+        ),
         matchups=matchups,
     )
 
