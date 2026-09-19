@@ -1,0 +1,2356 @@
+{
+  "rows": [
+    {
+      "mean": 19.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tre Tucker",
+      "player_id": "sleeper:player:10213"
+    },
+    {
+      "mean": 11.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Xavier Hutchinson",
+      "player_id": "sleeper:player:10218"
+    },
+    {
+      "mean": 98.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Chris Rodriguez",
+      "player_id": "sleeper:player:10219"
+    },
+    {
+      "mean": 37.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jayden Reed",
+      "player_id": "sleeper:player:10222"
+    },
+    {
+      "mean": 16.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Andrei Iosivas",
+      "player_id": "sleeper:player:10226"
+    },
+    {
+      "mean": 2.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Payne Durham",
+      "player_id": "sleeper:player:10227"
+    },
+    {
+      "mean": 49.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Rashee Rice",
+      "player_id": "sleeper:player:10229"
+    },
+    {
+      "mean": 6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Elijah Higgins",
+      "player_id": "sleeper:player:10231"
+    },
+    {
+      "mean": 22.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Michael Wilson",
+      "player_id": "sleeper:player:10232"
+    },
+    {
+      "mean": 7.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Roschon Johnson",
+      "player_id": "sleeper:player:10235"
+    },
+    {
+      "mean": 28.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Dalton Kincaid",
+      "player_id": "sleeper:player:10236"
+    },
+    {
+      "mean": 30.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Sam LaPorta",
+      "player_id": "sleeper:player:10859"
+    },
+    {
+      "mean": 5.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Luke Schoonmaker",
+      "player_id": "sleeper:player:10871"
+    },
+    {
+      "mean": 17.15,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Emari Demercado",
+      "player_id": "sleeper:player:11199"
+    },
+    {
+      "mean": 1.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Blake Whiteheart",
+      "player_id": "sleeper:player:11201"
+    },
+    {
+      "mean": 17,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jacob Saylors",
+      "player_id": "sleeper:player:11237"
+    },
+    {
+      "mean": 7.57,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Tyson Bagent",
+      "player_id": "sleeper:player:11256"
+    },
+    {
+      "mean": 2.79,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Tommy DeVito",
+      "player_id": "sleeper:player:11292"
+    },
+    {
+      "mean": 15.65,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Chris Brooks",
+      "player_id": "sleeper:player:11370"
+    },
+    {
+      "mean": 6.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Emanuel Wilson",
+      "player_id": "sleeper:player:11435"
+    },
+    {
+      "mean": 100.09,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Michael Penix",
+      "player_id": "sleeper:player:11559"
+    },
+    {
+      "mean": 301.92,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Caleb Williams",
+      "player_id": "sleeper:player:11560"
+    },
+    {
+      "mean": 5.56,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Spencer Rattler",
+      "player_id": "sleeper:player:11562"
+    },
+    {
+      "mean": 296.56,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Bo Nix",
+      "player_id": "sleeper:player:11563"
+    },
+    {
+      "mean": 317.08,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Drake Maye",
+      "player_id": "sleeper:player:11564"
+    },
+    {
+      "mean": 7.66,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "J.J. McCarthy",
+      "player_id": "sleeper:player:11565"
+    },
+    {
+      "mean": 322.28,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jayden Daniels",
+      "player_id": "sleeper:player:11566"
+    },
+    {
+      "mean": 11.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Rasheen Ali",
+      "player_id": "sleeper:player:11570"
+    },
+    {
+      "mean": 18.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Isaiah Davis",
+      "player_id": "sleeper:player:11571"
+    },
+    {
+      "mean": 41.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Ray Davis",
+      "player_id": "sleeper:player:11575"
+    },
+    {
+      "mean": 58.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Braelon Allen",
+      "player_id": "sleeper:player:11576"
+    },
+    {
+      "mean": 12.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Will Shipley",
+      "player_id": "sleeper:player:11577"
+    },
+    {
+      "mean": 127.45,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "MarShawn Lloyd",
+      "player_id": "sleeper:player:11581"
+    },
+    {
+      "mean": 125.45,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jonathon Brooks",
+      "player_id": "sleeper:player:11583"
+    },
+    {
+      "mean": 150.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Bucky Irving",
+      "player_id": "sleeper:player:11584"
+    },
+    {
+      "mean": 105.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Blake Corum",
+      "player_id": "sleeper:player:11586"
+    },
+    {
+      "mean": 12.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Theo Johnson",
+      "player_id": "sleeper:player:11597"
+    },
+    {
+      "mean": 7.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Cade Stover",
+      "player_id": "sleeper:player:11599"
+    },
+    {
+      "mean": 3.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Ja'Tavion Sanders",
+      "player_id": "sleeper:player:11600"
+    },
+    {
+      "mean": 28.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "AJ Barner",
+      "player_id": "sleeper:player:11603"
+    },
+    {
+      "mean": 38.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Brock Bowers",
+      "player_id": "sleeper:player:11604"
+    },
+    {
+      "mean": 9.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Isaiah Williams",
+      "player_id": "sleeper:player:11608"
+    },
+    {
+      "mean": 27.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Malik Washington",
+      "player_id": "sleeper:player:11610"
+    },
+    {
+      "mean": 22.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jalen McMillan",
+      "player_id": "sleeper:player:11618"
+    },
+    {
+      "mean": 40.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Rome Odunze",
+      "player_id": "sleeper:player:11620"
+    },
+    {
+      "mean": 7.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jordan Whittington",
+      "player_id": "sleeper:player:11623"
+    },
+    {
+      "mean": 33.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Xavier Worthy",
+      "player_id": "sleeper:player:11624"
+    },
+    {
+      "mean": 19.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Adonai Mitchell",
+      "player_id": "sleeper:player:11625"
+    },
+    {
+      "mean": 17.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Xavier Legette",
+      "player_id": "sleeper:player:11626"
+    },
+    {
+      "mean": 9.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Troy Franklin",
+      "player_id": "sleeper:player:11627"
+    },
+    {
+      "mean": 27.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Marvin Harrison",
+      "player_id": "sleeper:player:11628"
+    },
+    {
+      "mean": 10.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Devontez Walker",
+      "player_id": "sleeper:player:11629"
+    },
+    {
+      "mean": 28.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Brian Thomas",
+      "player_id": "sleeper:player:11631"
+    },
+    {
+      "mean": 40.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Malik Nabers",
+      "player_id": "sleeper:player:11632"
+    },
+    {
+      "mean": 36.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Ladd McConkey",
+      "player_id": "sleeper:player:11635"
+    },
+    {
+      "mean": 9.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Keon Coleman",
+      "player_id": "sleeper:player:11637"
+    },
+    {
+      "mean": 52.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jaylen Wright",
+      "player_id": "sleeper:player:11643"
+    },
+    {
+      "mean": 19.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jalen Coker",
+      "player_id": "sleeper:player:11646"
+    },
+    {
+      "mean": 40.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Kimani Vidal",
+      "player_id": "sleeper:player:11647"
+    },
+    {
+      "mean": 25.45,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Tyrone Tracy",
+      "player_id": "sleeper:player:11655"
+    },
+    {
+      "mean": 50.42,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Kirk Cousins",
+      "player_id": "sleeper:player:1166"
+    },
+    {
+      "mean": 22.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Ryan Flournoy",
+      "player_id": "sleeper:player:11783"
+    },
+    {
+      "mean": 15.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Devaughn Vele",
+      "player_id": "sleeper:player:11834"
+    },
+    {
+      "mean": 40.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "George Holani",
+      "player_id": "sleeper:player:12048"
+    },
+    {
+      "mean": 27.75,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jordan James",
+      "player_id": "sleeper:player:12467"
+    },
+    {
+      "mean": 43.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Dylan Sampson",
+      "player_id": "sleeper:player:12469"
+    },
+    {
+      "mean": 8.67,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Riley Leonard",
+      "player_id": "sleeper:player:12470"
+    },
+    {
+      "mean": 20.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "DJ Giddens",
+      "player_id": "sleeper:player:12471"
+    },
+    {
+      "mean": 29.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Raheim Sanders",
+      "player_id": "sleeper:player:12472"
+    },
+    {
+      "mean": 73.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Woody Marks",
+      "player_id": "sleeper:player:12474"
+    },
+    {
+      "mean": 156,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Cam Skattebo",
+      "player_id": "sleeper:player:12481"
+    },
+    {
+      "mean": 8.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Savion Williams",
+      "player_id": "sleeper:player:12482"
+    },
+    {
+      "mean": 10.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jack Bech",
+      "player_id": "sleeper:player:12483"
+    },
+    {
+      "mean": 18.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Terrance Ferguson",
+      "player_id": "sleeper:player:12487"
+    },
+    {
+      "mean": 81.45,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "RJ Harvey",
+      "player_id": "sleeper:player:12489"
+    },
+    {
+      "mean": 138.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Bhayshul Tuten",
+      "player_id": "sleeper:player:12490"
+    },
+    {
+      "mean": 12.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Pat Bryant",
+      "player_id": "sleeper:player:12492"
+    },
+    {
+      "mean": 18.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Oronde Gadsden",
+      "player_id": "sleeper:player:12493"
+    },
+    {
+      "mean": 20.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Ollie Gordon",
+      "player_id": "sleeper:player:12495"
+    },
+    {
+      "mean": 0.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tai Felton",
+      "player_id": "sleeper:player:12496"
+    },
+    {
+      "mean": 14.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tory Horton",
+      "player_id": "sleeper:player:12497"
+    },
+    {
+      "mean": 14.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Mason Taylor",
+      "player_id": "sleeper:player:12498"
+    },
+    {
+      "mean": 5.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Elic Ayomanor",
+      "player_id": "sleeper:player:12499"
+    },
+    {
+      "mean": 4.14,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Quinn Ewers",
+      "player_id": "sleeper:player:12500"
+    },
+    {
+      "mean": 30.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Matthew Golden",
+      "player_id": "sleeper:player:12501"
+    },
+    {
+      "mean": 18.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Gunnar Helm",
+      "player_id": "sleeper:player:12502"
+    },
+    {
+      "mean": 4.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Isaiah Bond",
+      "player_id": "sleeper:player:12503"
+    },
+    {
+      "mean": 29.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Harold Fannin",
+      "player_id": "sleeper:player:12506"
+    },
+    {
+      "mean": 183.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Omarion Hampton",
+      "player_id": "sleeper:player:12507"
+    },
+    {
+      "mean": 286.81,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jaxson Dart",
+      "player_id": "sleeper:player:12508"
+    },
+    {
+      "mean": 11.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tre' Harris",
+      "player_id": "sleeper:player:12509"
+    },
+    {
+      "mean": 5.11,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Will Howard",
+      "player_id": "sleeper:player:12511"
+    },
+    {
+      "mean": 164.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Quinshon Judkins",
+      "player_id": "sleeper:player:12512"
+    },
+    {
+      "mean": 39,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Emeka Egbuka",
+      "player_id": "sleeper:player:12514"
+    },
+    {
+      "mean": 37.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Colston Loveland",
+      "player_id": "sleeper:player:12517"
+    },
+    {
+      "mean": 34.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Tyler Warren",
+      "player_id": "sleeper:player:12518"
+    },
+    {
+      "mean": 38.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Luther Burden",
+      "player_id": "sleeper:player:12519"
+    },
+    {
+      "mean": 13.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Elijah Arroyo",
+      "player_id": "sleeper:player:12521"
+    },
+    {
+      "mean": 244.17,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Cam Ward",
+      "player_id": "sleeper:player:12522"
+    },
+    {
+      "mean": 61.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Shedeur Sanders",
+      "player_id": "sleeper:player:12524"
+    },
+    {
+      "mean": 33.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tetairoa McMillan",
+      "player_id": "sleeper:player:12526"
+    },
+    {
+      "mean": 165.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Ashton Jeanty",
+      "player_id": "sleeper:player:12527"
+    },
+    {
+      "mean": 134.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "TreVeyon Henderson",
+      "player_id": "sleeper:player:12529"
+    },
+    {
+      "mean": 5.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Trevor Etienne",
+      "player_id": "sleeper:player:12531"
+    },
+    {
+      "mean": 112.65,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jacory Croskey-Merritt",
+      "player_id": "sleeper:player:12533"
+    },
+    {
+      "mean": 95.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Kyle Monangai",
+      "player_id": "sleeper:player:12534"
+    },
+    {
+      "mean": 18.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Isaac TeSlaa",
+      "player_id": "sleeper:player:12535"
+    },
+    {
+      "mean": 19.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jaylin Noel",
+      "player_id": "sleeper:player:12536"
+    },
+    {
+      "mean": 8.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Chimere Dike",
+      "player_id": "sleeper:player:12540"
+    },
+    {
+      "mean": 17.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Tahj Brooks",
+      "player_id": "sleeper:player:12543"
+    },
+    {
+      "mean": 9.65,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "LeQuint Allen",
+      "player_id": "sleeper:player:12544"
+    },
+    {
+      "mean": 278.03,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Tyler Shough",
+      "player_id": "sleeper:player:12545"
+    },
+    {
+      "mean": 4.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "KeAndre Lambert-Smith",
+      "player_id": "sleeper:player:12670"
+    },
+    {
+      "mean": 4.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Konata Mumpfield",
+      "player_id": "sleeper:player:12718"
+    },
+    {
+      "mean": 6.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jahdae Walker",
+      "player_id": "sleeper:player:13079"
+    },
+    {
+      "mean": 186.49,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Fernando Mendoza",
+      "player_id": "sleeper:player:13269"
+    },
+    {
+      "mean": 14.22,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Carson Beck",
+      "player_id": "sleeper:player:13272"
+    },
+    {
+      "mean": 17.15,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Germie Bernard",
+      "player_id": "sleeper:player:13274"
+    },
+    {
+      "mean": 4.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Ty Simpson",
+      "player_id": "sleeper:player:13275"
+    },
+    {
+      "mean": 11.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Omar Cooper",
+      "player_id": "sleeper:player:13276"
+    },
+    {
+      "mean": 27.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Carnell Tate",
+      "player_id": "sleeper:player:13279"
+    },
+    {
+      "mean": 18,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jordyn Tyson",
+      "player_id": "sleeper:player:13281"
+    },
+    {
+      "mean": 12.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Malachi Fields",
+      "player_id": "sleeper:player:13285"
+    },
+    {
+      "mean": 122.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jadarian Price",
+      "player_id": "sleeper:player:13286"
+    },
+    {
+      "mean": 146.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jeremiyah Love",
+      "player_id": "sleeper:player:13287"
+    },
+    {
+      "mean": 13.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Nicholas Singleton",
+      "player_id": "sleeper:player:13288"
+    },
+    {
+      "mean": 16.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Ja'Kobi Lane",
+      "player_id": "sleeper:player:13293"
+    },
+    {
+      "mean": 27.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Makai Lemon",
+      "player_id": "sleeper:player:13294"
+    },
+    {
+      "mean": 11.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Caleb Douglas",
+      "player_id": "sleeper:player:13296"
+    },
+    {
+      "mean": 20.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "KC Concepcion",
+      "player_id": "sleeper:player:13298"
+    },
+    {
+      "mean": 10.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Antonio Williams",
+      "player_id": "sleeper:player:13301"
+    },
+    {
+      "mean": 9.38,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Cade Klubnik",
+      "player_id": "sleeper:player:13303"
+    },
+    {
+      "mean": 46.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Mike Washington",
+      "player_id": "sleeper:player:13305"
+    },
+    {
+      "mean": 8.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Chris Bell",
+      "player_id": "sleeper:player:13311"
+    },
+    {
+      "mean": 4.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Ted Hurst",
+      "player_id": "sleeper:player:13317"
+    },
+    {
+      "mean": 7.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Zachariah Branch",
+      "player_id": "sleeper:player:13320"
+    },
+    {
+      "mean": 5.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Malik Benson",
+      "player_id": "sleeper:player:13329"
+    },
+    {
+      "mean": 12.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Kenyon Sadiq",
+      "player_id": "sleeper:player:13330"
+    },
+    {
+      "mean": 36.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Emmett Johnson",
+      "player_id": "sleeper:player:13337"
+    },
+    {
+      "mean": 35.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jonah Coleman",
+      "player_id": "sleeper:player:13345"
+    },
+    {
+      "mean": 15.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Denzel Boston",
+      "player_id": "sleeper:player:13346"
+    },
+    {
+      "mean": 16.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Demond Claiborne",
+      "player_id": "sleeper:player:13347"
+    },
+    {
+      "mean": 5.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Eli Stowers",
+      "player_id": "sleeper:player:13349"
+    },
+    {
+      "mean": 23.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Kaytron Allen",
+      "player_id": "sleeper:player:13405"
+    },
+    {
+      "mean": 10.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Cyrus Allen",
+      "player_id": "sleeper:player:13413"
+    },
+    {
+      "mean": 35.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Kaelon Black",
+      "player_id": "sleeper:player:13414"
+    },
+    {
+      "mean": 25.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "De'Zhaun Stribling",
+      "player_id": "sleeper:player:13417"
+    },
+    {
+      "mean": 24,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Seth McGowan",
+      "player_id": "sleeper:player:13424"
+    },
+    {
+      "mean": 3.04,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jalon Daniels",
+      "player_id": "sleeper:player:13425"
+    },
+    {
+      "mean": 9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Will Kacmarek",
+      "player_id": "sleeper:player:13434"
+    },
+    {
+      "mean": 223.02,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Geno Smith",
+      "player_id": "sleeper:player:1373"
+    },
+    {
+      "mean": 26.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Travis Kelce",
+      "player_id": "sleeper:player:1466"
+    },
+    {
+      "mean": 18,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Keenan Allen",
+      "player_id": "sleeper:player:1479"
+    },
+    {
+      "mean": 7.71,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Joe Flacco",
+      "player_id": "sleeper:player:19"
+    },
+    {
+      "mean": 55.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Davante Adams",
+      "player_id": "sleeper:player:2133"
+    },
+    {
+      "mean": 34.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Mike Evans",
+      "player_id": "sleeper:player:2216"
+    },
+    {
+      "mean": 12.08,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jameis Winston",
+      "player_id": "sleeper:player:2306"
+    },
+    {
+      "mean": 3.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Marcus Mariota",
+      "player_id": "sleeper:player:2307"
+    },
+    {
+      "mean": 29.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Stefon Diggs",
+      "player_id": "sleeper:player:2449"
+    },
+    {
+      "mean": 23.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Darren Waller",
+      "player_id": "sleeper:player:2505"
+    },
+    {
+      "mean": 286,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jared Goff",
+      "player_id": "sleeper:player:3163"
+    },
+    {
+      "mean": 236.65,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Derrick Henry",
+      "player_id": "sleeper:player:3198"
+    },
+    {
+      "mean": 11.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Austin Hooper",
+      "player_id": "sleeper:player:3202"
+    },
+    {
+      "mean": 31.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Hunter Henry",
+      "player_id": "sleeper:player:3214"
+    },
+    {
+      "mean": 226.17,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jacoby Brissett",
+      "player_id": "sleeper:player:3257"
+    },
+    {
+      "mean": 16.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Tyler Higbee",
+      "player_id": "sleeper:player:3271"
+    },
+    {
+      "mean": 302.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Dak Prescott",
+      "player_id": "sleeper:player:3294"
+    },
+    {
+      "mean": 10.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Kalif Raymond",
+      "player_id": "sleeper:player:3634"
+    },
+    {
+      "mean": 165.69,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Deshaun Watson",
+      "player_id": "sleeper:player:4017"
+    },
+    {
+      "mean": 18.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "David Njoku",
+      "player_id": "sleeper:player:4033"
+    },
+    {
+      "mean": 206.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Christian McCaffrey",
+      "player_id": "sleeper:player:4034"
+    },
+    {
+      "mean": 47.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Alvin Kamara",
+      "player_id": "sleeper:player:4035"
+    },
+    {
+      "mean": 29.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Chris Godwin",
+      "player_id": "sleeper:player:4037"
+    },
+    {
+      "mean": 19.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Cooper Kupp",
+      "player_id": "sleeper:player:4039"
+    },
+    {
+      "mean": 293.49,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Patrick Mahomes",
+      "player_id": "sleeper:player:4046"
+    },
+    {
+      "mean": 6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Mo Alie-Cox",
+      "player_id": "sleeper:player:4054"
+    },
+    {
+      "mean": 18.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Evan Engram",
+      "player_id": "sleeper:player:4066"
+    },
+    {
+      "mean": 13.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "James Conner",
+      "player_id": "sleeper:player:4137"
+    },
+    {
+      "mean": 50.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Samaje Perine",
+      "player_id": "sleeper:player:4147"
+    },
+    {
+      "mean": 7.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Mack Hollins",
+      "player_id": "sleeper:player:4177"
+    },
+    {
+      "mean": 3.43,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Joshua Dobbs",
+      "player_id": "sleeper:player:4179"
+    },
+    {
+      "mean": 88.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Aaron Jones",
+      "player_id": "sleeper:player:4199"
+    },
+    {
+      "mean": 292.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Matthew Stafford",
+      "player_id": "sleeper:player:421"
+    },
+    {
+      "mean": 32.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "George Kittle",
+      "player_id": "sleeper:player:4217"
+    },
+    {
+      "mean": 9.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Kendrick Bourne",
+      "player_id": "sleeper:player:4454"
+    },
+    {
+      "mean": 182.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Saquon Barkley",
+      "player_id": "sleeper:player:4866"
+    },
+    {
+      "mean": 318.16,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Lamar Jackson",
+      "player_id": "sleeper:player:4881"
+    },
+    {
+      "mean": 273.01,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Baker Mayfield",
+      "player_id": "sleeper:player:4892"
+    },
+    {
+      "mean": 265.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Sam Darnold",
+      "player_id": "sleeper:player:4943"
+    },
+    {
+      "mean": 17.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Calvin Ridley",
+      "player_id": "sleeper:player:4981"
+    },
+    {
+      "mean": 43.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "DJ Moore",
+      "player_id": "sleeper:player:4983"
+    },
+    {
+      "mean": 376.13,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Josh Allen",
+      "player_id": "sleeper:player:4984"
+    },
+    {
+      "mean": 24.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Mike Gesicki",
+      "player_id": "sleeper:player:4993"
+    },
+    {
+      "mean": 19.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Dalton Schultz",
+      "player_id": "sleeper:player:5001"
+    },
+    {
+      "mean": 8.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Durham Smythe",
+      "player_id": "sleeper:player:5008"
+    },
+    {
+      "mean": 37.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Mark Andrews",
+      "player_id": "sleeper:player:5012"
+    },
+    {
+      "mean": 34.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Dallas Goedert",
+      "player_id": "sleeper:player:5022"
+    },
+    {
+      "mean": 36.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Courtland Sutton",
+      "player_id": "sleeper:player:5045"
+    },
+    {
+      "mean": 6.32,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Kyle Allen",
+      "player_id": "sleeper:player:5127"
+    },
+    {
+      "mean": 19.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "T.J. Hockenson",
+      "player_id": "sleeper:player:5844"
+    },
+    {
+      "mean": 33,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "DK Metcalf",
+      "player_id": "sleeper:player:5846"
+    },
+    {
+      "mean": 5.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Marquise Brown",
+      "player_id": "sleeper:player:5848"
+    },
+    {
+      "mean": 278.78,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Kyler Murray",
+      "player_id": "sleeper:player:5849"
+    },
+    {
+      "mean": 72.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Josh Jacobs",
+      "player_id": "sleeper:player:5850"
+    },
+    {
+      "mean": 2.64,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Drew Lock",
+      "player_id": "sleeper:player:5854"
+    },
+    {
+      "mean": 9.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Noah Fant",
+      "player_id": "sleeper:player:5857"
+    },
+    {
+      "mean": 41.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "A.J. Brown",
+      "player_id": "sleeper:player:5859"
+    },
+    {
+      "mean": 269.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Daniel Jones",
+      "player_id": "sleeper:player:5870"
+    },
+    {
+      "mean": 34.75,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Deebo Samuel",
+      "player_id": "sleeper:player:5872"
+    },
+    {
+      "mean": 157.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "David Montgomery",
+      "player_id": "sleeper:player:5892"
+    },
+    {
+      "mean": 16.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Dawson Knox",
+      "player_id": "sleeper:player:5906"
+    },
+    {
+      "mean": 39.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Terry McLaurin",
+      "player_id": "sleeper:player:5927"
+    },
+    {
+      "mean": 27.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jakobi Meyers",
+      "player_id": "sleeper:player:5947"
+    },
+    {
+      "mean": 147.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Tony Pollard",
+      "player_id": "sleeper:player:5967"
+    },
+    {
+      "mean": 10.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Josh Oliver",
+      "player_id": "sleeper:player:5973"
+    },
+    {
+      "mean": 40.65,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Justice Hill",
+      "player_id": "sleeper:player:5995"
+    },
+    {
+      "mean": 5.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Drew Sample",
+      "player_id": "sleeper:player:6001"
+    },
+    {
+      "mean": 28.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Ty Johnson",
+      "player_id": "sleeper:player:6039"
+    },
+    {
+      "mean": 2.76,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jarrett Stidham",
+      "player_id": "sleeper:player:6136"
+    },
+    {
+      "mean": 12.15,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Olamide Zaccheaus",
+      "player_id": "sleeper:player:6271"
+    },
+    {
+      "mean": 137.37,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Tua Tagovailoa",
+      "player_id": "sleeper:player:6768"
+    },
+    {
+      "mean": 297.69,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Joe Burrow",
+      "player_id": "sleeper:player:6770"
+    },
+    {
+      "mean": 16.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jerry Jeudy",
+      "player_id": "sleeper:player:6783"
+    },
+    {
+      "mean": 45.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "CeeDee Lamb",
+      "player_id": "sleeper:player:6786"
+    },
+    {
+      "mean": 156.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "D'Andre Swift",
+      "player_id": "sleeper:player:6790"
+    },
+    {
+      "mean": 38.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Justin Jefferson",
+      "player_id": "sleeper:player:6794"
+    },
+    {
+      "mean": 294.67,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Justin Herbert",
+      "player_id": "sleeper:player:6797"
+    },
+    {
+      "mean": 50.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tee Higgins",
+      "player_id": "sleeper:player:6801"
+    },
+    {
+      "mean": 286.26,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jordan Love",
+      "player_id": "sleeper:player:6804"
+    },
+    {
+      "mean": 137.75,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "J.K. Dobbins",
+      "player_id": "sleeper:player:6806"
+    },
+    {
+      "mean": 211.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jonathan Taylor",
+      "player_id": "sleeper:player:6813"
+    },
+    {
+      "mean": 27,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Michael Pittman",
+      "player_id": "sleeper:player:6819"
+    },
+    {
+      "mean": 16.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Cole Kmet",
+      "player_id": "sleeper:player:6826"
+    },
+    {
+      "mean": 0.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Devin Duvernay",
+      "player_id": "sleeper:player:6847"
+    },
+    {
+      "mean": 22.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Colby Parkinson",
+      "player_id": "sleeper:player:6865"
+    },
+    {
+      "mean": 5.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Adam Trautman",
+      "player_id": "sleeper:player:6869"
+    },
+    {
+      "mean": 323.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Jalen Hurts",
+      "player_id": "sleeper:player:6904"
+    },
+    {
+      "mean": 19.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Juwan Johnson",
+      "player_id": "sleeper:player:7002"
+    },
+    {
+      "mean": 125.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Rico Dowdle",
+      "player_id": "sleeper:player:7021"
+    },
+    {
+      "mean": 22.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jauan Jennings",
+      "player_id": "sleeper:player:7049"
+    },
+    {
+      "mean": 3.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Tyler Huntley",
+      "player_id": "sleeper:player:7083"
+    },
+    {
+      "mean": 14.1,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Darnell Mooney",
+      "player_id": "sleeper:player:7090"
+    },
+    {
+      "mean": 290.96,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Trevor Lawrence",
+      "player_id": "sleeper:player:7523"
+    },
+    {
+      "mean": 34.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "DeVonta Smith",
+      "player_id": "sleeper:player:7525"
+    },
+    {
+      "mean": 35.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jaylen Waddle",
+      "player_id": "sleeper:player:7526"
+    },
+    {
+      "mean": 11.32,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Mac Jones",
+      "player_id": "sleeper:player:7527"
+    },
+    {
+      "mean": 65.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Najee Harris",
+      "player_id": "sleeper:player:7528"
+    },
+    {
+      "mean": 149.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Travis Etienne",
+      "player_id": "sleeper:player:7543"
+    },
+    {
+      "mean": 58.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Amon-Ra St. Brown",
+      "player_id": "sleeper:player:7547"
+    },
+    {
+      "mean": 23.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Kyle Pitts",
+      "player_id": "sleeper:player:7553"
+    },
+    {
+      "mean": 53.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Ja'Marr Chase",
+      "player_id": "sleeper:player:7564"
+    },
+    {
+      "mean": 42.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Nico Collins",
+      "player_id": "sleeper:player:7569"
+    },
+    {
+      "mean": 23.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Rashod Bateman",
+      "player_id": "sleeper:player:7571"
+    },
+    {
+      "mean": 6.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Davis Mills",
+      "player_id": "sleeper:player:7585"
+    },
+    {
+      "mean": 9.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Dyami Brown",
+      "player_id": "sleeper:player:7587"
+    },
+    {
+      "mean": 195.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Javonte Williams",
+      "player_id": "sleeper:player:7588"
+    },
+    {
+      "mean": 7.94,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Justin Fields",
+      "player_id": "sleeper:player:7591"
+    },
+    {
+      "mean": 101.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Chuba Hubbard",
+      "player_id": "sleeper:player:7594"
+    },
+    {
+      "mean": 24,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Pat Freiermuth",
+      "player_id": "sleeper:player:7600"
+    },
+    {
+      "mean": 5.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Trey Lance",
+      "player_id": "sleeper:player:7610"
+    },
+    {
+      "mean": 115.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Rhamondre Stevenson",
+      "player_id": "sleeper:player:7611"
+    },
+    {
+      "mean": 10.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Tommy Tremble",
+      "player_id": "sleeper:player:7694"
+    },
+    {
+      "mean": 5.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "John Bates",
+      "player_id": "sleeper:player:7716"
+    },
+    {
+      "mean": 9.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Noah Gray",
+      "player_id": "sleeper:player:7828"
+    },
+    {
+      "mean": 8.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Brock Wright",
+      "player_id": "sleeper:player:7891"
+    },
+    {
+      "mean": 31.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Jake Ferguson",
+      "player_id": "sleeper:player:8110"
+    },
+    {
+      "mean": 15,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Cade Otton",
+      "player_id": "sleeper:player:8111"
+    },
+    {
+      "mean": 37.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Drake London",
+      "player_id": "sleeper:player:8112"
+    },
+    {
+      "mean": 4.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jalen Tolbert",
+      "player_id": "sleeper:player:8117"
+    },
+    {
+      "mean": 9.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jahan Dotson",
+      "player_id": "sleeper:player:8119"
+    },
+    {
+      "mean": 28.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Romeo Doubs",
+      "player_id": "sleeper:player:8121"
+    },
+    {
+      "mean": 19.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Wan'Dale Robinson",
+      "player_id": "sleeper:player:8126"
+    },
+    {
+      "mean": 8.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Charlie Kolar",
+      "player_id": "sleeper:player:8127"
+    },
+    {
+      "mean": 34.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Trey McBride",
+      "player_id": "sleeper:player:8130"
+    },
+    {
+      "mean": 21.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Isaiah Likely",
+      "player_id": "sleeper:player:8131"
+    },
+    {
+      "mean": 54.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Tyler Allgeier",
+      "player_id": "sleeper:player:8132"
+    },
+    {
+      "mean": 25.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Khalil Shakir",
+      "player_id": "sleeper:player:8134"
+    },
+    {
+      "mean": 10.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Treylon Burks",
+      "player_id": "sleeper:player:8135"
+    },
+    {
+      "mean": 104.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Rachaad White",
+      "player_id": "sleeper:player:8136"
+    },
+    {
+      "mean": 42.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "George Pickens",
+      "player_id": "sleeper:player:8137"
+    },
+    {
+      "mean": 202.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "James Cook",
+      "player_id": "sleeper:player:8138"
+    },
+    {
+      "mean": 30.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Alec Pierce",
+      "player_id": "sleeper:player:8142"
+    },
+    {
+      "mean": 40.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Chris Olave",
+      "player_id": "sleeper:player:8144"
+    },
+    {
+      "mean": 31.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Garrett Wilson",
+      "player_id": "sleeper:player:8146"
+    },
+    {
+      "mean": 41.65,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jameson Williams",
+      "player_id": "sleeper:player:8148"
+    },
+    {
+      "mean": 188.95,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Kyren Williams",
+      "player_id": "sleeper:player:8150"
+    },
+    {
+      "mean": 189.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Kenneth Walker",
+      "player_id": "sleeper:player:8151"
+    },
+    {
+      "mean": 76.45,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Brian Robinson",
+      "player_id": "sleeper:player:8154"
+    },
+    {
+      "mean": 165.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Breece Hall",
+      "player_id": "sleeper:player:8155"
+    },
+    {
+      "mean": 6.08,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Kenny Pickett",
+      "player_id": "sleeper:player:8160"
+    },
+    {
+      "mean": 254.73,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Malik Willis",
+      "player_id": "sleeper:player:8161"
+    },
+    {
+      "mean": 43.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Christian Watson",
+      "player_id": "sleeper:player:8167"
+    },
+    {
+      "mean": 21.75,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Greg Dulcich",
+      "player_id": "sleeper:player:8172"
+    },
+    {
+      "mean": 14.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jalen Nailor",
+      "player_id": "sleeper:player:8180"
+    },
+    {
+      "mean": 282.93,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Brock Purdy",
+      "player_id": "sleeper:player:8183"
+    },
+    {
+      "mean": 15.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tyquan Thornton",
+      "player_id": "sleeper:player:8188"
+    },
+    {
+      "mean": 45.15,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Isiah Pacheco",
+      "player_id": "sleeper:player:8205"
+    },
+    {
+      "mean": 9.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Daniel Bellinger",
+      "player_id": "sleeper:player:8225"
+    },
+    {
+      "mean": 135.05,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jaylen Warren",
+      "player_id": "sleeper:player:8228"
+    },
+    {
+      "mean": 4.99,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Tyrod Taylor",
+      "player_id": "sleeper:player:827"
+    },
+    {
+      "mean": 142,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jordan Mason",
+      "player_id": "sleeper:player:8408"
+    },
+    {
+      "mean": 26.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Rashid Shaheed",
+      "player_id": "sleeper:player:8676"
+    },
+    {
+      "mean": 8.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Jake Tonges",
+      "player_id": "sleeper:player:8698"
+    },
+    {
+      "mean": 44.75,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Malik Davis",
+      "player_id": "sleeper:player:8800"
+    },
+    {
+      "mean": 20.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "KaVontae Turpin",
+      "player_id": "sleeper:player:8917"
+    },
+    {
+      "mean": 235.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Jahmyr Gibbs",
+      "player_id": "sleeper:player:9221"
+    },
+    {
+      "mean": 181.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Chase Brown",
+      "player_id": "sleeper:player:9224"
+    },
+    {
+      "mean": 55.85,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Tank Bigsby",
+      "player_id": "sleeper:player:9225"
+    },
+    {
+      "mean": 158.45,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "De'Von Achane",
+      "player_id": "sleeper:player:9226"
+    },
+    {
+      "mean": 252.28,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Bryce Young",
+      "player_id": "sleeper:player:9228"
+    },
+    {
+      "mean": 3.24,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Tanner McKee",
+      "player_id": "sleeper:player:9230"
+    },
+    {
+      "mean": 13.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Darnell Washington",
+      "player_id": "sleeper:player:9479"
+    },
+    {
+      "mean": 25.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Brenton Strange",
+      "player_id": "sleeper:player:9480"
+    },
+    {
+      "mean": 3.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Luke Musgrave",
+      "player_id": "sleeper:player:9481"
+    },
+    {
+      "mean": 15,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Michael Mayer",
+      "player_id": "sleeper:player:9482"
+    },
+    {
+      "mean": 33.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "TE",
+      "full_name": "Tucker Kraft",
+      "player_id": "sleeper:player:9484"
+    },
+    {
+      "mean": 13.2,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Dontayvion Wicks",
+      "player_id": "sleeper:player:9486"
+    },
+    {
+      "mean": 33.6,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Parker Washington",
+      "player_id": "sleeper:player:9487"
+    },
+    {
+      "mean": 52.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jaxon Smith-Njigba",
+      "player_id": "sleeper:player:9488"
+    },
+    {
+      "mean": 66.4,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Puka Nacua",
+      "player_id": "sleeper:player:9493"
+    },
+    {
+      "mean": 26.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Josh Downs",
+      "player_id": "sleeper:player:9500"
+    },
+    {
+      "mean": 17.8,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "DeMario Douglas",
+      "player_id": "sleeper:player:9501"
+    },
+    {
+      "mean": 6.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Tank Dell",
+      "player_id": "sleeper:player:9502"
+    },
+    {
+      "mean": 15,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Kayshon Boutte",
+      "player_id": "sleeper:player:9504"
+    },
+    {
+      "mean": 58.55,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Sean Tucker",
+      "player_id": "sleeper:player:9506"
+    },
+    {
+      "mean": 62.65,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Tyjae Spears",
+      "player_id": "sleeper:player:9508"
+    },
+    {
+      "mean": 222.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Bijan Robinson",
+      "player_id": "sleeper:player:9509"
+    },
+    {
+      "mean": 38.5,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Keaton Mitchell",
+      "player_id": "sleeper:player:9511"
+    },
+    {
+      "mean": 233.9,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "Aaron Rodgers",
+      "player_id": "sleeper:player:96"
+    },
+    {
+      "mean": 83.35,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Zach Charbonnet",
+      "player_id": "sleeper:player:9753"
+    },
+    {
+      "mean": 37.3,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Quentin Johnston",
+      "player_id": "sleeper:player:9754"
+    },
+    {
+      "mean": 26.25,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Jordan Addison",
+      "player_id": "sleeper:player:9756"
+    },
+    {
+      "mean": 45.7,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "RB",
+      "full_name": "Kendre Miller",
+      "player_id": "sleeper:player:9757"
+    },
+    {
+      "mean": 261.48,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "QB",
+      "full_name": "C.J. Stroud",
+      "player_id": "sleeper:player:9758"
+    },
+    {
+      "mean": 47,
+      "as_of": "2026-09-10T21:36:41.346326Z",
+      "position": "WR",
+      "full_name": "Zay Flowers",
+      "player_id": "sleeper:player:9997"
+    }
+  ],
+  "row_count": 335,
+  "board_sha256": "3f9d07bff0a81d8c78d842145e905f49600822e944557d173ba4556ff99810f6",
+  "schema_version": "fsffl-i1-standard-coordinate-y1-v1",
+  "unique_player_ids": 335,
+  "scoring_coordinate": "frozen I1 standard/non-PPR",
+  "source_baseline_record_id": 145,
+  "source_baseline_raw_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d"
+}
