@@ -1,0 +1,59 @@
+{
+  "schema_version": "fsffl-unresolved-deployment-specification-v1",
+  "status": "NOT_DEPLOYMENT_REPRODUCIBLE",
+  "B2a": {
+    "recovered_authoritative_definition": [
+      "Candidate B remains the base conditional-active production treatment.",
+      "B2a applies a fixed five-bin monotone nonlinear within-position production-percentile correction in log-point space.",
+      "Effects are partially pooled by position/horizon using n/(n+50) shrinkage toward the global bin effect.",
+      "Persistence and future-state probabilities are not altered by B2a.",
+      "Projection-only rookie/cold-start rows are not treated as realized NFL source seasons in fitting."
+    ],
+    "unresolved_deployment_fields": [
+      "Exact five-bin edge construction, edge values, inclusivity, percentile tie handling, and ordering.",
+      "Exact monotonicity-enforcement algorithm and treatment of equal/violating empirical bin effects.",
+      "Exact fast-track Candidate-B estimator/object that B2a modifies, including model family and design matrix.",
+      "Complete Candidate-B/B2a source feature transforms and normalization rules.",
+      "Exact log-point target/residual construction and the point at which B2a correction is applied.",
+      "Exact inverse transform/back-transform, zero floor, caps if any, and missing-value behavior.",
+      "Any deterministic row ordering, seeds, solver/version assumptions, and coefficient serialization required to reproduce the original fitted candidate."
+    ],
+    "exact_recipe_recovered": false
+  },
+  "R1_R2": {
+    "recovered_authoritative_definition": [
+      "Frozen A2/routed persistence remains unchanged.",
+      "Frozen D/integrated-I1 ordered future-state probabilities remain unchanged.",
+      "R1 replaces generic state means with player-specific conditional production inside each positive future state, using already-governed source-time evidence and partial pooling.",
+      "R2 is R1 plus only the frozen two-prior-season consistency evidence where genuine coverage exists; missing coverage is explicit/neutral.",
+      "The two-prior component's standalone representation is durably documented: mean/gap age-state residual features, explicit coverage, training-only normalization, neutral zero continuous values when uncovered, and a no-intercept BayesianRidge residual-z adjustment with position deviations."
+    ],
+    "unresolved_deployment_fields": [
+      "Exact R1 state-conditional estimator/model family.",
+      "Exact R1 design matrix, categorical coding, continuous transforms, centering/scaling, and feature ordering.",
+      "Exact R1 regularization hyperparameters and solver/version assumptions.",
+      "Exact position/horizon/state partial-pooling hierarchy and shrinkage implementation.",
+      "Exact support floors, sparse-cell merging, and fallback hierarchy.",
+      "Exact conditional-production target definition, transformation, and inverse/back-transform behavior.",
+      "Exact per-state combination logic and deterministic ordering.",
+      "Exact implementation point and algebra by which the frozen two-prior residual component augments R1 to form R2."
+    ],
+    "missing_authoritative_artifact": {
+      "name": "ARCHITECTURE_SPECIFICATION.json",
+      "recorded_sha256": "197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc",
+      "bytes_recovered": false
+    },
+    "exact_recipe_recovered": false
+  },
+  "final_training_cutoff": {
+    "recovered_facts": [
+      "Historical candidate evaluation was chronological and learned transforms/fits only from outcomes observable inside each training cutoff.",
+      "The governed Phase-2 panel extends through 2025.",
+      "The revised production-resolution protocol proves h2 source 2023 and h3 source 2022 are point-in-time reconstructable with target outcomes through 2025.",
+      "An earlier current selected-routed materialization used source seasons through 2022 for both Y2 and Y3 conditional-production fitting."
+    ],
+    "unresolved_ambiguity": "No authoritative B2a/R2 post-selection deployment rule was found that mechanically chooses between a common completed-source endpoint and horizon-specific latest-observable source endpoints for the 2026 board.",
+    "exact_rule_recovered": false
+  },
+  "prohibition": "No missing field above may be filled by inference from prediction rows, regression-family search, hyperparameter tuning, current-player behavior, or a newly chosen training cutoff under this recovery task."
+}
