@@ -1,0 +1,84 @@
+{
+  "schema_version": "fsffl-bounded-final-fit-current-player-gate-outcome-v1",
+  "study": "Forecast Bounded Final Fit + Current-Player Credibility Gate",
+  "date": "2026-09-18",
+  "outcome": "C",
+  "label": "REPRODUCIBILITY_FITTING_BOUNDARY",
+  "decision": "STOP_BEFORE_FIT",
+  "prefit_manifest_commit": "4c90abd1f43c92b493ef72dd0517c2f46417be81",
+  "fitting_boundary_commit": "04305f36a1491abd02c8621bb7050e7ea9b16de0",
+  "reason": {
+    "B2a": "Historical behavior and high-level frozen form are recoverable, but exact bin construction, monotonic enforcement, base Candidate-B estimator details, and full transform/back-transform implementation are not durably specified at deployment precision.",
+    "R2": "Historical predictions and the two-prior consistency component are recoverable, but the R1 state-conditional learner extended by R2 lacks a durable exact estimator/design/regularization/pooling/fallback specification. The prior ARCHITECTURE_SPECIFICATION.json is known only by recorded SHA-256, not recoverable bytes.",
+    "cutoff": "No durable B2a/R2 deployment rule uniquely resolves the final 2026 training endpoint; choosing one would be a prohibited new training-window decision."
+  },
+  "smallest_missing_dependency": "Exact durable deployment-grade B2a and R1/R2 fitting specifications plus the mechanically governed final training cutoff. Recovery of the prior R2 ARCHITECTURE_SPECIFICATION.json bytes (recorded SHA-256 197acd61b3420c6664e171c00a24e7d2a19b91ee1fcf8e2ec91ab6e307dee9cc) would materially narrow the R2 portion of the boundary.",
+  "frozen_route_unchanged": {
+    "default": "B2a",
+    "routes": [
+      {
+        "position": "QB",
+        "experience": "4-8",
+        "horizon": "Y2",
+        "treatment": "R2"
+      },
+      {
+        "position": "QB",
+        "experience": "4-8",
+        "horizon": "Y3",
+        "treatment": "R2"
+      },
+      {
+        "position": "QB",
+        "experience": "9+",
+        "horizon": "Y2",
+        "treatment": "R2"
+      }
+    ],
+    "all_other_cells": "B2a"
+  },
+  "available_coordinates": {
+    "governed_year1": {
+      "rows": 335,
+      "sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f"
+    },
+    "current_identity_history": {
+      "rows": 335,
+      "sha256": "95fd6565a908b044ca234898cc801749abb2b6aa62a84c2d3c917445d369cda1"
+    },
+    "b2_historical_predictions": {
+      "rows": 16689,
+      "sha256": "9eda45f36786c0c73a190566b9eb14d199a604427112c890488f2d5a2cdaacb6"
+    },
+    "recombination_historical_predictions": {
+      "rows": 41344,
+      "sha256": "dbd1b1b5fd7fe7c6c43c2e6bda417db192c852f136ac704a7a5abb48fae2288b"
+    },
+    "candidate_B_ancestor_predictions": {
+      "rows": 22252,
+      "sha256": "4298b40667906fca5a88ad823313e57c0c5971b5eef9c6b38f55f5f5155bd3f5"
+    }
+  },
+  "board_generated": false,
+  "fitted_package_generated": false,
+  "credibility_judgment_made": false,
+  "branch_integrity_repair": {
+    "performed": true,
+    "repair_commit": "7b962a6406c0132e6991d33ebad7b1cff9e9c494",
+    "note": "Restored full research tree from intact ancestry after a prior binary artifact persistence operation had accidentally reduced the branch tree. No model content changed."
+  },
+  "execution_accounting": {
+    "B2a_fits": 0,
+    "R2_fits": 0,
+    "deterministic_verification_reruns": 0,
+    "candidate_comparisons": 0,
+    "hyperparameter_searches": 0,
+    "coefficient_tuning_iterations": 0,
+    "current_player_tuning_actions": 0,
+    "holdout_selection_runs": 0,
+    "board_materializations": 0,
+    "current_player_credibility_judgments": 0,
+    "production_downstream_changes": 0
+  },
+  "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+}
