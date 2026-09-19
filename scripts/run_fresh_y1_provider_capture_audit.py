@@ -12,7 +12,7 @@ from fsffl.forecast.live_ensemble import LiveForecastSourceBatch, build_authorit
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource, HtmlTableParser, _default_get_text as fft_get
 from fsffl.providers.razzball_live import _TableParser, _default_get_text as raz_get
 from fsffl.providers.razzball_season_live import RazzballSeasonProjectionSource
-from fsffl.product.private_beta_activation_data import activation_artifact_text
+from fsffl.value.private_beta_activation_data import activation_artifact_text
 from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact
 from research_freeze_governed_year1_universe import build_state, load_sleeper_players
 
