@@ -1,0 +1,135 @@
+{
+  "schema_version": "fsffl-source-coordinate-extrapolation-audit-start-v1",
+  "directive_date": "2026-09-19",
+  "starting_state": {
+    "research_branch": "research/future-state-resolution-phase34-resume",
+    "research_head": "f67736faba533720513c061414e0c9adfe4aec79",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "prior_outcome": "B - TARGETED RESOLUTION DOES NOT CLEAR PROMOTION"
+  },
+  "audit_inputs": [
+    {
+      "name": "P0 deployment specification",
+      "path": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/DEPLOYMENT_SPECIFICATION.json",
+      "git_blob_sha": "b871adc642c96ecd7c5d95a513981ca05b26840a",
+      "role": "Frozen model specification; audit only, no refit."
+    },
+    {
+      "name": "P0 final fitted package",
+      "library_path": "/FSFFL NEXT/reproducible_forecast_redevelopment_20260919/FINAL_FITTED_PACKAGE.json",
+      "sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+      "bytes": 107778,
+      "role": "Already-fitted P0 package; may be read/scored only under audit rules."
+    },
+    {
+      "name": "Historical Phase-2 player-season panel",
+      "local_artifact": "phase2_player_season_panel.csv",
+      "sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+      "rows": 15492,
+      "season_coverage": [
+        1999,
+        2025
+      ],
+      "position_scope": [
+        "QB",
+        "RB",
+        "WR",
+        "TE"
+      ],
+      "point_field": "fantasy_points",
+      "declared_scoring_identifier": "frozen I1 standard/non-PPR fantasy points"
+    },
+    {
+      "name": "Historical PIT source/target coordinate",
+      "local_artifact": "phase2_q3_age_state_rows.csv",
+      "sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+      "rows": 31218,
+      "source_season_coverage": [
+        2005,
+        2022
+      ],
+      "point_fields": [
+        "source_points",
+        "target_points"
+      ]
+    },
+    {
+      "name": "Historical P0 evaluation predictions",
+      "library_path": "/FSFFL NEXT/reproducible_forecast_redevelopment_20260919/historical_predictions.csv",
+      "sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+      "rows": 10336,
+      "source_season_coverage": [
+        2014,
+        2022
+      ]
+    },
+    {
+      "name": "Governed current 2026 Year-1 universe",
+      "repository_path": "artifacts/research/production_resolution/governed_year1_current_2026_20260918T094231Z/governed_year1_universe.json",
+      "sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+      "rows": 335,
+      "coordinate_id": "year1-current-governed-2026:2026-09-18T09:42:31.889752+00:00",
+      "freeze_as_of": "2026-09-18T09:42:31.889752+00:00",
+      "projection_sources": [
+        "fftoday",
+        "razzball"
+      ],
+      "evidence_basis": "live_full_season",
+      "point_field": "rows[].year1.distribution.mean",
+      "scoring_identifier": "management-12t-half-ppr-superflex-v2:full-current-universe",
+      "rules_sha256": "d47f6797388c23030a6b936031382d4e09b79d1a748927f9769ae889e34ac097"
+    },
+    {
+      "name": "Frozen materialized 335-player Outcome-B board",
+      "library_path": "/FSFFL NEXT/reproducible_forecast_redevelopment_20260919/CURRENT_BOARD_335.csv",
+      "sha256": "cbcf22a1dbe12ffcf944806e97b7bfcab4759e0b720c61b2ed4dbcfb7bbe9aa3",
+      "rows": 335
+    },
+    {
+      "name": "Governed 35-player exact-age completion",
+      "repository_path": "artifacts/research/production_resolution/governed_exact_age_completion_20260918/manifest.json",
+      "row_count": 35,
+      "canonical_rows_sha256": "06b5188ead67f52f62c34117bb861a2dc3a920dc83162a9ce2ba50970df692cf",
+      "joined_year1_sha256": "5dee244f794cd504a84d1575ed1d5fca5b467e604f682018a850363f7fbd5c0f",
+      "local_copy_sha256": "59265033c49dd032eae0f3da90466dc32146f61493127caf976dc21832987d35"
+    },
+    {
+      "name": "Prior reproducible redevelopment Outcome B",
+      "path": "artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/FINAL_OUTCOME.json",
+      "git_blob_sha": "5e3a249360c25e49a29b0a4d3d07b213e8237484"
+    },
+    {
+      "name": "Prior P1/P2 conditional-production resolution Outcome B",
+      "path": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/FINAL_OUTCOME.json",
+      "git_blob_sha": "7ffdd7bd98e6a39e0d6a27281f845b9632b62846"
+    },
+    {
+      "name": "Prior P1/P2 artifact manifest",
+      "path": "artifacts/research/production_resolution/conditional_production_magnitude_resolution_20260919/ARTIFACT_MANIFEST.json",
+      "git_blob_sha": "33f5ffbef1511b1699f896e48c27e4a132bff5b5"
+    }
+  ],
+  "source_lineage_code": {
+    "historical_extractor": "scripts/extract_phase2_future_state_panel.R",
+    "historical_transition_builder": "scripts/run_phase2_future_state_empirical.py",
+    "current_freeze": "scripts/research_freeze_governed_year1_universe.py",
+    "current_league_scoring": "src/fsffl/forecast/league_scoring.py",
+    "frozen_standard_scoring_contract": "src/fsffl/product/i1_scoring_bridge.py",
+    "current_materializer": "/FSFFL NEXT/reproducible_forecast_redevelopment_20260919/materialize_current_board_v1.py"
+  },
+  "stage0_verification": {
+    "required_hashes_match_durable_artifacts": true,
+    "required_row_counts_match": true,
+    "P0_refit_performed": false,
+    "model_fits": 0,
+    "tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0
+  },
+  "next_gate": "Stage 1 semantic coordinate equivalence. If material semantic equivalence fails, classify Outcome A and do not proceed to Stage 2-4 model/support response analysis."
+}
