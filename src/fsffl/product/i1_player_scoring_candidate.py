@@ -11,9 +11,10 @@ from fsffl.state.models import LeagueRules, Position
 from .i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
 
 
-FUTURE_I1_PLAYER_SCORING_CANDIDATE_VERSION = (
-    "i1-future-league-scoring-candidate-v1:player-ratio"
-)
+FUTURE_I1_PLAYER_SCORING_VERSION = "i1-future-league-scoring-v2:player-ratio"
+# Backward-compatible name retained so the completed architecture-gate evidence
+# continues to resolve to the exact mechanism that management promoted.
+FUTURE_I1_PLAYER_SCORING_CANDIDATE_VERSION = FUTURE_I1_PLAYER_SCORING_VERSION
 _SUPPORTED_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
 
 
@@ -30,7 +31,7 @@ def _season_fantasy_points(
             continue
         if observation.player_id in output:
             raise ValueError(
-                "player-specific future-I1 scoring candidate received multiple full-season "
+                "player-specific future-I1 scoring received multiple full-season "
                 f"fantasy-point observations for {observation.player_id}"
             )
         output[observation.player_id] = observation
@@ -44,22 +45,23 @@ def player_scoring_multipliers(
 ) -> dict[str, float]:
     """Return one deterministic league/standard Year-1 ratio per player.
 
-    This is a non-authoritative gate candidate. It preserves the player's governed
-    Year-1 scoring mix instead of replacing it with a position-average conversion.
-    The ratio is a downstream unit translation only; it does not fit or modify I1.
+    This is the promoted future-scoring representation. It preserves the player's
+    governed Year-1 scoring mix instead of replacing it with a position-average
+    conversion. The ratio is a downstream unit translation only; it does not fit
+    or modify I1.
     """
 
     standard = _season_fantasy_points(standard_year_one)
     league = _season_fantasy_points(league_year_one)
     if not league:
         raise ValueError(
-            "player-specific future-I1 scoring candidate requires governed league Year-1 forecasts"
+            "player-specific future-I1 scoring requires governed league Year-1 forecasts"
         )
 
     missing = sorted(set(league) - set(standard))
     if missing:
         raise ValueError(
-            "player-specific future-I1 scoring candidate cannot reproduce the frozen standard "
+            "player-specific future-I1 scoring cannot reproduce the frozen standard "
             f"coordinate for required players: {missing}"
         )
 
@@ -68,7 +70,7 @@ def player_scoring_multipliers(
         standard_observation = standard[player_id]
         if standard_observation.position != league_observation.position:
             raise ValueError(
-                "player-specific future-I1 scoring candidate position mismatch for "
+                "player-specific future-I1 scoring position mismatch for "
                 f"{player_id}: standard={standard_observation.position.value} "
                 f"league={league_observation.position.value}"
             )
@@ -79,13 +81,13 @@ def player_scoring_multipliers(
                 multipliers[player_id] = 1.0
                 continue
             raise ValueError(
-                "player-specific future-I1 scoring candidate has nonzero league points but "
+                "player-specific future-I1 scoring has nonzero league points but "
                 f"zero frozen standard points for {player_id}"
             )
         multiplier = numerator / denominator
         if not math.isfinite(multiplier) or multiplier <= 0.0:
             raise ValueError(
-                "player-specific future-I1 scoring candidate produced invalid multiplier for "
+                "player-specific future-I1 scoring produced invalid multiplier for "
                 f"{player_id}"
             )
         multipliers[player_id] = multiplier
@@ -105,7 +107,7 @@ def build_future_i1_player_scoring_multipliers(
         raw_forecasts,
         rules=standard_rules,
         source="fsffl:i1_frozen_standard_scoring:player_candidate",
-        model_version=FUTURE_I1_PLAYER_SCORING_CANDIDATE_VERSION,
+        model_version=FUTURE_I1_PLAYER_SCORING_VERSION,
     )
     return player_scoring_multipliers(
         standard_year_one=standard_year_one,
@@ -136,8 +138,8 @@ def translate_future_i1_result(
         ),
     )
     model_version = result.model_version
-    if FUTURE_I1_PLAYER_SCORING_CANDIDATE_VERSION not in model_version:
-        model_version = f"{model_version}:{FUTURE_I1_PLAYER_SCORING_CANDIDATE_VERSION}"
+    if FUTURE_I1_PLAYER_SCORING_VERSION not in model_version:
+        model_version = f"{model_version}:{FUTURE_I1_PLAYER_SCORING_VERSION}"
     return I1ForecastResult(
         probabilities=result.probabilities,
         persistence_probability=result.persistence_probability,
@@ -160,7 +162,7 @@ def translate_future_i1_result_for_player(
         multiplier = multipliers[player_id]
     except KeyError as exc:
         raise ValueError(
-            "player-specific future-I1 scoring candidate lacks a governed multiplier for "
+            "player-specific future-I1 scoring lacks a governed multiplier for "
             f"{player_id}"
         ) from exc
     return translate_future_i1_result(result, multiplier=float(multiplier))
