@@ -1,0 +1,13 @@
+{
+  "schema_version": "fsffl-conditional-production-prefit-reload-verification-v2",
+  "pass": true,
+  "specification_git_blob_sha": "7e9b6ce921c6c369393ca7ffabcc8f920afea8ce",
+  "implementation_git_blob_sha": "7ccbb33de75ba4aca2535e2dbe3f07d9c91fcb39",
+  "implementation_sha256": "5a9439fcd51debec42e973ace7ac758b6c298370dad7c9b596480d9200331447",
+  "byte_alignment_commit": "1b8221bd36c288be1615892058ce31150f2a3136",
+  "prior_failed_verification_commit": "d664c887ef94baf7a82f5417f318c06b6fe42f2b",
+  "prior_failure_reason": "Only missing terminal newline in repository copy; no methodology or executable statement differed.",
+  "successful_challenger_fits_before_checkpoint": 0,
+  "current_board_rematerializations_before_checkpoint": 0,
+  "fitting_authorized_after_this_checkpoint": true
+}
