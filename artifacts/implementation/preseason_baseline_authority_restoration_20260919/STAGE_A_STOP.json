@@ -1,0 +1,75 @@
+{
+  "schema_version": "fsffl-preseason-baseline-authority-restoration-stageA-stop-v1",
+  "date": "2026-09-19",
+  "repository": "jderhagopian-stack/fsffl-next",
+  "classification": "C - PRESERVED BASELINE PERSISTENCE/RUNTIME ACCESS DEFECT BLOCKS SAFE USE",
+  "management_directive": "Restore/verify preserved preseason Year-1 authority and separate it from fresh live evidence; no Forecast/Intrinsic research, merge, or deploy.",
+  "protected_state": {
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147_state": "open",
+    "pr147_merged": false,
+    "pr147_branch": "implementation/forecast-intrinsic-i1-shapley",
+    "pr147_head_at_final_recheck": "218d2b315e06b5c5ae3df1161652c4e8f09366c1",
+    "pr117": "merged",
+    "pr117_merge_commit": "a96c5536fec8824a1729cf4078d84fb57f225464"
+  },
+  "stage_a": {
+    "target_artifact_kind": "preseason_forecast_baseline",
+    "target_model_version": "next2-preseason-baseline-v1",
+    "expected_scope_kind": "league_season",
+    "result": "STOP_INACCESSIBLE",
+    "why": [
+      "Hosted Render service is active and durable persistence is evidently in use, but no Render-managed Postgres resource is exposed in the connected Render workspace.",
+      "The PR #147 diagnostic workflow runs with FSFFL_DATABASE_URL and FSFFL_DIAGNOSTIC_LEAGUE_ID blank, so it cannot query the production persistence record.",
+      "Render application logs from 2026-09-01 through 2026-09-19 contain no baseline-capture or baseline-fallback event that can prove the exact artifact indirectly.",
+      "Prior repository/workflow recovery established that the exact old 335-player PR147 Year-1 vector is not durably stored in repository/workflow artifacts; only named values, hashes, and partial rows survive there.",
+      "Therefore the exact preserved production baseline record cannot be decoded, its invalidation state cannot be proven, and the required 335-player board cannot be materialized from the exact artifact."
+    ]
+  },
+  "known_prior_named_pr147_y1": {
+    "Bijan Robinson": 329.24,
+    "Jahmyr Gibbs": 328.02,
+    "Christian McCaffrey": 315.36,
+    "Sam Darnold": 281.73,
+    "Aaron Rodgers": 243.7
+  },
+  "required_named_checks_not_provable_from_exact_baseline": [
+    "Puka Nacua",
+    "Josh Allen"
+  ],
+  "code_path_map": {
+    "baseline_model": "src/fsffl/forecast/preseason_baseline.py",
+    "persistence_codec_key": "src/fsffl/persistence/runtime_cache.py",
+    "resilient_loader": "src/fsffl/product/forecast_resilience.py",
+    "hosted_runtime_wiring": "src/fsffl/product/persistent_webapp.py",
+    "pr147_y1_consumer": "src/fsffl/product/private_beta_shapley_runtime.py",
+    "current_behavior": [
+      "make_resilient_forecast_loader retrieves a preserved baseline record, but still calls live_loader first and returns live evidence whenever live acquisition succeeds.",
+      "PrivateBetaShapleyContractLoader consumes context.forecast_evidence.league_scored_forecasts for Year 1, so it inherits whichever coordinate populated runtime context.",
+      "This means fresh live full-season evidence can still be preferred over the preserved preseason baseline for the frozen Year-1 Intrinsic coordinate."
+    ]
+  },
+  "concurrent_branch_change": {
+    "commit": "218d2b315e06b5c5ae3df1161652c4e8f09366c1",
+    "message": "Restore preseason baseline as explicit Year-1 authority",
+    "finding": "The commit changed build_runtime_from_preseason_baseline to reference PRESEASON_AUTHORITY_RUNTIME_VERSION, but that symbol is not defined in the file. Existing CI passed because the focused tests did not execute that concrete path. The loader remains live-first."
+  },
+  "test_status": {
+    "current_head_workflow": "Private-beta Intrinsic live diagnostics succeeded with provider-only mode; database credentials were blank.",
+    "focused_existing_tests": "18 passed in the live-diagnostics workflow.",
+    "new_invariant_proven": false,
+    "reason": "The existing tests validate fallback behavior, not baseline-first frozen Year-1 authority, fresh-source quarantine, provenance retention, or fail-closed behavior when a frozen baseline is required."
+  },
+  "changes_made_by_this_execution": {
+    "model_fits": 0,
+    "forecast_tuning_actions": 0,
+    "provider_weight_changes": 0,
+    "forecast_intrinsic_semantic_changes": 0,
+    "code_changes": 0,
+    "merge": false,
+    "deploy": false,
+    "report_artifacts_only": true
+  },
+  "smallest_next_governed_action": "Expose a read-only path to the production persistence record (or supply an exact export of the valid non-invalidated preseason_forecast_baseline record) so Stage A can decode it, prove >=2-source provenance/evaluation timestamp, materialize the exact 0.5-PPR 335-player board, and verify named-player parity. Only then may Stage B complete the baseline-first source-authority correction and regression tests.",
+  "stop_boundary": "STOP FOR MANAGEMENT REVIEW. Do not use fresh live provider pages as a substitute, do not complete the source-authority code change, do not reopen Forecast/Intrinsic research, merge, or deploy."
+}

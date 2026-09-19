@@ -13,8 +13,10 @@ from fsffl.forecast.models import (
     ForecastObservation,
 )
 from fsffl.forecast.preseason_baseline import (
+    PRESEASON_AUTHORITY_RUNTIME_VERSION,
     PRESEASON_BASELINE_MODEL_VERSION,
     baseline_from_runtime,
+    build_runtime_from_preseason_baseline,
     state_is_preseason_capture_eligible,
 )
 from fsffl.persistence.runtime_cache import (
@@ -23,14 +25,21 @@ from fsffl.persistence.runtime_cache import (
     decode_preseason_forecast_baseline,
     preseason_forecast_baseline_artifact,
 )
-from fsffl.product.forecast_resilience import make_resilient_forecast_loader
+from fsffl.product.forecast_resilience import (
+    make_preseason_baseline_authority_loader,
+    make_resilient_forecast_loader,
+)
 from fsffl.product.runtime import LiveForecastEvidence
 from fsffl.state.models import (
     League,
     LeagueMatchup,
     LeagueRules,
     LeagueState,
+    Player,
+    PlayerState,
+    Position,
     Provenance,
+    ScoringRule,
     Team,
     TeamState,
 )
@@ -63,26 +72,52 @@ def _state(*, scored: bool = False) -> LeagueState:
             league_id="league-1",
             name="Test",
             season=2026,
-            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
+            rules=LeagueRules(
+                team_count=2,
+                roster_size=1,
+                lineup=(),
+                scoring=(
+                    ScoringRule(stat="pass_yd", points=0.04),
+                    ScoringRule(stat="pass_td", points=4.0),
+                    ScoringRule(stat="pass_int", points=-1.0),
+                ),
+            ),
         ),
         as_of=NOW,
         teams=teams,
         team_states=(TeamState(team_id="a", roster=()), TeamState(team_id="b", roster=())),
-        players=(),
-        player_states=(),
+        players=(
+            Player(
+                player_id="p1",
+                full_name="Fixture Quarterback",
+                position=Position.QB,
+            ),
+        ),
+        player_states=(
+            PlayerState(
+                player_id="p1",
+                as_of=NOW,
+                provenance=_provenance(),
+            ),
+        ),
         matchups=matchups,
     )
 
 
-def _observation(*, horizon: ForecastHorizon = ForecastHorizon.SEASON) -> ForecastObservation:
+def _observation(
+    *,
+    horizon: ForecastHorizon = ForecastHorizon.SEASON,
+    metric: ForecastMetric = ForecastMetric.FANTASY_POINTS,
+    mean: float = 300.0,
+) -> ForecastObservation:
     return ForecastObservation(
         player_id="p1",
         position="QB",
         horizon=horizon,
-        metric=ForecastMetric.FANTASY_POINTS,
+        metric=metric,
         period_start=NOW + timedelta(days=1),
         period_end=NOW + timedelta(days=120),
-        distribution=ForecastDistribution(mean=300.0, stddev=20.0),
+        distribution=ForecastDistribution(mean=mean, stddev=20.0),
         source="fsffl:test-ensemble",
         model_version="test",
         as_of=NOW,
@@ -103,6 +138,28 @@ def _runtime(*, sources=("fftoday", "razzball"), horizon=ForecastHorizon.SEASON)
             minimum_independent_sources=2,
         ),
         successful_source_ids=tuple(sources),
+        failed_sources=(),
+        evaluation_as_of=NOW,
+    )
+
+
+def _raw_qb_runtime() -> LiveForecastRuntimeResult:
+    observations = (
+        _observation(metric=ForecastMetric.PASS_YARDS, mean=4000.0),
+        _observation(metric=ForecastMetric.PASS_TD, mean=25.0),
+        _observation(metric=ForecastMetric.INTERCEPTIONS, mean=10.0),
+    )
+    return LiveForecastRuntimeResult(
+        raw_ensemble=observations,
+        fantasy_point_forecasts=(),
+        coverage=LiveEnsembleCoverage(
+            independent_source_ids=("fftoday", "razzball"),
+            excluded_aggregate_source_ids=(),
+            active_source_ids=("fftoday", "razzball"),
+            observation_count=6,
+            minimum_independent_sources=2,
+        ),
+        successful_source_ids=("fftoday", "razzball"),
         failed_sources=(),
         evaluation_as_of=NOW,
     )
@@ -220,3 +277,59 @@ def test_resilient_loader_fails_closed_without_live_or_preserved_baseline():
 
     with pytest.raises(ValueError, match="only one live independent source"):
         make_resilient_forecast_loader(store, live_loader=fail)(_state(scored=True))
+
+
+def test_concrete_baseline_materialization_uses_authority_runtime_version():
+    state = _state()
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+
+    result = build_runtime_from_preseason_baseline(state, baseline)
+
+    assert result.model_version == PRESEASON_AUTHORITY_RUNTIME_VERSION
+    assert result.evaluation_as_of == NOW
+    assert result.successful_source_ids == ("fftoday", "razzball")
+    assert result.failed_sources == ()
+    assert len(result.fantasy_point_forecasts) == 1
+    assert result.fantasy_point_forecasts[0].distribution.mean == pytest.approx(250.0)
+    assert result.fantasy_point_forecasts[0].source == "fsffl:preseason_baseline_league_scored"
+
+
+def test_preseason_authority_loader_is_independent_of_healthy_live_forecast():
+    state = _state()
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+    record = preseason_forecast_baseline_artifact(
+        league_season_scope_id="league-1:2026",
+        baseline=baseline,
+    )
+    store = _Store(record)
+
+    authority = make_preseason_baseline_authority_loader(store)(state)
+    live = make_resilient_forecast_loader(
+        store,
+        live_loader=lambda _: _evidence(_runtime()),
+    )(state)
+
+    assert authority.evidence_basis == "preseason_baseline"
+    assert authority.runtime_result.evaluation_as_of == baseline.evaluation_as_of
+    assert authority.runtime_result.model_version == PRESEASON_AUTHORITY_RUNTIME_VERSION
+    assert authority.league_scored_forecasts[0].distribution.mean == pytest.approx(250.0)
+    assert live.evidence_basis == "live_full_season"
+    assert live.league_scored_forecasts[0].distribution.mean == pytest.approx(300.0)
+
+
+def test_preseason_authority_loader_fails_closed_without_baseline():
+    with pytest.raises(ValueError, match="valid preserved preseason Year-1 baseline is unavailable"):
+        make_preseason_baseline_authority_loader(_Store())(_state(scored=True))
+
+
+def test_preseason_authority_loader_fails_closed_for_invalid_source_coverage():
+    state = _state()
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+    invalid = baseline.model_copy(update={"successful_source_ids": ("razzball",)})
+    record = preseason_forecast_baseline_artifact(
+        league_season_scope_id="league-1:2026",
+        baseline=invalid,
+    )
+
+    with pytest.raises(ValueError, match="independent-source authority"):
+        make_preseason_baseline_authority_loader(_Store(record))(state)

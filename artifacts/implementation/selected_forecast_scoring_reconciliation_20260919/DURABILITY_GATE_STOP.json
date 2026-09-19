@@ -1,0 +1,122 @@
+{
+  "schema_version": "fsffl-selected-forecast-scoring-reconciliation-stop-v1",
+  "date": "2026-09-19",
+  "classification": "STOP_AT_DURABILITY_GATE",
+  "live_refs_at_start": {
+    "research_branch": {
+      "name": "research/future-state-resolution-phase34-resume",
+      "sha": "3bbdf8ce75eff05e26c154b2c38c70d425a4a5d2"
+    },
+    "pr_147": {
+      "branch": "implementation/forecast-intrinsic-i1-shapley",
+      "sha": "1fd76ac589b3d801e85a7f8963b27018f75916e6",
+      "state": "open_unmerged"
+    },
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76"
+  },
+  "selected_forecast_authority": {
+    "year_1": "preserved immutable preseason raw-stat ensemble",
+    "year_2_year_3": "position-routed Forecast plus frozen M1a plus frozen two-prior-season consistency",
+    "routing": {
+      "QB": "A2+C+D",
+      "RB": "A2+D",
+      "WR": "A2+D",
+      "TE": "A2+D"
+    },
+    "legacy_pr147_i1_is_not_authority": true
+  },
+  "year_1_scoring_verification": {
+    "status": "PASS",
+    "production_baseline_record_id": 145,
+    "raw_observation_count": 1675,
+    "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "league_board_rows": 335,
+    "league_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+    "standard_board_rows": 335,
+    "standard_board_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9",
+    "identity_population_parity": true,
+    "behavior": "Both Year-1 coordinates are derived directly from the same immutable raw observations. League-facing Year 1 is recalculated under connected league rules; standard/non-PPR is independently derived for frozen-model use."
+  },
+  "pr147_trace": {
+    "status": "LEGACY_I1_OWNS_YEAR_2_YEAR_3",
+    "producer": "src/fsffl/product/private_beta_shapley_runtime.py",
+    "details": [
+      "The loader embeds frozen_i1_h12.json and frozen_i1_h3.json from the private-beta activation bundle.",
+      "compose_live_intrinsic_calendar receives LeagueScoringNormalizedI1Predictor wrappers around those legacy I1 artifacts.",
+      "The selected routed A2+C+D/A2+D Forecast with M1a and two-prior consistency is not wired into the PR."
+    ]
+  },
+  "recovered_selected_candidate_evidence": {
+    "replacement_identity_coordinate": {
+      "rows": 335,
+      "coordinate_sha256": "95fd6565a908b044ca234898cc801749abb2b6aa62a84c2d3c917445d369cda1",
+      "row_material_sha256": "1803ee0200b8d1d39dfd719934bd683765727bef997f2a1f1ee44d2a6444af56",
+      "population_sha256": "095d09458bfe021e7b7075281e8430573514c6d1e5c2dae3d25430f555ceba4b"
+    },
+    "old_live_year1_universe": {
+      "rows": 335,
+      "canonical_sha256": "5dee244f794cd504a84d1575ed1d5fca5b467e604f682018a850363f7fbd5c0f",
+      "coordinate_as_of": "2026-09-18T09:42:31.889752+00:00"
+    },
+    "old_live_selected_candidate_board": {
+      "rows": 670,
+      "players": 335,
+      "horizons": [2, 3],
+      "canonical_rows_sha256": "723f14076f5d0b8801cfff731c8a533494a9d8bbf98531bf25e2d45a16ce1fe8",
+      "eight_sentinel_parity_max_abs_diff": 0.0
+    },
+    "warning": "The recovered board is durable evidence for the September 18 live Year-1 coordinate only. It is not a valid output from the September 10 preseason standard coordinate."
+  },
+  "population_reconciliation": {
+    "normalized_player_overlap": 334,
+    "preseason_only": {
+      "sleeper_id": "8800",
+      "name": "Malik Davis",
+      "position": "RB"
+    },
+    "old_live_only": {
+      "sleeper_id": "11630",
+      "name": "Roman Wilson",
+      "position": "WR"
+    },
+    "preseason_position_counts": {
+      "QB": 61,
+      "RB": 89,
+      "WR": 121,
+      "TE": 64
+    },
+    "old_live_position_counts": {
+      "QB": 61,
+      "RB": 88,
+      "WR": 122,
+      "TE": 64
+    }
+  },
+  "exact_missing_dependencies": [
+    "The fitted current-cutoff routed probability estimator artifacts for QB A2+C+D and RB/WR/TE A2+D, including DictVectorizer feature state and all LogisticRegression coefficients/intercepts for persistence and ordered positive-state thresholds.",
+    "A deployment-grade serialization of the frozen M1a and two-prior conditional-production transforms/coefficients attached to the selected routed estimator.",
+    "A governed replacement identity/history materialization coordinate aligned to the preserved preseason 335-player population, including Malik Davis rather than Roman Wilson.",
+    "A row-complete Y2/Y3 selected-candidate board produced from the preserved preseason standard/non-PPR coordinate, or sufficient frozen estimator state to reproduce that board without fitting."
+  ],
+  "prohibited_substitutions": [
+    "Do not use the recovered September 18 live-coordinate Y2/Y3 board as if it came from the preseason coordinate.",
+    "Do not refit or reconstruct the routed estimator.",
+    "Do not substitute PR #147's legacy embedded I1 path.",
+    "Do not estimate Year 1 through a scoring multiplier.",
+    "Do not tune to named current players."
+  ],
+  "tests": {
+    "command": "uv run pytest -q tests/test_preseason_forecast_baseline.py tests/test_private_beta_shapley_runtime.py tests/test_pr147_sanity_regressions.py",
+    "result": "PASS",
+    "passed": 27
+  },
+  "execution_accounting": {
+    "model_fits": 0,
+    "model_refits": 0,
+    "forecast_tuning_actions": 0,
+    "runtime_source_files_changed": 0,
+    "merges": 0,
+    "deploys": 0
+  },
+  "next_action": "STOP_FOR_MANAGEMENT_REVIEW"
+}

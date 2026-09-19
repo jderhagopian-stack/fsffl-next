@@ -1,0 +1,119 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3597 >>
+stream
+BT /F2 19 Tf 54 744 Td (FSFFL NEXT) Tj ET
+BT /F2 15 Tf 54 714 Td (Preseason Baseline Authority Restoration - Stage A Stop Report) Tj ET
+BT /F1 9.5 Tf 54 688 Td (19 Sep 2026 | Implementation-only source-authority diagnostic) Tj ET
+BT /F2 9.5 Tf 54 668 Td (Final classification: C - PRESERVED BASELINE PERSISTENCE/RUNTIME ACCESS DEFECT BLOCKS SAFE USE) Tj ET
+BT /F2 15 Tf 54 648 Td (Executive result) Tj ET
+BT /F1 9.5 Tf 54 622 Td (The directive cannot safely advance past Stage A because the exact preserved production) Tj ET
+BT /F1 9.5 Tf 54 609 Td (preseason_forecast_baseline record is not accessible through the currently connected production) Tj ET
+BT /F1 9.5 Tf 54 596 Td (surfaces. The baseline code contract exists, but the required production record itself cannot be) Tj ET
+BT /F1 9.5 Tf 54 583 Td (decoded or materialized from GitHub, the PR diagnostics, or the connected Render database surface.) Tj ET
+BT /F1 9.5 Tf 54 563 Td (No fresh provider board was substituted. No model fit, tuning, provider weighting, merge, or) Tj ET
+BT /F1 9.5 Tf 54 550 Td (deployment occurred.) Tj ET
+BT /F2 15 Tf 54 530 Td (Protected repository state) Tj ET
+BT /F1 9.5 Tf 54 504 Td (main: 53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76) Tj ET
+BT /F1 9.5 Tf 54 484 Td (PR #147: open / unmerged) Tj ET
+BT /F1 9.5 Tf 54 464 Td (PR #147 head at final recheck: 218d2b315e06b5c5ae3df1161652c4e8f09366c1) Tj ET
+BT /F1 9.5 Tf 54 444 Td (PR #117: merged at a96c5536fec8824a1729cf4078d84fb57f225464) Tj ET
+BT /F2 15 Tf 54 424 Td (Stage A evidence) Tj ET
+BT /F1 9.5 Tf 54 398 Td (Target persistence key: artifact_kind=preseason_forecast_baseline; scope_kind=league_season;) Tj ET
+BT /F1 9.5 Tf 54 385 Td (model_version=next2-preseason-baseline-v1.) Tj ET
+BT /F1 9.5 Tf 54 365 Td (- Hosted Render service is active and durable persistence is evidently in use, but no Render-managed) Tj ET
+BT /F1 9.5 Tf 54 352 Td (Postgres resource is exposed in the connected Render workspace.) Tj ET
+BT /F1 9.5 Tf 54 332 Td (- The PR #147 diagnostic workflow runs with FSFFL_DATABASE_URL and FSFFL_DIAGNOSTIC_LEAGUE_ID blank,) Tj ET
+BT /F1 9.5 Tf 54 319 Td (so it cannot query the production persistence record.) Tj ET
+BT /F1 9.5 Tf 54 299 Td (- Render logs from 2026-09-01 through 2026-09-19 contain no baseline-capture or baseline-fallback) Tj ET
+BT /F1 9.5 Tf 54 286 Td (event that can prove the exact artifact indirectly.) Tj ET
+BT /F1 9.5 Tf 54 266 Td (- Prior repository/workflow recovery established that the exact old 335-player PR147 Year-1 vector is) Tj ET
+BT /F1 9.5 Tf 54 253 Td (not durably stored in repository/workflow artifacts; only named values, hashes, and partial rows) Tj ET
+BT /F1 9.5 Tf 54 240 Td (survive there.) Tj ET
+BT /F1 9.5 Tf 54 220 Td (- Therefore the exact preserved production baseline record cannot be decoded, its invalidation state) Tj ET
+BT /F1 9.5 Tf 54 207 Td (cannot be proven, and the required 335-player board cannot be materialized from the exact artifact.) Tj ET
+BT /F2 15 Tf 54 187 Td (Surviving prior PR #147 named Year-1 evidence) Tj ET
+BT /F1 9.5 Tf 54 161 Td (Bijan Robinson 329.24 | Jahmyr Gibbs 328.02 | Christian McCaffrey 315.36 | Sam Darnold 281.73 | Aaron) Tj ET
+BT /F1 9.5 Tf 54 148 Td (Rodgers 243.70) Tj ET
+BT /F1 9.5 Tf 54 128 Td (These named values are prior durable evidence only. They cannot substitute for the exact production) Tj ET
+BT /F1 9.5 Tf 54 115 Td (baseline object. Puka Nacua and Josh Allen checks cannot be proven from that object while it remains) Tj ET
+BT /F1 9.5 Tf 54 102 Td (inaccessible.) Tj ET
+BT /F2 15 Tf 54 82 Td (Current code-path map and bypass) Tj ET
+endstream
+endobj
+4 0 obj
+<< /Length 3860 >>
+stream
+BT /F1 9.5 Tf 54 744 Td (baseline model: src/fsffl/forecast/preseason_baseline.py) Tj ET
+BT /F1 9.5 Tf 54 724 Td (persistence codec/key: src/fsffl/persistence/runtime_cache.py) Tj ET
+BT /F1 9.5 Tf 54 704 Td (resilient loader: src/fsffl/product/forecast_resilience.py) Tj ET
+BT /F1 9.5 Tf 54 684 Td (hosted runtime wiring: src/fsffl/product/persistent_webapp.py) Tj ET
+BT /F1 9.5 Tf 54 664 Td (PR147 Year-1 consumer: src/fsffl/product/private_beta_shapley_runtime.py) Tj ET
+BT /F1 9.5 Tf 54 644 Td (- make_resilient_forecast_loader retrieves a preserved baseline record, but still calls live_loader) Tj ET
+BT /F1 9.5 Tf 54 631 Td (first and returns live evidence whenever live acquisition succeeds.) Tj ET
+BT /F1 9.5 Tf 54 611 Td (- PrivateBetaShapleyContractLoader consumes context.forecast_evidence.league_scored_forecasts for Year) Tj ET
+BT /F1 9.5 Tf 54 598 Td (1, so it inherits whichever coordinate populated runtime context.) Tj ET
+BT /F1 9.5 Tf 54 578 Td (- Fresh live full-season evidence can therefore still be preferred over the preserved preseason) Tj ET
+BT /F1 9.5 Tf 54 565 Td (baseline for the frozen Year-1 Intrinsic coordinate.) Tj ET
+BT /F2 15 Tf 54 545 Td (Concurrent PR #147 change) Tj ET
+BT /F1 9.5 Tf 54 519 Td (PR #147 advanced during this execution to commit 218d2b315e06b5c5ae3df1161652c4e8f09366c1, message:) Tj ET
+BT /F1 9.5 Tf 54 506 Td (Restore preseason baseline as explicit Year-1 authority.) Tj ET
+BT /F1 9.5 Tf 54 486 Td (That change is incomplete: build_runtime_from_preseason_baseline now references) Tj ET
+BT /F1 9.5 Tf 54 473 Td (PRESEASON_AUTHORITY_RUNTIME_VERSION, but that symbol is not defined in preseason_baseline.py. The) Tj ET
+BT /F1 9.5 Tf 54 460 Td (resilience loader also remains live-first.) Tj ET
+BT /F1 9.5 Tf 54 440 Td (Existing CI did not detect this because the passing focused tests do not execute the concrete baseline) Tj ET
+BT /F1 9.5 Tf 54 427 Td (materialization path under the new symbol.) Tj ET
+BT /F2 15 Tf 54 407 Td (Regression status) Tj ET
+BT /F1 9.5 Tf 54 381 Td (The current live-diagnostics workflow reports 18 focused tests passing, but its environment shows) Tj ET
+BT /F1 9.5 Tf 54 368 Td (FSFFL_DATABASE_URL and FSFFL_DIAGNOSTIC_LEAGUE_ID blank. That successful run cannot prove the) Tj ET
+BT /F1 9.5 Tf 54 355 Td (production baseline record.) Tj ET
+BT /F1 9.5 Tf 54 335 Td (Required invariants are not mechanically proven: baseline-first Year-1 authority; live-drift) Tj ET
+BT /F1 9.5 Tf 54 322 Td (quarantine; provenance/evaluation timestamp retention; distinct live/current semantics; and fail-) Tj ET
+BT /F1 9.5 Tf 54 309 Td (closed behavior when the frozen baseline is unavailable.) Tj ET
+BT /F2 15 Tf 54 289 Td (Execution accounting) Tj ET
+BT /F1 9.5 Tf 54 263 Td (Model fits: 0 | Forecast tuning: 0 | Provider-weight changes: 0 | Forecast/Intrinsic semantic changes) Tj ET
+BT /F1 9.5 Tf 54 250 Td (by this execution: 0 | Merge: no | Deploy: no | Fresh live board used as substitute: no) Tj ET
+BT /F2 15 Tf 54 230 Td (Smallest next governed action) Tj ET
+BT /F1 9.5 Tf 54 204 Td (Expose a read-only path to the production persistence record, or supply an exact export of the valid) Tj ET
+BT /F1 9.5 Tf 54 191 Td (non-invalidated preseason_forecast_baseline record. Stage A can then decode it, prove >=2-source) Tj ET
+BT /F1 9.5 Tf 54 178 Td (provenance/evaluation timestamp, materialize the exact 0.5-PPR 335-player board, and verify named-) Tj ET
+BT /F1 9.5 Tf 54 165 Td (player parity. Only then may Stage B complete the baseline-first source-authority correction and) Tj ET
+BT /F1 9.5 Tf 54 152 Td (regression tests.) Tj ET
+BT /F2 9.5 Tf 54 132 Td (STOP FOR MANAGEMENT REVIEW. Do not use fresh live provider pages as a substitute, do not complete the) Tj ET
+BT /F2 9.5 Tf 54 119 Td (source-authority code change, do not reopen Forecast/Intrinsic research, merge, or deploy.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Pages /Kids [6 0 R 7 0 R] /Count 2 >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 5 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 5 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 4 0 R >>
+endobj
+8 0 obj
+<< /Type /Catalog /Pages 5 0 R >>
+endobj
+xref
+0 9
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000154 00000 n 
+0000003803 00000 n 
+0000007715 00000 n 
+0000007778 00000 n 
+0000007914 00000 n 
+0000008050 00000 n 
+trailer
+<< /Size 9 /Root 8 0 R >>
+startxref
+8099
+%%EOF

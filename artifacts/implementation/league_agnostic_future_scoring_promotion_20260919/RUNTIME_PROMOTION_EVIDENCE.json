@@ -1,0 +1,92 @@
+{
+  "schema_version": "fsffl-league-agnostic-future-scoring-production-wiring-v1",
+  "date": "2026-09-19",
+  "classification": "READY_FOR_FINAL_MANAGEMENT_MERGE_REVIEW",
+  "starting_pr_head": "3c33659b389b91c00ee3bfec1cfbd95af1980506",
+  "validated_code_head": "68c4905b41817239c60a45b4c65b94fb2745c887",
+  "main_at_start": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "research_head": "3bbdf8ce75eff05e26c154b2c38c70d425a4a5d2",
+  "p0_frozen": true,
+  "model_refits": 0,
+  "model_retunes": 0,
+  "route_feature_parameter_changes": 0,
+  "merges": 0,
+  "deploys": 0,
+  "runtime_before": {
+    "future_scoring": "position-average standard->league ratio by QB/RB/WR/TE",
+    "implementation": "LeagueScoringNormalizedI1Predictor + build_future_i1_position_scoring_multipliers",
+    "authoritative_consumer": "PrivateBetaShapleyContractLoader"
+  },
+  "runtime_after": {
+    "future_scoring": "player-specific Year1 league/standard ratio derived from the same player's preserved frozen preseason stat mix",
+    "version": "i1-future-league-scoring-v2:player-ratio",
+    "implementation_module": "src/fsffl/product/i1_player_scoring.py",
+    "candidate_compatibility_module": "src/fsffl/product/i1_player_scoring_candidate.py",
+    "authoritative_consumer": "PrivateBetaShapleyContractLoader",
+    "identity_aware_translation_hook": "compose_live_intrinsic_calendar(... future_i1_result_translator=...)",
+    "old_position_bridge_in_authoritative_runtime": false
+  },
+  "end_to_end_path": [
+    "frozen FFToday preseason projection evidence",
+    "frozen Razzball preseason projection evidence",
+    "governed two-source equal-weight raw-stat baseline/ensemble",
+    "direct connected-league Year1 scoring",
+    "frozen standard/non-PPR P0 compatibility coordinate",
+    "frozen P0 direct h1/h2/h3 state probabilities and conditional production",
+    "player-specific downstream league scoring translation",
+    "three-year calendar composition",
+    "Intrinsic/Shapley"
+  ],
+  "invariants": {
+    "state_probabilities_changed": false,
+    "persistence_or_active_probability_changed": false,
+    "conditional_trajectory_changed": false,
+    "active_probability_applied_extra_times": 0,
+    "league_scoring_applied_extra_times": 0,
+    "market_owner_roster_ranking_inputs_added": false,
+    "missing_player_multiplier_behavior": "fail closed",
+    "missing_two_source_lineage_behavior": "fail closed",
+    "unsupported_scoring_behavior": "fail closed"
+  },
+  "scoring_format_validation": {
+    "standard_non_ppr": "PASS - identity/compatibility coordinate",
+    "connected_half_ppr": "PASS - 335-player gate parity plus authoritative runtime regression",
+    "full_ppr": "PASS - authoritative runtime propagation test",
+    "six_point_passing_td": "PASS - authoritative runtime propagation test",
+    "te_premium": "TRANSLATION_LAYER_PASS; production scoring coverage remains intentionally unsupported for bonus_rec_te and fails closed; no coverage broadening"
+  },
+  "prior_gate_numeric_regression": {
+    "connected_league_players": 335,
+    "y1_reconstruction_max_abs_error_points": 5.684341886080802e-14,
+    "y2_max_conditional_trajectory_ratio_error": 3.552713678800501e-15,
+    "y3_max_conditional_trajectory_ratio_error": 3.552713678800501e-15,
+    "position_bridge_loss": {
+      "y2_mae": 1.6050560706103814,
+      "y2_median_abs": 1.1894279119318156,
+      "y2_p90_abs": 3.59664942969169,
+      "y2_max_abs": 11.884799397235483,
+      "y3_mae": 1.260437399757001,
+      "y3_median_abs": 0.9541563409528386,
+      "y3_p90_abs": 2.92722633706598,
+      "y3_max_abs": 10.55256141410868
+    },
+    "causal_identity": "candidate minus old bridge = frozen standard future points * (player-specific ratio - position-average ratio), floating-point residual only"
+  },
+  "authoritative_runtime_tests": {
+    "focused_workflow": "Private-beta Intrinsic live diagnostics",
+    "focused_run_id": 35453797074,
+    "focused_step": "Run focused activation/API/Forecast-resilience tests",
+    "focused_step_status": "PASS on validated code head before evidence-only persistence commit",
+    "full_ci_run_id": 35453797069,
+    "full_ci_status": "PASS",
+    "full_ci_result": "1243 passed, 2 warnings in 12.42s"
+  },
+  "files_changed_for_promotion": [
+    "src/fsffl/product/i1_player_scoring.py",
+    "src/fsffl/product/i1_player_scoring_candidate.py",
+    "src/fsffl/product/private_beta_shapley_runtime.py",
+    "src/fsffl/value/live_intrinsic_calendar.py",
+    "tests/test_private_beta_shapley_runtime.py"
+  ],
+  "stop_boundary": "No merge. No deploy. No main modification. Return to management for final merge review."
+}
