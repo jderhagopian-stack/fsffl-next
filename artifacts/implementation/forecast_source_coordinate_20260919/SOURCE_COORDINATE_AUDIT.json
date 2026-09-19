@@ -14,7 +14,7 @@
     "parity": "PASS"
   },
   "hashes": {
-    "standard_board_sha256": "3f9d07bff0a81d8c78d842145e905f49600822e944557d173ba4556ff99810f6",
+    "standard_board_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9",
     "league_half_ppr_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae"
   },
   "standard_scoring": [
@@ -70,5 +70,11 @@
   ],
   "semantic_change_required": false,
   "model_fit_required": false,
-  "provider_refetch_required": false
+  "provider_refetch_required": false,
+  "audit_export_correction": {
+    "corrected": true,
+    "reason": "initial derived export used rec_yd instead of ForecastMetric rec_yards; corrected before credibility-gate use",
+    "production_code_affected": false,
+    "verified_stage1_hash_preserved": true
+  }
 }
