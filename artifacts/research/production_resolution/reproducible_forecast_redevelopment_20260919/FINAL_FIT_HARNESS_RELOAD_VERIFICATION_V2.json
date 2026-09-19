@@ -1,0 +1,11 @@
+{
+  "schema_version": "fsffl-redevelopment-final-fit-harness-reload-verification-v2",
+  "pass": true,
+  "git_blob_sha": "cb59af05d1fb7550e945f0a4334fb557eff2cbdc",
+  "local_expected_git_blob_sha": "cb59af05d1fb7550e945f0a4334fb557eff2cbdc",
+  "local_sha256": "e04fa7d8ce21423478de238f7d870a3eb5e1b548a6478c2906ec273d7d7517d5",
+  "final_code_commit": "0140a815031e0ec41c5fb1f0d403454f2eeb587b",
+  "historical_freeze_commit": "7130beb75ec22fdaaeb25377e7fc071a8edf7c1c",
+  "final_fit_executed_before_checkpoint": false,
+  "current_player_board_materialized": false
+}
