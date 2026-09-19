@@ -44,6 +44,7 @@ if _PACKAGE.get("implementation_sha256") != SELECTED_FUTURE_FORECAST_IMPLEMENTAT
 @dataclass(frozen=True)
 class _SourceRow:
     player_id: str
+    player_name: str
     position: str
     age: float
     experience: int
@@ -82,6 +83,7 @@ def _load_rows() -> dict[str, _SourceRow]:
             raise ValueError(f"unsupported selected Forecast position: {position}")
         rows[player_id] = _SourceRow(
             player_id=player_id,
+            player_name=str(raw["player_name"]),
             position=position,
             age=float(raw["age"]),
             experience=int(raw["experience"]),
