@@ -1,0 +1,121 @@
+{
+  "schema_version": "fsffl-y1-projection-magnitude-lineage-audit-start-v1",
+  "directive_date": "2026-09-19",
+  "task": "Audit the governed 2026 Year-1 projection magnitude and lineage before scoring-coordinate correction or further Forecast work.",
+  "protected_state": {
+    "research_branch": "research/future-state-resolution-phase34-resume",
+    "starting_head": "3f8cec86e787a676416ec7fe60526c5dfd84d35d",
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "pr147": {
+      "state": "open",
+      "merged": false,
+      "head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63"
+    },
+    "model_fits": 0,
+    "forecast_tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0
+  },
+  "current_2026_y1": {
+    "status": "ROW_COMPLETE_CURRENT_BOARD_RECOVERED_BUT_PRE_ENSEMBLE_PROVIDER_ROWS_NOT_PERSISTED",
+    "coordinate_id": "year1-current-governed-2026:2026-09-18T09:42:31.889752+00:00",
+    "repo_path": "artifacts/research/production_resolution/governed_year1_current_2026_20260918T094231Z/governed_year1_universe.json",
+    "repo_git_blob_sha": "96db6a2d66593ca1ed05d92a2928c452f48606a1",
+    "canonical_sha256": "c668b74b9010809904c14366d992137f7b038b299d6d3f031b07eea0d63c0b3f",
+    "row_material_sha256": "b0e2ddae9296c9b3695534fffd7abdd37a8ecc004ba24687b6574dc654ef49d8",
+    "row_count": 335,
+    "position_counts": {
+      "QB": 61,
+      "RB": 88,
+      "TE": 64,
+      "WR": 122
+    },
+    "freeze_as_of": "2026-09-18T09:42:31.889752+00:00",
+    "rules_sha256": "d47f6797388c23030a6b936031382d4e09b79d1a748927f9769ae889e34ac097",
+    "scoring": "0.5-PPR league scoring: pass_yd .04, pass_td 4, pass_int -2, rush_yd .1, rush_td 6, rec .5, rec_yd .1, rec_td 6, fum_lost -2",
+    "source_governance": {
+      "evidence_basis": "live_full_season",
+      "successful_sources": [
+        "fftoday",
+        "razzball"
+      ],
+      "failed_sources": [
+        "cbs: full-season page validation failure",
+        "nfl_fantasy: projection-content validation failure"
+      ],
+      "minimum_independent_sources": 2
+    },
+    "workflow": {
+      "run_id": 35330898624,
+      "head_sha": "92eb9cb4cc1f5c61909e55d6c5491eb0292d4bb6",
+      "artifact_id": 10541375155,
+      "artifact_name": "governed-year1-evaluation-universe",
+      "artifact_zip_sha256": "c23fed641c4ad689513510022f187e6ea05cab2dc88d457d545be9afc1f49ee7",
+      "artifact_files": [
+        "governed_year1_universe.json",
+        "governed_year1_universe_manifest.json",
+        "reload_verification.json",
+        "report.md"
+      ]
+    },
+    "materializer": "scripts/research_freeze_governed_year1_universe.py",
+    "provider_detail_boundary": "The persisted row-complete artifact contains equal-weight ensemble metric means and provenance source fsffl:live_equal_weight[fftoday,razzball], but it does not contain the individual normalized FFToday and Razzball input rows required to reconstruct each provider's exact stat line/vintage separately."
+  },
+  "prior_pr147_y1": {
+    "status": "EXACT_ROW_COMPLETE_335_BOARD_NOT_RECOVERED",
+    "named_evidence": {
+      "library_file_id": "libfile_d7a60e1129448191b897ff16de904899",
+      "file_name": "FSFFL_NEXT_PR147_Supplemental_Forecast_I1_Diagnostic_Handoff(1).pdf",
+      "exact_pr147_head": "3e63cd61602d0832acf0a30dcc5bee0b13ceeb63",
+      "stated_semantics": "persisted, league-scored current-season Forecast quantity",
+      "named_y1": {
+        "Sam Darnold": 281.73,
+        "Bijan Robinson": 329.24,
+        "Jahmyr Gibbs": 328.02,
+        "Aaron Rodgers": 243.7,
+        "Christian McCaffrey": 315.36
+      }
+    },
+    "earlier_335_reference": {
+      "target_material_sha256": "70de5578372bca5914a570356d8a2bb2f0f4a16e2763849a316e6b587f90b706",
+      "player_count": 335,
+      "successful_sources": [
+        "fftoday",
+        "razzball"
+      ],
+      "sentinel_parent_commit": "62f2368864545e89fd9000b067be243714b3ec0a",
+      "sentinel_json_repo_path": "artifacts/research/phase34/phase34_current_player_sentinel_diagnostic.json",
+      "sentinel_json_git_blob_sha": "b261ae3a3b8bfd958a8f607dbee7d79003f9cf5d",
+      "durable_detailed_rows": 39
+    },
+    "prior_recovery_proof": {
+      "repo_json_path": "artifacts/research/production_resolution/GOVERNED_YEAR1_UNIVERSE_RECOVERY_2026-09-18.json",
+      "repo_json_git_blob_sha": "393c42ebecba899b57fae2fa763e26c8a86121c6",
+      "repo_checkpoint_path": "artifacts/research/production_resolution/GOVERNED_YEAR1_UNIVERSE_RECOVERY_CHECKPOINT_2026-09-18.md",
+      "repo_checkpoint_git_blob_sha": "0c1f90600e2b1dc5712653696c153365a7b7bc76",
+      "result": "Exact full 335-player prior Year-1 vector was not persisted/recovered from repository history, sentinel artifacts, activation bundle, or reviewed Actions artifacts."
+    },
+    "activation_artifact": {
+      "workflow_run_id": 35145456513,
+      "workflow_head_sha": "60cdc1d6acd94e79053a06b9de145a7e9cf1dfcd",
+      "artifact_id": 10467264159,
+      "artifact_name": "private-beta-i1-activation",
+      "artifact_zip_sha256": "3866d65353c27cab66f83d701b0af7f892310a71187d02206c49f77181a95ca5",
+      "files": [
+        "current_i1_facts_2026.json",
+        "frozen_i1_h12.json",
+        "frozen_i1_h3.json",
+        "private_beta_activation_build_report.json"
+      ],
+      "contains_prior_y1_board": false
+    }
+  },
+  "stage0_gate": {
+    "pass": false,
+    "reason": [
+      "The exact row-complete prior 335-player PR147 Y1 board and provider-level input material are not durably recoverable.",
+      "The current 335-player board is row-complete, but its artifact persists only post-ensemble metrics; individual FFToday/Razzball normalized input rows and source-vintage semantics are absent."
+    ],
+    "directive_consequence": "Stop before reconstructing either missing evidence set from memory, current web data, or algebraic inversion."
+  }
+}
