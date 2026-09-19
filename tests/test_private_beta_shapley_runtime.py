@@ -15,11 +15,14 @@ from fsffl.forecast.models import (
     ForecastMetric,
     ForecastObservation,
 )
+from fsffl.product.i1_player_scoring_candidate import (
+    FUTURE_I1_PLAYER_SCORING_VERSION,
+    build_future_i1_player_scoring_multipliers,
+    translate_future_i1_result_for_player,
+)
 from fsffl.product.i1_scoring_bridge import (
     FROZEN_I1_STANDARD_SCORING,
     FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
-    LeagueScoringNormalizedI1Predictor,
-    build_future_i1_position_scoring_multipliers,
 )
 from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from fsffl.product.runtime import UserRuntimeContext
@@ -161,10 +164,15 @@ def _authority_evidence(observation: ForecastObservation):
         SimpleNamespace(
             raw_forecasts=_raw_forecasts(year_one),
             league_scored_forecasts=(year_one,),
+            successful_source_ids=("fftoday", "razzball"),
             evidence_basis="preseason_baseline",
             runtime_result=SimpleNamespace(
                 evaluation_as_of=year_one.as_of,
                 model_version="authority-fixture-v1",
+                coverage=SimpleNamespace(
+                    independent_source_ids=("fftoday", "razzball"),
+                    minimum_independent_sources=2,
+                ),
             ),
         ),
     )
@@ -358,13 +366,13 @@ def test_same_raw_forecast_builds_standard_and_half_ppr_coordinates() -> None:
     assert len(league) == 1
     assert league[0].distribution.mean == 198.0
 
-    multipliers = build_future_i1_position_scoring_multipliers(
+    multipliers = build_future_i1_player_scoring_multipliers(
         raw_forecasts=raw,
         league_year_one=league,
         rules=league_rules,
     )
     # Standard/non-PPR = 100 receiving yards points + 60 TD points - 4 fumble points.
-    assert multipliers == {Position.WR: pytest.approx(198.0 / 156.0)}
+    assert multipliers == {"wr1": pytest.approx(198.0 / 156.0)}
 
 
 class _CoordinatePredictor:
@@ -393,12 +401,8 @@ class _CoordinatePredictor:
         )
 
 
-def test_future_i1_bridge_scales_outputs_once_and_preserves_standard_inputs() -> None:
+def test_player_specific_future_scoring_scales_outputs_once_and_preserves_standard_inputs() -> None:
     predictor = _CoordinatePredictor()
-    wrapped = LeagueScoringNormalizedI1Predictor(
-        predictor,
-        multipliers={Position.WR: 1.25},
-    )
     item = I1ForecastInput(
         position=Position.WR,
         age_band="young",
@@ -410,7 +414,12 @@ def test_future_i1_bridge_scales_outputs_once_and_preserves_standard_inputs() ->
         evidence=None,
     )
 
-    result = wrapped.predict(item)
+    base = predictor.predict(item)
+    result = translate_future_i1_result_for_player(
+        "wr1",
+        base,
+        multipliers={"wr1": 1.25},
+    )
 
     assert predictor.seen is item
     assert predictor.seen.current_points == 150.0
@@ -427,7 +436,8 @@ def test_future_i1_bridge_scales_outputs_once_and_preserves_standard_inputs() ->
         assert result.state_means[state] == pytest.approx(index * 25.0 * 1.25)
     expected = sum(result.probabilities[state] * result.state_means[state] for state in STATE_NAMES)
     assert result.anticipated_points == pytest.approx(expected)
-    assert result.model_version.count(FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION) == 1
+    assert result.model_version.count(FUTURE_I1_PLAYER_SCORING_VERSION) == 1
+    assert FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION not in result.model_version
 
 
 def test_current_i1_facts_are_locked_to_standard_research_coordinate() -> None:
@@ -442,7 +452,7 @@ def test_current_i1_facts_are_locked_to_standard_research_coordinate() -> None:
     assert report["current_fact_metadata"]["research_coordinate_validation"] == coordinate
 
 
-def test_contract_future_i1_provenance_contains_exactly_one_scoring_bridge() -> None:
+def test_contract_future_i1_provenance_contains_exactly_one_player_scoring_translation() -> None:
     state, observation = _fixture()
     contract = PrivateBetaShapleyContractLoader(
         year_one_loader=lambda _state: _authority_evidence(observation)
@@ -451,5 +461,200 @@ def test_contract_future_i1_provenance_contains_exactly_one_scoring_bridge() -> 
     assert len(future) == 2
     for item in future:
         assert item.provenance.model_version.count(
-            FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION
+            FUTURE_I1_PLAYER_SCORING_VERSION
         ) == 1
+        assert FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION not in item.provenance.model_version
+
+    assert contract.completed_source_provenance is not None
+    coverage = contract.completed_source_provenance.fact_family_coverage
+    assert coverage["future_i1_scoring_version"] == FUTURE_I1_PLAYER_SCORING_VERSION
+    assert coverage["future_i1_scoring_method"] == "player_specific_year1_league_standard_ratio"
+    assert coverage["future_i1_scoring_player_count"] == 1
+    assert coverage["year1_forecast_source_ids"] == "fftoday,razzball"
+    assert coverage["year1_forecast_source_count"] == 2
+
+
+
+def test_loader_fails_closed_when_preseason_two_source_lineage_is_missing() -> None:
+    state, observation = _fixture()
+    evidence = _authority_evidence(observation)
+    evidence.successful_source_ids = ("fftoday",)
+    evidence.runtime_result.coverage = SimpleNamespace(
+        independent_source_ids=("fftoday",),
+        minimum_independent_sources=2,
+    )
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: evidence
+    )(_context(state, observation))
+
+    assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert "preseason_year1_source_lineage" in contract.coverage.missing_required_fact_families
+
+
+def _runtime_scoring_case(
+    position: Position,
+    *,
+    scoring: tuple[ScoringRule, ...],
+):
+    facts = json.loads(activation_artifact_text("current_i1_facts_2026.json"))
+    row = next(item for item in facts["rows"] if item["position"] == position.value)
+    now = datetime(2026, 9, 10, 21, 36, tzinfo=UTC)
+    provenance = Provenance(
+        source="two-source-fixture",
+        retrieved_at=now,
+        effective_at=now,
+        source_version="two-source-fixture-v1",
+    )
+    player = Player(
+        player_id=f"runtime-{position.value.lower()}",
+        full_name=row["display_name"],
+        position=position,
+        provider_refs=(
+            ProviderRef(provider=row["identity_provider"], external_id=row["identity_external_id"]),
+        ),
+    )
+    slot = {
+        Position.QB: RosterSlot.QB,
+        Position.RB: RosterSlot.RB,
+        Position.WR: RosterSlot.WR,
+        Position.TE: RosterSlot.TE,
+    }[position]
+    rules = LeagueRules(
+        team_count=2,
+        roster_size=18,
+        lineup=(LineupRequirement(slot=slot, count=1),),
+        scoring=scoring,
+    )
+    state = LeagueState(
+        league=League(league_id=f"league-{position.value}", name="Fixture", season=2026, rules=rules),
+        as_of=now,
+        teams=(
+            Team(team_id="a", league_id=f"league-{position.value}", display_name="A"),
+            Team(team_id="b", league_id=f"league-{position.value}", display_name="B"),
+        ),
+        team_states=(TeamState(team_id="a", roster=()), TeamState(team_id="b", roster=())),
+        players=(player,),
+        player_states=(PlayerState(player_id=player.player_id, as_of=now, provenance=provenance),),
+    )
+    metric_values = (
+        (
+            (ForecastMetric.PASS_YARDS, 4000.0),
+            (ForecastMetric.PASS_TD, 30.0),
+            (ForecastMetric.INTERCEPTIONS, 10.0),
+            (ForecastMetric.RUSH_YARDS, 400.0),
+            (ForecastMetric.RUSH_TD, 4.0),
+        )
+        if position == Position.QB
+        else (
+            (ForecastMetric.RUSH_YARDS, 120.0),
+            (ForecastMetric.RUSH_TD, 1.0),
+            (ForecastMetric.RECEPTIONS, 80.0),
+            (ForecastMetric.REC_YARDS, 1000.0),
+            (ForecastMetric.REC_TD, 8.0),
+        )
+    )
+    raw = tuple(
+        ForecastObservation(
+            player_id=player.player_id,
+            position=position,
+            horizon=ForecastHorizon.SEASON,
+            metric=metric,
+            period_start=now,
+            period_end=now + timedelta(days=150),
+            distribution=ForecastDistribution(mean=mean, stddev=1.0),
+            source="fsffl:live_equal_weight",
+            model_version="next2-live-equal-weight-v1",
+            as_of=now,
+            provenance=Provenance(
+                source="fsffl:live_equal_weight[fftoday,razzball]",
+                retrieved_at=now,
+                effective_at=now,
+                source_version="next2-live-equal-weight-v1",
+            ),
+        )
+        for metric, mean in metric_values
+    )
+    scored = derive_league_fantasy_point_forecasts(
+        raw,
+        rules=rules,
+        source="fsffl:preseason_baseline_league_scored",
+        model_version="authority-fixture-v1",
+    )
+    assert len(scored) == 1
+    evidence = cast(
+        Any,
+        SimpleNamespace(
+            raw_forecasts=raw,
+            league_scored_forecasts=scored,
+            successful_source_ids=("fftoday", "razzball"),
+            evidence_basis="preseason_baseline",
+            runtime_result=SimpleNamespace(
+                evaluation_as_of=now,
+                model_version="authority-fixture-v1",
+                coverage=SimpleNamespace(
+                    independent_source_ids=("fftoday", "razzball"),
+                    minimum_independent_sources=2,
+                ),
+            ),
+        ),
+    )
+    context = UserRuntimeContext(user_id="user", league_state=state)
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: evidence
+    )(context)
+    return contract, scored[0]
+
+
+@pytest.mark.parametrize(
+    ("position", "variant_scoring"),
+    (
+        (
+            Position.WR,
+            FROZEN_I1_STANDARD_SCORING + (ScoringRule(stat="rec", points=0.5),),
+        ),
+        (
+            Position.WR,
+            FROZEN_I1_STANDARD_SCORING + (ScoringRule(stat="rec", points=1.0),),
+        ),
+        (
+            Position.QB,
+            tuple(
+                ScoringRule(stat=rule.stat, points=(6.0 if rule.stat == "pass_td" else rule.points))
+                for rule in FROZEN_I1_STANDARD_SCORING
+            ),
+        ),
+    ),
+)
+def test_authoritative_runtime_propagates_supported_scoring_family_to_intrinsic_shapley(
+    position: Position,
+    variant_scoring: tuple[ScoringRule, ...],
+) -> None:
+    standard_contract, standard_y1 = _runtime_scoring_case(
+        position,
+        scoring=FROZEN_I1_STANDARD_SCORING,
+    )
+    variant_contract, variant_y1 = _runtime_scoring_case(
+        position,
+        scoring=variant_scoring,
+    )
+    assert standard_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert variant_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+
+    ratio = variant_y1.distribution.mean / standard_y1.distribution.mean
+    standard_estimate = standard_contract.estimates[0]
+    variant_estimate = variant_contract.estimates[0]
+    assert variant_estimate.diagnostic_h1.anticipated_points == pytest.approx(
+        standard_estimate.diagnostic_h1.anticipated_points * ratio
+    )
+    for year_index in (2, 3):
+        standard_contribution = standard_estimate.contributions[year_index - 1]
+        variant_contribution = variant_estimate.contributions[year_index - 1]
+        assert variant_contribution.raw_shapley_contribution == pytest.approx(
+            standard_contribution.raw_shapley_contribution * ratio
+        )
+        assert variant_contribution.provenance.model_version.count(
+            FUTURE_I1_PLAYER_SCORING_VERSION
+        ) == 1
+        assert FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION not in (
+            variant_contribution.provenance.model_version
+        )
