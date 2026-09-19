@@ -1,0 +1,32 @@
+{
+  "schema_version": "fsffl-forecast-wide-distributional-selection-final-v1",
+  "locked_replication_touched_once": true,
+  "selection_freeze_commit": "03d783fa1d8d941f8708cbdc9d8c28120b97aa2e",
+  "position_dispositions": [
+    {
+      "position": "QB",
+      "disposition": "DISTRIBUTIONAL ALTERNATIVE EARNED",
+      "earned_cells": "Y3:developmental:D0->D1",
+      "unresolved_concern_cells": ""
+    },
+    {
+      "position": "RB",
+      "disposition": "DISTRIBUTIONAL ALTERNATIVE EARNED",
+      "earned_cells": "Y3:established:D0->D1",
+      "unresolved_concern_cells": ""
+    },
+    {
+      "position": "WR",
+      "disposition": "KEEP CURRENT P0 REPRESENTATION",
+      "earned_cells": "",
+      "unresolved_concern_cells": ""
+    },
+    {
+      "position": "TE",
+      "disposition": "KEEP CURRENT P0 REPRESENTATION",
+      "earned_cells": "",
+      "unresolved_concern_cells": ""
+    }
+  ],
+  "forecast_wide_classification": "C. FORECAST SELECTION METHODOLOGY REVISION EARNED"
+}
