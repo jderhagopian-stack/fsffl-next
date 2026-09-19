@@ -1,0 +1,47 @@
+{
+  "schema_version": "fsffl-fresh-y1-provider-pipeline-derived-manifest-v1",
+  "capture_dir": "artifacts/research/production_resolution/fresh_provider_capture_y1_pipeline_diagnostic_20260919/capture_35434414661",
+  "files": [
+    {
+      "path": "FINAL_OUTCOME.json",
+      "sha256": "4368907cf267d71f9a52d89cd1afb432b054ed87e52a608642661eb7d683bdf6",
+      "bytes": 2604
+    },
+    {
+      "path": "FRESH_VS_20260918_POST_ENSEMBLE.json",
+      "sha256": "7b3f12b46e6ab80114bbf2c52132f03ab645120df4b0a099cc67bf634523a6f9",
+      "bytes": 91344
+    },
+    {
+      "path": "MANAGEMENT_SUMMARY.md",
+      "sha256": "d41040945fdd3ab9b3689dda9431aa7ea76724ad7b3bc7b04f85c113be525c0a",
+      "bytes": 845
+    },
+    {
+      "path": "NAMED_PLAYER_CAUSAL_TRACE.json",
+      "sha256": "854178c0baae14280443f8a87bf3bcda4907f8bb6e4f346cfad137894921cc3b",
+      "bytes": 20328
+    },
+    {
+      "path": "PARSER_AND_SEMANTIC_VALIDATION.json",
+      "sha256": "81fe55469625a5f074a6118fc5039ef236d67616b062be0b33d0571e1f764f73",
+      "bytes": 7327
+    },
+    {
+      "path": "PROVIDER_DISAGREEMENT_DIAGNOSTICS.json",
+      "sha256": "2a7b8024b6e2aa6b232019eea601ee813ff63ce98de34df904c7f7b76f7d5ec7",
+      "bytes": 34492
+    },
+    {
+      "path": "PROVIDER_POPULATION_DIAGNOSTICS.json",
+      "sha256": "6c2060f66ad7de2704fba66bac1f48e4554b8588c763d6b9ed799908470800c4",
+      "bytes": 33276
+    },
+    {
+      "path": "PROVIDER_TO_CANONICAL_MAPPING_AUDIT.json",
+      "sha256": "6e718e1b15ca4fe3ccd701f212e345d7b4b8222438b673af0cac856f7d03bf0c",
+      "bytes": 297007
+    }
+  ],
+  "classification": "B - PROVIDER EVIDENCE ITSELF IS EXTREME / SEMANTICALLY UNSUITABLE"
+}

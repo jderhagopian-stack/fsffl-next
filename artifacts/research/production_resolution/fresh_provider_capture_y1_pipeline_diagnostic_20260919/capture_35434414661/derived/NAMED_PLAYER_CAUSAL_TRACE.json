@@ -1,0 +1,860 @@
+[
+  {
+    "player": "Bijan Robinson",
+    "player_id": "diag:sleeper:9509",
+    "name": "Bijan Robinson",
+    "position": "RB",
+    "team": "ATL",
+    "fftoday_source_cells": {
+      "page_artifact": "fftoday_page_03_parsed_substitute.json",
+      "text_index": 138,
+      "cells": [
+        "Bijan Robinson",
+        "ATL",
+        "11",
+        "280",
+        "1,402",
+        "9",
+        "84",
+        "707",
+        "3",
+        "324.9",
+        "Christian McCaffrey",
+        "SF"
+      ]
+    },
+    "fftoday_parsed_stats": {
+      "rec": 84.0,
+      "rec_td": 3.0,
+      "rec_yd": 707.0,
+      "rush_td": 9.0,
+      "rush_yd": 1402.0
+    },
+    "fftoday_normalized_stats": {
+      "rec_td": 3.0,
+      "rec_yards": 707.0,
+      "receptions": 84.0,
+      "rush_td": 9.0,
+      "rush_yards": 1402.0
+    },
+    "fftoday_half_ppr_from_raw_stats": 324.90000000000003,
+    "razzball_parsed_raw_row": {
+      "#": "",
+      "1/2PPR PTS": "643.2",
+      "Att": "0",
+      "Cmp": "0",
+      "Int": "0.0",
+      "Name": "Bijan Robinson",
+      "PPR PTS": "714.3",
+      "Pass TD": "0.0",
+      "Pass Yds": "0",
+      "Pos": "RB",
+      "Rec": "142",
+      "Rec TD": "6.1",
+      "Rec Yds": "1313",
+      "Run TD": "19.5",
+      "Rush": "553",
+      "Rush Yds": "2904",
+      "STD PTS": "572.1",
+      "Snaps": "1423",
+      "Team": "ATL",
+      "Tgt": "186"
+    },
+    "razzball_normalized_stats": {
+      "interceptions": 0.0,
+      "pass_td": 0.0,
+      "pass_yards": 0.0,
+      "rec_td": 6.1,
+      "rec_yards": 1313.0,
+      "receptions": 142.0,
+      "rush_td": 19.5,
+      "rush_yards": 2904.0
+    },
+    "razzball_half_ppr_from_raw_stats": 646.3000000000001,
+    "razzball_display_half_ppr": 643.2,
+    "ensemble_stats": {
+      "rec_td": 4.55,
+      "rec_yards": 1010.0,
+      "receptions": 113.0,
+      "rush_td": 14.25,
+      "rush_yards": 2153.0
+    },
+    "equal_weight_half_ppr": 485.6,
+    "fresh_stored_y1": 485.6,
+    "standard_non_ppr_equivalent": 429.1,
+    "term_by_term_half_ppr": [
+      {
+        "metric": "pass_yards",
+        "value": 0.0,
+        "coefficient": 0.04,
+        "points": 0.0
+      },
+      {
+        "metric": "pass_td",
+        "value": 0.0,
+        "coefficient": 4.0,
+        "points": 0.0
+      },
+      {
+        "metric": "interceptions",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      },
+      {
+        "metric": "rush_yards",
+        "value": 2153.0,
+        "coefficient": 0.1,
+        "points": 215.3
+      },
+      {
+        "metric": "rush_td",
+        "value": 14.25,
+        "coefficient": 6.0,
+        "points": 85.5
+      },
+      {
+        "metric": "receptions",
+        "value": 113.0,
+        "coefficient": 0.5,
+        "points": 56.5
+      },
+      {
+        "metric": "rec_yards",
+        "value": 1010.0,
+        "coefficient": 0.1,
+        "points": 101.0
+      },
+      {
+        "metric": "rec_td",
+        "value": 4.55,
+        "coefficient": 6.0,
+        "points": 27.299999999999997
+      },
+      {
+        "metric": "fumbles_lost",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      }
+    ],
+    "razzball_minus_fftoday_points": 321.40000000000003,
+    "ensemble_uplift_vs_fftoday_points": 160.7,
+    "causal_answer": "Razzball raw provider row is extreme; FSFFL preserves the columns and takes the exact equal-weight mean with FFToday."
+  },
+  {
+    "player": "Jahmyr Gibbs",
+    "player_id": "diag:sleeper:9221",
+    "name": "Jahmyr Gibbs",
+    "position": "RB",
+    "team": "DET",
+    "fftoday_source_cells": {
+      "page_artifact": "fftoday_page_03_parsed_substitute.json",
+      "text_index": 128,
+      "cells": [
+        "Jahmyr Gibbs",
+        "DET",
+        "6",
+        "279",
+        "1,422",
+        "12",
+        "72",
+        "572",
+        "4",
+        "331.4",
+        "Bijan Robinson",
+        "ATL"
+      ]
+    },
+    "fftoday_parsed_stats": {
+      "rec": 72.0,
+      "rec_td": 4.0,
+      "rec_yd": 572.0,
+      "rush_td": 12.0,
+      "rush_yd": 1422.0
+    },
+    "fftoday_normalized_stats": {
+      "rec_td": 4.0,
+      "rec_yards": 572.0,
+      "receptions": 72.0,
+      "rush_td": 12.0,
+      "rush_yards": 1422.0
+    },
+    "fftoday_half_ppr_from_raw_stats": 331.40000000000003,
+    "razzball_parsed_raw_row": {
+      "#": "",
+      "1/2PPR PTS": "585.7",
+      "Att": "0",
+      "Cmp": "0",
+      "Int": "0.0",
+      "Name": "Jahmyr Gibbs",
+      "PPR PTS": "645.2",
+      "Pass TD": "0.0",
+      "Pass Yds": "0",
+      "Pos": "RB",
+      "Rec": "119",
+      "Rec TD": "4.7",
+      "Rec Yds": "989",
+      "Run TD": "22.7",
+      "Rush": "519",
+      "Rush Yds": "2663",
+      "STD PTS": "526.2",
+      "Snaps": "1382",
+      "Team": "DET",
+      "Tgt": "155"
+    },
+    "razzball_normalized_stats": {
+      "interceptions": 0.0,
+      "pass_td": 0.0,
+      "pass_yards": 0.0,
+      "rec_td": 4.7,
+      "rec_yards": 989.0,
+      "receptions": 119.0,
+      "rush_td": 22.7,
+      "rush_yards": 2663.0
+    },
+    "razzball_half_ppr_from_raw_stats": 589.1,
+    "razzball_display_half_ppr": 585.7,
+    "ensemble_stats": {
+      "rec_td": 4.35,
+      "rec_yards": 780.5,
+      "receptions": 95.5,
+      "rush_td": 17.35,
+      "rush_yards": 2042.5
+    },
+    "equal_weight_half_ppr": 460.25000000000006,
+    "fresh_stored_y1": 460.25000000000006,
+    "standard_non_ppr_equivalent": 412.50000000000006,
+    "term_by_term_half_ppr": [
+      {
+        "metric": "pass_yards",
+        "value": 0.0,
+        "coefficient": 0.04,
+        "points": 0.0
+      },
+      {
+        "metric": "pass_td",
+        "value": 0.0,
+        "coefficient": 4.0,
+        "points": 0.0
+      },
+      {
+        "metric": "interceptions",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      },
+      {
+        "metric": "rush_yards",
+        "value": 2042.5,
+        "coefficient": 0.1,
+        "points": 204.25
+      },
+      {
+        "metric": "rush_td",
+        "value": 17.35,
+        "coefficient": 6.0,
+        "points": 104.10000000000001
+      },
+      {
+        "metric": "receptions",
+        "value": 95.5,
+        "coefficient": 0.5,
+        "points": 47.75
+      },
+      {
+        "metric": "rec_yards",
+        "value": 780.5,
+        "coefficient": 0.1,
+        "points": 78.05000000000001
+      },
+      {
+        "metric": "rec_td",
+        "value": 4.35,
+        "coefficient": 6.0,
+        "points": 26.099999999999998
+      },
+      {
+        "metric": "fumbles_lost",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      }
+    ],
+    "razzball_minus_fftoday_points": 257.7,
+    "ensemble_uplift_vs_fftoday_points": 128.85000000000002,
+    "causal_answer": "Razzball raw provider row is extreme; FSFFL preserves the columns and takes the exact equal-weight mean with FFToday."
+  },
+  {
+    "player": "Christian McCaffrey",
+    "player_id": "diag:sleeper:4034",
+    "name": "Christian McCaffrey",
+    "position": "RB",
+    "team": "SF",
+    "fftoday_source_cells": {
+      "page_artifact": "fftoday_page_03_parsed_substitute.json",
+      "text_index": 148,
+      "cells": [
+        "Christian McCaffrey",
+        "SF",
+        "8",
+        "279",
+        "1,144",
+        "9",
+        "82",
+        "715",
+        "4",
+        "304.9",
+        "Jonathan Taylor",
+        "IND"
+      ]
+    },
+    "fftoday_parsed_stats": {
+      "rec": 82.0,
+      "rec_td": 4.0,
+      "rec_yd": 715.0,
+      "rush_td": 9.0,
+      "rush_yd": 1144.0
+    },
+    "fftoday_normalized_stats": {
+      "rec_td": 4.0,
+      "rec_yards": 715.0,
+      "receptions": 82.0,
+      "rush_td": 9.0,
+      "rush_yards": 1144.0
+    },
+    "fftoday_half_ppr_from_raw_stats": 304.9,
+    "razzball_parsed_raw_row": {
+      "#": "",
+      "1/2PPR PTS": "559.1",
+      "Att": "0",
+      "Cmp": "0",
+      "Int": "0.0",
+      "Name": "Christian McCaffrey",
+      "PPR PTS": "622.4",
+      "Pass TD": "0.0",
+      "Pass Yds": "0",
+      "Pos": "RB",
+      "Rec": "127",
+      "Rec TD": "8.7",
+      "Rec Yds": "1229",
+      "Run TD": "17.1",
+      "Rush": "502",
+      "Rush Yds": "2208",
+      "STD PTS": "495.8",
+      "Snaps": "1333",
+      "Team": "SF",
+      "Tgt": "165"
+    },
+    "razzball_normalized_stats": {
+      "interceptions": 0.0,
+      "pass_td": 0.0,
+      "pass_yards": 0.0,
+      "rec_td": 8.7,
+      "rec_yards": 1229.0,
+      "receptions": 127.0,
+      "rush_td": 17.1,
+      "rush_yards": 2208.0
+    },
+    "razzball_half_ppr_from_raw_stats": 562.0000000000001,
+    "razzball_display_half_ppr": 559.1,
+    "ensemble_stats": {
+      "rec_td": 6.35,
+      "rec_yards": 972.0,
+      "receptions": 104.5,
+      "rush_td": 13.05,
+      "rush_yards": 1676.0
+    },
+    "equal_weight_half_ppr": 433.45000000000005,
+    "fresh_stored_y1": 433.45000000000005,
+    "standard_non_ppr_equivalent": 381.20000000000005,
+    "term_by_term_half_ppr": [
+      {
+        "metric": "pass_yards",
+        "value": 0.0,
+        "coefficient": 0.04,
+        "points": 0.0
+      },
+      {
+        "metric": "pass_td",
+        "value": 0.0,
+        "coefficient": 4.0,
+        "points": 0.0
+      },
+      {
+        "metric": "interceptions",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      },
+      {
+        "metric": "rush_yards",
+        "value": 1676.0,
+        "coefficient": 0.1,
+        "points": 167.60000000000002
+      },
+      {
+        "metric": "rush_td",
+        "value": 13.05,
+        "coefficient": 6.0,
+        "points": 78.30000000000001
+      },
+      {
+        "metric": "receptions",
+        "value": 104.5,
+        "coefficient": 0.5,
+        "points": 52.25
+      },
+      {
+        "metric": "rec_yards",
+        "value": 972.0,
+        "coefficient": 0.1,
+        "points": 97.2
+      },
+      {
+        "metric": "rec_td",
+        "value": 6.35,
+        "coefficient": 6.0,
+        "points": 38.099999999999994
+      },
+      {
+        "metric": "fumbles_lost",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      }
+    ],
+    "razzball_minus_fftoday_points": 257.10000000000014,
+    "ensemble_uplift_vs_fftoday_points": 128.55000000000007,
+    "causal_answer": "Razzball raw provider row is extreme; FSFFL preserves the columns and takes the exact equal-weight mean with FFToday."
+  },
+  {
+    "player": "Puka Nacua",
+    "player_id": "diag:sleeper:9493",
+    "name": "Puka Nacua",
+    "position": "WR",
+    "team": "LAR",
+    "fftoday_source_cells": {
+      "page_artifact": "fftoday_page_05_parsed_substitute.json",
+      "text_index": 128,
+      "cells": [
+        "Puka Nacua",
+        "LAR",
+        "11",
+        "113",
+        "1,521",
+        "9",
+        "10",
+        "72",
+        "1",
+        "275.8",
+        "Ja'Marr Chase",
+        "CIN"
+      ]
+    },
+    "fftoday_parsed_stats": {
+      "rec": 113.0,
+      "rec_td": 9.0,
+      "rec_yd": 1521.0,
+      "rush_td": 1.0,
+      "rush_yd": 72.0
+    },
+    "fftoday_normalized_stats": {
+      "rec_td": 9.0,
+      "rec_yards": 1521.0,
+      "receptions": 113.0,
+      "rush_td": 1.0,
+      "rush_yards": 72.0
+    },
+    "fftoday_half_ppr_from_raw_stats": 275.8,
+    "razzball_parsed_raw_row": {
+      "#": "",
+      "1/2PPR PTS": "525.1",
+      "Att": "0",
+      "Cmp": "0",
+      "Int": "0.0",
+      "Name": "Puka Nacua",
+      "PPR PTS": "637.5",
+      "Pass TD": "0.0",
+      "Pass Yds": "0",
+      "Pos": "WR",
+      "Rec": "225",
+      "Rec TD": "17.2",
+      "Rec Yds": "2946",
+      "Run TD": "0.9",
+      "Rush": "20",
+      "Rush Yds": "114",
+      "STD PTS": "412.8",
+      "Snaps": "1485",
+      "Team": "LAR",
+      "Tgt": "317"
+    },
+    "razzball_normalized_stats": {
+      "interceptions": 0.0,
+      "pass_td": 0.0,
+      "pass_yards": 0.0,
+      "rec_td": 17.2,
+      "rec_yards": 2946.0,
+      "receptions": 225.0,
+      "rush_td": 0.9,
+      "rush_yards": 114.0
+    },
+    "razzball_half_ppr_from_raw_stats": 527.1,
+    "razzball_display_half_ppr": 525.1,
+    "ensemble_stats": {
+      "rec_td": 13.1,
+      "rec_yards": 2233.5,
+      "receptions": 169.0,
+      "rush_td": 0.95,
+      "rush_yards": 93.0
+    },
+    "equal_weight_half_ppr": 401.45000000000005,
+    "fresh_stored_y1": 401.45000000000005,
+    "standard_non_ppr_equivalent": 316.95000000000005,
+    "term_by_term_half_ppr": [
+      {
+        "metric": "pass_yards",
+        "value": 0.0,
+        "coefficient": 0.04,
+        "points": 0.0
+      },
+      {
+        "metric": "pass_td",
+        "value": 0.0,
+        "coefficient": 4.0,
+        "points": 0.0
+      },
+      {
+        "metric": "interceptions",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      },
+      {
+        "metric": "rush_yards",
+        "value": 93.0,
+        "coefficient": 0.1,
+        "points": 9.3
+      },
+      {
+        "metric": "rush_td",
+        "value": 0.95,
+        "coefficient": 6.0,
+        "points": 5.699999999999999
+      },
+      {
+        "metric": "receptions",
+        "value": 169.0,
+        "coefficient": 0.5,
+        "points": 84.5
+      },
+      {
+        "metric": "rec_yards",
+        "value": 2233.5,
+        "coefficient": 0.1,
+        "points": 223.35000000000002
+      },
+      {
+        "metric": "rec_td",
+        "value": 13.1,
+        "coefficient": 6.0,
+        "points": 78.6
+      },
+      {
+        "metric": "fumbles_lost",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      }
+    ],
+    "razzball_minus_fftoday_points": 251.3,
+    "ensemble_uplift_vs_fftoday_points": 125.65000000000003,
+    "causal_answer": "Razzball raw provider row is extreme; FSFFL preserves the columns and takes the exact equal-weight mean with FFToday."
+  },
+  {
+    "player": "Sam Darnold",
+    "player_id": "diag:sleeper:4943",
+    "name": "Sam Darnold",
+    "position": "QB",
+    "team": "SEA",
+    "fftoday_source_cells": {
+      "page_artifact": "fftoday_page_01_parsed_substitute.json",
+      "text_index": 382,
+      "cells": [
+        "Sam Darnold",
+        "SEA",
+        "11",
+        "337",
+        "510",
+        "4,130",
+        "26",
+        "13",
+        "40",
+        "125",
+        "1",
+        "287.7"
+      ]
+    },
+    "fftoday_parsed_stats": {
+      "pass_int": 13.0,
+      "pass_td": 26.0,
+      "pass_yd": 4130.0,
+      "rush_td": 1.0,
+      "rush_yd": 125.0
+    },
+    "fftoday_normalized_stats": {
+      "interceptions": 13.0,
+      "pass_td": 26.0,
+      "pass_yards": 4130.0,
+      "rush_td": 1.0,
+      "rush_yards": 125.0
+    },
+    "fftoday_half_ppr_from_raw_stats": 261.70000000000005,
+    "razzball_parsed_raw_row": {
+      "#": "",
+      "1/2PPR PTS": "494.6",
+      "Att": "996",
+      "Cmp": "694",
+      "Int": "27.3",
+      "Name": "Sam Darnold",
+      "PPR PTS": "494.6",
+      "Pass TD": "50.3",
+      "Pass Yds": "7668",
+      "Pos": "QB",
+      "Rec": "0",
+      "Rec TD": "0.0",
+      "Rec Yds": "0",
+      "Run TD": "3.4",
+      "Rush": "98",
+      "Rush Yds": "307",
+      "STD PTS": "494.6",
+      "Snaps": "1945",
+      "Team": "SEA",
+      "Tgt": "0"
+    },
+    "razzball_normalized_stats": {
+      "interceptions": 27.3,
+      "pass_td": 50.3,
+      "pass_yards": 7668.0,
+      "rec_td": 0.0,
+      "rec_yards": 0.0,
+      "receptions": 0.0,
+      "rush_td": 3.4,
+      "rush_yards": 307.0
+    },
+    "razzball_half_ppr_from_raw_stats": 504.41999999999996,
+    "razzball_display_half_ppr": 494.6,
+    "ensemble_stats": {
+      "interceptions": 20.15,
+      "pass_td": 38.15,
+      "pass_yards": 5899.0,
+      "rush_td": 2.2,
+      "rush_yards": 216.0
+    },
+    "equal_weight_half_ppr": 383.06,
+    "fresh_stored_y1": 383.06,
+    "standard_non_ppr_equivalent": 383.06,
+    "term_by_term_half_ppr": [
+      {
+        "metric": "pass_yards",
+        "value": 5899.0,
+        "coefficient": 0.04,
+        "points": 235.96
+      },
+      {
+        "metric": "pass_td",
+        "value": 38.15,
+        "coefficient": 4.0,
+        "points": 152.6
+      },
+      {
+        "metric": "interceptions",
+        "value": 20.15,
+        "coefficient": -2.0,
+        "points": -40.3
+      },
+      {
+        "metric": "rush_yards",
+        "value": 216.0,
+        "coefficient": 0.1,
+        "points": 21.6
+      },
+      {
+        "metric": "rush_td",
+        "value": 2.2,
+        "coefficient": 6.0,
+        "points": 13.200000000000001
+      },
+      {
+        "metric": "receptions",
+        "value": 0.0,
+        "coefficient": 0.5,
+        "points": 0.0
+      },
+      {
+        "metric": "rec_yards",
+        "value": 0.0,
+        "coefficient": 0.1,
+        "points": 0.0
+      },
+      {
+        "metric": "rec_td",
+        "value": 0.0,
+        "coefficient": 6.0,
+        "points": 0.0
+      },
+      {
+        "metric": "fumbles_lost",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      }
+    ],
+    "razzball_minus_fftoday_points": 242.7199999999999,
+    "ensemble_uplift_vs_fftoday_points": 121.35999999999996,
+    "causal_answer": "Razzball raw provider row is extreme; FSFFL preserves the columns and takes the exact equal-weight mean with FFToday."
+  },
+  {
+    "player": "Aaron Rodgers",
+    "player_id": "diag:sleeper:96",
+    "name": "Aaron Rodgers",
+    "position": "QB",
+    "team": "PIT",
+    "fftoday_source_cells": {
+      "page_artifact": "fftoday_page_01_parsed_substitute.json",
+      "text_index": 454,
+      "cells": [
+        "Aaron Rodgers",
+        "PIT",
+        "9",
+        "354",
+        "537",
+        "3,649",
+        "23",
+        "8",
+        "29",
+        "80",
+        "0",
+        "246.0"
+      ]
+    },
+    "fftoday_parsed_stats": {
+      "pass_int": 8.0,
+      "pass_td": 23.0,
+      "pass_yd": 3649.0,
+      "rush_td": 0.0,
+      "rush_yd": 80.0
+    },
+    "fftoday_normalized_stats": {
+      "interceptions": 8.0,
+      "pass_td": 23.0,
+      "pass_yards": 3649.0,
+      "rush_td": 0.0,
+      "rush_yards": 80.0
+    },
+    "fftoday_half_ppr_from_raw_stats": 229.96,
+    "razzball_parsed_raw_row": {
+      "#": "",
+      "1/2PPR PTS": "447.9",
+      "Att": "1034",
+      "Cmp": "716",
+      "Int": "16.5",
+      "Name": "Aaron Rodgers",
+      "PPR PTS": "447.9",
+      "Pass TD": "42.4",
+      "Pass Yds": "7138",
+      "Pos": "QB",
+      "Rec": "0",
+      "Rec TD": "0.0",
+      "Rec Yds": "0",
+      "Run TD": "3.2",
+      "Rush": "78",
+      "Rush Yds": "173",
+      "STD PTS": "447.9",
+      "Snaps": "1928",
+      "Team": "PIT",
+      "Tgt": "0"
+    },
+    "razzball_normalized_stats": {
+      "interceptions": 16.5,
+      "pass_td": 42.4,
+      "pass_yards": 7138.0,
+      "rec_td": 0.0,
+      "rec_yards": 0.0,
+      "receptions": 0.0,
+      "rush_td": 3.2,
+      "rush_yards": 173.0
+    },
+    "razzball_half_ppr_from_raw_stats": 458.62,
+    "razzball_display_half_ppr": 447.9,
+    "ensemble_stats": {
+      "interceptions": 12.25,
+      "pass_td": 32.7,
+      "pass_yards": 5393.5,
+      "rush_td": 1.6,
+      "rush_yards": 126.5
+    },
+    "equal_weight_half_ppr": 344.29,
+    "fresh_stored_y1": 344.29,
+    "standard_non_ppr_equivalent": 344.29,
+    "term_by_term_half_ppr": [
+      {
+        "metric": "pass_yards",
+        "value": 5393.5,
+        "coefficient": 0.04,
+        "points": 215.74
+      },
+      {
+        "metric": "pass_td",
+        "value": 32.7,
+        "coefficient": 4.0,
+        "points": 130.8
+      },
+      {
+        "metric": "interceptions",
+        "value": 12.25,
+        "coefficient": -2.0,
+        "points": -24.5
+      },
+      {
+        "metric": "rush_yards",
+        "value": 126.5,
+        "coefficient": 0.1,
+        "points": 12.65
+      },
+      {
+        "metric": "rush_td",
+        "value": 1.6,
+        "coefficient": 6.0,
+        "points": 9.600000000000001
+      },
+      {
+        "metric": "receptions",
+        "value": 0.0,
+        "coefficient": 0.5,
+        "points": 0.0
+      },
+      {
+        "metric": "rec_yards",
+        "value": 0.0,
+        "coefficient": 0.1,
+        "points": 0.0
+      },
+      {
+        "metric": "rec_td",
+        "value": 0.0,
+        "coefficient": 6.0,
+        "points": 0.0
+      },
+      {
+        "metric": "fumbles_lost",
+        "value": 0.0,
+        "coefficient": -2.0,
+        "points": -0.0
+      }
+    ],
+    "razzball_minus_fftoday_points": 228.66,
+    "ensemble_uplift_vs_fftoday_points": 114.33000000000001,
+    "causal_answer": "Razzball raw provider row is extreme; FSFFL preserves the columns and takes the exact equal-weight mean with FFToday."
+  }
+]

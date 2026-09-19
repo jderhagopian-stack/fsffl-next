@@ -1,0 +1,1481 @@
+{
+  "distribution_by_provider_position_metric": [
+    {
+      "provider": "fftoday",
+      "position": "QB",
+      "metric": "pass_yards",
+      "n": 61,
+      "p50": 2544.0,
+      "p75": 3770.0,
+      "p90": 4049.0,
+      "p95": 4159.0,
+      "p99": 4357.0,
+      "max": 4459.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "QB",
+      "metric": "pass_td",
+      "n": 61,
+      "p50": 13.0,
+      "p75": 24.0,
+      "p90": 27.0,
+      "p95": 30.0,
+      "p99": 33.0,
+      "max": 33.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "QB",
+      "metric": "interceptions",
+      "n": 61,
+      "p50": 7.0,
+      "p75": 10.0,
+      "p90": 12.0,
+      "p95": 12.0,
+      "p99": 13.399999999999999,
+      "max": 14.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "QB",
+      "metric": "rush_yards",
+      "n": 61,
+      "p50": 50.0,
+      "p75": 286.0,
+      "p90": 456.0,
+      "p95": 567.0,
+      "p99": 650.4,
+      "max": 657.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "QB",
+      "metric": "rush_td",
+      "n": 61,
+      "p50": 0.0,
+      "p75": 2.0,
+      "p90": 4.0,
+      "p95": 4.0,
+      "p99": 9.599999999999994,
+      "max": 12.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "QB",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 61,
+      "p50": 143.95999999999998,
+      "p75": 285.88,
+      "p90": 300.04,
+      "p95": 313.84000000000003,
+      "p99": 337.72799999999995,
+      "max": 366.18
+    },
+    {
+      "provider": "fftoday",
+      "position": "RB",
+      "metric": "rush_yards",
+      "n": 88,
+      "p50": 426.5,
+      "p75": 1005.75,
+      "p90": 1164.7,
+      "p95": 1327.6499999999987,
+      "p99": 1453.6799999999994,
+      "max": 1572.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "RB",
+      "metric": "rush_td",
+      "n": 88,
+      "p50": 3.0,
+      "p75": 7.0,
+      "p90": 9.0,
+      "p95": 10.0,
+      "p99": 12.0,
+      "max": 12.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "RB",
+      "metric": "receptions",
+      "n": 88,
+      "p50": 18.5,
+      "p75": 38.0,
+      "p90": 44.89999999999999,
+      "p95": 56.0,
+      "p99": 82.25999999999999,
+      "max": 84.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "RB",
+      "metric": "rec_yards",
+      "n": 88,
+      "p50": 135.0,
+      "p75": 278.25,
+      "p90": 344.9999999999999,
+      "p95": 409.24999999999994,
+      "p99": 708.04,
+      "max": 715.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "RB",
+      "metric": "rec_td",
+      "n": 88,
+      "p50": 1.0,
+      "p75": 1.0,
+      "p90": 2.0,
+      "p95": 3.0,
+      "p99": 4.0,
+      "max": 4.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "RB",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 88,
+      "p50": 95.5,
+      "p75": 185.5,
+      "p90": 238.22,
+      "p95": 256.53999999999996,
+      "p99": 325.745,
+      "max": 331.40000000000003
+    },
+    {
+      "provider": "fftoday",
+      "position": "WR",
+      "metric": "receptions",
+      "n": 122,
+      "p50": 44.0,
+      "p75": 66.0,
+      "p90": 80.80000000000001,
+      "p95": 96.89999999999998,
+      "p99": 115.36999999999998,
+      "max": 119.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "WR",
+      "metric": "rec_yards",
+      "n": 122,
+      "p50": 567.0,
+      "p75": 909.75,
+      "p90": 1115.5,
+      "p95": 1185.55,
+      "p99": 1511.1299999999997,
+      "max": 1521.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "WR",
+      "metric": "rec_td",
+      "n": 122,
+      "p50": 3.0,
+      "p75": 6.0,
+      "p90": 7.0,
+      "p95": 7.949999999999989,
+      "p99": 10.0,
+      "max": 11.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "WR",
+      "metric": "rush_yards",
+      "n": 122,
+      "p50": 0.0,
+      "p75": 0.0,
+      "p90": 23.50000000000003,
+      "p95": 45.94999999999999,
+      "p99": 75.15999999999997,
+      "max": 93.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "WR",
+      "metric": "rush_td",
+      "n": 122,
+      "p50": 0.0,
+      "p75": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "p99": 1.0,
+      "max": 1.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "WR",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 122,
+      "p50": 100.55,
+      "p75": 160.55,
+      "p90": 192.81,
+      "p95": 208.99999999999994,
+      "p99": 269.5809999999999,
+      "max": 275.8
+    },
+    {
+      "provider": "fftoday",
+      "position": "TE",
+      "metric": "receptions",
+      "n": 64,
+      "p50": 41.5,
+      "p75": 57.0,
+      "p90": 72.4,
+      "p95": 76.85,
+      "p99": 103.37,
+      "max": 104.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "TE",
+      "metric": "rec_yards",
+      "n": 64,
+      "p50": 390.5,
+      "p75": 624.25,
+      "p90": 769.2,
+      "p95": 846.1999999999999,
+      "p99": 1063.4299999999998,
+      "max": 1088.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "TE",
+      "metric": "rec_td",
+      "n": 64,
+      "p50": 3.0,
+      "p75": 4.0,
+      "p90": 5.0,
+      "p95": 6.0,
+      "p99": 7.0,
+      "max": 7.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "TE",
+      "metric": "rush_yards",
+      "n": 64,
+      "p50": 0.0,
+      "p75": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "p99": 0.0,
+      "max": 0.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "TE",
+      "metric": "rush_td",
+      "n": 64,
+      "p50": 0.0,
+      "p75": 0.0,
+      "p90": 0.0,
+      "p95": 0.0,
+      "p99": 0.0,
+      "max": 0.0
+    },
+    {
+      "provider": "fftoday",
+      "position": "TE",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 64,
+      "p50": 76.2,
+      "p75": 116.47500000000001,
+      "p90": 140.45000000000002,
+      "p95": 152.0,
+      "p99": 200.158,
+      "max": 202.3
+    },
+    {
+      "provider": "razzball",
+      "position": "QB",
+      "metric": "pass_yards",
+      "n": 61,
+      "p50": 5502.0,
+      "p75": 7325.0,
+      "p90": 7810.0,
+      "p95": 7933.0,
+      "p99": 8413.0,
+      "max": 8530.0
+    },
+    {
+      "provider": "razzball",
+      "position": "QB",
+      "metric": "pass_td",
+      "n": 61,
+      "p50": 30.2,
+      "p75": 47.5,
+      "p90": 50.0,
+      "p95": 50.5,
+      "p99": 53.62,
+      "max": 55.9
+    },
+    {
+      "provider": "razzball",
+      "position": "QB",
+      "metric": "interceptions",
+      "n": 61,
+      "p50": 16.1,
+      "p75": 20.9,
+      "p90": 24.8,
+      "p95": 26.0,
+      "p99": 29.979999999999993,
+      "max": 32.5
+    },
+    {
+      "provider": "razzball",
+      "position": "QB",
+      "metric": "rush_yards",
+      "n": 61,
+      "p50": 108.0,
+      "p75": 557.0,
+      "p90": 955.0,
+      "p95": 1001.0,
+      "p99": 1113.8,
+      "max": 1133.0
+    },
+    {
+      "provider": "razzball",
+      "position": "QB",
+      "metric": "rush_td",
+      "n": 61,
+      "p50": 2.3,
+      "p75": 5.7,
+      "p90": 7.6,
+      "p95": 10.3,
+      "p99": 16.619999999999987,
+      "max": 21.9
+    },
+    {
+      "provider": "razzball",
+      "position": "QB",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 61,
+      "p50": 379.38,
+      "p75": 528.84,
+      "p90": 565.52,
+      "p95": 594.5600000000001,
+      "p99": 652.6359999999999,
+      "max": 698.0199999999999
+    },
+    {
+      "provider": "razzball",
+      "position": "RB",
+      "metric": "rush_yards",
+      "n": 88,
+      "p50": 903.5,
+      "p75": 1850.5,
+      "p90": 2349.0,
+      "p95": 2661.95,
+      "p99": 2918.0399999999995,
+      "max": 3012.0
+    },
+    {
+      "provider": "razzball",
+      "position": "RB",
+      "metric": "rush_td",
+      "n": 88,
+      "p50": 7.0,
+      "p75": 12.525,
+      "p90": 15.61,
+      "p95": 18.204999999999988,
+      "p99": 22.998999999999988,
+      "max": 25.0
+    },
+    {
+      "provider": "razzball",
+      "position": "RB",
+      "metric": "receptions",
+      "n": 88,
+      "p50": 37.5,
+      "p75": 72.5,
+      "p90": 89.0,
+      "p95": 113.39999999999986,
+      "p99": 130.68999999999994,
+      "max": 142.0
+    },
+    {
+      "provider": "razzball",
+      "position": "RB",
+      "metric": "rec_yards",
+      "n": 88,
+      "p50": 284.0,
+      "p75": 572.25,
+      "p90": 722.9,
+      "p95": 948.399999999999,
+      "p99": 1239.9199999999996,
+      "max": 1313.0
+    },
+    {
+      "provider": "razzball",
+      "position": "RB",
+      "metric": "rec_td",
+      "n": 88,
+      "p50": 1.35,
+      "p75": 2.925,
+      "p90": 4.33,
+      "p95": 4.894999999999998,
+      "p99": 6.437999999999988,
+      "max": 8.7
+    },
+    {
+      "provider": "razzball",
+      "position": "RB",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 88,
+      "p50": 193.10000000000002,
+      "p75": 386.3,
+      "p90": 458.68,
+      "p95": 497.555,
+      "p99": 596.5359999999997,
+      "max": 646.3000000000001
+    },
+    {
+      "provider": "razzball",
+      "position": "WR",
+      "metric": "receptions",
+      "n": 122,
+      "p50": 85.5,
+      "p75": 125.75,
+      "p90": 151.8,
+      "p95": 173.95,
+      "p99": 213.0599999999999,
+      "max": 225.0
+    },
+    {
+      "provider": "razzball",
+      "position": "WR",
+      "metric": "rec_yards",
+      "n": 122,
+      "p50": 1055.0,
+      "p75": 1548.0,
+      "p90": 1987.0,
+      "p95": 2272.5499999999997,
+      "p99": 2633.48,
+      "max": 2946.0
+    },
+    {
+      "provider": "razzball",
+      "position": "WR",
+      "metric": "rec_td",
+      "n": 122,
+      "p50": 6.1,
+      "p75": 9.4,
+      "p90": 11.970000000000002,
+      "p95": 13.6,
+      "p99": 16.373999999999995,
+      "max": 17.2
+    },
+    {
+      "provider": "razzball",
+      "position": "WR",
+      "metric": "rush_yards",
+      "n": 122,
+      "p50": 0.0,
+      "p75": 30.75,
+      "p90": 116.70000000000002,
+      "p95": 135.89999999999998,
+      "p99": 195.94999999999996,
+      "max": 202.0
+    },
+    {
+      "provider": "razzball",
+      "position": "WR",
+      "metric": "rush_td",
+      "n": 122,
+      "p50": 0.0,
+      "p75": 0.275,
+      "p90": 0.9,
+      "p95": 1.2,
+      "p99": 1.4789999999999992,
+      "max": 1.7
+    },
+    {
+      "provider": "razzball",
+      "position": "WR",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 122,
+      "p50": 194.10000000000002,
+      "p75": 281.975,
+      "p90": 350.25000000000006,
+      "p95": 388.32499999999993,
+      "p99": 474.787,
+      "max": 527.1
+    },
+    {
+      "provider": "razzball",
+      "position": "TE",
+      "metric": "receptions",
+      "n": 64,
+      "p50": 79.0,
+      "p75": 120.0,
+      "p90": 133.5,
+      "p95": 145.09999999999997,
+      "p99": 160.13999999999993,
+      "max": 174.0
+    },
+    {
+      "provider": "razzball",
+      "position": "TE",
+      "metric": "rec_yards",
+      "n": 64,
+      "p50": 759.5,
+      "p75": 1195.75,
+      "p90": 1363.0,
+      "p95": 1460.7499999999995,
+      "p99": 1632.8399999999997,
+      "max": 1716.0
+    },
+    {
+      "provider": "razzball",
+      "position": "TE",
+      "metric": "rec_td",
+      "n": 64,
+      "p50": 5.199999999999999,
+      "p75": 8.125,
+      "p90": 9.97,
+      "p95": 10.754999999999999,
+      "p99": 11.810999999999998,
+      "max": 12.0
+    },
+    {
+      "provider": "razzball",
+      "position": "TE",
+      "metric": "rush_yards",
+      "n": 64,
+      "p50": 0.0,
+      "p75": 6.25,
+      "p90": 17.10000000000001,
+      "p95": 48.849999999999994,
+      "p99": 88.24999999999994,
+      "max": 104.0
+    },
+    {
+      "provider": "razzball",
+      "position": "TE",
+      "metric": "rush_td",
+      "n": 64,
+      "p50": 0.0,
+      "p75": 0.1,
+      "p90": 0.2,
+      "p95": 0.4,
+      "p99": 0.747999999999999,
+      "max": 1.0
+    },
+    {
+      "provider": "razzball",
+      "position": "TE",
+      "metric": "half_ppr_from_raw_stats",
+      "n": 64,
+      "p50": 146.0,
+      "p75": 227.15000000000003,
+      "p90": 260.67,
+      "p95": 286.7849999999999,
+      "p99": 302.59799999999996,
+      "max": 318.6
+    }
+  ],
+  "extreme_flag_counts": [
+    {
+      "provider": "razzball",
+      "flag": "pass_yards>5000",
+      "count": 31
+    },
+    {
+      "provider": "razzball",
+      "flag": "rec_yards>2000",
+      "count": 12
+    },
+    {
+      "provider": "razzball",
+      "flag": "rush_yards>2000",
+      "count": 20
+    }
+  ],
+  "extreme_flag_rows": [
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:96",
+      "name": "Aaron Rodgers",
+      "position": "QB",
+      "team": "PIT",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7138.0,
+      "rush_yards": 173.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 458.62
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4892",
+      "name": "Baker Mayfield",
+      "position": "QB",
+      "team": "TB",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7231.0,
+      "rush_yards": 798.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 528.84
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:11563",
+      "name": "Bo Nix",
+      "position": "QB",
+      "team": "DEN",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7824.0,
+      "rush_yards": 705.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 565.06
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8183",
+      "name": "Brock Purdy",
+      "position": "QB",
+      "team": "SF",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7182.0,
+      "rush_yards": 416.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 500.88
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9228",
+      "name": "Bryce Young",
+      "position": "QB",
+      "team": "CAR",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7408.0,
+      "rush_yards": 559.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 507.81999999999994
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9758",
+      "name": "C.J. Stroud",
+      "position": "QB",
+      "team": "HOU",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7546.0,
+      "rush_yards": 557.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 529.54
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:11560",
+      "name": "Caleb Williams",
+      "position": "QB",
+      "team": "CHI",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7228.0,
+      "rush_yards": 817.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 574.62
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:12522",
+      "name": "Cam Ward",
+      "position": "QB",
+      "team": "TEN",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7435.0,
+      "rush_yards": 468.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 505.6
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:3294",
+      "name": "Dak Prescott",
+      "position": "QB",
+      "team": "DAL",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7933.0,
+      "rush_yards": 459.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 563.62
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:5870",
+      "name": "Daniel Jones",
+      "position": "QB",
+      "team": "IND",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 6991.0,
+      "rush_yards": 431.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 511.34000000000003
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4017",
+      "name": "Deshaun Watson",
+      "position": "QB",
+      "team": "CLE",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7325.0,
+      "rush_yards": 466.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 472.8
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:11564",
+      "name": "Drake Maye",
+      "position": "QB",
+      "team": "NE",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7384.0,
+      "rush_yards": 936.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 594.5600000000001
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:13269",
+      "name": "Fernando Mendoza",
+      "position": "QB",
+      "team": "LV",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 5502.0,
+      "rush_yards": 549.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 379.38
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:1373",
+      "name": "Geno Smith",
+      "position": "QB",
+      "team": "NYJ",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 6652.0,
+      "rush_yards": 392.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 451.0799999999999
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:3257",
+      "name": "Jacoby Brissett",
+      "position": "QB",
+      "team": "ARI",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 6642.0,
+      "rush_yards": 519.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 444.58000000000004
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6904",
+      "name": "Jalen Hurts",
+      "position": "QB",
+      "team": "PHI",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7197.0,
+      "rush_yards": 955.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 622.38
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:3163",
+      "name": "Jared Goff",
+      "position": "QB",
+      "team": "DET",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 8335.0,
+      "rush_yards": 145.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 527.7
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:12508",
+      "name": "Jaxson Dart",
+      "position": "QB",
+      "team": "NYG",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 6348.0,
+      "rush_yards": 973.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 526.02
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:11566",
+      "name": "Jayden Daniels",
+      "position": "QB",
+      "team": "WAS",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 6982.0,
+      "rush_yards": 1001.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 573.78
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6770",
+      "name": "Joe Burrow",
+      "position": "QB",
+      "team": "CIN",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 8530.0,
+      "rush_yards": 169.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 530.6999999999999
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6804",
+      "name": "Jordan Love",
+      "position": "QB",
+      "team": "GB",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7933.0,
+      "rush_yards": 510.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 565.52
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4984",
+      "name": "Josh Allen",
+      "position": "QB",
+      "team": "BUF",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7683.0,
+      "rush_yards": 1133.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 698.0199999999999
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6797",
+      "name": "Justin Herbert",
+      "position": "QB",
+      "team": "LAC",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7239.0,
+      "rush_yards": 799.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 549.66
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:5849",
+      "name": "Kyler Murray",
+      "position": "QB",
+      "team": "MIN",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 6426.0,
+      "rush_yards": 976.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 499.24000000000007
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4881",
+      "name": "Lamar Jackson",
+      "position": "QB",
+      "team": "BAL",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7358.0,
+      "rush_yards": 1101.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 600.8199999999999
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8161",
+      "name": "Malik Willis",
+      "position": "QB",
+      "team": "MIA",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 5503.0,
+      "rush_yards": 1060.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 451.12000000000006
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:421",
+      "name": "Matthew Stafford",
+      "position": "QB",
+      "team": "LAR",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7944.0,
+      "rush_yards": 108.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 540.16
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4046",
+      "name": "Patrick Mahomes",
+      "position": "QB",
+      "team": "KC",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7360.0,
+      "rush_yards": 854.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 561.4
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4943",
+      "name": "Sam Darnold",
+      "position": "QB",
+      "team": "SEA",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7668.0,
+      "rush_yards": 307.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 504.41999999999996
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:7523",
+      "name": "Trevor Lawrence",
+      "position": "QB",
+      "team": "JAX",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 7810.0,
+      "rush_yards": 606.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 541.2
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:12545",
+      "name": "Tyler Shough",
+      "position": "QB",
+      "team": "NO",
+      "flags": [
+        "pass_yards>5000"
+      ],
+      "pass_yards": 6783.0,
+      "rush_yards": 486.0,
+      "rec_yards": 0.0,
+      "half_ppr_from_raw_stats": 503.32
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9509",
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "team": "ATL",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2904.0,
+      "rec_yards": 1313.0,
+      "half_ppr_from_raw_stats": 646.3000000000001
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8155",
+      "name": "Breece Hall",
+      "position": "RB",
+      "team": "NYJ",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2264.0,
+      "rec_yards": 479.0,
+      "half_ppr_from_raw_stats": 401.5
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:11584",
+      "name": "Bucky Irving",
+      "position": "RB",
+      "team": "TB",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2167.0,
+      "rec_yards": 989.0,
+      "half_ppr_from_raw_stats": 456.1
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9224",
+      "name": "Chase Brown",
+      "position": "RB",
+      "team": "CIN",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2012.0,
+      "rec_yards": 1045.0,
+      "half_ppr_from_raw_stats": 497.1
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4034",
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "team": "SF",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2208.0,
+      "rec_yards": 1229.0,
+      "half_ppr_from_raw_stats": 562.0000000000001
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6790",
+      "name": "D'Andre Swift",
+      "position": "RB",
+      "team": "CHI",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2080.0,
+      "rec_yards": 525.0,
+      "half_ppr_from_raw_stats": 397.09999999999997
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:5892",
+      "name": "David Montgomery",
+      "position": "RB",
+      "team": "HOU",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2157.0,
+      "rec_yards": 615.0,
+      "half_ppr_from_raw_stats": 440.5
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9226",
+      "name": "De'Von Achane",
+      "position": "RB",
+      "team": "MIA",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2212.0,
+      "rec_yards": 873.0,
+      "half_ppr_from_raw_stats": 452.20000000000005
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:3198",
+      "name": "Derrick Henry",
+      "position": "RB",
+      "team": "BAL",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2868.0,
+      "rec_yards": 331.0,
+      "half_ppr_from_raw_stats": 497.8
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9221",
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "team": "DET",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2663.0,
+      "rec_yards": 989.0,
+      "half_ppr_from_raw_stats": 589.1
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8138",
+      "name": "James Cook",
+      "position": "RB",
+      "team": "BUF",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2795.0,
+      "rec_yards": 598.0,
+      "half_ppr_from_raw_stats": 451.3
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:7588",
+      "name": "Javonte Williams",
+      "position": "RB",
+      "team": "DAL",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2660.0,
+      "rec_yards": 535.0,
+      "half_ppr_from_raw_stats": 507.0
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:13287",
+      "name": "Jeremiyah Love",
+      "position": "RB",
+      "team": "ARI",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2490.0,
+      "rec_yards": 716.0,
+      "half_ppr_from_raw_stats": 464.70000000000005
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6813",
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "team": "IND",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 3012.0,
+      "rec_yards": 578.0,
+      "half_ppr_from_raw_stats": 496.7
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:11583",
+      "name": "Jonathon Brooks",
+      "position": "RB",
+      "team": "CAR",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2216.0,
+      "rec_yards": 562.0,
+      "half_ppr_from_raw_stats": 422.5
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8151",
+      "name": "Kenneth Walker",
+      "position": "RB",
+      "team": "KC",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2363.0,
+      "rec_yards": 739.0,
+      "half_ppr_from_raw_stats": 480.1
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8150",
+      "name": "Kyren Williams",
+      "position": "RB",
+      "team": "LAR",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2343.0,
+      "rec_yards": 465.0,
+      "half_ppr_from_raw_stats": 418.70000000000005
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:12512",
+      "name": "Quinshon Judkins",
+      "position": "RB",
+      "team": "CLE",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2050.0,
+      "rec_yards": 656.0,
+      "half_ppr_from_raw_stats": 413.6
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:4866",
+      "name": "Saquon Barkley",
+      "position": "RB",
+      "team": "PHI",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2497.0,
+      "rec_yards": 608.0,
+      "half_ppr_from_raw_stats": 454.00000000000006
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:5967",
+      "name": "Tony Pollard",
+      "position": "RB",
+      "team": "TEN",
+      "flags": [
+        "rush_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 2234.0,
+      "rec_yards": 347.0,
+      "half_ppr_from_raw_stats": 349.59999999999997
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:7547",
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "team": "DET",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 35.0,
+      "rec_yards": 2624.0,
+      "half_ppr_from_raw_stats": 475.90000000000003
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6786",
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "team": "DAL",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 22.0,
+      "rec_yards": 2277.0,
+      "half_ppr_from_raw_stats": 388.6
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8144",
+      "name": "Chris Olave",
+      "position": "WR",
+      "team": "NO",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 11.0,
+      "rec_yards": 2245.0,
+      "half_ppr_from_raw_stats": 392.29999999999995
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:7525",
+      "name": "DeVonta Smith",
+      "position": "WR",
+      "team": "PHI",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 0.0,
+      "rec_yards": 2052.0,
+      "half_ppr_from_raw_stats": 350.6
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8112",
+      "name": "Drake London",
+      "position": "WR",
+      "team": "ATL",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 8.0,
+      "rec_yards": 2274.0,
+      "half_ppr_from_raw_stats": 377.1
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:8146",
+      "name": "Garrett Wilson",
+      "position": "WR",
+      "team": "NYJ",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 0.0,
+      "rec_yards": 2081.0,
+      "half_ppr_from_raw_stats": 365.3
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:7564",
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "team": "CIN",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 38.0,
+      "rec_yards": 2567.0,
+      "half_ppr_from_raw_stats": 428.7
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9488",
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "team": "SEA",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 117.0,
+      "rec_yards": 2636.0,
+      "half_ppr_from_raw_stats": 470.6
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:6794",
+      "name": "Justin Jefferson",
+      "position": "WR",
+      "team": "MIN",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 6.0,
+      "rec_yards": 2432.0,
+      "half_ppr_from_raw_stats": 411.80000000000007
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9493",
+      "name": "Puka Nacua",
+      "position": "WR",
+      "team": "LAR",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 114.0,
+      "rec_yards": 2946.0,
+      "half_ppr_from_raw_stats": 527.1
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:5927",
+      "name": "Terry McLaurin",
+      "position": "WR",
+      "team": "WAS",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 0.0,
+      "rec_yards": 2054.0,
+      "half_ppr_from_raw_stats": 363.0
+    },
+    {
+      "provider": "razzball",
+      "player_id": "diag:sleeper:9997",
+      "name": "Zay Flowers",
+      "position": "WR",
+      "team": "BAL",
+      "flags": [
+        "rec_yards>2000"
+      ],
+      "pass_yards": 0.0,
+      "rush_yards": 136.0,
+      "rec_yards": 2110.0,
+      "half_ppr_from_raw_stats": 383.1
+    }
+  ]
+}

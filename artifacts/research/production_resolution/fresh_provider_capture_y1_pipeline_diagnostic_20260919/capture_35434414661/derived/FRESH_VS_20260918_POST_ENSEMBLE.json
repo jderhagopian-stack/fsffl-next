@@ -1,0 +1,3365 @@
+{
+  "guardrail": "Fresh evidence is descriptive only and is not a reconstruction of 2026-09-18 provider rows.",
+  "summary": {
+    "n": 335,
+    "mean_absolute_change": 1.3022089552238807,
+    "median_change": 0.0,
+    "p10_change": -0.10000000000002274,
+    "p90_change": 0.8599999999999932,
+    "min_change": -97.60000000000002,
+    "max_change": 21.849999999999966,
+    "within_0_1_points_count": 231
+  },
+  "rows": [
+    {
+      "player_id": "diag:sleeper:96",
+      "name": "Aaron Rodgers",
+      "position": "QB",
+      "team": "PIT",
+      "y1_2026_09_18": 344.31,
+      "fresh_y1": 344.29,
+      "absolute_change": -0.01999999999998181,
+      "percent_change": -5.808718887045927e-05
+    },
+    {
+      "player_id": "diag:sleeper:4892",
+      "name": "Baker Mayfield",
+      "position": "QB",
+      "team": "TB",
+      "y1_2026_09_18": 396.66999999999996,
+      "fresh_y1": 396.71999999999997,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.00012604936092985852
+    },
+    {
+      "player_id": "diag:sleeper:11563",
+      "name": "Bo Nix",
+      "position": "QB",
+      "team": "DEN",
+      "y1_2026_09_18": 431.63,
+      "fresh_y1": 431.63,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8183",
+      "name": "Brock Purdy",
+      "position": "QB",
+      "team": "SF",
+      "y1_2026_09_18": 395.81,
+      "fresh_y1": 395.92,
+      "absolute_change": 0.11000000000001364,
+      "percent_change": 0.0002779111189712413
+    },
+    {
+      "player_id": "diag:sleeper:9228",
+      "name": "Bryce Young",
+      "position": "QB",
+      "team": "CAR",
+      "y1_2026_09_18": 375.50000000000006,
+      "fresh_y1": 375.46,
+      "absolute_change": -0.04000000000007731,
+      "percent_change": -0.00010652463382176958
+    },
+    {
+      "player_id": "diag:sleeper:9758",
+      "name": "C.J. Stroud",
+      "position": "QB",
+      "team": "HOU",
+      "y1_2026_09_18": 389.29,
+      "fresh_y1": 385.84999999999997,
+      "absolute_change": -3.4400000000000546,
+      "percent_change": -0.008836599964037184
+    },
+    {
+      "player_id": "diag:sleeper:13303",
+      "name": "Cade Klubnik",
+      "position": "QB",
+      "team": "NYJ",
+      "y1_2026_09_18": 13.84,
+      "fresh_y1": 13.84,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11560",
+      "name": "Caleb Williams",
+      "position": "QB",
+      "team": "CHI",
+      "y1_2026_09_18": 437.09,
+      "fresh_y1": 437.33,
+      "absolute_change": 0.2400000000000091,
+      "percent_change": 0.0005490860005947784
+    },
+    {
+      "player_id": "diag:sleeper:12522",
+      "name": "Cam Ward",
+      "position": "QB",
+      "team": "TEN",
+      "y1_2026_09_18": 366.43000000000006,
+      "fresh_y1": 366.39,
+      "absolute_change": -0.04000000000007731,
+      "percent_change": -0.00010916136779215435
+    },
+    {
+      "player_id": "diag:sleeper:13272",
+      "name": "Carson Beck",
+      "position": "QB",
+      "team": "ARI",
+      "y1_2026_09_18": 14.260000000000002,
+      "fresh_y1": 14.260000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:3294",
+      "name": "Dak Prescott",
+      "position": "QB",
+      "team": "DAL",
+      "y1_2026_09_18": 428.86,
+      "fresh_y1": 428.64000000000004,
+      "absolute_change": -0.21999999999997044,
+      "percent_change": -0.0005129879214661459
+    },
+    {
+      "player_id": "diag:sleeper:5870",
+      "name": "Daniel Jones",
+      "position": "QB",
+      "team": "IND",
+      "y1_2026_09_18": 383.13,
+      "fresh_y1": 382.33,
+      "absolute_change": -0.8000000000000114,
+      "percent_change": -0.002088064103567988
+    },
+    {
+      "player_id": "diag:sleeper:7585",
+      "name": "Davis Mills",
+      "position": "QB",
+      "team": "HOU",
+      "y1_2026_09_18": 7.89,
+      "fresh_y1": 7.8500000000000005,
+      "absolute_change": -0.03999999999999915,
+      "percent_change": -0.005069708491761582
+    },
+    {
+      "player_id": "diag:sleeper:4017",
+      "name": "Deshaun Watson",
+      "position": "QB",
+      "team": "CLE",
+      "y1_2026_09_18": 302.61999999999995,
+      "fresh_y1": 302.74999999999994,
+      "absolute_change": 0.12999999999999545,
+      "percent_change": 0.0004295816535588859
+    },
+    {
+      "player_id": "diag:sleeper:11564",
+      "name": "Drake Maye",
+      "position": "QB",
+      "team": "NE",
+      "y1_2026_09_18": 456.07,
+      "fresh_y1": 455.91,
+      "absolute_change": -0.15999999999996817,
+      "percent_change": -0.00035082333852254344
+    },
+    {
+      "player_id": "diag:sleeper:5854",
+      "name": "Drew Lock",
+      "position": "QB",
+      "team": "SEA",
+      "y1_2026_09_18": 11.520000000000001,
+      "fresh_y1": 11.58,
+      "absolute_change": 0.05999999999999872,
+      "percent_change": 0.005208333333333259
+    },
+    {
+      "player_id": "diag:sleeper:13269",
+      "name": "Fernando Mendoza",
+      "position": "QB",
+      "team": "LV",
+      "y1_2026_09_18": 283.16,
+      "fresh_y1": 283.12,
+      "absolute_change": -0.040000000000020464,
+      "percent_change": -0.00014126289023885796
+    },
+    {
+      "player_id": "diag:sleeper:1373",
+      "name": "Geno Smith",
+      "position": "QB",
+      "team": "NYJ",
+      "y1_2026_09_18": 337.23,
+      "fresh_y1": 336.77,
+      "absolute_change": -0.4600000000000364,
+      "percent_change": -0.0013640542063281247
+    },
+    {
+      "player_id": "diag:sleeper:11565",
+      "name": "J.J. McCarthy",
+      "position": "QB",
+      "team": "MIN",
+      "y1_2026_09_18": 7.7,
+      "fresh_y1": 7.7,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:3257",
+      "name": "Jacoby Brissett",
+      "position": "QB",
+      "team": "ARI",
+      "y1_2026_09_18": 335.09000000000003,
+      "fresh_y1": 335.09000000000003,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6904",
+      "name": "Jalen Hurts",
+      "position": "QB",
+      "team": "PHI",
+      "y1_2026_09_18": 468.21000000000004,
+      "fresh_y1": 468.11,
+      "absolute_change": -0.10000000000002274,
+      "percent_change": -0.00021357937677546346
+    },
+    {
+      "player_id": "diag:sleeper:13425",
+      "name": "Jalon Daniels",
+      "position": "QB",
+      "team": "TB",
+      "y1_2026_09_18": 4.2,
+      "fresh_y1": 4.2,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:2306",
+      "name": "Jameis Winston",
+      "position": "QB",
+      "team": "NYG",
+      "y1_2026_09_18": 16.180000000000003,
+      "fresh_y1": 16.16,
+      "absolute_change": -0.020000000000003126,
+      "percent_change": -0.0012360939431398377
+    },
+    {
+      "player_id": "diag:sleeper:3163",
+      "name": "Jared Goff",
+      "position": "QB",
+      "team": "DET",
+      "y1_2026_09_18": 409.35,
+      "fresh_y1": 409.53,
+      "absolute_change": 0.17999999999994998,
+      "percent_change": 0.00043972150971050006
+    },
+    {
+      "player_id": "diag:sleeper:6136",
+      "name": "Jarrett Stidham",
+      "position": "QB",
+      "team": "DEN",
+      "y1_2026_09_18": 4.009999999999999,
+      "fresh_y1": 4.009999999999999,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12508",
+      "name": "Jaxson Dart",
+      "position": "QB",
+      "team": "NYG",
+      "y1_2026_09_18": 411.65000000000003,
+      "fresh_y1": 411.61,
+      "absolute_change": -0.040000000000020464,
+      "percent_change": -9.716992590802498e-05
+    },
+    {
+      "player_id": "diag:sleeper:11566",
+      "name": "Jayden Daniels",
+      "position": "QB",
+      "team": "WAS",
+      "y1_2026_09_18": 442.0899999999999,
+      "fresh_y1": 441.39,
+      "absolute_change": -0.6999999999999318,
+      "percent_change": -0.0015833879979187948
+    },
+    {
+      "player_id": "diag:sleeper:6770",
+      "name": "Joe Burrow",
+      "position": "QB",
+      "team": "CIN",
+      "y1_2026_09_18": 415.99,
+      "fresh_y1": 416.01,
+      "absolute_change": 0.01999999999998181,
+      "percent_change": 4.807807879991799e-05
+    },
+    {
+      "player_id": "diag:sleeper:19",
+      "name": "Joe Flacco",
+      "position": "QB",
+      "team": "CIN",
+      "y1_2026_09_18": 13.010000000000002,
+      "fresh_y1": 13.010000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6804",
+      "name": "Jordan Love",
+      "position": "QB",
+      "team": "GB",
+      "y1_2026_09_18": 419.2900000000001,
+      "fresh_y1": 419.13000000000005,
+      "absolute_change": -0.160000000000025,
+      "percent_change": -0.00038159746237698133
+    },
+    {
+      "player_id": "diag:sleeper:4984",
+      "name": "Josh Allen",
+      "position": "QB",
+      "team": "BUF",
+      "y1_2026_09_18": 532.44,
+      "fresh_y1": 532.1,
+      "absolute_change": -0.34000000000003183,
+      "percent_change": -0.0006385696040869249
+    },
+    {
+      "player_id": "diag:sleeper:4179",
+      "name": "Joshua Dobbs",
+      "position": "QB",
+      "team": "DET",
+      "y1_2026_09_18": 4.47,
+      "fresh_y1": 4.47,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7591",
+      "name": "Justin Fields",
+      "position": "QB",
+      "team": "KC",
+      "y1_2026_09_18": 8.82,
+      "fresh_y1": 8.82,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6797",
+      "name": "Justin Herbert",
+      "position": "QB",
+      "team": "LAC",
+      "y1_2026_09_18": 420.16999999999996,
+      "fresh_y1": 420.21999999999997,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.00011899945260251954
+    },
+    {
+      "player_id": "diag:sleeper:8160",
+      "name": "Kenny Pickett",
+      "position": "QB",
+      "team": "CAR",
+      "y1_2026_09_18": 7.1499999999999995,
+      "fresh_y1": 7.1499999999999995,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:1166",
+      "name": "Kirk Cousins",
+      "position": "QB",
+      "team": "LV",
+      "y1_2026_09_18": 64.05,
+      "fresh_y1": 64.12,
+      "absolute_change": 0.07000000000000739,
+      "percent_change": 0.0010928961748635224
+    },
+    {
+      "player_id": "diag:sleeper:5127",
+      "name": "Kyle Allen",
+      "position": "QB",
+      "team": "BUF",
+      "y1_2026_09_18": 7.409999999999999,
+      "fresh_y1": 7.409999999999999,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5849",
+      "name": "Kyler Murray",
+      "position": "QB",
+      "team": "MIN",
+      "y1_2026_09_18": 393.99,
+      "fresh_y1": 390.76000000000005,
+      "absolute_change": -3.2299999999999613,
+      "percent_change": -0.008198177618721214
+    },
+    {
+      "player_id": "diag:sleeper:4881",
+      "name": "Lamar Jackson",
+      "position": "QB",
+      "team": "BAL",
+      "y1_2026_09_18": 460.22,
+      "fresh_y1": 459.79,
+      "absolute_change": -0.4300000000000068,
+      "percent_change": -0.0009343357524662643
+    },
+    {
+      "player_id": "diag:sleeper:7527",
+      "name": "Mac Jones",
+      "position": "QB",
+      "team": "SF",
+      "y1_2026_09_18": 15.549999999999999,
+      "fresh_y1": 15.549999999999999,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8161",
+      "name": "Malik Willis",
+      "position": "QB",
+      "team": "MIA",
+      "y1_2026_09_18": 359.41,
+      "fresh_y1": 359.41,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:2307",
+      "name": "Marcus Mariota",
+      "position": "QB",
+      "team": "WAS",
+      "y1_2026_09_18": 12.050000000000002,
+      "fresh_y1": 12.03,
+      "absolute_change": -0.020000000000003126,
+      "percent_change": -0.0016597510373446145
+    },
+    {
+      "player_id": "diag:sleeper:421",
+      "name": "Matthew Stafford",
+      "position": "QB",
+      "team": "LAR",
+      "y1_2026_09_18": 413.04,
+      "fresh_y1": 413.02,
+      "absolute_change": -0.020000000000038654,
+      "percent_change": -4.842146039130135e-05
+    },
+    {
+      "player_id": "diag:sleeper:11559",
+      "name": "Michael Penix",
+      "position": "QB",
+      "team": "ATL",
+      "y1_2026_09_18": 148.12999999999997,
+      "fresh_y1": 101.64999999999999,
+      "absolute_change": -46.479999999999976,
+      "percent_change": -0.31377843785863757
+    },
+    {
+      "player_id": "diag:sleeper:4046",
+      "name": "Patrick Mahomes",
+      "position": "QB",
+      "team": "KC",
+      "y1_2026_09_18": 422.86,
+      "fresh_y1": 423.06999999999994,
+      "absolute_change": 0.2099999999999227,
+      "percent_change": 0.0004966182660925966
+    },
+    {
+      "player_id": "diag:sleeper:12500",
+      "name": "Quinn Ewers",
+      "position": "QB",
+      "team": "JAX",
+      "y1_2026_09_18": 5.14,
+      "fresh_y1": 5.14,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12470",
+      "name": "Riley Leonard",
+      "position": "QB",
+      "team": "IND",
+      "y1_2026_09_18": 8.73,
+      "fresh_y1": 8.73,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4943",
+      "name": "Sam Darnold",
+      "position": "QB",
+      "team": "SEA",
+      "y1_2026_09_18": 383.06,
+      "fresh_y1": 383.06,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12524",
+      "name": "Shedeur Sanders",
+      "position": "QB",
+      "team": "CLE",
+      "y1_2026_09_18": 61.99,
+      "fresh_y1": 61.99,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11562",
+      "name": "Spencer Rattler",
+      "position": "QB",
+      "team": "NO",
+      "y1_2026_09_18": 6.45,
+      "fresh_y1": 6.45,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:9230",
+      "name": "Tanner McKee",
+      "position": "QB",
+      "team": "PHI",
+      "y1_2026_09_18": 3.44,
+      "fresh_y1": 3.44,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11292",
+      "name": "Tommy DeVito",
+      "position": "QB",
+      "team": "NE",
+      "y1_2026_09_18": 3.7700000000000005,
+      "fresh_y1": 3.7700000000000005,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7523",
+      "name": "Trevor Lawrence",
+      "position": "QB",
+      "team": "JAX",
+      "y1_2026_09_18": 415.51,
+      "fresh_y1": 415.60999999999996,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.00024066809463052508
+    },
+    {
+      "player_id": "diag:sleeper:7610",
+      "name": "Trey Lance",
+      "position": "QB",
+      "team": "LAC",
+      "y1_2026_09_18": 6.03,
+      "fresh_y1": 6.03,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6768",
+      "name": "Tua Tagovailoa",
+      "position": "QB",
+      "team": "ATL",
+      "y1_2026_09_18": 207.12,
+      "fresh_y1": 182.72,
+      "absolute_change": -24.400000000000006,
+      "percent_change": -0.11780610274237158
+    },
+    {
+      "player_id": "diag:sleeper:13275",
+      "name": "Ty Simpson",
+      "position": "QB",
+      "team": "LAR",
+      "y1_2026_09_18": 4.99,
+      "fresh_y1": 4.99,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7083",
+      "name": "Tyler Huntley",
+      "position": "QB",
+      "team": "BAL",
+      "y1_2026_09_18": 4.640000000000001,
+      "fresh_y1": 4.640000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12545",
+      "name": "Tyler Shough",
+      "position": "QB",
+      "team": "NO",
+      "y1_2026_09_18": 395.75,
+      "fresh_y1": 395.53,
+      "absolute_change": -0.22000000000002728,
+      "percent_change": -0.0005559065066330637
+    },
+    {
+      "player_id": "diag:sleeper:827",
+      "name": "Tyrod Taylor",
+      "position": "QB",
+      "team": "GB",
+      "y1_2026_09_18": 5.88,
+      "fresh_y1": 5.88,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11256",
+      "name": "Tyson Bagent",
+      "position": "QB",
+      "team": "CHI",
+      "y1_2026_09_18": 8.620000000000001,
+      "fresh_y1": 8.620000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12511",
+      "name": "Will Howard",
+      "position": "QB",
+      "team": "PIT",
+      "y1_2026_09_18": 5.15,
+      "fresh_y1": 5.15,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4199",
+      "name": "Aaron Jones",
+      "position": "RB",
+      "team": "MIN",
+      "y1_2026_09_18": 228.85000000000002,
+      "fresh_y1": 229.75,
+      "absolute_change": 0.8999999999999773,
+      "percent_change": 0.0039327070133274855
+    },
+    {
+      "player_id": "diag:sleeper:4035",
+      "name": "Alvin Kamara",
+      "position": "RB",
+      "team": "NO",
+      "y1_2026_09_18": 128.65,
+      "fresh_y1": 128.65,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12527",
+      "name": "Ashton Jeanty",
+      "position": "RB",
+      "team": "LV",
+      "y1_2026_09_18": 317.9,
+      "fresh_y1": 317.9,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12490",
+      "name": "Bhayshul Tuten",
+      "position": "RB",
+      "team": "JAX",
+      "y1_2026_09_18": 281.0,
+      "fresh_y1": 280.95,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.00017793594306059202
+    },
+    {
+      "player_id": "diag:sleeper:9509",
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "team": "ATL",
+      "y1_2026_09_18": 479.90000000000003,
+      "fresh_y1": 485.6,
+      "absolute_change": 5.699999999999989,
+      "percent_change": 0.011877474473848793
+    },
+    {
+      "player_id": "diag:sleeper:11586",
+      "name": "Blake Corum",
+      "position": "RB",
+      "team": "LAR",
+      "y1_2026_09_18": 180.4,
+      "fresh_y1": 180.45000000000002,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.00027716186252768615
+    },
+    {
+      "player_id": "diag:sleeper:11576",
+      "name": "Braelon Allen",
+      "position": "RB",
+      "team": "NYJ",
+      "y1_2026_09_18": 112.10000000000001,
+      "fresh_y1": 112.54999999999998,
+      "absolute_change": 0.4499999999999744,
+      "percent_change": 0.004014272970561672
+    },
+    {
+      "player_id": "diag:sleeper:8155",
+      "name": "Breece Hall",
+      "position": "RB",
+      "team": "NYJ",
+      "y1_2026_09_18": 311.15000000000003,
+      "fresh_y1": 311.75000000000006,
+      "absolute_change": 0.6000000000000227,
+      "percent_change": 0.001928330387273025
+    },
+    {
+      "player_id": "diag:sleeper:8154",
+      "name": "Brian Robinson",
+      "position": "RB",
+      "team": "ATL",
+      "y1_2026_09_18": 131.95000000000002,
+      "fresh_y1": 134.85000000000002,
+      "absolute_change": 2.9000000000000057,
+      "percent_change": 0.021978021978022122
+    },
+    {
+      "player_id": "diag:sleeper:11584",
+      "name": "Bucky Irving",
+      "position": "RB",
+      "team": "TB",
+      "y1_2026_09_18": 326.45000000000005,
+      "fresh_y1": 326.55,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.0003063256241384593
+    },
+    {
+      "player_id": "diag:sleeper:12481",
+      "name": "Cam Skattebo",
+      "position": "RB",
+      "team": "NYG",
+      "y1_2026_09_18": 315.20000000000005,
+      "fresh_y1": 315.15000000000003,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.00015862944162436943
+    },
+    {
+      "player_id": "diag:sleeper:9224",
+      "name": "Chase Brown",
+      "position": "RB",
+      "team": "CIN",
+      "y1_2026_09_18": 367.40000000000003,
+      "fresh_y1": 367.45000000000005,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.00013609145345672147
+    },
+    {
+      "player_id": "diag:sleeper:11370",
+      "name": "Chris Brooks",
+      "position": "RB",
+      "team": "GB",
+      "y1_2026_09_18": 33.4,
+      "fresh_y1": 33.4,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:10219",
+      "name": "Chris Rodriguez",
+      "position": "RB",
+      "team": "JAX",
+      "y1_2026_09_18": 164.55,
+      "fresh_y1": 164.45000000000002,
+      "absolute_change": -0.09999999999999432,
+      "percent_change": -0.0006077180188391873
+    },
+    {
+      "player_id": "diag:sleeper:4034",
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "team": "SF",
+      "y1_2026_09_18": 433.5,
+      "fresh_y1": 433.45000000000005,
+      "absolute_change": -0.049999999999954525,
+      "percent_change": -0.000115340253748486
+    },
+    {
+      "player_id": "diag:sleeper:7594",
+      "name": "Chuba Hubbard",
+      "position": "RB",
+      "team": "CAR",
+      "y1_2026_09_18": 174.8,
+      "fresh_y1": 174.85000000000002,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0002860411899314741
+    },
+    {
+      "player_id": "diag:sleeper:6790",
+      "name": "D'Andre Swift",
+      "position": "RB",
+      "team": "CHI",
+      "y1_2026_09_18": 300.09999999999997,
+      "fresh_y1": 300.55,
+      "absolute_change": 0.4500000000000455,
+      "percent_change": 0.0014995001666113783
+    },
+    {
+      "player_id": "diag:sleeper:12471",
+      "name": "DJ Giddens",
+      "position": "RB",
+      "team": "IND",
+      "y1_2026_09_18": 36.8,
+      "fresh_y1": 38.45,
+      "absolute_change": 1.6500000000000057,
+      "percent_change": 0.044836956521739246
+    },
+    {
+      "player_id": "diag:sleeper:5892",
+      "name": "David Montgomery",
+      "position": "RB",
+      "team": "HOU",
+      "y1_2026_09_18": 308.25,
+      "fresh_y1": 311.7,
+      "absolute_change": 3.4499999999999886,
+      "percent_change": 0.01119221411192206
+    },
+    {
+      "player_id": "diag:sleeper:9226",
+      "name": "De'Von Achane",
+      "position": "RB",
+      "team": "MIA",
+      "y1_2026_09_18": 345.6,
+      "fresh_y1": 345.7,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.0002893518518518601
+    },
+    {
+      "player_id": "diag:sleeper:13347",
+      "name": "Demond Claiborne",
+      "position": "RB",
+      "team": "MIN",
+      "y1_2026_09_18": 31.450000000000003,
+      "fresh_y1": 31.400000000000002,
+      "absolute_change": -0.05000000000000071,
+      "percent_change": -0.0015898251192368873
+    },
+    {
+      "player_id": "diag:sleeper:3198",
+      "name": "Derrick Henry",
+      "position": "RB",
+      "team": "BAL",
+      "y1_2026_09_18": 374.3,
+      "fresh_y1": 374.7,
+      "absolute_change": 0.39999999999997726,
+      "percent_change": 0.0010686615014694478
+    },
+    {
+      "player_id": "diag:sleeper:12469",
+      "name": "Dylan Sampson",
+      "position": "RB",
+      "team": "CLE",
+      "y1_2026_09_18": 112.05,
+      "fresh_y1": 112.05,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11435",
+      "name": "Emanuel Wilson",
+      "position": "RB",
+      "team": "SEA",
+      "y1_2026_09_18": 7.45,
+      "fresh_y1": 7.45,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11199",
+      "name": "Emari Demercado",
+      "position": "RB",
+      "team": "DAL",
+      "y1_2026_09_18": 60.85,
+      "fresh_y1": 60.9,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0008216926869351049
+    },
+    {
+      "player_id": "diag:sleeper:13337",
+      "name": "Emmett Johnson",
+      "position": "RB",
+      "team": "KC",
+      "y1_2026_09_18": 89.10000000000001,
+      "fresh_y1": 89.15,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0005611672278338364
+    },
+    {
+      "player_id": "diag:sleeper:12048",
+      "name": "George Holani",
+      "position": "RB",
+      "team": "SEA",
+      "y1_2026_09_18": 76.55000000000001,
+      "fresh_y1": 76.25,
+      "absolute_change": -0.30000000000001137,
+      "percent_change": -0.003919007184846612
+    },
+    {
+      "player_id": "diag:sleeper:11571",
+      "name": "Isaiah Davis",
+      "position": "RB",
+      "team": "NYJ",
+      "y1_2026_09_18": 59.85,
+      "fresh_y1": 60.65,
+      "absolute_change": 0.7999999999999972,
+      "percent_change": 0.013366750208855471
+    },
+    {
+      "player_id": "diag:sleeper:8205",
+      "name": "Isiah Pacheco",
+      "position": "RB",
+      "team": "DET",
+      "y1_2026_09_18": 94.60000000000001,
+      "fresh_y1": 94.60000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6806",
+      "name": "J.K. Dobbins",
+      "position": "RB",
+      "team": "DEN",
+      "y1_2026_09_18": 234.45000000000002,
+      "fresh_y1": 235.5,
+      "absolute_change": 1.049999999999983,
+      "percent_change": 0.004478566858605149
+    },
+    {
+      "player_id": "diag:sleeper:11237",
+      "name": "Jacob Saylors",
+      "position": "RB",
+      "team": "DET",
+      "y1_2026_09_18": 24.7,
+      "fresh_y1": 24.7,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12533",
+      "name": "Jacory Croskey-Merritt",
+      "position": "RB",
+      "team": "WAS",
+      "y1_2026_09_18": 189.5,
+      "fresh_y1": 190.2,
+      "absolute_change": 0.6999999999999886,
+      "percent_change": 0.003693931398416783
+    },
+    {
+      "player_id": "diag:sleeper:13286",
+      "name": "Jadarian Price",
+      "position": "RB",
+      "team": "SEA",
+      "y1_2026_09_18": 220.95,
+      "fresh_y1": 220.9,
+      "absolute_change": -0.04999999999998295,
+      "percent_change": -0.00022629554197772794
+    },
+    {
+      "player_id": "diag:sleeper:9221",
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "team": "DET",
+      "y1_2026_09_18": 460.25000000000006,
+      "fresh_y1": 460.25000000000006,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4137",
+      "name": "James Conner",
+      "position": "RB",
+      "team": "ARI",
+      "y1_2026_09_18": 23.8,
+      "fresh_y1": 23.8,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8138",
+      "name": "James Cook",
+      "position": "RB",
+      "team": "BUF",
+      "y1_2026_09_18": 355.55,
+      "fresh_y1": 355.25,
+      "absolute_change": -0.30000000000001137,
+      "percent_change": -0.0008437631837997506
+    },
+    {
+      "player_id": "diag:sleeper:7588",
+      "name": "Javonte Williams",
+      "position": "RB",
+      "team": "DAL",
+      "y1_2026_09_18": 365.6,
+      "fresh_y1": 365.65000000000003,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0001367614879650425
+    },
+    {
+      "player_id": "diag:sleeper:8228",
+      "name": "Jaylen Warren",
+      "position": "RB",
+      "team": "PIT",
+      "y1_2026_09_18": 281.75,
+      "fresh_y1": 281.75,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11643",
+      "name": "Jaylen Wright",
+      "position": "RB",
+      "team": "MIA",
+      "y1_2026_09_18": 103.85,
+      "fresh_y1": 103.54999999999998,
+      "absolute_change": -0.30000000000001137,
+      "percent_change": -0.002888781896966841
+    },
+    {
+      "player_id": "diag:sleeper:13287",
+      "name": "Jeremiyah Love",
+      "position": "RB",
+      "team": "ARI",
+      "y1_2026_09_18": 348.25,
+      "fresh_y1": 348.3,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0001435750179468176
+    },
+    {
+      "player_id": "diag:sleeper:13345",
+      "name": "Jonah Coleman",
+      "position": "RB",
+      "team": "DEN",
+      "y1_2026_09_18": 55.95,
+      "fresh_y1": 56.00000000000001,
+      "absolute_change": 0.05000000000000426,
+      "percent_change": 0.0008936550491511763
+    },
+    {
+      "player_id": "diag:sleeper:6813",
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "team": "IND",
+      "y1_2026_09_18": 386.75,
+      "fresh_y1": 384.40000000000003,
+      "absolute_change": -2.349999999999966,
+      "percent_change": -0.006076276664511826
+    },
+    {
+      "player_id": "diag:sleeper:11583",
+      "name": "Jonathon Brooks",
+      "position": "RB",
+      "team": "CAR",
+      "y1_2026_09_18": 277.65,
+      "fresh_y1": 277.99999999999994,
+      "absolute_change": 0.3499999999999659,
+      "percent_change": 0.0012605798667386647
+    },
+    {
+      "player_id": "diag:sleeper:12467",
+      "name": "Jordan James",
+      "position": "RB",
+      "team": "SF",
+      "y1_2026_09_18": 38.15,
+      "fresh_y1": 38.15,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8408",
+      "name": "Jordan Mason",
+      "position": "RB",
+      "team": "MIN",
+      "y1_2026_09_18": 216.10000000000002,
+      "fresh_y1": 216.25,
+      "absolute_change": 0.14999999999997726,
+      "percent_change": 0.0006941230911614582
+    },
+    {
+      "player_id": "diag:sleeper:5850",
+      "name": "Josh Jacobs",
+      "position": "RB",
+      "team": "GB",
+      "y1_2026_09_18": 124.0,
+      "fresh_y1": 124.05,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.00040322580645169026
+    },
+    {
+      "player_id": "diag:sleeper:5995",
+      "name": "Justice Hill",
+      "position": "RB",
+      "team": "BAL",
+      "y1_2026_09_18": 129.9,
+      "fresh_y1": 130.4,
+      "absolute_change": 0.5,
+      "percent_change": 0.0038491147036181506
+    },
+    {
+      "player_id": "diag:sleeper:13414",
+      "name": "Kaelon Black",
+      "position": "RB",
+      "team": "SF",
+      "y1_2026_09_18": 91.95000000000002,
+      "fresh_y1": 91.95000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13405",
+      "name": "Kaytron Allen",
+      "position": "RB",
+      "team": "WAS",
+      "y1_2026_09_18": 52.8,
+      "fresh_y1": 52.85,
+      "absolute_change": 0.05000000000000426,
+      "percent_change": 0.0009469696969697239
+    },
+    {
+      "player_id": "diag:sleeper:9511",
+      "name": "Keaton Mitchell",
+      "position": "RB",
+      "team": "LAC",
+      "y1_2026_09_18": 111.5,
+      "fresh_y1": 111.55000000000001,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0004484304932736993
+    },
+    {
+      "player_id": "diag:sleeper:9757",
+      "name": "Kendre Miller",
+      "position": "RB",
+      "team": "NO",
+      "y1_2026_09_18": 74.85000000000001,
+      "fresh_y1": 74.9,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0006680026720107257
+    },
+    {
+      "player_id": "diag:sleeper:8151",
+      "name": "Kenneth Walker",
+      "position": "RB",
+      "team": "KC",
+      "y1_2026_09_18": 358.7,
+      "fresh_y1": 358.5,
+      "absolute_change": -0.19999999999998863,
+      "percent_change": -0.0005575689991635935
+    },
+    {
+      "player_id": "diag:sleeper:11647",
+      "name": "Kimani Vidal",
+      "position": "RB",
+      "team": "LAC",
+      "y1_2026_09_18": 76.95,
+      "fresh_y1": 76.95,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12534",
+      "name": "Kyle Monangai",
+      "position": "RB",
+      "team": "CHI",
+      "y1_2026_09_18": 168.8,
+      "fresh_y1": 168.7,
+      "absolute_change": -0.10000000000002274,
+      "percent_change": -0.0005924170616115054
+    },
+    {
+      "player_id": "diag:sleeper:8150",
+      "name": "Kyren Williams",
+      "position": "RB",
+      "team": "LAR",
+      "y1_2026_09_18": 324.65000000000003,
+      "fresh_y1": 324.65000000000003,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12544",
+      "name": "LeQuint Allen",
+      "position": "RB",
+      "team": "JAX",
+      "y1_2026_09_18": 26.25,
+      "fresh_y1": 26.25,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11581",
+      "name": "MarShawn Lloyd",
+      "position": "RB",
+      "team": "GB",
+      "y1_2026_09_18": 224.8,
+      "fresh_y1": 224.85,
+      "absolute_change": 0.04999999999998295,
+      "percent_change": 0.00022241992882565675
+    },
+    {
+      "player_id": "diag:sleeper:13305",
+      "name": "Mike Washington",
+      "position": "RB",
+      "team": "LV",
+      "y1_2026_09_18": 99.55,
+      "fresh_y1": 99.55,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7528",
+      "name": "Najee Harris",
+      "position": "RB",
+      "team": "NYG",
+      "y1_2026_09_18": 88.65,
+      "fresh_y1": 88.65,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13288",
+      "name": "Nicholas Singleton",
+      "position": "RB",
+      "team": "TEN",
+      "y1_2026_09_18": 22.400000000000006,
+      "fresh_y1": 22.400000000000006,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12495",
+      "name": "Ollie Gordon",
+      "position": "RB",
+      "team": "MIA",
+      "y1_2026_09_18": 36.4,
+      "fresh_y1": 36.4,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12507",
+      "name": "Omarion Hampton",
+      "position": "RB",
+      "team": "LAC",
+      "y1_2026_09_18": 320.85,
+      "fresh_y1": 320.9,
+      "absolute_change": 0.049999999999954525,
+      "percent_change": 0.00015583606046432052
+    },
+    {
+      "player_id": "diag:sleeper:12512",
+      "name": "Quinshon Judkins",
+      "position": "RB",
+      "team": "CLE",
+      "y1_2026_09_18": 303.45,
+      "fresh_y1": 303.45,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12489",
+      "name": "RJ Harvey",
+      "position": "RB",
+      "team": "DEN",
+      "y1_2026_09_18": 212.70000000000002,
+      "fresh_y1": 213.2,
+      "absolute_change": 0.4999999999999716,
+      "percent_change": 0.002350728725904805
+    },
+    {
+      "player_id": "diag:sleeper:8136",
+      "name": "Rachaad White",
+      "position": "RB",
+      "team": "WAS",
+      "y1_2026_09_18": 217.95,
+      "fresh_y1": 219.65,
+      "absolute_change": 1.700000000000017,
+      "percent_change": 0.007799954117917007
+    },
+    {
+      "player_id": "diag:sleeper:12472",
+      "name": "Raheim Sanders",
+      "position": "RB",
+      "team": "CLE",
+      "y1_2026_09_18": 48.2,
+      "fresh_y1": 48.25,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0010373443983402453
+    },
+    {
+      "player_id": "diag:sleeper:11570",
+      "name": "Rasheen Ali",
+      "position": "RB",
+      "team": "BAL",
+      "y1_2026_09_18": 45.0,
+      "fresh_y1": 45.1,
+      "absolute_change": 0.10000000000000142,
+      "percent_change": 0.0022222222222223476
+    },
+    {
+      "player_id": "diag:sleeper:11575",
+      "name": "Ray Davis",
+      "position": "RB",
+      "team": "BUF",
+      "y1_2026_09_18": 75.2,
+      "fresh_y1": 75.45,
+      "absolute_change": 0.25,
+      "percent_change": 0.0033244680851063357
+    },
+    {
+      "player_id": "diag:sleeper:7611",
+      "name": "Rhamondre Stevenson",
+      "position": "RB",
+      "team": "NE",
+      "y1_2026_09_18": 250.20000000000002,
+      "fresh_y1": 250.29999999999998,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.0003996802557952872
+    },
+    {
+      "player_id": "diag:sleeper:7021",
+      "name": "Rico Dowdle",
+      "position": "RB",
+      "team": "PIT",
+      "y1_2026_09_18": 265.95,
+      "fresh_y1": 265.95,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:10235",
+      "name": "Roschon Johnson",
+      "position": "RB",
+      "team": "CHI",
+      "y1_2026_09_18": 15.250000000000002,
+      "fresh_y1": 15.250000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4147",
+      "name": "Samaje Perine",
+      "position": "RB",
+      "team": "CIN",
+      "y1_2026_09_18": 116.3,
+      "fresh_y1": 116.3,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4866",
+      "name": "Saquon Barkley",
+      "position": "RB",
+      "team": "PHI",
+      "y1_2026_09_18": 347.7,
+      "fresh_y1": 347.65,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.00014380212827158623
+    },
+    {
+      "player_id": "diag:sleeper:9506",
+      "name": "Sean Tucker",
+      "position": "RB",
+      "team": "TB",
+      "y1_2026_09_18": 128.1,
+      "fresh_y1": 128.15,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.00039032006245132145
+    },
+    {
+      "player_id": "diag:sleeper:13424",
+      "name": "Seth McGowan",
+      "position": "RB",
+      "team": "IND",
+      "y1_2026_09_18": 50.45,
+      "fresh_y1": 51.849999999999994,
+      "absolute_change": 1.3999999999999915,
+      "percent_change": 0.027750247770069292
+    },
+    {
+      "player_id": "diag:sleeper:12543",
+      "name": "Tahj Brooks",
+      "position": "RB",
+      "team": "CIN",
+      "y1_2026_09_18": 32.50000000000001,
+      "fresh_y1": 32.550000000000004,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0015384615384614886
+    },
+    {
+      "player_id": "diag:sleeper:9225",
+      "name": "Tank Bigsby",
+      "position": "RB",
+      "team": "PHI",
+      "y1_2026_09_18": 91.15,
+      "fresh_y1": 91.15,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5967",
+      "name": "Tony Pollard",
+      "position": "RB",
+      "team": "TEN",
+      "y1_2026_09_18": 265.15,
+      "fresh_y1": 265.40000000000003,
+      "absolute_change": 0.25000000000005684,
+      "percent_change": 0.0009428625306433513
+    },
+    {
+      "player_id": "diag:sleeper:7543",
+      "name": "Travis Etienne",
+      "position": "RB",
+      "team": "NO",
+      "y1_2026_09_18": 282.70000000000005,
+      "fresh_y1": 282.75,
+      "absolute_change": 0.049999999999954525,
+      "percent_change": 0.00017686593562071806
+    },
+    {
+      "player_id": "diag:sleeper:12529",
+      "name": "TreVeyon Henderson",
+      "position": "RB",
+      "team": "NE",
+      "y1_2026_09_18": 259.85,
+      "fresh_y1": 259.95,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.0003848374061956594
+    },
+    {
+      "player_id": "diag:sleeper:12531",
+      "name": "Trevor Etienne",
+      "position": "RB",
+      "team": "CAR",
+      "y1_2026_09_18": 7.35,
+      "fresh_y1": 7.35,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6039",
+      "name": "Ty Johnson",
+      "position": "RB",
+      "team": "BUF",
+      "y1_2026_09_18": 94.9,
+      "fresh_y1": 95.3,
+      "absolute_change": 0.3999999999999915,
+      "percent_change": 0.004214963119072657
+    },
+    {
+      "player_id": "diag:sleeper:9508",
+      "name": "Tyjae Spears",
+      "position": "RB",
+      "team": "TEN",
+      "y1_2026_09_18": 162.7,
+      "fresh_y1": 162.75,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0003073140749847436
+    },
+    {
+      "player_id": "diag:sleeper:8132",
+      "name": "Tyler Allgeier",
+      "position": "RB",
+      "team": "ARI",
+      "y1_2026_09_18": 122.35000000000001,
+      "fresh_y1": 122.35000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11655",
+      "name": "Tyrone Tracy",
+      "position": "RB",
+      "team": "NYG",
+      "y1_2026_09_18": 43.150000000000006,
+      "fresh_y1": 43.150000000000006,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11577",
+      "name": "Will Shipley",
+      "position": "RB",
+      "team": "PHI",
+      "y1_2026_09_18": 26.150000000000002,
+      "fresh_y1": 26.150000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12474",
+      "name": "Woody Marks",
+      "position": "RB",
+      "team": "HOU",
+      "y1_2026_09_18": 149.35000000000002,
+      "fresh_y1": 151.3,
+      "absolute_change": 1.9499999999999886,
+      "percent_change": 0.013056578506863037
+    },
+    {
+      "player_id": "diag:sleeper:9753",
+      "name": "Zach Charbonnet",
+      "position": "RB",
+      "team": "SEA",
+      "y1_2026_09_18": 155.85000000000002,
+      "fresh_y1": 155.95000000000002,
+      "absolute_change": 0.09999999999999432,
+      "percent_change": 0.0006416426050690482
+    },
+    {
+      "player_id": "diag:sleeper:11603",
+      "name": "AJ Barner",
+      "position": "TE",
+      "team": "SEA",
+      "y1_2026_09_18": 162.35000000000002,
+      "fresh_y1": 162.3,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0003079765937789025
+    },
+    {
+      "player_id": "diag:sleeper:6869",
+      "name": "Adam Trautman",
+      "position": "TE",
+      "team": "DEN",
+      "y1_2026_09_18": 48.35,
+      "fresh_y1": 48.45,
+      "absolute_change": 0.10000000000000142,
+      "percent_change": 0.0020682523267838704
+    },
+    {
+      "player_id": "diag:sleeper:3202",
+      "name": "Austin Hooper",
+      "position": "TE",
+      "team": "ATL",
+      "y1_2026_09_18": 63.35,
+      "fresh_y1": 63.6,
+      "absolute_change": 0.25,
+      "percent_change": 0.003946329913180779
+    },
+    {
+      "player_id": "diag:sleeper:11201",
+      "name": "Blake Whiteheart",
+      "position": "TE",
+      "team": "CLE",
+      "y1_2026_09_18": 27.85,
+      "fresh_y1": 27.85,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:9480",
+      "name": "Brenton Strange",
+      "position": "TE",
+      "team": "JAX",
+      "y1_2026_09_18": 184.70000000000002,
+      "fresh_y1": 184.6,
+      "absolute_change": -0.10000000000002274,
+      "percent_change": -0.0005414185165133478
+    },
+    {
+      "player_id": "diag:sleeper:11604",
+      "name": "Brock Bowers",
+      "position": "TE",
+      "team": "LV",
+      "y1_2026_09_18": 223.65000000000003,
+      "fresh_y1": 223.60000000000002,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0002235636038453448
+    },
+    {
+      "player_id": "diag:sleeper:7891",
+      "name": "Brock Wright",
+      "position": "TE",
+      "team": "DET",
+      "y1_2026_09_18": 39.2,
+      "fresh_y1": 39.2,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8111",
+      "name": "Cade Otton",
+      "position": "TE",
+      "team": "TB",
+      "y1_2026_09_18": 118.64999999999999,
+      "fresh_y1": 118.60000000000001,
+      "absolute_change": -0.04999999999998295,
+      "percent_change": -0.00042140750105335023
+    },
+    {
+      "player_id": "diag:sleeper:11599",
+      "name": "Cade Stover",
+      "position": "TE",
+      "team": "HOU",
+      "y1_2026_09_18": 44.199999999999996,
+      "fresh_y1": 45.45,
+      "absolute_change": 1.250000000000007,
+      "percent_change": 0.02828054298642546
+    },
+    {
+      "player_id": "diag:sleeper:8127",
+      "name": "Charlie Kolar",
+      "position": "TE",
+      "team": "LAC",
+      "y1_2026_09_18": 85.89999999999999,
+      "fresh_y1": 85.89999999999999,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6865",
+      "name": "Colby Parkinson",
+      "position": "TE",
+      "team": "LAR",
+      "y1_2026_09_18": 116.05,
+      "fresh_y1": 116.0,
+      "absolute_change": -0.04999999999999716,
+      "percent_change": -0.0004308487720809939
+    },
+    {
+      "player_id": "diag:sleeper:6826",
+      "name": "Cole Kmet",
+      "position": "TE",
+      "team": "CHI",
+      "y1_2026_09_18": 95.4,
+      "fresh_y1": 95.44999999999999,
+      "absolute_change": 0.04999999999998295,
+      "percent_change": 0.0005241090146748117
+    },
+    {
+      "player_id": "diag:sleeper:12517",
+      "name": "Colston Loveland",
+      "position": "TE",
+      "team": "CHI",
+      "y1_2026_09_18": 207.45000000000002,
+      "fresh_y1": 207.54999999999998,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.0004820438659915993
+    },
+    {
+      "player_id": "diag:sleeper:5022",
+      "name": "Dallas Goedert",
+      "position": "TE",
+      "team": "PHI",
+      "y1_2026_09_18": 192.10000000000002,
+      "fresh_y1": 192.0,
+      "absolute_change": -0.10000000000002274,
+      "percent_change": -0.0005205622071838834
+    },
+    {
+      "player_id": "diag:sleeper:10236",
+      "name": "Dalton Kincaid",
+      "position": "TE",
+      "team": "BUF",
+      "y1_2026_09_18": 185.95000000000002,
+      "fresh_y1": 186.1,
+      "absolute_change": 0.14999999999997726,
+      "percent_change": 0.0008066684592631379
+    },
+    {
+      "player_id": "diag:sleeper:5001",
+      "name": "Dalton Schultz",
+      "position": "TE",
+      "team": "HOU",
+      "y1_2026_09_18": 170.25,
+      "fresh_y1": 171.35,
+      "absolute_change": 1.0999999999999943,
+      "percent_change": 0.0064610866372980524
+    },
+    {
+      "player_id": "diag:sleeper:8225",
+      "name": "Daniel Bellinger",
+      "position": "TE",
+      "team": "TEN",
+      "y1_2026_09_18": 61.800000000000004,
+      "fresh_y1": 61.800000000000004,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:9479",
+      "name": "Darnell Washington",
+      "position": "TE",
+      "team": "PIT",
+      "y1_2026_09_18": 102.60000000000001,
+      "fresh_y1": 102.60000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:2505",
+      "name": "Darren Waller",
+      "position": "TE",
+      "team": "CAR",
+      "y1_2026_09_18": 140.85000000000002,
+      "fresh_y1": 140.55,
+      "absolute_change": -0.30000000000001137,
+      "percent_change": -0.0021299254526092604
+    },
+    {
+      "player_id": "diag:sleeper:4033",
+      "name": "David Njoku",
+      "position": "TE",
+      "team": "LAC",
+      "y1_2026_09_18": 109.55000000000001,
+      "fresh_y1": 109.55000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5906",
+      "name": "Dawson Knox",
+      "position": "TE",
+      "team": "BUF",
+      "y1_2026_09_18": 91.2,
+      "fresh_y1": 91.30000000000001,
+      "absolute_change": 0.10000000000000853,
+      "percent_change": 0.0010964912280702066
+    },
+    {
+      "player_id": "diag:sleeper:6001",
+      "name": "Drew Sample",
+      "position": "TE",
+      "team": "CIN",
+      "y1_2026_09_18": 40.5,
+      "fresh_y1": 40.5,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5008",
+      "name": "Durham Smythe",
+      "position": "TE",
+      "team": "BAL",
+      "y1_2026_09_18": 56.900000000000006,
+      "fresh_y1": 56.95,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0008787346221441616
+    },
+    {
+      "player_id": "diag:sleeper:13349",
+      "name": "Eli Stowers",
+      "position": "TE",
+      "team": "PHI",
+      "y1_2026_09_18": 24.6,
+      "fresh_y1": 24.6,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12521",
+      "name": "Elijah Arroyo",
+      "position": "TE",
+      "team": "SEA",
+      "y1_2026_09_18": 77.0,
+      "fresh_y1": 77.0,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:10231",
+      "name": "Elijah Higgins",
+      "position": "TE",
+      "team": "ARI",
+      "y1_2026_09_18": 50.85000000000001,
+      "fresh_y1": 50.85000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4066",
+      "name": "Evan Engram",
+      "position": "TE",
+      "team": "DEN",
+      "y1_2026_09_18": 144.65,
+      "fresh_y1": 144.9,
+      "absolute_change": 0.25,
+      "percent_change": 0.001728309713100673
+    },
+    {
+      "player_id": "diag:sleeper:4217",
+      "name": "George Kittle",
+      "position": "TE",
+      "team": "SF",
+      "y1_2026_09_18": 215.20000000000002,
+      "fresh_y1": 216.10000000000002,
+      "absolute_change": 0.9000000000000057,
+      "percent_change": 0.004182156133829107
+    },
+    {
+      "player_id": "diag:sleeper:8172",
+      "name": "Greg Dulcich",
+      "position": "TE",
+      "team": "MIA",
+      "y1_2026_09_18": 140.75,
+      "fresh_y1": 140.8,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.000355239786856254
+    },
+    {
+      "player_id": "diag:sleeper:12502",
+      "name": "Gunnar Helm",
+      "position": "TE",
+      "team": "TEN",
+      "y1_2026_09_18": 134.25,
+      "fresh_y1": 133.95,
+      "absolute_change": -0.30000000000001137,
+      "percent_change": -0.0022346368715084886
+    },
+    {
+      "player_id": "diag:sleeper:12506",
+      "name": "Harold Fannin",
+      "position": "TE",
+      "team": "CLE",
+      "y1_2026_09_18": 206.6,
+      "fresh_y1": 206.6,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:3214",
+      "name": "Hunter Henry",
+      "position": "TE",
+      "team": "NE",
+      "y1_2026_09_18": 174.35000000000002,
+      "fresh_y1": 174.35000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8131",
+      "name": "Isaiah Likely",
+      "position": "TE",
+      "team": "NYG",
+      "y1_2026_09_18": 171.8,
+      "fresh_y1": 171.5,
+      "absolute_change": -0.30000000000001137,
+      "percent_change": -0.0017462165308499422
+    },
+    {
+      "player_id": "diag:sleeper:11600",
+      "name": "Ja'Tavion Sanders",
+      "position": "TE",
+      "team": "CAR",
+      "y1_2026_09_18": 13.55,
+      "fresh_y1": 13.55,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8110",
+      "name": "Jake Ferguson",
+      "position": "TE",
+      "team": "DAL",
+      "y1_2026_09_18": 174.85,
+      "fresh_y1": 174.8,
+      "absolute_change": -0.04999999999998295,
+      "percent_change": -0.0002859593937659666
+    },
+    {
+      "player_id": "diag:sleeper:8698",
+      "name": "Jake Tonges",
+      "position": "TE",
+      "team": "SF",
+      "y1_2026_09_18": 39.55,
+      "fresh_y1": 39.55,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7716",
+      "name": "John Bates",
+      "position": "TE",
+      "team": "WAS",
+      "y1_2026_09_18": 37.5,
+      "fresh_y1": 42.4,
+      "absolute_change": 4.899999999999999,
+      "percent_change": 0.1306666666666667
+    },
+    {
+      "player_id": "diag:sleeper:5973",
+      "name": "Josh Oliver",
+      "position": "TE",
+      "team": "MIN",
+      "y1_2026_09_18": 72.65,
+      "fresh_y1": 73.9,
+      "absolute_change": 1.25,
+      "percent_change": 0.01720578114246396
+    },
+    {
+      "player_id": "diag:sleeper:7002",
+      "name": "Juwan Johnson",
+      "position": "TE",
+      "team": "NO",
+      "y1_2026_09_18": 175.60000000000002,
+      "fresh_y1": 175.3,
+      "absolute_change": -0.30000000000001137,
+      "percent_change": -0.0017084282460136935
+    },
+    {
+      "player_id": "diag:sleeper:13330",
+      "name": "Kenyon Sadiq",
+      "position": "TE",
+      "team": "NYJ",
+      "y1_2026_09_18": 91.60000000000001,
+      "fresh_y1": 92.5,
+      "absolute_change": 0.8999999999999915,
+      "percent_change": 0.009825327510917026
+    },
+    {
+      "player_id": "diag:sleeper:7553",
+      "name": "Kyle Pitts",
+      "position": "TE",
+      "team": "ATL",
+      "y1_2026_09_18": 195.75,
+      "fresh_y1": 195.95,
+      "absolute_change": 0.19999999999998863,
+      "percent_change": 0.0010217113665389466
+    },
+    {
+      "player_id": "diag:sleeper:9481",
+      "name": "Luke Musgrave",
+      "position": "TE",
+      "team": "GB",
+      "y1_2026_09_18": 23.15,
+      "fresh_y1": 23.200000000000003,
+      "absolute_change": 0.05000000000000426,
+      "percent_change": 0.002159827213823018
+    },
+    {
+      "player_id": "diag:sleeper:10871",
+      "name": "Luke Schoonmaker",
+      "position": "TE",
+      "team": "DAL",
+      "y1_2026_09_18": 40.6,
+      "fresh_y1": 40.6,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5012",
+      "name": "Mark Andrews",
+      "position": "TE",
+      "team": "BAL",
+      "y1_2026_09_18": 194.40000000000003,
+      "fresh_y1": 194.35000000000002,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0002572016460905546
+    },
+    {
+      "player_id": "diag:sleeper:12498",
+      "name": "Mason Taylor",
+      "position": "TE",
+      "team": "NYJ",
+      "y1_2026_09_18": 123.25,
+      "fresh_y1": 124.25,
+      "absolute_change": 1.0,
+      "percent_change": 0.008113590263691739
+    },
+    {
+      "player_id": "diag:sleeper:9482",
+      "name": "Michael Mayer",
+      "position": "TE",
+      "team": "LV",
+      "y1_2026_09_18": 119.55000000000001,
+      "fresh_y1": 119.65,
+      "absolute_change": 0.09999999999999432,
+      "percent_change": 0.0008364700961940308
+    },
+    {
+      "player_id": "diag:sleeper:4993",
+      "name": "Mike Gesicki",
+      "position": "TE",
+      "team": "CIN",
+      "y1_2026_09_18": 135.85,
+      "fresh_y1": 135.8,
+      "absolute_change": -0.04999999999998295,
+      "percent_change": -0.00036805299963182936
+    },
+    {
+      "player_id": "diag:sleeper:4054",
+      "name": "Mo Alie-Cox",
+      "position": "TE",
+      "team": "IND",
+      "y1_2026_09_18": 34.5,
+      "fresh_y1": 34.5,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5857",
+      "name": "Noah Fant",
+      "position": "TE",
+      "team": "NO",
+      "y1_2026_09_18": 67.9,
+      "fresh_y1": 67.85,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0007363770250370383
+    },
+    {
+      "player_id": "diag:sleeper:7828",
+      "name": "Noah Gray",
+      "position": "TE",
+      "team": "KC",
+      "y1_2026_09_18": 61.4,
+      "fresh_y1": 61.4,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12493",
+      "name": "Oronde Gadsden",
+      "position": "TE",
+      "team": "LAC",
+      "y1_2026_09_18": 109.4,
+      "fresh_y1": 109.4,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7600",
+      "name": "Pat Freiermuth",
+      "position": "TE",
+      "team": "PIT",
+      "y1_2026_09_18": 153.55,
+      "fresh_y1": 153.55,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:10227",
+      "name": "Payne Durham",
+      "position": "TE",
+      "team": "TB",
+      "y1_2026_09_18": 22.3,
+      "fresh_y1": 22.25,
+      "absolute_change": -0.05000000000000071,
+      "percent_change": -0.0022421524663677195
+    },
+    {
+      "player_id": "diag:sleeper:10859",
+      "name": "Sam LaPorta",
+      "position": "TE",
+      "team": "DET",
+      "y1_2026_09_18": 215.6,
+      "fresh_y1": 215.6,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5844",
+      "name": "T.J. Hockenson",
+      "position": "TE",
+      "team": "MIN",
+      "y1_2026_09_18": 157.1,
+      "fresh_y1": 158.5,
+      "absolute_change": 1.4000000000000057,
+      "percent_change": 0.008911521323997418
+    },
+    {
+      "player_id": "diag:sleeper:12487",
+      "name": "Terrance Ferguson",
+      "position": "TE",
+      "team": "LAR",
+      "y1_2026_09_18": 74.85,
+      "fresh_y1": 74.8,
+      "absolute_change": -0.04999999999999716,
+      "percent_change": -0.0006680026720106147
+    },
+    {
+      "player_id": "diag:sleeper:11597",
+      "name": "Theo Johnson",
+      "position": "TE",
+      "team": "NYG",
+      "y1_2026_09_18": 77.85,
+      "fresh_y1": 77.80000000000001,
+      "absolute_change": -0.04999999999998295,
+      "percent_change": -0.0006422607578674411
+    },
+    {
+      "player_id": "diag:sleeper:7694",
+      "name": "Tommy Tremble",
+      "position": "TE",
+      "team": "CAR",
+      "y1_2026_09_18": 77.95,
+      "fresh_y1": 77.95,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:1466",
+      "name": "Travis Kelce",
+      "position": "TE",
+      "team": "KC",
+      "y1_2026_09_18": 193.10000000000002,
+      "fresh_y1": 193.15,
+      "absolute_change": 0.04999999999998295,
+      "percent_change": 0.0002589331952356222
+    },
+    {
+      "player_id": "diag:sleeper:8130",
+      "name": "Trey McBride",
+      "position": "TE",
+      "team": "ARI",
+      "y1_2026_09_18": 258.8,
+      "fresh_y1": 258.75,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.00019319938176198814
+    },
+    {
+      "player_id": "diag:sleeper:9484",
+      "name": "Tucker Kraft",
+      "position": "TE",
+      "team": "GB",
+      "y1_2026_09_18": 196.5,
+      "fresh_y1": 196.4,
+      "absolute_change": -0.09999999999999432,
+      "percent_change": -0.0005089058524172518
+    },
+    {
+      "player_id": "diag:sleeper:3271",
+      "name": "Tyler Higbee",
+      "position": "TE",
+      "team": "LAR",
+      "y1_2026_09_18": 87.35000000000001,
+      "fresh_y1": 87.3,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0005724098454494841
+    },
+    {
+      "player_id": "diag:sleeper:12518",
+      "name": "Tyler Warren",
+      "position": "TE",
+      "team": "IND",
+      "y1_2026_09_18": 223.15,
+      "fresh_y1": 222.55,
+      "absolute_change": -0.5999999999999943,
+      "percent_change": -0.0026887743670176434
+    },
+    {
+      "player_id": "diag:sleeper:13434",
+      "name": "Will Kacmarek",
+      "position": "TE",
+      "team": "MIA",
+      "y1_2026_09_18": 60.55,
+      "fresh_y1": 60.55,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5859",
+      "name": "A.J. Brown",
+      "position": "WR",
+      "team": "NE",
+      "y1_2026_09_18": 236.10000000000002,
+      "fresh_y1": 236.10000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11625",
+      "name": "Adonai Mitchell",
+      "position": "WR",
+      "team": "NYJ",
+      "y1_2026_09_18": 122.3,
+      "fresh_y1": 124.7,
+      "absolute_change": 2.4000000000000057,
+      "percent_change": 0.019623875715453876
+    },
+    {
+      "player_id": "diag:sleeper:8142",
+      "name": "Alec Pierce",
+      "position": "WR",
+      "team": "IND",
+      "y1_2026_09_18": 205.05,
+      "fresh_y1": 205.05,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7547",
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "team": "DET",
+      "y1_2026_09_18": 367.25,
+      "fresh_y1": 367.25,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:10226",
+      "name": "Andrei Iosivas",
+      "position": "WR",
+      "team": "CIN",
+      "y1_2026_09_18": 106.4,
+      "fresh_y1": 106.4,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13301",
+      "name": "Antonio Williams",
+      "position": "WR",
+      "team": "WAS",
+      "y1_2026_09_18": 54.55,
+      "fresh_y1": 55.7,
+      "absolute_change": 1.1500000000000057,
+      "percent_change": 0.02108157653528875
+    },
+    {
+      "player_id": "diag:sleeper:11631",
+      "name": "Brian Thomas",
+      "position": "WR",
+      "team": "JAX",
+      "y1_2026_09_18": 209.64999999999998,
+      "fresh_y1": 209.95,
+      "absolute_change": 0.30000000000001137,
+      "percent_change": 0.0014309563558312366
+    },
+    {
+      "player_id": "diag:sleeper:13296",
+      "name": "Caleb Douglas",
+      "position": "WR",
+      "team": "MIA",
+      "y1_2026_09_18": 119.9,
+      "fresh_y1": 119.9,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4981",
+      "name": "Calvin Ridley",
+      "position": "WR",
+      "team": "TEN",
+      "y1_2026_09_18": 148.8,
+      "fresh_y1": 148.8,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13279",
+      "name": "Carnell Tate",
+      "position": "WR",
+      "team": "TEN",
+      "y1_2026_09_18": 206.55,
+      "fresh_y1": 206.55,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6786",
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "team": "DAL",
+      "y1_2026_09_18": 298.90000000000003,
+      "fresh_y1": 298.90000000000003,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12540",
+      "name": "Chimere Dike",
+      "position": "WR",
+      "team": "TEN",
+      "y1_2026_09_18": 43.8,
+      "fresh_y1": 43.8,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13311",
+      "name": "Chris Bell",
+      "position": "WR",
+      "team": "MIA",
+      "y1_2026_09_18": 64.55000000000001,
+      "fresh_y1": 64.55000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:4037",
+      "name": "Chris Godwin",
+      "position": "WR",
+      "team": "TB",
+      "y1_2026_09_18": 200.95,
+      "fresh_y1": 200.95,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8144",
+      "name": "Chris Olave",
+      "position": "WR",
+      "team": "NO",
+      "y1_2026_09_18": 298.95,
+      "fresh_y1": 298.75,
+      "absolute_change": -0.19999999999998863,
+      "percent_change": -0.000669008195350318
+    },
+    {
+      "player_id": "diag:sleeper:8167",
+      "name": "Christian Watson",
+      "position": "WR",
+      "team": "GB",
+      "y1_2026_09_18": 255.70000000000002,
+      "fresh_y1": 255.65,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0001955416503716112
+    },
+    {
+      "player_id": "diag:sleeper:4039",
+      "name": "Cooper Kupp",
+      "position": "WR",
+      "team": "SEA",
+      "y1_2026_09_18": 129.95,
+      "fresh_y1": 130.0,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0003847633705271747
+    },
+    {
+      "player_id": "diag:sleeper:5045",
+      "name": "Courtland Sutton",
+      "position": "WR",
+      "team": "DEN",
+      "y1_2026_09_18": 224.95,
+      "fresh_y1": 225.60000000000002,
+      "absolute_change": 0.6500000000000341,
+      "percent_change": 0.0028895310068906
+    },
+    {
+      "player_id": "diag:sleeper:13413",
+      "name": "Cyrus Allen",
+      "position": "WR",
+      "team": "KC",
+      "y1_2026_09_18": 55.900000000000006,
+      "fresh_y1": 55.95,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0008944543828264262
+    },
+    {
+      "player_id": "diag:sleeper:4983",
+      "name": "DJ Moore",
+      "position": "WR",
+      "team": "BUF",
+      "y1_2026_09_18": 225.75,
+      "fresh_y1": 234.75,
+      "absolute_change": 9.0,
+      "percent_change": 0.039867109634551534
+    },
+    {
+      "player_id": "diag:sleeper:5846",
+      "name": "DK Metcalf",
+      "position": "WR",
+      "team": "PIT",
+      "y1_2026_09_18": 237.95,
+      "fresh_y1": 237.95,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7090",
+      "name": "Darnell Mooney",
+      "position": "WR",
+      "team": "NYG",
+      "y1_2026_09_18": 97.35,
+      "fresh_y1": 97.35,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:2133",
+      "name": "Davante Adams",
+      "position": "WR",
+      "team": "LAR",
+      "y1_2026_09_18": 252.5,
+      "fresh_y1": 252.60000000000002,
+      "absolute_change": 0.10000000000002274,
+      "percent_change": 0.0003960396039603964
+    },
+    {
+      "player_id": "diag:sleeper:13417",
+      "name": "De'Zhaun Stribling",
+      "position": "WR",
+      "team": "SF",
+      "y1_2026_09_18": 127.85000000000001,
+      "fresh_y1": 127.85000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:9501",
+      "name": "DeMario Douglas",
+      "position": "WR",
+      "team": "NE",
+      "y1_2026_09_18": 138.8,
+      "fresh_y1": 138.8,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:7525",
+      "name": "DeVonta Smith",
+      "position": "WR",
+      "team": "PHI",
+      "y1_2026_09_18": 270.2,
+      "fresh_y1": 270.15000000000003,
+      "absolute_change": -0.049999999999954525,
+      "percent_change": -0.0001850481125090786
+    },
+    {
+      "player_id": "diag:sleeper:5872",
+      "name": "Deebo Samuel",
+      "position": "WR",
+      "team": "SF",
+      "y1_2026_09_18": 184.1,
+      "fresh_y1": 184.1,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13346",
+      "name": "Denzel Boston",
+      "position": "WR",
+      "team": "CLE",
+      "y1_2026_09_18": 163.35000000000002,
+      "fresh_y1": 163.35000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11834",
+      "name": "Devaughn Vele",
+      "position": "WR",
+      "team": "NO",
+      "y1_2026_09_18": 115.95,
+      "fresh_y1": 116.0,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0004312203536007697
+    },
+    {
+      "player_id": "diag:sleeper:6847",
+      "name": "Devin Duvernay",
+      "position": "WR",
+      "team": "ARI",
+      "y1_2026_09_18": 4.2,
+      "fresh_y1": 4.2,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11629",
+      "name": "Devontez Walker",
+      "position": "WR",
+      "team": "BAL",
+      "y1_2026_09_18": 77.80000000000001,
+      "fresh_y1": 80.30000000000001,
+      "absolute_change": 2.5,
+      "percent_change": 0.03213367609254503
+    },
+    {
+      "player_id": "diag:sleeper:9486",
+      "name": "Dontayvion Wicks",
+      "position": "WR",
+      "team": "PHI",
+      "y1_2026_09_18": 120.75,
+      "fresh_y1": 120.7,
+      "absolute_change": -0.04999999999999716,
+      "percent_change": -0.00041407867494824835
+    },
+    {
+      "player_id": "diag:sleeper:8112",
+      "name": "Drake London",
+      "position": "WR",
+      "team": "ATL",
+      "y1_2026_09_18": 299.3,
+      "fresh_y1": 299.9,
+      "absolute_change": 0.5999999999999659,
+      "percent_change": 0.002004677581022296
+    },
+    {
+      "player_id": "diag:sleeper:7587",
+      "name": "Dyami Brown",
+      "position": "WR",
+      "team": "WAS",
+      "y1_2026_09_18": 51.75,
+      "fresh_y1": 52.400000000000006,
+      "absolute_change": 0.6500000000000057,
+      "percent_change": 0.012560386473430052
+    },
+    {
+      "player_id": "diag:sleeper:12499",
+      "name": "Elic Ayomanor",
+      "position": "WR",
+      "team": "TEN",
+      "y1_2026_09_18": 54.60000000000001,
+      "fresh_y1": 54.60000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12514",
+      "name": "Emeka Egbuka",
+      "position": "WR",
+      "team": "TB",
+      "y1_2026_09_18": 253.4,
+      "fresh_y1": 253.70000000000002,
+      "absolute_change": 0.30000000000001137,
+      "percent_change": 0.0011838989739543226
+    },
+    {
+      "player_id": "diag:sleeper:8146",
+      "name": "Garrett Wilson",
+      "position": "WR",
+      "team": "NYJ",
+      "y1_2026_09_18": 283.1,
+      "fresh_y1": 280.4,
+      "absolute_change": -2.7000000000000455,
+      "percent_change": -0.009537265983751486
+    },
+    {
+      "player_id": "diag:sleeper:8137",
+      "name": "George Pickens",
+      "position": "WR",
+      "team": "DAL",
+      "y1_2026_09_18": 267.0,
+      "fresh_y1": 267.05,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0001872659176029856
+    },
+    {
+      "player_id": "diag:sleeper:13274",
+      "name": "Germie Bernard",
+      "position": "WR",
+      "team": "PIT",
+      "y1_2026_09_18": 92.35,
+      "fresh_y1": 92.35,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12535",
+      "name": "Isaac TeSlaa",
+      "position": "WR",
+      "team": "DET",
+      "y1_2026_09_18": 86.05000000000001,
+      "fresh_y1": 86.05000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12503",
+      "name": "Isaiah Bond",
+      "position": "WR",
+      "team": "CLE",
+      "y1_2026_09_18": 43.9,
+      "fresh_y1": 44.300000000000004,
+      "absolute_change": 0.4000000000000057,
+      "percent_change": 0.009111617312073106
+    },
+    {
+      "player_id": "diag:sleeper:11608",
+      "name": "Isaiah Williams",
+      "position": "WR",
+      "team": "NYJ",
+      "y1_2026_09_18": 79.70000000000002,
+      "fresh_y1": 81.8,
+      "absolute_change": 2.09999999999998,
+      "percent_change": 0.026348808030112636
+    },
+    {
+      "player_id": "diag:sleeper:13293",
+      "name": "Ja'Kobi Lane",
+      "position": "WR",
+      "team": "BAL",
+      "y1_2026_09_18": 62.4,
+      "fresh_y1": 62.35,
+      "absolute_change": -0.04999999999999716,
+      "percent_change": -0.0008012820512820484
+    },
+    {
+      "player_id": "diag:sleeper:7564",
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "team": "CIN",
+      "y1_2026_09_18": 350.54999999999995,
+      "fresh_y1": 350.6,
+      "absolute_change": 0.05000000000006821,
+      "percent_change": 0.0001426330052776148
+    },
+    {
+      "player_id": "diag:sleeper:12483",
+      "name": "Jack Bech",
+      "position": "WR",
+      "team": "LV",
+      "y1_2026_09_18": 84.14999999999999,
+      "fresh_y1": 84.3,
+      "absolute_change": 0.15000000000000568,
+      "percent_change": 0.0017825311942960553
+    },
+    {
+      "player_id": "diag:sleeper:8119",
+      "name": "Jahan Dotson",
+      "position": "WR",
+      "team": "ATL",
+      "y1_2026_09_18": 74.05000000000001,
+      "fresh_y1": 74.05000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13079",
+      "name": "Jahdae Walker",
+      "position": "WR",
+      "team": "CHI",
+      "y1_2026_09_18": 39.35,
+      "fresh_y1": 39.400000000000006,
+      "absolute_change": 0.05000000000000426,
+      "percent_change": 0.0012706480304955914
+    },
+    {
+      "player_id": "diag:sleeper:5947",
+      "name": "Jakobi Meyers",
+      "position": "WR",
+      "team": "JAX",
+      "y1_2026_09_18": 195.5,
+      "fresh_y1": 196.3,
+      "absolute_change": 0.8000000000000114,
+      "percent_change": 0.004092071611253356
+    },
+    {
+      "player_id": "diag:sleeper:11646",
+      "name": "Jalen Coker",
+      "position": "WR",
+      "team": "CAR",
+      "y1_2026_09_18": 177.8,
+      "fresh_y1": 177.8,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11618",
+      "name": "Jalen McMillan",
+      "position": "WR",
+      "team": "TB",
+      "y1_2026_09_18": 140.60000000000002,
+      "fresh_y1": 140.60000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8180",
+      "name": "Jalen Nailor",
+      "position": "WR",
+      "team": "LV",
+      "y1_2026_09_18": 124.75,
+      "fresh_y1": 124.70000000000002,
+      "absolute_change": -0.04999999999998295,
+      "percent_change": -0.0004008016032063244
+    },
+    {
+      "player_id": "diag:sleeper:8117",
+      "name": "Jalen Tolbert",
+      "position": "WR",
+      "team": "MIA",
+      "y1_2026_09_18": 55.9,
+      "fresh_y1": 55.9,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8148",
+      "name": "Jameson Williams",
+      "position": "WR",
+      "team": "DET",
+      "y1_2026_09_18": 235.55,
+      "fresh_y1": 235.8,
+      "absolute_change": 0.25,
+      "percent_change": 0.001061345786457224
+    },
+    {
+      "player_id": "diag:sleeper:7049",
+      "name": "Jauan Jennings",
+      "position": "WR",
+      "team": "MIN",
+      "y1_2026_09_18": 137.45,
+      "fresh_y1": 92.75,
+      "absolute_change": -44.69999999999999,
+      "percent_change": -0.3252091669698072
+    },
+    {
+      "player_id": "diag:sleeper:9488",
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "team": "SEA",
+      "y1_2026_09_18": 363.0,
+      "fresh_y1": 363.1,
+      "absolute_change": 0.10000000000002274,
+      "percent_change": 0.0002754820936639035
+    },
+    {
+      "player_id": "diag:sleeper:10222",
+      "name": "Jayden Reed",
+      "position": "WR",
+      "team": "GB",
+      "y1_2026_09_18": 201.20000000000002,
+      "fresh_y1": 201.15,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0002485089463221124
+    },
+    {
+      "player_id": "diag:sleeper:7526",
+      "name": "Jaylen Waddle",
+      "position": "WR",
+      "team": "DEN",
+      "y1_2026_09_18": 238.2,
+      "fresh_y1": 238.9,
+      "absolute_change": 0.700000000000017,
+      "percent_change": 0.002938706968933724
+    },
+    {
+      "player_id": "diag:sleeper:12536",
+      "name": "Jaylin Noel",
+      "position": "WR",
+      "team": "HOU",
+      "y1_2026_09_18": 110.80000000000001,
+      "fresh_y1": 132.64999999999998,
+      "absolute_change": 21.849999999999966,
+      "percent_change": 0.19720216606498164
+    },
+    {
+      "player_id": "diag:sleeper:6783",
+      "name": "Jerry Jeudy",
+      "position": "WR",
+      "team": "CLE",
+      "y1_2026_09_18": 154.65,
+      "fresh_y1": 154.9,
+      "absolute_change": 0.25,
+      "percent_change": 0.0016165535079211146
+    },
+    {
+      "player_id": "diag:sleeper:9756",
+      "name": "Jordan Addison",
+      "position": "WR",
+      "team": "MIN",
+      "y1_2026_09_18": 166.25,
+      "fresh_y1": 172.8,
+      "absolute_change": 6.550000000000011,
+      "percent_change": 0.039398496240601544
+    },
+    {
+      "player_id": "diag:sleeper:11623",
+      "name": "Jordan Whittington",
+      "position": "WR",
+      "team": "LAR",
+      "y1_2026_09_18": 66.55,
+      "fresh_y1": 66.85000000000001,
+      "absolute_change": 0.30000000000001137,
+      "percent_change": 0.004507888805409532
+    },
+    {
+      "player_id": "diag:sleeper:13281",
+      "name": "Jordyn Tyson",
+      "position": "WR",
+      "team": "NO",
+      "y1_2026_09_18": 100.95,
+      "fresh_y1": 100.95,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:9500",
+      "name": "Josh Downs",
+      "position": "WR",
+      "team": "IND",
+      "y1_2026_09_18": 199.15,
+      "fresh_y1": 199.1,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.0002510670348984112
+    },
+    {
+      "player_id": "diag:sleeper:6794",
+      "name": "Justin Jefferson",
+      "position": "WR",
+      "team": "MIN",
+      "y1_2026_09_18": 311.5,
+      "fresh_y1": 315.05,
+      "absolute_change": 3.5500000000000114,
+      "percent_change": 0.011396468699839568
+    },
+    {
+      "player_id": "diag:sleeper:13298",
+      "name": "KC Concepcion",
+      "position": "WR",
+      "team": "CLE",
+      "y1_2026_09_18": 203.50000000000003,
+      "fresh_y1": 203.50000000000003,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:8917",
+      "name": "KaVontae Turpin",
+      "position": "WR",
+      "team": "DAL",
+      "y1_2026_09_18": 77.44999999999999,
+      "fresh_y1": 77.44999999999999,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:3634",
+      "name": "Kalif Raymond",
+      "position": "WR",
+      "team": "CHI",
+      "y1_2026_09_18": 72.65,
+      "fresh_y1": 72.75,
+      "absolute_change": 0.09999999999999432,
+      "percent_change": 0.0013764624913970014
+    },
+    {
+      "player_id": "diag:sleeper:9504",
+      "name": "Kayshon Boutte",
+      "position": "WR",
+      "team": "HOU",
+      "y1_2026_09_18": 115.65,
+      "fresh_y1": 131.85,
+      "absolute_change": 16.19999999999999,
+      "percent_change": 0.1400778210116731
+    },
+    {
+      "player_id": "diag:sleeper:12670",
+      "name": "KeAndre Lambert-Smith",
+      "position": "WR",
+      "team": "LAC",
+      "y1_2026_09_18": 22.35,
+      "fresh_y1": 22.35,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:1479",
+      "name": "Keenan Allen",
+      "position": "WR",
+      "team": "IND",
+      "y1_2026_09_18": 149.5,
+      "fresh_y1": 149.45000000000002,
+      "absolute_change": -0.04999999999998295,
+      "percent_change": -0.0003344481605349614
+    },
+    {
+      "player_id": "diag:sleeper:4454",
+      "name": "Kendrick Bourne",
+      "position": "WR",
+      "team": "ARI",
+      "y1_2026_09_18": 98.20000000000002,
+      "fresh_y1": 98.45000000000002,
+      "absolute_change": 0.25,
+      "percent_change": 0.002545824847250522
+    },
+    {
+      "player_id": "diag:sleeper:11637",
+      "name": "Keon Coleman",
+      "position": "WR",
+      "team": "BUF",
+      "y1_2026_09_18": 75.85,
+      "fresh_y1": 75.95,
+      "absolute_change": 0.10000000000000853,
+      "percent_change": 0.0013183915622940745
+    },
+    {
+      "player_id": "diag:sleeper:8134",
+      "name": "Khalil Shakir",
+      "position": "WR",
+      "team": "BUF",
+      "y1_2026_09_18": 175.3,
+      "fresh_y1": 175.4,
+      "absolute_change": 0.09999999999999432,
+      "percent_change": 0.0005704506560182399
+    },
+    {
+      "player_id": "diag:sleeper:12718",
+      "name": "Konata Mumpfield",
+      "position": "WR",
+      "team": "LAR",
+      "y1_2026_09_18": 32.25,
+      "fresh_y1": 32.25,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11635",
+      "name": "Ladd McConkey",
+      "position": "WR",
+      "team": "LAC",
+      "y1_2026_09_18": 227.60000000000002,
+      "fresh_y1": 227.7,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.0004393673110718588
+    },
+    {
+      "player_id": "diag:sleeper:12519",
+      "name": "Luther Burden",
+      "position": "WR",
+      "team": "CHI",
+      "y1_2026_09_18": 256.79999999999995,
+      "fresh_y1": 257.0,
+      "absolute_change": 0.20000000000004547,
+      "percent_change": 0.0007788161993771414
+    },
+    {
+      "player_id": "diag:sleeper:4177",
+      "name": "Mack Hollins",
+      "position": "WR",
+      "team": "NE",
+      "y1_2026_09_18": 61.099999999999994,
+      "fresh_y1": 61.099999999999994,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13294",
+      "name": "Makai Lemon",
+      "position": "WR",
+      "team": "PHI",
+      "y1_2026_09_18": 168.25,
+      "fresh_y1": 168.2,
+      "absolute_change": -0.05000000000001137,
+      "percent_change": -0.00029717682020813374
+    },
+    {
+      "player_id": "diag:sleeper:13285",
+      "name": "Malachi Fields",
+      "position": "WR",
+      "team": "NYG",
+      "y1_2026_09_18": 87.0,
+      "fresh_y1": 87.0,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:13329",
+      "name": "Malik Benson",
+      "position": "WR",
+      "team": "LV",
+      "y1_2026_09_18": 48.699999999999996,
+      "fresh_y1": 49.1,
+      "absolute_change": 0.4000000000000057,
+      "percent_change": 0.008213552361396426
+    },
+    {
+      "player_id": "diag:sleeper:11632",
+      "name": "Malik Nabers",
+      "position": "WR",
+      "team": "NYG",
+      "y1_2026_09_18": 249.20000000000002,
+      "fresh_y1": 249.20000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11610",
+      "name": "Malik Washington",
+      "position": "WR",
+      "team": "MIA",
+      "y1_2026_09_18": 157.65,
+      "fresh_y1": 157.65,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5848",
+      "name": "Marquise Brown",
+      "position": "WR",
+      "team": "PHI",
+      "y1_2026_09_18": 40.55,
+      "fresh_y1": 40.55,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11628",
+      "name": "Marvin Harrison",
+      "position": "WR",
+      "team": "ARI",
+      "y1_2026_09_18": 192.79999999999998,
+      "fresh_y1": 192.79999999999998,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12501",
+      "name": "Matthew Golden",
+      "position": "WR",
+      "team": "GB",
+      "y1_2026_09_18": 194.8,
+      "fresh_y1": 194.7,
+      "absolute_change": -0.10000000000002274,
+      "percent_change": -0.0005133470225874293
+    },
+    {
+      "player_id": "diag:sleeper:6819",
+      "name": "Michael Pittman",
+      "position": "WR",
+      "team": "PIT",
+      "y1_2026_09_18": 212.85,
+      "fresh_y1": 212.85,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:10232",
+      "name": "Michael Wilson",
+      "position": "WR",
+      "team": "ARI",
+      "y1_2026_09_18": 186.55,
+      "fresh_y1": 186.6,
+      "absolute_change": 0.04999999999998295,
+      "percent_change": 0.0002680246582684731
+    },
+    {
+      "player_id": "diag:sleeper:2216",
+      "name": "Mike Evans",
+      "position": "WR",
+      "team": "SF",
+      "y1_2026_09_18": 218.8,
+      "fresh_y1": 218.85,
+      "absolute_change": 0.04999999999998295,
+      "percent_change": 0.00022851919561239775
+    },
+    {
+      "player_id": "diag:sleeper:7569",
+      "name": "Nico Collins",
+      "position": "WR",
+      "team": "HOU",
+      "y1_2026_09_18": 298.55,
+      "fresh_y1": 200.95,
+      "absolute_change": -97.60000000000002,
+      "percent_change": -0.32691341483838554
+    },
+    {
+      "player_id": "diag:sleeper:6271",
+      "name": "Olamide Zaccheaus",
+      "position": "WR",
+      "team": "ATL",
+      "y1_2026_09_18": 77.8,
+      "fresh_y1": 77.65,
+      "absolute_change": -0.14999999999999147,
+      "percent_change": -0.001928020565552635
+    },
+    {
+      "player_id": "diag:sleeper:13276",
+      "name": "Omar Cooper",
+      "position": "WR",
+      "team": "NYJ",
+      "y1_2026_09_18": 59.85,
+      "fresh_y1": 47.349999999999994,
+      "absolute_change": -12.500000000000007,
+      "percent_change": -0.20885547201336685
+    },
+    {
+      "player_id": "diag:sleeper:9487",
+      "name": "Parker Washington",
+      "position": "WR",
+      "team": "JAX",
+      "y1_2026_09_18": 234.35000000000002,
+      "fresh_y1": 234.35000000000002,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12492",
+      "name": "Pat Bryant",
+      "position": "WR",
+      "team": "DEN",
+      "y1_2026_09_18": 117.5,
+      "fresh_y1": 118.75,
+      "absolute_change": 1.25,
+      "percent_change": 0.010638297872340496
+    },
+    {
+      "player_id": "diag:sleeper:9493",
+      "name": "Puka Nacua",
+      "position": "WR",
+      "team": "LAR",
+      "y1_2026_09_18": 401.5,
+      "fresh_y1": 401.45000000000005,
+      "absolute_change": -0.049999999999954525,
+      "percent_change": -0.0001245330012452639
+    },
+    {
+      "player_id": "diag:sleeper:9754",
+      "name": "Quentin Johnston",
+      "position": "WR",
+      "team": "LAC",
+      "y1_2026_09_18": 195.95000000000002,
+      "fresh_y1": 196.00000000000003,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0002551671344730444
+    },
+    {
+      "player_id": "diag:sleeper:10229",
+      "name": "Rashee Rice",
+      "position": "WR",
+      "team": "KC",
+      "y1_2026_09_18": 279.4,
+      "fresh_y1": 279.55,
+      "absolute_change": 0.1500000000000341,
+      "percent_change": 0.0005368647100931767
+    },
+    {
+      "player_id": "diag:sleeper:8676",
+      "name": "Rashid Shaheed",
+      "position": "WR",
+      "team": "SEA",
+      "y1_2026_09_18": 157.7,
+      "fresh_y1": 157.75,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.0003170577045021883
+    },
+    {
+      "player_id": "diag:sleeper:7571",
+      "name": "Rashod Bateman",
+      "position": "WR",
+      "team": "BAL",
+      "y1_2026_09_18": 145.0,
+      "fresh_y1": 145.05,
+      "absolute_change": 0.05000000000001137,
+      "percent_change": 0.00034482758620701937
+    },
+    {
+      "player_id": "diag:sleeper:11630",
+      "name": "Roman Wilson",
+      "position": "WR",
+      "team": "PIT",
+      "y1_2026_09_18": 25.85,
+      "fresh_y1": 25.85,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11620",
+      "name": "Rome Odunze",
+      "position": "WR",
+      "team": "CHI",
+      "y1_2026_09_18": 227.4,
+      "fresh_y1": 227.5,
+      "absolute_change": 0.09999999999999432,
+      "percent_change": 0.0004397537379068339
+    },
+    {
+      "player_id": "diag:sleeper:8121",
+      "name": "Romeo Doubs",
+      "position": "WR",
+      "team": "NE",
+      "y1_2026_09_18": 176.55,
+      "fresh_y1": 176.25000000000003,
+      "absolute_change": -0.29999999999998295,
+      "percent_change": -0.001699235344095107
+    },
+    {
+      "player_id": "diag:sleeper:11783",
+      "name": "Ryan Flournoy",
+      "position": "WR",
+      "team": "DAL",
+      "y1_2026_09_18": 125.55000000000001,
+      "fresh_y1": 125.55000000000001,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12482",
+      "name": "Savion Williams",
+      "position": "WR",
+      "team": "GB",
+      "y1_2026_09_18": 34.05,
+      "fresh_y1": 34.05,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:2449",
+      "name": "Stefon Diggs",
+      "position": "WR",
+      "team": "WAS",
+      "y1_2026_09_18": 217.95,
+      "fresh_y1": 223.75,
+      "absolute_change": 5.800000000000011,
+      "percent_change": 0.026611608167010914
+    },
+    {
+      "player_id": "diag:sleeper:12496",
+      "name": "Tai Felton",
+      "position": "WR",
+      "team": "MIN",
+      "y1_2026_09_18": 12.05,
+      "fresh_y1": 27.200000000000003,
+      "absolute_change": 15.150000000000002,
+      "percent_change": 1.2572614107883817
+    },
+    {
+      "player_id": "diag:sleeper:9502",
+      "name": "Tank Dell",
+      "position": "WR",
+      "team": "HOU",
+      "y1_2026_09_18": 48.85,
+      "fresh_y1": 58.75,
+      "absolute_change": 9.899999999999999,
+      "percent_change": 0.20266120777891494
+    },
+    {
+      "player_id": "diag:sleeper:13317",
+      "name": "Ted Hurst",
+      "position": "WR",
+      "team": "TB",
+      "y1_2026_09_18": 31.85,
+      "fresh_y1": 31.85,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:6801",
+      "name": "Tee Higgins",
+      "position": "WR",
+      "team": "CIN",
+      "y1_2026_09_18": 258.65,
+      "fresh_y1": 258.65,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:5927",
+      "name": "Terry McLaurin",
+      "position": "WR",
+      "team": "WAS",
+      "y1_2026_09_18": 255.70000000000002,
+      "fresh_y1": 262.6,
+      "absolute_change": 6.900000000000006,
+      "percent_change": 0.02698474775127102
+    },
+    {
+      "player_id": "diag:sleeper:12526",
+      "name": "Tetairoa McMillan",
+      "position": "WR",
+      "team": "CAR",
+      "y1_2026_09_18": 260.25,
+      "fresh_y1": 260.25,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:12497",
+      "name": "Tory Horton",
+      "position": "WR",
+      "team": "SEA",
+      "y1_2026_09_18": 75.65,
+      "fresh_y1": 75.7,
+      "absolute_change": 0.04999999999999716,
+      "percent_change": 0.0006609385327163153
+    },
+    {
+      "player_id": "diag:sleeper:10213",
+      "name": "Tre Tucker",
+      "position": "WR",
+      "team": "LV",
+      "y1_2026_09_18": 145.85000000000002,
+      "fresh_y1": 145.75,
+      "absolute_change": -0.10000000000002274,
+      "percent_change": -0.0006856359273227364
+    },
+    {
+      "player_id": "diag:sleeper:12509",
+      "name": "Tre' Harris",
+      "position": "WR",
+      "team": "LAC",
+      "y1_2026_09_18": 97.70000000000002,
+      "fresh_y1": 97.75,
+      "absolute_change": 0.04999999999998295,
+      "percent_change": 0.0005117707267141558
+    },
+    {
+      "player_id": "diag:sleeper:8135",
+      "name": "Treylon Burks",
+      "position": "WR",
+      "team": "WAS",
+      "y1_2026_09_18": 71.35,
+      "fresh_y1": 73.95,
+      "absolute_change": 2.6000000000000085,
+      "percent_change": 0.03644008409250188
+    },
+    {
+      "player_id": "diag:sleeper:11627",
+      "name": "Troy Franklin",
+      "position": "WR",
+      "team": "DEN",
+      "y1_2026_09_18": 65.55,
+      "fresh_y1": 71.25,
+      "absolute_change": 5.700000000000003,
+      "percent_change": 0.08695652173913038
+    },
+    {
+      "player_id": "diag:sleeper:8188",
+      "name": "Tyquan Thornton",
+      "position": "WR",
+      "team": "KC",
+      "y1_2026_09_18": 90.80000000000001,
+      "fresh_y1": 90.85,
+      "absolute_change": 0.04999999999998295,
+      "percent_change": 0.0005506607929512963
+    },
+    {
+      "player_id": "diag:sleeper:8126",
+      "name": "Wan'Dale Robinson",
+      "position": "WR",
+      "team": "TEN",
+      "y1_2026_09_18": 186.85,
+      "fresh_y1": 186.85,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:10218",
+      "name": "Xavier Hutchinson",
+      "position": "WR",
+      "team": "HOU",
+      "y1_2026_09_18": 55.6,
+      "fresh_y1": 72.65,
+      "absolute_change": 17.050000000000004,
+      "percent_change": 0.3066546762589928
+    },
+    {
+      "player_id": "diag:sleeper:11626",
+      "name": "Xavier Legette",
+      "position": "WR",
+      "team": "CAR",
+      "y1_2026_09_18": 108.14999999999999,
+      "fresh_y1": 108.14999999999999,
+      "absolute_change": 0.0,
+      "percent_change": 0.0
+    },
+    {
+      "player_id": "diag:sleeper:11624",
+      "name": "Xavier Worthy",
+      "position": "WR",
+      "team": "KC",
+      "y1_2026_09_18": 182.35000000000002,
+      "fresh_y1": 182.45,
+      "absolute_change": 0.0999999999999659,
+      "percent_change": 0.0005483959418699502
+    },
+    {
+      "player_id": "diag:sleeper:13320",
+      "name": "Zachariah Branch",
+      "position": "WR",
+      "team": "ATL",
+      "y1_2026_09_18": 51.900000000000006,
+      "fresh_y1": 49.95,
+      "absolute_change": -1.9500000000000028,
+      "percent_change": -0.037572254335260125
+    },
+    {
+      "player_id": "diag:sleeper:9997",
+      "name": "Zay Flowers",
+      "position": "WR",
+      "team": "BAL",
+      "y1_2026_09_18": 294.45,
+      "fresh_y1": 288.1,
+      "absolute_change": -6.349999999999966,
+      "percent_change": -0.021565630837153904
+    }
+  ]
+}

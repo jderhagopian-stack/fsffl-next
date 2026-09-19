@@ -1,0 +1,50 @@
+{
+  "schema_version": "fsffl-fresh-y1-provider-pipeline-diagnostic-final-v1",
+  "classification": "B - PROVIDER EVIDENCE ITSELF IS EXTREME / SEMANTICALLY UNSUITABLE",
+  "classification_basis": [
+    "Fresh FFToday rows are ordinary season projections for the named players.",
+    "Fresh Razzball raw table itself contains extreme totals and its own fantasy-point columns are likewise extreme.",
+    "Raw-to-normalized parity is exact, equal-weight arithmetic parity is exact, and league-scoring recomposition is exact to floating-point tolerance across the complete fresh 335-player board.",
+    "Fresh ensemble uplift over FFToday is caused by averaging extreme Razzball evidence, not additional FSFFL inflation.",
+    "Razzball page semantics are not clean for expected-season use: the page calls itself 2026 projections but metadata says it is updated from NFL Preseason through rest of season."
+  ],
+  "material_pipeline_defect_found": false,
+  "provider_semantic_issue": {
+    "provider": "razzball",
+    "status": "MATERIAL",
+    "effective_at": "2026-09-19T03:08:23+00:00",
+    "semantic_warning": "Updated from NFL Preseason through rest of season"
+  },
+  "non_material_pipeline_observations": [
+    "FFToday is 12 days 15:08:23 older than Razzball; this source-vintage gap should be governed explicitly, but it does not create the inflation because FFToday is the lower/ordinary side.",
+    "Provider-native fantasy-point columns are not used; FSFFL scores raw like-for-like stats under league rules.",
+    "No per-game fields or games multiplier are consumed."
+  ],
+  "named_fresh_y1": {
+    "Bijan Robinson": 485.6,
+    "Jahmyr Gibbs": 460.25000000000006,
+    "Christian McCaffrey": 433.45000000000005,
+    "Puka Nacua": 401.45000000000005,
+    "Sam Darnold": 383.06,
+    "Aaron Rodgers": 344.29
+  },
+  "extreme_counts": {
+    "razzball|pass_yards>5000": 31,
+    "razzball|rec_yards>2000": 12,
+    "razzball|rush_yards>2000": 20
+  },
+  "parity": {
+    "max_abs_raw_to_normalized_diff": 0.0,
+    "max_abs_equal_weight_diff": 0.0,
+    "max_abs_scoring_recomposition_diff": 0.0
+  },
+  "smallest_next_governed_action": "Do not change weights or repair in this audit. Establish a governed Razzball evidence-suitability/horizon-validation decision before using this page as expected full-season Forecast input; preserve both captured providers unchanged for review.",
+  "fresh_not_historical_reconstruction": true,
+  "execution_accounting": {
+    "successful_fresh_provider_capture_runs": 1,
+    "forecast_fits": 0,
+    "tuning_actions": 0,
+    "route_changes": 0,
+    "production_changes": 0
+  }
+}
