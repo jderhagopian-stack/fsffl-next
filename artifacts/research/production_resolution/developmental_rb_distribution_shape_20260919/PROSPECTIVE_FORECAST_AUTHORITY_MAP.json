@@ -1,0 +1,12 @@
+{
+  "WR_TE": "Current P0 retained; not reopened.",
+  "Y2_RB_developmental": "D1 retained. Shape candidates pass no-harm but are not promoted into Y2.",
+  "Y3_QB_developmental": "Prior research D0 -> D1 earned; not reopened.",
+  "Y3_RB_developmental": "P0/D1 remains frozen production control. Distributional direction is supported, but S1/S2 do not earn authority.",
+  "Y3_RB_established": "Prior research D0 -> D1 earned; not reopened.",
+  "general_forecast_selection": "Proper distributional scoring remains earned with MAE guardrail.",
+  "next_boundary": "Any new finite-mixture / richer tail candidate requires a separate management directive and fresh preregistration; locked 2021-2022 cannot be reused to tune it.",
+  "pr147": "hold",
+  "production_change": false,
+  "schema_version": "fsffl-dev-rb-distribution-shape-prospective-authority-map-v1"
+}
