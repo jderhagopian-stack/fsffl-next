@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass
 from typing import Callable, Mapping, Protocol
 
+from fsffl.forecast.future_contract import ForecastUncertaintyKind, FutureForecastContract
 from fsffl.forecast.i1_config import FROZEN_I1_REGULARIZATION
 from fsffl.forecast.i1_current_facts import CurrentI1MappingResult
 from fsffl.forecast.integrated_i1 import I1ForecastInput, I1ForecastResult, STATE_NAMES
@@ -318,6 +319,77 @@ def compose_live_intrinsic_calendar_from_future_results(
         completed_source_season=evaluation_season,
     )
 
+
+
+def compose_live_intrinsic_calendar_from_forecast_contract(
+    *,
+    live_year_one_forecasts: tuple[ForecastObservation, ...],
+    future_contract: FutureForecastContract,
+) -> LiveIntrinsicCalendarResult:
+    """Compose Year 1 plus a versioned model-agnostic future Forecast contract.
+
+    The current Shapley adapter supports exact discrete scenario distributions.
+    Forecast versions with richer/non-discrete uncertainty remain valid contracts,
+    but fail closed here until Value earns a compatible consumer rather than being
+    silently coerced into the current P0/I1 state geometry.
+    """
+
+    year_one = _year_one_index(live_year_one_forecasts)
+    if set(year_one) != set(future_contract.player_ids):
+        missing_future = sorted(set(year_one) - set(future_contract.player_ids))
+        extra_future = sorted(set(future_contract.player_ids) - set(year_one))
+        raise ValueError(
+            "future Forecast contract coverage must exactly match governed Year-1 coverage; "
+            f"missing={missing_future}; extra={extra_future}"
+        )
+
+    by_player: dict[str, dict[int, I1ForecastResult]] = {}
+    expected_scenarios = set(STATE_NAMES)
+    for row in future_contract.forecasts:
+        if row.year_index not in (2, 3):
+            raise ValueError(
+                f"current Shapley adapter supports Y2/Y3 only; received Y{row.year_index}"
+            )
+        if row.uncertainty_kind != ForecastUncertaintyKind.DISCRETE_SCENARIOS:
+            raise ValueError(
+                "current Shapley adapter requires discrete future Forecast scenarios"
+            )
+        scenario_ids = {scenario.scenario_id for scenario in row.scenarios}
+        if scenario_ids != expected_scenarios:
+            raise ValueError(
+                "current Shapley adapter does not recognize this future Forecast "
+                f"scenario geometry for {row.player_id} Y{row.year_index}: "
+                f"{sorted(scenario_ids)}"
+            )
+        probabilities = {
+            scenario.scenario_id: float(scenario.probability)
+            for scenario in row.scenarios
+        }
+        state_means = {
+            scenario.scenario_id: float(scenario.fantasy_points)
+            for scenario in row.scenarios
+        }
+        result = I1ForecastResult(
+            probabilities=probabilities,
+            persistence_probability=1.0 - probabilities["out"],
+            anticipated_points=float(row.central_expectation),
+            state_means=state_means,
+            evidence_path=row.evidence_path or "future_contract",
+            model_version=row.model_version,
+        )
+        by_player.setdefault(row.player_id, {})[row.year_index] = result
+
+    for player_id, by_horizon in by_player.items():
+        if set(by_horizon) != {2, 3}:
+            raise ValueError(
+                f"future Forecast contract must contain exactly Y2/Y3 for {player_id}"
+            )
+
+    return compose_live_intrinsic_calendar_from_future_results(
+        live_year_one_forecasts=live_year_one_forecasts,
+        future_results=by_player,
+        future_source_season=future_contract.evaluation_season,
+    )
 
 def build_live_calendar_shapley_estimates(
     calendar: LiveIntrinsicCalendarResult,

@@ -1,5 +1,13 @@
 from datetime import UTC, datetime
 
+import pytest
+
+from fsffl.forecast.future_contract import (
+    ForecastUncertaintyKind,
+    FutureForecastContract,
+    FutureForecastScenario,
+    FuturePlayerHorizonForecast,
+)
 from fsffl.forecast.i1_current_facts import CurrentI1MappingResult
 from fsffl.forecast.integrated_i1 import I1ForecastInput, I1ForecastResult, STATE_NAMES
 from fsffl.forecast.models import (
@@ -12,6 +20,7 @@ from fsffl.state.models import LeagueRules, LineupRequirement, Position, Provena
 from fsffl.value.live_intrinsic_calendar import (
     build_live_calendar_shapley_estimates,
     compose_live_intrinsic_calendar,
+    compose_live_intrinsic_calendar_from_forecast_contract,
 )
 from fsffl.value.shapley_intrinsic import FROZEN_INTRINSIC_DISCOUNT
 
@@ -184,3 +193,97 @@ def test_post_composition_shapley_discount_reconciliation_is_exact() -> None:
         + (FROZEN_INTRINSIC_DISCOUNT ** 2) * estimate.year_3_expected_shapley
     )
     assert abs(estimate.value - expected) <= 1e-12
+
+
+
+def test_model_agnostic_future_contract_preserves_current_discrete_value_inputs() -> None:
+    probabilities = {
+        "out": 0.05,
+        "depth": 0.10,
+        "usable": 0.20,
+        "starter": 0.35,
+        "premium": 0.20,
+        "elite": 0.10,
+    }
+    means = {state: float(index * 40) for index, state in enumerate(STATE_NAMES)}
+    expected = sum(probabilities[state] * means[state] for state in STATE_NAMES)
+
+    rows = tuple(
+        FuturePlayerHorizonForecast(
+            player_id="p1",
+            position=Position.WR,
+            evaluation_season=2026,
+            year_index=year_index,
+            target_season=2026 + year_index - 1,
+            central_expectation=expected,
+            scoring_coordinate="connected_league_fantasy_points",
+            model_version=f"fixture-contract-y{year_index}",
+            source="fixture-contract",
+            uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
+            scenarios=tuple(
+                FutureForecastScenario(
+                    scenario_id=state,
+                    probability=probabilities[state],
+                    fantasy_points=means[state],
+                )
+                for state in STATE_NAMES
+            ),
+            evidence_path="reduced",
+        )
+        for year_index in (2, 3)
+    )
+    contract = FutureForecastContract(
+        evaluation_season=2026,
+        scoring_coordinate="connected_league_fantasy_points",
+        forecast_model_version="fixture-contract-v1",
+        forecast_source="fixture-contract",
+        forecasts=rows,
+    )
+
+    calendar = compose_live_intrinsic_calendar_from_forecast_contract(
+        live_year_one_forecasts=(_live_forecast(),),
+        future_contract=contract,
+    )
+    player = calendar.forecasts[0]
+
+    assert player.diagnostic_h1 is None
+    assert player.year_2.result.anticipated_points == expected
+    assert player.year_3.result.anticipated_points == expected
+    assert player.year_2.result.probabilities == probabilities
+    assert player.year_3.result.state_means == means
+    assert player.year_2.regularization_c is None
+    assert player.year_3.regularization_policy_version is None
+
+
+
+def test_current_value_adapter_fails_closed_for_future_quantile_only_contract() -> None:
+    contract = FutureForecastContract(
+        evaluation_season=2026,
+        scoring_coordinate="connected_league_fantasy_points",
+        forecast_model_version="future-hierarchical-v1",
+        forecast_source="fixture-future",
+        forecasts=tuple(
+            FuturePlayerHorizonForecast(
+                player_id="p1",
+                position=Position.WR,
+                evaluation_season=2026,
+                year_index=year_index,
+                target_season=2026 + year_index - 1,
+                central_expectation=130.0,
+                scoring_coordinate="connected_league_fantasy_points",
+                model_version="future-hierarchical-v1",
+                source="fixture-future",
+                uncertainty_kind=ForecastUncertaintyKind.QUANTILES,
+                p10=65.0,
+                p50=125.0,
+                p90=220.0,
+            )
+            for year_index in (2, 3)
+        ),
+    )
+
+    with pytest.raises(ValueError, match="requires discrete future Forecast scenarios"):
+        compose_live_intrinsic_calendar_from_forecast_contract(
+            live_year_one_forecasts=(_live_forecast(),),
+            future_contract=contract,
+        )

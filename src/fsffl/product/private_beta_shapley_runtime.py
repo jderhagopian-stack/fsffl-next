@@ -5,12 +5,13 @@ import json
 from threading import RLock
 from typing import Callable
 
+from fsffl.forecast.future_contract import FutureForecastContract
 from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import LeagueState, Position
 from fsffl.value.live_intrinsic_calendar import (
     build_live_calendar_shapley_estimates,
-    compose_live_intrinsic_calendar_from_future_results,
+    compose_live_intrinsic_calendar_from_forecast_contract,
 )
 from fsffl.value.private_beta_activation_data import (
     ACTIVATION_BUNDLE_SHA256,
@@ -24,23 +25,8 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
-from .i1_player_scoring import (
-    FUTURE_I1_PLAYER_SCORING_VERSION,
-    build_future_i1_player_scoring_multipliers,
-    derive_future_i1_standard_year_one,
-    translate_future_i1_result_for_player,
-)
-from .p0_forecast_runtime import (
-    P0_CONNECTED_LEAGUE_Y1_BOARD_SHA256,
-    P0_CURRENT_SOURCE_CSV_SHA256,
-    P0_FINAL_ROUTE_AUTHORITY_SHA256,
-    P0_FINAL_ROUTE_AUTHORITY_VERSION,
-    P0_FORECAST_VERSION,
-    P0_PACKAGE_SHA256,
-    P0_SOURCE_SEASON,
-    P0_STANDARD_Y1_BOARD_SHA256,
-    build_p0_standard_future_materialization,
-)
+from .p0_forecast_runtime import P0_FORECAST_VERSION, P0_SOURCE_SEASON
+from .p0_future_forecast_provider import build_p0_future_forecast_contract
 from .runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
 
 _SUPPORTED_POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
@@ -95,21 +81,9 @@ def _preseason_source_ids(year_one_evidence: LiveForecastEvidence) -> tuple[str,
     return source_ids
 
 
-def _player_multiplier_digest(scoring_multipliers: dict[str, float]) -> str:
-    encoded = json.dumps(
-        {
-            player_id: float(multiplier)
-            for player_id, multiplier in sorted(scoring_multipliers.items())
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
-
-
 def _provenance(
     year_one_evidence: LiveForecastEvidence,
-    scoring_multipliers: dict[str, float] | None = None,
+    future_contract: FutureForecastContract,
 ) -> CompletedSourceFactProvenance:
     coverage = _FACTS.metadata.get("coverage_policy", {})
     fact_coverage: dict[str, bool | float | int | str | None] = {}
@@ -124,23 +98,13 @@ def _provenance(
     source_ids = _preseason_source_ids(year_one_evidence)
     fact_coverage.update(
         {
-            "provider_neutral_contract": True,
             "rights_classification": str(
                 _FACTS.metadata.get("rights_classification", "unclassified")
             ),
             "activation_bundle_sha256": ACTIVATION_BUNDLE_SHA256,
             "activation_workflow_run_id": ACTIVATION_WORKFLOW_RUN_ID,
-            "future_forecast_authority": "P0_D0_D1_redevelopment_final_routes_v1",
-            "p0_package_sha256": P0_PACKAGE_SHA256,
-            "p0_final_route_authority_sha256": P0_FINAL_ROUTE_AUTHORITY_SHA256,
-            "p0_final_route_authority_version": P0_FINAL_ROUTE_AUTHORITY_VERSION,
-            "p0_current_source_sha256": P0_CURRENT_SOURCE_CSV_SHA256,
-            "p0_standard_y1_board_sha256": P0_STANDARD_Y1_BOARD_SHA256,
-            "p0_connected_league_y1_control_sha256": P0_CONNECTED_LEAGUE_Y1_BOARD_SHA256,
-            "p0_internal_scoring_coordinate": "standard_non_ppr",
-            "p0_future_source_season": P0_SOURCE_SEASON,
-            "future_i1_scoring_version": FUTURE_I1_PLAYER_SCORING_VERSION,
-            "future_i1_scoring_method": "player_specific_year1_league_standard_ratio",
+            "future_forecast_contract_version": future_contract.contract_version,
+            "future_forecast_scoring_coordinate": future_contract.scoring_coordinate,
             "year1_forecast_evidence_basis": year_one_evidence.evidence_basis,
             "year1_forecast_evaluation_as_of": (
                 year_one_evidence.runtime_result.evaluation_as_of.isoformat()
@@ -150,18 +114,13 @@ def _provenance(
             "year1_forecast_source_count": len(source_ids),
         }
     )
-    if scoring_multipliers is not None:
-        fact_coverage["future_i1_scoring_player_count"] = len(scoring_multipliers)
-        fact_coverage["future_i1_scoring_multiplier_sha256"] = _player_multiplier_digest(
-            scoring_multipliers
-        )
+    fact_coverage.update(future_contract.provenance)
     return CompletedSourceFactProvenance(
-        source_version=P0_FORECAST_VERSION,
+        source_version=future_contract.forecast_model_version,
         schema_version="fsffl-redeveloped-forecast-fit-v1",
         providers=source_ids,
         fact_family_coverage=fact_coverage,
     )
-
 
 def _missing_fact_families() -> tuple[str, ...]:
     # Preserve the API's explicit evidence-coverage signaling. Missing fact
@@ -181,16 +140,13 @@ def _missing_fact_families() -> tuple[str, ...]:
 def _cache_key(
     context: UserRuntimeContext,
     year_one: tuple[ForecastObservation, ...],
-    scoring_multipliers: dict[str, float],
+    future_contract: FutureForecastContract,
     source_ids: tuple[str, ...],
 ) -> str:
     assert context.league_state is not None
     payload = {
-        "p0_package": P0_PACKAGE_SHA256,
-        "p0_final_route_authority": P0_FINAL_ROUTE_AUTHORITY_SHA256,
-        "p0_current_source": P0_CURRENT_SOURCE_CSV_SHA256,
         "league": league_material_fingerprint(context.league_state),
-        "forecast": [
+        "year_one": [
             {
                 "player_id": item.player_id,
                 "mean": item.distribution.mean,
@@ -202,24 +158,18 @@ def _cache_key(
             for item in sorted(year_one, key=lambda observation: observation.player_id)
         ],
         "preseason_source_ids": source_ids,
-        "future_scoring": {
-            "version": FUTURE_I1_PLAYER_SCORING_VERSION,
-            "player_multipliers": {
-                player_id: multiplier
-                for player_id, multiplier in sorted(scoring_multipliers.items())
-            },
-        },
+        "future_forecast_contract": future_contract.model_dump(mode="json"),
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 class PrivateBetaShapleyContractLoader:
-    """Compose frozen preseason Y1 -> exact P0 Y2/Y3 -> frozen Shapley.
+    """Compose governed Year 1 -> versioned future Forecast -> frozen Shapley.
 
-    No model fitting or selection occurs here. The embedded P0 package is a
-    byte-verified fitted artifact. League scoring remains downstream through the
-    player-specific Year-1 league/standard translation.
+    The current future provider is the byte-verified P0 authority, but this
+    downstream loader consumes the model-agnostic Forecast contract rather than
+    P0/D0-D1 internals. No model fitting or route selection occurs here.
     """
 
     def __init__(
@@ -295,73 +245,50 @@ class PrivateBetaShapleyContractLoader:
             )
 
         try:
-            standard_year_one = derive_future_i1_standard_year_one(
-                raw_forecasts=evidence.raw_forecasts,
-                rules=league_state.league.rules,
-            )
-            scoring_multipliers = build_future_i1_player_scoring_multipliers(
+            future_materialization = build_p0_future_forecast_contract(
+                league_state=league_state,
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
-                rules=league_state.league.rules,
             )
+            future_contract = future_materialization.contract
         except ValueError as exc:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
-                reason=f"Player-specific league scoring coordinate unavailable: {exc}",
-                missing_required_fact_families=("future_i1_player_scoring_coordinate",),
-                forecast_model_version=P0_FORECAST_VERSION,
-            )
-
-        try:
-            p0 = build_p0_standard_future_materialization(
-                league_state=league_state,
-                standard_year_one=standard_year_one,
-            )
-        except ValueError as exc:
-            return build_unavailable_shapley_intrinsic_contract(
-                evaluation_season=league_state.league.season,
-                reason=f"Authoritative P0 future Forecast unavailable: {exc}",
+                reason=f"Authoritative future Forecast contract unavailable: {exc}",
+                # Preserve the established external missing-evidence classification
+                # for current P0 authority failures. The generic contract is the
+                # transport boundary; this exception still means the authoritative
+                # P0 future coordinate could not be materialized.
                 missing_required_fact_families=("p0_future_forecast_coordinate",),
                 forecast_model_version=P0_FORECAST_VERSION,
             )
 
-        key = _cache_key(context, year_one, scoring_multipliers, source_ids)
+        key = _cache_key(context, year_one, future_contract, source_ids)
         with self._lock:
             if key == self._cached_key and self._cached_contract is not None:
                 return self._cached_contract
 
-        future_results = {}
-        for player_id, player_forecast in p0.players.items():
-            if player_id not in scoring_multipliers:
-                return build_unavailable_shapley_intrinsic_contract(
-                    evaluation_season=league_state.league.season,
-                    reason=f"Player-specific future scoring lacks P0 player {player_id}.",
-                    missing_required_fact_families=("future_i1_player_scoring_coordinate",),
-                    forecast_model_version=P0_FORECAST_VERSION,
-                )
-            future_results[player_id] = {
-                horizon: translate_future_i1_result_for_player(
-                    player_id,
-                    player_forecast.result_for(horizon),
-                    multipliers=scoring_multipliers,
-                )
-                for horizon in (2, 3)
-            }
-
-        calendar = compose_live_intrinsic_calendar_from_future_results(
-            live_year_one_forecasts=year_one,
-            future_results=future_results,
-            future_source_season=P0_SOURCE_SEASON,
-        )
+        try:
+            calendar = compose_live_intrinsic_calendar_from_forecast_contract(
+                live_year_one_forecasts=year_one,
+                future_contract=future_contract,
+            )
+        except ValueError as exc:
+            return build_unavailable_shapley_intrinsic_contract(
+                evaluation_season=league_state.league.season,
+                reason=f"Future Forecast contract is not consumable by current Value: {exc}",
+                missing_required_fact_families=("future_forecast_value_adapter",),
+                forecast_model_version=future_contract.forecast_model_version,
+            )
         result = build_live_calendar_shapley_estimates(
             calendar,
             rules=league_state.league.rules,
         )
         contract = build_shapley_intrinsic_contract(
             result,
-            completed_source_provenance=_provenance(evidence, scoring_multipliers),
+            completed_source_provenance=_provenance(evidence, future_contract),
             missing_required_fact_families=_missing_fact_families(),
-            forecast_model_version=P0_FORECAST_VERSION,
+            forecast_model_version=future_contract.forecast_model_version,
         )
         with self._lock:
             self._cached_key = key
