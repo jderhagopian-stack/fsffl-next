@@ -1,0 +1,62 @@
+{
+  "basis": [
+    "Both preregistered shape-only candidates materially improve full-cell Y3 CRPS in all three frozen 2014-2020 chronology blocks; pooled two-way bootstrap intervals are above zero.",
+    "Both candidates materially improve pooled four-region Brier score in 2014-2020 and preserve D1 expected points/MAE exactly by construction, demonstrating value from distribution shape rather than a mean boost.",
+    "Neither candidate clears the preregistered p95+ tail-calibration gate: survivor probability moves farther from the observed productive-survivor mass and combined survivor/downside absolute calibration error does not improve.",
+    "Locked 2021-2022 preserves positive Y3 CRPS direction for both candidates, but four-region Brier uncertainty spans zero and p95+ tail calibration again worsens versus D1.",
+    "Y2 no-harm controls pass and expected means are unchanged, so the distributional research direction is credible even though the tested candidates are insufficient.",
+    "The previously failed D1H90 mean challenger remains only a reference; it is not rescued or retried."
+  ],
+  "classification": "B. DISTRIBUTIONAL DIRECTION SUPPORTED, BUT NO CANDIDATE EARNS AUTHORITY",
+  "locked_key_metrics": {
+    "S1_Y3_brier4_gain": {
+      "ci_high": 0.02014527712761562,
+      "ci_low": -0.015035468007314106,
+      "gain_mean": 0.0014041608725743218
+    },
+    "S1_Y3_crps_gain": {
+      "ci_high": 0.876344437382243,
+      "ci_low": 0.1603671583897634,
+      "gain_mean": 0.5133238963546701
+    },
+    "S1_Y3_p95_tail_error_improvement": -0.021066724137592585,
+    "S2_Y3_brier4_gain": {
+      "ci_high": 0.019453271697730708,
+      "ci_low": -0.014770243661958843,
+      "gain_mean": 0.0013682990516660793
+    },
+    "S2_Y3_crps_gain": {
+      "ci_high": 0.8513936888287204,
+      "ci_low": 0.12835127300359359,
+      "gain_mean": 0.504605869176307
+    },
+    "S2_Y3_p95_tail_error_improvement": -0.029537183023449987
+  },
+  "next_research_implication": "Richer uncertainty remains justified, but a new candidate family would require a separate management directive. Do not iterate from holdout.",
+  "production_authority_change": false,
+  "schema_version": "fsffl-dev-rb-distribution-shape-final-classification-v1",
+  "selection_key_metrics": {
+    "S1_Y3_brier4_gain": {
+      "ci_high": 0.03665738236257211,
+      "ci_low": 0.004740759843560291,
+      "gain_mean": 0.020051309074868334
+    },
+    "S1_Y3_crps_gain": {
+      "ci_high": 1.10893931998171,
+      "ci_low": 0.518534631957171,
+      "gain_mean": 0.8114895525391524
+    },
+    "S1_Y3_p95_tail_error_improvement": -0.015604920903073582,
+    "S2_Y3_brier4_gain": {
+      "ci_high": 0.037057108909724135,
+      "ci_low": 0.0039356531540555365,
+      "gain_mean": 0.020104662783132998
+    },
+    "S2_Y3_crps_gain": {
+      "ci_high": 1.0965993867514001,
+      "ci_low": 0.5114942233216161,
+      "gain_mean": 0.8064755330602162
+    },
+    "S2_Y3_p95_tail_error_improvement": -0.01664091335611051
+  }
+}
