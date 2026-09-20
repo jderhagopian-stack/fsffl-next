@@ -1,0 +1,36 @@
+name: League value-lens real-roster audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_league_value_lens_real_roster_audit.py"
+      - ".github/workflows/league-value-lens-real-roster-audit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install -e '.[web]'
+      - name: Run real-roster League value-lens audit
+        run: python scripts/run_league_value_lens_real_roster_audit.py
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: league-value-lens-real-roster-audit
+          path: |
+            artifacts/diagnostics/forecast_value_reconciliation_20260920/LEAGUE_VALUE_LENS_REAL_ROSTER_AUDIT.json
+            artifacts/diagnostics/forecast_value_reconciliation_20260920/LEAGUE_VALUE_LENS_REAL_ROSTER_SAMPLE.csv
+          if-no-files-found: error
