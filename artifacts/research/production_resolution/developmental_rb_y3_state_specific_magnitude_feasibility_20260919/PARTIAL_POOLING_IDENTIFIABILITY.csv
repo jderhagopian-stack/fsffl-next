@@ -1,0 +1,2 @@
+index,contrast,bootstrap_mean,ci_low,ci_high,p_negative,origins_negative,origins_total,origin_diff_min,origin_diff_max,loo_diff_min,loo_diff_max,loo_sign_flip
+0,lower_minus_upper_slope,-0.6467079121086664,-1.2403485634561828,-0.1170536222457391,0.992,9,9,-1.2943838864214583,-0.1692765010509463,-0.6967484862268849,-0.5873277757753189,False

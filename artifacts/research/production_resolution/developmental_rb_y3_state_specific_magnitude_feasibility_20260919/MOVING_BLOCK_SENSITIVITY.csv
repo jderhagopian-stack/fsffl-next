@@ -1,0 +1,2 @@
+index,metric,block_length,point_mean,bootstrap_mean,ci_low,ci_high,all_origin_differences_negative
+0,lower_minus_upper_origin_slope_difference,3,-0.6207525568963065,-0.6673674509443573,-0.8128129561647782,-0.4976227848298644,True

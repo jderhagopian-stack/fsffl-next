@@ -1,0 +1,16 @@
+{
+  "classification": "B. PARTIAL-POOLING STRUCTURE IS IDENTIFIABLE, FULL STATE-SPECIFIC CURVES ARE NOT",
+  "basis": [
+    "All five positive states are observed in all nine origins, but individual state samples are modest (73-127 active rows); every individual state slope has a clustered interval spanning zero, and origin signs are mixed for elite, premium, starter, and usable. Depth is strongly directional but still too sparse/uncertain for a stand-alone curve.",
+    "A canonical economic pooling into upper states (starter/premium/elite) and lower states (usable/depth) is strongly supported: lower-minus-upper slope difference is negative in all 9 origins, remains negative under every leave-one-origin-out check, and has a two-way clustered bootstrap 95% interval below zero.",
+    "Within-group pairwise state-slope contrasts have intervals spanning zero, so five independent curves would manufacture precision not supported by the history.",
+    "Residual dispersion differs substantially by state, but no state shows a clustered magnitude-dependent residual-scale slope excluding zero; a first future challenger need not jointly parameterize scale.",
+    "The proposed future challenger is therefore a shared continuous curve plus a regularized lower-state deviation, with frozen D1 state probabilities and state-ordering constraints. It is specified only as a later candidate boundary and is not fit here."
+  ],
+  "production_authority_changed": false,
+  "challenger_fit": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge": false,
+  "deploy": false
+}

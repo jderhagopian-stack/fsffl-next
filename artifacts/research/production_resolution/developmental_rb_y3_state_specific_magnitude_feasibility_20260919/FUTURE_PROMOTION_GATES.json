@@ -1,0 +1,11 @@
+{
+  "full_cell_proper_score": "CRPS improvement or preservation with player/source-year clustered CI and >=6/9 origins improved; no LOO sign reversal",
+  "continuous_calibration": "integrated magnitude-conditioned calibration error improves overall and separately in upper/lower state groups",
+  "state_specific": "upper/lower conditional-production calibration must improve without reversing state ordering",
+  "mae_no_harm": "raw-point MAE guardrail and source_percentile<0.75 no-harm",
+  "temporal": "origin-level stability, moving source-year block bootstrap, LOO robustness, most-influential player/origin diagnostics",
+  "distribution": "valid probabilities; coherent ordered positive-state supports; coverage reported",
+  "probabilities": "D1 state probabilities remain unchanged",
+  "tails": "p75/p90/p95 secondary diagnostics only",
+  "prospective": "source-2023 -> target-2026 evaluated only after complete 2026 outcomes"
+}

@@ -1,0 +1,29 @@
+{
+  "status": "FEASIBILITY_ONLY_NOT_FIT",
+  "recommended_family": "partial_pooling_two_group_location_calibration",
+  "continuous_coordinate": "source_percentile centered continuously; no percentile thresholds as states or fitting strata",
+  "state_pooling": {
+    "upper_group": [
+      "starter",
+      "premium",
+      "elite"
+    ],
+    "lower_group": [
+      "depth",
+      "usable"
+    ],
+    "rationale": "upper-vs-lower magnitude-slope contrast is negative in all 9 origins and clustered CI excludes zero; within-group pairwise state-slope contrasts do not exclude zero"
+  },
+  "minimum_structure": "global bounded continuous log-multiplier curve plus one regularized lower-group intercept deviation and one regularized lower-group magnitude-slope deviation; upper group is reference. No independent five-state curves.",
+  "regularization": "L2/shrinkage on lower-group deviations toward the shared curve; exact penalty must be preregistered before fitting and must not be tuned to 2026 or tail slices.",
+  "ordering_constraint": "preserve D1 state order by using a common multiplier within each group and constrain lower-group multiplier <= upper-group multiplier across u; within-group ordering is inherited from D1.",
+  "scale": "do not add magnitude-dependent scale in the first challenger; this feasibility study finds no state with clustered evidence of systematic residual-scale change versus magnitude. State-level dispersion differs and should remain a reported uncertainty diagnostic.",
+  "parameters_per_origin": [
+    "shared curve intercept",
+    "shared curve continuous-magnitude slope",
+    "lower-group intercept deviation",
+    "lower-group continuous-magnitude slope deviation"
+  ],
+  "frozen_probabilities": true,
+  "prospective_confirmation": "source-2023 -> target-2026 remains untouched"
+}

@@ -1,0 +1,35 @@
+{
+  "classification": "B. PARTIAL-POOLING STRUCTURE IS IDENTIFIABLE, FULL STATE-SPECIFIC CURVES ARE NOT",
+  "full_state_specific_curves_identifiable": false,
+  "partial_pooling_identifiable": true,
+  "supported_pooling": {
+    "upper": [
+      "starter",
+      "premium",
+      "elite"
+    ],
+    "lower": [
+      "depth",
+      "usable"
+    ]
+  },
+  "lower_minus_upper_slope_difference": {
+    "mean": -0.6467079121086664,
+    "ci_low": -1.2403485634561828,
+    "ci_high": -0.1170536222457391,
+    "origins_negative": 9,
+    "origins_total": 9,
+    "loo_sign_flip": false,
+    "moving_block_ci": [
+      -0.8128129561647782,
+      -0.4976227848298644
+    ]
+  },
+  "magnitude_dependent_scale_required": false,
+  "challenger_fit": false,
+  "production_authority_change": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge": false,
+  "deploy": false
+}

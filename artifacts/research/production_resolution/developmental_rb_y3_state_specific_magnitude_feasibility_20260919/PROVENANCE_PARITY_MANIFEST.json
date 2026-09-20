@@ -1,0 +1,57 @@
+{
+  "schema_version": "fsffl-dev-rb-y3-state-specific-feasibility-v1",
+  "starting_research_head": "ca43806782898ff4050a4e067fed8fccfcaf1cde",
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "row_level_stage_sha256": "0dfe5cc5bc1b88d1c886936110d60723c989918a50c56df6bf0b88aafd0a97c8",
+  "panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+  "canonical_eval_rows": 986,
+  "active_eval_rows": 519,
+  "origins": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "merge_indicator": {
+    "both": 986,
+    "left_only": 0,
+    "right_only": 0
+  },
+  "max_abs_parity_diff": {
+    "source_points": 0.0,
+    "source_percentile": 0.0,
+    "target_points": 0.0,
+    "p_active": 0.0,
+    "pred_D1": 3.552713678800501e-15,
+    "p_out": 0.0,
+    "p_depth": 0.0,
+    "p_usable": 0.0,
+    "p_starter": 0.0,
+    "p_premium": 0.0,
+    "p_elite": 0.0,
+    "d1_mean_depth": 0.0,
+    "d1_mean_usable": 3.552713678800501e-15,
+    "d1_mean_starter": 3.552713678800501e-15,
+    "d1_mean_premium": 0.0,
+    "d1_mean_elite": 2.842170943040401e-14
+  },
+  "parity_pass": true,
+  "state_counts": {
+    "premium": 127,
+    "elite": 118,
+    "starter": 107,
+    "usable": 94,
+    "depth": 73
+  },
+  "challenger_fit": false,
+  "production_authority_change": false,
+  "pr147_change": false,
+  "main_change": false,
+  "merge": false,
+  "deploy": false
+}
