@@ -22,7 +22,7 @@ def test_roster_presents_value_and_market_percentile_separately_without_primary_
     assert "Authoritative NEXT-3 FSFFL Cardinal Market Score" in polish
     assert "<th>FSFFL Cardinal Value</th>" in html
     assert "<th>Broad Market percentile</th>" in html
-    assert "consistent current franchise-value scale" in html
+    assert "current additive market-cardinal reference across players and picks" in html
     assert "authoritative NEXT-3 market-cardinal score" not in html
     assert "PROVISIONAL — calibration in progress" not in html
 
