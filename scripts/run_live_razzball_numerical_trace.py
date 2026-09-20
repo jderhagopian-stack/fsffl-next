@@ -55,6 +55,18 @@ SAMPLE = (
     ("Dallas Goedert", Position.TE, "PHI"),
 )
 
+STAT_TO_METRIC = {
+    "pass_yd": "pass_yards",
+    "pass_td": "pass_td",
+    "pass_int": "interceptions",
+    "rush_yd": "rush_yards",
+    "rush_td": "rush_td",
+    "rec": "receptions",
+    "rec_yd": "rec_yards",
+    "rec_td": "rec_td",
+    "fum_lost": "fumbles_lost",
+}
+
 SCORING = (
     ScoringRule(stat="pass_yd", points=0.04),
     ScoringRule(stat="pass_td", points=4.0),
@@ -312,8 +324,9 @@ def main() -> None:
 
         metric_rows = []
         for metric, rz_value in sorted(rz_current.stats.items()):
-            normalized_value = normalized_by_source["razzball"].get((player_id, metric))
-            ensemble_value = ensemble_map.get((player_id, metric))
+            forecast_metric = STAT_TO_METRIC[metric]
+            normalized_value = normalized_by_source["razzball"].get((player_id, forecast_metric))
+            ensemble_value = ensemble_map.get((player_id, forecast_metric))
             comparisons = {}
             for source_id in sorted(providers):
                 other = current_by_source[source_id].get(k)
