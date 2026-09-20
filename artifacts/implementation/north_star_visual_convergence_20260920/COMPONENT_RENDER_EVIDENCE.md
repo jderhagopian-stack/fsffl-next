@@ -33,7 +33,8 @@ Headless Chromium render:
 - viewport: 1200 × 820;
 - baseline harness screenshot: `before.png`;
 - candidate harness screenshot: `after.png`;
-- both screenshots were inspected after rendering;
-- the candidate visibly exposes bilateral direction and relative same-metric consequence while keeping exact numbers primary.
+- both desktop screenshots were inspected after rendering;
+- a 390 × 844 mobile candidate render (`mobile_after.png`) was also generated and inspected after the mobile layout was changed from horizontal compression to an intentional metric-by-metric stack;
+- the candidate visibly exposes bilateral direction and relative same-metric consequence while keeping exact numbers primary on both desktop and mobile.
 
 These screenshots are included in the management PDF for the convergence pass. The reusable source grammar is implemented in `visual_primitives.css`, and the browser script continues to consume only server-returned Trade Simulation delta fields.
