@@ -1,0 +1,23 @@
+{
+  "forecast_if_future_candidate_earns": [
+    "frozen D1 p_out/inactive probability",
+    "active mixture weight pi_survivor(source magnitude)",
+    "decline and survivor component distribution parameters/quantiles",
+    "overall expectation and uncertainty summaries",
+    "provenance/training cutoff/support metadata"
+  ],
+  "normalization": "p_out + (1-p_out)*(1-pi_survivor + pi_survivor) = 1",
+  "positive_state_note": "Existing D1 positive-state probabilities remain diagnostic metadata; M1 did not earn authority, so no production reconciliation is implemented here.",
+  "research_only": true,
+  "schema_version": "fsffl-dev-rb-two-component-simulation-contract-v1",
+  "simulation": [
+    "draw inactive vs active once from Forecast p_out",
+    "if active draw one component once from Forecast mixture weight",
+    "draw one production realization from that active component",
+    "do not add a second collapse or RB downside draw"
+  ],
+  "value": [
+    "consume Forecast expectation/distribution",
+    "do not add a second collapse haircut"
+  ]
+}
