@@ -24,7 +24,7 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260910-phase3-visual2';
+const fsfflStaticVersion='20260920-owner-dossier1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
@@ -35,13 +35,13 @@ let analyticsTerminalScriptPromise=null;
 let whatIfScriptPromise=null;
 let simulatorScriptPromise=null;
 function injectMobileTouchFix(){if(document.querySelector('link[data-fsffl-touch-fix]'))return;const link=document.createElement('link');link.rel='stylesheet';link.dataset.fsfflTouchFix='true';link.href=`/static/mobile_touch_fix.css?v=${fsfflStaticVersion}`;document.head.appendChild(link)}
-function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseSetter,version=fsfflStaticVersion){if(typeof window[existingName]==='function')return Promise.resolve();const existing=promiseGetter();if(existing)return existing;const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`${path}?v=${version}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error(errorMessage));document.head.appendChild(script)});promiseSetter(promise);return promise}
+function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseSetter){if(typeof window[existingName]==='function')return Promise.resolve();const existing=promiseGetter();if(existing)return existing;const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`${path}?v=${fsfflStaticVersion}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error(errorMessage));document.head.appendChild(script)});promiseSetter(promise);return promise}
 function ensureLeagueComparisonScript(){return lazyProductScript('renderFsfflLeagueComparison','/static/league_comparison.js','Unable to load League presentation module',()=>leagueComparisonScriptPromise,value=>leagueComparisonScriptPromise=value)}
 function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/static/my_team_dashboard.js','Unable to load Franchise presentation module',()=>myTeamScriptPromise,value=>myTeamScriptPromise=value)}
 function ensureReportsScript(){return lazyProductScript('renderFsfflReports','/static/reports.js','Unable to load Reports presentation module',()=>reportsScriptPromise,value=>reportsScriptPromise=value)}
 function ensureHomeScript(){return lazyProductScript('installFsfflHomeExperience','/static/home_dashboard.js','Unable to load Home presentation module',()=>homeScriptPromise,value=>homeScriptPromise=value)}
 function ensureOpportunitiesScript(){return lazyProductScript('renderFsfflOpportunities','/static/opportunities.js','Unable to load Opportunity Engine presentation module',()=>opportunitiesScriptPromise,value=>opportunitiesScriptPromise=value)}
-function ensureBehavioralIntelligenceScript(){return lazyProductScript('renderFsfflBehavioralIntelligence','/static/behavioral_intelligence.js','Unable to load Behavioral Intelligence presentation module',()=>behavioralIntelligenceScriptPromise,value=>behavioralIntelligenceScriptPromise=value,'20260920-owner-dossier1')}
+function ensureBehavioralIntelligenceScript(){return lazyProductScript('renderFsfflBehavioralIntelligence','/static/behavioral_intelligence.js','Unable to load Behavioral Intelligence presentation module',()=>behavioralIntelligenceScriptPromise,value=>behavioralIntelligenceScriptPromise=value)}
 function ensureAnalyticsTerminalScript(){return lazyProductScript('renderFsfflAnalyticsTerminal','/static/analytics_terminal.js','Unable to load Analytics Terminal presentation module',()=>analyticsTerminalScriptPromise,value=>analyticsTerminalScriptPromise=value)}
 function ensureWhatIfScript(){return lazyProductScript('renderFsfflWhatIf','/static/what_if.js','Unable to load What-If scenario module',()=>whatIfScriptPromise,value=>whatIfScriptPromise=value)}
 function ensureSimulatorScript(){return lazyProductScript('renderFsfflSimulator','/static/simulator.js','Unable to load Simulator scenario module',()=>simulatorScriptPromise,value=>simulatorScriptPromise=value)}
