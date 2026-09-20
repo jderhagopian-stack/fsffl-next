@@ -41,7 +41,7 @@
     return`<div class="opp-asset-stack">${rows.map(item=>{
       const label=oppEscape(item.label||item.asset_ref);
       const meta=assetMeta(item);
-      return`<div><strong>${label}</strong>${meta?`<span class="opp-asset-meta">${oppEscape(meta)}</span>`:''}<small>FSFFL Value ${oppValue(item.fsffl_value)}</small></div>`;
+      return`<div><strong>${label}</strong>${meta?`<span class="opp-asset-meta">${oppEscape(meta)}</span>`:''}<small>FSFFL Cardinal Value ${oppValue(item.fsffl_value)}</small></div>`;
     }).join('')}</div>`;
   };
 
