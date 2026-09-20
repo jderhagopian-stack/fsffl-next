@@ -284,7 +284,7 @@ class PrivateBetaShapleyContractLoader:
             result,
             completed_source_provenance=_provenance(evidence, future_contract),
             missing_required_fact_families=_missing_fact_families(),
-            forecast_model_version=P0_FORECAST_VERSION,
+            forecast_model_version=future_contract.forecast_model_version,
         )
         with self._lock:
             self._cached_key = key
