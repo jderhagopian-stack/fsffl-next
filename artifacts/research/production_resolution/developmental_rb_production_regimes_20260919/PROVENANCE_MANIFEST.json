@@ -1,0 +1,17 @@
+{
+  "schema_version": "fsffl-dev-rb-regime-provenance-v1",
+  "research_start_head": "93e48b66d96b9e1473f504eb5fbabec200231db3",
+  "regime_prereg_commit": "3d1b5b984cbce54175d0ccf03db8cba48cd21ebf",
+  "identifiability_prereg_commit": "aa30af75d94315dc0e4384b0a03b6d8aef911ee5",
+  "preholdout_freeze_head": "485296e905e1e3ccbc6227835e00beb627531426",
+  "pr147_head_at_start": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "main_at_start": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "historical_predictions_path": "/mnt/data/fsffl_work/historical_predictions.csv",
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "phase2_artifact_zip_sha256": "f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff",
+  "final_fitted_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "source_reconstruction": "Exact source/target/source-state/target-state parity for all 10,336 authoritative historical prediction rows; local D1 state means reproduced to floating-point tolerance before candidate work.",
+  "selection_seasons": "2014-2020",
+  "locked_replication_seasons": "2021-2022 evaluated once after durable preholdout freeze",
+  "current_player_evidence_used": false
+}
