@@ -7,6 +7,12 @@ on:
     paths:
       - "scripts/run_live_razzball_numerical_trace.py"
       - ".github/workflows/live-razzball-numerical-trace.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_live_razzball_numerical_trace.py"
+      - ".github/workflows/live-razzball-numerical-trace.yml"
   workflow_dispatch:
 
 permissions:
