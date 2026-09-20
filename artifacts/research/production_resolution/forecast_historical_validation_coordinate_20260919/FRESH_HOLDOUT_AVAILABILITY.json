@@ -1,0 +1,22 @@
+{
+  "classification_implication": "No currently fully observed pristine Y3 final holdout remains.",
+  "Y2": {
+    "latest_fully_observed_source": 2023,
+    "target": 2025,
+    "candidate_specific_performance_previously_inspected": false,
+    "can_be_fresh_confirmation_for_future_Y2_or_no_harm": true,
+    "constraint": "Must generate control/candidate predictions via exact rolling-origin refit that excludes source-2023 target outcomes; final P0 fit itself includes rows through 2023 and is not OOT."
+  },
+  "Y3": {
+    "latest_fully_observed_source": 2022,
+    "target": 2025,
+    "candidate_specific_performance_previously_inspected": true,
+    "pristine_current_holdout": false,
+    "next_prospective_source": 2023,
+    "next_target": 2026,
+    "next_target_complete_in_governed_panel": false,
+    "prospective_policy": "Freeze source-2023 Y3 now as a future confirmation coordinate; do not inspect candidate-specific 2026 results until season completion and candidate freeze."
+  },
+  "2021_2022_status": "No longer pristine: repeatedly inspected across forecast-wide selection, D1R, D1H90/regime, S1/S2, and M1 stages.",
+  "overall": "Use nested/rolling-origin validation now; a truly fresh Y3 final confirmation must wait for the source-2023 -> 2026 outcome to complete."
+}

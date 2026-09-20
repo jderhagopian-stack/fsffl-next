@@ -1,0 +1,7 @@
+index,stage,source_seasons,candidate_specific,effect
+0,P0/D1 post-freeze replication,2021-2022,True,descriptive replication after route freeze
+1,Forecast-wide distributional selection,2021-2022,True,locked D0/D1 alternative validation
+2,D1R,2021-2022,True,locked challenger replication
+3,D1T90/D1H90 + identifiability,2021-2022,True,locked regime/nonlinear replication
+4,S1/S2 distribution shape,2021-2022,True,locked shape-candidate replication
+5,M1 two-component mixture,2021-2022,True,locked mixture replication

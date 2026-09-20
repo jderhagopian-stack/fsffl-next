@@ -1,0 +1,96 @@
+{
+  "schema_version": "fsffl-forecast-historical-validation-coordinate-audit-v1",
+  "date": "2026-09-19",
+  "research_start_head": "b6920796d4ee721839f586fecfd4c743f68eb797",
+  "pr147_head": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "main_head": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "phase2_workflow_artifact_id": 10486530017,
+  "phase2_zip_sha256": "f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff",
+  "phase2_panel": {
+    "rows": 15492,
+    "seasons": [
+      1999,
+      2025
+    ],
+    "sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7"
+  },
+  "phase2_q3": {
+    "rows": 31218,
+    "source_seasons": [
+      2005,
+      2022
+    ],
+    "horizons": [
+      1,
+      2,
+      3
+    ],
+    "sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063"
+  },
+  "source_reconstruction_parity": {
+    "rebuilt_rows": 30078,
+    "governed_rows": 30078,
+    "matched": 30078,
+    "left_only": 0,
+    "right_only": 0,
+    "source_state_mismatch": 0,
+    "target_state_mismatch": 0,
+    "max_source_diff": 0.0,
+    "max_target_diff": 0.0,
+    "max_cur_z_diff": 8.881784197001252e-16,
+    "max_prior_z_diff": 8.881784197001252e-16,
+    "panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+    "governed_q3_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+    "pass": true,
+    "fits_performed": 0,
+    "note": "Exact source/target coordinate reconstruction only; no Forecast candidate/model fit performed."
+  },
+  "historical_predictions": {
+    "rows": 10336,
+    "source_seasons": [
+      2014,
+      2022
+    ],
+    "sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709"
+  },
+  "latest_valid": {
+    "Y2": {
+      "source": 2023,
+      "target": 2025
+    },
+    "Y3": {
+      "source": 2022,
+      "target": 2025
+    }
+  },
+  "audit_generated_files": [
+    "CLUSTERED_UNCERTAINTY_PLAN.md",
+    "DEVELOPMENTAL_RB_TAIL_COUNTS_BY_ORIGIN.csv",
+    "ERA_2021_2022_DIAGNOSTIC.csv",
+    "ERA_2021_2022_SUMMARY.json",
+    "FINAL_CLASSIFICATION.json",
+    "FRESH_HOLDOUT_AVAILABILITY.json",
+    "FUTURE_CANDIDATE_EVALUATION_PROTOCOL.md",
+    "HISTORICAL_COORDINATE_CELL_SUMMARY.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_QB_Y2.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_QB_Y3.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_RB_Y2.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_RB_Y3.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_TE_Y2.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_TE_Y3.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_WR_Y2.csv",
+    "HISTORICAL_FORECAST_COORDINATE_INVENTORY_WR_Y3.csv",
+    "HOLDOUT_EXPOSURE_LEDGER.csv",
+    "LATEST_VALID_HORIZON_TABLE.csv",
+    "MINIMUM_HISTORY_RULE.json",
+    "MODEL_TRAINING_EVALUATION_USE_MATRIX.csv",
+    "OVERLAP_DEPENDENCE_ANALYSIS.md",
+    "PER_YEAR_SAMPLE_SIZES.csv",
+    "POINT_IN_TIME_PROVENANCE_MATRIX.csv",
+    "PRIMARY_ORIGIN_2014_TRAINING_SUPPORT.csv",
+    "RECONSTRUCTION_PARITY.json",
+    "ROLLING_ORIGIN_DESIGN.md",
+    "SOURCE_SEASON_HORIZON_STATUS.csv"
+  ],
+  "no_candidate_fit": true
+}

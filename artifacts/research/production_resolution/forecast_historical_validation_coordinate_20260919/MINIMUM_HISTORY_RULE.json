@@ -1,0 +1,14 @@
+{
+  "primary_first_evaluation_origin": 2014,
+  "basis": [
+    "2014 is the already-governed first selection origin in the frozen Forecast redevelopment, so retaining it avoids choosing a new start year after viewing later outcomes.",
+    "At origin 2014, exact rolling training already contains 7 source seasons for Y2 (2005-2011) and 6 for Y3 (2005-2010).",
+    "All four positions have hundreds of training rows and hundreds of active target rows by origin 2014."
+  ],
+  "sensitivity_origins": [
+    2012,
+    2013
+  ],
+  "sensitivity_rule": "May be reported only as sensitivity after the primary 2014-start design is frozen; they cannot replace the primary design based on candidate results.",
+  "calendar_timestamp_note": "The governed model coordinate is season-boundary point-in-time, not a persisted daily forecast timestamp."
+}

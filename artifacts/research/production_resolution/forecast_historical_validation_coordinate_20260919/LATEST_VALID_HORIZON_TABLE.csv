@@ -1,0 +1,3 @@
+index,horizon_label,horizon_code,latest_fully_observed_source_season,target_season,eligible_rows_all_positions,QB_rows,RB_rows,WR_rows,TE_rows,reason
+0,Y2,2,2023,2025,558,74,154,213,117,Governed panel ends 2025; project horizon code h=2 targets source_season+2.
+1,Y3,3,2022,2025,596,80,168,228,120,Governed panel ends 2025; project horizon code h=3 targets source_season+3.

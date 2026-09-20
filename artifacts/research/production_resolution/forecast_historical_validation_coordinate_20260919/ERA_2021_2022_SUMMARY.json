@@ -1,0 +1,121 @@
+{
+  "comparison": "2021-2022 developmental RB Y3 vs predeclared 2014-2020 historical two-year windows",
+  "full_cell": {
+    "2021_2022": {
+      "n": 213,
+      "active_n": 105,
+      "out_share": 0.5070422535211268,
+      "severe_active_share": 0.15492957746478872,
+      "middle_active_share": 0.07981220657276995,
+      "survivor_share": 0.25821596244131456,
+      "active_retention_median": 0.744131455399061,
+      "source_points_mean": 52.53596244131455,
+      "source_points_median": 24.5,
+      "age_mean": 24.205758724644348,
+      "experience_mean": 1.4507042253521127,
+      "top10_share_within_developmental": 0.06572769953051644,
+      "top5_share_within_developmental": 0.028169014084507043,
+      "prior1_coverage": 0.6384976525821596,
+      "prior2_coverage": 0.39436619718309857
+    },
+    "historical_two_year_range": {
+      "out_share": [
+        0.3901345291479821,
+        0.5333333333333333
+      ],
+      "severe_active_share": [
+        0.10222222222222223,
+        0.182648401826484
+      ],
+      "middle_active_share": [
+        0.0821917808219178,
+        0.1288888888888889
+      ],
+      "survivor_share": [
+        0.26222222222222225,
+        0.34080717488789236
+      ],
+      "active_retention_median": [
+        0.7186038143216984,
+        0.8013821126579199
+      ],
+      "source_points_mean": [
+        53.6709589041096,
+        66.62224215246636
+      ],
+      "experience_mean": [
+        1.3059360730593608,
+        1.3688888888888888
+      ]
+    },
+    "assessment": "Broad outcome mix and active-retention median are within or essentially at the edge of prior two-year variation. Source magnitude is slightly lower and experience slightly higher."
+  },
+  "p90_plus": {
+    "2021_2022": {
+      "n": 14,
+      "active_n": 13,
+      "out_share": 0.07142857142857142,
+      "severe_active_share": 0.21428571428571427,
+      "middle_active_share": 0.21428571428571427,
+      "survivor_share": 0.5,
+      "active_retention_median": 0.7276650841605524,
+      "source_points_mean": 210.4042857142857,
+      "source_points_median": 198.1,
+      "age_mean": 23.866530944705023,
+      "experience_mean": 1.5,
+      "top10_share_within_developmental": 1.0,
+      "top5_share_within_developmental": 0.42857142857142855,
+      "prior1_coverage": 0.7142857142857143,
+      "prior2_coverage": 0.42857142857142855
+    },
+    "historical_two_year_range": {
+      "out_share": [
+        0.045454545454545456,
+        0.11538461538461539
+      ],
+      "survivor_share": [
+        0.3181818181818182,
+        0.5862068965517241
+      ],
+      "active_retention_median": [
+        0.4866651696761339,
+        0.8186975349650671
+      ],
+      "source_points_mean": [
+        203.7625,
+        227.37241379310342
+      ]
+    },
+    "assessment": "n=14; outcome shares and active-retention median fall within prior two-year ranges."
+  },
+  "p95_plus": {
+    "2021_2022": {
+      "n": 6,
+      "active_n": 5,
+      "out_share": 0.16666666666666666,
+      "severe_active_share": 0.16666666666666666,
+      "middle_active_share": 0.3333333333333333,
+      "survivor_share": 0.3333333333333333,
+      "active_retention_median": 0.6753133197318565,
+      "source_points_mean": 242.1833333333333,
+      "source_points_median": 216.0,
+      "age_mean": 24.013726040461687,
+      "experience_mean": 1.6666666666666667,
+      "top10_share_within_developmental": 1.0,
+      "top5_share_within_developmental": 1.0,
+      "prior1_coverage": 0.8333333333333334,
+      "prior2_coverage": 0.5
+    },
+    "survivor_wilson95": [
+      0.09677141110578041,
+      0.700006684861608
+    ],
+    "out_wilson95": [
+      0.030053369748306635,
+      0.5635028221864702
+    ],
+    "assessment": "n=6 is too sparse for an outlier claim; point estimates differ from prior windows but confidence is very wide."
+  },
+  "overall_assessment": "NOT_ENOUGH_EVIDENCE_TO_CALL_2021_2022_UNUSUAL",
+  "use_constraint": "This diagnostic is descriptive only and may not be used to tune or rescue any prior candidate."
+}

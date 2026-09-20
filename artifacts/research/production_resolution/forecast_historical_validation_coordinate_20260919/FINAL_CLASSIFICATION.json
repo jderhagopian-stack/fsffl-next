@@ -1,0 +1,32 @@
+{
+  "classification": "B. EXPANDED WALK-FORWARD AVAILABLE, NO PRISTINE HOLDOUT REMAINS",
+  "basis": [
+    "The governed Phase-2 panel runs through 2025 and exact source reconstruction reproduces the 30,078 governed rows through source 2022 with zero source/target mismatches and floating-point residual parity.",
+    "A chronology-correct primary walk-forward can use 10 Y2 origins (2014-2023; 5,726 rows) and 9 Y3 origins (2014-2022; 5,168 rows) across QB/RB/WR/TE, with exact refitting rules that exclude unresolved future targets.",
+    "2021-2022 is not an unusual enough developmental-RB era to discard: full-cell outcome mix and active retention are within ordinary historical two-year variation, while the p95+ subgroup is too small to support an outlier label.",
+    "2021-2022 is no longer pristine because it has been inspected repeatedly across multiple candidate stages.",
+    "Y2 source 2023 -> target 2025 is fully observed and candidate-specific untouched, but the unresolved research question is Y3. The latest fully observed Y3 source is still 2022.",
+    "Source 2023 -> Y3 target 2026 is the next prospective fresh confirmation coordinate but is not yet complete in the governed panel."
+  ],
+  "primary_design": {
+    "Y2_origins": [
+      2014,
+      2023
+    ],
+    "Y2_origin_count": 10,
+    "Y2_rows": 5726,
+    "Y3_origins": [
+      2014,
+      2022
+    ],
+    "Y3_origin_count": 9,
+    "Y3_rows": 5168,
+    "minimum_history_origin": 2014
+  },
+  "fresh_holdout_policy": "Nested/rolling-origin validation is the strongest defensible current design. Prospectively freeze source-2023 Y3 for later 2026 confirmation; do not reuse 2021-2022 as pristine.",
+  "model_fits_performed_in_this_audit": 0,
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge_or_deploy": false
+}

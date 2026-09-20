@@ -1,0 +1,8 @@
+index,experiment,candidate_or_control,development_selection_sources,locked_or_postfreeze_sources,final_fit_inclusion,2021_2022_exposure,interpretation
+0,P0/D0-D1 redevelopment,D0/D1/D2 route,2014-2020 selection,2021-2022 post-freeze replication,"Y2 final fit includes source<=2023,target<=2025; Y3 source<=2022,target<=2025",2021-2022 inspected once after freeze,Selection history remains frozen; final fitted rows are not OOT.
+1,Forecast-wide distributional selection,existing D0/D1 alternatives,2014-2020,2021-2022 locked once,none,2021-2022 candidate metrics inspected,Earned proper-score methodology; cannot treat 2021-2022 as pristine for new candidate families.
+2,Developmental RB D1R,D1R,2014-2020,2021-2022 locked once,none,2021-2022 inspected,Failed before holdout; holdout did not rescue.
+3,Developmental RB regime/nonlinear,D1T90/D1H90,2014-2020,2021-2022 locked once,none,2021-2022 inspected,Failed promotion; 2021-2022 used for directional replication.
+4,Developmental RB shape,S1/S2,2014-2020,2021-2022 locked once,none,2021-2022 inspected,Both improved CRPS but failed tail gate.
+5,Developmental RB two-component,M1,2014-2020,2021-2022 locked once,none,2021-2022 inspected,Failed pre-holdout; locked replication also unfavorable.
+6,This validation audit,no candidate fit,none,none,none,No candidate-specific fresh performance inspected,Evidence/methodology audit only.

@@ -1,0 +1,55 @@
+index,source_season,horizon_label,horizon_code,target_season,status,reason
+0,1999,Y2,2,2001,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+1,1999,Y3,3,2002,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+2,2000,Y2,2,2002,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+3,2000,Y3,3,2003,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+4,2001,Y2,2,2003,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+5,2001,Y3,3,2004,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+6,2002,Y2,2,2004,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+7,2002,Y3,3,2005,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+8,2003,Y2,2,2005,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+9,2003,Y3,3,2006,NOT_VALID,Panel/setup history only; governed source-state reconstruction is not defined as a forecast origin this early.
+10,2004,Y2,2,2006,NOT_VALID,"Source coordinate can be reconstructed, but governed redevelopment/evaluation row builder begins at source season 2005."
+11,2004,Y3,3,2007,NOT_VALID,"Source coordinate can be reconstructed, but governed redevelopment/evaluation row builder begins at source season 2005."
+12,2005,Y2,2,2007,FULLY_REPRODUCIBLE,
+13,2005,Y3,3,2008,FULLY_REPRODUCIBLE,
+14,2006,Y2,2,2008,FULLY_REPRODUCIBLE,
+15,2006,Y3,3,2009,FULLY_REPRODUCIBLE,
+16,2007,Y2,2,2009,FULLY_REPRODUCIBLE,
+17,2007,Y3,3,2010,FULLY_REPRODUCIBLE,
+18,2008,Y2,2,2010,FULLY_REPRODUCIBLE,
+19,2008,Y3,3,2011,FULLY_REPRODUCIBLE,
+20,2009,Y2,2,2011,FULLY_REPRODUCIBLE,
+21,2009,Y3,3,2012,FULLY_REPRODUCIBLE,
+22,2010,Y2,2,2012,FULLY_REPRODUCIBLE,
+23,2010,Y3,3,2013,FULLY_REPRODUCIBLE,
+24,2011,Y2,2,2013,FULLY_REPRODUCIBLE,
+25,2011,Y3,3,2014,FULLY_REPRODUCIBLE,
+26,2012,Y2,2,2014,FULLY_REPRODUCIBLE,
+27,2012,Y3,3,2015,FULLY_REPRODUCIBLE,
+28,2013,Y2,2,2015,FULLY_REPRODUCIBLE,
+29,2013,Y3,3,2016,FULLY_REPRODUCIBLE,
+30,2014,Y2,2,2016,FULLY_REPRODUCIBLE,
+31,2014,Y3,3,2017,FULLY_REPRODUCIBLE,
+32,2015,Y2,2,2017,FULLY_REPRODUCIBLE,
+33,2015,Y3,3,2018,FULLY_REPRODUCIBLE,
+34,2016,Y2,2,2018,FULLY_REPRODUCIBLE,
+35,2016,Y3,3,2019,FULLY_REPRODUCIBLE,
+36,2017,Y2,2,2019,FULLY_REPRODUCIBLE,
+37,2017,Y3,3,2020,FULLY_REPRODUCIBLE,
+38,2018,Y2,2,2020,FULLY_REPRODUCIBLE,
+39,2018,Y3,3,2021,FULLY_REPRODUCIBLE,
+40,2019,Y2,2,2021,FULLY_REPRODUCIBLE,
+41,2019,Y3,3,2022,FULLY_REPRODUCIBLE,
+42,2020,Y2,2,2022,FULLY_REPRODUCIBLE,
+43,2020,Y3,3,2023,FULLY_REPRODUCIBLE,
+44,2021,Y2,2,2023,FULLY_REPRODUCIBLE,
+45,2021,Y3,3,2024,FULLY_REPRODUCIBLE,
+46,2022,Y2,2,2024,FULLY_REPRODUCIBLE,
+47,2022,Y3,3,2025,FULLY_REPRODUCIBLE,
+48,2023,Y2,2,2025,FULLY_REPRODUCIBLE,
+49,2023,Y3,3,2026,PARTIALLY_REPRODUCIBLE,"Source inputs reconstructable, but target season 2026 is not in the governed panel ending 2025."
+50,2024,Y2,2,2026,PARTIALLY_REPRODUCIBLE,"Source inputs reconstructable, but target season 2026 is not in the governed panel ending 2025."
+51,2024,Y3,3,2027,PARTIALLY_REPRODUCIBLE,"Source inputs reconstructable, but target season 2027 is not in the governed panel ending 2025."
+52,2025,Y2,2,2027,PARTIALLY_REPRODUCIBLE,"Source inputs reconstructable, but target season 2027 is not in the governed panel ending 2025."
+53,2025,Y3,3,2028,PARTIALLY_REPRODUCIBLE,"Source inputs reconstructable, but target season 2028 is not in the governed panel ending 2025."

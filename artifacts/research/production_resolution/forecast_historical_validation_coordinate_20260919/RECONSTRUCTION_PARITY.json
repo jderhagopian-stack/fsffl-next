@@ -1,0 +1,18 @@
+{
+  "rebuilt_rows": 30078,
+  "governed_rows": 30078,
+  "matched": 30078,
+  "left_only": 0,
+  "right_only": 0,
+  "source_state_mismatch": 0,
+  "target_state_mismatch": 0,
+  "max_source_diff": 0.0,
+  "max_target_diff": 0.0,
+  "max_cur_z_diff": 8.881784197001252e-16,
+  "max_prior_z_diff": 8.881784197001252e-16,
+  "panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+  "governed_q3_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+  "pass": true,
+  "fits_performed": 0,
+  "note": "Exact source/target coordinate reconstruction only; no Forecast candidate/model fit performed."
+}
