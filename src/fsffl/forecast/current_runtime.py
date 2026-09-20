@@ -18,6 +18,7 @@ from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_
 from .models import ForecastObservation
 from .regular_season import derive_fantasy_regular_season_forecasts
 from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
+from .source_health import validate_current_projection_snapshot_health
 
 
 CurrentSnapshotFetcher = Callable[[int], CurrentProjectionSnapshot]
@@ -93,6 +94,7 @@ def _fetch_current_snapshots(
                 snapshot = future.result()
                 if snapshot.provider != source_id:
                     raise ValueError("current projection fetcher returned wrong provider id")
+                validate_current_projection_snapshot_health(snapshot)
                 snapshots.append((source_id, snapshot))
             except Exception as exc:
                 failed.append(f"{source_id}: {type(exc).__name__}: {exc}")
