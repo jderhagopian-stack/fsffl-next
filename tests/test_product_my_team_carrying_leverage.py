@@ -18,7 +18,7 @@ def test_my_team_diagnostics_surface_carrier_and_asset_leverage_without_new_scor
 
 def test_my_team_optional_leverage_is_descriptive_not_aggregate_value() -> None:
     source = Path("src/fsffl/product/static/my_team_diagnostics.js").read_text(encoding="utf-8")
-    assert "Highest authoritative FSFFL Value among players not currently projected to start" in source
+    assert "Highest authoritative FSFFL Cardinal Value among players not currently projected to start" in source
     assert "descriptive only" in source
     assert "reduce(" not in source
     assert "sum(" not in source
