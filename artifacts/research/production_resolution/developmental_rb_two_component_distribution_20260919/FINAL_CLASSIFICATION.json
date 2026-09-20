@@ -1,0 +1,24 @@
+{
+  "basis": [
+    "M1 materially improves exceptional-tail survivor/downside calibration in frozen selection evidence relative to D1, so the survivor/decline mixture direction carries signal.",
+    "M1 fails pre-holdout because raw-point CRPS is worse in the governed chronology, expected-point MAE degrades severely, ordinary sub-p90 developmental RBs are harmed, and Y2 no-harm fails.",
+    "The mixture likelihood produces a broad high-retention component whose lognormal mean materially raises expected production; this is an emergent fit result, not a hand-set uplift, but it violates the point and proper-score guardrails.",
+    "Locked 2021-2022 is validation only and cannot rescue the failed candidate; its results determine only whether the directional tail signal replicates.",
+    "M2 was not authorized because the prior governed identifiability audit found no stable additional conditioning dimension."
+  ],
+  "classification": "C. TWO-COMPONENT REPRESENTATION NOT SUPPORTED",
+  "locked_Y3_brier4_gain": 0.005155546756014999,
+  "locked_Y3_crps_gain": -0.9129426410528719,
+  "locked_Y3_mae_gain": -13.809587476379873,
+  "locked_p95_tail_error_improvement": -0.02793941796466415,
+  "preholdout_decision": "FAIL_PREHOLDOUT",
+  "preholdout_failure_reasons": [
+    "crps",
+    "p95_tail",
+    "mae",
+    "sub_p90",
+    "Y2_no_harm"
+  ],
+  "schema_version": "fsffl-dev-rb-two-component-final-v1",
+  "selection_p95_tail_error_improvement": 0.11099638193675548
+}
