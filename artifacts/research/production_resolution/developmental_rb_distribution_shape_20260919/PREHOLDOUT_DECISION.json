@@ -1,0 +1,87 @@
+{
+  "candidates": {
+    "S1": {
+      "Y2_no_harm": {
+        "full_crps_gain": {
+          "ci_high": 1.6459425516877213,
+          "ci_low": 0.8427373591892072,
+          "gain_mean": 1.2519282954542676
+        },
+        "mean_reproduction_max_abs": 1.4210854715202004e-13,
+        "status": "PASS_NO_HARM"
+      },
+      "Y3": {
+        "all_block_brier_positive": true,
+        "all_block_crps_positive": true,
+        "decision": "FAIL_PREHOLDOUT",
+        "full_brier4_gain": {
+          "ci_high": 0.03665738236257211,
+          "ci_low": 0.004740759843560291,
+          "gain_mean": 0.020051309074868334
+        },
+        "full_crps_gain": {
+          "ci_high": 1.10893931998171,
+          "ci_low": 0.518534631957171,
+          "gain_mean": 0.8114895525391524
+        },
+        "mean_reproduction_max_abs": 1.1368683772161603e-13,
+        "p95_tail_error_improvement": -0.015604920903073582,
+        "sub_p90_crps_gain": {
+          "ci_high": 0.809558005713033,
+          "ci_low": 0.3739368364761517,
+          "gain_mean": 0.5829679050511362
+        }
+      },
+      "reasons": [
+        "Y3 CRPS and four-region Brier improve with uncertainty support and all chronology blocks are positive.",
+        "Y3 p95+ survivor/downside calibration gate fails: combined tail absolute error does not improve by >=0.05 and survivor calibration worsens.",
+        "Expected points/MAE are identical to D1 by construction."
+      ]
+    },
+    "S2": {
+      "Y2_no_harm": {
+        "full_crps_gain": {
+          "ci_high": 1.6425515745554604,
+          "ci_low": 0.8798951304421719,
+          "gain_mean": 1.244434141661436
+        },
+        "mean_reproduction_max_abs": 1.4210854715202004e-13,
+        "status": "PASS_NO_HARM"
+      },
+      "Y3": {
+        "all_block_brier_positive": true,
+        "all_block_crps_positive": true,
+        "decision": "FAIL_PREHOLDOUT",
+        "full_brier4_gain": {
+          "ci_high": 0.037057108909724135,
+          "ci_low": 0.0039356531540555365,
+          "gain_mean": 0.020104662783132998
+        },
+        "full_crps_gain": {
+          "ci_high": 1.0965993867514001,
+          "ci_low": 0.5114942233216161,
+          "gain_mean": 0.8064755330602162
+        },
+        "mean_reproduction_max_abs": 8.526512829121202e-14,
+        "p90plus_min_material_ess": 17.65902230208216,
+        "p95_tail_error_improvement": -0.01664091335611051,
+        "sub_p90_crps_gain": {
+          "ci_high": 0.8150336238588596,
+          "ci_low": 0.3765997095161043,
+          "gain_mean": 0.5804975064739709
+        }
+      },
+      "reasons": [
+        "Y3 CRPS and four-region Brier improve with uncertainty support and all chronology blocks are positive.",
+        "Y3 p95+ survivor/downside calibration gate fails: combined tail absolute error worsens and survivor calibration worsens.",
+        "Expected points/MAE are identical to D1 by construction.",
+        "p90+ effective sample support passes the preregistered ESS warning threshold."
+      ]
+    }
+  },
+  "holdout_rule": "Evaluate 2021-2022 exactly once for locked replication reporting. It cannot rescue, retune, or redesign either failed candidate.",
+  "holdout_touched": false,
+  "preholdout_selection_result": "NO_CANDIDATE_EARNS_AUTHORITY",
+  "schema_version": "fsffl-dev-rb-distribution-shape-preholdout-decision-v1",
+  "selection_window": "2014-2020 only"
+}
