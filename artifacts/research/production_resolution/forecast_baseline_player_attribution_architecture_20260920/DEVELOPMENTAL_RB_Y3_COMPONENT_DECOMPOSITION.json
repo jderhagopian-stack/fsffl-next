@@ -1,0 +1,22 @@
+{
+  "cohort": "historical rolling Y3 developmental RB source_percentile>=0.90, 2014-2022",
+  "n": 93,
+  "active_n": 85,
+  "median_p_active": 0.8740701497515069,
+  "median_forecast_conditional_points": 130.1260242175222,
+  "median_forecast_expected_points": 112.84477940235116,
+  "median_source_points": 200.1,
+  "mean_active_retention_bias": -0.03236602545920678,
+  "median_active_retention_bias": -0.07729662076910648,
+  "mean_elite_probability_conditional_active": 0.529127390178491,
+  "mean_premium_or_elite_probability_conditional_active": 0.8549100495590997,
+  "controlled_2014_2020_top_decile_plus10pct_source": {
+    "production_model_only_conditional_points_elasticity_median": 0.0503573245040487,
+    "state_mix_only_conditional_points_elasticity_median": -0.0911038101152384,
+    "combined_conditional_points_elasticity_median": -0.0339644769727997,
+    "combined_conditional_points_elasticity_mean": -0.0391783162606053,
+    "mean_retention_change_for_10pct_source_increase": -0.0589188415854605,
+    "source_percentile_plus_0_05_conditional_points_change_median": 0.4102483640304228,
+    "state_percentile_plus_0_05_conditional_points_change_median": 1.0754509308122806
+  }
+}

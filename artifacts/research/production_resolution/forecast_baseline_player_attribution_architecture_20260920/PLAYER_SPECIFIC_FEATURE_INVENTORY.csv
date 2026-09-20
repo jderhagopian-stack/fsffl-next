@@ -1,0 +1,11 @@
+index,feature_family,state_probability,state_mix,conditional_production,uncertainty_scale,notes
+0,source_points log1p,True,True,True,False,lp in probability layer; standardized source_log and interactions in production
+1,source percentile,False,True,True,False,state_percentile in ordered logits; source_percentile standardized in production
+2,source vs prior change dpts,False,True,False,False,"clip((source-prior1)/100,-2,2)"
+3,prior-season points,True,True,True,False,lprev in state layer; standardized prior1_log and coverage in production
+4,prior-two age/state residual mean and gap,False,False,True,False,D1 only
+5,age / age band / late-age terms,True,True,True,False,exact age for persistence; coarse age in ordered logits; standardized age in production
+6,experience / experience band,True,True,True,False,experience band and continuous exp in probability; standardized experience in production
+7,role / opportunity per game / games,True,True,False,False,probability layer only
+8,QB prior age-state residual memory,True,True,False,False,QB prime/aging supported memory term
+9,BayesianRidge posterior sigma_diag,False,False,False,False,serialized but runtime does not use it; no within-state predictive variance in P0

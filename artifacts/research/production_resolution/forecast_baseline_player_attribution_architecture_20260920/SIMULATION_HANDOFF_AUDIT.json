@@ -1,0 +1,5 @@
+{
+  "simulation_handoff": "Current regular-season Simulation does not consume Y2/Y3 P0 discrete state distributions. It consumes current-season season means decomposed to weekly means plus an independently calibrated weekly volatility model. Therefore Simulation cannot restore Y3 survivor upside lost in P0 state means; those future paths are not sampled by NEXT-4 regular-season Simulation.",
+  "intrinsic_handoff": "Intrinsic/Shapley consumes Y2/Y3 probabilities and every state mean directly. It evaluates Shapley scenarios at anticipated points and each state mean, then probability-weights state-specific Shapley values and applies frozen 0.85 annual discount.",
+  "within_state_uncertainty": "P0 runtime ignores serialized BayesianRidge sigma_diag and emits point support for each state. Forecast uncertainty at Y2/Y3 is discrete state uncertainty, not continuous within-state production uncertainty."
+}

@@ -1,0 +1,11 @@
+{
+  "rebuilt_rows": 10336,
+  "historical_prediction_rows": 10336,
+  "matched_rows": 10336,
+  "nonmatched_rows": 0,
+  "source_state_mismatch": 0,
+  "target_state_mismatch": 0,
+  "max_source_points_diff": 0.0,
+  "max_source_percentile_diff": 1.1102230246251565e-16,
+  "pass": true
+}

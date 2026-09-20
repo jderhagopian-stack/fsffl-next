@@ -1,0 +1,6 @@
+{
+  "age_or_rb_second_haircut": false,
+  "collapse_second_haircut": false,
+  "intrinsic_mechanism": "Shapley consumes Forecast state probabilities and state means, probability-weights state-specific Shapley scenarios, and applies frozen discount 0.85 per future year. No independent age, RB, or collapse multiplier is applied in shapley_intrinsic.py.",
+  "double_counting_assessment": "PASS - no downstream compensation/amplification found in settled Intrinsic/Shapley path."
+}

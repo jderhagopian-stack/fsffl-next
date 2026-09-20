@@ -1,0 +1,32 @@
+{
+  "schema_version": "fsffl-forecast-attribution-architecture-executive-summary-v1",
+  "classification": "D. MIXED / ROUTE-SPECIFIC ARCHITECTURE ISSUE",
+  "route_cells_audited": 24,
+  "reconstruction_rows": 10336,
+  "reconstruction_parity_pass": true,
+  "developmental_rb_y3": {
+    "current_route": "D1",
+    "median_current_board_plus10pct_source_combined_conditional_elasticity": 0.1529638639709893,
+    "historical_top_decile_plus10pct_source_production_only_elasticity": 0.0503573245040487,
+    "historical_top_decile_plus10pct_source_state_mix_elasticity": -0.0911038101152384,
+    "historical_top_decile_plus10pct_source_combined_elasticity": -0.0339644769727997,
+    "median_abs_continuous_individual_shift_pct_of_conditional": 0.1120341685186518,
+    "controlled_elite_source_low_points": 119.8,
+    "controlled_elite_source_high_points": 296.70000000000005,
+    "controlled_elite_mean_low": 185.95714932987437,
+    "controlled_elite_mean_high": 196.55402746900947,
+    "controlled_conditional_low": 116.1534787300074,
+    "controlled_conditional_high": 142.02723309648786,
+    "top10_active_realized_above_forecast_max_support_share": 0.2823529411764706
+  },
+  "high_magnitude_y3_developmental_mean_active_retention_bias_by_position": {
+    "QB": -0.0761905971888699,
+    "RB": -0.0323660254592067,
+    "TE": -0.0051154199389971,
+    "WR": -0.0640884273940781
+  },
+  "simulation_consumes_y2_y3_state_distribution": false,
+  "shapley_consumes_y2_y3_state_distribution": true,
+  "downstream_second_age_rb_collapse_haircut_found": false,
+  "decision_boundary": "Hold PR #147 for one preregistered route/state-specific conditional-production architecture study; do not fit in this diagnostic."
+}

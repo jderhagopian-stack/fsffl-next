@@ -1,0 +1,13 @@
+{
+  "schema_version": "fsffl-forecast-baseline-player-attribution-architecture-diagnostic-v1",
+  "date": "2026-09-20",
+  "pr147_checkpoint": "34470dce369df2c9d5454ebbd481317c5ab76d12",
+  "protected_main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "research_start": "592b67e8739e5bb7bae26b8cd8659b7e727908b2",
+  "p0_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "phase2_zip_sha256": "f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff",
+  "no_model_fit": true,
+  "no_pr147_change": true,
+  "no_main_change": true
+}

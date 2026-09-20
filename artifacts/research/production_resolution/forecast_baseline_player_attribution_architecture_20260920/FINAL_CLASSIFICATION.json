@@ -1,0 +1,12 @@
+{
+  "classification": "D. MIXED / ROUTE-SPECIFIC ARCHITECTURE ISSUE",
+  "reasoning": [
+    "Forecasts are genuinely individualized: state probabilities and conditional production both use multiple player-specific inputs, and D1 state means include continuous source magnitude/history/age/experience terms.",
+    "However, individualized conditional-production response is strongly route/state dependent. Developmental RB Y3 has very weak source-magnitude transmission, and its state-mix response can move in the opposite direction after spike seasons.",
+    "The issue is not a single bad generic RB baseline level. It is an interaction of pooled state anchors with insufficient/negative marginal player response in selected routes/states, especially Y3 developmental RB.",
+    "Cross-position evidence also shows strong baseline pull in some Y3 QB/TE/WR routes, so the mechanism is not strictly RB-only; it is route-specific rather than universal.",
+    "Existing uncertainty is only discrete state uncertainty. It preserves some elite-state paths but provides no within-state upside beyond the elite point support, so it only partially contains conditional-mean compression."
+  ],
+  "dev_rb_y3_nonveteran_elasticity_percentile_rank_low_is_stronger_pull": 0.5,
+  "decision_boundary": "Hold PR #147 for one bounded architecture research question: can conditional-production means be made more player-responsive in the specific weak route/state cells using a preregistered hierarchical/partial-pooling architecture that preserves state-probability authority and avoids global retuning? Do not fit it in this diagnostic."
+}

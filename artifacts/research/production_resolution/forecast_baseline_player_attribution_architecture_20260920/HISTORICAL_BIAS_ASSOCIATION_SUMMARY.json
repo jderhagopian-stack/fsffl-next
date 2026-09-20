@@ -1,0 +1,6 @@
+{
+  "eligible_cells": 20,
+  "pearson_forecast_elasticity_vs_bias_slope": 0.3797960250064971,
+  "spearman_forecast_elasticity_vs_bias_slope": 0.5172932330827067,
+  "interpretation": "descriptive route-level association only; not causal authority"
+}

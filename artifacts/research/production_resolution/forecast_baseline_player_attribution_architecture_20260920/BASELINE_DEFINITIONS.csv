@@ -1,0 +1,6 @@
+index,quantity,learned_from,acts_on,baseline_kind
+0,state-boundary/source-state anchor,all prior positive player-seasons within position at source-year cutoff; 5 log1p k-means-like centers and midpoint boundaries,source state assignment and age/state residual construction,population state anchor
+1,state probability persistence intercept/categorical structure,pooled chronology-correct rows; QB separate layer vs non-QB shared layer,p_out / active probability,probability baseline
+2,ordered positive-state logits,active future rows; QB separate vs non-QB shared; position/source-state/horizon/experience/age/role categories plus player covariates,depth/usable/starter/premium/elite state mix conditional on active,probability/state-mix baseline
+3,D1 production intercept + position + source-state + future-state + position-by-future-state terms,"all active target rows for horizon, pooled across positions with categorical interactions",conditional state means,conditional-production population/state anchor
+4,D0 production intercept + position + source-state terms,"all active target rows for Y3, pooled across positions",single active conditional mean used for every positive state,conditional-production population anchor
