@@ -1,0 +1,27 @@
+{
+  "M2": "not authorized because prior identifiability gate failed",
+  "bootstrap_reps": 2000,
+  "candidate": "M1 two-component active log-retention mixture",
+  "final_classification": "C. TWO-COMPONENT REPRESENTATION NOT SUPPORTED",
+  "historical_predictions_rows": 10336,
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "holdout_evaluation_count": 1,
+  "holdout_source_seasons": [
+    2021,
+    2022
+  ],
+  "holdout_touched": true,
+  "phase2_q3_rows": 31218,
+  "phase2_q3_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+  "preregistered_commit": "65340db8caff6a9fd16cb5334f3f9f6532987e51",
+  "quantile_grid_points": 199,
+  "research_start_head": "acd0ede3f5e09cf1e559707d04ffc8baa86a0d13",
+  "schema_version": "fsffl-dev-rb-two-component-provenance-v1",
+  "selection_source_seasons": [
+    2014,
+    2020
+  ],
+  "source_percentile_parity_max_abs": 1.1102230246251565e-16,
+  "source_points_parity_max_abs": 0.0,
+  "target_points_parity_max_abs": 0.0
+}
