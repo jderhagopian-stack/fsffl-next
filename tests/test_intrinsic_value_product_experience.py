@@ -23,7 +23,7 @@ def _node() -> str:
 def test_value_lens_preserves_four_value_coordinates_and_unavailability():
     script = _text("intrinsic_value_experience.js")
     assert "Broad Market Value" in script
-    assert "FSFFL Intrinsic Value" in script
+    assert "FSFFL Intrinsic v1 · replacement surplus" in script
     assert "League Market Value" in script
     assert "Team Utility" in script
     assert "Not production-ready" in script
@@ -70,7 +70,7 @@ def test_value_lens_surfaces_confidence_and_provenance_secondarily():
     assert "forecast_policy_version" in script
     assert "base_forecast_model_version" in script
     assert "replacement_context_version" in script
-    assert "What exactly is FSFFL Intrinsic Value?" in script
+    assert "What exactly is replacement-surplus Intrinsic v1?" in script
 
 
 def test_value_lens_has_intentional_mobile_layout():
