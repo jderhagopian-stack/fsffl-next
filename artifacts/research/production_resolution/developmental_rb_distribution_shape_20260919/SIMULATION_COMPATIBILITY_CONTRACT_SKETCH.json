@@ -1,0 +1,24 @@
+{
+  "double_counting_guard": "Collapse/disappearance is represented by Forecast state probability; within-state production spread represents conditional production uncertainty. Simulation samples from these once.",
+  "forecast_emission_if_future_candidate_earns": [
+    "existing state probabilities p_out,p_depth,p_usable,p_starter,p_premium,p_elite",
+    "existing D1 state-conditional central means",
+    "within-state distribution metadata sufficient to reconstruct conditional quantiles or sample support",
+    "provenance/support metadata including training cutoff and effective sample size",
+    "overall expected points and uncertainty summaries derived from the same distribution"
+  ],
+  "production_authority_change": false,
+  "research_only": true,
+  "schema_version": "fsffl-dev-rb-distribution-shape-simulation-contract-sketch-v1",
+  "simulation_consumption": [
+    "sample future state exactly once from Forecast state probabilities",
+    "if out, realize zero",
+    "if positive state, sample one production realization from the Forecast-provided within-state distribution",
+    "do not apply a second collapse haircut or independent RB downside multiplier"
+  ],
+  "value_consumption": [
+    "consume governed Forecast expectation/distribution outputs",
+    "do not create an additional collapse penalty already represented in Forecast",
+    "retain Value authority for economic mapping rather than probabilistic outcome generation"
+  ]
+}
