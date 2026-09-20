@@ -31,7 +31,7 @@ def test_market_percentile_and_age_stay_separate_while_dead_additive_market_tota
     assert "Number.isInteger(value)?value.toFixed(0):value.toFixed(1)" in source
     assert "<th>Market percentile</th>" in html
     assert 'value="total_market_value">Total market value' not in html
-    assert 'value="total_cardinal_value">Franchise value' in html
+    assert 'value="total_cardinal_value">FSFFL Cardinal Value' in html
     assert "team_market_value_portfolios" in source
     assert "team_cardinal_portfolios" in source
     assert "<th>Dynasty value</th>" not in html
