@@ -68,10 +68,10 @@ def test_owner_dossier_is_mobile_first() -> None:
     assert ".behavior-scan-signals{display:grid;grid-template-columns:repeat(4" in css
     assert "@media(max-width:760px)" in css
     assert ".behavior-scan-signals{grid-template-columns:1fr}" in css
-    assert ".behavior-primary-evidence,.behavior-position-evidence{grid-template-columns:1fr}" in css
+    assert ".behavior-grid{grid-template-columns:1fr}" in css
 
 
-def test_behavioral_lazy_asset_has_dedicated_release_token() -> None:
+def test_behavioral_lazy_asset_has_current_release_token() -> None:
     shell = _text("product_shell.js")
     source = _text("behavioral_intelligence.js")
     assert "'20260920-owner-dossier1'" in shell
