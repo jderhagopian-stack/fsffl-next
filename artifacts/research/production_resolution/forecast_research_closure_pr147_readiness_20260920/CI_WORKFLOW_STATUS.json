@@ -1,0 +1,32 @@
+{
+  "pr147_head": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "runs": [
+    {
+      "run_id": 35469384721,
+      "name": "CI",
+      "status": "completed",
+      "conclusion": "success",
+      "classification": "VALID_CURRENT_HEAD_CODE_SIGNAL"
+    },
+    {
+      "run_id": 35469384905,
+      "name": "Private-beta Intrinsic live diagnostics",
+      "status": "completed",
+      "conclusion": "success",
+      "classification": "VALID_CURRENT_HEAD_DIAGNOSTIC_SIGNAL"
+    },
+    {
+      "run_id": 35469384936,
+      "name": "Build private-beta I1 activation artifacts",
+      "status": "completed",
+      "conclusion": "failure",
+      "classification": "EXTERNAL_NETWORK_PROVIDER_DOWNLOAD_FAILURE",
+      "detail": "nflreadpy download of nflverse stats_player_reg_2020.parquet timed out at release-assets.githubusercontent.com after 180s; setup/build preceding steps passed; no model/code assertion failed."
+    }
+  ],
+  "mergeable": true,
+  "code_defect_red_check": false,
+  "route_authority_mismatch_means_final_merge_evidence_not_yet_complete": true,
+  "rerun_now": "NOT_USEFUL_BEFORE_REQUIRED_ROUTE_IMPLEMENTATION",
+  "post_implementation_required": "Rerun CI + focused P0/contract parity + current-head sanity; retry activation workflow only if it remains a required merge check or for clean operational evidence."
+}

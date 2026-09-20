@@ -1,0 +1,25 @@
+{
+  "status": "PASS_WITH_ROUTE_VERSION_RECONCILIATION_REQUIRED_AFTER_IMPLEMENTATION",
+  "forecast": {
+    "owns": "state probabilities and conditional production distributions/uncertainty",
+    "current_runtime": "P0 D0/D1 replay",
+    "required_route_changes": [
+      "Y3 QB|developmental D0->D1",
+      "Y3 RB|established D0->D1"
+    ]
+  },
+  "simulation": {
+    "owns": "sampling realized paths from Forecast evidence",
+    "closure_action": "none",
+    "independent_rb_collapse_haircut_found_in_audited_pr147_path": false
+  },
+  "value_intrinsic_shapley": {
+    "consumes": "Forecast probabilities/state means/anticipated points; computes probability-weighted state Shapley and 0.85 annual discount",
+    "extra_rb_collapse_haircut": false,
+    "closure_action": "none"
+  },
+  "presentation": {
+    "closure_action": "none"
+  },
+  "required_after_route_implementation": "Bump/record route-authority model version/provenance so changed Y3 route semantics cannot masquerade as the older P0-only route version."
+}

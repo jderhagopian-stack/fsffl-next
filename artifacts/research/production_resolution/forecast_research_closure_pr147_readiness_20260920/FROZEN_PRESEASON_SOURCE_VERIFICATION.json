@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "frozen_sources": [
+    "fftoday",
+    "razzball"
+  ],
+  "raw_observations": 1675,
+  "players": 335,
+  "baseline_record_id": 145,
+  "source_artifact_id": 94,
+  "baseline_raw_equals_source_raw": true,
+  "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+  "payload_sha256": "cea4126d353f85f1e1fe66bfba4214e204277f487be04462dbe18fb59ae0f387",
+  "fresh_or_live_provider_substitution": false,
+  "year1_direct_scoring_from_frozen_raw": true,
+  "standard_coordinate_direct_scoring_from_same_raw": true
+}

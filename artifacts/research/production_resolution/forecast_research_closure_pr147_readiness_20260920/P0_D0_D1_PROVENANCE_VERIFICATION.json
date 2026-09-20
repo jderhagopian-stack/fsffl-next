@@ -1,0 +1,25 @@
+{
+  "classification": "PASS_WITH_TWO_ROUTE_AUTHORITY_MISMATCHES_OUTSIDE_FIT",
+  "pr147_head": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "research_head": "97910b07a6061a15340b87c5361a8b026e31d49a",
+  "main_head": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "p0_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "p0_current_source_sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+  "standard_y1_board_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9",
+  "connected_league_y1_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+  "frozen_preseason_payload_sha256": "cea4126d353f85f1e1fe66bfba4214e204277f487be04462dbe18fb59ae0f387",
+  "frozen_raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+  "frozen_sources": [
+    "fftoday",
+    "razzball"
+  ],
+  "preseason_evaluation_as_of": "2026-09-10T21:36:41.346326Z",
+  "p0_internal_coordinate": "standard/non-PPR direct score from same frozen raw stats",
+  "product_y1": "direct connected-league scoring from same frozen raw stats",
+  "future_translation": "same-player connected-league Y1 / standard Y1 ratio",
+  "position_level_bridge_authoritative": false,
+  "old_separate_m1a_layer": false,
+  "old_separate_two_prior_layer": false,
+  "d1_internal_prior2_features_preserved": true,
+  "fit_or_refit_in_closure_audit": false
+}

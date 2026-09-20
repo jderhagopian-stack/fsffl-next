@@ -1,0 +1,13 @@
+index,evidence_or_test,current_status,reason,premerge_action
+0,Exact embedded P0 package/source byte hashes,VALID,Package/source unchanged; current unit test passes,Retain hash assertions after route overlay
+1,335-row current P0 replay against old corrected board,VALID FOR OLD P0 ROUTES ONLY,Current code unchanged since be637 except evidence artifacts,REPLACE/EXTEND with final-authority board after two route changes
+2,Frozen FFToday + Razzball preseason lineage,VALID,Read-only durable lineage; no provider refetch required,No rerun except hash/provenance assertion
+3,Player-specific league scoring translation,VALID,Promoted v2 player-ratio runtime; current CI green,Rerun focused scoring tests after route change; expected probabilities unchanged
+4,Current-head CI,GREEN,Run 35469384721 success,Rerun after route code change
+5,Private-beta Intrinsic live diagnostics,GREEN,Run 35469384905 success,Rerun after route code change
+6,Activation artifact workflow,RED_EXTERNAL,Run 35469384936 timed out downloading nflverse release asset,Retry after implementation only if merge-required/operational evidence desired; not a model defect
+7,Final route parity: QB Y3 developmental,MISSING,PR currently D0; final authority D1,REQUIRED BEFORE MERGE and then verify all affected players use existing frozen D1
+8,Final route parity: RB Y3 established,MISSING,PR currently D0; final authority D1,REQUIRED BEFORE MERGE and then verify all affected players use existing frozen D1
+9,Final current-head 335-player standard/connected boards,STALE_TO_FINAL_AUTHORITY,Existing board is current PR head semantics but predates earned route changes,Regenerate after bounded route implementation
+10,Final representative QB/RB/WR/TE sanity board,STALE_TO_FINAL_AUTHORITY,Existing trace remains valid for current code but two route classes are wrong relative to final authority,"Regenerate after bounded route implementation; credibility only, no tuning"
+11,Downstream Shapley contract parity,VALID_ARCHITECTURE,No downstream redesign required,Rerun contract/unit tests after route version change

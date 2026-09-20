@@ -1,0 +1,27 @@
+{
+  "classification": "A. READY FOR BOUNDED FINAL IMPLEMENTATION",
+  "reason": "Forecast research authority is settled. PR #147 preserves the correct P0 fit/source/scoring/downstream foundation but still carries the older P0 Y3 route selection in exactly two cells: QB developmental and RB established. Those two cells must switch to the already-frozen D1 production representation, with no refit. All other route cells either match final authority or are intentionally retained with caveats.",
+  "required_before_merge": [
+    "Implement Y3 QB|developmental D1 route authority",
+    "Implement Y3 RB|established D1 route authority",
+    "Version/provenance the final route authority without changing package hash",
+    "Regenerate route-correct 335-player standard/connected boards and sanity evidence",
+    "Rerun CI/focused route-scoring-downstream tests on the new PR head"
+  ],
+  "not_blockers": [
+    "Y3 developmental RB unresolved high-magnitude/elite calibration: retained as D1 uncertainty, no correction",
+    "Five weakened veteran cells: retain current routes with evidence caveat; future research only",
+    "Current activation-workflow failure: external nflverse release-asset read timeout, not a model/code defect"
+  ],
+  "do_not_implement": [
+    "p75/p90/p95 thresholds or states",
+    "gap-aware/partial-pooling developmental-RB correction",
+    "new veteran model",
+    "old Sep-18 M1a/prior-two hybrid",
+    "position-average future scoring bridge",
+    "independent downstream RB collapse haircut"
+  ],
+  "merge_authorized": false,
+  "deploy_authorized": false,
+  "new_research_authorized": false
+}
