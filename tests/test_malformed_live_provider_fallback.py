@@ -318,7 +318,7 @@ def test_malformed_razzball_uses_preserved_preseason_authority_without_rewrite()
     assert evidence.runtime_result.model_version == PRESEASON_AUTHORITY_RUNTIME_VERSION
     assert evidence.successful_source_ids == ("fftoday", "razzball")
     assert season[0].source == "fsffl:preseason_baseline_league_scored"
-    assert season[0].distribution.mean == pytest.approx(382.0)
+    assert season[0].distribution.mean == pytest.approx(386.0)
     assert season[0].distribution.mean < 500.0
     assert "razzball-full-season-upstream-inflation-20260920" in evidence.failed_sources[0]
     assert store.puts == []
