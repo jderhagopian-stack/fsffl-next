@@ -149,6 +149,19 @@ def raw_razz_map(rows) -> dict[tuple[str, str], Any]:
     return out
 
 
+STAT_TO_METRIC_VALUE = {
+    "pass_yd": ForecastMetric.PASS_YARDS.value,
+    "pass_td": ForecastMetric.PASS_TD.value,
+    "pass_int": ForecastMetric.INTERCEPTIONS.value,
+    "rush_yd": ForecastMetric.RUSH_YARDS.value,
+    "rush_td": ForecastMetric.RUSH_TD.value,
+    "rec": ForecastMetric.RECEPTIONS.value,
+    "rec_yd": ForecastMetric.REC_YARDS.value,
+    "rec_td": ForecastMetric.REC_TD.value,
+    "fum_lost": ForecastMetric.FUMBLES_LOST.value,
+}
+
+
 def observation_map(observations) -> dict[tuple[str, str], float]:
     return {
         (row.player_id, row.metric.value): float(row.distribution.mean)
