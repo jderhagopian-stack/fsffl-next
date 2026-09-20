@@ -1,0 +1,40 @@
+{
+  "candidate_families": [
+    "S1_state_conditioned_empirical_spread",
+    "S2_source_magnitude_conditioned_empirical_spread"
+  ],
+  "final_classification": "B. DISTRIBUTIONAL DIRECTION SUPPORTED, BUT NO CANDIDATE EARNS AUTHORITY",
+  "frozen_bandwidth_S2": 0.2,
+  "historical_predictions_rows": 10336,
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "holdout_evaluation_count": 1,
+  "holdout_touched_for_new_candidates": true,
+  "locked_source_seasons": [
+    2021,
+    2022
+  ],
+  "main_head": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "main_unchanged_expected": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+  "phase2_artifact_zip_sha256": "f7e9cfeee05687d5eb44085124c112c70d812ba95f6d30ca1213c6f92d1ac6ff",
+  "phase2_panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+  "phase2_q3_rows_sha256": "9c504c9e765bd113406b59185a3cc80d23cca2401ecf31857692e15720b29063",
+  "pr147_head": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "pr147_unchanged_expected": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "preholdout_decision_persisted_head": "60c370e9f5103ac14f2d929bb07eab9eaa97d0a7",
+  "preregistered_candidate_commit": "fbfddf724be310095925042fcff30d7f6e58f83b",
+  "research_start_head": "051e550ae7728134bd18188aeff1cc348ad576ba",
+  "schema_version": "fsffl-dev-rb-distribution-shape-preholdout-v1",
+  "source_reconstruction_parity": {
+    "governed_rows": 30078,
+    "left_only": 0,
+    "matched_rows": 30078,
+    "max_current_age_state_resid_z_diff": 8.881784197001252e-16,
+    "max_prior_age_state_resid_z_diff": 8.881784197001252e-16,
+    "max_source_points_diff": 0.0,
+    "max_target_points_diff": 0.0,
+    "rebuilt_rows": 30078,
+    "right_only": 0,
+    "source_state_mismatch": 0,
+    "target_state_mismatch": 0
+  }
+}
