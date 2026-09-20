@@ -21,7 +21,7 @@ def test_trade_center_name_search_only_matches_player_labels() -> None:
 
 def test_trade_center_filters_do_not_create_value_or_decision_logic() -> None:
     assert "fsffl_cardinal_values" in TRADE_JS
-    assert "FSFFL Value is market context only" in TRADE_JS
+    assert "FSFFL Cardinal Market Value is market context only" in TRADE_JS
     assert "acceptance probability" in TRADE_JS
     assert "package economics" in TRADE_JS
     assert "provisionalScoreFor" not in TRADE_JS
