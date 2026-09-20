@@ -19,7 +19,7 @@ def test_live_forecast_uses_one_horizon_isolated_razzball_source_id() -> None:
     assert "RazzballLiveProjectionSource" not in runtime
     assert 'source_id="razzball"' in runtime
     assert "Full-season Razzball source that never reads rest-of-season pages." in razzball
-    assert "Never read the ROS pages" in razzball
+    assert "horizon-isolated" in razzball
 
 
 def test_live_ensemble_rejects_duplicate_provider_ids_and_equal_weights_sources() -> None:
