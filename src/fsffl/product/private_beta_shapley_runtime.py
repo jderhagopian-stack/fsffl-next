@@ -117,7 +117,7 @@ def _provenance(
     fact_coverage.update(future_contract.provenance)
     return CompletedSourceFactProvenance(
         source_version=future_contract.forecast_model_version,
-        schema_version=future_contract.contract_version,
+        schema_version="fsffl-redeveloped-forecast-fit-v1",
         providers=source_ids,
         fact_family_coverage=fact_coverage,
     )
