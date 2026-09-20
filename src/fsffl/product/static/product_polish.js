@@ -180,7 +180,7 @@ function installProductPolish(){
   const rosterLead=document.querySelector('.roster-panel .lead');
   if(rosterLead){
     rosterLead.removeAttribute('title');
-    rosterLead.innerHTML='<strong>FSFFL Value uses the authoritative NEXT-3 market-cardinal score.</strong> Market percentile remains a separate governed market-position measure.';
+    rosterLead.innerHTML='<strong>FSFFL Cardinal Value uses the authoritative NEXT-3 market-cardinal score.</strong> Market percentile remains a separate governed market-position measure.';
   }
   const style=document.createElement('style');
   style.textContent=`
