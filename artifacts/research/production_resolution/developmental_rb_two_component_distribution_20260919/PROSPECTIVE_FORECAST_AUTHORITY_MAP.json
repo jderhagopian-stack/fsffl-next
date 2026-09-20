@@ -1,0 +1,13 @@
+{
+  "M2": "not authorized",
+  "Y2_developmental_RB": "D1 retained; M1 no-harm fails",
+  "Y3_developmental_RB": "P0/D1 remains frozen production control; M1 fails authority",
+  "next_boundary": "Any further active-production distribution family requires separate management authorization and fresh preregistration; locked 2021-2022 may not be reused to tune it.",
+  "prior_earned": [
+    "proper distributional scoring methodology",
+    "Y3 developmental QB D0->D1",
+    "Y3 established RB D0->D1",
+    "WR/TE P0 retained"
+  ],
+  "schema_version": "fsffl-dev-rb-two-component-authority-map-v1"
+}
