@@ -7,6 +7,7 @@ from typing import Any, cast
 
 import pytest
 
+from fsffl.forecast.future_contract import FUTURE_FORECAST_CONTRACT_VERSION
 from fsffl.forecast.integrated_i1 import I1ForecastInput, I1ForecastResult, STATE_NAMES
 from fsffl.forecast.league_scoring import derive_league_fantasy_point_forecasts
 from fsffl.forecast.models import (
@@ -463,6 +464,8 @@ def test_contract_future_i1_provenance_contains_exactly_one_player_scoring_trans
 
     assert contract.completed_source_provenance is not None
     coverage = contract.completed_source_provenance.fact_family_coverage
+    assert coverage["future_forecast_contract_version"] == FUTURE_FORECAST_CONTRACT_VERSION
+    assert coverage["future_forecast_scoring_coordinate"] == "connected_league_fantasy_points"
     assert coverage["future_i1_scoring_version"] == FUTURE_I1_PLAYER_SCORING_VERSION
     assert coverage["future_i1_scoring_method"] == "player_specific_year1_league_standard_ratio"
     assert coverage["p0_final_route_authority_sha256"] == P0_FINAL_ROUTE_AUTHORITY_SHA256
