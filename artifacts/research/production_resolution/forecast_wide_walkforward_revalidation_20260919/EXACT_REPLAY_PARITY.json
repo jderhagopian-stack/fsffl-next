@@ -1,0 +1,16 @@
+{
+  "schema_version": "fsffl-y2-origin-2023-replay-parity-v1",
+  "validation_origin": 2022,
+  "compared_rows": 596,
+  "max_abs_pred_D0_diff": 2.842170943040401e-14,
+  "max_abs_pred_D1_diff": 2.842170943040401e-14,
+  "max_abs_p_active_diff": 1.1102230246251565e-16,
+  "pass": true,
+  "generated_2023_Y2_rows": 558,
+  "generated_2023_position_counts": {
+    "QB": 74,
+    "RB": 154,
+    "WR": 213,
+    "TE": 117
+  }
+}

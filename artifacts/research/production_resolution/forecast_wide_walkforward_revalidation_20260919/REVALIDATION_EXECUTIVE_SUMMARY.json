@@ -1,0 +1,19 @@
+{
+  "coordinate": {
+    "Y2": "2014-2023, 10 origins, 5726 rows",
+    "Y3": "2014-2022, 9 origins, 5168 rows"
+  },
+  "overall_classification": "B. MIXED REVALIDATION - SPECIFIC ROUTES REQUIRE NEW RESEARCH",
+  "cells": {
+    "confirmed": 18,
+    "weakened": 5,
+    "unresolved": 1,
+    "reversed": 0
+  },
+  "magnitude": {
+    "smooth_nonlinear": 16,
+    "insufficient": 8,
+    "stable_change_point": 0
+  },
+  "next_target": "Y3 developmental-RB threshold-free continuous-magnitude conditional-production/uncertainty calibration: preserve D1 state/proper-score strength while resolving the supported extreme-source active-production underprediction without introducing p90/p95 model states."
+}

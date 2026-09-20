@@ -1,0 +1,135 @@
+{
+  "schema_version": "fsffl-forecast-wide-walkforward-revalidation-final-v1",
+  "classification": "B. MIXED REVALIDATION - SPECIFIC ROUTES REQUIRE NEW RESEARCH",
+  "classification_basis": [
+    "18 of 24 position x horizon x career-stage cells are confirmed; 5 are weakened and 1 remains unresolved; no frozen decision is strongly reversed.",
+    "The prior proper-score-earned Y3 developmental-QB D0->D1 and established-RB D0->D1 decisions both strengthen under the expanded walk-forward coordinate.",
+    "Veteran fallback routes remain temporally/uncertainty limited rather than earning clean reversal, so they are flagged for later bounded review rather than silently changed.",
+    "Y3 developmental-RB D1 remains strongly superior to D0 on proper score across every origin, but its high-end conditional-production calibration remains structurally unresolved.",
+    "Continuous magnitude diagnostics support smooth nonlinear behavior in adequately supported non-veteran routes; no route earns a stable hard percentile transition under the preregistered recurrence rule."
+  ],
+  "decision_counts": {
+    "CONFIRMED": 18,
+    "WEAKENED": 5,
+    "UNRESOLVED": 1
+  },
+  "confirmed_prior_earned_switches": [
+    {
+      "position": "QB",
+      "horizon": 3,
+      "career_stage": "developmental",
+      "research_current": "D1",
+      "pooled_crps_gain_current_vs_alt": 10.958182978197325,
+      "cluster_ci_low": 7.449253149667952,
+      "cluster_ci_high": 14.711564835446657,
+      "origin_share_improved": 1.0,
+      "pooled_mae_gain_current_vs_alt": -1.1638733762139168,
+      "mae_ci_low": -4.324730019159573,
+      "mae_ci_high": 1.914390211498069,
+      "revalidation_disposition": "CONFIRMED"
+    },
+    {
+      "position": "RB",
+      "horizon": 3,
+      "career_stage": "established",
+      "research_current": "D1",
+      "pooled_crps_gain_current_vs_alt": 2.69382337073777,
+      "cluster_ci_low": 1.3671808559975795,
+      "cluster_ci_high": 4.015561740946593,
+      "origin_share_improved": 1.0,
+      "pooled_mae_gain_current_vs_alt": -0.3494871462451672,
+      "mae_ci_low": -0.8712546788257675,
+      "mae_ci_high": 0.1620263824319883,
+      "revalidation_disposition": "CONFIRMED"
+    }
+  ],
+  "weakened_cells": [
+    {
+      "position": "RB",
+      "horizon": 3,
+      "career_stage": "veteran",
+      "research_current": "D0",
+      "pooled_crps_gain_current_vs_alt": -0.2031456454971309,
+      "cluster_ci_low": -1.095427376335542,
+      "cluster_ci_high": 0.7736426057082991,
+      "pooled_mae_gain_current_vs_alt": 1.2185246211560965,
+      "mae_ci_low": -0.0165239758074372,
+      "mae_ci_high": 2.342202888292147
+    },
+    {
+      "position": "WR",
+      "horizon": 2,
+      "career_stage": "veteran",
+      "research_current": "D1",
+      "pooled_crps_gain_current_vs_alt": 1.3055892661371555,
+      "cluster_ci_low": -0.3073373755824453,
+      "cluster_ci_high": 2.9134832385228653,
+      "pooled_mae_gain_current_vs_alt": -0.9696909506503558,
+      "mae_ci_low": -1.9325497915613523,
+      "mae_ci_high": -0.1090229376466792
+    },
+    {
+      "position": "WR",
+      "horizon": 3,
+      "career_stage": "veteran",
+      "research_current": "D0",
+      "pooled_crps_gain_current_vs_alt": -0.1324254054346272,
+      "cluster_ci_low": -0.8438635815344356,
+      "cluster_ci_high": 0.9346546665886698,
+      "pooled_mae_gain_current_vs_alt": 0.6948949158603417,
+      "mae_ci_low": 0.2790291460932327,
+      "mae_ci_high": 1.135898037185233
+    },
+    {
+      "position": "TE",
+      "horizon": 2,
+      "career_stage": "veteran",
+      "research_current": "D1",
+      "pooled_crps_gain_current_vs_alt": 1.7499167778120832,
+      "cluster_ci_low": -0.0424103257097639,
+      "cluster_ci_high": 4.299627160258086,
+      "pooled_mae_gain_current_vs_alt": -0.1896540257688252,
+      "mae_ci_low": -1.7039163973355804,
+      "mae_ci_high": 2.1419122485391
+    },
+    {
+      "position": "TE",
+      "horizon": 3,
+      "career_stage": "veteran",
+      "research_current": "D0",
+      "pooled_crps_gain_current_vs_alt": -0.4194740360728709,
+      "cluster_ci_low": -1.7223854939154477,
+      "cluster_ci_high": 0.7632684665661517,
+      "pooled_mae_gain_current_vs_alt": 0.1639716448927501,
+      "mae_ci_low": -0.8538697148232628,
+      "mae_ci_high": 0.8466343696847658
+    }
+  ],
+  "magnitude_structure_counts": {
+    "SMOOTH_NONLINEAR": 16,
+    "INSUFFICIENT_EVIDENCE": 8
+  },
+  "stable_hard_change_point_cells": 0,
+  "max_origin_recurrence_for_any_piecewise_knot": 0.5,
+  "developmental_RB_Y3_structure": {
+    "classification": "SMOOTH_NONLINEAR",
+    "pooled_best_piecewise_knot": 0.9,
+    "piecewise_origin_recurrence": 0.3333333333333333,
+    "bootstrap_best_knot_share": 0.4266666666666667,
+    "quadratic_curvature_sign_stability": 1.0,
+    "full_cell_D1_vs_D0_crps_gain": 5.547904023814499,
+    "full_cell_cluster_ci": [
+      4.515310680538699,
+      6.473794124513312
+    ],
+    "p90plus_active_retention_bias": -0.0323660254592067,
+    "p95plus_active_retention_bias": -0.1166534107510352
+  },
+  "next_research_target": "Y3 developmental-RB threshold-free continuous-magnitude conditional-production/uncertainty calibration: preserve D1 state/proper-score strength while resolving the supported extreme-source active-production underprediction without introducing p90/p95 model states.",
+  "fresh_holdout_policy": "No pristine current Y3 holdout remains; use canonical repeated/nested walk-forward now and preserve source-2023 -> target-2026 Y3 prospectively.",
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge": false,
+  "deploy": false
+}

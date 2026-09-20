@@ -1,0 +1,75 @@
+{
+  "schema_version": "fsffl-forecast-wide-walkforward-revalidation-v1",
+  "research_only": true,
+  "candidate_fit": false,
+  "coordinate": {
+    "Y2_origins": [
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023
+    ],
+    "Y3_origins": [
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "Y2_rows": 5726,
+    "Y3_rows": 5168
+  },
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "y2_2023_prediction_sha256": "70b9caf6a8255155a2c17298fe0ab78f7a6d29a39d0e04578a436a9cd134433b",
+  "p0_routes": {
+    "QB|developmental": "D0",
+    "QB|established": "D1",
+    "QB|veteran": "D1",
+    "RB|developmental": "D1",
+    "RB|established": "D0",
+    "RB|veteran": "D0",
+    "WR|developmental": "D1",
+    "WR|established": "D1",
+    "WR|veteran": "D0",
+    "TE|developmental": "D1",
+    "TE|established": "D1",
+    "TE|veteran": "D0"
+  },
+  "research_y3_routes": {
+    "QB|developmental": "D1",
+    "QB|established": "D1",
+    "QB|veteran": "D1",
+    "RB|developmental": "D1",
+    "RB|established": "D1",
+    "RB|veteran": "D0",
+    "WR|developmental": "D1",
+    "WR|established": "D1",
+    "WR|veteran": "D0",
+    "TE|developmental": "D1",
+    "TE|established": "D1",
+    "TE|veteran": "D0"
+  },
+  "bootstrap_reps": 2000,
+  "block_bootstrap_reps": 5000,
+  "structural_bootstrap_reps": 300,
+  "source_magnitude_knot_grid": [
+    0.6,
+    0.7,
+    0.8,
+    0.9
+  ],
+  "production_authority_change": false,
+  "pr147_change": false,
+  "merge": false,
+  "deploy": false
+}
