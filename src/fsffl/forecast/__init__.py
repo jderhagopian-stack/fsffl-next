@@ -18,6 +18,13 @@ from .fallback import (
     PROVISIONAL_POSITION_FLOOR_SOURCE,
     attach_provisional_position_floor_forecasts,
 )
+from .future_contract import (
+    FUTURE_FORECAST_CONTRACT_VERSION,
+    ForecastUncertaintyKind,
+    FutureForecastContract,
+    FutureForecastScenario,
+    FuturePlayerHorizonForecast,
+)
 from .intrinsic_v1 import (
     INTRINSIC_V1_FORECAST_POLICY_VERSION,
     ForecastEvidenceStrength,
@@ -39,6 +46,7 @@ __all__ = [
     "CareerTransitionCohort",
     "CareerTransitionEvidence",
     "CareerTransitionSample",
+    "FUTURE_FORECAST_CONTRACT_VERSION",
     "ForecastBundle",
     "ForecastDistribution",
     "ForecastEvidenceStrength",
@@ -46,6 +54,10 @@ __all__ = [
     "ForecastMetric",
     "ForecastObservation",
     "ForecastScore",
+    "ForecastUncertaintyKind",
+    "FutureForecastContract",
+    "FutureForecastScenario",
+    "FuturePlayerHorizonForecast",
     "INTRINSIC_V1_FORECAST_POLICY_VERSION",
     "IntrinsicV1ForecastHorizon",
     "IntrinsicV1ForecastMethod",
