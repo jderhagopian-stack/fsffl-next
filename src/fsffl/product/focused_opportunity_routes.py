@@ -68,7 +68,7 @@ def install_focused_opportunity_routes(
             for row in (values.fsffl_cardinal_values if values is not None else ())
         }
         if not cardinal:
-            raise HTTPException(status_code=409, detail="Market Focus requires current authoritative FSFFL Value")
+            raise HTTPException(status_code=409, detail="Market Focus requires current authoritative FSFFL Cardinal Market Value")
 
         browser = build_trade_center_browser_view(league_state, focal_team_id=focal_team_id)
         canonical = candidate_builder(runtime, browser, cardinal)
