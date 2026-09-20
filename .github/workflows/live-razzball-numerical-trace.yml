@@ -1,19 +1,6 @@
 name: Live Razzball numerical trace
 
 on:
-  push:
-    branches:
-      - correctness/forecast-value-authority-reconciliation-20260920
-    paths:
-      - "scripts/run_live_razzball_numerical_trace.py"
-      - "scripts/materialize_shapley_comparison_audit.py"
-      - ".github/workflows/live-razzball-numerical-trace.yml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "scripts/run_live_razzball_numerical_trace.py"
-      - ".github/workflows/live-razzball-numerical-trace.yml"
   workflow_dispatch:
 
 permissions:
