@@ -255,7 +255,11 @@ class PrivateBetaShapleyContractLoader:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
                 reason=f"Authoritative future Forecast contract unavailable: {exc}",
-                missing_required_fact_families=("future_forecast_contract",),
+                # Preserve the established external missing-evidence classification
+                # for current P0 authority failures. The generic contract is the
+                # transport boundary; this exception still means the authoritative
+                # P0 future coordinate could not be materialized.
+                missing_required_fact_families=("p0_future_forecast_coordinate",),
                 forecast_model_version=P0_FORECAST_VERSION,
             )
 
