@@ -10,7 +10,7 @@ def test_analytics_terminal_exposes_behavior_without_revaluing_assets() -> None:
     assert "['behavior','Behavior']" in source
     assert 'data-at-tab="${key}"' in source
     assert "Observed owner behavior" in source
-    assert "without changing general FSFFL Value" in source
+    assert "without changing governed Value coordinates" in source
     assert "acceptance percentage" in source
     assert "consolidation_trade_count" in source
     assert "diversification_trade_count" in source
