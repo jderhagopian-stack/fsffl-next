@@ -40,4 +40,4 @@ def test_franchise_and_simulator_copy_do_not_hide_value_coordinate() -> None:
     franchise = (STATIC / "my_team_dashboard.js").read_text(encoding="utf-8")
     simulator = (STATIC / "simulator.js").read_text(encoding="utf-8")
     assert "Your three highest current FSFFL Cardinal Market Values are" in franchise
-    assert "Ownership and existing Value evidence remain unchanged." in simulator
+    assert "Ownership and governed Value coordinates remain unchanged." in simulator
