@@ -1,0 +1,52 @@
+{
+  "S1": {
+    "expected_mean_max_abs_diff_locked": 5.684341886080802e-14,
+    "expected_mean_max_abs_diff_selection": 1.4210854715202004e-13,
+    "locked_brier4_gain": {
+      "ci_high": 0.03313742963800147,
+      "ci_low": -0.007545239008570354,
+      "gain_mean": 0.010168073006790018
+    },
+    "locked_crps_gain": {
+      "ci_high": 1.6866763659162147,
+      "ci_low": 0.3407539080522109,
+      "gain_mean": 1.010101533078781
+    },
+    "selection_brier4_gain": {
+      "ci_high": 0.033063871061121894,
+      "ci_low": 0.0012589417926575255,
+      "gain_mean": 0.01642088142628394
+    },
+    "selection_crps_gain": {
+      "ci_high": 1.6459425516877213,
+      "ci_low": 0.8427373591892072,
+      "gain_mean": 1.2519282954542676
+    },
+    "status": "PASS_NO_HARM_NOT_PROMOTED"
+  },
+  "S2": {
+    "expected_mean_max_abs_diff_locked": 8.526512829121202e-14,
+    "expected_mean_max_abs_diff_selection": 1.4210854715202004e-13,
+    "locked_brier4_gain": {
+      "ci_high": 0.032513351807393044,
+      "ci_low": -0.007328935482242236,
+      "gain_mean": 0.010077233602528568
+    },
+    "locked_crps_gain": {
+      "ci_high": 1.7431851827782152,
+      "ci_low": 0.37150187892397746,
+      "gain_mean": 1.0088089216879148
+    },
+    "selection_brier4_gain": {
+      "ci_high": 0.03215370955870688,
+      "ci_low": 0.00205424815105527,
+      "gain_mean": 0.016014657995464445
+    },
+    "selection_crps_gain": {
+      "ci_high": 1.6425515745554604,
+      "ci_low": 0.8798951304421719,
+      "gain_mean": 1.244434141661436
+    },
+    "status": "PASS_NO_HARM_NOT_PROMOTED"
+  }
+}
