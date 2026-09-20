@@ -16,8 +16,10 @@ def test_design_system_is_loaded_without_changing_model_authority() -> None:
     index = _read(INDEX)
     design = _read(DESIGN)
     assert f"north_star_design_system.css?v={RELEASE}" in index
+    assert "approved hybrid North Star visual design system" in design
+    assert "premium dark, mobile-first consumer fantasy product" in design
     assert "Presentation only" in design
-    assert "do not create model scores" in design
+    assert "no model scores" in design
     assert "recommendations" in design
     assert "thresholds" in design
 
@@ -26,7 +28,8 @@ def test_canonical_system_prefers_open_stage_over_card_wall() -> None:
     design = _read(DESIGN)
     doc = _read(DOC)
     assert ".nx-stage{" in design
-    assert "border-top:3px solid" in design
+    assert "linear-gradient(180deg,#0d1a2b" in design
+    assert ".nx-reference-tabs{" in design
     assert ".nx-story-rail{" in design
     assert "Open composition rule" in doc
     assert "A section does **not** become a card merely because it needs grouping" in doc
@@ -35,6 +38,8 @@ def test_canonical_system_prefers_open_stage_over_card_wall() -> None:
 def test_reference_trade_uses_identity_exchange_visual_shift_and_story() -> None:
     source = _read(TRADE)
     for token in (
+        "nx-reference-tabs",
+        "nx-team-mark",
         "nx-identity-line",
         "nx-stage__title",
         "nx-exchange",
@@ -66,7 +71,8 @@ def test_mobile_reference_is_recomposed_not_desktop_shrunk() -> None:
     assert "grid-template-columns:1fr;" in design
     assert ".nx-impact__teams{display:none}" in design
     assert ".nx-story-rail{grid-template-columns:1fr" in design
-    assert ".nx-action-button{width:100%}" in design
+    assert ".nx-reference-tabs{display:grid" in design
+    assert ".nx-action-button{min-height:46px}" in design
 
 
 def test_design_spec_preserves_visual_grammar_and_progressive_disclosure() -> None:
@@ -83,5 +89,8 @@ def test_design_spec_preserves_visual_grammar_and_progressive_disclosure() -> No
         "Package Comparison",
         "Progressive disclosure",
         "Mobile composition",
+        "Approved product-family benchmark",
+        "premium dark, mobile-first",
+        "visual/product benchmark, not a model specification",
     ):
         assert phrase in doc
