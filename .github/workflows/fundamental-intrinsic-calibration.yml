@@ -1,0 +1,139 @@
+name: Fundamental Intrinsic Calibration
+# Final v6 merge gate: production-parity calibration, parameter sensitivity, structural economics, growth audit, primitive competition, and final nonlinear scale.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/extract_career_transition_panel.R'
+      - 'scripts/run_career_calibration.py'
+      - 'scripts/run_fundamental_intrinsic_residual_calibration.py'
+      - 'scripts/run_fundamental_intrinsic_v5c_calibration.py'
+      - 'scripts/run_fundamental_intrinsic_production_parity.py'
+      - 'scripts/run_fundamental_intrinsic_parameter_scale_audit.py'
+      - 'scripts/run_fundamental_intrinsic_reference_distribution.py'
+      - 'scripts/run_intrinsic_structural_audit_fast.py'
+      - 'scripts/run_intrinsic_growth_state_audit.py'
+      - 'scripts/run_intrinsic_distribution_growth_audit.py'
+      - 'scripts/run_intrinsic_marginal_franchise_challenge.py'
+      - 'scripts/run_intrinsic_marginal_franchise_challenge_fixed.py'
+      - 'scripts/run_intrinsic_marginal_frontier_followup.py'
+      - 'scripts/run_intrinsic_v6_final_scale.py'
+      - 'src/fsffl/forecast/intrinsic_v1.py'
+      - 'src/fsffl/forecast/non_qb_career_state.py'
+      - 'src/fsffl/value/intrinsic_economics.py'
+      - 'src/fsffl/value/intrinsic_v2.py'
+      - 'src/fsffl/value/intrinsic_v2_runtime.py'
+      - '.github/workflows/fundamental-intrinsic-calibration.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Build PIT football career panel
+        run: Rscript scripts/extract_career_transition_panel.R
+      - name: Reproduce prior Fundamental Intrinsic calibration
+        run: |
+          python scripts/run_fundamental_intrinsic_residual_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/fundamental-intrinsic
+          python scripts/run_fundamental_intrinsic_v5c_calibration.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Download frozen PIT Forecast evidence
+        run: |
+          mkdir -p artifacts/fundamental-intrinsic/frozen-pr131 artifacts/fundamental-intrinsic/frozen-qb
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/pr131.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          unzip -q /tmp/pr131.zip -d artifacts/fundamental-intrinsic/frozen-pr131
+          unzip -q /tmp/qb.zip -d artifacts/fundamental-intrinsic/frozen-qb
+      - name: Validate production Forecast parity and structural economics
+        run: |
+          python scripts/run_fundamental_intrinsic_production_parity.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Audit frozen parameters and customer scale
+        run: |
+          python scripts/run_fundamental_intrinsic_parameter_scale_audit.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Audit structural conversion and Forecast growth capability
+        run: |
+          python scripts/run_intrinsic_structural_audit_fast.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Test bounded career-state growth challenger
+        run: |
+          python scripts/run_intrinsic_growth_state_audit.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Check distributional growth calibration
+        run: |
+          python scripts/run_intrinsic_distribution_growth_audit.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Compete marginal franchise value primitive against incumbent
+        run: |
+          python scripts/run_intrinsic_marginal_franchise_challenge_fixed.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Test deterministic marginal-slot frontier baseline
+        run: |
+          python scripts/run_intrinsic_marginal_frontier_followup.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Calibrate final nonlinear Intrinsic scale
+        run: |
+          python scripts/run_intrinsic_v6_final_scale.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Report league-derived dynasty reference cohorts
+        run: |
+          python scripts/run_fundamental_intrinsic_reference_distribution.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --model-a-rows artifacts/fundamental-intrinsic/frozen-pr131/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/fundamental-intrinsic/frozen-qb/qb_career_state_deployment_results.json \
+            --output-dir artifacts/fundamental-intrinsic
+      - name: Upload calibration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fundamental-intrinsic-calibration
+          path: |
+            artifacts/fundamental-intrinsic/*.json
+            artifacts/fundamental-intrinsic/*.md
+            artifacts/next2-career/career_transition_coverage.csv
+          retention-days: 14

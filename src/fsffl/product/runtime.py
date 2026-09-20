@@ -29,8 +29,8 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
     changes, including a fresh retrieval timestamp. That is correct for evidence
     provenance, but too strict for product cache reuse. This fingerprint is a
     performance-only compatibility key: any roster, rules, ownership, player
-    status, matchup result, or NFL bye change invalidates it. Retrieval/effective
-    timestamps and provenance metadata do not.
+    career/pedigree state, status, matchup result, or NFL bye change invalidates it.
+    Retrieval/effective timestamps and provenance metadata do not.
     """
 
     payload = {
@@ -52,6 +52,10 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
             {
                 "player_id": state.player_id,
                 "age_years": state.age_years,
+                "experience_years": state.experience_years,
+                "draft_year": state.draft_year,
+                "draft_round": state.draft_round,
+                "draft_number": state.draft_number,
                 "nfl_team": state.nfl_team,
                 "status": state.status.value,
             }
