@@ -37,3 +37,11 @@ jobs:
         with:
           name: live-razzball-numerical-trace
           path: artifacts/diagnostics/live_razzball_numerical_trace_20260920/
+      - name: Upload temporary repository snapshot for local read-only contract validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconciliation-repo-snapshot
+          path: |
+            src/
+            artifacts/implementation/
+            pyproject.toml
