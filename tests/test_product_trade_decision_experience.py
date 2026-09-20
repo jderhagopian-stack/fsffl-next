@@ -40,7 +40,7 @@ def test_trade_decision_experience_only_translates_existing_authority() -> None:
     assert "dispositionAction(result)" in source
     assert "feasibility_shape==='mutual_gain_candidate'" in source
     assert "search_distance" in source
-    assert "FSFFL Value remains market context" in source
+    assert "FSFFL Cardinal Market Value remains market context" in source
     assert "no acceptance probability is invented" in source
     assert "*10000" not in source.replace(" ", "")
     assert "composite_score" not in source.lower()
