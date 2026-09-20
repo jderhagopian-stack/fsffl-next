@@ -1,0 +1,15 @@
+{
+  "schema_version": "fsffl-dev-rb-regime-final-classification-v1",
+  "classification": "D. INDIVIDUAL SUSTAINABILITY NOT RELIABLY IDENTIFIABLE - DISTRIBUTIONAL UNCERTAINTY IS NEXT",
+  "basis": [
+    "Frozen 2014-2020 evidence supports a high-end nonlinear source-magnitude relationship in Y3 absolute future points, with p90 the most stable tested slope-change coordinate but material boundary uncertainty remains.",
+    "Discrete D1T90 fails chronology/uncertainty gates.",
+    "Continuous D1H90 improves Y3 CRPS with uncertainty support but fails the preregistered p90+ bias-reduction gate and therefore does not earn authority.",
+    "No additional eligible ex-ante feature family passes the preregistered chronological identifiability gate.",
+    "Locked 2021-2022 replicates the high-magnitude Y3 retention gap and does not rescue either failed candidate.",
+    "Empirical exceptional-regime outcomes retain both productive-survivor and collapse/downside mass, so unresolved individual outcomes should remain in Forecast uncertainty/distribution shape rather than be forced into a higher mean."
+  ],
+  "production_authority_changed": false,
+  "pr147_changed": false,
+  "merge_or_deploy": false
+}
