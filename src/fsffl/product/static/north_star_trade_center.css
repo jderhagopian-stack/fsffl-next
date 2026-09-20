@@ -18,8 +18,8 @@
 @media(max-width:760px){.ns-trade-impact-grid__head{display:none}.ns-trade-impact-row{grid-template-columns:1fr;gap:8px;padding:11px 10px}.ns-trade-impact-row>span{font-size:11px;color:var(--text)}.ns-trade-impact-side{display:grid;grid-template-columns:minmax(82px,.36fr) minmax(0,1fr);gap:8px;align-items:center}.ns-trade-impact-side>small{display:block}.ns-trade-impact-head{align-items:start}.ns-trade-impact-head>small{max-width:118px;text-align:right}}
 @media(max-width:520px){.ns-trade-impact-comparison{margin-top:10px}.ns-trade-impact-head strong{font-size:13px}.ns-trade-impact-side{grid-template-columns:74px minmax(0,1fr)}}
 
-/* Candidate North Star reference slice: #159's compact cards remain transitional.
- * The completed decision is recomposed as one open editorial stage. */
+/* Approved hybrid North Star reference slice: #159 compact cards remain transitional.
+ * The completed decision is recomposed inside the premium dark, mobile-first product language. */
 #trade-center-screen.ns-trade-center .ns-trade-room--reference{
   display:block;
   margin-top:18px;
@@ -32,10 +32,10 @@
   margin:0;
   padding:16px 0 0;
   border:0;
-  border-top:1px solid rgba(184,196,211,.65);
+  border-top:1px solid rgba(75,116,158,.25);
   border-radius:0;
   background:transparent;
-  color:#7f8da0;
+  color:#748399;
   box-shadow:none;
   text-align:left;
   min-height:44px;
