@@ -1,0 +1,89 @@
+/* FSFFL NEXT shared visual primitives.
+ * Presentation-only grammar. Exact governed values remain visible beside every
+ * visual treatment; these classes do not create a model score, model threshold, or recommendation.
+ */
+
+.ns-visual-delta{
+  --ns-delta-width:0%;
+  display:grid;
+  grid-template-columns:minmax(58px,.42fr) minmax(110px,1fr);
+  gap:8px;
+  align-items:center;
+  min-width:0;
+}
+.ns-visual-delta__value{
+  display:flex;
+  justify-content:flex-end;
+  align-items:baseline;
+  gap:4px;
+  min-width:0;
+}
+.ns-visual-delta__value strong{
+  font-size:13px;
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.ns-visual-delta__value small{
+  color:var(--muted);
+  font-size:8px;
+  line-height:1;
+  white-space:nowrap;
+}
+.ns-visual-delta__track{
+  position:relative;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.045);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.035);
+  overflow:hidden;
+}
+.ns-visual-delta__track:after{
+  content:"";
+  position:absolute;
+  top:-2px;
+  bottom:-2px;
+  left:50%;
+  width:1px;
+  background:rgba(255,255,255,.36);
+  z-index:2;
+}
+.ns-visual-delta__fill{
+  position:absolute;
+  top:1px;
+  bottom:1px;
+  width:var(--ns-delta-width);
+  border-radius:999px;
+  background:var(--ns-action,#59a7ff);
+}
+.ns-visual-delta[data-direction="positive"] .ns-visual-delta__fill{
+  left:50%;
+  background:var(--ns-positive,#3bd399);
+}
+.ns-visual-delta[data-direction="negative"] .ns-visual-delta__fill{
+  right:50%;
+  background:var(--ns-risk,#ef7474);
+}
+.ns-visual-delta[data-direction="neutral"] .ns-visual-delta__fill,
+.ns-visual-delta[data-direction="unavailable"] .ns-visual-delta__fill{
+  display:none;
+}
+.ns-visual-delta[data-direction="positive"] .ns-visual-delta__value strong{color:var(--ns-positive,#3bd399)}
+.ns-visual-delta[data-direction="negative"] .ns-visual-delta__value strong{color:var(--ns-risk,#ef7474)}
+.ns-visual-delta[data-direction="unavailable"]{opacity:.62}
+
+.ns-visual-comparison-note{
+  color:var(--muted);
+  font-size:9px;
+  line-height:1.4;
+  margin:0;
+}
+
+@media(max-width:680px){
+  .ns-visual-delta{
+    grid-template-columns:minmax(52px,.38fr) minmax(86px,1fr);
+    gap:6px;
+  }
+  .ns-visual-delta__value strong{font-size:12px}
+  .ns-visual-delta__track{height:9px}
+}
