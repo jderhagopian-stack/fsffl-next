@@ -12,7 +12,7 @@ function tradeBehaviorFitMarkup(fit){
   return`<section class="trade-behavior-fit ${escapeHtml(fit.direction||'unknown')}">
     <div class="trade-behavior-fit-head"><div><p class="eyebrow">Behavioral fit for this exact package</p><h3>${escapeHtml(tradeBehaviorFitWords(fit.direction))}</h3><p>Directional inference from ${Number(fit.observed_trade_count||0).toLocaleString()} observed trade(s). This helps judge negotiation plausibility; it is not an acceptance probability.</p></div><span class="status-chip">${escapeHtml(tradeBehaviorFitWords(fit.evidence_level))}</span></div>
     ${drivers.length?`<div class="trade-behavior-driver-grid">${drivers.map(driver=>`<div><strong>${escapeHtml(tradeBehaviorFitWords(driver.direction))}</strong><span>${escapeHtml(tradeBehaviorFitWords(driver.kind))}</span><small>${escapeHtml(driver.description)}</small></div>`).join('')}</div>`:'<p>No individual Behavioral drivers are available for this package.</p>'}
-    <p class="trade-behavior-boundary"><strong>Authority boundary:</strong> Behavioral fit cannot change FSFFL Value, the focal accept/decline disposition, competitive Simulation, or NEXT-6 action authority. Numeric acceptance remains unavailable until separately calibrated.</p>
+    <p class="trade-behavior-boundary"><strong>Authority boundary:</strong> Behavioral fit cannot change governed Value coordinates, the focal accept/decline disposition, competitive Simulation, or NEXT-6 action authority. Numeric acceptance remains unavailable until separately calibrated.</p>
   </section>`;
 }
 
