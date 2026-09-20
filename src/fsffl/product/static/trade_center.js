@@ -10,7 +10,7 @@ function tradeValueMarkup(option){
   const item=tradeAssetScore(option);
   if(!item||typeof item.score!=='number')return'<span class="asset-kind">FSFFL Cardinal —</span>';
   const detail=`Authoritative FSFFL market-cardinal Value\nStatus: ${item.authority_status||'authoritative'}\nModel: ${item.model_version||'—'}\nEvidence: ${item.evidence_source_id||'—'}\nScale: ${item.scale?.scale_id||'fsffl-market-cardinal'}`;
-  return`<span class="asset-kind" title="${escapeHtml(detail)}">FSFFL ${fmtFsfflValue(item.score)}</span>`;
+  return`<span class="asset-kind" title="${escapeHtml(detail)}">FSFFL Cardinal ${fmtFsfflValue(item.score)}</span>`;
 }
 
 function selectedRefs(side){return side==='focal'?tradeUiState.focalSelected:tradeUiState.counterpartySelected}
