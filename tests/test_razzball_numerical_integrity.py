@@ -176,7 +176,7 @@ def test_duplicate_single_provider_observation_fails_closed_in_ensemble() -> Non
         evaluation_as_of=NOW,
     )
 
-    with pytest.raises(ValueError, match="duplicate forecast source within one ensemble group"):
+    with pytest.raises(ValueError, match="duplicate player/metric/horizon observation"):
         build_authoritative_live_ensemble(
             (
                 LiveForecastSourceBatch(source_id="razzball", observations=razzball),
