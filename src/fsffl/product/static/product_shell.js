@@ -14,7 +14,7 @@ const fsfflProductRoutes=[
 
 const fsfflProductSurfaceCopy={
   my_team:['Franchise','What is actually driving your team?','See the competitive profile, optimized lineup, league-relative position edges, fragility, core assets, optionality and draft-capital trajectory without blending them into one score.'],
-  players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Value and separate market-position evidence, without creating a second valuation path.'],
+  players_assets:['Players & Assets','Search the entire league market.','Search, filter and sort canonical league ownership with authoritative FSFFL Cardinal Value and separate market-position evidence, without creating a second valuation path.'],
   league_comparison:['League','How does this league fit together?','See competitive shape, positional control, age, future assets and fragility as distinct governed structures instead of another team leaderboard.'],
   opportunities:['Opportunity Engine','Find places worth investigating.','Explore structural trade tests and available players from the governed Search layer. Diagnostic rows stay clearly separate from action-authoritative recommendations.'],
   behavioral_intelligence:['Behavioral Intelligence','See what owners have actually done.','Explore source-backed owner transaction history as descriptive evidence without converting it into universal Value, strategy labels, or acceptance probability.'],

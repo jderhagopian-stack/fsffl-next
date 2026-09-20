@@ -41,9 +41,9 @@ def test_players_assets_adds_read_only_league_and_position_context() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
     assert "function explorerLeagueRank" in source
     assert "function explorerPositionRank" in source
-    assert "Your highest FSFFL Value asset" in source
+    assert "Your highest FSFFL Cardinal Value asset" in source
     assert "Your highest NFL season projection" in source
-    assert "league's top 20 by FSFFL Value" in source
+    assert "league's top 20 by FSFFL Cardinal Value" in source
     assert "Your team" in source
     assert "presentation ordering" in source
     assert "not a new FSFFL score" in source
