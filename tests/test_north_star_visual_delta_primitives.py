@@ -70,8 +70,9 @@ def test_trade_delta_visual_is_intentionally_mobile_composed() -> None:
     trade = _source("north_star_trade_center.css")
     assert "@media(max-width:680px)" in shared
     assert "@media(max-width:760px)" in trade
-    assert ".ns-trade-impact-grid{overflow-x:auto}" in trade
-    assert "min-width:430px" in trade
+    assert ".ns-trade-impact-grid__head{display:none}" in trade
+    assert ".ns-trade-impact-row{grid-template-columns:1fr" in trade
+    assert ".ns-trade-impact-side>small{display:block}" in trade
 
 
 def test_trade_center_visual_script_parses() -> None:
