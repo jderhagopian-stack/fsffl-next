@@ -14,6 +14,7 @@ from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
 
 PRESEASON_BASELINE_MODEL_VERSION = "next2-preseason-baseline-v1"
 PRESEASON_FALLBACK_RUNTIME_VERSION = "next2-current-runtime-v5:preseason-baseline-fallback"
+PRESEASON_AUTHORITY_RUNTIME_VERSION = "next2-current-runtime-v6:preseason-baseline-authority"
 
 
 class PreseasonForecastBaseline(FrozenModel):
@@ -93,7 +94,7 @@ def build_runtime_from_preseason_baseline(
         baseline.raw_ensemble,
         rules=league_state.league.rules,
         source="fsffl:preseason_baseline_league_scored",
-        model_version=PRESEASON_FALLBACK_RUNTIME_VERSION,
+        model_version=PRESEASON_AUTHORITY_RUNTIME_VERSION,
     )
     fantasy_points = apply_empirical_season_fantasy_point_uncertainty(league_scored)
     fantasy_regular_season = (
@@ -107,7 +108,7 @@ def build_runtime_from_preseason_baseline(
         fantasy_regular_season_forecasts=fantasy_regular_season,
         coverage=baseline.coverage,
         successful_source_ids=baseline.successful_source_ids,
-        failed_sources=("live_full_season_sources_unavailable; using immutable preseason baseline",),
+        failed_sources=(),
         evaluation_as_of=baseline.evaluation_as_of,
-        model_version=PRESEASON_FALLBACK_RUNTIME_VERSION,
+        model_version=PRESEASON_AUTHORITY_RUNTIME_VERSION,
     )

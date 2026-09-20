@@ -1,0 +1,80 @@
+{
+  "schema_version": "fsffl-production-preseason-baseline-readonly-evidence-v1",
+  "recovered_date": "2026-09-19",
+  "access_mode": "authorized connected Supabase read-only SELECT queries; no persistence mutation",
+  "production_store": {
+    "provider": "Supabase Postgres",
+    "project_name": "FSFFL NEXT",
+    "project_ref": "gldxkbqcprzuffgmamxl",
+    "schema": "fsffl",
+    "table": "derived_artifact"
+  },
+  "governed_key": {
+    "artifact_kind": "preseason_forecast_baseline",
+    "scope_kind": "league_season",
+    "scope_id": "sleeper:1312071960615731200:2026",
+    "model_version": "next2-preseason-baseline-v1"
+  },
+  "exact_record": {
+    "id": 145,
+    "candidate_count": 1,
+    "input_fingerprint": "2e7c527fa7e08a460f8974e1bbbfc50afcd22357188e0819230c640353c8152f",
+    "computed_at": "2026-09-10T21:36:41.346326Z",
+    "invalidated_at": null,
+    "invalidation_reason": null,
+    "payload_bytes": 1037880,
+    "payload_md5": "2e236a1e49bc1ac8915f8c2e07ef770a",
+    "payload_sha256": "cea4126d353f85f1e1fe66bfba4214e204277f487be04462dbe18fb59ae0f387"
+  },
+  "decoded_baseline": {
+    "league_id": "sleeper:1312071960615731200",
+    "season": 2026,
+    "evaluation_as_of": "2026-09-10T21:36:41.346326Z",
+    "source_runtime_model_version": "next2-current-runtime-v4:parallel-provider-ingestion",
+    "baseline_model_version": "next2-preseason-baseline-v1",
+    "source_artifact_id": "94",
+    "successful_source_ids": [
+      "fftoday",
+      "razzball"
+    ],
+    "coverage": {
+      "active_source_ids": [
+        "fftoday",
+        "razzball"
+      ],
+      "independent_source_ids": [
+        "fftoday",
+        "razzball"
+      ],
+      "minimum_independent_sources": 2,
+      "raw_observation_count": 1675,
+      "coverage_observation_count": 3350,
+      "model_version": "next2-live-ensemble-governance-v2"
+    }
+  },
+  "source_artifact_lineage": {
+    "current_forecast_evidence_id": 94,
+    "raw_arrays_exact_equal": true,
+    "baseline_raw_count": 1675,
+    "source_raw_count": 1675,
+    "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "source_runtime_fantasy_point_count": 335
+  },
+  "materialization_verification": {
+    "board_row_count": 335,
+    "unique_player_ids": 335,
+    "positions": {
+      "QB": 61,
+      "RB": 89,
+      "TE": 64,
+      "WR": 121
+    },
+    "canonical_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+    "deterministic_repeat_hash_equal": true,
+    "all_player_recompute_compared": 335,
+    "all_player_max_abs_mean_diff": 1.13686837721616e-13,
+    "mismatches_gt_1e_9": 0,
+    "recomputed_board_mean_sha256": "155cf3c1566a6e03bf82b838e127c337b5e60c114949af7f61950cf460ea3725"
+  },
+  "rights_boundary": "No individual provider raw rows are persisted in this evidence package; only existing governed baseline metadata and derived league-scored Year-1 outputs."
+}

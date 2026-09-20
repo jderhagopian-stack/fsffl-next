@@ -1,0 +1,245 @@
+{
+  "schema_version": "fsffl-standard-vs-half-ppr-closure-and-credibility-gate-v1",
+  "date": "2026-09-19",
+  "management_result": {
+    "source_coordinate_closure": "PASS",
+    "source_coordinate_classification": "NO_SCORING_UNIT_DEFECT",
+    "controlled_current_player_credibility_gate": "MODEL_CONCERN",
+    "promotion_review_ready": false,
+    "stop_reason": "Material extreme-age persistence behavior remains after scoring-coordinate closure."
+  },
+  "source_coordinate_evidence": {
+    "recovered_baseline_record_id": 145,
+    "baseline_raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "league_half_ppr_board": {
+      "population": 335,
+      "unique_player_ids": 335,
+      "sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae"
+    },
+    "frozen_i1_standard_board": {
+      "population": 335,
+      "unique_player_ids": 335,
+      "sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9"
+    },
+    "future_i1_position_multipliers": {
+      "QB": 1.04575952979839,
+      "RB": 1.11430683937932,
+      "WR": 1.2899047488253,
+      "TE": 1.35877076106381
+    },
+    "lineage": [
+      "P0/current-state assignment consumes the frozen research fantasyPoints coordinate.",
+      "I1 current_points and prior_points consume the same frozen standard/non-PPR coordinate.",
+      "I1 target_points and state-conditioned means are fit in that same coordinate.",
+      "The 2025 completed-source adapter is exact-parity validated to the frozen research coordinate.",
+      "LeagueScoringNormalizedI1Predictor converts only output point quantities; probabilities and I1 inputs remain unchanged.",
+      "Future I1 outputs are league-scoring bridged exactly once before calendar/Shapley consumption."
+    ],
+    "semantic_correction_required": false
+  },
+  "regression_proof": {
+    "validated_head": "7fee31080c344f4d8b12e9996c75b14a79442af1",
+    "repository_ci": {
+      "run_id": 35445410298,
+      "passed": 1228,
+      "warnings": 2,
+      "result": "PASS"
+    },
+    "focused_coordinate_tests": {
+      "run_id": 35445410348,
+      "passed": 30,
+      "result": "PASS"
+    }
+  },
+  "credibility_gate": {
+    "workflow_run_id": 35445619939,
+    "workflow_head": "189e18522c64d66d271acf08eb0d9857809299cb",
+    "mechanical_status": "PASS",
+    "population": 335,
+    "mapped_current_facts": 335,
+    "shapley_permutations": 2048,
+    "live_provider_data_used": false,
+    "mechanical_checks": [
+      "identity/population parity",
+      "complete current-fact mapping",
+      "preserved preseason Year-1 authority",
+      "2026/2027/2028 calendar targets",
+      "future I1 bridge exactly once",
+      "finite nonnegative outputs"
+    ],
+    "sentinel_rows": [
+      {
+        "name": "Josh Allen",
+        "position": "QB",
+        "age": 29.3,
+        "state": "elite",
+        "y1": 389.1,
+        "y2": 234.2,
+        "y3": 199.5,
+        "intrinsic": 567,
+        "h2_out": 0.003,
+        "h2_starter_plus": 0.922,
+        "h2_premium_plus": 0.879
+      },
+      {
+        "name": "Bijan Robinson",
+        "position": "RB",
+        "age": 23.6,
+        "state": "elite",
+        "y1": 329.2,
+        "y2": 155,
+        "y3": 127,
+        "intrinsic": 434.7,
+        "h2_out": 0.015,
+        "h2_starter_plus": 0.937,
+        "h2_premium_plus": 0.903
+      },
+      {
+        "name": "Jahmyr Gibbs",
+        "position": "RB",
+        "age": 23.5,
+        "state": "elite",
+        "y1": 328,
+        "y2": 153.8,
+        "y3": 126.6,
+        "intrinsic": 431.6,
+        "h2_out": 0.014,
+        "h2_starter_plus": 0.937,
+        "h2_premium_plus": 0.902
+      },
+      {
+        "name": "Christian McCaffrey",
+        "position": "RB",
+        "age": 29.2,
+        "state": "elite",
+        "y1": 315.4,
+        "y2": 122.8,
+        "y3": 103.8,
+        "intrinsic": 378.5,
+        "h2_out": 0.025,
+        "h2_starter_plus": 0.882,
+        "h2_premium_plus": 0.801
+      },
+      {
+        "name": "Puka Nacua",
+        "position": "WR",
+        "age": 24.3,
+        "state": "elite",
+        "y1": 276.3,
+        "y2": 143.9,
+        "y3": 118.6,
+        "intrinsic": 368.9,
+        "h2_out": 0.018,
+        "h2_starter_plus": 0.913,
+        "h2_premium_plus": 0.869
+      },
+      {
+        "name": "Sam Darnold",
+        "position": "QB",
+        "age": 28.2,
+        "state": "elite",
+        "y1": 281.7,
+        "y2": 221.4,
+        "y3": 193.9,
+        "intrinsic": 446.7,
+        "h2_out": 0.003,
+        "h2_starter_plus": 0.912,
+        "h2_premium_plus": 0.857
+      },
+      {
+        "name": "Aaron Rodgers",
+        "position": "QB",
+        "age": 41.8,
+        "state": "elite",
+        "y1": 243.7,
+        "y2": 199.1,
+        "y3": 185.9,
+        "intrinsic": 387.7,
+        "h2_out": 0.005,
+        "h2_starter_plus": 0.874,
+        "h2_premium_plus": 0.795
+      },
+      {
+        "name": "Brock Bowers",
+        "position": "TE",
+        "age": 22.7,
+        "state": "elite",
+        "y1": 188.3,
+        "y2": 115.1,
+        "y3": 103.1,
+        "intrinsic": 245.3,
+        "h2_out": 0.004,
+        "h2_starter_plus": 0.949,
+        "h2_premium_plus": 0.914
+      }
+    ],
+    "extreme_age_evidence": {
+      "qbs_over_36": [
+        {
+          "name": "Aaron Rodgers",
+          "age": 41.8,
+          "state": "elite",
+          "y2": 199.1,
+          "y3": 185.9,
+          "h2_out": 0.005,
+          "h3_out": 0.017
+        },
+        {
+          "name": "Joe Flacco",
+          "age": 40.6,
+          "state": "premium",
+          "y2": 113.3,
+          "y3": 105.3,
+          "h2_out": 0.023,
+          "h3_out": 0.035
+        },
+        {
+          "name": "Matthew Stafford",
+          "age": 37.6,
+          "state": "elite",
+          "y2": 209.2,
+          "y3": 185.5,
+          "h2_out": 0.006,
+          "h3_out": 0.012
+        },
+        {
+          "name": "Kirk Cousins",
+          "age": 37,
+          "state": "premium",
+          "y2": 112.3,
+          "y3": 107,
+          "h2_out": 0.021,
+          "h3_out": 0.044
+        },
+        {
+          "name": "Tyrod Taylor",
+          "age": 36.1,
+          "state": "starter",
+          "y2": 39.5,
+          "y3": 47.7,
+          "h2_out": 0.085,
+          "h3_out": 0.06
+        }
+      ],
+      "median_h2_out_qbs_over_36": 0.021,
+      "representation_contract": [
+        "QB age_band is young <=25, prime <=31, aging >31.",
+        "Non-QB age_band is young <=23, prime <=27, aging >27.",
+        "Continuous experience feature is capped at 15 years before scaling."
+      ],
+      "interpretation": "The controlled board indicates the frozen I1 probability model can materially underrepresent extreme-career exit risk, particularly for very old QBs. This is not repaired here because doing so would require a model/calibration judgment rather than a mechanical scoring-unit correction."
+    }
+  },
+  "narrow_follow_up_question": "Does the frozen I1 age/experience representation materially understate persistence risk at extreme career ages, especially for QBs well beyond age 31, and if so what is the most defensible evidence-backed age representation/calibration that corrects this without named-player tuning or disturbing settled non-age architecture?",
+  "execution_accounting": {
+    "model_fits": 0,
+    "coefficient_fits": 0,
+    "named_player_tuning": 0,
+    "provider_weight_changes": 0,
+    "fresh_provider_substitutions": 0,
+    "production_semantic_changes_for_coordinate_closure": 0,
+    "merges": 0,
+    "deploys": 0
+  },
+  "stop_boundary": "STOP FOR MANAGEMENT REVIEW. Do not tune current players, refit I1, merge, deploy, or continue into provider-health remediation under this bounded directive."
+}

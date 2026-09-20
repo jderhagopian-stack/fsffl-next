@@ -1,0 +1,101 @@
+{
+  "authority": {
+    "PR147_runtime_forecast_modified": false,
+    "deploy": false,
+    "merge": false,
+    "stop": "STOP_FOR_MANAGEMENT_REVIEW"
+  },
+  "classification": "PASS_FOR_MANAGEMENT_PROMOTION_REVIEW",
+  "date": "2026-09-19",
+  "execution_runtime": {
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "python": "3.12.14",
+    "scikit_learn": "1.8.0",
+    "scipy": "1.17.0",
+    "scoring_path": "frozen JSON coefficients evaluated by the persisted deployment scorer; no sklearn fit or estimator deserialization"
+  },
+  "inputs": {
+    "age_completion_file_sha256": "59265033c49dd032eae0f3da90466dc32146f61493127caf976dc21832987d35",
+    "boundaries_file_sha256": "51a6a892e9a19e52b0ab8d2ac7f90b2850c199254f3021db0b5a989efdc107d5",
+    "deployment_fit_v1_sha256": "e04fa7d8ce21423478de238f7d870a3eb5e1b548a6478c2906ec273d7d7517d5",
+    "deployment_specification_sha256": "5a67418581ddd51f70843a06b22d9e036d4328f4992ef85006b3dd18728adf66",
+    "final_fit_persistence_manifest_sha256": "fe4978972e3deafb5ce3ded86da32b1c0e57d40d048f53f245ed2a408e8a4fba",
+    "final_replay_verification_sha256": "05cc8b0656f024bc3be5088b37dbd39ffdf41a668953dfccb153b68eb92b9c70",
+    "frozen_current_materializer_sha256": "53d7a3cdadf089d1e54be9b8221cd885eed94c96f3a6d6867e4aa446a5287ea7",
+    "history_file_sha256": "f4d0b9a0727c3925331c86cd2fd30848425d54ff19539364f8161ed2bbb4eaad",
+    "historical_selection_freeze_sha256": "efabf22c0e59a0c0bec2f61f3fd74ba4dba974958208f2513405d036fd8c5162",
+    "identity_coordinate_file_sha256": "95fd6565a908b044ca234898cc801749abb2b6aa62a84c2d3c917445d369cda1",
+    "identity_rows_sha256": "1803ee0200b8d1d39dfd719934bd683765727bef997f2a1f1ee44d2a6444af56",
+    "league_y1_board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+    "league_y1_file_sha256": "6b9fa1989ddde1a426d5dd86714df309d0237e76b34d20d905ac55cc9277bc5c",
+    "materializer_file_sha256": "3a519cfd38d91dbbea8f0ede74b7e23e7f279b0d8bb6d7d6c1e65339935c7b5f",
+    "nflverse_players_file_sha256": "801d5fec2fc21c54ad585415e8e551ae9d1de7c601a8c3768504b7ce59b579b6",
+    "old_live_y1_file_sha256": "6973e58bc0b6bfc3aaab7b5086e8ecd69945a397f57affcb454a53af504beac4",
+    "package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+    "provider_snapshot_file_sha256": "504cb0ea8ba479398dc543978274053ff3397db34c8cfb1c2e373bc49f0473ea",
+    "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "redevelopment_v1_sha256": "1d592e87660565bcda0ca24484568448c4624a4294ecb9ce6183343ee00e693a",
+    "standard_y1_board_sha256": "dfe817909dc42782ef4f1249692a9ad9139b5fa25311549ae741970c4ef9efe9",
+    "standard_y1_file_sha256": "387135bc72f8ca7685b2456704702c2126811e35a876339b828bbe99d6cc2172"
+  },
+  "materialization": {
+    "P0_package_replays": 1,
+    "current_player_tuning_actions": 0,
+    "horizon_rows": 670,
+    "model_fits": 0,
+    "model_refits": 0,
+    "players": 335,
+    "post_board_model_changes": 0
+  },
+  "outputs": {
+    "board_canonical_rows_sha256": "9015baf53c051e3d2eb138828e3253ec16398a8accd780298bdaed5991e811a9",
+    "board_csv": "CORRECTED_P0_PRESEASON_BOARD_335.csv",
+    "board_csv_sha256": "f93126db045ff97b9a605645f158452bc57afa10a93f6e40f44c8af4881fc4a2",
+    "diagnostics_json": "CREDIBILITY_DIAGNOSTICS.json",
+    "diagnostics_json_sha256": "802619fafbcf09a5232125602491caf83e35108f36232c254dffc39d6c4ddc0a",
+    "source_csv": "RECONCILED_PRESEASON_SOURCE_335.csv",
+    "source_csv_sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a"
+  },
+  "population_reconciliation": {
+    "bridge_application_count_for_future_outputs": 1,
+    "old_live_only": {
+      "current_player_id": "sleeper:11630",
+      "player_name": "Roman Wilson",
+      "position": "WR"
+    },
+    "preseason_only": {
+      "age_source": "governed_nflverse_DOB_frozen_A2_rule",
+      "age_years": 27.765114957870455,
+      "current_player_id": "sleeper:8800",
+      "date_of_birth": "1998-11-26",
+      "historical_gsis_id": "00-0037563",
+      "identity_snapshot_coordinate": "nflverse-players-20260918T123430Z+roster-2025-20260314",
+      "mapping_method": "EXACT_NAME_POSITION",
+      "mapping_status": "EXACT_NAME_POSITION",
+      "player_name": "Malik Davis",
+      "position": "RB"
+    },
+    "preseason_position_counts": {
+      "QB": 61,
+      "RB": 89,
+      "TE": 64,
+      "WR": 121
+    },
+    "shared_players": 334,
+    "standard_to_league_bridge": {
+      "QB": 1.045759529798389,
+      "RB": 1.1143068393793185,
+      "TE": 1.3587707610638076,
+      "WR": 1.2899047488253008
+    }
+  },
+  "schema_version": "fsffl-corrected-p0-preseason-credibility-gate-v1",
+  "year1": {
+    "internal_P0_coordinate": "independently direct-scored standard/non-PPR from the same raw observations",
+    "league_scoring": "direct from preserved raw observations",
+    "multiplier_used_to_estimate_year1": false,
+    "raw_observations": 1675
+  }
+}

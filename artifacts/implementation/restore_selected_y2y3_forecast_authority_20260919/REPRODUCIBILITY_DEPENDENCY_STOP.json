@@ -1,0 +1,93 @@
+{
+  "schema_version": "fsffl-restore-selected-y2y3-reproducibility-stop-v1",
+  "date": "2026-09-19",
+  "classification": "STOP - REPRODUCIBILITY DEPENDENCY",
+  "directive": "Implementation Directive - Restore Selected Y2/Y3 Forecast Authority",
+  "live_refs_at_start": {
+    "pr147": {
+      "branch": "implementation/forecast-intrinsic-i1-shapley",
+      "state": "open",
+      "merged": false,
+      "head": "7693090f7e8426ee2a6b758fdff75f0e4f5bb236",
+      "base": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76"
+    },
+    "main": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "research": {
+      "branch": "research/future-state-resolution-phase34-resume",
+      "head": "3bbdf8ce75eff05e26c154b2c38c70d425a4a5d2"
+    }
+  },
+  "required_selected_stack": {
+    "state_routing": {
+      "QB": "A2+C+D",
+      "RB": "A2+D",
+      "WR": "A2+D",
+      "TE": "A2+D"
+    },
+    "production_order": [
+      "D0/D1 selected conditional-production route",
+      "M1a continuous within-state magnitude carry-forward",
+      "frozen two-prior consistency adjustment"
+    ],
+    "downstream": [
+      "player-specific league-Y1/standard-Y1 scoring translation",
+      "three-year calendar",
+      "Intrinsic/Shapley"
+    ]
+  },
+  "recovered_exact_artifacts": {
+    "redeveloped_final_fitted_package": {
+      "library_file_id": "libfile_aaa8c63f86e08191a89f092f02367472",
+      "sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+      "bytes": 107778,
+      "replay": {
+        "rows": 20610,
+        "max_probability_difference": 4.996003610813204e-16,
+        "max_point_difference": 1.4210854715202004e-13,
+        "route_mismatches": 0
+      }
+    },
+    "corrected_preseason_source": {
+      "path": "artifacts/implementation/corrected_p0_preseason_credibility_gate_20260919/RECONCILED_PRESEASON_SOURCE_335.csv",
+      "sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+      "players": 335
+    },
+    "old_selected_candidate_diagnostic": {
+      "path": "artifacts/research/production_resolution/CURRENT_PLAYER_SENTINEL_FINAL_DIAGNOSTIC_2026-09-18.json",
+      "frozen_candidate": "fixed routed Forecast + frozen M1a + exact frozen two-prior-season consistency",
+      "Y2_m1a_coef": 0.07939942531895901,
+      "Y3_m1a_coef": 0.07812314495946265
+    }
+  },
+  "decisive_mismatch": {
+    "redeveloped_package_semantics": "The exact durable D0/D1 package directly scores conditional production from its serialized linear production models. Its D1 design includes prior2 mean/gap/coverage features inside that production model.",
+    "required_semantics": "The directive separately requires a frozen M1a continuous within-state magnitude layer and then the frozen two-prior consistency adjustment after D0/D1.",
+    "missing_dependency": [
+      "No durable deployment artifact was found that serializes the required separately selected M1a layer on top of the recovered D0/D1 package.",
+      "The old selected-candidate diagnostic preserves M1a and consistency coefficient summaries, but not a row-complete deployment package defining their exact combination with the later D0/D1 producer for all 335 players.",
+      "Using the redeveloped D0/D1 package alone would omit the directive-required M1a layer; adding a newly inferred M1a transform would create a new methodological combination."
+    ],
+    "conclusion": "The exact requested full stack cannot be wired without choosing how to combine model generations. That is a prohibited new modeling choice."
+  },
+  "attempted_implementation": {
+    "temporary_commits_from_start_to_reversion": 12,
+    "note": "A bounded implementation trial embedded and replay-checked the exact D0/D1 package, but repository reconciliation exposed the missing separate M1a deployment dependency before final promotion. The final stop commit restores the task-start runtime tree and preserves only this evidence.",
+    "runtime_changes_retained_at_final_head": false
+  },
+  "sanity_gate": {
+    "architecture_wiring_passed": false,
+    "final_335_y1_y2_y3_materialization_run": false,
+    "reason": "Directive requires architecture wiring to pass before final board sanity review."
+  },
+  "stop_boundary": {
+    "refit": false,
+    "retrain": false,
+    "retune": false,
+    "reselect": false,
+    "approximate_coefficients": false,
+    "merge": false,
+    "deploy": false,
+    "main_modified": false,
+    "scoring_coverage_broadened": false
+  }
+}

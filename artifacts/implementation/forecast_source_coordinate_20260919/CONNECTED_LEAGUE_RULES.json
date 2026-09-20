@@ -1,0 +1,549 @@
+{
+  "lineup": [
+    {
+      "slot": "FLEX",
+      "count": 1
+    },
+    {
+      "slot": "QB",
+      "count": 1
+    },
+    {
+      "slot": "RB",
+      "count": 2
+    },
+    {
+      "slot": "SUPERFLEX",
+      "count": 1
+    },
+    {
+      "slot": "TE",
+      "count": 1
+    },
+    {
+      "slot": "WR",
+      "count": 3
+    }
+  ],
+  "ir_size": 2,
+  "scoring": [
+    {
+      "stat": "blk_kick",
+      "points": 2
+    },
+    {
+      "stat": "blk_kick_ret_yd",
+      "points": 0
+    },
+    {
+      "stat": "bonus_def_fum_td_50p",
+      "points": 0
+    },
+    {
+      "stat": "bonus_def_int_td_50p",
+      "points": 0
+    },
+    {
+      "stat": "bonus_fd_qb",
+      "points": 0
+    },
+    {
+      "stat": "bonus_fd_rb",
+      "points": 0
+    },
+    {
+      "stat": "bonus_fd_te",
+      "points": 0
+    },
+    {
+      "stat": "bonus_fd_wr",
+      "points": 0
+    },
+    {
+      "stat": "bonus_pass_cmp_25",
+      "points": 0
+    },
+    {
+      "stat": "bonus_pass_yd_300",
+      "points": 0
+    },
+    {
+      "stat": "bonus_pass_yd_400",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rec_rb",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rec_te",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rec_wr",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rec_yd_100",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rec_yd_200",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rush_att_20",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rush_rec_yd_100",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rush_rec_yd_200",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rush_yd_100",
+      "points": 0
+    },
+    {
+      "stat": "bonus_rush_yd_200",
+      "points": 0
+    },
+    {
+      "stat": "bonus_sack_2p",
+      "points": 0
+    },
+    {
+      "stat": "bonus_tkl_10p",
+      "points": 0
+    },
+    {
+      "stat": "def_2pt",
+      "points": 0
+    },
+    {
+      "stat": "def_3_and_out",
+      "points": 0
+    },
+    {
+      "stat": "def_4_and_stop",
+      "points": 0
+    },
+    {
+      "stat": "def_forced_punts",
+      "points": 0
+    },
+    {
+      "stat": "def_kr_yd",
+      "points": 0
+    },
+    {
+      "stat": "def_pass_def",
+      "points": 0
+    },
+    {
+      "stat": "def_pr_yd",
+      "points": 0
+    },
+    {
+      "stat": "def_st_ff",
+      "points": 1
+    },
+    {
+      "stat": "def_st_fum_rec",
+      "points": 1
+    },
+    {
+      "stat": "def_st_td",
+      "points": 6
+    },
+    {
+      "stat": "def_st_tkl_solo",
+      "points": 0
+    },
+    {
+      "stat": "def_td",
+      "points": 6
+    },
+    {
+      "stat": "ff",
+      "points": 1
+    },
+    {
+      "stat": "fg_ret_yd",
+      "points": 0
+    },
+    {
+      "stat": "fgm",
+      "points": 0
+    },
+    {
+      "stat": "fgm_0_19",
+      "points": 3
+    },
+    {
+      "stat": "fgm_20_29",
+      "points": 3
+    },
+    {
+      "stat": "fgm_30_39",
+      "points": 3
+    },
+    {
+      "stat": "fgm_40_49",
+      "points": 4
+    },
+    {
+      "stat": "fgm_50p",
+      "points": 5
+    },
+    {
+      "stat": "fgm_yds",
+      "points": 0
+    },
+    {
+      "stat": "fgm_yds_over_30",
+      "points": 0
+    },
+    {
+      "stat": "fgmiss",
+      "points": -1
+    },
+    {
+      "stat": "fgmiss_0_19",
+      "points": 0
+    },
+    {
+      "stat": "fgmiss_20_29",
+      "points": 0
+    },
+    {
+      "stat": "fgmiss_30_39",
+      "points": 0
+    },
+    {
+      "stat": "fgmiss_40_49",
+      "points": 0
+    },
+    {
+      "stat": "fgmiss_50p",
+      "points": 0
+    },
+    {
+      "stat": "fum",
+      "points": 0
+    },
+    {
+      "stat": "fum_lost",
+      "points": -1
+    },
+    {
+      "stat": "fum_rec",
+      "points": 2
+    },
+    {
+      "stat": "fum_rec_td",
+      "points": 6
+    },
+    {
+      "stat": "fum_ret_yd",
+      "points": 0
+    },
+    {
+      "stat": "idp_pass_def_3p",
+      "points": 0
+    },
+    {
+      "stat": "idp_sack_yd",
+      "points": 0
+    },
+    {
+      "stat": "int",
+      "points": 2
+    },
+    {
+      "stat": "int_ret_yd",
+      "points": 0
+    },
+    {
+      "stat": "kr_yd",
+      "points": 0
+    },
+    {
+      "stat": "pass_2pt",
+      "points": 2
+    },
+    {
+      "stat": "pass_att",
+      "points": 0
+    },
+    {
+      "stat": "pass_cmp",
+      "points": 0
+    },
+    {
+      "stat": "pass_cmp_40p",
+      "points": 0
+    },
+    {
+      "stat": "pass_fd",
+      "points": 0
+    },
+    {
+      "stat": "pass_inc",
+      "points": 0
+    },
+    {
+      "stat": "pass_int",
+      "points": -1
+    },
+    {
+      "stat": "pass_int_td",
+      "points": 0
+    },
+    {
+      "stat": "pass_sack",
+      "points": 0
+    },
+    {
+      "stat": "pass_td",
+      "points": 4
+    },
+    {
+      "stat": "pass_td_40p",
+      "points": 0
+    },
+    {
+      "stat": "pass_td_50p",
+      "points": 0
+    },
+    {
+      "stat": "pass_yd",
+      "points": 0.04
+    },
+    {
+      "stat": "pr_yd",
+      "points": 0
+    },
+    {
+      "stat": "pts_allow",
+      "points": 0
+    },
+    {
+      "stat": "pts_allow_0",
+      "points": 10
+    },
+    {
+      "stat": "pts_allow_14_20",
+      "points": 1
+    },
+    {
+      "stat": "pts_allow_1_6",
+      "points": 7
+    },
+    {
+      "stat": "pts_allow_21_27",
+      "points": 0
+    },
+    {
+      "stat": "pts_allow_28_34",
+      "points": -1
+    },
+    {
+      "stat": "pts_allow_35p",
+      "points": -4
+    },
+    {
+      "stat": "pts_allow_7_13",
+      "points": 4
+    },
+    {
+      "stat": "qb_hit",
+      "points": 0
+    },
+    {
+      "stat": "rec",
+      "points": 0.5
+    },
+    {
+      "stat": "rec_0_4",
+      "points": 0
+    },
+    {
+      "stat": "rec_10_19",
+      "points": 0
+    },
+    {
+      "stat": "rec_20_29",
+      "points": 0
+    },
+    {
+      "stat": "rec_2pt",
+      "points": 2
+    },
+    {
+      "stat": "rec_30_39",
+      "points": 0
+    },
+    {
+      "stat": "rec_40p",
+      "points": 0
+    },
+    {
+      "stat": "rec_5_9",
+      "points": 0
+    },
+    {
+      "stat": "rec_fd",
+      "points": 0
+    },
+    {
+      "stat": "rec_td",
+      "points": 6
+    },
+    {
+      "stat": "rec_td_40p",
+      "points": 0
+    },
+    {
+      "stat": "rec_td_50p",
+      "points": 0
+    },
+    {
+      "stat": "rec_yd",
+      "points": 0.1
+    },
+    {
+      "stat": "rush_2pt",
+      "points": 2
+    },
+    {
+      "stat": "rush_40p",
+      "points": 0
+    },
+    {
+      "stat": "rush_att",
+      "points": 0
+    },
+    {
+      "stat": "rush_fd",
+      "points": 0
+    },
+    {
+      "stat": "rush_td",
+      "points": 6
+    },
+    {
+      "stat": "rush_td_40p",
+      "points": 0
+    },
+    {
+      "stat": "rush_td_50p",
+      "points": 0
+    },
+    {
+      "stat": "rush_yd",
+      "points": 0.1
+    },
+    {
+      "stat": "sack",
+      "points": 1
+    },
+    {
+      "stat": "sack_yd",
+      "points": 0
+    },
+    {
+      "stat": "safe",
+      "points": 2
+    },
+    {
+      "stat": "st_ff",
+      "points": 1
+    },
+    {
+      "stat": "st_fum_rec",
+      "points": 1
+    },
+    {
+      "stat": "st_td",
+      "points": 6
+    },
+    {
+      "stat": "st_tkl_solo",
+      "points": 0
+    },
+    {
+      "stat": "tkl",
+      "points": 0
+    },
+    {
+      "stat": "tkl_ast",
+      "points": 0
+    },
+    {
+      "stat": "tkl_loss",
+      "points": 0
+    },
+    {
+      "stat": "tkl_solo",
+      "points": 0
+    },
+    {
+      "stat": "xpm",
+      "points": 1
+    },
+    {
+      "stat": "xpmiss",
+      "points": -1
+    },
+    {
+      "stat": "yds_allow",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_0_100",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_100_199",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_200_299",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_300_349",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_350_399",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_400_449",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_450_499",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_500_549",
+      "points": 0
+    },
+    {
+      "stat": "yds_allow_550p",
+      "points": 0
+    }
+  ],
+  "taxi_size": 2,
+  "team_count": 12,
+  "roster_size": 18,
+  "playoff_team_count": 6,
+  "rookie_draft_rounds": 3,
+  "fantasy_regular_season_end_week": 14
+}

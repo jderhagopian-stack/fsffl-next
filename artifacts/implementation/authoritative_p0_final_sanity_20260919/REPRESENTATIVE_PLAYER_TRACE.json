@@ -1,0 +1,296 @@
+{
+  "schema_version": "fsffl-p0-representative-trace-v1",
+  "date": "2026-09-19",
+  "players": [
+    {
+      "player": "Drake Maye",
+      "position": "QB",
+      "age": 23.006632579724428,
+      "career_stage": "developmental",
+      "y1_standard": 317.08,
+      "y1_connected_league": 328.3805,
+      "player_specific_multiplier": 1.0356392708464741,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.9594525829217428,
+        "standard_conditional": 275.1256933364727,
+        "standard_expected": 263.9700570998141,
+        "connected_league_conditional": 284.93097243811525,
+        "connected_league_expected": 273.3777574601536,
+        "conditional_retention": 0.86768542114442,
+        "expected_retention": 0.8325030184805541
+      },
+      "Y3": {
+        "candidate": "D0",
+        "active_probability": 0.9469544098163035,
+        "standard_conditional": 256.8907630700039,
+        "standard_expected": 243.26384093021542,
+        "connected_league_conditional": 266.0461625530132,
+        "connected_league_expected": 251.93358684428097,
+        "conditional_retention": 0.8101764951116561,
+        "expected_retention": 0.7672002047754997
+      }
+    },
+    {
+      "player": "Brock Bowers",
+      "position": "TE",
+      "age": 22.719152343990636,
+      "career_stage": "developmental",
+      "y1_standard": 139.05,
+      "y1_connected_league": 188.323,
+      "player_specific_multiplier": 1.3543545487234807,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.9633548373337366,
+        "standard_conditional": 106.634613331356,
+        "standard_expected": 102.72697057997435,
+        "connected_league_conditional": 144.4210736166915,
+        "connected_league_expected": 139.12873988157145,
+        "conditional_retention": 0.7668796356084573,
+        "expected_retention": 0.7387772066161405
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.9324199111910771,
+        "standard_conditional": 99.19766916919117,
+        "standard_expected": 92.49388187709908,
+        "connected_league_conditional": 134.34881446206106,
+        "connected_league_expected": 125.26950964934146,
+        "conditional_retention": 0.713395679030501,
+        "expected_retention": 0.6651843356857179
+      }
+    },
+    {
+      "player": "Christian McCaffrey",
+      "position": "RB",
+      "age": 29.235371020623283,
+      "career_stage": "veteran",
+      "y1_standard": 276.7,
+      "y1_connected_league": 315.358,
+      "player_specific_multiplier": 1.139710878207445,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.836703147380181,
+        "standard_conditional": 167.92520075383158,
+        "standard_expected": 140.50354399517963,
+        "connected_league_conditional": 191.38617802431088,
+        "connected_league_expected": 160.13341751800456,
+        "conditional_retention": 0.6068854382140643,
+        "expected_retention": 0.5077829562529079
+      },
+      "Y3": {
+        "candidate": "D0",
+        "active_probability": 0.6019355734942642,
+        "standard_conditional": 125.5895021406734,
+        "standard_expected": 75.59678899590537,
+        "connected_league_conditional": 143.13572177838267,
+        "connected_league_expected": 86.15848277618622,
+        "conditional_retention": 0.4538832748126975,
+        "expected_retention": 0.27320848932383585
+      }
+    },
+    {
+      "player": "Sam Darnold",
+      "position": "QB",
+      "age": 28.241510777086457,
+      "career_stage": "established",
+      "y1_standard": 265.9,
+      "y1_connected_league": 281.7255,
+      "player_specific_multiplier": 1.059516735614893,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.9455448823915067,
+        "standard_conditional": 214.95783796830514,
+        "standard_expected": 203.25228362087364,
+        "connected_league_conditional": 227.75142677901374,
+        "connected_league_expected": 215.3491960482604,
+        "conditional_retention": 0.8084160886359728,
+        "expected_retention": 0.7643936954527027
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.8957616360820869,
+        "standard_conditional": 202.22218844565046,
+        "standard_expected": 181.14287837417595,
+        "connected_league_conditional": 214.25779297083528,
+        "connected_league_expected": 191.92391117489248,
+        "conditional_retention": 0.7605197008110209,
+        "expected_retention": 0.6812443714711394
+      }
+    },
+    {
+      "player": "CeeDee Lamb",
+      "position": "WR",
+      "age": 26.40163726839018,
+      "career_stage": "established",
+      "y1_standard": 167.95,
+      "y1_connected_league": 214.5355,
+      "player_specific_multiplier": 1.277377195593927,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.8892877761048724,
+        "standard_conditional": 137.87544183452792,
+        "standard_expected": 122.61094504850404,
+        "connected_league_conditional": 176.11894523186288,
+        "connected_league_expected": 156.62042513517918,
+        "conditional_retention": 0.8209314786217798,
+        "expected_retention": 0.7300443289580473
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.7657825926077533,
+        "standard_conditional": 119.97090920271576,
+        "standard_expected": 91.87163388676504,
+        "connected_league_conditional": 153.2481035502187,
+        "connected_league_expected": 117.35473004890792,
+        "conditional_retention": 0.7143251515493645,
+        "expected_retention": 0.5470177665183986
+      }
+    },
+    {
+      "player": "Trey McBride",
+      "position": "TE",
+      "age": 25.7773944707968,
+      "career_stage": "established",
+      "y1_standard": 127.1,
+      "y1_connected_league": 174.3455,
+      "player_specific_multiplier": 1.3717191188040911,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.9429343161767266,
+        "standard_conditional": 109.79427028075591,
+        "standard_expected": 103.52878516730728,
+        "connected_league_conditional": 150.6068996792567,
+        "connected_league_expected": 142.01241396055678,
+        "conditional_retention": 0.8638416229799836,
+        "expected_retention": 0.8145459100496245
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.8805071140678877,
+        "standard_conditional": 98.40865381909627,
+        "standard_expected": 86.64951977355828,
+        "connected_league_conditional": 134.9890318994276,
+        "connected_league_expected": 118.85880290858304,
+        "conditional_retention": 0.7742616350833696,
+        "expected_retention": 0.6817428778407418
+      }
+    },
+    {
+      "player": "Jahmyr Gibbs",
+      "position": "RB",
+      "age": 23.452911421863558,
+      "career_stage": "developmental",
+      "y1_standard": 292.3,
+      "y1_connected_league": 328.023,
+      "player_specific_multiplier": 1.122213479302087,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.9562612782128315,
+        "standard_conditional": 180.61426034241745,
+        "standard_expected": 172.71442345850522,
+        "connected_league_conditional": 202.68775751043725,
+        "connected_league_expected": 193.82245407502316,
+        "conditional_retention": 0.6179071513596218,
+        "expected_retention": 0.5908806823760014
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.90609149153729,
+        "standard_conditional": 165.94211207858893,
+        "standard_expected": 150.35873584213678,
+        "connected_league_conditional": 186.22247495845016,
+        "connected_league_expected": 168.73460009286774,
+        "conditional_retention": 0.5677116389961988,
+        "expected_retention": 0.5143986857411453
+      }
+    },
+    {
+      "player": "Puka Nacua",
+      "position": "WR",
+      "age": 24.260593988925166,
+      "career_stage": "developmental",
+      "y1_standard": 217.6,
+      "y1_connected_league": 276.308,
+      "player_specific_multiplier": 1.269797794117647,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.9376431997432308,
+        "standard_conditional": 157.93221327376156,
+        "standard_expected": 148.08406579654016,
+        "connected_league_conditional": 200.5419760351402,
+        "connected_league_expected": 188.0368200924192,
+        "conditional_retention": 0.7257914212948602,
+        "expected_retention": 0.6805333906091
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.8748937800879513,
+        "standard_conditional": 146.54713861231042,
+        "standard_expected": 128.21318006159723,
+        "connected_league_conditional": 186.08523334416483,
+        "connected_league_expected": 162.80481321902485,
+        "conditional_retention": 0.6734703061227502,
+        "expected_retention": 0.5892149819007225
+      }
+    },
+    {
+      "player": "Bijan Robinson",
+      "position": "RB",
+      "age": 23.587068865205993,
+      "career_stage": "developmental",
+      "y1_standard": 289.4,
+      "y1_connected_league": 329.2355,
+      "player_specific_multiplier": 1.137648583275743,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.9533976524434852,
+        "standard_conditional": 178.3509865898798,
+        "standard_expected": 170.0394119257709,
+        "connected_league_conditional": 202.90074721980778,
+        "connected_league_expected": 193.44509607839376,
+        "conditional_retention": 0.6162784609187277,
+        "expected_retention": 0.5875584378913992
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.8996606651354514,
+        "standard_conditional": 162.64380979839933,
+        "standard_expected": 146.3242381033918,
+        "connected_league_conditional": 185.03149979571842,
+        "connected_league_expected": 166.46556217722616,
+        "conditional_retention": 0.5620034892826515,
+        "expected_retention": 0.5056124329764747
+      }
+    },
+    {
+      "player": "Aaron Rodgers",
+      "position": "QB",
+      "age": 41.75034394956775,
+      "career_stage": "veteran",
+      "y1_standard": 233.9,
+      "y1_connected_league": 243.698,
+      "player_specific_multiplier": 1.041889696451475,
+      "Y2": {
+        "candidate": "D1",
+        "active_probability": 0.6606839987325569,
+        "standard_conditional": 91.73341380051043,
+        "standard_expected": 60.60679864710955,
+        "connected_league_conditional": 95.57609865907136,
+        "connected_league_expected": 63.14559904533263,
+        "conditional_retention": 0.3921907387794375,
+        "expected_retention": 0.2591141455626744
+      },
+      "Y3": {
+        "candidate": "D1",
+        "active_probability": 0.35170771897597897,
+        "standard_conditional": 88.2122082487062,
+        "standard_expected": 31.024914548986494,
+        "connected_league_conditional": 91.9073908755588,
+        "connected_league_expected": 32.324538801876486,
+        "conditional_retention": 0.37713641833564004,
+        "expected_retention": 0.1326417894355985
+      }
+    }
+  ]
+}

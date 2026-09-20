@@ -1,0 +1,318 @@
+{
+  "age_persistence_behavior": {
+    "age_26_29": {
+      "Y2_median_active_probability": 0.8067918138808681,
+      "Y3_median_active_probability": 0.6277452752045447,
+      "Y3_not_above_Y2": true,
+      "n": 124
+    },
+    "age_30_33": {
+      "Y2_median_active_probability": 0.6809002323324568,
+      "Y3_median_active_probability": 0.3847411636009259,
+      "Y3_not_above_Y2": true,
+      "n": 45
+    },
+    "age_ge34": {
+      "Y2_median_active_probability": 0.5324823736331359,
+      "Y3_median_active_probability": 0.26905686512803517,
+      "Y3_not_above_Y2": true,
+      "n": 8
+    },
+    "age_le25": {
+      "Y2_median_active_probability": 0.8241608072169251,
+      "Y3_median_active_probability": 0.6942198238656918,
+      "Y3_not_above_Y2": true,
+      "n": 158
+    }
+  },
+  "classification": "PASS_FOR_MANAGEMENT_PROMOTION_REVIEW",
+  "classification_rule": {
+    "basis": "the previously declared 60% upper-tail conditional-retention defect threshold",
+    "pass": "For top10 and young_top10 at Y2 and Y3: median conditional retention >=0.60 and share below 0.60 <=0.50.",
+    "post_inspection_model_changes_allowed": false
+  },
+  "cohorts": {
+    "top10": {
+      "Y2": {
+        "conditional_below_50pct_share": 0.0,
+        "conditional_below_60pct_share": 0.0,
+        "median_active_probability": 0.9290811106051008,
+        "median_conditional_to_y1_ratio": 0.8068746031252821,
+        "median_expected_to_y1_ratio": 0.7385354107294309
+      },
+      "Y3": {
+        "conditional_below_50pct_share": 0.06060606060606061,
+        "conditional_below_60pct_share": 0.24242424242424243,
+        "median_active_probability": 0.8538776335498484,
+        "median_conditional_to_y1_ratio": 0.713395679030501,
+        "median_expected_to_y1_ratio": 0.5892149819007225
+      },
+      "n": 33
+    },
+    "top10_by_position": {
+      "QB": {
+        "Y2": {
+          "conditional_below_50pct_share": 0.0,
+          "conditional_below_60pct_share": 0.0,
+          "median_active_probability": 0.9479123943756291,
+          "median_conditional_to_y1_ratio": 0.8500093377410416,
+          "median_expected_to_y1_ratio": 0.8011261784298127
+        },
+        "Y3": {
+          "conditional_below_50pct_share": 0.0,
+          "conditional_below_60pct_share": 0.0,
+          "median_active_probability": 0.897254600618037,
+          "median_conditional_to_y1_ratio": 0.7736616456149457,
+          "median_expected_to_y1_ratio": 0.6844309845623191
+        },
+        "n": 6
+      },
+      "RB": {
+        "Y2": {
+          "conditional_below_50pct_share": 0.0,
+          "conditional_below_60pct_share": 0.0,
+          "median_active_probability": 0.9298433009656104,
+          "median_conditional_to_y1_ratio": 0.6635538506673944,
+          "median_expected_to_y1_ratio": 0.6237468465814207
+        },
+        "Y3": {
+          "conditional_below_50pct_share": 0.2222222222222222,
+          "conditional_below_60pct_share": 0.8888888888888888,
+          "median_active_probability": 0.8314946420043066,
+          "median_conditional_to_y1_ratio": 0.5620034892826515,
+          "median_expected_to_y1_ratio": 0.4933420859949922
+        },
+        "n": 9
+      },
+      "TE": {
+        "Y2": {
+          "conditional_below_50pct_share": 0.0,
+          "conditional_below_60pct_share": 0.0,
+          "median_active_probability": 0.9646286434418352,
+          "median_conditional_to_y1_ratio": 0.8729384844724084,
+          "median_expected_to_y1_ratio": 0.83325300565334
+        },
+        "Y3": {
+          "conditional_below_50pct_share": 0.0,
+          "conditional_below_60pct_share": 0.0,
+          "median_active_probability": 0.9362537787011704,
+          "median_conditional_to_y1_ratio": 0.7934885133247388,
+          "median_expected_to_y1_ratio": 0.722883288668895
+        },
+        "n": 6
+      },
+      "WR": {
+        "Y2": {
+          "conditional_below_50pct_share": 0.0,
+          "conditional_below_60pct_share": 0.0,
+          "median_active_probability": 0.9198706863464157,
+          "median_conditional_to_y1_ratio": 0.8138241420448279,
+          "median_expected_to_y1_ratio": 0.735678563247139
+        },
+        "Y3": {
+          "conditional_below_50pct_share": 0.0,
+          "conditional_below_60pct_share": 0.0,
+          "median_active_probability": 0.8305416948551727,
+          "median_conditional_to_y1_ratio": 0.7082793308467894,
+          "median_expected_to_y1_ratio": 0.5651248163780312
+        },
+        "n": 12
+      }
+    },
+    "young_top10": {
+      "Y2": {
+        "conditional_below_50pct_share": 0.0,
+        "conditional_below_60pct_share": 0.0,
+        "median_active_probability": 0.9493583967299217,
+        "median_conditional_to_y1_ratio": 0.8110935924518972,
+        "median_expected_to_y1_ratio": 0.7528606169815182
+      },
+      "Y3": {
+        "conditional_below_50pct_share": 0.0,
+        "conditional_below_60pct_share": 0.21428571428571427,
+        "median_active_probability": 0.8979255622607891,
+        "median_conditional_to_y1_ratio": 0.7363626848782721,
+        "median_expected_to_y1_ratio": 0.6440650335946003
+      },
+      "n": 14
+    }
+  },
+  "sentinels": {
+    "Aaron Rodgers": {
+      "Y2": {
+        "active_probability": 0.6606839987325569,
+        "conditional_ratio": 0.3921907387794375,
+        "league_expected_points": 63.38013725578692,
+        "route": "D1",
+        "standard_conditional_active_points": 91.73341380051043,
+        "standard_expected_points": 60.60679864710955
+      },
+      "Y3": {
+        "active_probability": 0.3517077189759789,
+        "conditional_ratio": 0.37713641833564,
+        "league_expected_points": 32.444600050783315,
+        "route": "D1",
+        "standard_conditional_active_points": 88.2122082487062,
+        "standard_expected_points": 31.02491454898649
+      },
+      "age": 41.75034394956775,
+      "league_Y1": 243.698,
+      "position": "QB",
+      "standard_Y1": 233.9
+    },
+    "Bijan Robinson": {
+      "Y2": {
+        "active_probability": 0.9533976524434852,
+        "conditional_ratio": 0.6162784609187277,
+        "league_expected_points": 189.4760796729238,
+        "route": "D1",
+        "standard_conditional_active_points": 178.3509865898798,
+        "standard_expected_points": 170.0394119257709
+      },
+      "Y3": {
+        "active_probability": 0.8996606651354514,
+        "conditional_ratio": 0.5620034892826515,
+        "league_expected_points": 163.05009928557735,
+        "route": "D1",
+        "standard_conditional_active_points": 162.64380979839933,
+        "standard_expected_points": 146.3242381033918
+      },
+      "age": 23.587068865205996,
+      "league_Y1": 329.2355,
+      "position": "RB",
+      "standard_Y1": 289.4
+    },
+    "Brock Bowers": {
+      "Y2": {
+        "active_probability": 0.9633548373337366,
+        "conditional_ratio": 0.7668796356084573,
+        "league_expected_points": 139.5824039967311,
+        "route": "D1",
+        "standard_conditional_active_points": 106.634613331356,
+        "standard_expected_points": 102.72697057997436
+      },
+      "Y3": {
+        "active_probability": 0.9324199111910773,
+        "conditional_ratio": 0.713395679030501,
+        "league_expected_points": 125.67798227189184,
+        "route": "D1",
+        "standard_conditional_active_points": 99.19766916919116,
+        "standard_expected_points": 92.49388187709908
+      },
+      "age": 22.71915234399064,
+      "league_Y1": 188.323,
+      "position": "TE",
+      "standard_Y1": 139.05
+    },
+    "Christian McCaffrey": {
+      "Y2": {
+        "active_probability": 0.836703147380181,
+        "conditional_ratio": 0.6068854382140643,
+        "league_expected_points": 156.56406003086164,
+        "route": "D1",
+        "standard_conditional_active_points": 167.92520075383158,
+        "standard_expected_points": 140.50354399517963
+      },
+      "Y3": {
+        "active_probability": 0.6019355734942642,
+        "conditional_ratio": 0.4538832748126975,
+        "league_expected_points": 84.23801901325255,
+        "route": "D0",
+        "standard_conditional_active_points": 125.5895021406734,
+        "standard_expected_points": 75.59678899590537
+      },
+      "age": 29.235371020623283,
+      "league_Y1": 315.358,
+      "position": "RB",
+      "standard_Y1": 276.7
+    },
+    "Jahmyr Gibbs": {
+      "Y2": {
+        "active_probability": 0.9562612782128316,
+        "conditional_ratio": 0.6179071513596218,
+        "league_expected_points": 192.4568633192682,
+        "route": "D1",
+        "standard_conditional_active_points": 180.61426034241745,
+        "standard_expected_points": 172.71442345850522
+      },
+      "Y3": {
+        "active_probability": 0.90609149153729,
+        "conditional_ratio": 0.5677116389961988,
+        "league_expected_points": 167.5457677093213,
+        "route": "D1",
+        "standard_conditional_active_points": 165.9421120785889,
+        "standard_expected_points": 150.35873584213678
+      },
+      "age": 23.45291142186356,
+      "league_Y1": 328.023,
+      "position": "RB",
+      "standard_Y1": 292.3
+    },
+    "Puka Nacua": {
+      "Y2": {
+        "active_probability": 0.9376431997432308,
+        "conditional_ratio": 0.7257914212948602,
+        "league_expected_points": 191.01433969631543,
+        "route": "D1",
+        "standard_conditional_active_points": 157.93221327376156,
+        "standard_expected_points": 148.08406579654016
+      },
+      "Y3": {
+        "active_probability": 0.8748937800879513,
+        "conditional_ratio": 0.6734703061227502,
+        "league_expected_points": 165.38278982344764,
+        "route": "D1",
+        "standard_conditional_active_points": 146.54713861231042,
+        "standard_expected_points": 128.21318006159723
+      },
+      "age": 24.26059398892517,
+      "league_Y1": 276.308,
+      "position": "WR",
+      "standard_Y1": 217.6
+    },
+    "Sam Darnold": {
+      "Y2": {
+        "active_probability": 0.9455448823915068,
+        "conditional_ratio": 0.8084160886359728,
+        "league_expected_points": 212.5530125498136,
+        "route": "D1",
+        "standard_conditional_active_points": 214.95783796830517,
+        "standard_expected_points": 203.25228362087364
+      },
+      "Y3": {
+        "active_probability": 0.8957616360820869,
+        "conditional_ratio": 0.7605197008110209,
+        "league_expected_points": 189.43189131490504,
+        "route": "D1",
+        "standard_conditional_active_points": 202.2221884456505,
+        "standard_expected_points": 181.14287837417595
+      },
+      "age": 28.241510777086457,
+      "league_Y1": 281.7255,
+      "position": "QB",
+      "standard_Y1": 265.9
+    },
+    "Trey McBride": {
+      "Y2": {
+        "active_probability": 0.9429343161767266,
+        "conditional_ratio": 0.8638416229799836,
+        "league_expected_points": 140.67188621379353,
+        "route": "D1",
+        "standard_conditional_active_points": 109.79427028075592,
+        "standard_expected_points": 103.52878516730728
+      },
+      "Y3": {
+        "active_probability": 0.8805071140678877,
+        "conditional_ratio": 0.7742616350833696,
+        "league_expected_points": 117.73683392853124,
+        "route": "D1",
+        "standard_conditional_active_points": 98.40865381909629,
+        "standard_expected_points": 86.64951977355828
+      },
+      "age": 25.7773944707968,
+      "league_Y1": 174.3455,
+      "position": "TE",
+      "standard_Y1": 127.1
+    }
+  }
+}

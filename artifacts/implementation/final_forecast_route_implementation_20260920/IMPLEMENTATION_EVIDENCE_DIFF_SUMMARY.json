@@ -1,0 +1,25 @@
+{
+  "schema_version": "fsffl-final-forecast-route-before-after-v1",
+  "date": "2026-09-20",
+  "before_pr_head": "4d98e774ae41aea505f8acda7f6c5f6e6a23508b",
+  "route_authority_version": "p0-final-route-authority-v1:cf5e3c0d375c",
+  "route_authority_sha256": "cf5e3c0d375cdb6248ead9eeba853e71dabebaf017c292c6186d2fe765bfddda",
+  "intended_changed_cells": [
+    "Y3|QB|developmental",
+    "Y3|RB|established"
+  ],
+  "affected_players": 50,
+  "affected_players_by_cell": {
+    "QB|developmental": 24,
+    "RB|established": 26
+  },
+  "y1_changed_rows": 0,
+  "y2_changed_rows": 0,
+  "unaffected_y3_changed_rows": 0,
+  "affected_probability_max_abs_diff": 0,
+  "package_sha256_unchanged": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "current_source_sha256_unchanged": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+  "frozen_raw_array_sha256_unchanged": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+  "developmental_rb_y3_route": "D1",
+  "veteran_route_changes": 0
+}

@@ -1,0 +1,94 @@
+{
+  "schema_version": "fsffl-production-baseline-stageA-stageB-final-outcome-v1",
+  "date": "2026-09-19",
+  "classification": "A - EXACT BASELINE RECOVERED; STAGE B COMPLETED",
+  "validated_implementation_head": "a0648e1b0f4d03569bf2f6c098f7c81b3878630b",
+  "stage_a": {
+    "status": "PASS",
+    "production_record": {
+      "id": 145,
+      "artifact_kind": "preseason_forecast_baseline",
+      "scope_kind": "league_season",
+      "scope_id": "sleeper:1312071960615731200:2026",
+      "model_version": "next2-preseason-baseline-v1",
+      "computed_at": "2026-09-10T21:36:41.346326Z",
+      "invalidated_at": null,
+      "payload_sha256": "cea4126d353f85f1e1fe66bfba4214e204277f487be04462dbe18fb59ae0f387",
+      "payload_bytes": 1037880
+    },
+    "provenance": {
+      "successful_source_ids": [
+        "fftoday",
+        "razzball"
+      ],
+      "minimum_independent_sources": 2,
+      "raw_observation_count": 1675,
+      "source_artifact_id": 94,
+      "raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d"
+    },
+    "y1_board": {
+      "row_count": 335,
+      "unique_player_ids": 335,
+      "positions": {
+        "QB": 61,
+        "RB": 89,
+        "WR": 121,
+        "TE": 64
+      },
+      "board_sha256": "6bded35221a501471df60de8c05a6e691428552f23abb3f0cf799218fd71bfae",
+      "all_player_recompute_max_abs_diff": 1.13686837721616e-13,
+      "all_player_mismatch_count_gt_1e_9": 0,
+      "named": {
+        "Josh Allen": 389.0705,
+        "Bijan Robinson": 329.2355,
+        "Jahmyr Gibbs": 328.023,
+        "Christian McCaffrey": 315.358,
+        "Puka Nacua": 276.308,
+        "Sam Darnold": 281.7255,
+        "Aaron Rodgers": 243.698
+      }
+    }
+  },
+  "stage_b": {
+    "status": "COMPLETED_AND_TESTED",
+    "source_files_changed": [
+      "src/fsffl/forecast/preseason_baseline.py",
+      "src/fsffl/product/forecast_resilience.py",
+      "src/fsffl/product/private_beta_shapley_runtime.py",
+      "src/fsffl/product/persistent_webapp.py",
+      "src/fsffl/value/live_intrinsic_calendar.py"
+    ],
+    "test_files_changed": [
+      "tests/test_preseason_forecast_baseline.py",
+      "tests/test_private_beta_shapley_runtime.py"
+    ],
+    "behavior": [
+      "Frozen season-long Intrinsic Year 1 uses the valid preserved preseason baseline before and independently of live/current provider acquisition.",
+      "Live/current Forecast remains available as a separate path and cannot silently replace the frozen Year-1 coordinate.",
+      "Frozen Year-1 contract fails closed if preserved baseline authority is unavailable or invalid.",
+      "Downstream Year-1 provenance distinguishes preserved preseason authority from live/current evidence."
+    ],
+    "focused_tests": {
+      "run_id": 35444335811,
+      "passed": 25,
+      "result": "PASS"
+    },
+    "repository_ci": {
+      "run_id": 35444335817,
+      "passed": 1223,
+      "warnings": 2,
+      "result": "PASS"
+    }
+  },
+  "execution_accounting": {
+    "fresh_provider_fetches_used_as_substitute": 0,
+    "model_fits": 0,
+    "forecast_tuning_actions": 0,
+    "provider_weight_changes": 0,
+    "i1_parameter_changes": 0,
+    "shapley_algorithm_changes": 0,
+    "merges": 0,
+    "deploys": 0
+  },
+  "stop_boundary": "STOP FOR MANAGEMENT REVIEW. Do not merge or deploy. Do not continue into standard-vs-half-PPR source-coordinate audit or current-player credibility rerun."
+}

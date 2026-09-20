@@ -1,0 +1,196 @@
+{
+  "schema_version": "1",
+  "created_on": "2026-09-19",
+  "gate": "league_agnostic_future_scoring_no_refit_player_specific_translation",
+  "authority": {
+    "research_branch": "research/future-state-resolution-phase34-resume",
+    "research_head_recovered": "3bbdf8ce75eff05e26c154b2c38c70d425a4a5d2",
+    "implementation_pr": 147,
+    "implementation_branch": "implementation/forecast-intrinsic-i1-shapley",
+    "starting_pr_head": "7b76ec5a7488c935f07576c99015a9cebb9f7c5f",
+    "main_at_start": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "p0_frozen": true,
+    "runtime_authority_changed": false,
+    "main_modified": false,
+    "merged": false,
+    "deployed": false
+  },
+  "durable_recovery": {
+    "candidate_code_present_at_start": false,
+    "exact_preseason_raw_ensemble_recovered_via_authorized_read_only_persistence": true,
+    "persistence_project": "gldxkbqcprzuffgmamxl",
+    "persistence_schema_table_record": "fsffl.derived_artifact id=145",
+    "raw_observations": 1675,
+    "players": 335,
+    "preserved_standard_y1_board": true,
+    "preserved_connected_league_y1_board": true
+  },
+  "candidate": {
+    "version": "i1-future-league-scoring-candidate-v1:player-ratio",
+    "formula": "player league Y1 points / same-player frozen standard Y1 points; multiply only scoring-dependent P0 point outputs",
+    "player_identity_count": 335,
+    "p0_refit": false,
+    "p0_probabilities_changed": false,
+    "persistence_or_active_probability_changed": false,
+    "active_probability_extra_application": false,
+    "market_roster_owner_ranking_inputs": false,
+    "runtime_wiring": false
+  },
+  "format_gate": [
+    {
+      "format": "standard/non-PPR (frozen P0 compatibility coordinate; 4-point pass TD)",
+      "status": "PASS",
+      "evidence": "exact identity by construction plus focused candidate test"
+    },
+    {
+      "format": "connected league 0.5 PPR",
+      "status": "PASS",
+      "evidence": "335/335 preserved-board reconstruction and trajectory parity"
+    },
+    {
+      "format": "full PPR family",
+      "status": "PASS",
+      "evidence": "deterministic player-specific candidate-math fixture; no P0 change"
+    },
+    {
+      "format": "TE-premium family",
+      "status": "PASS_AT_CANDIDATE_TRANSLATION_LAYER",
+      "evidence": "deterministic player-specific candidate-math fixture; no universal TE-premium coefficient promoted"
+    },
+    {
+      "format": "6-point passing-TD variant",
+      "status": "PASS",
+      "evidence": "deterministic player-specific candidate-math fixture; standard row covers the frozen 4-point compatibility variant"
+    },
+    {
+      "format": "interrupted run sixth configuration",
+      "status": "NOT_DURABLY_IDENTIFIABLE",
+      "evidence": "not reconstructed or replaced; exact identity/parameters absent from durable repository and prior management evidence"
+    }
+  ],
+  "connected_league_numeric_parity": {
+    "players": 335,
+    "y1_player_ratio_reproduction_max_abs_error_points": 5.684341886080802e-14,
+    "y2_max_conditional_trajectory_ratio_error": 3.552713678800501e-15,
+    "y2_max_expected_trajectory_ratio_error": 8.881784197001252e-16,
+    "y3_max_conditional_trajectory_ratio_error": 3.552713678800501e-15,
+    "y3_max_expected_trajectory_ratio_error": 1.7763568394002505e-15,
+    "bridge_difference_identity_max_residual_y2": 3.019806626980426e-14,
+    "bridge_difference_identity_max_residual_y3": 2.453592884421596e-14
+  },
+  "player_specific_ratio_distribution": {
+    "QB": {
+      "n": 61,
+      "position_bridge": 1.045759529798389,
+      "min": 1.0208080808080808,
+      "median": 1.0469198269106272,
+      "p90": 1.1180039138943247,
+      "max": 1.2293478260869566
+    },
+    "RB": {
+      "n": 89,
+      "position_bridge": 1.1143068393793185,
+      "min": 1.0391608807776234,
+      "median": 1.1155329368709974,
+      "p90": 1.1936267048650169,
+      "max": 1.3534277620396602
+    },
+    "WR": {
+      "n": 121,
+      "position_bridge": 1.2899047488253008,
+      "min": 1.207595459236326,
+      "median": 1.294158163265306,
+      "p90": 1.3322991689750692,
+      "max": 1.5116666666666667
+    },
+    "TE": {
+      "n": 64,
+      "position_bridge": 1.3587707610638076,
+      "min": 1.271004056795132,
+      "median": 1.3661720792926375,
+      "p90": 1.4144881830289595,
+      "max": 1.4841150442477873
+    }
+  },
+  "position_bridge_loss_connected_half_ppr": {
+    "Y2_expected_points": {
+      "n": 335,
+      "mae": 1.6050560706103814,
+      "median_abs": 1.1894279119318156,
+      "p90_abs": 3.59664942969169,
+      "p95_abs": 4.748990298560083,
+      "max_abs": 11.884799397235483,
+      "mean_signed": 0.0926387414981758,
+      "median_abs_relative": 0.017205588956041174,
+      "p90_abs_relative": 0.048984395755676646,
+      "max_abs_relative": 0.17667800924962443
+    },
+    "Y3_expected_points": {
+      "n": 335,
+      "mae": 1.260437399757001,
+      "median_abs": 0.9541563409528386,
+      "p90_abs": 2.92722633706598,
+      "p95_abs": 3.5580490541825927,
+      "max_abs": 10.55256141410868,
+      "mean_signed": 0.0954006081058658,
+      "median_abs_relative": 0.01715030266135082,
+      "p90_abs_relative": 0.04911384201320189,
+      "max_abs_relative": 0.1766780092496244
+    },
+    "by_position_Y2_mae": {
+      "QB": 1.2266492792475618,
+      "RB": 2.3138496306746714,
+      "WR": 1.3760584244999587,
+      "TE": 1.4130076738411814
+    },
+    "by_position_Y3_mae": {
+      "QB": 1.2090728043384789,
+      "RB": 1.6324386803136843,
+      "WR": 1.0687421980506646,
+      "TE": 1.15450373971718
+    },
+    "representative_mechanically_selected_by_absolute_Y2_difference": [
+      {
+        "player": "Dylan Sampson",
+        "position": "RB",
+        "position_bridge_expected": 98.30019208280736,
+        "player_specific_expected": 110.18499148004284,
+        "difference": 11.884799397235483
+      },
+      {
+        "player": "Derrick Henry",
+        "position": "RB",
+        "position_bridge_expected": 133.0584244854576,
+        "player_specific_expected": 124.08530998536136,
+        "difference": -8.973114500096244
+      },
+      {
+        "player": "LeQuint Allen",
+        "position": "RB",
+        "position_bridge_expected": 39.33982220115156,
+        "player_specific_expected": 47.7818188304399,
+        "difference": 8.44199662928834
+      },
+      {
+        "player": "Jameson Williams",
+        "position": "WR",
+        "position_bridge_expected": 144.62689935612767,
+        "player_specific_expected": 138.53370937453073,
+        "difference": -6.093189981596936
+      }
+    ]
+  },
+  "interpretation": {
+    "loss_source": "discarded player-specific Year-1 scoring/stat mix in the position-average bridge",
+    "p0_trajectory_change": false,
+    "proof": "candidate-minus-position-bridge equals standard future points times (player ratio - position ratio), with only floating-point residual",
+    "requires_independent_future_stat_category_forecast": false
+  },
+  "limitations": [
+    "Exact sixth interrupted scoring configuration was not durably identifiable and was not replaced for symmetry.",
+    "The candidate is intentionally not wired into runtime authority.",
+    "Current production league-scoring coverage still governs which connected-league Year-1 rules can be materialized; this gate does not expand that production coverage."
+  ],
+  "final_classification": "PASS",
+  "management_boundary": "ready_to_return_for_management_promotion_review_not_merge_or_deploy"
+}
