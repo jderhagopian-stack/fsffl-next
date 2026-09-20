@@ -45,7 +45,7 @@ def _runtime() -> UserRuntimeContext:
             league_id=league_id,
             name="Fixture",
             season=2026,
-            rules=LeagueRules(team_count=2, roster_size=2),
+            rules=LeagueRules(team_count=2, roster_size=2, lineup=(), scoring=()),
         ),
         as_of=now,
         teams=(
