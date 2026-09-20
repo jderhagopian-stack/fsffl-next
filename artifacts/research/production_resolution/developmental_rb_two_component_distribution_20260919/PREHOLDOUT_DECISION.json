@@ -1,0 +1,95 @@
+{
+  "M2": "NOT_AUTHORIZED_PRIOR_IDENTIFIABILITY_GATE_FAILED",
+  "Y2_no_harm": {
+    "crps_gain": {
+      "ci_high": -0.2236101521844923,
+      "ci_low": -2.9714699547013583,
+      "horizon": 2,
+      "mean": -1.5210807180459383,
+      "n": 773,
+      "nboot": 2000,
+      "subset": "full"
+    },
+    "mae_gain": {
+      "ci_high": -15.983435728283826,
+      "ci_low": -24.892092452031584,
+      "horizon": 2,
+      "mean": -20.26700538716648,
+      "n": 773,
+      "nboot": 2000,
+      "subset": "full"
+    },
+    "max_block_crps_degradation": 2.7023027415438334
+  },
+  "Y3": {
+    "brier_negative_blocks": 0,
+    "crps_all_blocks_positive": false,
+    "full_brier4_gain": {
+      "ci_high": 0.04294743228758828,
+      "ci_low": 0.004544668144732185,
+      "horizon": 3,
+      "mean": 0.022696499834973065,
+      "n": 773,
+      "nboot": 2000,
+      "subset": "full"
+    },
+    "full_crps_gain": {
+      "ci_high": -0.3090428864013457,
+      "ci_low": -2.3588961288319683,
+      "horizon": 3,
+      "mean": -1.325070129365494,
+      "n": 773,
+      "nboot": 2000,
+      "subset": "full"
+    },
+    "initialization_and_support_pass": true,
+    "mae_gain": {
+      "ci_high": -33.2965903606756,
+      "ci_low": -76.76321212229563,
+      "horizon": 3,
+      "mean": -55.662921334402746,
+      "n": 773,
+      "nboot": 2000,
+      "subset": "full"
+    },
+    "max_prob_norm_error": 2.220446049250313e-16,
+    "p95_D1_downside": 0.4583909031906198,
+    "p95_D1_survivor": 0.3219309074228393,
+    "p95_M1_downside": 0.4208349098282363,
+    "p95_M1_survivor": 0.39537129599721127,
+    "p95_observed_downside": 0.21951219512195125,
+    "p95_observed_survivor": 0.4878048780487805,
+    "p95_tail_error_improvement": 0.11099638193675548,
+    "sub_p90_crps_gain": {
+      "ci_high": -0.07158690391020055,
+      "ci_low": -1.5228416618674847,
+      "horizon": 3,
+      "mean": -0.7741193428732761,
+      "n": 694,
+      "nboot": 2000,
+      "subset": "sub_p90"
+    }
+  },
+  "candidate": "M1",
+  "failure_reasons": [
+    "crps",
+    "p95_tail",
+    "mae",
+    "sub_p90",
+    "Y2_no_harm"
+  ],
+  "gate_results": {
+    "Brier4": true,
+    "CRPS": false,
+    "MAE": false,
+    "Y2_no_harm": false,
+    "p95_tail": false,
+    "probability_normalization": true,
+    "sub_p90": false,
+    "support_sensitivity": true
+  },
+  "holdout_rule": "Evaluate 2021-2022 exactly once after this file is persisted. Holdout cannot rescue or redesign a pre-holdout failure.",
+  "holdout_touched": false,
+  "preholdout_decision": "FAIL_PREHOLDOUT",
+  "schema_version": "fsffl-dev-rb-two-component-preholdout-v1"
+}
