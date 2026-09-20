@@ -1,18 +1,6 @@
 name: Value authority comparison audit
 
 on:
-  push:
-    branches:
-      - correctness/forecast-value-authority-reconciliation-20260920
-    paths:
-      - "scripts/run_value_authority_comparison_audit.py"
-      - ".github/workflows/value-authority-comparison-audit.yml"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "scripts/run_value_authority_comparison_audit.py"
-      - ".github/workflows/value-authority-comparison-audit.yml"
   workflow_dispatch:
 
 permissions:
