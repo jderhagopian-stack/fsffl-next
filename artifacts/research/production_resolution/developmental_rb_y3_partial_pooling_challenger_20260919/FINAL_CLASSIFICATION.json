@@ -1,0 +1,55 @@
+{
+  "classification": "C. PARTIAL-POOLING CHALLENGER FAILS",
+  "gates": [
+    {
+      "gate": "full_cell_crps",
+      "pass": false,
+      "detail": "gain=-0.4784; CI=[-0.8193,-0.1798]; origins=1/9; median=-0.3696; worst=-1.1682; LOO_flip=False"
+    },
+    {
+      "gate": "continuous_magnitude_calibration",
+      "pass": false,
+      "detail": "overall=-1.3166; upper=-1.8030; lower=-0.1973; overallCI=[-2.6199,-0.5230]"
+    },
+    {
+      "gate": "state_diagnostics",
+      "pass": false,
+      "detail": "new_material_failure=True"
+    },
+    {
+      "gate": "mae_no_harm",
+      "pass": false,
+      "detail": "gain=-2.2112; CI=[-3.0146,-1.5667]"
+    },
+    {
+      "gate": "low_mid_no_harm",
+      "pass": false,
+      "detail": "gain=-0.3507; CI=[-0.6316,-0.0715]"
+    },
+    {
+      "gate": "coverage",
+      "pass": true,
+      "detail": "[{\"scope\":\"overall\",\"n\":986,\"d1_cov10_90\":0.8874239351,\"challenger_cov10_90\":0.9097363083,\"diff10_90\":0.0223123732,\"d1_cov25_75\":0.7221095335,\"challenger_cov25_75\":0.7393509128,\"diff25_75\":0.0172413793},{\"scope\":\"upper\",\"n\":352,\"d1_cov10_90\":0.6988636364,\"challenger_cov10_90\":0.7613636364,\"diff10_90\":0.0625,\"d1_cov25_75\":0.4659090909,\"challenger_cov25_75\":0.5056818182,\"diff25_75\":0.0397727273},{\"scope\":\"lower\",\"n\":167,\"d1_cov10_90\":0.9880239521,\"challenger_cov10_90\":0.9880239521,\"diff10_90\":0.0,\"d1_cov25_75\":0.6946107784,\"challenger_cov25_75\":0.7125748503,\"diff25_75\":0.0179640719}]"
+    },
+    {
+      "gate": "ordering_probability_parity",
+      "pass": true,
+      "detail": "{\"max_probability_sum_error\": 4.440892098500626e-16, \"ordering_violation_rows\": 0, \"min_adjacent_state_gap_points\": 1.5420752969046727, \"all_fits_ok\": true, \"binding_plus_origins\": 9, \"binding_minus_origins\": 9}"
+    },
+    {
+      "gate": "temporal_influence",
+      "pass": true,
+      "detail": "LOO_flip=False; player_flip=False; blockCI=[-0.7761,-0.2423]"
+    },
+    {
+      "gate": "prospective_2023_2026_untouched",
+      "pass": true,
+      "detail": "No 2026 target outcomes accessed."
+    }
+  ],
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge": false,
+  "deploy": false
+}

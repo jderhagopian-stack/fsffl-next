@@ -1,0 +1,8 @@
+{
+  "max_probability_sum_error": 4.440892098500626e-16,
+  "ordering_violation_rows": 0,
+  "min_adjacent_state_gap_points": 1.5420752969046727,
+  "all_fits_ok": true,
+  "binding_plus_origins": 9,
+  "binding_minus_origins": 9
+}

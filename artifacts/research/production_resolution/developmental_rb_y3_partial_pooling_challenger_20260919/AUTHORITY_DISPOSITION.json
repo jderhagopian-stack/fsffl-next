@@ -1,0 +1,24 @@
+{
+  "classification": "C. PARTIAL-POOLING CHALLENGER FAILS",
+  "all_material_gates_pass": false,
+  "full_cell_crps_gain": -0.47842881720772035,
+  "clustered_crps_ci": [
+    -0.8192637095132703,
+    -0.17977770781643443
+  ],
+  "origins_improved": 1,
+  "median_origin_gain": -0.3696224801681005,
+  "worst_origin_gain": -1.1681776183999162,
+  "overall_imce_improvement": -1.3166343885554261,
+  "upper_imce_improvement": -1.8030077146387802,
+  "lower_imce_improvement": -0.19732462864694644,
+  "mae_gain": -2.2111919405533156,
+  "low_mid_crps_gain": -0.35067111140188834,
+  "lower_deviation_parameters_effectively_zero": true,
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge": false,
+  "deploy": false,
+  "prospective_2023_2026_untouched": true
+}

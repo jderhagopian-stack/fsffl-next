@@ -1,0 +1,10 @@
+index,gate,pass,detail
+0,full_cell_crps,False,"gain=-0.4784; CI=[-0.8193,-0.1798]; origins=1/9; median=-0.3696; worst=-1.1682; LOO_flip=False"
+1,continuous_magnitude_calibration,False,"overall=-1.3166; upper=-1.8030; lower=-0.1973; overallCI=[-2.6199,-0.5230]"
+2,state_diagnostics,False,new_material_failure=True
+3,mae_no_harm,False,"gain=-2.2112; CI=[-3.0146,-1.5667]"
+4,low_mid_no_harm,False,"gain=-0.3507; CI=[-0.6316,-0.0715]"
+5,coverage,True,"[{""scope"":""overall"",""n"":986,""d1_cov10_90"":0.8874239351,""challenger_cov10_90"":0.9097363083,""diff10_90"":0.0223123732,""d1_cov25_75"":0.7221095335,""challenger_cov25_75"":0.7393509128,""diff25_75"":0.0172413793},{""scope"":""upper"",""n"":352,""d1_cov10_90"":0.6988636364,""challenger_cov10_90"":0.7613636364,""diff10_90"":0.0625,""d1_cov25_75"":0.4659090909,""challenger_cov25_75"":0.5056818182,""diff25_75"":0.0397727273},{""scope"":""lower"",""n"":167,""d1_cov10_90"":0.9880239521,""challenger_cov10_90"":0.9880239521,""diff10_90"":0.0,""d1_cov25_75"":0.6946107784,""challenger_cov25_75"":0.7125748503,""diff25_75"":0.0179640719}]"
+6,ordering_probability_parity,True,"{""max_probability_sum_error"": 4.440892098500626e-16, ""ordering_violation_rows"": 0, ""min_adjacent_state_gap_points"": 1.5420752969046727, ""all_fits_ok"": true, ""binding_plus_origins"": 9, ""binding_minus_origins"": 9}"
+7,temporal_influence,True,"LOO_flip=False; player_flip=False; blockCI=[-0.7761,-0.2423]"
+8,prospective_2023_2026_untouched,True,No 2026 target outcomes accessed.
