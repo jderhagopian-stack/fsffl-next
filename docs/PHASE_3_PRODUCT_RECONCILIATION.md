@@ -1,151 +1,189 @@
 # FSFFL NEXT — Phase 3 Product Reconciliation
 
-Status: **Phase 3 active — Intrinsic Value productized; commercial cold-path latency slice implemented for review**  
+Status: **Phase 3 active — Intrinsic Value productized; progressive cold-path delivery merged; Intrinsic dynasty display-scale repair in review**  
 Roadmap authority: `docs/FSFFL_NEXT_PRODUCT_PRIORITIES.md`  
-Original reconciliation starting `main`: `641378af5b4d9bb99eae5ec3aa4ee8cc70118d5b`  
+Original Intrinsic productization starting `main`: `641378af5b4d9bb99eae5ec3aa4ee8cc70118d5b`  
 Commercial-latency slice starting `main`: `72fbfd35a920fa38cea523ef0979735e4e1ceb56`  
-Starting live Render SHA for both slices: `f38e2f029a0d9563986635012336434a3f9beb63`
+Intrinsic dynasty display-scale slice starting `main`: `53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76`
 
 This document records actual product state against the canonical roadmap. It does not replace or silently rewrite that roadmap.
 
-## Reconciled deployment state
+## Deployment and release state
 
-At the original reconciliation, GitHub `main` contained the merged FSFFL Intrinsic Value v1 work from PR #133 while the private-beta Render service was still serving `f38e2f...`. PR #134 subsequently productized Intrinsic Value and merged as `72fbfd35...`.
+PR #133 promoted FSFFL Intrinsic Value v1. PR #134 productized it in Franchise → Value Lens. PR #135 added progressive Market / Trade Center answer delivery without reducing 50,000-run Simulation fidelity.
 
-At the start of the commercial-latency slice, `main` was exactly `72fbfd35...`, confirming PR #134 was merged. Render was still serving `f38e2f...` because the private-beta service is configured to deploy the older `next-8-product-layer` branch rather than `main`. That deployment lag is operationally important but is not repaired by silently changing deployment configuration inside this product-performance PR.
+The private beta is deployed through the existing `next-8-product-layer` release branch. The governed release procedure is to verify that branch is a clean ancestor of the approved `main`, fast-forward it non-forced to the exact approved `main` SHA, manually trigger the existing Render service, and then verify the live SHA and smoke behavior. After PR #135, the live beta was aligned to `53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76`.
 
-Three states therefore remain distinct:
+Repository state and live state must remain distinct concepts:
 
 1. **merged to main** — repository-authoritative behavior;
-2. **available in the current live beta** — dependent on the Render branch/deploy configuration;
+2. **released to the private beta** — approved main SHA promoted through the release branch and Render;
 3. **customer-facing/productized** — presentation exists and is understandable when that repository state is deployed.
-
-Open PR overlap at the start of the latency slice:
-
-- PR #131 — research-only multi-year intrinsic work; draft/unmerged; no production authority and no overlap with this performance slice.
-- PR #132 — roadmap documentation alignment; open and based on older `main`; no product implementation overlap.
-- no parallel performance PR.
 
 ## Phase 3 surface matrix
 
-| Surface | Current status | What exists today | Exact unfinished gap | Gap type | Phase 3 exit impact |
-| --- | --- | --- | --- | --- | --- |
-| Home — “What should I care about right now?” | **MOSTLY COMPLETE** | Scan-first league/team attention view, competitive state, expected wins/playoff outlook, opportunity handoff, league comparison | Useful beta discoveries still need a durable product-learning loop | Product learning | Medium |
-| Franchise — “What is actually driving my franchise?” | **MOSTLY COMPLETE** | Strong diagnosis plus the PR #134 Value Lens that clearly separates Broad Market, FSFFL Intrinsic, unavailable League Market and Team Utility | Validate with real beta use after deployment | Beta validation | Medium |
-| League — “How do these teams differ?” | **MOSTLY COMPLETE** | League comparison, team structure, positional map, age/depth/future-capital context | League Market Value is not production-ready | Backend evidence | Medium |
-| Opportunities / Trade Finder — “Where is there something worth doing?” | **MOSTLY COMPLETE after latency slice** | Market Focus, opportunity detail, feasibility, credible package handoff, exact Search caching, and now a search-only quick view before bounded Decision enrichment | Fresh structural Search itself still determines the quick-view floor; Intrinsic-vs-Market disagreement is not yet a discovery lens | Performance / product intelligence | High |
-| Trade Center — “What happens if I make this deal?” | **MOSTLY COMPLETE after latency slice** | Immediate package-economics quick view, existing pre-Simulation bilateral roster analysis, unchanged 50k Simulation, quick/deep counter paths | Fresh 50k Simulation still takes about 85s when no exact reusable artifact exists | Performance | **High** |
-| Behavioral Intelligence — “How should I understand and approach this owner?” | **MOSTLY COMPLETE** | Customer-facing observed owner history, trade shapes, position flows, counterparties, provenance; unsupported inference remains gated | Context-controlled owner preference / calibrated acceptance remain evidence-blocked | Evidence | Medium |
-| Team/Owner-Adjusted Value | **BLOCKED** | Team Utility is separate and Decision uses franchise context | No governed owner-adjusted asset coordinate is production-ready | Evidence | Medium |
-| Performance / commercial latency | **PARTIAL → materially improved delivery contract** | Exact caches, durable Simulation reuse, quick frontier, progressive Market/Trade delivery, duplicate exact Simulation coalescing, phase instrumentation | Raw fresh 50k compute remains the dominant deep-analysis blocker | Performance | **High** |
+| Surface | Current status | What exists | Remaining Phase 3 gap |
+| --- | --- | --- | --- |
+| Home | **MOSTLY COMPLETE** | Scan-first attention view, competitive state, expected wins/playoff outlook, opportunity handoff | Durable beta-learning loop |
+| Franchise | **MOSTLY COMPLETE** | Diagnosis, roster/assets, Value Lens, separate Market / Intrinsic / League Market / Team Utility concepts | Intrinsic dynasty display-scale repair must merge and be live-validated |
+| League | **MOSTLY COMPLETE** | League structure, position map, age/depth/future-capital context | League Market Value not production-ready |
+| Market / Opportunities | **MOSTLY COMPLETE** | Market Focus, structural quick view, deeper Decision enrichment, reuse | Live user-perceived latency validation and later Intrinsic-vs-Market discovery |
+| Trade Center | **MOSTLY COMPLETE** | Quick package economics, pre-Simulation Decision evidence, unchanged 50k Simulation, quick/deep counter paths | Fresh 50k Simulation remains deep-path latency blocker |
+| Behavioral Intelligence | **MOSTLY COMPLETE** | Observed owner history, trade shapes, position flows, counterparties, provenance | Calibrated owner preference/acceptance remains evidence-blocked |
+| Team/Owner-adjusted Value | **BLOCKED** | Team Utility remains downstream and separate | No governed owner-adjusted asset coordinate |
+| Performance | **PARTIAL / materially improved delivery contract** | Exact caches, Simulation reuse, progressive Market/Trade delivery, duplicate exact Simulation coalescing | Raw fresh 50k compute remains expensive |
 
-## Intrinsic Value productization
+## Intrinsic Value authority — raw coordinate
 
-PR #134 closed the primary customer-facing Intrinsic gap by adding a Franchise **Value Lens**. It teaches the four-coordinate architecture in plain language:
+The authoritative Intrinsic v1 calculation remains unchanged:
 
-- **Broad Market Value** — what the wider dynasty market prices;
-- **FSFFL Intrinsic Value** — what FSFFL’s multi-year football economics imply above lineup replacement;
-- **League Market Value** — explicitly unavailable until governed league-specific pricing exists;
-- **Team Utility** — separate franchise/context value.
+`surplus_y = max(0, player Forecast_y - marginal-lineup-opportunity replacement Forecast_y)`
 
-The lens lazily requests governed Intrinsic evidence, shows confidence and provenance secondarily, compares Market and Intrinsic only through percentile rank as a presentation aid, and treats disagreement as a reason to investigate rather than an automatic trade command.
+`raw intrinsic = 1.00 × surplus_Y1 + 0.85 × surplus_Y2 + 0.70 × surplus_Y3`
 
-## Commercial cold-path latency — measured starting state
+The raw value is therefore **weighted expected fantasy-point surplus above replacement**. It is an internal FSFFL economic/fundamental coordinate. It is not a market price, not Team Utility, and not itself a customer-friendly dynasty-value magnitude.
 
-Re-measured from the actual Render logs at the start of this slice:
+Forecast continues to own football production/trajectory and QB career-state inference. Value consumes Forecast and owns replacement economics. Market evidence is not an input to raw Intrinsic. Team Utility remains downstream.
 
-- cold `/api/opportunities/workspace`: **15.037s**; underlying workspace build **14.910s**;
-- exact repeated Market workspace: approximately **0.131–0.180s** end to end;
-- `/api/trade-center/browser`: approximately **0.042–0.390s**;
-- fresh `/api/trade-center/analyze`: approximately **13.245–13.269s**;
-- fresh `/api/trade-center/simulate`: approximately **85.025s** for the unchanged 50,000-run changed-roster Simulation;
-- exact repeated Simulation: approximately **1.227s**;
-- historical deep frontier observations: approximately **315.845–331.544s**;
-- fresh full Opportunity trade evaluation: approximately **83.849–91.752s**, versus approximately **1.404s** when reusable Simulation evidence was available.
+## Live Value Lens defect discovered after PR #134/#135 deployment
 
-These figures describe the live `f38e2f...` beta, not the unmerged latency branch.
+Live beta testing exposed two presentation/integrity problems:
 
-## Bottleneck diagnosis
+1. Broad Market was shown as a percentile while raw Intrinsic was shown directly as values such as `109.7 pts`, `183.5 pts`, and `240.2 pts`. That mixed a market rank with an internal weighted-surplus unit and made the raw economic coordinate look like the intended dynasty asset-value score.
+2. Players with valid model-produced zero surplus could appear as `0 pts` with a misleading percentile such as `34th pct`. The old browser percentile function assigned the midpoint rank of the entire tied-zero block. That percentile did **not** mean missing evidence, but the presentation made zero versus unavailable impossible to interpret confidently.
 
-### Market
+The old frontend did **not** silently substitute zero for a missing estimate: it rendered `Unavailable` when no estimate object existed. Therefore the observed `0 pts` cases (including KC Concepcion, Dallas Goedert and Tyler Allgeier in the live Value Lens) were genuine Intrinsic estimates whose raw weighted surplus was exactly zero, not frontend fallback values. The defect was the lack of an explicit availability contract and the misleading tied-zero percentile treatment.
 
-The cold Market endpoint was not waiting only on Search. `build_opportunity_workspace` generated the structural Search catalog and then synchronously performed one full bilateral pre-Simulation Trade Decision enrichment before returning the first workspace. The same bilateral analysis path independently measured near 13 seconds. Repeated Market was already fast because exact workspace and structural-catalog caches were effective.
+## Intrinsic Dynasty Value display coordinate — candidate v1
 
-### Trade Center
+PR #137 adds a separate user-facing display coordinate while preserving raw Intrinsic unchanged.
 
-The pre-Simulation analysis combines legal changed State, package economics, mandatory cuts, lineup/position comparisons, four before/after franchise utility vectors, bilateral evaluation, decision shape and negotiation feasibility. It is authoritative but too expensive to be the first visible response.
+Scale:
 
-### Simulation
+- scale id: `fsffl-intrinsic-dynasty-value`
+- version: `1`
+- intended range: `0` to `<10,000`, asymptotically approaching 10,000
+- input: raw Intrinsic v1 only
+- Market input: **none**
+- Team Utility input: **none**
+- player identity input: **none**
 
-Exact completed Simulation reuse was already strong, but two simultaneous cold requests for the same exact changed State could both miss before either completed and therefore launch duplicate 50,000-run work. Fresh Simulation itself remains the deepest compute cost.
+The transform is monotonic and deterministic. Stable raw anchors are mapped piecewise, with an asymptotic elite tail:
 
-## Progressive answer delivery contract
+| Raw weighted surplus | Display value |
+| ---: | ---: |
+| 0 | 0 |
+| 45 | 3,000 |
+| 110 | 6,000 |
+| 180 | 8,500 |
+| 300 | 9,700 |
+| >300 | strictly increasing tail approaching 10,000 |
 
-This slice does **not** create two competing truths.
+The anchors were selected against the frozen/current Intrinsic-v1 evidence span rather than against market prices: valid zero-surplus cases; roughly 45-point fringe positive value; roughly 110-point meaningful asset value; roughly 180-point premium non-QB live Value Lens values; and roughly 300-point elite QB values from the frozen current-player safety evidence. The asymptotic tail prevents elite assets from clipping to one identical ceiling.
 
-### Market
+Representative mapping:
 
-1. **Quick view:** the same server-owned structural Search workspace with `bilateral_evaluation_limit=0`. It contains current canonical Search evidence and explicitly marks Decision enrichment as pending.
-2. **Updated view:** the existing full workspace endpoint adds the same bounded bilateral Decision enrichment as before.
-3. The quick and full workspaces share the exact structural Search catalog cache. The quick view can therefore populate the structural catalog once and the full follow-up reuses it rather than rebuilding the package universe.
-4. Old results are discarded if league/team/state identity changes before completion.
+| Raw Intrinsic | Display Intrinsic |
+| ---: | ---: |
+| 0.0 | 0 |
+| 45.1 | 3,005 |
+| 109.7 | 5,986 |
+| 183.5 | 8,535 |
+| 223.43 | 8,934 |
+| 240.2 | 9,102 |
+| 291.98 | 9,620 |
+| 311.21 | 9,732 |
+| 448.61 | 9,932 |
 
-### Trade Center
+This display transform is not a new fundamental model and does not replace the raw coordinate. It is a versioned presentation/value-normalization layer whose only purpose is to make the independently derived FSFFL fundamental coordinate readable as a dynasty asset-value magnitude.
 
-1. **Quick view:** canonical asset validation, legal changed-State application and existing governed package/market economics. It is labeled `partial_package_economics` and explicitly has no final disposition or competitive outcome authority.
-2. **Roster analysis:** the existing `/api/trade-center/analyze` endpoint adds mandatory-cut, lineup, resilience and bilateral Decision evidence. It remains explicitly pre-Simulation.
-3. **Full analysis:** the existing `/api/trade-center/simulate` path runs or exactly reuses the unchanged full 50,000-run Simulation and then produces Simulation-backed Decision/materiality/disposition evidence.
-4. Quick failure does not fabricate deeper evidence; deeper failure leaves the already-valid quick evidence visible for its stated scope.
-5. Every stage is guarded by current context + exact draft identity so an old request cannot overwrite a newer league, forecast state or draft.
+## Missing-value integrity contract
 
-## Exact reuse and concurrency behavior
+`/api/value/intrinsic-v1` now preserves the backward-compatible raw `estimates` array and adds explicit roster-player presentation rows containing:
 
-Scenario reuse remains keyed on the exact changed LeagueState, exact Simulation-facing forecast fingerprint, loader/configuration identity and Simulation model contract. The new in-flight layer adds only one rule: two concurrent requests with the **same exact key** share the same authoritative running Simulation instead of launching duplicate 50,000-run work.
+- `availability`
+- `evidence_state`
+- `reason`
+- `raw_intrinsic_value`
+- `intrinsic_dynasty_value`
+- `percentile`
+- `confidence`
+- nested raw `estimate` provenance when available
 
-A changed State, changed forecast evidence, changed loader/configuration identity or otherwise different key still forces a separate authoritative run. No interpolation, reduced run count or approximate competitive result is introduced.
+Contract:
 
-Additional phase instrumentation now records:
+- **available + positive raw surplus** → publish display value and population percentile;
+- **available + valid zero raw surplus** → publish display value `0`, explicitly explain valid zero surplus, and anchor percentile at `0th` rather than the midpoint of tied zeros;
+- **low-evidence but available** → publish value with `low_evidence` state and existing low-confidence explanation;
+- **unavailable** → publish `null` raw/display/percentile values plus a concise reason; never fabricate zero or a percentile.
 
-- quick Market total;
-- quick Trade State validation and package economics;
-- full Trade State validation, package economics, lineup/legality, roster Decision and finalization;
-- Simulation key lookup, durable lookup, exact in-flight wait, 50k execution and persistence;
-- post-trade Simulation preparation, Simulation/reuse and post-processing;
-- total endpoint wall clock for both quick and full Market/Trade/frontier routes.
+Unavailable reasons distinguish missing authoritative season Forecast evidence from inability to construct governed replacement context.
 
-## Expected user-perceived effect before live deployment
+## Broad Market presentation in Value Lens
 
-The previous first Market payload included the approximately 13-second bilateral enrichment. The new first Market payload removes that enrichment from its critical path and returns after the same structural Search work only. Based on the observed 15.037s Market total and roughly 13.25s independently measured bilateral analysis, this targets a low-single-digit first useful Market response on the same class of workload. This is a component-based expectation, **not** a claimed live post-change measurement; the PR branch is not the Render deployment branch.
+The product already carries two distinct governed market representations:
 
-Trade Center likewise no longer requires the approximately 13.25s pre-Simulation analysis before showing anything useful. Its first response is limited to changed-State validation and package economics, while the existing roster analysis follows and the unchanged 50k Simulation then enriches it. The full fresh-analysis wall clock is not expected to become 85 seconds faster; instead useful governed evidence appears materially before the deep run finishes.
+- the ensemble `dynasty-market-percentile` coordinate; and
+- the authoritative `fsffl-market-cardinal` 0–10,000 market magnitude.
 
-Fresh Simulation runtime itself is intentionally not claimed improved absent hosted post-deploy measurement. The concrete compute improvement in this slice is removal of duplicate identical concurrent 50k runs plus clearer phase timing for the next optimization decision.
+The repaired Value Lens uses the governed market-cardinal score as the primary **Broad Market Value** magnitude and retains the ensemble market percentile as secondary context. This does not alter market authority or feed Market into Intrinsic.
 
-## Mobile / progressive-state design
+The disagreement read remains rank-based. The UI does **not** subtract Broad Market and Intrinsic display values or create a master score. Reads are now:
 
-At <=680px:
+- FSFFL materially higher;
+- FSFFL moderately higher;
+- Roughly aligned;
+- Broad market moderately higher;
+- Broad market materially higher;
+- Intrinsic unavailable.
 
-- quick Trade package cards stack to one column;
-- status/progress rows stack rather than forcing horizontal compression;
-- the first governed answer stays above deeper evidence and does not require scrolling through a large progress dashboard;
-- quick Market uses a single compact progress row;
-- context changes invalidate old progressive responses before they can redraw the current analysis.
+Disagreement remains a reason to investigate, not an automatic buy/sell command.
 
-Copy is deliberately customer-facing: **Quick view ready**, **Full simulation running**, **Updated analysis ready**, rather than implementation terminology.
+## Distribution / position behavior
 
-## What remains after the latency slice
+The transform is position-agnostic by construction: identical raw Intrinsic values map to identical display values regardless of QB/RB/WR/TE. Cross-position differences therefore continue to come only from the authoritative Forecast + replacement economics upstream, not from display-scale position bonuses.
 
-Phase 3 is still not complete.
+Frozen/current QB safety references illustrate the upper and lower tails without player-specific transform logic:
 
-1. **Fresh 50,000-run Simulation compute** remains the primary deep-analysis latency blocker at roughly 85 seconds in the last live measurement. The new phase logs should be used after deployment to determine whether preparation, the core 50k execution, persistence or post-processing deserves the next bounded optimization. Do not reduce fidelity.
-2. **Render deployment alignment** needs an explicit operational decision: the private beta currently deploys `next-8-product-layer`, so merged `main` work is not automatically reaching the beta.
-3. **Intrinsic disagreement discovery beyond Franchise** remains a potentially useful Trade Finder product slice after latency behavior is validated.
-4. **League Market Value** remains unavailable until governed evidence exists.
-5. **Owner-adjusted value / calibrated proposal fit** remains blocked on appropriate point-in-time Behavioral evidence.
-6. **Durable beta-learning record** remains a Phase 3 exit requirement.
+- Malik Willis raw `0.00` → display `0`;
+- Daniel Jones raw `45.10` → display about `3,005`;
+- Dak Prescott raw `223.43` → display about `8,934`;
+- Lamar Jackson frozen safety raw `291.98` → display about `9,620`;
+- Drake Maye raw `311.21` → display about `9,732`;
+- Josh Allen raw `448.61` → display about `9,932`.
+
+Live Value Lens examples around `109.7`, `183.5`, and `240.2` map to approximately `5,986`, `8,535`, and `9,102`, respectively. The selected curve preserves meaningful separation across depth, starter, premium, elite, and apex ranges without using Broad Market as a calibration target.
+
+## Performance and mobile behavior
+
+The Value Lens remains lazy-loaded. The transform is a constant-time arithmetic operation per available estimate and requires no provider call, historical scan, Simulation, or model fit. It does not add work to Home or Franchise first paint.
+
+The existing <=680px Value Lens layout remains authoritative: coordinate cards stack, player summaries remain scan-first, tabs remain horizontally usable, and stale context responses are discarded before DOM mutation.
+
+## Commercial cold-path latency — prior measured baseline
+
+The last measured pre-progressive live baseline was approximately:
+
+- cold Market workspace: **15.037s**;
+- repeated Market workspace: **0.131–0.180s**;
+- pre-Simulation Trade analysis: **13.245–13.269s**;
+- fresh changed-roster 50k Simulation: **85.025s**;
+- exact repeated Simulation: **1.227s**;
+- historical deep frontier: **315.845–331.544s**.
+
+PR #135 changed the delivery contract so useful governed Market/Trade evidence can appear before the deepest Decision/Simulation work. It did not reduce Simulation count or alter Simulation semantics.
+
+## Remaining Phase 3 gaps after PR #137
+
+1. Deploy and live-validate the Intrinsic Dynasty Value display scale after management-approved merge.
+2. Use Intrinsic-vs-Market disagreement as an opportunity-discovery dimension only after the display/availability contract proves stable in beta.
+3. Fresh 50,000-run Simulation remains the main deep-analysis compute blocker; optimize only from measured phase evidence without reducing fidelity.
+4. League Market Value remains unavailable until governed evidence exists.
+5. Owner-adjusted asset value / calibrated proposal fit remains blocked on point-in-time Behavioral evidence.
+6. Durable useful-discovery records from real beta usage remain a Phase 3 exit requirement.
 
 ## Recommended following Phase 3 slice
 
-After this PR is merged and actually deployed, use the new hosted phase timings to run a **fresh 50k Simulation execution optimization** slice focused only on the dominant measured stage. Candidate techniques may include deterministic preprocessing reuse, unchanged-team distribution reuse or safe vectorization, but only if the phase evidence supports them and only with identical Simulation semantics and 50,000-run fidelity.
+After PR #137 is merged, deployed and smoke-validated, the next bounded product slice should use the now-comparable **Broad Market magnitude + independent Intrinsic Dynasty Value + governed rank disagreement** to improve Market / Trade Finder discovery and explanation without changing Search/Decision authority.
 
-If hosted measurements instead show the quick Market structural Search path is still not low-single-digit, the next bounded performance step should target the structural candidate catalog itself rather than reintroducing Decision work into first paint.
+If live measurement instead reveals a new correctness or latency blocker, repair that bounded defect first rather than expanding discovery scope.
