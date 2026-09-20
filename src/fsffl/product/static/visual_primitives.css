@@ -1,6 +1,6 @@
 /* FSFFL NEXT shared visual primitives.
  * Presentation-only grammar. Exact governed values remain visible beside every
- * visual treatment; these classes do not create model thresholds or scores.
+ * visual treatment; these classes do not create a model score, model threshold, or recommendation.
  */
 
 .ns-visual-delta{
