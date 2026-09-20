@@ -165,11 +165,11 @@ def _cache_key(
 
 
 class PrivateBetaShapleyContractLoader:
-    """Compose frozen preseason Y1 -> exact P0 Y2/Y3 -> frozen Shapley.
+    """Compose governed Year 1 -> versioned future Forecast -> frozen Shapley.
 
-    No model fitting or selection occurs here. The embedded P0 package is a
-    byte-verified fitted artifact. League scoring remains downstream through the
-    player-specific Year-1 league/standard translation.
+    The current future provider is the byte-verified P0 authority, but this
+    downstream loader consumes the model-agnostic Forecast contract rather than
+    P0/D0-D1 internals. No model fitting or route selection occurs here.
     """
 
     def __init__(
