@@ -12,11 +12,14 @@ def _read(path: Path) -> str:
 
 def test_trade_center_first_screen_answers_north_star_questions() -> None:
     source = _read(SCRIPT)
-    for phrase in ("Trade decision","You send","You receive","Main upside","Main risk","Next move","Advanced details / methods & evidence"):
+    for phrase in ("Trade Center · Decision","Overview","Simulation","Details","You send","You receive","Main upside","Main risk","Next move","Advanced details / methods & evidence"):
         assert phrase in source
     assert "nx-stage__title" in source
     assert "nx-exchange" in source
     assert "nx-story-rail" in source
+    assert "nx-reference-tabs" in source
+    assert "nx-team-mark" in source
+    assert "packageAssetLines" in source
 
 def test_trade_center_uses_authoritative_simulation_fields_only() -> None:
     source = _read(SCRIPT)
