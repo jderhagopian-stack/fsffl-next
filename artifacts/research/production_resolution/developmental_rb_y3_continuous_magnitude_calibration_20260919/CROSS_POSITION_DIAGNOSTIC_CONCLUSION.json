@@ -1,0 +1,8 @@
+{
+  "schema_version": "fsffl-dev-rb-y3-calibration-cross-position-diagnostic-v1",
+  "form": "C2 (richer preregistered continuous shape) used diagnostically only",
+  "routes_tested": 6,
+  "routes_with_positive_pooled_CRPS_gain": 0,
+  "routes_with_cluster_CI_low_ge_zero": 0,
+  "conclusion": "The common bounded multiplicative location form does not show general cross-position support; pooled CRPS gain is negative in every tested QB/WR/TE developmental/established Y3 route."
+}

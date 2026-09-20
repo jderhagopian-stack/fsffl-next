@@ -1,0 +1,14 @@
+{
+  "schema_version": "fsffl-dev-rb-y3-calibration-distribution-validity-v1",
+  "control_parity_pass": true,
+  "candidate_probability_vectors": "identical to D1 by construction",
+  "max_probability_sum_error": 2.220446049250313e-16,
+  "min_candidate_support": 0.0,
+  "state_probability_metrics_unchanged": {
+    "active_brier": 0.20739800392219082,
+    "active_logloss": 0.6003402538895475,
+    "six_state_brier": 0.6423201518323944,
+    "six_state_logloss": 1.358038799200125
+  },
+  "valid": true
+}

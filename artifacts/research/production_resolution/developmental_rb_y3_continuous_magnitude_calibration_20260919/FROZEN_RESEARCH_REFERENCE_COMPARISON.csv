@@ -1,0 +1,6 @@
+index,reference,prior_result,Y3_selection_CRPS_gain_vs_D1,key_reason
+0,D1R retention-coordinate,failed,0.177497,pooled CRPS CI crossed zero and high-source bias worsened
+1,D1H90 continuous mean hinge,failed,0.205965,improved CRPS but missed required high-magnitude bias reduction
+2,S1 empirical spread,failed,0.81149,shape improved CRPS but failed survivor-tail calibration gate
+3,S2 magnitude-conditioned spread,failed,0.806476,shape improved CRPS but failed survivor-tail calibration gate
+4,M1 two-component mixture,failed,-1.32507,material CRPS/MAE harm; tail improvement did not replicate

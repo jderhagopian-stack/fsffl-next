@@ -1,0 +1,25 @@
+{
+  "schema_version": "fsffl-dev-rb-y3-continuous-magnitude-calibration-final-v1",
+  "classification": "C. CONDITIONAL-PRODUCTION CALIBRATION DOES NOT RESOLVE THE PROBLEM",
+  "candidate_dispositions": {
+    "C1": "FAIL",
+    "C2": "FAIL"
+  },
+  "classification_basis": [
+    "Both preregistered threshold-free location calibrations worsen pooled full-cell CRPS versus frozen D1 and improve only 4 of 9 origins.",
+    "Both candidates worsen integrated magnitude-conditioned calibration error and make the supported p75+/p90+/p95+ active-retention compression more negative.",
+    "Both candidates improve raw-point MAE by about 2 points and preserve low/mid-source CRPS, showing the fit is numerically coherent but optimizes the wrong tradeoff for Forecast authority.",
+    "The fitted common multiplier is below 1 across the magnitude range in every origin; its modest upward curvature at high source magnitude is insufficient to offset the global downshift.",
+    "Realized-state diagnostics show opposite-sign conditional-production errors across positive future states at high magnitude, so one common multiplicative location factor is too blunt.",
+    "Frozen D1 state probabilities are unchanged and exact control parity passes across all nine Y3 origins."
+  ],
+  "control": "D1",
+  "control_remains_authoritative_research_control": true,
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge": false,
+  "deploy": false,
+  "prospective_confirmation": "source-2023 -> target-2026 remains untouched",
+  "recommended_next_boundary": "Before any new candidate, preregister a bounded identifiability/feasibility test for state-specific threshold-free continuous-magnitude conditional-production calibration (with hierarchical/shared regularization across D1 positive states). The evidence suggests elite/premium and starter/usable conditional means require different corrections; do not reintroduce percentile states or a common global multiplier."
+}

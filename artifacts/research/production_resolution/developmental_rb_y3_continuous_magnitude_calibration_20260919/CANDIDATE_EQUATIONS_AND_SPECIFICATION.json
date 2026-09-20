@@ -1,0 +1,15 @@
+{
+  "schema_version": "fsffl-dev-rb-y3-continuous-calibration-candidates-v1",
+  "A_log_bound": 0.4054651081081644,
+  "multiplier_bounds": [
+    0.6666666666666666,
+    1.5
+  ],
+  "ridge": 0.05,
+  "C1": "exp(A*tanh(b0+b1*z)), z=2*(source_percentile-.5)",
+  "C2": "exp(A*tanh(b0+b1*z+b2*(z^2-1/3))), z=2*(source_percentile-.5)",
+  "fit_target": "log(target_points / D1_conditional_active_mean), target-active resolved training rows",
+  "fit_optimizer": "L-BFGS-B, zero init, maxiter=2000, ftol=gtol=1e-10",
+  "distribution": "D1 state probabilities unchanged; all five positive-state support points multiplied by row multiplier",
+  "location_or_scale": "location-only; no new uncertainty scale"
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "fsffl-dev-rb-y3-continuous-magnitude-calibration-authority-v1",
+  "D1_route": "retained",
+  "C1_research_authority": false,
+  "C2_research_authority": false,
+  "state_probabilities": "frozen",
+  "state_probability_change": false,
+  "conditional_production_change_promoted": false,
+  "next_external_confirmation": "source-2023 -> target-2026 after complete 2026 outcomes",
+  "classification": "C. CONDITIONAL-PRODUCTION CALIBRATION DOES NOT RESOLVE THE PROBLEM"
+}

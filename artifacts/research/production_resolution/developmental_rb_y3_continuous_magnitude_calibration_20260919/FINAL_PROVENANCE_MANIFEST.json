@@ -1,0 +1,127 @@
+{
+  "schema_version": "fsffl-dev-rb-y3-continuous-calibration-manifest-v1",
+  "research_only": true,
+  "starting_research_head": "984ab2755f8d014b191785bfdd92f434f104a462",
+  "preregister_commit": "a254004543c9ff63251183a35575875c0a358617",
+  "historical_predictions_sha256": "ce585d581cf75a245a4f47a6d0c1aeb906480b7242749353562eca9e01757709",
+  "phase2_panel_sha256": "c2ebfd365d2828e79afbdc518939f404fa0c45cde57ec6f459abae9bd245c3b7",
+  "canonical_origins": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "candidates": [
+    "C1",
+    "C2"
+  ],
+  "classification": "C. CONDITIONAL-PRODUCTION CALIBRATION DOES NOT RESOLVE THE PROBLEM",
+  "production_authority_change": false,
+  "pr147_change": false,
+  "main_change": false,
+  "merge": false,
+  "deploy": false,
+  "artifacts": {
+    "AUTHORITY_DISPOSITION.json": {
+      "sha256": "2c2e245ee273463dd2c98970661f28c539efdf7dc561c3dbe715ee777576039c",
+      "bytes": 485
+    },
+    "CALIBRATION_MULTIPLIER_CURVES.png": {
+      "sha256": "8e43e27271838835ab56fd85b5c89f74d6a81a9abc406c58fd372c3abeb0c3e1",
+      "bytes": 63239
+    },
+    "CANDIDATE_AUTHORITY_SUMMARY.csv": {
+      "sha256": "27366d7c1cd177b472634cb3cd855412171d083012e85868a7410c401f629277",
+      "bytes": 2348
+    },
+    "CANDIDATE_EQUATIONS_AND_SPECIFICATION.json": {
+      "sha256": "c9b3651bdcc88672eac7037d8e22a400f33ad390acb6e303e22c4c20a82b40d7",
+      "bytes": 694
+    },
+    "CONTINUOUS_MAGNITUDE_CALIBRATION.csv": {
+      "sha256": "6fef6015fb3932272152141745a410dacfc7c6c759d2a9545ddc6445b8ba1329",
+      "bytes": 3811
+    },
+    "CROSS_POSITION_CRPS_DIAGNOSTIC.png": {
+      "sha256": "6ee650745136214022eaa42aad2871392804f89c7a2ea39b390b50ebb5810b92",
+      "bytes": 42498
+    },
+    "CROSS_POSITION_DIAGNOSTIC.csv": {
+      "sha256": "14aea17ae9879f35966739d6a807b738dd34efa03dcc7b22808f8b1d8024e799",
+      "bytes": 1134
+    },
+    "CROSS_POSITION_DIAGNOSTIC_CONCLUSION.json": {
+      "sha256": "6aeb78ecf2cd9d8d9f7c6fcb3c467523e4b2b81ca0d4abfd576568d892298f7f",
+      "bytes": 477
+    },
+    "CROSS_POSITION_ORIGIN_DIAGNOSTIC.csv": {
+      "sha256": "1323e6961aa70e53c45993a0bc8c7e015fea1cfb8486685b1eb7d53f8b980387",
+      "bytes": 5507
+    },
+    "DISTRIBUTION_VALIDITY_AND_STATE_PARITY.json": {
+      "sha256": "3d6f079fabc1c2df328f58b01ff205c24404b40a89387894e4b3508385935579",
+      "bytes": 499
+    },
+    "EXACT_D1_CONTROL_PARITY.json": {
+      "sha256": "a6fcbf5980fc40226b1a4b2efd3e5447028ab5349eaf99a736e57df02703185e",
+      "bytes": 2651
+    },
+    "FINAL_CLASSIFICATION.json": {
+      "sha256": "6306ab48a6f998e80decffdbbee016e331ad905ad488b68ea4908f2af4eda77c",
+      "bytes": 2000
+    },
+    "FROZEN_RESEARCH_REFERENCE_COMPARISON.csv": {
+      "sha256": "b1e703dcb14ed4dba068df2348518fb6eb706d224646b4924e867a9450e3faf3",
+      "bytes": 577
+    },
+    "LEAVE_ONE_ORIGIN_OUT_RESULTS.csv": {
+      "sha256": "b7c0a23f6d9338fe38752106d7d3e4bf1bc237089e14923a8a8358712cb4634e",
+      "bytes": 613
+    },
+    "ORIGIN_BY_ORIGIN_CANDIDATE_SCORES.csv": {
+      "sha256": "fa7a8d1565ad2f03a0dea293a3e75bb0e36a0c83eaec28b5fdc0ab8d6f68ba57",
+      "bytes": 5288
+    },
+    "ORIGIN_CRPS_GAINS.png": {
+      "sha256": "5c683fb7e9f45c4b80976d7cc8ae2313e8bf8fc84330b84211601cd42ce84cd2",
+      "bytes": 85792
+    },
+    "ORIGIN_SPECIFIC_CALIBRATION_FITS.csv": {
+      "sha256": "4d8ea03577ab1a4094bca6c231bb5b137a5b54a288d58555835f4d457141ef18",
+      "bytes": 2895
+    },
+    "P90_STATE_SPECIFIC_BIAS.png": {
+      "sha256": "730cc845b25292db895e632dcef8a53399791bfd43bc125fbdd9200400ababbe",
+      "bytes": 50138
+    },
+    "PROMOTION_GATE_EVALUATION.csv": {
+      "sha256": "92361468284061ce7da48091767982252626a45900345a4b0d81b28a1a55c4d5",
+      "bytes": 1131
+    },
+    "REALIZED_STATE_CONDITIONAL_BIAS_DIAGNOSTIC.csv": {
+      "sha256": "77d0c600ba87816cb9c79d60cc178bf9af932e0555d220217e5918451ddce673",
+      "bytes": 2496
+    },
+    "RECOMMENDED_NEXT_RESEARCH_BOUNDARY.md": {
+      "sha256": "cecc2d89015e3cac3aefb49971828181b3f662c5c0a15464543b6e4870a85a39",
+      "bytes": 1747
+    },
+    "RESIDUAL_SCALE_BY_MAGNITUDE.csv": {
+      "sha256": "134529d65060717d766e584015224c149bdc83223899c5d62481eef677cd381c",
+      "bytes": 1550
+    },
+    "ROW_LEVEL_EVALUATION_SCORES.csv": {
+      "sha256": "0dfe5cc5bc1b88d1c886936110d60723c989918a50c56df6bf0b88aafd0a97c8",
+      "bytes": 1308043
+    },
+    "TAIL_DIAGNOSTICS.csv": {
+      "sha256": "15159993ff2affd0f72dbb2b5ea74382c24bd7e4d3a5ffde278fa7b50d10503b",
+      "bytes": 1920
+    }
+  }
+}
