@@ -1,0 +1,12 @@
+{
+  "max_probability_sum_error": 4.440892098500626e-16,
+  "total_ordering_violations": 0,
+  "minimum_adjusted_starter_usable_gap_points": 12.604131117515468,
+  "minimum_adjusted_starter_usable_gap_log1p": 0.3554580256333413,
+  "minimum_any_adjacent_gap_points": 0.7437266622410061,
+  "max_abs_tanh_h": 0.26856050206665166,
+  "max_fraction_abs_tanh_h_ge_090": 0.0,
+  "max_fraction_abs_tanh_h_ge_095": 0.0,
+  "max_fraction_abs_tanh_h_ge_099": 0.0,
+  "source_2023_target_2026_inspected": false
+}

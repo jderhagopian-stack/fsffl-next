@@ -1,0 +1,24 @@
+{
+  "classification": "B. MECHANISM WAS CORRECT, BUT CHALLENGER IS NOT STRONG ENOUGH",
+  "all_material_gates_pass": false,
+  "mechanism_expressed": true,
+  "full_cell_crps_gain": 0.01453521645691858,
+  "clustered_crps_ci": [
+    -0.4044968956140399,
+    0.3399473163965086
+  ],
+  "origins_improved": 6,
+  "median_origin_gain": 0.2231544997294909,
+  "overall_imce_improvement": 0.13965610961984729,
+  "upper_imce_improvement": 0.11025750619258506,
+  "lower_imce_improvement": 0.0922335822444253,
+  "mae_gain": 0.9366258063526983,
+  "low_mid_crps_gain": 0.08725225265403287,
+  "ordering_violations": 0,
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "main_modified": false,
+  "merge": false,
+  "deploy": false,
+  "prospective_2023_2026_untouched": true
+}

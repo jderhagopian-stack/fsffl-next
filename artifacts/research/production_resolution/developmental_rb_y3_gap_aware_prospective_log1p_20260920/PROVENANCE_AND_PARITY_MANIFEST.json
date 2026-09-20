@@ -1,0 +1,34 @@
+{
+  "starting_mechanism_head": "bb66b7f6e6bdac946d42a2414c59f618aea341e4",
+  "preregistration_commit": "62d40406d090d9bffd37df78b83926d5c7887059",
+  "evaluation_rows": 986,
+  "active_evaluation_rows": 519,
+  "evaluation_origins": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "residual_library_rows": 546,
+  "residual_library_origins": [
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018
+  ],
+  "earliest_residual_origin": 2009,
+  "exact_replay_max_abs_diff": 8.526512829121202e-14,
+  "source_2023_target_2026_inspected": false,
+  "current_player_tuning": false
+}

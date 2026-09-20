@@ -1,0 +1,39 @@
+{
+  "candidate": "gap_aware_prospective_log1p_partial_pooling",
+  "A": 0.4054651081081644,
+  "shared_penalty": 0.05,
+  "lower_deviation_penalty": 0.10538922155688624,
+  "groups": {
+    "upper": [
+      "starter",
+      "premium",
+      "elite"
+    ],
+    "lower": [
+      "depth",
+      "usable"
+    ]
+  },
+  "residual": "log1p(realized)-log1p(prospective_D1_realized_state_mean)",
+  "equations": {
+    "z": "2*(u-.5)",
+    "c_U": "A*tanh(a0+a1*z)",
+    "G": "log1p(D1_starter)-log1p(D1_usable)",
+    "h": "d0+d1*z",
+    "c_L": "c_U+G*tanh(h)",
+    "adjusted_mean": "expm1(log1p(D1_mean_state)+group_correction)"
+  },
+  "optimizer": "SLSQP zeros maxiter=2000 ftol=1e-12",
+  "earliest_residual_origin": 2009,
+  "evaluation_origins": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ]
+}

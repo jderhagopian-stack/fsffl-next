@@ -1,0 +1,10 @@
+index,gate,pass,detail
+0,full_cell_crps,False,"gain=+0.0145; CI=[-0.4045,+0.3399]; origins=6/9; median=+0.2232; worst=-0.6532; LOO_flip=True"
+1,continuous_magnitude_calibration,False,"overall relative=+38.239%; overall abs=+0.1397 CI=[-0.6032,+0.8293]; upper=+0.1103; lower=+0.0922"
+2,individual_state_no_new_failure,False,max_abs_bias_worsening=+0.6607
+3,mae_no_harm,True,"gain=+0.9366; CI=[+0.4130,+1.4187]"
+4,low_mid_no_harm,True,"CRPS gain=+0.0873; CI=[-0.1155,+0.2481]; IMCE improvement=+0.2480"
+5,coverage,False,"[{""scope"":""overall"",""n"":986,""d1_cov10_90"":0.8874239351,""challenger_cov10_90"":0.8620689655,""diff10_90"":-0.0253549696,""d1_cov25_75"":0.7221095335,""challenger_cov25_75"":0.6967545639,""diff25_75"":-0.0253549696},{""scope"":""upper"",""n"":352,""d1_cov10_90"":0.6988636364,""challenger_cov10_90"":0.6306818182,""diff10_90"":-0.0681818182,""d1_cov25_75"":0.4659090909,""challenger_cov25_75"":0.4119318182,""diff25_75"":-0.0539772727},{""scope"":""lower"",""n"":167,""d1_cov10_90"":0.9880239521,""challenger_cov10_90"":0.9820359281,""diff10_90"":-0.005988024,""d1_cov25_75"":0.6946107784,""challenger_cov25_75"":0.6586826347,""diff25_75"":-0.0359281437},{""scope"":""low_mid_lt75"",""n"":750,""d1_cov10_90"":0.908,""challenger_cov10_90"":0.8946666667,""diff10_90"":-0.0133333333,""d1_cov25_75"":0.776,""challenger_cov25_75"":0.756,""diff25_75"":-0.02}]"
+6,ordering_probability_parity,True,"{""max_probability_sum_error"": 4.440892098500626e-16, ""total_ordering_violations"": 0, ""minimum_adjusted_starter_usable_gap_points"": 12.604131117515468, ""minimum_adjusted_starter_usable_gap_log1p"": 0.3554580256333413, ""minimum_any_adjacent_gap_points"": 0.7437266622410061, ""max_abs_tanh_h"": 0.26856050206665166, ""max_fraction_abs_tanh_h_ge_090"": 0.0, ""max_fraction_abs_tanh_h_ge_095"": 0.0, ""max_fraction_abs_tanh_h_ge_099"": 0.0, ""source_2023_target_2026_inspected"": false}"
+7,temporal_and_player_influence,False,"LOO_flip=True; player_flip=True; moving_block_CI=[-0.1873,+0.1813]"
+8,prospective_2023_2026_untouched,True,No incomplete 2026 target outcomes accessed.

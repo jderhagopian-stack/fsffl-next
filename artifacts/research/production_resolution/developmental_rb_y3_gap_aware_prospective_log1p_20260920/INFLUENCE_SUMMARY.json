@@ -1,0 +1,10 @@
+{
+  "leave_one_origin_min_crps_gain": -0.0306927937390914,
+  "leave_one_origin_max_crps_gain": 0.1001060309251505,
+  "leave_one_origin_negative_count": 5,
+  "leave_one_player_min_crps_gain": -0.0024252957203224,
+  "leave_one_player_max_crps_gain": 0.0520053977656091,
+  "leave_one_player_negative_count": 3,
+  "most_negative_omitted_player": "00-0035831",
+  "most_positive_omitted_player": "00-0032764"
+}

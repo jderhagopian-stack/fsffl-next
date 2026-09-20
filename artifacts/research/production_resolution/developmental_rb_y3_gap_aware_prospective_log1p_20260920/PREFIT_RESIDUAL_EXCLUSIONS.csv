@@ -1,0 +1,4 @@
+index,source_origin,player_id,target_state,source_percentile,reason,d1_mean_depth,d1_mean_usable,d1_mean_starter,d1_mean_premium,d1_mean_elite
+0,2011,00-0027905,depth,0.1036585365853658,frozen D1 positive-state means not strictly ordered,0.0,0.0,14.407750989826503,58.49685308790063,169.3939012569334
+1,2012,00-0027905,usable,0.2,frozen D1 positive-state means not strictly ordered,0.0,0.0,14.303149012779478,55.05921167024476,156.28574493939053
+2,2012,00-0027917,depth,0.0088235294117647,frozen D1 positive-state means not strictly ordered,0.0,0.0,13.75897718291798,52.31125841598717,168.8580151731418

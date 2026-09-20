@@ -1,0 +1,74 @@
+{
+  "classification": "B. MECHANISM WAS CORRECT, BUT CHALLENGER IS NOT STRONG ENOUGH",
+  "gates": [
+    {
+      "gate": "full_cell_crps",
+      "pass": false,
+      "detail": "gain=+0.0145; CI=[-0.4045,+0.3399]; origins=6/9; median=+0.2232; worst=-0.6532; LOO_flip=True"
+    },
+    {
+      "gate": "continuous_magnitude_calibration",
+      "pass": false,
+      "detail": "overall relative=+38.239%; overall abs=+0.1397 CI=[-0.6032,+0.8293]; upper=+0.1103; lower=+0.0922"
+    },
+    {
+      "gate": "individual_state_no_new_failure",
+      "pass": false,
+      "detail": "max_abs_bias_worsening=+0.6607"
+    },
+    {
+      "gate": "mae_no_harm",
+      "pass": true,
+      "detail": "gain=+0.9366; CI=[+0.4130,+1.4187]"
+    },
+    {
+      "gate": "low_mid_no_harm",
+      "pass": true,
+      "detail": "CRPS gain=+0.0873; CI=[-0.1155,+0.2481]; IMCE improvement=+0.2480"
+    },
+    {
+      "gate": "coverage",
+      "pass": false,
+      "detail": "[{\"scope\":\"overall\",\"n\":986,\"d1_cov10_90\":0.8874239351,\"challenger_cov10_90\":0.8620689655,\"diff10_90\":-0.0253549696,\"d1_cov25_75\":0.7221095335,\"challenger_cov25_75\":0.6967545639,\"diff25_75\":-0.0253549696},{\"scope\":\"upper\",\"n\":352,\"d1_cov10_90\":0.6988636364,\"challenger_cov10_90\":0.6306818182,\"diff10_90\":-0.0681818182,\"d1_cov25_75\":0.4659090909,\"challenger_cov25_75\":0.4119318182,\"diff25_75\":-0.0539772727},{\"scope\":\"lower\",\"n\":167,\"d1_cov10_90\":0.9880239521,\"challenger_cov10_90\":0.9820359281,\"diff10_90\":-0.005988024,\"d1_cov25_75\":0.6946107784,\"challenger_cov25_75\":0.6586826347,\"diff25_75\":-0.0359281437},{\"scope\":\"low_mid_lt75\",\"n\":750,\"d1_cov10_90\":0.908,\"challenger_cov10_90\":0.8946666667,\"diff10_90\":-0.0133333333,\"d1_cov25_75\":0.776,\"challenger_cov25_75\":0.756,\"diff25_75\":-0.02}]"
+    },
+    {
+      "gate": "ordering_probability_parity",
+      "pass": true,
+      "detail": "{\"max_probability_sum_error\": 4.440892098500626e-16, \"total_ordering_violations\": 0, \"minimum_adjusted_starter_usable_gap_points\": 12.604131117515468, \"minimum_adjusted_starter_usable_gap_log1p\": 0.3554580256333413, \"minimum_any_adjacent_gap_points\": 0.7437266622410061, \"max_abs_tanh_h\": 0.26856050206665166, \"max_fraction_abs_tanh_h_ge_090\": 0.0, \"max_fraction_abs_tanh_h_ge_095\": 0.0, \"max_fraction_abs_tanh_h_ge_099\": 0.0, \"source_2023_target_2026_inspected\": false}"
+    },
+    {
+      "gate": "temporal_and_player_influence",
+      "pass": false,
+      "detail": "LOO_flip=True; player_flip=True; moving_block_CI=[-0.1873,+0.1813]"
+    },
+    {
+      "gate": "prospective_2023_2026_untouched",
+      "pass": true,
+      "detail": "No incomplete 2026 target outcomes accessed."
+    }
+  ],
+  "authority": {
+    "classification": "B. MECHANISM WAS CORRECT, BUT CHALLENGER IS NOT STRONG ENOUGH",
+    "all_material_gates_pass": false,
+    "mechanism_expressed": true,
+    "full_cell_crps_gain": 0.01453521645691858,
+    "clustered_crps_ci": [
+      -0.4044968956140399,
+      0.3399473163965086
+    ],
+    "origins_improved": 6,
+    "median_origin_gain": 0.2231544997294909,
+    "overall_imce_improvement": 0.13965610961984729,
+    "upper_imce_improvement": 0.11025750619258506,
+    "lower_imce_improvement": 0.0922335822444253,
+    "mae_gain": 0.9366258063526983,
+    "low_mid_crps_gain": 0.08725225265403287,
+    "ordering_violations": 0,
+    "production_authority_changed": false,
+    "pr147_modified": false,
+    "main_modified": false,
+    "merge": false,
+    "deploy": false,
+    "prospective_2023_2026_untouched": true
+  }
+}
