@@ -24,7 +24,12 @@ from fsffl.product.i1_scoring_bridge import (
     FROZEN_I1_STANDARD_SCORING,
     FUTURE_I1_LEAGUE_SCORING_BRIDGE_VERSION,
 )
-from fsffl.product.p0_forecast_runtime import P0_FORECAST_VERSION, frozen_p0_source_rows
+from fsffl.product.p0_forecast_runtime import (
+    P0_FINAL_ROUTE_AUTHORITY_SHA256,
+    P0_FINAL_ROUTE_AUTHORITY_VERSION,
+    P0_FORECAST_VERSION,
+    frozen_p0_source_rows,
+)
 from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from fsffl.product.runtime import UserRuntimeContext
 from fsffl.state.models import (
@@ -460,6 +465,8 @@ def test_contract_future_i1_provenance_contains_exactly_one_player_scoring_trans
     coverage = contract.completed_source_provenance.fact_family_coverage
     assert coverage["future_i1_scoring_version"] == FUTURE_I1_PLAYER_SCORING_VERSION
     assert coverage["future_i1_scoring_method"] == "player_specific_year1_league_standard_ratio"
+    assert coverage["p0_final_route_authority_sha256"] == P0_FINAL_ROUTE_AUTHORITY_SHA256
+    assert coverage["p0_final_route_authority_version"] == P0_FINAL_ROUTE_AUTHORITY_VERSION
     assert coverage["future_i1_scoring_player_count"] == 1
     assert coverage["year1_forecast_source_ids"] == "fftoday,razzball"
     assert coverage["year1_forecast_source_count"] == 2

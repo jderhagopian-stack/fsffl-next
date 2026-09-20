@@ -33,6 +33,8 @@ from .i1_player_scoring import (
 from .p0_forecast_runtime import (
     P0_CONNECTED_LEAGUE_Y1_BOARD_SHA256,
     P0_CURRENT_SOURCE_CSV_SHA256,
+    P0_FINAL_ROUTE_AUTHORITY_SHA256,
+    P0_FINAL_ROUTE_AUTHORITY_VERSION,
     P0_FORECAST_VERSION,
     P0_PACKAGE_SHA256,
     P0_SOURCE_SEASON,
@@ -128,8 +130,10 @@ def _provenance(
             ),
             "activation_bundle_sha256": ACTIVATION_BUNDLE_SHA256,
             "activation_workflow_run_id": ACTIVATION_WORKFLOW_RUN_ID,
-            "future_forecast_authority": "P0_D0_D1_redevelopment",
+            "future_forecast_authority": "P0_D0_D1_redevelopment_final_routes_v1",
             "p0_package_sha256": P0_PACKAGE_SHA256,
+            "p0_final_route_authority_sha256": P0_FINAL_ROUTE_AUTHORITY_SHA256,
+            "p0_final_route_authority_version": P0_FINAL_ROUTE_AUTHORITY_VERSION,
             "p0_current_source_sha256": P0_CURRENT_SOURCE_CSV_SHA256,
             "p0_standard_y1_board_sha256": P0_STANDARD_Y1_BOARD_SHA256,
             "p0_connected_league_y1_control_sha256": P0_CONNECTED_LEAGUE_Y1_BOARD_SHA256,
@@ -183,6 +187,7 @@ def _cache_key(
     assert context.league_state is not None
     payload = {
         "p0_package": P0_PACKAGE_SHA256,
+        "p0_final_route_authority": P0_FINAL_ROUTE_AUTHORITY_SHA256,
         "p0_current_source": P0_CURRENT_SOURCE_CSV_SHA256,
         "league": league_material_fingerprint(context.league_state),
         "forecast": [

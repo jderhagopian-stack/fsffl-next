@@ -1,0 +1,53 @@
+{
+  "schema_version": "fsffl-final-forecast-route-authority-v1",
+  "date": "2026-09-20",
+  "fitted_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "current_source_sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+  "route_authority_version": "p0-final-route-authority-v1:cf5e3c0d375c",
+  "route_authority_sha256": "cf5e3c0d375cdb6248ead9eeba853e71dabebaf017c292c6186d2fe765bfddda",
+  "routes": {
+    "2": {
+      "QB|developmental": "D1",
+      "QB|established": "D1",
+      "QB|veteran": "D1",
+      "RB|developmental": "D1",
+      "RB|established": "D1",
+      "RB|veteran": "D1",
+      "TE|developmental": "D1",
+      "TE|established": "D1",
+      "TE|veteran": "D1",
+      "WR|developmental": "D1",
+      "WR|established": "D1",
+      "WR|veteran": "D1"
+    },
+    "3": {
+      "QB|developmental": "D1",
+      "QB|established": "D1",
+      "QB|veteran": "D1",
+      "RB|developmental": "D1",
+      "RB|established": "D1",
+      "RB|veteran": "D0",
+      "TE|developmental": "D1",
+      "TE|established": "D1",
+      "TE|veteran": "D0",
+      "WR|developmental": "D1",
+      "WR|established": "D1",
+      "WR|veteran": "D0"
+    }
+  },
+  "package_route_differences": [
+    {
+      "horizon": 3,
+      "cell": "QB|developmental",
+      "package_route": "D0",
+      "final_route": "D1"
+    },
+    {
+      "horizon": 3,
+      "cell": "RB|established",
+      "package_route": "D0",
+      "final_route": "D1"
+    }
+  ],
+  "closure_research_head": "592b67e8739e5bb7bae26b8cd8659b7e727908b2"
+}

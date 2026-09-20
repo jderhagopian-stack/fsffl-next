@@ -23,7 +23,51 @@ from .p0_frozen_assets import (
     P0_STANDARD_Y1_BOARD_SHA256,
 )
 
-P0_FORECAST_VERSION = "p0-redeveloped-v1:" + P0_PACKAGE_SHA256[:12]
+P0_FITTED_PACKAGE_VERSION = "p0-redeveloped-v1:" + P0_PACKAGE_SHA256[:12]
+P0_FINAL_ROUTE_AUTHORITY = {
+    "2": {
+        "QB|developmental": "D1",
+        "QB|established": "D1",
+        "QB|veteran": "D1",
+        "RB|developmental": "D1",
+        "RB|established": "D1",
+        "RB|veteran": "D1",
+        "TE|developmental": "D1",
+        "TE|established": "D1",
+        "TE|veteran": "D1",
+        "WR|developmental": "D1",
+        "WR|established": "D1",
+        "WR|veteran": "D1",
+    },
+    "3": {
+        "QB|developmental": "D1",
+        "QB|established": "D1",
+        "QB|veteran": "D1",
+        "RB|developmental": "D1",
+        "RB|established": "D1",
+        "RB|veteran": "D0",
+        "TE|developmental": "D1",
+        "TE|established": "D1",
+        "TE|veteran": "D0",
+        "WR|developmental": "D1",
+        "WR|established": "D1",
+        "WR|veteran": "D0",
+    },
+}
+P0_FINAL_ROUTE_AUTHORITY_JSON = json.dumps(
+    P0_FINAL_ROUTE_AUTHORITY,
+    sort_keys=True,
+    separators=(",", ":"),
+)
+P0_FINAL_ROUTE_AUTHORITY_SHA256 = hashlib.sha256(
+    P0_FINAL_ROUTE_AUTHORITY_JSON.encode("utf-8")
+).hexdigest()
+P0_FINAL_ROUTE_AUTHORITY_VERSION = (
+    "p0-final-route-authority-v1:" + P0_FINAL_ROUTE_AUTHORITY_SHA256[:12]
+)
+P0_FORECAST_VERSION = (
+    f"{P0_FITTED_PACKAGE_VERSION}:{P0_FINAL_ROUTE_AUTHORITY_VERSION}"
+)
 P0_SOURCE_SEASON = 2026
 P0_STANDARD_PARITY_TOLERANCE = 1e-9
 P0_PROBABILITY_TOLERANCE = 1e-10
@@ -44,6 +88,35 @@ if _sha256(P0_CURRENT_SOURCE_CSV) != P0_CURRENT_SOURCE_CSV_SHA256:
 _PACKAGE = json.loads(P0_PACKAGE_JSON)
 if _PACKAGE.get("schema_version") != "fsffl-redeveloped-forecast-fit-v1":
     raise ValueError("embedded P0 package schema mismatch")
+
+
+def _validate_final_route_authority() -> None:
+    expected_overrides = {
+        ("3", "QB|developmental", "D0", "D1"),
+        ("3", "RB|established", "D0", "D1"),
+    }
+    observed_overrides: set[tuple[str, str, str, str]] = set()
+    for horizon in ("2", "3"):
+        embedded = _PACKAGE["selection"][horizon]["selected_route"]
+        final = P0_FINAL_ROUTE_AUTHORITY[horizon]
+        if set(final) != set(embedded):
+            raise ValueError(f"final route authority cell mismatch for horizon {horizon}")
+        for cell, final_route in final.items():
+            embedded_route = str(embedded[cell])
+            if final_route not in _PACKAGE["horizons"][horizon]["production_models"]:
+                raise ValueError(
+                    f"final route authority references missing model: {horizon} {cell} {final_route}"
+                )
+            if embedded_route != final_route:
+                observed_overrides.add((horizon, cell, embedded_route, final_route))
+    if observed_overrides != expected_overrides:
+        raise ValueError(
+            "final route authority differs from the frozen package outside the two "
+            f"research-earned cells: {sorted(observed_overrides)}"
+        )
+
+
+_validate_final_route_authority()
 
 
 def _optional_float(value: str | None) -> float | None:
@@ -105,6 +178,7 @@ class P0FutureMaterialization:
     players: Mapping[str, P0PlayerForecast]
     package_sha256: str = P0_PACKAGE_SHA256
     source_sha256: str = P0_CURRENT_SOURCE_CSV_SHA256
+    route_authority_sha256: str = P0_FINAL_ROUTE_AUTHORITY_SHA256
     source_season: int = P0_SOURCE_SEASON
 
     @property
@@ -413,7 +487,7 @@ def _score_source(
         layer = horizon_package["state_qb"] if source.position == "QB" else horizon_package["state_nonqb"]
         probabilities = _score_prob(layer, row)
         route_cell = f"{source.position}|{source.career_stage}"
-        route = _PACKAGE["selection"][str(horizon)]["selected_route"][route_cell]
+        route = P0_FINAL_ROUTE_AUTHORITY[str(horizon)][route_cell]
         model = horizon_package["production_models"][route]
         if route == "D0":
             conditional = _score_production(model, row)

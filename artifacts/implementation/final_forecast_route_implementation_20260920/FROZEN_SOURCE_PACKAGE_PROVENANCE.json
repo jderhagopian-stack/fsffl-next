@@ -1,0 +1,21 @@
+{
+  "schema_version": "fsffl-final-route-provenance-v1",
+  "frozen_preseason_sources": [
+    "fftoday",
+    "razzball"
+  ],
+  "frozen_raw_observations": 1675,
+  "frozen_players": 335,
+  "frozen_raw_array_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+  "p0_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+  "p0_current_source_sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+  "p0_internal_y1_coordinate": "standard/non-PPR direct scoring from same frozen raw projected stats",
+  "product_y1_coordinate": "connected-league direct scoring from same frozen raw projected stats",
+  "future_scoring_translation": "same-player connected-Y1 / standard-Y1 ratio, applied exactly once",
+  "route_authority_version": "p0-final-route-authority-v1:cf5e3c0d375c",
+  "route_authority_sha256": "cf5e3c0d375cdb6248ead9eeba853e71dabebaf017c292c6186d2fe765bfddda",
+  "legacy_m1a_layer_restored": false,
+  "separate_prior_two_layer_restored": false,
+  "developmental_rb_y3_extra_correction": false,
+  "percentile_state_or_tail_haircut": false
+}
