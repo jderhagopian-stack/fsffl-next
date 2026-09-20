@@ -1,0 +1,67 @@
+{
+  "schema_version": "fsffl-dev-rb-regime-preholdout-v1",
+  "holdout_touched": false,
+  "regime_diagnosis": {
+    "absolute_future_points_nonlinearity": "SUPPORTED",
+    "pooled_best_knot_source_percentile": 0.9,
+    "leave_one_season_best_knot_p90_count": 6,
+    "leave_one_season_total": 7,
+    "bootstrap_p90_share": 0.4765,
+    "discrete_boundary_uncertainty": "MATERIAL"
+  },
+  "candidate_decisions": {
+    "D1T90_Y2": {
+      "pass": false,
+      "reasons": [
+        "crps_direction_not_positive_all_blocks",
+        "pooled_crps_ci_not_above_zero"
+      ]
+    },
+    "D1H90_Y2": {
+      "pass": false,
+      "reasons": [
+        "crps_direction_not_positive_all_blocks",
+        "pooled_crps_ci_not_above_zero"
+      ]
+    },
+    "D1T90_Y3": {
+      "pass": false,
+      "reasons": [
+        "crps_direction_not_positive_all_blocks",
+        "pooled_crps_ci_not_above_zero",
+        "p90_bias_reduction_gate_fail"
+      ]
+    },
+    "D1H90_Y3": {
+      "pass": false,
+      "reasons": [
+        "p90_bias_reduction_gate_fail"
+      ]
+    }
+  },
+  "identifiability_family_decisions": [
+    {
+      "family": "role_opportunity",
+      "pass": false,
+      "reasons": "no_auc_gain_ge_0.05"
+    },
+    {
+      "family": "workload_efficiency",
+      "pass": false,
+      "reasons": "no_brier_logloss_gain_early_to_mid;no_brier_logloss_gain_earlymid_to_validation;auc_decline_earlymid_to_validation;no_auc_gain_ge_0.05"
+    },
+    {
+      "family": "availability",
+      "pass": false,
+      "reasons": "no_brier_logloss_gain_earlymid_to_validation;auc_decline_earlymid_to_validation"
+    },
+    {
+      "family": "prior_role_stability",
+      "pass": false,
+      "reasons": "coverage_below_0.80;no_brier_logloss_gain_early_to_mid"
+    }
+  ],
+  "identifiability_gate": "FAIL_NO_FAMILY_PASSES",
+  "preholdout_research_disposition": "NO_MAGNITUDE_CANDIDATE_EARNS; NO_RICHER_EX_ANTE_CHALLENGER_AUTHORIZED",
+  "next_step": "Single locked 2021-2022 replication for fixed candidates and uncertainty-shape confirmation; no redesign."
+}
