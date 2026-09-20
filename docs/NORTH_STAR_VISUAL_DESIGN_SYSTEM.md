@@ -1,9 +1,36 @@
 # FSFFL NEXT — North Star Visual Design & Interaction System
 
-Status: **candidate canonical system for management review**  
+Status: **approved hybrid visual direction; bounded reference implementation pending management visual review**  
 Date: 2026-09-20
 
-This document translates the canonical North Star product directive into an explicit design and interaction specification. It governs Presentation only. It does not create model truth.
+Management approved a hybrid direction: **LOOK LIKE THE SUPPLIED EIGHT-SCREEN PREMIUM DARK, MOBILE-FIRST EXAMPLE. THINK LIKE THE CORRECTIVE NORTH STAR SYSTEM.** The supplied reference governs aspirational look/feel; this document governs hierarchy, interaction, progressive disclosure, and analytical authority. It governs Presentation only. It does not create model truth.
+
+
+## Approved product-family benchmark
+
+The approved aspirational product family is a premium dark, mobile-first fantasy-football application with:
+- a dark, high-contrast shell;
+- persistent, obvious mobile navigation;
+- clear tabs/segmented controls when they map to real product states;
+- stronger player, franchise, and owner identity;
+- polished consumer-product typography and spacing;
+- richer graphical intelligence: bars, rings, heat maps, comparison charts, trajectory visuals, and compact summaries when governed inputs support them;
+- restrained elevation and cards used for bounded objects rather than every section;
+- consistent cross-surface language across Home, Franchise, League, Market, Trade Center, Simulation/League Impact, and Owner Intelligence.
+
+The eight-screen reference is a **visual/product benchmark, not a model specification**. Illustrative constructs in that mockup—such as Team Grades, Fit scores, behavioral certainty, recommendation strength, or similar labels—must not be copied unless FSFFL has governed authority for that exact output. Preserve the visual role with the nearest governed truth, a qualified signal, or an explicit unavailable/uncertain state.
+
+### Hybrid rule
+
+Use the approved dark consumer-product language for the surface. Preserve the corrective system underneath:
+- one dominant truth;
+- strong hierarchy;
+- open composition where useful;
+- exact evidence beside graphics;
+- progressive disclosure;
+- methods/provenance secondary;
+- intentional mobile recomposition;
+- upstream authority unchanged.
 
 ## 1. The interaction model: SEE -> UNDERSTAND -> INTERACT -> DRILL DEEPER
 
@@ -49,6 +76,10 @@ Required implications:
 
 ## 2. Composition system
 
+### Approved dark-shell interpretation
+
+The canonical shell is dark and premium, but **dark does not mean dense**. Use tonal depth, type scale, negative space, selective dividers, and a small number of elevated bounded objects. Avoid turning every fact into a navy rounded rectangle. A dominant stage may be open within the dark shell rather than placed inside another card.
+
 A default decision/intelligence surface uses four layers:
 
 1. **Primary Insight Stage**
@@ -81,6 +112,8 @@ Cards are reserved for bounded interactive objects, warnings, or discrete module
 over repeated dark rounded containers.
 
 ## 3. Typography & scale
+
+The approved benchmark is app-like and mobile-first: concise labels, strong exact numbers, and compact but readable hierarchy. The corrective type scale remains the guardrail against the current beta's small-label/equal-weight failure mode.
 
 The system uses scale to signal authority and reading order.
 
@@ -277,9 +310,11 @@ Shared grammar must not make every page look identical.
 
 ## 12. Transitional versus canonical
 
-The PR #159 Delta Band semantics are accepted: bilateral, zero-centered, exact-value-preserving, no grade. Its current compact dark-card styling is **transitional** and is not the canonical visual benchmark.
+The PR #159 Delta Band semantics are accepted: bilateral, zero-centered, exact-value-preserving, no grade. Its compact render remains **transitional**.
 
-Canonical authority comes from this design system plus management-approved rendered reference compositions, not from any one existing CSS file.
+The prior PR #160 light editorial reference is retained as structural learning—dominant decision state, identity, breathing room, bilateral consequence storytelling, exact evidence, and methods below the fold—but its light aesthetic is **not** the approved brand target.
+
+The approved visual destination is the premium dark, mobile-first product family described above. Canonical authority comes from this design system plus management-approved rendered reference compositions, not from any one existing CSS file.
 
 ## 13. Product validation gate
 
