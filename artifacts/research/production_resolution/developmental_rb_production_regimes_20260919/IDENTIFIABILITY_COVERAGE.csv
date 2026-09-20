@@ -1,0 +1,5 @@
+index,family,eligible_binary_n,complete_n,coverage
+0,role_opportunity,59,59,1.0
+1,workload_efficiency,59,59,1.0
+2,availability,59,59,1.0
+3,prior_role_stability,59,46,0.7796610169491526
