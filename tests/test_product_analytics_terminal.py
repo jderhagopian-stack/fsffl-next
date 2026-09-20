@@ -27,7 +27,7 @@ def test_value_lab_makes_the_ui_model_switch_auditable() -> None:
     ui = (ROOT / "src/fsffl/product/static/analytics_terminal.js").read_text()
     assert "fsffl_cardinal_values" in ui
     assert "provisional_fsffl_values" in ui
-    assert "Current authoritative FSFFL Value" in ui
+    assert "Current authoritative FSFFL Cardinal Market Value" in ui
     assert "Earlier beta challenger" in ui
     assert "Decision and Opportunity Search must not consume the earlier challenger" in ui
     assert "retained only for calibration comparison" in ui
