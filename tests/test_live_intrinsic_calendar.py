@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from fsffl.forecast.future_contract import (
     ForecastUncertaintyKind,
     FutureForecastContract,
@@ -251,3 +253,37 @@ def test_model_agnostic_future_contract_preserves_current_discrete_value_inputs(
     assert player.year_3.result.state_means == means
     assert player.year_2.regularization_c is None
     assert player.year_3.regularization_policy_version is None
+
+
+
+def test_current_value_adapter_fails_closed_for_future_quantile_only_contract() -> None:
+    contract = FutureForecastContract(
+        evaluation_season=2026,
+        scoring_coordinate="connected_league_fantasy_points",
+        forecast_model_version="future-hierarchical-v1",
+        forecast_source="fixture-future",
+        forecasts=tuple(
+            FuturePlayerHorizonForecast(
+                player_id="p1",
+                position=Position.WR,
+                evaluation_season=2026,
+                year_index=year_index,
+                target_season=2026 + year_index - 1,
+                central_expectation=130.0,
+                scoring_coordinate="connected_league_fantasy_points",
+                model_version="future-hierarchical-v1",
+                source="fixture-future",
+                uncertainty_kind=ForecastUncertaintyKind.QUANTILES,
+                p10=65.0,
+                p50=125.0,
+                p90=220.0,
+            )
+            for year_index in (2, 3)
+        ),
+    )
+
+    with pytest.raises(ValueError, match="requires discrete future Forecast scenarios"):
+        compose_live_intrinsic_calendar_from_forecast_contract(
+            live_year_one_forecasts=(_live_forecast(),),
+            future_contract=contract,
+        )
