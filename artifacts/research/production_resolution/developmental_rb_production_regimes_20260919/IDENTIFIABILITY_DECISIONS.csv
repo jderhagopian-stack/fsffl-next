@@ -1,0 +1,5 @@
+index,family,pass,reasons
+0,role_opportunity,False,no_auc_gain_ge_0.05
+1,workload_efficiency,False,no_brier_logloss_gain_early_to_mid;no_brier_logloss_gain_earlymid_to_validation;auc_decline_earlymid_to_validation;no_auc_gain_ge_0.05
+2,availability,False,no_brier_logloss_gain_earlymid_to_validation;auc_decline_earlymid_to_validation
+3,prior_role_stability,False,coverage_below_0.80;no_brier_logloss_gain_early_to_mid
