@@ -1,0 +1,59 @@
+{
+  "upper_lower_contrast": {
+    "contrast": "lower_minus_upper_slope",
+    "bootstrap_mean": -0.6467079121086664,
+    "ci_low": -1.2403485634561828,
+    "ci_high": -0.1170536222457391,
+    "p_negative": 0.992,
+    "origins_negative": 9.0,
+    "origins_total": 9.0,
+    "origin_diff_min": -1.2943838864214583,
+    "origin_diff_max": -0.1692765010509463,
+    "loo_diff_min": -0.6967484862268849,
+    "loo_diff_max": -0.5873277757753189,
+    "loo_sign_flip": 0.0
+  },
+  "group_response": [
+    {
+      "group": "upper",
+      "states": "starter,premium,elite",
+      "n": 352,
+      "unique_players": 173,
+      "pooled_slope": 0.1385716642978189,
+      "bootstrap_slope_mean": 0.1373424928299649,
+      "slope_ci_low": -0.0228301988751217,
+      "slope_ci_high": 0.3055845079424044,
+      "bootstrap_p_positive": 0.953,
+      "origin_same_sign_share": 0.8888888888888888,
+      "loo_slope_min": 0.1085626261003657,
+      "loo_slope_max": 0.1696959612467214
+    },
+    {
+      "group": "lower",
+      "states": "depth,usable",
+      "n": 167,
+      "unique_players": 121,
+      "pooled_slope": -0.515710773377444,
+      "bootstrap_slope_mean": -0.4984200985211591,
+      "slope_ci_low": -1.0751101983227835,
+      "slope_ci_high": 0.0160222438502803,
+      "bootstrap_p_positive": 0.0294,
+      "origin_same_sign_share": 1.0,
+      "loo_slope_min": -0.5631517878228929,
+      "loo_slope_max": -0.4403193238957904
+    }
+  ],
+  "moving_block_sensitivity_summary": {
+    "rows": 1,
+    "columns": [
+      "metric",
+      "block_length",
+      "point_mean",
+      "bootstrap_mean",
+      "ci_low",
+      "ci_high",
+      "all_origin_differences_negative"
+    ],
+    "note": "Persisted feasibility-stage moving-block sensitivity retained as the uncertainty authority for the descriptive upper/lower contrast."
+  }
+}

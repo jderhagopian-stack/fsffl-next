@@ -1,0 +1,19 @@
+{
+  "starting_research_head": "24b8ea2b103e54368c4bdf8d602ccdda81874a51",
+  "directive_file": "/mnt/data/FSFFL_NEXT_Developmental_RB_Y3_Ordering_Constraint_Conflict_Mechanism_Diagnostic_Directive_2026-09-20(1).pdf",
+  "source_artifacts": {
+    "historical_predictions": "/mnt/data/fsffl_diag/historical_predictions.csv",
+    "phase2_player_season_panel": "/mnt/data/fsffl_phase2/future-state-phase2/phase2_player_season_panel.csv",
+    "prior_challenger_rows": "/mnt/data/fsffl_partial_pooling_challenger_20260919/ROW_LEVEL_EVALUATION.csv",
+    "prior_constrained_fits": "/mnt/data/fsffl_partial_pooling_challenger_20260919/ORIGIN_SPECIFIC_FITTED_PARAMETERS.csv",
+    "feasibility_group_response": "/mnt/data/fsffl_state_specific_feasibility_20260919/PARTIAL_POOLING_GROUP_RESPONSE.csv",
+    "feasibility_identifiability": "/mnt/data/fsffl_state_specific_feasibility_20260919/PARTIAL_POOLING_IDENTIFIABILITY.csv"
+  },
+  "replay_model": "/mnt/data/fsffl_revalidate_fit.py",
+  "new_challenger_fit": false,
+  "unconstrained_fit_role": "diagnostic only; not scored or eligible for authority",
+  "source_2023_target_2026_inspected": false,
+  "production_authority_changed": false,
+  "pr147_modified": false,
+  "main_modified": false
+}

@@ -1,0 +1,10 @@
+{
+  "classification": "A. PARAMETERIZATION CONFLICT IDENTIFIED - ONE NATURAL CHALLENGER JUSTIFIED",
+  "signal_actionability": "actionable_but_blocked_by_tested_parameterization",
+  "why_not_full_domain_endpoint_issue": "Historical developmental-RB source-percentile support spans ~0.003 to ~0.997. The constraint bound because it ordered correction multipliers, not because only unsupported endpoints caused crossing.",
+  "why_not_non_actionable": "The feasibility contrast remains temporally stable and the unconstrained exact objective can express differential slopes without causing any historical final-state ordering violation.",
+  "additional_mechanism": "The tested challenger fit raw log(target/D1_mean) residuals in-sample, whereas the feasibility signal was established on prospective walk-forward log1p residuals. On canonical out-of-sample rows the lower group is below D1; on in-sample raw-log-ratio fitting inputs the lower group has a strongly positive level. That mismatch pushes the unconstrained fit toward M_L>M_U.",
+  "new_challenger_fitted": false,
+  "production_authority_changed": false,
+  "prospective_2023_2026_untouched": true
+}

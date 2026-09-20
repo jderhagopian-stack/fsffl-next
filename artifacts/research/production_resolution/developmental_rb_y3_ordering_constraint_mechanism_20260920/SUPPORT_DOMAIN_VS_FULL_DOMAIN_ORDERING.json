@@ -1,0 +1,21 @@
+{
+  "training_support_source_percentile_range": [
+    0.002890173410404624,
+    0.9971428571428571
+  ],
+  "evaluation_support_source_percentile_range": [
+    0.0028571428571428,
+    0.9971428571428572
+  ],
+  "unconstrained_lower_to_upper_multiplier_ratio_full_domain": {
+    "minimum": 1.05556069823898,
+    "maximum": 1.1578681192502065
+  },
+  "minimum_d1_starter_to_usable_ratio_training_support": 1.3786135493916132,
+  "minimum_d1_starter_to_usable_ratio_evaluation_support": 1.4486516792950925,
+  "minimum_final_starter_to_usable_ratio_if_unconstrained_training_support": 1.209271678024588,
+  "minimum_final_starter_to_usable_ratio_if_unconstrained_evaluation_support": 1.262431162089638,
+  "unconstrained_final_ordering_violations_training_support": 0,
+  "unconstrained_final_ordering_violations_evaluation_support": 0,
+  "diagnosis": "The failed constraint required the correction functions themselves to be ordered (M_L<=M_U), which is materially stronger than the Forecast requirement that final state means remain ordered. Historical magnitude support already spans almost the full [0,1] percentile domain, so the binding is not primarily an unsupported-endpoint artifact."
+}

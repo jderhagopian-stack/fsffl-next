@@ -1,0 +1,25 @@
+{
+  "starting_research_head": "24b8ea2b103e54368c4bdf8d602ccdda81874a51",
+  "canonical_origins": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "constrained_parameter_max_abs_diff": {
+    "a0": 5.551115123125783e-17,
+    "a1": 5.551115123125783e-17,
+    "d0": 6.162975822039155e-33,
+    "d1": 3.0814879110195774e-33
+  },
+  "all_nine_constrained_fits_reproduced": true,
+  "both_endpoint_constraints_binding_all_origins": true,
+  "max_abs_constrained_lower_deviation": 2.775557561562905e-17,
+  "d1_control_parity_previously_persisted": true,
+  "prospective_2023_to_2026_inspected": false
+}
