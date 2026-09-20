@@ -21,6 +21,7 @@ Fixture:
 - Team B deltas: -0.50 wins, -7.0 pp playoffs, -4.0 pp first place
 - Simulation count in the fixture: 50,000
 - Proposal fixture: Team A sends Player `p1`; Team B sends Player `p2`
+- Action-language reference uses the existing governed `support` disposition path exercised in `tests/test_trade_decision_disposition.py`; Presentation maps `support` to `Pursue this trade` in the current Trade Center code. The visual does not infer that action from the bars.
 
 The harness uses the fixture identities `Team A`, `Team B`, `P1`, and `P2` rather than inventing branded teams or player identities.
 
