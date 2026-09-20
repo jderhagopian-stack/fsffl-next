@@ -1,0 +1,7 @@
+{
+  "executed_cross_position_reselection": false,
+  "future_generalization_requirement": "Any QB/WR/TE use requires separate position-specific evidence and authorization; no forced universalization.",
+  "generic_mechanism": true,
+  "reason": "Directive requires architecture compatibility but prohibits reopening QB/WR/TE authority. The empirical within-state spread technique is position-agnostic in concept, but this stage evaluates only developmental RB.",
+  "schema_version": "fsffl-dev-rb-distribution-shape-cross-position-architecture-v1"
+}
