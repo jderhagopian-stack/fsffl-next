@@ -20,6 +20,7 @@ from .forecast_resilience import (
 )
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
+from .intrinsic_market_discovery_routes import install_intrinsic_market_discovery_routes
 from .intrinsic_value_routes import install_intrinsic_value_v1_routes
 from .latency_observability import install_latency_observability
 from .opportunity_search_cache import make_cached_opportunity_search
@@ -123,6 +124,12 @@ install_shapley_intrinsic_routes(
     app,
     runtime_store=_runtime_store,
     contract_loader=_shapley_intrinsic_loader,
+)
+install_intrinsic_market_discovery_routes(
+    app,
+    runtime_store=_runtime_store,
+    contract_loader=_shapley_intrinsic_loader,
+    require_user=_webapp.require_beta_user,
 )
 install_focused_opportunity_routes(
     app,
