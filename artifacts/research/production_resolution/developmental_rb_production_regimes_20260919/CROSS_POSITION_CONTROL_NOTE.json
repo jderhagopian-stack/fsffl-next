@@ -1,0 +1,7 @@
+{
+  "schema_version": "fsffl-dev-rb-regime-cross-position-note-v1",
+  "candidate_scope": "RB-specific by construction",
+  "cross_position_noharm_required": false,
+  "reason": "D1T90 and D1H90 features activate only for developmental RB rows; neither candidate earned authority. Previously earned QB/WR/TE dispositions were not reopened.",
+  "y2_control": "No candidate earned Y2 authority; D1 retained."
+}
