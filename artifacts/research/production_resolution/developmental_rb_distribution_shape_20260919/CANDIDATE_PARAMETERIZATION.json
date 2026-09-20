@@ -1,0 +1,29 @@
+{
+  "S1": {
+    "expected_state_mean_preserved": true,
+    "name": "state_conditioned_empirical_spread",
+    "state_probabilities": "frozen D1",
+    "support_transform": "D1_state_mean * q_i",
+    "within_state_shape": "equal-weight empirical q_i=target_points_i/mean(target_points within positive future state)"
+  },
+  "S2": {
+    "bandwidth": 0.2,
+    "expected_state_mean_preserved": true,
+    "kernel": "Gaussian source_percentile",
+    "name": "source_magnitude_conditioned_empirical_spread",
+    "state_probabilities": "frozen D1",
+    "support_transform": "D1_state_mean * q_i",
+    "within_state_shape": "kernel-weighted q_i=target_points_i/weighted_mean(target_points)"
+  },
+  "control": "frozen P0/D1",
+  "no_current_player_tuning": true,
+  "no_floor_or_cap": true,
+  "no_manual_tail_mass": true,
+  "regions": {
+    "middle_active": "0.40<=x/source_points<0.70",
+    "out": "x=0",
+    "productive_survivor": "x/source_points>=0.70",
+    "severe_active_decline": "0<x/source_points<0.40"
+  },
+  "schema_version": "fsffl-dev-rb-distribution-shape-candidates-v1"
+}
