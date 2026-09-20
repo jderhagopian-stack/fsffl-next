@@ -508,7 +508,7 @@ def create_app(
         except Exception as exc:
             value_failure = f"{type(exc).__name__}: {exc}"
             _logger.warning(
-                "FSFFL Value enrichment unavailable league=%s error=%s",
+                "FSFFL Cardinal Value enrichment unavailable league=%s error=%s",
                 refreshed_state.league.league_id,
                 exc,
             )
