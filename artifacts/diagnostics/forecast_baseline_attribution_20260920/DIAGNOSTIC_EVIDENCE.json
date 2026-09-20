@@ -1,0 +1,194 @@
+{
+  "schema_version": "fsffl-forecast-baseline-attribution-diagnostic-v1",
+  "date": "2026-09-20",
+  "authority": "diagnostic_only",
+  "recovered_state": {
+    "pr_number": 147,
+    "pr_head": "34470dce369df2c9d5454ebbd481317c5ab76d12",
+    "main_head": "53ff3a3c2e79a59d1e4d8bbdfbb293b10f978b76",
+    "p0_package_sha256": "ea8b5c158d6e08071fe7b1ff2f8ec3538844213e8738ca1f399a1416fe156aa7",
+    "route_authority": "p0-final-route-authority-v1:cf5e3c0d375c",
+    "current_source_sha256": "eda43a5e297ffe46550af5c3fbf98a1d32545fc15925a9e49c6620427043307a",
+    "raw_source_sha256": "4dd1fa70b9b4f886ad103a2f5b6f45f7c4f123a571f84b7a4400b0004271639d",
+    "source_players": 335,
+    "raw_observations": 1675
+  },
+  "final_classification": "B. LOCALIZED RB BASELINE / SHRINKAGE PROBLEM",
+  "architecture_conclusion": {
+    "state_probability_individualization": "substantial",
+    "conditional_production_individualization": "modest around shared state/position anchors in D1; D0 is one common positive-state mean per player",
+    "mechanism_scope": "strong pooling is Forecast-wide; material error evidence is localized to developmental RB Y3",
+    "pr147_disposition": "remain on management hold pending bounded architecture/uncertainty disposition; no production change authorized"
+  },
+  "current_top_decile_y3": {
+    "QB": {
+      "n": 6,
+      "conditional_retention_median": 0.7736616456149457,
+      "active_probability_median": 0.897254600618037
+    },
+    "RB": {
+      "n": 9,
+      "conditional_retention_median": 0.5677116389961988,
+      "active_probability_median": 0.8314946420043066
+    },
+    "WR": {
+      "n": 12,
+      "conditional_retention_median": 0.7082793308467894,
+      "active_probability_median": 0.8305416948551727
+    },
+    "TE": {
+      "n": 6,
+      "conditional_retention_median": 0.7934885133247389,
+      "active_probability_median": 0.9362537787011704
+    }
+  },
+  "y3_d1_elite_response_slopes": {
+    "meaning": "future elite-state points gained per one source-point increase over each cell's governed P10-P90 central range with joint source/state percentile evidence varied continuously",
+    "QB": {
+      "developmental": 0.146604158,
+      "established": 0.1393872229,
+      "veteran": 0.1437369223
+    },
+    "RB": {
+      "developmental": 0.1610492415,
+      "established": 0.1011465394
+    },
+    "WR": {
+      "developmental": 0.2350806779,
+      "established": 0.1830215153
+    },
+    "TE": {
+      "developmental": 0.1662877646,
+      "established": 0.1464707566
+    }
+  },
+  "developmental_rb_y3_high_source": {
+    "subset": "position=RB, career_stage=developmental, source_percentile>=0.90",
+    "n": 3,
+    "median_source_points": 289.4,
+    "median_active_probability": 0.8996606651354514,
+    "median_elite_state_mean": 198.0367179465549,
+    "median_anchor_only_elite_state_mean": 169.979189001555,
+    "median_player_specific_elite_lift": 28.057528944999888,
+    "median_conditional_points": 162.64380979839936,
+    "median_expected_points": 146.32423810339182,
+    "exact_decline_decomposition": {
+      "definition": "source points -> elite state mean -> probability-weighted active conditional mean -> expected points",
+      "elite_mean_compression_points": 225.84370218241804,
+      "state_mix_loss_points": 121.26038051248014,
+      "disappearance_loss_points": 55.07758597323124,
+      "total_points": 402.1816686681294,
+      "shares": {
+        "elite_mean_compression": 0.5615464845285597,
+        "state_mix": 0.30150648316231754,
+        "disappearance": 0.13694703230912278
+      }
+    },
+    "historical_support": {
+      "selection_cell_counts": {
+        "early": 329,
+        "mid": 219,
+        "validation": 225
+      },
+      "distinct_source_seasons": 7,
+      "active_top_decile_n": 72,
+      "source_points_p90": 295.27,
+      "source_points_max": 357.2,
+      "realized_active_retention_median": 0.6441050743380667
+    }
+  },
+  "prior_all_top_decile_rb_decomposition": {
+    "production_state_mean_share": 0.71042966,
+    "state_composition_share": 0.09402912,
+    "disappearance_share": 0.19554122
+  },
+  "historical_pull_bias_descriptive_association": {
+    "n_cells": 8,
+    "pearson": -0.20832606850404226,
+    "spearman": -0.023809523809523808,
+    "inference": "none; descriptive only"
+  },
+  "chronology_correct_dev_rb_magnitude_challenger": {
+    "classification": "B. MECHANISM WAS CORRECT, BUT CHALLENGER IS NOT STRONG ENOUGH",
+    "full_cell_crps_gain": 0.01453521645691858,
+    "clustered_95_ci": [
+      -0.4044968956140399,
+      0.3399473163965086
+    ],
+    "origins_improved": "6/9",
+    "median_origin_gain": 0.2231544997294909,
+    "moving_block_95_ci": [
+      -0.1872658268007295,
+      0.18133791934061466
+    ],
+    "leave_one_origin_negative_count": 5,
+    "mae_gain": 0.9366258063526983,
+    "overall_imce_improvement": 0.13965610961984729,
+    "production_authority_changed": false
+  },
+  "cross_position_magnitude_control": {
+    "tested_routes": 6,
+    "routes_with_positive_pooled_crps_gain": 0,
+    "routes_with_cluster_ci_low_ge_zero": 0,
+    "conclusion": "common bounded multiplicative location form did not show general QB/WR/TE support"
+  },
+  "uncertainty_containment": {
+    "current_p0_within_state_distribution": false,
+    "current_p0_uncertainty": "discrete state mixture only",
+    "regular_season_simulation_uses_p0_y2_y3_distribution": false,
+    "regular_season_weekly_volatility_source": "independently calibrated historical weekly volatility; not season forecast uncertainty",
+    "shapley_future_input": "state probabilities + point state means + expected points",
+    "distribution_shape_research": {
+      "selection_S1_y3_crps_gain": 0.8114895525391524,
+      "selection_S1_95_ci": [
+        0.518534631957171,
+        1.10893931998171
+      ],
+      "locked_2021_2022_S1_y3_crps_gain": 0.5133238963546701,
+      "locked_2021_2022_S1_95_ci": [
+        0.1603671583897634,
+        0.876344437382243
+      ],
+      "p95_tail_gate": "failed; productive-survivor/downside calibration worsened",
+      "authority_changed": false
+    }
+  },
+  "value_double_counting": {
+    "rb_age_collapse_haircut_found": false,
+    "intrinsic_discount": 0.85,
+    "y3_discount_power": 2,
+    "note": "Shapley maps Forecast state outcomes to marginal fantasy value; no extra RB-specific collapse penalty is introduced in the verified P0 -> Shapley/Intrinsic path."
+  },
+  "next_research_boundary": {
+    "question": "Can one pre-specified developmental-RB Y3 within-state conditional-production uncertainty representation preserve frozen D1 probabilities and central means while calibrating productive-survivor tail mass without a new p95+ survivor/downside failure?",
+    "restrictions": [
+      "one candidate family only",
+      "freeze D1 probabilities, routes, central means, scoring coordinate, and expected points",
+      "chronology-correct pre-origin fitting only",
+      "origin-clustered uncertainty",
+      "unlock 2021-2022 once only if every selection gate passes",
+      "leave source-2023 -> target-2026 untouched",
+      "no mean boost or state-probability change",
+      "no QB/WR/TE authority change",
+      "no named-player tuning"
+    ]
+  },
+  "persisted_artifacts": {
+    "management_report": "MANAGEMENT_REPORT.md",
+    "equation_lineage": "EQUATION_AND_FEATURE_LINEAGE.md",
+    "route_matrix": "ROUTE_INFLUENCE_MATRIX.csv",
+    "continuous_curves": "CONTINUOUS_EVIDENCE_RESPONSE_CURVES.csv"
+  },
+  "hard_stop": {
+    "pr147_modified": false,
+    "main_modified": false,
+    "merged": false,
+    "deployed": false,
+    "refit_or_tuned": false,
+    "route_authority_changed": false,
+    "simulation_changed": false,
+    "value_changed": false,
+    "intrinsic_changed": false,
+    "shapley_changed": false
+  }
+}
