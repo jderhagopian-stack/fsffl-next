@@ -16,7 +16,7 @@
  * Unavailable inference is labeled Awaiting PIT history rather than rendered as a score.
  */
 
-const fsfflBehaviorUiVersion='20260909-stable2';
+const fsfflBehaviorUiVersion='20260920-owner-dossier1';
 let fsfflBehaviorSelectedOwnerId=null;
 let fsfflBehaviorRouteGuardInstalled=false;
 let fsfflBehaviorProfiles=[];
