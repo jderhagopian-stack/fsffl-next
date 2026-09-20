@@ -26,7 +26,7 @@ def test_live_ensemble_rejects_duplicate_provider_ids_and_equal_weights_sources(
     source = (ROOT / "src" / "fsffl" / "forecast" / "live_ensemble.py").read_text(
         encoding="utf-8"
     )
-    assert "live ensemble source ids must be unique" in source
+    assert "live forecast source ids must be unique" in source
     assert "equal_weight_ensemble" in source
     assert "minimum_independent_sources" in source
     assert "aggregate" in source.lower()
