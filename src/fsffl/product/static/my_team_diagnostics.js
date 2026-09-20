@@ -20,8 +20,8 @@ function renderFsfflMyTeamDiagnostics(){
   const pressureDetail=weakest?`Lowest current optimized-starter position strength. 100 is league average.`:'Position-strength evidence has not attached.';
   const engine=strongest?`${strongest.position} · ${Math.round(strongest.strength_index)}`:'Unavailable';
   const engineDetail=strongest?`Highest current optimized-starter position strength. 100 is league average; this identifies the unit carrying the most current lineup strength.`:'Position-strength evidence has not attached.';
-  const cornerstoneDetail=cornerstone?'Highest authoritative FSFFL Value among players currently on the roster. This is an asset fact, not a new franchise score.':'Authoritative player Value evidence has not attached.';
-  const leverageDetail=nonstarterLeverage?'Highest authoritative FSFFL Value among players not currently projected to start. This highlights optionality already on the roster; it is descriptive only.':'No nonstarter with authoritative FSFFL Value is currently available.';
+  const cornerstoneDetail=cornerstone?'Highest authoritative FSFFL Cardinal Value among players currently on the roster. This is an asset fact, not a new franchise score.':'Authoritative player Value evidence has not attached.';
+  const leverageDetail=nonstarterLeverage?'Highest authoritative FSFFL Cardinal Value among players not currently projected to start. This highlights optionality already on the roster; it is descriptive only.':'No nonstarter with authoritative FSFFL Cardinal Value is currently available.';
   const ageValue=starterAge!=null||rosterAge!=null?`Starters ${starterAge==null?'—':starterAge.toFixed(1)} · roster ${rosterAge==null?'—':rosterAge.toFixed(1)}`:'Unavailable';
   const ageDetail='Descriptive average ages only. No youth/veteran label or age-curve value adjustment is created in Presentation.';
   const pickText=myTeamDiagnosticPickText(view);
