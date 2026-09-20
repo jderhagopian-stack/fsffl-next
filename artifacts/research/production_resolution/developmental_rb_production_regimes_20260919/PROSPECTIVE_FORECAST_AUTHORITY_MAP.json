@@ -1,0 +1,19 @@
+{
+  "schema_version": "fsffl-prospective-forecast-authority-map-regimes-v1",
+  "research_only": true,
+  "carry_forward": {
+    "candidate_selection_method": "Proper distributional scoring earned for general Forecast candidate selection; ordinary MAE remains a guardrail.",
+    "Y3_QB_developmental": "D0 -> D1 earned in prior research; not implemented here.",
+    "Y3_RB_established": "D0 -> D1 earned in prior research; not implemented here.",
+    "WR_TE": "Current P0 representation retained.",
+    "Y2_RB_developmental": "D1 retained.",
+    "Y3_RB_developmental": "Structural concern remains unresolved; D1 remains frozen production control pending separate management authorization."
+  },
+  "new_research_disposition": {
+    "discrete_tiering": "NOT EARNED",
+    "continuous_nonlinear": "PROMISING BUT NOT EARNED",
+    "additional_ex_ante_breakout_classifier": "NOT IDENTIFIABLE / NOT AUTHORIZED",
+    "next_research_direction": "Bounded distribution-shape / uncertainty representation for exceptional developmental-RB magnitude regions, preserving explicit collapse probability and productive-survivor upside."
+  },
+  "implementation_authorized": false
+}
