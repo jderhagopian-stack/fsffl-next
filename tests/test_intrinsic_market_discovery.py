@@ -15,7 +15,9 @@ from fsffl.state.models import (
     LeagueRules,
     LeagueState,
     Player,
+    PlayerState,
     Position,
+    Provenance,
     RosterEntry,
     RosterSlot,
     Team,
@@ -69,6 +71,19 @@ def _runtime() -> UserRuntimeContext:
             ),
         ),
         players=players,
+        player_states=tuple(
+            PlayerState(
+                player_id=player.player_id,
+                as_of=now,
+                provenance=Provenance(
+                    source="fixture",
+                    retrieved_at=now,
+                    effective_at=now,
+                    source_version="fixture-v1",
+                ),
+            )
+            for player in players
+        ),
     )
     scale = ValueScale(
         scale_id="dynasty-market-percentile",
