@@ -37,11 +37,11 @@ def _season_fantasy_observation(
 
 
 def _fantasy_ppg(points: float | None) -> float | None:
-    if points is None:
-        return None
-    # Forecast contracts own season totals but not projected active games. This
-    # display rate uses the 17-game NFL team schedule and labels that basis.
-    return float(points) / 17.0
+    # Current Forecast contracts own full-season expected fantasy points but do
+    # not expose expected player games played. PPG therefore fails closed rather
+    # than dividing by the NFL team schedule and pretending that is player PPG.
+    _ = points
+    return None
 
 
 class PlayerFutureForecastCache:
@@ -180,7 +180,7 @@ def build_player_intelligence_overview(
                 "target_season": state.league.season,
                 "fantasy_points": float(y1.distribution.mean),
                 "fantasy_ppg": _fantasy_ppg(float(y1.distribution.mean)),
-                "ppg_basis": "full-season fantasy points / 17 NFL team games",
+                "ppg_basis": "unavailable: Forecast contract does not expose expected player games",
                 "uncertainty": {
                     "kind": "moments",
                     "stddev": float(y1.distribution.stddev),
