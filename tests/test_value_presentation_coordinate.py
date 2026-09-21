@@ -33,9 +33,9 @@ def _rows(source: str, values: list[float]) -> tuple[NativeMarketMagnitudeObserv
 
 def test_shared_coordinate_is_empirical_nonlinear_and_provider_neutral() -> None:
     evidence = (
-        *_rows("source-a", [0, 10, 20, 30, 40, 50, 80, 150, 350, 1000] * 3),
-        *_rows("source-b", [1, 2, 3, 5, 8, 13, 34, 144, 610, 1597] * 3),
-        *_rows("source-c", [0, 1, 4, 9, 16, 25, 64, 256, 1024, 4096] * 3),
+        *_rows("source-a", [float(index**2) for index in range(30)]),
+        *_rows("source-b", [float(index**3 + 1) for index in range(30)]),
+        *_rows("source-c", [float((index + 1) ** 4) for index in range(30)]),
     )
     coordinate = build_value_presentation_coordinate(
         evidence,
