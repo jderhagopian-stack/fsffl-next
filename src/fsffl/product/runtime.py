@@ -149,7 +149,7 @@ class LiveForecastEvidence:
     uncertainty_ready: bool
     runtime_result: LiveForecastRuntimeResult
     evidence_basis: str = "live_full_season"
-    model_version: str = "next8-live-forecast-evidence-v3"
+    model_version: str = "next8-live-forecast-evidence-v4:source-health-provenance"
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
