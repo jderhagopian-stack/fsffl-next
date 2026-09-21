@@ -17,16 +17,3 @@ services:
         sync: false
       - key: FSFFL_SCHEDULER_TOKEN
         sync: false
-
-  - type: cron
-    name: fsffl-next-annual-preseason-snapshot
-    runtime: python
-    plan: starter
-    buildCommand: python -m pip install -e .
-    startCommand: python scripts/run_annual_preseason_scheduler_tick.py
-    schedule: "17 8 * * *"
-    envVars:
-      - key: FSFFL_ANNUAL_SNAPSHOT_ENDPOINT
-        value: "https://fsffl-next-private-beta.onrender.com/internal/annual-preseason-snapshot/capture"
-      - key: FSFFL_SCHEDULER_TOKEN
-        sync: false
