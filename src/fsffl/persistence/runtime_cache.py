@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import TypeAdapter
 
 from fsffl.forecast.current_runtime import LiveForecastRuntimeResult
+from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
 from fsffl.forecast.preseason_baseline import (
     PRESEASON_BASELINE_MODEL_VERSION,
     PreseasonForecastBaseline,
@@ -20,7 +21,7 @@ VALUE_ARTIFACT_KIND = "current_market_value"
 LEAGUE_SCOPE_KIND = "league_state"
 LEAGUE_SEASON_SCOPE_KIND = "league_season"
 
-FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v3"
+FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v4:source-health-provenance"
 SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v7:scoring-dispersion-diagnostic"
 VALUE_MODEL_VERSION = "next3-current-market-runtime-v7:market-total-fail-closed"
 
@@ -39,6 +40,34 @@ def decode_forecast_evidence(payload: dict[str, object]) -> LiveForecastEvidence
         raise ValueError("stored forecast evidence model version is stale")
     if not isinstance(evidence.runtime_result, LiveForecastRuntimeResult):
         raise ValueError("stored forecast runtime payload is invalid")
+    if evidence.evidence_basis == "live_full_season":
+        provenance = evidence.runtime_result.source_provenance
+        source_ids = tuple(sorted(set(evidence.successful_source_ids)))
+        provenance_ids = tuple(sorted(item.provider for item in provenance))
+        if provenance_ids != source_ids:
+            raise ValueError(
+                "stored live forecast evidence lacks complete provider provenance"
+            )
+        if not provenance:
+            raise ValueError(
+                "stored live forecast evidence lacks provider content-health provenance"
+            )
+        for item in provenance:
+            if not item.provider_payload_sha256:
+                raise ValueError(
+                    "stored live forecast evidence lacks provider payload fingerprint"
+                )
+            if item.health_disposition != "accepted":
+                raise ValueError(
+                    "stored live forecast evidence contains non-accepted provider health"
+                )
+            if (
+                item.health_contract_version
+                != CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
+            ):
+                raise ValueError(
+                    "stored live forecast evidence predates the current source-health contract"
+                )
     return evidence
 
 
