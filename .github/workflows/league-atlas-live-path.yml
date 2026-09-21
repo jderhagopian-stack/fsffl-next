@@ -1,0 +1,67 @@
+name: League Atlas persisted live-path verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/fsffl/product/static/league_atlas_v1.js"
+      - "src/fsffl/product/static/product_shell.js"
+      - "src/fsffl/product/persistent_webapp.py"
+      - "src/fsffl/product/private_beta_shapley_runtime.py"
+      - "src/fsffl/product/league_value_lenses.py"
+      - "src/fsffl/product/league_value_lens_routes.py"
+      - "scripts/run_league_atlas_live_path_validation.py"
+      - ".github/workflows/league-atlas-live-path.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/fsffl/product/static/league_atlas_v1.js"
+      - "src/fsffl/product/static/product_shell.js"
+      - "src/fsffl/product/persistent_webapp.py"
+      - "src/fsffl/product/private_beta_shapley_runtime.py"
+      - "src/fsffl/product/league_value_lenses.py"
+      - "src/fsffl/product/league_value_lens_routes.py"
+      - "scripts/run_league_atlas_live_path_validation.py"
+      - ".github/workflows/league-atlas-live-path.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  persisted-live-path:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FSFFL_DATABASE_URL: ${{ secrets.FSFFL_DATABASE_URL }}
+      FSFFL_DIAGNOSTIC_LEAGUE_ID: ${{ vars.FSFFL_DIAGNOSTIC_LEAGUE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Require persistence secret
+        run: |
+          if [ -z "$FSFFL_DATABASE_URL" ]; then
+            echo "FSFFL_DATABASE_URL is required for persisted live-path verification."
+            exit 1
+          fi
+
+      - name: Install app and WebKit validation tooling
+        run: |
+          python -m pip install -e '.[web]' playwright
+          python -m playwright install --with-deps webkit
+
+      - name: Run persisted API and mobile WebKit verification
+        run: python scripts/run_league_atlas_live_path_validation.py
+
+      - name: Upload live-path evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: league-atlas-persisted-live-path
+          path: artifacts/diagnostics/league_atlas_live_path_20260921/
+          if-no-files-found: error
+          retention-days: 14
