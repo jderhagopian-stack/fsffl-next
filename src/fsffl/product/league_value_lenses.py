@@ -1,44 +1,18 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Iterable
-
 from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicAvailability,
     ShapleyIntrinsicContract,
 )
 
 from .runtime import UserRuntimeContext
-from .value_presentation import build_value_presentation_coordinate
+from .value_lens_evidence import build_governed_value_lens_evidence
 
 
 LEAGUE_VALUE_LENS_CONTRACT_VERSION = "phase3-league-value-lenses-v2:value-index"
 BROAD_MARKET_SCALE_ID = "dynasty-market-percentile"
 INTRINSIC_PRESENTATION_COORDINATE = "percentile_rank_presentation_only"
-
-
-def _percentile_ranks(values: Iterable[tuple[str, float]]) -> dict[str, float]:
-    """Return centered percentile ranks without pretending raw values share units."""
-    ordered = sorted(
-        ((asset_id, float(value)) for asset_id, value in values),
-        key=lambda item: (item[1], item[0]),
-    )
-    count = len(ordered)
-    if count == 0:
-        return {}
-
-    ranks: dict[str, float] = {}
-    index = 0
-    while index < count:
-        end = index + 1
-        while end < count and ordered[end][1] == ordered[index][1]:
-            end += 1
-        average_zero_based_rank = (index + end - 1) / 2.0
-        percentile = (average_zero_based_rank + 0.5) / count
-        for offset in range(index, end):
-            ranks[ordered[offset][0]] = percentile
-        index = end
-    return ranks
 
 
 def _ownership(runtime: UserRuntimeContext) -> dict[str, str]:
@@ -76,37 +50,11 @@ def build_league_value_lenses(
     if state is None:
         raise ValueError("League value lenses require canonical LeagueState")
 
-    values = runtime.value_evidence
-    market = {
-        estimate.asset_id: max(0.0, min(1.0, float(estimate.distribution.mean)))
-        for estimate in (values.estimates if values is not None else ())
-        if estimate.scale.scale_id == BROAD_MARKET_SCALE_ID
-    }
-
-    intrinsic_available = bool(
-        intrinsic is not None
-        and intrinsic.status != ShapleyIntrinsicAvailability.UNAVAILABLE
-        and intrinsic.estimates
-    )
-    intrinsic_raw = (
-        {
-            estimate.player_id: float(estimate.raw_intrinsic_value)
-            for estimate in intrinsic.estimates
-        }
-        if intrinsic_available and intrinsic is not None
-        else {}
-    )
-    intrinsic_ranks = _percentile_ranks(intrinsic_raw.items())
-
-    value_coordinate = None
-    value_coordinate_error = None
-    if values is not None:
-        try:
-            value_coordinate = build_value_presentation_coordinate(
-                values.native_magnitude_observations
-            )
-        except ValueError as exc:
-            value_coordinate_error = str(exc)
+    lens_evidence = build_governed_value_lens_evidence(runtime, intrinsic)
+    market = lens_evidence.market_percentiles
+    intrinsic_ranks = lens_evidence.intrinsic_percentiles
+    value_coordinate = lens_evidence.value_coordinate
+    value_coordinate_error = lens_evidence.value_coordinate_error
 
     owner_by_player = _ownership(runtime)
     team_names = {team.team_id: team.display_name for team in state.teams}
@@ -192,12 +140,7 @@ def build_league_value_lenses(
     intrinsic_status = (
         intrinsic.status.value if intrinsic is not None else "unavailable"
     )
-    if market_ready and intrinsic_ranks:
-        status = "ready"
-    elif market_ready or intrinsic_ranks:
-        status = "degraded"
-    else:
-        status = "unavailable"
+    status = lens_evidence.status
 
     return {
         "status": status,
@@ -234,11 +177,15 @@ def build_league_value_lenses(
             ),
         },
         "value_presentation": (
-            value_coordinate.summary_payload()
+            {
+                "status": "ready",
+                **value_coordinate.summary_payload(),
+            }
             if value_coordinate is not None
             else {
                 "status": "unavailable",
                 "reason": value_coordinate_error
+                or lens_evidence.reason
                 or "Governed native market magnitude evidence is unavailable.",
                 "presentation_only": True,
             }
