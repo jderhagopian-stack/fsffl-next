@@ -202,7 +202,7 @@ def build_player_intelligence_overview(
                 "target_season": row.target_season,
                 "fantasy_points": float(row.central_expectation),
                 "fantasy_ppg": _fantasy_ppg(float(row.central_expectation)),
-                "ppg_basis": "full-season fantasy points / 17 NFL team games",
+                "ppg_basis": "unavailable: Forecast contract does not expose expected player games",
                 "uncertainty": {
                     "kind": row.uncertainty_kind.value,
                     "stddev": row.stddev,
