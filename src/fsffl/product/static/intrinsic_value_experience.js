@@ -70,7 +70,7 @@
     const cmp=row.comparison,estimate=row.estimate,evidence=estimate?evidenceRead(estimate):{label:'Unavailable',copy:'No Intrinsic estimate is available.'};
     return `<details class="value-lens-player" data-signal="${cmp.kind}">
       <summary>
-        <span class="value-lens-player-name"><strong>${esc(row.player.full_name)}</strong><small>${esc(row.player.position)}${finite(row.player.age_years)?` · age ${row.player.age_years}`:''}</small></span>
+        <span class="value-lens-player-name"><button type="button" class="pi-player-link" data-player-intelligence-id="${esc(row.player.player_id)}"><strong>${esc(row.player.full_name)}</strong></button><small>${esc(row.player.position)}${finite(row.player.age_years)?` · age ${row.player.age_years}`:''}</small></span>
         <span><small>Broad Market</small><strong>${index(row.marketIndex)}</strong><small>${pct(row.market)}</small></span>
         <span><small>FSFFL Intrinsic</small><strong>${index(row.intrinsicIndex)}</strong><small>${pct(row.intrinsicRank)}</small></span>
         <span class="value-lens-signal"><small>Read</small><strong>${esc(cmp.label)}</strong></span>
