@@ -136,7 +136,7 @@ def build_governed_value_lens_evidence(
         value_coordinate_error=coordinate_error,
         market_model_version=(values.model_version if values is not None else None),
         market_context_id=(values.market_context_id if values is not None else None),
-        intrinsic_contract_version=(intrinsic.contract_version if intrinsic is not None else None),
-        intrinsic_model_version=(intrinsic.intrinsic_model_version if intrinsic is not None else None),
-        forecast_model_version=(intrinsic.forecast_model_version if intrinsic is not None else None),
+        intrinsic_contract_version=(getattr(intrinsic, "contract_version", None) if intrinsic is not None else None),
+        intrinsic_model_version=(getattr(intrinsic, "intrinsic_model_version", None) if intrinsic is not None else None),
+        forecast_model_version=(getattr(intrinsic, "forecast_model_version", None) if intrinsic is not None else None),
     )
