@@ -99,66 +99,117 @@ def _state() -> LeagueState:
     )
 
 
-def _razzball_snapshot(*, healthy_revision: bool) -> CurrentProjectionSnapshot:
+def _razzball_snapshot(
+    *,
+    healthy_revision: bool,
+    timestamp_shift: timedelta = timedelta(0),
+    reverse_rows: bool = False,
+    extra_rows: int = 0,
+) -> CurrentProjectionSnapshot:
+    def row(
+        player_name: str,
+        position: Position,
+        nfl_team: str,
+        **stats: float,
+    ) -> CurrentProjectionRow:
+        return CurrentProjectionRow(
+            provider="razzball",
+            external_id=f"{position.value}:{nfl_team}:{player_name.lower().replace(' ', '')}",
+            player_name=player_name,
+            position=position,
+            nfl_team=nfl_team,
+            stats=stats,
+        )
+
     rows = [
-        CurrentProjectionRow(
-            provider="razzball",
-            external_id="QB:BUF:joshallen",
-            player_name="Josh Allen",
-            position=Position.QB,
-            nfl_team="BUF",
-            stats={
-                "pass_yd": 7682.0 if not healthy_revision else 4200.0,
-                "pass_td": 47.9 if not healthy_revision else 31.0,
-                "pass_int": 22.8 if not healthy_revision else 10.0,
-                "rush_yd": 1134.0 if not healthy_revision else 600.0,
-                "rush_td": 21.9 if not healthy_revision else 9.0,
-            },
+        row(
+            "Josh Allen",
+            Position.QB,
+            "BUF",
+            pass_yd=4200.0 if healthy_revision else 7682.0,
+            pass_td=31.0 if healthy_revision else 47.9,
+            pass_int=10.0 if healthy_revision else 22.8,
+            rush_yd=600.0 if healthy_revision else 1134.0,
+            rush_td=9.0 if healthy_revision else 21.9,
+            rec=0.0,
+            rec_yd=0.0,
+            rec_td=0.0,
         ),
-        CurrentProjectionRow(
-            provider="razzball",
-            external_id="RB:DET:jahmyrgibbs",
-            player_name="Jahmyr Gibbs",
-            position=Position.RB,
-            nfl_team="DET",
-            stats={"rush_yd": 2665.0, "rush_td": 22.7, "rec": 119.0, "rec_yd": 991.0, "rec_td": 4.7},
+        row(
+            "Dak Prescott", Position.QB, "DAL",
+            pass_yd=7934.0, pass_td=49.3, pass_int=16.2,
+            rush_yd=459.0, rush_td=6.0, rec=0.0, rec_yd=0.0, rec_td=0.0,
         ),
-        CurrentProjectionRow(
-            provider="razzball",
-            external_id="WR:LAR:pukanacua",
-            player_name="Puka Nacua",
-            position=Position.WR,
-            nfl_team="LAR",
-            stats={"rush_yd": 114.0, "rush_td": 0.9, "rec": 223.0, "rec_yd": 2926.0, "rec_td": 17.0},
+        row(
+            "Deshaun Watson", Position.QB, "CLE",
+            pass_yd=7314.0, pass_td=41.5, pass_int=23.6,
+            rush_yd=465.0, rush_td=2.4, rec=0.0, rec_yd=0.0, rec_td=0.0,
+        ),
+        row(
+            "Jahmyr Gibbs", Position.RB, "DET",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=2665.0, rush_td=22.7, rec=119.0, rec_yd=991.0, rec_td=4.7,
+        ),
+        row(
+            "Tony Pollard", Position.RB, "TEN",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=2234.0, rush_td=10.0, rec=51.0, rec_yd=347.0, rec_td=1.0,
+        ),
+        row(
+            "Tyjae Spears", Position.RB, "TEN",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=746.0, rush_td=8.0, rec=67.0, rec_yd=544.0, rec_td=3.0,
+        ),
+        row(
+            "Puka Nacua", Position.WR, "LAR",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=114.0, rush_td=0.9, rec=223.0, rec_yd=2926.0, rec_td=17.0,
+        ),
+        row(
+            "CeeDee Lamb", Position.WR, "DAL",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=22.0, rush_td=0.2, rec=171.0, rec_yd=2276.0, rec_td=12.0,
+        ),
+        row(
+            "Matthew Golden", Position.WR, "GB",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=173.0, rush_td=1.3, rec=111.0, rec_yd=1427.0, rec_td=6.5,
+        ),
+        row(
+            "Brock Bowers", Position.TE, "LV",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=15.0, rush_td=0.1, rec=124.0, rec_yd=1279.0, rec_td=8.5,
+        ),
+        row(
+            "Kyle Pitts", Position.TE, "ATL",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=0.0, rush_td=0.0, rec=138.0, rec_yd=1366.0, rec_td=6.5,
+        ),
+        row(
+            "Dallas Goedert", Position.TE, "PHI",
+            pass_yd=0.0, pass_td=0.0, pass_int=0.0,
+            rush_yd=0.0, rush_td=0.0, rec=122.0, rec_yd=1236.0, rec_td=12.0,
         ),
     ]
-    # The completed numerical trace captured 562 offensive rows after conversion.
-    # Keep the incident identity exact without making the health gate depend on any
-    # one named player's value.
     rows.extend(
-        CurrentProjectionRow(
-            provider="razzball",
-            external_id=f"QB:FA:filler{index}",
-            player_name=f"Filler {index}",
-            position=Position.QB,
-            nfl_team="FA",
-            stats={"pass_yd": 1.0},
+        row(
+            f"Filler {index}",
+            Position.QB,
+            "FA",
+            pass_yd=1.0,
         )
-        for index in range(559)
+        for index in range(550 + extra_rows)
     )
+    if reverse_rows:
+        rows.reverse()
     return CurrentProjectionSnapshot(
         provider="razzball",
-        captured_at=NOW,
-        effective_at=(
-            BAD_EFFECTIVE_AT + timedelta(seconds=1)
-            if healthy_revision
-            else BAD_EFFECTIVE_AT
-        ),
+        captured_at=NOW + timestamp_shift,
+        effective_at=BAD_EFFECTIVE_AT + timestamp_shift,
         rows=tuple(rows),
         source_version="razzball-season-projections-html-v3:horizon-isolated",
         usage_class="beta-personal-research-requires-commercial-review",
     )
-
 
 def _fftoday_snapshot() -> CurrentProjectionSnapshot:
     return CurrentProjectionSnapshot(
@@ -245,14 +296,24 @@ class _Store:
         self.record = record
 
 
-def _evidence_from_live(state: LeagueState, *, healthy_revision: bool) -> LiveForecastEvidence:
+def _evidence_from_live(
+    state: LeagueState,
+    *,
+    healthy_revision: bool,
+    timestamp_shift: timedelta = timedelta(0),
+    reverse_rows: bool = False,
+    extra_rows: int = 0,
+) -> LiveForecastEvidence:
     result = build_current_live_forecasts(
         state,
         fetchers=(
             NamedCurrentProjectionFetcher(
                 source_id="razzball",
                 fetch=lambda _season: _razzball_snapshot(
-                    healthy_revision=healthy_revision
+                    healthy_revision=healthy_revision,
+                    timestamp_shift=timestamp_shift,
+                    reverse_rows=reverse_rows,
+                    extra_rows=extra_rows,
                 ),
             ),
             NamedCurrentProjectionFetcher(
@@ -283,6 +344,39 @@ def test_known_bad_razzball_revision_cannot_enter_live_ensemble() -> None:
     message = str(excinfo.value)
     assert "razzball-full-season-upstream-inflation-20260920" in message
     assert "successful=['fftoday']" in message
+
+
+def test_same_malformed_content_with_new_timestamps_is_still_quarantined() -> None:
+    with pytest.raises(ValueError) as excinfo:
+        _evidence_from_live(
+            _state(),
+            healthy_revision=False,
+            timestamp_shift=timedelta(minutes=5),
+        )
+
+    assert "razzball-full-season-upstream-inflation-20260920" in str(excinfo.value)
+
+
+def test_same_malformed_content_with_reordered_rows_is_still_quarantined() -> None:
+    with pytest.raises(ValueError) as excinfo:
+        _evidence_from_live(
+            _state(),
+            healthy_revision=False,
+            reverse_rows=True,
+        )
+
+    assert "razzball-full-season-upstream-inflation-20260920" in str(excinfo.value)
+
+
+def test_same_malformed_content_with_changed_row_count_is_still_quarantined() -> None:
+    with pytest.raises(ValueError) as excinfo:
+        _evidence_from_live(
+            _state(),
+            healthy_revision=False,
+            extra_rows=3,
+        )
+
+    assert "razzball-full-season-upstream-inflation-20260920" in str(excinfo.value)
 
 
 def test_malformed_razzball_uses_preserved_preseason_authority_without_rewrite() -> None:
