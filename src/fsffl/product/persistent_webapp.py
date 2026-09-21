@@ -21,6 +21,7 @@ from .forecast_resilience import (
 )
 from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
+from .intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
 from .intrinsic_market_discovery_routes import install_intrinsic_market_discovery_routes
 from .intrinsic_value_routes import install_intrinsic_value_v1_routes
 from .league_value_lens_routes import install_league_value_lens_routes
@@ -80,6 +81,11 @@ _full_refresh_seconds = max(
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
 _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
     year_one_loader=make_preseason_baseline_authority_loader(_persistence_store),
+    persistence_store=_persistence_store,
+)
+_shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
+    _shapley_intrinsic_loader,
+    max_workers=1,
 )
 
 # Build the expensive structural candidate catalog once per exact authoritative
@@ -130,12 +136,14 @@ install_shapley_intrinsic_routes(
     app,
     runtime_store=_runtime_store,
     contract_loader=_shapley_intrinsic_loader,
+    background_coordinator=_shapley_intrinsic_coordinator,
 )
 install_intrinsic_market_discovery_routes(
     app,
     runtime_store=_runtime_store,
     contract_loader=_shapley_intrinsic_loader,
     require_user=_webapp.require_beta_user,
+    background_coordinator=_shapley_intrinsic_coordinator,
 )
 install_league_value_lens_routes(
     app,
