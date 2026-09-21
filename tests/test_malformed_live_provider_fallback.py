@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -210,6 +211,32 @@ def _razzball_snapshot(
         source_version="razzball-season-projections-html-v3:horizon-isolated",
         usage_class="beta-personal-research-requires-commercial-review",
     )
+
+
+def _later_malformed_razzball_snapshot() -> CurrentProjectionSnapshot:
+    snapshot = _razzball_snapshot(healthy_revision=False)
+    replacements = {
+        "Josh Allen": {"pass_yd": 7684.0, "pass_td": 48.0, "pass_int": 22.8, "rush_yd": 1134.0, "rush_td": 22.0, "rec": 0.0, "rec_yd": 0.0, "rec_td": 0.0},
+        "Dak Prescott": {"pass_yd": 7939.0, "pass_td": 49.3, "pass_int": 16.2, "rush_yd": 459.0, "rush_td": 6.0, "rec": 0.0, "rec_yd": 0.0, "rec_td": 0.0},
+        "Deshaun Watson": {"pass_yd": 7320.0, "pass_td": 41.6, "pass_int": 23.6, "rush_yd": 466.0, "rush_td": 2.4, "rec": 0.0, "rec_yd": 0.0, "rec_td": 0.0},
+        "Jahmyr Gibbs": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 2665.0, "rush_td": 22.7, "rec": 119.0, "rec_yd": 989.0, "rec_td": 4.7},
+        "Tony Pollard": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 2227.0, "rush_td": 9.9, "rec": 50.0, "rec_yd": 346.0, "rec_td": 1.0},
+        "Tyjae Spears": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 748.0, "rush_td": 8.0, "rec": 68.0, "rec_yd": 547.0, "rec_td": 3.0},
+        "Puka Nacua": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 109.0, "rush_td": 0.8, "rec": 217.0, "rec_yd": 2840.0, "rec_td": 16.5},
+        "CeeDee Lamb": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 22.0, "rush_td": 0.2, "rec": 171.0, "rec_yd": 2275.0, "rec_td": 12.0},
+        "Matthew Golden": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 173.0, "rush_td": 1.3, "rec": 112.0, "rec_yd": 1428.0, "rec_td": 6.5},
+        "Brock Bowers": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 15.0, "rush_td": 0.1, "rec": 124.0, "rec_yd": 1283.0, "rec_td": 8.5},
+        "Kyle Pitts": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 0.0, "rush_td": 0.0, "rec": 136.0, "rec_yd": 1341.0, "rec_td": 6.3},
+        "Dallas Goedert": {"pass_yd": 0.0, "pass_td": 0.0, "pass_int": 0.0, "rush_yd": 0.0, "rush_td": 0.0, "rec": 122.0, "rec_yd": 1235.0, "rec_td": 12.0},
+    }
+    rows = tuple(
+        replace(row, stats=replacements[row.player_name])
+        if row.player_name in replacements
+        else row
+        for row in snapshot.rows
+    )
+    return replace(snapshot, rows=rows)
+
 
 def _fftoday_snapshot() -> CurrentProjectionSnapshot:
     return CurrentProjectionSnapshot(
