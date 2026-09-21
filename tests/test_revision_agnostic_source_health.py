@@ -274,6 +274,44 @@ def test_production_runtime_rejects_unseen_two_source_scale_disagreement() -> No
     )
 
 
+def test_governed_reference_identifies_unseen_inflated_source_without_naming_provider() -> None:
+    state = _state()
+    reference = tuple(
+        observation.model_copy(
+            update={
+                "source": "governed-reference",
+                "model_version": "governed-reference-v1",
+            }
+        )
+        for observation in _fantasy_points(multiplier=1.0)
+    )
+
+    with pytest.raises(LiveForecastSourceHealthFailure) as excinfo:
+        build_current_live_forecasts(
+            state,
+            fetchers=(
+                NamedCurrentProjectionFetcher(
+                    source_id="source_a",
+                    fetch=lambda _season: _snapshot("source_a", scale=1.03),
+                ),
+                NamedCurrentProjectionFetcher(
+                    source_id="source_b",
+                    fetch=lambda _season: _snapshot("source_b", scale=1.80),
+                ),
+            ),
+            clock=lambda: NOW + timedelta(days=2),
+            reference_raw_forecasts=reference,
+            reference_id="immutable-preseason-fixture",
+        )
+
+    events = {event.provider: event for event in excinfo.value.health_events}
+    assert events["source_a"].disposition == "accepted"
+    assert events["source_b"].disposition == "quarantined"
+    assert events["source_b"].check == "revision_agnostic_governed_reference_scale"
+    assert events["source_b"].reference_id == "immutable-preseason-fixture"
+    assert "known_incident" not in events["source_b"].check
+
+
 def test_production_runtime_accepts_benign_revision_drift_and_metadata_changes() -> None:
     state = _state()
     result = build_current_live_forecasts(
