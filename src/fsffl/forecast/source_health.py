@@ -7,6 +7,11 @@ from dataclasses import dataclass
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 
 
+CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION = (
+    "current-projection-health-v2:razzball-incidents-20260920-20260921"
+)
+
+
 @dataclass(frozen=True)
 class ProjectionContentWitness:
     player_name: str
@@ -205,6 +210,83 @@ _RAZZBALL_20260920_WITNESSES = (
 )
 
 
+
+_RAZZBALL_20260921_WITNESSES = (
+    _witness(
+        "Josh Allen", "QB", "BUF",
+        pass_int=22.8, pass_td=48.0, pass_yd=7684.0,
+        rec=0.0, rec_td=0.0, rec_yd=0.0,
+        rush_td=22.0, rush_yd=1134.0,
+    ),
+    _witness(
+        "Dak Prescott", "QB", "DAL",
+        pass_int=16.2, pass_td=49.3, pass_yd=7939.0,
+        rec=0.0, rec_td=0.0, rec_yd=0.0,
+        rush_td=6.0, rush_yd=459.0,
+    ),
+    _witness(
+        "Deshaun Watson", "QB", "CLE",
+        pass_int=23.6, pass_td=41.6, pass_yd=7320.0,
+        rec=0.0, rec_td=0.0, rec_yd=0.0,
+        rush_td=2.4, rush_yd=466.0,
+    ),
+    _witness(
+        "Jahmyr Gibbs", "RB", "DET",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=119.0, rec_td=4.7, rec_yd=989.0,
+        rush_td=22.7, rush_yd=2665.0,
+    ),
+    _witness(
+        "Tony Pollard", "RB", "TEN",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=50.0, rec_td=1.0, rec_yd=346.0,
+        rush_td=9.9, rush_yd=2227.0,
+    ),
+    _witness(
+        "Tyjae Spears", "RB", "TEN",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=68.0, rec_td=3.0, rec_yd=547.0,
+        rush_td=8.0, rush_yd=748.0,
+    ),
+    _witness(
+        "Puka Nacua", "WR", "LAR",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=217.0, rec_td=16.5, rec_yd=2840.0,
+        rush_td=0.8, rush_yd=109.0,
+    ),
+    _witness(
+        "CeeDee Lamb", "WR", "DAL",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=171.0, rec_td=12.0, rec_yd=2275.0,
+        rush_td=0.2, rush_yd=22.0,
+    ),
+    _witness(
+        "Matthew Golden", "WR", "GB",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=112.0, rec_td=6.5, rec_yd=1428.0,
+        rush_td=1.3, rush_yd=173.0,
+    ),
+    _witness(
+        "Brock Bowers", "TE", "LV",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=124.0, rec_td=8.5, rec_yd=1283.0,
+        rush_td=0.1, rush_yd=15.0,
+    ),
+    _witness(
+        "Kyle Pitts", "TE", "ATL",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=136.0, rec_td=6.3, rec_yd=1341.0,
+        rush_td=0.0, rush_yd=0.0,
+    ),
+    _witness(
+        "Dallas Goedert", "TE", "PHI",
+        pass_int=0.0, pass_td=0.0, pass_yd=0.0,
+        rec=122.0, rec_td=12.0, rec_yd=1235.0,
+        rush_td=0.0, rush_yd=0.0,
+    ),
+)
+
+
 _KNOWN_BAD_CURRENT_REVISIONS = (
     CurrentProjectionHealthIncident(
         provider="razzball",
@@ -219,7 +301,66 @@ _KNOWN_BAD_CURRENT_REVISIONS = (
             "CurrentProjectionSnapshot rows; full 562-row payload was not preserved"
         ),
     ),
+    CurrentProjectionHealthIncident(
+        provider="razzball",
+        source_version="razzball-season-projections-html-v3:horizon-isolated",
+        content_fingerprint_sha256=(
+            "580e2bf8cfc1256336b6496202c37f598e192e31f063129f83fce8b2686ec334"
+        ),
+        witness_rows=_RAZZBALL_20260921_WITNESSES,
+        incident_id="razzball-full-season-upstream-inflation-20260921",
+        evidence_note=(
+            "corrective live numerical trace preserved 12 exact malformed "
+            "pre-normalization CurrentProjectionSnapshot rows from the later 624-row revision"
+        ),
+    ),
 )
+
+
+def current_projection_payload_sha256(
+    snapshot: CurrentProjectionSnapshot,
+) -> str:
+    """Hash provider content without transport timestamps or row ordering.
+
+    This digest is provenance identity only. Source-health authority remains the
+    incident-specific witness gate below.
+    """
+
+    rows = sorted(
+        (
+            {
+                "provider": row.provider,
+                "external_id": row.external_id,
+                "player_name": row.player_name,
+                "position": row.position.value,
+                "nfl_team": row.nfl_team,
+                "stats": [
+                    [key, float(value)]
+                    for key, value in sorted(row.stats.items())
+                ],
+            }
+            for row in snapshot.rows
+        ),
+        key=lambda item: (
+            str(item["external_id"]),
+            str(item["player_name"]),
+            str(item["position"]),
+            str(item["nfl_team"]),
+            json.dumps(item["stats"], separators=(",", ":")),
+        ),
+    )
+    encoded = json.dumps(
+        {
+            "provider": snapshot.provider,
+            "source_version": snapshot.source_version,
+            "usage_class": snapshot.usage_class,
+            "rows": rows,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _canonical_witness_payload(
