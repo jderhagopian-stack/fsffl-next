@@ -5,7 +5,7 @@
 (function(){
   'use strict';
 
-  const VERSION='20260921-intrinsic-market-discovery2';
+  const VERSION='20260921-intrinsic-market-discovery3-value-index';
   let open=false;
   let cached=null;
   let cachedStateId=null;
@@ -18,6 +18,7 @@
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
   const finite=value=>typeof value==='number'&&Number.isFinite(value);
   const pct=value=>finite(value)?`${Math.round(value*100)}th pct`:'Unavailable';
+  const index=value=>finite(value)?Math.round(value).toLocaleString():'Unavailable';
   const signedPct=value=>finite(value)?`${value>=0?'+':''}${Math.round(value*100)} pct pts`:'Unavailable';
   function currentContext(){
     try{
@@ -40,7 +41,7 @@
   }
   function cacheMatches(){
     const ctx=currentContext();
-    return cached&&cachedStateId===ctx.stateId&&cachedTeamId===ctx.teamId;
+    return cached&&cached.status==='ready'&&cachedStateId===ctx.stateId&&cachedTeamId===ctx.teamId;
   }
   function requestIsCurrent(requestGeneration,stateId,teamId){
     const ctx=currentContext();
@@ -61,9 +62,9 @@
         <strong>${esc(row.full_name)}</strong>
         <small>${esc(row.position||'')}${finite(row.age_years)?` · age ${row.age_years}`:''} · ${esc(row.owner_team_name||'Owner unavailable')}</small>
       </div>
-      <div><small>Broad market</small><strong>${pct(row.market_percentile)}</strong></div>
-      <div><small>FSFFL Intrinsic</small><strong>${pct(row.intrinsic_percentile)}</strong></div>
-      <div class="imd-gap"><small>Rank difference</small><strong>${signedPct(row.percentile_gap)}</strong><span>${esc(directionCopy(row))}</span></div>
+      <div><small>Broad Market</small><strong>${index(row.market_value_index)}</strong><span>${pct(row.market_percentile)}</span></div>
+      <div><small>FSFFL Intrinsic</small><strong>${index(row.intrinsic_value_index)}</strong><span>${pct(row.intrinsic_percentile)}</span></div>
+      <div class="imd-gap"><small>Value Index difference</small><strong>${finite(row.value_index_gap)?`${row.value_index_gap>=0?'+':''}${index(row.value_index_gap)}`:'Unavailable'}</strong><span>${esc(directionCopy(row))}</span></div>
       <button type="button" class="secondary-button" data-imd-focus="${index}">${esc(actionLabel(row))}</button>
     </article>`;
   }
@@ -80,11 +81,11 @@
   function shellMarkup(payload,loading=false){
     return `<section class="imd-shell" data-version="${VERSION}">
       <header class="imd-head">
-        <div><p class="eyebrow">Value disagreement</p><h3>Where market price and football worth diverge</h3><p>Compare Broad Market and FSFFL Intrinsic by <strong>percentile rank only</strong>. A disagreement is a reason to investigate—not a buy/sell instruction.</p></div>
+        <div><p class="eyebrow">Value disagreement</p><h3>Where market price and football worth diverge</h3><p>Broad Market and FSFFL Intrinsic share the same <strong>0-10,000 Value Index</strong> for presentation. Percentile remains secondary. A disagreement is a reason to investigate—not a buy/sell instruction.</p></div>
         <button type="button" class="text-button" data-imd-close>Close</button>
       </header>
       ${loading?'<div class="imd-loading"><i></i><span>Preparing governed Intrinsic server-side. This will end in ready or an explicit unavailable state.</span></div>':bodyMarkup(payload)}
-      <details class="imd-methods"><summary>Methods & authority</summary><p>Broad Market and Intrinsic use different units, so this lens never subtracts raw values. League Market Value remains unavailable. Team Utility and acceptance evidence remain separate. Choosing a player only hands that player into the existing server-owned Market Focus search.</p></details>
+      <details class="imd-methods"><summary>Methods & authority</summary><p>The 0-10,000 Value Index is a presentation-only percentile-equated ruler derived from governed native Market distributions. Broad Market and raw Shapley remain different authorities and raw units are never subtracted. The displayed Index gap is allowed only because both display numbers use the same versioned ruler. League Market Value remains unavailable. Team Utility and acceptance evidence remain separate.</p></details>
     </section>`;
   }
   function installTrigger(panel){
