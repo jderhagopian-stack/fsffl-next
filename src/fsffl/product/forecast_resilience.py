@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Callable
 
+from fsffl.forecast.current_runtime import LiveForecastSourceHealthFailure
 from fsffl.forecast.preseason_baseline import (
     PRESEASON_BASELINE_MODEL_VERSION,
     baseline_from_runtime,
@@ -33,6 +34,10 @@ def _evidence_from_baseline(
     live_failure: Exception | None = None,
 ) -> LiveForecastEvidence:
     result = build_runtime_from_preseason_baseline(league_state, baseline)
+    if isinstance(live_failure, LiveForecastSourceHealthFailure):
+        result = result.model_copy(
+            update={"source_health_events": live_failure.health_events}
+        )
     uncertainty_ready = bool(result.fantasy_point_forecasts) and all(
         observation.distribution.stddev > 0
         for observation in result.fantasy_point_forecasts
@@ -117,12 +122,25 @@ def make_resilient_forecast_loader(
             model_version=PRESEASON_BASELINE_MODEL_VERSION,
         )
 
+        baseline = (
+            decode_preseason_forecast_baseline(dict(existing.payload))
+            if existing is not None
+            else None
+        )
+
         try:
-            evidence = live_loader(league_state)
+            if live_loader is default_live_forecast_loader:
+                evidence = default_live_forecast_loader(
+                    league_state,
+                    reference_raw_forecasts=(
+                        baseline.raw_ensemble if baseline is not None else None
+                    ),
+                )
+            else:
+                evidence = live_loader(league_state)
         except Exception as exc:
-            if existing is None:
+            if baseline is None:
                 raise
-            baseline = decode_preseason_forecast_baseline(dict(existing.payload))
             _logger.warning(
                 "FSFFL live full-season forecast unavailable; using immutable preseason baseline league=%s season=%s baseline_as_of=%s sources=%s error=%s",
                 league_state.league.league_id,

@@ -4,10 +4,11 @@
  */
 (function(){
   'use strict';
-  const VERSION='20260920-shapley-franchise1';
+  const VERSION='20260921-shapley-franchise2';
   const TAB='value_lens';
   const MARKET_SCALE='dynasty-market-percentile';
   let cached=null,cachedStateId=null,inFlight=null,requestGeneration=0;
+  const POLL_MS=1500,MAX_POLLS=80;
 
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
   const finite=value=>typeof value==='number'&&Number.isFinite(value);
@@ -95,13 +96,13 @@
         <div class="value-lens-players">${rows.length?rows.map(row=>rowHtml(row,payload)).join(''):'<p class="franchise-empty">No roster players are available for this franchise.</p>'}</div>
       </section>
       <section class="value-lens-actions"><div><strong>How to use this</strong><p>If FSFFL is higher than the broad market, investigate whether the player can be acquired near broad-market cost. If the market is higher, investigate whether the market is paying for value FSFFL’s football economics do not support. Finish the decision with league price and team context when available.</p></div><button type="button" class="secondary-button" data-value-lens-market>Open Market</button><button type="button" class="secondary-button" data-value-lens-trade>Open Trade Center</button></section>
-      <details class="value-lens-methods"><summary>What exactly is FSFFL Intrinsic?</summary><p>FSFFL Intrinsic is the governed Shapley economic coordinate. It attributes each player’s marginal contribution to the three-year deployment game, using governed Year 1 and future Forecast evidence with the contract discount. Broad Market, Cardinal, League Market Value and Team Utility are different coordinates and are not inputs to this Intrinsic calculation.</p><p><strong>Authority:</strong> ${esc(payload.intrinsic_model_version||'Shapley Intrinsic')} · ${esc(payload.quantity_semantics||'raw governed Shapley marginal fantasy points')}. The older replacement-surplus endpoint remains compatibility-only and is not this Franchise consumer’s Intrinsic authority.${missing.length?` Missing/reduced fact families remain explicit: ${esc(missing.join(', '))}.`:''}</p></details>
+      <details class="value-lens-methods"><summary>What exactly is FSFFL Intrinsic?</summary><p>FSFFL Intrinsic is the governed Shapley economic coordinate. It attributes each player’s marginal contribution to the three-year deployment game, using governed Year 1 and future Forecast evidence with the contract discount. Broad Market, League Market Value and Team Utility are different coordinates and are not inputs to this Intrinsic calculation.</p><p><strong>Authority:</strong> ${esc(payload.intrinsic_model_version||'Shapley Intrinsic')} · ${esc(payload.quantity_semantics||'raw governed Shapley marginal fantasy points')}. The older replacement-surplus endpoint remains compatibility-only and is not this Franchise consumer’s Intrinsic authority.${missing.length?` Missing/reduced fact families remain explicit: ${esc(missing.join(', '))}.`:''}</p></details>
     </div>`;
     host.querySelector('[data-value-lens-market]')?.addEventListener('click',()=>window.setRoute?.('opportunities'));
     host.querySelector('[data-value-lens-trade]')?.addEventListener('click',()=>window.setRoute?.('trade_center'));
   }
 
-  function renderUnavailable(message){const host=document.querySelector('[data-franchise-view="value_lens"]');if(!host)return;host.innerHTML=`<div class="value-lens-shell"><header class="value-lens-hero"><div><p class="eyebrow">Value Lens</p><h3>FSFFL Shapley Intrinsic is unavailable right now.</h3><p>${esc(message||'Governed Forecast or Shapley evidence is not available for the current league state.')}</p></div></header><div class="value-lens-unavailable"><strong>No substitute number is shown.</strong><p>Broad Market, FSFFL Cardinal Value, League Market Value and Team Utility are different coordinates. FSFFL will not silently use one in place of canonical Shapley Intrinsic.</p></div></div>`}
+  function renderUnavailable(message){const host=document.querySelector('[data-franchise-view="value_lens"]');if(!host)return;host.innerHTML=`<div class="value-lens-shell"><header class="value-lens-hero"><div><p class="eyebrow">Value Lens</p><h3>FSFFL Shapley Intrinsic is unavailable right now.</h3><p>${esc(message||'Governed Forecast or Shapley evidence is not available for the current league state.')}</p></div></header><div class="value-lens-unavailable"><strong>No substitute number is shown.</strong><p>Broad Market, League Market Value and Team Utility are different coordinates. FSFFL will not silently use another coordinate in place of canonical Shapley Intrinsic.</p></div></div>`}
 
   function requestIsCurrent(generation,sid){return generation===requestGeneration&&sid===stateId()}
   async function load(){
@@ -109,7 +110,20 @@
     const sid=stateId(),generation=requestGeneration;if(cached&&cachedStateId===sid){render(cached);return}
     host.innerHTML='<div class="value-lens-loading"><p class="eyebrow">Value Lens</p><h3>Loading governed Shapley Intrinsic evidence…</h3><p>Your Franchise view remains usable while this secondary lens loads.</p></div>';
     if(inFlight?.generation===generation&&inFlight?.stateId===sid)return inFlight.promise;
-    const promise=(async()=>{try{const result=await api('/api/value/intrinsic-shapley-v1');if(!requestIsCurrent(generation,sid))return;cached=result;cachedStateId=sid;render(result)}catch(error){if(!requestIsCurrent(generation,sid))return;renderUnavailable(error?.message||String(error))}finally{if(inFlight?.generation===generation&&inFlight?.stateId===sid)inFlight=null}})();
+    const promise=(async()=>{try{
+      let result=null;
+      for(let attempt=0;attempt<MAX_POLLS;attempt+=1){
+        result=await api('/api/value/intrinsic-shapley-v1');
+        if(!requestIsCurrent(generation,sid))return;
+        if(result?.status!=='loading')break;
+        host.innerHTML='<div class="value-lens-loading"><p class="eyebrow">Value Lens</p><h3>Preparing governed FSFFL Intrinsic server-side…</h3><p>Your Franchise view remains usable. This request will stop with an explicit unavailable state instead of spinning indefinitely.</p></div>';
+        await new Promise(resolve=>setTimeout(resolve,Number(result?.retry_after_ms)||POLL_MS));
+      }
+      if(result?.status==='loading')throw new Error('FSFFL Intrinsic is still preparing after two minutes. Try again shortly.');
+      if(!requestIsCurrent(generation,sid))return;
+      if(result?.status==='unavailable'){renderUnavailable(result?.status_reason||result?.message||'Governed Shapley Intrinsic evidence is unavailable.');return}
+      cached=result;cachedStateId=sid;render(result)
+    }catch(error){if(!requestIsCurrent(generation,sid))return;renderUnavailable(error?.message||String(error))}finally{if(inFlight?.generation===generation&&inFlight?.stateId===sid)inFlight=null}})();
     inFlight={generation,stateId:sid,promise};
     return promise;
   }
@@ -117,7 +131,7 @@
   function activate(panel){panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.franchiseTab===TAB)));panel.querySelectorAll('[data-franchise-view]').forEach(section=>section.hidden=section.dataset.franchiseView!==TAB);load()}
 
   function replaceTextWithin(root,from,to){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{if(node.parentElement?.closest('.value-lens-view'))return;if(node.nodeValue?.includes(from))node.nodeValue=node.nodeValue.replaceAll(from,to)})}
-  function clarifyLegacyLabels(){replaceTextWithin(document.querySelector('.franchise-shell'),'FSFFL Value','FSFFL Cardinal Value');replaceTextWithin(document.querySelector('.league-structure-panel'),'Total FSFFL value','Total FSFFL Cardinal Value')}
+  function clarifyLegacyLabels(){}
 
   function inject(){
     clarifyLegacyLabels();

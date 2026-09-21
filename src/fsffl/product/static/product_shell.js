@@ -47,7 +47,7 @@ function ensureWhatIfScript(){return lazyProductScript('renderFsfflWhatIf','/sta
 function ensureSimulatorScript(){return lazyProductScript('renderFsfflSimulator','/static/simulator.js','Unable to load Simulator scenario module',()=>simulatorScriptPromise,value=>simulatorScriptPromise=value)}
 
 function fsfflDisplayedProjectionObservation(player){const observations=player?.forecasts||[];return observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='season')||null}
-function fsfflDisplayedProjectionValue(player){if(typeof player?.season_fantasy_points_projection==='number'&&Number.isFinite(player.season_fantasy_points_projection))return player.season_fantasy_points_projection;const observation=fsfflDisplayedProjectionObservation(player);return typeof observation?.distribution?.mean==='number'&&Number.isFinite(observation.distribution.mean)?observation.distribution.mean:null}
+function fsfflDisplayedProjectionValue(player){const observation=fsfflDisplayedProjectionObservation(player);if(typeof observation?.distribution?.mean==='number'&&Number.isFinite(observation.distribution.mean))return observation.distribution.mean;return typeof player?.season_fantasy_points_projection==='number'&&Number.isFinite(player.season_fantasy_points_projection)?player.season_fantasy_points_projection:null}
 window.fsfflDisplayedProjectionObservation=fsfflDisplayedProjectionObservation;
 window.fsfflDisplayedProjectionValue=fsfflDisplayedProjectionValue;
 function fsfflExplorerMissingForSort(value,key){if(value==null)return true;if(typeof value==='number'){if(!Number.isFinite(value))return true;if(value===0&&['value','market_percentile','projection'].includes(key))return true}return value===''}

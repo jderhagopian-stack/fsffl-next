@@ -5,6 +5,8 @@ import json
 from threading import RLock
 from typing import Callable
 
+from fsffl.persistence.contracts import ArtifactKey, PersistenceStore, ReusableArtifactRecord, utc_now
+
 from fsffl.forecast.future_contract import FutureForecastContract
 from fsffl.forecast.i1_current_facts import CurrentI1FactsArtifact
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
@@ -19,6 +21,7 @@ from fsffl.value.private_beta_activation_data import (
     activation_artifact_text,
 )
 from fsffl.value.shapley_intrinsic_contract import (
+    SHAPLEY_INTRINSIC_CONTRACT_VERSION,
     CompletedSourceFactProvenance,
     ShapleyIntrinsicContract,
     build_shapley_intrinsic_contract,
@@ -30,6 +33,9 @@ from .p0_future_forecast_provider import build_p0_future_forecast_contract
 from .runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
 
 _SUPPORTED_POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
+SHAPLEY_INTRINSIC_ARTIFACT_KIND = "shapley_intrinsic_contract"
+SHAPLEY_INTRINSIC_SCOPE_KIND = "league_material"
+
 YearOneAuthorityLoader = Callable[[LeagueState], LiveForecastEvidence]
 
 
@@ -176,11 +182,69 @@ class PrivateBetaShapleyContractLoader:
         self,
         *,
         year_one_loader: YearOneAuthorityLoader | None = None,
+        persistence_store: PersistenceStore | None = None,
     ) -> None:
         self._lock = RLock()
         self._year_one_loader = year_one_loader
+        self._persistence_store = persistence_store
         self._cached_key: str | None = None
         self._cached_contract: ShapleyIntrinsicContract | None = None
+
+    def _artifact_key(
+        self,
+        context: UserRuntimeContext,
+        *,
+        input_fingerprint: str,
+    ) -> ArtifactKey:
+        assert context.league_state is not None
+        return ArtifactKey(
+            artifact_kind=SHAPLEY_INTRINSIC_ARTIFACT_KIND,
+            scope_kind=SHAPLEY_INTRINSIC_SCOPE_KIND,
+            scope_id=league_material_fingerprint(context.league_state),
+            input_fingerprint=input_fingerprint,
+            model_version=SHAPLEY_INTRINSIC_CONTRACT_VERSION,
+        )
+
+    def _restore_persisted(
+        self,
+        context: UserRuntimeContext,
+        *,
+        input_fingerprint: str,
+    ) -> ShapleyIntrinsicContract | None:
+        if self._persistence_store is None:
+            return None
+        record = self._persistence_store.get_reusable_artifact(
+            self._artifact_key(context, input_fingerprint=input_fingerprint)
+        )
+        if record is None:
+            return None
+        try:
+            contract = ShapleyIntrinsicContract.model_validate(dict(record.payload))
+        except (TypeError, ValueError):
+            return None
+        if contract.contract_version != SHAPLEY_INTRINSIC_CONTRACT_VERSION:
+            return None
+        return contract
+
+    def _persist(
+        self,
+        context: UserRuntimeContext,
+        *,
+        input_fingerprint: str,
+        contract: ShapleyIntrinsicContract,
+    ) -> None:
+        if self._persistence_store is None:
+            return
+        self._persistence_store.put_artifact(
+            ReusableArtifactRecord(
+                key=self._artifact_key(
+                    context,
+                    input_fingerprint=input_fingerprint,
+                ),
+                payload=contract.model_dump(mode="json"),
+                computed_at=utc_now(),
+            )
+        )
 
     def __call__(self, context: UserRuntimeContext) -> ShapleyIntrinsicContract:
         league_state = context.league_state
@@ -268,29 +332,45 @@ class PrivateBetaShapleyContractLoader:
             if key == self._cached_key and self._cached_contract is not None:
                 return self._cached_contract
 
-        try:
-            calendar = compose_live_intrinsic_calendar_from_forecast_contract(
-                live_year_one_forecasts=year_one,
-                future_contract=future_contract,
+            persisted = self._restore_persisted(
+                context,
+                input_fingerprint=key,
             )
-        except ValueError as exc:
-            return build_unavailable_shapley_intrinsic_contract(
-                evaluation_season=league_state.league.season,
-                reason=f"Future Forecast contract is not consumable by current Value: {exc}",
-                missing_required_fact_families=("future_forecast_value_adapter",),
+            if persisted is not None:
+                self._cached_key = key
+                self._cached_contract = persisted
+                return persisted
+
+            # Hold the loader lock through the expensive build. The HTTP layer runs
+            # this work in a server-side background coordinator, so concurrent
+            # browser requests never duplicate the same cold Shapley calculation.
+            try:
+                calendar = compose_live_intrinsic_calendar_from_forecast_contract(
+                    live_year_one_forecasts=year_one,
+                    future_contract=future_contract,
+                )
+            except ValueError as exc:
+                return build_unavailable_shapley_intrinsic_contract(
+                    evaluation_season=league_state.league.season,
+                    reason=f"Future Forecast contract is not consumable by current Value: {exc}",
+                    missing_required_fact_families=("future_forecast_value_adapter",),
+                    forecast_model_version=future_contract.forecast_model_version,
+                )
+            result = build_live_calendar_shapley_estimates(
+                calendar,
+                rules=league_state.league.rules,
+            )
+            contract = build_shapley_intrinsic_contract(
+                result,
+                completed_source_provenance=_provenance(evidence, future_contract),
+                missing_required_fact_families=_missing_fact_families(),
                 forecast_model_version=future_contract.forecast_model_version,
             )
-        result = build_live_calendar_shapley_estimates(
-            calendar,
-            rules=league_state.league.rules,
-        )
-        contract = build_shapley_intrinsic_contract(
-            result,
-            completed_source_provenance=_provenance(evidence, future_contract),
-            missing_required_fact_families=_missing_fact_families(),
-            forecast_model_version=future_contract.forecast_model_version,
-        )
-        with self._lock:
+            self._persist(
+                context,
+                input_fingerprint=key,
+                contract=contract,
+            )
             self._cached_key = key
             self._cached_contract = contract
-        return contract
+            return contract

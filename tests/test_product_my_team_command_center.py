@@ -4,23 +4,25 @@ from pathlib import Path
 def test_franchise_diagnosis_consumes_governed_backend_outputs() -> None:
     source = Path("src/fsffl/product/static/my_team_dashboard.js").read_text(encoding="utf-8")
     assert "api('/api/my-team')" in source
-    assert "api('/api/values')" in source
+    assert "api('/api/league/value-lenses')" in source
     assert "api('/api/league/team-views')" in source
     assert "competitive_outcome" in source
     assert "roster_resilience" in source
     assert "projected_starter" in source
-    assert "fsffl_cardinal_values" in source
+    assert "Broad Market" in source
+    assert "FSFFL Intrinsic" in source
     assert "draft_picks" in source
     assert "calculated_competitive_state" in source
 
 
 def test_franchise_diagnosis_does_not_create_parallel_authority() -> None:
     source = Path("src/fsffl/product/static/my_team_dashboard.js").read_text(encoding="utf-8")
-    assert "fsffl_cardinal_values" in source
+    assert "api('/api/league/value-lenses')" in source
+    assert "fsffl_cardinal_values" not in source
     assert "acceptance_probability" not in source
     assert "trade grade" not in source.lower()
     assert "no presentation-layer dynasty score" in source
-    assert "no new portfolio score" in source
+    assert "no blended value score" in source
     assert "strength_index" in source
     assert "calculated_competitive_state" in source
 

@@ -6,7 +6,7 @@
 // that existing eager slot only to attach the lazy Franchise Value Lens assets;
 // the lens itself performs no API work until the customer opens its tab.
 (function(){
-  const version='20260920-shapley-franchise1';
+  const version='20260921-shapley-franchise2';
   if(!document.querySelector('link[data-intrinsic-value-experience]')){
     const link=document.createElement('link');link.rel='stylesheet';link.href=`/static/intrinsic_value_experience.css?v=${version}`;link.dataset.intrinsicValueExperience='true';document.head.appendChild(link);
   }

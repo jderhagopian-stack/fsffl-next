@@ -200,7 +200,9 @@ def test_opportunity_waiver_ui_requires_server_action_authority() -> None:
     assert "scenario_simulation_count" in ui
     assert "material_assessment" in ui
     assert "action_authority==='actionable'" in ui
-    assert "State, Value, Simulation and materiality remain server-owned" in ui
+    assert "State, Decision, Simulation and materiality remain server-owned" in ui
+    assert "internal compatibility Value remains implementation detail" in ui
+    assert "Broad Market and FSFFL Intrinsic remain separate user-facing evidence lenses" in ui
     assert "acceptance_probability" not in ui
 
 

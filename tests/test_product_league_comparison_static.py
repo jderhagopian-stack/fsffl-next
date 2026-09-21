@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-def test_league_comparison_consumes_authoritative_analytics_and_optional_value_evidence() -> None:
+def test_league_comparison_consumes_authoritative_analytics_without_team_value_fabrication() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     for evidence in (
         "calculated_competitive_state",
@@ -10,14 +10,13 @@ def test_league_comparison_consumes_authoritative_analytics_and_optional_value_e
         "strength_index",
         "league_rank",
         "draft_picks",
-        "team_cardinal_portfolios",
     ):
         assert evidence in source
     assert "api('/api/league/team-views')" in source
-    assert "api('/api/values')" in source
-    assert "Promise.allSettled" in source
-    assert "valueResult.status==='fulfilled'?valueResult.value:null" in source
-    assert "FSFFL Cardinal pick value" in source
+    assert "api('/api/values')" not in source
+    assert "team_cardinal_portfolios" not in source
+    assert "Broad Market + FSFFL Intrinsic" in source
+    assert "no universal team-value total is created here" in source
     assert "one power score" in source
 
 

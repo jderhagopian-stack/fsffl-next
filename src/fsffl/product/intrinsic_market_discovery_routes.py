@@ -3,9 +3,16 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
 
+from .intrinsic_background import (
+    IntrinsicBuildStatus,
+    ShapleyIntrinsicBackgroundCoordinator,
+    intrinsic_failure_payload,
+    intrinsic_loading_payload,
+)
 from .intrinsic_market_discovery import build_intrinsic_market_discovery
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
@@ -19,6 +26,7 @@ def install_intrinsic_market_discovery_routes(
     runtime_store: PrivateBetaRuntimeStore,
     contract_loader: IntrinsicContractLoader,
     require_user,
+    background_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
 ) -> None:
     """Expose a lazy discovery lens without changing Search or Value authority."""
 
@@ -34,16 +42,43 @@ def install_intrinsic_market_discovery_routes(
                 status_code=409,
                 detail="Connect a league before requesting value disagreement discovery",
             )
-        try:
-            intrinsic = contract_loader(runtime)
-        except Exception as exc:
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "Governed Intrinsic disagreement evidence unavailable: "
-                    f"{type(exc).__name__}: {exc}"
-                ),
-            ) from exc
+        if background_coordinator is not None:
+            record = background_coordinator.request(runtime)
+            if record.status in {
+                IntrinsicBuildStatus.QUEUED,
+                IntrinsicBuildStatus.RUNNING,
+            }:
+                payload = intrinsic_loading_payload(record)
+                payload["message"] = (
+                    "Governed Value Disagreement evidence is being prepared "
+                    "server-side from the shared FSFFL Intrinsic artifact."
+                )
+                return JSONResponse(status_code=202, content=payload)
+            if record.status == IntrinsicBuildStatus.FAILED:
+                return JSONResponse(
+                    status_code=503,
+                    content=intrinsic_failure_payload(record),
+                )
+            intrinsic = record.contract
+            if intrinsic is None:
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "status": "unavailable",
+                        "message": "Governed FSFFL Intrinsic completed without a usable contract.",
+                    },
+                )
+        else:
+            try:
+                intrinsic = contract_loader(runtime)
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Governed Intrinsic disagreement evidence unavailable: "
+                        f"{type(exc).__name__}: {exc}"
+                    ),
+                ) from exc
         return build_intrinsic_market_discovery(
             runtime,
             intrinsic,

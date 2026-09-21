@@ -1,16 +1,22 @@
 const tradeUiState={browser:null,counterpartyTeamId:'',focalSelected:new Set(),counterpartySelected:new Set(),loading:false};
 
-function tradeAssetScore(option){
+function tradeMarketEstimate(option){
   const assetId=option?.player_id||option?.pick_id;
   if(!assetId)return null;
-  return(state.valueCatalog?.fsffl_cardinal_values||[]).find(item=>item.asset_id===assetId)||null;
+  return(state.valueCatalog?.estimates||[]).find(item=>item.asset_id===assetId&&item.scale?.scale_id==='dynasty-market-percentile')||null;
+}
+
+function tradeMarketLabel(option){
+  const item=tradeMarketEstimate(option);
+  const value=item?.distribution?.mean;
+  return typeof value==='number'&&Number.isFinite(value)?`${Math.round(value*100)}th pct`:'—';
 }
 
 function tradeValueMarkup(option){
-  const item=tradeAssetScore(option);
-  if(!item||typeof item.score!=='number')return'<span class="asset-kind">FSFFL Cardinal —</span>';
-  const detail=`Authoritative FSFFL market-cardinal Value\nStatus: ${item.authority_status||'authoritative'}\nModel: ${item.model_version||'—'}\nEvidence: ${item.evidence_source_id||'—'}\nScale: ${item.scale?.scale_id||'fsffl-market-cardinal'}`;
-  return`<span class="asset-kind" title="${escapeHtml(detail)}">FSFFL Cardinal ${fmtFsfflValue(item.score)}</span>`;
+  const item=tradeMarketEstimate(option);
+  if(!item)return'<span class="asset-kind">Broad Market —</span>';
+  const detail=`Governed Broad Market percentile\nModel: ${item.model_version||'—'}\nSources: ${(item.evidence_sources||[]).join(', ')||'—'}\nScale: ${item.scale?.scale_id||'dynasty-market-percentile'}`;
+  return`<span class="asset-kind" title="${escapeHtml(detail)}">Broad Market ${tradeMarketLabel(option)}</span>`;
 }
 
 function selectedRefs(side){return side==='focal'?tradeUiState.focalSelected:tradeUiState.counterpartySelected}
@@ -49,7 +55,7 @@ function renderTradeDraftSide(side){
   count.textContent=`${selected.size} selected`;
   container.innerHTML='';
   if(!team||!selected.size){container.innerHTML=`<p class="trade-empty">${side==='focal'?'Tap assets below to add them.':'Choose a team, then tap assets.'}</p>`;return}
-  [...selected].forEach(ref=>{const option=team.assets.find(item=>item.asset_ref===ref);if(!option)return;const chip=document.createElement('button');chip.type='button';chip.className='draft-chip';chip.title='Remove from draft';chip.innerHTML=`${escapeHtml(option.label)}${tradeAssetScore(option)?` · ${fmtFsfflValue(tradeAssetScore(option).score)}`:''}`;chip.addEventListener('click',()=>toggleTradeAsset(side,ref));container.appendChild(chip)})
+  [...selected].forEach(ref=>{const option=team.assets.find(item=>item.asset_ref===ref);if(!option)return;const chip=document.createElement('button');chip.type='button';chip.className='draft-chip';chip.title='Remove from draft';chip.innerHTML=`${escapeHtml(option.label)}${tradeMarketEstimate(option)?` · ${tradeMarketLabel(option)}`:''}`;chip.addEventListener('click',()=>toggleTradeAsset(side,ref));container.appendChild(chip)})
 }
 
 function renderTradeAssetList(side){
@@ -84,7 +90,7 @@ function renderTradeCounterparties(){
 function renderTradeAnalysisNotice(message){
   const panel=qs('#trade-analysis-empty');if(!panel)return;if(message){panel.textContent=message;return}
   const ready=tradeUiState.counterpartyTeamId&&tradeUiState.focalSelected.size&&tradeUiState.counterpartySelected.size;
-  panel.textContent=ready?'Draft ready. Analyze Trade submits these canonically owned assets to the authoritative Trade Decision endpoint. FSFFL Cardinal Market Values shown above are the current authoritative market-cardinal values and do not determine the bilateral result by themselves.':'Select at least one asset from each side. FSFFL Cardinal Market Value is market context only; it is not a trade grade, recommendation, acceptance probability, or package economics.';
+  panel.textContent=ready?'Draft ready. Analyze Trade submits these canonically owned assets to the authoritative Trade Decision endpoint. Broad Market percentiles shown above are market context only; Decision owns bilateral package economics and consequences.':'Select at least one asset from each side. Broad Market is market context only; it is not a trade grade, recommendation, acceptance probability, or package economics.';
 }
 
 function tradeTeamName(teamId){
@@ -142,7 +148,7 @@ function renderTradeAnalysis(result){
     <div id="trade-simulation-result" style="margin-top:12px"></div>
     <div id="trade-frontier-result" style="margin-top:12px"></div>
     ${warnings?`<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--accent)">Evidence & limitations</summary><ul style="color:var(--muted);font-size:12px;line-height:1.5;padding-left:18px">${warnings}</ul></details>`:''}
-    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Authoritative FSFFL Cardinal Market Value is market context; Trade Decision remains the authority for bilateral consequences.</p>
+    <p style="color:var(--muted);font-size:11px;margin:12px 0 0">Broad Market and FSFFL Intrinsic are evidence lenses; Trade Decision remains the authority for bilateral package economics and consequences.</p>
   </div>`;
 }
 

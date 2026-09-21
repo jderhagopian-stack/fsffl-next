@@ -5,7 +5,7 @@
 (function(){
   'use strict';
 
-  const VERSION='20260920-intrinsic-market-discovery1';
+  const VERSION='20260921-intrinsic-market-discovery2';
   let open=false;
   let cached=null;
   let cachedStateId=null;
@@ -13,6 +13,7 @@
   let inFlight=null;
   let generation=0;
   let queued=false;
+  const POLL_MS=1500,MAX_POLLS=80;
 
   const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
   const finite=value=>typeof value==='number'&&Number.isFinite(value);
@@ -82,7 +83,7 @@
         <div><p class="eyebrow">Value disagreement</p><h3>Where market price and football worth diverge</h3><p>Compare Broad Market and FSFFL Intrinsic by <strong>percentile rank only</strong>. A disagreement is a reason to investigate—not a buy/sell instruction.</p></div>
         <button type="button" class="text-button" data-imd-close>Close</button>
       </header>
-      ${loading?'<div class="imd-loading"><i></i><span>Loading governed Intrinsic and Broad Market evidence…</span></div>':bodyMarkup(payload)}
+      ${loading?'<div class="imd-loading"><i></i><span>Preparing governed Intrinsic server-side. This will end in ready or an explicit unavailable state.</span></div>':bodyMarkup(payload)}
       <details class="imd-methods"><summary>Methods & authority</summary><p>Broad Market and Intrinsic use different units, so this lens never subtracts raw values. League Market Value remains unavailable. Team Utility and acceptance evidence remain separate. Choosing a player only hands that player into the existing server-owned Market Focus search.</p></details>
     </section>`;
   }
@@ -134,8 +135,14 @@
     render();
     const promise=(async()=>{
       try{
-        const payload=await api('/api/opportunities/value-disagreements?minimum_gap=0.10&limit=24');
-        if(!requestIsCurrent(requestGeneration,ctx.stateId,ctx.teamId))return null;
+        let payload=null;
+        for(let attempt=0;attempt<MAX_POLLS;attempt+=1){
+          payload=await api('/api/opportunities/value-disagreements?minimum_gap=0.10&limit=24');
+          if(!requestIsCurrent(requestGeneration,ctx.stateId,ctx.teamId))return null;
+          if(payload?.status!=='loading')break;
+          await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||POLL_MS));
+        }
+        if(payload?.status==='loading')throw new Error('Value Disagreement evidence is still preparing after two minutes. Try again shortly.');
         if(payload?.league_state_id&&payload.league_state_id!==ctx.stateId)return null;
         if(payload?.focal_team_id&&payload.focal_team_id!==ctx.teamId)return null;
         cached=payload;cachedStateId=ctx.stateId;cachedTeamId=ctx.teamId;

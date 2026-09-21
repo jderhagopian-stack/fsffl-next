@@ -100,4 +100,6 @@ def test_independent_provider_fetches_overlap_instead_of_running_serially() -> N
         clock=lambda: NOW,
     )
     assert result.successful_source_ids == ("cbs", "fftoday")
-    assert result.model_version == "next2-current-runtime-v4:parallel-provider-ingestion"
+    assert result.model_version == "next2-current-runtime-v7:revision-agnostic-source-health"
+    assert {event.provider for event in result.source_health_events} == {"cbs", "fftoday"}
+    assert all(event.disposition == "accepted" for event in result.source_health_events)

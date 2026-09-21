@@ -40,5 +40,6 @@ def test_trade_center_renders_bilateral_analysis_instead_of_raw_json() -> None:
     assert "Competitive impact" in source
     assert "Behavioral plausibility" in source
     assert "Descriptive evidence only" in source
-    assert "Authoritative FSFFL Cardinal Market Value is market context" in source
+    assert "Broad Market and FSFFL Intrinsic are evidence lenses" in source
+    assert "Trade Decision remains the authority for bilateral package economics and consequences" in source
     assert "JSON.stringify(result,null,2)" not in source

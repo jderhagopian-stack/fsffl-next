@@ -149,7 +149,7 @@ class LiveForecastEvidence:
     uncertainty_ready: bool
     runtime_result: LiveForecastRuntimeResult
     evidence_basis: str = "live_full_season"
-    model_version: str = "next8-live-forecast-evidence-v3"
+    model_version: str = "next8-live-forecast-evidence-v5:revision-agnostic-source-health"
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
@@ -166,7 +166,11 @@ def default_sleeper_state_loader(league_external_id: str) -> LeagueState:
     return service.materialize_live(league_external_id=league_external_id)
 
 
-def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvidence:
+def default_live_forecast_loader(
+    league_state: LeagueState,
+    *,
+    reference_raw_forecasts: tuple[ForecastObservation, ...] | None = None,
+) -> LiveForecastEvidence:
     """Run the governed multi-provider NEXT-2 current forecast runtime.
 
     No single provider output is promoted as an FSFFL forecast. The returned raw
@@ -175,7 +179,10 @@ def default_live_forecast_loader(league_state: LeagueState) -> LiveForecastEvide
     horizon plus the derived league-specific fantasy regular-season horizon.
     """
 
-    result = build_current_live_forecasts(league_state)
+    result = build_current_live_forecasts(
+        league_state,
+        reference_raw_forecasts=reference_raw_forecasts,
+    )
     _logger.info(
         "FSFFL live forecast sources successful=%s failures=%s raw_groups=%s scored_players=%s regular_season_players=%s",
         list(result.successful_source_ids),

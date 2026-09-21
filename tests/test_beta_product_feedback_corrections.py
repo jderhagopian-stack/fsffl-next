@@ -19,7 +19,9 @@ def test_beta_product_correction_layer_is_loaded_last_with_fresh_cache_key() -> 
 def test_dead_additive_market_total_is_not_offered_on_primary_home_chart() -> None:
     html = (STATIC / "index.html").read_text()
     assert 'value="total_market_value"' not in html
-    assert 'value="total_cardinal_value">FSFFL Cardinal Value' in html
+    assert 'value="total_cardinal_value"' not in html
+    assert "Broad Market" in html
+    assert "FSFFL Intrinsic" in html
 
 
 def test_trade_simulation_updates_competitive_summary_and_keeps_methods_secondary() -> None:

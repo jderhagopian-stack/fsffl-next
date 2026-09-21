@@ -1,0 +1,41 @@
+name: PR164 focused corrective regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/fsffl/forecast/**"
+      - "src/fsffl/persistence/**"
+      - "src/fsffl/product/**"
+      - "tests/**"
+      - ".github/workflows/pr164-focused-corrective.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install -e '.[dev,web]'
+      - name: Focused corrective regression
+        run: >
+          pytest -q
+          tests/test_revision_agnostic_source_health.py
+          tests/test_malformed_live_provider_fallback.py
+          tests/test_current_forecast_runtime.py
+          tests/test_phase2_derived_artifact_lifecycle.py
+          tests/test_private_beta_shapley_runtime.py
+          tests/test_intrinsic_value_product_experience.py
+          tests/test_intrinsic_market_discovery.py
+          tests/test_league_value_lenses.py
+          tests/test_product_my_team_command_center.py
+          tests/test_product_opportunity_workspace.py
+          tests/test_product_trade_center_interaction_static.py
+          tests/test_value_authority_labels.py

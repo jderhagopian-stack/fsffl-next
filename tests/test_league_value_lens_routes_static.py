@@ -26,11 +26,12 @@ def test_atlas_lens_contract_cannot_create_team_value_or_team_utility() -> None:
     assert '"acceptance_probability": None' in source
 
 
-def test_cardinal_is_not_rebranded_as_generic_franchise_value() -> None:
+def test_primary_league_presentation_uses_approved_value_hierarchy() -> None:
     html = (PRODUCT / "static" / "index.html").read_text(encoding="utf-8")
     corrections = (PRODUCT / "static" / "beta_product_corrections.js").read_text(encoding="utf-8")
     league = (PRODUCT / "static" / "league_comparison.js").read_text(encoding="utf-8")
-    assert 'value="total_cardinal_value">FSFFL Cardinal Value' in html
-    assert "cardinalOption.textContent='FSFFL Cardinal Value'" in corrections
-    assert "cardinalOption.textContent='Franchise value'" not in corrections
-    assert "Total FSFFL Cardinal Value" in league
+    assert 'value="total_cardinal_value"' not in html
+    assert 'option[value="total_cardinal_value"]' in corrections
+    assert "remove()" in corrections
+    assert "Broad Market + FSFFL Intrinsic" in league
+    assert "Total FSFFL Cardinal Value" not in league

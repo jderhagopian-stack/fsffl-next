@@ -3,8 +3,13 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from time import monotonic, sleep
 
-from fsffl.forecast.current_runtime import LiveForecastRuntimeResult
+from fsffl.forecast.current_runtime import (
+    LiveForecastRuntimeResult,
+    LiveForecastSourceHealthEvent,
+    LiveForecastSourceProvenance,
+)
 from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
+from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
 from fsffl.forecast.models import (
     ForecastDistribution,
     ForecastHorizon,
@@ -181,6 +186,30 @@ def _forecast_evidence(forecasts: tuple[ForecastObservation, ...]) -> LiveForeca
         successful_source_ids=("test-a", "test-b"),
         failed_sources=(),
         evaluation_as_of=AS_OF,
+        source_provenance=tuple(
+            LiveForecastSourceProvenance(
+                provider=provider,
+                source_version=f"{provider}-fixture-v1",
+                captured_at=AS_OF,
+                effective_at=AS_OF,
+                usage_class="fixture",
+                provider_payload_sha256=f"{provider}-payload-sha256",
+                health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+                health_disposition="accepted",
+            )
+            for provider in ("test-a", "test-b")
+        ),
+        source_health_events=tuple(
+            LiveForecastSourceHealthEvent(
+                provider=provider,
+                disposition="accepted",
+                check="fixture_revision_agnostic_health",
+                reason="fixture provider passed current source-health contract",
+                health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+                provider_payload_sha256=f"{provider}-payload-sha256",
+            )
+            for provider in ("test-a", "test-b")
+        ),
     )
     return LiveForecastEvidence(
         raw_forecasts=forecasts,

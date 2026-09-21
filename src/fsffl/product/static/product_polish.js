@@ -3,28 +3,32 @@
  * calculate Value, utility, simulation outcomes, trade grades, or acceptance.
  */
 
-function fsfflCardinalScoreFor(assetId){
-  return (state.valueCatalog?.fsffl_cardinal_values||[]).find(item=>item.asset_id===assetId)||null;
+function fsfflBroadMarketFor(assetId){
+  return (state.valueCatalog?.estimates||[]).find(
+    item=>item.asset_id===assetId&&item.scale?.scale_id==='dynasty-market-percentile'
+  )||null;
 }
 
-function cardinalValueDetails(item){
+function broadMarketDetails(item){
   if(!item)return'';
-  const source=item.evidence_source_id||'governed NEXT-3 evidence';
-  const scale=item.scale?.unit_label||'FSFFL Cardinal Market Value points';
-  return `Authoritative NEXT-3 FSFFL Cardinal Market Score.\nModel: ${item.model_version}\nAuthority: ${item.authority_status}\nEvidence: ${source}\nScale: ${scale}`;
+  const sources=(item.evidence_sources||[]).join(', ')||'governed market evidence';
+  return `Governed Broad Market percentile.\nModel: ${item.model_version||'—'}\nEvidence: ${sources}\nScale: ${item.scale?.scale_id||'dynasty-market-percentile'}`;
 }
 
-provisionalScoreFor=fsfflCardinalScoreFor;
+provisionalScoreFor=fsfflBroadMarketFor;
 provisionalValueCell=function(assetId){
-  const item=fsfflCardinalScoreFor(assetId);
-  if(!item||typeof item.score!=='number')return'—';
-  return `<span title="${escapeHtml(cardinalValueDetails(item))}"><strong>${fmtFsfflValue(item.score)}</strong><br><small>Authoritative market-cardinal value</small></span>`;
+  const item=fsfflBroadMarketFor(assetId);
+  const value=item?.distribution?.mean;
+  if(typeof value!=='number'||!Number.isFinite(value))return'—';
+  return `<span title="${escapeHtml(broadMarketDetails(item))}"><strong>${Math.round(value*100)}th pct</strong><br><small>Broad Market</small></span>`;
 };
 
 tradeValueMarkup=function(option){
-  const item=tradeAssetScore(option);
-  if(!item||typeof item.score!=='number')return'<span class="asset-kind">FSFFL Cardinal —</span>';
-  return `<span class="asset-kind" title="${escapeHtml(cardinalValueDetails(item))}">Cardinal ${fmtFsfflValue(item.score)}</span>`;
+  const assetId=option?.player_id||option?.pick_id;
+  const item=fsfflBroadMarketFor(assetId);
+  const value=item?.distribution?.mean;
+  if(typeof value!=='number'||!Number.isFinite(value))return'<span class="asset-kind">Broad Market —</span>';
+  return `<span class="asset-kind" title="${escapeHtml(broadMarketDetails(item))}">Broad Market ${Math.round(value*100)}th pct</span>`;
 };
 
 function coreIntelligenceReady(context){
@@ -180,7 +184,7 @@ function installProductPolish(){
   const rosterLead=document.querySelector('.roster-panel .lead');
   if(rosterLead){
     rosterLead.removeAttribute('title');
-    rosterLead.innerHTML='<strong>FSFFL Cardinal Value uses the authoritative NEXT-3 market-cardinal score.</strong> Broad Market percentile remains a separate governed market-position measure.';
+    rosterLead.innerHTML='<strong>Broad Market</strong> shows the wider dynasty market percentile. <strong>FSFFL Intrinsic</strong> is the separate market-independent football-economic lens available in Franchise Value Lens; League Market Value remains unavailable.';
   }
   const style=document.createElement('style');
   style.textContent=`

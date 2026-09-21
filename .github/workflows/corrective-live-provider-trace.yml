@@ -1,0 +1,54 @@
+name: Corrective live provider numerical trace
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/corrective-live-provider-trace.yml"
+      - "scripts/run_live_razzball_numerical_trace.py"
+      - "src/fsffl/forecast/**"
+      - "src/fsffl/providers/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install -e '.[web]'
+      - name: Run live numerical trace
+        shell: bash
+        run: |
+          mkdir -p artifacts/diagnostics/live_razzball_numerical_trace_20260920
+          set +e
+          python scripts/run_live_razzball_numerical_trace.py 2>&1 | tee artifacts/diagnostics/live_razzball_numerical_trace_20260920/WORKFLOW_TRACE.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if grep -q "revision-agnostic numerical-integrity gate" artifacts/diagnostics/live_razzball_numerical_trace_20260920/WORKFLOW_TRACE.log; then
+            cat > artifacts/diagnostics/live_razzball_numerical_trace_20260920/EXPECTED_QUARANTINE.md <<'EOF'
+          # Expected live-provider quarantine
+
+          The current live provider revision was rejected by the revision-agnostic
+          numerical-integrity gate before it could enter the authoritative ensemble.
+          With fewer than two healthy independent sources, fail-closed behavior is
+          the expected diagnostic outcome.
+          EOF
+            exit 0
+          fi
+          exit "$status"
+      - name: Upload trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corrective-live-provider-numerical-trace
+          path: artifacts/diagnostics/live_razzball_numerical_trace_20260920/
+          if-no-files-found: error
+          retention-days: 14

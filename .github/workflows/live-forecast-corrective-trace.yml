@@ -1,0 +1,61 @@
+name: Live Forecast corrective trace
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_live_forecast_value_corrective_trace.py"
+      - ".github/workflows/live-forecast-corrective-trace.yml"
+      - "src/fsffl/persistence/**"
+      - "src/fsffl/product/**"
+      - "src/fsffl/forecast/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FSFFL_DATABASE_URL: ${{ secrets.FSFFL_DATABASE_URL }}
+      FSFFL_DIAGNOSTIC_LEAGUE_ID: ${{ vars.FSFFL_DIAGNOSTIC_LEAGUE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check persistence access
+        id: persistence
+        shell: bash
+        run: |
+          mkdir -p artifacts/diagnostics/live_forecast_value_corrective_20260921
+          if [ -z "$FSFFL_DATABASE_URL" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            cat > artifacts/diagnostics/live_forecast_value_corrective_20260921/ENVIRONMENT_BOUNDARY.md <<'EOF'
+          # Environment boundary
+
+          GitHub Actions does not have FSFFL_DATABASE_URL for this repository.
+          The production-persistence trace is therefore not executed in Actions.
+          This is an environmental access boundary, not a product-health failure.
+          Production persistence must be verified through an already-authorized
+          read-only path outside Actions.
+          EOF
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install
+        if: steps.persistence.outputs.available == 'true'
+        run: python -m pip install -e '.[web]'
+      - name: Trace persisted Forecast to presentation
+        if: steps.persistence.outputs.available == 'true'
+        run: python scripts/run_live_forecast_value_corrective_trace.py
+      - name: Upload trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-forecast-value-corrective-trace
+          path: artifacts/diagnostics/live_forecast_value_corrective_20260921/
+          if-no-files-found: error
+          retention-days: 14
