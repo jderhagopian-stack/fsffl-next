@@ -66,13 +66,13 @@ def _normalize_team(value: str | None) -> str:
     return _TEAM_ALIASES.get(team, team)
 
 
-def _player_indexes(league_state: LeagueState) -> tuple[
+def _player_indexes(players: tuple[Player, ...]) -> tuple[
     dict[tuple[str, Position, str], list[Player]],
     dict[tuple[str, Position], list[Player]],
 ]:
     exact: dict[tuple[str, Position, str], list[Player]] = {}
     loose: dict[tuple[str, Position], list[Player]] = {}
-    for player in league_state.players:
+    for player in players:
         name = _normalize_name(player.full_name)
         team = _normalize_team(player.nfl_team)
         exact.setdefault((name, player.position, team), []).append(player)
@@ -132,7 +132,8 @@ def current_snapshot_from_razzball(snapshot: RazzballProjectionSnapshot) -> Curr
 def normalize_projection_snapshot(
     snapshot: CurrentProjectionSnapshot,
     *,
-    league_state: LeagueState,
+    league_state: LeagueState | None = None,
+    players: tuple[Player, ...] | None = None,
     horizon: ForecastHorizon,
     period_start: datetime,
     period_end: datetime,
@@ -160,7 +161,12 @@ def normalize_projection_snapshot(
     if snapshot.effective_at > evaluation_as_of:
         raise ValueError("provider snapshot cannot postdate evaluation_as_of")
 
-    exact_index, loose_index = _player_indexes(league_state)
+    if (league_state is None) == (players is None):
+        raise ValueError("provide exactly one canonical player universe: league_state or players")
+    player_universe = league_state.players if league_state is not None else players
+    if player_universe is None:
+        raise ValueError("canonical player universe is unavailable")
+    exact_index, loose_index = _player_indexes(tuple(player_universe))
     observations: list[ForecastObservation] = []
 
     for row in snapshot.rows:
