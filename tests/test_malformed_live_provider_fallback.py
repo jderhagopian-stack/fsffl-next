@@ -373,6 +373,29 @@ def test_known_bad_razzball_revision_cannot_enter_live_ensemble() -> None:
     assert "successful=['fftoday']" in message
 
 
+def test_later_malformed_razzball_revision_is_also_quarantined() -> None:
+    state = _state()
+    with pytest.raises(ValueError) as excinfo:
+        build_current_live_forecasts(
+            state,
+            fetchers=(
+                NamedCurrentProjectionFetcher(
+                    source_id="razzball",
+                    fetch=lambda _season: _later_malformed_razzball_snapshot(),
+                ),
+                NamedCurrentProjectionFetcher(
+                    source_id="fftoday",
+                    fetch=lambda _season: _fftoday_snapshot(),
+                ),
+            ),
+            clock=lambda: NOW,
+        )
+
+    message = str(excinfo.value)
+    assert "razzball-full-season-upstream-inflation-20260921" in message
+    assert "successful=['fftoday']" in message
+
+
 def test_same_malformed_content_with_new_timestamps_is_still_quarantined() -> None:
     with pytest.raises(ValueError) as excinfo:
         _evidence_from_live(
@@ -472,3 +495,13 @@ def test_valid_new_razzball_revision_continues_through_governed_live_path() -> N
     assert evidence.failed_sources == ()
     assert store.puts == []
     assert evidence.league_scored_forecasts[0].source == "fsffl:live_league_scored"
+    assert {item.provider for item in evidence.runtime_result.source_provenance} == {
+        "fftoday",
+        "razzball",
+    }
+    assert all(
+        item.provider_payload_sha256
+        and item.health_disposition == "accepted"
+        and item.health_contract_version
+        for item in evidence.runtime_result.source_provenance
+    )
