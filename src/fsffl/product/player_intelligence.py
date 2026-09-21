@@ -383,11 +383,6 @@ class PlayerHistoryService:
         if external_id is None:
             raise ValueError("player lacks canonical Sleeper identity for historical stats")
 
-        player_by_external = {
-            external: candidate
-            for candidate in state.players
-            if (external := _sleeper_external_id(candidate)) is not None
-        }
         output: list[HistoricalPlayerSeason] = []
         for season in range(state.league.season - seasons, state.league.season):
             aggregates = self._season(runtime, season)
@@ -403,38 +398,16 @@ class PlayerHistoryService:
             points = _score_stats(totals, state.league.rules)
             games = max(0, int(row.get("games_played", 0)))
 
-            comparable: list[tuple[str, float]] = []
-            for ext, candidate in player_by_external.items():
-                if candidate.position != player.position:
-                    continue
-                candidate_row = aggregates.get(ext)
-                if candidate_row is None:
-                    continue
-                candidate_totals = {
-                    key: float(value)
-                    for key, value in candidate_row.items()
-                    if key not in {"games_played", "retrieved_at"}
-                    and isinstance(value, (int, float))
-                }
-                comparable.append((ext, _score_stats(candidate_totals, state.league.rules)))
-            comparable.sort(key=lambda item: (-item[1], item[0]))
-            rank = next(
-                (index + 1 for index, item in enumerate(comparable) if item[0] == external_id),
-                None,
-            )
-
             output.append(
                 HistoricalPlayerSeason(
                     season=season,
                     games_played=games,
                     fantasy_points=points,
                     fantasy_ppg=(points / games if games > 0 else None),
-                    position_rank=rank,
-                    position_rank_population=(len(comparable) if rank is not None else None),
+                    position_rank=None,
+                    position_rank_population=None,
                     rank_basis=(
-                        "rank among current canonical player population, scored under current league rules"
-                        if rank is not None
-                        else None
+                        "unavailable: complete point-in-time historical position population is not persisted"
                     ),
                     stats=_position_stats(player.position, totals),
                     scoring_basis="scored under current league rules",
