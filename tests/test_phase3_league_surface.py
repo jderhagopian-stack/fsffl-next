@@ -24,12 +24,13 @@ def test_league_surface_leads_with_governed_structure_not_power_score() -> None:
     assert "hidden power rating" in source
 
 
-def test_league_surface_keeps_value_optional_to_canonical_team_analytics() -> None:
+def test_league_surface_uses_canonical_team_analytics_without_cardinal_team_totals() -> None:
     source = _source(LEAGUE)
 
-    assert "Promise.allSettled([api('/api/league/team-views'),api('/api/values')])" in source
-    assert "if(teamResult.status!=='fulfilled')throw teamResult.reason" in source
-    assert "valueResult.status==='fulfilled'?valueResult.value:null" in source
+    assert "api('/api/league/team-views')" in source
+    assert "api('/api/values')" not in source
+    assert "Broad Market + FSFFL Intrinsic" in source
+    assert "Total FSFFL Cardinal Value" not in source
 
 
 def test_league_pressure_point_is_investigative_not_a_trade_recommendation() -> None:
