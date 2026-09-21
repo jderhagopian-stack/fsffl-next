@@ -10,20 +10,18 @@ def test_product_api_exposes_authoritative_cardinal_value_without_replacing_mark
     assert '"provisional_fsffl_values": [' in source
 
 
-def test_roster_presents_value_and_market_percentile_separately_without_primary_jargon() -> None:
+def test_roster_foregrounds_broad_market_and_intrinsic_without_cardinal() -> None:
     polish = Path("src/fsffl/product/static/product_polish.js").read_text(encoding="utf-8")
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
 
-    assert "fsffl_cardinal_values" in polish
-    assert "item.score" in polish
-    assert "item.authority_status" in polish
-    assert "item.model_version" in polish
-    assert "item.evidence_source_id" in polish
-    assert "Authoritative NEXT-3 FSFFL Cardinal Market Score" in polish
-    assert "<th>FSFFL Cardinal Value</th>" in html
+    assert "fsfflBroadMarketFor" in polish
+    assert "dynasty-market-percentile" in polish
+    assert "Governed Broad Market percentile" in polish
+    assert "FSFFL Intrinsic" in polish
+    assert "fsffl_cardinal_values" not in polish
+    assert "<th>FSFFL Cardinal Value</th>" not in html
     assert "<th>Broad Market percentile</th>" in html
-    assert "current additive market-cardinal reference across players and picks" in html
-    assert "authoritative NEXT-3 market-cardinal score" not in html
+    assert "<th>Value lens</th>" in html
     assert "PROVISIONAL — calibration in progress" not in html
 
 
@@ -33,13 +31,14 @@ def test_presentation_never_derives_fsffl_value_from_market_percentile() -> None
     compact = (source + polish).replace(" ", "")
     assert "*10000" not in compact
     assert "*10,000" not in compact
-    assert "fsfflCardinalScoreFor(assetId)" in polish
+    assert "fsfflBroadMarketFor(assetId)" in polish
     assert "playerMarketPercentile(player)" in source
 
 
-def test_missing_authoritative_value_remains_missing() -> None:
+def test_missing_broad_market_value_remains_missing() -> None:
     polish = Path("src/fsffl/product/static/product_polish.js").read_text(encoding="utf-8")
-    assert "if(!item||typeof item.score!=='number')return'—'" in polish
+    assert "Broad Market —" in polish
+    assert "typeof value!=='number'||!Number.isFinite(value)" in polish
 
 
 def test_trade_report_is_human_first_and_mobile_stacks() -> None:
