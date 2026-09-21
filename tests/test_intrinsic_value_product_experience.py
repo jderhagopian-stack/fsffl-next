@@ -120,12 +120,12 @@ vm.runInThisContext(fs.readFileSync({script_path},'utf8'),{{filename:'intrinsic_
   const loading=host.innerHTML;
   state.context.state_id='state-new';
   listeners['fsffl:product-context-updated']();
-  resolvers.shift()({{model_version:'stale-model',estimates:[{{player_id:'stale',value:999}}]}});
+  resolvers.shift()({{status:'ready',contract_version:'stale-contract',estimates:[{{player_id:'stale',raw_intrinsic_value:999,contributions:[]}}]}});
   await first;
   if(host.innerHTML!==loading)throw new Error('obsolete request mutated the DOM');
   const second=window.fsfflIntrinsicValueExperience.load();
   if(calls!==2)throw new Error('obsolete request repopulated cache or blocked a new request');
-  resolvers.shift()({{model_version:'current-model',estimates:[{{player_id:'current',value:10}}]}});
+  resolvers.shift()({{status:'ready',contract_version:'current-contract',intrinsic_model_version:'shapley-current',forecast_model_version:'forecast-current',quantity_semantics:'raw_governed_shapley_marginal_fantasy_points',discount:.85,permutations:2048,coverage:{{missing_required_fact_families:[]}},estimates:[{{player_id:'current',raw_intrinsic_value:10,contributions:[]}}]}});
   await second;
   if(!host.innerHTML.includes('current-contract'))throw new Error('current-context response did not render');
   if(host.innerHTML.includes('stale-contract'))throw new Error('stale response remained visible');
@@ -156,7 +156,7 @@ def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
     shell_version = "20260913-phase3-latency1"
     experience_version = "20260920-shapley-franchise1"
     assert f'/static/league_position_strength.js?v={shell_version}' in html
-        assert f"const version='{experience_version}'" in bootstrap
+    assert f"const version='{experience_version}'" in bootstrap
     assert f"const VERSION='{experience_version}'" in experience
     assert f'/static/intrinsic_value_experience.css?v=${{version}}' in bootstrap
     assert f'/static/intrinsic_value_experience.js?v=${{version}}' in bootstrap
