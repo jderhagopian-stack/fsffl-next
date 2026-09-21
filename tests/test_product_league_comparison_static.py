@@ -30,9 +30,9 @@ def test_value_api_exposes_server_owned_team_value_portfolios() -> None:
     assert '"team_name": team_names.get(portfolio.team_id, portfolio.team_id)' in source
 
 
-def test_league_comparison_is_wired_as_a_real_product_surface() -> None:
+def test_league_atlas_v1_is_wired_as_the_real_product_surface() -> None:
     shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
-    assert "league_comparison.js" in shell
+    assert "league_atlas_v1.js" in shell
     assert "renderFsfflLeagueComparison" in shell
     assert "route==='league_comparison'" in shell
 
