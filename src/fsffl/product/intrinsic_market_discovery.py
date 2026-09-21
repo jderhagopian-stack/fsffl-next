@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Iterable
 
 from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicAvailability,
@@ -9,36 +8,11 @@ from fsffl.value.shapley_intrinsic_contract import (
 )
 
 from .runtime import UserRuntimeContext
+from .value_lens_evidence import build_governed_value_lens_evidence
 
 
-INTRINSIC_MARKET_DISCOVERY_VERSION = "phase3-intrinsic-market-discovery-v1"
+INTRINSIC_MARKET_DISCOVERY_VERSION = "phase3-intrinsic-market-discovery-v2:value-index"
 MARKET_PERCENTILE_SCALE_ID = "dynasty-market-percentile"
-
-
-def _percentile_ranks(values: Iterable[tuple[str, float]]) -> dict[str, float]:
-    ordered = sorted(
-        ((asset_id, float(value)) for asset_id, value in values),
-        key=lambda item: (item[1], item[0]),
-    )
-    count = len(ordered)
-    if count == 0:
-        return {}
-
-    ranks: dict[str, float] = {}
-    index = 0
-    while index < count:
-        end = index + 1
-        while end < count and ordered[end][1] == ordered[index][1]:
-            end += 1
-        average_zero_based_rank = (index + end - 1) / 2.0
-        # Mirror the Franchise Value Lens presentation rank: center each rank bin
-        # within the observed population instead of pretending the raw Intrinsic
-        # quantity lives on the Market percentile scale.
-        percentile = (average_zero_based_rank + 0.5) / count
-        for offset in range(index, end):
-            ranks[ordered[offset][0]] = percentile
-        index = end
-    return ranks
 
 
 def _ownership(runtime: UserRuntimeContext) -> dict[str, str]:
@@ -121,30 +95,19 @@ def build_intrinsic_market_discovery(
             reason="Select the franchise you manage before requesting value disagreement discovery.",
             intrinsic=intrinsic,
         )
-    values = runtime.value_evidence
-    if values is None or not values.estimates:
+    lens_evidence = build_governed_value_lens_evidence(runtime, intrinsic)
+    if lens_evidence.status != "ready":
         return _unavailable(
             runtime,
-            reason="Governed Broad Market evidence is unavailable for the current league state.",
-            intrinsic=intrinsic,
-        )
-    if intrinsic.status == ShapleyIntrinsicAvailability.UNAVAILABLE or not intrinsic.estimates:
-        return _unavailable(
-            runtime,
-            reason=intrinsic.status_reason or "Governed Intrinsic evidence is unavailable.",
+            reason=lens_evidence.reason or "Governed Value lens evidence is unavailable.",
             intrinsic=intrinsic,
         )
 
-    market = {
-        estimate.asset_id: max(0.0, min(1.0, float(estimate.distribution.mean)))
-        for estimate in values.estimates
-        if estimate.scale.scale_id == MARKET_PERCENTILE_SCALE_ID
-    }
-    intrinsic_values = {
-        estimate.player_id: float(estimate.raw_intrinsic_value)
-        for estimate in intrinsic.estimates
-    }
-    intrinsic_ranks = _percentile_ranks(intrinsic_values.items())
+    market = lens_evidence.market_percentiles
+    intrinsic_values = lens_evidence.intrinsic_raw
+    intrinsic_ranks = lens_evidence.intrinsic_percentiles
+    value_coordinate = lens_evidence.value_coordinate
+    assert value_coordinate is not None
     owner_by_player = _ownership(runtime)
     teams = {team.team_id: team.display_name for team in state.teams}
     players = {player.player_id: player for player in state.players}
@@ -171,6 +134,13 @@ def build_intrinsic_market_discovery(
         market_percentile = market[player_id]
         intrinsic_percentile = intrinsic_ranks[player_id]
         gap = intrinsic_percentile - market_percentile
+        market_index = value_coordinate.index_for_percentile(market_percentile)
+        intrinsic_index = value_coordinate.index_for_percentile(intrinsic_percentile)
+        display_gap = (
+            intrinsic_index - market_index
+            if market_index is not None and intrinsic_index is not None
+            else None
+        )
         if abs(gap) < minimum_percentile_gap:
             continue
 
@@ -206,6 +176,9 @@ def build_intrinsic_market_discovery(
                 "owned_by_focal": owned_by_focal,
                 "market_percentile": market_percentile,
                 "intrinsic_percentile": intrinsic_percentile,
+                "market_value_index": market_index,
+                "intrinsic_value_index": intrinsic_index,
+                "value_index_gap": display_gap,
                 "percentile_gap": gap,
                 "absolute_percentile_gap": abs(gap),
                 "direction": direction,
@@ -233,11 +206,15 @@ def build_intrinsic_market_discovery(
         "model_version": INTRINSIC_MARKET_DISCOVERY_VERSION,
         "league_state_id": state.state_id,
         "focal_team_id": runtime.selected_team_id,
-        "market_context_id": values.market_context_id,
-        "market_model_version": values.model_version,
-        "intrinsic_contract_version": intrinsic.contract_version,
-        "intrinsic_model_version": intrinsic.intrinsic_model_version,
-        "forecast_model_version": intrinsic.forecast_model_version,
+        "market_context_id": lens_evidence.market_context_id,
+        "market_model_version": lens_evidence.market_model_version,
+        "intrinsic_contract_version": lens_evidence.intrinsic_contract_version,
+        "intrinsic_model_version": lens_evidence.intrinsic_model_version,
+        "forecast_model_version": lens_evidence.forecast_model_version,
+        "value_presentation": {
+            "status": "ready",
+            **value_coordinate.summary_payload(),
+        },
         "intrinsic_status": intrinsic.status.value,
         "minimum_percentile_gap": minimum_percentile_gap,
         "comparable_player_count": len(comparable_ids),
@@ -253,5 +230,7 @@ def build_intrinsic_market_discovery(
             "team_utility_included": False,
             "raw_value_subtraction_used": False,
             "comparison_coordinate": "percentile_rank_presentation_only",
+            "shared_value_index_presentation_only": True,
+            "display_value_index_subtraction_allowed": True,
         },
     }
