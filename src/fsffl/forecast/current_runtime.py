@@ -18,7 +18,11 @@ from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_
 from .models import ForecastObservation
 from .regular_season import derive_fantasy_regular_season_forecasts
 from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
-from .source_health import validate_current_projection_snapshot_health
+from .source_health import (
+    CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+    current_projection_payload_sha256,
+    validate_current_projection_snapshot_health,
+)
 
 
 CurrentSnapshotFetcher = Callable[[int], CurrentProjectionSnapshot]
@@ -31,6 +35,17 @@ class NamedCurrentProjectionFetcher:
     fetch: CurrentSnapshotFetcher
 
 
+class LiveForecastSourceProvenance(FrozenModel):
+    provider: str
+    source_version: str
+    captured_at: datetime
+    effective_at: datetime
+    usage_class: str
+    provider_payload_sha256: str
+    health_contract_version: str
+    health_disposition: str = "accepted"
+
+
 class LiveForecastRuntimeResult(FrozenModel):
     raw_ensemble: tuple[ForecastObservation, ...]
     fantasy_point_forecasts: tuple[ForecastObservation, ...]
@@ -39,7 +54,8 @@ class LiveForecastRuntimeResult(FrozenModel):
     failed_sources: tuple[str, ...]
     evaluation_as_of: datetime
     fantasy_regular_season_forecasts: tuple[ForecastObservation, ...] = ()
-    model_version: str = "next2-current-runtime-v4:parallel-provider-ingestion"
+    source_provenance: tuple[LiveForecastSourceProvenance, ...] = ()
+    model_version: str = "next2-current-runtime-v5:source-health-provenance"
 
 
 def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher, ...]:
@@ -139,6 +155,7 @@ def build_current_live_forecasts(
 
     batches: list[LiveForecastSourceBatch] = []
     successful: list[str] = []
+    provenance_by_source: dict[str, LiveForecastSourceProvenance] = {}
     for source_id, snapshot in snapshots:
         try:
             observations = normalize_current_projection_snapshot(
@@ -154,6 +171,16 @@ def build_current_live_forecasts(
             continue
         batches.append(LiveForecastSourceBatch(source_id=source_id, observations=observations))
         successful.append(source_id)
+        provenance_by_source[source_id] = LiveForecastSourceProvenance(
+            provider=snapshot.provider,
+            source_version=snapshot.source_version,
+            captured_at=snapshot.captured_at.astimezone(UTC),
+            effective_at=snapshot.effective_at.astimezone(UTC),
+            usage_class=snapshot.usage_class,
+            provider_payload_sha256=current_projection_payload_sha256(snapshot),
+            health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+            health_disposition="accepted",
+        )
 
     if len(batches) < minimum_independent_sources:
         detail = "; ".join(sorted(failed)) if failed else "no provider-specific failure details"
@@ -171,7 +198,7 @@ def build_current_live_forecasts(
         raw_ensemble,
         rules=league_state.league.rules,
         source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v4:parallel-provider-ingestion",
+        model_version="next2-current-runtime-v5:source-health-provenance",
     )
     fantasy_points = apply_empirical_season_fantasy_point_uncertainty(league_scored)
     fantasy_regular_season = (
@@ -187,4 +214,8 @@ def build_current_live_forecasts(
         successful_source_ids=tuple(sorted(successful)),
         failed_sources=tuple(sorted(failed)),
         evaluation_as_of=evaluation_as_of,
+        source_provenance=tuple(
+            provenance_by_source[source_id]
+            for source_id in sorted(successful)
+        ),
     )
