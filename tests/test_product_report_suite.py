@@ -24,7 +24,7 @@ def test_preseason_guide_keeps_forecast_value_and_simulation_separate() -> None:
     assert "Most valuable current assets" in source
     assert "Championship odds" in source
     assert "full NFL-season Forecast observations" in source
-    assert "FSFFL Value remains the authoritative NEXT-3 market-cardinal score" in source
+    assert "FSFFL Cardinal Value remains the authoritative NEXT-3 market-cardinal score" in source
     assert "Starter age is descriptive presentation math" in source
     assert "report-only team grade" in source
 

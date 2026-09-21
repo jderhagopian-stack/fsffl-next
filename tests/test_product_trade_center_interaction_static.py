@@ -43,5 +43,5 @@ def test_trade_center_price_frontier_is_backend_governed_not_client_invented() -
 
 
 def test_trade_center_handles_honest_missing_value() -> None:
-    assert "FSFFL Value —" in TRADE_CLIENT
+    assert "FSFFL Cardinal —" in TRADE_CLIENT
     assert "typeof item.score!=='number'" in TRADE_CLIENT

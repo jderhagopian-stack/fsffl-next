@@ -15,7 +15,7 @@ from .models import ValueAssetKind, ValueScale
 FSFFL_CARDINAL_SCALE = ValueScale(
     scale_id="fsffl-market-cardinal",
     version="next3-v1",
-    unit_label="FSFFL Value points",
+    unit_label="FSFFL Cardinal Value points",
 )
 FSFFL_CARDINAL_MODEL_VERSION = "next3-fsffl-market-cardinal-v1"
 FSFFL_CARDINAL_REFERENCE_SOURCE_ID = "statsguy_market_values"

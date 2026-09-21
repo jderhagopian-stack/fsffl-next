@@ -11,7 +11,7 @@ def test_analytics_terminal_exposes_deeper_read_only_views() -> None:
     assert "FSFFL vs market" in source
     assert "Trade partners" in source
     assert "Roster construction heatmap" in source
-    assert "Where FSFFL and the market disagree" in source
+    assert "Where Cardinal and Broad Market disagree" in source
     assert "Trade-partner intelligence" in source
     assert "championship_probability" in source
     assert "competitive_state" in source

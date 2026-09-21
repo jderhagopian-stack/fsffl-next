@@ -39,7 +39,7 @@
       </div>
       ${drivers.length?`<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px">${drivers.map(item=>`<span class="opp-badge">${esc(item)}</span>`).join('')}</div>`:''}
       ${negotiation?`<p style="font-size:12px;color:var(--muted);margin:10px 0 0"><strong>Negotiation context:</strong> ${esc(negotiation)}. This describes the bilateral shape, not whether your team should reject an otherwise favorable offer.</p>`:''}
-      <p style="font-size:11px;color:var(--muted);margin:12px 0 0">The reasons above are copied from governed disposition evidence. FSFFL Value remains market context. Owner history may inform negotiation context, but no acceptance probability is invented here.</p>
+      <p style="font-size:11px;color:var(--muted);margin:12px 0 0">The reasons above are copied from governed disposition evidence. FSFFL Cardinal Market Value remains market context. Owner history may inform negotiation context, but no acceptance probability is invented here.</p>
     </section>`;
   }
 

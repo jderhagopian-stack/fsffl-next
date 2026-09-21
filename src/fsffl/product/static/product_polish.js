@@ -10,7 +10,7 @@ function fsfflCardinalScoreFor(assetId){
 function cardinalValueDetails(item){
   if(!item)return'';
   const source=item.evidence_source_id||'governed NEXT-3 evidence';
-  const scale=item.scale?.unit_label||'FSFFL Value points';
+  const scale=item.scale?.unit_label||'FSFFL Cardinal Market Value points';
   return `Authoritative NEXT-3 FSFFL Cardinal Market Score.\nModel: ${item.model_version}\nAuthority: ${item.authority_status}\nEvidence: ${source}\nScale: ${scale}`;
 }
 
@@ -23,8 +23,8 @@ provisionalValueCell=function(assetId){
 
 tradeValueMarkup=function(option){
   const item=tradeAssetScore(option);
-  if(!item||typeof item.score!=='number')return'<span class="asset-kind">FSFFL Value —</span>';
-  return `<span class="asset-kind" title="${escapeHtml(cardinalValueDetails(item))}">FSFFL ${fmtFsfflValue(item.score)}</span>`;
+  if(!item||typeof item.score!=='number')return'<span class="asset-kind">FSFFL Cardinal —</span>';
+  return `<span class="asset-kind" title="${escapeHtml(cardinalValueDetails(item))}">Cardinal ${fmtFsfflValue(item.score)}</span>`;
 };
 
 function coreIntelligenceReady(context){
@@ -180,7 +180,7 @@ function installProductPolish(){
   const rosterLead=document.querySelector('.roster-panel .lead');
   if(rosterLead){
     rosterLead.removeAttribute('title');
-    rosterLead.innerHTML='<strong>FSFFL Cardinal Value uses the authoritative NEXT-3 market-cardinal score.</strong> Market percentile remains a separate governed market-position measure.';
+    rosterLead.innerHTML='<strong>FSFFL Cardinal Value uses the authoritative NEXT-3 market-cardinal score.</strong> Broad Market percentile remains a separate governed market-position measure.';
   }
   const style=document.createElement('style');
   style.textContent=`

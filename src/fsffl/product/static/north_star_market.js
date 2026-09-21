@@ -33,7 +33,7 @@
     const bullets=[],target=row.target_position||'This position';
     if(row.focal_position_strength_rank)bullets.push(`Targets ${target}, currently #${row.focal_position_strength_rank} on your league-relative position profile.`);
     if(typeof row.counterparty_receive_position_strength_index==='number')bullets.push('What you send includes a position that can help the other roster.');
-    if(typeof row.market_gap_ratio==='number'||typeof row.search_distance==='number')bullets.push('The package is close enough in current FSFFL Value to be worth checking.');
+    if(typeof row.market_gap_ratio==='number'||typeof row.search_distance==='number')bullets.push('The package is close enough in current FSFFL Cardinal Value to be worth checking.');
     if((row.send||[]).length>1)bullets.push(`This is a consolidation structure: ${row.send.length} assets for one target.`);
     if(authority.key==='needs-eval')bullets.push('It still needs a full bilateral evaluation before FSFFL can recommend action.');
     if(authority.key==='match-only')bullets.push('Treat this as a market match, not a recommendation.');
@@ -45,7 +45,7 @@
   function methodsMarkup(row){
     const distance=typeof row.search_distance==='number'?Math.round(row.search_distance).toLocaleString():'Unavailable';
     const gap=typeof row.market_gap_ratio==='number'?`${(row.market_gap_ratio*100).toFixed(1)}%`:'Unavailable';
-    return `<details class="ns-market-methods"><summary>Methods & evidence</summary><p><strong>FSFFL Value distance:</strong> ${distance} · <strong>Relative gap:</strong> ${gap}</p><p>This view presents existing Search, Decision and owner-history evidence. It does not calculate an acceptance probability or create recommendation authority.</p></details>`;
+    return `<details class="ns-market-methods"><summary>Methods & evidence</summary><p><strong>FSFFL Cardinal Value distance:</strong> ${distance} · <strong>Relative gap:</strong> ${gap}</p><p>This view presents existing Search, Decision and owner-history evidence. It does not calculate an acceptance probability or create recommendation authority.</p></details>`;
   }
   function packageLine(row){const send=assets(row.send),receive=assets(row.receive);return `<div class="ns-market-package-line"><span><small>You give</small><b>${esc(send.join(' + ')||'—')}</b></span><i aria-hidden="true">→</i><span><small>You get</small><b>${esc(receive.join(' + ')||row.target_position||'—')}</b></span></div>`}
   function card(row,index,featured=false){

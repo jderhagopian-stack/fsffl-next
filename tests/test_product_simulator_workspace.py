@@ -35,7 +35,7 @@ def test_simulator_transport_envelope_reuses_hosted_governed_endpoint() -> None:
     assert "simulator:${playerIds.join(',')}" in ui
     assert "50,000-run Simulation" in ui
     assert "scenario_cache_hit" in ui
-    assert "Ownership and FSFFL Value remain unchanged" in ui
+    assert "Ownership and governed Value coordinates remain unchanged" in ui
     assert "acceptance_probability" not in ui
 
 

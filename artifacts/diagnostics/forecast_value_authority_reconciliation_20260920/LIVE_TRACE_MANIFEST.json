@@ -1,0 +1,32 @@
+{
+  "schema_version": "fsffl-live-razzball-numerical-trace-manifest-v1",
+  "run_id": 35533528646,
+  "artifact_id": 10612217445,
+  "branch": "correctness/forecast-value-authority-reconciliation-20260920",
+  "providers_successful": ["fftoday", "razzball"],
+  "provider_failures": {
+    "cbs": "ValueError: CBS QB response is not a full-season projection page",
+    "nfl_fantasy": "ValueError: NFL Fantasy hosted response did not contain projection content"
+  },
+  "razzball_parser_rows": {
+    "row_count": 626,
+    "unique_identity_count": 626,
+    "duplicate_identity_count": 0,
+    "max_identity_multiplicity": 1
+  },
+  "razzball_current_snapshot": {
+    "row_count": 562,
+    "unique_external_id_count": 562,
+    "duplicate_external_id_count": 0,
+    "max_external_id_multiplicity": 1
+  },
+  "razzball_normalized_observations": {
+    "observation_count": 96,
+    "unique_key_count": 96,
+    "duplicate_observation_key_count": 0,
+    "max_observation_key_multiplicity": 1
+  },
+  "source_record_equals_current_snapshot_for_sampled_stats": true,
+  "current_snapshot_equals_normalized_observation_for_sampled_stats": true,
+  "conclusion": "The live Razzball source page itself supplies the inflated values. FSFFL parser/current-snapshot/normalization preserve those values exactly. With CBS and NFL Fantasy unavailable, the authoritative live ensemble is FFToday + Razzball and therefore materially inherits the upstream Razzball inflation."
+}

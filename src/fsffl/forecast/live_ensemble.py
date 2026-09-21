@@ -93,12 +93,21 @@ def build_authoritative_live_ensemble(
 
     independent_sources_by_group: dict[tuple[object, ...], set[str]] = defaultdict(set)
     for source_id, batch in independent_batches.items():
+        seen_source_groups: set[tuple[object, ...]] = set()
         for observation in batch.observations:
             if observation.source != source_id:
                 raise ValueError(
                     f"observation source {observation.source!r} does not match batch {source_id!r}"
                 )
-            independent_sources_by_group[_group_key(observation)].add(source_id)
+            key = _group_key(observation)
+            if key in seen_source_groups:
+                raise ValueError(
+                    "live forecast source batch contains a duplicate player/metric/horizon "
+                    f"observation for {source_id!r}; duplicate provider rows cannot acquire "
+                    "extra ensemble weight"
+                )
+            seen_source_groups.add(key)
+            independent_sources_by_group[key].add(source_id)
 
     eligible_groups = {
         key

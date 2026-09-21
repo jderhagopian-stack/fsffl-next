@@ -316,12 +316,24 @@ def create_app(
         evidence = runtime.forecast_evidence
         message = None
         if evidence is not None:
-            message = "Authoritative NEXT-2 ensemble loaded from independent sources: " + ", ".join(evidence.successful_source_ids) + "."
+            if evidence.evidence_basis == "preseason_baseline":
+                message = (
+                    "Governed preserved preseason Forecast authority is in use after "
+                    "the live full-season refresh failed or was quarantined; preserved "
+                    "sources: " + ", ".join(evidence.successful_source_ids) + "."
+                )
+            else:
+                message = (
+                    "Authoritative NEXT-2 ensemble loaded from independent sources: "
+                    + ", ".join(evidence.successful_source_ids) + "."
+                )
         payload = state_first_runtime_status(
             runtime.league_state,
             forecast_ready=evidence is not None and bool(evidence.league_scored_forecasts),
             forecast_message=message,
         ).model_dump(mode="json")
+        payload["forecast_evidence_basis"] = evidence.evidence_basis if evidence is not None else None
+        payload["forecast_failed_sources"] = list(evidence.failed_sources) if evidence is not None else []
         value_ready = runtime.value_evidence is not None and bool(runtime.value_evidence.estimates)
         for stage in payload["stages"]:
             if stage["stage"] == "value" and value_ready:
@@ -508,7 +520,7 @@ def create_app(
         except Exception as exc:
             value_failure = f"{type(exc).__name__}: {exc}"
             _logger.warning(
-                "FSFFL Value enrichment unavailable league=%s error=%s",
+                "FSFFL Cardinal Value enrichment unavailable league=%s error=%s",
                 refreshed_state.league.league_id,
                 exc,
             )
@@ -520,6 +532,9 @@ def create_app(
             **_runtime_context_payload(store, user_id),
             "successful_sources": list(evidence.successful_source_ids),
             "failed_sources": list(evidence.failed_sources),
+            "forecast_evidence_basis": evidence.evidence_basis,
+            "forecast_runtime_model_version": evidence.runtime_result.model_version,
+            "forecast_evaluation_as_of": evidence.runtime_result.evaluation_as_of.isoformat(),
             "ensemble_groups": len(evidence.raw_forecasts),
             "league_scored_players": len(evidence.league_scored_forecasts),
             "uncertainty_ready": evidence.uncertainty_ready,

@@ -10,7 +10,7 @@ def test_trade_finder_presents_published_asset_context_without_browser_model_log
     assert "item?.detail" in script
     assert "item?.age_years" in script
     assert "item?.roster_slot" in script
-    assert "FSFFL Value ${oppValue(item.fsffl_value)}" in script
+    assert "FSFFL Cardinal Value ${oppValue(item.fsffl_value)}" in script
     assert "authoritative Cardinal Value to find economically plausible structures" in script
     assert "Roster need and counterparty fit then help prioritize" in script
     assert "authoritative Cardinal Value first to locate market-plausible structures" in script

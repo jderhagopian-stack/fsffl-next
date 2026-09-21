@@ -342,7 +342,7 @@ def build_opportunity_workspace(
         return _empty_workspace(
             status="building_intelligence",
             message=(
-                "Current FSFFL Value evidence is still being built. Opportunity discovery "
+                "Current FSFFL Cardinal Value evidence is still being built. Opportunity discovery "
                 "will activate automatically when the governed intelligence refresh finishes."
             ),
             retryable=True,

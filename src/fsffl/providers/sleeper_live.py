@@ -52,6 +52,16 @@ class SleeperLiveSource:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._max_workers = max_workers
 
+    def fetch_nfl_player_universe(self) -> Any:
+        """Acquire Sleeper's current NFL player catalog without league-specific state."""
+
+        return self._get("/players/nfl")
+
+    def fetch_nfl_regular_season_schedule(self, *, season: int) -> Any:
+        """Acquire Sleeper's regular-season schedule for one NFL season."""
+
+        return self._nfl_regular_season_schedule(season)
+
     def fetch_sync_probe(self, *, league_external_id: str) -> SleeperSyncProbe:
         """Fingerprint likely league changes without rebuilding canonical State.
 

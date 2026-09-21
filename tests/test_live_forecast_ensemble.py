@@ -70,3 +70,20 @@ def test_live_ensemble_fails_closed_with_only_one_independent_source() -> None:
         build_authoritative_live_ensemble(
             (LiveForecastSourceBatch(source_id="razzball", observations=(_obs("razzball", 4000.0),)),)
         )
+
+
+def test_live_ensemble_rejects_duplicate_observation_inside_one_provider_batch() -> None:
+    duplicate = _obs("razzball", 4000.0)
+    with pytest.raises(ValueError, match="duplicate player/metric/horizon observation"):
+        build_authoritative_live_ensemble(
+            (
+                LiveForecastSourceBatch(
+                    source_id="razzball",
+                    observations=(duplicate, duplicate),
+                ),
+                LiveForecastSourceBatch(
+                    source_id="fftoday",
+                    observations=(_obs("fftoday", 4200.0),),
+                ),
+            )
+        )

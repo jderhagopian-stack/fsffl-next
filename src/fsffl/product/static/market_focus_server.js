@@ -22,7 +22,7 @@
   }
   function updateMethods(){
     const p=document.querySelector('#opp-posture-control .opp-posture-methods p');if(!p)return;
-    p.textContent='Market Focus is applied by server-owned Trade Finder search before the candidate limit. Position, target and consolidation narrow the full structural search; Shop a player rebuilds package neighborhoods around that asset. Strategic direction changes Search ordering only. Your calculated competitive state, FSFFL Value, Decision truth and acceptance uncertainty do not change.';
+    p.textContent='Market Focus is applied by server-owned Trade Finder search before the candidate limit. Position, target and consolidation narrow the full structural search; Shop a player rebuilds package neighborhoods around that asset. Strategic direction changes Search ordering only. Your calculated competitive state, governed Value coordinates, Decision truth and acceptance uncertainty do not change.';
   }
   async function refresh(){
     if(!onMarket())return;const s=stateRef();if(!s?.payload||s.payload.status!=='ready')return;

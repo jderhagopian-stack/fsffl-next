@@ -58,7 +58,7 @@ function simulatorScenarioResult(result){
       ${simulatorMetricCard('Largest lineup-loss exposure',simulatorFmtNumber(resilience.largest_single_player_lineup_drop,2),'Scenario minus baseline')}
     </div>
     <div class="panel" style="margin-top:14px;background:var(--surface-2)"><strong>Calculated state</strong><p style="margin:6px 0 0">${escapeHtml(result.calculated_state_before||'—')} → <strong>${escapeHtml(result.calculated_state_after||'—')}</strong></p></div>
-    <p style="color:var(--muted);font-size:12px;margin:12px 0 0">Ownership and FSFFL Value remain unchanged. State owns the hypothetical availability change; NEXT-4 Simulation owns competitive outcomes. Cache reuse is exact-result performance reuse only.</p>
+    <p style="color:var(--muted);font-size:12px;margin:12px 0 0">Ownership and governed Value coordinates remain unchanged. State owns the hypothetical availability change; NEXT-4 Simulation owns competitive outcomes. Cache reuse is exact-result performance reuse only.</p>
   </article>`;
 }
 function simulatorComparisonTable(){

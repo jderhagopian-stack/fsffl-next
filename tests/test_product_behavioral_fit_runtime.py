@@ -64,6 +64,6 @@ def test_trade_center_presents_same_returned_fit_without_frontend_inference() ->
     assert "result?.behavioral_fit" in source
     assert "Behavioral fit for this exact package" in source
     assert "it is not an acceptance probability" in source
-    assert "cannot change FSFFL Value" in source
+    assert "cannot change governed Value coordinates" in source
     assert "driver.description" in source
     assert "acceptance_probability" not in source

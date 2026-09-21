@@ -186,6 +186,7 @@ def build_league_value_lenses(
             ),
         },
         "fsffl_intrinsic": {
+            "authority_family": "canonical_shapley_intrinsic",
             "status": intrinsic_status,
             "contract_version": (
                 intrinsic.contract_version if intrinsic is not None else None
@@ -206,6 +207,7 @@ def build_league_value_lenses(
         "players": rows,
         "teams": teams,
         "authority": {
+            "canonical_fsffl_intrinsic_authority": "shapley_intrinsic",
             "broad_market_and_intrinsic_are_distinct_lenses": True,
             "comparison_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
             "raw_value_subtraction_used": False,

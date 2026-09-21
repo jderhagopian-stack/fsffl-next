@@ -200,11 +200,11 @@ def build_private_beta_trade_analysis(
 
     incomplete_cut_cost = any(item.required_cut_count and item.cut_market_value_total is None for item in trade_team_resolutions)
     if incomplete_cut_cost:
-        warnings.append("The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative FSFFL Value; cut opportunity cost remains incomplete.")
+        warnings.append("The post-trade state is roster-legal, but at least one mandatory cut lacks authoritative FSFFL Cardinal Market Value; cut opportunity cost remains incomplete.")
     warnings.append("Competitive win/playoff/championship impact is intentionally unavailable in this fast analysis until the post-trade state is run through Simulation authority.")
     warnings.append("Negotiation feasibility is a Decision-owned bilateral consequence shape, not an acceptance probability.")
     warnings.append("Acceptance probability is not estimated; Behavioral Intelligence is descriptive evidence until a calibrated acceptance model is promoted.")
-    warnings.append("Package concentration is measured separately from cuts, lineup impact and Simulation. The current 0%-15% residual premium interval is only a provisional Decision robustness guard and is not added to FSFFL Value.")
+    warnings.append("Package concentration is measured separately from cuts, lineup impact and Simulation. The current 0%-15% residual premium interval is only a provisional Decision robustness guard and is not added to FSFFL Cardinal Market Value.")
 
     focal_scenario_delta = None
     if evaluation is not None:

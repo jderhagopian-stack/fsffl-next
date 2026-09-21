@@ -1,0 +1,39 @@
+name: Live Razzball numerical trace
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install -e .
+      - name: Run numerical trace
+        run: python scripts/run_live_razzball_numerical_trace.py
+      - name: Materialize frozen Shapley comparison board
+        run: python scripts/materialize_shapley_comparison_audit.py
+      - name: Upload trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-razzball-numerical-trace
+          path: |
+            artifacts/diagnostics/live_razzball_numerical_trace_20260920/
+            artifacts/diagnostics/forecast_value_reconciliation_20260920/
+      - name: Upload temporary repository snapshot for local read-only contract validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconciliation-repo-snapshot
+          path: |
+            src/
+            artifacts/implementation/
+            pyproject.toml

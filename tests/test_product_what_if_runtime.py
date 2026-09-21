@@ -60,7 +60,7 @@ def test_what_if_ui_invokes_server_scenario_and_only_presents_returned_deltas() 
     assert "build_player_unavailable_scenario" in webapp
     assert "Run What-If" in ui
     assert "50,000-run stress test" in ui
-    assert "Ownership and FSFFL Value are unchanged" in ui
+    assert "Ownership and governed Value coordinates are unchanged" in ui
     assert "Browser calculation: none" in ui
     assert "ensureWhatIfScript" in shell
     assert "what_if.js" in shell
