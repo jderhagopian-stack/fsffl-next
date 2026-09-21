@@ -8,7 +8,10 @@ from fsffl.value.shapley_intrinsic_contract import (
 )
 
 from .runtime import UserRuntimeContext
-from .value_lens_evidence import build_governed_value_lens_evidence
+from .value_lens_evidence import (
+    build_governed_value_lens_evidence,
+    percentile_ranks as _percentile_ranks,
+)
 
 
 INTRINSIC_MARKET_DISCOVERY_VERSION = "phase3-intrinsic-market-discovery-v2:value-index"
