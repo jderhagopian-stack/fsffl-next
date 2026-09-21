@@ -1,6 +1,8 @@
 /* Phase 3 Intrinsic-vs-Broad-Market discovery lens.
  * Lazy-loads only after the customer opens the lens.
- * It never creates recommendation authority, a common value scale, or acceptance probability.
+ * The shared 0-10,000 Value Index is presentation-only; raw Market and raw
+ * Shapley remain distinct authorities. No recommendation or acceptance
+ * probability is created here.
  */
 (function(){
   'use strict';
@@ -85,7 +87,7 @@
         <button type="button" class="text-button" data-imd-close>Close</button>
       </header>
       ${loading?'<div class="imd-loading"><i></i><span>Preparing governed Intrinsic server-side. This will end in ready or an explicit unavailable state.</span></div>':bodyMarkup(payload)}
-      <details class="imd-methods"><summary>Methods & authority</summary><p>The 0-10,000 Value Index is a presentation-only percentile-equated ruler derived from governed native Market distributions. Broad Market and raw Shapley remain different authorities and raw units are never subtracted. The displayed Index gap is allowed only because both display numbers use the same versioned ruler. League Market Value remains unavailable. Team Utility and acceptance evidence remain separate.</p></details>
+      <details class="imd-methods"><summary>Methods & authority</summary><p>The 0-10,000 Value Index is a presentation-only percentile-equated ruler derived from governed native Market distributions. Broad Market and raw Shapley remain different authorities; raw Market and raw Shapley quantities are never subtracted. The displayed Index gap is allowed only because both display numbers use the same versioned ruler. League Market Value remains unavailable. Team Utility and acceptance evidence remain separate.</p></details>
     </section>`;
   }
   function installTrigger(panel){
