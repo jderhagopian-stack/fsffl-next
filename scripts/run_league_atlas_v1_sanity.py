@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,6 +10,12 @@ from fsffl.product.league_value_lenses import build_league_value_lenses
 from fsffl.product.runtime import UserRuntimeContext, default_sleeper_state_loader
 from fsffl.product.team_page import build_state_only_team_view
 from fsffl.value.current_runtime import build_current_market_values
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from scripts.run_league_value_lens_real_roster_audit import (
     LEAGUE_ID,
     _intrinsic_contract,
@@ -16,7 +23,6 @@ from scripts.run_league_value_lens_real_roster_audit import (
 )
 
 
-ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts/diagnostics/league_atlas_v1_20260921"
 ATLAS_SOURCE = ROOT / "src/fsffl/product/static/league_atlas_v1.js"
 
