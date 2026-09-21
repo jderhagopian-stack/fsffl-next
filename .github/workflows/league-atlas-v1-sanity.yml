@@ -27,6 +27,8 @@ jobs:
           python-version: "3.11"
       - name: Install
         run: python -m pip install -e '.[web]'
+      - name: Check Atlas JavaScript syntax
+        run: node --check src/fsffl/product/static/league_atlas_v1.js
       - name: Run real-league Atlas sanity
         run: python scripts/run_league_atlas_v1_sanity.py
       - name: Upload Atlas sanity evidence
