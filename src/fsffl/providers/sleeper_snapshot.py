@@ -99,6 +99,46 @@ def _age_years(raw_age: Any) -> float | None:
     return age if age >= 0 else None
 
 
+def canonical_players_from_sleeper_player_universe(
+    raw_players: Any,
+) -> tuple[Player, ...]:
+    """Normalize Sleeper's current QB/RB/WR/TE catalog into canonical player identity.
+
+    This helper is league-agnostic and intentionally limited to the same fantasy
+    positions/team normalization used by live State enrichment.
+    """
+
+    if not isinstance(raw_players, Mapping):
+        return ()
+
+    players: dict[str, Player] = {}
+    for external_id, raw in raw_players.items():
+        if not isinstance(raw, Mapping):
+            continue
+        position = _FANTASY_POSITIONS.get(str(raw.get("position") or "").upper())
+        nfl_team = _normalize_team(raw.get("team"))
+        if position is None or nfl_team is None:
+            continue
+        player_id = f"sleeper:player:{external_id}"
+        full_name = str(
+            raw.get("full_name")
+            or " ".join(
+                filter(None, [raw.get("first_name"), raw.get("last_name")])
+            )
+            or external_id
+        )
+        players[player_id] = Player(
+            player_id=player_id,
+            full_name=full_name,
+            position=position,
+            nfl_team=nfl_team,
+            provider_refs=(
+                ProviderRef(provider="sleeper", external_id=str(external_id)),
+            ),
+        )
+    return tuple(sorted(players.values(), key=lambda item: item.player_id))
+
+
 def _attach_current_fantasy_player_universe(
     state: LeagueState,
     raw_players: Any,
