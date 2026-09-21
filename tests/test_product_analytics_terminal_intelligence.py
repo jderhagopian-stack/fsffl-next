@@ -8,10 +8,10 @@ TERMINAL = ROOT / "src/fsffl/product/static/analytics_terminal.js"
 def test_analytics_terminal_exposes_deeper_read_only_views() -> None:
     source = TERMINAL.read_text(encoding="utf-8")
     assert "Team heatmap" in source
-    assert "FSFFL vs market" in source
+    assert "Market vs FSFFL" in source
     assert "Trade partners" in source
     assert "Roster construction heatmap" in source
-    assert "Where Cardinal and Broad Market disagree" in source
+    assert "Broad Market vs FSFFL Intrinsic" in source
     assert "Trade-partner intelligence" in source
     assert "championship_probability" in source
     assert "competitive_state" in source
@@ -40,4 +40,4 @@ def test_analytics_terminal_player_projection_is_full_nfl_season_only() -> None:
     assert "season_fantasy_points_projection" in source
     assert "item.horizon==='season'" in source
     assert "fantasy_regular_season" not in source
-    assert "NFL season projection" in source
+    assert "Season projection" in source
