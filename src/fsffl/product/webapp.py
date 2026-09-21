@@ -214,11 +214,52 @@ def _attach_live_value_profiles(view, value_evidence):
     return view.model_copy(update={"players": players, "draft_picks": draft_picks})
 
 
-def _team_view_payload(view, value_evidence) -> dict[str, object]:
+def _team_view_payload(view, value_evidence, forecast_evidence=None) -> dict[str, object]:
     enriched = _attach_live_value_profiles(view, value_evidence)
+    runtime_result = (
+        forecast_evidence.runtime_result
+        if forecast_evidence is not None
+        else None
+    )
     return {
         **enriched.model_dump(mode="json"),
         "team_market_value": _team_market_value_payload(value_evidence, enriched.team_id),
+        "forecast_authority": {
+            "evidence_basis": (
+                forecast_evidence.evidence_basis
+                if forecast_evidence is not None
+                else None
+            ),
+            "evidence_model_version": (
+                forecast_evidence.model_version
+                if forecast_evidence is not None
+                else None
+            ),
+            "runtime_model_version": (
+                runtime_result.model_version
+                if runtime_result is not None
+                else None
+            ),
+            "evaluation_as_of": (
+                runtime_result.evaluation_as_of.isoformat()
+                if runtime_result is not None
+                else None
+            ),
+            "successful_source_ids": (
+                list(forecast_evidence.successful_source_ids)
+                if forecast_evidence is not None
+                else []
+            ),
+            "failed_sources": (
+                list(forecast_evidence.failed_sources)
+                if forecast_evidence is not None
+                else []
+            ),
+            "fallback_active": (
+                forecast_evidence is not None
+                and forecast_evidence.evidence_basis == "preseason_baseline"
+            ),
+        },
     }
 
 
@@ -616,7 +657,7 @@ def create_app(
                 for item in runtime.simulation_analytics.team_views
                 if item.team_id == runtime.selected_team_id
             )
-            return _team_view_payload(view, runtime.value_evidence)
+            return _team_view_payload(view, runtime.value_evidence, runtime.forecast_evidence)
         lineup_result = _forecast_lineup_result(runtime)
         if lineup_result is not None:
             view = next(item for item in lineup_result.team_views if item.team_id == runtime.selected_team_id)
