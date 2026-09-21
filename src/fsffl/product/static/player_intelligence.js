@@ -128,7 +128,7 @@
   function bindTabs(){
     const host=sheet();host.querySelectorAll('[data-pi-tab]').forEach(button=>button.addEventListener('click',()=>{host.querySelectorAll('[data-pi-tab]').forEach(x=>x.classList.toggle('active',x===button));host.querySelectorAll('[data-pi-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.piPanel===button.dataset.piTab))}));
   }
-  document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]');if(!trigger)return;event.preventDefault();event.stopPropagation();open(trigger.dataset.playerIntelligenceId)});
+  document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]');if(!trigger)return;event.preventDefault();event.stopPropagation();open(trigger.dataset.playerIntelligenceId)},true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!ensure().hidden)close()});
   window.fsfflPlayerIntelligence={open,close,version:VERSION};
 })();
