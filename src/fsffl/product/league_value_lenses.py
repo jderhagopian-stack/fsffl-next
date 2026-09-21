@@ -9,9 +9,10 @@ from fsffl.value.shapley_intrinsic_contract import (
 )
 
 from .runtime import UserRuntimeContext
+from .value_presentation import build_value_presentation_coordinate
 
 
-LEAGUE_VALUE_LENS_CONTRACT_VERSION = "phase3-league-value-lenses-v1"
+LEAGUE_VALUE_LENS_CONTRACT_VERSION = "phase3-league-value-lenses-v2:value-index"
 BROAD_MARKET_SCALE_ID = "dynasty-market-percentile"
 INTRINSIC_PRESENTATION_COORDINATE = "percentile_rank_presentation_only"
 
@@ -97,6 +98,16 @@ def build_league_value_lenses(
     )
     intrinsic_ranks = _percentile_ranks(intrinsic_raw.items())
 
+    value_coordinate = None
+    value_coordinate_error = None
+    if values is not None:
+        try:
+            value_coordinate = build_value_presentation_coordinate(
+                values.native_magnitude_observations
+            )
+        except ValueError as exc:
+            value_coordinate_error = str(exc)
+
     owner_by_player = _ownership(runtime)
     team_names = {team.team_id: team.display_name for team in state.teams}
     players = {player.player_id: player for player in state.players}
@@ -111,6 +122,21 @@ def build_league_value_lenses(
         gap = (
             intrinsic_percentile - market_percentile
             if market_percentile is not None and intrinsic_percentile is not None
+            else None
+        )
+        market_index = (
+            value_coordinate.index_for_percentile(market_percentile)
+            if value_coordinate is not None
+            else None
+        )
+        intrinsic_index = (
+            value_coordinate.index_for_percentile(intrinsic_percentile)
+            if value_coordinate is not None
+            else None
+        )
+        display_gap = (
+            intrinsic_index - market_index
+            if market_index is not None and intrinsic_index is not None
             else None
         )
         player_state = player_states.get(player_id)
@@ -129,6 +155,9 @@ def build_league_value_lenses(
                 ),
                 "broad_market_percentile": market_percentile,
                 "intrinsic_percentile": intrinsic_percentile,
+                "broad_market_value_index": market_index,
+                "intrinsic_value_index": intrinsic_index,
+                "value_index_gap": display_gap,
                 "percentile_gap": gap,
                 "comparison_available": gap is not None,
             }
@@ -204,13 +233,29 @@ def build_league_value_lenses(
                 else intrinsic_error
             ),
         },
+        "value_presentation": (
+            value_coordinate.summary_payload()
+            if value_coordinate is not None
+            else {
+                "status": "unavailable",
+                "reason": value_coordinate_error
+                or "Governed native market magnitude evidence is unavailable.",
+                "presentation_only": True,
+            }
+        ),
         "players": rows,
         "teams": teams,
         "authority": {
             "canonical_fsffl_intrinsic_authority": "shapley_intrinsic",
             "broad_market_and_intrinsic_are_distinct_lenses": True,
             "comparison_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
+            "shared_value_index_presentation_only": value_coordinate is not None,
             "raw_value_subtraction_used": False,
+            "display_value_index_subtraction_allowed": (
+                value_coordinate.display_gap_subtraction_allowed
+                if value_coordinate is not None
+                else False
+            ),
             "team_value_total_created": False,
             "team_value_rank_created": False,
             "league_market_value_available": False,
