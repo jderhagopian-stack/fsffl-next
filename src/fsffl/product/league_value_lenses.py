@@ -140,7 +140,12 @@ def build_league_value_lenses(
     intrinsic_status = (
         intrinsic.status.value if intrinsic is not None else "unavailable"
     )
-    status = lens_evidence.status
+    if market_ready and intrinsic_ranks and value_coordinate is not None:
+        status = "ready"
+    elif market_ready or intrinsic_ranks:
+        status = "degraded"
+    else:
+        status = "unavailable"
 
     return {
         "status": status,
