@@ -5,27 +5,26 @@ ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "src" / "fsffl" / "product" / "static"
 
 
-def test_market_cardinal_numbers_are_labeled_as_cardinal_market_value() -> None:
+def test_primary_market_copy_keeps_cardinal_internal() -> None:
     opportunities = (STATIC / "opportunities.js").read_text(encoding="utf-8")
-    assert "authoritative_cardinal_value:'FSFFL Cardinal Market Value'" in opportunities
-    assert "<span>FSFFL Cardinal Market Value</span>" in opportunities
-    assert "<th>FSFFL Cardinal Market Value</th>" in opportunities
-    assert "authoritative_cardinal_value:'FSFFL Value'" not in opportunities
-    assert "<span>FSFFL Value</span>" not in opportunities
-    assert "<th>FSFFL Value</th>" not in opportunities
+    assert "Internal Value compatibility" in opportunities
+    assert "Broad Market / Intrinsic" in opportunities
+    assert "Broad Market and FSFFL Intrinsic remain separate user-facing evidence lenses" in opportunities
+    assert "FSFFL Cardinal Market Value" not in opportunities
+    assert "through Cardinal Value" not in opportunities
 
 
-def test_trade_center_cardinal_context_is_not_presented_as_generic_fsffl_value() -> None:
+def test_trade_center_foregrounds_broad_market_and_decision_not_cardinal() -> None:
     trade = (STATIC / "trade_center.js").read_text(encoding="utf-8")
-    decision = (STATIC / "trade_decision_experience.js").read_text(encoding="utf-8")
     polish = (STATIC / "product_polish.js").read_text(encoding="utf-8")
 
-    assert "FSFFL Cardinal Market Values shown above" in trade
-    assert "FSFFL Cardinal Market Value is market context only" in trade
-    assert "Authoritative FSFFL Cardinal Market Value is market context" in trade
-    assert "FSFFL Cardinal Market Value remains market context" in decision
-    assert "FSFFL Cardinal —" in trade
-    assert "FSFFL Cardinal —" in polish
+    assert "Broad Market percentiles shown above are market context only" in trade
+    assert "Decision owns bilateral package economics and consequences" in trade
+    assert "Broad Market and FSFFL Intrinsic are evidence lenses" in trade
+    assert "Broad Market —" in trade
+    assert "Broad Market —" in polish
+    assert "FSFFL Cardinal Market Values shown above" not in trade
+
 
 
 def test_trade_backend_names_missing_cut_value_as_cardinal_market_value() -> None:
@@ -36,8 +35,10 @@ def test_trade_backend_names_missing_cut_value_as_cardinal_market_value() -> Non
     assert "is not added to FSFFL Cardinal Market Value" in source
 
 
-def test_franchise_and_simulator_copy_do_not_hide_value_coordinate() -> None:
+def test_franchise_foregrounds_market_intrinsic_and_preserves_simulator_boundaries() -> None:
     franchise = (STATIC / "my_team_dashboard.js").read_text(encoding="utf-8")
     simulator = (STATIC / "simulator.js").read_text(encoding="utf-8")
-    assert "Your three highest current FSFFL Cardinal Market Values are" in franchise
+    assert "FSFFL Intrinsic" in franchise
+    assert "Broad Market" in franchise
+    assert "fsffl_cardinal_values" not in franchise
     assert "Ownership and governed Value coordinates remain unchanged." in simulator
