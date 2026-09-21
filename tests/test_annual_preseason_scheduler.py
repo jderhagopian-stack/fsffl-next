@@ -188,14 +188,32 @@ def test_scheduler_route_is_token_protected_and_reports_outcome(monkeypatch) -> 
     assert authorized.json()["outcome"] == "already-frozen"
 
 
-def test_render_config_declares_daily_production_scheduler_contract() -> None:
+def test_render_config_preserves_web_endpoint_without_paid_cron() -> None:
     render_yaml = (Path(__file__).resolve().parents[1] / "render.yaml").read_text(
         encoding="utf-8"
     )
 
-    assert "name: fsffl-next-annual-preseason-snapshot" in render_yaml
-    assert 'schedule: "17 8 * * *"' in render_yaml
-    assert "python scripts/run_annual_preseason_scheduler_tick.py" in render_yaml
-    assert "FSFFL_ANNUAL_SNAPSHOT_ENDPOINT" in render_yaml
+    assert "type: web" in render_yaml
     assert "FSFFL_SCHEDULER_TOKEN" in render_yaml
     assert "sync: false" in render_yaml
+    assert "type: cron" not in render_yaml
+    assert "fsffl-next-annual-preseason-snapshot" not in render_yaml
+    assert "plan: starter" not in render_yaml
+
+
+def test_github_actions_declares_free_daily_scheduler_contract() -> None:
+    workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github"
+        / "workflows"
+        / "annual-preseason-snapshot-scheduler.yml"
+    ).read_text(encoding="utf-8")
+
+    assert 'cron: "17 8 * * *"' in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "python scripts/run_annual_preseason_scheduler_tick.py" in workflow
+    assert "FSFFL_ANNUAL_SNAPSHOT_ENDPOINT" in workflow
+    assert "secrets.FSFFL_SCHEDULER_TOKEN" in workflow
+    assert "DORMANT - secure GitHub Actions secret" in workflow
+    assert "type: cron" not in workflow
+    assert "plan: starter" not in workflow
