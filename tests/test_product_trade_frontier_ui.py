@@ -18,10 +18,11 @@ def test_trade_center_frontier_routes_through_backend_authority() -> None:
     assert "Search does not rewrite Value" in ui
 
 
-def test_trade_center_uses_authoritative_cardinal_value_not_retired_challenger() -> None:
+def test_trade_center_uses_broad_market_context_not_cardinal_foregrounding() -> None:
     ui = TRADE_UI.read_text(encoding="utf-8")
-    assert "fsffl_cardinal_values" in ui
-    assert "Authoritative FSFFL market-cardinal Value" in ui
+    assert "dynasty-market-percentile" in ui
+    assert "Broad Market" in ui
+    assert "fsffl_cardinal_values" not in ui
     assert "provisionalScoreFor" not in ui
     assert "PROVISIONAL" not in ui
 
