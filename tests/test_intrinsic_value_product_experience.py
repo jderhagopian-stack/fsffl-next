@@ -28,7 +28,7 @@ def test_value_lens_preserves_four_value_coordinates_and_unavailability():
     assert "Team Utility" in script
     assert "Not production-ready" in script
     assert "No substitute number is shown" in script
-    assert "will not silently use one in place of canonical Shapley Intrinsic" in script
+    assert "will not silently use another coordinate in place of canonical Shapley Intrinsic" in script
 
 
 def test_value_lens_uses_governed_intrinsic_api_and_does_not_rebrand_legacy_value():
@@ -39,10 +39,9 @@ def test_value_lens_uses_governed_intrinsic_api_and_does_not_rebrand_legacy_valu
     assert "provisional_fsffl_values" not in script
     assert "fsffl_cardinal_values" not in script
     assert "replacement-surplus endpoint remains compatibility-only" in script
-    assert "Broad Market, Cardinal, League Market Value and Team Utility are different coordinates" in script
-    assert "FSFFL Cardinal Value" in script
-    assert "replaceTextWithin(document.querySelector('.franchise-shell'),'FSFFL Value','FSFFL Cardinal Value')" in script
-    assert "replaceTextWithin(document.querySelector('.league-structure-panel'),'Total FSFFL value','Total FSFFL Cardinal Value')" in script
+    assert "Broad Market, League Market Value and Team Utility are different coordinates" in script
+    assert "FSFFL Cardinal Value" not in script
+    assert "clarifyLegacyLabels(){}" in script
 
 
 def test_value_lens_comparison_is_rank_only_and_not_a_fake_common_scale():
@@ -154,7 +153,7 @@ def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
     bootstrap = _text("league_position_strength.js")
     experience = _text("intrinsic_value_experience.js")
     shell_version = "20260913-phase3-latency1"
-    experience_version = "20260920-shapley-franchise1"
+    experience_version = "20260921-shapley-franchise2"
     assert f'/static/league_position_strength.js?v={shell_version}' in html
     assert f"const version='{experience_version}'" in bootstrap
     assert f"const VERSION='{experience_version}'" in experience
