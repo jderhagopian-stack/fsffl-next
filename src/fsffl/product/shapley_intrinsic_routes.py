@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
 from fsffl.value.shapley_intrinsic_contract import (
     SHAPLEY_INTRINSIC_ENDPOINT_PATH,
@@ -10,6 +11,12 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
+from .intrinsic_background import (
+    IntrinsicBuildStatus,
+    ShapleyIntrinsicBackgroundCoordinator,
+    intrinsic_failure_payload,
+    intrinsic_loading_payload,
+)
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 from .webapp import require_beta_user
 
@@ -22,6 +29,7 @@ def install_shapley_intrinsic_routes(
     *,
     runtime_store: PrivateBetaRuntimeStore,
     contract_loader: ShapleyIntrinsicContractLoader | None = None,
+    background_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
 ) -> None:
     """Expose the versioned Shapley-native Intrinsic contract.
 
@@ -40,6 +48,22 @@ def install_shapley_intrinsic_routes(
 
         if contract_loader is None:
             contract = None
+        elif background_coordinator is not None:
+            record = background_coordinator.request(context)
+            if record.status in {
+                IntrinsicBuildStatus.QUEUED,
+                IntrinsicBuildStatus.RUNNING,
+            }:
+                return JSONResponse(
+                    status_code=202,
+                    content=intrinsic_loading_payload(record),
+                )
+            if record.status == IntrinsicBuildStatus.FAILED:
+                return JSONResponse(
+                    status_code=503,
+                    content=intrinsic_failure_payload(record),
+                )
+            contract = record.contract
         else:
             try:
                 contract = contract_loader(context)
