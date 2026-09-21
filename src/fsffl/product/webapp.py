@@ -332,6 +332,8 @@ def create_app(
             forecast_ready=evidence is not None and bool(evidence.league_scored_forecasts),
             forecast_message=message,
         ).model_dump(mode="json")
+        payload["forecast_evidence_basis"] = evidence.evidence_basis if evidence is not None else None
+        payload["forecast_failed_sources"] = list(evidence.failed_sources) if evidence is not None else []
         value_ready = runtime.value_evidence is not None and bool(runtime.value_evidence.estimates)
         for stage in payload["stages"]:
             if stage["stage"] == "value" and value_ready:
