@@ -150,6 +150,7 @@ install_league_value_lens_routes(
     runtime_store=_runtime_store,
     contract_loader=_shapley_intrinsic_loader,
     require_user=_webapp.require_beta_user,
+    background_coordinator=_shapley_intrinsic_coordinator,
 )
 install_focused_opportunity_routes(
     app,
