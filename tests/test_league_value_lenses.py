@@ -24,6 +24,8 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
+from fsffl.value.calibration import DataRightsClass
+from fsffl.value.cardinal import NativeMarketMagnitudeObservation
 from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
 from fsffl.value.models import (
     MarketPriceEstimate,
@@ -87,6 +89,28 @@ def _state() -> LeagueState:
     )
 
 
+def _native_market_rows() -> tuple[NativeMarketMagnitudeObservation, ...]:
+    rows: list[NativeMarketMagnitudeObservation] = []
+    for source_id, values in {
+        "fixture-a": [float(index * index) for index in range(30)],
+        "fixture-b": [float(index**3 + 1) for index in range(30)],
+    }.items():
+        rows.extend(
+            NativeMarketMagnitudeObservation(
+                asset_id=f"{source_id}:{index}",
+                source_id=source_id,
+                native_scale_id=f"{source_id}-native",
+                value=value,
+                observed_at=NOW,
+                market_context_id="fixture-market",
+                rights_class=DataRightsClass.RUNTIME_ONLY,
+                source_version="fixture-v1",
+            )
+            for index, value in enumerate(values)
+        )
+    return tuple(rows)
+
+
 def _market(state: LeagueState) -> CurrentMarketValueRuntimeResult:
     scale = ValueScale(
         scale_id=BROAD_MARKET_SCALE_ID,
@@ -114,6 +138,7 @@ def _market(state: LeagueState) -> CurrentMarketValueRuntimeResult:
         roster_player_count=4,
         valued_roster_player_count=4,
         market_context_id="fixture-market",
+        native_magnitude_observations=_native_market_rows(),
     )
 
 
@@ -129,6 +154,8 @@ def _intrinsic(*, unavailable: bool = False) -> Any:
             ),
             status_reason="fixture unavailable" if unavailable else None,
             contract_version="intrinsic-shapley-contract-fixture",
+            intrinsic_model_version="intrinsic-fixture-v1",
+            forecast_model_version="forecast-fixture-v1",
             quantity_semantics="raw_governed_shapley_marginal_fantasy_points",
             estimates=tuple(
                 SimpleNamespace(player_id=player_id, raw_intrinsic_value=value)
@@ -158,6 +185,8 @@ def test_league_value_lenses_keep_market_and_intrinsic_separate() -> None:
     authority = payload["authority"]
     assert authority["broad_market_and_intrinsic_are_distinct_lenses"] is True
     assert authority["raw_value_subtraction_used"] is False
+    assert authority["shared_value_index_presentation_only"] is True
+    assert authority["display_value_index_subtraction_allowed"] is True
     assert authority["team_value_total_created"] is False
     assert authority["team_value_rank_created"] is False
     assert authority["league_market_value_available"] is False
@@ -170,6 +199,11 @@ def test_league_value_lenses_keep_market_and_intrinsic_separate() -> None:
     assert rows["p1"]["broad_market_percentile"] == 0.90
     assert rows["p2"]["intrinsic_percentile"] > rows["p2"]["broad_market_percentile"]
     assert rows["p3"]["intrinsic_percentile"] > rows["p3"]["broad_market_percentile"]
+    assert rows["p2"]["broad_market_value_index"] is not None
+    assert rows["p2"]["intrinsic_value_index"] is not None
+    assert rows["p2"]["value_index_gap"] == (
+        rows["p2"]["intrinsic_value_index"] - rows["p2"]["broad_market_value_index"]
+    )
 
 
 def test_market_failure_does_not_replace_intrinsic_lens() -> None:
