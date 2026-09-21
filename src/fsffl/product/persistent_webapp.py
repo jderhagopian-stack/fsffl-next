@@ -12,6 +12,7 @@ from fsffl.providers.sleeper_live import SleeperLiveSource
 
 from . import opportunity_workspace as _opportunity_workspace
 from . import webapp as _webapp
+from .annual_preseason_scheduler_routes import install_annual_preseason_scheduler_route
 from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
 from .focused_opportunity_routes import install_focused_opportunity_routes
 from .forecast_resilience import (
@@ -102,6 +103,10 @@ app = _webapp.create_app(
     runtime_store=_runtime_store,
     behavioral_coordinator=_behavioral_coordinator,
     forecast_loader=_forecast_loader,
+)
+install_annual_preseason_scheduler_route(
+    app,
+    persistence_store=_persistence_store,
 )
 install_hosted_connect_routes(
     app,
