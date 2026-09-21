@@ -33,10 +33,11 @@ def test_league_value_lens_names_shapley_as_canonical_intrinsic_without_team_val
     assert '"team_utility_included": False' in source
 
 
-def test_franchise_shapley_migration_does_not_relabel_other_value_coordinates() -> None:
+def test_franchise_shapley_migration_preserves_approved_value_hierarchy() -> None:
     source = (STATIC / "intrinsic_value_experience.js").read_text(encoding="utf-8")
     assert "Broad Market Value" in source
-    assert "FSFFL Cardinal Value" in source
+    assert "FSFFL Intrinsic · Shapley" in source
     assert "League Market Value" in source
     assert "Team Utility" in source
     assert "Broad Market and Shapley Intrinsic use different units" in source
+    assert "FSFFL Cardinal Value" not in source
