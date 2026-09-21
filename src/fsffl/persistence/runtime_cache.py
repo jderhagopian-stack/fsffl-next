@@ -21,7 +21,7 @@ VALUE_ARTIFACT_KIND = "current_market_value"
 LEAGUE_SCOPE_KIND = "league_state"
 LEAGUE_SEASON_SCOPE_KIND = "league_season"
 
-FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v4:source-health-provenance"
+FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v5:revision-agnostic-source-health"
 SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v7:scoring-dispersion-diagnostic"
 VALUE_MODEL_VERSION = "next3-current-market-runtime-v7:market-total-fail-closed"
 
@@ -68,6 +68,18 @@ def decode_forecast_evidence(payload: dict[str, object]) -> LiveForecastEvidence
                 raise ValueError(
                     "stored live forecast evidence predates the current source-health contract"
                 )
+        accepted_health_ids = {
+            event.provider
+            for event in evidence.runtime_result.source_health_events
+            if event.disposition == "accepted"
+            and event.health_contract_version
+            == CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
+        }
+        if not set(source_ids).issubset(accepted_health_ids):
+            raise ValueError(
+                "stored live forecast evidence lacks accepted revision-agnostic "
+                "source-health provenance"
+            )
     return evidence
 
 
