@@ -31,7 +31,7 @@ def test_route_specific_modules_are_lazy_at_initial_page_load():
     shell = (STATIC / "product_shell.js").read_text()
 
     for script, loader in (
-        ("/static/league_comparison.js", "ensureLeagueComparisonScript"),
+        ("/static/league_atlas_v1.js", "ensureLeagueComparisonScript"),
         ("/static/my_team_dashboard.js", "ensureMyTeamScript"),
         ("/static/opportunities.js", "ensureOpportunitiesScript"),
         ("/static/simulator.js", "ensureSimulatorScript"),
