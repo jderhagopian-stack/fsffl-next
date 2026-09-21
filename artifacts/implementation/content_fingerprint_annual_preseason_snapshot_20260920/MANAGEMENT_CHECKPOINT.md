@@ -1,6 +1,6 @@
 # FSFFL NEXT - Final Management Checkpoint
 
-Date: 2026-09-20
+Date: 2026-09-21
 Directive: Pre-merge correction for PR #162 + durable annual preseason snapshot capability
 Repository: jderhagopian-stack/fsffl-next
 PR: #162
@@ -98,28 +98,66 @@ League scoring is **not** part of canonical snapshot identity. Future leagues re
 
 No historical snapshot backfill or fabrication path was added. The live annual capture path is closed on or after the season opener. A prior season therefore cannot be manufactured from current provider pages by this capability. Authentic point-in-time historical backfill remains unavailable unless separately supported by provenance-sufficient historical evidence.
 
-## Scheduler / opener boundary
+## Scheduler / opener boundary — 2026-09-21 continuation
 
-The repository contains a Render web service but no deployable cron/scheduler integration for this annual job. Per the directive's allowed boundary, implementation stops at the reusable idempotent capture service + immutable artifact contract + tests.
+The reusable capture capability is now connected to a production-capable recurring entry point without creating a second Forecast authority.
 
-The governed Sleeper schedule coordinate currently supplies opener **date** precision, not a verified kickoff clock time. The implementation records that precision explicitly rather than inventing an hour.
+Implemented scheduler path:
+- league-agnostic scheduler runner acquires the current Sleeper NFL player universe and regular-season schedule, then calls the existing idempotent annual preseason capture service;
+- token-protected hosted POST endpoint: `/internal/annual-preseason-snapshot/capture`;
+- Render cron client: `scripts/run_annual_preseason_scheduler_tick.py`;
+- repository deployment contract: daily Render cron at `17 8 * * *` UTC;
+- cron reaches the existing hosted web process, so durable writes use the web service's existing production `FSFFL_DATABASE_URL` persistence rather than a second database credential;
+- `FSFFL_SCHEDULER_TOKEN` is required on both caller and web service and is never stored in source;
+- `FSFFL_ANNUAL_SNAPSHOT_ENDPOINT` is the non-secret caller endpoint coordinate.
 
-Operational recurrence must invoke the service daily during the capture window to realize automatic retry. No unapproved external scheduler/deployment change was made.
+The runner exposes inspectable outcomes: attempted, before-window, already-frozen, captured, or failed-with-reason. Before-window and already-frozen runs are harmless. Failed source/persistence attempts return failure rather than silently succeeding. The existing >=2 healthy independent-source rule, T-14 gate, retry semantics and first-valid immutable freeze remain authoritative inside the annual capture service.
+
+The governed Sleeper schedule coordinate still supplies opener **date** precision, not a verified kickoff clock time. No opener date is hard-coded as model truth.
+
+### Live deployment inspection and external blocker
+
+Live Render inspection found one production web service, `fsffl-next-private-beta`, on `main`, with auto-deploy enabled in Virginia and no existing cron service. The scheduler token has been added to that web service's managed environment without exposing its value in source or this checkpoint.
+
+Render rejected a `free` cron plan as invalid and reported that only paid cron plans are valid. The required smallest plan is `starter`. Attempting to create the paid cron resource from the connected execution surface was blocked before the billed resource could be created.
+
+Therefore the recurring code/configuration is deployable and validated, but the **live paid Render cron resource does not yet exist**. Per the continuation directive, this is a hard stop before merge rather than a reason to substitute a fake scheduler.
+
+Smallest external action required:
+1. create Render cron service `fsffl-next-annual-preseason-snapshot` from this repository, branch `main`, region Virginia, plan `starter`;
+2. build: `python -m pip install -e .`;
+3. command: `python scripts/run_annual_preseason_scheduler_tick.py`;
+4. schedule: `17 8 * * *`;
+5. set `FSFFL_ANNUAL_SNAPSHOT_ENDPOINT=https://fsffl-next-private-beta.onrender.com/internal/annual-preseason-snapshot/capture`;
+6. set `FSFFL_SCHEDULER_TOKEN` to the same secret configured on the web service.
+
+After that resource exists, re-fetch/validate it, complete final PR checks, mark #162 ready and merge normally. League Atlas must not start before that merge.
 
 ## Validation
 
-Validated head: `6f1987eed09b51a216f40f5c170dea652382d363`
+Original annual-snapshot implementation head: `6f1987eed09b51a216f40f5c170dea652382d363`.
 
-GitHub Actions:
-- CI run `35554267031`: **SUCCESS**
-  - `pytest -q`: **1310 passed**, 2 deprecation warnings, 0 failures.
-- Cardinal Value Research run `35554267154`: **SUCCESS**.
-- League value-lens real-roster audit run `35554267022`: **SUCCESS**.
+Scheduler implementation head before this checkpoint update:
+`4e8b3a002f42d9cebf67a4cce82584c21983633a`.
 
-Final review also confirmed the 7-file post-directive diff contains no Value, Simulation, Decision/Search, Team Utility, league-market, Shapley-math, provider-weight, or Forecast-coefficient modifications.
+Focused/full validation on the scheduler implementation:
+- CI run `35562013616`: **SUCCESS**
+  - `pytest -q`: **1315 passed**, 2 deprecation warnings, 0 failures.
+- Cardinal Value Research run `35562013706`: **SUCCESS**.
+- League value-lens real-roster audit run `35562013618`: **SUCCESS**.
+- The added scheduler regression suite proves governed capture, harmless pre-window behavior, no provider work after first-valid freeze, token protection, and the daily Render configuration contract.
+
+The scheduler continuation from checkpoint head `c7bf1cfeb32b0299a2aebf3da1ec8a891b7fa07c` to `4e8b3a002f42d9cebf67a4cce82584c21983633a` changes only operational/provider-composition files, the Render deployment contract, and focused tests. It does not alter Forecast coefficients, provider weights, P0/D0-D1, the frozen 2026 baseline, Shapley mathematics/discount, Simulation fidelity, Value, Decision/Search, Team Utility or League Market Value.
 
 ## Management disposition
 
-The continuation directive is satisfied at the validated implementation head.
+Scheduler implementation and repository validation are complete, but the paid live Render cron resource could not be created from the connected execution surface. The directive explicitly requires a stop before merge when operational infrastructure cannot be completed.
 
-PR #162 must remain **open / draft / unmerged / undeployed** for management review. No merge or deployment is authorized by this checkpoint.
+PR #162 therefore remains **open / draft / unmerged**. League Atlas has **not** started. No Forecast-vNext A2 production work was performed.
+
+Classification for this continuation:
+- scheduler code/config/tests: **PASS**;
+- production web token configuration: **PASS**;
+- live recurring cron resource: **BLOCKED — external paid Render resource activation required**;
+- PR #162 merge: **STOPPED BEFORE MERGE, as directed**;
+- League Atlas: **NOT STARTED**.
