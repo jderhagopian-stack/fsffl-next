@@ -59,7 +59,7 @@
     const tone=row.direction==='intrinsic_higher'?'intrinsic':'market';
     return `<article class="imd-row" data-tone="${tone}">
       <div class="imd-player">
-        <strong>${esc(row.full_name)}</strong>
+        <button type="button" class="pi-player-link" data-player-intelligence-id="${esc(row.player_id)}"><strong>${esc(row.full_name)}</strong></button>
         <small>${esc(row.position||'')}${finite(row.age_years)?` · age ${row.age_years}`:''} · ${esc(row.owner_team_name||'Owner unavailable')}</small>
       </div>
       <div><small>Broad Market</small><strong>${index(row.market_value_index)}</strong><span>${pct(row.market_percentile)}</span></div>
