@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from fsffl.forecast.current_normalization import normalize_current_projection_snapshot
 from fsffl.forecast.current_runtime import (
     LiveForecastSourceHealthFailure,
     NamedCurrentProjectionFetcher,
@@ -276,14 +277,11 @@ def test_production_runtime_rejects_unseen_two_source_scale_disagreement() -> No
 
 def test_governed_reference_identifies_unseen_inflated_source_without_naming_provider() -> None:
     state = _state()
-    reference = tuple(
-        observation.model_copy(
-            update={
-                "source": "governed-reference",
-                "model_version": "governed-reference-v1",
-            }
-        )
-        for observation in _fantasy_points(multiplier=1.0)
+    reference = normalize_current_projection_snapshot(
+        _snapshot("reference", scale=1.0),
+        league_state=state,
+        season=2026,
+        evaluation_as_of=NOW + timedelta(days=2),
     )
 
     with pytest.raises(LiveForecastSourceHealthFailure) as excinfo:
