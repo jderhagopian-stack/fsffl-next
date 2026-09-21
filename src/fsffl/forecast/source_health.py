@@ -3,13 +3,158 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from statistics import median
 
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
+from fsffl.state.models import Position
+
+from .models import ForecastHorizon, ForecastMetric, ForecastObservation
+from .season_uncertainty import SEASON_FANTASY_POINT_ERROR_CALIBRATION
 
 
 CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION = (
-    "current-projection-health-v2:razzball-incidents-20260920-20260921"
+    "current-projection-health-v3:revision-agnostic-scale-integrity"
 )
+
+# The generalized scale threshold is not fitted to any current player or provider.
+# It is anchored to the largest already-promoted position-level relative RMSE from
+# the retained 2024-2025 multi-source historical Forecast benchmark. A single
+# player's forecast can miss by that scale; a broad median shift across many
+# players and multiple positions should not. Using the largest promoted RMSE makes
+# this gate deliberately conservative.
+REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD = 1.0 + max(
+    item.relative_rmse
+    for item in SEASON_FANTASY_POINT_ERROR_CALIBRATION.values()
+)
+REVISION_AGNOSTIC_MIN_COMPARABLE_PLAYERS = 16
+REVISION_AGNOSTIC_MIN_PLAYERS_PER_POSITION = 4
+REVISION_AGNOSTIC_MIN_POSITIONS = 3
+
+
+@dataclass(frozen=True)
+class RevisionAgnosticScaleHealth:
+    disposition: str
+    reason: str
+    reference_id: str
+    comparable_player_count: int
+    ratio_threshold: float
+    overall_median_ratio: float | None
+    position_median_ratios: tuple[tuple[str, float], ...]
+    eligible_position_count: int
+    inflated_position_count: int
+
+
+def _season_fantasy_point_map(
+    observations: tuple[ForecastObservation, ...],
+) -> dict[str, ForecastObservation]:
+    return {
+        item.player_id: item
+        for item in observations
+        if item.metric == ForecastMetric.FANTASY_POINTS
+        and item.horizon == ForecastHorizon.SEASON
+        and item.position in {
+            Position.QB,
+            Position.RB,
+            Position.WR,
+            Position.TE,
+        }
+    }
+
+
+def evaluate_revision_agnostic_scale_health(
+    candidate: tuple[ForecastObservation, ...],
+    reference: tuple[ForecastObservation, ...],
+    *,
+    reference_id: str,
+) -> RevisionAgnosticScaleHealth:
+    """Detect broad unseen projection-scale inflation without player caps.
+
+    The comparison is provider/dataset level. It uses the median multiplicative
+    shift across canonically matched season fantasy-point forecasts and requires
+    the same shift across multiple offensive positions. No individual row is
+    clipped or repaired, and no provider name participates in the rule.
+    """
+
+    candidate_by_player = _season_fantasy_point_map(candidate)
+    reference_by_player = _season_fantasy_point_map(reference)
+    by_position: dict[Position, list[float]] = {
+        Position.QB: [],
+        Position.RB: [],
+        Position.WR: [],
+        Position.TE: [],
+    }
+    all_ratios: list[float] = []
+    for player_id in sorted(set(candidate_by_player) & set(reference_by_player)):
+        current = candidate_by_player[player_id]
+        prior = reference_by_player[player_id]
+        if current.position != prior.position:
+            continue
+        denominator = float(prior.distribution.mean)
+        numerator = float(current.distribution.mean)
+        if denominator <= 0.0 or numerator < 0.0:
+            continue
+        ratio = numerator / denominator
+        all_ratios.append(ratio)
+        by_position[current.position].append(ratio)
+
+    position_medians = tuple(
+        sorted(
+            (
+                (position.value, float(median(values)))
+                for position, values in by_position.items()
+                if len(values) >= REVISION_AGNOSTIC_MIN_PLAYERS_PER_POSITION
+            ),
+            key=lambda item: item[0],
+        )
+    )
+    comparable = len(all_ratios)
+    overall = float(median(all_ratios)) if all_ratios else None
+    eligible_positions = len(position_medians)
+    inflated_positions = sum(
+        1
+        for _position, value in position_medians
+        if value > REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD
+    )
+
+    evaluable = (
+        comparable >= REVISION_AGNOSTIC_MIN_COMPARABLE_PLAYERS
+        and eligible_positions >= REVISION_AGNOSTIC_MIN_POSITIONS
+    )
+    quarantined = bool(
+        evaluable
+        and overall is not None
+        and overall > REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD
+        and inflated_positions >= REVISION_AGNOSTIC_MIN_POSITIONS
+    )
+    if quarantined:
+        disposition = "quarantined"
+        reason = (
+            "broad season-projection scale inflation exceeds the governed "
+            "historical-error tolerance across multiple positions"
+        )
+    elif evaluable:
+        disposition = "accepted"
+        reason = (
+            "broad projection scale is within the governed historical-error "
+            "tolerance across the comparable multi-position cohort"
+        )
+    else:
+        disposition = "not_evaluable"
+        reason = (
+            "insufficient comparable multi-position season fantasy-point evidence "
+            "for the revision-agnostic scale check"
+        )
+    return RevisionAgnosticScaleHealth(
+        disposition=disposition,
+        reason=reason,
+        reference_id=reference_id,
+        comparable_player_count=comparable,
+        ratio_threshold=REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD,
+        overall_median_ratio=overall,
+        position_median_ratios=position_medians,
+        eligible_position_count=eligible_positions,
+        inflated_position_count=inflated_positions,
+    )
 
 
 @dataclass(frozen=True)
@@ -447,11 +592,12 @@ def _snapshot_witness_fingerprint(
 def validate_current_projection_snapshot_health(
     snapshot: CurrentProjectionSnapshot,
 ) -> None:
-    """Fail closed for provider content with durable numerical-integrity evidence.
+    """Secondary forensic gate for specifically preserved malformed incidents.
 
-    This gate is incident-specific rather than provider-wide. Known malformed content
-    remains quarantined if republished under a different timestamp, row order, or row
-    count. Corrected content remains eligible for the normal governed live path.
+    Revision-agnostic scale integrity is evaluated separately before this function
+    in the current runtime. These fingerprints are defense-in-depth only: they make
+    known bad content auditable across timestamp/order/count drift but are not the
+    primary source-health authority.
     """
 
     for incident in _KNOWN_BAD_CURRENT_REVISIONS:
