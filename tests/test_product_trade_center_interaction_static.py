@@ -21,11 +21,12 @@ def test_trade_center_uses_canonical_browser_and_authoritative_analysis_endpoint
     assert "counterparty_asset_refs" in TRADE_CLIENT
 
 
-def test_trade_center_authoritative_value_is_market_context_only() -> None:
-    assert "fsffl_cardinal_values" in TRADE_CLIENT
-    assert "Authoritative FSFFL market-cardinal Value" in TRADE_CLIENT
-    assert "do not determine the bilateral result" in TRADE_CLIENT
+def test_trade_center_broad_market_is_context_and_decision_owns_package_economics() -> None:
+    assert "dynasty-market-percentile" in TRADE_CLIENT
+    assert "Broad Market" in TRADE_CLIENT
+    assert "Decision owns bilateral package economics and consequences" in TRADE_CLIENT
     assert "not a trade grade, recommendation, acceptance probability, or package economics" in TRADE_CLIENT
+    assert "fsffl_cardinal_values" not in TRADE_CLIENT
     assert "provisionalScoreFor" not in TRADE_CLIENT
     assert "PROVISIONAL" not in TRADE_CLIENT
     assert "percentile*10000" not in TRADE_CLIENT.replace(" ", "").lower()
@@ -42,6 +43,6 @@ def test_trade_center_price_frontier_is_backend_governed_not_client_invented() -
     assert "trade_grade" not in TRADE_CLIENT
 
 
-def test_trade_center_handles_honest_missing_value() -> None:
-    assert "FSFFL Cardinal —" in TRADE_CLIENT
-    assert "typeof item.score!=='number'" in TRADE_CLIENT
+def test_trade_center_handles_honest_missing_market_value() -> None:
+    assert "Broad Market —" in TRADE_CLIENT
+    assert "if(!item)return'<span class=\"asset-kind\">Broad Market —</span>'" in TRADE_CLIENT
