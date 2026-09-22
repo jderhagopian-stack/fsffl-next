@@ -267,3 +267,84 @@ def test_north_star_value_comparison_only_presents_descriptive_governed_lenses()
     assert "separate governed lenses" in source
     assert "This is not a buy/sell command." in source
     assert "Value comparison unavailable" in source
+
+
+def test_final_ia_uses_four_jobs_to_be_done_tabs_without_value_tab() -> None:
+    source = _text("player_intelligence.js")
+    nav = source.split('<nav class="pi-tabs"', 1)[1].split("</nav>", 1)[0]
+    assert 'data-pi-tab="overview"' in nav
+    assert 'data-pi-tab="career"' in nav
+    assert 'data-pi-tab="stats"' in nav
+    assert 'data-pi-tab="methods"' in nav
+    assert 'data-pi-tab="value"' not in nav
+    assert ">Overview<" in nav
+    assert ">Career & Forecast<" in nav
+    assert ">Stats<" in nav
+    assert ">Methods / Evidence<" in nav
+
+
+def test_overview_absorbs_value_job_and_keeps_only_compact_trajectory_preview() -> None:
+    source = _text("player_intelligence.js")
+    overview = source.split('data-pi-panel="overview"', 1)[1].split(
+        'data-pi-panel="career"', 1
+    )[0]
+    assert "overviewCards()" in overview
+    assert "valueComparison()" in overview
+    assert "Why this value?" in overview
+    assert "chart(true)" in overview
+    assert "Open detail" in overview
+
+
+def test_career_forecast_is_trajectory_only_and_connects_actual_to_y1() -> None:
+    source = _text("player_intelligence.js")
+    assert "const bridge=forecast.length&&actual.length?[actual[actual.length-1],...forecast]:forecast" in source
+    assert "points(bridge,'expected')" in source
+    career = source.split('data-pi-panel="career"', 1)[1].split(
+        'data-pi-panel="stats"', 1
+    )[0]
+    assert "chart(false)" in career
+    assert "forecastTable()" in career
+    assert "statsTable()" not in career
+    assert "Historical stats" not in career
+
+
+def test_stats_tab_starts_with_governed_current_season_projected_row() -> None:
+    source = _text("player_intelligence.js")
+    stats = source.split('data-pi-panel="stats"', 1)[1].split(
+        'data-pi-panel="methods"', 1
+    )[0]
+    assert "statsTable()" in stats
+    assert "PROJECTED" in source
+    assert "current_projected_stats" in source
+    assert "Unsupported projected fields remain unavailable" in source
+    assert "no football stats are inferred from fantasy points" in source
+    assert "Historical rows are actuals" in source
+    assert "pi-projected-badge" in source
+
+
+def test_stats_tab_position_sections_keep_supported_real_fields_only() -> None:
+    source = _text("player_intelligence.js")
+    for token in (
+        "pass_att','Pass att",
+        "pass_cmp','Comp",
+        "pass_yd','Pass yds",
+        "rush_att','Rush att",
+        "rush_yd','Rush yds",
+        "rec_tgt','Targets",
+        "rec','Rec",
+        "rec_yd','Rec yds",
+        "fantasy_points','FPTS",
+        "fantasy_ppg','PPG",
+    ):
+        assert token in source
+    assert "positionViews()" in source
+
+
+def test_methods_evidence_owns_deep_projected_stat_provenance() -> None:
+    source = _text("player_intelligence.js")
+    methods = source.split('data-pi-panel="methods"', 1)[1].split("`;", 1)[0]
+    assert "Projected stat evidence" in methods
+    assert "model_versions" in methods
+    assert "source_ids" in methods
+    assert "evidence_basis" in methods
+    assert "Raw Shapley audit" in methods
