@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+from time import perf_counter
 from threading import RLock
 from typing import Any, Callable
 
@@ -38,6 +40,7 @@ SHAPLEY_INTRINSIC_SCOPE_KIND = "league_material"
 
 YearOneAuthorityLoader = Callable[[LeagueState], LiveForecastEvidence]
 FutureForecastBuilder = Callable[..., Any]
+_logger = logging.getLogger("fsffl.product.performance")
 
 
 def _json_artifact(name: str) -> dict[str, object]:
@@ -335,12 +338,19 @@ class PrivateBetaShapleyContractLoader:
             )
 
         try:
+            phase_started = perf_counter()
             future_materialization = self._future_forecast_builder(
                 league_state=league_state,
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
             )
             future_contract = future_materialization.contract
+            _logger.info(
+                "FSFFL Intrinsic phase future-contract forecast=%s players=%s elapsed=%.3fs",
+                future_contract.forecast_model_version,
+                len(future_contract.player_ids),
+                perf_counter() - phase_started,
+            )
         except ValueError as exc:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
@@ -372,9 +382,16 @@ class PrivateBetaShapleyContractLoader:
             # this work in a server-side background coordinator, so concurrent
             # browser requests never duplicate the same cold Shapley calculation.
             try:
+                phase_started = perf_counter()
                 calendar = compose_live_intrinsic_calendar_from_forecast_contract(
                     live_year_one_forecasts=year_one,
                     future_contract=future_contract,
+                )
+                _logger.info(
+                    "FSFFL Intrinsic phase value-adapter forecast=%s players=%s elapsed=%.3fs",
+                    future_contract.forecast_model_version,
+                    calendar.player_count,
+                    perf_counter() - phase_started,
                 )
             except ValueError as exc:
                 return build_unavailable_shapley_intrinsic_contract(
@@ -383,9 +400,17 @@ class PrivateBetaShapleyContractLoader:
                     missing_required_fact_families=("future_forecast_value_adapter",),
                     forecast_model_version=future_contract.forecast_model_version,
                 )
+            phase_started = perf_counter()
             result = build_live_calendar_shapley_estimates(
                 calendar,
                 rules=league_state.league.rules,
+            )
+            _logger.info(
+                "FSFFL Intrinsic phase shapley forecast=%s players=%s permutations=%s elapsed=%.3fs",
+                future_contract.forecast_model_version,
+                calendar.player_count,
+                result.permutations,
+                perf_counter() - phase_started,
             )
             contract = build_shapley_intrinsic_contract(
                 result,
