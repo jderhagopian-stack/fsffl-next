@@ -68,22 +68,30 @@
 
   function forecastRows(){return overview?.forecast?.rows||[]}
   function y1(){return forecastRows().find(row=>row.year_index===1)||null}
-  function forecastRange(row){
+  function forecastBands(row){
     const u=row?.uncertainty||{};
-    if(finite(u.p10)&&finite(u.p90))return[u.p10,u.p90];
-    const scenarios=Array.isArray(u.scenarios)?u.scenarios:[];
-    const values=scenarios.map(x=>x.fantasy_points).filter(finite);
-    return values.length?[Math.min(...values),Math.max(...values)]:null;
+    return {p10:finite(u.p10)?u.p10:null,p25:finite(u.p25)?u.p25:null,p50:finite(u.p50)?u.p50:null,p75:finite(u.p75)?u.p75:null,p90:finite(u.p90)?u.p90:null};
   }
   function trajectoryRows(){
-    const actual=(history?.status==='ready'?history.seasons:[]).map(row=>({kind:'actual',season:row.season,points:row.fantasy_points,ppg:row.fantasy_ppg,rank:row.position_rank,range:null}));
-    const future=forecastRows().map(row=>({kind:'forecast',season:row.target_season,points:row.fantasy_points,ppg:row.fantasy_ppg,rank:null,range:forecastRange(row)}));
+    const actual=(history?.status==='ready'?history.seasons:[]).map(row=>({kind:'actual',season:row.season,expected:row.fantasy_points,median:null,p25:null,p75:null,p10:null,p90:null,ppg:row.fantasy_ppg,rank:row.position_rank}));
+    const future=forecastRows().map(row=>{const bands=forecastBands(row);return{kind:'forecast',season:row.target_season,expected:row.fantasy_points,median:bands.p50,p25:bands.p25,p75:bands.p75,p10:bands.p10,p90:bands.p90,ppg:row.fantasy_ppg,rank:null}});
     return [...actual,...future].sort((a,b)=>a.season-b.season);
   }
   function chart(){
     const rows=trajectoryRows();if(!rows.length)return'<div class="pi-empty">Trajectory data is unavailable.</div>';
-    const maximum=Math.max(...rows.map(row=>row.range?Math.max(row.points,row.range[1]):row.points),1);
-    return `<div class="pi-chart" aria-label="Career trajectory">${rows.map((row,rowIndex)=>{const h=Math.max(3,row.points/maximum*100),range=row.range,lo=range?range[0]/maximum*100:null,hi=range?range[1]/maximum*100:null,forecastBoundary=row.kind==='forecast'&&rowIndex>0&&rows[rowIndex-1].kind==='actual';return `<button class="pi-bar-wrap ${forecastBoundary?'pi-forecast-boundary':''}" title="${esc(row.season)} · ${num(row.points,1)} pts${finite(row.ppg)?` · ${num(row.ppg,1)} PPG`:''}${row.rank?` · rank #${row.rank}`:''}">${forecastBoundary?'<i class="pi-phase-label">FORECAST</i>':''}<span class="pi-bar-zone">${range?`<i class="pi-range" style="bottom:${lo.toFixed(1)}%;height:${Math.max(1,hi-lo).toFixed(1)}%"></i>`:''}<b class="pi-bar ${row.kind}" style="height:${h.toFixed(1)}%"></b></span><strong>${esc(row.season)}</strong><small>${row.kind==='actual'?'Actual':'Forecast'}</small><em>${num(row.points,0)}</em></button>`}).join('')}</div><div class="pi-chart-key"><span><i class="actual"></i>Actual</span><span><i class="forecast"></i>Forecast</span><span><i class="range"></i>Governed uncertainty / scenario range</span></div>`;
+    const values=[];rows.forEach(row=>[row.expected,row.median,row.p25,row.p75,row.p10,row.p90].forEach(value=>{if(finite(value))values.push(value)}));
+    const maximum=Math.max(...values,1),width=Math.max(540,96+rows.length*72),height=260,pad={left:44,right:20,top:24,bottom:40},plotW=width-pad.left-pad.right,plotH=height-pad.top-pad.bottom,step=rows.length>1?plotW/(rows.length-1):0;
+    const x=index=>pad.left+(rows.length>1?index*step:plotW/2),y=value=>pad.top+plotH-(Math.max(0,value)/maximum)*plotH;
+    const indexed=rows.map((row,index)=>({row,index})),actual=indexed.filter(item=>item.row.kind==='actual'),forecast=indexed.filter(item=>item.row.kind==='forecast');
+    const points=(subset,key)=>subset.filter(item=>finite(item.row[key])).map(item=>`${x(item.index).toFixed(1)},${y(item.row[key]).toFixed(1)}`).join(' ');
+    const band=(lower,upper,cls)=>{const eligible=forecast.filter(item=>finite(item.row[lower])&&finite(item.row[upper]));if(!eligible.length)return'';const upperPts=eligible.map(item=>`${x(item.index).toFixed(1)},${y(item.row[upper]).toFixed(1)}`),lowerPts=[...eligible].reverse().map(item=>`${x(item.index).toFixed(1)},${y(item.row[lower]).toFixed(1)}`);return `<polygon class="${cls}" points="${[...upperPts,...lowerPts].join(' ')}"></polygon>`};
+    const firstForecast=forecast[0],boundary=firstForecast&&firstForecast.index>0?x(firstForecast.index)-step/2:null;
+    const grid=[0,.25,.5,.75,1].map(f=>{const gy=pad.top+plotH-(f*plotH),label=maximum*f;return `<line class="pi-grid-line" x1="${pad.left}" x2="${width-pad.right}" y1="${gy.toFixed(1)}" y2="${gy.toFixed(1)}"></line><text class="pi-axis-label" x="${pad.left-8}" y="${(gy+4).toFixed(1)}" text-anchor="end">${num(label,0)}</text>`}).join('');
+    const actualLine=actual.length?`<polyline class="pi-actual-line" points="${points(actual,'expected')}"></polyline>`:'';
+    const expectedLine=forecast.length?`<polyline class="pi-expected-line" points="${points(forecast,'expected')}"></polyline>`:'';
+    const medianLine=forecast.some(item=>finite(item.row.median))?`<polyline class="pi-median-line" points="${points(forecast,'median')}"></polyline>`:'';
+    const dots=indexed.map(item=>{const row=item.row,px=x(item.index),py=y(row.expected),title=`${row.season} · ${row.kind==='actual'?'Actual':'Expected'} ${num(row.expected,1)} pts${finite(row.median)?` · Median ${num(row.median,1)}`:''}${finite(row.p25)&&finite(row.p75)?` · IQR ${num(row.p25,1)}–${num(row.p75,1)}`:''}`;return `<g><title>${esc(title)}</title><circle class="pi-chart-point ${row.kind}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4"></circle>${finite(row.median)&&Math.abs(row.median-row.expected)>.01?`<circle class="pi-chart-point median" cx="${px.toFixed(1)}" cy="${y(row.median).toFixed(1)}" r="3"></circle>`:''}<text class="pi-season-label" x="${px.toFixed(1)}" y="${height-14}" text-anchor="middle">${esc(row.season)}</text></g>`}).join('');
+    return `<div class="pi-trajectory-scroll"><svg class="pi-trajectory-svg" viewBox="0 0 ${width} ${height}" style="min-width:${width}px" role="img" aria-label="Career trajectory actual seasons followed by governed forecast seasons">${grid}${band('p10','p90','pi-outer-band')}${band('p25','p75','pi-iqr-band')}${boundary!==null?`<line class="pi-boundary" x1="${boundary.toFixed(1)}" x2="${boundary.toFixed(1)}" y1="${pad.top}" y2="${pad.top+plotH}"></line><text class="pi-phase-label-svg" x="${(boundary+8).toFixed(1)}" y="${pad.top+10}">FORECAST</text><text class="pi-phase-label-svg actual" x="${(boundary-8).toFixed(1)}" y="${pad.top+10}" text-anchor="end">ACTUAL</text>`:''}${actualLine}${expectedLine}${medianLine}${dots}</svg></div><div class="pi-chart-key"><span><i class="actual-line"></i>Actual</span><span><i class="expected-line"></i>Expected forecast</span><span><i class="median-line"></i>Median (P50)</span><span><i class="iqr"></i>IQR (P25–P75)</span><span><i class="outer"></i>P10–P90</span></div>`;
   }
   const statLabels={pass_att:'Pass att',pass_cmp:'Completions',pass_yd:'Pass yds',pass_td:'Pass TD',pass_int:'INT',rush_att:'Rush att',rush_yd:'Rush yds',rush_td:'Rush TD',rec_tgt:'Targets',rec:'Receptions',rec_yd:'Rec yds',rec_td:'Rec TD',fum:'Fumbles',fum_lost:'Fumbles lost'};
   function statGrid(stats){return Object.entries(stats||{}).filter(([,value])=>finite(value)).map(([key,value])=>`<span><small>${esc(statLabels[key]||key)}</small><b>${num(value,key.includes('yd')||key.includes('att')||key==='pass_cmp'||key==='rec_tgt'||key==='rec'?0:1)}</b></span>`).join('')}
