@@ -17,11 +17,11 @@ def test_player_intelligence_exposes_required_information_architecture() -> None
     for label in (
         "Overview",
         "Career & Forecast",
-        "Value",
+        "Stats",
         "Methods / Evidence",
         "Broad Market",
         "FSFFL Intrinsic",
-        "Historical actuals",
+        "Projected current season + historical actuals",
         "Forecast details",
     ):
         assert label in source
@@ -62,8 +62,8 @@ def test_player_intelligence_preserves_value_and_forecast_authority_boundaries()
     assert "Raw Market and raw Shapley quantities are never subtracted" in source
     assert "Future Y2/Y3 points come directly from Forecast authority" in source
     assert "they are not inferred from Intrinsic" in source
-    assert "shared Value Index is presentation-only" in source
-    assert "League Market Value:</strong> unavailable by design" in source
+    assert "shared 0–10,000 presentation ruler" in source
+    assert "League Market Value remains unavailable by design" in source
 
 
 def test_player_intelligence_mobile_sheet_is_scrollable_and_tabs_accessible() -> None:
@@ -111,7 +111,7 @@ def test_live_corrective_preserves_selected_tab_during_intrinsic_polling() -> No
     assert "let activeId=null,activeTab='overview'" in source
     assert "activeTab=button.dataset.piTab||'overview'" in source
     assert "tabClass('career')" in source
-    assert "tabClass('value')" in source
+    assert "tabClass('stats')" in source
     assert "tabClass('methods')" in source
 
 
@@ -142,8 +142,8 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?pi=20260922-player-intelligence-north-star1&v=20260913-phase3-latency1" in index
-    assert "player_intelligence.css?pi=20260922-player-intelligence-north-star1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.js?pi=20260922-player-intelligence-final-ia1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.css?pi=20260922-player-intelligence-final-ia1&v=20260913-phase3-latency1" in index
     assert "product_shell.js?v=20260913-phase3-latency1" in index
 
 
