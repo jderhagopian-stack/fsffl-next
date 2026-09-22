@@ -228,3 +228,56 @@ def test_player_intelligence_rejects_invalid_player_ids(player_id: str) -> None:
 
 def test_player_intelligence_accepts_real_player_id() -> None:
     assert _validated_player_id(" sleeper:player:123 ") == "sleeper:player:123"
+
+
+
+def test_completed_but_unavailable_intrinsic_surfaces_governed_reason(monkeypatch) -> None:
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    import fsffl.product.player_intelligence_routes as routes
+    from fsffl.value.shapley_intrinsic_contract import (
+        build_unavailable_shapley_intrinsic_contract,
+    )
+
+    context = _context()
+    unavailable = build_unavailable_shapley_intrinsic_contract(
+        evaluation_season=2026,
+        reason="fixture governed unavailable reason",
+        missing_required_fact_families=("fixture_fact",),
+        forecast_model_version="forecast-vnext-fixture",
+    )
+    coordinator = SimpleNamespace(
+        request=lambda _runtime: SimpleNamespace(
+            status=IntrinsicBuildStatus.COMPLETED,
+            contract=unavailable,
+            error=None,
+        )
+    )
+    store = SimpleNamespace(get=lambda _user: context)
+    monkeypatch.setattr(
+        routes,
+        "build_player_intelligence_overview",
+        lambda *_args, **_kwargs: {
+            "value": {
+                "intrinsic_value_index": None,
+                "intrinsic_percentile": None,
+            }
+        },
+    )
+    app = FastAPI()
+    routes.install_player_intelligence_routes(
+        app,
+        runtime_store=cast(Any, store),
+        require_user=lambda: "u",
+        intrinsic_coordinator=cast(Any, coordinator),
+        future_cache=cast(Any, SimpleNamespace()),
+        history_coordinator=cast(Any, SimpleNamespace()),
+    )
+
+    response = TestClient(app).get("/api/player-intelligence/player-1")
+    assert response.status_code == 200
+    value = response.json()["value"]
+    assert value["intrinsic_lifecycle_status"] == "completed"
+    assert value["intrinsic_status"] == "unavailable"
+    assert value["intrinsic_error"] == "fixture governed unavailable reason"
