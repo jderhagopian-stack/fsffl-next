@@ -29,9 +29,14 @@ from .latency_observability import install_latency_observability
 from .opportunity_search_cache import make_cached_opportunity_search
 from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
+from .player_intelligence import PlayerFutureForecastCache
 from .player_intelligence_routes import install_player_intelligence_routes
 from .phase1_latency import install_phase1_latency_routes
 from .private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
+from .vnext_future_forecast_provider import (
+    VNEXT_FORECAST_VERSION,
+    build_vnext_future_forecast_contract,
+)
 from .progressive_delivery_routes import install_progressive_delivery_routes
 from .quick_frontier_routes import install_quick_frontier_routes
 from .runtime import default_sleeper_state_loader
@@ -83,6 +88,13 @@ _forecast_loader = make_resilient_forecast_loader(_persistence_store)
 _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
     year_one_loader=make_preseason_baseline_authority_loader(_persistence_store),
     persistence_store=_persistence_store,
+    future_forecast_builder=build_vnext_future_forecast_contract,
+    future_forecast_model_version=VNEXT_FORECAST_VERSION,
+    future_missing_fact_family="vnext_future_forecast_coordinate",
+)
+_player_future_forecast_cache = PlayerFutureForecastCache(
+    future_forecast_builder=build_vnext_future_forecast_contract,
+    forecast_model_version=VNEXT_FORECAST_VERSION,
 )
 _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _shapley_intrinsic_loader,
@@ -158,6 +170,7 @@ install_player_intelligence_routes(
     runtime_store=_runtime_store,
     require_user=_webapp.require_beta_user,
     intrinsic_coordinator=_shapley_intrinsic_coordinator,
+    future_cache=_player_future_forecast_cache,
     persistence_store=_persistence_store,
 )
 install_focused_opportunity_routes(

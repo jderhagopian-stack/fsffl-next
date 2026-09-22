@@ -14,6 +14,7 @@ from fsffl.persistence.contracts import (
     utc_now,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
+from fsffl.product.p0_forecast_runtime import P0_FORECAST_VERSION
 from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
 from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatLine, SleeperWeeklyStatsSource
 from fsffl.state.models import LeagueRules, Player, Position
@@ -55,9 +56,16 @@ def _fantasy_ppg(points: float | None) -> float | None:
 
 
 class PlayerFutureForecastCache:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        future_forecast_builder=build_p0_future_forecast_contract,
+        forecast_model_version: str = P0_FORECAST_VERSION,
+    ) -> None:
         self._lock = RLock()
-        self._key: tuple[str, str, str] | None = None
+        self._future_forecast_builder = future_forecast_builder
+        self._forecast_model_version = str(forecast_model_version)
+        self._key: tuple[str, str, str, str] | None = None
         self._contract: FutureForecastContract | None = None
 
     def get(self, runtime: UserRuntimeContext) -> FutureForecastContract | None:
@@ -69,6 +77,7 @@ class PlayerFutureForecastCache:
             state.state_id,
             evidence.model_version,
             evidence.runtime_result.evaluation_as_of.isoformat(),
+            self._forecast_model_version,
         )
         with self._lock:
             if self._key == key and self._contract is not None:
@@ -79,7 +88,7 @@ class PlayerFutureForecastCache:
                 if row.metric == ForecastMetric.FANTASY_POINTS
                 and row.horizon == ForecastHorizon.SEASON
             )
-            materialized = build_p0_future_forecast_contract(
+            materialized = self._future_forecast_builder(
                 league_state=state,
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
