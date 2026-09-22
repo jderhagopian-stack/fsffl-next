@@ -35,6 +35,15 @@ class SleeperWeeklyStatLine:
     source_company: str | None = None
 
 
+@dataclass(frozen=True)
+class SleeperSeasonStatLine:
+    player_id: str
+    season: int
+    stats: Mapping[str, float]
+    captured_at: datetime
+    source_company: str | None = None
+
+
 class SleeperWeeklyStatsSource:
     """Acquire measured weekly NFL stat lines from Sleeper's stats feed.
 
@@ -43,7 +52,7 @@ class SleeperWeeklyStatsSource:
     """
 
     provider_name = "sleeper_stats"
-    source_version = "sleeper-weekly-nfl-stats-v1"
+    source_version = "sleeper-nfl-stats-v2:season-aggregate"
     base_url = "https://api.sleeper.app/v1/stats/nfl/regular"
     state_url = "https://api.sleeper.app/v1/state/nfl"
 
@@ -72,6 +81,53 @@ class SleeperWeeklyStatsSource:
             season_type=season_type,
             captured_at=captured.astimezone(UTC),
         )
+
+    def fetch_season(self, *, season: int) -> tuple[SleeperSeasonStatLine, ...]:
+        """Acquire provider-owned whole-season regular-season totals.
+
+        Sleeper's season aggregate endpoint returns the same numeric stat namespace
+        as the weekly endpoint plus a governed gp participation total when
+        available. Player Intelligence consumes this Data-layer shape directly so a
+        full career does not require 18 external requests per season.
+        """
+
+        if season < 2000:
+            raise ValueError("Sleeper stats season is invalid")
+        captured = self._clock()
+        if captured.tzinfo is None:
+            raise ValueError("Sleeper stats clock must be timezone-aware")
+        payload = self._http_get_json(f"{self.base_url}/{season}")
+        rows = _rows(payload)
+        output: list[SleeperSeasonStatLine] = []
+        for raw in rows:
+            raw_season = raw.get("season")
+            if raw_season not in (None, "") and int(raw_season) != season:
+                raise ValueError("Sleeper season stats response season mismatch")
+            player_id = str(raw.get("player_id") or "").strip()
+            if not player_id:
+                continue
+            stats_raw = raw.get("stats") if isinstance(raw.get("stats"), Mapping) else raw
+            stats: dict[str, float] = {}
+            for key, value in stats_raw.items():
+                if key in {"player_id", "season", "week", "company"} or isinstance(value, bool):
+                    continue
+                try:
+                    numeric = float(value)
+                except (TypeError, ValueError):
+                    continue
+                stats[str(key)] = numeric
+            if not stats:
+                continue
+            output.append(
+                SleeperSeasonStatLine(
+                    player_id=f"sleeper:player:{player_id}",
+                    season=season,
+                    stats=stats,
+                    captured_at=captured.astimezone(UTC),
+                    source_company=(str(raw.get("company")) if raw.get("company") else None),
+                )
+            )
+        return tuple(sorted(output, key=lambda item: item.player_id))
 
     def fetch_week(self, *, season: int, week: int) -> tuple[SleeperWeeklyStatLine, ...]:
         if season < 2000:

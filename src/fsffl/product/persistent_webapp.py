@@ -158,6 +158,7 @@ install_player_intelligence_routes(
     runtime_store=_runtime_store,
     require_user=_webapp.require_beta_user,
     intrinsic_coordinator=_shapley_intrinsic_coordinator,
+    persistence_store=_persistence_store,
 )
 install_focused_opportunity_routes(
     app,

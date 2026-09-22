@@ -9,6 +9,8 @@ from threading import RLock
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
+from fsffl.persistence.contracts import PersistenceStore
+
 from .intrinsic_background import IntrinsicBuildStatus, ShapleyIntrinsicBackgroundCoordinator
 from .player_intelligence import (
     PLAYER_INTELLIGENCE_CONTRACT_VERSION,
@@ -144,10 +146,11 @@ def install_player_intelligence_routes(
     intrinsic_coordinator: ShapleyIntrinsicBackgroundCoordinator,
     future_cache: PlayerFutureForecastCache | None = None,
     history_coordinator: PlayerHistoryBackgroundCoordinator | None = None,
+    persistence_store: PersistenceStore | None = None,
 ) -> None:
     future_forecasts = future_cache or PlayerFutureForecastCache()
     history = history_coordinator or PlayerHistoryBackgroundCoordinator(
-        PlayerHistoryService(),
+        PlayerHistoryService(persistence_store=persistence_store),
         max_workers=1,
     )
 
@@ -243,6 +246,14 @@ def install_player_intelligence_routes(
             "league_state_id": record.league_state_id,
             "player_id": player_id,
             "scoring_basis": "scored under current league rules",
+            "history_boundary": {
+                "minimum_season": 2010,
+                "current_season_included": False,
+                "basis": (
+                    "Sleeper detailed regular-season stats provider-supported "
+                    "2010+ range; only seasons with selected-player evidence returned"
+                ),
+            },
             "seasons": [
                 {
                     "season": row.season,
@@ -253,6 +264,8 @@ def install_player_intelligence_routes(
                     "position_rank_population": row.position_rank_population,
                     "rank_basis": row.rank_basis,
                     "stats": row.stats,
+                    "more_stats": row.more_stats,
+                    "games_played_basis": row.games_played_basis,
                     "scoring_basis": row.scoring_basis,
                     "source": row.source,
                     "source_version": row.source_version,

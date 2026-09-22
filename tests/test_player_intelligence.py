@@ -20,7 +20,11 @@ from fsffl.product.player_intelligence import (
     build_player_intelligence_overview,
 )
 from fsffl.product.runtime import UserRuntimeContext
-from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatLine
+from fsffl.providers.sleeper_weekly_stats import (
+    SleeperSeasonStatLine,
+    SleeperWeeklyStatLine,
+    SleeperWeeklyStatsSource,
+)
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -270,84 +274,301 @@ def test_player_overview_uses_forecast_owned_y1_y2_y3_and_fails_ppg_closed() -> 
 
 class _HistorySource:
     provider_name = "sleeper_stats"
-    source_version = "fixture-sleeper-weekly-v1"
+    source_version = "fixture-sleeper-season-v2"
 
     _stats = {
         "101": {
-            "gp": 1,
-            "pass_yd": 300,
-            "pass_td": 2,
-            "pass_int": 1,
-            "rush_yd": 20,
-            "rush_td": 1,
+            "gp": 17,
+            "pass_att": 550,
+            "pass_cmp": 365,
+            "pass_yd": 4300,
+            "pass_td": 31,
+            "pass_int": 10,
+            "rush_att": 54,
+            "rush_yd": 320,
+            "rush_td": 4,
+            "fum": 5,
+            "fum_lost": 2,
         },
         "102": {
-            "gp": 1,
-            "rush_yd": 80,
-            "rush_td": 1,
-            "rec": 4,
-            "rec_yd": 30,
-            "rec_td": 0,
+            "gp": 16,
+            "rush_att": 245,
+            "rush_yd": 1080,
+            "rush_td": 9,
+            "rec_tgt": 61,
+            "rec": 48,
+            "rec_yd": 390,
+            "rec_td": 3,
+            "fum": 2,
+            "fum_lost": 1,
         },
         "103": {
-            "gp": 1,
-            "rush_yd": 5,
-            "rush_td": 0,
-            "rec": 7,
-            "rec_yd": 100,
-            "rec_td": 1,
+            "gp": 17,
+            "rec_tgt": 132,
+            "rec": 88,
+            "rec_yd": 1240,
+            "rec_td": 9,
+            "rush_att": 7,
+            "rush_yd": 46,
+            "rush_td": 1,
+            "fum": 1,
+            "fum_lost": 0,
         },
         "104": {
-            "gp": 1,
-            "rush_yd": 0,
+            "gp": 15,
+            "rec_tgt": 98,
+            "rec": 70,
+            "rec_yd": 760,
+            "rec_td": 7,
+            "rush_att": 1,
+            "rush_yd": 4,
             "rush_td": 0,
-            "rec": 5,
-            "rec_yd": 60,
-            "rec_td": 1,
+            "fum": 1,
+            "fum_lost": 1,
         },
     }
+    _first_season = {"101": 2020, "102": 2021, "103": 2022, "104": 2024}
 
-    def fetch_week(self, *, season: int, week: int):
-        if week != 1:
-            return ()
-        return tuple(
-            SleeperWeeklyStatLine(
-                player_id=f"sleeper:player:{external_id}",
-                season=season,
-                week=week,
-                stats=stats,
-                captured_at=NOW,
-                source_company="fixture",
+    def __init__(self):
+        self.season_calls: list[int] = []
+
+    def fetch_season(self, *, season: int):
+        self.season_calls.append(season)
+        rows = []
+        for external_id, stats in self._stats.items():
+            if season < self._first_season[external_id]:
+                continue
+            rows.append(
+                SleeperSeasonStatLine(
+                    player_id=f"sleeper:player:{external_id}",
+                    season=season,
+                    stats=stats,
+                    captured_at=NOW,
+                    source_company="fixture",
+                )
             )
-            for external_id, stats in self._stats.items()
-        )
+        return tuple(rows)
 
 
 @pytest.mark.parametrize(
     ("player_id", "expected_keys"),
     (
-        ("sleeper:player:101", {"pass_yd", "pass_td", "pass_int", "rush_yd", "rush_td"}),
-        ("sleeper:player:102", {"rush_yd", "rush_td", "rec", "rec_yd", "rec_td"}),
-        ("sleeper:player:103", {"rush_yd", "rush_td", "rec", "rec_yd", "rec_td"}),
-        ("sleeper:player:104", {"rush_yd", "rush_td", "rec", "rec_yd", "rec_td"}),
+        (
+            "sleeper:player:101",
+            {
+                "pass_att",
+                "pass_cmp",
+                "pass_yd",
+                "pass_td",
+                "pass_int",
+                "rush_att",
+                "rush_yd",
+                "rush_td",
+                "fum",
+                "fum_lost",
+            },
+        ),
+        (
+            "sleeper:player:102",
+            {
+                "rush_att",
+                "rush_yd",
+                "rush_td",
+                "rec_tgt",
+                "rec",
+                "rec_yd",
+                "rec_td",
+                "fum",
+                "fum_lost",
+            },
+        ),
+        (
+            "sleeper:player:103",
+            {
+                "rec_tgt",
+                "rec",
+                "rec_yd",
+                "rec_td",
+                "rush_att",
+                "rush_yd",
+                "rush_td",
+                "fum",
+                "fum_lost",
+            },
+        ),
+        (
+            "sleeper:player:104",
+            {
+                "rec_tgt",
+                "rec",
+                "rec_yd",
+                "rec_td",
+                "rush_att",
+                "rush_yd",
+                "rush_td",
+                "fum",
+                "fum_lost",
+            },
+        ),
     ),
 )
-def test_history_reuses_sleeper_actuals_with_current_scoring_and_provenance(
+def test_history_exposes_source_supported_position_box_stats(
     player_id: str,
     expected_keys: set[str],
 ) -> None:
     runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
-    service = PlayerHistoryService(source=_HistorySource(), max_workers=1)
+    source = _HistorySource()
+    service = PlayerHistoryService(source=source, max_workers=4, minimum_season=2020)
 
     rows = service.player_history(runtime, player_id)
 
-    assert [row.season for row in rows] == [2023, 2024, 2025]
-    assert all(row.games_played == 1 for row in rows)
-    assert all(row.fantasy_points > 0 for row in rows)
-    assert all(row.fantasy_ppg == pytest.approx(row.fantasy_points) for row in rows)
+    assert rows
     assert all(set(row.stats) == expected_keys for row in rows)
+    assert all(row.more_stats == {} for row in rows)
+    assert all(row.games_played > 0 for row in rows)
+    assert all(row.fantasy_ppg == pytest.approx(row.fantasy_points / row.games_played) for row in rows)
     assert all(row.scoring_basis == "scored under current league rules" for row in rows)
     assert all(row.source == "sleeper_stats" for row in rows)
-    assert all(row.source_version == "fixture-sleeper-weekly-v1" for row in rows)
+    assert all(row.source_version == "fixture-sleeper-season-v2" for row in rows)
+    assert all(row.games_played_basis == "provider season aggregate gp" for row in rows)
     assert all(row.position_rank is None for row in rows)
-    assert all("complete point-in-time historical position population" in (row.rank_basis or "") for row in rows)
+
+
+def test_full_career_history_is_not_capped_at_three_and_does_not_fabricate_young_seasons() -> None:
+    runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
+    service = PlayerHistoryService(source=_HistorySource(), max_workers=4, minimum_season=2020)
+
+    veteran = service.player_history(runtime, "sleeper:player:101")
+    young = service.player_history(runtime, "sleeper:player:104")
+
+    assert [row.season for row in veteran] == [2020, 2021, 2022, 2023, 2024, 2025]
+    assert len(veteran) > 3
+    assert [row.season for row in young] == [2024, 2025]
+
+
+def test_historical_fantasy_points_reconcile_to_current_league_scoring() -> None:
+    runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
+    service = PlayerHistoryService(source=_HistorySource(), max_workers=2, minimum_season=2025)
+
+    row = service.player_history(runtime, "sleeper:player:101")[0]
+
+    expected = 4300 * 0.04 + 31 * 4.0 - 10 * 2.0 + 320 * 0.1 + 4 * 6.0
+    assert row.fantasy_points == pytest.approx(expected)
+    assert row.games_played == 17
+
+
+def test_repeat_player_history_reuses_compatible_season_aggregates() -> None:
+    runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
+    source = _HistorySource()
+    service = PlayerHistoryService(source=source, max_workers=4, minimum_season=2020)
+
+    first = service.player_history(runtime, "sleeper:player:101")
+    call_count = len(source.season_calls)
+    second = service.player_history(runtime, "sleeper:player:102")
+
+    assert first and second
+    assert call_count == 6
+    assert len(source.season_calls) == call_count
+
+
+class _ArtifactStore:
+    def __init__(self):
+        self.records = {}
+
+    def get_reusable_artifact(self, key):
+        return self.records.get(key)
+
+    def put_artifact(self, record):
+        self.records[record.key] = record
+
+
+def test_history_season_aggregates_are_durably_reusable_across_service_instances() -> None:
+    runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
+    store = _ArtifactStore()
+    first_source = _HistorySource()
+    first_service = PlayerHistoryService(
+        source=first_source,
+        max_workers=2,
+        minimum_season=2025,
+        persistence_store=store,
+    )
+    assert first_service.player_history(runtime, "sleeper:player:101")
+    assert first_source.season_calls == [2025]
+
+    second_source = _HistorySource()
+    second_service = PlayerHistoryService(
+        source=second_source,
+        max_workers=2,
+        minimum_season=2025,
+        persistence_store=store,
+    )
+    assert second_service.player_history(runtime, "sleeper:player:102")
+    assert second_source.season_calls == []
+
+
+class _WeeklyNoGpSource:
+    provider_name = "sleeper_stats"
+    source_version = "fixture-weekly-no-gp"
+
+    def fetch_week(self, *, season: int, week: int):
+        stats = {"pass_yd": 0.0} if week == 1 else ({"pass_yd": 100.0} if week == 2 else None)
+        if stats is None:
+            return ()
+        return (
+            SleeperWeeklyStatLine(
+                player_id="sleeper:player:101",
+                season=season,
+                week=week,
+                stats=stats,
+                captured_at=NOW,
+                source_company="fixture",
+            ),
+        )
+
+
+def test_weekly_fallback_does_not_count_zero_non_participation_rows_as_games() -> None:
+    runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
+    service = PlayerHistoryService(
+        source=_WeeklyNoGpSource(),
+        max_workers=4,
+        minimum_season=2025,
+    )
+
+    row = service.player_history(runtime, "sleeper:player:101")[0]
+
+    assert row.games_played == 1
+    assert "non-zero measured-production fallback" in row.games_played_basis
+
+
+def test_sleeper_season_stats_source_preserves_provider_box_score_keys_and_gp() -> None:
+    seen = []
+
+    def getter(url):
+        seen.append(url)
+        return {
+            "101": {
+                "season": 2025,
+                "gp": 17,
+                "pass_att": 550,
+                "pass_cmp": 365,
+                "pass_yd": 4300,
+                "rush_att": 54,
+                "rec_tgt": 1,
+                "fum": 5,
+                "fum_lost": 2,
+            }
+        }
+
+    source = SleeperWeeklyStatsSource(http_get_json=getter, clock=lambda: NOW)
+    rows = source.fetch_season(season=2025)
+
+    assert seen == ["https://api.sleeper.app/v1/stats/nfl/regular/2025"]
+    assert len(rows) == 1
+    assert rows[0].stats["gp"] == 17
+    assert rows[0].stats["pass_att"] == 550
+    assert rows[0].stats["pass_cmp"] == 365
+    assert rows[0].stats["rush_att"] == 54
+    assert rows[0].stats["rec_tgt"] == 1
+    assert rows[0].stats["fum"] == 5
+    assert rows[0].stats["fum_lost"] == 2
+
