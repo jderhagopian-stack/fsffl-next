@@ -84,23 +84,24 @@ def _fixture(player_index: int = 0):
             ),
         ),
     )
-    raw = (
+    raw = tuple(
         ForecastObservation(
             player_id=player.player_id,
             position=player.position,
             horizon=ForecastHorizon.SEASON,
-            metric=ForecastMetric.RUSH_YARDS,
+            metric=metric,
             period_start=now,
             period_end=now + timedelta(days=180),
-            distribution=ForecastDistribution(
-                mean=float(source.standard_y1_points) * 10.0,
-                stddev=1.0,
-            ),
+            distribution=ForecastDistribution(mean=mean, stddev=1.0),
             source="fixture-raw",
             model_version="fixture-raw-v1",
             as_of=now,
             provenance=provenance,
-        ),
+        )
+        for metric, mean in (
+            (ForecastMetric.RUSH_YARDS, float(source.standard_y1_points) * 10.0),
+            (ForecastMetric.RUSH_TD, 0.0),
+        )
     )
     year_one = (
         ForecastObservation(
