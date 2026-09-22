@@ -34,15 +34,25 @@ class ForecastDistribution(FrozenModel):
     mean: float
     stddev: Annotated[float, Field(ge=0)]
     p10: float | None = None
+    p25: float | None = None
     p50: float | None = None
+    p75: float | None = None
     p90: float | None = None
 
     @model_validator(mode="after")
     def validate_quantiles(self) -> "ForecastDistribution":
-        supplied = [self.p10, self.p50, self.p90]
+        supplied = [
+            self.p10,
+            self.p25,
+            self.p50,
+            self.p75,
+            self.p90,
+        ]
         concrete = [value for value in supplied if value is not None]
         if concrete != sorted(concrete):
-            raise ValueError("forecast quantiles must be ordered p10 <= p50 <= p90")
+            raise ValueError(
+                "forecast quantiles must be ordered p10 <= p25 <= p50 <= p75 <= p90"
+            )
         return self
 
 
