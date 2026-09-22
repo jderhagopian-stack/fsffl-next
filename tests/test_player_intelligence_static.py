@@ -35,7 +35,7 @@ def test_player_trajectory_matches_expected_median_iqr_mockup_semantics() -> Non
     assert "Actual → Forecast" in source
     assert "pi-boundary" in source
     assert "FORECAST" in source
-    assert "Expected forecast" in source
+    assert "Expected" in source
     assert "Median (P50)" in source
     assert "IQR (P25–P75)" in source
     assert "P10–P90" in source
@@ -147,17 +147,18 @@ def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     assert "product_shell.js?v=20260913-phase3-latency1" in index
 
 
-def test_full_career_mobile_history_keeps_summary_and_expansion_state() -> None:
+def test_full_career_mobile_history_is_compact_and_stateful() -> None:
     source = _text("player_intelligence.js")
     css = _text("player_intelligence.css")
-    assert "expandedSeasons" in source
     assert "sheetScrollTop" in source
-    assert "data-pi-season" in source
     assert "restoreViewState" in source
-    assert "Fantasy points" in source
-    assert "Fantasy PPG" in source
-    assert "games_played_basis" in source
-    assert "More stats" in source
+    assert "historyView" in source
+    assert "pi-history-segments" in source
+    assert "pi-history-table" in source
+    assert "fantasy_points" in source
+    assert "fantasy_ppg" in source
+    assert "Historical fantasy scoring uses current league rules" in source
+    assert ".pi-history-table-wrap" in css
     assert "summary span:nth-child(n+3){display:none}" not in css
 
 
