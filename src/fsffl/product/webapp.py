@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.opportunity import WaiverMove
+from fsffl.state.history import StateSnapshotStore
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
@@ -22,6 +23,7 @@ from .background_jobs import IntelligenceJob, IntelligenceJobCoordinator, Intell
 from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
 from .frontier_runtime import build_negotiation_frontier
+from .league_atlas import build_league_atlas_payload
 from .intelligence_runtime import (
     build_forecast_lineup_analytics,
     build_state_only_league_view,
@@ -320,6 +322,8 @@ def create_app(
     runtime_store: PrivateBetaRuntimeStore | None = None,
     state_loader: StateLoader = default_sleeper_state_loader,
     forecast_loader: LiveForecastLoader = default_live_forecast_loader,
+    preseason_forecast_loader: LiveForecastLoader | None = None,
+    state_snapshot_store: StateSnapshotStore | None = None,
     simulation_loader: SimulationLoader = _default_simulation_loader,
     value_loader: LiveValueLoader = default_live_value_loader,
     trade_evaluator: TradeEvaluator | None = None,
@@ -728,6 +732,77 @@ def create_app(
             ),
             "team_views": [view.model_dump(mode="json") for view in enriched],
         }
+
+    @application.get("/api/league/atlas")
+    def league_atlas(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        """Compose the scan-first League Atlas without creating new model authority."""
+
+        runtime = store.get(user_id)
+        league_state = runtime.league_state
+        if league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+
+        preseason_views = None
+        preseason_as_of = None
+        preseason_reason = None
+        if preseason_forecast_loader is None:
+            preseason_reason = (
+                "Preserved preseason Forecast authority is not configured in this runtime."
+            )
+        elif state_snapshot_store is None:
+            preseason_reason = (
+                "Historical point-in-time State storage is unavailable; preseason player "
+                "Forecast evidence is not enough to fabricate a team expectation."
+            )
+        else:
+            try:
+                preseason_evidence = preseason_forecast_loader(league_state)
+                cutoff = preseason_evidence.runtime_result.evaluation_as_of
+                preseason_state = state_snapshot_store.latest_at_or_before(
+                    league_state.league.league_id,
+                    cutoff,
+                )
+                if preseason_state is None:
+                    preseason_reason = (
+                        "No canonical preseason State snapshot exists at or before the "
+                        "preserved Forecast cutoff."
+                    )
+                elif preseason_state.league.season != league_state.league.season:
+                    preseason_reason = (
+                        "The available historical State snapshot belongs to a different season."
+                    )
+                elif any(
+                    matchup.team_a_points is not None
+                    or matchup.team_b_points is not None
+                    for matchup in preseason_state.matchups
+                ):
+                    preseason_reason = (
+                        "The compatible historical State already contains scored games, so "
+                        "it is not used as a frozen preseason expectation."
+                    )
+                else:
+                    preseason_result = build_forecast_lineup_analytics(
+                        preseason_state,
+                        forecasts=(
+                            preseason_evidence.raw_forecasts
+                            + preseason_evidence.league_scored_forecasts
+                        ),
+                        forecast_model_version=preseason_evidence.model_version,
+                    )
+                    preseason_views = preseason_result.team_views
+                    preseason_as_of = preseason_state.as_of.isoformat()
+            except Exception as exc:
+                preseason_reason = (
+                    "Frozen preseason team expectation unavailable: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+
+        return build_league_atlas_payload(
+            runtime,
+            preseason_team_views=preseason_views,
+            preseason_as_of=preseason_as_of,
+            preseason_reason=preseason_reason,
+        )
 
     @application.get("/api/opportunities/workspace")
     def opportunity_workspace(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
