@@ -61,9 +61,12 @@ def test_player_intelligence_mobile_sheet_is_scrollable_and_tabs_accessible() ->
     css = _text("player_intelligence.css")
     source = _text("player_intelligence.js")
     assert "@media(max-width:620px)" in css
-    assert ".pi-sheet{inset:0;border-radius:0;padding:16px;max-width:none}" in css
-    assert ".pi-sheet" in css and "overflow:auto" in css
+    assert "height:100dvh" in css
+    assert "env(safe-area-inset-top)" in css
+    assert "env(safe-area-inset-bottom)" in css
+    assert ".pi-sheet" in css and "overflow-x:hidden" in css
     assert ".pi-tabs" in css and "overflow-x:auto" in css
+    assert "position:sticky" in css
     assert "MAX_POLLS=80" in source
     assert "Escape" in source
 
@@ -128,5 +131,47 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?pi=20260921-player-intelligence-corrective1&v=20260913-phase3-latency1" in index
-    assert "player_intelligence.css?pi=20260921-player-intelligence-corrective1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.js?pi=20260921-player-intelligence-career-mobile1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.css?pi=20260921-player-intelligence-career-mobile1&v=20260913-phase3-latency1" in index
+
+
+def test_full_career_mobile_history_keeps_summary_and_expansion_state() -> None:
+    source = _text("player_intelligence.js")
+    css = _text("player_intelligence.css")
+    assert "expandedSeasons" in source
+    assert "sheetScrollTop" in source
+    assert "data-pi-season" in source
+    assert "restoreViewState" in source
+    assert "Fantasy points" in source
+    assert "Fantasy PPG" in source
+    assert "games_played_basis" in source
+    assert "More stats" in source
+    assert "summary span:nth-child(n+3){display:none}" not in css
+
+
+def test_full_career_mobile_trajectory_is_horizontally_bounded_not_microscopic() -> None:
+    css = _text("player_intelligence.css")
+    assert "overflow-x:auto" in css
+    assert ".pi-bar-wrap{flex:0 0 52px;min-width:52px}" in css
+    assert "overscroll-behavior-x:contain" in css
+
+
+def test_historical_standard_stat_labels_cover_qb_rb_wr_te_box_score_fields() -> None:
+    source = _text("player_intelligence.js")
+    for token in (
+        "pass_att:'Pass att'",
+        "pass_cmp:'Completions'",
+        "pass_yd:'Pass yds'",
+        "pass_td:'Pass TD'",
+        "pass_int:'INT'",
+        "rush_att:'Rush att'",
+        "rush_yd:'Rush yds'",
+        "rush_td:'Rush TD'",
+        "rec_tgt:'Targets'",
+        "rec:'Receptions'",
+        "rec_yd:'Rec yds'",
+        "rec_td:'Rec TD'",
+        "fum:'Fumbles'",
+        "fum_lost:'Fumbles lost'",
+    ):
+        assert token in source
