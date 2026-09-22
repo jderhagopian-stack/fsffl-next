@@ -494,7 +494,9 @@ def build_vnext_future_forecast_contract(
             )
             ratio_nodes = frozen_vnext_ratio_nodes(position, year_index)
             p10 = _weighted_quantile(probabilities, state_means, ratio_nodes, 0.10)
+            p25 = _weighted_quantile(probabilities, state_means, ratio_nodes, 0.25)
             p50 = _weighted_quantile(probabilities, state_means, ratio_nodes, 0.50)
+            p75 = _weighted_quantile(probabilities, state_means, ratio_nodes, 0.75)
             p90 = _weighted_quantile(probabilities, state_means, ratio_nodes, 0.90)
             rows.append(
                 FuturePlayerHorizonForecast(
@@ -515,7 +517,9 @@ def build_vnext_future_forecast_contract(
                         anticipated,
                     ),
                     p10=p10,
+                    p25=p25,
                     p50=p50,
+                    p75=p75,
                     p90=p90,
                     scenarios=tuple(
                         FutureForecastScenario(
