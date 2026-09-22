@@ -52,6 +52,12 @@ VNEXT_STAGE_D_PLAYER_COUNT = 335
 VNEXT_STAGE_D_ROW_COUNT = 670
 VNEXT_RATIO_NODE_COUNT = 81
 VNEXT_RATIO_NODES_SHA256 = "738b5b51fe82ad5bad93b72852f3dc4e9ded1046f20330b5f417b755f6118e4a"
+VNEXT_CURRENT_SOURCE_COORDINATE = "preserved_preseason_2026_source_335"
+VNEXT_CURRENT_SOURCE_PLAYER_COUNT = 335
+VNEXT_CURRENT_SOURCE_REFRESH_AUTHORITY = "governed_annual_preseason_source_snapshot"
+VNEXT_NEW_PLAYER_POLICY = "fail_closed_until_governed_source_refresh"
+VNEXT_PROBABILITY_CANONICAL_SHA256_11DP = "ca99fb8bbd840a04e6698d15389136cc0b9061a082cbb10a7a3bd6d41697f706"
+VNEXT_STAGE_D_FORECAST_CANONICAL_SHA256_10DP = "3a17b1b02a5ce2610894bc5a0d934c21e2e937c507980df0219c92dc2c6679bf"
 VNEXT_STAGE_D_STATE_MEAN_SHARDS_SHA256 = {
     "QB:2": "572db17fac68318b36005dca3ff8a1c7cc7dec776a46e9601e105c1cc1d31f1e",
     "QB:3": "4a2cc1596c5272b416e2dd43546d2cea11be00c967124dc2236851eac67d2d45",
@@ -213,6 +219,205 @@ def _state_mean_shard_digest(
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+
+def _canonical_digest(rows: list[list[object]], *, digits: int) -> str:
+    normalized: list[list[object]] = []
+    for row in rows:
+        normalized.append(
+            [
+                row[0],
+                row[1],
+                *[
+                    round(float(value), digits)
+                    for value in row[2:]
+                ],
+            ]
+        )
+    encoded = json.dumps(
+        normalized,
+        sort_keys=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def vnext_shadow_identity() -> dict[str, object]:
+    """Replay the frozen 335 x Y2/Y3 Stage-D coordinate without product state.
+
+    This is a validation surface, not a second Forecast authority.  It proves the
+    shipped probability layer, conditional-state means and 81-node uncertainty
+    adapter reproduce the exact current-coordinate handoff to the preregistered
+    canonical precision.
+    """
+
+    p0 = build_p0_standard_future_materialization(
+        league_state=_frozen_source_league_state(),
+        standard_year_one=_frozen_source_year_one(),
+    )
+    probability_rows: list[list[object]] = []
+    forecast_rows: list[list[object]] = []
+    max_probability_mass_error = 0.0
+    max_expected_identity_error = 0.0
+    for player_id in sorted(p0.players):
+        player = p0.players[player_id]
+        position = str(player.source.position)
+        sleeper_external_id = player.source.sleeper_external_id
+        for horizon in (2, 3):
+            result = player.result_for(horizon)
+            probabilities = {
+                state: float(result.probabilities[state])
+                for state in STATE_NAMES
+            }
+            max_probability_mass_error = max(
+                max_probability_mass_error,
+                abs(sum(probabilities.values()) - 1.0),
+            )
+            means = {
+                "out": 0.0,
+                **dict(
+                    frozen_vnext_stage_d_state_means(
+                        position,
+                        horizon,
+                        sleeper_external_id,
+                    )
+                ),
+            }
+            expected = sum(
+                probabilities[state] * means[state]
+                for state in STATE_NAMES
+            )
+            identity = sum(
+                probabilities[state] * means[state]
+                for state in STATE_NAMES
+            )
+            max_expected_identity_error = max(
+                max_expected_identity_error,
+                abs(expected - identity),
+            )
+            ratio_nodes = frozen_vnext_ratio_nodes(position, horizon)
+            q10 = _weighted_quantile(probabilities, means, ratio_nodes, 0.10)
+            q50 = _weighted_quantile(probabilities, means, ratio_nodes, 0.50)
+            q90 = _weighted_quantile(probabilities, means, ratio_nodes, 0.90)
+            q99 = _weighted_quantile(probabilities, means, ratio_nodes, 0.99)
+            probability_rows.append(
+                [
+                    player_id,
+                    horizon,
+                    *[probabilities[state] for state in STATE_NAMES],
+                ]
+            )
+            forecast_rows.append(
+                [player_id, horizon, expected, q10, q50, q90, q99]
+            )
+    return {
+        "players": len(p0.players),
+        "rows": len(forecast_rows),
+        "probability_canonical_sha256_11dp": _canonical_digest(
+            probability_rows,
+            digits=11,
+        ),
+        "forecast_canonical_sha256_10dp": _canonical_digest(
+            forecast_rows,
+            digits=10,
+        ),
+        "max_probability_mass_error": max_probability_mass_error,
+        "max_expected_identity_error": max_expected_identity_error,
+    }
+
+
+def _frozen_source_league_state() -> LeagueState:
+    """Build the minimal canonical state needed for the frozen source replay."""
+
+    from datetime import UTC, datetime
+
+    from fsffl.state.models import League, LeagueRules, Player, PlayerState, ProviderRef, Provenance
+
+    sources = tuple(_frozen_source_rows())
+    now = datetime(2026, 9, 1, tzinfo=UTC)
+    provenance = Provenance(
+        source="fsffl:vnext_shadow_identity",
+        retrieved_at=now,
+        effective_at=now,
+        source_version=VNEXT_FORECAST_VERSION,
+    )
+    players = tuple(
+        Player(
+            player_id=source.current_player_id,
+            full_name=source.player_name,
+            position=Position(source.position),
+            provider_refs=(
+                ProviderRef(
+                    provider="sleeper",
+                    external_id=source.sleeper_external_id,
+                ),
+            ),
+        )
+        for source in sources
+    )
+    return LeagueState(
+        league=League(
+            league_id="fsffl:vnext-shadow",
+            name="vNext shadow identity",
+            season=P0_SOURCE_SEASON,
+            rules=LeagueRules(team_count=1, roster_size=1, lineup=(), scoring=()),
+        ),
+        as_of=now,
+        teams=(),
+        team_states=(),
+        players=players,
+        player_states=tuple(
+            PlayerState(
+                player_id=player.player_id,
+                as_of=now,
+                provenance=provenance,
+            )
+            for player in players
+        ),
+    )
+
+
+def _frozen_source_year_one() -> tuple[ForecastObservation, ...]:
+    """Expose the preserved standard/non-PPR source coordinate for parity only."""
+
+    from datetime import UTC, datetime, timedelta
+
+    from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric
+    from fsffl.state.models import Provenance
+
+    now = datetime(2026, 9, 1, tzinfo=UTC)
+    provenance = Provenance(
+        source="fsffl:vnext_shadow_identity",
+        retrieved_at=now,
+        effective_at=now,
+        source_version=VNEXT_FORECAST_VERSION,
+    )
+    return tuple(
+        ForecastObservation(
+            player_id=source.current_player_id,
+            position=Position(source.position),
+            horizon=ForecastHorizon.SEASON,
+            metric=ForecastMetric.FANTASY_POINTS,
+            period_start=now,
+            period_end=now + timedelta(days=180),
+            distribution=ForecastDistribution(
+                mean=float(source.standard_y1_points),
+                stddev=0.0,
+            ),
+            source="fsffl:vnext_shadow_identity",
+            model_version=VNEXT_FORECAST_VERSION,
+            as_of=now,
+            provenance=provenance,
+        )
+        for source in _frozen_source_rows()
+    )
+
+
+def _frozen_source_rows():
+    from .p0_forecast_runtime import frozen_p0_source_rows
+
+    return frozen_p0_source_rows()
+
+
 def build_vnext_future_forecast_contract(
     *,
     league_state: LeagueState,
@@ -343,6 +548,12 @@ def build_vnext_future_forecast_contract(
         "research_tag_object": VNEXT_RESEARCH_TAG_OBJECT,
         "stage_d_players": VNEXT_STAGE_D_PLAYER_COUNT,
         "stage_d_rows": VNEXT_STAGE_D_ROW_COUNT,
+        "stage_d_role": "frozen_2026_current_coordinate_and_validation_fixture",
+        "current_source_coordinate": VNEXT_CURRENT_SOURCE_COORDINATE,
+        "current_source_player_count": VNEXT_CURRENT_SOURCE_PLAYER_COUNT,
+        "current_source_refresh_authority": VNEXT_CURRENT_SOURCE_REFRESH_AUTHORITY,
+        "new_player_policy": VNEXT_NEW_PLAYER_POLICY,
+        "runtime_generalizes_beyond_frozen_source_coordinate": False,
         "state_probability_authority": "frozen_A2_equal_to_current_P0_within_3.33e-16",
         "conditional_state_mean_authority": "frozen_A2_stage_d_current_coordinate",
         "qb_within_state_family": "BURR12_M1",
