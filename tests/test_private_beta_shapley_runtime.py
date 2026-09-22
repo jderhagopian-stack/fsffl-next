@@ -34,6 +34,10 @@ from fsffl.product.p0_forecast_runtime import (
 from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
 from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from fsffl.product.runtime import UserRuntimeContext
+from fsffl.product.vnext_future_forecast_provider import (
+    VNEXT_FORECAST_VERSION,
+    build_vnext_future_forecast_contract,
+)
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -757,3 +761,35 @@ def test_persisted_intrinsic_contract_is_forecast_version_scoped_and_reused() ->
         f"{first.contract_version}|forecast=forecast-v1",
         f"{promoted.contract_version}|forecast=forecast-v2",
     }
+
+
+
+def test_promoted_vnext_shapley_consumes_vnext_y2_y3_and_preserves_y1_authority() -> None:
+    state, observation = _fixture()
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        future_forecast_builder=build_vnext_future_forecast_contract,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
+    )
+
+    contract = loader(_context(state, observation))
+
+    assert contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert contract.forecast_model_version == VNEXT_FORECAST_VERSION
+    estimate = contract.estimates[0]
+    assert estimate.diagnostic_h1.included_in_intrinsic is False
+    assert estimate.contributions[0].provenance.authority == (
+        "preserved_preseason_year1_forecast"
+    )
+    assert estimate.contributions[0].provenance.source == (
+        "fsffl:preseason_baseline_league_scored"
+    )
+    assert [
+        item.provenance.direct_i1_horizon
+        for item in estimate.contributions
+    ] == [None, 2, 3]
+    assert all(
+        VNEXT_FORECAST_VERSION in item.provenance.model_version
+        for item in estimate.contributions[1:]
+    )
