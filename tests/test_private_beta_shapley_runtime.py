@@ -31,6 +31,7 @@ from fsffl.product.p0_forecast_runtime import (
     P0_FORECAST_VERSION,
     frozen_p0_source_rows,
 )
+from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
 from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from fsffl.product.runtime import UserRuntimeContext
 from fsffl.state.models import (
@@ -674,3 +675,85 @@ def test_te_premium_outside_governed_scoring_coverage_fails_closed() -> None:
     )
     with pytest.raises(ValueError, match="unsupported rules"):
         derive_league_fantasy_point_forecasts(raw, rules=te_premium_rules)
+
+
+class _MemoryShapleyArtifactStore:
+    def __init__(self) -> None:
+        self.records = {}
+
+    def get_reusable_artifact(self, key):
+        return self.records.get(key)
+
+    def put_artifact(self, record) -> None:
+        self.records[record.key] = record
+
+
+def _versioned_future_builder(version: str, calls: list[str]):
+    def builder(**kwargs):
+        calls.append(version)
+        materialized = build_p0_future_forecast_contract(**kwargs)
+        contract = materialized.contract.model_copy(
+            update={
+                "forecast_model_version": version,
+                "forecasts": tuple(
+                    row.model_copy(update={"model_version": version})
+                    for row in materialized.contract.forecasts
+                ),
+            }
+        )
+        return SimpleNamespace(
+            contract=contract,
+            scoring_multipliers=materialized.scoring_multipliers,
+        )
+
+    return builder
+
+
+def test_persisted_intrinsic_contract_is_forecast_version_scoped_and_reused() -> None:
+    state, observation = _fixture()
+    context = _context(state, observation)
+    evidence_loader = lambda _state: _authority_evidence(observation)
+    store = _MemoryShapleyArtifactStore()
+    calls: list[str] = []
+
+    first_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=evidence_loader,
+        persistence_store=cast(Any, store),
+        future_forecast_builder=_versioned_future_builder("forecast-v1", calls),
+        future_forecast_model_version="forecast-v1",
+    )
+    first = first_loader(context)
+    assert first.forecast_model_version == "forecast-v1"
+    assert len(store.records) == 1
+    first_key = next(iter(store.records))
+    assert first_key.model_version.endswith("|forecast=forecast-v1")
+
+    # A fresh loader instance still resolves the Forecast input coordinate, then
+    # reuses the durable canonical Shapley contract rather than creating another
+    # artifact for the same league/state/Forecast coordinate.
+    same_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=evidence_loader,
+        persistence_store=cast(Any, store),
+        future_forecast_builder=_versioned_future_builder("forecast-v1", calls),
+        future_forecast_model_version="forecast-v1",
+    )
+    same = same_loader(context)
+    assert same == first
+    assert len(store.records) == 1
+
+    promoted_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=evidence_loader,
+        persistence_store=cast(Any, store),
+        future_forecast_builder=_versioned_future_builder("forecast-v2", calls),
+        future_forecast_model_version="forecast-v2",
+    )
+    promoted = promoted_loader(context)
+    assert promoted.forecast_model_version == "forecast-v2"
+    assert len(store.records) == 2
+    assert {
+        key.model_version
+        for key in store.records
+    } == {
+        f"{first.contract_version}|forecast=forecast-v1",
+        f"{promoted.contract_version}|forecast=forecast-v2",
+    }
