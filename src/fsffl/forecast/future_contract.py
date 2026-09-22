@@ -9,7 +9,7 @@ from pydantic import Field, field_validator, model_validator
 from fsffl.state.models import FrozenModel, Position
 
 
-FUTURE_FORECAST_CONTRACT_VERSION = "future-forecast-contract-v1"
+FUTURE_FORECAST_CONTRACT_VERSION = "future-forecast-contract-v2:iqr"
 
 
 class ForecastUncertaintyKind(StrEnum):
@@ -59,7 +59,9 @@ class FuturePlayerHorizonForecast(FrozenModel):
     uncertainty_kind: ForecastUncertaintyKind = ForecastUncertaintyKind.NONE
     stddev: Annotated[float | None, Field(ge=0.0)] = None
     p10: float | None = None
+    p25: float | None = None
     p50: float | None = None
+    p75: float | None = None
     p90: float | None = None
     scenarios: tuple[FutureForecastScenario, ...] = ()
     evidence_path: str | None = None
@@ -76,10 +78,21 @@ class FuturePlayerHorizonForecast(FrozenModel):
         if self.target_season != self.evaluation_season + self.year_index - 1:
             raise ValueError("future Forecast target season must align with year_index")
 
-        supplied_quantiles = [self.p10, self.p50, self.p90]
-        concrete_quantiles = [value for value in supplied_quantiles if value is not None]
+        supplied_quantiles = [
+            self.p10,
+            self.p25,
+            self.p50,
+            self.p75,
+            self.p90,
+        ]
+        concrete_quantiles = [
+            value for value in supplied_quantiles if value is not None
+        ]
         if concrete_quantiles != sorted(concrete_quantiles):
-            raise ValueError("future Forecast quantiles must be ordered p10 <= p50 <= p90")
+            raise ValueError(
+                "future Forecast quantiles must be ordered "
+                "p10 <= p25 <= p50 <= p75 <= p90"
+            )
 
         if self.uncertainty_kind == ForecastUncertaintyKind.DISCRETE_SCENARIOS:
             if not self.scenarios:
