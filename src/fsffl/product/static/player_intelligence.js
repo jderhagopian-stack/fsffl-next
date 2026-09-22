@@ -3,9 +3,9 @@
  */
 (function(){
   'use strict';
-  const VERSION='20260922-player-intelligence-trajectory-iqr1';
+  const VERSION='20260922-player-intelligence-north-star1';
   const POLL_MS=1500,MAX_POLLS=80;
-  let activeId=null,activeTab='overview',overview=null,history=null,generation=0,sheetScrollTop=0;
+  let activeId=null,activeTab='overview',overview=null,history=null,generation=0,sheetScrollTop=0,historyView=null;
   const expandedSeasons=new Set();
 
   const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
@@ -26,8 +26,8 @@
     return root;
   }
   function sheet(){return ensure().querySelector('.pi-sheet')}
-  function close(){const root=ensure();root.hidden=true;document.body.classList.remove('pi-open');activeId=null;activeTab='overview';overview=null;history=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1}
-  function open(playerId){const id=normalizedPlayerId(playerId);if(!id)return;activeId=id;activeTab='overview';overview=null;history=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Forecast, Value and History load independently.</span></div>';void loadOverview(g,id);void loadHistory(g,id)}
+  function close(){const root=ensure();root.hidden=true;document.body.classList.remove('pi-open');activeId=null;activeTab='overview';overview=null;history=null;historyView=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1}
+  function open(playerId){const id=normalizedPlayerId(playerId);if(!id)return;activeId=id;activeTab='overview';overview=null;history=null;historyView=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Forecast, Value and History load independently.</span></div>';void loadOverview(g,id);void loadHistory(g,id)}
 
   async function loadOverview(g,id){
     try{
@@ -80,7 +80,7 @@
   function chart(){
     const rows=trajectoryRows();if(!rows.length)return'<div class="pi-empty">Trajectory data is unavailable.</div>';
     const values=[];rows.forEach(row=>[row.expected,row.median,row.p25,row.p75,row.p10,row.p90].forEach(value=>{if(finite(value))values.push(value)}));
-    const maximum=Math.max(...values,1),width=Math.max(540,96+rows.length*72),height=260,pad={left:44,right:20,top:24,bottom:40},plotW=width-pad.left-pad.right,plotH=height-pad.top-pad.bottom,step=rows.length>1?plotW/(rows.length-1):0;
+    const maximum=Math.max(...values,1),width=Math.max(520,90+rows.length*64),height=260,pad={left:44,right:20,top:24,bottom:40},plotW=width-pad.left-pad.right,plotH=height-pad.top-pad.bottom,step=rows.length>1?plotW/(rows.length-1):0;
     const x=index=>pad.left+(rows.length>1?index*step:plotW/2),y=value=>pad.top+plotH-(Math.max(0,value)/maximum)*plotH;
     const indexed=rows.map((row,index)=>({row,index})),actual=indexed.filter(item=>item.row.kind==='actual'),forecast=indexed.filter(item=>item.row.kind==='forecast');
     const points=(subset,key)=>subset.filter(item=>finite(item.row[key])).map(item=>`${x(item.index).toFixed(1)},${y(item.row[key]).toFixed(1)}`).join(' ');
@@ -91,7 +91,7 @@
     const expectedLine=forecast.length?`<polyline class="pi-expected-line" points="${points(forecast,'expected')}"></polyline>`:'';
     const medianLine=forecast.some(item=>finite(item.row.median))?`<polyline class="pi-median-line" points="${points(forecast,'median')}"></polyline>`:'';
     const dots=indexed.map(item=>{const row=item.row,px=x(item.index),py=y(row.expected),title=`${row.season} · ${row.kind==='actual'?'Actual':'Expected'} ${num(row.expected,1)} pts${finite(row.median)?` · Median ${num(row.median,1)}`:''}${finite(row.p25)&&finite(row.p75)?` · IQR ${num(row.p25,1)}–${num(row.p75,1)}`:''}`;return `<g><title>${esc(title)}</title><circle class="pi-chart-point ${row.kind}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4"></circle>${finite(row.median)&&Math.abs(row.median-row.expected)>.01?`<circle class="pi-chart-point median" cx="${px.toFixed(1)}" cy="${y(row.median).toFixed(1)}" r="3"></circle>`:''}<text class="pi-season-label" x="${px.toFixed(1)}" y="${height-14}" text-anchor="middle">${esc(row.season)}</text></g>`}).join('');
-    return `<div class="pi-trajectory-scroll"><svg class="pi-trajectory-svg" viewBox="0 0 ${width} ${height}" style="min-width:${width}px" role="img" aria-label="Career trajectory actual seasons followed by governed forecast seasons">${grid}${band('p10','p90','pi-outer-band')}${band('p25','p75','pi-iqr-band')}${boundary!==null?`<line class="pi-boundary" x1="${boundary.toFixed(1)}" x2="${boundary.toFixed(1)}" y1="${pad.top}" y2="${pad.top+plotH}"></line><text class="pi-phase-label-svg" x="${(boundary+8).toFixed(1)}" y="${pad.top+10}">FORECAST</text><text class="pi-phase-label-svg actual" x="${(boundary-8).toFixed(1)}" y="${pad.top+10}" text-anchor="end">ACTUAL</text>`:''}${actualLine}${expectedLine}${medianLine}${dots}</svg></div><div class="pi-chart-key"><span><i class="actual-line"></i>Actual</span><span><i class="expected-line"></i>Expected forecast</span><span><i class="median-line"></i>Median (P50)</span><span><i class="iqr"></i>IQR (P25–P75)</span><span><i class="outer"></i>P10–P90</span></div>`;
+    const minWidth=rows.length>10?Math.min(980,width):0;return `<div class="pi-trajectory-frame"><div class="pi-trajectory-scroll"><svg class="pi-trajectory-svg" viewBox="0 0 ${width} ${height}" ${minWidth?`style="min-width:${minWidth}px"`:''} role="img" aria-label="Career trajectory actual seasons followed by governed forecast seasons">${grid}${band('p10','p90','pi-outer-band')}${band('p25','p75','pi-iqr-band')}${boundary!==null?`<line class="pi-boundary" x1="${boundary.toFixed(1)}" x2="${boundary.toFixed(1)}" y1="${pad.top}" y2="${pad.top+plotH}"></line><text class="pi-phase-label-svg" x="${(boundary+8).toFixed(1)}" y="${pad.top+10}">FORECAST</text><text class="pi-phase-label-svg actual" x="${(boundary-8).toFixed(1)}" y="${pad.top+10}" text-anchor="end">ACTUAL</text>`:''}${actualLine}${expectedLine}${medianLine}${dots}</svg></div><div class="pi-chart-key"><span><i class="actual-line"></i>Actual</span><span><i class="expected-line"></i>Expected</span><span><i class="median-line"></i>Median (P50)</span><span><i class="iqr"></i>IQR (P25–P75)</span><span><i class="outer"></i>P10–P90</span></div></div>`;
   }
   const statLabels={pass_att:'Pass att',pass_cmp:'Completions',pass_yd:'Pass yds',pass_td:'Pass TD',pass_int:'INT',rush_att:'Rush att',rush_yd:'Rush yds',rush_td:'Rush TD',rec_tgt:'Targets',rec:'Receptions',rec_yd:'Rec yds',rec_td:'Rec TD',fum:'Fumbles',fum_lost:'Fumbles lost'};
   function statGrid(stats){return Object.entries(stats||{}).filter(([,value])=>finite(value)).map(([key,value])=>`<span><small>${esc(statLabels[key]||key)}</small><b>${num(value,key.includes('yd')||key.includes('att')||key==='pass_cmp'||key==='rec_tgt'||key==='rec'?0:1)}</b></span>`).join('')}
@@ -99,11 +99,29 @@
     const primary=statGrid(row?.stats||{}),more=statGrid(row?.more_stats||{});
     return `${primary}${more?`<details class="pi-more-stats"><summary>More stats</summary><div class="pi-stat-grid pi-stat-grid-more">${more}</div></details>`:''}`;
   }
+  const historyDefinitions={
+    passing:{label:'Passing',columns:[['pass_yd','Pass yds'],['pass_td','Pass TD'],['pass_int','INT']]},
+    rushing:{label:'Rushing',columns:[['rush_yd','Rush yds'],['rush_td','Rush TD'],['rush_att','Rush att']]},
+    receiving:{label:'Receiving',columns:[['rec','Rec'],['rec_yd','Rec yds'],['rec_td','Rec TD']]},
+    fantasy:{label:'Fantasy',columns:[['fantasy_points','FPTS'],['fantasy_ppg','PPG']]},
+  };
+  function historyRows(){return history?.status==='ready'?[...(history.seasons||[])].sort((a,b)=>b.season-a.season):[]}
+  function historyStat(row,key){if(key==='fantasy_points'||key==='fantasy_ppg')return row[key];return row?.stats?.[key]}
+  function availableHistoryViews(rows){
+    const views=[];
+    for(const key of ['passing','rushing','receiving']){const def=historyDefinitions[key];if(rows.some(row=>def.columns.some(([field])=>finite(historyStat(row,field)))))views.push(key)}
+    views.push('fantasy');return views;
+  }
+  function defaultHistoryView(views){const pos=overview?.player?.position,preferred=pos==='QB'?'passing':pos==='RB'?'rushing':['WR','TE'].includes(pos)?'receiving':'fantasy';return views.includes(preferred)?preferred:views[0]}
   function historyTable(){
     if(!history||history.status==='loading')return'<div class="pi-loading-inline"><i></i>Loading historical actuals…</div>';
     if(history.status!=='ready')return`<div class="pi-empty"><strong>Historical actuals unavailable.</strong><p>${esc(history.message||'No canonical history is available.')}</p></div>`;
-    const rows=[...(history.seasons||[])].sort((a,b)=>b.season-a.season);if(!rows.length)return'<div class="pi-empty">No prior-season actuals were returned for this player.</div>';
-    return `<div class="pi-history-list">${rows.map(row=>`<details class="pi-history-row" data-pi-season="${row.season}" ${expandedSeasons.has(String(row.season))?'open':''}><summary><span><strong>${row.season}</strong><small>${row.games_played} GP</small></span><span><small>Fantasy points</small><b>${num(row.fantasy_points,1)}</b></span><span><small>Fantasy PPG</small><b>${num(row.fantasy_ppg,1)}</b></span>${row.position_rank?`<span><small>Position rank</small><b>#${row.position_rank}</b></span>`:''}</summary><div class="pi-stat-grid">${positionStats(row)}</div><p class="pi-foot">${esc(row.scoring_basis)} · GP: ${esc(row.games_played_basis||'basis unavailable')} · ${esc(row.source)} / ${esc(row.source_version)}${row.rank_basis?` · ${esc(row.rank_basis)}`:''}</p></details>`).join('')}</div>`;
+    const rows=historyRows();if(!rows.length)return'<div class="pi-empty pi-empty-compact">No prior-season actuals were returned for this player.</div>';
+    const views=availableHistoryViews(rows);if(!historyView||!views.includes(historyView))historyView=defaultHistoryView(views);const def=historyDefinitions[historyView];
+    const segments=`<div class="pi-history-segments" role="tablist" aria-label="Historical stat category">${views.map(view=>`<button type="button" data-pi-history-view="${view}" class="${view===historyView?'active':''}">${historyDefinitions[view].label}</button>`).join('')}</div>`;
+    const head=`<tr><th>Season</th><th>GP</th>${def.columns.map(([,label])=>`<th>${esc(label)}</th>`).join('')}</tr>`;
+    const body=rows.map(row=>`<tr><td><strong>${row.season}</strong></td><td>${num(row.games_played,0)}</td>${def.columns.map(([key])=>`<td>${num(historyStat(row,key),key==='fantasy_ppg'?1:0)}</td>`).join('')}</tr>`).join('');
+    return `${segments}<div class="pi-history-table-wrap"><table class="pi-history-table"><thead>${head}</thead><tbody>${body}</tbody></table></div><p class="pi-foot">Historical fantasy scoring uses current league rules. Source/provenance remains governed and no unavailable stat field is invented.</p>`;
   }
   function forecastTable(){
     const rows=forecastRows();if(!rows.length)return'<div class="pi-empty">Governed Forecast trajectory unavailable.</div>';
@@ -117,14 +135,29 @@
   function valueRead(){
     const v=overview?.value||{},gap=finite(v.intrinsic_value_index)&&finite(v.broad_market_value_index)?v.intrinsic_value_index-v.broad_market_value_index:null;
     if(!finite(gap)){const reason=intrinsicReason(v);return reason?`FSFFL Intrinsic unavailable: ${reason}`:'Comparison is unavailable until both governed lenses are ready.'}
-    if(Math.abs(gap)<250)return'Broad Market and FSFFL Intrinsic are broadly aligned on the shared display ruler.';
-    return gap>0?'FSFFL Intrinsic is higher than Broad Market — investigate whether market price understates the football economics.':'Broad Market is higher than FSFFL Intrinsic — investigate whether market demand exceeds the football-economic read.';
+    if(Math.abs(gap)<250)return'Broad Market and FSFFL Intrinsic are closely aligned on the shared display ruler.';
+    return gap>0?'FSFFL Intrinsic above Broad Market.':'FSFFL Intrinsic below Broad Market.';
   }
   function intrinsicDisplay(v){if(finite(v?.intrinsic_value_index))return idx(v.intrinsic_value_index);if(['queued','running'].includes(v?.intrinsic_status))return'Preparing…';return'Unavailable'}
-  function valueCards(){
-    const v=overview?.value||{},reason=intrinsicReason(v);
-    return `<div class="pi-value-grid"><article><small>Broad Market</small><strong>${idx(v.broad_market_value_index)}</strong><span>0–10,000 Value Index</span><em>${pct(v.broad_market_percentile)}</em></article><article><small>FSFFL Intrinsic</small><strong>${intrinsicDisplay(v)}</strong><span>0–10,000 Value Index</span><em class="pi-value-reason">${finite(v.intrinsic_percentile)?pct(v.intrinsic_percentile):esc(reason||'Governed value ready')}</em></article></div><div class="pi-value-read"><strong>${esc(valueRead())}</strong><p>Same presentation ruler; separate underlying authorities. This is not a buy/sell command.</p></div>`;
+  function valueGauge(value){const ratio=finite(value)?Math.max(0,Math.min(1,value/10000)):0;return `<span class="pi-value-gauge" aria-hidden="true">${[.2,.4,.6,.8,1].map((threshold,index)=>`<i class="${ratio>=threshold-.12?'on':''}" style="height:${8+index*4}px"></i>`).join('')}</span>`}
+  function valueCard(label,value,percentile){
+    const shown=finite(value)?idx(value):label==='FSFFL Intrinsic'?intrinsicDisplay(overview?.value||{}):'—';
+    const support=finite(percentile)?pct(percentile):label==='FSFFL Intrinsic'?esc(intrinsicReason(overview?.value||{})||'Governed value ready'):'—';
+    return `<article class="pi-value-card"><div class="pi-value-card-copy"><small>${esc(label)}</small><strong>${shown}</strong><span>0–10,000 Value Index</span><em>${support}</em></div>${valueGauge(value)}</article>`;
   }
+  function valueComparison(){
+    const v=overview?.value||{},market=v.broad_market_value_index,intrinsic=v.intrinsic_value_index;
+    if(!finite(market)||!finite(intrinsic))return `<div class="pi-compare-card unavailable"><span class="pi-compare-icon">!</span><div><strong>Value comparison unavailable</strong><p>${esc(intrinsicReason(v)||'Both governed lenses must be ready before comparison.')}</p></div></div>`;
+    const gap=intrinsic-market,relative=Math.abs(gap)/Math.max(1,(intrinsic+market)/2),aligned=relative<.04,up=gap>0;
+    const headline=aligned?'Broad Market and FSFFL Intrinsic are closely aligned.':`FSFFL Intrinsic ${up?'above':'below'} Broad Market.`;
+    return `<div class="pi-compare-card"><span class="pi-compare-icon">${aligned?'↔':up?'↑':'↓'}</span><div><strong>${esc(headline)}</strong><p>Both values use the shared 0–10,000 presentation ruler while remaining separate governed lenses. This is not a buy/sell command.</p></div></div>`;
+  }
+  function projectionCard(){
+    const row=y1(),f=overview?.forecast||{},fallback=f.current_evidence_basis==='preseason_baseline';
+    return `<article class="pi-summary-card"><div><small>Season Projection</small><strong>${num(row?.fantasy_points,1)}</strong><span>fantasy points</span><em>${finite(row?.fantasy_ppg)?`${num(row.fantasy_ppg,1)} PPG`:'PPG unavailable'}</em></div><span class="pi-authority-pill ${fallback?'fallback':''}">${fallback?'Preseason fallback':'Governed Forecast'}</span></article>`;
+  }
+  function overviewCards(){const v=overview?.value||{};return `<div class="pi-summary-grid">${projectionCard()}${valueCard('Broad Market',v.broad_market_value_index,v.broad_market_percentile)}${valueCard('FSFFL Intrinsic',v.intrinsic_value_index,v.intrinsic_percentile)}</div>`}
+  function valueCards(){const v=overview?.value||{};return `<div class="pi-value-stack">${valueCard('Broad Market',v.broad_market_value_index,v.broad_market_percentile)}${valueCard('FSFFL Intrinsic',v.intrinsic_value_index,v.intrinsic_percentile)}</div>${valueComparison()}`}
   function forecastProvenance(){
     const f=overview?.forecast||{},basis=f.current_evidence_basis||'unavailable',fallback=basis==='preseason_baseline';
     return `<div class="pi-provenance ${fallback?'fallback':''}"><strong>${fallback?'Preserved Preseason Forecast fallback':'Current governed Forecast'}</strong><span>Evidence basis: ${esc(basis)} · as of ${esc(f.current_as_of||'—')}</span><span>Sources: ${esc((f.successful_source_ids||[]).join(', ')||'preserved / unavailable')}</span></div>`;
@@ -139,22 +172,24 @@
     requestAnimationFrame(()=>{host.scrollTop=sheetScrollTop});
   }
   function render(){
-    if(!overview)return;captureViewState();const p=overview.player,v=overview.value||{},first=y1();
-    sheet().innerHTML=`<button class="pi-close" data-pi-close aria-label="Close">×</button>
-      <header class="pi-player-head"><div class="pi-avatar">${esc((p.full_name||'?').split(' ').map(x=>x[0]).slice(0,2).join(''))}</div><div><p class="eyebrow">Player Intelligence</p><h2>${esc(p.full_name)}</h2><span>${esc(p.position)} · ${esc(p.nfl_team||'FA')} · age ${esc(p.age_years??'—')}</span></div></header>
+    if(!overview)return;captureViewState();const p=overview.player,v=overview.value||{};
+    sheet().innerHTML=`<button class="pi-close" data-pi-close aria-label="Close Player Intelligence">×</button>
+      <header class="pi-player-head"><div class="pi-avatar">${esc((p.full_name||'?').split(' ').map(x=>x[0]).slice(0,2).join(''))}</div><div class="pi-player-identity"><p class="eyebrow">Player Intelligence</p><h2>${esc(p.full_name)}</h2><span>${esc(p.position)} · ${esc(p.nfl_team||'FA')} · age ${esc(p.age_years??'—')}</span></div></header>
       <nav class="pi-tabs" role="tablist"><button data-pi-tab="overview" class="${tabClass('overview')}">Overview</button><button data-pi-tab="career" class="${tabClass('career')}">Career & Forecast</button><button data-pi-tab="value" class="${tabClass('value')}">Value</button><button data-pi-tab="methods" class="${tabClass('methods')}">Methods / Evidence</button></nav>
       <div class="pi-tab ${tabClass('overview')}" data-pi-panel="overview">
-        ${forecastProvenance()}
-        <div class="pi-overview-grid"><article><small>Season Projection</small><strong>${num(first?.fantasy_points,1)}</strong><span>fantasy pts</span><em>${finite(first?.fantasy_ppg)?`${num(first.fantasy_ppg,1)} PPG`:'PPG unavailable'}</em></article><article><small>Broad Market</small><strong>${idx(v.broad_market_value_index)}</strong><span>Value Index</span><em>${pct(v.broad_market_percentile)}</em></article><article><small>FSFFL Intrinsic</small><strong>${intrinsicDisplay(v)}</strong><span>Value Index</span><em>${finite(v.intrinsic_percentile)?pct(v.intrinsic_percentile):esc(intrinsicReason(v)||'Governed value ready')}</em></article></div>
-        <section class="pi-section"><div class="pi-section-head"><div><small>Career trajectory</small><h3>Actual → Forecast</h3></div></div>${chart()}</section>
+        ${overviewCards()}
+        ${finite(v.broad_market_value_index)&&finite(v.intrinsic_value_index)?valueComparison():''}
+        <section class="pi-section pi-trajectory-section"><div class="pi-section-head"><div><small>Career trajectory</small><h3>Actual → Forecast</h3></div><button type="button" class="pi-drill-button" data-pi-jump="career">Open detail</button></div>${chart()}</section>
       </div>
-      <div class="pi-tab ${tabClass('career')}" data-pi-panel="career"><section class="pi-section"><div class="pi-section-head"><div><small>Career & Forecast</small><h3>Full career actuals through Year 3</h3></div></div>${chart()}</section><section class="pi-section"><h3>Forecast details</h3>${forecastTable()}</section><section class="pi-section"><h3>Historical actuals</h3>${historyTable()}</section></div>
+      <div class="pi-tab ${tabClass('career')}" data-pi-panel="career"><section class="pi-section pi-career-hero"><div class="pi-section-head"><div><small>Career & Forecast</small><h3>Career trajectory: Actual → Forecast</h3></div></div>${chart()}</section><section class="pi-section"><div class="pi-section-head"><div><small>Forecast details</small><h3>Governed future distribution</h3></div></div>${forecastTable()}</section><section class="pi-section"><div class="pi-section-head"><div><small>Historical stats</small><h3>Year-by-year production</h3></div></div>${historyTable()}</section></div>
       <div class="pi-tab ${tabClass('value')}" data-pi-panel="value">${valueCards()}<details class="pi-method"><summary>Why this value?</summary><p><strong>Raw Shapley:</strong> ${num(v.raw_shapley_marginal_points,1)} marginal fantasy-point units. This is audit detail, not projected points or market price.</p><p><strong>Display contract:</strong> ${esc(v.value_presentation?.contract_version||'unavailable')}. The shared Value Index is presentation-only and does not alter Broad Market, Intrinsic, Team Utility, or Trade Decision.</p><p><strong>League Market Value:</strong> unavailable by design.</p></details></div>
-      <div class="pi-tab ${tabClass('methods')}" data-pi-panel="methods">${forecastProvenance()}<div class="pi-method-grid"><article><small>Current Forecast model</small><strong>${esc(overview.forecast?.current_model_version||'—')}</strong></article><article><small>Value presentation</small><strong>${esc(v.value_presentation?.contract_version||'Unavailable')}</strong></article><article><small>History scoring</small><strong>${esc(history?.scoring_basis||'Scored under current league rules when loaded')}</strong></article><article><small>Intrinsic readiness</small><strong>${esc(v.intrinsic_status||'unavailable')}</strong><span>${esc(intrinsicReason(v)||v.intrinsic_status_reason||'Governed value available')}</span></article></div><p class="pi-foot">Raw Market and raw Shapley quantities are never subtracted. Future Y2/Y3 points come directly from Forecast authority; they are not inferred from Intrinsic.</p></div>`;
+      <div class="pi-tab ${tabClass('methods')}" data-pi-panel="methods">${forecastProvenance()}<div class="pi-method-grid"><article><small>Current Forecast model</small><strong>${esc(overview.forecast?.current_model_version||'—')}</strong><span>Y2/Y3 remain governed Forecast outputs.</span></article><article><small>Value presentation</small><strong>${esc(v.value_presentation?.contract_version||'Unavailable')}</strong><span>Shared ruler; separate authorities.</span></article><article><small>History scoring</small><strong>${esc(history?.scoring_basis||'Scored under current league rules when loaded')}</strong><span>Historical actuals remain source-backed.</span></article><article><small>Intrinsic readiness</small><strong>${esc(v.intrinsic_status||'unavailable')}</strong><span>${esc(intrinsicReason(v)||v.intrinsic_status_reason||'Governed value available')}</span></article></div><p class="pi-foot">Raw Market and raw Shapley quantities are never subtracted. Future Y2/Y3 points come directly from Forecast authority; they are not inferred from Intrinsic.</p></div>`;
     bindTabs();restoreViewState();
   }
   function bindTabs(){
-    const host=sheet();host.querySelectorAll('[data-pi-tab]').forEach(button=>button.addEventListener('click',()=>{activeTab=button.dataset.piTab||'overview';host.querySelectorAll('[data-pi-tab]').forEach(x=>x.classList.toggle('active',x.dataset.piTab===activeTab));host.querySelectorAll('[data-pi-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.piPanel===activeTab))}));
+    const host=sheet();host.querySelectorAll('[data-pi-tab]').forEach(button=>button.addEventListener('click',()=>{activeTab=button.dataset.piTab||'overview';host.querySelectorAll('[data-pi-tab]').forEach(x=>x.classList.toggle('active',x.dataset.piTab===activeTab));host.querySelectorAll('[data-pi-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.piPanel===activeTab));host.scrollTop=0}));
+    host.querySelectorAll('[data-pi-history-view]').forEach(button=>button.addEventListener('click',()=>{historyView=button.dataset.piHistoryView||historyView;captureViewState();render()}));
+    const drill=host.querySelector('[data-pi-jump="career"]');if(drill)drill.addEventListener('click',()=>{activeTab='career';sheetScrollTop=0;render()});
   }
   document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]');if(!trigger)return;const id=normalizedPlayerId(trigger.dataset.playerIntelligenceId);if(!id)return;event.preventDefault();event.stopPropagation();open(id)},true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!ensure().hidden)close()});
