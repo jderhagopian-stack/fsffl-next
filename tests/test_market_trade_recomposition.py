@@ -57,7 +57,7 @@ def test_single_trade_room_surfaces_useful_evidence_before_methods() -> None:
     source = _read(SCRIPT)
     css = _read(CSS)
     for phrase in (
-        "FSFFL Cardinal Value after cuts",
+        "Roster-adjusted package economics",
         "Expected wins",
         "Playoff odds",
         "First-place odds",

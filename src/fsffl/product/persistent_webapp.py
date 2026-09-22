@@ -29,6 +29,7 @@ from .latency_observability import install_latency_observability
 from .opportunity_search_cache import make_cached_opportunity_search
 from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
+from .player_intelligence_routes import install_player_intelligence_routes
 from .phase1_latency import install_phase1_latency_routes
 from .private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from .progressive_delivery_routes import install_progressive_delivery_routes
@@ -151,6 +152,12 @@ install_league_value_lens_routes(
     contract_loader=_shapley_intrinsic_loader,
     require_user=_webapp.require_beta_user,
     background_coordinator=_shapley_intrinsic_coordinator,
+)
+install_player_intelligence_routes(
+    app,
+    runtime_store=_runtime_store,
+    require_user=_webapp.require_beta_user,
+    intrinsic_coordinator=_shapley_intrinsic_coordinator,
 )
 install_focused_opportunity_routes(
     app,

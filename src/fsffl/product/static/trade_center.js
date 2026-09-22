@@ -74,7 +74,7 @@ function renderTradeAssetList(side){
     return true;
   });
   if(!assets.length){container.innerHTML='<p class="trade-empty">No matching assets.</p>';return}
-  assets.forEach(option=>{const button=document.createElement('button');button.type='button';button.className=`asset-option${selected.has(option.asset_ref)?' selected':''}`;button.innerHTML=`<span><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.detail||option.asset_kind)}</small></span>${tradeValueMarkup(option)}`;button.addEventListener('click',()=>toggleTradeAsset(side,option.asset_ref));container.appendChild(button)})
+  assets.forEach(option=>{const button=document.createElement('button');button.type='button';button.className=`asset-option${selected.has(option.asset_ref)?' selected':''}`;button.innerHTML=`<span><strong ${option.player_id?`data-player-intelligence-id="${escapeHtml(option.player_id)}"`:''}>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.detail||option.asset_kind)}</small></span>${tradeValueMarkup(option)}`;button.addEventListener('click',()=>toggleTradeAsset(side,option.asset_ref));container.appendChild(button)})
 }
 
 function updateAnalyzeTradeState(){const button=qs('#analyze-trade');if(!button)return;button.disabled=!(tradeUiState.counterpartyTeamId&&tradeUiState.focalSelected.size&&tradeUiState.counterpartySelected.size)}

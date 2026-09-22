@@ -4,11 +4,11 @@ from pathlib import Path
 def test_players_assets_explorer_consumes_existing_authoritative_endpoints() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
     assert "'/api/trade-center/browser'" in source
-    assert "'/api/values'" in source
-    assert "fsffl_cardinal_values" in source
-    assert "values.estimates" in source
-    assert "cardinalRow?.score" in source
-    assert "market?.distribution?.mean" in source
+    assert "'/api/league/team-views'" in source
+    assert "'/api/league/value-lenses'" in source
+    assert "broad_market_value_index" in source
+    assert "intrinsic_value_index" in source
+    assert "fsffl_cardinal_values" not in source
     assert "Search player, pick or team" in source
     assert "All positions" in source
     assert "All teams" in source
@@ -24,7 +24,7 @@ def test_players_assets_filter_state_survives_sort_redraw() -> None:
     assert "position.value=filters.position" in source
     assert "owner.value=filters.owner" in source
     assert "role.value=filters.role" in source
-    assert "renderPlayersAssetsExplorer(values)" in source
+    assert "renderPlayersAssetsExplorer(lenses)" in source
 
 
 def test_players_assets_prefers_full_nfl_season_projection() -> None:
@@ -41,13 +41,13 @@ def test_players_assets_adds_read_only_league_and_position_context() -> None:
     source = Path("src/fsffl/product/static/explorer.js").read_text(encoding="utf-8")
     assert "function explorerLeagueRank" in source
     assert "function explorerPositionRank" in source
-    assert "Your highest FSFFL Cardinal Value asset" in source
+    assert "Your highest Broad Market Value Index asset" in source
     assert "Your highest NFL season projection" in source
-    assert "league's top 20 by FSFFL Cardinal Value" in source
+    assert "league's top 20 by Broad Market Value Index" in source
     assert "Your team" in source
     assert "presentation ordering" in source
-    assert "not a new FSFFL score" in source
     assert "do not calculate new value, team utility, or action authority" in source
+    assert "FSFFL Cardinal Value" not in source
 
 
 def test_legacy_explorer_metrics_remain_read_only_until_terminal_replaces_them() -> None:

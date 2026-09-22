@@ -23,6 +23,8 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
+from fsffl.value.calibration import DataRightsClass
+from fsffl.value.cardinal import NativeMarketMagnitudeObservation
 from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
 from fsffl.value.models import (
     MarketPriceEstimate,
@@ -31,6 +33,28 @@ from fsffl.value.models import (
     ValueScale,
 )
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
+
+
+def _native_market_rows(now: datetime) -> tuple[NativeMarketMagnitudeObservation, ...]:
+    rows: list[NativeMarketMagnitudeObservation] = []
+    for source_id, values in {
+        "fixture-a": [float(index * index) for index in range(30)],
+        "fixture-b": [float(index**3 + 1) for index in range(30)],
+    }.items():
+        rows.extend(
+            NativeMarketMagnitudeObservation(
+                asset_id=f"{source_id}:{index}",
+                source_id=source_id,
+                native_scale_id=f"{source_id}-native",
+                value=value,
+                observed_at=now,
+                market_context_id="fixture-market",
+                rights_class=DataRightsClass.RUNTIME_ONLY,
+                source_version="fixture-v1",
+            )
+            for index, value in enumerate(values)
+        )
+    return tuple(rows)
 
 
 def _runtime() -> UserRuntimeContext:
@@ -116,6 +140,7 @@ def _runtime() -> UserRuntimeContext:
         roster_player_count=4,
         valued_roster_player_count=4,
         market_context_id="fixture-market",
+        native_magnitude_observations=_native_market_rows(now),
     )
     return UserRuntimeContext(
         user_id="u",
@@ -150,7 +175,7 @@ def test_percentile_ranks_center_ties_without_inventing_common_units() -> None:
     assert ranks == {"a": 0.125, "b": 0.5, "c": 0.5, "d": 0.875}
 
 
-def test_discovery_uses_rank_only_and_preserves_action_boundaries() -> None:
+def test_discovery_uses_shared_value_index_and_preserves_action_boundaries() -> None:
     runtime = _runtime()
     payload = build_intrinsic_market_discovery(
         runtime,
@@ -170,6 +195,8 @@ def test_discovery_uses_rank_only_and_preserves_action_boundaries() -> None:
     assert authority["league_market_value_available"] is False
     assert authority["team_utility_included"] is False
     assert authority["raw_value_subtraction_used"] is False
+    assert authority["shared_value_index_presentation_only"] is True
+    assert authority["display_value_index_subtraction_allowed"] is True
 
     rows = {row["player_id"]: row for row in payload["rows"]}
     # p2 is on the focal team and Intrinsic ranks it much higher than market,
@@ -178,6 +205,11 @@ def test_discovery_uses_rank_only_and_preserves_action_boundaries() -> None:
     assert rows["p2"]["focus_value"] == "player:p2"
     assert rows["p2"]["action_authority"] == "diagnostic_only"
     assert rows["p2"]["acceptance_probability"] is None
+    assert rows["p2"]["market_value_index"] is not None
+    assert rows["p2"]["intrinsic_value_index"] is not None
+    assert rows["p2"]["value_index_gap"] == (
+        rows["p2"]["intrinsic_value_index"] - rows["p2"]["market_value_index"]
+    )
     # p3 is owned by another team and is likewise a discovery-only target handoff.
     assert rows["p3"]["focus_intent"] == "target"
     assert rows["p3"]["focus_value"] == "player:p3"

@@ -54,7 +54,7 @@ def test_market_why_this_surfaced_uses_consumer_language_then_methods() -> None:
 
     assert "Why this surfaced" in source
     assert "Targets ${target}, currently #" in source
-    assert "close enough in current FSFFL Cardinal Value to be worth checking" in source
+    assert "close enough in governed package market economics to be worth checking" in source
     assert "still needs a full bilateral evaluation" in source
     assert "Methods & evidence" in source
     assert "diagnostic Search evidence, not an acceptance score" not in source

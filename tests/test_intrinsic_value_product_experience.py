@@ -44,11 +44,12 @@ def test_value_lens_uses_governed_intrinsic_api_and_does_not_rebrand_legacy_valu
     assert "clarifyLegacyLabels(){}" in script
 
 
-def test_value_lens_comparison_is_rank_only_and_not_a_fake_common_scale():
+def test_value_lens_uses_shared_display_scale_without_collapsing_raw_authority():
     script = _text("intrinsic_value_experience.js")
-    assert "percentile rank only as a presentation aid" in script
-    assert "Broad Market and Shapley Intrinsic use different units" in script
-    assert "does <strong>not</strong> subtract the raw numbers" in script
+    assert "same versioned 0-10,000 Value Index for presentation" in script
+    assert "Broad Market and Shapley Intrinsic use different raw units" in script
+    assert "Raw Market and raw Shapley quantities are never subtracted" in script
+    assert "percentile remains secondary" in script
     assert "not an automatic buy signal" in script
     assert "not an automatic sell signal" in script
 
@@ -111,7 +112,15 @@ global.NodeFilter={{SHOW_TEXT:4}};
 global.MutationObserver=class{{constructor(cb){{this.cb=cb}} observe(){{}}}};
 global.addEventListener=(name,handler)=>{{listeners[name]=handler}};
 global.setTimeout=(fn)=>{{fn();return 1}};
-global.api=()=>{{calls+=1;return new Promise(resolve=>resolvers.push(resolve))}};
+global.api=(path)=>{{
+  calls+=1;
+  if(path==='/api/league/value-lenses')return Promise.resolve({{
+    status:'ready',
+    players:[],
+    value_presentation:{{status:'ready',contract_version:'value-presentation-coordinate-v1'}}
+  }});
+  return new Promise(resolve=>resolvers.push(resolve));
+}};
 vm.runInThisContext(fs.readFileSync({script_path},'utf8'),{{filename:'intrinsic_value_experience.js'}});
 (async()=>{{
   const first=window.fsfflIntrinsicValueExperience.load();
@@ -126,6 +135,7 @@ vm.runInThisContext(fs.readFileSync({script_path},'utf8'),{{filename:'intrinsic_
   if(calls!==2)throw new Error('obsolete request repopulated cache or blocked a new request');
   resolvers.shift()({{status:'ready',contract_version:'current-contract',intrinsic_model_version:'shapley-current',forecast_model_version:'forecast-current',quantity_semantics:'raw_governed_shapley_marginal_fantasy_points',discount:.85,permutations:2048,coverage:{{missing_required_fact_families:[]}},estimates:[{{player_id:'current',raw_intrinsic_value:10,contributions:[]}}]}});
   await second;
+  if(calls!==3)throw new Error('current response did not load the shared Value presentation lens');
   if(!host.innerHTML.includes('current-contract'))throw new Error('current-context response did not render');
   if(host.innerHTML.includes('stale-contract'))throw new Error('stale response remained visible');
 }})().catch(error=>{{console.error(error);process.exit(1)}});
@@ -153,7 +163,7 @@ def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
     bootstrap = _text("league_position_strength.js")
     experience = _text("intrinsic_value_experience.js")
     shell_version = "20260913-phase3-latency1"
-    experience_version = "20260921-shapley-franchise2"
+    experience_version = "20260921-shapley-franchise3-value-index"
     assert f'/static/league_position_strength.js?v={shell_version}' in html
     assert f"const version='{experience_version}'" in bootstrap
     assert f"const VERSION='{experience_version}'" in experience
