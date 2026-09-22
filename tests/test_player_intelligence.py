@@ -146,7 +146,7 @@ def _forecast_observation(player_id: str, points: float) -> ForecastObservation:
         metric=ForecastMetric.FANTASY_POINTS,
         period_start=datetime(2026, 9, 1, tzinfo=UTC),
         period_end=datetime(2027, 2, 1, tzinfo=UTC),
-        distribution=ForecastDistribution(mean=points, stddev=30.0, p10=250.0, p50=300.0, p90=350.0),
+        distribution=ForecastDistribution(mean=points, stddev=30.0, p10=250.0, p25=280.0, p50=300.0, p75=325.0, p90=350.0),
         source="fsffl:fixture",
         model_version="fixture-y1-v1",
         as_of=NOW,
@@ -164,9 +164,11 @@ class _FutureContract:
                 central_expectation=280.0,
                 uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
                 stddev=None,
-                p10=None,
-                p50=None,
-                p90=None,
+                p10=120.0,
+                p25=210.0,
+                p50=280.0,
+                p75=335.0,
+                p90=380.0,
                 scenarios=(
                     FutureForecastScenario(
                         scenario_id="down",
@@ -194,9 +196,11 @@ class _FutureContract:
                 central_expectation=240.0,
                 uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
                 stddev=None,
-                p10=None,
-                p50=None,
-                p90=None,
+                p10=120.0,
+                p25=210.0,
+                p50=280.0,
+                p75=335.0,
+                p90=380.0,
                 scenarios=(
                     FutureForecastScenario(
                         scenario_id="down",
@@ -258,6 +262,11 @@ def test_player_overview_uses_forecast_owned_y1_y2_y3_and_fails_ppg_closed() -> 
     assert rows[0]["evidence_basis"] == "preseason_baseline"
     assert rows[1]["evidence_basis"] == "governed_future_forecast_contract"
     assert rows[1]["uncertainty"]["kind"] == "discrete_scenarios"
+    assert rows[0]["uncertainty"]["p25"] == 280.0
+    assert rows[0]["uncertainty"]["p75"] == 325.0
+    assert rows[1]["uncertainty"]["p25"] == 210.0
+    assert rows[1]["uncertainty"]["p50"] == 280.0
+    assert rows[1]["uncertainty"]["p75"] == 335.0
     assert [scenario["fantasy_points"] for scenario in rows[1]["uncertainty"]["scenarios"]] == [
         180.0,
         280.0,

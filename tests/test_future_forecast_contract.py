@@ -98,7 +98,9 @@ def test_contract_does_not_require_discrete_scenarios_for_future_versions() -> N
         source="fixture",
         uncertainty_kind=ForecastUncertaintyKind.QUANTILES,
         p10=70.0,
+        p25=100.0,
         p50=140.0,
+        p75=190.0,
         p90=230.0,
     )
     contract = FutureForecastContract(
@@ -109,3 +111,37 @@ def test_contract_does_not_require_discrete_scenarios_for_future_versions() -> N
         forecasts=(row,),
     )
     assert contract.forecasts[0].scenarios == ()
+
+
+
+def test_future_forecast_iqr_quantiles_must_remain_ordered() -> None:
+    with pytest.raises(ValidationError, match="p10 <= p25 <= p50 <= p75 <= p90"):
+        FuturePlayerHorizonForecast(
+            player_id="p1",
+            position=Position.WR,
+            evaluation_season=2026,
+            year_index=2,
+            target_season=2027,
+            central_expectation=120.0,
+            scoring_coordinate="league_points",
+            model_version="forecast-fixture-v2",
+            source="fixture",
+            uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
+            p10=40.0,
+            p25=100.0,
+            p50=90.0,
+            p75=160.0,
+            p90=220.0,
+            scenarios=(
+                FutureForecastScenario(
+                    scenario_id="out",
+                    probability=0.25,
+                    fantasy_points=0.0,
+                ),
+                FutureForecastScenario(
+                    scenario_id="active",
+                    probability=0.75,
+                    fantasy_points=160.0,
+                ),
+            ),
+        )

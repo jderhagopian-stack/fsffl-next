@@ -29,16 +29,25 @@ def test_player_intelligence_exposes_required_information_architecture() -> None
     assert "/history" in source
 
 
-def test_player_trajectory_distinguishes_actual_forecast_and_uncertainty() -> None:
+def test_player_trajectory_matches_expected_median_iqr_mockup_semantics() -> None:
     source = _text("player_intelligence.js")
     css = _text("player_intelligence.css")
     assert "Actual → Forecast" in source
-    assert "pi-forecast-boundary" in source
+    assert "pi-boundary" in source
     assert "FORECAST" in source
-    assert "Governed uncertainty / scenario range" in source
-    assert "pi-range" in source
-    assert ".pi-bar-wrap.pi-forecast-boundary" in css
-    assert ".pi-phase-label" in css
+    assert "Expected forecast" in source
+    assert "Median (P50)" in source
+    assert "IQR (P25–P75)" in source
+    assert "P10–P90" in source
+    assert "pi-expected-line" in source
+    assert "pi-median-line" in source
+    assert "pi-iqr-band" in source
+    assert ".pi-actual-line" in css
+    assert ".pi-expected-line" in css
+    assert ".pi-median-line" in css
+    assert ".pi-iqr-band" in css
+    assert ".pi-outer-band" in css
+    assert "pi-bar-wrap" not in source
 
 
 def test_forecast_ppg_fails_closed_without_expected_games() -> None:
@@ -108,11 +117,11 @@ def test_live_corrective_preserves_selected_tab_during_intrinsic_polling() -> No
 
 def test_live_corrective_starts_history_independently_of_intrinsic() -> None:
     source = _text("player_intelligence.js")
-    assert "void loadOverview(g);void loadHistory(g)" in source
-    overview_loader = source.split("async function loadOverview(g){", 1)[1].split(
-        "async function loadHistory(g){", 1
+    assert "void loadOverview(g,id);void loadHistory(g,id)" in source
+    overview_loader = source.split("async function loadOverview(g,id){", 1)[1].split(
+        "async function loadHistory(g,id){", 1
     )[0]
-    assert "loadHistory(g)" not in overview_loader
+    assert "loadHistory(g,id)" not in overview_loader
 
 
 def test_live_corrective_rejects_invalid_player_ids_before_fetch() -> None:
@@ -120,6 +129,8 @@ def test_live_corrective_rejects_invalid_player_ids_before_fetch() -> None:
     assert "normalizedPlayerId" in source
     assert "['null','undefined','none']" in source
     assert "const id=normalizedPlayerId(trigger.dataset.playerIntelligenceId);if(!id)return" in source
+    assert "encodeURIComponent(id)" in source
+    assert "encodeURIComponent(activeId)" not in source
 
 
 def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games() -> None:
@@ -131,8 +142,9 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?pi=20260921-player-intelligence-career-mobile1&v=20260913-phase3-latency1" in index
-    assert "player_intelligence.css?pi=20260921-player-intelligence-career-mobile1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.js?pi=20260922-player-intelligence-trajectory-iqr1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.css?pi=20260922-player-intelligence-trajectory-iqr1&v=20260913-phase3-latency1" in index
+    assert "product_shell.js?v=20260913-phase3-latency1" in index
 
 
 def test_full_career_mobile_history_keeps_summary_and_expansion_state() -> None:
@@ -152,7 +164,8 @@ def test_full_career_mobile_history_keeps_summary_and_expansion_state() -> None:
 def test_full_career_mobile_trajectory_is_horizontally_bounded_not_microscopic() -> None:
     css = _text("player_intelligence.css")
     assert "overflow-x:auto" in css
-    assert ".pi-bar-wrap{flex:0 0 52px;min-width:52px}" in css
+    assert ".pi-trajectory-scroll" in css
+    assert ".pi-trajectory-svg{height:240px;width:auto}" in css
     assert "overscroll-behavior-x:contain" in css
 
 
@@ -175,3 +188,23 @@ def test_historical_standard_stat_labels_cover_qb_rb_wr_te_box_score_fields() ->
         "fum_lost:'Fumbles lost'",
     ):
         assert token in source
+
+
+
+def test_intrinsic_never_falls_through_to_a_silent_dash() -> None:
+    source = _text("player_intelligence.js")
+    franchise = _text("my_team_dashboard.js")
+    assert "function intrinsicReason(v)" in source
+    assert "return'Unavailable'" in source
+    assert "intrinsic_error" in source
+    assert "intrinsic_status_reason" in source
+    assert "franchise-intrinsic-unavailable" in franchise
+    assert "Governed FSFFL Intrinsic is unavailable for the current league state." in franchise
+
+
+def test_forecast_detail_keeps_expected_as_centerline_and_does_not_relabel_it_p50() -> None:
+    source = _text("player_intelligence.js")
+    assert "Expected · governed economic centerline" in source
+    assert "<small>Median (P50)</small>" in source
+    assert "<small>IQR (P25–P75)</small>" in source
+    assert "<small>P10–P90</small>" in source
