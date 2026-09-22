@@ -86,7 +86,7 @@ body.pi-open{overflow:hidden}#player-intelligence-root{position:fixed;inset:0;z-
 .pi-trajectory-section{border-top:1px solid rgba(107,164,205,.12);padding-top:14px}.pi-career-hero{border-top:0;padding-top:0}
 .pi-trajectory-frame{border:1px solid rgba(107,164,205,.14);border-radius:13px;background:linear-gradient(180deg,rgba(9,24,40,.8),rgba(5,15,27,.72));overflow:hidden}
 .pi-trajectory-scroll{border:0;border-radius:0;background:transparent}
-.pi-trajectory-svg{height:270px;min-width:0!important}.pi-grid-line{stroke:rgba(130,169,199,.10)}.pi-axis-label,.pi-season-label{fill:#7f98ae;font-size:8px}
+.pi-trajectory-svg{height:270px;width:100%}.pi-grid-line{stroke:rgba(130,169,199,.10)}.pi-axis-label,.pi-season-label{fill:#7f98ae;font-size:8px}
 .pi-phase-label-svg{fill:#50d5fa;font-size:7px;font-weight:800;letter-spacing:.14em}.pi-phase-label-svg.actual{fill:#8aa0b4}
 .pi-boundary{stroke:rgba(56,201,244,.6)}.pi-outer-band{fill:rgba(49,178,223,.035);stroke:rgba(83,194,232,.15);stroke-dasharray:3 3}.pi-iqr-band{fill:rgba(56,201,244,.16);stroke:rgba(91,218,255,.34)}
 .pi-actual-line{stroke:#879bb1}.pi-expected-line{stroke:#2bc8f6}.pi-median-line{stroke:#b9eaff}.pi-chart-point.actual{fill:#94a8bd}.pi-chart-point.forecast{fill:#34cef9}.pi-chart-point.median{fill:#d0f4ff}
@@ -114,3 +114,21 @@ body.pi-open{overflow:hidden}#player-intelligence-root{position:fixed;inset:0;z-
   .pi-method-grid{grid-template-columns:1fr}.pi-method-grid article{min-height:auto}.pi-method p{font-size:9px}.pi-foot{font-size:7px}
 }
 @media(max-width:390px){.pi-tabs{justify-content:flex-start}.pi-tabs button{font-size:7.5px}.pi-summary-grid .pi-value-card-copy strong,.pi-summary-card strong{font-size:20px}.pi-compare-card p{font-size:9px}.pi-trajectory-svg{height:226px}}
+
+.pi-overview-why{margin:9px 0 0;border:1px solid rgba(107,164,205,.12);border-radius:11px;padding:9px 11px;background:rgba(7,20,33,.48)}
+.pi-overview-why summary{font-size:10px;color:#d9f4ff}.pi-overview-why p{margin:7px 0 0;font-size:9px;line-height:1.45}
+.pi-trajectory-frame.preview .pi-trajectory-scroll{overflow:hidden}.pi-trajectory-frame.preview .pi-trajectory-svg{min-width:0!important;width:100%!important}
+.pi-stats-hero{margin-top:0}
+.pi-history-table tr.projected{background:linear-gradient(90deg,rgba(36,167,211,.16),rgba(12,29,49,.18))}
+.pi-history-table tr.projected td{border-bottom-color:rgba(56,201,244,.26)}
+.pi-history-table tr.projected td:first-child{color:#c9f5ff}
+.pi-projected-badge{display:inline-flex;margin-left:6px;padding:2px 5px;border-radius:999px;border:1px solid rgba(56,201,244,.4);background:rgba(56,201,244,.09);color:#61dbff;font-size:6.5px;letter-spacing:.08em;font-weight:800;vertical-align:middle}
+.pi-projected-note{margin:0 0 8px;padding:9px 10px;border-left:2px solid #36c9f5;background:rgba(56,201,244,.05);color:#91a9bd;font-size:8px;line-height:1.45}.pi-projected-note strong{color:#bfefff}.pi-projected-note.unavailable{border-left-color:rgba(237,194,122,.7);background:rgba(237,194,122,.05)}
+@media(max-width:620px){
+  .pi-career-hero .pi-trajectory-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}
+  .pi-career-hero .pi-trajectory-svg{width:auto}
+  .pi-career-hero .pi-trajectory-frame{position:relative}
+  .pi-trajectory-frame.preview .pi-trajectory-svg{height:210px}
+  .pi-history-table{min-width:520px}
+  .pi-projected-note{font-size:7.5px}
+}
