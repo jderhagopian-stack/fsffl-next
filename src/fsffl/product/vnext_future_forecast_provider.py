@@ -359,7 +359,7 @@ def _frozen_source_league_state() -> LeagueState:
             league_id="fsffl:vnext-shadow",
             name="vNext shadow identity",
             season=P0_SOURCE_SEASON,
-            rules=LeagueRules(team_count=1, roster_size=1, lineup=(), scoring=()),
+            rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
         ),
         as_of=now,
         teams=(),
