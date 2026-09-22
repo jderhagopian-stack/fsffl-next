@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from threading import RLock
-from typing import Callable
+from typing import Any, Callable
 
 from fsffl.persistence.contracts import ArtifactKey, PersistenceStore, ReusableArtifactRecord, utc_now
 
@@ -37,6 +37,7 @@ SHAPLEY_INTRINSIC_ARTIFACT_KIND = "shapley_intrinsic_contract"
 SHAPLEY_INTRINSIC_SCOPE_KIND = "league_material"
 
 YearOneAuthorityLoader = Callable[[LeagueState], LiveForecastEvidence]
+FutureForecastBuilder = Callable[..., Any]
 
 
 def _json_artifact(name: str) -> dict[str, object]:
@@ -183,18 +184,31 @@ class PrivateBetaShapleyContractLoader:
         *,
         year_one_loader: YearOneAuthorityLoader | None = None,
         persistence_store: PersistenceStore | None = None,
+        future_forecast_builder: FutureForecastBuilder = build_p0_future_forecast_contract,
+        future_forecast_model_version: str = P0_FORECAST_VERSION,
+        future_missing_fact_family: str = "p0_future_forecast_coordinate",
     ) -> None:
         self._lock = RLock()
         self._year_one_loader = year_one_loader
         self._persistence_store = persistence_store
+        self._future_forecast_builder = future_forecast_builder
+        self._future_forecast_model_version = str(future_forecast_model_version)
+        self._future_missing_fact_family = str(future_missing_fact_family)
         self._cached_key: str | None = None
         self._cached_contract: ShapleyIntrinsicContract | None = None
+
+    @property
+    def forecast_model_version(self) -> str:
+        """Forecast coordinate used by background lifecycle coalescing."""
+
+        return self._future_forecast_model_version
 
     def _artifact_key(
         self,
         context: UserRuntimeContext,
         *,
         input_fingerprint: str,
+        forecast_model_version: str,
     ) -> ArtifactKey:
         assert context.league_state is not None
         return ArtifactKey(
@@ -202,7 +216,10 @@ class PrivateBetaShapleyContractLoader:
             scope_kind=SHAPLEY_INTRINSIC_SCOPE_KIND,
             scope_id=league_material_fingerprint(context.league_state),
             input_fingerprint=input_fingerprint,
-            model_version=SHAPLEY_INTRINSIC_CONTRACT_VERSION,
+            model_version=(
+                f"{SHAPLEY_INTRINSIC_CONTRACT_VERSION}"
+                f"|forecast={forecast_model_version}"
+            ),
         )
 
     def _restore_persisted(
@@ -210,11 +227,16 @@ class PrivateBetaShapleyContractLoader:
         context: UserRuntimeContext,
         *,
         input_fingerprint: str,
+        forecast_model_version: str,
     ) -> ShapleyIntrinsicContract | None:
         if self._persistence_store is None:
             return None
         record = self._persistence_store.get_reusable_artifact(
-            self._artifact_key(context, input_fingerprint=input_fingerprint)
+            self._artifact_key(
+                context,
+                input_fingerprint=input_fingerprint,
+                forecast_model_version=forecast_model_version,
+            )
         )
         if record is None:
             return None
@@ -224,6 +246,8 @@ class PrivateBetaShapleyContractLoader:
             return None
         if contract.contract_version != SHAPLEY_INTRINSIC_CONTRACT_VERSION:
             return None
+        if contract.forecast_model_version != forecast_model_version:
+            return None
         return contract
 
     def _persist(
@@ -231,6 +255,7 @@ class PrivateBetaShapleyContractLoader:
         context: UserRuntimeContext,
         *,
         input_fingerprint: str,
+        forecast_model_version: str,
         contract: ShapleyIntrinsicContract,
     ) -> None:
         if self._persistence_store is None:
@@ -240,6 +265,7 @@ class PrivateBetaShapleyContractLoader:
                 key=self._artifact_key(
                     context,
                     input_fingerprint=input_fingerprint,
+                    forecast_model_version=forecast_model_version,
                 ),
                 payload=contract.model_dump(mode="json"),
                 computed_at=utc_now(),
@@ -257,15 +283,15 @@ class PrivateBetaShapleyContractLoader:
                     "The pinned private-beta P0 package targets "
                     f"evaluation season {P0_SOURCE_SEASON}, not {league_state.league.season}."
                 ),
-                missing_required_fact_families=("p0_future_forecast_coordinate",),
-                forecast_model_version=P0_FORECAST_VERSION,
+                missing_required_fact_families=(self._future_missing_fact_family,),
+                forecast_model_version=self._future_forecast_model_version,
             )
         if self._year_one_loader is None:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
                 reason="Preserved preseason Year-1 authority loader is not configured.",
                 missing_required_fact_families=("preseason_year1_forecast",),
-                forecast_model_version=P0_FORECAST_VERSION,
+                forecast_model_version=self._future_forecast_model_version,
             )
         try:
             evidence = self._year_one_loader(league_state)
@@ -277,7 +303,7 @@ class PrivateBetaShapleyContractLoader:
                     f"{type(exc).__name__}: {exc}"
                 ),
                 missing_required_fact_families=("preseason_year1_forecast",),
-                forecast_model_version=P0_FORECAST_VERSION,
+                forecast_model_version=self._future_forecast_model_version,
             )
         if evidence.evidence_basis != "preseason_baseline":
             return build_unavailable_shapley_intrinsic_contract(
@@ -287,7 +313,7 @@ class PrivateBetaShapleyContractLoader:
                     f"received {evidence.evidence_basis}."
                 ),
                 missing_required_fact_families=("preseason_year1_forecast",),
-                forecast_model_version=P0_FORECAST_VERSION,
+                forecast_model_version=self._future_forecast_model_version,
             )
         year_one = _year_one_forecasts(evidence)
         if not year_one:
@@ -295,7 +321,7 @@ class PrivateBetaShapleyContractLoader:
                 evaluation_season=league_state.league.season,
                 reason="Preserved preseason Year-1 Forecast evidence is empty.",
                 missing_required_fact_families=("preseason_year1_forecast",),
-                forecast_model_version=P0_FORECAST_VERSION,
+                forecast_model_version=self._future_forecast_model_version,
             )
 
         try:
@@ -305,11 +331,11 @@ class PrivateBetaShapleyContractLoader:
                 evaluation_season=league_state.league.season,
                 reason=f"Preserved preseason Year-1 source lineage unavailable: {exc}",
                 missing_required_fact_families=("preseason_year1_source_lineage",),
-                forecast_model_version=P0_FORECAST_VERSION,
+                forecast_model_version=self._future_forecast_model_version,
             )
 
         try:
-            future_materialization = build_p0_future_forecast_contract(
+            future_materialization = self._future_forecast_builder(
                 league_state=league_state,
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
@@ -323,8 +349,8 @@ class PrivateBetaShapleyContractLoader:
                 # for current P0 authority failures. The generic contract is the
                 # transport boundary; this exception still means the authoritative
                 # P0 future coordinate could not be materialized.
-                missing_required_fact_families=("p0_future_forecast_coordinate",),
-                forecast_model_version=P0_FORECAST_VERSION,
+                missing_required_fact_families=(self._future_missing_fact_family,),
+                forecast_model_version=self._future_forecast_model_version,
             )
 
         key = _cache_key(context, year_one, future_contract, source_ids)
@@ -335,6 +361,7 @@ class PrivateBetaShapleyContractLoader:
             persisted = self._restore_persisted(
                 context,
                 input_fingerprint=key,
+                forecast_model_version=future_contract.forecast_model_version,
             )
             if persisted is not None:
                 self._cached_key = key
@@ -369,6 +396,7 @@ class PrivateBetaShapleyContractLoader:
             self._persist(
                 context,
                 input_fingerprint=key,
+                forecast_model_version=future_contract.forecast_model_version,
                 contract=contract,
             )
             self._cached_key = key
