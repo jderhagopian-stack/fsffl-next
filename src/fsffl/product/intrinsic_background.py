@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+import logging
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -13,6 +14,8 @@ from .runtime import UserRuntimeContext
 
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
+DEFAULT_INTRINSIC_BACKGROUND_TIMEOUT_SECONDS = 30.0
+_logger = logging.getLogger("fsffl.product.performance")
 
 
 class IntrinsicBuildStatus(StrEnum):
@@ -45,8 +48,12 @@ class ShapleyIntrinsicBackgroundCoordinator:
         loader: IntrinsicContractLoader,
         *,
         max_workers: int = 1,
+        timeout_seconds: float = DEFAULT_INTRINSIC_BACKGROUND_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout_seconds <= 0:
+            raise ValueError("Intrinsic background timeout must be positive")
         self._loader = loader
+        self._timeout_seconds = float(timeout_seconds)
         self._lock = RLock()
         self._records: dict[tuple[str, str], IntrinsicBuildRecord] = {}
         self._executor = ThreadPoolExecutor(
@@ -66,6 +73,33 @@ class ShapleyIntrinsicBackgroundCoordinator:
         with self._lock:
             existing = self._records.get(key)
             if existing is not None:
+                if existing.status in {
+                    IntrinsicBuildStatus.QUEUED,
+                    IntrinsicBuildStatus.RUNNING,
+                }:
+                    elapsed = (now - existing.updated_at).total_seconds()
+                    if elapsed >= self._timeout_seconds:
+                        error = (
+                            "TimeoutError: governed FSFFL Intrinsic preparation exceeded "
+                            f"{self._timeout_seconds:.1f}s response budget; the background "
+                            "build may still finish and become reusable."
+                        )
+                        existing = replace(
+                            existing,
+                            status=IntrinsicBuildStatus.FAILED,
+                            contract=None,
+                            error=error,
+                            updated_at=now,
+                        )
+                        self._records[key] = existing
+                        _logger.warning(
+                            "FSFFL Intrinsic background build timed out user=%s state=%s "
+                            "elapsed=%.3fs budget=%.3fs",
+                            existing.user_id,
+                            existing.league_state_id,
+                            elapsed,
+                            self._timeout_seconds,
+                        )
                 return existing
 
             # Drop stale same-user records when authoritative State advances.
@@ -95,9 +129,17 @@ class ShapleyIntrinsicBackgroundCoordinator:
         status: IntrinsicBuildStatus,
         contract: ShapleyIntrinsicContract | None = None,
         error: str | None = None,
-    ) -> IntrinsicBuildRecord:
+    ) -> IntrinsicBuildRecord | None:
         with self._lock:
-            current = self._records[key]
+            current = self._records.get(key)
+            if current is None:
+                return None
+            if (
+                current.status == IntrinsicBuildStatus.FAILED
+                and (current.error or "").startswith("TimeoutError:")
+                and status == IntrinsicBuildStatus.RUNNING
+            ):
+                return current
             updated = replace(
                 current,
                 status=status,
@@ -113,21 +155,38 @@ class ShapleyIntrinsicBackgroundCoordinator:
         key: tuple[str, str],
         context: UserRuntimeContext,
     ) -> None:
-        self._set(key, status=IntrinsicBuildStatus.RUNNING)
+        running = self._set(key, status=IntrinsicBuildStatus.RUNNING)
+        if running is None or running.status != IntrinsicBuildStatus.RUNNING:
+            return
         try:
             contract = self._loader(context)
         except Exception as exc:
-            self._set(
+            failed = self._set(
                 key,
                 status=IntrinsicBuildStatus.FAILED,
                 error=f"{type(exc).__name__}: {exc}",
             )
+            if failed is not None:
+                _logger.warning(
+                    "FSFFL Intrinsic background build failed user=%s state=%s error=%s",
+                    failed.user_id,
+                    failed.league_state_id,
+                    failed.error,
+                )
             return
-        self._set(
+        completed = self._set(
             key,
             status=IntrinsicBuildStatus.COMPLETED,
             contract=contract,
         )
+        if completed is not None:
+            elapsed = (completed.updated_at - completed.created_at).total_seconds()
+            _logger.info(
+                "FSFFL Intrinsic background build completed user=%s state=%s elapsed=%.3fs",
+                completed.user_id,
+                completed.league_state_id,
+                elapsed,
+            )
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
         key = self._key(context)
