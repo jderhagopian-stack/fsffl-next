@@ -40,3 +40,13 @@ def test_franchise_is_a_real_diagnosis_surface_and_mobile_first() -> None:
         assert f'data-franchise-route="{destination}"' in source
     assert "@media(max-width:820px)" in source
     assert "@media(max-width:560px)" in source
+
+
+
+def test_franchise_intrinsic_unavailable_is_explicit_not_a_dash() -> None:
+    source = Path("src/fsffl/product/static/my_team_dashboard.js").read_text(
+        encoding="utf-8"
+    )
+    assert "franchise-intrinsic-unavailable" in source
+    assert "Governed FSFFL Intrinsic is unavailable for the current league state." in source
+    assert "fsffl_intrinsic?.reason" in source
