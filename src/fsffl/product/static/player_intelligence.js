@@ -3,7 +3,7 @@
  */
 (function(){
   'use strict';
-  const VERSION='20260921-player-intelligence-career-mobile1';
+  const VERSION='20260922-player-intelligence-trajectory-iqr1';
   const POLL_MS=1500,MAX_POLLS=80;
   let activeId=null,activeTab='overview',overview=null,history=null,generation=0,sheetScrollTop=0;
   const expandedSeasons=new Set();
@@ -27,13 +27,14 @@
   }
   function sheet(){return ensure().querySelector('.pi-sheet')}
   function close(){const root=ensure();root.hidden=true;document.body.classList.remove('pi-open');activeId=null;activeTab='overview';overview=null;history=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1}
-  function open(playerId){const id=normalizedPlayerId(playerId);if(!id)return;activeId=id;activeTab='overview';overview=null;history=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Forecast, Value and History load independently.</span></div>';void loadOverview(g);void loadHistory(g)}
+  function open(playerId){const id=normalizedPlayerId(playerId);if(!id)return;activeId=id;activeTab='overview';overview=null;history=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Forecast, Value and History load independently.</span></div>';void loadOverview(g,id);void loadHistory(g,id)}
 
-  async function loadOverview(g){
+  async function loadOverview(g,id){
     try{
       let payload=null;
       for(let attempt=0;attempt<MAX_POLLS;attempt+=1){
-        payload=await api(`/api/player-intelligence/${encodeURIComponent(activeId)}`);
+        if(g!==generation)return;
+        payload=await api(`/api/player-intelligence/${encodeURIComponent(id)}`);
         if(g!==generation)return;
         overview=payload;render();
         if(!['queued','running'].includes(payload?.value?.intrinsic_status))break;
@@ -46,11 +47,12 @@
     }
   }
 
-  async function loadHistory(g){
+  async function loadHistory(g,id){
     try{
       let payload=null;
       for(let attempt=0;attempt<MAX_POLLS;attempt+=1){
-        payload=await api(`/api/player-intelligence/${encodeURIComponent(activeId)}/history`);
+        if(g!==generation)return;
+        payload=await api(`/api/player-intelligence/${encodeURIComponent(id)}/history`);
         if(g!==generation)return;
         if(payload?.status!=='loading')break;
         history=payload;render();
