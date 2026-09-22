@@ -47,6 +47,65 @@ def _season_fantasy_observation(
     return max(candidates, key=lambda item: (item.as_of, item.model_version, item.source))
 
 
+_PROJECTED_STAT_BY_METRIC = {
+    ForecastMetric.PASS_YARDS: "pass_yd",
+    ForecastMetric.PASS_TD: "pass_td",
+    ForecastMetric.INTERCEPTIONS: "pass_int",
+    ForecastMetric.RUSH_YARDS: "rush_yd",
+    ForecastMetric.RUSH_TD: "rush_td",
+    ForecastMetric.RECEPTIONS: "rec",
+    ForecastMetric.REC_YARDS: "rec_yd",
+    ForecastMetric.REC_TD: "rec_td",
+    ForecastMetric.FUMBLES_LOST: "fum_lost",
+}
+
+
+def _season_projected_stats(
+    rows: tuple[ForecastObservation, ...],
+    player_id: str,
+) -> tuple[dict[str, float], dict[str, dict[str, str]]]:
+    """Return only governed full-season football-stat observations.
+
+    This is deliberately a transport helper, not an inference layer. Fields that
+    Forecast does not publish (for example pass attempts, rush attempts, targets,
+    or expected games played) remain absent instead of being reverse-engineered
+    from fantasy points.
+    """
+
+    selected: dict[ForecastMetric, ForecastObservation] = {}
+    for row in rows:
+        if (
+            row.player_id != player_id
+            or row.horizon != ForecastHorizon.SEASON
+            or row.metric not in _PROJECTED_STAT_BY_METRIC
+        ):
+            continue
+        current = selected.get(row.metric)
+        if current is None or (
+            row.as_of,
+            row.model_version,
+            row.source,
+        ) > (
+            current.as_of,
+            current.model_version,
+            current.source,
+        ):
+            selected[row.metric] = row
+
+    stats: dict[str, float] = {}
+    provenance: dict[str, dict[str, str]] = {}
+    for metric, row in selected.items():
+        key = _PROJECTED_STAT_BY_METRIC[metric]
+        stats[key] = float(row.distribution.mean)
+        provenance[key] = {
+            "metric": metric.value,
+            "source": row.source,
+            "model_version": row.model_version,
+            "as_of": row.as_of.isoformat(),
+        }
+    return stats, provenance
+
+
 def _fantasy_ppg(points: float | None) -> float | None:
     # Current Forecast contracts own full-season expected fantasy points but do
     # not expose expected player games played. PPG therefore fails closed rather
@@ -129,6 +188,14 @@ def build_player_intelligence_overview(
         if evidence is not None
         else None
     )
+
+    projected_stats: dict[str, float] = {}
+    projected_stats_provenance: dict[str, dict[str, str]] = {}
+    if evidence is not None:
+        projected_stats, projected_stats_provenance = _season_projected_stats(
+            evidence.raw_forecasts,
+            player_id,
+        )
 
     future_rows = ()
     future_error = None
@@ -264,6 +331,45 @@ def build_player_intelligence_overview(
             "status": "ready" if forecasts else "unavailable",
             "rows": forecasts,
             "future_error": future_error,
+            "current_projected_stats": {
+                "season": state.league.season,
+                "label": "PROJECTED",
+                "stats": projected_stats,
+                "fantasy_points": (
+                    float(y1.distribution.mean) if y1 is not None else None
+                ),
+                "fantasy_ppg": _fantasy_ppg(
+                    float(y1.distribution.mean) if y1 is not None else None
+                ),
+                "games_played": None,
+                "games_played_basis": (
+                    "unavailable: Forecast authority does not expose expected player games"
+                ),
+                "evidence_basis": (
+                    evidence.evidence_basis if evidence is not None else None
+                ),
+                "source_ids": (
+                    sorted(
+                        {
+                            item["source"]
+                            for item in projected_stats_provenance.values()
+                        }
+                    )
+                    if projected_stats_provenance
+                    else []
+                ),
+                "model_versions": (
+                    sorted(
+                        {
+                            item["model_version"]
+                            for item in projected_stats_provenance.values()
+                        }
+                    )
+                    if projected_stats_provenance
+                    else []
+                ),
+                "field_provenance": projected_stats_provenance,
+            },
             "current_evidence_basis": evidence.evidence_basis if evidence is not None else None,
             "current_model_version": evidence.model_version if evidence is not None else None,
             "current_as_of": (
