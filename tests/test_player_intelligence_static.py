@@ -128,5 +128,5 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?v=20260921-player-intelligence-corrective1" in index
-    assert "player_intelligence.css?v=20260921-player-intelligence-corrective1" in index
+    assert "player_intelligence.js?pi=20260921-player-intelligence-corrective1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.css?pi=20260921-player-intelligence-corrective1&v=20260913-phase3-latency1" in index
