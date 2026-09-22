@@ -162,11 +162,16 @@ def test_full_career_mobile_history_is_compact_and_stateful() -> None:
     assert "summary span:nth-child(n+3){display:none}" not in css
 
 
-def test_full_career_mobile_trajectory_is_horizontally_bounded_not_microscopic() -> None:
+def test_full_career_mobile_trajectory_scrolls_with_stable_season_spacing() -> None:
+    source = _text("player_intelligence.js")
     css = _text("player_intelligence.css")
+    assert 'data-pi-trajectory="full"' in source
+    assert 'style="min-width:' in source
+    assert "positionCareerTrajectory" in source
+    assert "careerScrollLeft" in source
+    assert "scroller.scrollLeft=max" in source
+    assert ".pi-career-hero .pi-trajectory-scroll" in css
     assert "overflow-x:auto" in css
-    assert ".pi-trajectory-scroll" in css
-    assert ".pi-trajectory-svg{height:240px;width:auto}" in css
     assert "overscroll-behavior-x:contain" in css
 
 
@@ -221,8 +226,8 @@ def test_north_star_visual_rebuild_matches_approved_information_hierarchy() -> N
         "pi-compare-card",
         "pi-trajectory-frame",
         "pi-drill-button",
-        "Governed future distribution",
-        "Year-by-year production",
+        "Current season + Y2 / Y3",
+        "Projected current season + historical actuals",
     ):
         assert token in source or token in css
     assert "Actual → Forecast" in source
