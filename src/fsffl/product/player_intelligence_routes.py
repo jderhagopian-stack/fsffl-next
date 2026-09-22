@@ -20,6 +20,19 @@ from .player_intelligence import (
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
 
+INVALID_PLAYER_IDS = {"", "null", "undefined", "none"}
+
+
+def _validated_player_id(player_id: str) -> str:
+    cleaned = str(player_id or "").strip()
+    if cleaned.lower() in INVALID_PLAYER_IDS:
+        raise HTTPException(
+            status_code=404,
+            detail="Player Intelligence requires a valid player id",
+        )
+    return cleaned
+
+
 class PlayerHistoryBuildStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -143,6 +156,7 @@ def install_player_intelligence_routes(
         player_id: str,
         user_id: str = Depends(require_user),
     ):
+        player_id = _validated_player_id(player_id)
         runtime = runtime_store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(
@@ -182,6 +196,7 @@ def install_player_intelligence_routes(
         player_id: str,
         user_id: str = Depends(require_user),
     ):
+        player_id = _validated_player_id(player_id)
         runtime = runtime_store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(

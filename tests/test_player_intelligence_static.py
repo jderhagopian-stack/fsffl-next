@@ -92,3 +92,41 @@ def test_player_intelligence_is_reachable_from_core_player_surfaces() -> None:
     }
     for filename, marker in surfaces.items():
         assert marker in _text(filename), filename
+
+
+def test_live_corrective_preserves_selected_tab_during_intrinsic_polling() -> None:
+    source = _text("player_intelligence.js")
+    assert "let activeId=null,activeTab='overview'" in source
+    assert "activeTab=button.dataset.piTab||'overview'" in source
+    assert "tabClass('career')" in source
+    assert "tabClass('value')" in source
+    assert "tabClass('methods')" in source
+
+
+def test_live_corrective_starts_history_independently_of_intrinsic() -> None:
+    source = _text("player_intelligence.js")
+    assert "void loadOverview(g);void loadHistory(g)" in source
+    overview_loader = source.split("async function loadOverview(g){", 1)[1].split(
+        "async function loadHistory(g){", 1
+    )[0]
+    assert "loadHistory(g)" not in overview_loader
+
+
+def test_live_corrective_rejects_invalid_player_ids_before_fetch() -> None:
+    source = _text("player_intelligence.js")
+    assert "normalizedPlayerId" in source
+    assert "['null','undefined','none']" in source
+    assert "const id=normalizedPlayerId(trigger.dataset.playerIntelligenceId);if(!id)return" in source
+
+
+def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games() -> None:
+    source = _text("player_intelligence.js")
+    assert "replace(/^unavailable:\\s*/i,'')" in source
+    assert "PPG unavailable unavailable" not in source
+    assert "17-game display rate" not in source
+
+
+def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
+    index = _text("index.html")
+    assert "player_intelligence.js?pi=20260921-player-intelligence-corrective1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.css?pi=20260921-player-intelligence-corrective1&v=20260913-phase3-latency1" in index
