@@ -154,6 +154,32 @@ def _forecast_observation(player_id: str, points: float) -> ForecastObservation:
     )
 
 
+def _stat_forecast_observation(
+    player_id: str,
+    metric: ForecastMetric,
+    mean: float,
+) -> ForecastObservation:
+    provenance = Provenance(
+        source="fixture-raw-y1",
+        retrieved_at=NOW,
+        effective_at=NOW,
+        source_version="fixture-raw-y1-v1",
+    )
+    return ForecastObservation(
+        player_id=player_id,
+        position=Position.QB,
+        horizon=ForecastHorizon.SEASON,
+        metric=metric,
+        period_start=datetime(2026, 9, 1, tzinfo=UTC),
+        period_end=datetime(2027, 2, 1, tzinfo=UTC),
+        distribution=ForecastDistribution(mean=mean, stddev=0.0),
+        source="fsffl:fixture-raw-y1",
+        model_version="fixture-raw-y1-v1",
+        as_of=NOW,
+        provenance=provenance,
+    )
+
+
 class _FutureContract:
     def rows_for_player(self, player_id: str):
         assert player_id == "sleeper:player:101"
@@ -234,9 +260,31 @@ class _FutureCache:
 def test_player_overview_uses_forecast_owned_y1_y2_y3_and_fails_ppg_closed() -> None:
     state = _state()
     y1 = _forecast_observation("sleeper:player:101", 310.0)
+    raw_y1 = (
+        _stat_forecast_observation(
+            "sleeper:player:101",
+            ForecastMetric.PASS_YARDS,
+            4050.0,
+        ),
+        _stat_forecast_observation(
+            "sleeper:player:101",
+            ForecastMetric.PASS_TD,
+            29.0,
+        ),
+        _stat_forecast_observation(
+            "sleeper:player:101",
+            ForecastMetric.INTERCEPTIONS,
+            9.0,
+        ),
+        _stat_forecast_observation(
+            "sleeper:player:101",
+            ForecastMetric.RUSH_YARDS,
+            720.0,
+        ),
+    )
     forecast = SimpleNamespace(
         league_scored_forecasts=(y1,),
-        raw_forecasts=(),
+        raw_forecasts=raw_y1,
         evidence_basis="preseason_baseline",
         model_version="next8-live-forecast-evidence-v5:revision-agnostic-source-health",
         successful_source_ids=("preserved_preseason_baseline",),
@@ -279,6 +327,66 @@ def test_player_overview_uses_forecast_owned_y1_y2_y3_and_fails_ppg_closed() -> 
         for row in rows
     )
     assert payload["value"]["raw_shapley_marginal_points"] is None
+
+
+    projected = payload["forecast"]["current_projected_stats"]
+    assert projected["season"] == 2026
+    assert projected["label"] == "PROJECTED"
+    assert projected["evidence_basis"] == "preseason_baseline"
+    assert projected["stats"] == {
+        "pass_yd": 4050.0,
+        "pass_td": 29.0,
+        "pass_int": 9.0,
+        "rush_yd": 720.0,
+    }
+    assert projected["fantasy_points"] == 310.0
+    assert projected["fantasy_ppg"] is None
+    assert projected["games_played"] is None
+    assert "pass_att" not in projected["stats"]
+    assert "pass_cmp" not in projected["stats"]
+    assert "rush_att" not in projected["stats"]
+    assert set(projected["field_provenance"]) == {
+        "pass_yd",
+        "pass_td",
+        "pass_int",
+        "rush_yd",
+    }
+    assert projected["source_ids"] == ["fsffl:fixture-raw-y1"]
+    assert projected["model_versions"] == ["fixture-raw-y1-v1"]
+
+
+def test_player_overview_projected_stats_fail_closed_when_y1_raw_fields_are_absent() -> None:
+    state = _state()
+    y1 = _forecast_observation("sleeper:player:101", 310.0)
+    forecast = SimpleNamespace(
+        league_scored_forecasts=(y1,),
+        raw_forecasts=(),
+        evidence_basis="preseason_baseline",
+        model_version="fixture",
+        successful_source_ids=("preserved_preseason_baseline",),
+        runtime_result=SimpleNamespace(evaluation_as_of=NOW),
+    )
+    runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=forecast,
+    )
+
+    payload = build_player_intelligence_overview(
+        runtime,
+        "sleeper:player:101",
+        intrinsic=None,
+        future_cache=_FutureCache(),
+    )
+
+    projected = payload["forecast"]["current_projected_stats"]
+    assert projected["stats"] == {}
+    assert projected["field_provenance"] == {}
+    assert projected["source_ids"] == []
+    assert projected["model_versions"] == []
+    assert projected["fantasy_points"] == 310.0
+    assert projected["games_played"] is None
 
 
 class _HistorySource:
