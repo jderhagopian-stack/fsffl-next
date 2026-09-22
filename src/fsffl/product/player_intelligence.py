@@ -6,6 +6,13 @@ from datetime import UTC, datetime
 from threading import RLock
 
 from fsffl.forecast.future_contract import FutureForecastContract
+from fsffl.persistence.contracts import (
+    ArtifactKey,
+    PersistenceStore,
+    ReusableArtifactRecord,
+    canonical_fingerprint,
+    utc_now,
+)
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
 from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatLine, SleeperWeeklyStatsSource
@@ -17,7 +24,10 @@ from .value_lens_evidence import build_governed_value_lens_evidence
 from .value_presentation import build_value_presentation_coordinate
 
 
-PLAYER_INTELLIGENCE_CONTRACT_VERSION = "player-intelligence-v1"
+PLAYER_INTELLIGENCE_CONTRACT_VERSION = "player-intelligence-v2:full-career-history"
+PLAYER_HISTORY_MIN_DETAILED_SEASON = 2010
+PLAYER_HISTORY_ARTIFACT_KIND = "player_history_season_aggregate"
+PLAYER_HISTORY_ARTIFACT_VERSION = "player-history-season-aggregate-v1"
 
 
 def _season_fantasy_observation(
@@ -265,7 +275,13 @@ def build_player_intelligence_overview(
         "history": {
             "status": "lazy",
             "endpoint": f"/api/player-intelligence/{player_id}/history",
-            "season_count": 3,
+            "season_count": None,
+            "boundary_min_season": PLAYER_HISTORY_MIN_DETAILED_SEASON,
+            "boundary_basis": (
+                "Sleeper detailed regular-season stats are consumed from the "
+                "provider-supported 2010+ range; only seasons with player evidence "
+                "are returned."
+            ),
         },
     }
 
@@ -280,6 +296,8 @@ class HistoricalPlayerSeason:
     position_rank_population: int | None
     rank_basis: str | None
     stats: dict[str, float]
+    more_stats: dict[str, float]
+    games_played_basis: str
     scoring_basis: str
     source: str
     source_version: str
@@ -295,14 +313,89 @@ def _sleeper_external_id(player: Player) -> str | None:
     return None
 
 
-def _position_stats(position: Position, totals: dict[str, float]) -> dict[str, float]:
-    if position == Position.QB:
-        keys = ("pass_yd", "pass_td", "pass_int", "rush_yd", "rush_td")
-    elif position in {Position.RB, Position.WR, Position.TE}:
-        keys = ("rush_yd", "rush_td", "rec", "rec_yd", "rec_td")
-    else:
-        keys = tuple(sorted(totals))
-    return {key: float(totals.get(key, 0.0)) for key in keys}
+_STANDARD_BOX_STATS = (
+    "pass_att",
+    "pass_cmp",
+    "pass_yd",
+    "pass_td",
+    "pass_int",
+    "rush_att",
+    "rush_yd",
+    "rush_td",
+    "rec_tgt",
+    "rec",
+    "rec_yd",
+    "rec_td",
+    "fum",
+    "fum_lost",
+)
+_PRIMARY_BY_POSITION = {
+    Position.QB: (
+        "pass_att",
+        "pass_cmp",
+        "pass_yd",
+        "pass_td",
+        "pass_int",
+        "rush_att",
+        "rush_yd",
+        "rush_td",
+        "fum",
+        "fum_lost",
+    ),
+    Position.RB: (
+        "rush_att",
+        "rush_yd",
+        "rush_td",
+        "rec_tgt",
+        "rec",
+        "rec_yd",
+        "rec_td",
+        "fum",
+        "fum_lost",
+    ),
+    Position.WR: (
+        "rec_tgt",
+        "rec",
+        "rec_yd",
+        "rec_td",
+        "rush_att",
+        "rush_yd",
+        "rush_td",
+        "fum",
+        "fum_lost",
+    ),
+    Position.TE: (
+        "rec_tgt",
+        "rec",
+        "rec_yd",
+        "rec_td",
+        "rush_att",
+        "rush_yd",
+        "rush_td",
+        "fum",
+        "fum_lost",
+    ),
+}
+
+
+def _position_stats(
+    position: Position,
+    totals: dict[str, float],
+) -> tuple[dict[str, float], dict[str, float]]:
+    primary_keys = _PRIMARY_BY_POSITION.get(position, _STANDARD_BOX_STATS)
+    primary = {
+        key: float(totals[key])
+        for key in primary_keys
+        if key in totals
+    }
+    more = {
+        key: float(totals[key])
+        for key in _STANDARD_BOX_STATS
+        if key not in primary_keys
+        and key in totals
+        and abs(float(totals[key])) > 0
+    }
+    return primary, more
 
 
 def _score_stats(totals: dict[str, float], rules: LeagueRules) -> float:
@@ -312,28 +405,102 @@ def _score_stats(totals: dict[str, float], rules: LeagueRules) -> float:
 
 
 class PlayerHistoryService:
-    """Lazy measured-history materializer using the existing Sleeper Data source."""
+    """Measured full-career history with season-level provider/persistence reuse.
+
+    Raw season aggregates are Data-layer evidence. League scoring is applied only
+    after a cached aggregate is selected, so the durable artifact never becomes a
+    new scoring or Value authority.
+    """
 
     def __init__(
         self,
         *,
         source: SleeperWeeklyStatsSource | None = None,
         max_workers: int = 6,
+        persistence_store: PersistenceStore | None = None,
+        minimum_season: int = PLAYER_HISTORY_MIN_DETAILED_SEASON,
     ) -> None:
         self._source = source or SleeperWeeklyStatsSource()
-        self._max_workers = max_workers
+        self._max_workers = max(1, max_workers)
+        self._persistence_store = persistence_store
+        self._minimum_season = minimum_season
         self._lock = RLock()
-        self._cache: dict[tuple[str, int], dict[str, dict[str, float | int | str]]] = {}
+        self._cache: dict[
+            tuple[str, int, str],
+            dict[str, dict[str, float | int | str]],
+        ] = {}
 
-    def _season(self, runtime: UserRuntimeContext, season: int) -> dict[str, dict[str, float | int | str]]:
-        state = runtime.league_state
-        if state is None:
-            raise ValueError("history requires canonical league state")
-        key = (state.league.league_id, season)
-        with self._lock:
-            cached = self._cache.get(key)
-            if cached is not None:
-                return cached
+    def _artifact_key(self, league_id: str, season: int) -> ArtifactKey:
+        return ArtifactKey(
+            artifact_kind=PLAYER_HISTORY_ARTIFACT_KIND,
+            scope_kind="league_season",
+            scope_id=f"{league_id}:{season}",
+            input_fingerprint=canonical_fingerprint(
+                self._source.provider_name,
+                self._source.source_version,
+                season,
+            ),
+            model_version=PLAYER_HISTORY_ARTIFACT_VERSION,
+        )
+
+    @staticmethod
+    def _normalize_persisted_payload(
+        payload: object,
+    ) -> dict[str, dict[str, float | int | str]] | None:
+        if not isinstance(payload, dict):
+            return None
+        normalized: dict[str, dict[str, float | int | str]] = {}
+        for player_id, raw in payload.items():
+            if not isinstance(player_id, str) or not isinstance(raw, dict):
+                return None
+            row: dict[str, float | int | str] = {}
+            for key, value in raw.items():
+                if isinstance(key, str) and isinstance(value, (int, float, str)):
+                    row[key] = value
+            normalized[player_id] = row
+        return normalized
+
+    def _restore_persisted(
+        self,
+        league_id: str,
+        season: int,
+    ) -> dict[str, dict[str, float | int | str]] | None:
+        if self._persistence_store is None:
+            return None
+        record = self._persistence_store.get_reusable_artifact(
+            self._artifact_key(league_id, season)
+        )
+        if record is None:
+            return None
+        return self._normalize_persisted_payload(dict(record.payload))
+
+    def _persist(
+        self,
+        league_id: str,
+        season: int,
+        aggregates: dict[str, dict[str, float | int | str]],
+    ) -> None:
+        if self._persistence_store is None:
+            return
+        self._persistence_store.put_artifact(
+            ReusableArtifactRecord(
+                key=self._artifact_key(league_id, season),
+                payload=aggregates,
+                computed_at=utc_now(),
+            )
+        )
+
+    def _weekly_fallback(
+        self,
+        *,
+        season: int,
+    ) -> dict[str, dict[str, float | int | str]]:
+        """Compatibility fallback for fixtures/older source adapters.
+
+        Provider gp is authoritative when present. If a weekly adapter omits gp, a
+        row counts as participation only when it contains non-zero measured
+        production; an all-zero/non-participation row is never blindly counted.
+        """
 
         weeks: list[tuple[SleeperWeeklyStatLine, ...]] = []
         with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
@@ -352,18 +519,83 @@ class PlayerHistoryService:
                     external_id,
                     {
                         "games_played": 0,
+                        "games_played_basis": "weekly provider gp",
                         "retrieved_at": row.captured_at.astimezone(UTC).isoformat(),
                     },
                 )
                 gp = row.stats.get("gp")
-                target["games_played"] = int(target["games_played"]) + int(
-                    round(float(gp)) if gp is not None else 1
-                )
+                if gp is not None:
+                    increment = max(0, int(round(float(gp))))
+                else:
+                    measured = [
+                        float(value)
+                        for key, value in row.stats.items()
+                        if key not in {"gp", "pts_std", "pts_ppr", "pts_half_ppr"}
+                    ]
+                    increment = 1 if any(abs(value) > 0 for value in measured) else 0
+                    target["games_played_basis"] = (
+                        "weekly non-zero measured-production fallback; provider gp absent"
+                    )
+                target["games_played"] = int(target["games_played"]) + increment
                 for stat, value in row.stats.items():
                     if stat == "gp":
                         continue
                     target[stat] = float(target.get(stat, 0.0)) + float(value)
+        return aggregates
 
+    def _acquire_season(
+        self,
+        *,
+        season: int,
+    ) -> dict[str, dict[str, float | int | str]]:
+        fetch_season = getattr(self._source, "fetch_season", None)
+        if not callable(fetch_season):
+            return self._weekly_fallback(season=season)
+
+        rows = fetch_season(season=season)
+        aggregates: dict[str, dict[str, float | int | str]] = {}
+        for row in rows:
+            external_id = row.player_id.split(":")[-1]
+            stats = {
+                str(key): float(value)
+                for key, value in row.stats.items()
+                if isinstance(value, (int, float)) and not isinstance(value, bool)
+            }
+            gp = stats.pop("gp", None)
+            aggregates[external_id] = {
+                "games_played": max(0, int(round(gp))) if gp is not None else 0,
+                "games_played_basis": (
+                    "provider season aggregate gp"
+                    if gp is not None
+                    else "unavailable: provider season aggregate omitted gp"
+                ),
+                "retrieved_at": row.captured_at.astimezone(UTC).isoformat(),
+                **stats,
+            }
+        return aggregates
+
+    def _season(
+        self,
+        runtime: UserRuntimeContext,
+        season: int,
+    ) -> dict[str, dict[str, float | int | str]]:
+        state = runtime.league_state
+        if state is None:
+            raise ValueError("history requires canonical league state")
+        key = (state.league.league_id, season, self._source.source_version)
+        with self._lock:
+            cached = self._cache.get(key)
+            if cached is not None:
+                return cached
+
+        persisted = self._restore_persisted(state.league.league_id, season)
+        if persisted is not None:
+            with self._lock:
+                self._cache[key] = persisted
+            return persisted
+
+        aggregates = self._acquire_season(season=season)
+        self._persist(state.league.league_id, season, aggregates)
         with self._lock:
             self._cache[key] = aggregates
         return aggregates
@@ -372,8 +604,6 @@ class PlayerHistoryService:
         self,
         runtime: UserRuntimeContext,
         player_id: str,
-        *,
-        seasons: int = 3,
     ) -> tuple[HistoricalPlayerSeason, ...]:
         state = runtime.league_state
         if state is None:
@@ -383,20 +613,40 @@ class PlayerHistoryService:
         if external_id is None:
             raise ValueError("player lacks canonical Sleeper identity for historical stats")
 
+        candidate_seasons = tuple(
+            range(self._minimum_season, state.league.season)
+        )
+        by_season: dict[int, dict[str, dict[str, float | int | str]]] = {}
+        worker_count = min(self._max_workers, max(1, len(candidate_seasons)))
+        with ThreadPoolExecutor(
+            max_workers=worker_count,
+            thread_name_prefix="fsffl-player-history-season",
+        ) as executor:
+            futures = {
+                executor.submit(self._season, runtime, season): season
+                for season in candidate_seasons
+            }
+            for future in as_completed(futures):
+                by_season[futures[future]] = future.result()
+
         output: list[HistoricalPlayerSeason] = []
-        for season in range(state.league.season - seasons, state.league.season):
-            aggregates = self._season(runtime, season)
-            row = aggregates.get(external_id)
+        for season in candidate_seasons:
+            row = by_season[season].get(external_id)
             if row is None:
                 continue
             totals = {
                 key: float(value)
                 for key, value in row.items()
-                if key not in {"games_played", "retrieved_at"}
+                if key not in {
+                    "games_played",
+                    "games_played_basis",
+                    "retrieved_at",
+                }
                 and isinstance(value, (int, float))
             }
             points = _score_stats(totals, state.league.rules)
             games = max(0, int(row.get("games_played", 0)))
+            primary, more = _position_stats(player.position, totals)
 
             output.append(
                 HistoricalPlayerSeason(
@@ -409,7 +659,12 @@ class PlayerHistoryService:
                     rank_basis=(
                         "unavailable: complete point-in-time historical position population is not persisted"
                     ),
-                    stats=_position_stats(player.position, totals),
+                    stats=primary,
+                    more_stats=more,
+                    games_played_basis=str(
+                        row.get("games_played_basis")
+                        or "unavailable: participation basis missing"
+                    ),
                     scoring_basis="scored under current league rules",
                     source=self._source.provider_name,
                     source_version=self._source.source_version,
@@ -417,3 +672,4 @@ class PlayerHistoryService:
                 )
             )
         return tuple(output)
+
