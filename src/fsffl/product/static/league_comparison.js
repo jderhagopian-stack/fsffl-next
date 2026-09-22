@@ -138,32 +138,54 @@ function laActiveTab(){if(fsfflLeagueStructureState.activeTab==='positions')retu
 function laEvidenceStrip(){return '<footer class="atlas-evidence-strip"><span>State '+laEsc(String(laAtlas()?.league_state_id||'unavailable').slice(0,12))+'…</span><span>Simulation '+(laAtlas()?.simulation?.status==='ready'?Number(laAtlas()?.simulation?.simulation_count||0).toLocaleString()+' runs':'unavailable')+'</span><span>Value '+laEsc(fsfflLeagueStructureState.valueLenses?.status||fsfflLeagueStructureState.valueStatus)+'</span><span>Cold '+(typeof fsfflLeagueStructureState.loadMs==='number'?Math.round(fsfflLeagueStructureState.loadMs)+' ms':'—')+'</span></footer>'}
 function bindLeagueActions(){
   document.querySelector('#league-open-market')?.addEventListener('click',()=>{if(typeof setRoute==='function')setRoute('opportunities')});
-  document.querySelectorAll('[data-value-mode]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.valueLensMode=button.dataset.valueMode||'market';renderLeagueComparison()}));
+  document.querySelectorAll('[data-atlas-tab]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.activeTab=button.dataset.atlasTab||'overview';fsfflLeagueStructureState.selectedRoom=null;fsfflLeagueStructureState.selectedPickTeamId=null;renderLeagueComparison()}));
+  document.querySelectorAll('[data-room-team][data-room-position]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.selectedRoom={teamId:button.dataset.roomTeam,position:button.dataset.roomPosition};fsfflLeagueStructureState.selectedPickTeamId=null;renderLeagueComparison()}));
+  document.querySelectorAll('[data-atlas-close]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.selectedRoom=null;fsfflLeagueStructureState.selectedPickTeamId=null;renderLeagueComparison()}));
+  document.querySelectorAll('[data-value-mode]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.valueLensMode=button.dataset.valueMode||'difference';renderLeagueComparison()}));
   document.querySelectorAll('[data-value-team]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.selectedValueTeamId=button.dataset.valueTeam||null;renderLeagueComparison()}));
+  document.querySelectorAll('[data-pick-year]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.pickYear=Number(button.dataset.pickYear);renderLeagueComparison()}));
+  document.querySelectorAll('[data-pick-team]').forEach(button=>button.addEventListener('click',()=>{fsfflLeagueStructureState.selectedPickTeamId=button.dataset.pickTeam||null;fsfflLeagueStructureState.selectedRoom=null;renderLeagueComparison()}));
 }
 function renderLeagueComparison(){
   const panel=leagueComparisonPanel();if(!panel)return;const views=fsfflLeagueStructureState.views;
-  if(!views.length){panel.innerHTML='<p class="eyebrow">League</p><h2>No league structure is available yet.</h2><p class="lead">Load current league evidence from Home, then return here.</p>';return}
-  panel.classList.add('league-structure-panel');
-  panel.innerHTML='<section class="league-structure-hero"><div><p class="eyebrow">League atlas</p><h2>See how the league fits together.</h2><p class="lead">Scan positional control, player-level value disagreement, competitive shape, age, pick inventory and fragility before opening exact evidence.</p></div><div class="league-takeaway">'+laPrimaryTakeaway()+'</div></section>'+laPositionMatrix()+laValueLensSection()+laPressurePoint()+'<div class="league-two-column">'+laCompetitiveMap()+laAgeStructure()+'</div>'+laPickStructure()+laDepthStructure()+laEvidenceDetail();
+  if(!views.length||!fsfflLeagueStructureState.atlas){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>No governed league structure is available yet.</h2><p class="lead">Load current league evidence from Home, then return here.</p>';return}
+  panel.classList.add('league-structure-panel','league-atlas-north-star');
+  panel.innerHTML=laAtlasHeader()+'<main class="league-atlas-content">'+laActiveTab()+'</main>'+laEvidenceStrip()+laRoomDrawer()+laPickDrawer();
   bindLeagueActions();
+}
+async function loadLeagueValueLenses(){
+  fsfflLeagueStructureState.valueStatus='loading';renderLeagueComparison();
+  for(let attempt=0;attempt<80;attempt+=1){
+    try{
+      const payload=await api('/api/league/value-lenses');
+      if(payload?.status==='loading'||payload?.build_status==='queued'||payload?.build_status==='running'){
+        await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||1500));continue;
+      }
+      fsfflLeagueStructureState.valueLenses=payload;fsfflLeagueStructureState.valueStatus=payload?.status||'ready';fsfflLeagueStructureState.valueError=null;renderLeagueComparison();return;
+    }catch(error){
+      fsfflLeagueStructureState.valueLenses=null;fsfflLeagueStructureState.valueStatus='unavailable';fsfflLeagueStructureState.valueError=error.message||String(error);renderLeagueComparison();return;
+    }
+  }
+  fsfflLeagueStructureState.valueStatus='unavailable';fsfflLeagueStructureState.valueError='Governed value-lens preparation did not complete within the bounded polling window.';renderLeagueComparison();
 }
 async function loadFsfflLeagueComparison(){
   const panel=leagueComparisonPanel();if(!panel)return;
-  if(!state?.context?.league_id){panel.innerHTML='<p class="eyebrow">League</p><h2>Connect a league first.</h2><p class="lead">Load a league from Home to see its structure.</p>';return}
-  panel.innerHTML='<p class="eyebrow">League atlas</p><h2>Building the league map…</h2><p class="lead">Loading governed team structure and player-level Value lenses.</p>';
-  const started=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+  if(!state?.context?.league_id){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>Connect a league first.</h2><p class="lead">Load a league from Home to see its competitive landscape.</p>';return}
+  const stateId=state?.context?.state_id||null,started=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+  if(fsfflLeagueStructureState.atlas&&stateId&&fsfflLeagueStructureState.atlas.league_state_id===stateId&&fsfflLeagueStructureState.views.length){
+    const ended=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();fsfflLeagueStructureState.warmMs=Math.max(0,ended-started);renderLeagueComparison();if(!fsfflLeagueStructureState.valueLenses&&fsfflLeagueStructureState.valueStatus!=='loading')void loadLeagueValueLenses();return;
+  }
+  panel.innerHTML='<div class="atlas-loading"><i></i><strong>League Atlas</strong><span>Loading State, Simulation and league structure independently of Intrinsic.</span></div>';
   try{
-    const[teamResult,valueLensResult]=await Promise.allSettled([api('/api/league/team-views'),api('/api/league/value-lenses')]);
-    if(teamResult.status!=='fulfilled')throw teamResult.reason;
-    fsfflLeagueStructureState.views=teamResult.value?.team_views||[];
-    fsfflLeagueStructureState.valueLenses=valueLensResult.status==='fulfilled'?valueLensResult.value:null;
-    fsfflLeagueStructureState.managedTeamId=state?.context?.team_id||null;
-    if(fsfflLeagueStructureState.selectedValueTeamId&&!fsfflLeagueStructureState.views.some(view=>view.team_id===fsfflLeagueStructureState.selectedValueTeamId))fsfflLeagueStructureState.selectedValueTeamId=null;
-    const ended=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
-    fsfflLeagueStructureState.loadMs=Math.max(0,ended-started);
-    renderLeagueComparison();
-  }catch(error){panel.innerHTML='<p class="eyebrow">League</p><h2>Unable to load league structure.</h2><p class="lead">'+laEsc(error.message||error)+'</p>'}
+    const results=await Promise.all([api('/api/league/atlas'),api('/api/league/team-views')]);
+    fsfflLeagueStructureState.atlas=results[0];fsfflLeagueStructureState.views=results[1]?.team_views||[];
+    fsfflLeagueStructureState.valueLenses=null;fsfflLeagueStructureState.valueStatus='idle';fsfflLeagueStructureState.valueError=null;
+    fsfflLeagueStructureState.managedTeamId=state?.context?.team_id||fsfflLeagueStructureState.atlas?.managed_team_id||null;
+    fsfflLeagueStructureState.pickYear=fsfflLeagueStructureState.atlas?.pick_map?.seasons?.[0]||null;
+    fsfflLeagueStructureState.selectedRoom=null;fsfflLeagueStructureState.selectedPickTeamId=null;
+    const ended=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();fsfflLeagueStructureState.loadMs=Math.max(0,ended-started);
+    renderLeagueComparison();void loadLeagueValueLenses();
+  }catch(error){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>Unable to load league intelligence.</h2><p class="lead">'+laEsc(error.message||error)+'</p><p class="lead">Missing evidence is never replaced with a decorative score.</p>'}
 }
 function installLeagueComparisonStyles(){
   if(document.querySelector('#fsffl-league-atlas-v1-style'))return;
@@ -173,3 +195,4 @@ function installLeagueComparisonStyles(){
 }
 function renderFsfflLeagueComparison(){installLeagueComparisonStyles();return loadFsfflLeagueComparison()}
 window.renderFsfflLeagueComparison=renderFsfflLeagueComparison;
+window.fsfflLeagueAtlasDiagnostics=()=>({version:'20260922-league-atlas-north-star1',league_state_id:fsfflLeagueStructureState.atlas?.league_state_id||null,cold_load_ms:fsfflLeagueStructureState.loadMs,warm_render_ms:fsfflLeagueStructureState.warmMs,value_status:fsfflLeagueStructureState.valueLenses?.status||fsfflLeagueStructureState.valueStatus,simulation_status:fsfflLeagueStructureState.atlas?.simulation?.status||'unavailable',preseason_status:fsfflLeagueStructureState.atlas?.preseason_expectation?.status||'unavailable'});
