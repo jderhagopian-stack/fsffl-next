@@ -203,9 +203,11 @@ def test_vnext_contract_preserves_central_probability_mean_identity_and_schema()
                 abs=1e-10,
             )
         assert row.p10 is not None
+        assert row.p25 is not None
         assert row.p50 is not None
+        assert row.p75 is not None
         assert row.p90 is not None
-        assert row.p10 <= row.p50 <= row.p90
+        assert row.p10 <= row.p25 <= row.p50 <= row.p75 <= row.p90
 
 
 def test_vnext_current_coordinate_fails_closed_for_player_outside_governed_refresh() -> None:
