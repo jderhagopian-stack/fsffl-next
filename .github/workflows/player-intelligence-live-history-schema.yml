@@ -1,0 +1,43 @@
+name: Player Intelligence live history schema diagnostic
+
+on:
+  pull_request:
+
+jobs:
+  history-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect live Sleeper season aggregate schema
+        run: |
+          python - <<'PY'
+          import json
+          from urllib.request import Request, urlopen
+
+          url = "https://api.sleeper.app/v1/stats/nfl/regular/2025"
+          request = Request(url, headers={"User-Agent": "fsffl-next/0.1"})
+          with urlopen(request, timeout=30) as response:
+              payload = json.loads(response.read().decode("utf-8"))
+
+          assert isinstance(payload, dict) and payload, type(payload)
+          rows = []
+          for player_id, raw in payload.items():
+              if not isinstance(raw, dict):
+                  continue
+              row = dict(raw)
+              row.setdefault("player_id", player_id)
+              rows.append(row)
+          assert rows, "no player rows"
+          keys = set().union(*(row.keys() for row in rows))
+          requested = {
+              "gp", "pass_att", "pass_cmp", "pass_yd", "pass_td", "pass_int",
+              "rush_att", "rush_yd", "rush_td", "rec_tgt", "rec", "rec_yd",
+              "rec_td", "fum", "fum_lost",
+          }
+          missing = sorted(requested - keys)
+          print("row_count", len(rows))
+          print("requested_keys_present", sorted(requested & keys))
+          print("requested_keys_missing", missing)
+          assert "gp" in keys, "provider season aggregate did not expose gp"
+          assert {"pass_att", "pass_cmp", "rush_att", "rec_tgt", "fum", "fum_lost"} <= keys
+          PY
