@@ -35,7 +35,7 @@ def test_player_trajectory_matches_expected_median_iqr_mockup_semantics() -> Non
     assert "Actual → Forecast" in source
     assert "pi-boundary" in source
     assert "FORECAST" in source
-    assert "Expected forecast" in source
+    assert "Expected" in source
     assert "Median (P50)" in source
     assert "IQR (P25–P75)" in source
     assert "P10–P90" in source
@@ -142,22 +142,23 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?pi=20260922-player-intelligence-trajectory-iqr1&v=20260913-phase3-latency1" in index
-    assert "player_intelligence.css?pi=20260922-player-intelligence-trajectory-iqr1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.js?pi=20260922-player-intelligence-north-star1&v=20260913-phase3-latency1" in index
+    assert "player_intelligence.css?pi=20260922-player-intelligence-north-star1&v=20260913-phase3-latency1" in index
     assert "product_shell.js?v=20260913-phase3-latency1" in index
 
 
-def test_full_career_mobile_history_keeps_summary_and_expansion_state() -> None:
+def test_full_career_mobile_history_is_compact_and_stateful() -> None:
     source = _text("player_intelligence.js")
     css = _text("player_intelligence.css")
-    assert "expandedSeasons" in source
     assert "sheetScrollTop" in source
-    assert "data-pi-season" in source
     assert "restoreViewState" in source
-    assert "Fantasy points" in source
-    assert "Fantasy PPG" in source
-    assert "games_played_basis" in source
-    assert "More stats" in source
+    assert "historyView" in source
+    assert "pi-history-segments" in source
+    assert "pi-history-table" in source
+    assert "fantasy_points" in source
+    assert "fantasy_ppg" in source
+    assert "Historical fantasy scoring uses current league rules" in source
+    assert ".pi-history-table-wrap" in css
     assert "summary span:nth-child(n+3){display:none}" not in css
 
 
@@ -208,3 +209,56 @@ def test_forecast_detail_keeps_expected_as_centerline_and_does_not_relabel_it_p5
     assert "<small>Median (P50)</small>" in source
     assert "<small>IQR (P25–P75)</small>" in source
     assert "<small>P10–P90</small>" in source
+
+
+
+def test_north_star_visual_rebuild_matches_approved_information_hierarchy() -> None:
+    source = _text("player_intelligence.js")
+    css = _text("player_intelligence.css")
+    for token in (
+        "pi-summary-grid",
+        "pi-value-gauge",
+        "pi-compare-card",
+        "pi-trajectory-frame",
+        "pi-drill-button",
+        "Governed future distribution",
+        "Year-by-year production",
+    ):
+        assert token in source or token in css
+    assert "Actual → Forecast" in source
+    assert "Expected" in source
+    assert "Median (P50)" in source
+    assert "IQR (P25–P75)" in source
+    assert "P10–P90" in source
+    assert "background:radial-gradient" in css
+    assert ".pi-tabs button.active:after" in css
+
+
+def test_north_star_history_is_compact_segmented_table_not_tall_default_cards() -> None:
+    source = _text("player_intelligence.js")
+    css = _text("player_intelligence.css")
+    for label in ("Passing", "Rushing", "Receiving", "Fantasy"):
+        assert label in source
+    assert "pi-history-segments" in source
+    assert "pi-history-table" in source
+    assert "Historical fantasy scoring uses current league rules" in source
+    assert ".pi-history-table-wrap" in css
+    assert ".pi-history-segments button.active" in css
+
+
+def test_north_star_overview_keeps_decision_relevant_content_in_first_screenful() -> None:
+    source = _text("player_intelligence.js")
+    assert "Season Projection" in source
+    assert "Broad Market" in source
+    assert "FSFFL Intrinsic" in source
+    assert "valueComparison()" in source
+    assert "Open detail" in source
+    assert "Career trajectory" in source
+
+
+def test_north_star_value_comparison_only_presents_descriptive_governed_lenses() -> None:
+    source = _text("player_intelligence.js")
+    assert "shared 0–10,000 presentation ruler" in source
+    assert "separate governed lenses" in source
+    assert "This is not a buy/sell command." in source
+    assert "Value comparison unavailable" in source
