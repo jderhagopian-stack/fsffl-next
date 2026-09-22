@@ -204,7 +204,9 @@ def build_player_intelligence_overview(
                     "kind": "moments",
                     "stddev": float(y1.distribution.stddev),
                     "p10": y1.distribution.p10,
+                    "p25": y1.distribution.p25,
                     "p50": y1.distribution.p50,
+                    "p75": y1.distribution.p75,
                     "p90": y1.distribution.p90,
                 },
                 "source": y1.source,
@@ -226,7 +228,9 @@ def build_player_intelligence_overview(
                     "kind": row.uncertainty_kind.value,
                     "stddev": row.stddev,
                     "p10": row.p10,
+                    "p25": row.p25,
                     "p50": row.p50,
+                    "p75": row.p75,
                     "p90": row.p90,
                     "scenarios": [
                         scenario.model_dump(mode="json")
