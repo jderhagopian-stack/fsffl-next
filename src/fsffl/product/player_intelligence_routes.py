@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from fsffl.persistence.contracts import PersistenceStore
+from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 
 from .intrinsic_background import IntrinsicBuildStatus, ShapleyIntrinsicBackgroundCoordinator
 from .player_intelligence import (
@@ -183,9 +184,37 @@ def install_player_intelligence_routes(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
         value = dict(payload["value"])
-        value["intrinsic_status"] = intrinsic_record.status.value
-        if intrinsic_record.status == IntrinsicBuildStatus.FAILED:
-            value["intrinsic_error"] = intrinsic_record.error
+        value["intrinsic_lifecycle_status"] = intrinsic_record.status.value
+        if intrinsic_record.status in {
+            IntrinsicBuildStatus.QUEUED,
+            IntrinsicBuildStatus.RUNNING,
+        }:
+            value["intrinsic_status"] = intrinsic_record.status.value
+        elif intrinsic_record.status == IntrinsicBuildStatus.FAILED:
+            value["intrinsic_status"] = "unavailable"
+            value["intrinsic_error"] = (
+                intrinsic_record.error
+                or "Governed FSFFL Intrinsic background preparation failed."
+            )
+        elif intrinsic is None:
+            value["intrinsic_status"] = "unavailable"
+            value["intrinsic_error"] = (
+                "Governed FSFFL Intrinsic lifecycle completed without a contract."
+            )
+        elif (
+            intrinsic.status == ShapleyIntrinsicAvailability.UNAVAILABLE
+            or not intrinsic.estimates
+        ):
+            value["intrinsic_status"] = "unavailable"
+            value["intrinsic_contract_status"] = intrinsic.status.value
+            value["intrinsic_error"] = (
+                intrinsic.status_reason
+                or "Governed FSFFL Intrinsic contract is explicitly unavailable."
+            )
+        else:
+            value["intrinsic_status"] = "ready"
+            value["intrinsic_contract_status"] = intrinsic.status.value
+            value["intrinsic_status_reason"] = intrinsic.status_reason
         payload["value"] = value
         if intrinsic_record.status in {
             IntrinsicBuildStatus.QUEUED,
