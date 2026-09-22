@@ -3,15 +3,17 @@
  */
 (function(){
   'use strict';
-  const VERSION='20260921-player-intelligence1';
+  const VERSION='20260921-player-intelligence-corrective1';
   const POLL_MS=1500,MAX_POLLS=80;
-  let activeId=null,overview=null,history=null,generation=0;
+  let activeId=null,activeTab='overview',overview=null,history=null,generation=0;
 
   const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
   const finite=v=>typeof v==='number'&&Number.isFinite(v);
   const num=(v,d=1)=>finite(v)?v.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
   const idx=v=>finite(v)?Math.round(v).toLocaleString():'—';
   const pct=v=>finite(v)?`${Math.round(v*100)}th pct`:'—';
+  const normalizedPlayerId=value=>{const id=String(value??'').trim();return id&&!['null','undefined','none'].includes(id.toLowerCase())?id:null};
+  const tabClass=name=>activeTab===name?'active':'';
 
   function ensure(){
     let root=document.querySelector('#player-intelligence-root');
@@ -23,8 +25,8 @@
     return root;
   }
   function sheet(){return ensure().querySelector('.pi-sheet')}
-  function close(){const root=ensure();root.hidden=true;document.body.classList.remove('pi-open');activeId=null;overview=null;history=null;generation+=1}
-  function open(playerId){if(!playerId)return;activeId=playerId;overview=null;history=null;generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Current Forecast and value lenses first; history loads separately.</span></div>';void loadOverview(g)}
+  function close(){const root=ensure();root.hidden=true;document.body.classList.remove('pi-open');activeId=null;activeTab='overview';overview=null;history=null;generation+=1}
+  function open(playerId){const id=normalizedPlayerId(playerId);if(!id)return;activeId=id;activeTab='overview';overview=null;history=null;generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Forecast, Value and History load independently.</span></div>';void loadOverview(g);void loadHistory(g)}
 
   async function loadOverview(g){
     try{
@@ -37,7 +39,6 @@
         await new Promise(resolve=>setTimeout(resolve,Number(payload?.retry_after_ms)||POLL_MS));
       }
       if(g!==generation)return;
-      void loadHistory(g);
     }catch(error){
       if(g!==generation)return;
       sheet().innerHTML=`<button class="pi-close" data-pi-close aria-label="Close">×</button><div class="pi-error"><strong>Player Intelligence unavailable.</strong><p>${esc(error.message||error)}</p></div>`;
@@ -93,7 +94,7 @@
   }
   function forecastTable(){
     const rows=forecastRows();if(!rows.length)return'<div class="pi-empty">Governed Forecast trajectory unavailable.</div>';
-    return `<div class="pi-forecast-list">${rows.map(row=>{const range=forecastRange(row),ppg=finite(row.fantasy_ppg)?`${num(row.fantasy_ppg,1)} PPG`:'PPG unavailable';return `<article><div><small>${row.year_index===1?'Current season':`Year ${row.year_index}`} · ${row.target_season}</small><strong>${num(row.fantasy_points,1)} pts</strong><span>${ppg} <i>${esc(row.ppg_basis||'')}</i></span></div><div><small>Uncertainty</small><strong>${range?`${num(range[0],0)}–${num(range[1],0)} pts`:(finite(row.uncertainty?.stddev)?`σ ${num(row.uncertainty.stddev,1)}`:'Unavailable')}</strong><span>${esc(row.uncertainty?.kind||'none')}</span></div></article>`}).join('')}</div>`;
+    return `<div class="pi-forecast-list">${rows.map(row=>{const range=forecastRange(row),ppgAvailable=finite(row.fantasy_ppg),ppg=ppgAvailable?`${num(row.fantasy_ppg,1)} PPG`:'PPG unavailable',basis=String(row.ppg_basis||'').replace(/^unavailable:\s*/i,'');return `<article><div><small>${row.year_index===1?'Current season':`Year ${row.year_index}`} · ${row.target_season}</small><strong>${num(row.fantasy_points,1)} pts</strong><span>${ppg}${basis?` <i>${esc(basis)}</i>`:''}</span></div><div><small>Uncertainty</small><strong>${range?`${num(range[0],0)}–${num(range[1],0)} pts`:(finite(row.uncertainty?.stddev)?`σ ${num(row.uncertainty.stddev,1)}`:'Unavailable')}</strong><span>${esc(row.uncertainty?.kind||'none')}</span></div></article>`}).join('')}</div>`;
   }
   function valueRead(){
     const v=overview?.value||{},gap=finite(v.intrinsic_value_index)&&finite(v.broad_market_value_index)?v.intrinsic_value_index-v.broad_market_value_index:null;
@@ -101,9 +102,10 @@
     if(Math.abs(gap)<250)return'Broad Market and FSFFL Intrinsic are broadly aligned on the shared display ruler.';
     return gap>0?'FSFFL Intrinsic is higher than Broad Market — investigate whether market price understates the football economics.':'Broad Market is higher than FSFFL Intrinsic — investigate whether market demand exceeds the football-economic read.';
   }
+  function intrinsicDisplay(v){if(finite(v?.intrinsic_value_index))return idx(v.intrinsic_value_index);if(['queued','running'].includes(v?.intrinsic_status))return'Preparing…';if(v?.intrinsic_status==='failed')return'Unavailable';return'—'}
   function valueCards(){
     const v=overview?.value||{};
-    return `<div class="pi-value-grid"><article><small>Broad Market</small><strong>${idx(v.broad_market_value_index)}</strong><span>0–10,000 Value Index</span><em>${pct(v.broad_market_percentile)}</em></article><article><small>FSFFL Intrinsic</small><strong>${idx(v.intrinsic_value_index)}</strong><span>0–10,000 Value Index</span><em>${pct(v.intrinsic_percentile)}</em></article></div><div class="pi-value-read"><strong>${esc(valueRead())}</strong><p>Same presentation ruler; separate underlying authorities. This is not a buy/sell command.</p></div>`;
+    return `<div class="pi-value-grid"><article><small>Broad Market</small><strong>${idx(v.broad_market_value_index)}</strong><span>0–10,000 Value Index</span><em>${pct(v.broad_market_percentile)}</em></article><article><small>FSFFL Intrinsic</small><strong>${intrinsicDisplay(v)}</strong><span>0–10,000 Value Index</span><em>${pct(v.intrinsic_percentile)}</em></article></div><div class="pi-value-read"><strong>${esc(valueRead())}</strong><p>Same presentation ruler; separate underlying authorities. This is not a buy/sell command.</p></div>`;
   }
   function forecastProvenance(){
     const f=overview?.forecast||{},basis=f.current_evidence_basis||'unavailable',fallback=basis==='preseason_baseline';
@@ -114,21 +116,21 @@
     if(!overview)return;const p=overview.player,v=overview.value||{},first=y1();
     sheet().innerHTML=`<button class="pi-close" data-pi-close aria-label="Close">×</button>
       <header class="pi-player-head"><div class="pi-avatar">${esc((p.full_name||'?').split(' ').map(x=>x[0]).slice(0,2).join(''))}</div><div><p class="eyebrow">Player Intelligence</p><h2>${esc(p.full_name)}</h2><span>${esc(p.position)} · ${esc(p.nfl_team||'FA')} · age ${esc(p.age_years??'—')}</span></div></header>
-      <nav class="pi-tabs" role="tablist"><button data-pi-tab="overview" class="active">Overview</button><button data-pi-tab="career">Career & Forecast</button><button data-pi-tab="value">Value</button><button data-pi-tab="methods">Methods / Evidence</button></nav>
-      <div class="pi-tab active" data-pi-panel="overview">
+      <nav class="pi-tabs" role="tablist"><button data-pi-tab="overview" class="${tabClass('overview')}">Overview</button><button data-pi-tab="career" class="${tabClass('career')}">Career & Forecast</button><button data-pi-tab="value" class="${tabClass('value')}">Value</button><button data-pi-tab="methods" class="${tabClass('methods')}">Methods / Evidence</button></nav>
+      <div class="pi-tab ${tabClass('overview')}" data-pi-panel="overview">
         ${forecastProvenance()}
-        <div class="pi-overview-grid"><article><small>Season Projection</small><strong>${num(first?.fantasy_points,1)}</strong><span>fantasy pts</span><em>${finite(first?.fantasy_ppg)?`${num(first.fantasy_ppg,1)} PPG`:'PPG unavailable'}</em></article><article><small>Broad Market</small><strong>${idx(v.broad_market_value_index)}</strong><span>Value Index</span><em>${pct(v.broad_market_percentile)}</em></article><article><small>FSFFL Intrinsic</small><strong>${idx(v.intrinsic_value_index)}</strong><span>Value Index</span><em>${pct(v.intrinsic_percentile)}</em></article></div>
+        <div class="pi-overview-grid"><article><small>Season Projection</small><strong>${num(first?.fantasy_points,1)}</strong><span>fantasy pts</span><em>${finite(first?.fantasy_ppg)?`${num(first.fantasy_ppg,1)} PPG`:'PPG unavailable'}</em></article><article><small>Broad Market</small><strong>${idx(v.broad_market_value_index)}</strong><span>Value Index</span><em>${pct(v.broad_market_percentile)}</em></article><article><small>FSFFL Intrinsic</small><strong>${intrinsicDisplay(v)}</strong><span>Value Index</span><em>${pct(v.intrinsic_percentile)}</em></article></div>
         <section class="pi-section"><div class="pi-section-head"><div><small>Career trajectory</small><h3>Actual → Forecast</h3></div></div>${chart()}</section>
       </div>
-      <div class="pi-tab" data-pi-panel="career"><section class="pi-section"><div class="pi-section-head"><div><small>Career & Forecast</small><h3>Historical actuals through Year 3</h3></div></div>${chart()}</section><section class="pi-section"><h3>Forecast details</h3>${forecastTable()}</section><section class="pi-section"><h3>Historical actuals</h3>${historyTable()}</section></div>
-      <div class="pi-tab" data-pi-panel="value">${valueCards()}<details class="pi-method"><summary>Why this value?</summary><p><strong>Raw Shapley:</strong> ${num(v.raw_shapley_marginal_points,1)} marginal fantasy-point units. This is audit detail, not projected points or market price.</p><p><strong>Display contract:</strong> ${esc(v.value_presentation?.contract_version||'unavailable')}. The shared Value Index is presentation-only and does not alter Broad Market, Intrinsic, Team Utility, or Trade Decision.</p><p><strong>League Market Value:</strong> unavailable by design.</p></details></div>
-      <div class="pi-tab" data-pi-panel="methods">${forecastProvenance()}<div class="pi-method-grid"><article><small>Current Forecast model</small><strong>${esc(overview.forecast?.current_model_version||'—')}</strong></article><article><small>Value presentation</small><strong>${esc(v.value_presentation?.contract_version||'Unavailable')}</strong></article><article><small>History scoring</small><strong>${esc(history?.scoring_basis||'Scored under current league rules when loaded')}</strong></article><article><small>Intrinsic readiness</small><strong>${esc(v.intrinsic_status||'unavailable')}</strong></article></div><p class="pi-foot">Raw Market and raw Shapley quantities are never subtracted. Future Y2/Y3 points come directly from Forecast authority; they are not inferred from Intrinsic.</p></div>`;
+      <div class="pi-tab ${tabClass('career')}" data-pi-panel="career"><section class="pi-section"><div class="pi-section-head"><div><small>Career & Forecast</small><h3>Historical actuals through Year 3</h3></div></div>${chart()}</section><section class="pi-section"><h3>Forecast details</h3>${forecastTable()}</section><section class="pi-section"><h3>Historical actuals</h3>${historyTable()}</section></div>
+      <div class="pi-tab ${tabClass('value')}" data-pi-panel="value">${valueCards()}<details class="pi-method"><summary>Why this value?</summary><p><strong>Raw Shapley:</strong> ${num(v.raw_shapley_marginal_points,1)} marginal fantasy-point units. This is audit detail, not projected points or market price.</p><p><strong>Display contract:</strong> ${esc(v.value_presentation?.contract_version||'unavailable')}. The shared Value Index is presentation-only and does not alter Broad Market, Intrinsic, Team Utility, or Trade Decision.</p><p><strong>League Market Value:</strong> unavailable by design.</p></details></div>
+      <div class="pi-tab ${tabClass('methods')}" data-pi-panel="methods">${forecastProvenance()}<div class="pi-method-grid"><article><small>Current Forecast model</small><strong>${esc(overview.forecast?.current_model_version||'—')}</strong></article><article><small>Value presentation</small><strong>${esc(v.value_presentation?.contract_version||'Unavailable')}</strong></article><article><small>History scoring</small><strong>${esc(history?.scoring_basis||'Scored under current league rules when loaded')}</strong></article><article><small>Intrinsic readiness</small><strong>${esc(v.intrinsic_status||'unavailable')}</strong></article></div><p class="pi-foot">Raw Market and raw Shapley quantities are never subtracted. Future Y2/Y3 points come directly from Forecast authority; they are not inferred from Intrinsic.</p></div>`;
     bindTabs();
   }
   function bindTabs(){
-    const host=sheet();host.querySelectorAll('[data-pi-tab]').forEach(button=>button.addEventListener('click',()=>{host.querySelectorAll('[data-pi-tab]').forEach(x=>x.classList.toggle('active',x===button));host.querySelectorAll('[data-pi-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.piPanel===button.dataset.piTab))}));
+    const host=sheet();host.querySelectorAll('[data-pi-tab]').forEach(button=>button.addEventListener('click',()=>{activeTab=button.dataset.piTab||'overview';host.querySelectorAll('[data-pi-tab]').forEach(x=>x.classList.toggle('active',x.dataset.piTab===activeTab));host.querySelectorAll('[data-pi-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.piPanel===activeTab))}));
   }
-  document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]');if(!trigger)return;event.preventDefault();event.stopPropagation();open(trigger.dataset.playerIntelligenceId)},true);
+  document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]');if(!trigger)return;const id=normalizedPlayerId(trigger.dataset.playerIntelligenceId);if(!id)return;event.preventDefault();event.stopPropagation();open(id)},true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!ensure().hidden)close()});
   window.fsfflPlayerIntelligence={open,close,version:VERSION};
 })();
