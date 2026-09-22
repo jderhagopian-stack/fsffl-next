@@ -3,6 +3,7 @@ from __future__ import annotations
 import bisect
 import math
 import random
+from functools import lru_cache
 from dataclasses import dataclass
 from typing import Mapping
 
@@ -45,6 +46,49 @@ def subset_caps_from_rules(rules: LeagueRules) -> tuple[tuple[tuple[int, ...], i
 ReplacementPlan = tuple[int | None, float | None, str | None] | None
 
 
+@lru_cache(maxsize=None)
+def _valid_counts_cached(
+    caps: tuple[tuple[tuple[int, ...], int], ...],
+    counts: tuple[int, int, int, int],
+) -> bool:
+    """Memoize lineup-feasibility checks without changing Shapley semantics.
+
+    A 335-player / 2048-permutation cold build revisits the same small set of
+    position-count states millions of times.  Feasibility depends only on the
+    frozen league caps and integer position counts, so this cache removes
+    redundant structural work while preserving the exact permutation stream and
+    marginal-value mathematics.
+    """
+
+    return all(
+        sum(counts[index] for index in indices) <= cap
+        for indices, cap in caps
+    )
+
+
+@lru_cache(maxsize=None)
+def _replacement_options_cached(
+    caps: tuple[tuple[tuple[int, ...], int], ...],
+    counts: tuple[int, int, int, int],
+    incoming: int,
+) -> tuple[bool, tuple[int, ...]]:
+    add_counts = list(counts)
+    add_counts[incoming] += 1
+    if _valid_counts_cached(caps, tuple(add_counts)):
+        return True, ()
+
+    outgoing_options: list[int] = []
+    for outgoing in range(4):
+        if counts[outgoing] <= 0:
+            continue
+        swap_counts = list(counts)
+        swap_counts[outgoing] -= 1
+        swap_counts[incoming] += 1
+        if _valid_counts_cached(caps, tuple(swap_counts)):
+            outgoing_options.append(outgoing)
+    return False, tuple(outgoing_options)
+
+
 class _Basis:
     def __init__(self, caps: tuple[tuple[tuple[int, ...], int], ...]) -> None:
         self.caps = caps
@@ -53,17 +97,28 @@ class _Basis:
         self.total = 0.0
 
     def _valid_counts(self, counts: list[int]) -> bool:
-        return all(sum(counts[index] for index in indices) <= cap for indices, cap in self.caps)
+        return _valid_counts_cached(
+            self.caps,
+            (counts[0], counts[1], counts[2], counts[3]),
+        )
 
     def _can_add(self, position_index: int) -> bool:
-        counts = self.counts.copy(); counts[position_index] += 1
-        return self._valid_counts(counts)
+        can_add, _ = _replacement_options_cached(
+            self.caps,
+            (self.counts[0], self.counts[1], self.counts[2], self.counts[3]),
+            position_index,
+        )
+        return can_add
 
     def _can_swap(self, outgoing: int, incoming: int) -> bool:
         if self.counts[outgoing] <= 0:
             return False
-        counts = self.counts.copy(); counts[outgoing] -= 1; counts[incoming] += 1
-        return self._valid_counts(counts)
+        can_add, outgoing_options = _replacement_options_cached(
+            self.caps,
+            (self.counts[0], self.counts[1], self.counts[2], self.counts[3]),
+            incoming,
+        )
+        return (not can_add) and outgoing in outgoing_options
 
     def replacement_plan(self, position: str) -> ReplacementPlan:
         """Return the lineup-feasibility plan for an incoming position.
@@ -75,11 +130,16 @@ class _Basis:
         """
 
         incoming = POSITION_INDEX[position]
-        if self._can_add(incoming):
+        can_add, outgoing_options = _replacement_options_cached(
+            self.caps,
+            (self.counts[0], self.counts[1], self.counts[2], self.counts[3]),
+            incoming,
+        )
+        if can_add:
             return (None, None, None)
         best: tuple[float, str, int] | None = None
-        for outgoing in range(4):
-            if not self.by_position[outgoing] or not self._can_swap(outgoing, incoming):
+        for outgoing in outgoing_options:
+            if not self.by_position[outgoing]:
                 continue
             old_weight, old_id = self.by_position[outgoing][0]
             option = (old_weight, old_id, outgoing)
@@ -106,8 +166,14 @@ class _Basis:
     def marginal(self, position: str, weight: float) -> tuple[float, ReplacementPlan]:
         return self.marginal_from_plan(weight, self.replacement_plan(position))
 
-    def add(self, player_id: str, position: str, weight: float) -> float:
-        delta, replacement = self.marginal(position, weight)
+    def add_with_plan(
+        self,
+        player_id: str,
+        position: str,
+        weight: float,
+        plan: ReplacementPlan,
+    ) -> float:
+        delta, replacement = self.marginal_from_plan(weight, plan)
         candidate = max(0.0, float(weight)); incoming = POSITION_INDEX[position]
         if replacement is None:
             return 0.0
@@ -122,6 +188,14 @@ class _Basis:
         bisect.insort(self.by_position[incoming], (candidate, player_id))
         self.counts[incoming] += 1; self.total += candidate
         return delta
+
+    def add(self, player_id: str, position: str, weight: float) -> float:
+        return self.add_with_plan(
+            player_id,
+            position,
+            weight,
+            self.replacement_plan(position),
+        )
 
 
 def full_game_value(
@@ -167,7 +241,7 @@ def monte_carlo_shapley_scenarios(
                 marginal, _ = basis.marginal_from_plan(scenario, plan)
                 sums[player_id][index] += marginal
                 sums_sq[player_id][index] += marginal * marginal
-            basis.add(player_id, position, baseline)
+            basis.add_with_plan(player_id, position, baseline, plan)
 
     estimates = {
         player_id: tuple(value / permutations for value in values)
