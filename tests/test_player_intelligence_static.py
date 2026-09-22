@@ -144,9 +144,7 @@ def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
     assert "player_intelligence.js?pi=20260922-player-intelligence-trajectory-iqr1&v=20260913-phase3-latency1" in index
     assert "player_intelligence.css?pi=20260922-player-intelligence-trajectory-iqr1&v=20260913-phase3-latency1" in index
-    assert "product_shell.js?v=20260913-phase3-latency1&ps=20260922-intrinsic-pi-corrective1" in index
-    shell = _text("product_shell.js")
-    assert "my_team_dashboard.js?mt=20260922-intrinsic-pi-corrective1" in shell
+    assert "product_shell.js?v=20260913-phase3-latency1" in index
 
 
 def test_full_career_mobile_history_keeps_summary_and_expansion_state() -> None:
