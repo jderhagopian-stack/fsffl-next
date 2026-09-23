@@ -100,6 +100,16 @@ class SleeperNormalizer:
         league_external_id = str(bundle.league["league_id"])
         league_id = f"sleeper:{league_external_id}"
         settings = bundle.league.get("settings", {})
+        raw_leg = settings.get("leg")
+        try:
+            current_matchup_week = int(raw_leg) if raw_leg is not None else None
+        except (TypeError, ValueError):
+            current_matchup_week = None
+        completed_through_week = (
+            max(0, current_matchup_week - 1)
+            if current_matchup_week is not None and current_matchup_week >= 1
+            else None
+        )
         roster_positions = list(bundle.league.get("roster_positions", []))
         scoring_settings = bundle.league.get("scoring_settings", {})
 
@@ -248,6 +258,13 @@ class SleeperNormalizer:
                 if (points_a is None) != (points_b is None):
                     points_a = None
                     points_b = None
+                if completed_through_week is not None and week > completed_through_week:
+                    # Sleeper emits numeric zero placeholders for future schedule rows.
+                    # Canonical State uses missing points for matchups that are not yet
+                    # proven complete; the provider's current fantasy-week coordinate
+                    # is the authoritative completion boundary.
+                    points_a = None
+                    points_b = None
                 canonical_matchups.append(
                     LeagueMatchup(
                         week=week,
@@ -369,5 +386,6 @@ class SleeperNormalizer:
                     key=lambda item: (item.week, item.team_a_id, item.team_b_id),
                 )
             ),
+            completed_through_week=completed_through_week,
             provenance=(provenance,),
         )
