@@ -25,8 +25,8 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260920-owner-dossier1';
-const leagueAtlasStaticVersion='20260923-league-atlas-iphone1';
-const mobileTouchStaticVersion='20260923-mobile-safearea1';
+const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone2';
+const mobileTouchStaticVersion='20260923-mobile-safearea2';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
