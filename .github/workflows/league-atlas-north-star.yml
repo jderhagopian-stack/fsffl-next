@@ -11,6 +11,7 @@ on:
       - "src/fsffl/product/player_intelligence.py"
       - "src/fsffl/product/static/league_comparison.js"
       - "src/fsffl/product/static/league_atlas.css"
+      - "src/fsffl/product/static/mobile_touch_fix.css"
       - "src/fsffl/product/static/product_shell.js"
       - "tests/test_league_atlas_north_star.py"
       - "tests/test_phase3_league_surface.py"
