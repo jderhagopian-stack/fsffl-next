@@ -49,8 +49,8 @@
 
   body.fsffl-product-architecture{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
   .fsffl-product-architecture .topbar{
-    padding-top:env(safe-area-inset-top,0px)!important;
-    min-height:calc(76px + env(safe-area-inset-top,0px));
+    padding-top:calc(10px + env(safe-area-inset-top,0px))!important;
+    min-height:calc(76px + env(safe-area-inset-top,0px))!important;
   }
   body.fsffl-product-architecture #mobile-menu{display:none!important}
   .fsffl-product-architecture .sidebar{display:none!important}
