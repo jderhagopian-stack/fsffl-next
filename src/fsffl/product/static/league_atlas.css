@@ -510,3 +510,54 @@
   }
   .league-atlas-north-star .league-depth-section{margin-top:8px!important}
 }
+
+
+/* Physical iPhone acceptance correction 3: reveal #1 identity and remove map vertical scroller. */
+@media(max-width:720px){
+  /* Safari was still painting the two row-spanned identity header cells over
+   * the first body row. Keep body identity horizontally sticky, but let the
+   * header identity cells participate in normal table flow. */
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-rank-sticky,
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-team-sticky{
+    position:static!important;
+    left:auto!important;
+    top:auto!important;
+    z-index:auto!important;
+    box-shadow:none!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody .atlas-race-rank-sticky{
+    position:sticky!important;
+    left:0!important;
+    top:auto!important;
+    z-index:7!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody .atlas-race-team-sticky{
+    position:sticky!important;
+    left:44px!important;
+    top:auto!important;
+    z-index:6!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody tr:first-child td{
+    z-index:auto!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody tr:first-child .atlas-race-rank-sticky{z-index:7!important}
+  .league-atlas-north-star .atlas-race-table tbody tr:first-child .atlas-race-team-sticky{z-index:6!important}
+
+  /* north_star_app.css intentionally compressed the old exact matrix to a
+   * 280px scrolling drill-down. Atlas now owns the primary map, so cancel that
+   * legacy compression for this one canonical map and let all 12 rows render. */
+  .league-atlas-north-star.ns-app-compressed .league-edge-map,
+  .league-atlas-north-star.ns-app-compressed .league-edge-matrix{
+    max-height:none!important;
+    height:auto!important;
+    overflow:visible!important;
+    overflow-x:visible!important;
+    overflow-y:visible!important;
+    overscroll-behavior:auto!important;
+    -webkit-overflow-scrolling:auto!important;
+  }
+  .league-atlas-north-star.ns-app-compressed .league-edge-map::-webkit-scrollbar,
+  .league-atlas-north-star.ns-app-compressed .league-edge-matrix::-webkit-scrollbar{
+    display:none!important;
+  }
+}

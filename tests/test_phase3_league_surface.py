@@ -89,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone3" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone3';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone4" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone4';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
@@ -222,3 +222,18 @@ def test_physical_iphone_acceptance_race_identity_is_compact_and_header_does_not
     assert ".atlas-race-table thead th{\n    position:static!important" in css
     assert ".atlas-race-table thead .atlas-race-rank-sticky" in css
     assert "top:auto!important" in css
+
+
+def test_physical_iphone_acceptance_3_reveals_rank_one_identity_and_removes_map_scroller() -> None:
+    css = _source(ATLAS_CSS)
+
+    assert ".atlas-race-table thead .atlas-race-rank-sticky" in css
+    assert "position:static!important" in css
+    assert ".atlas-race-table tbody .atlas-race-rank-sticky" in css
+    assert ".atlas-race-table tbody .atlas-race-team-sticky" in css
+    assert "tbody tr:first-child .atlas-race-rank-sticky{z-index:7!important}" in css
+    assert "tbody tr:first-child .atlas-race-team-sticky{z-index:6!important}" in css
+    assert ".league-atlas-north-star.ns-app-compressed .league-edge-map" in css
+    assert "max-height:none!important" in css
+    assert "overflow-y:visible!important" in css
+    assert "::-webkit-scrollbar" in css
