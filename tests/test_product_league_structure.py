@@ -5,11 +5,13 @@ def test_league_structure_surface_uses_governed_race_position_value_pick_and_for
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     for label in (
         "League Race",
-        "Frozen preseason expectation",
+        "Preseason expectation → now",
+        "What changed since the frozen baseline?",
         "Competitive shape",
         "Depth / fragility",
+        "Position & Depth",
+        "Value Map",
         "Pick Map",
-        "Outlook",
     ):
         assert label in source
     assert "calculated_competitive_state" in source
