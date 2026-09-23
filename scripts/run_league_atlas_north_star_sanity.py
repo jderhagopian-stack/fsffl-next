@@ -56,6 +56,16 @@ def main() -> None:
         raise RuntimeError("real live State is missing matchup completion authority")
     if payload["last_completed_week"] != state.completed_through_week:
         raise RuntimeError("Atlas last-completed-week diverges from canonical State")
+    if state.completed_through_week != 2:
+        raise RuntimeError(
+            f"live provider evidence proves Week 2 complete; canonical boundary is {state.completed_through_week}"
+        )
+    missing_max_pf = [
+        row["team_id"] for row in payload["standings"]
+        if row.get("max_points_for") is None
+    ]
+    if missing_max_pf:
+        raise RuntimeError(f"canonical Max PF missing for real teams: {missing_max_pf}")
     false_future_scores = [
         matchup
         for matchup in state.matchups
@@ -85,7 +95,9 @@ def main() -> None:
         "Position & Depth",
         "Value Map",
         "Pick Map",
-        "Outlook",
+        "Forward outlook",
+        "Max PF",
+        "champ",
         "data-room-team",
         "data-room-position",
         "data-player-intelligence-id",
@@ -101,6 +113,10 @@ def main() -> None:
         "api('/api/values')",
         "team_cardinal_portfolios",
         "acceptance_probability",
+        "laTabButton('outlook'",
+        "laOutlookTab",
+        "View all ",
+        "league-edge-exact",
     ):
         if forbidden in js:
             raise RuntimeError(f"Atlas source contains forbidden authority token: {forbidden}")
@@ -134,6 +150,9 @@ def main() -> None:
         "distinct_team_pick_counts": sorted(set(per_team_pick_counts)),
         "last_completed_week": payload["last_completed_week"],
         "future_scored_matchup_rows": len(false_future_scores),
+        "max_pf_team_count": sum(
+            row.get("max_points_for") is not None for row in payload["standings"]
+        ),
         "simulation_status_in_ci_runtime": payload["simulation"]["status"],
         "preseason_status_in_ci_runtime": payload["preseason_expectation"]["status"],
         "latency_ms": {
@@ -144,7 +163,8 @@ def main() -> None:
         },
         "authority": payload["authority"],
         "notes": [
-            "This CI sanity uses the real league State and exercises the production Atlas composition builder.",
+            "This CI sanity uses the real 12-team Sleeper State and exercises the production Atlas composition builder.",
+            "All 12 standings rows carry canonical provider-backed Max PF and the completed-week boundary is Week 2.",
             "It intentionally does not recompute the 50,000-run Simulation or Shapley Intrinsic in CI.",
             "Persisted production evidence for Simulation, position strength, resilience, Market and A2+Burr-backed Intrinsic is recorded separately in the implementation checkpoint.",
             "Authenticated hosted iPhone/Safari latency remains a management acceptance item after exact-SHA deployment.",
@@ -170,7 +190,7 @@ def main() -> None:
                 f"- Atlas composition warm median: {warm_median_ms:.3f} ms",
                 f"- Atlas composition warm p95: {warm_p95_ms:.3f} ms",
                 "",
-                "The UI contract exposes the five North Star surfaces and required drilldowns without creating prohibited model authority.",
+                "The UI contract exposes the four final Atlas tabs and required drilldowns without creating prohibited model authority.",
                 "",
                 "Authenticated hosted/mobile latency is not claimed by this CI run.",
             ]

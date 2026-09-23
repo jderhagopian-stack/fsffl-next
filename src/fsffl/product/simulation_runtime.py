@@ -39,7 +39,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
     scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic
-    model_version: str = "next8-live-simulation-analytics-v7:scoring-dispersion-diagnostic"
+    model_version: str = "next8-live-simulation-analytics-v8:resilience-driver-identity"
 
 
 def build_live_simulation_analytics(
@@ -260,7 +260,7 @@ def build_live_simulation_analytics(
                 component="competitive_state_policy",
                 model_version=competitive_state_policy.model_version,
             ),
-            ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v4"),
+            ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v5:resilience-driver-identity"),
         ),
         warnings=tuple(warnings),
     )
@@ -276,7 +276,7 @@ def build_live_simulation_analytics(
                 horizon=ForecastHorizon.SEASON,
                 competitive_outcome=outcomes[team.team_id],
                 competitive_state_policy=competitive_state_policy,
-                model_version="next4-live-team-utility-v4",
+                model_version="next4-live-team-utility-v5:resilience-driver-identity",
             )
         except ValueError:
             if not lineups[team.team_id].unfilled_slots:
@@ -290,7 +290,7 @@ def build_live_simulation_analytics(
                     competitive_state_policy,
                     as_of=league_state.as_of,
                 ),
-                model_version="next4-live-team-utility-v4:resilience_unavailable_incomplete_roster",
+                model_version="next4-live-team-utility-v5:resilience-driver-identity:resilience_unavailable_incomplete_roster",
             )
         team_views.append(
             build_team_analytics_view(

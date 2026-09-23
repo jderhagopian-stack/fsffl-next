@@ -112,7 +112,7 @@ class SleeperNormalizer:
             else None
         )
 
-        nfl_state_completed: int | None = None
+        nfl_state_completion_candidates: list[int] = []
         nfl_state = bundle.nfl_state
         if isinstance(nfl_state, Mapping):
             raw_season = nfl_state.get("season")
@@ -122,28 +122,22 @@ class SleeperNormalizer:
                 nfl_season = None
             season_type = str(nfl_state.get("season_type") or "regular").lower()
             if nfl_season in (None, int(bundle.league.get("season"))) and season_type == "regular":
-                raw_display_week = nfl_state.get("display_week")
-                raw_week = nfl_state.get("week")
-                try:
-                    display_week = (
-                        int(raw_display_week)
-                        if raw_display_week not in (None, "")
-                        else None
-                    )
-                except (TypeError, ValueError):
-                    display_week = None
-                try:
-                    nfl_week = int(raw_week) if raw_week not in (None, "") else None
-                except (TypeError, ValueError):
-                    nfl_week = None
-                if display_week is not None and display_week >= 1:
-                    nfl_state_completed = max(0, display_week - 1)
-                elif nfl_week is not None and nfl_week >= 1:
-                    nfl_state_completed = max(0, nfl_week - 1)
+                # Sleeper can temporarily lag display_week and league.settings.leg
+                # behind its NFL state week/leg after a completed slate. Treat all
+                # same-season regular-season week coordinates as factual provider
+                # evidence and retain the strongest completed-week boundary.
+                for key in ("display_week", "week", "leg"):
+                    raw_value = nfl_state.get(key)
+                    try:
+                        value = int(raw_value) if raw_value not in (None, "") else None
+                    except (TypeError, ValueError):
+                        value = None
+                    if value is not None and value >= 1:
+                        nfl_state_completion_candidates.append(max(0, value - 1))
 
         completion_candidates = [
             week
-            for week in (league_leg_completed, nfl_state_completed)
+            for week in (league_leg_completed, *nfl_state_completion_candidates)
             if week is not None
         ]
         completed_through_week = max(completion_candidates, default=None)
@@ -240,13 +234,40 @@ class SleeperNormalizer:
                     slot = RosterSlot.BENCH
                 entries.append(RosterEntry(player_id=f"sleeper:player:{pid}", slot=slot))
 
-            used_faab = int((roster.get("settings") or {}).get("waiver_budget_used") or 0)
+            roster_settings = roster.get("settings") or {}
+            used_faab = int(roster_settings.get("waiver_budget_used") or 0)
             current_faab = max(faab_budget - used_faab, 0) if faab_budget else 0
+
+            max_points_for: float | None = None
+            raw_ppts = roster_settings.get("ppts")
+            if raw_ppts not in (None, ""):
+                try:
+                    whole = float(raw_ppts)
+                    decimal = float(roster_settings.get("ppts_decimal") or 0)
+                    max_points_for = whole + decimal / 100.0
+                except (TypeError, ValueError):
+                    max_points_for = None
+            max_points_for_provenance = (
+                Provenance(
+                    source="sleeper:roster_settings:ppts",
+                    retrieved_at=retrieved_at,
+                    effective_at=as_of,
+                    provider_ref=ProviderRef(
+                        provider="sleeper",
+                        external_id=f"{league_external_id}:roster:{roster_id}:ppts",
+                    ),
+                    source_version="ppts+ppts_decimal",
+                )
+                if max_points_for is not None
+                else None
+            )
             team_states.append(
                 TeamState(
                     team_id=team_id,
                     roster=tuple(entries),
                     faab_balance=current_faab,
+                    max_points_for=max_points_for,
+                    max_points_for_provenance=max_points_for_provenance,
                 )
             )
 

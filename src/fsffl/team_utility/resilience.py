@@ -16,7 +16,7 @@ def build_roster_resilience(
     team_id: str,
     as_of: datetime,
     horizon: ForecastHorizon,
-    model_version: str = "next4-roster-resilience-v1",
+    model_version: str = "next4-roster-resilience-v2:argmax-driver-identity",
 ) -> RosterResilience:
     """Describe roster fragility using real lineup substitutions.
 

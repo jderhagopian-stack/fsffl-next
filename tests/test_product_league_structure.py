@@ -1,15 +1,17 @@
 from pathlib import Path
 
 
-def test_league_structure_surface_uses_governed_race_position_value_pick_and_outlook_evidence() -> None:
+def test_league_structure_surface_uses_governed_race_position_value_pick_and_forward_evidence() -> None:
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
     for label in (
         "League Race",
-        "Frozen preseason expectation",
+        "Preseason expectation → now",
+        "What changed since the frozen baseline?",
         "Competitive shape",
         "Depth / fragility",
+        "Position & Depth",
+        "Value Map",
         "Pick Map",
-        "Outlook",
     ):
         assert label in source
     assert "calculated_competitive_state" in source
@@ -33,3 +35,11 @@ def test_league_structure_visualization_does_not_create_model_authority() -> Non
     assert '"power_score_created": False' in contract
     assert '"recommendation_strength_created": False' in contract
     assert '"acceptance_probability_created": False' in contract
+
+
+def test_final_atlas_has_no_standalone_outlook_or_duplicate_position_grid() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "laTabButton('outlook'" not in source
+    assert "laOutlookTab" not in source
+    assert "league-edge-exact" not in source
+    assert "View all " not in source

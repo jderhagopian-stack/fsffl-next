@@ -126,6 +126,19 @@ def persist_runtime_snapshot(
                 result=simulation_analytics,
             )
         )
+        # Automatic annual League Atlas baseline capture is an orchestration
+        # side-effect of persisting an already-authoritative 50,000-run runtime.
+        # The helper fails closed outside a proven pre-opener coordinate.
+        from fsffl.product.league_atlas_preseason import (
+            capture_preseason_baseline_if_eligible,
+        )
+
+        capture_preseason_baseline_if_eligible(
+            store,
+            state=league_state,
+            forecast=forecast_evidence,
+            simulation=simulation_analytics,
+        )
     if value_evidence is not None:
         store.put_artifact(
             value_artifact(
