@@ -57,8 +57,18 @@ def _state() -> LeagueState:
             Team(team_id="b", league_id=league_id, display_name="Beta"),
         ),
         team_states=(
-            TeamState(team_id="a", roster=()),
-            TeamState(team_id="b", roster=()),
+            TeamState(
+                team_id="a",
+                roster=(),
+                max_points_for=250.25,
+                max_points_for_provenance=_provenance(),
+            ),
+            TeamState(
+                team_id="b",
+                roster=(),
+                max_points_for=230.50,
+                max_points_for_provenance=_provenance(),
+            ),
         ),
         players=(),
         player_states=(),
@@ -142,6 +152,8 @@ def test_atlas_contract_aggregates_current_state_and_preserves_unavailable_layer
     assert standings[0]["ties"] == 1
     assert standings[0]["points_for"] == 231.5
     assert standings[0]["points_against"] == 209.0
+    assert standings[0]["max_points_for"] == 250.25
+    assert standings[0]["max_points_for_provenance"]["source"] == "fixture"
 
     assert payload["simulation"]["status"] == "unavailable"
     assert payload["simulation"]["teams"] == []
@@ -271,10 +283,12 @@ def test_atlas_route_uses_preserved_preseason_forecast_only_with_historical_stat
     assert "preseason_state.league.season != league_state.league.season" in webapp
     assert "No valid pre-kickoff 2026 State + Forecast pair can be proven" in webapp
     assert "completed_matchups(preseason_state)" in webapp
-    assert "build_forecast_lineup_analytics(" in webapp
+    assert "capture_preseason_baseline_if_eligible" in webapp
+    assert "load_preseason_baseline" in webapp
     assert "_preseason_forecast_loader = make_preseason_baseline_authority_loader" in persistent
     assert "preseason_forecast_loader=_preseason_forecast_loader" in persistent
     assert "state_snapshot_store=_state_snapshot_store" in persistent
+    assert "persistence_store=_persistence_store" in persistent
 
 def test_future_zero_schedule_rows_do_not_create_ties_or_advance_current_rank() -> None:
     state = _state()
