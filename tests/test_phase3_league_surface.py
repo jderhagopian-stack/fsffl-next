@@ -89,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone4" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone4';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone5" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone5';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
@@ -188,7 +188,9 @@ def test_final_iphone_polish_race_has_real_two_tier_sticky_geometry() -> None:
     assert 'class="atlas-race-metric-row"' in source
     assert 'colspan="4">Current Season' in source
     assert 'colspan="5">Outlook from Today' in source
-    assert 'rowspan="2"' in source
+    assert 'rowspan="2"' not in source
+    assert source.count("atlas-race-rank-sticky") >= 3
+    assert source.count("atlas-race-team-sticky") >= 3
     assert "atlas-col-wins" in source
     assert "min-width:1120px" in css
     assert "--atlas-race-group-height:32px" in css
@@ -237,3 +239,24 @@ def test_physical_iphone_acceptance_3_reveals_rank_one_identity_and_removes_map_
     assert "max-height:none!important" in css
     assert "overflow-y:visible!important" in css
     assert "::-webkit-scrollbar" in css
+
+
+def test_final_density_value_polish_uses_sticky_identity_headers_compact_cards_and_value_indices() -> None:
+    source = _source(LEAGUE)
+    css = _source(ATLAS_CSS)
+
+    assert 'class="atlas-race-group-row"' in source
+    assert 'class="atlas-race-metric-row"' in source
+    assert 'atlas-race-corner' in source
+    assert 'rowspan="2"' not in source
+    assert "thead tr.atlas-race-group-row>th" in css
+    assert "thead tr.atlas-race-metric-row>th" in css
+    assert "thead .atlas-race-team-sticky" in css
+    assert "position:sticky!important" in css
+    assert "min-height:52px!important" in css
+    assert "min-height:58px!important" in css
+    assert "broad_market_value_index" in source
+    assert "intrinsic_value_index" in source
+    assert "value_index_gap" in source
+    assert "Governed 0–10,000 Value Index" in source
+    assert "percentile_gap" not in source[source.index("function laValuePlayerDetail"):source.index("function laValueDetail")]
