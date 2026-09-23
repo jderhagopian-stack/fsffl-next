@@ -41,6 +41,8 @@ def test_sleeper_live_acquires_only_configured_regular_season_weeks() -> None:
             return {}
         if url.endswith("/league/123/traded_picks"):
             return []
+        if url.endswith("/state/nfl"):
+            return {"season": "2026", "week": 1, "season_type": "regular"}
         if "/league/123/matchups/" in url:
             return []
         if url.endswith("/schedule/nfl/regular/2026"):

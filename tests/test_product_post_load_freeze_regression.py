@@ -54,6 +54,8 @@ def test_sleeper_live_retries_a_partial_roster_payload_once() -> None:
             return {}
         if url.endswith("/league/league-1/traded_picks"):
             return []
+        if url.endswith("/state/nfl"):
+            return {"season": "2026", "week": 1, "season_type": "regular"}
         raise AssertionError(f"unexpected URL {url}")
 
     source = SleeperLiveSource(
@@ -72,6 +74,8 @@ def test_sleeper_live_rejects_a_persistently_partial_roster_payload() -> None:
             return {"league_id": "league-1", "settings": {"num_teams": 2}}
         if url.endswith("/league/league-1/rosters"):
             return [{"roster_id": 1}]
+        if url.endswith("/state/nfl"):
+            return {"season": "2026", "week": 1, "season_type": "regular"}
         raise AssertionError(f"unexpected URL {url}")
 
     source = SleeperLiveSource(

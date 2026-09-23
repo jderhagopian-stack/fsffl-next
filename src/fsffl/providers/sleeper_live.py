@@ -152,6 +152,7 @@ class SleeperLiveSource:
             "users": lambda: self._get(f"/league/{league_id}/users"),
             "players": lambda: self._get("/players/nfl"),
             "traded_picks": lambda: self._get(f"/league/{league_id}/traded_picks"),
+            "nfl_state": lambda: self._get("/state/nfl"),
             "nfl_schedule": lambda: self._nfl_regular_season_schedule(season),
         }
         for week in matchup_weeks:
@@ -177,6 +178,7 @@ class SleeperLiveSource:
                 str(week): results[f"matchup:{week}"]
                 for week in matchup_weeks
             },
+            "nfl_state": results["nfl_state"],
             "nfl_schedule": results["nfl_schedule"],
         }
         return ProviderSnapshot(

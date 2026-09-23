@@ -9,6 +9,12 @@ from .models import LeagueState
 
 def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     payload = state.model_dump(mode="json", exclude_none=False)
+    # Additive matchup-completion evidence must remain backward-compatible with
+    # durable snapshots written before the field existed. Omitting only the new
+    # unset coordinate preserves their deterministic State identity; a governed
+    # non-null coordinate remains canonical State evidence and changes identity.
+    if payload.get("completed_through_week") is None:
+        payload.pop("completed_through_week", None)
     payload["teams"] = sorted(payload["teams"], key=lambda item: item["team_id"])
     payload["team_states"] = sorted(payload["team_states"], key=lambda item: item["team_id"])
     for team_state in payload["team_states"]:

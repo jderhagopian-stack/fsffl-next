@@ -21,6 +21,8 @@ def test_live_sleeper_source_acquires_provider_payloads_without_model_logic() ->
             return {"p1": {"player_id": "p1"}}
         if url.endswith("/league/league123/traded_picks"):
             return []
+        if url.endswith("/state/nfl"):
+            return {"season": "2026", "week": 1, "season_type": "regular"}
         if url.endswith("/schedule/nfl/regular/2026"):
             return [{"week": 1, "home": "NYJ", "away": "BUF"}]
         raise AssertionError(url)
@@ -38,13 +40,15 @@ def test_live_sleeper_source_acquires_provider_payloads_without_model_logic() ->
         "players",
         "traded_picks",
         "matchups",
+        "nfl_state",
         "nfl_schedule",
     }
     assert snapshot.payload["matchups"] == {}
+    assert snapshot.payload["nfl_state"] == {"season": "2026", "week": 1, "season_type": "regular"}
     assert snapshot.payload["nfl_schedule"] == [{"week": 1, "home": "NYJ", "away": "BUF"}]
     # A league with no playoff_week_start makes no fantasy-matchup calls, but the
     # factual NFL schedule remains independent league-wide State evidence.
-    assert len(seen) == 6
+    assert len(seen) == 7
     assert not any("/matchups/" in url for url in seen)
 
 

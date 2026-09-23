@@ -38,7 +38,7 @@ def build_roster_resilience(
         horizon=horizon,
     )
 
-    drops: list[float] = []
+    drops: list[tuple[str, float]] = []
     for assignment in lineup.assignments:
         try:
             impact = marginal_lineup_impact(
@@ -55,9 +55,19 @@ def build_roster_resilience(
             # starter contribution is a transparent lower-bound drop.
             if "cannot fill every required lineup slot" not in str(exc):
                 raise
-            drops.append(assignment.expected_points)
+            drop = assignment.expected_points
         else:
-            drops.append(impact.marginal_expected_points)
+            drop = impact.marginal_expected_points
+        drops.append((assignment.player_id, drop))
+
+    largest_drop = max((drop for _, drop in drops), default=0.0)
+    driver_ids = tuple(
+        sorted(
+            player_id
+            for player_id, drop in drops
+            if abs(drop - largest_drop) <= 1e-9
+        )
+    )
 
     return RosterResilience(
         team_id=team_id,
@@ -65,6 +75,7 @@ def build_roster_resilience(
         bench_forecasted_count=len(lineup.bench_player_ids),
         unavailable_count=len(lineup.unavailable_player_ids),
         missing_forecast_count=len(lineup.missing_forecast_player_ids),
-        largest_single_player_lineup_drop=max(drops, default=0.0),
+        largest_single_player_lineup_drop=largest_drop,
+        largest_single_player_lineup_drop_player_ids=driver_ids,
         model_version=model_version,
     )

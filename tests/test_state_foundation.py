@@ -120,3 +120,14 @@ def test_snapshot_store_never_uses_future_state() -> None:
     result = store.latest_at_or_before("league:test", query_time)
     assert result is not None
     assert result.as_of == old_state.as_of
+
+def test_optional_matchup_completion_coordinate_is_backward_compatible_but_authoritative_when_present() -> None:
+    legacy = make_state()
+    canonical = canonical_state_json(legacy)
+    assert '"completed_through_week"' not in canonical
+
+    completed = legacy.model_copy(update={"completed_through_week": 2})
+    completed_canonical = canonical_state_json(completed)
+    assert '"completed_through_week":2' in completed_canonical
+    assert completed.state_id != legacy.state_id
+

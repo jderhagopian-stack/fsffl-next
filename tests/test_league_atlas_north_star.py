@@ -270,7 +270,121 @@ def test_atlas_route_uses_preserved_preseason_forecast_only_with_historical_stat
     assert "state_snapshot_store.latest_at_or_before" in webapp
     assert "preseason_state.league.season != league_state.league.season" in webapp
     assert "The compatible historical State already contains scored games" in webapp
+    assert "completed_matchups(preseason_state)" in webapp
     assert "build_forecast_lineup_analytics(" in webapp
     assert "_preseason_forecast_loader = make_preseason_baseline_authority_loader" in persistent
     assert "preseason_forecast_loader=_preseason_forecast_loader" in persistent
     assert "state_snapshot_store=_state_snapshot_store" in persistent
+
+def test_future_zero_schedule_rows_do_not_create_ties_or_advance_current_rank() -> None:
+    state = _state()
+    future = LeagueMatchup(
+        week=14,
+        team_a_id="a",
+        team_b_id="b",
+        team_a_points=0.0,
+        team_b_points=0.0,
+        provenance=_provenance(),
+    )
+    state = state.model_copy(
+        update={
+            "matchups": state.matchups + (future,),
+            "completed_through_week": 2,
+        }
+    )
+    outcomes = (
+        SimpleNamespace(
+            team_id="a",
+            expected_wins=10.2,
+            wins_stddev=1.4,
+            playoff_probability=0.82,
+            first_place_probability=0.55,
+            championship_probability=0.31,
+            simulation_count=50_000,
+            simulation_model_version="sim-v1",
+        ),
+        SimpleNamespace(
+            team_id="b",
+            expected_wins=6.1,
+            wins_stddev=1.5,
+            playoff_probability=0.18,
+            first_place_probability=0.08,
+            championship_probability=0.04,
+            simulation_count=50_000,
+            simulation_model_version="sim-v1",
+        ),
+    )
+    finish = (
+        SimpleNamespace(team_id="a", expected_finish=1.2),
+        SimpleNamespace(team_id="b", expected_finish=1.8),
+    )
+    team_views = (
+        SimpleNamespace(
+            team_id="a",
+            utility=SimpleNamespace(
+                calculated_competitive_state=SimpleNamespace(value="contender")
+            ),
+        ),
+        SimpleNamespace(
+            team_id="b",
+            utility=SimpleNamespace(
+                calculated_competitive_state=SimpleNamespace(value="rebuilding")
+            ),
+        ),
+    )
+    runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=state,
+        selected_team_id="a",
+        simulation_analytics=cast(
+            Any,
+            SimpleNamespace(
+                simulation_result=SimpleNamespace(
+                    outcomes=outcomes,
+                    finish_distributions=finish,
+                    simulation_count=50_000,
+                    model_version="sim-v1",
+                ),
+                team_views=team_views,
+            ),
+        ),
+    )
+
+    payload = build_league_atlas_payload(runtime)
+
+    assert payload["last_completed_week"] == 2
+    standings = {row["team_id"]: row for row in payload["standings"]}
+    assert standings["a"]["wins"] == 1
+    assert standings["a"]["losses"] == 0
+    assert standings["a"]["ties"] == 1
+    assert standings["a"]["games"] == 2
+    assert standings["a"]["points_for"] == 231.5
+    assert standings["a"]["points_against"] == 209.0
+    assert standings["a"]["rank"] == 1
+    simulation = {row["team_id"]: row for row in payload["simulation"]["teams"]}
+    assert simulation["a"]["current_rank"] == 1
+    assert simulation["a"]["movement_vs_current_rank"] == pytest.approx(-0.2)
+
+
+def test_legacy_state_with_trailing_zero_schedule_rows_fails_closed() -> None:
+    state = _state()
+    future = LeagueMatchup(
+        week=14,
+        team_a_id="a",
+        team_b_id="b",
+        team_a_points=0.0,
+        team_b_points=0.0,
+        provenance=_provenance(),
+    )
+    legacy = state.model_copy(update={"matchups": state.matchups + (future,)})
+
+    payload = build_league_atlas_payload(
+        UserRuntimeContext(user_id="u", league_state=legacy, selected_team_id="a")
+    )
+
+    assert legacy.completed_through_week is None
+    assert payload["last_completed_week"] == 2
+    standings = {row["team_id"]: row for row in payload["standings"]}
+    assert standings["a"]["games"] == 2
+    assert standings["a"]["ties"] == 1
+

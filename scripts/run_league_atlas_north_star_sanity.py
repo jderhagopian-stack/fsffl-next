@@ -52,6 +52,23 @@ def main() -> None:
         raise RuntimeError(f"expected real 12-team league, found {len(state.teams)}")
     if len(payload["standings"]) != 12:
         raise RuntimeError("Atlas standings do not cover every real league team")
+    if state.completed_through_week is None:
+        raise RuntimeError("real live State is missing matchup completion authority")
+    if payload["last_completed_week"] != state.completed_through_week:
+        raise RuntimeError("Atlas last-completed-week diverges from canonical State")
+    false_future_scores = [
+        matchup
+        for matchup in state.matchups
+        if matchup.week > state.completed_through_week
+        and (
+            matchup.team_a_points is not None
+            or matchup.team_b_points is not None
+        )
+    ]
+    if false_future_scores:
+        raise RuntimeError(
+            "future matchup rows still contain scored/completed evidence after canonical normalization"
+        )
     if len(state.draft_picks) != len(state.pick_ownership):
         raise RuntimeError("canonical pick ownership coverage is incomplete")
     if not payload["pick_map"]["teams"]:
@@ -116,6 +133,7 @@ def main() -> None:
         "pick_years": payload["pick_map"]["seasons"],
         "distinct_team_pick_counts": sorted(set(per_team_pick_counts)),
         "last_completed_week": payload["last_completed_week"],
+        "future_scored_matchup_rows": len(false_future_scores),
         "simulation_status_in_ci_runtime": payload["simulation"]["status"],
         "preseason_status_in_ci_runtime": payload["preseason_expectation"]["status"],
         "latency_ms": {

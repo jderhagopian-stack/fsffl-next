@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import Iterable
 
 from fsffl.analytics.team import TeamAnalyticsView
+from fsffl.state.matchups import completed_matchups, completed_through_week
 from fsffl.state.models import LeagueState
 
 from .runtime import UserRuntimeContext
@@ -30,9 +31,7 @@ def _current_standings(state: LeagueState) -> tuple[dict[str, object], ...]:
         for team in state.teams
     }
     completed_weeks: set[int] = set()
-    for matchup in state.matchups:
-        if matchup.team_a_points is None or matchup.team_b_points is None:
-            continue
+    for matchup in completed_matchups(state):
         completed_weeks.add(matchup.week)
         a = records[matchup.team_a_id]
         b = records[matchup.team_b_id]
@@ -321,15 +320,7 @@ def build_league_atlas_payload(
         "league_name": state.league.name,
         "season": state.league.season,
         "as_of": state.as_of.isoformat(),
-        "last_completed_week": max(
-            (
-                matchup.week
-                for matchup in state.matchups
-                if matchup.team_a_points is not None
-                and matchup.team_b_points is not None
-            ),
-            default=None,
-        ),
+        "last_completed_week": completed_through_week(state),
         "managed_team_id": runtime.selected_team_id,
         "standings": list(standings),
         "simulation": {

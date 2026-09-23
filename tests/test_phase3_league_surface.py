@@ -83,8 +83,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260922-league-atlas-north-star1" in league
-    assert "const leagueAtlasStaticVersion='20260922-league-atlas1';" in shell
+    assert "/static/league_atlas.css?v=20260922-league-atlas-corrective1" in league
+    assert "const leagueAtlasStaticVersion='20260922-league-atlas-corrective1';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
 
 
@@ -105,3 +105,21 @@ def test_generic_surface_clears_league_only_panel_class() -> None:
     source = _source(PRODUCT_SHELL)
 
     assert "if(route!=='league_comparison')panel?.classList.remove('league-structure-panel')" in source
+
+def test_live_acceptance_corrective_mobile_composition_preserves_identity_and_progressive_evidence() -> None:
+    source = _source(LEAGUE)
+    css = _source(ATLAS_CSS)
+
+    assert "View exact strength indices" in source
+    assert "largest_single_player_lineup_drop_player_ids" in source
+    assert "driver unavailable" in source
+    assert "total through" in source
+    assert "Selected-year inventory is kept separate from all-horizon inventory." in source
+    assert "league-value-detail-heading" in source
+    assert "laActiveTab()+laEvidenceDetail()" in source
+    assert "laActiveTab()+'</main>'+laEvidenceStrip()" not in source
+    assert ".atlas-pick-table{overflow:visible!important" in css
+    assert ".atlas-outlook-list{overflow:visible!important" in css
+    assert ".league-edge-row>span:first-child{position:sticky" in css
+    assert ".league-value-dot{width:11px!important" in css
+

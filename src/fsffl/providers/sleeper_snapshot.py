@@ -62,6 +62,7 @@ class SleeperSnapshotNormalizer:
             players=payload["players"],
             traded_picks=payload.get("traded_picks", ()),
             matchups=payload.get("matchups", {}),
+            nfl_state=payload.get("nfl_state"),
             retrieved_at=snapshot.captured_at,
         )
         state = self._normalizer.normalize(bundle, as_of=as_of)

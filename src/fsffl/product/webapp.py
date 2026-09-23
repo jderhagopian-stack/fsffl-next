@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.opportunity import WaiverMove
 from fsffl.state.history import StateSnapshotStore
+from fsffl.state.matchups import completed_matchups
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
@@ -771,11 +772,7 @@ def create_app(
                     preseason_reason = (
                         "The available historical State snapshot belongs to a different season."
                     )
-                elif any(
-                    matchup.team_a_points is not None
-                    or matchup.team_b_points is not None
-                    for matchup in preseason_state.matchups
-                ):
+                elif completed_matchups(preseason_state):
                     preseason_reason = (
                         "The compatible historical State already contains scored games, so "
                         "it is not used as a frozen preseason expectation."

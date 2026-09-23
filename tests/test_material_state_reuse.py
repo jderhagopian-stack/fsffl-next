@@ -210,3 +210,13 @@ def test_older_replacement_state_does_not_reuse_future_forecast_evidence() -> No
     assert forecast_input_fingerprint(original) == forecast_input_fingerprint(replacement)
     assert returned.league_state is replacement
     assert returned.forecast_evidence is None
+
+def test_material_fingerprint_changes_when_matchup_completion_boundary_changes() -> None:
+    first = _state(as_of=BASE).model_copy(update={"completed_through_week": 1})
+    later = _state(as_of=BASE + timedelta(minutes=5)).model_copy(
+        update={"completed_through_week": 2}
+    )
+
+    assert league_material_fingerprint(first) != league_material_fingerprint(later)
+    assert forecast_input_fingerprint(first) == forecast_input_fingerprint(later)
+

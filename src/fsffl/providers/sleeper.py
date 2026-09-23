@@ -34,6 +34,7 @@ class SleeperPayloadBundle:
     players: Mapping[str, Mapping[str, Any]]
     traded_picks: Sequence[Mapping[str, Any]] = ()
     matchups: Mapping[str, Sequence[Mapping[str, Any]]] | None = None
+    nfl_state: Mapping[str, Any] | None = None
     retrieved_at: datetime | None = None
 
 
@@ -100,6 +101,52 @@ class SleeperNormalizer:
         league_external_id = str(bundle.league["league_id"])
         league_id = f"sleeper:{league_external_id}"
         settings = bundle.league.get("settings", {})
+        raw_leg = settings.get("leg")
+        try:
+            current_matchup_week = int(raw_leg) if raw_leg is not None else None
+        except (TypeError, ValueError):
+            current_matchup_week = None
+        league_leg_completed = (
+            max(0, current_matchup_week - 1)
+            if current_matchup_week is not None and current_matchup_week >= 1
+            else None
+        )
+
+        nfl_state_completed: int | None = None
+        nfl_state = bundle.nfl_state
+        if isinstance(nfl_state, Mapping):
+            raw_season = nfl_state.get("season")
+            try:
+                nfl_season = int(raw_season) if raw_season not in (None, "") else None
+            except (TypeError, ValueError):
+                nfl_season = None
+            season_type = str(nfl_state.get("season_type") or "regular").lower()
+            if nfl_season in (None, int(bundle.league.get("season"))) and season_type == "regular":
+                raw_display_week = nfl_state.get("display_week")
+                raw_week = nfl_state.get("week")
+                try:
+                    display_week = (
+                        int(raw_display_week)
+                        if raw_display_week not in (None, "")
+                        else None
+                    )
+                except (TypeError, ValueError):
+                    display_week = None
+                try:
+                    nfl_week = int(raw_week) if raw_week not in (None, "") else None
+                except (TypeError, ValueError):
+                    nfl_week = None
+                if display_week is not None and display_week >= 1:
+                    nfl_state_completed = max(0, display_week - 1)
+                elif nfl_week is not None and nfl_week >= 1:
+                    nfl_state_completed = max(0, nfl_week - 1)
+
+        completion_candidates = [
+            week
+            for week in (league_leg_completed, nfl_state_completed)
+            if week is not None
+        ]
+        completed_through_week = max(completion_candidates, default=None)
         roster_positions = list(bundle.league.get("roster_positions", []))
         scoring_settings = bundle.league.get("scoring_settings", {})
 
@@ -248,6 +295,13 @@ class SleeperNormalizer:
                 if (points_a is None) != (points_b is None):
                     points_a = None
                     points_b = None
+                if completed_through_week is not None and week > completed_through_week:
+                    # Sleeper emits numeric zero placeholders for future schedule rows.
+                    # Canonical State uses missing points for matchups that are not yet
+                    # proven complete; the provider's current fantasy-week coordinate
+                    # is the authoritative completion boundary.
+                    points_a = None
+                    points_b = None
                 canonical_matchups.append(
                     LeagueMatchup(
                         week=week,
@@ -369,5 +423,6 @@ class SleeperNormalizer:
                     key=lambda item: (item.week, item.team_a_id, item.team_b_id),
                 )
             ),
+            completed_through_week=completed_through_week,
             provenance=(provenance,),
         )

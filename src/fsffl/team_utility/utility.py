@@ -37,12 +37,19 @@ class RosterResilience(FrozenModel):
     unavailable_count: Annotated[int, Field(ge=0)]
     missing_forecast_count: Annotated[int, Field(ge=0)]
     largest_single_player_lineup_drop: Annotated[float, Field(ge=0)] = 0.0
+    largest_single_player_lineup_drop_player_ids: tuple[str, ...] = ()
     model_version: str
 
     @model_validator(mode="after")
     def validate_identifiers(self) -> "RosterResilience":
         if not self.team_id.strip() or not self.model_version.strip():
             raise ValueError("roster resilience identifiers cannot be blank")
+        if any(not player_id.strip() for player_id in self.largest_single_player_lineup_drop_player_ids):
+            raise ValueError("roster resilience driver ids cannot be blank")
+        if len(set(self.largest_single_player_lineup_drop_player_ids)) != len(
+            self.largest_single_player_lineup_drop_player_ids
+        ):
+            raise ValueError("roster resilience driver ids must be unique")
         return self
 
 

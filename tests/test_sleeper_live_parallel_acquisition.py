@@ -41,6 +41,8 @@ def test_live_sleeper_fetches_independent_payloads_concurrently() -> None:
                 return {}
             if url.endswith('/traded_picks'):
                 return []
+            if url.endswith('/state/nfl'):
+                return {'season': '2026', 'week': 1, 'season_type': 'regular'}
             if '/schedule/nfl/regular/2026' in url:
                 return []
             raise AssertionError(f'unexpected URL {url}')
@@ -81,6 +83,8 @@ def test_live_sleeper_parallel_path_keeps_roster_retry_fail_closed() -> None:
             return {}
         if url.endswith('/traded_picks'):
             return []
+        if url.endswith('/state/nfl'):
+            return {'season': '2026', 'week': 1, 'season_type': 'regular'}
         if '/schedule/nfl/regular/2026' in url:
             return []
         raise AssertionError(f'unexpected URL {url}')
