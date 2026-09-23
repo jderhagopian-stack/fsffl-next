@@ -65,6 +65,7 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
             ownership.model_dump(mode="json")
             for ownership in sorted(league_state.pick_ownership, key=lambda item: item.pick_id)
         ],
+        "completed_through_week": league_state.completed_through_week,
         "matchups": [
             {
                 "week": matchup.week,
