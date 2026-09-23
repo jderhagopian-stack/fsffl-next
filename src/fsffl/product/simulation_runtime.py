@@ -39,7 +39,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
     scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic
-    model_version: str = "next8-live-simulation-analytics-v7:scoring-dispersion-diagnostic"
+    model_version: str = "next8-live-simulation-analytics-v8:resilience-driver-identity"
 
 
 def build_live_simulation_analytics(
