@@ -95,7 +95,7 @@ def main() -> None:
         "Position & Depth",
         "Value Map",
         "Pick Map",
-        "Forward outlook",
+        "Outlook from Today",
         "Max PF",
         "champ",
         "data-room-team",
