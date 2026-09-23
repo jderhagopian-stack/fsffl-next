@@ -62,3 +62,25 @@ The corrective live-provider numerical trace is an external provider-health diag
 After the only product-branch change was alignment of the stale League Atlas presentation test with the already-approved final IA, run #100 succeeded with two independent providers (`fftoday` and `razzball`). A later ad-hoc fragility diagnostic also encountered transient provider-health disagreement before Simulation could start. These alternating outcomes, with unchanged Forecast code and authority, classify the red trace as live provider/source-health volatility rather than a PR #174 regression.
 
 Decision: preserve the existing two-independent-source Forecast authority and fail-closed behavior. Do not weaken source-health governance merely to make a network/provider diagnostic green. Deterministic League Atlas acceptance uses the governed regression suites plus the real Sleeper State/Max-PF sanity path; live provider-health diagnostics are recorded separately.
+
+
+## Persisted real-league fragility identity verification
+
+The latest persisted production 12-team Simulation coordinate before this pass was independently replay-checked from its stored team-view inputs and the matching stored Forecast coordinate. The verification preserved the governed lineup eligibility, active-roster availability, position-floor fallback for missing active forecasts, and exact starter-removal counterfactual. For all 12 teams, the independently recomputed maximum drop matched the already-persisted numeric `largest_single_player_lineup_drop` within the existing 1e-9 exact-tie tolerance, and every argmax player ID resolved to a rostered player name.
+
+| Team | Persisted drop | Exact argmax player ID | Resolved player |
+| --- | ---: | --- | --- |
+| jaco057 | 381.5100 | `sleeper:player:4984` | Josh Allen |
+| jder52 | 173.6250 | `sleeper:player:6904` | Jalen Hurts |
+| Drigs24 | 170.8075 | `sleeper:player:9509` | Bijan Robinson |
+| Ballard22 | 149.9300 | `sleeper:player:4892` | Baker Mayfield |
+| nuckyniners | 69.1275 | `sleeper:player:8138` | James Cook |
+| PVos | 209.6025 | `sleeper:player:9221` | Jahmyr Gibbs |
+| chuckthegoat77 | 167.2200 | `sleeper:player:9758` | C.J. Stroud |
+| ddersimon | 173.5150 | `sleeper:player:11563` | Bo Nix |
+| CoachKoko | 84.3350 | `sleeper:player:6790` | D'Andre Swift |
+| MochaSmev | 244.7125 | `sleeper:player:9224` | Chase Brown |
+| Anthonyder | 174.4550 | `sleeper:player:4034` | Christian McCaffrey |
+| jimmygoodjob | 47.5225 | `sleeper:player:4881` | Lamar Jackson |
+
+This proves the missing identity was a persistence/version-contract defect rather than missing roster identity or a need to change the fragility calculation. PR #174's v2 resilience contract emits these exact deterministic argmax IDs; Team View already carries the matching canonical IDs and names, and Atlas resolves those IDs into tappable Player Intelligence names.
