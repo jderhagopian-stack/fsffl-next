@@ -1,4 +1,4 @@
-const fsfflLeagueStructureState={views:[],valueLenses:null,atlas:null,managedTeamId:null,valueLensMode:'difference',selectedValueTeamId:null,activeTab:'overview',selectedRoom:null,selectedPickTeamId:null,pickYear:null,positionLensMode:'rank',raceSortKey:'rank',raceSortDirection:'asc',loadMs:null,warmMs:null,valueStatus:'idle',valueError:null};
+const fsfflLeagueStructureState={views:[],valueLenses:null,atlas:null,managedTeamId:null,valueLensMode:'difference',selectedValueTeamId:null,activeTab:'overview',selectedRoom:null,selectedPickTeamId:null,pickYear:null,positionLensMode:'rank',raceSortKey:'rank',raceSortDirection:'asc',focusMetric:null,focusTeamId:null,focusPlayerId:null,loadMs:null,warmMs:null,valueStatus:'idle',valueError:null};
 
 function leagueComparisonPanel(){return document.querySelector('#generic-screen .panel')}
 function laEsc(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
@@ -140,15 +140,15 @@ function laRaceSortHeader(key,label){
 }
 function laRaceHeaderDock(){
   const metrics=[
-    '<span class="atlas-race-head-record">Record</span>',
-    '<span>'+laRaceSortHeader('points_for','PF')+'</span>',
-    '<span>'+laRaceSortHeader('points_against','PA')+'</span>',
-    '<span>'+laRaceSortHeader('max_points_for','Max PF')+'</span>',
-    '<span>'+laRaceSortHeader('expected_finish','Projected Finish')+'</span>',
-    '<span>'+laRaceSortHeader('playoff_probability','Playoffs')+'</span>',
-    '<span>'+laRaceSortHeader('championship_probability','Championship')+'</span>',
-    '<span>'+laRaceSortHeader('expected_wins','Projected Final Wins')+'</span>',
-    '<span>'+laRaceSortHeader('first_place_probability','1st Place')+'</span>'
+    '<span class="atlas-race-head-record" data-race-metric="record">Record</span>',
+    '<span data-race-metric="points_for">'+laRaceSortHeader('points_for','PF')+'</span>',
+    '<span data-race-metric="points_against">'+laRaceSortHeader('points_against','PA')+'</span>',
+    '<span data-race-metric="max_points_for">'+laRaceSortHeader('max_points_for','Max PF')+'</span>',
+    '<span data-race-metric="expected_finish">'+laRaceSortHeader('expected_finish','Projected Finish')+'</span>',
+    '<span data-race-metric="playoff_probability">'+laRaceSortHeader('playoff_probability','Playoffs')+'</span>',
+    '<span data-race-metric="championship_probability">'+laRaceSortHeader('championship_probability','Championship')+'</span>',
+    '<span data-race-metric="expected_wins">'+laRaceSortHeader('expected_wins','Projected Final Wins')+'</span>',
+    '<span data-race-metric="first_place_probability">'+laRaceSortHeader('first_place_probability','1st Place')+'</span>'
   ].join('');
   return '<div class="atlas-race-head-dock" aria-label="League Race column headers">'
     +'<div class="atlas-race-head-fixed"><div class="atlas-race-head-fixed-group"></div><div class="atlas-race-head-fixed-metrics"><span>'+laRaceSortHeader('rank','Rank')+'</span><span class="atlas-race-head-team-label">Team/Owner</span></div></div>'
@@ -167,7 +167,7 @@ function laProbDelta(pre,current){if(typeof pre!=='number'||typeof current!=='nu
 
 function laOverview(){
   const standings=laAtlas()?.standings||[],sim=laAtlas()?.simulation||{},managed=fsfflLeagueStructureState.managedTeamId,managedStanding=managed?laStanding(managed):null,managedSim=managed?laSimulation(managed):null,lastWeek=laAtlas()?.last_completed_week;
-  const raceRows=laRaceSorted(standings).map(row=>{const s=laSimulation(row.team_id),view=fsfflLeagueStructureState.views.find(v=>v.team_id===row.team_id);return '<tr class="'+(row.team_id===managed?'managed':'')+'"><td class="atlas-race-rank-sticky"><b>#'+row.rank+'</b></td><td class="atlas-race-team-sticky"><span><strong>'+laEsc(row.team_name)+'</strong><small>'+laEsc(laState(view?.utility?.calculated_competitive_state))+'</small></span></td><td>'+laRecord(row)+'</td><td>'+laNum(row.points_for,1)+'</td><td>'+laNum(row.points_against,1)+'</td><td>'+laNum(row.max_points_for,1)+'</td><td>'+laNum(s?.expected_finish,1)+'</td><td>'+laProb(s?.playoff_probability)+'</td><td>'+laProb(s?.championship_probability)+'</td><td>'+laNum(s?.expected_wins,1)+'</td><td>'+laProb(s?.first_place_probability)+'</td></tr>'}).join('');
+  const raceRows=laRaceSorted(standings).map(row=>{const s=laSimulation(row.team_id),view=fsfflLeagueStructureState.views.find(v=>v.team_id===row.team_id);return '<tr data-race-team="'+laEsc(row.team_id)+'" class="'+(row.team_id===managed?'managed':'')+'"><td class="atlas-race-rank-sticky"><b>#'+row.rank+'</b></td><td class="atlas-race-team-sticky"><span><strong>'+laEsc(row.team_name)+'</strong><small>'+laEsc(laState(view?.utility?.calculated_competitive_state))+'</small></span></td><td data-race-metric="record">'+laRecord(row)+'</td><td data-race-metric="points_for">'+laNum(row.points_for,1)+'</td><td data-race-metric="points_against">'+laNum(row.points_against,1)+'</td><td data-race-metric="max_points_for">'+laNum(row.max_points_for,1)+'</td><td data-race-metric="expected_finish">'+laNum(s?.expected_finish,1)+'</td><td data-race-metric="playoff_probability">'+laProb(s?.playoff_probability)+'</td><td data-race-metric="championship_probability">'+laProb(s?.championship_probability)+'</td><td data-race-metric="expected_wins">'+laNum(s?.expected_wins,1)+'</td><td data-race-metric="first_place_probability">'+laProb(s?.first_place_probability)+'</td></tr>'}).join('');
   const colgroup='<colgroup><col class="atlas-col-rank"><col class="atlas-col-team"><col class="atlas-col-record"><col class="atlas-col-pf"><col class="atlas-col-pa"><col class="atlas-col-maxpf"><col class="atlas-col-finish"><col class="atlas-col-playoffs"><col class="atlas-col-champ"><col class="atlas-col-wins"><col class="atlas-col-first"></colgroup>';
   const race=laRaceHeaderDock()+'<div class="atlas-race-table-wrap"><table class="atlas-race-table">'+colgroup+'<tbody>'+raceRows+'</tbody></table></div>';
   const pre=laAtlas()?.preseason_expectation||{};
@@ -197,7 +197,7 @@ function laRoomDrawer(){
   const players=(view.players||[]).filter(p=>p.position===room.position).slice().sort((a,b)=>(b.projected_starter?1:0)-(a.projected_starter?1:0)||(Number(b.season_fantasy_points_projection)||-1)-(Number(a.season_fantasy_points_projection)||-1));
   const resilience=laResilience(view);
   const driverIds=resilience?.largest_single_player_lineup_drop_player_ids||[],driverLabel=laFragilityDriverLabel(view);
-  return '<aside class="atlas-drawer"><button type="button" data-atlas-close class="atlas-drawer-close" aria-label="Close">×</button><header><p class="eyebrow">Team-position detail</p><h3>'+laEsc(view.display_name)+' · '+laEsc(room.position)+'</h3><p>Actual rostered players and governed evidence behind the league-relative rank.</p></header><div class="atlas-room-summary"><span><b>'+(rank?'#'+rank.league_rank+' / '+rank.team_count:'—')+'</b><small>strength rank</small></span><span><b>'+laNum(rank?.strength_index,0)+'</b><small>strength index</small></span><span><b>'+laNum(rank?.expected_points,1)+'</b><small>starter points</small></span><span><b>'+laNum(resilience?.largest_single_player_lineup_drop,1)+'</b><small>team fragility · '+laEsc(driverLabel)+'</small></span></div><div class="atlas-player-room">'+(players.map(player=>{const value=(fsfflLeagueStructureState.valueLenses?.players||[]).find(v=>v.player_id===player.player_id),role=player.projected_starter?(player.projected_lineup_slot||'Projected starter'):(player.roster_slot||'Roster'),driver=driverIds.includes(player.player_id);return '<button type="button" data-player-intelligence-id="'+laEsc(player.player_id)+'"><span><strong>'+laEsc(player.full_name)+'</strong><small>'+laEsc(role)+' · '+(typeof player.season_fantasy_points_projection==='number'?laNum(player.season_fantasy_points_projection,1)+' season pts':'projection unavailable')+(driver?' · fragility driver':'')+'</small></span><span><b>'+(typeof value?.broad_market_percentile==='number'?Math.round(value.broad_market_percentile*100):'—')+'</b><small>Market pct</small></span><span><b>'+(typeof value?.intrinsic_percentile==='number'?Math.round(value.intrinsic_percentile*100):'—')+'</b><small>Intrinsic pct</small></span></button>'}).join('')||'<p>No rostered players at this position.</p>')+'</div><p class="atlas-foot">Position rank = governed optimized-starter production relative to the league. Team-level resilience is context only; Atlas does not invent a position fragility score.</p></aside>';
+  return '<aside class="atlas-drawer"><button type="button" data-atlas-close class="atlas-drawer-close" aria-label="Close">×</button><header><p class="eyebrow">Team-position detail</p><h3>'+laEsc(view.display_name)+' · '+laEsc(room.position)+'</h3><p>Actual rostered players and governed evidence behind the league-relative rank.</p></header><div class="atlas-room-summary"><span><b>'+(rank?'#'+rank.league_rank+' / '+rank.team_count:'—')+'</b><small>strength rank</small></span><span><b>'+laNum(rank?.strength_index,0)+'</b><small>strength index</small></span><span><b>'+laNum(rank?.expected_points,1)+'</b><small>starter points</small></span><span><b>'+laNum(resilience?.largest_single_player_lineup_drop,1)+'</b><small>team fragility · '+laEsc(driverLabel)+'</small></span></div><div class="atlas-player-room">'+(players.map(player=>{const value=(fsfflLeagueStructureState.valueLenses?.players||[]).find(v=>v.player_id===player.player_id),role=player.projected_starter?(player.projected_lineup_slot||'Projected starter'):(player.roster_slot||'Roster'),driver=driverIds.includes(player.player_id);return '<button type="button" class="'+(player.player_id===fsfflLeagueStructureState.focusPlayerId?'atlas-intent-player':'')+'" data-player-intelligence-id="'+laEsc(player.player_id)+'"><span><strong>'+laEsc(player.full_name)+'</strong><small>'+laEsc(role)+' · '+(typeof player.season_fantasy_points_projection==='number'?laNum(player.season_fantasy_points_projection,1)+' season pts':'projection unavailable')+(driver?' · fragility driver':'')+'</small></span><span><b>'+(typeof value?.broad_market_percentile==='number'?Math.round(value.broad_market_percentile*100):'—')+'</b><small>Market pct</small></span><span><b>'+(typeof value?.intrinsic_percentile==='number'?Math.round(value.intrinsic_percentile*100):'—')+'</b><small>Intrinsic pct</small></span></button>'}).join('')||'<p>No rostered players at this position.</p>')+'</div><p class="atlas-foot">Position rank = governed optimized-starter production relative to the league. Team-level resilience is context only; Atlas does not invent a position fragility score.</p></aside>';
 }
 function laPickDrawer(){
   const id=fsfflLeagueStructureState.selectedPickTeamId;if(!id)return'';const team=(laAtlas()?.pick_map?.teams||[]).find(t=>t.team_id===id);if(!team)return'';
@@ -206,6 +206,35 @@ function laPickDrawer(){
 }
 function laActiveTab(){if(fsfflLeagueStructureState.activeTab==='positions')return laPositionsTab();if(fsfflLeagueStructureState.activeTab==='value')return laValueTab();if(fsfflLeagueStructureState.activeTab==='picks')return laPickTab();return laOverview()}
 function laEvidenceStrip(){return '<footer class="atlas-evidence-strip"><span>State '+laEsc(String(laAtlas()?.league_state_id||'unavailable').slice(0,12))+'…</span><span>Simulation '+(laAtlas()?.simulation?.status==='ready'?Number(laAtlas()?.simulation?.simulation_count||0).toLocaleString()+' runs':'unavailable')+'</span><span>Value '+laEsc(fsfflLeagueStructureState.valueLenses?.status||fsfflLeagueStructureState.valueStatus)+'</span><span>Cold '+(typeof fsfflLeagueStructureState.loadMs==='number'?Math.round(fsfflLeagueStructureState.loadMs)+' ms':'—')+'</span></footer>'}
+function applyLeagueNavigationIntent(){
+  const intent=typeof window.fsfflConsumeNavigationIntent==='function'?window.fsfflConsumeNavigationIntent('league_comparison'):null;
+  if(!intent)return;
+  fsfflLeagueStructureState.focusTeamId=intent.teamId||fsfflLeagueStructureState.managedTeamId||null;
+  fsfflLeagueStructureState.focusMetric=intent.metric||null;
+  fsfflLeagueStructureState.focusPlayerId=intent.playerId||null;
+  if(intent.section==='positions'){
+    fsfflLeagueStructureState.activeTab='positions';
+    fsfflLeagueStructureState.selectedRoom=intent.position?{teamId:fsfflLeagueStructureState.focusTeamId,position:intent.position}:null;
+  }else{
+    fsfflLeagueStructureState.activeTab='overview';
+    fsfflLeagueStructureState.selectedRoom=null;
+  }
+}
+function focusLeagueNavigationTarget(){
+  const teamId=fsfflLeagueStructureState.focusTeamId,metric=fsfflLeagueStructureState.focusMetric;
+  if(fsfflLeagueStructureState.activeTab==='overview'){
+    const row=teamId?document.querySelector('[data-race-team="'+CSS.escape(teamId)+'"]'):null;
+    row?.classList.add('atlas-intent-row');
+    if(metric){
+      document.querySelectorAll('[data-race-metric="'+CSS.escape(metric)+'"]').forEach(node=>node.classList.add('atlas-intent-metric'));
+      const cell=row?.querySelector('[data-race-metric="'+CSS.escape(metric)+'"]'),wrap=document.querySelector('.atlas-race-table-wrap');
+      if(cell&&wrap)wrap.scrollLeft=Math.max(0,cell.offsetLeft-180);
+    }
+    row?.scrollIntoView({block:'center',inline:'nearest'});
+  }else if(fsfflLeagueStructureState.activeTab==='positions'){
+    document.querySelector('.atlas-intent-player')?.scrollIntoView({block:'center',inline:'nearest'});
+  }
+}
 function bindLeagueActions(){
   document.querySelector('#league-open-market')?.addEventListener('click',()=>{if(typeof setRoute==='function')setRoute('opportunities')});
   document.querySelectorAll('[data-race-sort]').forEach(button=>button.addEventListener('click',()=>{const key=button.dataset.raceSort||'rank';if(fsfflLeagueStructureState.raceSortKey===key){fsfflLeagueStructureState.raceSortDirection=fsfflLeagueStructureState.raceSortDirection==='asc'?'desc':'asc'}else{fsfflLeagueStructureState.raceSortKey=key;fsfflLeagueStructureState.raceSortDirection=(key==='rank'||key==='expected_finish')?'asc':'desc'}renderLeagueComparison()}));
@@ -222,9 +251,10 @@ function bindLeagueActions(){
 function renderLeagueComparison(){
   const panel=leagueComparisonPanel();if(!panel)return;const views=fsfflLeagueStructureState.views;
   if(!views.length||!fsfflLeagueStructureState.atlas){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>No governed league structure is available yet.</h2><p class="lead">Load current league evidence from Home, then return here.</p>';return}
+  applyLeagueNavigationIntent();
   panel.classList.add('league-structure-panel','league-atlas-north-star');
   panel.innerHTML=laAtlasHeader()+'<main class="league-atlas-content">'+laActiveTab()+laEvidenceDetail()+'</main>'+laRoomDrawer()+laPickDrawer();
-  bindLeagueActions();
+  bindLeagueActions();setTimeout(focusLeagueNavigationTarget,0);
 }
 async function loadLeagueValueLenses(){
   fsfflLeagueStructureState.valueStatus='loading';renderLeagueComparison();
