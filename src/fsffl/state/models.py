@@ -189,12 +189,18 @@ class TeamState(FrozenModel):
     team_id: str
     roster: tuple[RosterEntry, ...]
     faab_balance: Annotated[int, Field(ge=0)] = 0
+    max_points_for: Annotated[float, Field(ge=0)] | None = None
+    max_points_for_provenance: Provenance | None = None
 
     @model_validator(mode="after")
     def unique_player_entries(self) -> "TeamState":
         ids = [entry.player_id for entry in self.roster]
         if len(ids) != len(set(ids)):
             raise ValueError("a player may appear only once on a team roster")
+        if (self.max_points_for is None) != (self.max_points_for_provenance is None):
+            raise ValueError(
+                "max_points_for and max_points_for_provenance must be present together"
+            )
         return self
 
 
