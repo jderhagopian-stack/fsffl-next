@@ -68,12 +68,20 @@ def main() -> None:
             ),
         })
 
+    schedule = snapshot.payload.get("nfl_schedule") or []
+    week1 = [row for row in schedule if isinstance(row, dict) and str(row.get("week")) == "1"]
+    schedule_sample = []
+    for row in week1[:2]:
+        schedule_sample.append({key: row.get(key) for key in sorted(row) if key in {"week", "date", "time", "start_time", "kickoff", "timestamp", "season", "season_type", "home", "away", "home_team", "away_team"}})
+
     manifest = {
         "schema_version": "fsffl-league-atlas-final-acceptance-audit-v1",
         "captured_at": snapshot.captured_at.isoformat(),
         "league_id": state.league.league_id,
         "raw_league_leg": (snapshot.payload.get("league") or {}).get("settings", {}).get("leg"),
         "raw_nfl_state": snapshot.payload.get("nfl_state"),
+        "week1_schedule_sample": schedule_sample,
+        "week1_schedule_keys": sorted(week1[0].keys()) if week1 else [],
         "team_count": len(state.teams),
         "completed_through_week": completed_through_week(state),
         "completed_matchup_count": len(completed),
