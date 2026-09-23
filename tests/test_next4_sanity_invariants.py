@@ -16,7 +16,7 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
-from fsffl.team_utility import marginal_lineup_impact, optimize_team_lineup
+from fsffl.team_utility import build_roster_resilience, marginal_lineup_impact, optimize_team_lineup
 
 
 AS_OF = datetime(2026, 9, 5, 15, 0, tzinfo=UTC)
@@ -168,3 +168,29 @@ def test_better_depth_cannot_lower_optimized_lineup_points() -> None:
 
     assert improved.expected_points >= base.expected_points
     assert improved.expected_points == 64.0
+
+def test_roster_resilience_retains_exact_argmax_player_without_changing_drop() -> None:
+    players = (
+        _player("elite_qb", Position.QB),
+        _player("qb2", Position.QB),
+        _player("qb3_weak", Position.QB),
+        _player("wr1", Position.WR),
+    )
+    forecasts = (
+        _forecast("elite_qb", Position.QB, 30.0),
+        _forecast("qb2", Position.QB, 22.0),
+        _forecast("qb3_weak", Position.QB, 8.0),
+        _forecast("wr1", Position.WR, 18.0),
+    )
+
+    resilience = build_roster_resilience(
+        _state(players),
+        forecasts,
+        team_id="team:1",
+        as_of=AS_OF,
+        horizon=ForecastHorizon.SEASON,
+    )
+
+    assert resilience.largest_single_player_lineup_drop == 22.0
+    assert resilience.largest_single_player_lineup_drop_player_ids == ("elite_qb",)
+
