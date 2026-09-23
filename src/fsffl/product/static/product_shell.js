@@ -25,7 +25,7 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260920-owner-dossier1';
-const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone7';
+const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const homeNorthStarStaticVersion='20260923-home-north-star1';
 const opportunityHomeIntentStaticVersion='20260923-home-intent1';
