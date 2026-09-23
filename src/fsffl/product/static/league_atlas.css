@@ -882,3 +882,20 @@
     z-index:6!important;
   }
 }
+
+
+/* Home contextual navigation focus states. Presentation only. */
+.league-atlas-north-star .atlas-intent-row>td{
+  box-shadow:inset 0 1px 0 rgba(80,207,255,.45),inset 0 -1px 0 rgba(80,207,255,.45);
+}
+.league-atlas-north-star [data-race-metric].atlas-intent-metric{
+  background:#123650!important;
+  color:#eaf8ff!important;
+}
+.league-atlas-north-star .atlas-intent-row [data-race-metric].atlas-intent-metric{
+  box-shadow:inset 0 0 0 1px rgba(80,207,255,.72);
+}
+.league-atlas-north-star .atlas-player-room .atlas-intent-player{
+  border-color:#50cfff!important;
+  box-shadow:inset 0 0 0 1px rgba(80,207,255,.45),0 0 0 2px rgba(80,207,255,.08);
+}
