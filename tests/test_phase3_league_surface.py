@@ -13,17 +13,19 @@ def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_league_atlas_uses_final_north_star_information_architecture() -> None:
+def test_league_atlas_uses_final_acceptance_information_architecture() -> None:
     source = _source(LEAGUE)
 
-    for label in ("Overview", "Position & Depth", "Value Map", "Pick Map", "Outlook"):
+    for label in ("Overview", "Position & Depth", "Value Map", "Pick Map"):
         assert label in source
     assert "laOverview()" in source
     assert "laPositionsTab()" in source
     assert "laValueTab()" in source
     assert "laPickTab()" in source
-    assert "laOutlookTab()" in source
+    assert "laOutlookTab()" not in source
+    assert "data-atlas-tab=\"outlook\"" not in source
     assert "data-atlas-tab" in source
+    assert "Current reality → Forward outlook" in source
 
 
 def test_league_atlas_composes_governed_contracts_without_team_value_fabrication() -> None:
@@ -83,8 +85,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260922-league-atlas-corrective1" in league
-    assert "const leagueAtlasStaticVersion='20260922-league-atlas-corrective1';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-final1" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-final1';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
 
 
@@ -110,7 +112,8 @@ def test_live_acceptance_corrective_mobile_composition_preserves_identity_and_pr
     source = _source(LEAGUE)
     css = _source(ATLAS_CSS)
 
-    assert "View exact strength indices" in source
+    assert "View exact strength indices" not in source
+    assert "league-edge-exact" not in source
     assert "largest_single_player_lineup_drop_player_ids" in source
     assert "driver unavailable" in source
     assert "total through" in source
@@ -123,3 +126,20 @@ def test_live_acceptance_corrective_mobile_composition_preserves_identity_and_pr
     assert ".league-edge-row>span:first-child{position:sticky" in css
     assert ".league-value-dot{width:11px!important" in css
 
+
+
+def test_final_acceptance_overview_is_full_league_and_evidence_complete() -> None:
+    source = _source(LEAGUE)
+
+    assert "standings.slice(0,6)" not in source
+    assert "View all " not in source
+    assert "standings.map(row=>" in source
+    assert "<small>PF</small>" in source
+    assert "<small>PA</small>" in source
+    assert "<small>Max PF</small>" in source
+    assert "<small>playoffs</small>" in source
+    assert "<small>champ</small>" in source
+    assert "expected wins" in source
+    assert "1st place" in source
+    assert "Preseason expectation → now" in source
+    assert "ppts + ppts_decimal" in source
