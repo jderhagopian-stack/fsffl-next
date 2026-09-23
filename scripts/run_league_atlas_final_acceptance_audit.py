@@ -72,6 +72,8 @@ def main() -> None:
         "schema_version": "fsffl-league-atlas-final-acceptance-audit-v1",
         "captured_at": snapshot.captured_at.isoformat(),
         "league_id": state.league.league_id,
+        "raw_league_leg": (snapshot.payload.get("league") or {}).get("settings", {}).get("leg"),
+        "raw_nfl_state": snapshot.payload.get("nfl_state"),
         "team_count": len(state.teams),
         "completed_through_week": completed_through_week(state),
         "completed_matchup_count": len(completed),
