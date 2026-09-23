@@ -281,7 +281,7 @@ def test_atlas_route_uses_preserved_preseason_forecast_only_with_historical_stat
     assert "preseason_forecast_loader" in webapp
     assert "state_snapshot_store.latest_at_or_before" in webapp
     assert "preseason_state.league.season != league_state.league.season" in webapp
-    assert "No valid pre-kickoff 2026 State + Forecast pair can be proven" in webapp
+    assert "No exact pre-kickoff 2026 State can be proven" in webapp\n    assert "historical TAXI/IR/active-slot moves" in webapp
     assert "completed_matchups(preseason_state)" in webapp
     assert "capture_preseason_baseline_if_eligible" in webapp
     assert "load_preseason_baseline" in webapp
