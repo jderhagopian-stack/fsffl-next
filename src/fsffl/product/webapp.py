@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.opportunity import WaiverMove
+from fsffl.persistence.contracts import PersistenceStore
 from fsffl.state.history import StateSnapshotStore
 from fsffl.state.matchups import completed_matchups
 from fsffl.state.models import FrozenModel, LeagueState
@@ -25,6 +26,10 @@ from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeS
 from .dashboard import build_league_metric_chart
 from .frontier_runtime import build_negotiation_frontier
 from .league_atlas import build_league_atlas_payload
+from .league_atlas_preseason import (
+    capture_preseason_baseline_if_eligible,
+    load_preseason_baseline,
+)
 from .intelligence_runtime import (
     build_forecast_lineup_analytics,
     build_state_only_league_view,
@@ -325,6 +330,7 @@ def create_app(
     forecast_loader: LiveForecastLoader = default_live_forecast_loader,
     preseason_forecast_loader: LiveForecastLoader | None = None,
     state_snapshot_store: StateSnapshotStore | None = None,
+    persistence_store: PersistenceStore | None = None,
     simulation_loader: SimulationLoader = _default_simulation_loader,
     value_loader: LiveValueLoader = default_live_value_loader,
     trade_evaluator: TradeEvaluator | None = None,
@@ -746,59 +752,77 @@ def create_app(
         preseason_views = None
         preseason_as_of = None
         preseason_reason = None
-        if preseason_forecast_loader is None:
-            preseason_reason = (
-                "Preserved preseason Forecast authority is not configured in this runtime."
-            )
-        elif state_snapshot_store is None:
-            preseason_reason = (
-                "Historical point-in-time State storage is unavailable; preseason player "
-                "Forecast evidence is not enough to fabricate a team expectation."
-            )
-        else:
-            try:
-                preseason_evidence = preseason_forecast_loader(league_state)
-                cutoff = preseason_evidence.runtime_result.evaluation_as_of
-                preseason_state = state_snapshot_store.latest_at_or_before(
-                    league_state.league.league_id,
-                    cutoff,
-                )
-                if preseason_state is None:
-                    preseason_reason = (
-                        "No canonical preseason State snapshot exists at or before the "
-                        "preserved Forecast cutoff."
-                    )
-                elif preseason_state.league.season != league_state.league.season:
-                    preseason_reason = (
-                        "The available historical State snapshot belongs to a different season."
-                    )
-                elif completed_matchups(preseason_state):
-                    preseason_reason = (
-                        "The compatible historical State already contains scored games, so "
-                        "it is not used as a frozen preseason expectation."
-                    )
-                else:
-                    preseason_result = build_forecast_lineup_analytics(
-                        preseason_state,
-                        forecasts=(
-                            preseason_evidence.raw_forecasts
-                            + preseason_evidence.league_scored_forecasts
-                        ),
-                        forecast_model_version=preseason_evidence.model_version,
-                    )
-                    preseason_views = preseason_result.team_views
-                    preseason_as_of = preseason_state.as_of.isoformat()
-            except Exception as exc:
+        preseason_baseline = load_preseason_baseline(
+            persistence_store,
+            state=league_state,
+        )
+        if preseason_baseline is None:
+            if preseason_forecast_loader is None:
                 preseason_reason = (
-                    "Frozen preseason team expectation unavailable: "
-                    f"{type(exc).__name__}: {exc}"
+                    "Preserved preseason Forecast authority is not configured in this runtime."
                 )
+            elif state_snapshot_store is None:
+                preseason_reason = (
+                    "Historical point-in-time State storage is unavailable; preseason player "
+                    "Forecast evidence is not enough to fabricate a team expectation."
+                )
+            else:
+                try:
+                    preseason_evidence = preseason_forecast_loader(league_state)
+                    cutoff = preseason_evidence.runtime_result.evaluation_as_of
+                    preseason_state = state_snapshot_store.latest_at_or_before(
+                        league_state.league.league_id,
+                        cutoff,
+                    )
+                    if preseason_state is None:
+                        preseason_reason = (
+                            "No canonical preseason State snapshot exists at or before the "
+                            "preserved Forecast cutoff."
+                        )
+                    elif preseason_state.league.season != league_state.league.season:
+                        preseason_reason = (
+                            "The available historical State snapshot belongs to a different season."
+                        )
+                    elif completed_matchups(preseason_state):
+                        preseason_reason = (
+                            "No valid pre-kickoff 2026 State + Forecast pair can be proven from "
+                            "governed evidence; the available historical State already contains "
+                            "regular-season scoring. Current rosters are never backfilled."
+                        )
+                    elif not preseason_evidence.uncertainty_ready:
+                        preseason_reason = (
+                            "The preserved pre-kickoff Forecast does not carry governed uncertainty "
+                            "needed for the 50,000-run preseason Simulation."
+                        )
+                    else:
+                        reconstructed = simulation_loader(
+                            preseason_state,
+                            preseason_evidence,
+                        )
+                        preseason_baseline = capture_preseason_baseline_if_eligible(
+                            persistence_store,
+                            state=preseason_state,
+                            forecast=preseason_evidence,
+                            simulation=reconstructed,
+                        )
+                        if preseason_baseline is None:
+                            preseason_reason = (
+                                "A compatible pregame State + Forecast exists, but the governed "
+                                "opener coordinate required to freeze a no-hindsight preseason "
+                                "baseline is unavailable."
+                            )
+                except Exception as exc:
+                    preseason_reason = (
+                        "Frozen preseason team expectation unavailable: "
+                        f"{type(exc).__name__}: {exc}"
+                    )
 
         return build_league_atlas_payload(
             runtime,
             preseason_team_views=preseason_views,
             preseason_as_of=preseason_as_of,
             preseason_reason=preseason_reason,
+            preseason_baseline=preseason_baseline,
         )
 
     @application.get("/api/opportunities/workspace")
