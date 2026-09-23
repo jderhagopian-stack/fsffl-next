@@ -181,3 +181,75 @@ def test_nfl_state_is_stronger_than_lagging_league_leg_for_matchup_completion() 
     assert by_week[3].team_a_points is None
     assert by_week[3].team_b_points is None
 
+
+
+def test_live_nfl_week_and_leg_beat_lagging_display_week_and_league_leg() -> None:
+    base = bundle()
+    settings = {**dict(base.league["settings"]), "leg": 2}
+    league = {**dict(base.league), "settings": settings}
+    with_matchups = SleeperPayloadBundle(
+        league=league,
+        users=base.users,
+        rosters=base.rosters,
+        players=base.players,
+        traded_picks=base.traded_picks,
+        matchups={
+            "1": (
+                {"matchup_id": 1, "roster_id": 1, "points": 121.5},
+                {"matchup_id": 1, "roster_id": 2, "points": 99.0},
+            ),
+            "2": (
+                {"matchup_id": 1, "roster_id": 1, "points": 110.0},
+                {"matchup_id": 1, "roster_id": 2, "points": 108.0},
+            ),
+            "3": (
+                {"matchup_id": 1, "roster_id": 1, "points": 0.0},
+                {"matchup_id": 1, "roster_id": 2, "points": 0.0},
+            ),
+        },
+        nfl_state={
+            "season": "2026",
+            "week": 3,
+            "leg": 3,
+            "display_week": 2,
+            "season_type": "regular",
+        },
+        retrieved_at=AS_OF,
+    )
+
+    state = SleeperNormalizer().normalize(with_matchups, as_of=AS_OF)
+
+    assert state.completed_through_week == 2
+    by_week = {matchup.week: matchup for matchup in state.matchups}
+    assert by_week[2].team_a_points == 110.0
+    assert by_week[3].team_a_points is None
+
+
+def test_sleeper_ppts_is_normalized_as_canonical_max_pf_with_provenance() -> None:
+    base = bundle()
+    rosters = []
+    for roster in base.rosters:
+        settings = dict(roster.get("settings") or {})
+        if roster["roster_id"] == 1:
+            settings.update({"ppts": 321, "ppts_decimal": 10})
+        rosters.append({**dict(roster), "settings": settings})
+    with_ppts = SleeperPayloadBundle(
+        league=base.league,
+        users=base.users,
+        rosters=tuple(rosters),
+        players=base.players,
+        traded_picks=base.traded_picks,
+        retrieved_at=AS_OF,
+    )
+
+    state = SleeperNormalizer().normalize(with_ppts, as_of=AS_OF)
+    alpha = next(item for item in state.team_states if item.team_id.endswith(":team:1"))
+
+    assert alpha.max_points_for == 321.10
+    assert alpha.max_points_for_provenance is not None
+    assert alpha.max_points_for_provenance.source == "sleeper:roster_settings:ppts"
+    assert alpha.max_points_for_provenance.source_version == "ppts+ppts_decimal"
+
+    beta = next(item for item in state.team_states if item.team_id.endswith(":team:2"))
+    assert beta.max_points_for is None
+    assert beta.max_points_for_provenance is None
