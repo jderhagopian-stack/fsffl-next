@@ -53,3 +53,12 @@ Decision: bump only the affected resilience / Team Utility lineage and live Simu
 ## Hard boundaries retained
 
 No League Market Value, team Intrinsic total, summed Broad Market total, hidden power score, owner-adjusted universal Value, recommendation strength, or acceptance probability is created. Forecast, Value, Simulation, Decision and Search mathematics remain unchanged. Home/Franchise is out of scope.
+
+
+## Live Forecast provider-health classification
+
+The corrective live-provider numerical trace is an external provider-health diagnostic, not a League Atlas model-authority gate. On PR head `a367362ee36fb16cb1e70a34806aee68a6a74427`, run #99 failed closed because the live Forecast runtime found only one healthy independent source (`razzball`) while the authoritative contract requires at least two. No Forecast threshold or two-source requirement was changed.
+
+After the only product-branch change was alignment of the stale League Atlas presentation test with the already-approved final IA, run #100 succeeded with two independent providers (`fftoday` and `razzball`). A later ad-hoc fragility diagnostic also encountered transient provider-health disagreement before Simulation could start. These alternating outcomes, with unchanged Forecast code and authority, classify the red trace as live provider/source-health volatility rather than a PR #174 regression.
+
+Decision: preserve the existing two-independent-source Forecast authority and fail-closed behavior. Do not weaken source-health governance merely to make a network/provider diagnostic green. Deterministic League Atlas acceptance uses the governed regression suites plus the real Sleeper State/Max-PF sanity path; live provider-health diagnostics are recorded separately.
