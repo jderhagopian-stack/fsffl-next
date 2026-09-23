@@ -7,6 +7,7 @@ INDEX = Path("src/fsffl/product/static/index.html")
 POSITION_MAP = Path("src/fsffl/product/static/league_position_map.js")
 POSITION_STRENGTH = Path("src/fsffl/product/static/league_position_strength.js")
 PRODUCT_SHELL = Path("src/fsffl/product/static/product_shell.js")
+MOBILE_TOUCH = Path("src/fsffl/product/static/mobile_touch_fix.css")
 
 
 def _source(path: Path) -> str:
@@ -25,7 +26,7 @@ def test_league_atlas_uses_final_acceptance_information_architecture() -> None:
     assert "laOutlookTab()" not in source
     assert "data-atlas-tab=\"outlook\"" not in source
     assert "data-atlas-tab" in source
-    assert "Current reality → Forward outlook" in source
+    assert "Current Season + Outlook from Today" in source
 
 
 def test_league_atlas_composes_governed_contracts_without_team_value_fabrication() -> None:
@@ -73,8 +74,11 @@ def test_league_atlas_mobile_css_is_deliberate_and_safe_area_aware() -> None:
     css = _source(ATLAS_CSS)
 
     assert "@media(max-width:720px)" in css
+    mobile = _source(MOBILE_TOUCH)
     assert "env(safe-area-inset-top)" in css
     assert "env(safe-area-inset-bottom)" in css
+    assert "padding-top:env(safe-area-inset-top,0px)!important" in mobile
+    assert "padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))" in mobile
     assert "overflow-x:auto" in css
     assert "-webkit-overflow-scrolling:touch" in css
     assert ".atlas-drawer{inset:0" in css
@@ -85,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-final1" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-final1';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-iphone1" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-iphone1';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
 
 
@@ -124,22 +128,44 @@ def test_live_acceptance_corrective_mobile_composition_preserves_identity_and_pr
     assert ".atlas-pick-table{overflow:visible!important" in css
     assert ".atlas-outlook-list{overflow:visible!important" in css
     assert ".league-edge-row>span:first-child{position:sticky" in css
-    assert ".league-value-dot{width:11px!important" in css
+    assert ".league-value-dot{\n  width:12px!important" in css
 
 
 
-def test_final_acceptance_overview_is_full_league_and_evidence_complete() -> None:
+def test_final_acceptance_overview_is_full_league_sortable_table() -> None:
     source = _source(LEAGUE)
+    css = _source(ATLAS_CSS)
 
     assert "standings.slice(0,6)" not in source
     assert "View all " not in source
-    assert "standings.map(row=>" in source
-    assert "<small>PF</small>" in source
-    assert "<small>PA</small>" in source
-    assert "<small>Max PF</small>" in source
-    assert "<small>playoffs</small>" in source
-    assert "<small>champ</small>" in source
-    assert "expected wins" in source
-    assert "1st place" in source
+    assert "laRaceSorted(standings)" in source
+    assert 'class="atlas-race-table"' in source
+    assert "Current Season" in source
+    assert "Outlook from Today" in source
+    assert "50,000 simulations using current standings, rosters and forecast evidence." in source
+    for label in ("PF", "PA", "Max PF", "Projected finish", "Playoffs", "Championship", "Projected final wins", "1st Place"):
+        assert label in source
+    assert "Forward details" not in source
+    assert "rank vs exp finish" not in source
+    assert "data-race-sort" in source
+    assert "atlas-race-rank-sticky" in css
+    assert "atlas-race-team-sticky" in css
+    assert "overflow-x:auto" in css
     assert "Preseason expectation → now" in source
     assert "ppts + ppts_decimal" in source
+
+
+def test_iphone_polish_keeps_one_tappable_position_map_and_valid_value_dom() -> None:
+    source = _source(LEAGUE)
+    css = _source(ATLAS_CSS)
+
+    assert source.count("league-edge-matrix league-edge-map") == 1
+    assert "league-edge-exact" not in source
+    assert "data-room-team" in source
+    assert "data-room-position" in source
+    assert "league-value-team-select" in source
+    assert '<button type="button" class="league-value-row ' not in source
+    assert '<div class="league-value-row ' in source
+    assert "league-edge-cell>b" in css
+    assert "width:34px" in css
+    assert "grid-template-columns:minmax(82px,1.32fr) repeat(4,minmax(0,1fr))!important" in css

@@ -214,6 +214,7 @@ def test_github_actions_declares_free_daily_scheduler_contract() -> None:
     assert "python scripts/run_annual_preseason_scheduler_tick.py" in workflow
     assert "FSFFL_ANNUAL_SNAPSHOT_ENDPOINT" in workflow
     assert "secrets.FSFFL_SCHEDULER_TOKEN" in workflow
-    assert "DORMANT - secure GitHub Actions secret" in workflow
+    assert "cannot invoke hosted capture: secure GitHub Actions secret" in workflow
+    assert "exit 1" in workflow
     assert "type: cron" not in workflow
     assert "plan: starter" not in workflow
