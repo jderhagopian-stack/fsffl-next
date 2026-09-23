@@ -1,95 +1,218 @@
-/* Phase 3 Home Command Center.
- * Presentation only. Home reuses already-loaded governed team/opportunity evidence
- * and deliberately does not initiate Search, Decision, Value or Simulation work.
+/* FSFFL NEXT Home North Star.
+ * Presentation-owned command center. Home summarizes existing governed evidence
+ * and never launches Search, Decision, Value, or a new Simulation merely to render.
  */
 let fsfflHomeRenderHookInstalled=false;
+const fsfflHomeState={
+  summary:null,
+  loading:false,
+  error:null,
+  positionLens:'rank',
+  contextKey:null,
+  loadMs:null,
+};
 
 function homeEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 function homeNumber(value,digits=1){return typeof value==='number'&&Number.isFinite(value)?value.toFixed(digits):'—'}
-function homePercent(value,digits=1){return typeof value==='number'&&Number.isFinite(value)?`${(value*100).toFixed(digits)}%`:'—'}
+function homePercent(value){return typeof value==='number'&&Number.isFinite(value)?Math.round(value*100)+'%':'—'}
 function homeWords(value){return String(value||'').replaceAll('_',' ')}
-function homeStateLabel(value){return value&&value!=='unknown'?homeWords(value):'Not classified'}
-function homeStrengthRows(view){return(view?.position_strengths||[]).filter(row=>typeof row?.strength_index==='number'&&Number.isFinite(row.strength_index))}
-function homeOpportunityAssetLabels(items){return(items||[]).map(item=>item.label||item.asset_ref).filter(Boolean).join(' + ')||'—'}
-function homeLoadedOpportunityWorkspace(){return typeof fsfflOpportunityState!=='undefined'?fsfflOpportunityState.payload:null}
-
-function homePrimaryAction(){
-  const workspace=homeLoadedOpportunityWorkspace();
-  const lead=workspace?.trade_discovery?.spotlights?.most_promising_evaluated;
-  if(lead){
-    const receive=homeOpportunityAssetLabels(lead.receive),send=homeOpportunityAssetLabels(lead.send),other=lead.counterparty_name||lead.counterparty_team_id||'another team';
-    const shape=lead.negotiation_feasibility_shape?homeWords(lead.negotiation_feasibility_shape):'Decision evaluated';
-    if(lead.recommendation_authority===true)return{tone:'opportunity',kicker:'Best current action path',title:`Explore ${receive}`,detail:`Send ${send} to ${other}. ${shape}. This is the server-selected action-authoritative lead, not an acceptance prediction.`,route:'opportunities',action:'Work this opportunity',meta:'Strongest action-authoritative path already loaded by Market'};
-    return{tone:'quiet',kicker:'Lead to investigate',title:`Inspect ${receive}`,detail:`A Decision-evaluated market candidate would send ${send} to ${other}. ${shape}. It is diagnostic evidence, not an action-authoritative recommendation.`,route:'opportunities',action:'Inspect in Market',meta:'Diagnostic candidate — no recommendation authority'};
-  }
-  if(workspace?.status&&workspace.status!=='ready')return{tone:'waiting',kicker:'Market intelligence',title:'Opportunity search is still preparing',detail:workspace.message||'A governed input is still attaching.',route:'opportunities',action:'See market readiness',meta:'FSFFL will not substitute an unevaluated guess'};
-  if(workspace)return{tone:'quiet',kicker:'Market intelligence',title:'No evaluated lead stands out yet',detail:'The current governed workspace has not identified a Decision-evaluated lead. FSFFL will not invent an opportunity to fill this space.',route:'opportunities',action:'Explore the full market',meta:'No fabricated recommendation'};
-  return{tone:'opportunity',kicker:'Best next action',title:'Scan the personalized market',detail:'Market has not been opened in this session yet. Home stays fast by reusing governed results after Market loads instead of launching deep Search itself.',route:'opportunities',action:'Find my best moves',meta:'Opens Market without duplicating Search work'};
+function homeStateLabel(value){return value&&value!=='unknown'?homeWords(value):'Unclassified'}
+function homeContextKey(){return [state?.context?.league_id||'',state?.context?.team_id||'',state?.context?.state_id||''].join('|')}
+function homeRecord(row){if(!row)return'—';return row.ties?row.wins+'-'+row.losses+'-'+row.ties:row.wins+'-'+row.losses}
+function homePositions(view){const order={QB:0,RB:1,WR:2,TE:3};return(view?.position_strengths||[]).filter(row=>Object.hasOwn(order,row.position)&&typeof row?.strength_index==='number'&&Number.isFinite(row.strength_index)).sort((a,b)=>order[a.position]-order[b.position])}
+function homeWeakestPosition(view){
+  const order={QB:0,RB:1,WR:2,TE:3},rows=homePositions(view);
+  if(!rows.length)return null;
+  return [...rows].sort((a,b)=>{
+    const ar=typeof a.league_rank==='number'?a.league_rank:-1,br=typeof b.league_rank==='number'?b.league_rank:-1;
+    if(ar!==br)return br-ar;
+    const ai=typeof a.strength_index==='number'?a.strength_index:Number.POSITIVE_INFINITY,bi=typeof b.strength_index==='number'?b.strength_index:Number.POSITIVE_INFINITY;
+    if(ai!==bi)return ai-bi;
+    return order[a.position]-order[b.position];
+  })[0];
 }
-
-function homePulse(view){
-  const outcome=view?.utility?.competitive_outcome,resilience=view?.utility?.roster_resilience;
-  const strengths=homeStrengthRows(view).sort((a,b)=>a.strength_index-b.strength_index),weakest=strengths[0]||null,strongest=strengths[strengths.length-1]||null;
-  const stateLabel=homeStateLabel(view?.utility?.calculated_competitive_state);
-  const outlook=outcome?`${homeNumber(outcome.expected_wins,2)} wins · ${homePercent(outcome.playoff_probability,0)} playoffs`:stateLabel;
-  const outlookDetail=outcome?`${stateLabel} current competitive profile.`:'Competitive Simulation evidence is still attaching.';
-  const risk=typeof resilience?.largest_single_player_lineup_drop==='number'?`${homeNumber(resilience.largest_single_player_lineup_drop,1)} projected points`:'Not available';
-  const riskDetail=typeof resilience?.largest_single_player_lineup_drop==='number'?`Largest lineup loss from one starter becoming unavailable. ${resilience.bench_forecasted_count??'—'} bench players have forecast evidence.`:'Roster-resilience evidence is not available on this state.';
-  const pressure=weakest?`${weakest.position} · #${weakest.league_rank||'—'} of ${weakest.team_count||'—'}`:'Not available';
-  const pressureDetail=weakest?`${Math.round(weakest.strength_index)} strength index versus 100 league average.${strongest&&strongest.position!==weakest.position?` Strongest unit: ${strongest.position}.`:''}`:'League-relative position evidence is not available.';
-  return[
-    {label:'Competitive outlook',value:outlook,detail:outlookDetail,route:'my_team',action:'Open Franchise'},
-    {label:'Biggest roster risk',value:risk,detail:riskDetail,route:'what_if',action:'Stress-test it'},
-    {label:'Position to watch',value:pressure,detail:pressureDetail,route:'my_team',action:'See the diagnosis'},
-  ];
+function homeStrengthBand(row){if(!row)return'missing';const count=row.team_count||12,rank=row.league_rank;if(typeof rank!=='number')return'missing';const share=(rank-1)/Math.max(1,count-1);return share<=.2?'elite':share<=.42?'strong':share<=.7?'neutral':'weak'}
+function homeDriver(view){
+  const resilience=view?.utility?.roster_resilience,ids=resilience?.largest_single_player_lineup_drop_player_ids||[];
+  const players=ids.map(id=>(view?.players||[]).find(player=>player.player_id===id)).filter(Boolean);
+  return{resilience,players,primary:players[0]||null};
 }
-function homePulseRow(item){return`<article class="home-pulse-row"><div><span>${homeEscape(item.label)}</span><strong>${homeEscape(item.value)}</strong><small>${homeEscape(item.detail)}</small></div><button type="button" data-home-route="${homeEscape(item.route)}">${homeEscape(item.action)}<b aria-hidden="true">›</b></button></article>`}
-function homeWorkflow(route,title,detail){return`<button type="button" class="home-workflow" data-home-route="${homeEscape(route)}"><span><strong>${homeEscape(title)}</strong><small>${homeEscape(detail)}</small></span><b aria-hidden="true">›</b></button>`}
+function homeSummary(){return fsfflHomeState.summary||{}}
+function homeStanding(){return homeSummary().managed_standing||null}
+function homeSimulation(){return homeSummary().simulation?.team||null}
+function homeSimulationReady(){return homeSummary().simulation?.status==='ready'&&Boolean(homeSimulation())}
+function homeNavigate(intent){if(typeof window.fsfflNavigate==='function')window.fsfflNavigate(intent);else if(typeof setRoute==='function')setRoute(intent.route)}
+function homeIntentButton(label,intent,body,className=''){
+  return '<button type="button" class="'+className+'" data-home-intent="'+homeEscape(JSON.stringify(intent))+'" aria-label="'+homeEscape(label)+'">'+body+'</button>';
+}
+function homeRing(label,value,display,intent,tone=''){
+  const pct=typeof value==='number'&&Number.isFinite(value)?Math.max(0,Math.min(100,Math.round(value*100))):null;
+  const style=pct==null?'':(' style="--home-ring-pct:'+pct+'"');
+  const body='<span class="home-ring-visual '+tone+'"'+style+'><b>'+homeEscape(display)+'</b></span><span class="home-ring-label">'+homeEscape(label)+'</span>';
+  return homeIntentButton(label+' — '+display,intent,body,'home-outlook-metric');
+}
+function homePositionPill(row,teamId){
+  const mode=fsfflHomeState.positionLens,value=mode==='strength'?homeNumber(row?.strength_index,0):(typeof row?.league_rank==='number'?'#'+row.league_rank:'—');
+  const intent={route:'league_comparison',section:'positions',teamId,position:row?.position||null};
+  const body='<span>'+homeEscape(row?.position||'—')+'</span><b class="'+homeStrengthBand(row)+'">'+homeEscape(value)+'</b>';
+  return homeIntentButton((row?.position||'Position')+' detail — '+value,intent,body,'home-position-pill');
+}
+function homeAroundLeague(){
+  const rows=homeSummary().around_the_league||[],managed=homeSummary().managed_team_id;
+  if(!rows.length)return'<p class="home-unavailable">Current standings context is unavailable.</p>';
+  return '<div class="home-around-list">'+rows.map(row=>'<div class="home-around-row '+(row.team_id===managed?'managed':'')+'"><b>#'+row.rank+'</b><span><strong>'+homeEscape(row.team_name)+'</strong><small>'+homeEscape(homeRecord(row))+'</small></span><em>'+homeNumber(row.points_for,1)+' PF</em></div>').join('')+'</div>';
+}
+function homeEvidenceDetails(){
+  const summary=homeSummary(),count=summary.simulation?.simulation_count;
+  return '<details class="home-evidence"><summary>Evidence & definitions</summary><div><p><strong>Current State:</strong> '+homeEscape(String(summary.league_state_id||state?.context?.state_id||'unavailable').slice(0,14))+'…</p><p><strong>Simulation:</strong> '+(count?Number(count).toLocaleString()+' governed runs already attached to this exact State':'unavailable for this exact State')+'. Home does not launch a new Simulation.</p><p><strong>Position strength:</strong> the same League Atlas optimized-starter evidence; Strength Index 100 = league-average optimized starter production.</p><p><strong>Pressure point:</strong> weakest QB/RB/WR/TE within that single comparable position-strength family. Home does not rank unrelated evidence families against one another.</p></div></details>';
+}
+function homeLoadingMarkup(){
+  return '<div class="home-command-loading"><i></i><strong>Reading your current team context…</strong><span>Home is attaching existing State, Team Utility and Simulation evidence without launching downstream Search.</span></div>';
+}
+function homeUnavailableMarkup(message){
+  return '<div class="home-command-unavailable"><p class="eyebrow">Home</p><h2>Current command-center evidence is unavailable.</h2><p>'+homeEscape(message||'The governed runtime has not attached enough evidence yet.')+'</p></div>';
+}
 
 function renderFsfflHomeAttention(view=state?.teamView){
   const container=document.querySelector('#home-attention');if(!container)return;
-  if(!state?.context?.league_id){container.innerHTML='<div class="home-onboarding"><p class="eyebrow">Your league, understood</p><h2>Connect a league to turn FSFFL on.</h2><p>FSFFL will prioritize what deserves attention, explain why it matters, and connect each insight to the next decision.</p><button type="button" class="primary-button" data-home-connect>Connect Sleeper League</button></div>';container.querySelector('[data-home-connect]')?.addEventListener('click',()=>document.querySelector('#connect-button')?.click());return}
-  if(!state?.context?.team_id){container.innerHTML='<div class="home-onboarding"><p class="eyebrow">Personalize the command center</p><h2>Choose the franchise you manage.</h2><p>FSFFL already knows the league. Select your team so Home can prioritize the signals that matter to you.</p></div>';return}
-  if(!view){container.innerHTML='<div class="home-onboarding"><p class="eyebrow">Command Center</p><h2>Reading the current franchise state…</h2><p>The product remains usable while governed Franchise evidence attaches.</p></div>';return}
+  if(!state?.context?.league_id){
+    container.innerHTML='<div class="home-onboarding"><p class="eyebrow">FSFFL NEXT</p><h2>Connect a league to activate Home.</h2><p>Home will summarize the governed signals that matter to the franchise you manage and route you directly to the authoritative detail.</p><button type="button" class="primary-button" data-home-connect>Connect Sleeper League</button></div>';
+    container.querySelector('[data-home-connect]')?.addEventListener('click',()=>document.querySelector('#connect-button')?.click());return;
+  }
+  if(!state?.context?.team_id){
+    container.innerHTML='<div class="home-onboarding"><p class="eyebrow">FSFFL NEXT</p><h2>Choose the franchise you manage.</h2><p>Select a team above to personalize the command center.</p></div>';return;
+  }
+  if(!view||fsfflHomeState.loading&&!fsfflHomeState.summary){container.innerHTML=homeLoadingMarkup();return}
+  const summary=homeSummary();
+  if(fsfflHomeState.error&&!summary.managed_standing){
+    container.innerHTML=homeUnavailableMarkup(fsfflHomeState.error);return;
+  }
 
-  const primary=homePrimaryAction(),pulse=homePulse(view);
-  container.innerHTML=`
-    <section class="home-command-head"><div><p class="eyebrow">Command Center</p><h2>${homeEscape(view.display_name)}</h2><p>What deserves your attention right now.</p></div><span class="home-state-pill">${homeEscape(homeStateLabel(view.utility?.calculated_competitive_state))}</span></section>
-    <section class="home-priority ${homeEscape(primary.tone)}">
-      <div class="home-priority-copy"><span class="home-priority-kicker">${homeEscape(primary.kicker)}</span><h3>${homeEscape(primary.title)}</h3><p>${homeEscape(primary.detail)}</p><small>${homeEscape(primary.meta)}</small></div>
-      <button type="button" class="primary-button" data-home-route="${homeEscape(primary.route)}">${homeEscape(primary.action)} <b aria-hidden="true">→</b></button>
-    </section>
-    <section class="home-current"><div class="home-section-title"><div><p class="eyebrow">Franchise pulse</p><h3>Three things worth knowing</h3></div><button type="button" class="text-button" data-home-route="my_team">Full diagnosis</button></div><div class="home-pulse-list">${pulse.map(homePulseRow).join('')}</div></section>
-    <section class="home-next"><div class="home-section-title"><div><p class="eyebrow">Go deeper</p><h3>Choose the decision, not the dashboard</h3></div></div><div class="home-workflows">${homeWorkflow('opportunities','Find my best moves','Open the personalized Market and set an objective.')}${homeWorkflow('trade_center','Test a specific trade','See both franchises, Simulation impact and realistic counters.')}${homeWorkflow('league_comparison','Read the league','Find positional edges, structural imbalances and complementary needs.')}</div></section>
-    <p class="home-evidence-note">Home prioritizes already-loaded governed evidence; it does not calculate a combined score or launch deep Search. Change-since-last-visit and activity alerts will join this command center only after their governed history/evidence contracts exist.</p>`;
-  container.querySelectorAll('[data-home-route]').forEach(button=>button.addEventListener('click',()=>setRoute(button.dataset.homeRoute)));
+  const standing=homeStanding(),simulation=homeSimulation(),teamId=state.context.team_id;
+  const stateLabel=homeStateLabel(view?.utility?.calculated_competitive_state||simulation?.competitive_state);
+  const teamCount=(standing?.team_count||state?.context?.teams?.length||12);
+  const weakest=homeWeakestPosition(view),positions=homePositions(view);
+  const driver=homeDriver(view),drop=driver.resilience?.largest_single_player_lineup_drop;
+  const driverNames=driver.players.length?driver.players.map(player=>player.full_name).join(' / '):'Driver unavailable';
+  const expectedFinish=homeSimulationReady()?homeNumber(simulation.expected_finish,1):'—';
+  const pressureBody=weakest
+    ?'<div class="home-pressure-main"><span class="home-pressure-circle '+homeStrengthBand(weakest)+'">'+homeEscape(weakest.position)+'</span><div><p class="eyebrow">What matters right now</p><h2>'+homeEscape(weakest.position)+' is your clearest roster pressure point</h2><p>#'+homeEscape(weakest.league_rank)+' of '+homeEscape(weakest.team_count||teamCount)+' · Strength Index '+homeNumber(weakest.strength_index,0)+'</p></div></div><span class="home-pressure-cta">Explore '+homeEscape(weakest.position)+' options <b>→</b></span>'
+    :'<div class="home-pressure-main"><span class="home-pressure-circle missing">—</span><div><p class="eyebrow">What matters right now</p><h2>Position-strength evidence unavailable</h2><p>Home will not derive a substitute from Market Value or raw projections.</p></div></div>';
+
+  const identity=homeIntentButton(
+    'Open '+view.display_name+' Franchise',
+    {route:'my_team',teamId},
+    '<span class="home-team-mark">'+homeEscape((view.display_name||'?').slice(0,2).toUpperCase())+'</span><span class="home-identity-copy"><strong>'+homeEscape(view.display_name)+'</strong><small>'+homeEscape(homeRecord(standing))+(standing?' · #'+standing.rank+' of '+teamCount:'')+'</small><em>'+homeEscape(stateLabel)+'</em></span><b aria-hidden="true">›</b>',
+    'home-identity'
+  );
+  const pressure=homeIntentButton(
+    weakest?'Explore '+weakest.position+' options in Market':'Position-strength evidence unavailable',
+    weakest?{route:'opportunities',teamId,position:weakest.position,source:'home-pressure'}:{route:'league_comparison',section:'positions',teamId},
+    pressureBody,
+    'home-pressure '+(weakest?'':'unavailable')
+  );
+
+  const simCount=summary.simulation?.simulation_count;
+  const outlook=homeSimulationReady()
+    ?'<div class="home-outlook-grid">'
+      +homeRing('Projected final wins',null,homeNumber(simulation.expected_wins,1),{route:'league_comparison',section:'overview',teamId,metric:'expected_wins'},'wins')
+      +homeRing('Playoffs',simulation.playoff_probability,homePercent(simulation.playoff_probability),{route:'league_comparison',section:'overview',teamId,metric:'playoff_probability'},'playoffs')
+      +homeRing('Championship',simulation.championship_probability,homePercent(simulation.championship_probability),{route:'league_comparison',section:'overview',teamId,metric:'championship_probability'},'championship')
+      +'</div><small class="home-section-note">'+(simCount?Number(simCount).toLocaleString()+' current-State simulations':'Current governed Simulation')+'</small>'
+    :'<p class="home-unavailable">Current Simulation is unavailable for this exact State. Home will not reuse stale probabilities.</p>';
+
+  const roster=positions.length===4
+    ?'<div class="home-position-grid">'+positions.map(row=>homePositionPill(row,teamId)).join('')+'</div>'
+    :'<p class="home-unavailable">Complete QB/RB/WR/TE position-strength evidence is unavailable.</p>';
+
+  const exposureIntent=driver.primary?{route:'league_comparison',section:'positions',teamId,position:driver.primary.position,playerId:driver.primary.player_id,source:'home-fragility'}:{route:'league_comparison',section:'positions',teamId};
+  const exposureValue=typeof drop==='number'?homeNumber(drop,1)+' projected-point drop':'Unavailable';
+  const exposure=homeIntentButton(
+    'Open largest single-player exposure detail',
+    exposureIntent,
+    '<span class="home-secondary-icon">◉</span><span><small>Largest single-player exposure</small><strong>'+homeEscape(driverNames)+'</strong><em>'+homeEscape(exposureValue)+'</em></span><b aria-hidden="true">›</b>',
+    'home-secondary-row'
+  );
+  const finish=homeIntentButton(
+    'Open current expected finish in League Atlas',
+    {route:'league_comparison',section:'overview',teamId,metric:'expected_finish',source:'home-finish'},
+    '<span class="home-secondary-icon">↗</span><span><small>Current outlook</small><strong>Expected finish: '+homeEscape(expectedFinish)+'</strong><em>'+(standing?'You’re #'+standing.rank+' of '+teamCount:'Current rank unavailable')+'</em></span><b aria-hidden="true">›</b>',
+    'home-secondary-row'
+  );
+  const around=homeIntentButton(
+    'Open current standings in League Atlas',
+    {route:'league_comparison',section:'overview',teamId,source:'home-around-league'},
+    '<div><p class="eyebrow">Around the league</p>'+homeAroundLeague()+'</div><b aria-hidden="true">›</b>',
+    'home-around'
+  );
+
+  container.innerHTML='<div class="home-command">'
+    +'<header class="home-brand-row"><span>FSFFL <b>NEXT</b></span></header>'
+    +identity
+    +pressure
+    +'<section class="home-section"><div class="home-section-heading"><div><p class="eyebrow">Season outlook</p><h3>Current Simulation</h3></div></div>'+outlook+'</section>'
+    +'<section class="home-section"><div class="home-section-heading home-roster-heading"><div><p class="eyebrow">Your roster at a glance</p><h3>League-relative shape</h3></div><div class="home-position-toggle" role="group" aria-label="Roster position lens"><button type="button" data-home-position-mode="rank" class="'+(fsfflHomeState.positionLens==='rank'?'active':'')+'">Rank</button><button type="button" data-home-position-mode="strength" class="'+(fsfflHomeState.positionLens==='strength'?'active':'')+'">Strength Index</button></div></div>'+roster+'</section>'
+    +'<section class="home-section"><div class="home-section-heading"><div><p class="eyebrow">Also worth knowing</p><h3>Two supporting facts</h3></div></div><div class="home-secondary-list">'+exposure+finish+'</div></section>'
+    +around
+    +homeEvidenceDetails()
+    +'</div>';
+
+  container.querySelectorAll('[data-home-intent]').forEach(button=>button.addEventListener('click',()=>{
+    try{homeNavigate(JSON.parse(button.dataset.homeIntent))}catch(_){}
+  }));
+  container.querySelectorAll('[data-home-position-mode]').forEach(button=>button.addEventListener('click',event=>{
+    fsfflHomeState.positionLens=event.currentTarget.dataset.homePositionMode==='strength'?'strength':'rank';
+    renderFsfflHomeAttention(state?.teamView||view);
+  }));
+}
+
+async function loadFsfflHomeCommandCenter({force=false}={}){
+  if(!state?.context?.league_id||!state?.context?.team_id)return;
+  const key=homeContextKey();
+  if(!force&&fsfflHomeState.summary&&fsfflHomeState.contextKey===key){renderFsfflHomeAttention(state?.teamView);return}
+  if(fsfflHomeState.loading)return;
+  fsfflHomeState.loading=true;fsfflHomeState.error=null;fsfflHomeState.contextKey=key;
+  const started=typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
+  renderFsfflHomeAttention(state?.teamView);
+  try{
+    const payload=await api('/api/home/command-center');
+    if(homeContextKey()!==key)return;
+    fsfflHomeState.summary=payload;
+    const ended=typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
+    fsfflHomeState.loadMs=Math.max(0,ended-started);
+  }catch(error){
+    if(homeContextKey()===key){fsfflHomeState.summary=null;fsfflHomeState.error=error.message||String(error)}
+  }finally{
+    if(homeContextKey()===key){fsfflHomeState.loading=false;renderFsfflHomeAttention(state?.teamView)}
+  }
 }
 
 function installFsfflHomeExperience(){
   const leagueScreen=document.querySelector('#league-screen');if(!leagueScreen)return;
-  const hero=leagueScreen.querySelector('.hero-row');
-  const eyebrow=hero?.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='Home';
-  const heading=hero?.querySelector('h1');if(heading)heading.textContent='Know what matters. Then act.';
-  const lead=hero?.querySelector('.lead');if(lead)lead.textContent='Your command center prioritizes the current action, risk and context worth your attention. Detailed diagnosis and evidence live where they belong.';
-  hero?.querySelector('.hero-actions')?.setAttribute('hidden','');
+  const hero=leagueScreen.querySelector('.hero-row');if(hero)hero.hidden=true;
   leagueScreen.querySelector('.metric-grid')?.setAttribute('hidden','');
   leagueScreen.querySelector('.dashboard-grid')?.setAttribute('hidden','');
   leagueScreen.querySelector('.roster-panel')?.setAttribute('hidden','');
+  const runtime=document.querySelector('#runtime-status');if(runtime)runtime.hidden=true;
   document.querySelector('#home-quick-actions')?.remove();
-  let attention=document.querySelector('#home-attention');if(!attention){attention=document.createElement('section');attention.id='home-attention';attention.className='home-attention';hero?.insertAdjacentElement('afterend',attention)}
-
-  const runtime=document.querySelector('#runtime-status'),grid=document.querySelector('#runtime-stage-grid');
-  if(runtime){runtime.classList.add('home-system-status');if(grid&&!runtime.querySelector('#runtime-detail-toggle')){grid.hidden=true;const toggle=document.createElement('button');toggle.id='runtime-detail-toggle';toggle.type='button';toggle.className='text-button';toggle.textContent='Show technical status';toggle.setAttribute('aria-expanded','false');toggle.addEventListener('click',()=>{grid.hidden=!grid.hidden;toggle.textContent=grid.hidden?'Show technical status':'Hide technical status';toggle.setAttribute('aria-expanded',String(!grid.hidden))});runtime.querySelector('.panel-header')?.appendChild(toggle);const runtimeEyebrow=runtime.querySelector('.eyebrow');if(runtimeEyebrow)runtimeEyebrow.textContent='System status'}}
+  let attention=document.querySelector('#home-attention');
+  if(!attention){attention=document.createElement('section');attention.id='home-attention';attention.className='home-attention';leagueScreen.prepend(attention)}
 
   if(!fsfflHomeRenderHookInstalled&&typeof renderMyTeam==='function'){
-    const originalRenderMyTeam=renderMyTeam;window.renderMyTeam=function(view){const result=originalRenderMyTeam(view);renderFsfflHomeAttention(view);return result};renderMyTeam=window.renderMyTeam;fsfflHomeRenderHookInstalled=true;
+    const originalRenderMyTeam=renderMyTeam;
+    window.renderMyTeam=function(view){const result=originalRenderMyTeam(view);renderFsfflHomeAttention(view);return result};
+    renderMyTeam=window.renderMyTeam;fsfflHomeRenderHookInstalled=true;
   }
   renderFsfflHomeAttention(state?.teamView||null);
-  if(!document.querySelector('#fsffl-home-command-style')){const style=document.createElement('style');style.id='fsffl-home-command-style';style.textContent=`
-.home-attention{margin:4px 0 24px;max-width:1080px}.home-command-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:13px}.home-command-head h2{margin:2px 0 4px;font-size:clamp(1.45rem,3vw,2rem)}.home-command-head>div>p:last-child{margin:0;color:var(--muted)}.home-state-pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:var(--muted);font-size:11px;text-transform:capitalize}.home-priority{border:1px solid #31536a;border-radius:18px;padding:22px;background:linear-gradient(135deg,rgba(19,48,67,.82),rgba(10,17,32,.96) 64%);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;box-shadow:var(--shadow)}.home-priority.quiet,.home-priority.waiting{border-color:var(--line);background:linear-gradient(135deg,rgba(17,25,43,.95),rgba(10,17,32,.96))}.home-priority-kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:850;color:var(--accent)}.home-priority h3{font-size:clamp(1.5rem,4vw,2.25rem);line-height:1.08;margin:7px 0 9px;letter-spacing:-.035em}.home-priority p{color:#cbd5e1;line-height:1.5;margin:0 0 8px;max-width:720px}.home-priority small{display:block;color:var(--muted);font-size:11px}.home-priority>.primary-button{min-width:178px}.home-current,.home-next{margin-top:22px}.home-section-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:9px}.home-section-title h3{margin:2px 0;font-size:1.05rem}.home-pulse-list{border-top:1px solid var(--line)}.home-pulse-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:13px 2px;border-bottom:1px solid var(--line)}.home-pulse-row>div{display:grid;grid-template-columns:minmax(130px,.65fr) minmax(160px,.8fr) minmax(220px,1.4fr);gap:14px;align-items:center}.home-pulse-row span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}.home-pulse-row strong{font-size:14px}.home-pulse-row small{color:var(--muted);font-size:11px;line-height:1.35}.home-pulse-row>button{border:0;background:transparent;color:var(--accent);font:inherit;font-size:12px;white-space:nowrap}.home-pulse-row>button b,.home-workflow>b{font-size:17px;font-weight:400;margin-left:3px}.home-workflows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.home-workflow{border:1px solid var(--line);border-radius:13px;background:#0a1120;color:var(--text);padding:13px;text-align:left;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font:inherit}.home-workflow:hover{border-color:#37516f}.home-workflow span{display:grid;gap:3px}.home-workflow strong{font-size:13px}.home-workflow small{color:var(--muted);font-size:10px;line-height:1.35}.home-workflow>b{color:var(--muted)}.home-evidence-note{color:var(--muted);font-size:10px;line-height:1.45;margin:14px 2px 0}.home-onboarding{border:1px solid var(--line);border-radius:18px;background:#0a1120;padding:24px;max-width:760px}.home-onboarding h2{font-size:1.7rem;margin:4px 0 8px}.home-onboarding p:not(.eyebrow){color:var(--muted);line-height:1.5}.home-onboarding .primary-button{margin-top:8px}.home-system-status{margin-top:18px;opacity:.82}
-@media(max-width:760px){.home-attention{margin-top:0}.home-command-head{align-items:flex-start}.home-priority{grid-template-columns:1fr;padding:17px;gap:16px}.home-priority>.primary-button{width:100%}.home-pulse-row{grid-template-columns:1fr}.home-pulse-row>div{grid-template-columns:1fr;gap:4px}.home-pulse-row>button{text-align:left;padding:3px 0}.home-workflows{grid-template-columns:1fr}.home-section-title{align-items:flex-start}.home-system-status{margin-top:12px}}
+  void loadFsfflHomeCommandCenter();
+
+  if(!document.querySelector('#fsffl-home-north-star-style')){
+    const style=document.createElement('style');style.id='fsffl-home-north-star-style';style.textContent=`
+.home-attention{width:min(100%,720px);margin:0 auto;padding:10px 0 calc(88px + env(safe-area-inset-bottom,0px));overflow-x:hidden}.home-command{display:grid;gap:10px}.home-brand-row{padding:2px 4px 0;font-size:21px;font-weight:900;letter-spacing:.04em}.home-brand-row span{color:#50d3ff}.home-brand-row b{color:#fff}.home-identity,.home-pressure,.home-outlook-metric,.home-position-pill,.home-secondary-row,.home-around{appearance:none;width:100%;border:1px solid #1b3850;background:linear-gradient(145deg,#0a1b2d,#071421);color:#f3f7fb;text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}.home-identity{min-height:72px;border-radius:13px;padding:9px 12px;display:grid;grid-template-columns:52px minmax(0,1fr) 22px;gap:10px;align-items:center}.home-team-mark{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#173a56;border:1px solid #3baedc;font-weight:900}.home-identity-copy{display:grid;gap:1px;min-width:0}.home-identity-copy strong{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.home-identity-copy small,.home-identity-copy em{color:#9bb0c4;font-size:11px;font-style:normal}.home-identity>b,.home-secondary-row>b,.home-around>b{color:#86b6d4;font-size:26px;font-weight:300}.home-pressure{border-color:#7d294e;background:radial-gradient(circle at 15% 25%,rgba(215,47,101,.18),transparent 35%),linear-gradient(145deg,#2a0e22,#170d1c);border-radius:14px;padding:12px;display:grid;gap:9px}.home-pressure-main{display:grid;grid-template-columns:68px minmax(0,1fr);gap:12px;align-items:center}.home-pressure-circle{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;border:5px solid #e33e71;font-size:19px;font-weight:900;background:#250e1d}.home-pressure-circle.strong,.home-pressure-circle.elite{border-color:#42d49d}.home-pressure-circle.neutral{border-color:#e6bb57}.home-pressure-circle.missing{border-color:#506174;color:#8fa2b4}.home-pressure h2{font-size:18px;line-height:1.14;margin:2px 0 4px}.home-pressure p:not(.eyebrow){margin:0;color:#b8a4af;font-size:11px}.home-pressure-cta{display:flex;justify-content:center;align-items:center;min-height:38px;border-radius:8px;background:#a52955;font-weight:800;font-size:12px}.home-pressure.unavailable{border-color:#263b4e;background:#0b1724}.home-section{border:1px solid #16334a;border-radius:14px;background:linear-gradient(145deg,#071725,#07131f);padding:11px}.home-section-heading{display:flex;justify-content:space-between;align-items:end;gap:8px;margin-bottom:9px}.home-section-heading h3{font-size:15px;margin:1px 0}.home-section .eyebrow,.home-pressure .eyebrow,.home-around .eyebrow{margin:0;color:#83bfe1;font-size:9px;font-weight:850;letter-spacing:.13em;text-transform:uppercase}.home-outlook-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.home-outlook-metric{border:0;background:transparent;display:grid;justify-items:center;gap:6px;padding:2px;min-height:98px;text-align:center}.home-ring-visual{--home-ring-pct:0;position:relative;display:grid;place-items:center;width:66px;height:66px;border-radius:50%;background:conic-gradient(#42d49d calc(var(--home-ring-pct)*1%),#183146 0)}.home-ring-visual:after{content:'';position:absolute;inset:6px;border-radius:50%;background:#081625}.home-ring-visual.wins{background:#173e58}.home-ring-visual b{position:relative;z-index:1;font-size:16px}.home-ring-visual.championship{background:conic-gradient(#e05f77 calc(var(--home-ring-pct)*1%),#183146 0)}.home-ring-label{font-size:9px;color:#a7b9c9;line-height:1.15}.home-section-note{display:block;text-align:center;color:#738da3;font-size:8px}.home-roster-heading{align-items:center}.home-position-toggle{display:grid;grid-template-columns:1fr 1fr;border:1px solid #21415a;border-radius:999px;padding:2px;min-width:180px}.home-position-toggle button{border:0;border-radius:999px;background:transparent;color:#91a8bb;min-height:30px;padding:4px 8px;font-size:8px;font-weight:800}.home-position-toggle button.active{background:#15527a;color:#fff}.home-position-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.home-position-pill{border:0;background:transparent;display:grid;justify-items:center;gap:4px;padding:3px;min-height:64px}.home-position-pill>span{color:#8fa7ba;font-size:9px;font-weight:800}.home-position-pill>b{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#163f58;border:2px solid #3183a9;font-size:12px}.home-position-pill>b.elite{background:#0e4b40;border-color:#35c99a}.home-position-pill>b.strong{background:#11445d;border-color:#3598c8}.home-position-pill>b.neutral{background:#4a4125;border-color:#d9ad48}.home-position-pill>b.weak{background:#542536;border-color:#dc5d79}.home-secondary-list{display:grid;border-top:1px solid #18344a}.home-secondary-row{border:0;border-bottom:1px solid #18344a;background:transparent;border-radius:0;min-height:64px;padding:8px 2px;display:grid;grid-template-columns:42px minmax(0,1fr) 18px;gap:8px;align-items:center}.home-secondary-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#173a56;color:#58c9f3;font-size:18px}.home-secondary-row>span:nth-child(2){display:grid;gap:1px}.home-secondary-row small,.home-secondary-row em{color:#8ea5b8;font-size:9px;font-style:normal}.home-secondary-row strong{font-size:13px}.home-around{border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:minmax(0,1fr) 20px;gap:8px;align-items:center}.home-around-list{display:grid;margin-top:5px}.home-around-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:7px;align-items:center;padding:5px 0;border-top:1px solid #173146}.home-around-row:first-child{border-top:0}.home-around-row.managed{color:#75d8ff}.home-around-row>span{display:grid}.home-around-row small,.home-around-row em{color:#88a0b4;font-size:8px;font-style:normal}.home-evidence{border:1px solid #173146;border-radius:11px;background:#07131f}.home-evidence summary{padding:10px 12px;color:#8ea4b6;font-size:9px;font-weight:800}.home-evidence>div{padding:0 12px 10px;color:#8499aa;font-size:9px;line-height:1.4}.home-evidence p{margin:6px 0}.home-unavailable{color:#879cad;font-size:10px;line-height:1.4;margin:5px 0}.home-command-loading,.home-command-unavailable,.home-onboarding{border:1px solid #1b3850;border-radius:14px;background:#081625;padding:18px}.home-command-loading{display:grid;gap:5px}.home-command-loading i{width:26px;height:26px;border-radius:50%;border:3px solid #21445f;border-top-color:#50cfff;animation:home-spin .8s linear infinite}.home-command-loading span,.home-command-unavailable p,.home-onboarding p{color:#91a5b7;line-height:1.45}.home-onboarding .primary-button{margin-top:8px}@keyframes home-spin{to{transform:rotate(360deg)}}@media(max-width:760px){#league-screen>.hero-row,#runtime-status,.metric-grid,.dashboard-grid,.roster-panel{display:none!important}.home-attention{padding-left:8px;padding-right:8px}.home-brand-row{font-size:19px}.home-position-toggle{min-width:164px}.home-pressure-main{grid-template-columns:62px minmax(0,1fr)}.home-pressure-circle{width:56px;height:56px}.home-ring-visual{width:62px;height:62px}.home-outlook-metric{min-height:90px}}@media(max-width:390px){.home-roster-heading{display:grid;align-items:start}.home-position-toggle{width:100%}.home-identity{grid-template-columns:46px minmax(0,1fr) 18px}.home-team-mark{width:42px;height:42px}.home-position-pill>b{width:42px;height:42px}.home-outlook-grid{gap:3px}}
 `;document.head.appendChild(style)}
 }
 window.renderFsfflHomeAttention=renderFsfflHomeAttention;
+window.loadFsfflHomeCommandCenter=loadFsfflHomeCommandCenter;
 window.installFsfflHomeExperience=installFsfflHomeExperience;
-window.addEventListener('fsffl:product-context-updated',()=>setTimeout(()=>renderFsfflHomeAttention(state?.teamView||null),0));
+window.fsfflHomeDiagnostics=()=>({version:'20260923-home-north-star1',context_key:fsfflHomeState.contextKey,load_ms:fsfflHomeState.loadMs,summary_status:fsfflHomeState.summary?.status||'unavailable',simulation_status:fsfflHomeState.summary?.simulation?.status||'unavailable',position_lens:fsfflHomeState.positionLens});
+window.addEventListener('fsffl:product-context-updated',()=>{fsfflHomeState.summary=null;fsfflHomeState.error=null;fsfflHomeState.contextKey=null;setTimeout(()=>{renderFsfflHomeAttention(state?.teamView||null);void loadFsfflHomeCommandCenter({force:true})},0)});
