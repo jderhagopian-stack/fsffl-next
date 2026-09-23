@@ -84,7 +84,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     shell = _source(PRODUCT_SHELL)
 
     assert "/static/league_atlas.css?v=20260922-league-atlas-north-star1" in league
-    assert "const fsfflStaticVersion='20260922-league-atlas1';" in shell
+    assert "const leagueAtlasStaticVersion='20260922-league-atlas1';" in shell
+    assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
 
 
 def test_legacy_league_position_modules_remain_non_rendering_shims() -> None:
