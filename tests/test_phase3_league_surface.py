@@ -77,7 +77,7 @@ def test_league_atlas_mobile_css_is_deliberate_and_safe_area_aware() -> None:
     mobile = _source(MOBILE_TOUCH)
     assert "env(safe-area-inset-top)" in css
     assert "env(safe-area-inset-bottom)" in css
-    assert "padding-top:env(safe-area-inset-top,0px)!important" in mobile
+    assert "padding-top:calc(10px + env(safe-area-inset-top,0px))!important" in mobile
     assert "padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))" in mobile
     assert "overflow-x:auto" in css
     assert "-webkit-overflow-scrolling:touch" in css
@@ -89,9 +89,10 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-iphone1" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-iphone1';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone2" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone2';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
+    assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
 
 def test_legacy_league_position_modules_remain_non_rendering_shims() -> None:
@@ -143,7 +144,7 @@ def test_final_acceptance_overview_is_full_league_sortable_table() -> None:
     assert "Current Season" in source
     assert "Outlook from Today" in source
     assert "50,000 simulations using current standings, rosters and forecast evidence." in source
-    for label in ("PF", "PA", "Max PF", "Projected finish", "Playoffs", "Championship", "Projected final wins", "1st Place"):
+    for label in ("PF", "PA", "Max PF", "Projected Finish", "Playoffs", "Championship", "Projected Final Wins", "1st Place"):
         assert label in source
     assert "Forward details" not in source
     assert "rank vs exp finish" not in source
@@ -155,17 +156,43 @@ def test_final_acceptance_overview_is_full_league_sortable_table() -> None:
     assert "ppts + ppts_decimal" in source
 
 
-def test_iphone_polish_keeps_one_tappable_position_map_and_valid_value_dom() -> None:
+def test_final_iphone_polish_uses_one_tappable_rank_strength_map_and_valid_value_dom() -> None:
     source = _source(LEAGUE)
     css = _source(ATLAS_CSS)
 
     assert source.count("league-edge-matrix league-edge-map") == 1
+    assert source.count("See positional control at a glance") == 1
+    assert "Where does each roster own an actual lineup edge?" not in source
     assert "league-edge-exact" not in source
+    assert "positionLensMode:'rank'" in source
+    assert 'data-position-lens="rank"' in source
+    assert 'data-position-lens="strength"' in source
+    assert "100 = league-average optimized starter production." in source
+    assert "Team order does not change between lenses." in source
     assert "data-room-team" in source
     assert "data-room-position" in source
+    assert "Tap any position to see the players and evidence behind its rank." in source
     assert "league-value-team-select" in source
     assert '<button type="button" class="league-value-row ' not in source
     assert '<div class="league-value-row ' in source
-    assert "league-edge-cell>b" in css
-    assert "width:34px" in css
-    assert "grid-template-columns:minmax(82px,1.32fr) repeat(4,minmax(0,1fr))!important" in css
+    assert "league-edge-map .league-edge-cell>b" in css
+    assert "width:36px" in css
+    assert "grid-template-columns:minmax(80px,1.25fr) repeat(4,minmax(0,1fr))!important" in css
+
+
+def test_final_iphone_polish_race_has_real_two_tier_sticky_geometry() -> None:
+    source = _source(LEAGUE)
+    css = _source(ATLAS_CSS)
+
+    assert 'class="atlas-race-group-row"' in source
+    assert 'class="atlas-race-metric-row"' in source
+    assert 'colspan="4">Current Season' in source
+    assert 'colspan="5">Outlook from Today' in source
+    assert 'rowspan="2"' in source
+    assert "atlas-col-wins" in source
+    assert "min-width:1120px" in css
+    assert "--atlas-race-group-height:32px" in css
+    assert "tr.atlas-race-group-row>th" in css
+    assert "tr.atlas-race-metric-row>th" in css
+    assert "top:calc(var(--atlas-safe-top) + var(--atlas-tabs-height) + var(--atlas-race-group-height) + 2px)!important" in css
+    assert "scroll-padding-left:184px" in css
