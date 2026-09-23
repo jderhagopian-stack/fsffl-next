@@ -1,22 +1,22 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import psycopg
+
 from fsffl.product.league_atlas import build_league_atlas_payload
-from fsffl.product.runtime import (
-    UserRuntimeContext,
-    default_live_forecast_loader,
-    default_sleeper_state_loader,
-)
-from fsffl.product.simulation_runtime import build_live_simulation_analytics
+from fsffl.product.runtime import UserRuntimeContext
+from fsffl.product.simulation_runtime import LiveSimulationAnalyticsResult
+from fsffl.state.models import LeagueState
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "artifacts/diagnostics/home_north_star_20260923"
-LEAGUE_ID = "1312071960615731200"
+LEAGUE_ID = "sleeper:1312071960615731200"
 HOME_JS = ROOT / "src/fsffl/product/static/home_dashboard.js"
 SHELL_JS = ROOT / "src/fsffl/product/static/product_shell.js"
 LEAGUE_JS = ROOT / "src/fsffl/product/static/league_comparison.js"
@@ -27,7 +27,7 @@ def _elapsed_ms(started: float) -> float:
     return (time.perf_counter() - started) * 1000.0
 
 
-def _managed_team(state):
+def _managed_team(state: LeagueState):
     preferred = next(
         (team for team in state.teams if team.display_name.casefold() == "jimmygoodjob"),
         None,
@@ -37,11 +37,7 @@ def _managed_team(state):
 
 def _weakest_position(view):
     positions = {"QB": 0, "RB": 1, "WR": 2, "TE": 3}
-    rows = [
-        row
-        for row in view.position_strengths
-        if row.position in positions
-    ]
+    rows = [row for row in view.position_strengths if row.position in positions]
     if not rows:
         return None
     return sorted(
@@ -54,45 +50,102 @@ def _weakest_position(view):
     )[0]
 
 
+def _load_exact_persisted_coordinate():
+    database_url = os.getenv("FSFFL_DATABASE_URL", "").strip()
+    if not database_url:
+        raise RuntimeError(
+            "FSFFL_DATABASE_URL is required for the exact persisted Home sanity coordinate"
+        )
+    started = time.perf_counter()
+    with psycopg.connect(database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                select
+                    s.state_hash,
+                    s.as_of,
+                    s.payload,
+                    a.model_version,
+                    a.computed_at,
+                    a.payload
+                from fsffl.derived_artifact a
+                join fsffl.state_snapshot_history s
+                  on s.state_hash = a.scope_id
+                where a.artifact_kind = 'live_simulation_analytics'
+                  and s.league_id = %s
+                  and s.season = 2026
+                  and a.invalidated_at is null
+                order by a.computed_at desc
+                limit 1
+                """,
+                (LEAGUE_ID,),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                raise RuntimeError(
+                    "no persisted production Simulation coordinate exists for the real league"
+                )
+            (
+                state_hash,
+                state_as_of,
+                state_payload,
+                simulation_model_version,
+                simulation_computed_at,
+                simulation_payload,
+            ) = row
+            cursor.execute(
+                """
+                select payload
+                from fsffl.derived_artifact
+                where artifact_kind = 'current_forecast_evidence'
+                  and scope_id = %s
+                  and invalidated_at is null
+                order by computed_at desc
+                limit 1
+                """,
+                (state_hash,),
+            )
+            forecast_row = cursor.fetchone()
+    state = LeagueState.model_validate(state_payload)
+    simulation = LiveSimulationAnalyticsResult.model_validate(simulation_payload)
+    forecast_payload = forecast_row[0] if forecast_row is not None else {}
+    return {
+        "state": state,
+        "simulation": simulation,
+        "state_hash": state_hash,
+        "state_as_of": state_as_of,
+        "simulation_model_version": simulation_model_version,
+        "simulation_computed_at": simulation_computed_at,
+        "forecast_sources": list(forecast_payload.get("successful_source_ids") or []),
+        "load_ms": _elapsed_ms(started),
+    }
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-
-    started = time.perf_counter()
-    state = default_sleeper_state_loader(LEAGUE_ID)
-    state_load_ms = _elapsed_ms(started)
+    persisted = _load_exact_persisted_coordinate()
+    state = persisted["state"]
+    simulation = persisted["simulation"]
     managed = _managed_team(state)
 
-    started = time.perf_counter()
-    forecast = default_live_forecast_loader(state)
-    forecast_load_ms = _elapsed_ms(started)
-    if len(forecast.successful_source_ids) < 2:
-        raise RuntimeError(
-            "Home real-league sanity requires the existing two-independent-source "
-            f"Forecast authority; healthy={forecast.successful_source_ids}"
-        )
-    if not forecast.uncertainty_ready:
-        raise RuntimeError("current Forecast uncertainty is not ready for governed Simulation")
-
-    started = time.perf_counter()
-    simulation = build_live_simulation_analytics(
-        state,
-        forecasts=forecast.league_scored_forecasts,
-        forecast_model_version=forecast.model_version,
-        simulation_count=50_000,
-    )
-    simulation_ms = _elapsed_ms(started)
+    if state.state_id != persisted["state_hash"]:
+        raise RuntimeError("persisted State payload identity does not match artifact scope")
+    if simulation.league_view.context.league_state_id != state.state_id:
+        raise RuntimeError("persisted Simulation does not match the exact persisted State")
 
     runtime = UserRuntimeContext(
         user_id="home-north-star-sanity",
         league_state=state,
         selected_team_id=managed.team_id,
-        forecast_evidence=forecast,
         simulation_analytics=simulation,
     )
+    started = time.perf_counter()
     atlas = build_league_atlas_payload(
         runtime,
         preseason_reason="Home sanity intentionally ignores preseason reconstruction.",
     )
+    compose_ms = _elapsed_ms(started)
+
     view = next(item for item in simulation.team_views if item.team_id == managed.team_id)
     standing = next(item for item in atlas["standings"] if item["team_id"] == managed.team_id)
     sim_row = next(
@@ -181,10 +234,7 @@ def main() -> None:
     ):
         if forbidden in home_js:
             failures.append(f"Home cold-load source contains forbidden deep-work call: {forbidden}")
-    for token in (
-        "fsfflNavigateTo",
-        "fsfflConsumeDeepLinkIntent",
-    ):
+    for token in ("fsfflNavigateTo", "fsfflConsumeDeepLinkIntent"):
         if token not in shell_js:
             failures.append(f"shell missing deep-link mechanism: {token}")
     if "laConsumeDeepLinkIntent" not in league_js:
@@ -193,12 +243,18 @@ def main() -> None:
         failures.append("Market does not consume Home pressure-point intent")
 
     manifest = {
-        "schema_version": "fsffl-home-north-star-real-league-sanity-v1",
+        "schema_version": "fsffl-home-north-star-real-league-sanity-v2",
         "run_at": datetime.now(UTC).isoformat(),
         "status": "PASS" if not failures else "FAIL",
         "failures": failures,
-        "league_id": state.league.league_id,
-        "league_state_id": state.state_id,
+        "coordinate": {
+            "league_id": state.league.league_id,
+            "league_state_id": state.state_id,
+            "state_as_of": persisted["state_as_of"].isoformat(),
+            "simulation_computed_at": persisted["simulation_computed_at"].isoformat(),
+            "simulation_model_version": persisted["simulation_model_version"],
+            "forecast_sources": persisted["forecast_sources"],
+        },
         "team_count": len(state.teams),
         "managed_team": {
             "team_id": managed.team_id,
@@ -222,8 +278,7 @@ def main() -> None:
                 "team_count": weakest.team_count,
                 "strength_index": weakest.strength_index,
             }
-            if weakest is not None
-            else None
+            if weakest is not None else None
         ),
         "simulation": {
             "simulation_count": simulation.simulation_result.simulation_count,
@@ -231,7 +286,6 @@ def main() -> None:
             "playoff_probability": sim_row["playoff_probability"],
             "championship_probability": sim_row["championship_probability"],
             "expected_finish": sim_row["expected_finish"],
-            "model_version": atlas["simulation"]["model_version"],
         },
         "position_strip": [
             {
@@ -249,8 +303,7 @@ def main() -> None:
                 "driver_ids": driver_ids,
                 "driver_names": driver_names,
             }
-            if resilience is not None
-            else None
+            if resilience is not None else None
         ),
         "around_the_league": [
             {
@@ -263,11 +316,9 @@ def main() -> None:
             }
             for row in adjacent
         ],
-        "forecast_sources": list(forecast.successful_source_ids),
         "latency_ms": {
-            "state_load": round(state_load_ms, 2),
-            "forecast_load": round(forecast_load_ms, 2),
-            "simulation_50000": round(simulation_ms, 2),
+            "persisted_coordinate_load": round(persisted["load_ms"], 2),
+            "home_atlas_compose": round(compose_ms, 3),
         },
         "authority": {
             "home_specific_forecast": False,
