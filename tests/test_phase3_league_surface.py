@@ -200,16 +200,14 @@ def test_final_iphone_polish_race_has_real_two_tier_sticky_geometry() -> None:
     assert ".atlas-race-group-row>.atlas-race-team-sticky" in css
 
 
-def test_physical_iphone_acceptance_removes_legacy_duplicate_map_and_fits_retained_map() -> None:
+def test_physical_iphone_acceptance_hides_legacy_duplicate_map_and_fits_retained_map() -> None:
     source = _source(LEAGUE)
     css = _source(ATLAS_CSS)
     north_star = Path("src/fsffl/product/static/north_star_app.js").read_text(encoding="utf-8")
-    index = _source(INDEX)
 
     assert source.count("league-edge-matrix league-edge-map") == 1
-    assert "document.querySelectorAll('.ns-league-atlas').forEach(node=>node.remove())" in north_star
-    assert "atlas.className='ns-league-atlas'" not in north_star
-    assert "/static/north_star_app.js?v=20260923-atlas-dedupe1" in index
+    assert "atlas.className='ns-league-atlas'" in north_star
+    assert ".league-structure-panel .ns-league-atlas{display:none!important}" in css
     assert "height:31px!important" in css
     assert "width:27px!important" in css
     assert "grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important" in css
