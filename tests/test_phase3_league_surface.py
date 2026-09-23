@@ -89,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone5" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone5';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone6" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone6';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
@@ -260,3 +260,21 @@ def test_final_density_value_polish_uses_sticky_identity_headers_compact_cards_a
     assert "value_index_gap" in source
     assert "Governed 0–10,000 Value Index" in source
     assert "percentile_gap" not in source[source.index("function laValuePlayerDetail"):source.index("function laValueDetail")]
+
+
+def test_final_header_label_correction_keeps_metric_labels_visible_and_identity_frozen_horizontally() -> None:
+    source = _source(LEAGUE)
+    css = _source(ATLAS_CSS)
+
+    for label in ("Rank", "Team/Owner", "Record", "PF", "PA", "Max PF", "Projected Finish", "Playoffs", "Championship", "Projected Final Wins", "1st Place"):
+        assert label in source
+    assert "Final iPhone header-label correction" in css
+    assert "thead tr.atlas-race-group-row>th" in css
+    assert "thead tr.atlas-race-metric-row>th" in css
+    assert "position:static!important" in css
+    assert "visibility:visible!important" in css
+    assert "opacity:1!important" in css
+    assert "thead tr.atlas-race-metric-row .atlas-race-rank-sticky" in css
+    assert "thead tr.atlas-race-metric-row .atlas-race-team-sticky" in css
+    assert "left:44px!important" in css
+    assert "text-align:left!important" in css
