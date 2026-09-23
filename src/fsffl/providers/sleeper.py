@@ -116,12 +116,26 @@ class SleeperNormalizer:
             except (TypeError, ValueError):
                 nfl_season = None
                 nfl_week = None
+            try:
+                display_week = int(nfl_state.get("display_week"))
+            except (TypeError, ValueError):
+                display_week = None
             season_type = str(nfl_state.get("season_type") or "regular").lower()
             if nfl_season == int(bundle.league["season"]) and nfl_week is not None:
                 if season_type in {"post", "postseason", "off"}:
                     completed_through_week = 18
                 elif 0 <= nfl_week <= 18:
-                    completed_through_week = max(0, nfl_week - 1)
+                    # Sleeper can keep week on the just-finished scoring leg while
+                    # advancing display_week to the next matchup after finalization.
+                    # Accept only the documented adjacent display coordinate; reject
+                    # larger jumps rather than guessing.
+                    effective_week = nfl_week
+                    if (
+                        display_week is not None
+                        and nfl_week <= display_week <= min(18, nfl_week + 1)
+                    ):
+                        effective_week = display_week
+                    completed_through_week = max(0, effective_week - 1)
 
         if completed_through_week is None and current_matchup_week is not None and current_matchup_week >= 1:
             # Older snapshots may not retain NFL state. The league leg remains a
