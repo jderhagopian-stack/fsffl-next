@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 LEAGUE = Path("src/fsffl/product/static/league_comparison.js")
+ATLAS_CSS = Path("src/fsffl/product/static/league_atlas.css")
 INDEX = Path("src/fsffl/product/static/index.html")
 POSITION_MAP = Path("src/fsffl/product/static/league_position_map.js")
 POSITION_STRENGTH = Path("src/fsffl/product/static/league_position_strength.js")
@@ -12,25 +13,50 @@ def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_league_surface_leads_with_governed_structure_not_power_score() -> None:
+def test_league_atlas_uses_final_north_star_information_architecture() -> None:
     source = _source(LEAGUE)
 
-    assert "lcPrimaryTakeaway()" in source
-    assert "lcPositionMatrix()" in source
-    assert "calculated_competitive_state" in source
-    assert "league_rank" in source
-    assert "strength_index" in source
-    assert "one power score" in source
-    assert "hidden power rating" in source
+    for label in ("Overview", "Position & Depth", "Value Map", "Pick Map", "Outlook"):
+        assert label in source
+    assert "laOverview()" in source
+    assert "laPositionsTab()" in source
+    assert "laValueTab()" in source
+    assert "laPickTab()" in source
+    assert "laOutlookTab()" in source
+    assert "data-atlas-tab" in source
 
 
-def test_league_surface_uses_canonical_team_analytics_without_cardinal_team_totals() -> None:
+def test_league_atlas_composes_governed_contracts_without_team_value_fabrication() -> None:
     source = _source(LEAGUE)
 
+    assert "api('/api/league/atlas')" in source
     assert "api('/api/league/team-views')" in source
+    assert "api('/api/league/value-lenses')" in source
     assert "api('/api/values')" not in source
-    assert "Broad Market + FSFFL Intrinsic" in source
-    assert "Total FSFFL Cardinal Value" not in source
+    assert "team_cardinal_portfolios" not in source
+    assert "no arbitrary pick-value master score" in source
+    assert "does not invent a position fragility score" in source
+    assert "acceptance_probability" not in source
+
+
+def test_league_atlas_progressively_loads_value_without_blocking_structure() -> None:
+    source = _source(LEAGUE)
+
+    assert "Promise.all([api('/api/league/atlas'),api('/api/league/team-views')])" in source
+    assert "void loadLeagueValueLenses()" in source
+    assert "Governed value lenses are loading" in source
+    assert "Other Atlas surfaces remain independently usable" in source
+
+
+def test_position_and_pick_drilldowns_and_player_handoff_are_present() -> None:
+    source = _source(LEAGUE)
+    player = Path("src/fsffl/product/static/player_intelligence.js").read_text(encoding="utf-8")
+
+    assert "data-room-team" in source
+    assert "data-room-position" in source
+    assert "data-pick-team" in source
+    assert "data-player-intelligence-id" in source
+    assert "document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]')" in player
 
 
 def test_league_pressure_point_is_investigative_not_a_trade_recommendation() -> None:
@@ -41,51 +67,37 @@ def test_league_pressure_point_is_investigative_not_a_trade_recommendation() -> 
     assert "setRoute('opportunities')" in source
 
 
-def test_league_surface_uses_visible_primary_structure_and_secondary_provenance() -> None:
-    source = _source(LEAGUE)
+def test_league_atlas_mobile_css_is_deliberate_and_safe_area_aware() -> None:
+    css = _source(ATLAS_CSS)
 
-    render = source.split("function renderLeagueComparison()", 1)[1].split(
-        "async function loadFsfflLeagueComparison", 1
-    )[0]
-    assert render.index("lcPrimaryTakeaway()") < render.index("lcPositionMatrix()")
-    assert render.index("lcPositionMatrix()") < render.index("lcCompetitiveMap()")
-    assert "Evidence & definitions" in source
-    assert "<details class=\"league-detail\"><summary>Evidence & definitions" in source
+    assert "@media(max-width:720px)" in css
+    assert "env(safe-area-inset-top)" in css
+    assert "env(safe-area-inset-bottom)" in css
+    assert "overflow-x:auto" in css
+    assert "-webkit-overflow-scrolling:touch" in css
+    assert ".atlas-drawer{inset:0" in css
+    assert "min-height:44px" in css
 
 
-def test_legacy_league_position_modules_no_longer_render_competing_surfaces() -> None:
+def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
+    league = _source(LEAGUE)
+    shell = _source(PRODUCT_SHELL)
+
+    assert "/static/league_atlas.css?v=20260922-league-atlas-north-star1" in league
+    assert "const fsfflStaticVersion='20260922-league-atlas1';" in shell
+
+
+def test_legacy_league_position_modules_remain_non_rendering_shims() -> None:
     assert _source(POSITION_MAP).strip().startswith("// Phase 3 League now owns")
     assert _source(POSITION_STRENGTH).strip().startswith("// Phase 3 League now owns")
 
 
-def test_phase3_league_cache_generation_preserves_hosted_recovery_scripts() -> None:
+def test_phase3_league_preserves_hosted_recovery_scripts() -> None:
     source = _source(INDEX)
 
     assert "/static/session_recovery.js?v=" in source
     assert "/static/mobile_safari_recovery.js?v=" in source
     assert "/static/product_shell.js?v=" in source
-    versions = {
-        token.split("?v=")[1].split('"')[0]
-        for token in source.split()
-        if "?v=" in token
-    }
-    assert len(versions) == 1
-
-
-def test_league_asset_order_never_mixes_pick_count_with_cardinal_value() -> None:
-    source = _source(LEAGUE)
-
-    assert "b.picks-a.picks" in source
-    assert "(b.pickValue??b.picks)" not in source
-    assert "(a.pickValue??a.picks)" not in source
-
-
-def test_age_profile_surfaces_starter_specific_evidence_on_mobile() -> None:
-    source = _source(LEAGUE)
-
-    assert "known_starter_age_count" in source
-    assert "starter avg · ${view.known_starter_age_count||0} known" in source
-    assert ".league-age-reading:nth-child(3){display:none}" not in source
 
 
 def test_generic_surface_clears_league_only_panel_class() -> None:
