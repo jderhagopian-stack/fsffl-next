@@ -68,21 +68,9 @@
   function leagueViews(){try{return typeof fsfflLeagueStructureState!=='undefined'?(fsfflLeagueStructureState.views||[]):[]}catch(_){return[]}}
   function leagueManagedId(){try{return typeof fsfflLeagueStructureState!=='undefined'?fsfflLeagueStructureState.managedTeamId:null}catch(_){return null}}
   function leagueAtlas(){
-    const section=document.querySelector('.league-position-section');if(!section||document.querySelector('.ns-league-atlas'))return;
-    const views=leagueViews();if(!views.length)return;const positions=['QB','RB','WR','TE'],managed=leagueManagedId();
-    const atlas=document.createElement('section');atlas.className='ns-league-atlas';
-    const sorted=[...views].sort((a,b)=>a.team_id===managed?-1:b.team_id===managed?1:((a.display_name||'').localeCompare(b.display_name||'')));
-    atlas.innerHTML=`<div class="ns-app-section-head"><div><p class="eyebrow">League map</p><h3>See positional control at a glance.</h3></div><div class="ns-atlas-legend"><span><i class="elite"></i>Strength</span><span><i class="neutral"></i>Middle</span><span><i class="weak"></i>Weakness</span></div></div>
-      <div class="ns-atlas-grid"><div class="ns-atlas-row header"><span>Team</span>${positions.map(p=>`<b>${p}</b>`).join('')}</div>${sorted.map(view=>`<button type="button" class="ns-atlas-row${view.team_id===managed?' managed':''}" data-ns-team="${esc(view.team_id)}"><span>${esc(view.display_name)}</span>${positions.map(position=>{const row=strength(view,position);if(!row)return'<i class="unknown" title="No current position-strength evidence"></i>';const count=row.team_count||views.length;return `<i class="${strengthBand(row.league_rank,count)}" title="${esc(position)} #${row.league_rank} of ${count}; strength index ${num(row.strength_index,0)}"><em>#${row.league_rank}</em></i>`}).join('')}</button>`).join('')}</div>
-      <div class="ns-atlas-detail" aria-live="polite">Tap a franchise to see exact league-relative numbers.</div>`;
-    section.before(atlas);
-    atlas.querySelectorAll('[data-ns-team]').forEach(button=>button.addEventListener('click',()=>{
-      const view=views.find(item=>String(item.team_id)===String(button.dataset.nsTeam));if(!view)return;
-      atlas.querySelectorAll('[data-ns-team]').forEach(row=>row.classList.toggle('selected',row===button));
-      const outcome=view.utility?.competitive_outcome,resilience=view.utility?.roster_resilience;
-      const exact=positions.map(position=>{const row=strength(view,position);return row?`<span><b>${position}</b><strong>#${row.league_rank}</strong><small>${num(row.strength_index,0)} index</small></span>`:''}).join('');
-      atlas.querySelector('.ns-atlas-detail').innerHTML=`<div><strong>${esc(view.display_name)}</strong><small>${esc(words(view.utility?.calculated_competitive_state||'unclassified'))}${finite(outcome?.playoff_probability)?` · ${Math.round(outcome.playoff_probability*100)}% playoffs`:''}</small></div><div class="ns-atlas-exact">${exact}</div>${resilience&&finite(resilience.largest_single_player_lineup_drop)?`<span class="ns-atlas-risk">${num(resilience.largest_single_player_lineup_drop,1)} pts largest one-player lineup drop</span>`:''}`;
-    }));
+    // League Atlas now owns the canonical Position & Depth map.
+    // Remove any legacy injected North Star map rather than rendering a duplicate.
+    document.querySelectorAll('.ns-league-atlas').forEach(node=>node.remove());
   }
 
   function compressLeagueLists(){
