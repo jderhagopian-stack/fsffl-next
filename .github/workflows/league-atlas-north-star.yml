@@ -50,10 +50,14 @@ jobs:
           tests/test_player_intelligence.py
       - name: Real-league Atlas composition sanity
         run: python scripts/run_league_atlas_north_star_sanity.py
+      - name: Final-acceptance live provider authority audit
+        run: python scripts/run_league_atlas_final_acceptance_audit.py
       - name: Upload Atlas sanity evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: league-atlas-north-star-sanity
-          path: artifacts/diagnostics/league_atlas_north_star_20260922/
+          path: |
+            artifacts/diagnostics/league_atlas_north_star_20260922/
+            artifacts/diagnostics/league_atlas_final_acceptance_20260923/
           if-no-files-found: error
