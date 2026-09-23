@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any, cast
 
+import pytest
+
 from fsffl.product.league_atlas import (
     LEAGUE_ATLAS_CONTRACT_VERSION,
     build_league_atlas_payload,
@@ -243,7 +245,7 @@ def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score(
     assert rows["a"]["playoff_probability"] == 0.82
     assert rows["a"]["competitive_state"] == "contender"
     assert rows["a"]["current_rank"] == 1
-    assert rows["a"]["movement_vs_current_rank"] == -0.2
+    assert rows["a"]["movement_vs_current_rank"] == pytest.approx(-0.2)
 
     authority = payload["authority"]
     assert authority["presentation_creates_model_truth"] is False
