@@ -113,6 +113,7 @@ class SleeperLiveSource:
             "users": results["users"],
             "rosters": results["rosters"],
             "traded_picks": results["traded_picks"],
+            "nfl_state": results["nfl_state"],
             "matchups": {
                 key.split(":", 1)[1]: value
                 for key, value in results.items()
@@ -152,6 +153,7 @@ class SleeperLiveSource:
             "users": lambda: self._get(f"/league/{league_id}/users"),
             "players": lambda: self._get("/players/nfl"),
             "traded_picks": lambda: self._get(f"/league/{league_id}/traded_picks"),
+            "nfl_state": lambda: self._get("/state/nfl"),
             "nfl_schedule": lambda: self._nfl_regular_season_schedule(season),
         }
         for week in matchup_weeks:
