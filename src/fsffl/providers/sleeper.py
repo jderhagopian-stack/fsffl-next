@@ -34,6 +34,7 @@ class SleeperPayloadBundle:
     players: Mapping[str, Mapping[str, Any]]
     traded_picks: Sequence[Mapping[str, Any]] = ()
     matchups: Mapping[str, Sequence[Mapping[str, Any]]] | None = None
+    nfl_state: Mapping[str, Any] | None = None
     retrieved_at: datetime | None = None
 
 
@@ -105,11 +106,29 @@ class SleeperNormalizer:
             current_matchup_week = int(raw_leg) if raw_leg is not None else None
         except (TypeError, ValueError):
             current_matchup_week = None
-        completed_through_week = (
-            max(0, current_matchup_week - 1)
-            if current_matchup_week is not None and current_matchup_week >= 1
-            else None
-        )
+
+        completed_through_week: int | None = None
+        nfl_state = bundle.nfl_state if isinstance(bundle.nfl_state, Mapping) else None
+        if nfl_state is not None:
+            try:
+                nfl_season = int(nfl_state.get("season"))
+                nfl_week = int(nfl_state.get("week"))
+            except (TypeError, ValueError):
+                nfl_season = None
+                nfl_week = None
+            season_type = str(nfl_state.get("season_type") or "regular").lower()
+            if nfl_season == int(bundle.league["season"]) and nfl_week is not None:
+                if season_type in {"post", "postseason", "off"}:
+                    completed_through_week = 18
+                elif 0 <= nfl_week <= 18:
+                    completed_through_week = max(0, nfl_week - 1)
+
+        if completed_through_week is None and current_matchup_week is not None and current_matchup_week >= 1:
+            # Older snapshots may not retain NFL state. The league leg remains a
+            # conservative fallback, but current live acquisition supplies NFL
+            # state because it is the same completion coordinate already governed
+            # by in-season Forecast.
+            completed_through_week = max(0, current_matchup_week - 1)
         roster_positions = list(bundle.league.get("roster_positions", []))
         scoring_settings = bundle.league.get("scoring_settings", {})
 
