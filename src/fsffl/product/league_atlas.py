@@ -7,10 +7,11 @@ from fsffl.analytics.team import TeamAnalyticsView
 from fsffl.state.matchups import completed_matchups, completed_through_week
 from fsffl.state.models import LeagueState
 
+from .league_atlas_preseason import LeagueAtlasPreseasonBaseline
 from .runtime import UserRuntimeContext
 
 
-LEAGUE_ATLAS_CONTRACT_VERSION = "phase3-league-atlas-v1:north-star"
+LEAGUE_ATLAS_CONTRACT_VERSION = "phase3-league-atlas-v2:final-acceptance"
 
 
 def _team_names(state: LeagueState) -> dict[str, str]:
@@ -19,6 +20,7 @@ def _team_names(state: LeagueState) -> dict[str, str]:
 
 def _current_standings(state: LeagueState) -> tuple[dict[str, object], ...]:
     names = _team_names(state)
+    team_states = {team_state.team_id: team_state for team_state in state.team_states}
     records: dict[str, dict[str, float | int]] = {
         team.team_id: {
             "wins": 0,
@@ -71,6 +73,17 @@ def _current_standings(state: LeagueState) -> tuple[dict[str, object], ...]:
                 "win_percentage": pct,
                 "points_for": float(raw["points_for"]),
                 "points_against": float(raw["points_against"]),
+                "max_points_for": (
+                    team_states[team.team_id].max_points_for
+                    if team.team_id in team_states
+                    else None
+                ),
+                "max_points_for_provenance": (
+                    team_states[team.team_id].max_points_for_provenance.model_dump(mode="json")
+                    if team.team_id in team_states
+                    and team_states[team.team_id].max_points_for_provenance is not None
+                    else None
+                ),
             }
         )
     rows.sort(
@@ -187,6 +200,29 @@ def _preseason_rows(
     return tuple({**row, "rank": rank} for rank, row in enumerate(rows, start=1))
 
 
+
+def _frozen_preseason_rows(
+    state: LeagueState,
+    baseline: LeagueAtlasPreseasonBaseline | None,
+) -> tuple[dict[str, object], ...]:
+    if baseline is None:
+        return ()
+    names = _team_names(state)
+    return tuple(
+        {
+            "team_id": row.team_id,
+            "team_name": names.get(row.team_id, row.team_id),
+            "projected_starter_points": row.projected_starter_points,
+            "rank": row.rank,
+            "playoff_probability": row.playoff_probability,
+            "championship_probability": row.championship_probability,
+            "first_place_probability": row.first_place_probability,
+            "expected_wins": row.expected_wins,
+            "expected_finish": row.expected_finish,
+        }
+        for row in sorted(baseline.teams, key=lambda item: (item.rank, item.team_id))
+    )
+
 def _pick_map(state: LeagueState) -> dict[str, object]:
     names = _team_names(state)
     owner_by_pick = {
@@ -280,6 +316,7 @@ def build_league_atlas_payload(
     preseason_team_views: Iterable[TeamAnalyticsView] | None = None,
     preseason_as_of: str | None = None,
     preseason_reason: str | None = None,
+    preseason_baseline: LeagueAtlasPreseasonBaseline | None = None,
 ) -> dict[str, object]:
     state = runtime.league_state
     if state is None:
@@ -287,15 +324,36 @@ def build_league_atlas_payload(
 
     standings = _current_standings(state)
     simulation_rows = _simulation_rows(runtime, standings)
-    preseason_rows = _preseason_rows(state, preseason_team_views)
-    if preseason_rows:
+    frozen_preseason_rows = _frozen_preseason_rows(state, preseason_baseline)
+    preseason_rows = (
+        frozen_preseason_rows
+        if frozen_preseason_rows
+        else _preseason_rows(state, preseason_team_views)
+    )
+    if frozen_preseason_rows and preseason_baseline is not None:
         preseason = {
             "status": "ready",
+            "baseline_status": preseason_baseline.status,
+            "as_of": preseason_baseline.state_as_of.isoformat(),
+            "opener_date": preseason_baseline.opener_date,
+            "basis": (
+                "frozen pre-opener canonical State + contemporaneous governed Forecast "
+                "+ matching 50,000-run governed Simulation"
+            ),
+            "simulation_count": preseason_baseline.simulation_count,
+            "simulation_model_version": preseason_baseline.simulation_model_version,
+            "forecast_model_version": preseason_baseline.forecast_model_version,
+            "teams": list(preseason_rows),
+        }
+    elif preseason_rows:
+        preseason = {
+            "status": "lineup_only",
+            "baseline_status": "legacy_lineup_only",
             "as_of": preseason_as_of,
             "basis": (
                 "preserved preseason full-season Forecast joined to a compatible "
-                "point-in-time preseason State snapshot; optimized starter production "
-                "is shown as expectation context, not as a current power score"
+                "point-in-time preseason State snapshot; no frozen 50,000-run preseason "
+                "Simulation baseline is available, so probability comparison is unavailable"
             ),
             "teams": list(preseason_rows),
         }
@@ -346,6 +404,8 @@ def build_league_atlas_payload(
         "pick_map": _pick_map(state),
         "authority": {
             "state": "canonical point-in-time LeagueState",
+            "max_points_for": "canonical State provider potential-points evidence when available",
+            "preseason": "frozen pre-opener State + governed Forecast + matching 50,000-run Simulation when available",
             "simulation": "governed 50,000-run Simulation when already available",
             "competitive_state": "existing Team Utility calculated competitive state",
             "pick_ownership": "canonical State",
