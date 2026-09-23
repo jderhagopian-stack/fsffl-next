@@ -96,3 +96,47 @@ def test_taxi_assignment_is_preserved() -> None:
     beta = next(item for item in state.team_states if item.team_id.endswith(":team:2"))
     p4 = next(entry for entry in beta.roster if entry.player_id == "sleeper:player:p4")
     assert p4.slot == RosterSlot.TAXI
+
+def test_matchup_completion_uses_sleeper_leg_and_future_zero_rows_fail_closed() -> None:
+    base = bundle()
+    settings = {**dict(base.league["settings"]), "leg": 3}
+    league = {**dict(base.league), "settings": settings}
+    with_matchups = SleeperPayloadBundle(
+        league=league,
+        users=base.users,
+        rosters=base.rosters,
+        players=base.players,
+        traded_picks=base.traded_picks,
+        matchups={
+            "1": (
+                {"matchup_id": 1, "roster_id": 1, "points": 121.5},
+                {"matchup_id": 1, "roster_id": 2, "points": 99.0},
+            ),
+            "2": (
+                {"matchup_id": 1, "roster_id": 1, "points": 0.0},
+                {"matchup_id": 1, "roster_id": 2, "points": 0.0},
+            ),
+            "3": (
+                {"matchup_id": 1, "roster_id": 1, "points": 0.0},
+                {"matchup_id": 1, "roster_id": 2, "points": 0.0},
+            ),
+            "14": (
+                {"matchup_id": 1, "roster_id": 1, "points": 0.0},
+                {"matchup_id": 1, "roster_id": 2, "points": 0.0},
+            ),
+        },
+        retrieved_at=AS_OF,
+    )
+
+    state = SleeperNormalizer().normalize(with_matchups, as_of=AS_OF)
+
+    assert state.completed_through_week == 2
+    by_week = {matchup.week: matchup for matchup in state.matchups}
+    assert by_week[1].team_a_points == 121.5
+    assert by_week[2].team_a_points == 0.0
+    assert by_week[2].team_b_points == 0.0
+    assert by_week[3].team_a_points is None
+    assert by_week[3].team_b_points is None
+    assert by_week[14].team_a_points is None
+    assert by_week[14].team_b_points is None
+
