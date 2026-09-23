@@ -89,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone2" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone2';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone3" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone3';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
