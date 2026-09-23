@@ -17,3 +17,36 @@
 .ns-trade-impact-row{border-bottom:1px solid rgba(255,255,255,.055)}.ns-trade-impact-row:last-child{border-bottom:0}.ns-trade-impact-row>span{font-size:10px;color:var(--muted);font-weight:700}.ns-trade-impact-side{min-width:0}.ns-trade-impact-side>small{display:none;color:var(--muted);font-size:9px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:760px){.ns-trade-impact-grid__head{display:none}.ns-trade-impact-row{grid-template-columns:1fr;gap:8px;padding:11px 10px}.ns-trade-impact-row>span{font-size:11px;color:var(--text)}.ns-trade-impact-side{display:grid;grid-template-columns:minmax(82px,.36fr) minmax(0,1fr);gap:8px;align-items:center}.ns-trade-impact-side>small{display:block}.ns-trade-impact-head{align-items:start}.ns-trade-impact-head>small{max-width:118px;text-align:right}}
 @media(max-width:520px){.ns-trade-impact-comparison{margin-top:10px}.ns-trade-impact-head strong{font-size:13px}.ns-trade-impact-side{grid-template-columns:74px minmax(0,1fr)}}
+
+/* Approved hybrid North Star reference slice: #159 compact cards remain transitional.
+ * The completed decision is recomposed inside the premium dark, mobile-first product language. */
+#trade-center-screen.ns-trade-center .ns-trade-room--reference{
+  display:block;
+  margin-top:18px;
+}
+#trade-center-screen.ns-trade-center .ns-trade-room--reference + .ns-trade-methods-toggle{
+  margin-top:0;
+}
+#trade-center-screen.ns-trade-center .ns-trade-methods-toggle.nx-evidence-toggle{
+  width:100%;
+  margin:0;
+  padding:16px 0 0;
+  border:0;
+  border-top:1px solid rgba(75,116,158,.25);
+  border-radius:0;
+  background:transparent;
+  color:#748399;
+  box-shadow:none;
+  text-align:left;
+  min-height:44px;
+}
+#trade-center-screen.ns-trade-center .ns-trade-methods-toggle.nx-evidence-toggle:hover,
+#trade-center-screen.ns-trade-center .ns-trade-methods-toggle.nx-evidence-toggle:focus-visible{
+  color:#8fc4ff;
+  border-color:rgba(143,196,255,.62);
+}
+@media(max-width:640px){
+  #trade-center-screen.ns-trade-center .ns-trade-room--reference{
+    margin-top:12px;
+  }
+}

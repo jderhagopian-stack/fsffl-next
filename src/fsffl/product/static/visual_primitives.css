@@ -1,6 +1,8 @@
-/* FSFFL NEXT shared visual primitives.
- * Presentation-only grammar. Exact governed values remain visible beside every
- * visual treatment; these classes do not create a model score, model threshold, or recommendation.
+/* FSFFL NEXT transitional PR #159 delta styling.
+ * The bilateral zero-centered semantic remains useful, but this compact-bar aesthetic
+ * is not the canonical visual benchmark. Canonical candidate grammar lives in
+ * north_star_design_system.css. Presentation still creates no model score,
+ * model threshold, recommendation, or missing evidence.
  */
 
 .ns-visual-delta{
