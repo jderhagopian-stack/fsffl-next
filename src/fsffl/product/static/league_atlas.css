@@ -656,3 +656,54 @@
   .league-atlas-north-star .league-value-player>span b{font-size:9px!important}
   .league-atlas-north-star .league-value-player small{font-size:6.8px!important}
 }
+
+
+/* Final iPhone header-label correction: horizontal freeze without vertical overlap. */
+@media(max-width:720px){
+  /* Keep both header rows in normal vertical flow so Safari always paints
+   * Current Season / Outlook and every metric label. Only the identity cells
+   * freeze horizontally with their body columns. */
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-group-row>th,
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-metric-row>th{
+    position:static!important;
+    top:auto!important;
+    z-index:auto!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-group-row>th{
+    height:32px!important;
+    background:#0d2438!important;
+    color:#9fc6df!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-metric-row>th{
+    height:44px!important;
+    background:#0b1d2e!important;
+    color:var(--atlas-muted)!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-metric-row .atlas-race-rank-sticky{
+    position:sticky!important;
+    left:0!important;
+    top:auto!important;
+    z-index:12!important;
+    background:#0b1d2e!important;
+    box-shadow:5px 0 10px rgba(0,0,0,.13)!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-metric-row .atlas-race-team-sticky{
+    position:sticky!important;
+    left:44px!important;
+    top:auto!important;
+    z-index:11!important;
+    background:#0b1d2e!important;
+    box-shadow:7px 0 11px rgba(0,0,0,.18)!important;
+    text-align:left!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-sort{
+    color:inherit!important;
+    opacity:1!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-sort span{
+    display:block!important;
+    visibility:visible!important;
+  }
+}
