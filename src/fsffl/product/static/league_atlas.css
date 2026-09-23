@@ -707,3 +707,178 @@
     visibility:visible!important;
   }
 }
+
+
+/* Final League Race header architecture: standalone sticky dock, synced to horizontal body scroll. */
+.league-atlas-north-star{
+  --atlas-race-rank-width:44px;
+  --atlas-race-team-width:108px;
+  --atlas-race-fixed-width:152px;
+  --atlas-race-record-width:82px;
+  --atlas-race-pf-width:72px;
+  --atlas-race-pa-width:72px;
+  --atlas-race-maxpf-width:82px;
+  --atlas-race-finish-width:112px;
+  --atlas-race-playoffs-width:90px;
+  --atlas-race-champ-width:112px;
+  --atlas-race-wins-width:132px;
+  --atlas-race-first-width:90px;
+  --atlas-race-metrics-width:844px;
+  --atlas-race-table-width:996px;
+}
+.league-atlas-north-star .atlas-race-head-dock{
+  position:sticky;
+  top:0;
+  z-index:40;
+  display:grid;
+  grid-template-columns:var(--atlas-race-fixed-width) minmax(0,1fr);
+  width:100%;
+  height:76px;
+  overflow:hidden;
+  border:1px solid var(--atlas-line);
+  border-bottom:0;
+  border-radius:12px 12px 0 0;
+  background:#0b1d2e;
+}
+.league-atlas-north-star .atlas-race-head-fixed{
+  position:relative;
+  z-index:3;
+  display:grid;
+  grid-template-rows:32px 44px;
+  width:var(--atlas-race-fixed-width);
+  background:#0d2438;
+  box-shadow:7px 0 11px rgba(0,0,0,.18);
+}
+.league-atlas-north-star .atlas-race-head-fixed-group{
+  border-bottom:1px solid var(--atlas-line);
+}
+.league-atlas-north-star .atlas-race-head-fixed-metrics{
+  display:grid;
+  grid-template-columns:var(--atlas-race-rank-width) var(--atlas-race-team-width);
+  align-items:center;
+}
+.league-atlas-north-star .atlas-race-head-fixed-metrics>span{
+  display:flex;
+  align-items:center;
+  height:44px;
+  min-width:0;
+  padding:0 7px;
+  border-right:1px solid rgba(111,167,205,.08);
+  color:var(--atlas-muted);
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.league-atlas-north-star .atlas-race-head-fixed-metrics>span:first-child{justify-content:center}
+.league-atlas-north-star .atlas-race-head-team-label{
+  justify-content:flex-start!important;
+  text-align:left!important;
+}
+.league-atlas-north-star .atlas-race-head-viewport{
+  overflow:hidden;
+  min-width:0;
+  height:76px;
+  background:#0b1d2e;
+}
+.league-atlas-north-star .atlas-race-head-track{
+  width:var(--atlas-race-metrics-width);
+  height:76px;
+  will-change:transform;
+}
+.league-atlas-north-star .atlas-race-head-groups{
+  display:grid;
+  grid-template-columns:308px 536px;
+  height:32px;
+  border-bottom:1px solid var(--atlas-line);
+  background:#0d2438;
+}
+.league-atlas-north-star .atlas-race-head-groups>span{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 8px;
+  border-right:1px solid rgba(111,167,205,.08);
+  color:#9fc6df;
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.league-atlas-north-star .atlas-race-head-metrics{
+  display:grid;
+  grid-template-columns:
+    var(--atlas-race-record-width)
+    var(--atlas-race-pf-width)
+    var(--atlas-race-pa-width)
+    var(--atlas-race-maxpf-width)
+    var(--atlas-race-finish-width)
+    var(--atlas-race-playoffs-width)
+    var(--atlas-race-champ-width)
+    var(--atlas-race-wins-width)
+    var(--atlas-race-first-width);
+  height:44px;
+  background:#0b1d2e;
+}
+.league-atlas-north-star .atlas-race-head-metrics>span{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  height:44px;
+  padding:0 6px;
+  border-right:1px solid rgba(111,167,205,.08);
+  color:var(--atlas-muted);
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:.05em;
+  line-height:1.15;
+  text-align:center;
+  text-transform:uppercase;
+}
+.league-atlas-north-star .atlas-race-head-dock .atlas-race-sort{
+  color:inherit!important;
+  opacity:1!important;
+}
+.league-atlas-north-star .atlas-race-head-dock .atlas-race-sort span{
+  display:block!important;
+  visibility:visible!important;
+}
+.league-atlas-north-star .atlas-race-table-wrap{
+  border-radius:0 0 12px 12px!important;
+  border-top:0!important;
+}
+.league-atlas-north-star .atlas-race-table{
+  width:var(--atlas-race-table-width)!important;
+  min-width:var(--atlas-race-table-width)!important;
+  table-layout:fixed!important;
+}
+.league-atlas-north-star .atlas-race-table col.atlas-col-rank{width:var(--atlas-race-rank-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-team{width:var(--atlas-race-team-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-record{width:var(--atlas-race-record-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-pf{width:var(--atlas-race-pf-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-pa{width:var(--atlas-race-pa-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-maxpf{width:var(--atlas-race-maxpf-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-finish{width:var(--atlas-race-finish-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-playoffs{width:var(--atlas-race-playoffs-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-champ{width:var(--atlas-race-champ-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-wins{width:var(--atlas-race-wins-width)!important}
+.league-atlas-north-star .atlas-race-table col.atlas-col-first{width:var(--atlas-race-first-width)!important}
+
+@media(max-width:720px){
+  .league-atlas-north-star .atlas-race-head-dock{
+    top:calc(var(--atlas-safe-top) + var(--atlas-tabs-height) + 2px)!important;
+    z-index:42!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody .atlas-race-rank-sticky{
+    position:sticky!important;
+    left:0!important;
+    z-index:7!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody .atlas-race-team-sticky{
+    position:sticky!important;
+    left:var(--atlas-race-rank-width)!important;
+    z-index:6!important;
+  }
+}
