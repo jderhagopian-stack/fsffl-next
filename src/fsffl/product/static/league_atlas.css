@@ -110,3 +110,192 @@
   .league-atlas-north-star .atlas-preseason-row{grid-template-columns:1fr!important;gap:6px}
   .league-atlas-north-star .atlas-preseason-row>span{grid-template-columns:minmax(0,1fr) auto;align-items:baseline}
 }
+
+
+/* iPhone final acceptance polish: one position map, sortable race table, valid Value DOM. */
+.league-atlas-north-star .league-edge-cell{
+  background:transparent!important;
+  min-height:44px!important;
+  padding:3px!important;
+}
+.league-atlas-north-star .league-edge-cell>b{
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  margin:auto;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:50%;
+  background:#122337;
+  font-size:11px;
+  line-height:1;
+  box-shadow:0 2px 8px rgba(0,0,0,.24);
+}
+.league-atlas-north-star .league-edge-cell.elite>b{background:rgba(52,209,151,.29);border-color:rgba(52,209,151,.46)}
+.league-atlas-north-star .league-edge-cell.strong>b{background:rgba(43,158,230,.26);border-color:rgba(43,158,230,.43)}
+.league-atlas-north-star .league-edge-cell.neutral>b{background:rgba(226,182,76,.20);border-color:rgba(226,182,76,.36)}
+.league-atlas-north-star .league-edge-cell.weak>b{background:rgba(235,87,98,.24);border-color:rgba(235,87,98,.42)}
+
+.league-atlas-north-star .league-value-row{
+  width:100%;
+  display:grid;
+  grid-template-columns:140px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  border-top:1px solid var(--line);
+  background:#09111e;
+  color:inherit;
+  padding:9px 10px;
+  text-align:left;
+}
+.league-atlas-north-star .league-value-row:first-child{border-top:0}
+.league-atlas-north-star .league-value-team-select{
+  appearance:none;
+  min-width:0;
+  min-height:34px;
+  display:block;
+  border:0;
+  background:transparent;
+  color:inherit;
+  padding:0;
+  text-align:left;
+  cursor:pointer;
+}
+.league-atlas-north-star .league-value-row.selected{box-shadow:inset 0 0 0 1px #3d83c9}
+.league-atlas-north-star .league-value-dot{
+  width:12px!important;
+  height:12px!important;
+  min-width:12px!important;
+  min-height:12px!important;
+}
+
+.league-atlas-north-star .atlas-race-table-wrap{
+  width:100%;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  border:1px solid var(--atlas-line);
+  border-radius:12px;
+  background:#071522;
+}
+.league-atlas-north-star .atlas-race-table{
+  width:100%;
+  min-width:980px;
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout:fixed;
+}
+.league-atlas-north-star .atlas-race-table th,
+.league-atlas-north-star .atlas-race-table td{
+  height:42px;
+  padding:6px 9px;
+  border-top:1px solid var(--atlas-line);
+  border-right:1px solid rgba(111,167,205,.08);
+  background:#071522;
+  font-size:9px;
+  white-space:nowrap;
+  text-align:right;
+}
+.league-atlas-north-star .atlas-race-table thead th{
+  position:sticky;
+  top:0;
+  z-index:4;
+  height:35px;
+  border-top:0;
+  background:#0b1d2e;
+  color:var(--atlas-muted);
+  font-size:7.5px;
+  font-weight:800;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.league-atlas-north-star .atlas-race-table .atlas-race-groups th{
+  background:#0d2438;
+  color:#9fc6df;
+  text-align:center;
+  letter-spacing:.09em;
+}
+.league-atlas-north-star .atlas-race-table tbody tr.managed td{background:#092036}
+.league-atlas-north-star .atlas-race-rank-sticky{
+  position:sticky!important;
+  left:0;
+  z-index:6!important;
+  width:46px;
+  min-width:46px;
+  max-width:46px;
+  text-align:center!important;
+  box-shadow:5px 0 10px rgba(0,0,0,.13);
+}
+.league-atlas-north-star .atlas-race-team-sticky{
+  position:sticky!important;
+  left:46px;
+  z-index:5!important;
+  width:126px;
+  min-width:126px;
+  max-width:126px;
+  text-align:left!important;
+  box-shadow:7px 0 11px rgba(0,0,0,.18);
+}
+.league-atlas-north-star .atlas-race-table thead .atlas-race-rank-sticky,
+.league-atlas-north-star .atlas-race-table thead .atlas-race-team-sticky{z-index:8!important;background:#0d2438}
+.league-atlas-north-star .atlas-race-team-sticky>span{display:grid;min-width:0}
+.league-atlas-north-star .atlas-race-team-sticky strong{overflow:hidden;text-overflow:ellipsis;font-size:9px}
+.league-atlas-north-star .atlas-race-team-sticky small{overflow:hidden;text-overflow:ellipsis;color:var(--atlas-muted);font-size:7px}
+.league-atlas-north-star .atlas-race-sort{
+  appearance:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:3px;
+  width:100%;
+  border:0;
+  background:transparent;
+  color:inherit;
+  padding:0;
+  font:inherit;
+  text-transform:inherit;
+  letter-spacing:inherit;
+  cursor:pointer;
+}
+.league-atlas-north-star .atlas-race-rank-sticky .atlas-race-sort{justify-content:center}
+.league-atlas-north-star .atlas-race-sort b{font-size:8px;color:#6289a3}
+.league-atlas-north-star .atlas-race-sort.active{color:#eaf7ff}
+.league-atlas-north-star .atlas-race-sort.active b{color:var(--atlas-cyan)}
+
+@media(max-width:720px){
+  .league-atlas-north-star .league-atlas-header{padding-top:5px}
+  .league-atlas-north-star .league-atlas-tabs{top:env(safe-area-inset-top,0px)}
+  .league-atlas-north-star .league-atlas-content{padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+  .league-atlas-north-star .league-position-section{padding:10px!important}
+  .league-atlas-north-star .league-position-section .league-section-heading{gap:5px;margin-bottom:7px}
+  .league-atlas-north-star .league-position-section .league-section-heading small{line-height:1.25}
+  .league-atlas-north-star .league-edge-map{overflow-x:visible!important}
+  .league-atlas-north-star .league-edge-map .league-edge-row{
+    min-width:0!important;
+    width:100%!important;
+    grid-template-columns:minmax(82px,1.32fr) repeat(4,minmax(0,1fr))!important;
+  }
+  .league-atlas-north-star .league-edge-map .league-edge-row>span{padding:4px 5px!important}
+  .league-atlas-north-star .league-edge-map .league-edge-team strong{
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:9px;
+  }
+  .league-atlas-north-star .league-edge-map .league-edge-team small{font-size:7px}
+  .league-atlas-north-star .league-edge-map .league-edge-cell{min-width:0!important}
+  .league-atlas-north-star .league-edge-map .league-edge-cell>b{width:34px;height:34px;font-size:11px}
+  .league-atlas-north-star .league-value-row{grid-template-columns:88px minmax(0,1fr);gap:6px;padding:8px 7px}
+  .league-atlas-north-star .league-value-team-select{min-height:44px}
+  .league-atlas-north-star .league-value-strip{height:36px!important}
+  .league-atlas-north-star .atlas-race-table{min-width:910px}
+  .league-atlas-north-star .atlas-race-table thead th{
+    top:calc(env(safe-area-inset-top,0px) + 47px);
+  }
+  .league-atlas-north-star .atlas-race-rank-sticky{width:42px;min-width:42px;max-width:42px}
+  .league-atlas-north-star .atlas-race-team-sticky{left:42px;width:112px;min-width:112px;max-width:112px}
+  .league-atlas-north-star .atlas-race-table th,
+  .league-atlas-north-star .atlas-race-table td{padding:6px 7px}
+}
