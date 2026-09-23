@@ -561,3 +561,98 @@
     display:none!important;
   }
 }
+
+
+/* Final density/value acceptance: sticky identity headers + compact diagnostic cards. */
+.league-atlas-north-star.ns-app-compressed .league-age-row,
+.league-atlas-north-star.ns-app-compressed .league-depth-row{
+  min-height:0!important;
+  height:auto!important;
+  align-content:center!important;
+  align-items:center!important;
+  padding:8px 10px!important;
+  gap:7px!important;
+}
+.league-atlas-north-star .league-age-track.ns-horizontal-band,
+.league-atlas-north-star .league-depth-grid.ns-horizontal-band{
+  align-items:start!important;
+}
+.league-atlas-north-star .league-age-row .league-age-reading,
+.league-atlas-north-star .league-depth-row>span{
+  align-self:center!important;
+}
+
+@media(max-width:720px){
+  /* Two independent header rows avoid Safari's rowspan/sticky paint bug.
+   * Both tiers now freeze beneath the Atlas tabs while Rank + Team/Owner also
+   * remain frozen horizontally. */
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-group-row>th{
+    position:sticky!important;
+    top:calc(var(--atlas-safe-top) + var(--atlas-tabs-height) + 2px)!important;
+    z-index:34!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-metric-row>th{
+    position:sticky!important;
+    top:calc(var(--atlas-safe-top) + var(--atlas-tabs-height) + var(--atlas-race-group-height) + 2px)!important;
+    z-index:33!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-rank-sticky{
+    position:sticky!important;
+    left:0!important;
+    box-shadow:5px 0 10px rgba(0,0,0,.13)!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-team-sticky{
+    position:sticky!important;
+    left:44px!important;
+    box-shadow:7px 0 11px rgba(0,0,0,.18)!important;
+    text-align:left!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-group-row .atlas-race-rank-sticky,
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-group-row .atlas-race-team-sticky{
+    z-index:38!important;
+    background:#0d2438!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-metric-row .atlas-race-rank-sticky,
+  .league-atlas-north-star .atlas-race-table thead tr.atlas-race-metric-row .atlas-race-team-sticky{
+    z-index:37!important;
+    background:#0d2438!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody .atlas-race-rank-sticky{
+    position:sticky!important;
+    left:0!important;
+    z-index:7!important;
+  }
+  .league-atlas-north-star .atlas-race-table tbody .atlas-race-team-sticky{
+    position:sticky!important;
+    left:44px!important;
+    z-index:6!important;
+  }
+  .league-atlas-north-star .atlas-race-corner{padding:0!important}
+
+  /* The scan cards should be only as tall as their content. */
+  .league-atlas-north-star.ns-app-compressed .league-age-row{
+    min-height:52px!important;
+    padding:6px 8px!important;
+  }
+  .league-atlas-north-star.ns-app-compressed .league-depth-row{
+    min-height:58px!important;
+    padding:7px 8px!important;
+  }
+  .league-atlas-north-star .league-depth-row{
+    grid-template-columns:minmax(0,1fr) 62px 104px!important;
+    gap:5px!important;
+  }
+  .league-atlas-north-star .league-fragility-reading{min-width:0!important}
+  .league-atlas-north-star .league-depth-row b{font-size:12px!important}
+  .league-atlas-north-star .league-depth-row small,
+  .league-atlas-north-star .league-fragility-reading button{font-size:7px!important}
+
+  /* Value breakout now displays 0–10,000 indices instead of percentiles. */
+  .league-atlas-north-star .league-value-player{
+    grid-template-columns:minmax(90px,1fr) repeat(3,minmax(54px,auto))!important;
+    gap:5px!important;
+    padding:7px!important;
+  }
+  .league-atlas-north-star .league-value-player>span b{font-size:9px!important}
+  .league-atlas-north-star .league-value-player small{font-size:6.8px!important}
+}
