@@ -48,9 +48,17 @@ The repository contains a free GitHub Actions scheduler:
 - hosted route requires `X-FSFFL-Scheduler-Token` matching Render `FSFFL_SCHEDULER_TOKEN`;
 - capture logic uses the governed Sleeper schedule/player universe, T-14 window, minimum two healthy independent Forecast sources, first-valid immutable annual projection artifact, and durable persistence.
 
-Operational audit of Render request/app logs from the workflow's introduction through this pass found **no scheduled POST request** to `/internal/annual-preseason-snapshot/capture` and no hosted `annual preseason snapshot scheduler attempted` log entry. The workflow previously treated an absent GitHub Actions `FSFFL_SCHEDULER_TOKEN` as a successful dormant run; this pass changes that behavior to fail visibly with a nonzero exit so missing credentials cannot look operational.
+Operational proof completed on 2026-09-23:
+- scheduled workflow run #2 originally showed `FSFFL_SCHEDULER_TOKEN` empty and took the dormant path;
+- after the repository Actions secret and Render environment variable were configured to the same private value, the same scheduler job was re-run;
+- GitHub Actions masked the credential as `***`, executed `python scripts/run_annual_preseason_scheduler_tick.py`, and issued the configured POST;
+- the hosted route no longer returned 401; instead it returned the governed post-opener result: HTTP 503 with `failed-with-reason` / `annual preseason capture window is closed; opener_date=2026-09-09`;
+- Render recorded the matching application request event at **2026-09-23T17:44:33.381150324Z**: `POST /internal/annual-preseason-snapshot/capture HTTP/1.1` -> **503 Service Unavailable**;
+- this is the expected proof condition for an in-season test: authentication and routing succeeded, while capture creation correctly declined because the preseason window is closed.
 
-The remaining operational requirement is to prove a token-authenticated scheduled invocation reaches Render. The available integration cannot read or create GitHub Actions repository secrets, so this evidence must come from a configured `FSFFL_SCHEDULER_TOKEN` secret and a resulting hosted POST/log entry. Until that exists, scheduler presence is proven but end-to-end operational invocation is not.
+The first retry occurred while the Render environment update deployment was still replacing the prior instance and correctly returned 401. After deploy `dep-daq0v53ncjis73941sjg` became live on unchanged main SHA `f9d584fe15dffb439ff819bb30c158ace34ed375`, the next retry reached the governed capture logic and produced the expected closed-window response above.
+
+**Scheduler operational outcome: PASS.** The GitHub Actions secret is present, the protected Render route accepts the shared credential, the workflow sends the real POST, and Render records the matching request. No 2026 preseason baseline was created or fabricated. The workflow's missing-secret path remains hardened to fail visibly.
 
 ## iPhone ownership boundary
 
