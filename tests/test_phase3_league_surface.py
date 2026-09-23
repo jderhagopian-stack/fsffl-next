@@ -89,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone6" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone6';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone7" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone7';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
@@ -262,19 +262,33 @@ def test_final_density_value_polish_uses_sticky_identity_headers_compact_cards_a
     assert "percentile_gap" not in source[source.index("function laValuePlayerDetail"):source.index("function laValueDetail")]
 
 
-def test_final_header_label_correction_keeps_metric_labels_visible_and_identity_frozen_horizontally() -> None:
+def test_final_header_dock_keeps_all_labels_visible_and_identity_frozen() -> None:
     source = _source(LEAGUE)
     css = _source(ATLAS_CSS)
 
     for label in ("Rank", "Team/Owner", "Record", "PF", "PA", "Max PF", "Projected Finish", "Playoffs", "Championship", "Projected Final Wins", "1st Place"):
         assert label in source
-    assert "Final iPhone header-label correction" in css
-    assert "thead tr.atlas-race-group-row>th" in css
-    assert "thead tr.atlas-race-metric-row>th" in css
-    assert "position:static!important" in css
-    assert "visibility:visible!important" in css
-    assert "opacity:1!important" in css
-    assert "thead tr.atlas-race-metric-row .atlas-race-rank-sticky" in css
-    assert "thead tr.atlas-race-metric-row .atlas-race-team-sticky" in css
-    assert "left:44px!important" in css
+    assert "function laRaceHeaderDock()" in source
+    assert "function bindLeagueRaceHeaderScroll()" in source
+    assert "atlas-race-head-dock" in source
+    assert "atlas-race-head-track" in source
+    assert "<thead>" not in source[source.index("function laOverview()"):source.index("function laPositionsTab()")]
+    assert "Final League Race header architecture" in css
+    assert ".atlas-race-head-dock" in css
+    assert "position:sticky" in css
+    assert ".atlas-race-head-fixed-metrics" in css
+    assert ".atlas-race-head-team-label" in css
     assert "text-align:left!important" in css
+    assert "translate3d(" in source
+
+
+def test_header_dock_widths_match_body_columns_for_horizontal_scroll_sync() -> None:
+    css = _source(ATLAS_CSS)
+
+    assert "--atlas-race-fixed-width:152px" in css
+    assert "--atlas-race-metrics-width:844px" in css
+    assert "--atlas-race-table-width:996px" in css
+    assert "--atlas-race-rank-width:44px" in css
+    assert "--atlas-race-team-width:108px" in css
+    assert "grid-template-columns:308px 536px" in css
+    assert "left:var(--atlas-race-rank-width)!important" in css
