@@ -47,6 +47,23 @@ def main() -> None:
         if sleeper_ref is not None:
             team_by_roster[int(sleeper_ref.external_id)] = team
 
+    raw_nfl_state = snapshot.payload.get("nfl_state") or {}
+    try:
+        provider_completed_week = max(0, int(raw_nfl_state.get("week")) - 1)
+    except (TypeError, ValueError):
+        provider_completed_week = None
+    raw_completed_pf_by_roster = {}
+    if provider_completed_week is not None:
+        for week in range(1, provider_completed_week + 1):
+            for matchup in (snapshot.payload.get("matchups") or {}).get(str(week), []) or []:
+                roster_id = matchup.get("roster_id")
+                if roster_id is None:
+                    continue
+                raw_completed_pf_by_roster[int(roster_id)] = (
+                    raw_completed_pf_by_roster.get(int(roster_id), 0.0)
+                    + float(matchup.get("points") or 0.0)
+                )
+
     rows = []
     for roster in sorted(raw_rosters, key=lambda item: int(item.get("roster_id") or 0)):
         roster_id = int(roster["roster_id"])
@@ -63,6 +80,7 @@ def main() -> None:
             "provider_ppts": ppts,
             "provider_fpts": fpts,
             "canonical_completed_pf": pf.get(team.team_id) if team is not None else None,
+            "raw_provider_completed_pf": raw_completed_pf_by_roster.get(roster_id),
             "ppts_minus_fpts": (
                 ppts - fpts if ppts is not None and fpts is not None else None
             ),
@@ -79,8 +97,10 @@ def main() -> None:
         "captured_at": snapshot.captured_at.isoformat(),
         "league_id": state.league.league_id,
         "raw_league_leg": (snapshot.payload.get("league") or {}).get("settings", {}).get("leg"),
-        "raw_nfl_state": snapshot.payload.get("nfl_state"),
+        "raw_nfl_state": raw_nfl_state,
+        "provider_completed_week_candidate": provider_completed_week,
         "week1_schedule_sample": schedule_sample,
+        "week1_earliest_date": min((str(row.get("date")) for row in week1 if row.get("date")), default=None),
         "week1_schedule_keys": sorted(week1[0].keys()) if week1 else [],
         "team_count": len(state.teams),
         "completed_through_week": completed_through_week(state),
@@ -98,6 +118,12 @@ def main() -> None:
             row["provider_fpts"] is not None
             and row["canonical_completed_pf"] is not None
             and abs(row["provider_fpts"] - row["canonical_completed_pf"]) <= 0.011
+            for row in rows
+        ),
+        "all_fpts_match_raw_provider_completed_pf": all(
+            row["provider_fpts"] is not None
+            and row["raw_provider_completed_pf"] is not None
+            and abs(row["provider_fpts"] - row["raw_provider_completed_pf"]) <= 0.011
             for row in rows
         ),
         "rows": rows,
