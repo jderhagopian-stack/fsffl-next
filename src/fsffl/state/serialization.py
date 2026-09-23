@@ -18,6 +18,10 @@ def _sorted_payload(state: LeagueState) -> dict[str, Any]:
     payload["teams"] = sorted(payload["teams"], key=lambda item: item["team_id"])
     payload["team_states"] = sorted(payload["team_states"], key=lambda item: item["team_id"])
     for team_state in payload["team_states"]:
+        # Preserve identity for durable snapshots written before Max PF existed.
+        if team_state.get("max_points_for") is None:
+            team_state.pop("max_points_for", None)
+            team_state.pop("max_points_for_provenance", None)
         team_state["roster"] = sorted(
             team_state["roster"], key=lambda item: (item["player_id"], item["slot"])
         )
