@@ -234,13 +234,40 @@ class SleeperNormalizer:
                     slot = RosterSlot.BENCH
                 entries.append(RosterEntry(player_id=f"sleeper:player:{pid}", slot=slot))
 
-            used_faab = int((roster.get("settings") or {}).get("waiver_budget_used") or 0)
+            roster_settings = roster.get("settings") or {}
+            used_faab = int(roster_settings.get("waiver_budget_used") or 0)
             current_faab = max(faab_budget - used_faab, 0) if faab_budget else 0
+
+            max_points_for: float | None = None
+            raw_ppts = roster_settings.get("ppts")
+            if raw_ppts not in (None, ""):
+                try:
+                    whole = float(raw_ppts)
+                    decimal = float(roster_settings.get("ppts_decimal") or 0)
+                    max_points_for = whole + decimal / 100.0
+                except (TypeError, ValueError):
+                    max_points_for = None
+            max_points_for_provenance = (
+                Provenance(
+                    source="sleeper:roster_settings:ppts",
+                    retrieved_at=retrieved_at,
+                    effective_at=as_of,
+                    provider_ref=ProviderRef(
+                        provider="sleeper",
+                        external_id=f"{league_external_id}:roster:{roster_id}:ppts",
+                    ),
+                    source_version="ppts+ppts_decimal",
+                )
+                if max_points_for is not None
+                else None
+            )
             team_states.append(
                 TeamState(
                     team_id=team_id,
                     roster=tuple(entries),
                     faab_balance=current_faab,
+                    max_points_for=max_points_for,
+                    max_points_for_provenance=max_points_for_provenance,
                 )
             )
 
