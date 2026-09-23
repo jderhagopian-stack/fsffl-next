@@ -25,6 +25,7 @@ from .background_jobs import IntelligenceJob, IntelligenceJobCoordinator, Intell
 from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
 from .frontier_runtime import build_negotiation_frontier
+from .home_command_center import build_home_command_center_payload
 from .league_atlas import build_league_atlas_payload
 from .league_atlas_preseason import (
     capture_preseason_baseline_if_eligible,
@@ -685,6 +686,16 @@ def create_app(
             return _team_view_payload(view, runtime.value_evidence)
         view = build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id)
         return _team_view_payload(view, runtime.value_evidence)
+
+    @application.get("/api/home/command-center")
+    def home_command_center(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        """Read-only Home composition from already-attached governed evidence."""
+
+        runtime = store.get(user_id)
+        try:
+            return build_home_command_center_payload(runtime)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @application.get("/api/league/team-views")
     def league_team_views(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
