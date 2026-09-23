@@ -89,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone6" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone6';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone7" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone7';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
@@ -180,26 +180,22 @@ def test_final_iphone_polish_uses_one_tappable_rank_strength_map_and_valid_value
     assert "grid-template-columns:minmax(80px,1.25fr) repeat(4,minmax(0,1fr))!important" in css
 
 
-def test_final_iphone_polish_race_has_real_two_tier_sticky_geometry() -> None:
+def test_final_iphone_polish_race_has_two_tier_synced_sticky_header_dock() -> None:
     source = _source(LEAGUE)
     css = _source(ATLAS_CSS)
 
-    assert 'class="atlas-race-group-row"' in source
-    assert 'class="atlas-race-metric-row"' in source
-    assert 'colspan="4">Current Season' in source
-    assert 'colspan="5">Outlook from Today' in source
-    assert 'rowspan="2"' not in source
-    assert source.count("atlas-race-rank-sticky") >= 3
-    assert source.count("atlas-race-team-sticky") >= 3
+    assert "function laRaceHeaderDock()" in source
+    assert "atlas-race-head-groups" in source
+    assert "Current Season" in source
+    assert "Outlook from Today" in source
+    assert "atlas-race-head-metrics" in source
     assert "atlas-col-wins" in source
-    assert "min-width:1120px" in css
+    assert "<thead>" not in source[source.index("function laOverview()"):source.index("function laPositionsTab()")]
     assert "--atlas-race-group-height:32px" in css
-    assert "tr.atlas-race-group-row>th" in css
-    assert "tr.atlas-race-metric-row>th" in css
-    assert ".atlas-race-table thead th{\n    position:static!important" in css
-    assert "top:auto!important" in css
-    assert "width:108px!important" in css
-    assert ".atlas-race-group-row>.atlas-race-team-sticky" in css
+    assert "--atlas-race-table-width:996px" in css
+    assert ".atlas-race-head-dock" in css
+    assert ".atlas-race-head-fixed-metrics" in css
+    assert ".atlas-race-head-track" in css
 
 
 def test_physical_iphone_acceptance_hides_legacy_duplicate_map_and_fits_retained_map() -> None:
@@ -241,18 +237,13 @@ def test_physical_iphone_acceptance_3_reveals_rank_one_identity_and_removes_map_
     assert "::-webkit-scrollbar" in css
 
 
-def test_final_density_value_polish_uses_sticky_identity_headers_compact_cards_and_value_indices() -> None:
+def test_final_density_value_polish_uses_header_dock_compact_cards_and_value_indices() -> None:
     source = _source(LEAGUE)
     css = _source(ATLAS_CSS)
 
-    assert 'class="atlas-race-group-row"' in source
-    assert 'class="atlas-race-metric-row"' in source
-    assert 'atlas-race-corner' in source
-    assert 'rowspan="2"' not in source
-    assert "thead tr.atlas-race-group-row>th" in css
-    assert "thead tr.atlas-race-metric-row>th" in css
-    assert "thead .atlas-race-team-sticky" in css
-    assert "position:sticky!important" in css
+    assert "atlas-race-head-dock" in source
+    assert "atlas-race-head-team-label" in source
+    assert "position:sticky" in css
     assert "min-height:52px!important" in css
     assert "min-height:58px!important" in css
     assert "broad_market_value_index" in source
@@ -262,19 +253,33 @@ def test_final_density_value_polish_uses_sticky_identity_headers_compact_cards_a
     assert "percentile_gap" not in source[source.index("function laValuePlayerDetail"):source.index("function laValueDetail")]
 
 
-def test_final_header_label_correction_keeps_metric_labels_visible_and_identity_frozen_horizontally() -> None:
+def test_final_header_dock_keeps_all_labels_visible_and_identity_frozen() -> None:
     source = _source(LEAGUE)
     css = _source(ATLAS_CSS)
 
     for label in ("Rank", "Team/Owner", "Record", "PF", "PA", "Max PF", "Projected Finish", "Playoffs", "Championship", "Projected Final Wins", "1st Place"):
         assert label in source
-    assert "Final iPhone header-label correction" in css
-    assert "thead tr.atlas-race-group-row>th" in css
-    assert "thead tr.atlas-race-metric-row>th" in css
-    assert "position:static!important" in css
-    assert "visibility:visible!important" in css
-    assert "opacity:1!important" in css
-    assert "thead tr.atlas-race-metric-row .atlas-race-rank-sticky" in css
-    assert "thead tr.atlas-race-metric-row .atlas-race-team-sticky" in css
-    assert "left:44px!important" in css
+    assert "function laRaceHeaderDock()" in source
+    assert "function bindLeagueRaceHeaderScroll()" in source
+    assert "atlas-race-head-dock" in source
+    assert "atlas-race-head-track" in source
+    assert "<thead>" not in source[source.index("function laOverview()"):source.index("function laPositionsTab()")]
+    assert "Final League Race header architecture" in css
+    assert ".atlas-race-head-dock" in css
+    assert "position:sticky" in css
+    assert ".atlas-race-head-fixed-metrics" in css
+    assert ".atlas-race-head-team-label" in css
     assert "text-align:left!important" in css
+    assert "translate3d(" in source
+
+
+def test_header_dock_widths_match_body_columns_for_horizontal_scroll_sync() -> None:
+    css = _source(ATLAS_CSS)
+
+    assert "--atlas-race-fixed-width:152px" in css
+    assert "--atlas-race-metrics-width:844px" in css
+    assert "--atlas-race-table-width:996px" in css
+    assert "--atlas-race-rank-width:44px" in css
+    assert "--atlas-race-team-width:108px" in css
+    assert "grid-template-columns:308px 536px" in css
+    assert "left:var(--atlas-race-rank-width)!important" in css
