@@ -60,6 +60,7 @@
 .league-atlas-north-star .league-age-team{display:grid;gap:2px;min-width:0}
 .league-atlas-north-star .league-age-team small{color:var(--atlas-muted);font-size:8px}
 .league-atlas-north-star .league-fragility-reading{min-width:128px}
+.league-atlas-north-star .league-fragility-drivers{display:flex!important;justify-content:flex-end;align-items:center;gap:3px;flex-wrap:wrap}
 .league-atlas-north-star .league-fragility-reading button{appearance:none;border:0;background:transparent;color:#71d4ec;padding:1px 0;font:inherit;font-size:8px;text-align:right;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .league-atlas-north-star .atlas-pick-count{display:grid;text-align:right}
 .league-atlas-north-star .atlas-pick-count small{font-size:7px;color:var(--atlas-muted)}
