@@ -24,7 +24,8 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260922-league-atlas1';
+const fsfflStaticVersion='20260920-owner-dossier1';
+const leagueAtlasStaticVersion='20260922-league-atlas1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
 let reportsScriptPromise=null;
@@ -36,7 +37,7 @@ let whatIfScriptPromise=null;
 let simulatorScriptPromise=null;
 function injectMobileTouchFix(){if(document.querySelector('link[data-fsffl-touch-fix]'))return;const link=document.createElement('link');link.rel='stylesheet';link.dataset.fsfflTouchFix='true';link.href=`/static/mobile_touch_fix.css?v=${fsfflStaticVersion}`;document.head.appendChild(link)}
 function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseSetter){if(typeof window[existingName]==='function')return Promise.resolve();const existing=promiseGetter();if(existing)return existing;const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`${path}?v=${fsfflStaticVersion}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error(errorMessage));document.head.appendChild(script)});promiseSetter(promise);return promise}
-function ensureLeagueComparisonScript(){return lazyProductScript('renderFsfflLeagueComparison','/static/league_comparison.js','Unable to load League presentation module',()=>leagueComparisonScriptPromise,value=>leagueComparisonScriptPromise=value)}
+function ensureLeagueComparisonScript(){if(typeof window.renderFsfflLeagueComparison==='function')return Promise.resolve();if(leagueComparisonScriptPromise)return leagueComparisonScriptPromise;leagueComparisonScriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`/static/league_comparison.js?v=${leagueAtlasStaticVersion}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error('Unable to load League presentation module'));document.head.appendChild(script)});return leagueComparisonScriptPromise}
 function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/static/my_team_dashboard.js','Unable to load Franchise presentation module',()=>myTeamScriptPromise,value=>myTeamScriptPromise=value)}
 function ensureReportsScript(){return lazyProductScript('renderFsfflReports','/static/reports.js','Unable to load Reports presentation module',()=>reportsScriptPromise,value=>reportsScriptPromise=value)}
 function ensureHomeScript(){return lazyProductScript('installFsfflHomeExperience','/static/home_dashboard.js','Unable to load Home presentation module',()=>homeScriptPromise,value=>homeScriptPromise=value)}
