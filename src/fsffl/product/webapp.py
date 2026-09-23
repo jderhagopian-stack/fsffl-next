@@ -271,6 +271,45 @@ def _team_view_payload(view, value_evidence, forecast_evidence=None) -> dict[str
     }
 
 
+def _managed_team_view_payload(runtime) -> dict[str, object]:
+    """Return the strongest already-attached managed-team view without launching new work."""
+
+    if runtime.league_state is None:
+        raise ValueError("No league is loaded")
+    if runtime.selected_team_id is None:
+        raise ValueError("No managed team is selected")
+    if runtime.simulation_analytics is not None:
+        view = next(
+            item
+            for item in runtime.simulation_analytics.team_views
+            if item.team_id == runtime.selected_team_id
+        )
+        return _team_view_payload(view, runtime.value_evidence, runtime.forecast_evidence)
+    lineup_result = _forecast_lineup_result(runtime)
+    if lineup_result is not None:
+        view = next(
+            item
+            for item in lineup_result.team_views
+            if item.team_id == runtime.selected_team_id
+        )
+        return _team_view_payload(view, runtime.value_evidence)
+    if runtime.forecast_evidence is not None:
+        evidence = runtime.forecast_evidence
+        forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
+        view = build_forecast_team_view(
+            runtime.league_state,
+            team_id=runtime.selected_team_id,
+            forecasts=forecasts,
+            forecast_model_version=evidence.model_version,
+        )
+        return _team_view_payload(view, runtime.value_evidence)
+    view = build_state_only_team_view(
+        runtime.league_state,
+        team_id=runtime.selected_team_id,
+    )
+    return _team_view_payload(view, runtime.value_evidence)
+
+
 def _default_simulation_loader(
     league_state: LeagueState,
     evidence: LiveForecastEvidence,
@@ -655,36 +694,53 @@ def create_app(
             ],
         }
 
-    @application.get("/api/my-team")
-    def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+    @application.get("/api/home")
+    def home_north_star(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        """Compose Home strictly from already-attached governed evidence."""
+
         runtime = store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
-        if runtime.simulation_analytics is not None:
-            view = next(
-                item
-                for item in runtime.simulation_analytics.team_views
-                if item.team_id == runtime.selected_team_id
-            )
-            return _team_view_payload(view, runtime.value_evidence, runtime.forecast_evidence)
-        lineup_result = _forecast_lineup_result(runtime)
-        if lineup_result is not None:
-            view = next(item for item in lineup_result.team_views if item.team_id == runtime.selected_team_id)
-            return _team_view_payload(view, runtime.value_evidence)
-        if runtime.forecast_evidence is not None:
-            evidence = runtime.forecast_evidence
-            forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
-            view = build_forecast_team_view(
-                runtime.league_state,
-                team_id=runtime.selected_team_id,
-                forecasts=forecasts,
-                forecast_model_version=evidence.model_version,
-            )
-            return _team_view_payload(view, runtime.value_evidence)
-        view = build_state_only_team_view(runtime.league_state, team_id=runtime.selected_team_id)
-        return _team_view_payload(view, runtime.value_evidence)
+
+        team_view = _managed_team_view_payload(runtime)
+        atlas = build_league_atlas_payload(
+            runtime,
+            preseason_reason=(
+                "Home intentionally does not resolve or reconstruct preseason evidence."
+            ),
+        )
+        return {
+            "status": "ready",
+            "contract_version": "home-north-star-v1",
+            "league_state_id": runtime.league_state.state_id,
+            "managed_team_id": runtime.selected_team_id,
+            "team_view": team_view,
+            "standings": atlas["standings"],
+            "simulation": atlas["simulation"],
+            "authority": {
+                "state": "canonical point-in-time LeagueState",
+                "team_view": (
+                    "existing attached Simulation/Forecast/State team view; "
+                    "Home launches no Forecast, Simulation, Value, Decision, or Search work"
+                ),
+                "simulation": "existing matching governed 50,000-run Simulation only",
+                "position_strength": "existing league-relative position-strength evidence",
+                "fragility": "existing Team Utility roster-resilience evidence",
+                "presentation_creates_model_truth": False,
+                "market_search_launched": False,
+                "changed_state_simulation_launched": False,
+            },
+        }
+
+    @application.get("/api/my-team")
+    def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        try:
+            return _managed_team_view_payload(runtime)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @application.get("/api/league/team-views")
     def league_team_views(user_id: str = Depends(require_beta_user)) -> dict[str, object]:

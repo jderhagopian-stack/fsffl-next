@@ -1,7 +1,7 @@
 from pathlib import Path
 
 INDEX = Path("src/fsffl/product/static/index.html")
-RELEASE = "20260913-phase3-latency1"
+RELEASE = "20260923-home-north-star1"
 
 def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
