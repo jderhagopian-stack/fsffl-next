@@ -24,10 +24,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Report dormant secure-secret boundary
+      - name: Fail visibly when scheduler credential is missing
         if: ${{ env.FSFFL_SCHEDULER_TOKEN == '' }}
         run: |
-          echo "Annual preseason scheduler is DORMANT - secure GitHub Actions secret FSFFL_SCHEDULER_TOKEN is not configured."
+          echo "Annual preseason scheduler cannot invoke hosted capture: secure GitHub Actions secret FSFFL_SCHEDULER_TOKEN is not configured."
+          exit 1
 
       - name: Invoke governed hosted annual capture
         if: ${{ env.FSFFL_SCHEDULER_TOKEN != '' }}
