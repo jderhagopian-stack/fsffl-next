@@ -89,8 +89,8 @@ def test_league_atlas_lazy_assets_have_release_specific_cache_bust() -> None:
     league = _source(LEAGUE)
     shell = _source(PRODUCT_SHELL)
 
-    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone2" in league
-    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone2';" in shell
+    assert "/static/league_atlas.css?v=20260923-league-atlas-finaliphone3" in league
+    assert "const leagueAtlasStaticVersion='20260923-league-atlas-finaliphone3';" in shell
     assert "league_comparison.js?v=${leagueAtlasStaticVersion}" in shell
     assert "const mobileTouchStaticVersion=\'20260923-mobile-safearea2\';" in shell
 
@@ -194,5 +194,31 @@ def test_final_iphone_polish_race_has_real_two_tier_sticky_geometry() -> None:
     assert "--atlas-race-group-height:32px" in css
     assert "tr.atlas-race-group-row>th" in css
     assert "tr.atlas-race-metric-row>th" in css
-    assert "top:calc(var(--atlas-safe-top) + var(--atlas-tabs-height) + var(--atlas-race-group-height) + 2px)!important" in css
-    assert "scroll-padding-left:184px" in css
+    assert ".atlas-race-table thead th{\n    position:static!important" in css
+    assert "top:auto!important" in css
+    assert "width:108px!important" in css
+    assert ".atlas-race-group-row>.atlas-race-team-sticky" in css
+
+
+def test_physical_iphone_acceptance_hides_legacy_duplicate_map_and_fits_retained_map() -> None:
+    source = _source(LEAGUE)
+    css = _source(ATLAS_CSS)
+    north_star = Path("src/fsffl/product/static/north_star_app.js").read_text(encoding="utf-8")
+
+    assert source.count("league-edge-matrix league-edge-map") == 1
+    assert "atlas.className='ns-league-atlas'" in north_star
+    assert ".league-structure-panel .ns-league-atlas{display:none!important}" in css
+    assert "height:31px!important" in css
+    assert "width:27px!important" in css
+    assert "grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important" in css
+
+
+def test_physical_iphone_acceptance_race_identity_is_compact_and_header_does_not_cover_first_row() -> None:
+    css = _source(ATLAS_CSS)
+
+    assert ".atlas-race-team-sticky{\n  width:108px!important" in css
+    assert ".atlas-race-group-row>.atlas-race-team-sticky" in css
+    assert "text-align:left!important" in css
+    assert ".atlas-race-table thead th{\n    position:static!important" in css
+    assert ".atlas-race-table thead .atlas-race-rank-sticky" in css
+    assert "top:auto!important" in css

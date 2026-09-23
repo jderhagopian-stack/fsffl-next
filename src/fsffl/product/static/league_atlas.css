@@ -408,3 +408,105 @@
   .league-atlas-north-star .atlas-race-table tbody tr:first-child td{border-top:1px solid var(--atlas-line)}
   .league-atlas-north-star .atlas-race-table-wrap{scroll-padding-left:184px}
 }
+
+
+/* Physical iPhone acceptance correction: dedupe map, fit all 12, unstack race header. */
+.league-structure-panel .ns-league-atlas{display:none!important}
+.league-atlas-north-star .atlas-race-team-sticky{
+  width:108px!important;
+  min-width:108px!important;
+  max-width:108px!important;
+  text-align:left!important;
+}
+.league-atlas-north-star .atlas-race-table col.atlas-col-team{width:108px!important}
+.league-atlas-north-star .atlas-race-group-row>.atlas-race-team-sticky{
+  text-align:left!important;
+  padding-left:10px!important;
+}
+
+@media(max-width:720px){
+  /* Do not vertically float the race header over data rows on iPhone.
+   * Horizontal identity stickiness remains; the two header rows stay in normal table flow. */
+  .league-atlas-north-star .atlas-race-table thead th{
+    position:static!important;
+    top:auto!important;
+  }
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-rank-sticky,
+  .league-atlas-north-star .atlas-race-table thead .atlas-race-team-sticky{
+    position:sticky!important;
+    top:auto!important;
+    z-index:8!important;
+  }
+  .league-atlas-north-star .atlas-race-rank-sticky{
+    width:44px!important;
+    min-width:44px!important;
+    max-width:44px!important;
+  }
+  .league-atlas-north-star .atlas-race-team-sticky{
+    left:44px!important;
+    width:108px!important;
+    min-width:108px!important;
+    max-width:108px!important;
+  }
+  .league-atlas-north-star .atlas-race-table col.atlas-col-rank{width:44px!important}
+  .league-atlas-north-star .atlas-race-table col.atlas-col-team{width:108px!important}
+  .league-atlas-north-star .atlas-race-table{min-width:1080px!important}
+  .league-atlas-north-star .atlas-race-table tbody tr:first-child td{position:relative;z-index:1}
+
+  /* Keep the retained interactive map fully visible without vertical map scrolling. */
+  .league-atlas-north-star .league-position-section{padding:7px 8px 6px!important}
+  .league-atlas-north-star .league-map-heading{display:block!important;margin-bottom:4px!important}
+  .league-atlas-north-star .league-map-heading .eyebrow{margin-bottom:3px!important;font-size:8px!important}
+  .league-atlas-north-star .league-map-heading h3{margin:0 0 5px!important;font-size:15px!important;line-height:1.08!important}
+  .league-atlas-north-star .league-position-lens-wrap{
+    width:100%!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:6px!important;
+    max-width:none!important;
+  }
+  .league-atlas-north-star .league-position-lens{flex:0 0 auto}
+  .league-atlas-north-star .league-position-lens button{
+    min-height:26px!important;
+    padding:3px 8px!important;
+    font-size:7px!important;
+  }
+  .league-atlas-north-star .league-position-lens-wrap>small{
+    max-width:54%!important;
+    font-size:6.4px!important;
+    line-height:1.15!important;
+    text-align:right!important;
+  }
+  .league-atlas-north-star .league-edge-map .league-edge-row{
+    min-height:0!important;
+    height:31px!important;
+    grid-template-columns:minmax(78px,1.22fr) repeat(4,minmax(0,1fr))!important;
+  }
+  .league-atlas-north-star .league-edge-map .league-edge-row.header{height:25px!important}
+  .league-atlas-north-star .league-edge-map .league-edge-row>span{padding:2px 4px!important}
+  .league-atlas-north-star .league-edge-map .league-edge-team strong{
+    font-size:7.4px!important;
+    line-height:1!important;
+  }
+  .league-atlas-north-star .league-edge-map .league-edge-team small{
+    font-size:5.7px!important;
+    line-height:1!important;
+  }
+  .league-atlas-north-star .league-edge-map .league-edge-cell{
+    min-height:31px!important;
+    height:31px!important;
+    padding:1px!important;
+  }
+  .league-atlas-north-star .league-edge-map .league-edge-cell>b{
+    width:27px!important;
+    height:27px!important;
+    font-size:8px!important;
+  }
+  .league-atlas-north-star .league-map-foot{
+    margin:3px 1px 0!important;
+    font-size:6.8px!important;
+    line-height:1.2!important;
+  }
+  .league-atlas-north-star .league-depth-section{margin-top:8px!important}
+}
