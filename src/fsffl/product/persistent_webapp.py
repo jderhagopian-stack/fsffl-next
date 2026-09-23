@@ -125,6 +125,7 @@ app = _webapp.create_app(
     forecast_loader=_forecast_loader,
     preseason_forecast_loader=_preseason_forecast_loader,
     state_snapshot_store=_state_snapshot_store,
+    persistence_store=_persistence_store,
 )
 install_annual_preseason_scheduler_route(
     app,
