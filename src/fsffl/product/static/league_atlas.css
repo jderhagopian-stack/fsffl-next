@@ -89,3 +89,24 @@
   .league-atlas-north-star .league-value-strip{height:34px!important}
   .league-atlas-north-star .atlas-evidence-strip{display:none!important}
 }
+
+
+/* Final acceptance: 12-team League Race stays identity-bound on desktop and mobile. */
+.atlas-race-full{display:grid;gap:7px;border:0;overflow:visible}
+.atlas-race-card{display:grid;grid-template-columns:minmax(210px,1.3fr) minmax(190px,.9fr) minmax(190px,.9fr);gap:10px;align-items:center;padding:10px;border:1px solid var(--atlas-line);border-radius:11px;background:#071522}
+.atlas-race-card.managed{border-color:var(--atlas-strong-line);background:#092036}
+.atlas-race-primary{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:8px;align-items:center}.atlas-race-primary>span{display:grid}.atlas-race-primary small,.atlas-race-facts small,.atlas-race-forward small,.atlas-race-more small{font-size:7.5px;color:var(--atlas-muted)}.atlas-race-primary strong{font-size:10px}.atlas-race-record{text-align:right}
+.atlas-race-facts,.atlas-race-forward{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.atlas-race-facts>span,.atlas-race-forward>span{display:grid;text-align:right}.atlas-race-facts b,.atlas-race-forward b{font-size:10px}
+.atlas-race-more{grid-column:1/-1;margin:-2px 0 0;border-top:1px solid rgba(111,167,205,.1)}.atlas-race-more summary{padding:7px 0 2px;color:var(--atlas-muted);font-size:8px}.atlas-race-more>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px 0 2px}.atlas-race-more span{display:grid}
+.atlas-preseason-compare{display:grid;gap:6px}.atlas-preseason-row{display:grid;grid-template-columns:minmax(150px,1.1fr) repeat(3,minmax(120px,1fr));gap:8px;align-items:center;padding:8px 9px;border:1px solid var(--atlas-line);border-radius:9px;background:#071522}.atlas-preseason-row>span{display:grid}.atlas-preseason-row small{font-size:7.5px;color:var(--atlas-muted)}.atlas-preseason-compact{max-width:none}
+
+@media(max-width:720px){
+  .league-atlas-north-star .atlas-race-list{overflow:visible}
+  .league-atlas-north-star .atlas-race-card{grid-template-columns:1fr!important;gap:8px;padding:10px}
+  .league-atlas-north-star .atlas-race-primary{grid-template-columns:30px minmax(0,1fr) auto}
+  .league-atlas-north-star .atlas-race-facts,.league-atlas-north-star .atlas-race-forward{grid-template-columns:repeat(3,minmax(0,1fr));padding-left:38px}
+  .league-atlas-north-star .atlas-race-facts>span,.league-atlas-north-star .atlas-race-forward>span{text-align:left}
+  .league-atlas-north-star .atlas-race-more{padding-left:38px}
+  .league-atlas-north-star .atlas-preseason-row{grid-template-columns:1fr!important;gap:6px}
+  .league-atlas-north-star .atlas-preseason-row>span{grid-template-columns:minmax(0,1fr) auto;align-items:baseline}
+}
