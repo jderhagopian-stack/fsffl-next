@@ -164,7 +164,12 @@ def test_nfl_state_is_stronger_than_lagging_league_leg_for_matchup_completion() 
                 {"matchup_id": 1, "roster_id": 2, "points": 0.0},
             ),
         },
-        nfl_state={"season": "2026", "week": 3, "season_type": "regular"},
+        nfl_state={
+            "season": "2026",
+            "week": 2,
+            "display_week": 3,
+            "season_type": "regular",
+        },
         retrieved_at=AS_OF,
     )
 
