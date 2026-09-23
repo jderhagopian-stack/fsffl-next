@@ -411,6 +411,7 @@
 
 
 /* Physical iPhone acceptance correction: dedupe map, fit all 12, unstack race header. */
+.league-structure-panel .ns-league-atlas{display:none!important}
 .league-atlas-north-star .atlas-race-team-sticky{
   width:108px!important;
   min-width:108px!important;
