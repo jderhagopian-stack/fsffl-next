@@ -785,9 +785,10 @@ def create_app(
                         )
                     elif completed_matchups(preseason_state):
                         preseason_reason = (
-                            "No valid pre-kickoff 2026 State + Forecast pair can be proven from "
-                            "governed evidence; the available historical State already contains "
-                            "regular-season scoring. Current rosters are never backfilled."
+                            "No exact pre-kickoff 2026 State can be proven: the earliest canonical "
+                            "State is post-opener, and captured transaction history does not preserve "
+                            "historical TAXI/IR/active-slot moves needed to prove lineup eligibility. "
+                            "Current rosters are never backfilled."
                         )
                     elif not preseason_evidence.uncertainty_ready:
                         preseason_reason = (
