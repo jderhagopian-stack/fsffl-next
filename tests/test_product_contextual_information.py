@@ -27,7 +27,8 @@ def test_league_structure_adds_state_position_and_read_only_context() -> None:
     assert "Calculated state comes from Team Utility and Simulation" in source
     assert "owner strategic posture is separate" in source
     assert "does not create trade recommendations" in source
-    assert "hidden power rating" in source
+    assert "hidden composite scores" in source
+    assert "one power score" in source
 
 
 def test_franchise_keeps_primary_action_paths_available_without_dashboard_duplication() -> None:

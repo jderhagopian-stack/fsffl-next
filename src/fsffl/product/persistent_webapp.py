@@ -85,8 +85,9 @@ _full_refresh_seconds = max(
     int(os.getenv("FSFFL_FULL_PROVIDER_REFRESH_SECONDS", "3600")),
 )
 _forecast_loader = make_resilient_forecast_loader(_persistence_store)
+_preseason_forecast_loader = make_preseason_baseline_authority_loader(_persistence_store)
 _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
-    year_one_loader=make_preseason_baseline_authority_loader(_persistence_store),
+    year_one_loader=_preseason_forecast_loader,
     persistence_store=_persistence_store,
     future_forecast_builder=build_vnext_future_forecast_contract,
     future_forecast_model_version=VNEXT_FORECAST_VERSION,
@@ -122,6 +123,8 @@ app = _webapp.create_app(
     runtime_store=_runtime_store,
     behavioral_coordinator=_behavioral_coordinator,
     forecast_loader=_forecast_loader,
+    preseason_forecast_loader=_preseason_forecast_loader,
+    state_snapshot_store=_state_snapshot_store,
 )
 install_annual_preseason_scheduler_route(
     app,

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-def test_league_position_strength_is_owned_by_the_structural_surface() -> None:
+def test_league_position_strength_is_owned_by_the_atlas_surface() -> None:
     shim = Path("src/fsffl/product/static/league_position_strength.js").read_text(encoding="utf-8")
     source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
 
@@ -18,9 +18,9 @@ def test_league_position_strength_is_owned_by_the_structural_surface() -> None:
 def test_legacy_position_strength_script_stays_wired_without_competing_rendering() -> None:
     html = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
     shim = Path("src/fsffl/product/static/league_position_strength.js").read_text(encoding="utf-8")
-    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    css = Path("src/fsffl/product/static/league_atlas.css").read_text(encoding="utf-8")
 
     assert '/static/league_position_strength.js?v=' in html
     assert "league_comparison.js" in shim
     assert "MutationObserver" not in shim
-    assert "@media(max-width:560px)" in source
+    assert "@media(max-width:720px)" in css

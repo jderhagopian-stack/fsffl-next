@@ -1,0 +1,59 @@
+name: League Atlas North Star focused validation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/fsffl/product/league_atlas.py"
+      - "src/fsffl/product/webapp.py"
+      - "src/fsffl/product/persistent_webapp.py"
+      - "src/fsffl/product/player_intelligence.py"
+      - "src/fsffl/product/static/league_comparison.js"
+      - "src/fsffl/product/static/league_atlas.css"
+      - "src/fsffl/product/static/product_shell.js"
+      - "tests/test_league_atlas_north_star.py"
+      - "tests/test_phase3_league_surface.py"
+      - "tests/test_product_league_comparison_static.py"
+      - "tests/test_product_league_structure.py"
+      - "tests/test_product_league_position_map.py"
+      - "tests/test_product_league_position_strength.py"
+      - "scripts/run_league_atlas_north_star_sanity.py"
+      - ".github/workflows/league-atlas-north-star.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install -e '.[dev,web]'
+      - name: Check League Atlas JavaScript syntax
+        run: node --check src/fsffl/product/static/league_comparison.js
+      - name: Focused Atlas and bounded Player Intelligence regressions
+        run: >
+          pytest -q
+          tests/test_league_atlas_north_star.py
+          tests/test_phase3_league_surface.py
+          tests/test_product_league_comparison_static.py
+          tests/test_product_league_structure.py
+          tests/test_product_league_position_map.py
+          tests/test_product_league_position_strength.py
+          tests/test_player_intelligence.py
+      - name: Real-league Atlas composition sanity
+        run: python scripts/run_league_atlas_north_star_sanity.py
+      - name: Upload Atlas sanity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: league-atlas-north-star-sanity
+          path: artifacts/diagnostics/league_atlas_north_star_20260922/
+          if-no-files-found: error

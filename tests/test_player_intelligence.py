@@ -320,11 +320,15 @@ def test_player_overview_uses_forecast_owned_y1_y2_y3_and_fails_ppg_closed() -> 
         280.0,
         380.0,
     ]
-    assert all(row["fantasy_ppg"] is None for row in rows)
+    assert rows[0]["fantasy_ppg"] == pytest.approx(310.0 / 17.0)
+    assert rows[0]["projected_games"] == 17
+    assert rows[0]["ppg_basis"] == "governed full-season projection schedule basis: 17 NFL games"
+    assert rows[1]["fantasy_ppg"] is None
+    assert rows[2]["fantasy_ppg"] is None
     assert all(
         row["ppg_basis"]
         == "unavailable: Forecast contract does not expose expected player games"
-        for row in rows
+        for row in rows[1:]
     )
     assert payload["value"]["raw_shapley_marginal_points"] is None
 
@@ -340,8 +344,9 @@ def test_player_overview_uses_forecast_owned_y1_y2_y3_and_fails_ppg_closed() -> 
         "rush_yd": 720.0,
     }
     assert projected["fantasy_points"] == 310.0
-    assert projected["fantasy_ppg"] is None
-    assert projected["games_played"] is None
+    assert projected["fantasy_ppg"] == pytest.approx(310.0 / 17.0)
+    assert projected["games_played"] == 17
+    assert projected["games_played_basis"] == "governed full-season projection schedule basis: 17 NFL games"
     assert "pass_att" not in projected["stats"]
     assert "pass_cmp" not in projected["stats"]
     assert "rush_att" not in projected["stats"]
@@ -386,7 +391,8 @@ def test_player_overview_projected_stats_fail_closed_when_y1_raw_fields_are_abse
     assert projected["source_ids"] == []
     assert projected["model_versions"] == []
     assert projected["fantasy_points"] == 310.0
-    assert projected["games_played"] is None
+    assert projected["games_played"] == 17
+    assert projected["fantasy_ppg"] == pytest.approx(310.0 / 17.0)
 
 
 class _HistorySource:

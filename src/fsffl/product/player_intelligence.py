@@ -29,6 +29,8 @@ PLAYER_INTELLIGENCE_CONTRACT_VERSION = "player-intelligence-v2:full-career-histo
 PLAYER_HISTORY_MIN_DETAILED_SEASON = 2010
 PLAYER_HISTORY_ARTIFACT_KIND = "player_history_season_aggregate"
 PLAYER_HISTORY_ARTIFACT_VERSION = "player-history-season-aggregate-v1"
+Y1_FULL_SEASON_GAME_BASIS = 17
+Y1_FULL_SEASON_GAME_BASIS_REASON = "governed full-season projection schedule basis: 17 NFL games"
 
 
 def _season_fantasy_observation(
@@ -106,12 +108,10 @@ def _season_projected_stats(
     return stats, provenance
 
 
-def _fantasy_ppg(points: float | None) -> float | None:
-    # Current Forecast contracts own full-season expected fantasy points but do
-    # not expose expected player games played. PPG therefore fails closed rather
-    # than dividing by the NFL team schedule and pretending that is player PPG.
-    _ = points
-    return None
+def _fantasy_ppg(points: float | None, *, games_basis: int | None = None) -> float | None:
+    if points is None or games_basis is None or games_basis <= 0:
+        return None
+    return float(points) / float(games_basis)
 
 
 class PlayerFutureForecastCache:
@@ -265,8 +265,12 @@ def build_player_intelligence_overview(
                 "year_index": 1,
                 "target_season": state.league.season,
                 "fantasy_points": float(y1.distribution.mean),
-                "fantasy_ppg": _fantasy_ppg(float(y1.distribution.mean)),
-                "ppg_basis": "unavailable: Forecast contract does not expose expected player games",
+                "fantasy_ppg": _fantasy_ppg(
+                    float(y1.distribution.mean),
+                    games_basis=Y1_FULL_SEASON_GAME_BASIS,
+                ),
+                "projected_games": Y1_FULL_SEASON_GAME_BASIS,
+                "ppg_basis": Y1_FULL_SEASON_GAME_BASIS_REASON,
                 "uncertainty": {
                     "kind": "moments",
                     "stddev": float(y1.distribution.stddev),
@@ -339,11 +343,14 @@ def build_player_intelligence_overview(
                     float(y1.distribution.mean) if y1 is not None else None
                 ),
                 "fantasy_ppg": _fantasy_ppg(
-                    float(y1.distribution.mean) if y1 is not None else None
+                    float(y1.distribution.mean) if y1 is not None else None,
+                    games_basis=(Y1_FULL_SEASON_GAME_BASIS if y1 is not None else None),
                 ),
-                "games_played": None,
+                "games_played": (
+                    Y1_FULL_SEASON_GAME_BASIS if y1 is not None else None
+                ),
                 "games_played_basis": (
-                    "unavailable: Forecast authority does not expose expected player games"
+                    Y1_FULL_SEASON_GAME_BASIS_REASON if y1 is not None else None
                 ),
                 "evidence_basis": (
                     evidence.evidence_basis if evidence is not None else None
