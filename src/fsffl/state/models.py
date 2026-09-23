@@ -255,6 +255,7 @@ class LeagueState(FrozenModel):
     draft_picks: tuple[DraftPick, ...] = ()
     pick_ownership: tuple[PickOwnership, ...] = ()
     matchups: tuple[LeagueMatchup, ...] = ()
+    completed_through_week: Annotated[int, Field(ge=0, le=18)] | None = None
     nfl_team_byes: tuple[NflTeamBye, ...] = ()
     provenance: tuple[Provenance, ...] = ()
 
