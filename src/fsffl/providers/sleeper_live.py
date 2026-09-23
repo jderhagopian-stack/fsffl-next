@@ -113,7 +113,6 @@ class SleeperLiveSource:
             "users": results["users"],
             "rosters": results["rosters"],
             "traded_picks": results["traded_picks"],
-            "nfl_state": results["nfl_state"],
             "matchups": {
                 key.split(":", 1)[1]: value
                 for key, value in results.items()
@@ -179,6 +178,7 @@ class SleeperLiveSource:
                 str(week): results[f"matchup:{week}"]
                 for week in matchup_weeks
             },
+            "nfl_state": results["nfl_state"],
             "nfl_schedule": results["nfl_schedule"],
         }
         return ProviderSnapshot(
