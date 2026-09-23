@@ -194,3 +194,30 @@ def test_roster_resilience_retains_exact_argmax_player_without_changing_drop() -
     assert resilience.largest_single_player_lineup_drop == 22.0
     assert resilience.largest_single_player_lineup_drop_player_ids == ("elite_qb",)
 
+def test_roster_resilience_exposes_all_exact_tied_fragility_drivers_deterministically() -> None:
+    players = (
+        _player("qb1", Position.QB),
+        _player("qb2", Position.QB),
+        _player("wr1", Position.WR),
+    )
+    forecasts = (
+        _forecast("qb1", Position.QB, 20.0),
+        _forecast("qb2", Position.QB, 20.0),
+        _forecast("wr1", Position.WR, 20.0),
+    )
+
+    resilience = build_roster_resilience(
+        _state(players),
+        forecasts,
+        team_id="team:1",
+        as_of=AS_OF,
+        horizon=ForecastHorizon.SEASON,
+    )
+
+    assert resilience.largest_single_player_lineup_drop == 20.0
+    assert resilience.largest_single_player_lineup_drop_player_ids == (
+        "qb1",
+        "qb2",
+        "wr1",
+    )
+
