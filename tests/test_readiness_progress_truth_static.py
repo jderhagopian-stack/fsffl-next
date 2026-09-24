@@ -42,8 +42,8 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
-    assert "/static/forecast_refresh.js?v=20260924-readiness-control3" in index
-    assert "/static/product_shell.js?v=20260924-readiness-control3" in index
+    assert "/static/forecast_refresh.js?v=20260924-readiness-control4" in index
+    assert "/static/product_shell.js?v=20260924-readiness-control4" in index
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_incomplete() -> None:
@@ -51,5 +51,7 @@ def test_visible_readiness_strip_exposes_manual_refresh_when_incomplete() -> Non
     assert "fsffl-shared-readiness-refresh" in source
     assert "Refresh Intelligence" in source
     assert "window.fsfflManualIntelligenceRefresh?.()" in source
+    assert "const refreshAction=(!fsfflSharedReadinessJobActive())?" in source
+    assert "!status.complete&&!fsfflSharedReadinessJobActive()" not in source
     assert ".fsffl-shared-readiness-refresh{pointer-events:auto" in source
     assert "!status.complete&&!fsfflSharedReadinessJobActive()" in source
