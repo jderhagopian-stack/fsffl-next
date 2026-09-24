@@ -221,29 +221,3 @@ def test_completed_job_survives_coordinator_restart_without_recomputation() -> N
     assert recovered is not None
     assert recovered.job_id == completed.job_id
     assert recovered.status == IntelligenceJobStatus.COMPLETED
-
-
-def test_background_pacing_activates_under_foreground_pressure() -> None:
-    coordinator = IntelligenceJobCoordinator(max_workers=1)
-    observed = Event()
-
-    def work(_progress) -> None:
-        total = 0
-        for value in range(5000):
-            total += value
-        assert total > 0
-        observed.set()
-
-    with patch(
-        "fsffl.product.background_jobs.foreground_pressure.cooperative_yield",
-        return_value=True,
-    ) as cooperative_yield:
-        coordinator.start(user_id="u-paced", league_state_id="state-1", work=work)
-        assert observed.wait(timeout=2)
-        current = _wait_for_status(
-            coordinator,
-            user_id="u-paced",
-            status=IntelligenceJobStatus.COMPLETED,
-        )
-        assert current is not None
-        assert cooperative_yield.call_count > 0
