@@ -90,10 +90,11 @@
       if(pending?.marketTab&&['player_board','free_agents'].includes(pending.marketTab)&&typeof window.fsfflMarketNorthStar?.bootReadOnly==='function'){
         return window.fsfflMarketNorthStar.bootReadOnly(pending.marketTab);
       }
+      if(productState()?.route!=='opportunities')return;
       const store=opportunityStore();if(!store||store.loading)return;
       const captured=oppContextSnapshot(),requestId=++store.requestSequence;
       store.loading=true;try{oppCancelRetry()}catch(_){}if(showLoading)try{oppLoading()}catch(_){}
-      const contextStillCurrent=()=>requestId===store.requestSequence&&oppContextSnapshot().key===captured.key;
+      const contextStillCurrent=()=>productState()?.route==='opportunities'&&requestId===store.requestSequence&&oppContextSnapshot().key===captured.key;
       try{
         const sideEvidence=Promise.all([
           request('/api/behavioral/profiles').catch(()=>({status:'unavailable',profiles:[]})),
