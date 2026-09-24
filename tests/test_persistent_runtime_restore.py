@@ -166,3 +166,56 @@ def test_runtime_restore_backfills_exact_state_into_history_off_request_path() -
         sleep(0.01)
 
     assert captured == [state]
+
+
+def test_explicit_startup_restore_makes_followup_get_memory_only() -> None:
+    class CountingPersistence(MemoryPersistence):
+        def __init__(self) -> None:
+            super().__init__()
+            self.context_reads = 0
+
+        def get_user_runtime_context(self, *, user_id):
+            self.context_reads += 1
+            return super().get_user_runtime_context(user_id=user_id)
+
+    persistence = CountingPersistence()
+    state = _league_state()
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=state,
+        selected_team_id="t2",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+
+    restored = runtime.restore_user("jimmy")
+    reads_after_startup_restore = persistence.context_reads
+    first_request = runtime.get("jimmy")
+
+    assert restored.league_state == state
+    assert restored.selected_team_id == "t2"
+    assert first_request == restored
+    assert reads_after_startup_restore == 1
+    assert persistence.context_reads == reads_after_startup_restore
+
+
+def test_incompatible_persisted_state_still_fails_closed_on_startup_restore() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=state,
+        selected_team_id="t2",
+    )
+    persistence.user = persistence.user.__class__(
+        **{**persistence.user.__dict__, "state_hash": "incompatible"}
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+
+    restored = runtime.restore_user("jimmy")
+
+    assert restored.league_state is None
+    assert restored.forecast_evidence is None
+    assert restored.simulation_analytics is None
+    assert restored.value_evidence is None
