@@ -287,6 +287,12 @@ def install_hosted_connect_routes(
                 )
                 return
             runtime_store.set_league_state(user_id, league_state)
+            wait_for_checkpoint = getattr(runtime_store, "wait_for_checkpoint", None)
+            if callable(wait_for_checkpoint) and not wait_for_checkpoint(user_id, timeout=30.0):
+                raise RuntimeError("Sleeper league activation could not be durably checkpointed")
+            active_state = runtime_store.get(user_id).league_state
+            if not _matches_sleeper_league(active_state, league_external_id):
+                raise RuntimeError("Sleeper league activation lost requested identity")
             _logger.info(
                 "FSFFL Sleeper connect activated user=%s league=%s state=%s",
                 user_id,
