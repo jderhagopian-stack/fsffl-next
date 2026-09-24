@@ -27,7 +27,7 @@ const fsfflProductSurfaceCopy={
 const fsfflStaticVersion='20260924-live-usability-hotfix1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260924-live-usability-hotfix1';
+const homeNorthStarStaticVersion='20260924-readiness-truth1';
 const franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
@@ -88,9 +88,9 @@ function fsfflSharedReadinessEscape(value){return String(value??'').replaceAll('
 function fsfflSharedReadinessSnapshot(){
   const context=state?.context||{},job=state?.intelligence?.job||null;
   if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false};
-  if(job?.status==='failed'||job?.phase==='failed'){
+  if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
     const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
-    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:'Intelligence refresh needs attention',failed:true,complete:false};
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:(job?.status==='interrupted'||job?.phase==='interrupted')?'Refresh interrupted — last-good intelligence retained':'Intelligence refresh needs attention',failed:true,complete:false};
   }
   if(job&&fsfflSharedReadinessPhases[job.phase]){
     const [step,label]=fsfflSharedReadinessPhases[job.phase];
@@ -146,7 +146,7 @@ async function fsfflPollSharedReadinessOnce(){
     state.intelligence=await api('/api/intelligence/status');
     fsfflRenderSharedReadiness();
     const status=fsfflSharedReadinessSnapshot();
-    if(status.complete||status.failed)fsfflStopSharedReadinessPolling();
+    if(status.complete||status.failed||state?.intelligence?.job?.status==='interrupted')fsfflStopSharedReadinessPolling();
   }catch(_error){
     fsfflRenderSharedReadiness();
   }finally{
