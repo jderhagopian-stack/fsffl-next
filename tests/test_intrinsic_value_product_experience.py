@@ -162,7 +162,7 @@ def test_value_lens_bootstrap_cache_key_is_bumped_consistently():
     html = _text("index.html")
     bootstrap = _text("league_position_strength.js")
     experience = _text("intrinsic_value_experience.js")
-    shell_version = "20260924-readiness-control3"
+    shell_version = "20260924-readiness-control4"
     experience_version = "20260921-shapley-franchise3-value-index"
     assert f'/static/league_position_strength.js?v={shell_version}' in html
     assert f"const version='{experience_version}'" in bootstrap
