@@ -136,6 +136,14 @@ class LeagueConnectCoordinator:
         try:
             work()
         except Exception as exc:
+            _logger.warning(
+                "FSFFL Sleeper background job failed job=%s user=%s league=%s operation=%s error=%s",
+                current.job_id,
+                current.user_id,
+                current.league_external_id,
+                current.operation,
+                exc,
+            )
             self._set(
                 job_id,
                 status=LeagueConnectStatus.FAILED,
@@ -147,6 +155,13 @@ class LeagueConnectCoordinator:
                 error=f"{type(exc).__name__}: {exc}",
             )
             return
+        _logger.info(
+            "FSFFL Sleeper background job completed job=%s user=%s league=%s operation=%s",
+            current.job_id,
+            current.user_id,
+            current.league_external_id,
+            current.operation,
+        )
         self._set(
             job_id,
             status=LeagueConnectStatus.COMPLETED,
@@ -253,9 +268,31 @@ def install_hosted_connect_routes(
 
         def work() -> None:
             if already_loaded:
+                _logger.info(
+                    "FSFFL Sleeper connect reused active league user=%s league=%s",
+                    user_id,
+                    league_external_id,
+                )
                 return
             league_state = state_loader(league_external_id)
+            if not _matches_sleeper_league(league_state, league_external_id):
+                raise ValueError("Sleeper state loader returned a different league")
+            current_job = jobs.current(user_id)
+            if current_job is not None and current_job.league_external_id != league_external_id:
+                _logger.info(
+                    "FSFFL Sleeper connect superseded before activation user=%s requested=%s current=%s",
+                    user_id,
+                    league_external_id,
+                    current_job.league_external_id,
+                )
+                return
             runtime_store.set_league_state(user_id, league_state)
+            _logger.info(
+                "FSFFL Sleeper connect activated user=%s league=%s state=%s",
+                user_id,
+                league_external_id,
+                league_state.state_id,
+            )
             behavioral_coordinator.start(
                 user_id=user_id,
                 league_state=league_state,
@@ -328,10 +365,21 @@ def install_hosted_connect_routes(
                     probe = None
 
             league_state = state_loader(league_external_id)
+            if not _matches_sleeper_league(league_state, league_external_id):
+                raise ValueError("Sleeper state loader returned a different league")
             changed = (
                 previous_fingerprint is None
                 or league_material_fingerprint(league_state) != previous_fingerprint
             )
+            current_job = jobs.current(user_id)
+            if current_job is not None and current_job.league_external_id != league_external_id:
+                _logger.info(
+                    "FSFFL Sleeper refresh superseded before activation user=%s requested=%s current=%s",
+                    user_id,
+                    league_external_id,
+                    current_job.league_external_id,
+                )
+                return
             runtime_store.set_league_state(user_id, league_state)
             if changed:
                 behavioral_coordinator.start(

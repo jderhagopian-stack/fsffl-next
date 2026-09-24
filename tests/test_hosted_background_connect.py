@@ -114,6 +114,8 @@ def test_mobile_connect_has_one_same_league_poll_owner_and_canonical_readiness_p
     assert "if(operation==='connect'&&Date.now()>=nextContextProbeAt)" in source
     assert "if(context)return context" in source
     assert "pollDelay=Math.min(2200" in source
+    assert "League import completed without activating the requested Sleeper league." in source
+    assert "if(!contextMatchesLeague(context,normalized)||!context?.state_id)" in source
 
 
 def test_saved_session_restores_before_provider_refresh() -> None:
@@ -256,3 +258,43 @@ def test_hosted_connect_reuses_restored_matching_league_before_provider_reload()
     assert "already_loaded = _matches_sleeper_league" in source
     assert "if already_loaded:" in source
     assert "return" in source.split("if already_loaded:", 1)[1].split("league_state = state_loader", 1)[0]
+
+
+def test_mobile_connect_commits_saved_league_only_after_identity_match() -> None:
+    source = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+    interactive = source.split("async function interactiveConnect()", 1)[1].split(
+        "window.fsfflRestoreSession=restoreSavedSession", 1
+    )[0]
+
+    previous_index = interactive.index("const previousLeagueId=localStorage.getItem(LEAGUE_KEY)")
+    wait_index = interactive.index("await waitForBackgroundImport(normalized")
+    verify_index = interactive.index("if(!contextMatchesLeague(context,normalized)||!context?.state_id)")
+    save_index = interactive.index("localStorage.setItem(LEAGUE_KEY,normalized)")
+    apply_index = interactive.index("applyConnectedContext(context)")
+    assert previous_index < wait_index < verify_index < save_index < apply_index
+    assert "localStorage.setItem(LEAGUE_KEY,normalized);" not in interactive[:wait_index]
+    assert "if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY)" in interactive
+    assert "else localStorage.setItem(LEAGUE_KEY,previousLeagueId)" in interactive
+
+
+def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    connect = source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+    refresh = source.split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[1].split('@application.get("/api/connect/sleeper/background/current")', 1)[0]
+
+    assert "if not _matches_sleeper_league(league_state, league_external_id)" in connect
+    assert "if not _matches_sleeper_league(league_state, league_external_id)" in refresh
+    assert "current_job = jobs.current(user_id)" in connect
+    assert "current_job = jobs.current(user_id)" in refresh
+    assert "current_job.league_external_id != league_external_id" in connect
+    assert "current_job.league_external_id != league_external_id" in refresh
