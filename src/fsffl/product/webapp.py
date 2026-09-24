@@ -377,7 +377,7 @@ def create_app(
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
-    jobs = IntelligenceJobCoordinator(max_workers=2)
+    jobs = IntelligenceJobCoordinator(max_workers=2, persistence_store=persistence_store)
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
