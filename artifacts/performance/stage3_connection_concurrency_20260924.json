@@ -1,0 +1,78 @@
+{
+  "schema": "fsffl-performance-stage3-v1",
+  "observed_at": "2026-09-24",
+  "base_sha": "bac7c43b319993f772bcff7dcfe5192702bc8fec",
+  "stage2_merge_sha": "7fbe2368e3ed6634f46a45641e8c72f39b8ec54a",
+  "branch": "performance/stage3-connection-concurrency-hardening-20260923",
+  "render_before": {
+    "sha": "bac7c43b319993f772bcff7dcfe5192702bc8fec",
+    "deploy_id": "dep-daq97qh7lnhs73c5odbg",
+    "plan": "free",
+    "region": "Virginia",
+    "instances": 1,
+    "cpu_limit_cores": 0.15,
+    "memory_limit_bytes": 536870900
+  },
+  "before": {
+    "my_team_idle_seconds": [
+      0.126
+    ],
+    "my_team_refresh_stalls_seconds": [
+      32.008,
+      30.804
+    ],
+    "product_context_idle_seconds": [
+      0.014
+    ],
+    "cpu_cores": [
+      {
+        "at": "03:00:00Z",
+        "value": 0.0011350666
+      },
+      {
+        "at": "03:01:00Z",
+        "value": 0.10738324
+      },
+      {
+        "at": "03:01:30Z",
+        "value": 0.15
+      },
+      {
+        "at": "03:02:00Z",
+        "value": 0.1498503
+      }
+    ],
+    "memory_peak_bytes": 332517380
+  },
+  "attribution": {
+    "root_cause": "single-instance CPU scheduling contention during background intelligence refresh",
+    "database_connection_causal": false,
+    "runtime_lock_causal": false,
+    "evidence": [
+      "My Team read path is in-memory and does not acquire PostgreSQL",
+      "cheap status/Home requests continued while My Team requests were pending",
+      "Render CPU reached exact 0.15-core service limit during refresh",
+      "memory remained below limit"
+    ]
+  },
+  "change": {
+    "kind": "background_thread_scheduler_priority",
+    "linux_nice": 10,
+    "target": "dedicated IntelligenceJobCoordinator executor native thread",
+    "fail_open": true,
+    "db_connection_management_changed": false,
+    "worker_count_changed": false,
+    "new_service": false
+  },
+  "invariants": {
+    "simulation_count": 50000,
+    "simulation_math_changed": false,
+    "forecast_authority_changed": false,
+    "value_authority_changed": false,
+    "decision_search_authority_changed": false,
+    "stage2_last_good_contract_changed": false,
+    "recurring_cost_usd": 0
+  },
+  "live_closeout_required": true,
+  "stage4_authorized": false
+}

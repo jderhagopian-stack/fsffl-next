@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from threading import Event
+from unittest.mock import patch
 from time import monotonic, sleep
 
 from fsffl.product.background_jobs import (
@@ -130,3 +132,46 @@ def test_completed_job_records_each_runtime_phase_and_total_elapsed_time() -> No
         IntelligenceJobPhase.ATTACHING_RESULTS,
     ]
     assert all(timing.elapsed_seconds > 0.0 for timing in current.phase_timings)
+
+
+def test_background_job_lowers_only_its_dedicated_thread_priority() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1)
+    observed = Event()
+
+    def work(_progress) -> None:
+        observed.set()
+
+    with patch("fsffl.product.background_jobs.get_native_id", return_value=4242), patch(
+        "fsffl.product.background_jobs.os.setpriority"
+    ) as setpriority:
+        coordinator.start(user_id="u-priority", league_state_id="state-1", work=work)
+        assert observed.wait(timeout=2)
+        current = _wait_for_status(
+            coordinator,
+            user_id="u-priority",
+            status=IntelligenceJobStatus.COMPLETED,
+        )
+        assert current is not None
+        setpriority.assert_called_once_with(os.PRIO_PROCESS, 4242, 10)
+
+
+def test_background_priority_failure_does_not_fail_intelligence_work() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1)
+    observed = Event()
+
+    def work(_progress) -> None:
+        observed.set()
+
+    with patch(
+        "fsffl.product.background_jobs.os.setpriority",
+        side_effect=PermissionError("not permitted"),
+    ):
+        coordinator.start(user_id="u-priority-fail", league_state_id="state-1", work=work)
+        assert observed.wait(timeout=2)
+        current = _wait_for_status(
+            coordinator,
+            user_id="u-priority-fail",
+            status=IntelligenceJobStatus.COMPLETED,
+        )
+        assert current is not None
+        assert current.status == IntelligenceJobStatus.COMPLETED
