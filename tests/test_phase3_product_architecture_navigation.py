@@ -25,11 +25,10 @@ def test_mobile_primary_navigation_has_exactly_four_objects_plus_more():
     assert "grid-template-columns:repeat(5" in (STATIC / "mobile_touch_fix.css").read_text()
 
 
-def test_more_sheet_preserves_every_existing_secondary_route():
+def test_more_sheet_preserves_secondary_routes_without_competing_player_market():
     source = (STATIC / "product_navigation.js").read_text()
     for route in (
         "trade_center",
-        "players_assets",
         "behavioral_intelligence",
         "what_if",
         "simulator",
@@ -37,6 +36,8 @@ def test_more_sheet_preserves_every_existing_secondary_route():
         "analytics",
     ):
         assert f"route:'{route}'" in source
+    decisions = source.split("const DECISIONS=[", 1)[1].split("];", 1)[0]
+    assert "players_assets" not in decisions
     assert "Decision tools" in source
     assert "Scenarios" in source
     assert "Explore" in source

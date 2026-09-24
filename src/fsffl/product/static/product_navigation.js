@@ -7,11 +7,10 @@
     {route:'league',label:'Home',short:'Home',question:'What matters now?',icon:'home'},
     {route:'my_team',label:'Franchise',short:'Franchise',question:'What is driving my team?',icon:'franchise',teamScoped:true},
     {route:'league_comparison',label:'League',short:'League',question:'How does this league fit together?',icon:'league'},
-    {route:'opportunities',label:'Market',short:'Market',question:'What should I do?',icon:'market'},
+    {route:'opportunities',label:'Market',short:'Market',question:'Where is there something worth doing?',icon:'market'},
   ];
   const DECISIONS=[
     {route:'trade_center',label:'Trade Center',description:'Build, simulate and work a specific deal.',icon:'trade',teamScoped:true},
-    {route:'players_assets',label:'Players & Assets',description:'Search the league market and inspect assets.',icon:'player'},
     {route:'behavioral_intelligence',label:'Owners',description:'Understand observed manager behavior.',icon:'owner'},
   ];
   const SCENARIOS=[

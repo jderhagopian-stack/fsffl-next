@@ -21,7 +21,7 @@ from .runtime import UserRuntimeContext
 from .trade_center_view import TradeAssetOption, TradeCenterBrowserView
 
 
-_VALID_INTENTS = {"", "position", "shop", "target", "consolidate"}
+_VALID_INTENTS = {"", "position", "shop", "target", "owner", "consolidate"}
 
 
 def _row_has_ref(row: dict[str, object], side: str, asset_ref: str) -> bool:
@@ -155,7 +155,7 @@ def build_focused_trade_candidates(
 ) -> list[dict[str, object]]:
     """Apply explicit Market Focus before the product candidate limit.
 
-    Position, target and consolidation focus narrow the full structural catalog.
+    Position, target, owner and consolidation focus narrow the full structural catalog.
     Shopping a player rebuilds package neighborhoods constrained to include that asset,
     so it is not merely a browser filter over previously returned rows. Strategic
     posture changes Search ordering only and never rewrites State, Value or Decision.
@@ -179,6 +179,12 @@ def build_focused_trade_candidates(
             rows = [row for row in rows if str(row.get("target_position") or "") == intent_value]
         elif normalized_intent == "target" and intent_value:
             rows = [row for row in rows if _row_has_ref(row, "receive", intent_value)]
+        elif normalized_intent == "owner" and intent_value:
+            rows = [
+                row
+                for row in rows
+                if str(row.get("counterparty_team_id") or "") == intent_value
+            ]
         elif normalized_intent == "consolidate":
             rows = [row for row in rows if len(row.get("send") or []) > 1]
 

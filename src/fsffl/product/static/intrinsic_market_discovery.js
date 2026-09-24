@@ -93,13 +93,19 @@
   function installTrigger(panel){
     let trigger=panel.querySelector('[data-imd-trigger]');
     if(trigger)return trigger;
+    const external=panel.querySelector('[data-market-disagreement]');
+    if(external){
+      if(external.dataset.imdWired!=='true'){external.dataset.imdWired='true';external.addEventListener('click',()=>{open=true;render();void load()})}
+      return external;
+    }
     const control=panel.querySelector('#opp-posture-control');
     const nav=panel.querySelector('.ns-market-mode-nav');
-    if(!control&&!nav)return null;
+    const northStar=panel.querySelector('.market-ns-tabs');
+    if(!control&&!nav&&!northStar)return null;
     const wrap=document.createElement('div');
     wrap.className='imd-trigger';
     wrap.innerHTML='<div><small>Another discovery lens</small><strong>Market vs. Intrinsic</strong><span>Find players where broad-market rank and FSFFL football economics materially disagree.</span></div><button type="button" class="secondary-button" data-imd-trigger>Open value disagreements</button>';
-    (control||nav).insertAdjacentElement('afterend',wrap);
+    (control||nav||northStar).insertAdjacentElement('afterend',wrap);
     trigger=wrap.querySelector('[data-imd-trigger]');
     trigger.addEventListener('click',()=>{open=true;render();void load()});
     return trigger;

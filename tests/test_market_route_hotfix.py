@@ -11,13 +11,15 @@ def _source(path: Path) -> str:
 
 def test_market_route_is_not_navigation_locked_before_team_context() -> None:
     source = _source(NAV)
-    market = "{route:'opportunities',label:'Market',short:'Market',question:'What should I do?',icon:'market'}"
+    market = "{route:'opportunities',label:'Market',short:'Market',question:'Where is there something worth doing?',icon:'market'}"
     assert market in source
-    assert "{route:'opportunities',label:'Market',short:'Market',question:'What should I do?',icon:'market',teamScoped:true}" not in source
+    assert "{route:'opportunities',label:'Market',short:'Market',question:'Where is there something worth doing?',icon:'market',teamScoped:true}" not in source
 
 
 def test_north_star_market_does_not_shadow_global_route_state() -> None:
     source = _source(MARKET)
-    assert "function opportunityState()" in source
+    assert "const opp=()=>{" in source
+    assert "const context=()=>{" in source
+    assert "const onMarket=()=>{" in source
     assert "function state()" not in source
-    assert "state?.route==='opportunities'" in source
+    assert 'state?.route==="opportunities"' in source

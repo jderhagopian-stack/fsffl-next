@@ -26,13 +26,20 @@ def test_full_product_navigation_shell_is_exposed() -> None:
         "Players & Assets",
         "League",
         "Trade Center",
-        "Opportunities",
+        "Market",
         "What-If",
         "Simulator",
         "Analytics Terminal",
         "Reports",
     ):
         assert f"label:'{label}'" in source
+
+
+def test_legacy_players_route_is_compatibility_only_and_delegates_to_market() -> None:
+    source = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
+    assert "{route:'players_assets',label:'Players & Assets',legacy:true}" in source
+    assert "marketTab:'player_board'" in source
+    assert "fsfflProductRoutes.filter(item=>!item.legacy)" in source
 
 
 def test_product_surfaces_explain_authoritative_reuse_not_frontend_model_logic() -> None:

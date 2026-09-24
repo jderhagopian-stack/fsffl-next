@@ -86,6 +86,10 @@
     if(marketInstalled||!available)return;
     marketInstalled=true;
     const progressive=async function({showLoading=true}={}){
+      const pending=typeof window.fsfflPeekDeepLinkIntent==='function'?window.fsfflPeekDeepLinkIntent('opportunities'):null;
+      if(pending?.marketTab&&['player_board','free_agents'].includes(pending.marketTab)&&typeof window.fsfflMarketNorthStar?.bootReadOnly==='function'){
+        return window.fsfflMarketNorthStar.bootReadOnly(pending.marketTab);
+      }
       const store=opportunityStore();if(!store||store.loading)return;
       const captured=oppContextSnapshot(),requestId=++store.requestSequence;
       store.loading=true;try{oppCancelRetry()}catch(_){}if(showLoading)try{oppLoading()}catch(_){}

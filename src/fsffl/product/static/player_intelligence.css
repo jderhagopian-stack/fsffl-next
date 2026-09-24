@@ -132,3 +132,9 @@ body.pi-open{overflow:hidden}#player-intelligence-root{position:fixed;inset:0;z-
   .pi-history-table{min-width:520px}
   .pi-projected-note{font-size:7.5px}
 }
+
+.pi-market-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;padding:9px 10px;border:1px solid rgba(105,169,221,.16);border-radius:11px;background:rgba(13,36,55,.65)}
+.pi-market-actions>small{font-size:7px;text-transform:uppercase;letter-spacing:.08em;color:#7893aa;font-weight:800}
+.pi-market-actions>div{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pi-market-actions button{font-size:8px;min-height:34px}
+@media(max-width:640px){.pi-market-actions{display:grid;align-items:stretch}.pi-market-actions>div{display:grid;grid-template-columns:1fr;justify-content:stretch}.pi-market-actions button{width:100%;min-height:42px}}

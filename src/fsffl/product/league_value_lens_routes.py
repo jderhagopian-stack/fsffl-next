@@ -31,8 +31,16 @@ def install_league_value_lens_routes(
     """Expose Atlas-ready player lenses without creating team value authority."""
 
     @app.get("/api/league/value-lenses")
-    def league_value_lenses(user_id: str = Depends(require_user)) -> dict[str, object]:
+    def league_value_lenses(
+        universe: str = "rostered",
+        user_id: str = Depends(require_user),
+    ) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
+        if universe not in {"rostered", "all"}:
+            raise HTTPException(
+                status_code=422,
+                detail="universe must be rostered or all",
+            )
         if runtime.league_state is None:
             raise HTTPException(
                 status_code=409,
@@ -72,4 +80,5 @@ def install_league_value_lens_routes(
             runtime,
             intrinsic,
             intrinsic_error=intrinsic_error,
+            include_unrostered=universe == "all",
         )

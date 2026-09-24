@@ -5,7 +5,7 @@
   'use strict';
   const VERSION='20260922-player-intelligence-final-ia1';
   const POLL_MS=1500,MAX_POLLS=80;
-  let activeId=null,activeTab='overview',overview=null,history=null,generation=0,sheetScrollTop=0,historyView=null,careerScrollLeft=null;
+  let activeId=null,activeTab='overview',overview=null,history=null,generation=0,sheetScrollTop=0,historyView=null,careerScrollLeft=null,marketContext=null;
   const expandedSeasons=new Set();
 
   const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
@@ -26,8 +26,8 @@
     return root;
   }
   function sheet(){return ensure().querySelector('.pi-sheet')}
-  function close(){const root=ensure();root.hidden=true;document.body.classList.remove('pi-open');activeId=null;activeTab='overview';overview=null;history=null;historyView=null;careerScrollLeft=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1}
-  function open(playerId){const id=normalizedPlayerId(playerId);if(!id)return;activeId=id;activeTab='overview';overview=null;history=null;historyView=null;careerScrollLeft=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Forecast, value lenses, and stats load independently.</span></div>';void loadOverview(g,id);void loadHistory(g,id)}
+  function close(){const root=ensure();root.hidden=true;document.body.classList.remove('pi-open');activeId=null;activeTab='overview';overview=null;history=null;historyView=null;careerScrollLeft=null;marketContext=null;sheetScrollTop=0;expandedSeasons.clear();generation+=1}
+  function open(playerId,context=null){const id=normalizedPlayerId(playerId);if(!id)return;activeId=id;activeTab='overview';overview=null;history=null;historyView=null;careerScrollLeft=null;marketContext=context&&typeof context==='object'?{...context}:null;sheetScrollTop=0;expandedSeasons.clear();generation+=1;const g=generation;const root=ensure();root.hidden=false;document.body.classList.add('pi-open');sheet().innerHTML='<div class="pi-loading"><i></i><strong>Loading Player Intelligence…</strong><span>Forecast, value lenses, and stats load independently.</span></div>';void loadOverview(g,id);void loadHistory(g,id)}
 
   async function loadOverview(g,id){
     try{
@@ -197,6 +197,24 @@
     requestAnimationFrame(()=>{host.scrollTop=sheetScrollTop});
     positionCareerTrajectory(false);
   }
+  function marketActions(){
+    const ctx=marketContext||{},id=activeId;if(!id)return"";
+    const actions=[];
+    if(ctx.rosterStatus==="available")actions.push(["waiver","Evaluate add/drop"]);
+    else if(ctx.managed===true)actions.push(["shop","Shop in Trade Finder"]);
+    else if(ctx.ownerTeamId)actions.push(["target","Target in Trade Finder"],["owner","Open current owner"]);
+    if(!actions.length)return"";
+    return "<section class='pi-market-actions'><small>Market actions</small><div>"+actions.map(([key,label])=>"<button type='button' class='secondary-button' data-pi-market-action='"+key+"'>"+label+"</button>").join("")+"</div></section>";
+  }
+  function runMarketAction(action){
+    const id=activeId,ctx=marketContext?{...marketContext}:{};if(!id)return;
+    close();
+    if(action==="waiver"){window.fsfflMarketNorthStar?.openFreeAgent?.(id);return}
+    if(action==="shop"){window.fsfflMarketNorthStar?.openTradeFinder?.("shop","player:"+id);return}
+    if(action==="target"){window.fsfflMarketNorthStar?.openTradeFinder?.("target","player:"+id);return}
+    if(action==="owner"&&ctx.ownerTeamId){window.fsfflMarketNorthStar?.openOwner?.(ctx.ownerTeamId)}
+  }
+
   function render(){
     if(!overview)return;captureViewState();const p=overview.player,v=overview.value||{},projected=overview.forecast?.current_projected_stats||{};
     sheet().innerHTML=`<button class="pi-close" data-pi-close aria-label="Close Player Intelligence">×</button>
@@ -204,6 +222,7 @@
       <nav class="pi-tabs" role="tablist"><button data-pi-tab="overview" class="${tabClass('overview')}">Overview</button><button data-pi-tab="career" class="${tabClass('career')}">Career & Forecast</button><button data-pi-tab="stats" class="${tabClass('stats')}">Stats</button><button data-pi-tab="methods" class="${tabClass('methods')}">Methods / Evidence</button></nav>
       <div class="pi-tab ${tabClass('overview')}" data-pi-panel="overview">
         ${overviewCards()}
+        ${marketActions()}
         ${finite(v.broad_market_value_index)&&finite(v.intrinsic_value_index)?valueComparison():''}
         <details class="pi-method pi-overview-why"><summary>Why this value?</summary><p>Broad Market and FSFFL Intrinsic use the same 0–10,000 presentation ruler but remain separate governed lenses. Percentiles are secondary context; this is not a buy/sell command.</p></details>
         <section class="pi-section pi-trajectory-section"><div class="pi-section-head"><div><small>Trajectory preview</small><h3>Recent actuals → Forecast</h3></div><button type="button" class="pi-drill-button" data-pi-jump="career">Open detail</button></div>${chart(true)}</section>
@@ -215,9 +234,9 @@
   }
   function bindTabs(){
     const host=sheet();host.querySelectorAll('[data-pi-tab]').forEach(button=>button.addEventListener('click',()=>{captureViewState();activeTab=button.dataset.piTab||'overview';host.querySelectorAll('[data-pi-tab]').forEach(x=>x.classList.toggle('active',x.dataset.piTab===activeTab));host.querySelectorAll('[data-pi-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.piPanel===activeTab));host.scrollTop=0;if(activeTab==='career')positionCareerTrajectory(careerScrollLeft===null)}));
-    const drill=host.querySelector('[data-pi-jump="career"]');if(drill)drill.addEventListener('click',()=>{captureViewState();activeTab='career';sheetScrollTop=0;render();positionCareerTrajectory(careerScrollLeft===null)});
+    const drill=host.querySelector('[data-pi-jump="career"]');if(drill)drill.addEventListener('click',()=>{captureViewState();activeTab='career';sheetScrollTop=0;render();positionCareerTrajectory(careerScrollLeft===null)});host.querySelectorAll('[data-pi-market-action]').forEach(button=>button.addEventListener('click',()=>runMarketAction(button.dataset.piMarketAction)));
   }
-  document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]');if(!trigger)return;const id=normalizedPlayerId(trigger.dataset.playerIntelligenceId);if(!id)return;event.preventDefault();event.stopPropagation();open(id)},true);
+  document.addEventListener('click',event=>{const trigger=event.target.closest('[data-player-intelligence-id]');if(!trigger)return;const id=normalizedPlayerId(trigger.dataset.playerIntelligenceId);if(!id)return;const ctx={ownerTeamId:trigger.dataset.piOwnerTeamId||null,ownerTeamName:trigger.dataset.piOwnerTeamName||null,rosterStatus:trigger.dataset.piRosterStatus||null,managed:trigger.dataset.piManaged==='true'||state?.route==='my_team'};event.preventDefault();event.stopPropagation();open(id,ctx)},true);
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!ensure().hidden)close()});
   window.fsfflPlayerIntelligence={open,close,version:VERSION};
 })();
