@@ -18,9 +18,9 @@ def test_historical_completed_job_cannot_settle_partial_current_state() -> None:
     source = _source()
     assert "fsfflSessionStartedJobId" in source
     assert "if(fsfflSessionStartedJobId===payload.job_id)" in source
-    assert "A completed job discovered after the current state is already partial" in source
+    assert "Do not auto-start heavy intelligence merely because a page was opened." in source
     completed_branch = source.split("if(payload.job_id&&payload.status==='completed')", 1)[1]
-    assert "await maybeStartIntelligenceJob();" in completed_branch
+    assert "reflectRefreshAction(state.context);" in completed_branch
 
 
 def test_completed_partial_session_stops_auto_loop_and_offers_retry() -> None:

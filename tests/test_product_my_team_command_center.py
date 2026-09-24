@@ -163,7 +163,7 @@ def test_franchise_north_star_is_the_only_primary_franchise_renderer() -> None:
     assert NORTH_STAR.rfind("window.renderFsfflMyTeam=") == NORTH_STAR.rfind(
         "window.renderFsfflMyTeam=loadFranchiseNorthStar;"
     )
-    assert "franchiseNorthStarStaticVersion='20260924-franchise-live-cleanup1'" in SHELL
+    assert "franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1'" in SHELL
     assert "lazyProductScript(\'renderFsfflMyTeam\',\'/static/my_team_dashboard.js\'" in SHELL
     assert "franchiseNorthStarStaticVersion)" in SHELL
 

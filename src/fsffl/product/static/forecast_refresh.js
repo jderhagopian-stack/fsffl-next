@@ -262,11 +262,12 @@ async function maintainFsfflIntelligence(){
         await settleCompletedJob();
         return;
       }
-      // A completed job discovered after the current state is already partial must
-      // not suppress a fresh enrichment attempt for this browser session.
+      // Do not auto-start heavy intelligence merely because a page was opened.
+      // Preserve and serve the current last-good evidence; the user may explicitly
+      // request enrichment with Refresh Intelligence.
       fsfflCurrentJobId=null;
       fsfflJobStateId=null;
-      await maybeStartIntelligenceJob();
+      reflectRefreshAction(state.context);
       return;
     }
 
@@ -277,13 +278,15 @@ async function maintainFsfflIntelligence(){
       }
       fsfflCurrentJobId=null;
       fsfflJobStateId=null;
-      await maybeStartIntelligenceJob();
+      reflectRefreshAction(state.context);
       return;
     }
   }catch(error){
     console.error('Unable to discover FSFFL intelligence job',error);
   }
-  await maybeStartIntelligenceJob();
+  // Ordinary browsing is read-first. Missing enrichment is an explicit manual
+  // action; scheduled server-side semantics remain independent of page entry.
+  reflectRefreshAction(state.context);
 }
 
 setInterval(maintainFsfflIntelligence,2500);

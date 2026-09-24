@@ -142,9 +142,9 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?pi=20260922-player-intelligence-final-ia1&v=20260924-market-north-star1" in index
-    assert "player_intelligence.css?pi=20260922-player-intelligence-final-ia1&v=20260924-market-north-star1" in index
-    assert "product_shell.js?v=20260924-market-north-star1" in index
+    assert "player_intelligence.js?pi=20260922-player-intelligence-final-ia1&v=20260924-live-usability-hotfix1" in index
+    assert "player_intelligence.css?pi=20260922-player-intelligence-final-ia1&v=20260924-live-usability-hotfix1" in index
+    assert "product_shell.js?v=20260924-live-usability-hotfix1" in index
 
 
 def test_full_career_mobile_history_is_compact_and_stateful() -> None:
