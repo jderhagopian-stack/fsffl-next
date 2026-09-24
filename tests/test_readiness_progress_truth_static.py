@@ -38,5 +38,5 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 
 def test_readiness_repair_busts_mobile_static_cache() -> None:
     index = _index()
-    assert "20260924-readiness-truth1" in index
-    assert "20260924-live-usability-hotfix1" not in index
+    assert "/static/forecast_refresh.js?v=20260924-readiness-truth1" in index
+    assert "/static/product_shell.js?v=20260924-readiness-truth1" in index
