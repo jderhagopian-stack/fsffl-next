@@ -273,6 +273,15 @@ class IntelligenceJobCoordinator:
             )
             self._jobs[job_id] = updated
             self._persist(updated)
+            if current.status != updated.status or current.phase != updated.phase:
+                _logger.info(
+                    "FSFFL intelligence lifecycle transition job=%s user=%s state=%s status=%s phase=%s",
+                    updated.job_id,
+                    updated.user_id,
+                    updated.league_state_id,
+                    updated.status.value,
+                    updated.phase.value,
+                )
             return updated
 
     def _log_final_timing(self, job: IntelligenceJob) -> None:
