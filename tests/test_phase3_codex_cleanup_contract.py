@@ -38,11 +38,23 @@ def test_opportunity_context_change_invalidates_inflight_actions_and_old_rows() 
     assert "if(state?.route==='opportunities'){oppLoading();" in opportunities
 
 
-def test_behavioral_rls_bootstrap_is_process_once_and_retryable_on_failure() -> None:
+def test_behavioral_runtime_schema_validation_is_read_only_and_migration_owned() -> None:
     source = Path("src/fsffl/behavioral/postgres_store.py").read_text()
+    lowered = source.lower()
 
-    assert "_RLS_BOOTSTRAP_LOCK = Lock()" in source
-    assert "_RLS_BOOTSTRAPPED_DATABASE_URLS: set[str] = set()" in source
-    assert "if self._database_url not in _RLS_BOOTSTRAPPED_DATABASE_URLS:" in source
-    assert "_RLS_BOOTSTRAPPED_DATABASE_URLS.add(self._database_url)" in source
-    assert source.index("cursor.execute(f\"alter table fsffl.{table_name} enable row level security\")") < source.index("_RLS_BOOTSTRAPPED_DATABASE_URLS.add(self._database_url)")
+    # Ordinary hosted runtime validates the governed schema; it never creates or
+    # repairs schema/index/RLS state itself.
+    assert "pg_class" in source
+    assert "relrowsecurity" in source
+    assert "to_regclass('fsffl.behavior_event_family_time_idx')" in source
+    assert "missing=" in source
+    assert "rls_disabled=" in source
+    assert "apply governed migrations before serving traffic" in source
+    assert "_RLS_BOOTSTRAP_LOCK" not in source
+    assert "_RLS_BOOTSTRAPPED_DATABASE_URLS" not in source
+    assert "create schema" not in lowered
+    assert "create table" not in lowered
+    assert "create index" not in lowered
+    assert "alter table" not in lowered
+    assert "drop table" not in lowered
+    assert "drop index" not in lowered
