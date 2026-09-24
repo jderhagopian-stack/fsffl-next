@@ -174,6 +174,7 @@ async function loadFsfflHomeNorthStar({force=false}={}){
 }
 function installFsfflHomeExperience(){
   const leagueScreen=document.querySelector('#league-screen');if(!leagueScreen)return;
+  leagueScreen.classList.add('fsffl-home-north-star-active');
   const hero=leagueScreen.querySelector('.hero-row');if(hero)hero.hidden=true;
   leagueScreen.querySelector('.metric-grid')?.setAttribute('hidden','');
   leagueScreen.querySelector('.dashboard-grid')?.setAttribute('hidden','');
