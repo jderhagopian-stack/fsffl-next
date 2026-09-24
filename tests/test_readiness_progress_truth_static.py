@@ -46,7 +46,7 @@ def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     assert "/static/product_shell.js?v=20260924-readiness-control4" in index
 
 
-def test_visible_readiness_strip_exposes_manual_refresh_when_incomplete() -> None:
+def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
     source = _shell()
     assert "fsffl-shared-readiness-refresh" in source
     assert "Refresh Intelligence" in source
@@ -54,4 +54,3 @@ def test_visible_readiness_strip_exposes_manual_refresh_when_incomplete() -> Non
     assert "const refreshAction=(!fsfflSharedReadinessJobActive())?" in source
     assert "!status.complete&&!fsfflSharedReadinessJobActive()" not in source
     assert ".fsffl-shared-readiness-refresh{pointer-events:auto" in source
-    assert "!status.complete&&!fsfflSharedReadinessJobActive()" in source
