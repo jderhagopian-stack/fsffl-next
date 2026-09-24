@@ -49,6 +49,7 @@ from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
 # wall-clock phase timings; ensure Render emits those INFO records so latency work
 # can target measured bottlenecks without adding technical noise to product UI.
 logging.getLogger("fsffl.product.performance").setLevel(logging.INFO)
+logging.getLogger("fsffl.product.persistence").setLevel(logging.INFO)
 _logger = logging.getLogger("fsffl.product.performance")
 
 _persistence_store = persistence_store_from_env()
