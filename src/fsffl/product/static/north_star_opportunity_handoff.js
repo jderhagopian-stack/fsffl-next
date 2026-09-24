@@ -18,6 +18,8 @@
       actionAuthority:result?.action_authority||row?.action_authority||row?.recommendation_authority||null,
       disposition:result?.disposition?.disposition||row?.focal_decision_shape||null,
       simulationCount:Number(result?.scenario_simulation_count||0),
+      whySurfaced:(row?.search_context||[])[0]||row?.target_position||'Governed Market Search path',
+      packageShape:row?.package_shape||null,
     };
     window.fsfflOpportunityHandoffMeta=meta;
   }
@@ -26,7 +28,7 @@
     const host=banner.querySelector('div');if(!host)return;
     const block=document.createElement('div');block.className='ns-opportunity-handoff-context';
     const authority=meta.actionAuthority?words(meta.actionAuthority):'not yet evaluated',disposition=meta.disposition?words(meta.disposition):'pending';
-    block.innerHTML=`<span>Market context carried forward</span><strong>${esc(authority)}</strong><small>${esc(disposition)}${meta.simulationCount?` · ${meta.simulationCount.toLocaleString()} simulations`:''}</small>`;
+    block.innerHTML=`<span>Market context carried forward · ${esc(meta.whySurfaced)}</span><strong>${esc(authority)}</strong><small>${esc(disposition)}${meta.packageShape?` · ${esc(words(meta.packageShape))}`:''}${meta.simulationCount?` · ${meta.simulationCount.toLocaleString()} simulations`:''}</small>`;
     host.appendChild(block);
   }
   function install(){
