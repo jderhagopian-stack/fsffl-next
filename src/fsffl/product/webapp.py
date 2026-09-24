@@ -271,8 +271,19 @@ def _team_view_payload(view, value_evidence, forecast_evidence=None) -> dict[str
     }
 
 
-def _managed_team_view_payload(runtime) -> dict[str, object]:
-    """Return the strongest already-attached managed-team view without launching new work."""
+def _managed_team_view_payload(
+    runtime,
+    *,
+    state_only_while_enriching: bool = False,
+) -> dict[str, object]:
+    """Return the strongest already-attached managed-team view without launching new work.
+
+    On the first governed enrichment, there may be no completed Simulation bundle to
+    serve yet. While that background job is active, prefer the cheap canonical
+    State-only team view instead of rebuilding forecast-lineup analytics on every
+    foreground read. This is presentation/read-path degradation only; it does not
+    change Forecast, Simulation, Value, or the pending intelligence bundle.
+    """
 
     if runtime.league_state is None:
         raise ValueError("No league is loaded")
@@ -285,6 +296,12 @@ def _managed_team_view_payload(runtime) -> dict[str, object]:
             if item.team_id == runtime.selected_team_id
         )
         return _team_view_payload(view, runtime.value_evidence, runtime.forecast_evidence)
+    if state_only_while_enriching:
+        view = build_state_only_team_view(
+            runtime.league_state,
+            team_id=runtime.selected_team_id,
+        )
+        return _team_view_payload(view, runtime.value_evidence)
     lineup_result = _forecast_lineup_result(runtime)
     if lineup_result is not None:
         view = next(
@@ -705,7 +722,15 @@ def create_app(
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
 
-        team_view = _managed_team_view_payload(runtime)
+        current_job = jobs.current(user_id)
+        enrichment_running = bool(
+            current_job is not None
+            and current_job.status.value in {"queued", "running"}
+        )
+        team_view = _managed_team_view_payload(
+            runtime,
+            state_only_while_enriching=enrichment_running,
+        )
         atlas = build_league_atlas_payload(
             runtime,
             preseason_reason=(
@@ -738,8 +763,16 @@ def create_app(
     @application.get("/api/my-team")
     def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
+        current_job = jobs.current(user_id)
+        enrichment_running = bool(
+            current_job is not None
+            and current_job.status.value in {"queued", "running"}
+        )
         try:
-            return _managed_team_view_payload(runtime)
+            return _managed_team_view_payload(
+                runtime,
+                state_only_while_enriching=enrichment_running,
+            )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
