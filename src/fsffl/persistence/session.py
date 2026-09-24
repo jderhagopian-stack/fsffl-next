@@ -151,6 +151,21 @@ def persist_runtime_snapshot(
                 result=value_evidence,
             )
         )
+        for estimate in value_evidence.estimates:
+            store.append_market_value_snapshot(
+                asset_ref=estimate.asset_id,
+                asset_kind=estimate.asset_kind.value,
+                scale_id=estimate.scale.scale_id,
+                market_context_id=estimate.market_context_id,
+                estimate_as_of=estimate.as_of,
+                value=float(estimate.distribution.mean),
+                source_lineage={
+                    "model_version": estimate.model_version,
+                    "evidence_sources": list(estimate.evidence_sources),
+                },
+                recorded_at=now,
+            )
+
     # Complete bundles get an independent durable identity. Partial refresh
     # checkpoints cannot displace this restart authority.
     if forecast_evidence is not None and simulation_analytics is not None and value_evidence is not None:
@@ -167,22 +182,6 @@ def persist_runtime_snapshot(
                 computed_at=now,
             )
         )
-
-        for estimate in value_evidence.estimates:
-            store.append_market_value_snapshot(
-                asset_ref=estimate.asset_id,
-                asset_kind=estimate.asset_kind.value,
-                scale_id=estimate.scale.scale_id,
-                market_context_id=estimate.market_context_id,
-                estimate_as_of=estimate.as_of,
-                value=float(estimate.distribution.mean),
-                source_lineage={
-                    "model_version": estimate.model_version,
-                    "evidence_sources": list(estimate.evidence_sources),
-                },
-                recorded_at=now,
-            )
-
 
 def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> DurableRuntimeSnapshot | None:
     """Restore only an internally consistent, current-model runtime snapshot."""
