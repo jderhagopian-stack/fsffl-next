@@ -96,7 +96,7 @@ def test_mobile_connect_uses_background_import_and_transport_recovery() -> None:
     assert "pageshow" not in source
 
 
-def test_mobile_connect_has_one_same_league_poll_owner_and_canonical_readiness_probe() -> None:
+def test_mobile_connect_has_one_poll_owner_and_requires_terminal_connect_success() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -110,9 +110,13 @@ def test_mobile_connect_has_one_same_league_poll_owner_and_canonical_readiness_p
     assert "['queued','running'].includes(existing.status)" in source
     assert "current.status==='completed'&&current.operation===operation" in source
     assert "const recovered=await recoverCurrentJob(leagueId,operation)" in source
-    assert "async function usableConnectedContext(leagueId)" in source
-    assert "if(operation==='connect'&&Date.now()>=nextContextProbeAt)" in source
-    assert "if(context)return context" in source
+    perform = source.split("async function performBackgroundImport", 1)[1].split(
+        "function waitForBackgroundImport", 1
+    )[0]
+    assert "nextContextProbeAt" not in perform
+    assert "operation==='connect'&&Date.now()" not in perform
+    assert "job?.status==='completed'" in perform
+    assert "const context=await resilientApi('/api/product-context',{},3)" in perform
     assert "pollDelay=Math.min(2200" in source
     assert "League import completed without activating the requested Sleeper league." in source
     assert "if(!contextMatchesLeague(context,normalized)||!context?.state_id)" in source
@@ -303,4 +307,21 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
     assert "20260924-readiness-control4" in source
-    assert "mobile_safari_recovery.js?v=20260924-readiness-control4" in source
+    assert "mobile_safari_recovery.js?v=20260924-league-switch-terminal1" in source
+
+
+def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    connect = source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+    set_index = connect.index("runtime_store.set_league_state(user_id, league_state)")
+    wait_index = connect.index('getattr(runtime_store, "wait_for_checkpoint", None)')
+    verify_index = connect.index("active_state = runtime_store.get(user_id).league_state")
+    behavioral_index = connect.index("behavioral_coordinator.start")
+    assert set_index < wait_index < verify_index < behavioral_index
+    assert 'raise RuntimeError("Sleeper league activation could not be durably checkpointed")' in connect
+    assert 'raise RuntimeError("Sleeper league activation lost requested identity")' in connect
