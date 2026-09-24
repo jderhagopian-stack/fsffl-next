@@ -6,6 +6,7 @@ SHELL = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="ut
 LEAGUE = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
 MARKET = Path("src/fsffl/product/static/opportunities.js").read_text(encoding="utf-8")
 INDEX = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
+APP = Path("src/fsffl/product/static/app.js").read_text(encoding="utf-8")
 
 
 def test_home_matches_north_star_single_screen_information_architecture() -> None:
@@ -57,8 +58,9 @@ def test_home_outlook_is_exact_current_simulation_or_unavailable() -> None:
     assert "Matching current Simulation unavailable" in HOME
 
 
-def test_home_cold_load_calls_only_home_composition_endpoint() -> None:
+def test_home_cold_load_uses_only_bounded_read_endpoints_and_no_deep_work() -> None:
     assert "api('/api/home')" in HOME
+    assert "api('/api/intelligence/status')" in HOME
     for forbidden in (
         "/api/opportunities/workspace",
         "/api/opportunities/trade",
@@ -135,3 +137,42 @@ def test_home_north_star_accepted_sections_and_drill_ins_remain_intact_after_cle
         "data-home-action=\"exposure\"",
     ):
         assert action in HOME
+
+
+def test_home_replaces_methods_evidence_dropdown_with_compact_readiness_strip() -> None:
+    assert '<details class="home-evidence">' not in HOME
+    assert "Evidence & readiness" not in HOME
+    assert "home-readiness-strip" in HOME
+    assert "HOME_READINESS_STEPS=7" in HOME
+    for label in (
+        "Preparing current intelligence…",
+        "Building projections…",
+        "Refreshing league state…",
+        "Running season outlook…",
+        "Building market values…",
+        "Attaching current intelligence…",
+        "Intelligence current",
+    ):
+        assert label in HOME
+    assert "min-height:32px" in HOME
+    assert "height:2px" in HOME
+
+
+def test_home_readiness_strip_tracks_canonical_intelligence_status_without_launching_work() -> None:
+    assert "api('/api/intelligence/status')" in HOME
+    assert "fsffl:intelligence-status-updated" in HOME
+    assert "fsffl:intelligence-status-updated" in APP
+    assert "setInterval(" in HOME
+    assert "2500" in HOME
+    for forbidden in (
+        "/api/intelligence/jobs",
+        "/api/intelligence/refresh-forecasts",
+        "/api/what-if",
+        "/api/opportunities/workspace",
+    ):
+        assert forbidden not in HOME
+
+
+def test_home_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
+    assert "/static/app.js?v=20260923-home-north-star1&home=20260924-readiness1" in INDEX
+    assert "/static/home_dashboard.js?v=20260923-home-north-star1&home=20260924-readiness1" in INDEX
