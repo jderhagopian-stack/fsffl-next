@@ -7,8 +7,10 @@ def test_home_stays_presentation_only_after_north_star_recomposition() -> None:
     workspace = Path("src/fsffl/product/opportunity_workspace.py").read_text()
 
     assert "api('/api/home')" in home
-    assert "api('/api/intelligence/status')" in home
-    assert home.count("api(") == 2
+    shell = Path("src/fsffl/product/static/product_shell.js").read_text()
+    assert "api('/api/intelligence/status')" not in home
+    assert "api('/api/intelligence/status')" in shell
+    assert home.count("api(") == 1
     assert "most_promising_evaluated" not in home
     assert "/api/opportunities/workspace" not in home
     assert "bilateral_evaluation_limit: int = 1" in workspace
