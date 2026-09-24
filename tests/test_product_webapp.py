@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from pathlib import Path
 import hashlib
 
 from fastapi.testclient import TestClient
@@ -188,3 +189,36 @@ def test_my_team_exposes_state_only_view_with_missing_evidence_warning(monkeypat
     assert payload["team_id"] == "a"
     assert payload["display_name"] == "Alpha"
     assert payload["context"]["warnings"][0]["code"] == "team_runtime_not_enriched"
+
+
+def test_managed_team_view_uses_state_only_during_initial_enrichment(monkeypatch) -> None:
+    from fsffl.product.runtime import UserRuntimeContext
+    from fsffl.product import webapp as product_webapp
+
+    runtime = UserRuntimeContext(
+        user_id="u1",
+        league_state=_canonical_state(),
+        selected_team_id="a",
+        forecast_evidence=object(),  # type: ignore[arg-type]
+    )
+
+    def unexpected_forecast_rebuild(_runtime):
+        raise AssertionError("foreground read rebuilt forecast-lineup analytics")
+
+    monkeypatch.setattr(
+        product_webapp,
+        "_forecast_lineup_result",
+        unexpected_forecast_rebuild,
+    )
+    payload = product_webapp._managed_team_view_payload(
+        runtime,
+        state_only_while_enriching=True,
+    )
+    assert payload["team_id"] == "a"
+    assert payload["context"]["warnings"][0]["code"] == "team_runtime_not_enriched"
+
+
+def test_home_and_franchise_use_lightweight_read_path_while_job_is_active() -> None:
+    source = Path("src/fsffl/product/webapp.py").read_text()
+    assert source.count("state_only_while_enriching=enrichment_running") >= 2
+    assert 'current_job.status.value in {"queued", "running"}' in source
