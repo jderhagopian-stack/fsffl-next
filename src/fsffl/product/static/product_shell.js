@@ -143,27 +143,10 @@ async function fsfflPollSharedReadinessOnce(){
   if(fsfflSharedReadinessState.requestInFlight||!state?.context?.league_id)return;
   fsfflSharedReadinessState.requestInFlight=true;
   try{
-    // Poll the authoritative lifecycle endpoint directly. /api/intelligence/status
-    // is useful for governed evidence stages, but the shared 1/7 -> 7/7 strip is
-    // specifically a job-lifecycle view and must not lose the active job when
-    // other presentation refreshes replace state.intelligence.
-    const payload=await api('/api/intelligence/jobs/current');
-    state.context={...state.context,...payload};
-    state.intelligence=state.intelligence||{};
-    state.intelligence.job={
-      job_id:payload.job_id||null,
-      status:payload.status||'idle',
-      phase:payload.phase||'idle',
-      message:payload.message||'',
-      error:payload.error||null,
-      league_state_id:payload.league_state_id||null,
-      created_at:payload.created_at||null,
-      updated_at:payload.updated_at||null,
-    };
+    state.intelligence=await api('/api/intelligence/status');
     fsfflRenderSharedReadiness();
     const status=fsfflSharedReadinessSnapshot();
-    const terminal=['completed','failed','interrupted'].includes(state.intelligence.job.status);
-    if(status.complete||status.failed||terminal)fsfflStopSharedReadinessPolling();
+    if(status.complete||status.failed||state?.intelligence?.job?.status==='interrupted')fsfflStopSharedReadinessPolling();
   }catch(_error){
     fsfflRenderSharedReadiness();
   }finally{
