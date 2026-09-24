@@ -199,7 +199,7 @@ async function pollIntelligenceJob(){
 
 async function maybeStartIntelligenceJob({manual=false}={}){
   if(fsfflJobStartInFlight||!state?.context?.league_id)return;
-  if(intelligencePipelineReady(state.context)){
+  if(!manual&&intelligencePipelineReady(state.context)){
     reflectRefreshAction(state.context);
     return;
   }
