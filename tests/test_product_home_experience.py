@@ -58,9 +58,12 @@ def test_home_outlook_is_exact_current_simulation_or_unavailable() -> None:
     assert "Matching current Simulation unavailable" in HOME
 
 
-def test_home_cold_load_uses_only_bounded_read_endpoints_and_no_deep_work() -> None:
+
+def test_home_cold_load_uses_only_home_composition_and_shared_shell_owns_status_reads() -> None:
     assert "api('/api/home')" in HOME
-    assert "api('/api/intelligence/status')" in HOME
+    assert "api('/api/intelligence/status')" not in HOME
+    assert HOME.count("api(") == 1
+    assert "api('/api/intelligence/status')" in SHELL
     for forbidden in (
         "/api/opportunities/workspace",
         "/api/opportunities/trade",
@@ -71,7 +74,6 @@ def test_home_cold_load_uses_only_bounded_read_endpoints_and_no_deep_work() -> N
     ):
         assert forbidden not in HOME
     assert "It does not launch Opportunity Search, Decision, Value or new Simulation work." in HOME
-
 
 def test_home_contextual_navigation_contract_is_presentation_owned() -> None:
     assert "fsfflNavigateTo" in HOME
@@ -139,11 +141,13 @@ def test_home_north_star_accepted_sections_and_drill_ins_remain_intact_after_cle
         assert action in HOME
 
 
-def test_home_replaces_methods_evidence_dropdown_with_compact_readiness_strip() -> None:
+
+def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -> None:
     assert '<details class="home-evidence">' not in HOME
     assert "Evidence & readiness" not in HOME
-    assert "home-readiness-strip" in HOME
-    assert "HOME_READINESS_STEPS=7" in HOME
+    assert "homeReadiness" not in HOME
+    assert "FSFFL_SHARED_READINESS_STEPS=7" in SHELL
+    assert "fsffl-shared-readiness-strip" in SHELL
     for label in (
         "Preparing current intelligence…",
         "Building projections…",
@@ -153,32 +157,47 @@ def test_home_replaces_methods_evidence_dropdown_with_compact_readiness_strip() 
         "Attaching current intelligence…",
         "Intelligence current",
     ):
-        assert label in HOME
-    assert "min-height:32px" in HOME
-    assert "height:2px" in HOME
-    assert "function homeReadinessHost()" in HOME
-    assert "document.querySelector(\'#fsffl-sync-state\')" in HOME
-    assert "home-readiness-host" in HOME
-    assert "function homeReleaseReadinessHost()" in HOME
-    assert "window.fsfflHomeReadinessRouteChanged" in HOME
-    assert "${homeReadinessMarkup()}" not in HOME
+        assert label in SHELL
+    assert "min-height:32px" in SHELL
+    assert "height:2px" in SHELL
+    assert "function fsfflSharedReadinessHost()" in SHELL
+    assert "document.querySelector('#fsffl-sync-state')" in SHELL
+    assert "fsffl-shared-readiness-host" in SHELL
+    assert "pointer-events:none" in SHELL
+    assert "white-space:normal" in SHELL
+    assert "overflow-wrap:anywhere" in SHELL
 
 
-def test_home_readiness_strip_tracks_canonical_intelligence_status_without_launching_work() -> None:
-    assert "api('/api/intelligence/status')" in HOME
-    assert "fsffl:intelligence-status-updated" in HOME
-    assert "fsffl:intelligence-status-updated" in APP
-    assert "setInterval(" in HOME
-    assert "2500" in HOME
+def test_shared_readiness_tracks_status_on_every_route_without_launching_model_work() -> None:
+    readiness = SHELL.split("const FSFFL_SHARED_READINESS_STEPS=7;", 1)[1].split(
+        "function productSurfaceError", 1
+    )[0]
+    assert "api('/api/intelligence/status')" in readiness
+    assert "fsffl:intelligence-status-updated" in SHELL
+    assert "fsffl:product-context-updated" in SHELL
+    assert "fsffl:sync-state" in SHELL
+    assert "setInterval(" in readiness
+    assert "2500" in readiness
+    assert "state?.route" not in readiness
+    assert "route==='league'" not in readiness
+    assert "if(!status.connected" in readiness
+    assert "node.hidden=true" in readiness
+    assert "fsfflSharedReadinessJobActive" in readiness
     for forbidden in (
         "/api/intelligence/jobs",
         "/api/intelligence/refresh-forecasts",
         "/api/what-if",
         "/api/opportunities/workspace",
+        "/api/trade-center/analyze",
+        "/api/trade-center/simulate",
     ):
-        assert forbidden not in HOME
+        assert forbidden not in readiness
 
 
-def test_home_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    assert "/static/app.js?v=20260924-home-readiness-top1" in INDEX
-    assert "/static/home_dashboard.js?v=20260924-home-readiness-top1" in INDEX
+def test_shared_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
+    release = "20260924-shared-readiness-shell1"
+    assert f"/static/app.js?v={release}" in INDEX
+    assert f"/static/home_dashboard.js?v={release}" in INDEX
+    assert f"/static/product_shell.js?v={release}" in INDEX
+    assert f"const homeNorthStarStaticVersion='{release}';" in SHELL
+
