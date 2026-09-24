@@ -24,7 +24,7 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260924-live-usability-hotfix1';
+const fsfflStaticVersion='20260924-readiness-truth1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const homeNorthStarStaticVersion='20260924-live-usability-hotfix1';
@@ -88,9 +88,9 @@ function fsfflSharedReadinessEscape(value){return String(value??'').replaceAll('
 function fsfflSharedReadinessSnapshot(){
   const context=state?.context||{},job=state?.intelligence?.job||null;
   if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false};
-  if(job?.status==='failed'||job?.phase==='failed'){
+  if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
     const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
-    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:'Intelligence refresh needs attention',failed:true,complete:false};
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:(job?.status==='interrupted'||job?.phase==='interrupted')?'Refresh interrupted — last-good intelligence retained':'Intelligence refresh needs attention',failed:true,complete:false};
   }
   if(job&&fsfflSharedReadinessPhases[job.phase]){
     const [step,label]=fsfflSharedReadinessPhases[job.phase];
@@ -143,10 +143,27 @@ async function fsfflPollSharedReadinessOnce(){
   if(fsfflSharedReadinessState.requestInFlight||!state?.context?.league_id)return;
   fsfflSharedReadinessState.requestInFlight=true;
   try{
-    state.intelligence=await api('/api/intelligence/status');
+    // Poll the authoritative lifecycle endpoint directly. /api/intelligence/status
+    // is useful for governed evidence stages, but the shared 1/7 -> 7/7 strip is
+    // specifically a job-lifecycle view and must not lose the active job when
+    // other presentation refreshes replace state.intelligence.
+    const payload=await api('/api/intelligence/jobs/current');
+    state.context={...state.context,...payload};
+    state.intelligence=state.intelligence||{};
+    state.intelligence.job={
+      job_id:payload.job_id||null,
+      status:payload.status||'idle',
+      phase:payload.phase||'idle',
+      message:payload.message||'',
+      error:payload.error||null,
+      league_state_id:payload.league_state_id||null,
+      created_at:payload.created_at||null,
+      updated_at:payload.updated_at||null,
+    };
     fsfflRenderSharedReadiness();
     const status=fsfflSharedReadinessSnapshot();
-    if(status.complete||status.failed)fsfflStopSharedReadinessPolling();
+    const terminal=['completed','failed','interrupted'].includes(state.intelligence.job.status);
+    if(status.complete||status.failed||terminal)fsfflStopSharedReadinessPolling();
   }catch(_error){
     fsfflRenderSharedReadiness();
   }finally{
