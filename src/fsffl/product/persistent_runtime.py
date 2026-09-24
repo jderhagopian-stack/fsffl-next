@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
+from time import monotonic
 from concurrent.futures import ThreadPoolExecutor
 from threading import RLock
 
@@ -91,6 +93,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     def _restore_once(self, user_id: str) -> None:
         if self._persistence is None:
             return
+        started = monotonic()
         with self._restore_lock:
             if user_id in self._restore_attempted:
                 return
@@ -101,12 +104,16 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     return
                 super().set_league_state(user_id, snapshot.league_state)
                 if snapshot.forecast_evidence is not None:
-                    super().set_intelligence_bundle(
+                    restored = super().set_intelligence_bundle(
                         user_id,
                         league_state=snapshot.league_state,
                         forecast_evidence=snapshot.forecast_evidence,
                         simulation_analytics=snapshot.simulation_analytics,
                         value_evidence=snapshot.value_evidence,
+                    )
+                    self._contexts[user_id] = replace(
+                        restored,
+                        intelligence_reused=True,
                     )
                 if snapshot.selected_team_id is not None:
                     super().select_team(user_id, snapshot.selected_team_id)
@@ -123,8 +130,29 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     snapshot.simulation_analytics is not None,
                     snapshot.value_evidence is not None,
                 )
+                _logger.info(
+                    "FSFFL persist-first restore timing user=%s elapsed=%.3fs complete_bundle=%s",
+                    user_id,
+                    max(0.0, monotonic() - started),
+                    (
+                        snapshot.forecast_evidence is not None
+                        and snapshot.simulation_analytics is not None
+                        and snapshot.value_evidence is not None
+                    ),
+                )
             except Exception as exc:
                 _logger.warning("FSFFL persistence restore failed user=%s error=%s", user_id, exc)
+
+    def restore_user(self, user_id: str) -> UserRuntimeContext:
+        """Synchronously restore the last-good exact-compatible beta context.
+
+        Hosted startup may call this before accepting traffic so the first useful
+        request consumes persisted evidence instead of paying lazy-restore latency.
+        """
+
+        if not user_id.strip():
+            raise ValueError("user_id cannot be blank")
+        return self.get(user_id)
 
     def get(self, user_id: str) -> UserRuntimeContext:
         current = super().get(user_id)
