@@ -1,144 +1,372 @@
-/* North Star Market presentation.
- * Reads existing Opportunity Search / Decision / Behavioral outputs only.
- * It does not create candidate ordering, recommendation authority, acceptance probability,
- * Value truth, or competitive-state truth. Presentation filters and sort controls operate
- * only on evidence already returned by the governed Market workspace.
+/* FSFFL NEXT Market North Star.
+ * Presentation and workflow composition only.
+ * Search, Value, Forecast, Decision, Simulation and Behavioral authority remain server-owned.
  */
 (function(){
-  let queued=false;
-  const SAVE_KEY='fsffl.market.savedOpportunities';
-  const WATCH_KEY='fsffl.market.watchedPlayers';
-  const esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-  const words=value=>String(value||'').replaceAll('_',' ');
-  const initials=value=>String(value||'?').split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase();
-  const assets=items=>(items||[]).map(item=>item.label||item.asset_ref).filter(Boolean);
-  const assetRefs=items=>(items||[]).map(item=>item.asset_ref||item.label).filter(Boolean);
-  const unique=items=>[...new Set(items.filter(Boolean))];
-  function opportunityState(){try{return typeof fsfflOpportunityState!=='undefined'?fsfflOpportunityState:null}catch(_){return null}}
-  function onMarketRoute(){try{return typeof window.state!=='undefined'?window.state?.route==='opportunities':typeof state!=='undefined'&&state?.route==='opportunities'}catch(_){return false}}
-  function rows(){try{return typeof oppTradeRows==='function'?oppTradeRows():opportunityState()?.payload?.trade_discovery?.candidates||[]}catch(_){return[]}}
-  function ownerSignal(row){try{const profile=typeof oppBehaviorFor==='function'?oppBehaviorFor(row.counterparty_team_id):null;if(!profile)return null;return{trades:profile.trade_count??0,events:profile.event_count??0}}catch(_){return null}}
-  function rowKey(row){try{return typeof oppTradeKey==='function'?oppTradeKey(row):`${row.counterparty_team_id}:${assetRefs(row.send).join('+')}:${assetRefs(row.receive).join('+')}`}catch(_){return''}}
-  function storageSet(key){try{return new Set(JSON.parse(localStorage.getItem(key)||'[]'))}catch(_){return new Set()}}
-  function persistSet(key,set){try{localStorage.setItem(key,JSON.stringify([...set]))}catch(_){}}
-  function authorityState(row){
-    const authority=String(row?.action_authority||row?.recommendation_authority||'').toLowerCase();
-    const shape=String(row?.decision_shape||row?.focal_decision_shape||'').toLowerCase();
-    if(authority==='actionable'||authority==='recommended')return{key:'recommended',label:'Recommended',short:'Act',glyph:'✓',detail:'Decision evidence supports action.',cta:'Open recommendation'};
-    if(!row?.bilateral_decision_evaluated)return{key:'needs-eval',label:'Needs full evaluation',short:'Evaluate',glyph:'?',detail:'This is a plausible market match, not yet a recommendation.',cta:'Run full evaluation'};
-    if(shape.includes('support')||shape.includes('counter')||shape.includes('review')||authority==='market_test_only')return{key:'investigate',label:'Worth investigating',short:'Inspect',glyph:'↗',detail:'The structure is promising enough to inspect further.',cta:'Inspect this move'};
-    return{key:'match-only',label:'Market match only',short:'Match',glyph:'·',detail:'Search found a structural match, but Decision evidence does not support recommendation language.',cta:'Inspect market match'};
+  "use strict";
+  const VERSION="20260924-market-north-star1";
+  const TABS=[
+    ["for_you","For You","What might I care about?"],
+    ["trade_finder","Trade Finder","Find realistic paths"],
+    ["player_board","Player Board","Discover for yourself"],
+    ["free_agents","Free Agents","Add without a trade"]
+  ];
+  const POSTURES=[
+    ["default_calculated","Calculated"],
+    ["win_now","Contend / Win now"],
+    ["balanced","Balanced"],
+    ["retool","Retool"],
+    ["rebuild","Rebuild"]
+  ];
+  const market={
+    tab:"for_you",
+    readOnly:false,
+    playerRows:[],
+    playerLoading:false,
+    playerLoaded:false,
+    playerError:null,
+    boardFilters:{query:"",position:"",age:"",owner:"",nfl:"",roster:"",role:""},
+    boardSort:{key:"market_index",direction:"desc"},
+    freeFilters:{query:"",position:"",nfl:""},
+    freeSort:{key:"market_index",direction:"desc"},
+    finderFilters:{position:"",team:"",status:"",deal:"",assets:"",sort:"search"},
+    detailKey:"",
+    detailSection:"overview",
+    waiverPlayer:null,
+    waiverDrop:"",
+    waiverResult:null,
+    waiverBusy:false,
+    waiverSeq:0
+  };
+
+  const esc=value=>String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  const finite=value=>typeof value==="number"&&Number.isFinite(value);
+  const num=(value,digits=1)=>finite(value)?value.toLocaleString(undefined,{minimumFractionDigits:digits,maximumFractionDigits:digits}):"Unavailable";
+  const integer=value=>finite(value)?Math.round(value).toLocaleString():"Unavailable";
+  const age=value=>finite(value)?(Number.isInteger(value)?String(value):value.toFixed(1)):"Unavailable";
+  const words=value=>String(value||"").replaceAll("_"," ");
+  const unique=values=>[...new Set(values.filter(Boolean))];
+  const opp=()=>{try{return typeof fsfflOpportunityState!=="undefined"?fsfflOpportunityState:null}catch(_){return null}};
+  const panel=()=>document.querySelector("#generic-screen .panel");
+  const context=()=>{try{return state?.context||window.state?.context||{}}catch(_){return{}}};
+  const onMarket=()=>{try{return state?.route==="opportunities"||window.state?.route==="opportunities"}catch(_){return false}};
+  const tradeRows=()=>opp()?.payload?.trade_discovery?.candidates||[];
+  const rowKey=row=>String(row?.counterparty_team_id||"")+":"+(row?.send||[]).map(x=>x.asset_ref).join("+")+":"+(row?.receive||[]).map(x=>x.asset_ref).join("+");
+  const refs=items=>(items||[]).map(x=>x.asset_ref).filter(Boolean);
+  const labels=items=>(items||[]).map(x=>x.label||x.asset_ref).filter(Boolean);
+  const selectedIntent=()=>window.fsfflMarketIntent?.selected?.()||{intent:"",value:""};
+  const selectedPosture=()=>window.fsfflOpportunityPosture?.selectedPosture?.()||"default_calculated";
+  function authority(row){
+    const action=String(row?.action_authority||row?.recommendation_authority||"").toLowerCase();
+    const shape=String(row?.decision_shape||row?.focal_decision_shape||"").toLowerCase();
+    if(action==="actionable"||action==="recommended")return{key:"recommended",label:"Recommended",copy:"Existing Decision authority supports action."};
+    if(!row?.bilateral_decision_evaluated)return{key:"needs",label:"Needs full evaluation",copy:"Search found a plausible structure; Decision has not evaluated this package."};
+    if(shape.includes("support")||shape.includes("counter")||shape.includes("review")||action==="market_test_only")return{key:"investigate",label:"Worth investigating",copy:"Governed Decision evidence supports deeper review without predicting acceptance."};
+    return{key:"match",label:"Market match only",copy:"Search found a structural match without recommendation authority."};
   }
-  function plainReasons(row,authority){
-    const bullets=[],target=row.target_position||'This position';
-    if(row.focal_position_strength_rank)bullets.push(`Targets ${target}, currently #${row.focal_position_strength_rank} on your league-relative position profile.`);
-    if(typeof row.counterparty_receive_position_strength_index==='number')bullets.push('What you send includes a position that can help the other roster.');
-    if(typeof row.market_gap_ratio==='number'||typeof row.search_distance==='number')bullets.push('The package is close enough in governed package market economics to be worth checking.');
-    if((row.send||[]).length>1)bullets.push(`This is a consolidation structure: ${row.send.length} assets for one target.`);
-    if(authority.key==='needs-eval')bullets.push('It still needs a full bilateral evaluation before FSFFL can recommend action.');
-    if(authority.key==='match-only')bullets.push('Treat this as a market match, not a recommendation.');
-    if(authority.key==='investigate')bullets.push('The current Decision evidence says investigate further before sending anything.');
-    if(authority.key==='recommended')bullets.push('The current Decision result supports action.');
-    return unique(bullets).slice(0,5);
+  function reason(row){
+    if(row?.focal_position_strength_rank)return "Addresses "+esc(row.target_position||"a roster need")+" · current league position rank #"+esc(row.focal_position_strength_rank)+".";
+    if(finite(row?.market_gap_ratio))return "Closest market match within the current governed Search neighborhood.";
+    if((row?.send||[]).length>1)return "Consolidation path surfaced by the governed Search layer.";
+    return authority(row).copy;
   }
-  function primaryReason(row,authority){return plainReasons(row,authority)[0]||authority.detail}
-  function methodsMarkup(row){
-    const distance=typeof row.search_distance==='number'?Math.round(row.search_distance).toLocaleString():'Unavailable';
-    const gap=typeof row.market_gap_ratio==='number'?`${(row.market_gap_ratio*100).toFixed(1)}%`:'Unavailable';
-    return `<details class="ns-market-methods"><summary>Methods & evidence</summary><p><strong>Governed package-economics distance:</strong> ${distance} · <strong>Relative gap:</strong> ${gap}</p><p>This view presents existing Search, Decision and owner-history evidence. It does not calculate an acceptance probability or create recommendation authority.</p></details>`;
+  function ownerProfile(teamId){return(opp()?.behavior?.profiles||[]).find(x=>String(x.current_team_id)===String(teamId))||null}
+  function ownerCoverage(teamId){
+    const p=ownerProfile(teamId);
+    if(!p)return"Owner history unavailable";
+    const trades=Number(p.trade_count||0);
+    return trades?trades+" observed completed trade"+(trades===1?"":"s"):(Number(p.event_count||0)+" observed events");
   }
-  function packageLine(row){const send=assets(row.send),receive=assets(row.receive);return `<div class="ns-market-package-line"><span><small>You give</small><b>${esc(send.join(' + ')||'—')}</b></span><i aria-hidden="true">→</i><span><small>You get</small><b>${esc(receive.join(' + ')||row.target_position||'—')}</b></span></div>`}
-  function card(row,index,featured=false){
-    const receive=assets(row.receive),owner=ownerSignal(row),target=row.target_position||'Roster fit',authority=authorityState(row),reason=primaryReason(row,authority),saved=storageSet(SAVE_KEY).has(rowKey(row));
-    return `<article class="ns-market-card authority-${authority.key}${featured?' featured':''}" data-ns-market-card="${index}" data-authority="${authority.key}">
-      <button type="button" class="ns-market-card-main" data-ns-market-open="${index}" aria-label="${esc(authority.cta)} for ${esc(receive.join(' and ')||target)}">
-        <div class="ns-market-authority-orb" aria-label="${esc(authority.label)}"><strong>${esc(authority.glyph)}</strong><small>${esc(authority.short)}</small></div>
-        <div class="ns-market-card-copy"><div class="ns-market-card-top"><span>${esc(target)}</span><b>${esc(authority.label)}</b></div><div class="ns-market-title"><span class="ns-market-identity">${esc(initials(receive[0]||target))}</span><div><small>Acquire</small><h3>${esc(receive.join(' + ')||target)}</h3><p>${esc(row.counterparty_name||'Another franchise')}</p></div></div>${packageLine(row)}<p class="ns-market-reason">${esc(reason)}</p><div class="ns-market-card-footer"><div class="ns-market-signals">${row.package_shape?`<span>${esc(words(row.package_shape))}</span>`:''}${owner?`<span>${owner.trades} observed trade${owner.trades===1?'':'s'}</span>`:''}${saved?'<span>Saved</span>':''}</div><strong>${esc(authority.cta)} <i aria-hidden="true">›</i></strong></div></div>
-      </button>
-    </article>`;
+  function packageMarkup(row){
+    return "<div class='market-ns-package'><span><small>You give</small><strong>"+esc(labels(row?.send).join(" + ")||"Unavailable")+"</strong></span><i aria-hidden='true'>→</i><span><small>You get</small><strong>"+esc(labels(row?.receive).join(" + ")||row?.target_position||"Unavailable")+"</strong></span></div>";
   }
-  function featureIndex(all){const lead=opportunityState()?.payload?.trade_discovery?.spotlights?.most_promising_evaluated;if(!lead)return 0;const leadTeam=lead.counterparty_team_id,leadSend=assetRefs(lead.send).join('|'),leadReceive=assetRefs(lead.receive).join('|');const found=all.findIndex(row=>row.counterparty_team_id===leadTeam&&assetRefs(row.send).join('|')===leadSend&&assetRefs(row.receive).join('|')===leadReceive);return found>=0?found:0}
-  function radarMarkup(all,active){
-    const counts={recommended:0,investigate:0,'needs-eval':0,'match-only':0};all.forEach(row=>counts[authorityState(row).key]++);
-    const cells=[['recommended','Recommended'],['investigate','Worth investigating'],['needs-eval','Needs full evaluation'],['match-only','Market match only']];
-    return `<div class="ns-market-radar" aria-label="Filter by opportunity status">${cells.map(([key,label])=>`<button type="button" data-ns-status="${key}" class="${active===key?'active':''}"><strong>${counts[key]}</strong><span>${label}</span></button>`).join('')}</div>`;
+  function statusPill(row){const a=authority(row);return"<span class='market-ns-status "+a.key+"'>"+esc(a.label)+"</span>"}
+  function tabNav(){
+    return "<nav class='market-ns-tabs' role='tablist' aria-label='Market views'>"+TABS.map(([key,label,question])=>"<button type='button' data-market-tab='"+key+"' class='"+(market.tab===key?"active":"")+"' aria-selected='"+(market.tab===key?"true":"false")+"'><strong>"+label+"</strong><small>"+question+"</small></button>").join("")+"</nav>";
   }
-  function intentFilter(all){
-    let intent={intent:'',value:''};try{intent=window.fsfflMarketIntent?.selected?.()||intent}catch(_){ }
-    if(!intent.intent)return all;
-    if(intent.intent==='consolidate')return all.filter(row=>(row.send||[]).length>1);
-    if(!intent.value)return all;
-    if(intent.intent==='position')return all.filter(row=>String(row.target_position||'')===String(intent.value));
-    if(intent.intent==='shop')return all.filter(row=>(row.send||[]).some(item=>String(item.asset_ref)===String(intent.value)));
-    if(intent.intent==='target')return all.filter(row=>(row.receive||[]).some(item=>String(item.asset_ref)===String(intent.value)));
-    return all;
+  function shell(payload=null){
+    const host=panel();if(!host)return;
+    host.classList.add("market-ns-v2");
+    host.innerHTML="<header class='market-ns-head'><div><p class='eyebrow'>Market</p><h1>Find something worth doing.</h1><p>FSFFL can surface relevant opportunities, or you can explore the league on your own terms.</p></div><span class='status-chip'>"+(market.readOnly?"Read-only discovery":"Governed discovery")+"</span></header>"+tabNav()+"<div id='market-ns-body'></div><details class='market-ns-authority'><summary>Authority & evidence</summary><p>Search discovers candidate structures. Trade Center owns bilateral Decision, package consequences and exact Simulation. Broad Market and FSFFL Intrinsic remain separate. Missing evidence stays unavailable; acceptance probability is not estimated.</p></details>";
+    wireTabs();
+    renderBody(payload||opp()?.payload||null);
   }
-  function filterState(s){if(!s.nsFilters)s.nsFilters={position:'',team:'',status:'',deal:'',asset:'',sort:'best-fit'};return s.nsFilters}
-  function filteredRows(all,s){
-    const f=filterState(s);let result=intentFilter(all);
-    if(f.position)result=result.filter(row=>row.target_position===f.position);
-    if(f.team)result=result.filter(row=>String(row.counterparty_team_id)===f.team);
-    if(f.status)result=result.filter(row=>authorityState(row).key===f.status);
-    if(f.deal==='one')result=result.filter(row=>(row.send||[]).length===1);
-    if(f.deal==='multi')result=result.filter(row=>(row.send||[]).length>1);
-    if(f.asset==='players-only')result=result.filter(row=>[...(row.send||[]),...(row.receive||[])].every(item=>item.asset_kind==='player'));
-    if(f.asset==='includes-picks')result=result.filter(row=>[...(row.send||[]),...(row.receive||[])].some(item=>item.asset_kind==='pick'));
-    const original=new Map(all.map((row,index)=>[rowKey(row),index]));
-    if(f.sort==='most-actionable')result=[...result].sort((a,b)=>({recommended:0,investigate:1,'needs-eval':2,'match-only':3}[authorityState(a).key]-({recommended:0,investigate:1,'needs-eval':2,'match-only':3}[authorityState(b).key])||(original.get(rowKey(a))??0)-(original.get(rowKey(b))??0)));
-    if(f.sort==='closest-market')result=[...result].sort((a,b)=>((a.market_gap_ratio??Infinity)-(b.market_gap_ratio??Infinity))||((a.search_distance??Infinity)-(b.search_distance??Infinity)));
-    if(f.sort==='biggest-need')result=[...result].sort((a,b)=>((a.focal_position_strength_index??Infinity)-(b.focal_position_strength_index??Infinity))||((b.focal_position_strength_rank??0)-(a.focal_position_strength_rank??0)));
-    return result;
+  function wireTabs(){
+    panel()?.querySelectorAll("[data-market-tab]").forEach(button=>button.addEventListener("click",()=>openTab(button.dataset.marketTab)));
   }
-  function optionMarkup(items,value){return items.map(item=>`<option value="${esc(item.value)}"${String(item.value)===String(value)?' selected':''}>${esc(item.label)}</option>`).join('')}
-  function filtersMarkup(all,s){
-    const f=filterState(s),positions=unique(all.map(row=>row.target_position)).sort().map(value=>({value,label:value})),teams=unique(all.map(row=>row.counterparty_team_id)).map(id=>{const row=all.find(item=>String(item.counterparty_team_id)===String(id));return{value:id,label:row?.counterparty_name||id}}).sort((a,b)=>a.label.localeCompare(b.label));
-    return `<div class="ns-market-filterbar"><label><span>Position</span><select data-ns-filter="position"><option value="">All</option>${optionMarkup(positions,f.position)}</select></label><label><span>Team / owner</span><select data-ns-filter="team"><option value="">All</option>${optionMarkup(teams,f.team)}</select></label><label><span>Status</span><select data-ns-filter="status"><option value="">All</option>${optionMarkup([{value:'recommended',label:'Recommended'},{value:'investigate',label:'Worth investigating'},{value:'needs-eval',label:'Needs full evaluation'},{value:'match-only',label:'Market match only'}],f.status)}</select></label><label><span>Deal size</span><select data-ns-filter="deal"><option value="">Any</option>${optionMarkup([{value:'one',label:'1-for-1'},{value:'multi',label:'Consolidation'}],f.deal)}</select></label><label><span>Assets</span><select data-ns-filter="asset"><option value="">Any</option>${optionMarkup([{value:'players-only',label:'Players only'},{value:'includes-picks',label:'Includes picks'}],f.asset)}</select></label><label class="ns-market-sort"><span>Sort</span><select data-ns-filter="sort">${optionMarkup([{value:'best-fit',label:'Best fit / current Search order'},{value:'most-actionable',label:'Most actionable'},{value:'closest-market',label:'Closest market match'},{value:'biggest-need',label:'Biggest need addressed'}],f.sort)}</select></label></div>`;
+  function consumeMarketDeepLink(){
+    const pending=window.fsfflConsumeDeepLinkIntent?.("opportunities");
+    if(!pending?.marketTab)return null;
+    if(TABS.some(row=>row[0]===pending.marketTab))market.tab=pending.marketTab;
+    if(pending.marketIntent&&window.fsfflMarketIntent?.set)window.fsfflMarketIntent.set(pending.marketIntent,pending.marketValue||"");
+    return pending;
   }
-  function detailMarkup(row,index){
-    if(!row)return'';const authority=authorityState(row),owner=ownerSignal(row),bullets=plainReasons(row,authority),key=rowKey(row),saved=storageSet(SAVE_KEY).has(key),watchRef=row.receive?.[0]?.asset_ref||'',watched=watchRef&&storageSet(WATCH_KEY).has(watchRef);
-    return `<section class="ns-market-opportunity-detail" data-detail-key="${esc(key)}"><div class="ns-market-detail-head"><button type="button" class="ns-market-back" data-ns-close-detail>‹ Back to opportunities</button><span class="ns-market-status authority-${authority.key}">${esc(authority.label)}</span></div><div class="ns-market-detail-hero"><div><p class="eyebrow">Opportunity detail</p><h3>${esc(assets(row.receive).join(' + ')||row.target_position||'Trade opportunity')}</h3><p>${esc(row.counterparty_name||'Counterparty')} · ${esc(authority.detail)}</p></div><div class="ns-market-detail-actions"><button type="button" class="secondary-button" data-ns-save="${index}">${saved?'Saved ✓':'Save'}</button>${watchRef?`<button type="button" class="secondary-button" data-ns-watch="${index}">${watched?'Watching ✓':'Watch target'}</button>`:''}<button type="button" class="primary-button" data-ns-trade-center="${index}">Send to Trade Center</button></div></div>${packageLine(row)}<div class="ns-market-detail-grid"><div><small>Roster fit</small><strong>${esc(primaryReason(row,authority))}</strong></div><div><small>Decision status</small><strong>${esc(authority.label)}</strong></div><div><small>Counterparty context</small><strong>${owner?`${owner.trades} observed trade${owner.trades===1?'':'s'}`:'Owner history unavailable'}</strong></div><div><small>Market context</small><strong>${typeof row.market_gap_ratio==='number'?`${(row.market_gap_ratio*100).toFixed(1)}% relative value gap`:'Value gap unavailable'}</strong></div></div><div class="ns-market-detail-why"><h4>Why this surfaced</h4><ul>${bullets.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>${methodsMarkup(row)}</div><div class="ns-market-detail-result"><div class="ns-market-eval-loading">${opportunityState()?.tradeEvaluationLoading&&opportunityState()?.tradeEvaluationKey===key?'Running full changed-roster evaluation…':'Full evaluation will appear here when available.'}</div></div></section>`;
+  function openTab(key){
+    if(!TABS.some(row=>row[0]===key))return;
+    market.tab=key;market.detailKey="";market.detailSection="overview";
+    if((key==="for_you"||key==="trade_finder")&&opp()?.payload?.status!=="ready"){
+      market.readOnly=false;
+      shell();
+      const body=document.querySelector("#market-ns-body");if(body)body.innerHTML=loading("Loading governed Search","Market will become useful before deep Decision or exact Simulation work runs.");
+      if(typeof loadOpportunityWorkspace==="function")void loadOpportunityWorkspace({showLoading:false});
+      return;
+    }
+    shell();
   }
-  function modeMarkup(s){const mode=s.nsMode||(s.tab==='free_agents'?'players':'opportunities');return `<nav class="ns-market-mode-nav" aria-label="Market mode"><button type="button" data-ns-mode="opportunities" class="${mode==='opportunities'?'active':''}"><strong>Opportunities</strong><small>Personalized trade discovery</small></button><button type="button" data-ns-mode="players" class="${mode==='players'?'active':''}"><strong>Players</strong><small>Browse available talent</small></button><button type="button" data-ns-mode="waivers" class="${mode==='waivers'?'active':''}"><strong>Waivers / Add-Drop</strong><small>Evaluate roster moves</small></button></nav>`}
-  function wireModeNav(s){document.querySelectorAll('[data-ns-mode]').forEach(button=>button.addEventListener('click',()=>{const mode=button.dataset.nsMode;s.nsMode=mode;s.query='';s.nsSelectedTradeKey='';if(mode==='opportunities')s.tab='trades';else s.tab='free_agents';if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace()}))}
-  function renderModeNav(){const s=opportunityState(),panel=document.querySelector('#generic-screen .panel');if(!s||!panel||!onMarketRoute())return;let nav=panel.querySelector('.ns-market-mode-nav');const markup=modeMarkup(s);if(nav){if(nav.outerHTML!==markup)nav.outerHTML=markup}else{const lead=panel.querySelector(':scope > .lead');if(lead)lead.insertAdjacentHTML('afterend',markup)}wireModeNav(s)}
-  function renderDeck(){
-    const s=opportunityState(),body=document.querySelector('#opportunity-body');if(!onMarketRoute()||!s||s.tab!=='trades'||!body)return;const all=rows();let deck=body.querySelector('.ns-market-deck');if(!all.length){deck?.remove();return}
-    const filtered=filteredRows(all,s),visibleCount=s.nsVisibleCount||4,visible=filtered.slice(0,visibleCount),selectedIndex=all.findIndex(row=>rowKey(row)===s.nsSelectedTradeKey),selected=selectedIndex>=0?all[selectedIndex]:null,f=filterState(s);
-    const feature=featureIndex(all),key=[...all.map(row=>`${rowKey(row)}:${authorityState(row).key}`),JSON.stringify(f),s.nsVisibleCount||4,s.nsSelectedTradeKey||'',JSON.stringify(window.fsfflMarketIntent?.selected?.()||{})].join('||');if(deck?.dataset.key===key)return;deck?.remove();deck=document.createElement('section');deck.className='ns-market-deck';deck.dataset.key=key;
-    deck.innerHTML=`${detailMarkup(selected,selectedIndex)}<div class="ns-market-command"><div><p class="eyebrow">Your opportunity board</p><h3>What is worth your attention?</h3><p>Curated first. Status tells you what each move is—and what it is not.</p></div>${radarMarkup(all,f.status)}</div>${filtersMarkup(all,s)}<div class="ns-market-cards">${visible.length?visible.map(row=>card(row,all.indexOf(row),all.indexOf(row)===feature)).join(''):'<div class="ns-market-no-results"><strong>No opportunities match these filters.</strong><span>Clear a filter or change your Market focus.</span></div>'}</div><div class="ns-market-board-actions">${filtered.length>visible.length?`<button type="button" class="secondary-button" data-ns-see-more>See more (${filtered.length-visible.length})</button>`:''}<button type="button" class="text-button" data-ns-unevaluated>View all unevaluated</button><button type="button" class="text-button" data-ns-matches>Browse market matches</button></div>`;body.prepend(deck);
-    deck.querySelectorAll('[data-ns-market-open]').forEach(button=>button.addEventListener('click',()=>{const index=Number(button.dataset.nsMarketOpen),row=all[index];if(!row)return;s.nsSelectedTradeKey=rowKey(row);renderDeck();if(typeof runTradeEvaluation==='function')runTradeEvaluation(row)}));
-    deck.querySelectorAll('[data-ns-filter]').forEach(select=>select.addEventListener('change',()=>{filterState(s)[select.dataset.nsFilter]=select.value;s.nsVisibleCount=4;s.nsSelectedTradeKey='';renderDeck()}));
-    deck.querySelectorAll('[data-ns-status]').forEach(button=>button.addEventListener('click',()=>{f.status=f.status===button.dataset.nsStatus?'':button.dataset.nsStatus;s.nsVisibleCount=4;s.nsSelectedTradeKey='';renderDeck()}));
-    deck.querySelector('[data-ns-see-more]')?.addEventListener('click',()=>{s.nsVisibleCount=visibleCount+4;renderDeck()});
-    deck.querySelector('[data-ns-unevaluated]')?.addEventListener('click',()=>{f.status='needs-eval';s.nsVisibleCount=12;s.nsSelectedTradeKey='';renderDeck()});
-    deck.querySelector('[data-ns-matches]')?.addEventListener('click',()=>{f.status='match-only';s.nsVisibleCount=12;s.nsSelectedTradeKey='';renderDeck()});
-    deck.querySelector('[data-ns-close-detail]')?.addEventListener('click',()=>{s.nsSelectedTradeKey='';renderDeck()});
-    deck.querySelectorAll('[data-ns-save]').forEach(button=>button.addEventListener('click',()=>{const row=all[Number(button.dataset.nsSave)],set=storageSet(SAVE_KEY),key=rowKey(row);set.has(key)?set.delete(key):set.add(key);persistSet(SAVE_KEY,set);renderDeck()}));
-    deck.querySelectorAll('[data-ns-watch]').forEach(button=>button.addEventListener('click',()=>{const row=all[Number(button.dataset.nsWatch)],ref=row?.receive?.[0]?.asset_ref;if(!ref)return;const set=storageSet(WATCH_KEY);set.has(ref)?set.delete(ref):set.add(ref);persistSet(WATCH_KEY,set);renderDeck()}));
-    deck.querySelectorAll('[data-ns-trade-center]').forEach(button=>button.addEventListener('click',()=>{const row=all[Number(button.dataset.nsTradeCenter)];if(row&&typeof window.fsfflOpenOpportunityInTradeCenter==='function')window.fsfflOpenOpportunityInTradeCenter(row)}));
-    const table=body.querySelector('.table-wrap');if(table&&!table.closest('.ns-market-exact')){const detail=document.createElement('details');detail.className='ns-market-exact';detail.innerHTML='<summary>View every market match</summary>';table.before(detail);detail.appendChild(table)}
-    window.dispatchEvent(new CustomEvent('fsffl:market-rendered'));
+  function loading(title,copy){return"<section class='market-ns-empty'><i></i><strong>"+esc(title)+"</strong><span>"+esc(copy)+"</span></section>"}
+  function unavailable(title,copy){return"<section class='market-ns-empty'><strong>"+esc(title)+"</strong><span>"+esc(copy)+"</span></section>"}
+  function renderBody(payload){
+    const body=document.querySelector("#market-ns-body");if(!body)return;
+    if(market.tab==="for_you")return renderForYou(body,payload);
+    if(market.tab==="trade_finder")return renderTradeFinder(body,payload);
+    if(market.tab==="player_board")return renderPlayerBoard(body);
+    if(market.tab==="free_agents")return renderFreeAgents(body);
   }
-  function tuneFreeAgentMode(){
-    const s=opportunityState();if(!s||s.tab!=='free_agents')return;const mode=s.nsMode||'players',body=document.querySelector('#opportunity-body'),note=body?.querySelector('.opp-note');if(!body)return;
-    body.classList.toggle('ns-market-players-mode',mode==='players');body.classList.toggle('ns-market-waivers-mode',mode==='waivers');
-    if(note){const strong=note.querySelector('strong'),span=note.querySelector('span');if(strong)strong.textContent=mode==='waivers'?'Waiver / add-drop workspace':'Best available players';if(span)span.textContent=mode==='waivers'?'Choose an available player, then compare the exact add/drop against your current roster.':'Browse unowned players as a market. Open an add/drop evaluation when a player is worth a roster decision.'}
-    body.querySelectorAll('[data-waiver-add]').forEach(button=>button.textContent=mode==='waivers'?'Evaluate add/drop':'Open player');
+
+  function spotlightRows(rows,payload){
+    const spots=payload?.trade_discovery?.spotlights||{},desired=[spots.most_promising_evaluated,spots.closest_market_match,spots.premium_target,spots.position_need].filter(Boolean);
+    const byKey=new Map(rows.map(row=>[rowKey(row),row])),ordered=[];
+    desired.forEach(row=>{const match=byKey.get(rowKey(row));if(match&&!ordered.includes(match))ordered.push(match)});
+    rows.forEach(row=>{if(!ordered.includes(row))ordered.push(row)});
+    return ordered.slice(0,5);
   }
-  function syncWaiverWorkflow(){const s=opportunityState(),select=document.querySelector('#opp-waiver-drop');if(!s||!select)return;const addKey=s.waiverAdd?.player_id||null;if(s.nsWaiverAddKey!==addKey){s.nsWaiverAddKey=addKey;s.nsWaiverDropSelection=''}if(select.value!==String(s.nsWaiverDropSelection||''))select.value=String(s.nsWaiverDropSelection||'');if(!select.dataset.nsPersisted){select.dataset.nsPersisted='true';select.addEventListener('change',()=>{s.nsWaiverDropSelection=select.value||''})}const evaluator=select.closest('.opp-waiver-evaluator');if(evaluator){const intro=evaluator.querySelector('.opp-result-head p');if(intro)intro.textContent='Choose who you would cut, then compare the changed roster.'}}
-  function simplifyWaiverResult(){const result=document.querySelector('.opp-waiver-result');if(!result||result.classList.contains('ns-waiver-result'))return;result.classList.add('ns-waiver-result');const eyebrow=result.querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='Waiver decision';const authority=result.querySelector('.opp-authority-note');if(authority&&!authority.closest('.ns-waiver-methods')){const details=document.createElement('details');details.className='ns-waiver-methods';details.innerHTML='<summary>Methods & evidence</summary>';authority.before(details);details.appendChild(authority)}const count=result.querySelector('.opp-result-head .status-chip');if(count){const methods=result.querySelector('.ns-waiver-methods');if(methods){const meta=document.createElement('p');meta.className='ns-waiver-sim-count';meta.textContent=count.textContent;methods.prepend(meta);count.remove()}}}
-  function renderAlternatives(result,host){const rows=result?.negotiation?.alternatives||result?.negotiation?.counteroffers||result?.alternatives;if(!host||!Array.isArray(rows)||!rows.length||host.querySelector('.ns-market-alternatives'))return;const block=document.createElement('div');block.className='ns-market-alternatives';block.innerHTML=`<h4>Alternative packages / counters</h4><div>${rows.slice(0,4).map(item=>`<p>${esc(item.label||item.summary||item.description||String(item))}</p>`).join('')}</div>`;host.appendChild(block)}
-  function enhanceResult(){
-    if(!onMarketRoute())return;const result=document.querySelector('.opp-trade-result');if(!result)return;result.classList.add('ns-market-result');const heading=result.querySelector('.opp-result-head h3');if(heading&&!result.querySelector('.ns-market-result-icon'))heading.insertAdjacentHTML('beforebegin','<span class="ns-market-result-icon" aria-hidden="true">↗</span>');const metrics=result.querySelector('.opp-result-metrics');if(metrics)metrics.setAttribute('aria-label','Changed-roster outcome summary');
-    const slot=document.querySelector('.ns-market-opportunity-detail .ns-market-detail-result');if(slot&&result.parentElement!==slot){slot.innerHTML='';slot.appendChild(result)}
-    renderAlternatives(opportunityState()?.tradeEvaluation,slot);
+  function opportunityCard(row){
+    const a=authority(row),target=labels(row.receive).join(" + ")||row.target_position||"Trade path";
+    return"<article class='market-ns-opportunity "+a.key+"'><button type='button' data-market-open='"+esc(rowKey(row))+"'><span class='market-ns-orb'>"+(a.key==="recommended"?"✓":a.key==="investigate"?"↗":a.key==="needs"?"?":"·")+"</span><div><div class='market-ns-card-top'><small>"+esc(row.target_position||"Opportunity")+"</small>"+statusPill(row)+"</div><h3>"+esc(target)+"</h3><p>"+esc(row.counterparty_name||"Counterparty unavailable")+" · "+reason(row)+"</p>"+packageMarkup(row)+"<span class='market-ns-card-cta'>Open opportunity →</span></div></button></article>";
   }
-  function simplifyShell(){
-    const panel=document.querySelector('#generic-screen .panel');if(!panel)return;if(!onMarketRoute()||opportunityState()?.payload?.status!=='ready'){panel.classList.remove('ns-market-shell');return}panel.classList.add('ns-market-shell');const eyebrow=panel.querySelector('.panel-header .eyebrow');if(eyebrow)eyebrow.textContent='Market';const title=panel.querySelector('.panel-header h2');if(title)title.textContent='Your market';const lead=panel.querySelector(':scope > .lead');if(lead)lead.textContent='Set your intent, scan a curated board, then open only the moves worth deeper work.';const summary=panel.querySelector('.opp-summary');if(summary)summary.classList.add('ns-market-summary');const note=panel.querySelector('#opportunity-body > .opp-note');if(note)note.classList.add('ns-market-supporting');const search=panel.querySelector('#opp-search');if(search)search.placeholder=opportunityState()?.tab==='trades'?'Search this opportunity board':'Search available players';const legacyTabs=panel.querySelector('.opp-tabs');if(legacyTabs)legacyTabs.classList.add('ns-market-legacy-tabs')
+  function renderForYou(body,payload){
+    if(market.detailKey)return renderOpportunityDetail(body,payload);
+    if(!payload||payload.status!=="ready"){body.innerHTML=loading("Preparing your Market","For You uses the current governed Search workspace; it does not invent a recommendation feed.");return}
+    const rows=spotlightRows(tradeRows(),payload);
+    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>For You</p><h2>What might be worth your attention?</h2><p>A deliberately small set from current governed Search and Decision evidence.</p></div><small>"+rows.length+" high-signal item"+(rows.length===1?"":"s")+"</small></section><div class='market-ns-opportunity-list'>"+(rows.length?rows.map(opportunityCard).join(""):unavailable("No current opportunities surfaced","Try Trade Finder to set an explicit direction or use Player Board to explore independently."))+"</div>";
+    body.querySelectorAll("[data-market-open]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.marketOpen;market.detailSection="overview";renderBody(payload)}));
   }
-  function enhance(){queued=false;if(window.fsfflMarketNorthStarV2)return;simplifyShell();if(!onMarketRoute())return;renderModeNav();renderDeck();tuneFreeAgentMode();syncWaiverWorkflow();simplifyWaiverResult();enhanceResult()}
-  function schedule(){if(queued)return;queued=true;requestAnimationFrame(enhance)}
-  const observer=new MutationObserver(schedule);const start=()=>{observer.observe(document.body,{childList:true,subtree:true});schedule()};
-  if(document.readyState==='loading')window.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  window.addEventListener('fsffl:product-context-updated',schedule);window.addEventListener('fsffl:market-intent-changed',schedule);
+  function acquisitionPaths(row,rows){
+    const target=refs(row.receive)[0];if(!target)return[row];
+    const matches=rows.filter(item=>refs(item.receive).includes(target));
+    return matches.length?matches.slice(0,4):[row];
+  }
+  function renderOpportunityDetail(body,payload){
+    const rows=tradeRows(),row=rows.find(item=>rowKey(item)===market.detailKey);
+    if(!row){market.detailKey="";return renderForYou(body,payload)}
+    const a=authority(row),paths=acquisitionPaths(row,rows),section=market.detailSection;
+    const overview="<div class='market-ns-detail-grid'><article><small>Why it surfaced</small><strong>"+reason(row)+"</strong></article><article><small>Search / Decision status</small><strong>"+esc(a.label)+"</strong><span>"+esc(a.copy)+"</span></article><article><small>Owner history coverage</small><strong>"+esc(ownerCoverage(row.counterparty_team_id))+"</strong></article><article><small>Value context</small><strong>"+(finite(row.market_gap_ratio)?(row.market_gap_ratio*100).toFixed(1)+"% relative package gap":"Unavailable")+"</strong><span>Broad Market and Intrinsic are not blended here.</span></article></div>";
+    const pathMarkup="<div class='market-ns-paths'>"+paths.map(item=>"<article>"+packageMarkup(item)+"<small>Search-discovered acquisition path · not an acceptance prediction</small><button type='button' class='secondary-button' data-market-path='"+esc(rowKey(item))+"'>Use this package</button></article>").join("")+"</div>";
+    const fit="<div class='market-ns-detail-grid'><article><small>Roster need</small><strong>"+esc(row.target_position||"Unavailable")+(row.focal_position_strength_rank?" · #"+esc(row.focal_position_strength_rank):"")+"</strong></article><article><small>Package shape</small><strong>"+esc(words(row.package_shape||((row.send||[]).length>1?"consolidation":"trade")))+"</strong></article><article><small>Counterparty context</small><strong>"+esc(ownerCoverage(row.counterparty_team_id))+"</strong><span>Descriptive only; no acceptance probability.</span></article><article><small>Exact season impact</small><strong>Trade Center</strong><span>Not run merely to preview this opportunity.</span></article></div>";
+    body.innerHTML="<section class='market-ns-detail'><div class='market-ns-detail-top'><button type='button' class='text-button' data-market-back>‹ Back</button>"+statusPill(row)+"</div><div class='market-ns-detail-hero'><div><p class='eyebrow'>Opportunity Detail</p><h2>"+esc(labels(row.receive).join(" + ")||row.target_position||"Trade opportunity")+"</h2><button type='button' class='market-ns-owner-link' data-market-owner='"+esc(row.counterparty_team_id||"")+"'>"+esc(row.counterparty_name||"Counterparty")+" → Owner Intelligence</button></div><button type='button' class='primary-button' data-market-trade='"+esc(rowKey(row))+"'>Evaluate this package in Trade Center</button></div>"+packageMarkup(row)+"<nav class='market-ns-detail-tabs'><button data-detail-section='overview' class='"+(section==="overview"?"active":"")+"'>Overview</button><button data-detail-section='paths' class='"+(section==="paths"?"active":"")+"'>Acquisition Paths</button><button data-detail-section='fit' class='"+(section==="fit"?"active":"")+"'>Fit & Impact</button></nav>"+(section==="paths"?pathMarkup:section==="fit"?fit:overview)+"</section>";
+    body.querySelector("[data-market-back]")?.addEventListener("click",()=>{market.detailKey="";renderBody(payload)});
+    body.querySelectorAll("[data-detail-section]").forEach(button=>button.addEventListener("click",()=>{market.detailSection=button.dataset.detailSection;renderBody(payload)}));
+    body.querySelectorAll("[data-market-path]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.marketPath;market.detailSection="overview";renderBody(payload)}));
+    body.querySelector("[data-market-trade]")?.addEventListener("click",()=>window.fsfflOpenOpportunityInTradeCenter?.(row));
+    body.querySelector("[data-market-owner]")?.addEventListener("click",()=>openOwner(row.counterparty_team_id));
+  }
+
+  function currentCalculatedState(payload){
+    return payload?.search_posture?.calculated_competitive_state||payload?.search_posture?.calculated_state||"unknown";
+  }
+  function finderMode(){
+    const intent=selectedIntent().intent;
+    return intent==="target"?"target":intent==="shop"?"shop":intent==="position"?"position":intent==="owner"?"owner":"improve";
+  }
+  function targetOptions(mode){
+    const teamId=context().team_id;
+    if(!market.playerLoaded)return[];
+    if(mode==="shop")return market.playerRows.filter(row=>String(row.owner_team_id||"")===String(teamId));
+    if(mode==="target")return market.playerRows.filter(row=>row.roster_status==="rostered"&&String(row.owner_team_id||"")!==String(teamId));
+    return[];
+  }
+  function ownerOptions(){return(context().teams||[]).filter(team=>String(team.team_id)!==String(context().team_id)).map(team=>[team.team_id,team.display_name]).sort((a,b)=>String(a[1]).localeCompare(String(b[1])))}
+  function intentValueControl(mode){
+    const current=selectedIntent().value||"";
+    if(mode==="position")return"<label><span>Position</span><select data-finder-intent-value><option value=''>Choose position</option>"+["QB","RB","WR","TE"].map(v=>"<option value='"+v+"'"+(current===v?" selected":"")+">"+v+"</option>").join("")+"</select></label>";
+    if(mode==="owner")return"<label><span>Owner / team</span><select data-finder-intent-value><option value=''>Choose owner</option>"+ownerOptions().map(([id,name])=>"<option value='"+esc(id)+"'"+(String(current)===String(id)?" selected":"")+">"+esc(name)+"</option>").join("")+"</select></label>";
+    if(mode==="target"||mode==="shop"){
+      const rows=targetOptions(mode);
+      return"<label><span>"+(mode==="target"?"Target player":"Player to shop")+"</span><select data-finder-intent-value><option value=''>Choose player</option>"+rows.map(row=>"<option value='player:"+esc(row.player_id)+"'"+(current==="player:"+row.player_id?" selected":"")+">"+esc(row.full_name)+" · "+esc(row.owner_team_name||row.roster_status)+"</option>").join("")+"</select></label>";
+    }
+    return"";
+  }
+  function finderRows(){
+    const all=tradeRows(),f=market.finderFilters;let rows=[...all];
+    if(f.position)rows=rows.filter(row=>String(row.target_position||"")===f.position);
+    if(f.team)rows=rows.filter(row=>String(row.counterparty_team_id||"")===f.team);
+    if(f.status)rows=rows.filter(row=>authority(row).key===f.status);
+    if(f.deal==="one")rows=rows.filter(row=>(row.send||[]).length===1);
+    if(f.deal==="multi")rows=rows.filter(row=>(row.send||[]).length>1);
+    if(f.assets==="players")rows=rows.filter(row=>[...(row.send||[]),...(row.receive||[])].every(item=>item.asset_kind==="player"));
+    if(f.assets==="picks")rows=rows.filter(row=>[...(row.send||[]),...(row.receive||[])].some(item=>item.asset_kind==="pick"));
+    if(f.sort==="closest")rows.sort((a,b)=>(a.market_gap_ratio??Infinity)-(b.market_gap_ratio??Infinity)||(a.search_distance??Infinity)-(b.search_distance??Infinity));
+    if(f.sort==="need")rows.sort((a,b)=>(a.focal_position_strength_index??Infinity)-(b.focal_position_strength_index??Infinity));
+    if(f.sort==="authority")rows.sort((a,b)=>({recommended:0,investigate:1,needs:2,match:3}[authority(a).key]-({recommended:0,investigate:1,needs:2,match:3}[authority(b).key])));
+    return rows;
+  }
+  function renderTradeFinder(body,payload){
+    if(!payload||payload.status!=="ready"){body.innerHTML=loading("Loading Trade Finder","Server-owned Search is preparing the current candidate workspace.");return}
+    if(!market.playerLoaded&&!market.playerLoading)void ensurePlayerUniverse();
+    const mode=finderMode(),f=market.finderFilters,rows=finderRows(),calc=words(currentCalculatedState(payload));
+    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Trade Finder</p><h2>I know what I am trying to do.</h2><p>Choose an intent and strategic Search lens. Calculated competitive state remains "+esc(calc)+".</p></div><small>"+rows.length+" returned path"+(rows.length===1?"":"s")+"</small></section><div class='market-ns-finder'><div class='market-ns-mode-grid'>"+[["improve","Improve my team"],["target","Target a player"],["shop","Shop a player"],["position","Target a position"],["owner","Explore an owner / team"]].map(([key,label])=>"<button type='button' data-finder-mode='"+key+"' class='"+(mode===key?"active":"")+"'>"+label+"</button>").join("")+"</div><div class='market-ns-finder-controls'><label><span>Strategic lens</span><select data-finder-posture>"+POSTURES.map(([key,label])=>"<option value='"+key+"'"+(selectedPosture()===key?" selected":"")+">"+label+"</option>").join("")+"</select></label>"+intentValueControl(mode)+"<label><span>Position</span><select data-finder-filter='position'><option value=''>All positions</option>"+["QB","RB","WR","TE"].map(v=>"<option value='"+v+"'"+(f.position===v?" selected":"")+">"+v+"</option>").join("")+"</select></label><label><span>Owner / team</span><select data-finder-filter='team'><option value=''>All owners</option>"+ownerOptions().map(([id,name])=>"<option value='"+esc(id)+"'"+(String(f.team)===String(id)?" selected":"")+">"+esc(name)+"</option>").join("")+"</select></label><label><span>Package shape</span><select data-finder-filter='deal'><option value=''>Any</option><option value='one'"+(f.deal==="one"?" selected":"")+">1-for-1</option><option value='multi'"+(f.deal==="multi"?" selected":"")+">Consolidation</option></select></label><label><span>Assets</span><select data-finder-filter='assets'><option value=''>Players / picks</option><option value='players'"+(f.assets==="players"?" selected":"")+">Players only</option><option value='picks'"+(f.assets==="picks"?" selected":"")+">Includes picks</option></select></label><label><span>Status</span><select data-finder-filter='status'><option value=''>Any status</option><option value='recommended'"+(f.status==="recommended"?" selected":"")+">Recommended</option><option value='investigate'"+(f.status==="investigate"?" selected":"")+">Worth investigating</option><option value='needs'"+(f.status==="needs"?" selected":"")+">Needs full evaluation</option><option value='match'"+(f.status==="match"?" selected":"")+">Market match only</option></select></label><label><span>Sort</span><select data-finder-filter='sort'><option value='search'"+(f.sort==="search"?" selected":"")+">Current Search order</option><option value='closest'"+(f.sort==="closest"?" selected":"")+">Closest market match</option><option value='need'"+(f.sort==="need"?" selected":"")+">Biggest roster need addressed</option><option value='authority'"+(f.sort==="authority"?" selected":"")+">Most action-authoritative</option></select></label><button type='button' class='text-button market-ns-reset' data-finder-reset>Reset filters</button></div></div><div class='market-ns-result-list'>"+(rows.length?rows.slice(0,80).map(row=>"<article><button type='button' data-finder-open='"+esc(rowKey(row))+"'><div><small>"+esc(row.target_position||"Trade path")+" · "+esc(row.counterparty_name||"Owner unavailable")+"</small><strong>"+esc(labels(row.receive).join(" + ")||"Target unavailable")+"</strong><span>"+reason(row)+"</span></div>"+statusPill(row)+"<b>"+esc(labels(row.send).join(" + ")||"Unavailable")+" → "+esc(labels(row.receive).join(" + ")||"Unavailable")+"</b></button></article>").join(""):unavailable("No paths match this view","Change the Search intent, strategic lens, or filters."))+"</div>";
+    wireFinder(body,payload,mode);
+  }
+  function wireFinder(body,payload,mode){
+    body.querySelectorAll("[data-finder-mode]").forEach(button=>button.addEventListener("click",()=>{
+      const next=button.dataset.finderMode;
+      if(next==="improve")window.fsfflMarketIntent?.clear?.();else window.fsfflMarketIntent?.set?.(next,"");
+      renderBody(payload);
+    }));
+    body.querySelector("[data-finder-intent-value]")?.addEventListener("change",event=>{if(mode!=="improve")window.fsfflMarketIntent?.set?.(mode,event.target.value||"")});
+    body.querySelector("[data-finder-posture]")?.addEventListener("change",event=>{window.fsfflOpportunityPosture?.setPosture?.(event.target.value);window.fsfflMarketFocus?.refresh?.()});
+    body.querySelectorAll("[data-finder-filter]").forEach(select=>select.addEventListener("change",()=>{market.finderFilters[select.dataset.finderFilter]=select.value;renderBody(payload)}));
+    body.querySelector("[data-finder-reset]")?.addEventListener("click",()=>{market.finderFilters={position:"",team:"",status:"",deal:"",assets:"",sort:"search"};renderBody(payload)});
+    body.querySelectorAll("[data-finder-open]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.finderOpen;market.detailSection="overview";renderOpportunityDetail(body,payload)}));
+  }
+
+  function projectionFromPlayer(player){
+    const forecasts=player?.forecasts||[];
+    const obs=forecasts.find(item=>item.metric==="fantasy_points"&&item.horizon==="season")||forecasts.find(item=>item.metric==="fantasy_points");
+    if(finite(obs?.distribution?.mean))return obs.distribution.mean;
+    if(finite(player?.season_fantasy_points_projection))return player.season_fantasy_points_projection;
+    return null;
+  }
+  function deriveRanks(rows){
+    const ranked=[...rows].filter(row=>finite(row.market_index)).sort((a,b)=>b.market_index-a.market_index||String(a.full_name).localeCompare(String(b.full_name)));
+    ranked.forEach((row,index)=>row.overall_rank=index+1);
+    const positions=unique(ranked.map(row=>row.position));
+    positions.forEach(position=>ranked.filter(row=>row.position===position).forEach((row,index)=>row.position_rank=index+1));
+  }
+  async function ensurePlayerUniverse(){
+    if(market.playerLoaded||market.playerLoading)return;
+    market.playerLoading=true;market.playerError=null;renderBody(opp()?.payload||null);
+    try{
+      const results=await Promise.all([api("/api/league/value-lenses?universe=all"),api("/api/league/team-views")]);
+      const lenses=results[0]||{},league=results[1]||{};
+      if(lenses.status==="loading")throw new Error(lenses.message||"Governed Value lenses are still preparing.");
+      const analytics=new Map();
+      (league.team_views||[]).forEach(team=>(team.players||[]).forEach(player=>analytics.set(String(player.player_id),{...player,analytics_team_id:team.team_id,analytics_team_name:team.display_name})));
+      market.playerRows=(lenses.players||[]).map(row=>{
+        const a=analytics.get(String(row.player_id)),projection=a?projectionFromPlayer(a):null;
+        return{
+          player_id:String(row.player_id),full_name:row.full_name,position:row.position,nfl_team:row.nfl_team||a?.nfl_team||null,age:row.age_years,
+          owner_team_id:row.owner_team_id||null,owner_team_name:row.owner_team_name||null,roster_status:row.roster_status|| (row.owner_team_id?"rostered":"available"),
+          projected_starter:a?.projected_starter===true,role:a?(a.projected_starter?"starter":"reserve"):"unavailable",
+          projection,ppg:finite(projection)?projection/17:null,market_index:row.broad_market_value_index,intrinsic_index:row.intrinsic_value_index,
+          market_percentile:row.broad_market_percentile,intrinsic_percentile:row.intrinsic_percentile,overall_rank:null,position_rank:null
+        };
+      });
+      deriveRanks(market.playerRows);market.playerLoaded=true;
+    }catch(error){market.playerError=error?.message||String(error)}finally{market.playerLoading=false;renderBody(opp()?.payload||null)}
+  }
+  function optionList(values,current){return unique(values).sort().map(value=>"<option value='"+esc(value)+"'"+(String(current)===String(value)?" selected":"")+">"+esc(value)+"</option>").join("")}
+  function boardRows(){
+    const f=market.boardFilters,query=f.query.trim().toLowerCase();let rows=market.playerRows.filter(row=>{
+      if(query&&!((row.full_name+" "+(row.owner_team_name||"")+" "+(row.nfl_team||"")+" "+row.position).toLowerCase().includes(query)))return false;
+      if(f.position&&row.position!==f.position)return false;
+      if(f.owner&&String(row.owner_team_id||"")!==f.owner)return false;
+      if(f.nfl&&String(row.nfl_team||"")!==f.nfl)return false;
+      if(f.roster==="managed"&&String(row.owner_team_id||"")!==String(context().team_id))return false;
+      if(f.roster==="rostered"&&row.roster_status!=="rostered")return false;
+      if(f.roster==="available"&&row.roster_status!=="available")return false;
+      if(f.role&&row.role!==f.role)return false;
+      if(f.age==="u24"&&!(finite(row.age)&&row.age<24))return false;
+      if(f.age==="24-26"&&!(finite(row.age)&&row.age>=24&&row.age<=26.99))return false;
+      if(f.age==="27-29"&&!(finite(row.age)&&row.age>=27&&row.age<=29.99))return false;
+      if(f.age==="30p"&&!(finite(row.age)&&row.age>=30))return false;
+      return true;
+    });
+    const sort=market.boardSort,key=sort.key,dir=sort.direction==="asc"?1:-1;
+    rows.sort((a,b)=>{const av=a[key],bv=b[key];if(av==null&&bv==null)return String(a.full_name).localeCompare(String(b.full_name));if(av==null)return 1;if(bv==null)return-1;if(typeof av==="number"&&typeof bv==="number")return(av-bv)*dir;return String(av).localeCompare(String(bv))*dir});
+    return rows;
+  }
+  function playerActionContext(row){
+    const managed=String(row.owner_team_id||"")===String(context().team_id);
+    return"data-pi-owner-team-id='"+esc(row.owner_team_id||"")+"' data-pi-owner-team-name='"+esc(row.owner_team_name||"")+"' data-pi-roster-status='"+esc(row.roster_status)+"' data-pi-managed='"+(managed?"true":"false")+"'";
+  }
+  function playerRowMarkup(row){
+    return"<tr><td class='market-ns-player-sticky'><button type='button' class='pi-player-link market-ns-player-link' data-player-intelligence-id='"+esc(row.player_id)+"' "+playerActionContext(row)+"><strong>"+esc(row.full_name)+"</strong><small>"+esc(row.position)+" · "+esc(row.nfl_team||"NFL team unavailable")+"</small></button></td><td>"+age(row.age)+"</td><td>"+esc(row.owner_team_name||(row.roster_status==="available"?"Available":"Unavailable"))+"</td><td>"+integer(row.market_index)+"</td><td>"+integer(row.intrinsic_index)+"</td><td>"+num(row.ppg,1)+"</td><td>"+num(row.projection,1)+"</td><td>"+(row.overall_rank?"#"+row.overall_rank:"Unavailable")+"</td><td>"+(row.position_rank?"#"+row.position_rank+" "+esc(row.position):"Unavailable")+"</td></tr>";
+  }
+  function renderPlayerBoard(body){
+    if(!market.playerLoaded){body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Player Board</p><h2>Explore the whole player market.</h2><p>Read-only league discovery with separate governed Value lenses.</p></div></section>"+(market.playerError?unavailable("Player Board unavailable",market.playerError):loading("Loading Player Board","Reading current State, Forecast team views and governed Value lenses. No Search or Decision work is launched."));if(!market.playerLoading&&!market.playerError)void ensurePlayerUniverse();return}
+    const f=market.boardFilters,rows=boardRows(),positions=market.playerRows.map(x=>x.position),owners=market.playerRows.filter(x=>x.owner_team_id).map(x=>x.owner_team_name),nfl=market.playerRows.map(x=>x.nfl_team);
+    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Player Board</p><h2>Let me discover for myself.</h2><p>Overall and position ranks are presentation ordering only. Broad Market and FSFFL Intrinsic remain separate.</p></div><small>"+rows.length+" players</small></section><div class='market-ns-board-controls'><input type='search' data-board-filter='query' value='"+esc(f.query)+"' placeholder='Search player, owner, NFL team or keyword'><select data-board-filter='position'><option value=''>All positions</option>"+optionList(positions,f.position)+"</select><select data-board-filter='age'><option value=''>All ages</option><option value='u24'"+(f.age==="u24"?" selected":"")+">Under 24</option><option value='24-26'"+(f.age==="24-26"?" selected":"")+">24-26</option><option value='27-29'"+(f.age==="27-29"?" selected":"")+">27-29</option><option value='30p'"+(f.age==="30p"?" selected":"")+">30+</option></select><select data-board-filter='owner'><option value=''>All fantasy teams</option>"+unique(market.playerRows.filter(x=>x.owner_team_id).map(x=>[x.owner_team_id,x.owner_team_name])).map(()=> "").join("")+"</select><select data-board-filter='nfl'><option value=''>All NFL teams</option>"+optionList(nfl,f.nfl)+"</select><select data-board-filter='roster'><option value=''>All roster statuses</option><option value='managed'"+(f.roster==="managed"?" selected":"")+">My roster</option><option value='rostered'"+(f.roster==="rostered"?" selected":"")+">Rostered</option><option value='available'"+(f.roster==="available"?" selected":"")+">Available</option></select><select data-board-filter='role'><option value=''>All projected roles</option><option value='starter'"+(f.role==="starter"?" selected":"")+">Projected starters</option><option value='reserve'"+(f.role==="reserve"?" selected":"")+">Projected reserves</option></select><select data-board-sort><option value='market_index'>Broad Market</option><option value='intrinsic_index'>FSFFL Intrinsic</option><option value='age'>Age</option><option value='ppg'>PPG</option><option value='projection'>17-game projection</option><option value='overall_rank'>Overall rank</option><option value='position_rank'>Position rank</option><option value='full_name'>Player name</option></select></div><div class='market-ns-board-meta'><span>Broad Market and FSFFL Intrinsic are shown side by side and never blended.</span><span>League Market Value: unavailable · Team Utility: not part of this board.</span></div><div class='market-ns-player-table'><table><thead><tr><th>Player</th><th>Age</th><th>Fantasy team</th><th>Broad Market</th><th>FSFFL Intrinsic</th><th>PPG</th><th>17-game projection</th><th>Overall rank</th><th>Position rank</th></tr></thead><tbody>"+(rows.length?rows.map(playerRowMarkup).join(""):"<tr><td colspan='9'>No players match these filters.</td></tr>")+"</tbody></table></div>";
+    const ownerSelect=body.querySelector("[data-board-filter='owner']");if(ownerSelect){ownerSelect.innerHTML="<option value=''>All fantasy teams</option>"+[...new Map(market.playerRows.filter(x=>x.owner_team_id).map(x=>[String(x.owner_team_id),x.owner_team_name])).entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).map(([id,name])=>"<option value='"+esc(id)+"'"+(f.owner===id?" selected":"")+">"+esc(name)+"</option>").join("")}
+    const sort=body.querySelector("[data-board-sort]");if(sort)sort.value=market.boardSort.key;
+    body.querySelectorAll("[data-board-filter]").forEach(control=>control.addEventListener(control.tagName==="INPUT"?"input":"change",()=>{market.boardFilters[control.dataset.boardFilter]=control.value;renderPlayerBoard(body)}));
+    sort?.addEventListener("change",()=>{market.boardSort={key:sort.value,direction:["age","full_name","overall_rank","position_rank"].includes(sort.value)?"asc":"desc"};renderPlayerBoard(body)});
+  }
+
+  function freeRows(){
+    const f=market.freeFilters,query=f.query.trim().toLowerCase();let rows=market.playerRows.filter(row=>row.roster_status==="available");
+    rows=rows.filter(row=>(!query||(row.full_name+" "+row.position+" "+(row.nfl_team||"")).toLowerCase().includes(query))&&(!f.position||row.position===f.position)&&(!f.nfl||row.nfl_team===f.nfl));
+    const sort=market.freeSort,key=sort.key,dir=sort.direction==="asc"?1:-1;rows.sort((a,b)=>{const av=a[key],bv=b[key];if(av==null&&bv==null)return String(a.full_name).localeCompare(String(b.full_name));if(av==null)return 1;if(bv==null)return-1;if(typeof av==="number"&&typeof bv==="number")return(av-bv)*dir;return String(av).localeCompare(String(bv))*dir});return rows;
+  }
+  function waiverResultMarkup(result){
+    if(!result)return"";if(result.error)return"<div class='market-ns-waiver-result'><strong>Evaluation unavailable</strong><span>"+esc(result.error)+"</span></div>";
+    const delta=result.team_delta||{},competitive=delta.competitive||{},assessment=result.material_assessment||{};
+    return"<div class='market-ns-waiver-result'><div><small>Governed disposition</small><strong>"+esc(words(assessment.disposition||"Unavailable"))+"</strong><span>Action authority: "+esc(words(result.action_authority||"Unavailable"))+"</span></div><div><small>Expected wins</small><strong>"+(finite(competitive.expected_wins)?(competitive.expected_wins>0?"+":"")+competitive.expected_wins.toFixed(2):"Unavailable")+"</strong></div><div><small>Playoff odds</small><strong>"+(finite(competitive.playoff_probability)?(competitive.playoff_probability>0?"+":"")+(competitive.playoff_probability*100).toFixed(1)+" pp":"Unavailable")+"</strong></div><div><small>Simulation</small><strong>"+(result.scenario_simulation_count?Number(result.scenario_simulation_count).toLocaleString():"Unavailable")+"</strong></div></div>";
+  }
+  function waiverEvaluator(){
+    const add=market.waiverPlayer;if(!add)return"";
+    const managed=market.playerRows.filter(row=>String(row.owner_team_id||"")===String(context().team_id)).sort((a,b)=>(a.projected_starter?1:0)-(b.projected_starter?1:0)||String(a.full_name).localeCompare(String(b.full_name)));
+    return"<section class='market-ns-waiver'><div class='market-ns-detail-top'><div><p class='eyebrow'>Add / Drop Detail</p><h3>Add "+esc(add.full_name)+"</h3><p>Choose a drop candidate. The governed evaluator runs only when you ask.</p></div><button type='button' class='text-button' data-waiver-close>Close</button></div><label><span>Drop from your roster</span><select data-waiver-drop><option value=''>Use open roster slot</option>"+managed.map(row=>"<option value='"+esc(row.player_id)+"'"+(market.waiverDrop===row.player_id?" selected":"")+">"+esc(row.full_name)+" · "+esc(row.position)+" · "+esc(row.role)+"</option>").join("")+"</select></label><button type='button' class='primary-button' data-waiver-run "+(market.waiverBusy?"disabled":"")+">"+(market.waiverBusy?"Running governed evaluation…":"Evaluate add/drop")+"</button>"+waiverResultMarkup(market.waiverResult)+"</section>";
+  }
+  function renderFreeAgents(body){
+    if(!market.playerLoaded){body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Free Agents</p><h2>What can I add without a trade?</h2><p>Available-player discovery is immediate; add/drop evaluation is explicit.</p></div></section>"+(market.playerError?unavailable("Free Agents unavailable",market.playerError):loading("Loading available players","Reading current State, Forecast and separate Value lenses."));if(!market.playerLoading&&!market.playerError)void ensurePlayerUniverse();return}
+    const f=market.freeFilters,rows=freeRows(),nfl=market.playerRows.filter(x=>x.roster_status==="available").map(x=>x.nfl_team);
+    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Free Agents</p><h2>Available players</h2><p>No waiver priority is invented. Missing Forecast or Value evidence stays unavailable.</p></div><small>"+rows.length+" available</small></section>"+waiverEvaluator()+"<div class='market-ns-free-controls'><input type='search' data-free-filter='query' value='"+esc(f.query)+"' placeholder='Search available player'><select data-free-filter='position'><option value=''>All positions</option>"+optionList(["QB","RB","WR","TE"],f.position)+"</select><select data-free-filter='nfl'><option value=''>All NFL teams</option>"+optionList(nfl,f.nfl)+"</select><select data-free-sort><option value='market_index'>Broad Market</option><option value='intrinsic_index'>FSFFL Intrinsic</option><option value='projection'>17-game projection</option><option value='ppg'>PPG</option><option value='age'>Age</option><option value='position_rank'>Position rank</option></select></div><div class='market-ns-free-list'>"+(rows.length?rows.map(row=>"<article><button type='button' class='market-ns-free-player pi-player-link' data-player-intelligence-id='"+esc(row.player_id)+"' "+playerActionContext(row)+"><span><strong>"+esc(row.full_name)+"</strong><small>"+esc(row.position)+" · "+esc(row.nfl_team||"NFL team unavailable")+" · age "+age(row.age)+"</small></span><span><small>PPG</small><b>"+num(row.ppg,1)+"</b></span><span><small>17-game</small><b>"+num(row.projection,1)+"</b></span><span><small>Broad Market</small><b>"+integer(row.market_index)+"</b></span><span><small>Intrinsic</small><b>"+integer(row.intrinsic_index)+"</b></span></button><button type='button' class='secondary-button' data-free-evaluate='"+esc(row.player_id)+"'>Evaluate add/drop</button></article>").join(""):unavailable("No available players match","Change the filters to broaden the list."))+"</div>";
+    const sort=body.querySelector("[data-free-sort]");if(sort)sort.value=market.freeSort.key;
+    body.querySelectorAll("[data-free-filter]").forEach(control=>control.addEventListener(control.tagName==="INPUT"?"input":"change",()=>{market.freeFilters[control.dataset.freeFilter]=control.value;renderFreeAgents(body)}));
+    sort?.addEventListener("change",()=>{market.freeSort={key:sort.value,direction:["age","position_rank"].includes(sort.value)?"asc":"desc"};renderFreeAgents(body)});
+    body.querySelectorAll("[data-free-evaluate]").forEach(button=>button.addEventListener("click",()=>{market.waiverPlayer=market.playerRows.find(row=>row.player_id===button.dataset.freeEvaluate)||null;market.waiverDrop="";market.waiverResult=null;renderFreeAgents(body);document.querySelector(".market-ns-waiver")?.scrollIntoView({behavior:"smooth",block:"nearest"})}));
+    body.querySelector("[data-waiver-close]")?.addEventListener("click",()=>{market.waiverPlayer=null;market.waiverResult=null;renderFreeAgents(body)});
+    body.querySelector("[data-waiver-drop]")?.addEventListener("change",event=>{market.waiverDrop=event.target.value||""});
+    body.querySelector("[data-waiver-run]")?.addEventListener("click",runWaiver);
+  }
+  async function runWaiver(){
+    if(!market.waiverPlayer||market.waiverBusy)return;const id=++market.waiverSeq,ctx=context(),stateId=ctx.state_id;
+    market.waiverBusy=true;market.waiverResult=null;renderBody(opp()?.payload||null);
+    try{
+      const result=await api("/api/opportunities/waiver",{method:"POST",body:JSON.stringify({add_player_id:market.waiverPlayer.player_id,drop_player_id:market.waiverDrop||null})});
+      if(id!==market.waiverSeq||context().state_id!==stateId)return;market.waiverResult=result;
+    }catch(error){if(id===market.waiverSeq)market.waiverResult={error:error?.message||String(error)}}finally{if(id===market.waiverSeq){market.waiverBusy=false;renderBody(opp()?.payload||null)}}
+  }
+
+  function openOwner(teamId){
+    if(!teamId)return;
+    window.fsfflSetDeepLinkIntent?.({route:"behavioral_intelligence",ownerTeamId:String(teamId)});
+    if(typeof setRoute==="function")setRoute("behavioral_intelligence");
+  }
+  function openTradeFinder(intent,value){
+    window.fsfflSetDeepLinkIntent?.({route:"opportunities",marketTab:"trade_finder",marketIntent:intent||"",marketValue:value||""});
+    if(typeof setRoute==="function")setRoute("opportunities");
+  }
+  function openFreeAgent(playerId){
+    window.fsfflSetDeepLinkIntent?.({route:"opportunities",marketTab:"free_agents",playerId:String(playerId||"")});
+    if(typeof setRoute==="function")setRoute("opportunities");
+  }
+  function bootReadOnly(tab){
+    market.readOnly=true;market.tab=tab==="free_agents"?"free_agents":"player_board";market.detailKey="";
+    const pending=consumeMarketDeepLink();
+    shell(null);void ensurePlayerUniverse();
+    if(pending?.playerId&&market.tab==="free_agents"){
+      const timer=setInterval(()=>{if(market.playerLoaded){clearInterval(timer);const row=market.playerRows.find(x=>x.player_id===String(pending.playerId));if(row){market.waiverPlayer=row;renderBody(null)}}},50);setTimeout(()=>clearInterval(timer),5000)
+    }
+  }
+  function renderNorthStar(payload){
+    market.readOnly=false;
+    const pending=consumeMarketDeepLink();
+    if(!pending&&market.tab==="player_board"&&payload?.status==="ready"){}else if(!pending&&!TABS.some(row=>row[0]===market.tab))market.tab="for_you";
+    shell(payload);
+    const focus=payload?.trade_discovery?.focus||null,intent=selectedIntent();
+    if(market.tab==="trade_finder"&&intent.intent&&(!focus||focus.intent!==intent.intent||String(focus.value||"")!==String(intent.value||""))){
+      setTimeout(()=>window.fsfflMarketFocus?.refresh?.(),0);
+    }
+  }
+  function reset(){
+    market.playerRows=[];market.playerLoaded=false;market.playerLoading=false;market.playerError=null;market.detailKey="";market.waiverPlayer=null;market.waiverResult=null;market.waiverSeq+=1;
+  }
+
+  window.fsfflMarketNorthStarV2=true;
+  window.renderFsfflMarketNorthStar=renderNorthStar;
+  window.fsfflMarketNorthStar={version:VERSION,bootReadOnly,openTab,openTradeFinder,openFreeAgent,openOwner,render:renderNorthStar};
+  window.addEventListener("fsffl:product-context-updated",reset);
+  window.addEventListener("fsffl:market-focus-applied",()=>{if(onMarket())shell(opp()?.payload||null)});
 })();
