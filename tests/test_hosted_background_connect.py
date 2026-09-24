@@ -256,3 +256,75 @@ def test_hosted_connect_reuses_restored_matching_league_before_provider_reload()
     assert "already_loaded = _matches_sleeper_league" in source
     assert "if already_loaded:" in source
     assert "return" in source.split("if already_loaded:", 1)[1].split("league_state = state_loader", 1)[0]
+
+
+def test_background_connect_latest_league_wins_cross_league_race() -> None:
+    coordinator = LeagueConnectCoordinator(max_workers=2)
+    old_release = Event()
+    old_started = Event()
+    promotions: list[str] = []
+
+    def old_work() -> None:
+        old_started.set()
+        old_release.wait(timeout=2)
+        if coordinator.is_current(user_id="u", league_external_id="old"):
+            promotions.append("old")
+
+    def new_work() -> None:
+        if coordinator.is_current(user_id="u", league_external_id="new"):
+            promotions.append("new")
+
+    coordinator.start(user_id="u", league_external_id="old", work=old_work)
+    assert old_started.wait(timeout=1)
+    coordinator.start(user_id="u", league_external_id="new", work=new_work)
+
+    deadline = monotonic() + 1
+    while "new" not in promotions and monotonic() < deadline:
+        sleep(0.01)
+    old_release.set()
+
+    deadline = monotonic() + 1
+    while monotonic() < deadline:
+        if coordinator.current("u") is not None:
+            break
+        sleep(0.01)
+
+    assert promotions == ["new"]
+    assert coordinator.is_current(user_id="u", league_external_id="old") is False
+
+
+def test_mobile_connect_rejects_false_success_and_only_persists_verified_league() -> None:
+    source = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+    completed = source.split("if(job?.status==='completed'){", 1)[1].split(
+        "if(job?.status==='failed')", 1
+    )[0]
+    assert "contextMatchesLeague(context,leagueId)" in completed
+    assert "requested Sleeper league did not become active" in completed
+
+    interactive = source.split("async function interactiveConnect()", 1)[1]
+    before_wait = interactive.split("const context=await waitForBackgroundImport", 1)[0]
+    after_wait = interactive.split("const context=await waitForBackgroundImport", 1)[1]
+    assert "localStorage.setItem(LEAGUE_KEY,normalized)" not in before_wait
+    assert "contextMatchesLeague(context,normalized)" in after_wait
+    assert "localStorage.setItem(LEAGUE_KEY,normalized)" in after_wait
+    assert "localStorage.removeItem(TEAM_KEY)" in after_wait
+
+
+def test_hosted_connect_fences_stale_cross_league_promotion() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    connect = source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+    refresh = source.split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[1].split('@application.get("/api/connect/sleeper/background/current")', 1)[0]
+    assert "jobs.is_current" in connect
+    assert "superseded before promotion" in connect
+    assert "jobs.is_current" in refresh
+    assert "superseded before promotion" in refresh
