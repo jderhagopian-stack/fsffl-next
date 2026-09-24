@@ -5,6 +5,8 @@
 (function(){
   "use strict";
   const VERSION="20260924-market-north-star1";
+  const SAVE_KEY="fsffl.market.savedOpportunities";
+  const WATCH_KEY="fsffl.market.watchedPlayers";
   const TABS=[
     ["for_you","For You","What might I care about?"],
     ["trade_finder","Trade Finder","Find realistic paths"],
@@ -46,6 +48,9 @@
   const age=value=>finite(value)?(Number.isInteger(value)?String(value):value.toFixed(1)):"Unavailable";
   const words=value=>String(value||"").replaceAll("_"," ");
   const unique=values=>[...new Set(values.filter(Boolean))];
+  function storageSet(key){try{return new Set(JSON.parse(localStorage.getItem(key)||"[]"))}catch(_){return new Set()}}
+  function persistSet(key,set){try{localStorage.setItem(key,JSON.stringify([...set]))}catch(_){}}
+
   const opp=()=>{try{return typeof fsfflOpportunityState!=="undefined"?fsfflOpportunityState:null}catch(_){return null}};
   const panel=()=>document.querySelector("#generic-screen .panel");
   const context=()=>{try{return state?.context||window.state?.context||{}}catch(_){return{}}};
@@ -131,8 +136,8 @@
     return ordered.slice(0,5);
   }
   function opportunityCard(row){
-    const a=authority(row),target=labels(row.receive).join(" + ")||row.target_position||"Trade path";
-    return"<article class='market-ns-opportunity "+a.key+"'><button type='button' data-market-open='"+esc(rowKey(row))+"'><span class='market-ns-orb'>"+(a.key==="recommended"?"✓":a.key==="investigate"?"↗":a.key==="needs"?"?":"·")+"</span><div><div class='market-ns-card-top'><small>"+esc(row.target_position||"Opportunity")+"</small>"+statusPill(row)+"</div><h3>"+esc(target)+"</h3><p>"+esc(row.counterparty_name||"Counterparty unavailable")+" · "+reason(row)+"</p>"+packageMarkup(row)+"<span class='market-ns-card-cta'>Open opportunity →</span></div></button></article>";
+    const a=authority(row),target=labels(row.receive).join(" + ")||row.target_position||"Trade path",saved=storageSet(SAVE_KEY).has(rowKey(row));
+    return"<article class='market-ns-opportunity "+a.key+"'><button type='button' data-market-open='"+esc(rowKey(row))+"'><span class='market-ns-orb'>"+(a.key==="recommended"?"✓":a.key==="investigate"?"↗":a.key==="needs"?"?":"·")+"</span><div><div class='market-ns-card-top'><small>"+esc(row.target_position||"Opportunity")+(saved?" · Saved":"")+"</small>"+statusPill(row)+"</div><h3>"+esc(target)+"</h3><p>"+esc(row.counterparty_name||"Counterparty unavailable")+" · "+reason(row)+"</p>"+packageMarkup(row)+"<span class='market-ns-card-cta'>Open opportunity →</span></div></button></article>";
   }
   function renderForYou(body,payload){
     if(market.detailKey)return renderOpportunityDetail(body,payload);
@@ -153,12 +158,14 @@
     const overview="<div class='market-ns-detail-grid'><article><small>Why it surfaced</small><strong>"+reason(row)+"</strong></article><article><small>Search / Decision status</small><strong>"+esc(a.label)+"</strong><span>"+esc(a.copy)+"</span></article><article><small>Owner history coverage</small><strong>"+esc(ownerCoverage(row.counterparty_team_id))+"</strong></article><article><small>Value context</small><strong>"+(finite(row.market_gap_ratio)?(row.market_gap_ratio*100).toFixed(1)+"% relative package gap":"Unavailable")+"</strong><span>Broad Market and Intrinsic are not blended here.</span></article></div>";
     const pathMarkup="<div class='market-ns-paths'>"+paths.map(item=>"<article>"+packageMarkup(item)+"<small>Search-discovered acquisition path · not an acceptance prediction</small><button type='button' class='secondary-button' data-market-path='"+esc(rowKey(item))+"'>Use this package</button></article>").join("")+"</div>";
     const fit="<div class='market-ns-detail-grid'><article><small>Roster need</small><strong>"+esc(row.target_position||"Unavailable")+(row.focal_position_strength_rank?" · #"+esc(row.focal_position_strength_rank):"")+"</strong></article><article><small>Package shape</small><strong>"+esc(words(row.package_shape||((row.send||[]).length>1?"consolidation":"trade")))+"</strong></article><article><small>Counterparty context</small><strong>"+esc(ownerCoverage(row.counterparty_team_id))+"</strong><span>Descriptive only; no acceptance probability.</span></article><article><small>Exact season impact</small><strong>Trade Center</strong><span>Not run merely to preview this opportunity.</span></article></div>";
-    body.innerHTML="<section class='market-ns-detail'><div class='market-ns-detail-top'><button type='button' class='text-button' data-market-back>‹ Back</button>"+statusPill(row)+"</div><div class='market-ns-detail-hero'><div><p class='eyebrow'>Opportunity Detail</p><h2>"+esc(labels(row.receive).join(" + ")||row.target_position||"Trade opportunity")+"</h2><button type='button' class='market-ns-owner-link' data-market-owner='"+esc(row.counterparty_team_id||"")+"'>"+esc(row.counterparty_name||"Counterparty")+" → Owner Intelligence</button></div><button type='button' class='primary-button' data-market-trade='"+esc(rowKey(row))+"'>Evaluate this package in Trade Center</button></div>"+packageMarkup(row)+"<nav class='market-ns-detail-tabs'><button data-detail-section='overview' class='"+(section==="overview"?"active":"")+"'>Overview</button><button data-detail-section='paths' class='"+(section==="paths"?"active":"")+"'>Acquisition Paths</button><button data-detail-section='fit' class='"+(section==="fit"?"active":"")+"'>Fit & Impact</button></nav>"+(section==="paths"?pathMarkup:section==="fit"?fit:overview)+"</section>";
+    body.innerHTML="<section class='market-ns-detail'><div class='market-ns-detail-top'><button type='button' class='text-button' data-market-back>‹ Back</button>"+statusPill(row)+"</div><div class='market-ns-detail-hero'><div><p class='eyebrow'>Opportunity Detail</p><h2>"+esc(labels(row.receive).join(" + ")||row.target_position||"Trade opportunity")+"</h2><button type='button' class='market-ns-owner-link' data-market-owner='"+esc(row.counterparty_team_id||"")+"'>"+esc(row.counterparty_name||"Counterparty")+" → Owner Intelligence</button></div><div class='market-ns-detail-actions'><button type='button' class='secondary-button' data-market-save>"+(storageSet(SAVE_KEY).has(rowKey(row))?"Saved ✓":"Save")+"</button>"+(refs(row.receive)[0]?"<button type='button' class='secondary-button' data-market-watch>"+(storageSet(WATCH_KEY).has(refs(row.receive)[0])?"Watching ✓":"Watch target")+"</button>":"")+"<button type='button' class='primary-button' data-market-trade='"+esc(rowKey(row))+"'>Evaluate this package in Trade Center</button></div></div>"+packageMarkup(row)+"<nav class='market-ns-detail-tabs'><button data-detail-section='overview' class='"+(section==="overview"?"active":"")+"'>Overview</button><button data-detail-section='paths' class='"+(section==="paths"?"active":"")+"'>Acquisition Paths</button><button data-detail-section='fit' class='"+(section==="fit"?"active":"")+"'>Fit & Impact</button></nav>"+(section==="paths"?pathMarkup:section==="fit"?fit:overview)+"</section>";
     body.querySelector("[data-market-back]")?.addEventListener("click",()=>{market.detailKey="";renderBody(payload)});
     body.querySelectorAll("[data-detail-section]").forEach(button=>button.addEventListener("click",()=>{market.detailSection=button.dataset.detailSection;renderBody(payload)}));
     body.querySelectorAll("[data-market-path]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.marketPath;market.detailSection="overview";renderBody(payload)}));
     body.querySelector("[data-market-trade]")?.addEventListener("click",()=>window.fsfflOpenOpportunityInTradeCenter?.(row));
     body.querySelector("[data-market-owner]")?.addEventListener("click",()=>openOwner(row.counterparty_team_id));
+    body.querySelector("[data-market-save]")?.addEventListener("click",()=>{const set=storageSet(SAVE_KEY),key=rowKey(row);set.has(key)?set.delete(key):set.add(key);persistSet(SAVE_KEY,set);renderOpportunityDetail(body,payload)});
+    body.querySelector("[data-market-watch]")?.addEventListener("click",()=>{const ref=refs(row.receive)[0];if(!ref)return;const set=storageSet(WATCH_KEY);set.has(ref)?set.delete(ref):set.add(ref);persistSet(WATCH_KEY,set);renderOpportunityDetail(body,payload)});
   }
 
   function currentCalculatedState(payload){
