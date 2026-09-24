@@ -103,7 +103,13 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     let nextContextProbeAt=Date.now()+1000;
     while(Date.now()<deadline){
       onProgress?.(job);
-      if(job?.status==='completed')return resilientApi('/api/product-context',{},3);
+      if(job?.status==='completed'){
+        const context=await resilientApi('/api/product-context',{},3);
+        if(!contextMatchesLeague(context,leagueId)||!context?.state_id){
+          throw new Error('League import completed, but the requested Sleeper league did not become active.');
+        }
+        return context;
+      }
       if(job?.status==='failed')throw new Error(job.error||'Sleeper league import failed');
 
       // Canonical State is the readiness boundary for using the application. A hosted
@@ -229,7 +235,6 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     if(!leagueId?.trim())return;
     const normalized=leagueId.trim();
     const started=now();
-    localStorage.setItem(LEAGUE_KEY,normalized);
     interactiveConnectInFlight=true;
     const button=document.querySelector('#connect-button');
     const original=button?.textContent||'Connect Sleeper League';
@@ -238,6 +243,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       const context=await waitForBackgroundImport(normalized,job=>{
         if(button)button.textContent=job?.status==='running'?'Loading league…':'Starting import…';
       },'connect');
+      if(!contextMatchesLeague(context,normalized)||!context?.state_id){
+        throw new Error('Requested Sleeper league was not activated.');
+      }
+      localStorage.setItem(LEAGUE_KEY,normalized);
+      localStorage.removeItem(TEAM_KEY);
       applyConnectedContext(context);
       publishSyncState('current');
       recordLatency('first_connect_ready',started,'success');

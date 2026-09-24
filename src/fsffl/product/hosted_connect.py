@@ -66,6 +66,14 @@ class LeagueConnectCoordinator:
             job_id = self._current_by_user.get(user_id)
             return self._jobs.get(job_id) if job_id is not None else None
 
+    def is_current(self, *, user_id: str, league_external_id: str) -> bool:
+        current = self.current(user_id)
+        return bool(
+            current is not None
+            and current.league_external_id == league_external_id
+            and current.status in {LeagueConnectStatus.QUEUED, LeagueConnectStatus.RUNNING}
+        )
+
     def start(
         self,
         *,
@@ -136,6 +144,12 @@ class LeagueConnectCoordinator:
         try:
             work()
         except Exception as exc:
+            _logger.exception(
+                "FSFFL Sleeper background job failed job=%s league=%s operation=%s",
+                job_id,
+                current.league_external_id,
+                current.operation,
+            )
             self._set(
                 job_id,
                 status=LeagueConnectStatus.FAILED,
@@ -255,7 +269,22 @@ def install_hosted_connect_routes(
             if already_loaded:
                 return
             league_state = state_loader(league_external_id)
+            if not jobs.is_current(
+                user_id=user_id,
+                league_external_id=league_external_id,
+            ):
+                _logger.info(
+                    "FSFFL Sleeper connect superseded before promotion league=%s user=%s",
+                    league_external_id,
+                    user_id,
+                )
+                return
             runtime_store.set_league_state(user_id, league_state)
+            if not _matches_sleeper_league(
+                runtime_store.get(user_id).league_state,
+                league_external_id,
+            ):
+                raise RuntimeError("Sleeper connect completed without promoting requested league")
             behavioral_coordinator.start(
                 user_id=user_id,
                 league_state=league_state,
@@ -328,6 +357,16 @@ def install_hosted_connect_routes(
                     probe = None
 
             league_state = state_loader(league_external_id)
+            if not jobs.is_current(
+                user_id=user_id,
+                league_external_id=league_external_id,
+            ):
+                _logger.info(
+                    "FSFFL Sleeper refresh superseded before promotion league=%s user=%s",
+                    league_external_id,
+                    user_id,
+                )
+                return
             changed = (
                 previous_fingerprint is None
                 or league_material_fingerprint(league_state) != previous_fingerprint
