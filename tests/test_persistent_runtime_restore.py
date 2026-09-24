@@ -3,7 +3,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from time import monotonic, sleep
 
-from fsffl.persistence.session import persist_runtime_snapshot, restore_runtime_snapshot
+from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
+from fsffl.persistence.session import (
+    LAST_GOOD_ARTIFACT_KIND, LAST_GOOD_MODEL_VERSION, LAST_GOOD_SCOPE_KIND,
+    persist_runtime_snapshot, restore_runtime_snapshot,
+)
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.state.models import (
     League,
@@ -219,3 +223,34 @@ def test_incompatible_persisted_state_still_fails_closed_on_startup_restore() ->
     assert restored.forecast_evidence is None
     assert restored.simulation_analytics is None
     assert restored.value_evidence is None
+
+
+def test_partial_checkpoint_cannot_displace_durable_last_good_identity() -> None:
+    persistence = MemoryPersistence()
+    last_good = _league_state()
+    persist_runtime_snapshot(persistence, user_id="jimmy", league_state=last_good, selected_team_id="t2")
+    persistence.put_artifact(ReusableArtifactRecord(
+        key=ArtifactKey(artifact_kind=LAST_GOOD_ARTIFACT_KIND, scope_kind=LAST_GOOD_SCOPE_KIND, scope_id="jimmy", input_fingerprint=last_good.state_id, model_version=LAST_GOOD_MODEL_VERSION),
+        payload={"league_state": last_good.model_dump(mode="json"), "selected_team_id": "t2"},
+        computed_at=datetime.now(UTC),
+    ))
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind="intelligence_job_lifecycle",
+                scope_kind="user",
+                scope_id="jimmy",
+                input_fingerprint="job-running",
+                model_version="intelligence-job-lifecycle-v1",
+            ),
+            payload={"status": "running"},
+            computed_at=datetime.now(UTC),
+        )
+    )
+    partial = last_good.model_copy(update={"as_of": datetime(2026, 9, 8, 12, 5, tzinfo=UTC)})
+    persist_runtime_snapshot(persistence, user_id="jimmy", league_state=partial, selected_team_id="t1")
+
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy")
+    assert restored is not None
+    assert restored.league_state.state_id == last_good.state_id
+    assert restored.selected_team_id == "t2"

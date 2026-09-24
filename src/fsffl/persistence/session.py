@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING
 from fsffl.state.models import LeagueState
 
 from .contracts import (
+    ArtifactKey,
     LeagueSnapshotRecord,
     PersistenceStore,
+    ReusableArtifactRecord,
     TeamSnapshotRecord,
     UserRuntimeContextRecord,
     utc_now,
@@ -35,6 +37,11 @@ if TYPE_CHECKING:
 
 
 CURRENT_TEAM_ANALYTICS_VIEW_VERSION = "next7-team-view-v4:position-strength-age"
+LAST_GOOD_ARTIFACT_KIND = "runtime_last_good_bundle"
+LAST_GOOD_SCOPE_KIND = "user"
+LAST_GOOD_MODEL_VERSION = "runtime-last-good-v1"
+JOB_LIFECYCLE_ARTIFACT_KIND = "intelligence_job_lifecycle"
+JOB_LIFECYCLE_MODEL_VERSION = "intelligence-job-lifecycle-v1"
 
 
 @dataclass(frozen=True)
@@ -161,6 +168,22 @@ def persist_runtime_snapshot(
                 recorded_at=now,
             )
 
+    # Complete bundles get an independent durable identity. Partial refresh
+    # checkpoints cannot displace this restart authority.
+    if forecast_evidence is not None and simulation_analytics is not None and value_evidence is not None:
+        store.put_artifact(
+            ReusableArtifactRecord(
+                key=ArtifactKey(
+                    artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+                    scope_kind=LAST_GOOD_SCOPE_KIND,
+                    scope_id=user_id,
+                    input_fingerprint=league_state.state_id,
+                    model_version=LAST_GOOD_MODEL_VERSION,
+                ),
+                payload={"league_state": state_payload, "selected_team_id": selected_team_id},
+                computed_at=now,
+            )
+        )
 
 def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> DurableRuntimeSnapshot | None:
     """Restore only an internally consistent, current-model runtime snapshot."""
@@ -168,16 +191,46 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
     context = store.get_user_runtime_context(user_id=user_id)
     if context is None:
         return None
-    league_record = store.get_league_snapshot(
-        provider=context.provider,
-        league_id=context.league_id,
-        season=context.season,
+    # Ordinary/selective state checkpoints remain restart-authoritative. Only an
+    # in-flight refresh is allowed to fall back to the independently promoted
+    # complete bundle; this preserves Stage 2 selective invalidation semantics.
+    lifecycle = store.get_latest_reusable_artifact(
+        artifact_kind=JOB_LIFECYCLE_ARTIFACT_KIND,
+        scope_kind=LAST_GOOD_SCOPE_KIND,
+        scope_id=user_id,
+        model_version=JOB_LIFECYCLE_MODEL_VERSION,
     )
-    if league_record is None or league_record.state_hash != context.state_hash:
-        return None
-    league_state = LeagueState.model_validate(league_record.payload)
-    if league_state.state_id != context.state_hash:
-        return None
+    refresh_was_in_flight = (
+        lifecycle is not None
+        and lifecycle.payload.get("status") in {"queued", "running"}
+    )
+    last_good = None
+    if refresh_was_in_flight:
+        last_good = store.get_latest_reusable_artifact(
+            artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+            scope_kind=LAST_GOOD_SCOPE_KIND,
+            scope_id=user_id,
+            model_version=LAST_GOOD_MODEL_VERSION,
+        )
+
+    if last_good is not None:
+        try:
+            league_state = LeagueState.model_validate(last_good.payload["league_state"])
+            selected = last_good.payload.get("selected_team_id")
+        except (KeyError, TypeError, ValueError):
+            return None
+    else:
+        league_record = store.get_league_snapshot(
+            provider=context.provider,
+            league_id=context.league_id,
+            season=context.season,
+        )
+        if league_record is None or league_record.state_hash != context.state_hash:
+            return None
+        league_state = LeagueState.model_validate(league_record.payload)
+        if league_state.state_id != context.state_hash:
+            return None
+        selected = context.selected_team_id
 
     forecast = None
     simulation = None
@@ -230,7 +283,6 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         except (TypeError, ValueError):
             values = None
 
-    selected = context.selected_team_id
     if selected not in {team.team_id for team in league_state.teams}:
         selected = None
     return DurableRuntimeSnapshot(
