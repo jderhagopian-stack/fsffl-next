@@ -12,6 +12,7 @@ _logger = logging.getLogger("uvicorn.error")
 _TARGET_PATHS = frozenset(
     {
         "/api/product-context",
+        "/api/home",
         "/api/my-team",
         "/api/opportunities/workspace",
         "/api/opportunities/workspace/quick",
