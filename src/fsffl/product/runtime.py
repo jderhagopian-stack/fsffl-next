@@ -423,7 +423,7 @@ class PrivateBetaRuntimeStore:
 
             # Preserve an already-complete last-good bundle until Value also
             # succeeds for this exact pending State/Forecast/Simulation identity.
-            if _complete_intelligence(current) and current.league_state is not None and current.league_state.state_id != result_state_id:
+            if _complete_intelligence(current) and pending is not None:
                 return current
 
             updated = UserRuntimeContext(
