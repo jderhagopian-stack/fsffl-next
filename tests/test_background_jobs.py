@@ -175,3 +175,29 @@ def test_background_priority_failure_does_not_fail_intelligence_work() -> None:
         )
         assert current is not None
         assert current.status == IntelligenceJobStatus.COMPLETED
+
+
+def test_background_pacing_activates_under_foreground_pressure() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1)
+    observed = Event()
+
+    def work(_progress) -> None:
+        total = 0
+        for value in range(5000):
+            total += value
+        assert total > 0
+        observed.set()
+
+    with patch(
+        "fsffl.product.background_jobs.foreground_pressure.cooperative_yield",
+        return_value=True,
+    ) as cooperative_yield:
+        coordinator.start(user_id="u-paced", league_state_id="state-1", work=work)
+        assert observed.wait(timeout=2)
+        current = _wait_for_status(
+            coordinator,
+            user_id="u-paced",
+            status=IntelligenceJobStatus.COMPLETED,
+        )
+        assert current is not None
+        assert cooperative_yield.call_count > 0
