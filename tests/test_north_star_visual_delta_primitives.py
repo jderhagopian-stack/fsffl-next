@@ -23,7 +23,7 @@ def _node() -> str:
 def test_shared_delta_primitive_is_global_presentation_grammar() -> None:
     index = _source("index.html")
     css = _source("visual_primitives.css")
-    assert "/static/visual_primitives.css?v=20260924-home-readiness1" in index
+    assert "/static/visual_primitives.css?v=20260924-home-readiness-top1" in index
     assert ".ns-visual-delta{" in css
     assert ".ns-visual-delta__track" in css
     assert 'data-direction="positive"' in css
