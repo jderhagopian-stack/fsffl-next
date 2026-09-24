@@ -158,7 +158,8 @@ def test_franchise_north_star_is_the_only_primary_franchise_renderer() -> None:
         "window.renderFsfflMyTeam=loadFranchiseNorthStar;"
     )
     assert "franchiseNorthStarStaticVersion='20260924-franchise-north-star1'" in SHELL
-    assert "/static/my_team_dashboard.js?v=${franchiseNorthStarStaticVersion}" in SHELL
+    assert "lazyProductScript(\'renderFsfflMyTeam\',\'/static/my_team_dashboard.js\'" in SHELL
+    assert "franchiseNorthStarStaticVersion)" in SHELL
 
 
 def test_franchise_mobile_layout_avoids_table_first_and_page_horizontal_scroll() -> None:
