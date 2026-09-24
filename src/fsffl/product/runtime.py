@@ -254,16 +254,31 @@ class PrivateBetaRuntimeStore:
         self._lock = RLock()
         self._contexts: dict[str, UserRuntimeContext] = {}
         self._pending_intelligence: dict[str, _PendingIntelligenceSnapshot] = {}
+        self._league_generations: dict[str, int] = {}
 
     def get(self, user_id: str) -> UserRuntimeContext:
         with self._lock:
             return self._contexts.get(user_id, UserRuntimeContext(user_id=user_id))
+
+    def league_generation(self, user_id: str) -> int:
+        """Return the in-process league identity generation for job invalidation."""
+
+        with self._lock:
+            return self._league_generations.get(user_id, 0)
 
     def set_league_state(self, user_id: str, league_state: LeagueState) -> UserRuntimeContext:
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
         with self._lock:
             current = self.get(user_id)
+            previous_league_id = (
+                current.league_state.league.league_id
+                if current.league_state is not None
+                else None
+            )
+            incoming_league_id = league_state.league.league_id
+            if previous_league_id != incoming_league_id:
+                self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1
             valid_team_ids = {team.team_id for team in league_state.teams}
             selected = current.selected_team_id if current.selected_team_id in valid_team_ids else None
             same_league = (
@@ -340,6 +355,11 @@ class PrivateBetaRuntimeStore:
             league_state = refreshed_league_state or current.league_state
             if league_state is None:
                 raise ValueError("cannot attach forecasts before a league is loaded")
+            if (
+                current.league_state is not None
+                and current.league_state.league.league_id != league_state.league.league_id
+            ):
+                raise ValueError("cannot attach forecasts for a different loaded league")
             forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
             if any(item.as_of > league_state.as_of for item in forecasts):
                 raise ValueError("forecast evidence cannot postdate canonical league state")
@@ -550,3 +570,4 @@ class PrivateBetaRuntimeStore:
         with self._lock:
             self._contexts.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
+            self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1
