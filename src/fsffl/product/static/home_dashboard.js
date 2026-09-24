@@ -201,6 +201,7 @@ async function homePollReadinessOnce(){
   }
 }
 function homeStartReadinessPolling(){
+  if(state?.route!=='league'){homeStopReadinessPolling();homeReleaseReadinessHost();return}
   homeRefreshReadinessStrip();
   const status=homeReadinessSnapshot();
   if(status.complete||status.failed||!state?.context?.league_id){homeStopReadinessPolling();return}
@@ -318,5 +319,5 @@ window.addEventListener('fsffl:sync-state',event=>{
   if(event.detail?.state)fsfflHomeNorthStarState.latestSyncState={state:event.detail.state,message:event.detail.message||null};
   if(state?.route==='league')setTimeout(()=>{homeReadinessHost();homeRefreshReadinessStrip()},0);
 });
-window.addEventListener('fsffl:intelligence-status-updated',event=>{if(event.detail)state.intelligence=event.detail;homeRefreshReadinessStrip();homeStartReadinessPolling()});
+window.addEventListener('fsffl:intelligence-status-updated',event=>{if(event.detail)state.intelligence=event.detail;if(state?.route==='league'){homeRefreshReadinessStrip();homeStartReadinessPolling()}});
 window.addEventListener('fsffl:product-context-updated',()=>{fsfflHomeNorthStarState.payload=null;fsfflHomeNorthStarState.error=null;homeStopReadinessPolling();setTimeout(()=>{void loadFsfflHomeNorthStar({force:true});homeStartReadinessPolling()},0)});
