@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from math import sqrt
 from random import Random
-from typing import Annotated
+from typing import Annotated, Callable
 
 from pydantic import Field, model_validator
 
@@ -253,7 +253,11 @@ def _simulate_standard_champion(standings, playoff_team_count, playoff_scoring, 
     return None
 
 
-def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSeasonSimulationResult:
+def simulate_regular_season(
+    request: RegularSeasonSimulationInput,
+    *,
+    cooperative_yield: Callable[[], object] | None = None,
+) -> RegularSeasonSimulationResult:
     """Simulate canonical regular season and, when supported, a standard seeded title bracket.
 
     A separate deterministic postseason RNG preserves the established regular-season
@@ -300,6 +304,11 @@ def simulate_regular_season(request: RegularSeasonSimulationInput) -> RegularSea
     ranking_indexes = tuple(range(team_count))
 
     for _ in range(request.simulation_count):
+        # Scheduling-only checkpoint. Product orchestration may yield this worker
+        # while foreground requests are active; the callback cannot alter the
+        # simulation request, RNG stream, iteration count, or accumulated outputs.
+        if cooperative_yield is not None:
+            cooperative_yield()
         wins = [0.0] * team_count
         points_for = [0.0] * team_count
         for home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev in compiled_schedule:

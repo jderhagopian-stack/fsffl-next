@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Callable
 
 from fsffl.analytics.league import LeagueAnalyticsView, build_league_analytics_view
 from fsffl.analytics.models import (
@@ -50,6 +51,7 @@ def build_live_simulation_analytics(
     simulation_count: int = 50_000,
     seed: int = 20260905,
     generated_at: datetime | None = None,
+    cooperative_yield: Callable[[], object] | None = None,
 ) -> LiveSimulationAnalyticsResult:
     """Run Forecast -> week-specific NEXT-4 Simulation -> NEXT-7.
 
@@ -144,7 +146,7 @@ def build_live_simulation_analytics(
         seed=seed,
         model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
     )
-    simulation = simulate_regular_season(request)
+    simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
     scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
         weekly_scoring,
         simulation,

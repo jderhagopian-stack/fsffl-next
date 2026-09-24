@@ -15,6 +15,7 @@ from . import webapp as _webapp
 from .annual_preseason_scheduler_routes import install_annual_preseason_scheduler_route
 from .behavioral_runtime import BehavioralRuntimeCoordinator, default_behavioral_store
 from .focused_opportunity_routes import install_focused_opportunity_routes
+from .foreground_pressure import install_foreground_pressure
 from .forecast_resilience import (
     make_preseason_baseline_authority_loader,
     make_resilient_forecast_loader,
@@ -210,3 +211,4 @@ install_quick_frontier_routes(
 )
 install_phase1_latency_routes(app, persistence_store=_persistence_store)
 install_latency_observability(app)
+install_foreground_pressure(app)

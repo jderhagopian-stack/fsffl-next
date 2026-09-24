@@ -319,6 +319,7 @@ def _default_simulation_loader(
         forecasts=evidence.league_scored_forecasts,
         forecast_model_version=evidence.model_version,
         simulation_count=50_000,
+        cooperative_yield=foreground_pressure.cooperative_yield,
     )
 
 

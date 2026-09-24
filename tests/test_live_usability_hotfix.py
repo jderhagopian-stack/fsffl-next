@@ -9,7 +9,11 @@ def test_hotfix_disables_line_level_background_tracing() -> None:
     hosted = Path("src/fsffl/product/persistent_webapp.py").read_text()
     assert "sys.settrace" not in source
     assert "cooperative_trace" not in source
-    assert "install_foreground_pressure(app)" not in hosted
+    assert "install_foreground_pressure(app)" in hosted
+    webapp = Path("src/fsffl/product/webapp.py").read_text()
+    simulation = Path("src/fsffl/team_utility/simulation.py").read_text()
+    assert "cooperative_yield=foreground_pressure.cooperative_yield" in webapp
+    assert "if cooperative_yield is not None:" in simulation
     assert "_deprioritize_background_thread()" in source
 
 
