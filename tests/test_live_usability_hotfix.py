@@ -41,3 +41,5 @@ def test_franchise_keeps_last_good_view_while_reads_refresh() -> None:
     assert "const hasLastGood=Boolean(fsfflMyTeamState.view)" in source
     assert "if(hasLastGood){" in source
     assert "renderFranchiseNorthStar();" in source
+
+# CI retry marker: 2026-09-24 League Atlas prior run failed on transient connection reset.
