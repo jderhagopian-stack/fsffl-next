@@ -201,3 +201,10 @@ def test_shared_readiness_assets_are_cache_busted_without_splitting_release_gene
     assert f"/static/product_shell.js?v={release}" in INDEX
     assert f"const homeNorthStarStaticVersion='{release}';" in SHELL
 
+
+
+def test_readiness_refresh_invokes_intelligence_lifecycle_directly():
+    shell = (Path(__file__).parents[1] / 'src/fsffl/product/static/product_shell.js').read_text()
+    refresh = (Path(__file__).parents[1] / 'src/fsffl/product/static/forecast_refresh.js').read_text()
+    assert "window.fsfflManualIntelligenceRefresh?.()" in shell
+    assert "window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh" in refresh
