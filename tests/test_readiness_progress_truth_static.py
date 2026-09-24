@@ -42,5 +42,5 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
-    assert "/static/forecast_refresh.js?v=20260924-live-usability-hotfix1&rt=20260924-readiness-truth1" in index
-    assert "/static/product_shell.js?v=20260924-live-usability-hotfix1&rt=20260924-readiness-truth1" in index
+    assert "/static/forecast_refresh.js?v=20260924-readiness-truth1" in index
+    assert "/static/product_shell.js?v=20260924-readiness-truth1" in index
