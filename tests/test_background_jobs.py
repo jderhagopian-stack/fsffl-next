@@ -7,6 +7,7 @@ from time import monotonic, sleep
 
 from fsffl.product.background_jobs import (
     IntelligenceJobCoordinator,
+    IntelligenceJobInterrupted,
     IntelligenceJobPhase,
     IntelligenceJobStatus,
 )
@@ -221,3 +222,21 @@ def test_completed_job_survives_coordinator_restart_without_recomputation() -> N
     assert recovered is not None
     assert recovered.job_id == completed.job_id
     assert recovered.status == IntelligenceJobStatus.COMPLETED
+
+
+def test_superseded_job_is_interrupted_not_failed() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1)
+
+    def work(_progress) -> None:
+        raise IntelligenceJobInterrupted("league_switch")
+
+    coordinator.start(user_id="u-switch", league_state_id="state-old", work=work)
+    current = _wait_for_status(
+        coordinator,
+        user_id="u-switch",
+        status=IntelligenceJobStatus.INTERRUPTED,
+    )
+    assert current is not None
+    assert current.status == IntelligenceJobStatus.INTERRUPTED
+    assert current.phase == IntelligenceJobPhase.INTERRUPTED
+    assert current.error == "league_switch"
