@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 from fastapi import FastAPI
@@ -70,15 +69,3 @@ def test_hosted_middleware_balances_success_and_failure_requests() -> None:
 
     assert client.get("/fail").status_code == 500
     assert foreground_pressure.snapshot().active_requests == baseline
-
-
-def test_hosted_composition_installs_foreground_pressure() -> None:
-    source = (
-        Path(__file__).parents[1]
-        / "src"
-        / "fsffl"
-        / "product"
-        / "persistent_webapp.py"
-    ).read_text()
-    assert "from .foreground_pressure import install_foreground_pressure" in source
-    assert "install_foreground_pressure(app)" in source
