@@ -138,4 +138,6 @@ def test_default_hosted_simulation_loader_resolves_foreground_pressure_callback(
 
     assert result is sentinel
     assert build.call_args.kwargs["simulation_count"] == 50_000
-    assert build.call_args.kwargs["cooperative_yield"] is webapp.foreground_pressure.cooperative_yield
+    callback = build.call_args.kwargs["cooperative_yield"]
+    assert callback.__self__ is webapp.foreground_pressure
+    assert callback.__func__ is webapp.foreground_pressure.cooperative_yield.__func__
