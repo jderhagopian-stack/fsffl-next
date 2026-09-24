@@ -100,7 +100,6 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     const deadline=Date.now()+120000;
     let consecutiveTransportFailures=0;
     let pollDelay=700;
-    let nextContextProbeAt=Date.now()+1000;
     while(Date.now()<deadline){
       onProgress?.(job);
       if(job?.status==='completed'){
@@ -110,16 +109,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
       if(job?.status==='failed')throw new Error(job.error||'Sleeper league import failed');
 
-      // Canonical State is the readiness boundary for using the application. A hosted
-      // worker can still be finishing bookkeeping or secondary intelligence after the
-      // valid league snapshot is already available, so do not turn that into a false
-      // browser timeout. Value and Behavioral surfaces retain their own readiness gates.
-      if(operation==='connect'&&Date.now()>=nextContextProbeAt){
-        const context=await usableConnectedContext(leagueId);
-        if(context)return context;
-        nextContextProbeAt=Date.now()+Math.max(1400,pollDelay);
-      }
-
+      // Cross-league connect success is terminal, not optimistic. Do not accept a
+      // transient in-memory product context before the server job has completed its
+      // serialized persistence checkpoint and final identity verification.
       await sleep(document.visibilityState==='hidden'?Math.max(1500,pollDelay):pollDelay);
       pollDelay=Math.min(2200,Math.round(pollDelay*1.35));
       try{
@@ -135,8 +127,6 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         if(consecutiveTransportFailures>=8)throw new Error('Connection to the server was interrupted. Please try again.');
       }
     }
-    const context=operation==='connect'?await usableConnectedContext(leagueId):null;
-    if(context)return context;
     throw new Error('League import is taking longer than expected. Please try again in a moment.');
   }
 
