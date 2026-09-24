@@ -1,0 +1,55 @@
+{
+  "schema": "fsffl-performance-stage2-v1",
+  "base_sha": "a264d4042dd1eec109087cac4ef648d612066879",
+  "branch": "performance/stage2-persist-first-restore-20260923",
+  "stage1_live_gate": {
+    "render_deploy": "dep-daq83ih42hec738matjg",
+    "deployed_sha": "a264d4042dd1eec109087cac4ef648d612066879",
+    "build": "success",
+    "startup": "success",
+    "live": true,
+    "authenticated_route_smoke": "not directly executable from this environment"
+  },
+  "before": {
+    "restore": "lazy on first runtime get",
+    "first_request_persistence_context_reads": 1,
+    "partial_refresh_can_replace_complete_bundle": true,
+    "stage0_process_cold_product_context_seconds": [
+      3.103,
+      3.704
+    ],
+    "stage0_same_session_warm_seconds": 0.013
+  },
+  "after": {
+    "restore": "startup prewarm using existing exact restore contract",
+    "first_request_additional_persistence_context_reads": 0,
+    "complete_last_good_preserved_during_partial_refresh": true,
+    "atomic_promotion_after_state_forecast_simulation_value_complete": true,
+    "new_persistence_framework": false,
+    "new_identity_framework": false
+  },
+  "authority_changes": {
+    "forecast_math": false,
+    "simulation_math": false,
+    "simulation_count": false,
+    "value_intrinsic": false,
+    "decision": false,
+    "search": false,
+    "team_utility": false,
+    "owner_behavior": false,
+    "provenance": false,
+    "presentation": false
+  },
+  "recurring_beta_cost_change_usd": 0,
+  "deferred": [
+    "stage3_database_connection_hardening",
+    "stage4_reuse_expansion",
+    "stage5_simulation_kernel",
+    "stage6_durable_jobs",
+    "stage7_progressive_delivery"
+  ],
+  "limitations": [
+    "authenticated live product-route smoke unavailable from execution environment",
+    "post-change hosted wall-clock requires deployment after PR merge"
+  ]
+}

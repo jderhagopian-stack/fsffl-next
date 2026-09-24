@@ -233,6 +233,15 @@ class _PendingIntelligenceSnapshot:
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
 
 
+def _complete_intelligence(context: UserRuntimeContext) -> bool:
+    return (
+        context.league_state is not None
+        and context.forecast_evidence is not None
+        and context.simulation_analytics is not None
+        and context.value_evidence is not None
+    )
+
+
 class PrivateBetaRuntimeStore:
     """Small in-memory runtime store for the single-user/private beta.
 
@@ -338,6 +347,18 @@ class PrivateBetaRuntimeStore:
             valid_team_ids = {team.team_id for team in league_state.teams}
             if selected not in valid_team_ids:
                 selected = None
+            pending = _PendingIntelligenceSnapshot(
+                league_state=league_state,
+                forecast_evidence=evidence,
+            )
+            self._pending_intelligence[user_id] = pending
+
+            # A refresh must never replace a known-good completed bundle with a
+            # partial Forecast-only snapshot. Keep serving the completed bundle
+            # while the new exact-identity bundle is assembled off to the side.
+            if _complete_intelligence(current):
+                return current
+
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -348,10 +369,6 @@ class PrivateBetaRuntimeStore:
                 intelligence_reused=False,
             )
             self._contexts[user_id] = updated
-            self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
-                league_state=league_state,
-                forecast_evidence=evidence,
-            )
             return updated
 
     def _recover_pending_for_result(
@@ -397,6 +414,18 @@ class PrivateBetaRuntimeStore:
             valid_team_ids = {team.team_id for team in league_state.teams}
             if selected not in valid_team_ids:
                 selected = None
+            staged = _PendingIntelligenceSnapshot(
+                league_state=league_state,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=result,
+            )
+            self._pending_intelligence[user_id] = staged
+
+            # Preserve an already-complete last-good bundle until Value also
+            # succeeds for this exact pending State/Forecast/Simulation identity.
+            if _complete_intelligence(current) and pending is not None:
+                return current
+
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -407,11 +436,6 @@ class PrivateBetaRuntimeStore:
                 intelligence_reused=False,
             )
             self._contexts[user_id] = updated
-            self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
-                league_state=league_state,
-                forecast_evidence=forecast_evidence,
-                simulation_analytics=result,
-            )
             return updated
 
     def set_value_evidence(
@@ -433,12 +457,16 @@ class PrivateBetaRuntimeStore:
             league_state = current.league_state
             forecast_evidence = current.forecast_evidence
             simulation_analytics = current.simulation_analytics
-            if league_state is None or league_state.state_id != result.league_state_id:
-                if pending is None:
-                    raise ValueError("Value evidence must match current LeagueState")
+            if pending is not None:
+                # Complete a staged refresh atomically. If Simulation never
+                # completed, a known-good bundle remains authoritative.
+                if pending.simulation_analytics is None and _complete_intelligence(current):
+                    return current
                 league_state = pending.league_state
                 forecast_evidence = pending.forecast_evidence
                 simulation_analytics = pending.simulation_analytics
+            elif league_state is None or league_state.state_id != result.league_state_id:
+                raise ValueError("Value evidence must match current LeagueState")
             selected = current.selected_team_id
             valid_team_ids = {team.team_id for team in league_state.teams}
             if selected not in valid_team_ids:

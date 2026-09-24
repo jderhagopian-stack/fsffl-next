@@ -59,6 +59,20 @@ _runtime_store = PersistentPrivateBetaRuntimeStore(
 )
 configure_scenario_cache_persistence(_persistence_store)
 
+# Persist-first restoration is a startup concern for the single-user private beta.
+# Restore the exact compatible last-good runtime before accepting traffic so the
+# first product-context/Home/My Team/Atlas request consumes already-governed
+# evidence rather than paying lazy-restore latency. This performs no provider or
+# model work; incompatible or absent persistence remains fail-closed.
+_beta_auth_enabled = os.getenv("FSFFL_BETA_AUTH", "0").strip().lower() in {"1", "true", "yes", "on"}
+_beta_restore_user = (
+    os.getenv("FSFFL_BETA_USERNAME", "").strip()
+    if _beta_auth_enabled
+    else "local-beta-user"
+)
+if _persistence_store is not None and _beta_restore_user:
+    _runtime_store.restore_user(_beta_restore_user)
+
 # Hosted Behavioral persistence validates its migrated schema when the Postgres
 # adapter is first constructed. Build the shared adapter while the Render process is
 # starting rather than on the first user status/Market request. Validation is

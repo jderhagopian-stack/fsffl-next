@@ -70,3 +70,87 @@ def test_same_league_reconnect_cannot_split_one_intelligence_refresh() -> None:
     assert completed.forecast_evidence is evidence
     assert completed.simulation_analytics is simulation
     assert completed.value_evidence is value
+
+
+def _simulation_for(state: LeagueState):
+    return SimpleNamespace(
+        league_view=SimpleNamespace(
+            context=SimpleNamespace(league_state_id=state.state_id)
+        )
+    )
+
+
+def _value_for(state: LeagueState):
+    return SimpleNamespace(league_state_id=state.state_id)
+
+
+def test_completed_last_good_bundle_survives_partial_refresh_until_atomic_promotion() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    last_good_state = _state(t0)
+    refreshed_state = _state(t0 + timedelta(minutes=1))
+    old_forecast = _evidence()
+    old_simulation = _simulation_for(last_good_state)
+    old_value = _value_for(last_good_state)
+    store.set_league_state("u", last_good_state)
+    store.set_intelligence_bundle(
+        "u",
+        league_state=last_good_state,
+        forecast_evidence=old_forecast,
+        simulation_analytics=old_simulation,  # type: ignore[arg-type]
+        value_evidence=old_value,  # type: ignore[arg-type]
+    )
+
+    new_forecast = _evidence()
+    after_forecast = store.set_forecast_evidence(
+        "u",
+        new_forecast,
+        refreshed_league_state=refreshed_state,
+    )
+    assert after_forecast.league_state == last_good_state
+    assert after_forecast.forecast_evidence is old_forecast
+    assert after_forecast.simulation_analytics is old_simulation
+    assert after_forecast.value_evidence is old_value
+
+    new_simulation = _simulation_for(refreshed_state)
+    after_simulation = store.set_simulation_analytics("u", new_simulation)  # type: ignore[arg-type]
+    assert after_simulation.league_state == last_good_state
+    assert after_simulation.value_evidence is old_value
+
+    new_value = _value_for(refreshed_state)
+    promoted = store.set_value_evidence("u", new_value)  # type: ignore[arg-type]
+    assert promoted.league_state == refreshed_state
+    assert promoted.forecast_evidence is new_forecast
+    assert promoted.simulation_analytics is new_simulation
+    assert promoted.value_evidence is new_value
+
+
+def test_failed_partial_refresh_preserves_completed_last_good_bundle() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    last_good_state = _state(t0)
+    refreshed_state = _state(t0 + timedelta(minutes=1))
+    old_forecast = _evidence()
+    old_simulation = _simulation_for(last_good_state)
+    old_value = _value_for(last_good_state)
+    store.set_league_state("u", last_good_state)
+    store.set_intelligence_bundle(
+        "u",
+        league_state=last_good_state,
+        forecast_evidence=old_forecast,
+        simulation_analytics=old_simulation,  # type: ignore[arg-type]
+        value_evidence=old_value,  # type: ignore[arg-type]
+    )
+
+    store.set_forecast_evidence(
+        "u",
+        _evidence(),
+        refreshed_league_state=refreshed_state,
+    )
+    # Model a failed Simulation followed by an independently successful Value build.
+    retained = store.set_value_evidence("u", _value_for(refreshed_state))  # type: ignore[arg-type]
+
+    assert retained.league_state == last_good_state
+    assert retained.forecast_evidence is old_forecast
+    assert retained.simulation_analytics is old_simulation
+    assert retained.value_evidence is old_value
