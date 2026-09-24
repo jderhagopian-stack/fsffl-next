@@ -434,9 +434,16 @@ async function loadFranchiseNorthStar(){
   }
   const expectedStateId=state.context?.state_id||null;
   fsfflMyTeamState.valueLensGeneration+=1;
-  fsfflMyTeamState.valueLenses=null;
   fsfflMyTeamState.valueLensLoading=false;
-  if(panel)panel.innerHTML='<div class="franchise-ns-shell franchise-ns-loading"><p class="eyebrow">Franchise</p><h2>Reading the franchise…</h2><p>Loading current roster, position strength, Simulation context, Value and draft capital.</p></div>';
+  // Keep the accepted last-good Franchise visible while fresh reads are in flight.
+  // This prevents a prior Market body from occupying Franchise during refresh and
+  // avoids replacing usable governed evidence with a generic loading takeover.
+  const hasLastGood=Boolean(fsfflMyTeamState.view);
+  if(hasLastGood){
+    renderFranchiseNorthStar();
+  }else if(panel){
+    panel.innerHTML='<div class="franchise-ns-shell franchise-ns-loading"><p class="eyebrow">Franchise</p><h2>Restoring your franchise…</h2><p>Using the last compatible league context while current evidence is checked.</p></div>';
+  }
   try{
     const results=await Promise.all([
       api('/api/my-team'),
