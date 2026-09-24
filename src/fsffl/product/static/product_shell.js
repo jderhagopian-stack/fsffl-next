@@ -27,7 +27,7 @@ const fsfflProductSurfaceCopy={
 const fsfflStaticVersion='20260924-live-usability-hotfix1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260924-readiness-control1';
+const homeNorthStarStaticVersion='20260924-readiness-control2';
 const franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
@@ -132,7 +132,7 @@ function fsfflRenderSharedReadiness(){
   node.innerHTML=fsfflSharedReadinessMarkup(status);
   node.hidden=false;
   const refresh=node.querySelector('.fsffl-shared-readiness-refresh');
-  if(refresh)refresh.addEventListener('click',()=>document.querySelector('#refresh-intelligence')?.click());
+  if(refresh)refresh.addEventListener('click',()=>window.fsfflManualIntelligenceRefresh?.());
 }
 function fsfflStopSharedReadinessPolling(){
   if(fsfflSharedReadinessState.pollTimer){clearInterval(fsfflSharedReadinessState.pollTimer);fsfflSharedReadinessState.pollTimer=null}

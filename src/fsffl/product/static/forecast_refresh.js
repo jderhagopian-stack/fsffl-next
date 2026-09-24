@@ -314,6 +314,8 @@ async function maintainFsfflIntelligence(){
 }
 
 setInterval(maintainFsfflIntelligence,2500);
+window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh;
+
 window.addEventListener('load',()=>{
   ensureIntelligenceRefreshButton();
   maintainFsfflIntelligence();
