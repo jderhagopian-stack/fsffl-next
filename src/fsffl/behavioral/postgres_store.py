@@ -1,14 +1,10 @@
 from __future__ import annotations
 
 import json
-from threading import Lock
 from typing import Iterable
 
 from .models import OwnerBehaviorEvent, OwnerBehaviorProfile
 
-
-_RLS_BOOTSTRAP_LOCK = Lock()
-_RLS_BOOTSTRAPPED_DATABASE_URLS: set[str] = set()
 
 
 class PostgresBehavioralIntelligenceStore:
@@ -18,9 +14,9 @@ class PostgresBehavioralIntelligenceStore:
     and reusable profile outputs only; it performs no preference inference or other
     Behavioral calculations.
 
-    The private beta initializes these additive cache tables idempotently so a web
-    deploy cannot depend on an out-of-band migration step. The matching SQL migration
-    remains the canonical production schema history.
+    Governed migrations own schema/index/RLS creation. Runtime construction performs
+    read-only schema validation and fails closed when required persistence is missing
+    or unsafe; ordinary application use never executes DDL.
     """
 
     def __init__(self, database_url: str) -> None:
@@ -38,76 +34,54 @@ class PostgresBehavioralIntelligenceStore:
         return psycopg.connect(self._database_url, row_factory=dict_row)
 
     def _initialize(self) -> None:
+        """Validate the migrated Behavioral schema without mutating it.
+
+        Schema, indexes, and RLS are migration authority. Keeping this check read-only
+        makes startup safe to repeat and prevents request/store construction from
+        performing CREATE/ALTER work.
+        """
+        required_relations = (
+            "behavior_event",
+            "behavior_profile",
+            "behavior_season",
+            "behavior_runtime_context",
+        )
         with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute("create schema if not exists fsffl")
             cursor.execute(
                 """
-                create table if not exists fsffl.behavior_event (
-                    league_family_id text not null,
-                    event_id text not null,
-                    occurred_at timestamptz not null,
-                    payload jsonb not null,
-                    recorded_at timestamptz not null default now(),
-                    primary key (league_family_id, event_id)
+                select c.relname, c.relrowsecurity
+                from pg_class c
+                join pg_namespace n on n.oid = c.relnamespace
+                where n.nspname = 'fsffl' and c.relname = any(%s)
+                """,
+                (list(required_relations),),
+            )
+            rows = cursor.fetchall()
+            by_name = {str(row["relname"]): bool(row["relrowsecurity"]) for row in rows}
+            missing = [name for name in required_relations if name not in by_name]
+            unsafe = [name for name in required_relations if name in by_name and not by_name[name]]
+            if missing or unsafe:
+                details = []
+                if missing:
+                    details.append("missing=" + ",".join(missing))
+                if unsafe:
+                    details.append("rls_disabled=" + ",".join(unsafe))
+                raise RuntimeError(
+                    "Behavioral persistence schema is unavailable or incompatible; "
+                    "apply governed migrations before serving traffic (" + "; ".join(details) + ")"
                 )
-                """
-            )
+
             cursor.execute(
                 """
-                create index if not exists behavior_event_family_time_idx
-                on fsffl.behavior_event (league_family_id, occurred_at, event_id)
+                select to_regclass('fsffl.behavior_event_family_time_idx') as relation
                 """
             )
-            cursor.execute(
-                """
-                create table if not exists fsffl.behavior_profile (
-                    league_family_id text not null,
-                    owner_id text not null,
-                    as_of timestamptz not null,
-                    payload jsonb not null,
-                    updated_at timestamptz not null default now(),
-                    primary key (league_family_id, owner_id)
+            index_row = cursor.fetchone()
+            if index_row is None or index_row["relation"] is None:
+                raise RuntimeError(
+                    "Behavioral persistence index is unavailable; apply governed migrations "
+                    "before serving traffic (missing=behavior_event_family_time_idx)"
                 )
-                """
-            )
-            cursor.execute(
-                """
-                create table if not exists fsffl.behavior_season (
-                    league_family_id text not null,
-                    league_external_id text not null,
-                    season integer not null,
-                    complete boolean not null default false,
-                    updated_at timestamptz not null default now(),
-                    primary key (league_family_id, league_external_id)
-                )
-                """
-            )
-            cursor.execute(
-                """
-                create table if not exists fsffl.behavior_runtime_context (
-                    user_id text primary key,
-                    league_state_id text not null,
-                    sleeper_league_external_id text not null,
-                    league_family_id text not null,
-                    current_owner_by_roster jsonb not null,
-                    updated_at timestamptz not null default now()
-                )
-                """
-            )
-            # Hosted startup intentionally supports deploy-before-migration. Apply the
-            # same deny-by-default RLS protection as migration _007, but only once per
-            # database URL in this process. Failed bootstrap attempts are not cached,
-            # so a later construction retries rather than silently assuming protection.
-            with _RLS_BOOTSTRAP_LOCK:
-                if self._database_url not in _RLS_BOOTSTRAPPED_DATABASE_URLS:
-                    for table_name in (
-                        "behavior_event",
-                        "behavior_profile",
-                        "behavior_season",
-                        "behavior_runtime_context",
-                    ):
-                        cursor.execute(f"alter table fsffl.{table_name} enable row level security")
-                    _RLS_BOOTSTRAPPED_DATABASE_URLS.add(self._database_url)
 
     def put_events(self, events: Iterable[OwnerBehaviorEvent]) -> int:
         inserted = 0

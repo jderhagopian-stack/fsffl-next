@@ -1,0 +1,55 @@
+{
+  "schema_version": "fsffl-performance-stage1-v1",
+  "stage": 1,
+  "base_main_sha": "355b0c20457f2acf4f99e59257b274afb66598aa",
+  "scope": "runtime_ddl_schema_hardening",
+  "hosted_postgres_runtime_ddl": {
+    "before": {
+      "create_schema_sites": 1,
+      "create_table_sites": 4,
+      "create_index_sites": 1,
+      "alter_table_rls_sites": 4,
+      "historical_repeated_create_index_calls": 214,
+      "historical_cumulative_waste_minutes": 89
+    },
+    "after": {
+      "create_schema_sites": 0,
+      "create_table_sites": 0,
+      "create_index_sites": 0,
+      "alter_table_rls_sites": 0,
+      "startup_catalog_validation_queries": 2
+    }
+  },
+  "fail_closed_validation": [
+    "required_behavioral_relations_present",
+    "rls_enabled_on_all_behavioral_relations",
+    "behavior_event_family_time_idx_present"
+  ],
+  "canonical_migrations": [
+    "db/migrations/20260909_004_durable_behavioral_evidence.sql",
+    "db/migrations/20260909_005_behavioral_runtime_context.sql",
+    "db/migrations/20260910_007_enable_rls_new_private_persistence.sql"
+  ],
+  "excluded_classification": {
+    "src/fsffl/behavioral/store.py": "local/test SQLite cache initialization; not hosted PostgreSQL runtime"
+  },
+  "timing": {
+    "current_external_db_after_ms": null,
+    "reason": "No direct external database timing surface available from selected Render workspace; no synthetic statistic manufactured."
+  },
+  "authority_changes": {
+    "forecast": false,
+    "simulation": false,
+    "value_intrinsic": false,
+    "decision": false,
+    "search": false,
+    "team_utility": false,
+    "owner_behavior": false,
+    "evidence_identity": false,
+    "provenance": false
+  },
+  "cost": {
+    "paid_compute": false,
+    "paid_infrastructure_change": false
+  }
+}

@@ -58,8 +58,8 @@ def test_behavioral_migration_preserves_evidence_profile_and_season_layers() -> 
     assert "primary key (league_family_id, league_external_id)" in sql
 
 
-def test_postgres_behavioral_bootstrap_enables_rls_without_waiting_for_migration() -> None:
-    source = Path("src/fsffl/behavioral/postgres_store.py").read_text()
+def test_postgres_behavioral_runtime_validates_migrated_schema_without_ddl() -> None:
+    source = Path("src/fsffl/behavioral/postgres_store.py").read_text().lower()
 
     for table_name in (
         "behavior_event",
@@ -68,4 +68,12 @@ def test_postgres_behavioral_bootstrap_enables_rls_without_waiting_for_migration
         "behavior_runtime_context",
     ):
         assert f'"{table_name}"' in source
-    assert 'cursor.execute(f"alter table fsffl.{table_name} enable row level security")' in source
+
+    # Runtime construction may inspect catalog state, but migrations exclusively own
+    # schema/index/RLS creation.
+    assert "pg_class" in source
+    assert "relrowsecurity" in source
+    assert "to_regclass" in source
+    assert "cursor.execute(f\"alter table" not in source
+    assert "create table if not exists" not in source
+    assert "create index if not exists" not in source

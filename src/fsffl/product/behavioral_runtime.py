@@ -95,13 +95,12 @@ def default_behavioral_cache_path() -> Path:
 def default_behavioral_store():
     """Reuse one hosted Postgres store per process; retain SQLite for local/tests.
 
-    Constructing the hosted Postgres adapter performs its deploy-before-migration
-    schema safety bootstrap. Reconstructing that adapter on request therefore also
-    repeats PostgreSQL DDL, including CREATE INDEX IF NOT EXISTS. Keep exactly one
-    adapter for each configured database URL so that safety bootstrap happens once
-    per web process rather than during restore/status/Behavioral request paths.
+    Constructing the hosted Postgres adapter performs read-only validation of the
+    governed migrated schema. Keep exactly one adapter for each configured database
+    URL so that validation and connection setup are not repeated during
+    restore/status/Behavioral request paths.
 
-    This is connection/bootstrap reuse only. The store remains evidence persistence;
+    This is connection/validation reuse only. The store remains evidence persistence;
     no Behavioral inference, model truth, or cache validity rule changes here.
     """
 
