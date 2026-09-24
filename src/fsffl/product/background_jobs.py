@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -13,8 +12,6 @@ from typing import Callable
 from uuid import uuid4
 
 from fsffl.persistence.contracts import ArtifactKey, PersistenceStore, ReusableArtifactRecord
-
-from .foreground_pressure import foreground_pressure
 
 
 _logger = logging.getLogger("fsffl.product.performance")
@@ -305,21 +302,6 @@ class IntelligenceJobCoordinator:
     def _run(self, job_id: str, work: JobWork) -> None:
         _deprioritize_background_thread()
 
-        # Keep the canonical heavy refresh cooperative with foreground browsing.
-        # This scheduling hook never changes Forecast/Simulation/Value inputs,
-        # iteration counts, RNG state, or outputs; it only yields the worker thread
-        # while interactive demand is active or recovering from a slow request.
-        trace_events = 0
-        yield_count = 0
-
-        def cooperative_trace(frame, event, arg):
-            nonlocal trace_events, yield_count
-            if event == "line":
-                trace_events += 1
-                if trace_events % 256 == 0 and foreground_pressure.cooperative_yield():
-                    yield_count += 1
-            return cooperative_trace
-
         self._update(
             job_id,
             status=IntelligenceJobStatus.RUNNING,
@@ -335,8 +317,6 @@ class IntelligenceJobCoordinator:
                 message=message,
             )
 
-        previous_trace = sys.gettrace()
-        sys.settrace(cooperative_trace)
         try:
             work(progress)
         except Exception as exc:
@@ -349,14 +329,6 @@ class IntelligenceJobCoordinator:
             )
             self._log_final_timing(failed)
             return
-        finally:
-            sys.settrace(previous_trace)
-            _logger.info(
-                "FSFFL intelligence cooperative pacing job=%s trace_events=%s yields=%s",
-                job_id,
-                trace_events,
-                yield_count,
-            )
         completed = self._update(
             job_id,
             status=IntelligenceJobStatus.COMPLETED,
