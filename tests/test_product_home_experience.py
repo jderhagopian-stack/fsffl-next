@@ -156,6 +156,12 @@ def test_home_replaces_methods_evidence_dropdown_with_compact_readiness_strip() 
         assert label in HOME
     assert "min-height:32px" in HOME
     assert "height:2px" in HOME
+    assert "function homeReadinessHost()" in HOME
+    assert "document.querySelector(\'#fsffl-sync-state\')" in HOME
+    assert "home-readiness-host" in HOME
+    assert "function homeReleaseReadinessHost()" in HOME
+    assert "window.fsfflHomeReadinessRouteChanged" in HOME
+    assert "${homeReadinessMarkup()}" not in HOME
 
 
 def test_home_readiness_strip_tracks_canonical_intelligence_status_without_launching_work() -> None:
@@ -174,5 +180,5 @@ def test_home_readiness_strip_tracks_canonical_intelligence_status_without_launc
 
 
 def test_home_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    assert "/static/app.js?v=20260924-home-readiness1" in INDEX
-    assert "/static/home_dashboard.js?v=20260924-home-readiness1" in INDEX
+    assert "/static/app.js?v=20260924-home-readiness-top1" in INDEX
+    assert "/static/home_dashboard.js?v=20260924-home-readiness-top1" in INDEX
