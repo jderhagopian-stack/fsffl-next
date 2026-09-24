@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 from time import monotonic
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from threading import RLock
 
 from fsffl.persistence import PersistenceStore, persistence_store_from_env
@@ -44,6 +44,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             max_workers=1,
             thread_name_prefix="fsffl-persist",
         )
+        self._checkpoint_futures: dict[str, Future[bool]] = {}
 
     @property
     def persistence_enabled(self) -> bool:
@@ -62,9 +63,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return
         self._checkpoint_executor.submit(self._persist_state_history, league_state)
 
-    def _persist_context(self, user_id: str, context: UserRuntimeContext) -> None:
+    def _persist_context(self, user_id: str, context: UserRuntimeContext) -> bool:
         if context.league_state is None:
-            return
+            return True
+        durable = True
         if self._persistence is not None:
             try:
                 persist_runtime_snapshot(
@@ -77,18 +79,43 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     value_evidence=context.value_evidence,
                 )
             except Exception as exc:  # persistence must not break authoritative runtime
+                durable = False
                 _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
         self._persist_state_history(context.league_state)
+        return durable
 
-    def _checkpoint_async(self, user_id: str, context: UserRuntimeContext) -> None:
+    def _checkpoint_async(
+        self,
+        user_id: str,
+        context: UserRuntimeContext,
+    ) -> Future[bool] | None:
         if context.league_state is None or (
             self._persistence is None and self._state_history is None
         ):
-            return
+            return None
         # One worker is deliberate: an earlier state-only snapshot can never finish
         # after and overwrite a later, richer intelligence snapshot. State-history
         # retention follows the same mutation order.
-        self._checkpoint_executor.submit(self._persist_context, user_id, context)
+        future = self._checkpoint_executor.submit(self._persist_context, user_id, context)
+        with self._restore_lock:
+            self._checkpoint_futures[user_id] = future
+        return future
+
+    def wait_for_checkpoint(self, user_id: str, *, timeout: float = 30.0) -> bool:
+        """Wait for the latest serialized checkpoint without moving persistence onto the request path."""
+
+        with self._restore_lock:
+            future = self._checkpoint_futures.get(user_id)
+        if future is None:
+            return self._persistence is None
+        try:
+            return bool(future.result(timeout=timeout))
+        except FutureTimeoutError:
+            _logger.warning("FSFFL persistence checkpoint timed out user=%s", user_id)
+            return False
+        except Exception as exc:
+            _logger.warning("FSFFL persistence checkpoint wait failed user=%s error=%s", user_id, exc)
+            return False
 
     def _restore_once(self, user_id: str) -> None:
         if self._persistence is None:

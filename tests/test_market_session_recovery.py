@@ -3,7 +3,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RECOVERY = ROOT / "src/fsffl/product/static/market_session_recovery.js"
 INDEX = ROOT / "src/fsffl/product/static/index.html"
-RELEASE = "20260924-readiness-control4"
+RELEASE = "20260924-readiness-control5"
 
 def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")

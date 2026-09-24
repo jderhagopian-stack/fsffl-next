@@ -159,3 +159,25 @@ def test_failed_async_checkpoint_does_not_replace_authoritative_runtime_state() 
     assert context.league_state == state
     assert current.league_state == state
     assert persistence.get_user_runtime_context(user_id="jimmy") is None
+
+
+def test_checkpoint_barrier_waits_for_exact_serialized_write() -> None:
+    persistence = SlowPersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+
+    runtime.set_league_state("jimmy", _state())
+
+    assert runtime.wait_for_checkpoint("jimmy", timeout=2) is True
+    durable = persistence.get_user_runtime_context(user_id="jimmy")
+    assert durable is not None
+    assert durable.league_id == "sleeper:123"
+
+
+def test_checkpoint_barrier_reports_failed_durable_write() -> None:
+    persistence = WriteFailingPersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+
+    runtime.set_league_state("jimmy", _state())
+
+    assert runtime.wait_for_checkpoint("jimmy", timeout=2) is False
+    assert persistence.get_user_runtime_context(user_id="jimmy") is None
