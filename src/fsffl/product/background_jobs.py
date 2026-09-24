@@ -1,17 +1,46 @@
 from __future__ import annotations
 
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
-from threading import RLock
+from threading import RLock, get_native_id
 from time import monotonic
 from typing import Callable
 from uuid import uuid4
 
 
 _logger = logging.getLogger("fsffl.product.performance")
+
+
+def _deprioritize_background_thread() -> None:
+    """Give request-serving threads precedence during CPU-heavy refresh work.
+
+    Render's free instance is CPU-capped. Intelligence refresh is best-effort
+    background work, so its dedicated executor thread may run at a lower Linux
+    scheduler priority without changing Forecast/Simulation/Value inputs or math.
+    Unsupported platforms fail open to the existing scheduler behavior.
+    """
+
+    raw = os.getenv("FSFFL_INTELLIGENCE_NICE", "10").strip()
+    try:
+        nice = max(0, min(19, int(raw)))
+    except ValueError:
+        nice = 10
+    if nice <= 0 or not hasattr(os, "setpriority") or not hasattr(os, "PRIO_PROCESS"):
+        return
+    try:
+        native_id = get_native_id()
+        os.setpriority(os.PRIO_PROCESS, native_id, nice)
+        _logger.info(
+            "FSFFL intelligence scheduler priority native_thread=%s nice=%s",
+            native_id,
+            nice,
+        )
+    except (OSError, PermissionError) as exc:
+        _logger.warning("FSFFL intelligence scheduler priority unchanged error=%s", exc)
 
 
 class IntelligenceJobStatus(StrEnum):
@@ -182,6 +211,7 @@ class IntelligenceJobCoordinator:
         )
 
     def _run(self, job_id: str, work: JobWork) -> None:
+        _deprioritize_background_thread()
         self._update(
             job_id,
             status=IntelligenceJobStatus.RUNNING,
