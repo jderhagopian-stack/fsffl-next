@@ -27,7 +27,7 @@ const fsfflProductSurfaceCopy={
 const fsfflStaticVersion='20260920-owner-dossier1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260924-home-readiness-top1';
+const homeNorthStarStaticVersion='20260924-shared-readiness-shell1';
 const franchiseNorthStarStaticVersion='20260924-franchise-live-cleanup1';
 const opportunityHomeIntentStaticVersion='20260923-home-intent1';
 let leagueComparisonScriptPromise=null;
@@ -68,12 +68,134 @@ window.fsfflSetDeepLinkIntent=fsfflSetDeepLinkIntent;
 window.fsfflPeekDeepLinkIntent=fsfflPeekDeepLinkIntent;
 window.fsfflConsumeDeepLinkIntent=fsfflConsumeDeepLinkIntent;
 window.fsfflNavigateTo=fsfflNavigateTo;
+const FSFFL_SHARED_READINESS_STEPS=7;
+const fsfflSharedReadinessState={
+  pollTimer:null,
+  pollAttempts:0,
+  requestInFlight:false,
+  lastStep:1,
+};
+const fsfflSharedReadinessPhases={
+  queued:[1,'Preparing current intelligence…'],
+  building_forecasts:[2,'Building projections…'],
+  refreshing_state:[3,'Refreshing league state…'],
+  running_simulation:[4,'Running season outlook…'],
+  building_values:[5,'Building market values…'],
+  attaching_results:[6,'Attaching current intelligence…'],
+  completed:[7,'Intelligence current'],
+};
+function fsfflSharedReadinessEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+function fsfflSharedReadinessSnapshot(){
+  const context=state?.context||{},job=state?.intelligence?.job||null;
+  if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false};
+  if(job?.status==='failed'||job?.phase==='failed'){
+    const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:'Intelligence refresh needs attention',failed:true,complete:false};
+  }
+  if(job&&fsfflSharedReadinessPhases[job.phase]){
+    const [step,label]=fsfflSharedReadinessPhases[job.phase];
+    fsfflSharedReadinessState.lastStep=step;
+    return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:step===FSFFL_SHARED_READINESS_STEPS};
+  }
+  let step=1;
+  if(context?.forecast_ready)step=Math.max(step,2);
+  if(context?.simulation_ready)step=Math.max(step,4);
+  if(context?.value_ready)step=Math.max(step,5);
+  const complete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
+  if(complete)step=FSFFL_SHARED_READINESS_STEPS;
+  fsfflSharedReadinessState.lastStep=step;
+  const label=complete?'Intelligence current':!context?.forecast_ready?'Building projections…':!context?.simulation_ready?'Running season outlook…':!context?.value_ready?'Building market values…':'Attaching current intelligence…';
+  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete};
+}
+function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
+  const pct=status.total?Math.max(0,Math.min(100,(status.step/status.total)*100)):0;
+  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':'●')+'</span><strong>'+status.step+' / '+status.total+'</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+'</span></div>';
+}
+function fsfflSharedReadinessHost(){
+  let node=document.querySelector('#fsffl-sync-state');
+  if(!node){
+    const topbar=document.querySelector('.topbar');if(!topbar)return null;
+    node=document.createElement('div');
+    node.id='fsffl-sync-state';node.className='fsffl-sync-state';
+    node.setAttribute('role','status');node.setAttribute('aria-live','polite');
+    topbar.insertAdjacentElement('afterend',node);
+  }
+  node.classList.add('fsffl-shared-readiness-host');
+  node.dataset.sharedReadiness='true';
+  return node;
+}
+function fsfflRenderSharedReadiness(){
+  const node=fsfflSharedReadinessHost();if(!node)return;
+  const status=fsfflSharedReadinessSnapshot();
+  if(!status.connected){node.hidden=true;node.innerHTML='';return}
+  node.innerHTML=fsfflSharedReadinessMarkup(status);
+  node.hidden=false;
+}
+function fsfflStopSharedReadinessPolling(){
+  if(fsfflSharedReadinessState.pollTimer){clearInterval(fsfflSharedReadinessState.pollTimer);fsfflSharedReadinessState.pollTimer=null}
+  fsfflSharedReadinessState.pollAttempts=0;
+}
+function fsfflSharedReadinessJobActive(){
+  const job=state?.intelligence?.job;
+  return job?.status==='queued'||job?.status==='running';
+}
+async function fsfflPollSharedReadinessOnce(){
+  if(fsfflSharedReadinessState.requestInFlight||!state?.context?.league_id)return;
+  fsfflSharedReadinessState.requestInFlight=true;
+  try{
+    state.intelligence=await api('/api/intelligence/status');
+    fsfflRenderSharedReadiness();
+    const status=fsfflSharedReadinessSnapshot();
+    if(status.complete||status.failed)fsfflStopSharedReadinessPolling();
+  }catch(_error){
+    fsfflRenderSharedReadiness();
+  }finally{
+    fsfflSharedReadinessState.requestInFlight=false;
+  }
+}
+function fsfflStartSharedReadinessPolling(){
+  fsfflRenderSharedReadiness();
+  const status=fsfflSharedReadinessSnapshot();
+  if(!status.connected||status.complete||status.failed){fsfflStopSharedReadinessPolling();return}
+  if(fsfflSharedReadinessState.pollTimer)return;
+  fsfflSharedReadinessState.pollAttempts=0;
+  void fsfflPollSharedReadinessOnce();
+  fsfflSharedReadinessState.pollTimer=setInterval(()=>{
+    fsfflSharedReadinessState.pollAttempts+=1;
+    if(fsfflSharedReadinessState.pollAttempts>=36&&!fsfflSharedReadinessJobActive()){fsfflStopSharedReadinessPolling();return}
+    void fsfflPollSharedReadinessOnce();
+  },2500);
+}
+function installFsfflSharedReadinessStyles(){
+  if(document.querySelector('#fsffl-shared-readiness-style'))return;
+  const style=document.createElement('style');
+  style.id='fsffl-shared-readiness-style';
+  style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:none;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr);align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr);gap:6px}}';
+  document.head.appendChild(style);
+}
+window.fsfflSharedReadiness={
+  snapshot:fsfflSharedReadinessSnapshot,
+  render:fsfflRenderSharedReadiness,
+  refresh:fsfflStartSharedReadinessPolling,
+};
+
 function productSurfaceError(label,error){const panel=document.querySelector('#generic-screen .panel');if(panel)panel.innerHTML=`<p class="eyebrow">${label}</p><h2>Unable to load this view.</h2><p class="lead">${String(error.message||error)}</p>`}
 function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];if(!copy)return;const panel=document.querySelector('#generic-screen .panel');if(route!=='league_comparison')panel?.classList.remove('league-structure-panel');const eyebrow=document.querySelector('#generic-eyebrow'),title=document.querySelector('#generic-title'),body=document.querySelector('#generic-copy');if(eyebrow)eyebrow.textContent=copy[0];if(title)title.textContent=copy[1];if(body)body.textContent=copy[2];if(route==='my_team')ensureMyTeamScript().then(()=>{installProjectionPresentation();window.renderFsfflMyTeam?.();setTimeout(installProjectionPresentation,0)}).catch(error=>productSurfaceError('Franchise',error));if(route==='players_assets'&&typeof window.renderFsfflExplorer==='function'){installExplorerSortSemantics();installProjectionPresentation();window.renderFsfflExplorer(route);setTimeout(()=>{installProjectionPresentation();installExplorerSortSemantics()},0)}if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>productSurfaceError('League',error));if(route==='opportunities')ensureOpportunitiesScript().then(()=>window.renderFsfflOpportunities?.()).catch(error=>productSurfaceError('Opportunity Engine',error));if(route==='behavioral_intelligence')ensureBehavioralIntelligenceScript().then(()=>window.renderFsfflBehavioralIntelligence?.()).catch(error=>productSurfaceError('Behavioral Intelligence',error));if(route==='what_if')ensureWhatIfScript().then(()=>window.renderFsfflWhatIf?.()).catch(error=>productSurfaceError('What-If',error));if(route==='simulator')ensureSimulatorScript().then(()=>window.renderFsfflSimulator?.()).catch(error=>productSurfaceError('Simulator',error));if(route==='analytics')ensureAnalyticsTerminalScript().then(()=>window.renderFsfflAnalyticsTerminal?.()).catch(error=>productSurfaceError('Analytics Terminal',error));if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error))}
 function rebuildProductNavigation(){const nav=document.querySelector('#primary-nav');if(!nav)return;nav.innerHTML='';const hasTeam=Boolean(state?.context?.team_id);fsfflProductRoutes.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='nav-item';button.dataset.route=item.route;if(item.route===state?.route)button.classList.add('active');if(item.teamScoped&&!hasTeam)button.classList.add('locked');button.innerHTML=`<span>${item.label}</span>${item.teamScoped&&!hasTeam?'<small>Select team</small>':''}`;button.addEventListener('click',event=>{event.preventDefault();if(button.classList.contains('locked'))return;if(typeof setRoute==='function')setRoute(item.route)});nav.appendChild(button)})}
 function productRouteAwareSetRoute(route){if(!fsfflProductSurfaceCopy[route])return;document.querySelectorAll('.route-screen').forEach(item=>item.hidden=item.id!=='generic-screen');document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.route===route));renderProductSurface(route)}
 function renderMobileRecoveryControls(){const topbar=document.querySelector('.topbar');const leagueScreen=document.querySelector('#league-screen');if(!topbar||!leagueScreen)return;let nav=document.querySelector('#mobile-direct-nav');if(!nav){nav=document.createElement('nav');nav.id='mobile-direct-nav';nav.className='mobile-direct-nav';nav.setAttribute('aria-label','Quick section navigation');topbar.insertAdjacentElement('afterend',nav)}nav.innerHTML='';fsfflProductRoutes.filter(item=>['league','my_team','players_assets','league_comparison','trade_center','opportunities','what_if','simulator','analytics','reports','behavioral_intelligence'].includes(item.route)).forEach(item=>{const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.directRoute=item.route;const locked=item.teamScoped&&!state?.context?.team_id;button.disabled=locked;button.addEventListener('click',()=>{if(!button.disabled)setRoute(item.route)});nav.appendChild(button)});let chooser=document.querySelector('#mobile-team-chooser');if(!state?.context?.league_id||state?.context?.team_id){chooser?.remove();return}if(!chooser){chooser=document.createElement('section');chooser.id='mobile-team-chooser';chooser.className='panel mobile-team-chooser';const hero=leagueScreen.querySelector('.hero-row');hero?.insertAdjacentElement('afterend',chooser)}chooser.innerHTML='<p class="eyebrow">Choose your team</p><h2>Select the franchise you manage</h2><p class="lead">Use these buttons if the Managing dropdown is unreliable on your phone.</p><div class="mobile-team-grid"></div>';const grid=chooser.querySelector('.mobile-team-grid');(state.context.teams||[]).forEach(team=>{const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent=team.display_name;button.addEventListener('click',async()=>{button.disabled=true;try{await selectTeam(team.team_id)}finally{button.disabled=false;renderMobileRecoveryControls();rebuildProductNavigation()}});grid.appendChild(button)})}
 const originalRenderRuntimeStatus=typeof renderRuntimeStatus==='function'?renderRuntimeStatus:null;if(originalRenderRuntimeStatus){renderRuntimeStatus=function(){const result=originalRenderRuntimeStatus();presentDownstreamReadiness();return result}}
-const originalSetRoute=typeof setRoute==='function'?setRoute:null;if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;window.fsfflHomeReadinessRouteChanged?.(route);productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return}const result=originalSetRoute(route);window.fsfflHomeReadinessRouteChanged?.(route);if(route==='league')ensureHomeScript().then(()=>{window.installFsfflHomeExperience?.();window.fsfflHomeReadinessRouteChanged?.('league')}).catch(()=>{});if(route==='trade_center'&&typeof loadTradeCenter==='function')setTimeout(loadTradeCenter,0);renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result};setRoute=window.setRoute}
+const originalSetRoute=typeof setRoute==='function'?setRoute:null;if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;fsfflRenderSharedReadiness();productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return}const result=originalSetRoute(route);fsfflRenderSharedReadiness();if(route==='league')ensureHomeScript().then(()=>{window.installFsfflHomeExperience?.();fsfflRenderSharedReadiness()}).catch(()=>{});if(route==='trade_center'&&typeof loadTradeCenter==='function')setTimeout(loadTradeCenter,0);renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result};setRoute=window.setRoute}
 const originalApplyContext=typeof applyContext==='function'?applyContext:null;if(originalApplyContext){applyContext=function(){const result=originalApplyContext();window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result}}
-injectMobileTouchFix();window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()});setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()},0);
+installFsfflSharedReadinessStyles();
+window.addEventListener('fsffl:intelligence-status-updated',event=>{
+  if(event.detail)state.intelligence=event.detail;
+  fsfflRenderSharedReadiness();
+  fsfflStartSharedReadinessPolling();
+});
+window.addEventListener('fsffl:product-context-updated',()=>{
+  fsfflStopSharedReadinessPolling();
+  setTimeout(()=>fsfflStartSharedReadinessPolling(),0);
+});
+window.addEventListener('fsffl:sync-state',()=>setTimeout(()=>fsfflRenderSharedReadiness(),0));
+injectMobileTouchFix();window.addEventListener('load',()=>{injectMobileTouchFix();rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();fsfflStartSharedReadinessPolling();ensureHomeScript().then(()=>window.installFsfflHomeExperience?.()).catch(()=>{})});window.addEventListener('fsffl:product-context-updated',()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()});setTimeout(()=>{rebuildProductNavigation();renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness()},0);
