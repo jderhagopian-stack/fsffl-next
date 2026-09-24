@@ -103,7 +103,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     let nextContextProbeAt=Date.now()+1000;
     while(Date.now()<deadline){
       onProgress?.(job);
-      if(job?.status==='completed')return resilientApi('/api/product-context',{},3);
+      if(job?.status==='completed'){
+        const context=await resilientApi('/api/product-context',{},3);
+        if(operation!=='connect'||(contextMatchesLeague(context,leagueId)&&context?.state_id))return context;
+        throw new Error('League import completed without activating the requested Sleeper league.');
+      }
       if(job?.status==='failed')throw new Error(job.error||'Sleeper league import failed');
 
       // Canonical State is the readiness boundary for using the application. A hosted
@@ -229,7 +233,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     if(!leagueId?.trim())return;
     const normalized=leagueId.trim();
     const started=now();
-    localStorage.setItem(LEAGUE_KEY,normalized);
+    const previousLeagueId=localStorage.getItem(LEAGUE_KEY);
     interactiveConnectInFlight=true;
     const button=document.querySelector('#connect-button');
     const original=button?.textContent||'Connect Sleeper League';
@@ -238,10 +242,20 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       const context=await waitForBackgroundImport(normalized,job=>{
         if(button)button.textContent=job?.status==='running'?'Loading league…':'Starting import…';
       },'connect');
+      if(!contextMatchesLeague(context,normalized)||!context?.state_id){
+        throw new Error('The requested Sleeper league did not become active.');
+      }
+      localStorage.setItem(LEAGUE_KEY,normalized);
+      const savedTeamId=localStorage.getItem(TEAM_KEY);
+      if(savedTeamId&&!(context.teams||[]).some(team=>team.team_id===savedTeamId)){
+        localStorage.removeItem(TEAM_KEY);
+      }
       applyConnectedContext(context);
       publishSyncState('current');
       recordLatency('first_connect_ready',started,'success');
     }catch(error){
+      if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY);
+      else localStorage.setItem(LEAGUE_KEY,previousLeagueId);
       recordLatency('first_connect_ready',started,'failed',String(error?.message||error));
       window.alert(`Could not connect league: ${error.message}`);
     }finally{
