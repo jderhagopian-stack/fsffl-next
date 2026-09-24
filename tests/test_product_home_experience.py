@@ -5,6 +5,7 @@ HOME = Path("src/fsffl/product/static/home_dashboard.js").read_text(encoding="ut
 SHELL = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
 LEAGUE = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
 MARKET = Path("src/fsffl/product/static/opportunities.js").read_text(encoding="utf-8")
+INDEX = Path("src/fsffl/product/static/index.html").read_text(encoding="utf-8")
 
 
 def test_home_matches_north_star_single_screen_information_architecture() -> None:
@@ -91,3 +92,46 @@ def test_home_is_mobile_first_without_horizontal_scrolling() -> None:
     assert "padding:4px 10px calc(76px + env(safe-area-inset-bottom,0px))" in HOME
     assert "touch-action:manipulation" in HOME
     assert "overflow-x:auto" not in HOME
+
+
+def test_home_north_star_suppresses_all_legacy_home_modules_from_first_paint() -> None:
+    assert 'class="route-screen fsffl-home-north-star-active"' in INDEX
+    assert 'data-home-surface="north-star"' in INDEX
+    assert '<section id="home-attention" class="home-attention"' in INDEX
+    assert 'id="home-north-star-presentation-guard"' in INDEX
+    for selector in (
+        "#league-screen.fsffl-home-north-star-active > .hero-row",
+        "#league-screen.fsffl-home-north-star-active > #runtime-status",
+        "#league-screen.fsffl-home-north-star-active > .metric-grid",
+        "#league-screen.fsffl-home-north-star-active > .dashboard-grid",
+        "#league-screen.fsffl-home-north-star-active > .roster-panel",
+        "#league-screen.fsffl-home-north-star-active > #home-quick-actions",
+    ):
+        assert selector in INDEX
+    assert "display: none !important;" in INDEX
+    assert "leagueScreen.classList.add('fsffl-home-north-star-active')" in HOME
+
+
+def test_home_north_star_has_no_literal_escape_text_in_document_shell() -> None:
+    assert r"\n" not in INDEX
+    head = INDEX.split("</head>", 1)[0]
+    assert r"\n" not in head
+
+
+def test_home_north_star_accepted_sections_and_drill_ins_remain_intact_after_cleanup() -> None:
+    for label in (
+        "What matters right now",
+        "Season outlook · current Simulation",
+        "Your roster at a glance",
+        "Also worth knowing",
+        "Around the league",
+    ):
+        assert label in HOME
+    for action in (
+        "data-home-action=\"franchise\"",
+        "data-home-action=\"pressure\"",
+        "data-home-action=\"outlook\"",
+        "data-home-action=\"position\"",
+        "data-home-action=\"exposure\"",
+    ):
+        assert action in HOME
