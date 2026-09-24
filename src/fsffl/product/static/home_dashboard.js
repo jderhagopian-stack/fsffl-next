@@ -152,7 +152,6 @@ function renderFsfflHomeNorthStar(){
 
   </section>`;
   homeWireActions(container);
-  homeRefreshReadinessStrip();
 }
 async function loadFsfflHomeNorthStar({force=false}={}){
   const leagueId=state?.context?.league_id,teamId=state?.context?.team_id,stateId=state?.context?.state_id;
