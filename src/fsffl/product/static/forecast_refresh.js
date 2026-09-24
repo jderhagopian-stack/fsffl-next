@@ -222,6 +222,10 @@ async function maybeStartIntelligenceJob({manual=false}={}){
     fsfflSessionStartedJobId=payload.job_id||null;
     fsfflJobStateId=payload.league_state_id||stateId;
     setForecastRefreshMessage(phaseMessage(payload));
+    // The shared strip may have stopped its idle polling before a user manually
+    // launched heavy intelligence. Restart it from the authoritative status
+    // endpoint as soon as a job is accepted so 1/7 -> 7/7 cannot remain stale.
+    window.fsfflSharedReadiness?.refresh();
   }catch(error){
     console.error('Unable to start FSFFL intelligence job',error);
     fsfflSettledStateId=stateId;
