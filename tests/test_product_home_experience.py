@@ -161,8 +161,7 @@ def test_home_replaces_methods_evidence_dropdown_with_compact_readiness_strip() 
     assert "home-readiness-host" in HOME
     assert "function homeReleaseReadinessHost()" in HOME
     assert "window.fsfflHomeReadinessRouteChanged" in HOME
-    rendered = HOME[HOME.index("container.innerHTML=`<section class=\\\"home-north-star\\\">"):HOME.index("homeWireActions(container);")]
-    assert "${homeReadinessMarkup()}" not in rendered
+    assert "${homeReadinessMarkup()}" not in HOME
 
 
 def test_home_readiness_strip_tracks_canonical_intelligence_status_without_launching_work() -> None:
