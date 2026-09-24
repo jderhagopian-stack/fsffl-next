@@ -1,0 +1,44 @@
+{
+  "schema_version": "fsffl-performance-baseline-v1",
+  "stage": 0,
+  "captured_at_utc": "2026-09-24T00:35:00Z",
+  "base_main_sha": "f4a46f7fe5651192dc5a5e2a7d648006ea635ff7",
+  "render": {
+    "service_id": "srv-dae6k7vqj5pc73af7bt0",
+    "service_name": "fsffl-next-private-beta",
+    "deploy_id": "dep-daq6kfgu01pc73f0vg90",
+    "live_sha": "f4a46f7fe5651192dc5a5e2a7d648006ea635ff7",
+    "plan": "free",
+    "region": "virginia",
+    "instances": 1
+  },
+  "observations": [
+    {"metric":"product_context_first_useful_s","values":[3.103,3.704],"source":"render_request_logs","classification":"single_live_observations"},
+    {"metric":"product_context_warm_s","values":[0.013],"source":"render_request_logs","classification":"single_live_observation"},
+    {"metric":"my_team_s","values":[0.004,0.097,0.302,0.393,0.497],"source":"render_request_logs","classification":"live_observations"},
+    {"metric":"market_catalog_cold_s","values":[0.896],"source":"render_app_logs","cache_hit":false},
+    {"metric":"market_catalog_warm_s","values":[0.0],"source":"render_app_logs","cache_hit":true,"note":"logged to millisecond precision"},
+    {"metric":"opportunity_quick_s","values":[1.453],"source":"render_request_logs","cache_hit":false},
+    {"metric":"trade_analysis_total_s","values":[14.003],"source":"render_app_logs","phases":{"state_validation":0.097,"package_economics":0.005,"lineup_and_legality":0.895,"roster_decision":13.007,"finalize":0.0}},
+    {"metric":"market_workspace_full_s","values":[15.068],"source":"render_request_logs","cache_hit":false},
+    {"metric":"fresh_50000_simulation_s","values":[],"source":"not_observed_current_live_window","simulation_count":50000}
+  ],
+  "historical_management_comparators": {
+    "fresh_50000_total_s": 87.8,
+    "fresh_50000_kernel_s": 86.8,
+    "fast_trade_s_range": [12,36],
+    "my_team_read_s_range": [0.006,14.5],
+    "exact_repeated_simulation_s_range": [1,2],
+    "behavioral_repeated_create_index_calls": 214,
+    "behavioral_cumulative_waste_minutes": 89
+  },
+  "authority": {
+    "simulation_count_reduced": false,
+    "model_math_changed": false,
+    "forecast_authority_changed": false,
+    "value_authority_changed": false,
+    "decision_authority_changed": false,
+    "search_authority_changed": false,
+    "paid_compute_used": false
+  }
+}
