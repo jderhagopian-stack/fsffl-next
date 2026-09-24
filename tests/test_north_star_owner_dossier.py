@@ -74,7 +74,7 @@ def test_owner_dossier_is_mobile_first() -> None:
 def test_behavioral_lazy_asset_has_current_release_token() -> None:
     shell = _text("product_shell.js")
     source = _text("behavioral_intelligence.js")
-    assert "'20260920-owner-dossier1'" in shell
+    assert "'20260924-market-north-star1'" in shell
     assert "const fsfflBehaviorUiVersion='20260920-owner-dossier1'" in source
 
 
