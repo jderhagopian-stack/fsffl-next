@@ -298,3 +298,9 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
     assert "current_job = jobs.current(user_id)" in refresh
     assert "current_job.league_external_id != league_external_id" in connect
     assert "current_job.league_external_id != league_external_id" in refresh
+
+
+def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
+    source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
+    assert "20260924-readiness-control4" in source
+    assert "mobile_safari_recovery.js?v=20260924-readiness-control4" in source
