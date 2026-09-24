@@ -42,7 +42,7 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
-    assert "/static/forecast_refresh.js?v=20260924-readiness-control4" in index
+    assert "/static/forecast_refresh.js?v=20260924-manual-refresh-ready1" in index
     assert "/static/product_shell.js?v=20260924-readiness-control4" in index
 
 
@@ -54,3 +54,13 @@ def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_comple
     assert "const refreshAction=(!fsfflSharedReadinessJobActive())?" in source
     assert "!status.complete&&!fsfflSharedReadinessJobActive()" not in source
     assert ".fsffl-shared-readiness-refresh{pointer-events:auto" in source
+
+
+def test_manual_refresh_bypasses_already_ready_short_circuit() -> None:
+    source = _refresh()
+    start = source.split("async function maybeStartIntelligenceJob", 1)[1].split(
+        "async function maintainFsfflIntelligence", 1
+    )[0]
+    assert "if(!manual&&intelligencePipelineReady(state.context))" in start
+    assert "if(intelligencePipelineReady(state.context))" not in start
+    assert "api('/api/intelligence/jobs',{method:'POST'})" in start
