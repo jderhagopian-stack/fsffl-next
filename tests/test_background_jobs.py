@@ -176,3 +176,48 @@ def test_background_priority_failure_does_not_fail_intelligence_work() -> None:
         assert current is not None
         assert current.status == IntelligenceJobStatus.COMPLETED
 
+
+
+class _LifecyclePersistence:
+    def __init__(self):
+        self.rows = []
+    def put_artifact(self, record):
+        self.rows.append(record)
+    def get_latest_reusable_artifact(self, *, artifact_kind, scope_kind, scope_id, model_version):
+        rows = [r for r in self.rows if r.key.artifact_kind == artifact_kind and r.key.scope_kind == scope_kind and r.key.scope_id == scope_id and r.key.model_version == model_version]
+        return max(rows, key=lambda r: r.computed_at) if rows else None
+
+
+def test_restart_reconciles_durable_running_job_as_interrupted() -> None:
+    persistence = _LifecyclePersistence()
+    first = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence)  # type: ignore[arg-type]
+    release = Event()
+    started = Event()
+    def work(_progress) -> None:
+        started.set()
+        release.wait(timeout=2)
+    first.start(user_id="u-restart", league_state_id="state-1", work=work)
+    assert started.wait(timeout=2)
+    assert first.current("u-restart").status == IntelligenceJobStatus.RUNNING
+
+    restarted = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence)  # type: ignore[arg-type]
+    recovered = restarted.current("u-restart")
+    assert recovered is not None
+    assert recovered.status == IntelligenceJobStatus.INTERRUPTED
+    assert recovered.phase == IntelligenceJobPhase.INTERRUPTED
+    assert recovered.error == "server_restart"
+    release.set()
+
+
+def test_completed_job_survives_coordinator_restart_without_recomputation() -> None:
+    persistence = _LifecyclePersistence()
+    first = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence)  # type: ignore[arg-type]
+    first.start(user_id="u-complete", league_state_id="state-1", work=lambda _progress: None)
+    completed = _wait_for_status(first, user_id="u-complete", status=IntelligenceJobStatus.COMPLETED)
+    assert completed is not None
+
+    restarted = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence)  # type: ignore[arg-type]
+    recovered = restarted.current("u-complete")
+    assert recovered is not None
+    assert recovered.job_id == completed.job_id
+    assert recovered.status == IntelligenceJobStatus.COMPLETED
