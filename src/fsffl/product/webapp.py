@@ -21,7 +21,7 @@ from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
 
-from . import foreground_pressure
+from .foreground_pressure import foreground_pressure
 from .background_jobs import (
     IntelligenceJob,
     IntelligenceJobCoordinator,
