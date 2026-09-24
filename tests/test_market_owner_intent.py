@@ -16,14 +16,15 @@ def test_market_exposes_consumer_owner_intent_control() -> None:
 
     assert "What are you trying to do?" in source
     for label in (
-        "Use calculated / neutral",
-        "Push in the chips / Win now",
+        "Calculated / neutral",
+        "Contend / Win now",
         "Balanced",
         "Retool",
         "Rebuild",
-        "Improve a position",
+        "Target a position",
         "Shop a player",
         "Target a player",
+        "Explore an owner / team",
         "Consolidate",
     ):
         assert label in source
@@ -44,15 +45,18 @@ def test_strategic_owner_intent_uses_server_published_posture_ordering_not_ui_sc
     assert "server-published posture views" in source
 
 
-def test_specific_market_tasks_only_narrow_already_returned_candidates() -> None:
-    source = _source(POSTURE_UI)
+def test_specific_market_tasks_use_server_focused_search_before_candidate_limit() -> None:
+    posture = _source(POSTURE_UI)
+    focused = _source(Path("src/fsffl/product/focused_opportunity_search.py"))
+    routes = _source(Path("src/fsffl/product/focused_opportunity_routes.py"))
 
-    assert "fsffl.marketIntent" in source
-    assert "fsffl.marketIntentValue" in source
-    assert "Position, shop, target and consolidation choices only narrow" in source
-    assert "already-returned candidate set" in source
-    assert "fsffl:market-intent-changed" in source
-
+    assert "fsffl.marketIntent" in posture
+    assert "fsffl.marketIntentValue" in posture
+    assert "Position, shop, target, owner and consolidation choices use the server-owned focused Search path before the candidate limit." in posture
+    assert "fsffl:market-intent-changed" in posture
+    assert '"owner"' in focused.split("_VALID_INTENTS", 1)[1].split("\n", 1)[0]
+    assert 'normalized_intent == "owner"' in focused
+    assert '"applied_before_candidate_limit": True' in routes
 
 def test_default_market_focus_resolves_from_calculated_competitive_state() -> None:
     source = _source(POSTURE_SERVER)
