@@ -36,6 +36,7 @@ def build_league_value_lenses(
     intrinsic: ShapleyIntrinsicContract | None,
     *,
     intrinsic_error: str | None = None,
+    include_unrostered: bool = False,
 ) -> dict[str, object]:
     """Expose separate Broad Market and Intrinsic player lenses for League Atlas.
 
@@ -61,9 +62,13 @@ def build_league_value_lenses(
     players = {player.player_id: player for player in state.players}
     player_states = {row.player_id: row for row in state.player_states}
 
-    rostered_ids = sorted(set(owner_by_player) & set(players))
+    player_ids = (
+        sorted(players)
+        if include_unrostered
+        else sorted(set(owner_by_player) & set(players))
+    )
     rows: list[dict[str, object]] = []
-    for player_id in rostered_ids:
+    for player_id in player_ids:
         player = players[player_id]
         market_percentile = market.get(player_id)
         intrinsic_percentile = intrinsic_ranks.get(player_id)
@@ -97,9 +102,16 @@ def build_league_value_lenses(
                 "age_years": (
                     player_state.age_years if player_state is not None else None
                 ),
-                "owner_team_id": owner_by_player[player_id],
-                "owner_team_name": team_names.get(
-                    owner_by_player[player_id], owner_by_player[player_id]
+                "owner_team_id": owner_by_player.get(player_id),
+                "owner_team_name": (
+                    team_names.get(owner_by_player[player_id], owner_by_player[player_id])
+                    if player_id in owner_by_player
+                    else None
+                ),
+                "nfl_team": player.nfl_team,
+                "roster_status": "rostered" if player_id in owner_by_player else "available",
+                "player_status": (
+                    player_state.status.value if player_state is not None else "unknown"
                 ),
                 "broad_market_percentile": market_percentile,
                 "intrinsic_percentile": intrinsic_percentile,
@@ -155,6 +167,7 @@ def build_league_value_lenses(
             "status": "ready" if market_ready else "unavailable",
             "scale_id": BROAD_MARKET_SCALE_ID,
             "player_count": len(market),
+            "universe": "all_players" if include_unrostered else "rostered_players",
             "team_total_authority": False,
             "reason": (
                 None
@@ -196,6 +209,7 @@ def build_league_value_lenses(
             }
         ),
         "players": rows,
+        "player_universe": "all_players" if include_unrostered else "rostered_players",
         "teams": teams,
         "authority": {
             "canonical_fsffl_intrinsic_authority": "shapley_intrinsic",
