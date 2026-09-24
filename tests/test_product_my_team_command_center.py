@@ -101,6 +101,7 @@ def test_franchise_roster_is_compact_filtered_and_uses_one_forecast_basis() -> N
     roster = NORTH_STAR.split("function franchiseNSRoster(){", 1)[1].split(
         "function franchiseNSAssets(){", 1
     )[0]
+    assert "franchiseRosterFilter:'starters'" in NORTH_STAR
     assert "Starters" in roster
     assert "Bench" in roster
     assert "All Players" in roster
@@ -112,11 +113,13 @@ def test_franchise_roster_is_compact_filtered_and_uses_one_forecast_basis() -> N
     assert "Broad Market" in NORTH_STAR
     assert "FSFFL Intrinsic" in NORTH_STAR
     assert "data-player-intelligence-id" in NORTH_STAR
+    assert "roster.filter(franchiseNSProjectedStarter)" in roster
+    assert "!franchiseNSProjectedStarter(player)" in roster
 
 
 def test_franchise_assets_keep_market_intrinsic_and_pick_authority_separate() -> None:
     assets = NORTH_STAR.split("function franchiseNSAssets(){", 1)[1].split(
-        "function franchiseNSEvidence(){", 1
+        "function renderFranchiseNorthStar(){", 1
     )[0]
     assert "Broad Market" in assets
     assert "FSFFL Intrinsic" in assets
@@ -130,14 +133,17 @@ def test_franchise_assets_keep_market_intrinsic_and_pick_authority_separate() ->
     assert "Movable Assets" not in assets
 
 
-def test_franchise_normal_provenance_is_secondary_and_degraded_forecast_is_visible() -> None:
+def test_franchise_degraded_forecast_is_compact_and_default_methods_clutter_is_removed() -> None:
     renderer = NORTH_STAR.split("function renderFranchiseNorthStar(){", 1)[1].split(
         "async function loadFranchiseNorthStarValueLenses", 1
     )[0]
-    assert "Preseason Forecast fallback active" in renderer
+    assert "franchise-ns-forecast-strip" in renderer
+    assert "Forecast fallback active" in renderer
+    assert "Preserved preseason projections in use · live source-health degraded." in renderer
+    assert "fallback?" in renderer
     assert "Current governed Forecast" not in renderer
-    assert '<details class="franchise-ns-evidence">' in NORTH_STAR
-    assert "Methods & evidence" in NORTH_STAR
+    assert "Methods & evidence" not in NORTH_STAR
+    assert '<details class="franchise-ns-evidence">' not in NORTH_STAR
 
 
 def test_franchise_missing_evidence_fails_visibly_without_substitute_metrics() -> None:
@@ -157,7 +163,7 @@ def test_franchise_north_star_is_the_only_primary_franchise_renderer() -> None:
     assert NORTH_STAR.rfind("window.renderFsfflMyTeam=") == NORTH_STAR.rfind(
         "window.renderFsfflMyTeam=loadFranchiseNorthStar;"
     )
-    assert "franchiseNorthStarStaticVersion='20260924-franchise-north-star1'" in SHELL
+    assert "franchiseNorthStarStaticVersion='20260924-franchise-live-cleanup1'" in SHELL
     assert "lazyProductScript(\'renderFsfflMyTeam\',\'/static/my_team_dashboard.js\'" in SHELL
     assert "franchiseNorthStarStaticVersion)" in SHELL
 
@@ -175,3 +181,41 @@ def test_franchise_intrinsic_unavailable_is_explicit_not_a_dash() -> None:
     assert "franchiseNSIntrinsicReason" in NORTH_STAR
     assert "Governed FSFFL Intrinsic is unavailable for the current league state." in NORTH_STAR
     assert "fsffl_intrinsic?.reason" in NORTH_STAR
+
+
+def test_franchise_roster_and_flexible_assets_share_canonical_starter_classification() -> None:
+    helper = NORTH_STAR.split("function franchiseNSProjectedStarter(player){", 1)[1].split(
+        "function franchiseNSPlayerRole(player){", 1
+    )[0]
+    assert "player?.projected_starter===true" in helper
+
+    role = NORTH_STAR.split("function franchiseNSPlayerRole(player){", 1)[1].split(
+        "function franchiseNSPlayerRow(player){", 1
+    )[0]
+    assert "franchiseNSProjectedStarter(player)" in role
+    assert "return'Bench'" in role
+    assert "roster_slot==='TAXI'" in role
+    assert "roster_slot==='IR'" in role
+
+    ranked = NORTH_STAR.split("function franchiseNSRankedAssets", 1)[1].split(
+        "function franchiseNSAssetValue", 1
+    )[0]
+    assert "!franchiseNSProjectedStarter(player)" in ranked
+
+
+def test_franchise_mobile_player_names_wrap_without_ellipsis_and_cards_are_only_modestly_tighter() -> None:
+    assert ".franchise-ns-player-id strong{white-space:normal" in NORTH_STAR
+    assert "text-overflow:clip" in NORTH_STAR
+    assert "overflow-wrap:anywhere" in NORTH_STAR
+    assert ".franchise-ns-player-row{width:100%;min-height:58px" in NORTH_STAR
+    assert "padding:7px 9px" in NORTH_STAR
+    player_style = NORTH_STAR.split(".franchise-ns-player-id strong{", 1)[1].split("}", 1)[0]
+    assert "text-overflow:ellipsis" not in player_style
+    assert "white-space:nowrap" not in player_style
+
+
+def test_franchise_pick_labels_preserve_original_team_attribution_and_fail_closed_value() -> None:
+    assert "pick.original_team_id" in SOURCE
+    assert "myTeamTeamName(pick.original_team_id)" in SOURCE
+    assert "Value unavailable" in NORTH_STAR
+    assert "Broad Market pick Value evidence is unavailable" in NORTH_STAR
