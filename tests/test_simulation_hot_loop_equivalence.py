@@ -127,3 +127,30 @@ def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
         )
         for row in simulate_regular_season(request).outcomes
     }
+
+
+def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
+    request = RegularSeasonSimulationInput(
+        scoring=(
+            TeamScoringDistribution(team_id="a", mean_points=125, stddev_points=15, model_version="v1"),
+            TeamScoringDistribution(team_id="b", mean_points=115, stddev_points=12, model_version="v1"),
+        ),
+        schedule=tuple(
+            ScheduledMatchup(week=week, home_team_id="a", away_team_id="b")
+            for week in range(1, 5)
+        ),
+        playoff_team_count=1,
+        simulation_count=250,
+        seed=12345,
+        model_version="paced-equivalence-v1",
+    )
+    baseline = simulate_regular_season(request)
+    calls = 0
+
+    def checkpoint() -> None:
+        nonlocal calls
+        calls += 1
+
+    paced = simulate_regular_season(request, cooperative_yield=checkpoint)
+    assert paced == baseline
+    assert calls == request.simulation_count
