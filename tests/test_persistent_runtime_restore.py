@@ -234,7 +234,20 @@ def test_partial_checkpoint_cannot_displace_durable_last_good_identity() -> None
         payload={"league_state": last_good.model_dump(mode="json"), "selected_team_id": "t2"},
         computed_at=datetime.now(UTC),
     ))
-    persistence.put_artifact(ReusableArtifactRecord(\n        key=ArtifactKey(artifact_kind="intelligence_job_lifecycle", scope_kind="user", scope_id="jimmy", input_fingerprint="job-running", model_version="intelligence-job-lifecycle-v1"),\n        payload={"status": "running"}, computed_at=datetime.now(UTC),\n    ))\n    partial = last_good.model_copy(update={"as_of": datetime(2026, 9, 8, 12, 5, tzinfo=UTC)})
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind="intelligence_job_lifecycle",
+                scope_kind="user",
+                scope_id="jimmy",
+                input_fingerprint="job-running",
+                model_version="intelligence-job-lifecycle-v1",
+            ),
+            payload={"status": "running"},
+            computed_at=datetime.now(UTC),
+        )
+    )
+    partial = last_good.model_copy(update={"as_of": datetime(2026, 9, 8, 12, 5, tzinfo=UTC)})
     persist_runtime_snapshot(persistence, user_id="jimmy", league_state=partial, selected_team_id="t1")
 
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
