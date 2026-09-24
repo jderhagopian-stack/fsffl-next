@@ -15,7 +15,7 @@ from fsffl.product import scenario_cache
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT = ROOT / "src" / "fsffl" / "product"
 STATIC = PRODUCT / "static"
-RELEASE = "20260924-home-readiness1"
+RELEASE = "20260924-home-readiness-top1"
 
 
 def _text(path: Path) -> str:
