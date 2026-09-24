@@ -70,7 +70,7 @@ def test_home_cold_load_uses_only_bounded_read_endpoints_and_no_deep_work() -> N
         "/api/league/value-lenses",
     ):
         assert forbidden not in HOME
-    assert "launches no Opportunity Search, bilateral Decision evaluation, Value build, Forecast refresh, or changed-state Simulation" in HOME
+    assert "It does not launch Opportunity Search, Decision, Value or new Simulation work." in HOME
 
 
 def test_home_contextual_navigation_contract_is_presentation_owned() -> None:
@@ -174,5 +174,5 @@ def test_home_readiness_strip_tracks_canonical_intelligence_status_without_launc
 
 
 def test_home_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    assert "/static/app.js?v=20260923-home-north-star1&home=20260924-readiness1" in INDEX
-    assert "/static/home_dashboard.js?v=20260923-home-north-star1&home=20260924-readiness1" in INDEX
+    assert "/static/app.js?v=20260924-home-readiness1" in INDEX
+    assert "/static/home_dashboard.js?v=20260924-home-readiness1" in INDEX
