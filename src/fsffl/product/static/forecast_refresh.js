@@ -180,6 +180,16 @@ async function pollIntelligenceJob(){
       settleFailedJob(payload);
       return;
     }
+
+    if(payload.status==='interrupted'){
+      fsfflSettledStateId=state?.context?.state_id||fsfflJobStateId||null;
+      fsfflCurrentJobId=null;
+      fsfflJobStateId=null;
+      fsfflSessionStartedJobId=null;
+      setForecastRefreshMessage('Intelligence refresh was interrupted. Last-good intelligence remains active; use Refresh Intelligence to start a new refresh.');
+      reflectRefreshAction(state.context);
+      return;
+    }
   }catch(error){
     console.error('Unable to poll FSFFL intelligence job',error);
     setForecastRefreshMessage('Unable to check intelligence refresh status. Retrying…');
@@ -278,6 +288,16 @@ async function maintainFsfflIntelligence(){
       }
       fsfflCurrentJobId=null;
       fsfflJobStateId=null;
+      reflectRefreshAction(state.context);
+      return;
+    }
+
+    if(payload.job_id&&payload.status==='interrupted'){
+      fsfflCurrentJobId=null;
+      fsfflJobStateId=null;
+      fsfflSessionStartedJobId=null;
+      fsfflSettledStateId=state.context.state_id||null;
+      setForecastRefreshMessage('Intelligence refresh was interrupted. Last-good intelligence remains active; use Refresh Intelligence to start a new refresh.');
       reflectRefreshAction(state.context);
       return;
     }
