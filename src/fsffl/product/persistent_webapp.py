@@ -59,12 +59,11 @@ _runtime_store = PersistentPrivateBetaRuntimeStore(
 )
 configure_scenario_cache_persistence(_persistence_store)
 
-# Hosted Behavioral persistence performs an idempotent deploy-before-migration
-# schema safety bootstrap when its Postgres adapter is first constructed. Build the
-# shared adapter while the Render process is starting rather than on the first user
-# status/Market request. Failure remains non-fatal: the coordinator will retry its
-# normal factory later and Behavioral evidence will fail closed rather than blocking
-# the rest of the product.
+# Hosted Behavioral persistence validates its migrated schema when the Postgres
+# adapter is first constructed. Build the shared adapter while the Render process is
+# starting rather than on the first user status/Market request. Validation is
+# read-only: governed migrations own schema/index/RLS creation. Failure remains
+# non-fatal here; Behavioral evidence fails closed rather than blocking the product.
 try:
     _behavioral_store = default_behavioral_store()
 except Exception as exc:  # pragma: no cover - hosted infrastructure guard
