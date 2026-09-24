@@ -27,7 +27,7 @@ const fsfflProductSurfaceCopy={
 const fsfflStaticVersion='20260924-live-usability-hotfix1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260924-readiness-truth1';
+const homeNorthStarStaticVersion='20260924-readiness-control1';
 const franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
@@ -109,7 +109,8 @@ function fsfflSharedReadinessSnapshot(){
 }
 function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const pct=status.total?Math.max(0,Math.min(100,(status.step/status.total)*100)):0;
-  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':'●')+'</span><strong>'+status.step+' / '+status.total+'</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+'</span></div>';
+  const refreshAction=(!status.complete&&!fsfflSharedReadinessJobActive())?'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>':'';
+  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':'●')+'</span><strong>'+status.step+' / '+status.total+'</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){
   let node=document.querySelector('#fsffl-sync-state');
@@ -130,6 +131,8 @@ function fsfflRenderSharedReadiness(){
   if(!status.connected){node.hidden=true;node.innerHTML='';return}
   node.innerHTML=fsfflSharedReadinessMarkup(status);
   node.hidden=false;
+  const refresh=node.querySelector('.fsffl-shared-readiness-refresh');
+  if(refresh)refresh.addEventListener('click',()=>document.querySelector('#refresh-intelligence')?.click());
 }
 function fsfflStopSharedReadinessPolling(){
   if(fsfflSharedReadinessState.pollTimer){clearInterval(fsfflSharedReadinessState.pollTimer);fsfflSharedReadinessState.pollTimer=null}
