@@ -40,6 +40,8 @@ CURRENT_TEAM_ANALYTICS_VIEW_VERSION = "next7-team-view-v4:position-strength-age"
 LAST_GOOD_ARTIFACT_KIND = "runtime_last_good_bundle"
 LAST_GOOD_SCOPE_KIND = "user"
 LAST_GOOD_MODEL_VERSION = "runtime-last-good-v1"
+JOB_LIFECYCLE_ARTIFACT_KIND = "intelligence_job_lifecycle"
+JOB_LIFECYCLE_MODEL_VERSION = "intelligence-job-lifecycle-v1"
 
 
 @dataclass(frozen=True)
@@ -189,12 +191,28 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
     context = store.get_user_runtime_context(user_id=user_id)
     if context is None:
         return None
-    last_good = store.get_latest_reusable_artifact(
-        artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+    # Ordinary/selective state checkpoints remain restart-authoritative. Only an
+    # in-flight refresh is allowed to fall back to the independently promoted
+    # complete bundle; this preserves Stage 2 selective invalidation semantics.
+    lifecycle = store.get_latest_reusable_artifact(
+        artifact_kind=JOB_LIFECYCLE_ARTIFACT_KIND,
         scope_kind=LAST_GOOD_SCOPE_KIND,
         scope_id=user_id,
-        model_version=LAST_GOOD_MODEL_VERSION,
+        model_version=JOB_LIFECYCLE_MODEL_VERSION,
     )
+    refresh_was_in_flight = (
+        lifecycle is not None
+        and lifecycle.payload.get("status") in {"queued", "running"}
+    )
+    last_good = None
+    if refresh_was_in_flight:
+        last_good = store.get_latest_reusable_artifact(
+            artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+            scope_kind=LAST_GOOD_SCOPE_KIND,
+            scope_id=user_id,
+            model_version=LAST_GOOD_MODEL_VERSION,
+        )
+
     if last_good is not None:
         try:
             league_state = LeagueState.model_validate(last_good.payload["league_state"])
