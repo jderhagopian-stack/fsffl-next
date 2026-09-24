@@ -132,7 +132,7 @@ function fsfflRenderSharedReadiness(){
   node.innerHTML=fsfflSharedReadinessMarkup(status);
   node.hidden=false;
   const refresh=node.querySelector('.fsffl-shared-readiness-refresh');
-  if(refresh)refresh.addEventListener('click',()=>document.querySelector('#refresh-intelligence')?.click());
+  if(refresh)refresh.addEventListener('click',()=>window.fsfflManualIntelligenceRefresh?.());
 }
 function fsfflStopSharedReadinessPolling(){
   if(fsfflSharedReadinessState.pollTimer){clearInterval(fsfflSharedReadinessState.pollTimer);fsfflSharedReadinessState.pollTimer=null}
