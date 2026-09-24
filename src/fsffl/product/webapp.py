@@ -21,7 +21,13 @@ from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
 
-from .background_jobs import IntelligenceJob, IntelligenceJobCoordinator, IntelligenceJobPhase
+from .foreground_pressure import foreground_pressure
+from .background_jobs import (
+    IntelligenceJob,
+    IntelligenceJobCoordinator,
+    IntelligenceJobInterrupted,
+    IntelligenceJobPhase,
+)
 from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
 from .frontier_runtime import build_negotiation_frontier
@@ -563,13 +569,26 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         initial_state = runtime.league_state
         initial_state_id = initial_state.state_id
+        initial_league_id = initial_state.league.league_id
+        initial_league_generation = store.league_generation(user_id)
+
+        def require_active_league_identity() -> None:
+            active = store.get(user_id).league_state
+            if (
+                store.league_generation(user_id) != initial_league_generation
+                or active is None
+                or active.league.league_id != initial_league_id
+            ):
+                raise IntelligenceJobInterrupted("league_switch")
 
         def work(progress) -> None:
             progress(IntelligenceJobPhase.BUILDING_FORECASTS, "Building governed multi-source projections.")
             evidence: LiveForecastEvidence = forecast_loader(initial_state)
+            require_active_league_identity()
 
             progress(IntelligenceJobPhase.REFRESHING_STATE, "Refreshing canonical Sleeper state at the evidence cutoff.")
             refreshed_state = state_loader(_sleeper_external_id(initial_state))
+            require_active_league_identity()
             store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
 
             if not evidence.uncertainty_ready:
@@ -577,10 +596,12 @@ def create_app(
 
             progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running 50,000 governed NEXT-4 season simulations.")
             simulation = simulation_loader(refreshed_state, evidence)
+            require_active_league_identity()
             store.set_simulation_analytics(user_id, simulation)
 
             progress(IntelligenceJobPhase.BUILDING_VALUES, "Building governed NEXT-3 current market values.")
             values = value_loader(refreshed_state)
+            require_active_league_identity()
 
             progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching simulation and Value results to the current canonical league state.")
             store.set_value_evidence(user_id, values)

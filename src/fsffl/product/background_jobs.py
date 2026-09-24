@@ -53,6 +53,12 @@ class IntelligenceJobStatus(StrEnum):
     INTERRUPTED = "interrupted"
 
 
+class IntelligenceJobInterrupted(RuntimeError):
+    """Signal that a running intelligence job lost write authority."""
+
+    pass
+
+
 class IntelligenceJobPhase(StrEnum):
     QUEUED = "queued"
     BUILDING_FORECASTS = "building_forecasts"
@@ -319,6 +325,16 @@ class IntelligenceJobCoordinator:
 
         try:
             work(progress)
+        except IntelligenceJobInterrupted as exc:
+            interrupted = self._update(
+                job_id,
+                status=IntelligenceJobStatus.INTERRUPTED,
+                phase=IntelligenceJobPhase.INTERRUPTED,
+                message="Intelligence refresh was superseded by a league switch. Last-good intelligence remains active.",
+                error=str(exc) or "league_switch",
+            )
+            self._log_final_timing(interrupted)
+            return
         except Exception as exc:
             failed = self._update(
                 job_id,

@@ -1,3 +1,4 @@
+import pytest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
@@ -5,9 +6,9 @@ from fsffl.product.runtime import LiveForecastEvidence, PrivateBetaRuntimeStore
 from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 
-def _state(as_of: datetime) -> LeagueState:
+def _state(as_of: datetime, *, league_id: str = "sleeper:123") -> LeagueState:
     league = League(
-        league_id="sleeper:123",
+        league_id=league_id,
         name="Recovery League",
         season=2026,
         rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
@@ -154,3 +155,24 @@ def test_failed_partial_refresh_preserves_completed_last_good_bundle() -> None:
     assert retained.forecast_evidence is old_forecast
     assert retained.simulation_analytics is old_simulation
     assert retained.value_evidence is old_value
+
+
+def test_cross_league_switch_invalidates_old_refresh_generation() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    old_state = _state(t0, league_id="sleeper:123")
+    new_state = _state(t0 + timedelta(minutes=1), league_id="sleeper:456")
+    refreshed_old_state = _state(t0 + timedelta(minutes=2), league_id="sleeper:123")
+
+    store.set_league_state("u", old_state)
+    old_generation = store.league_generation("u")
+    store.set_league_state("u", new_state)
+
+    assert store.league_generation("u") > old_generation
+    with pytest.raises(ValueError, match="different loaded league"):
+        store.set_forecast_evidence(
+            "u",
+            _evidence(),
+            refreshed_league_state=refreshed_old_state,
+        )
+    assert store.get("u").league_state == new_state

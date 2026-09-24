@@ -1,4 +1,6 @@
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from fsffl.forecast.models import (
     ForecastDistribution,
@@ -121,3 +123,21 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     states = {row.team_id: row.utility.calculated_competitive_state for row in result.team_views}
     assert states["a"].value != "unknown"
     assert states["b"].value != "unknown"
+
+
+def test_default_hosted_simulation_loader_resolves_foreground_pressure_callback() -> None:
+    from fsffl.product import webapp
+
+    evidence = SimpleNamespace(
+        league_scored_forecasts=(),
+        model_version="forecast-test",
+    )
+    sentinel = object()
+    with patch.object(webapp, "build_live_simulation_analytics", return_value=sentinel) as build:
+        result = webapp._default_simulation_loader(_state(), evidence)  # type: ignore[arg-type]
+
+    assert result is sentinel
+    assert build.call_args.kwargs["simulation_count"] == 50_000
+    callback = build.call_args.kwargs["cooperative_yield"]
+    assert callback.__self__ is webapp.foreground_pressure
+    assert callback.__func__ is webapp.foreground_pressure.cooperative_yield.__func__
