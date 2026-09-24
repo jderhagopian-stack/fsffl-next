@@ -11,6 +11,8 @@ from time import monotonic
 from typing import Callable
 from uuid import uuid4
 
+from fsffl.persistence.contracts import ArtifactKey, PersistenceStore, ReusableArtifactRecord
+
 
 _logger = logging.getLogger("fsffl.product.performance")
 
@@ -48,6 +50,7 @@ class IntelligenceJobStatus(StrEnum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    INTERRUPTED = "interrupted"
 
 
 class IntelligenceJobPhase(StrEnum):
@@ -59,6 +62,7 @@ class IntelligenceJobPhase(StrEnum):
     ATTACHING_RESULTS = "attaching_results"
     COMPLETED = "completed"
     FAILED = "failed"
+    INTERRUPTED = "interrupted"
 
 
 @dataclass(frozen=True)
@@ -102,8 +106,9 @@ class IntelligenceJobCoordinator:
     of inferring it from isolated microbenchmarks.
     """
 
-    def __init__(self, *, max_workers: int = 2) -> None:
+    def __init__(self, *, max_workers: int = 2, persistence_store: PersistenceStore | None = None) -> None:
         self._lock = RLock()
+        self._persistence = persistence_store
         self._jobs: dict[str, IntelligenceJob] = {}
         self._current_by_user: dict[str, str] = {}
         self._job_started_monotonic: dict[str, float] = {}
@@ -117,7 +122,80 @@ class IntelligenceJobCoordinator:
     def current(self, user_id: str) -> IntelligenceJob | None:
         with self._lock:
             job_id = self._current_by_user.get(user_id)
-            return self._jobs.get(job_id) if job_id is not None else None
+            if job_id is not None:
+                return self._jobs.get(job_id)
+        restored = self._restore_latest(user_id)
+        if restored is None:
+            return None
+        if restored.status in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}:
+            restored = replace(
+                restored,
+                status=IntelligenceJobStatus.INTERRUPTED,
+                phase=IntelligenceJobPhase.INTERRUPTED,
+                message="Intelligence refresh was interrupted by a server restart. Last-good intelligence remains active; start a new refresh when ready.",
+                updated_at=datetime.now(UTC),
+                error="server_restart",
+            )
+            self._persist(restored)
+        with self._lock:
+            self._jobs[restored.job_id] = restored
+            self._current_by_user[user_id] = restored.job_id
+        return restored
+
+    def _persist(self, job: IntelligenceJob) -> None:
+        if self._persistence is None:
+            return
+        try:
+            self._persistence.put_artifact(
+                ReusableArtifactRecord(
+                    key=ArtifactKey(
+                        artifact_kind="intelligence_job_lifecycle",
+                        scope_kind="user",
+                        scope_id=job.user_id,
+                        input_fingerprint=job.job_id,
+                        model_version="intelligence-job-lifecycle-v1",
+                    ),
+                    payload={
+                        "job_id": job.job_id,
+                        "user_id": job.user_id,
+                        "league_state_id": job.league_state_id,
+                        "status": job.status.value,
+                        "phase": job.phase.value,
+                        "message": job.message,
+                        "created_at": job.created_at.isoformat(),
+                        "updated_at": job.updated_at.isoformat(),
+                        "error": job.error,
+                        "phase_timings": [{"phase": t.phase.value, "elapsed_seconds": t.elapsed_seconds} for t in job.phase_timings],
+                        "total_elapsed_seconds": job.total_elapsed_seconds,
+                    },
+                    computed_at=job.updated_at,
+                )
+            )
+        except Exception as exc:
+            _logger.warning("FSFFL intelligence lifecycle persistence failed job=%s error=%s", job.job_id, exc)
+
+    def _restore_latest(self, user_id: str) -> IntelligenceJob | None:
+        if self._persistence is None:
+            return None
+        try:
+            record = self._persistence.get_latest_reusable_artifact(
+                artifact_kind="intelligence_job_lifecycle", scope_kind="user", scope_id=user_id,
+                model_version="intelligence-job-lifecycle-v1",
+            )
+            if record is None:
+                return None
+            p = record.payload
+            return IntelligenceJob(
+                job_id=str(p["job_id"]), user_id=str(p["user_id"]), league_state_id=str(p["league_state_id"]),
+                status=IntelligenceJobStatus(str(p["status"])), phase=IntelligenceJobPhase(str(p["phase"])),
+                message=str(p["message"]), created_at=datetime.fromisoformat(str(p["created_at"])),
+                updated_at=datetime.fromisoformat(str(p["updated_at"])), error=p.get("error"),
+                phase_timings=tuple(IntelligencePhaseTiming(phase=IntelligenceJobPhase(str(t["phase"])), elapsed_seconds=float(t["elapsed_seconds"])) for t in p.get("phase_timings", ())),
+                total_elapsed_seconds=(float(p["total_elapsed_seconds"]) if p.get("total_elapsed_seconds") is not None else None),
+            )
+        except Exception as exc:
+            _logger.warning("FSFFL intelligence lifecycle restore failed user=%s error=%s", user_id, exc)
+            return None
 
     def start(self, *, user_id: str, league_state_id: str, work: JobWork) -> IntelligenceJob:
         now = datetime.now(UTC)
@@ -142,6 +220,7 @@ class IntelligenceJobCoordinator:
             )
             self._jobs[job.job_id] = job
             self._current_by_user[user_id] = job.job_id
+            self._persist(job)
             self._executor.submit(self._run, job.job_id, work)
             return job
 
@@ -176,7 +255,7 @@ class IntelligenceJobCoordinator:
                 if status == IntelligenceJobStatus.RUNNING:
                     self._phase_started_monotonic[job_id] = now_monotonic
 
-            if status in {IntelligenceJobStatus.COMPLETED, IntelligenceJobStatus.FAILED}:
+            if status in {IntelligenceJobStatus.COMPLETED, IntelligenceJobStatus.FAILED, IntelligenceJobStatus.INTERRUPTED}:
                 job_started = self._job_started_monotonic.pop(job_id, None)
                 if job_started is not None:
                     total_elapsed = max(0.0, now_monotonic - job_started)
@@ -193,6 +272,7 @@ class IntelligenceJobCoordinator:
                 total_elapsed_seconds=total_elapsed,
             )
             self._jobs[job_id] = updated
+            self._persist(updated)
             return updated
 
     def _log_final_timing(self, job: IntelligenceJob) -> None:
