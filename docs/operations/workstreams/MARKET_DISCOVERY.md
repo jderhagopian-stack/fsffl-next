@@ -1,7 +1,7 @@
 # Workstream — Market / Trade Discovery Architecture Review
 
 ## State
-**AUTHORIZED / NEXT**
+**MANAGEMENT GATE — ARCHITECTURE REVIEW COMPLETE**
 
 ## Why this workstream moved forward
 Physical-iPhone Market acceptance exposed a product-level problem rather than a narrow presentation defect.
@@ -19,6 +19,28 @@ Observed acceptance evidence:
 Redesign the governed definition, discovery, screening, ranking/diversification, and presentation contract for a Market opportunity **before** deep Decision/Simulation evaluation.
 
 This is an architecture/product-definition review. Do not begin broad implementation until Management accepts the resulting contract.
+
+## Architecture-review outcome — 2026-09-24
+The review is complete and persisted in:
+- `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`
+
+The implementation-ready contract establishes:
+- OpportunityHypothesis → MarketOpportunity → CandidatePath as distinct discovery layers;
+- raw package variants as subordinate paths, not top-level opportunities;
+- a staged funnel that uses cheap Decision-owned economics and a bounded pre-Simulation bilateral screen before For You eligibility;
+- exact changed-state Simulation only after transaction-level escalation;
+- descriptive Owner Intelligence as optional plausibility context, never fabricated acceptance probability or universal Value;
+- family clustering, within-family dominance pruning, and a separate diversity selector;
+- a For You `worth_attention` gate that cannot be satisfied by Search generation or “Needs full evaluation” alone;
+- a four-card private-beta For You cap with explicit target/need/counterparty diversity rules;
+- a bounded eight-path pre-Simulation Decision budget as tunable product compute policy, not model authority;
+- revised four-surface Market information architecture and mobile drill-down grammar;
+- a truthful split between Core 7/7 lifecycle readiness and per-surface Market readiness;
+- nonblocking Player Board / Free Agents behavior when optional Intrinsic or player-level enrichment is still building;
+- deterministic Gibbs-neighborhood, extreme-Superflex, bilateral-dominance, readiness, and Simulation-call-count fixtures;
+- a seven-phase bounded migration and acceptance sequence.
+
+No broad Market implementation was performed. Management acceptance is required before Phase 1 implementation begins.
 
 ## Core product question
 What should FSFFL NEXT have to establish cheaply and governably before telling a user that an opportunity is worth attention?
@@ -178,3 +200,13 @@ Market discovery must not duplicate Trade Center. Trade Center receives a specif
 
 ### Product acceptance implication
 A Market item earns scarce For You space only after the architecture can explain why it deserves attention. “Search generated it” or “Needs full evaluation” alone is insufficient.
+
+
+## Architecture closeout
+Current stop state: **MANAGEMENT GATE — MARKET / TRADE DISCOVERY ARCHITECTURE REVIEW**.
+
+The review found that the shipped failure is upstream of presentation: package-row generation, exact-only deduplication, pre-family truncation, and sparse Decision enrichment allow repeated target neighborhoods and economically questionable packages to reach For You before they have earned attention. Presentation density then amplifies the problem.
+
+Management should review the persisted handoff and either:
+1. accept the governed contract and authorize the bounded implementation sequence; or
+2. return explicit architecture changes while keeping broad Market implementation gated.
