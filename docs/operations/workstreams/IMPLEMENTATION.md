@@ -279,3 +279,32 @@ For the current FSFFL regression, Management expects that the new State either:
 - performs a full governed enrichment for the new State if compatibility cannot be proven.
 
 In neither case may the shell claim green/full readiness before the current-State capabilities actually exist.
+
+
+### Refresh Intelligence = league sync + intelligence reconciliation
+Management defines the user-facing **Refresh Intelligence** action as the canonical manual league-sync/update operation, not merely a model rerun against the currently loaded State.
+
+Required order of operations:
+1. fetch/revalidate the currently selected Sleeper league from the provider;
+2. persist/select the resulting canonical current LeagueState;
+3. compare the new State to the prior State and determine which persisted intelligence remains provably compatible;
+4. reuse compatible artifacts only under existing exact-state/input-fingerprint authority rules;
+5. automatically rebuild every invalidated or missing governed layer for the new State;
+6. expose persistent progress and exact capability/blocker status until reconciliation terminates;
+7. atomically promote newly valid Forecast / Simulation / Value / derived analytics for the current State.
+
+The current implementation path is not sufficient for this contract because `POST /api/intelligence/jobs` presently invokes the Forecast loader on the already-loaded `initial_state` before it refreshes canonical Sleeper State. A manual sync must not compute new intelligence from an old State and then attach/reconcile it onto a newly fetched State unless compatibility is explicitly proven.
+
+Acceptance:
+- a no-change sync should cheaply retain/reuse current governed intelligence;
+- a changed-State sync should invalidate only affected layers and recompute them;
+- a material roster/rules/matchup/player-state change must never leave stale downstream intelligence labeled current;
+- if current evidence cannot rebuild a layer, the exact blocker must be surfaced while current canonical State remains usable;
+- repeated manual Refresh Intelligence calls must be idempotent for an unchanged provider State;
+- league switching and manual refresh must use the same underlying State-first reconciliation contract rather than separate semantics.
+
+Product semantics:
+**Refresh Intelligence = Sync league + refresh/reconcile intelligence.**
+The existing button label may remain for now, but user-facing status should make the sync/rebuild lifecycle clear. A future wording change such as `Sync & Refresh` may be considered separately if physical testing shows the action remains ambiguous.
+
+Do not weaken exact-state binding, Forecast authority, Value authority, Simulation gates, or last-good safety to satisfy this behavior.
