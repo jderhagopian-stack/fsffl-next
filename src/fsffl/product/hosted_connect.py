@@ -418,7 +418,19 @@ def install_hosted_connect_routes(
                     runtime_store.league_generation(user_id),
                 )
                 return
-            runtime_store.set_league_state(user_id, league_state)
+            activated = runtime_store.set_league_state_if_generation(
+                user_id,
+                league_state,
+                expected_generation=refresh_generation,
+                expected_league_id=runtime.league_state.league.league_id,
+            )
+            if activated is None:
+                _performance_logger.info(
+                    "FSFFL Sleeper refresh superseded at activation user=%s requested=%s",
+                    user_id,
+                    league_external_id,
+                )
+                return
             if changed:
                 behavioral_coordinator.start(
                     user_id=user_id,
