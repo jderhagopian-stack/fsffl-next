@@ -43,3 +43,17 @@ def test_player_board_intrinsic_build_is_optional_not_route_blocking() -> None:
     assert '"Broad Market remains independently usable."' in routes
     assert "JSONResponse(status_code=202" not in routes
     assert 'payload["fsffl_intrinsic"]' in routes
+
+
+def test_market_value_lens_route_exposes_intrinsic_coordinate_and_build_state() -> None:
+    routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
+    for token in (
+        '"intrinsic_execution"',
+        '"forecast_coordinate"',
+        '"response_budget_exceeded"',
+        '"started_at"',
+        '"updated_at"',
+        "FSFFL Market value lenses",
+    ):
+        assert token in routes
+    assert '"all_player_forecast"' not in routes or "forecast_status" in routes
