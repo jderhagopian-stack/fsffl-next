@@ -155,7 +155,7 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
         "Running season outlook…",
         "Building market values…",
         "Attaching current intelligence…",
-        "Intelligence current",
+        "Core intelligence current",
     ):
         assert label in SHELL
     assert "min-height:32px" in SHELL
