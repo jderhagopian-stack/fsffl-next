@@ -78,7 +78,7 @@ class MemoryPersistence:
         self.market.append(kwargs)
 
 
-def _league_state() -> LeagueState:
+def _league_state(*, as_of: datetime | None = None) -> LeagueState:
     league_id = "sleeper:123"
     rules = LeagueRules(
         team_count=2,
@@ -94,7 +94,7 @@ def _league_state() -> LeagueState:
             rules=rules,
             provider_refs=(ProviderRef(provider="sleeper", external_id="123"),),
         ),
-        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC),
+        as_of=as_of or datetime(2026, 9, 8, 12, 0, tzinfo=UTC),
         teams=(
             Team(team_id="t1", league_id=league_id, display_name="One"),
             Team(team_id="t2", league_id=league_id, display_name="Two"),
@@ -247,7 +247,7 @@ def test_running_refresh_restores_current_state_not_stale_last_good_identity() -
             computed_at=datetime.now(UTC),
         )
     )
-    partial = last_good.model_copy(update={"as_of": datetime(2026, 9, 8, 12, 5, tzinfo=UTC)})
+    partial = _league_state(as_of=datetime(2026, 9, 8, 12, 5, tzinfo=UTC))
     persist_runtime_snapshot(persistence, user_id="jimmy", league_state=partial, selected_team_id="t1")
 
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
@@ -289,8 +289,8 @@ def test_failed_refresh_restores_current_state_while_preserving_stale_last_good_
             computed_at=datetime.now(UTC),
         )
     )
-    failed_state = last_good.model_copy(
-        update={"as_of": datetime(2026, 9, 8, 12, 10, tzinfo=UTC)}
+    failed_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
     )
     persist_runtime_snapshot(
         persistence,
@@ -352,8 +352,8 @@ def test_interrupted_refresh_restores_current_state_while_preserving_stale_last_
             computed_at=datetime.now(UTC),
         )
     )
-    interrupted_state = last_good.model_copy(
-        update={"as_of": datetime(2026, 9, 8, 12, 15, tzinfo=UTC)}
+    interrupted_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 15, tzinfo=UTC)
     )
     persist_runtime_snapshot(
         persistence,
