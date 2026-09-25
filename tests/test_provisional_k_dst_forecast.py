@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from fsffl.forecast.k_dst_calibration import K_REDUCED_2024_FINGERPRINT
 from fsffl.forecast.k_dst_provisional import (
     ProvisionalKDstConsumer,
     assess_provisional_k_dst_consumer,
@@ -417,4 +418,71 @@ def test_builder_hard_rejects_non_2026_even_if_model_is_unsafely_copied() -> Non
             unsafe,
             subject_key="K:tylerbass:BUF",
             rules=_k_rules(ScoringRule(stat="xpm", points=1)),
+        )
+
+
+def test_provisional_path_uses_exact_difference_transform_without_inventing_misses() -> None:
+    artifact = _artifact(
+        _snapshot(
+            "one",
+            position=Position.K,
+            stats=(
+                (ForecastMetric.FG_ATTEMPT.value, 24.0),
+                (ForecastMetric.FG_MADE.value, 20.0),
+            ),
+            hash_char="a",
+        ),
+        _snapshot(
+            "two",
+            position=Position.K,
+            stats=(
+                (ForecastMetric.FG_ATTEMPT.value, 26.0),
+                (ForecastMetric.FG_MADE.value, 21.0),
+            ),
+            hash_char="b",
+        ),
+    )
+    forecast = build_provisional_k_dst_forecast(
+        artifact,
+        subject_key="K:tylerbass:BUF",
+        rules=_k_rules(ScoringRule(stat="fgmiss", points=-1)),
+    )
+
+    assert forecast.fantasy_points_mean == pytest.approx(-4.5)
+    assert forecast.included_coordinates[0].status == RuleEvidenceStatus.EXACT_DERIVED
+    assert set(forecast.included_coordinates[0].metrics) == {
+        ForecastMetric.FG_ATTEMPT,
+        ForecastMetric.FG_MADE,
+    }
+
+
+def test_full_authority_supersedes_provisional_when_existing_full_gates_clear() -> None:
+    stats_one = (
+        (ForecastMetric.FG_MADE.value, 20.0),
+        (ForecastMetric.FG_ATTEMPT.value, 24.0),
+        (ForecastMetric.XP_MADE.value, 30.0),
+    )
+    stats_two = (
+        (ForecastMetric.FG_MADE.value, 22.0),
+        (ForecastMetric.FG_ATTEMPT.value, 27.0),
+        (ForecastMetric.XP_MADE.value, 32.0),
+    )
+    artifact = _artifact(
+        _snapshot("one", position=Position.K, stats=stats_one, hash_char="a"),
+        _snapshot("two", position=Position.K, stats=stats_two, hash_char="b"),
+    )
+    rules = _k_rules(
+        ScoringRule(stat="fgm", points=3),
+        ScoringRule(stat="fgmiss", points=-1),
+        ScoringRule(stat="xpm", points=1),
+    )
+
+    with pytest.raises(ValueError, match="full K/DST Forecast authority is available"):
+        build_provisional_k_dst_forecast(
+            artifact,
+            subject_key="K:tylerbass:BUF",
+            rules=rules,
+            promoted_uncertainty_fingerprint_ids=frozenset(
+                {K_REDUCED_2024_FINGERPRINT.fingerprint_id}
+            ),
         )
