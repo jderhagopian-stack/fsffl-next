@@ -277,3 +277,82 @@ Corrective objective:
 10. Return to Management for another physical-iPhone acceptance only after all non-physical validation has been exhausted.
 
 Required terminal behavior: follow `OPERATING_PROTOCOL.md`. A commit, PR, green CI, or deploy is not completion. Stop only at a permitted terminal state, and immediately before returning ask whether another authorized action can advance this corrective directive; if yes, perform it.
+
+
+## Management clarification — opportunity discovery quality + compute discipline — 2026-09-25
+
+This clarification is part of the currently authorized corrective acceptance work. It does **not** reopen the accepted Market architecture. It makes explicit what Implementation must prove about the discovery engine.
+
+### Product objective
+Market is not an equal-value trade generator. Broad Market / FSFFL Intrinsic equivalence is useful evidence for acquisition-cost and economic sanity, but approximate value equality alone does not constitute a real opportunity and must not be the primary discovery objective.
+
+The discovery engine should cheaply identify transactions or acquisition neighborhoods that have a governed strategic reason to exist for the actual franchises involved, then spend expensive compute only when the user chooses to investigate more deeply.
+
+### Required cheap-to-expensive funnel
+Implementation must preserve and demonstrate this ordering:
+
+`League/roster state → actionable need/surplus/opportunity hypotheses → complementary counterparties → candidate assets → economically plausible package families → cheap bilateral Decision screen → dominance/dedup/diversity → small opportunity frontier → user-selected deep Decision/Simulation`
+
+Simulation remains the microscope, not the searchlight.
+
+### Initial discovery acceptance
+- Trace candidate admission at the earliest Search stage for every Trade Finder intent.
+- Intent and its selected parameters must influence candidate discovery itself where semantically appropriate, not merely filter or rerank a generic post-generated universe.
+- For **Improve my team**, begin from governed franchise diagnosis / actionable opportunity hypotheses, not generic player rankings or nearest-value assets.
+- For **Target a player**, discovery should identify plausible counterparties/package ingredients around that target.
+- For **Shop a player**, discovery should use the outgoing asset plus actual roster consequences/counterparty complementarity, not simply return generic similarly valued players.
+- For **Target a position**, the target position must materially govern candidate admission.
+- For **Explore an owner/team**, the selected counterparty must materially govern the relevant discovery neighborhood.
+- Legitimate overlap between intents is allowed when upstream evidence supports it; do not manufacture difference for test satisfaction. Overlap must be explainable.
+
+Add deterministic fixtures proving materially different intents/parameters produce appropriately different early candidate neighborhoods before package generation.
+
+### Readily available evidence first
+Use already-governed inexpensive evidence wherever available before invoking expensive evaluation, including:
+- roster construction, starters, depth and fragility;
+- positional strength / replacement exposure;
+- current governed Forecast outputs;
+- Broad Market and FSFFL Intrinsic where covered, kept separate;
+- draft-pick holdings and roster constraints;
+- competitive/team state already governed by upstream authorities;
+- counterparty holdings, needs and surpluses derived from governed team evidence;
+- descriptive Owner Intelligence only where its existing authority permits it.
+
+Do not create a hidden composite/master score. Do not duplicate upstream authority inside Search.
+
+### Economic evidence is a screen, not the opportunity definition
+Market/Intrinsic values may:
+- reject absurd economic neighborhoods;
+- estimate acquisition-cost bands;
+- identify meaningful disagreement;
+- help construct plausible package families;
+- support cheap dominance comparisons.
+
+They must not reduce discovery to “find two sides whose values are approximately equal.” A balanced package with no strategic bilateral rationale should not become a high-signal opportunity merely because its generic values match.
+
+### Cheap bilateral opportunity screen
+Before a path can consume scarce attention, cheaply determine from existing governed evidence whether:
+- it addresses a real user need/opportunity;
+- the counterparty has a coherent roster/economic reason to engage;
+- roster constraints, replacement effects and mandatory cut costs are represented where applicable;
+- economics are within a plausible neighborhood without demanding artificial equality;
+- the path is not obviously dominated for either side by another generated construction;
+- it adds a materially distinct opportunity rather than duplicating an existing family.
+
+This preliminary screen is not final Decision authority and must not fabricate acceptance probability.
+
+### Compute budget / observability acceptance
+Instrument the discovery funnel so Management can inspect, for a representative request:
+- candidate counts entering/exiting each major stage;
+- rejection reason counts;
+- number of preliminary Decision screens;
+- exact changed-state Simulation call count;
+- wall-clock timing for major stages;
+- cache/reuse behavior where relevant.
+
+The existing bounded eight-path pre-Simulation Decision budget remains product policy unless a separately justified change is brought to Management. Broad discovery must continue to make **zero exact changed-state Simulation calls**.
+
+Optimize by pruning cheaply and early rather than weakening evidence. Expensive Simulation/deep Decision belongs after the user selects a promising transaction/path, except for any separately governed bounded escalation already authorized by the accepted architecture.
+
+### Acceptance question
+Implementation is not accepted merely because it can generate economically similar packages quickly. It must demonstrate that FSFFL can surface a small, diverse set of **strategically grounded, bilaterally coherent, economically plausible** opportunities using inexpensive governed evidence first, with deep compute reserved for investigation after selection.
