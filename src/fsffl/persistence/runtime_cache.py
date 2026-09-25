@@ -3,7 +3,10 @@ from __future__ import annotations
 from pydantic import TypeAdapter
 
 from fsffl.forecast.current_runtime import LiveForecastRuntimeResult
-from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
+from fsffl.forecast.source_health import (
+    CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+    LEGACY_COMPATIBLE_PROJECTION_HEALTH_CONTRACT_VERSIONS,
+)
 from fsffl.forecast.preseason_baseline import (
     PRESEASON_BASELINE_MODEL_VERSION,
     PreseasonForecastBaseline,
@@ -63,17 +66,17 @@ def decode_forecast_evidence(payload: dict[str, object]) -> LiveForecastEvidence
                 )
             if (
                 item.health_contract_version
-                != CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
+                not in LEGACY_COMPATIBLE_PROJECTION_HEALTH_CONTRACT_VERSIONS
             ):
                 raise ValueError(
-                    "stored live forecast evidence predates the current source-health contract"
+                    "stored live forecast evidence predates the compatible source-health contracts"
                 )
         accepted_health_ids = {
             event.provider
             for event in evidence.runtime_result.source_health_events
             if event.disposition == "accepted"
             and event.health_contract_version
-            == CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
+            in LEGACY_COMPATIBLE_PROJECTION_HEALTH_CONTRACT_VERSIONS
         }
         if not set(source_ids).issubset(accepted_health_ids):
             raise ValueError(

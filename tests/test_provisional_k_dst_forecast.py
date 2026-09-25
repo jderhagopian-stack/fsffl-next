@@ -30,6 +30,9 @@ from fsffl.product.provisional_k_dst_routes import (
     ProvisionalKDstLookupError,
     load_provisional_k_dst_presentation,
 )
+from fsffl.product.provisional_k_dst_runtime import (
+    materialize_provisional_k_dst_for_state,
+)
 from fsffl.providers.ros_projection_rows import (
     ProjectionRightsStatus,
     RosProjectionRow,
@@ -601,3 +604,94 @@ def test_product_lookup_hard_fails_outside_2026() -> None:
             subject_key="DST:BUF",
         )
     assert exc.value.status_code == 404
+
+
+
+class _CaptureArtifactStore:
+    def __init__(self) -> None:
+        self.rows = []
+
+    def put_artifact(self, record) -> None:
+        self.rows.append(record)
+
+
+def _materialization_state(rules: LeagueRules):
+    return SimpleNamespace(
+        league=SimpleNamespace(
+            season=2026,
+            league_id="league-materialize",
+            rules=rules,
+        ),
+        state_id="state-materialize",
+        as_of=CAPTURED,
+    )
+
+
+def test_provisional_materializer_persists_only_rights_cleared_supported_subjects() -> None:
+    artifact = _artifact(
+        _snapshot(
+            "one",
+            position=Position.K,
+            stats=((ForecastMetric.XP_MADE.value, 20.0),),
+            independence_group="one",
+            rights_status=ProjectionRightsStatus.LICENSED_BETA,
+            hash_char="a",
+        ),
+        _snapshot(
+            "two",
+            position=Position.K,
+            stats=((ForecastMetric.XP_MADE.value, 22.0),),
+            independence_group="two",
+            rights_status=ProjectionRightsStatus.PRODUCTION_CLEARED,
+            hash_char="b",
+        ),
+    )
+    store = _CaptureArtifactStore()
+    summary = materialize_provisional_k_dst_for_state(
+        _materialization_state(
+            _k_rules(ScoringRule(stat="xpm", points=1.0))
+        ),
+        snapshot=artifact,
+        persistence_store=store,  # type: ignore[arg-type]
+    )
+
+    assert summary.rights_cleared_provider_ids == ("one", "two")
+    assert summary.eligible_subject_keys == ("K:tylerbass:BUF",)
+    assert summary.persisted_subject_keys == ("K:tylerbass:BUF",)
+    assert summary.blockers == ()
+    assert len(store.rows) == 1
+    decoded = decode_provisional_k_dst_forecast(dict(store.rows[0].payload))
+    assert decoded.league_id == "league-materialize"
+    assert decoded.league_state_id == "state-materialize"
+    assert decoded.fantasy_points_mean == pytest.approx(21.0)
+
+
+def test_provisional_materializer_keeps_research_only_snapshot_non_promoting() -> None:
+    artifact = _artifact(
+        _snapshot(
+            "cbs",
+            position=Position.DST,
+            stats=((ForecastMetric.DST_SACK.value, 40.0),),
+            independence_group="cbs",
+            rights_status=ProjectionRightsStatus.RESEARCH_ONLY,
+            hash_char="c",
+        ),
+    )
+    store = _CaptureArtifactStore()
+    summary = materialize_provisional_k_dst_for_state(
+        _materialization_state(
+            _dst_rules(ScoringRule(stat="sack", points=1.0))
+        ),
+        snapshot=artifact,
+        persistence_store=store,  # type: ignore[arg-type]
+    )
+
+    assert summary.persisted_subject_keys == ()
+    assert summary.rights_cleared_provider_ids == ()
+    assert summary.research_only_provider_ids == ("cbs",)
+    assert "no_rights_cleared_accepted_ros_subjects" in summary.blockers
+    assert (
+        "research_only_ros_sources_cannot_promote_private_beta_forecast"
+        in summary.blockers
+    )
+    assert store.rows == []

@@ -13,7 +13,12 @@ from fsffl.providers.razzball_season_live import RazzballSeasonProjectionSource
 from fsffl.state.models import FrozenModel, LeagueState
 
 from .current_normalization import current_snapshot_from_razzball, normalize_current_projection_snapshot
-from .league_scoring import derive_league_fantasy_point_forecasts
+from .league_scoring import (
+    ForecastRuleFamilyCoverage,
+    PartialFantasyPointForecast,
+    ScoringCoverage,
+    derive_league_scoring_result,
+)
 from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_authoritative_live_ensemble
 from .models import ForecastObservation
 from .regular_season import derive_fantasy_regular_season_forecasts
@@ -21,6 +26,7 @@ from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
 from .source_health import (
     CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
     RevisionAgnosticScaleHealth,
+    build_source_health_fantasy_point_forecasts,
     current_projection_payload_sha256,
     evaluate_revision_agnostic_scale_health,
     validate_current_projection_snapshot_health,
@@ -76,6 +82,10 @@ class LiveForecastSourceHealthFailure(ValueError):
 class LiveForecastRuntimeResult(FrozenModel):
     raw_ensemble: tuple[ForecastObservation, ...]
     fantasy_point_forecasts: tuple[ForecastObservation, ...]
+    partial_fantasy_point_forecasts: tuple[PartialFantasyPointForecast, ...] = ()
+    league_scoring_coverage: ScoringCoverage | None = None
+    family_coverage: tuple[ForecastRuleFamilyCoverage, ...] = ()
+    simulation_authority_blockers: tuple[str, ...] = ()
     coverage: LiveEnsembleCoverage
     successful_source_ids: tuple[str, ...]
     failed_sources: tuple[str, ...]
@@ -83,7 +93,7 @@ class LiveForecastRuntimeResult(FrozenModel):
     fantasy_regular_season_forecasts: tuple[ForecastObservation, ...] = ()
     source_provenance: tuple[LiveForecastSourceProvenance, ...] = ()
     source_health_events: tuple[LiveForecastSourceHealthEvent, ...] = ()
-    model_version: str = "next2-current-runtime-v7:revision-agnostic-source-health"
+    model_version: str = "next2-current-runtime-v8:shared-forecast-partial-coverage"
 
 
 def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher, ...]:
@@ -259,11 +269,9 @@ def build_current_live_forecasts(
             )
             if not observations:
                 raise ValueError("provider produced no canonical player observations")
-            scored = derive_league_fantasy_point_forecasts(
+            scored = build_source_health_fantasy_point_forecasts(
                 observations,
-                rules=league_state.league.rules,
                 source=f"fsffl:source-health:{source_id}",
-                model_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
             )
             if not scored:
                 raise ValueError(
@@ -280,11 +288,9 @@ def build_current_live_forecasts(
     scale_result_by_source: dict[str, RevisionAgnosticScaleHealth] = {}
 
     if reference_raw_forecasts:
-        reference_scored = derive_league_fantasy_point_forecasts(
+        reference_scored = build_source_health_fantasy_point_forecasts(
             reference_raw_forecasts,
-            rules=league_state.league.rules,
             source="fsffl:source-health:governed-reference",
-            model_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
         )
         for source_id in sorted(scored_by_source):
             result = evaluate_revision_agnostic_scale_health(
@@ -477,21 +483,46 @@ def build_current_live_forecasts(
         tuple(batches),
         minimum_independent_sources=minimum_independent_sources,
     )
-    league_scored = derive_league_fantasy_point_forecasts(
+    scoring = derive_league_scoring_result(
         raw_ensemble,
         rules=league_state.league.rules,
         source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v7:revision-agnostic-source-health",
+        model_version="next2-current-runtime-v8:shared-forecast-partial-coverage",
     )
-    fantasy_points = apply_empirical_season_fantasy_point_uncertainty(league_scored)
+    fantasy_points = (
+        apply_empirical_season_fantasy_point_uncertainty(
+            scoring.authoritative_forecasts
+        )
+        if scoring.authoritative_forecasts
+        else ()
+    )
     fantasy_regular_season = (
         derive_fantasy_regular_season_forecasts(league_state, fantasy_points)
-        if league_state.matchups
+        if league_state.matchups and fantasy_points
         else ()
+    )
+    simulation_blockers = tuple(
+        sorted(
+            {
+                reason
+                for family in scoring.family_coverage
+                if family.blocks_full_downstream_authority
+                for reason in family.reason_codes
+            }
+            | (
+                {"partial_player_scoring_coordinates_present"}
+                if scoring.partial_forecasts
+                else set()
+            )
+        )
     )
     return LiveForecastRuntimeResult(
         raw_ensemble=raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
+        partial_fantasy_point_forecasts=scoring.partial_forecasts,
+        league_scoring_coverage=scoring.coverage,
+        family_coverage=scoring.family_coverage,
+        simulation_authority_blockers=simulation_blockers,
         fantasy_regular_season_forecasts=fantasy_regular_season,
         coverage=coverage,
         successful_source_ids=tuple(sorted(successful)),
