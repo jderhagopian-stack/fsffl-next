@@ -14,10 +14,18 @@ Observed/worker-reported checkpoint:
 - CI was green for PR #211.
 
 ## Current blocker
-The newly connected league cannot complete governed intelligence because Forecast fails closed under its scoring configuration, including K/DST, with insufficient qualifying independent full-season sources and no preserved preseason baseline for that newly connected league.
+The newly connected league cannot complete governed intelligence because production Forecast authority for its K/DST scoring configuration is not implemented/promoted.
+
+Forecast Research has completed the architecture and late-connect bootstrap contract. See:
+- `RESEARCH.md`
+- `../../../artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+
+Research completion does not remove the runtime blocker.
 
 ## Boundary
 Do not change Forecast rules, evidence requirements, scoring authority, or fabricate projections to make lifecycle acceptance pass.
 
+Do not treat Research completion as authority for Performance to implement Forecast changes.
+
 ## Resume condition
-Resume lifecycle acceptance after Research/Forecast and governed implementation remove the upstream blocker. Then complete every gate in `../ACCEPTANCE_GATES.md`, including 7/7, atomic promotion, correct-league populated surfaces, restart survival, stale-job reconciliation, and foreground latency.
+Resume lifecycle acceptance only after Management-authorized Forecast implementation and required evidence promotion remove the upstream blocker. Then complete every gate in `../ACCEPTANCE_GATES.md`, including 7/7, atomic promotion, correct-league populated surfaces, restart survival, stale-job reconciliation, and foreground latency.
