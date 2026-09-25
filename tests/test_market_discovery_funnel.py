@@ -255,3 +255,35 @@ def test_explicit_trade_finder_intents_group_at_the_approved_opportunity_level()
     )
     assert owner_gibbs[0] == owner_other_target[0]
     assert owner_gibbs[2:] == ("explore_owner", "OWNER", "owner:team-gibbs")
+
+
+def test_market_discovery_observability_exposes_required_counts_and_reason_codes() -> None:
+    runtime_source = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
+    contract_source = (ROOT / "src/fsffl/opportunity/market_discovery.py").read_text()
+    search_source = (ROOT / "src/fsffl/product/opportunity_search.py").read_text()
+
+    for token in (
+        '"hypotheses_generated"',
+        '"targets_considered"',
+        '"raw_packages_generated_pre_dedup"',
+        '"packages_removed_exact_duplicate"',
+        '"packages_screened_economic"',
+        '"packages_economic_incomplete"',
+        '"path_families_created"',
+        '"preliminary_decision_budget"',
+        '"preliminary_decision_runs"',
+        '"counterparty_dominated_count"',
+        '"focal_dominated_count"',
+        '"opportunities_created"',
+        '"opportunities_suppressed"',
+        '"opportunities_attention_ready"',
+        '"for_you_selected"',
+        '"diversity_relaxations"',
+        '"changed_state_simulation_calls_during_discovery"',
+    ):
+        assert token in runtime_source
+    assert "reason_codes: tuple[str, ...]" in contract_source
+    assert '"attention_eligible_path_present"' in runtime_source
+    assert '"package_variants_clustered"' in runtime_source
+    assert "class SearchCandidateCollection" in search_source
+    assert '"packages_removed_exact_duplicate": exact_duplicates_removed' in search_source
