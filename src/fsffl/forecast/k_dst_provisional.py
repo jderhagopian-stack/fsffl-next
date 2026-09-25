@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from statistics import fmean
 from typing import Literal
@@ -110,9 +111,9 @@ class ProvisionalKDstForecast(FrozenModel):
     subject_key: str
     subject_family: ForecastSubjectFamily
     horizon: Literal["rest_of_season"] = ForecastHorizon.REST_OF_SEASON.value
-    period_start: object
-    period_end: object
-    as_of: object
+    period_start: datetime
+    period_end: datetime
+    as_of: datetime
     available: bool
     fantasy_points_mean: float | None
     included_coordinates: tuple[ProvisionalKDstCoordinate, ...]
@@ -133,8 +134,6 @@ class ProvisionalKDstForecast(FrozenModel):
 
     @model_validator(mode="after")
     def validate_partial_contract(self) -> "ProvisionalKDstForecast":
-        from datetime import datetime
-
         for name in ("period_start", "period_end", "as_of"):
             value = getattr(self, name)
             if not isinstance(value, datetime) or value.tzinfo is None:
