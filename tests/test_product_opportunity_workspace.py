@@ -9,6 +9,14 @@ from fsffl.product.webapp import app
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_market_surface_readiness_requires_managed_team_for_team_scoped_discovery() -> None:
+    source = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
+    assert "team_ready = runtime.selected_team_id is not None" in source
+    assert '("managed_team", team_ready)' in source
+    assert "if team_ready and value_ready and simulation_ready" in source
+    assert "if team_ready and value_ready" in source
+
+
 def test_opportunity_api_exposes_readiness_without_transport_failure() -> None:
     response = TestClient(app).get("/api/opportunities/workspace")
     assert response.status_code == 200
