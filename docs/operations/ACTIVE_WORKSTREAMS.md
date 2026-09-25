@@ -92,6 +92,8 @@ Full/focused CI is green. Production startup restored the correct existing leagu
 
 ## Market acceptance
 **State:** ACTIVE — CURRENT-BETA CORRECTIVE IMPLEMENTATION AUTHORIZED  
+PR #240 merged at `7b7f44ef0b3bf22008d80a3363aec1e6ce6f19d9` after all configured workflows passed. This is implementation evidence, not product acceptance: deployment, production validation, durable Market closeout, and then repeat physical-iPhone/Safari acceptance remain required.
+
 Management completed the post-PR-#232/#235 authenticated physical-iPhone pass and acceptance failed. Current corrective scope is persisted in `workstreams/MARKET_DISCOVERY.md`: competitive lens must govern upstream discovery; Trade Finder must use explicit configuration → **Find opportunities** → visible running/completion lifecycle; focused zero-result cases must distinguish genuine search exhaustion from insufficient exploration; Forecast and FSFFL Intrinsic availability must be traced separately; remaining safe-area issues must be corrected. The accepted architecture, eight-path preliminary Decision budget, and zero broad changed-state Simulation boundary must not regress.
 
 The same pass measured automatic discovery at ~44.1s internally/~44.9s hosted cold and focused Target Player requests at ~31.8s, ~41.4s and ~47.8s, so foreground cold/focused responsiveness remains failed. Performance owns general cold-path optimization; Market may remove only Market-owned redundant work that preserves discovery semantics.
