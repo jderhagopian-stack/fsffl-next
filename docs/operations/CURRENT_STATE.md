@@ -1,6 +1,6 @@
 # FSFFL NEXT — Current State
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 ## Product state
 FSFFL NEXT is in private beta. The canonical authority chain remains:
@@ -20,7 +20,7 @@ The prior research dependency is now resolved: Forecast Research completed the K
 
 Research history: PR #213 / commit `91018b39967a0775ad830a6a750a2588e7f041d0`.
 
-The production blocker itself is **not yet resolved**. Management has now authorized the bounded implementation described by the completed Research handoff. PR #215 is the active implementation and acceptance vehicle; Stage 1 contracts/scoring plus a non-promoting Stage 2 calibration/outcome harness are implemented there, while production K/DST provider/calibration authority remains red.
+The production blocker itself is **not yet resolved**. Bounded Forecast implementation PR #215 is now merged to canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Stage 1 subject/scoring integrity and the non-promoting Stage 2 outcome/calibration harness are implemented and regression-clean. Production K/DST provider/calibration authority remains red at the empirical/source evidence gate.
 
 ## Completed research determination
 The accepted research contract establishes:
@@ -40,15 +40,16 @@ Read-only research inspection established:
 - legacy baseline artifact 145 is authentic 2026 offensive PIT evidence from FFToday + Razzball with 1,675 raw ensemble observations;
 - that artifact has no `fumbles_lost` observations and therefore is not universally replayable under arbitrary target scoring;
 - no qualifying persisted two-source 2026 preseason K/DST raw package is proven;
-- the current league-scoring completeness guard has an identified `fum_lost` integrity gap that implementation must close.
+- PR #215 closed the `fum_lost` integrity gap: active missing evidence now withholds authoritative fantasy points and CBS no longer manufactures a missing FL value as zero;
+- a post-merge evidence check did not recover a qualifying independent historical K/DST source #2; dated Razzball material points to mutable current endpoints and CBS historical-looking paths are not sufficient PIT provenance;
+- candidate Razzball/CBS/Sleeper production use remains rights/licensing gated under the currently published terms/documentation.
 
 ## Immediate management priority
-1. Complete PR #215 acceptance validation without weakening active-rule completeness or K/DST source requirements.
-2. Merge only after required regression/trace checks are green.
-3. Keep production K/DST authority fail-closed until separate historical calibration, source-rights/content-health, and Sleeper truth-fixture gates are satisfied.
-4. Keep 2026 K/DST preseason comparison unavailable unless qualifying point-in-time raw evidence is proven; never backdate current data.
-5. Resume full new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
-6. Then continue Market physical-iPhone acceptance, Home × Franchise redundancy audit, and Trade Discovery architecture review.
+1. Treat Forecast/Product K/DST implementation as **BLOCKED at the empirical/source evidence gate**, not as an unfinished PR.
+2. Keep production K/DST authority fail-closed until a second independent historical PIT corpus, production source rights/content health, and the remaining Sleeper truth-fixture requirements are satisfied.
+3. Keep 2026 K/DST preseason comparison unavailable unless qualifying point-in-time raw evidence is proven; never backdate current data.
+4. Resume new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
+5. Market / Trade Discovery architecture may continue in parallel because it does not own Forecast/K/DST authority.
 
 ## Important distinction
-Research completion does **not** mean the production Forecast blocker is fixed. The architecture/handoff is complete; implementation, empirical promotion, and lifecycle acceptance remain separate gates.
+Research and bounded code implementation are complete for the currently authorized evidence-independent scope. Production Forecast support is still blocked on empirical/source evidence promotion and subsequent downstream/lifecycle acceptance. See `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
