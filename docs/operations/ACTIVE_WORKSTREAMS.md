@@ -15,12 +15,12 @@ Lifecycle/league-switch repair remains gated on governed Forecast authority for 
 The implementation-ready research contract is persisted in `workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
 
 ## Product / Forecast Implementation
-**State:** AUTHORIZED / ACTIVE — PR #215 RECONCILING WITH CURRENT MAIN  
-Management accepted the completed Research contract and authorized bounded implementation. Durable implementation state is in `workstreams/IMPLEMENTATION.md` and `artifacts/implementation/forecast_k_dst_contracts_20260924/IMPLEMENTATION_HANDOFF.md`.
+**State:** BLOCKED — EMPIRICAL/SOURCE EVIDENCE GATE  
+PR #215 is merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. The evidence-independent Stage 1 contracts/scoring work and Stage 2 non-promoting outcome/calibration harness are implemented and regression-clean.
 
-PR #215 implements the governed K/DST subject/scoring contracts, active-rule completeness including fail-closed `fum_lost`, deterministic K/DST realized-outcome reconstruction, and non-promoting calibration harnesses. Required executable checks passed on the implementation head. Main subsequently advanced through Market PR #216, so PR #215 is being reconciled without dropping either workstream's state.
+The workstream cannot promote production K/DST authority without a qualifying second historical independent source, production source rights/content-health clearance, remaining exact Sleeper truth fixtures, and qualifying preseason evidence where required. The post-merge recovery check is persisted in `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
 
-No production K/DST provider authority, uncertainty calibration, fabricated 2026 preseason baseline, or downstream K/DST economics are promoted. After code reconciliation/merge, the workstream is expected to stop at the empirical/source evidence gate unless qualifying evidence is already present.
+Do not start Stage 3 provider promotion, Stage 4 migration/downstream promotion, or Stage 5/6 lifecycle claims by substituting one-source calibration, non-commercial source content, guessed D/ST semantics, or backdated current data.
 
 ## Market / Trade Discovery Architecture Review
 **State:** AUTHORIZED / NEXT  
