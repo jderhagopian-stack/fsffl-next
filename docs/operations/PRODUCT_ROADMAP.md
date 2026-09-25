@@ -5,12 +5,12 @@
 ### Foundation / league-agnostic path
 1. Forecast Research: **COMPLETE**.
 2. Management acceptance / bounded implementation authorization: **COMPLETE**.
-3. Governed Forecast implementation: **ACTIVE in PR #215; code acceptance checks passed, reconciling with current main**.
+3. Governed Forecast implementation, evidence-independent scope: **MERGED / COMPLETE at PR #215, main `407c1bf85e5dc75f92b9906719f82bcd11d97c31`**.
    - K and D/ST subject/scoring contracts;
    - active-rule completeness and fail-closed missing evidence;
    - deterministic realized-outcome and non-promoting calibration harnesses;
    - annual raw-snapshot replay invariants.
-4. Empirical/source promotion gate:
+4. Empirical/source promotion gate: **BLOCKED**:
    - historical independent K/DST source #2;
    - production provider rights/content-health;
    - exact Sleeper D/ST truth fixtures;
