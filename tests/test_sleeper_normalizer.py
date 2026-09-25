@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 from fsffl.providers.sleeper import SleeperNormalizer, SleeperPayloadBundle
-from fsffl.state.models import RosterSlot
+from fsffl.state.models import Position, RosterSlot
 
 
 AS_OF = datetime(2026, 9, 4, 14, 0, tzinfo=UTC)
@@ -253,3 +253,43 @@ def test_sleeper_ppts_is_normalized_as_canonical_max_pf_with_provenance() -> Non
     beta = next(item for item in state.team_states if item.team_id.endswith(":team:2"))
     assert beta.max_points_for is None
     assert beta.max_points_for_provenance is None
+
+
+def test_rostered_sleeper_dst_retains_canonical_team_identity_without_forecast_player_semantics() -> None:
+    base = bundle()
+    league = {
+        **dict(base.league),
+        "roster_positions": ["QB", "DEF", "BN", "BN"],
+    }
+    rosters = (
+        {
+            "roster_id": 1,
+            "owner_id": "u1",
+            "players": ["p1", "JAC"],
+            "starters": ["p1", "JAC"],
+            "settings": {"waiver_budget_used": 25},
+        },
+        base.rosters[1],
+    )
+    players = {
+        **dict(base.players),
+        "JAC": {"full_name": "Jacksonville Jaguars", "position": "DEF", "team": None, "status": "active"},
+    }
+    state = SleeperNormalizer().normalize(
+        SleeperPayloadBundle(
+            league=league,
+            users=base.users,
+            rosters=rosters,
+            players=players,
+            traded_picks=base.traded_picks,
+            retrieved_at=AS_OF,
+        ),
+        as_of=AS_OF,
+    )
+
+    dst = next(item for item in state.players if item.player_id == "sleeper:player:JAC")
+    assert dst.position == Position.DST
+    assert dst.nfl_team == "JAX"
+    alpha = next(item for item in state.team_states if item.team_id.endswith(":team:1"))
+    dst_entry = next(item for item in alpha.roster if item.player_id == "sleeper:player:JAC")
+    assert dst_entry.slot == RosterSlot.DST
