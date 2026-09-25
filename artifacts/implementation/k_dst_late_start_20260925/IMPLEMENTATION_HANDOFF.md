@@ -4,11 +4,12 @@ Date: 2026-09-25
 Workstream: Forecast / Product Implementation  
 Research authority: `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`  
 Implementation PR: #233  
-Branch: `implementation/kdst-late-start-2026-20260925`
+Merged main SHA: `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8`  
+Accepted reconciled head: `1e9eb293c7029b0953c3ecec8353b8c2638ea35e`
 
 ## State
 
-**ACTIVE — ACCEPTANCE VALIDATION**
+**BLOCKED — BOUNDED IMPLEMENTATION COMPLETE / EXTERNAL SOURCE-AUTHORITY EVIDENCE REQUIRED**
 
 Management authorized the bounded, one-season-only 2026 current-date ROS implementation. This checkpoint records the implementation actually present in PR #233. It does not promote production K/DST Forecast authority.
 
@@ -103,6 +104,26 @@ PR #233 does not:
 
 Until those gates clear, Hodor current-forward K/DST must remain fail-closed even though the 2026 late-start plumbing exists.
 
+## Acceptance result
+
+The reconciled PR #233 head passed:
+- full CI;
+- PR164 focused corrective regression;
+- Live Forecast corrective trace;
+- Corrective live provider numerical trace.
+
+PR #233 then merged to canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8`.
+
+No production provider was registered by this implementation, so there is no separate K/DST runtime/product acceptance to perform until source authority itself is cleared.
+
 ## Next action
 
-Complete PR #233 acceptance against current main, fix any regression, merge when green, then reconcile canonical operating state. After merge, apply OPERATING_PROTOCOL.md: if no rights-cleared/API evidence is available, stop at the exact external evidence/source-rights blocker rather than implementing a heuristic substitute.
+Resume only when a presently unavailable external dependency changes:
+- authorized exact-capability API/source access plus deployable rights;
+- a second independent current ROS source for K 60+;
+- a second independent current ROS source for D/ST PA distribution and remaining rare events;
+- enough compatible evidence to promote full-score K/DST uncertainty.
+
+Until then, the correct operating-protocol stop is:
+
+**BLOCKED — FORECAST IMPLEMENTATION — EXTERNAL SOURCE RIGHTS + SECOND-SOURCE EXACT COORDINATES + TARGET-COMPATIBLE UNCERTAINTY**
