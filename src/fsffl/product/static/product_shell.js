@@ -28,7 +28,7 @@ const fsfflStaticVersion='20260924-live-usability-hotfix1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const homeNorthStarStaticVersion='20260925-market-corrective1';
-const franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1';
+const franchiseNorthStarStaticVersion='20260925-lifecycle1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
@@ -75,6 +75,8 @@ const fsfflSharedReadinessState={
   requestInFlight:false,
   lastStep:1,
 };
+let fsfflLeagueLifecycleState=window.fsfflLeagueLifecycleState||null;
+let fsfflLastAppliedLeagueId=state?.context?.league_id||null;
 const fsfflSharedReadinessPhases={
   queued:[1,'Preparing current intelligence…'],
   building_forecasts:[2,'Building projections…'],
@@ -87,6 +89,14 @@ const fsfflSharedReadinessPhases={
 function fsfflSharedReadinessEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 function fsfflSharedReadinessSnapshot(){
   const context=state?.context||{},job=state?.intelligence?.job||null;
+  const lifecycle=fsfflLeagueLifecycleState;
+  if(lifecycle?.state==='switching'){
+    const requested=lifecycle.requested_league_id?' '+lifecycle.requested_league_id:'';
+    return{connected:true,step:1,total:FSFFL_SHARED_READINESS_STEPS,label:'Switching to Sleeper league'+requested+'…',failed:false,complete:false};
+  }
+  if(lifecycle?.state==='refreshing_state'){
+    return{connected:true,step:3,total:FSFFL_SHARED_READINESS_STEPS,label:lifecycle.message||'Refreshing current league State…',failed:false,complete:false};
+  }
   if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false};
   const contextComplete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
   if((job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted')&&contextComplete){
@@ -94,8 +104,18 @@ function fsfflSharedReadinessSnapshot(){
     return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Last-good intelligence retained',failed:false,complete:true};
   }
   if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
-    const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
-    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:(job?.status==='interrupted'||job?.phase==='interrupted')?'Refresh interrupted — last-good intelligence retained':'Intelligence refresh needs attention',failed:true,complete:false};
+    const failureStage=job?.failure_stage||null;
+    const failureStep=failureStage&&fsfflSharedReadinessPhases[failureStage]?fsfflSharedReadinessPhases[failureStage][0]:null;
+    const prior=Number.isFinite(failureStep)?failureStep:(Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1);
+    const interrupted=(job?.status==='interrupted'||job?.phase==='interrupted');
+    const label=interrupted
+      ?'Refresh interrupted — usable State retained'
+      :failureStage==='building_forecasts'
+        ?'Forecast blocked — current league roster remains available'
+        :failureStage
+          ?failureStage.replaceAll('_',' ')+' blocked — usable State retained'
+          :'Intelligence refresh failed — usable State retained';
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label,failed:true,complete:false};
   }
   if(job&&fsfflSharedReadinessPhases[job.phase]){
     const [step,label]=fsfflSharedReadinessPhases[job.phase];
@@ -202,8 +222,13 @@ function productRouteAwareSetRoute(route){if(!fsfflProductSurfaceCopy[route])ret
 function renderMobileRecoveryControls(){const topbar=document.querySelector('.topbar');const leagueScreen=document.querySelector('#league-screen');if(!topbar||!leagueScreen)return;let nav=document.querySelector('#mobile-direct-nav');if(!nav){nav=document.createElement('nav');nav.id='mobile-direct-nav';nav.className='mobile-direct-nav';nav.setAttribute('aria-label','Quick section navigation');topbar.insertAdjacentElement('afterend',nav)}nav.innerHTML='';fsfflProductRoutes.filter(item=>['league','my_team','league_comparison','trade_center','opportunities','what_if','simulator','analytics','reports','behavioral_intelligence'].includes(item.route)).forEach(item=>{const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.directRoute=item.route;const locked=item.teamScoped&&!state?.context?.team_id;button.disabled=locked;button.addEventListener('click',()=>{if(!button.disabled)setRoute(item.route)});nav.appendChild(button)});let chooser=document.querySelector('#mobile-team-chooser');if(!state?.context?.league_id||state?.context?.team_id){chooser?.remove();return}if(!chooser){chooser=document.createElement('section');chooser.id='mobile-team-chooser';chooser.className='panel mobile-team-chooser';const hero=leagueScreen.querySelector('.hero-row');hero?.insertAdjacentElement('afterend',chooser)}chooser.innerHTML='<p class="eyebrow">Choose your team</p><h2>Select the franchise you manage</h2><p class="lead">Use these buttons if the Managing dropdown is unreliable on your phone.</p><div class="mobile-team-grid"></div>';const grid=chooser.querySelector('.mobile-team-grid');(state.context.teams||[]).forEach(team=>{const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent=team.display_name;button.addEventListener('click',async()=>{button.disabled=true;try{await selectTeam(team.team_id)}finally{button.disabled=false;renderMobileRecoveryControls();rebuildProductNavigation()}});grid.appendChild(button)})}
 const originalRenderRuntimeStatus=typeof renderRuntimeStatus==='function'?renderRuntimeStatus:null;if(originalRenderRuntimeStatus){renderRuntimeStatus=function(){const result=originalRenderRuntimeStatus();presentDownstreamReadiness();return result}}
 const originalSetRoute=typeof setRoute==='function'?setRoute:null;if(originalSetRoute){window.setRoute=function(route){if(fsfflProductSurfaceCopy[route]){state.route=route;fsfflRenderSharedReadiness();productRouteAwareSetRoute(route);document.querySelector('.sidebar')?.classList.remove('open');renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return}const result=originalSetRoute(route);fsfflRenderSharedReadiness();if(route==='league')ensureHomeScript().then(()=>{window.installFsfflHomeExperience?.();fsfflRenderSharedReadiness()}).catch(()=>{});if(route==='trade_center'&&typeof loadTradeCenter==='function')setTimeout(loadTradeCenter,0);renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result};setRoute=window.setRoute}
-const originalApplyContext=typeof applyContext==='function'?applyContext:null;if(originalApplyContext){applyContext=function(){const result=originalApplyContext();window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result}}
+const originalApplyContext=typeof applyContext==='function'?applyContext:null;if(originalApplyContext){applyContext=function(){const previousLeagueId=fsfflLastAppliedLeagueId;const result=originalApplyContext();const currentLeagueId=state?.context?.league_id||null;if(previousLeagueId!==currentLeagueId){window.dispatchEvent(new CustomEvent('fsffl:league-context-changed',{detail:{previous_league_id:previousLeagueId,current_league_id:currentLeagueId,state_id:state?.context?.state_id||null}}));fsfflLastAppliedLeagueId=currentLeagueId}window.dispatchEvent(new CustomEvent('fsffl:product-context-updated',{detail:state.context}));renderMobileRecoveryControls();installExplorerSortSemantics();installProjectionPresentation();presentDownstreamReadiness();return result}}
 installFsfflSharedReadinessStyles();
+window.addEventListener('fsffl:league-lifecycle',event=>{
+  fsfflLeagueLifecycleState=event.detail||null;
+  window.fsfflLeagueLifecycleState=fsfflLeagueLifecycleState;
+  fsfflRenderSharedReadiness();
+});
 window.addEventListener('fsffl:intelligence-status-updated',event=>{
   if(event.detail)state.intelligence=event.detail;
   fsfflRenderSharedReadiness();
