@@ -510,7 +510,7 @@ def _latest_season_forecast_means(runtime: UserRuntimeContext) -> dict[str, floa
     """Consume already-attached governed season Forecast means for Search context."""
 
     state = runtime.league_state
-    evidence = runtime.forecast_evidence
+    evidence = getattr(runtime, "forecast_evidence", None)
     if state is None or evidence is None:
         return {}
     latest: dict[str, object] = {}
