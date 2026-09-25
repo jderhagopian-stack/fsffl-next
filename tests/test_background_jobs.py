@@ -313,3 +313,28 @@ def test_legacy_failed_lifecycle_infers_failure_phase_from_timings() -> None:
     assert recovered.status == IntelligenceJobStatus.FAILED
     assert recovered.phase == IntelligenceJobPhase.FAILED
     assert recovered.failure_phase == IntelligenceJobPhase.BUILDING_FORECASTS
+
+
+
+def test_background_job_uses_work_supplied_truthful_completion_message() -> None:
+    coordinator = IntelligenceJobCoordinator(max_workers=1)
+
+    def work(progress) -> str:
+        progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Evaluating simulation authority")
+        progress(IntelligenceJobPhase.BUILDING_VALUES, "Building values")
+        return (
+            "Governed Forecast and current Value evidence are ready. "
+            "Simulation remains unavailable under current Forecast authority."
+        )
+
+    coordinator.start(user_id="u-partial", league_state_id="state-partial", work=work)
+    current = _wait_for_status(
+        coordinator,
+        user_id="u-partial",
+        status=IntelligenceJobStatus.COMPLETED,
+    )
+    assert current is not None
+    assert current.message == (
+        "Governed Forecast and current Value evidence are ready. "
+        "Simulation remains unavailable under current Forecast authority."
+    )
