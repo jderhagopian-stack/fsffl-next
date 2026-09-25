@@ -14,7 +14,7 @@ Not complete until evidence demonstrates:
 - Home, Franchise, and Market populated with governed evidence for the correct active league;
 - no cross-league intelligence contamination.
 
-Current status: **ACTIVE — PRODUCTION ACCEPTANCE / MARKET COLD-PATH VALIDATION.**
+Current status: **ACTIVE — APP-WIDE LIFECYCLE / HODOR COMPLETION / MARKET FOREGROUND LATENCY.**
 
 Evidence already satisfied for the existing FSFFL Dynasty incident:
 - PR #222 fixes terminal failed/interrupted last-good restoration, same-league state-only demotion, restored-readiness precedence, and the mobile Refresh Intelligence grid/button;
@@ -26,16 +26,17 @@ Evidence already satisfied for the existing FSFFL Dynasty incident:
 - PR #235 / merge `3c252aed...` is live through Render deploy `dep-dar9kg142hec73dglcq0`; startup restored `jimmygoodjob` state `203227df...` with Forecast/Simulation/Value complete, no automatic heavy intelligence job and no startup errors;
 - PR #235 removes request-local redundant Market input construction only. Repository-wide CI, PR164 corrective regression, and Live Forecast corrective trace are green, so PR #232 candidate admission, strategic-hypothesis, eight-path bilateral-screen, dominance/diversity, For You, and zero-broad-Simulation tests remain satisfied.
 
-Still open before this Performance directive is complete:
-- physical-iPhone/Safari confirmation that jimmygoodjob visibly presents restored 7/7;
-- Home, Franchise, and Market populated for the correct restored league;
-- normal single-line/actionable Refresh Intelligence presentation on mobile;
-- responsive foreground interaction on the accepted deployed build;
-- no stale-job or cross-league contamination.
+The jimmygoodjob last-good restoration evidence above is retained and must not regress. Management's newer physical test adds an app-wide acceptance failure: Hodor / `jder52` has never completed and was observed at 2/7 with `Intelligence refresh needs attention`, `Not Classified`, and an empty roster view.
 
-The pre-#235 physical-device timing showed Home/Franchise within sub-second ranges but Market cold discovery at 36.705s quick and 48.396s full, followed by a 0.172s cached full response. PR #235 is the bounded cold-path repair and is live, but no authenticated Market request has yet reached the fresh process. Performance acceptance therefore requires one post-#235 physical cold Market observation demonstrating acceptable foreground latency; CI/cache-hit evidence alone is insufficient.
+Still open before Performance is complete:
+- trace the exact Hodor job/stage/blocker from persisted connection and roster State through Forecast (including the provisional 2026 K/DST path), Value, Simulation, readiness and promotion;
+- preserve valid active-league roster State while derived intelligence is incomplete;
+- provide immediate acknowledgement and persistent truthful background-work status for connect, league switch, Refresh League, Refresh Intelligence and recomputation;
+- preserve same-league last-good safely, never serve old-league evidence as the newly selected league, and survive restart/failure without demotion;
+- validate mobile lifecycle controls and state communication on physical iPhone/Safari;
+- improve cold/focused Market foreground latency without weakening PR #232 discovery semantics or authority.
 
-The separate new-league K/DST Forecast authority gate remains real, but it is not the stop state for this existing-league restoration incident.
+The authenticated current-beta Market pass measured ~44.1s internal/~44.9s hosted cold automatic discovery and focused Target Player requests at ~31.8s, ~41.4s and ~47.8s, while a warm full workspace was ~0.137s. Foreground responsiveness therefore remains failed; CI or cache-hit evidence alone is insufficient.
 
 ## Forecast K/DST research
 **Status: COMPLETE — RESEARCH / 2026 LATE-START PLAN READY.**
@@ -74,9 +75,11 @@ The contract defines governed behavior for a league first connected after presea
 - when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
 
 ## Forecast K/DST implementation gate
-**Status: IMPLEMENTATION ACCEPTANCE SATISFIED — PRODUCTION AUTHORITY BLOCKED ON EXTERNAL EVIDENCE / RIGHTS.**
+**Status: PROVISIONAL 2026 MODE IMPLEMENTED — EXACT-STATE HARDENING ACTIVE / FULL AUTHORITY EXTERNALLY BLOCKED.**
 
-PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` and established the base evidence-independent K/DST contract. PR #233 merged at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` and satisfies the Management-authorized 2026 late-start implementation contract. Its reconciled head passed full CI, PR164 focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace.
+PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` and established the base evidence-independent K/DST contract. PR #233 merged at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` and satisfies the first Management-authorized 2026 late-start implementation contract. PR #237 merged at `33b969b04180893f7e582c0ebd76c54bea81961d` and implements the second bounded private-beta exception: provisional current-ROS K/DST may expose only governed supported coordinates, with unsupported coordinates omitted and explicit partial-rule/provisional authority. Value/Simulation/Team Utility/Decision/Search may not silently consume it as full Forecast truth.
+
+PR #238 is an authorized exact-state safety hardening within the same directive. Its green head `81e0ee4f60958d4920fb2c9e888d04367e104bed` binds provisional persistence/API retrieval to exact league + league-state identity and must be reconciled with current main before merge.
 
 Accepted code-level requirements already include:
 - canonical K and D/ST subject identity;
@@ -107,14 +110,16 @@ Research has measured bounded reduced-fingerprint evidence:
 These are **research measurements only**. They are not accepted Hodor-total uncertainty coefficients because the fitted fingerprints exclude active Hodor coordinates.
 
 ### Current-forward Hodor blockers
-Production K/DST support remains unaccepted until evidence demonstrates:
+Full-production K/DST authority remains unaccepted until evidence demonstrates:
 - rights-cleared source access for the actual deployed provider set;
 - >=2 independent healthy sources for each required subject/metric/horizon group;
 - K: live validation of an exact 60+ evidence path plus a second independent 60+ source;
 - D/ST: live validation of distributional PA-tier evidence plus a second independent PA-distribution source and remaining rare-event two-source coverage;
 - target-compatible K and D/ST uncertainty promotion with explicit scoring-fingerprint compatibility;
 - downstream Value/Simulation/Decision do not invent missing Forecast truth;
-- successful new-league lifecycle acceptance after Forecast authority is actually promoted.
+- successful new-league lifecycle acceptance under truthful downstream authority semantics.
+
+These full-authority blockers do **not** erase the distinct 2026 provisional tier created by PR #237. Where qualifying rights-cleared current ROS evidence exists, Presentation/readiness/analytics may expose provisional K/DST with its omitted-coordinate and uncertainty limitations attached; downstream full-authority consumers remain blocked.
 
 Already satisfied in PR #233:
 - schedule-aware row freshness quarantines stale post-game ROS rows rather than backdating or heuristically adjusting them;
@@ -193,7 +198,7 @@ Architecture review evidence demonstrates:
 Management accepted the architecture on 2026-09-25 and authorized the bounded implementation executed in PR #220.
 
 ## Market implementation acceptance gate
-**Status: CORRECTIVE IMPLEMENTATION ACCEPTED NON-PHYSICALLY — REPEAT PHYSICAL IPHONE / SAFARI GATE NEXT.**
+**Status: ACCEPTANCE FAILED — CURRENT-BETA BOUNDED CORRECTIVE IMPLEMENTATION ACTIVE.**
 
 PR #232 merged at `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b` and is live through Render deploy `dep-dar9cdrtqb8s73819ap0`, static generation `20260925-market-corrective1`.
 
@@ -211,9 +216,6 @@ Non-physical acceptance demonstrates:
 - all configured CI/focused authority regressions are green;
 - production startup restored the correct existing league as Forecast=True / Simulation=True / Value=True / complete=True with no post-deploy errors.
 
-Remaining acceptance:
-1. repeat physical-iPhone/Safari validation of For You, Trade Finder, Player Board, Free Agents, drill-down, readiness, scrolling/sorting and safe-area behavior;
-2. exercise at least one authenticated Trade Finder intent so production funnel telemetry is emitted;
-3. inspect that telemetry afterward for candidate admission/rejection counts, eight-path-or-fewer preliminary Decision runs, zero broad Simulation, bounded wall-clock timing, and cache reuse.
+Management subsequently completed the authenticated current-beta physical-iPhone pass. The accepted architecture remains valid, but product acceptance failed on four functional dimensions: competitive-lens changes did not materially govern visible discovery; selector changes silently triggered/replaced expensive work without an explicit Find opportunities lifecycle; focused zero-result cases did not prove meaningful neighborhood exhaustion; and Market Forecast/FSFFL Intrinsic availability still requires separate end-to-end tracing. Remaining safe-area crowding also remains in scope.
 
-Market product acceptance remains open until those physical/runtime observations pass.
+The bounded corrective implementation must exhaust nonphysical tracing, deterministic/regression tests, CI, deploy and production validation before the next physical gate. It must preserve strategic admission before package construction, the eight-path preliminary Decision policy, dominance/dedup/diversity, truthful zero-result behavior, and zero broad exact changed-state Simulation.
