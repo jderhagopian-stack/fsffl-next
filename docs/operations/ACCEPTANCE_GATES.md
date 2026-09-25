@@ -51,15 +51,17 @@ The contract defines governed behavior for a league first connected after presea
 - when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
 
 ## Forecast K/DST implementation gate
-**Status: MANAGEMENT GATE — NOT STARTED UNDER THE RESEARCH DIRECTIVE.**
+**Status: ACTIVE — PR #215 UNDER ACCEPTANCE VALIDATION.**
 
-Implementation is not accepted until Management authorizes it and evidence demonstrates:
-- canonical K and D/ST subject identity;
-- active-rule-complete league scoring;
+Management has authorized the bounded implementation. Stage 1 contracts/scoring and a non-promoting Stage 2 research harness are implemented in PR #215, but production K/DST authority is not yet accepted.
+
+Implementation is not fully accepted until evidence demonstrates:
+- canonical K and D/ST subject identity; **implemented in PR #215, pending merge acceptance**;
+- active-rule-complete league scoring; **implemented for the governed contract in PR #215, with active missing `fum_lost` fail-closed**;
 - no silent missing-metric zero substitution, including `fum_lost`;
 - source health and independence at the relevant metric/rule coordinate;
 - separate promoted K/DST season-error and weekly-volatility evidence;
-- distributional treatment for D/ST scoring bands;
+- distributional treatment for D/ST scoring bands; **contract/scoring implementation present; empirical provider evidence still gated**;
 - annual snapshot/bootstrap migration behavior;
 - downstream compatibility without Value/Simulation/Decision inventing Forecast truth;
 - regression-clean behavior for the original no-K/DST league;
