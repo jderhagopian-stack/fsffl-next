@@ -122,3 +122,18 @@
 @media(max-width:390px){
   .market-ns-player-table th:first-child,.market-ns-player-sticky{width:108px!important;min-width:108px!important;max-width:108px!important}
 }
+
+
+/* 2026-09-25 current-beta Market acceptance corrective. */
+.market-ns-submit-row{display:flex;align-items:center;gap:10px;grid-column:1/-1;margin-top:2px}
+.market-ns-submit-row .primary-button{min-width:150px;min-height:42px}
+.market-ns-submit-row span{font-size:8px;line-height:1.35;color:#7e96ab}
+.market-ns-submit-row [aria-live]{min-height:1.35em}
+@media(max-width:760px){
+  .market-ns-submit-row{display:grid;grid-template-columns:1fr;gap:6px}
+  .market-ns-submit-row .primary-button{width:100%;min-height:46px}
+  .market-ns-submit-row span{font-size:8px}
+  body:has(.market-ns-v2) .fsffl-product-architecture .topbar{
+    padding-top:max(10px,env(safe-area-inset-top))!important;
+  }
+}
