@@ -7,21 +7,22 @@ Updated: 2026-09-25
 Owns sequencing, scope, gates, product decisions, and cross-workstream conflict resolution.
 
 ## Performance
-**State:** ACTIVE — PRODUCTION ACCEPTANCE / LAST-GOOD RESTORATION  
+**State:** ACTIVE — PRODUCTION ACCEPTANCE / MARKET COLD-PATH VALIDATION  
 The prior PR #211 K/DST-only Management Gate is obsolete for the active Performance directive.
 
 The existing FSFFL Dynasty league regressed from previously valid 7/7 to visible 3/7 after Market PR #220. Performance traced this to last-good restoration semantics: terminal failed/interrupted enrichment could leave a newer state-only checkpoint restart-authoritative instead of the independently promoted complete bundle.
 
 Durable repair chain:
 - PR #222 / merge `514b27e9...`: preserves same-league complete intelligence across revalidation, restores same-league last-good after failed/interrupted refresh, keeps cross-league restore fail-closed, makes restored complete context truthful 7/7, and fixes the narrow mobile Refresh Intelligence grid/button;
-- PR #226 / merge `50614b1d...`: startup readiness observability; this is the current live Render SHA;
-- PR #227 / merge `ee221b29...`: test-only interrupted-refresh restoration regression.
+- PR #226 / merge `50614b1d...`: startup readiness observability;
+- PR #227 / merge `ee221b29...`: test-only interrupted-refresh restoration regression;
+- PR #235 / merge `3c252aed...`: exact request-local reuse of canonical ownership, Cardinal/value inputs, forecast-floor inputs, and baseline lineups across Market discovery without altering PR #232 candidate admission, hypotheses, eight-path bilateral screening, dominance/diversity, For You gating, or zero-broad-Simulation authority.
 
-Production #226 has already restarted twice with `jimmygoodjob` restored on state `203227df...` and `forecast=True simulation=True value=True complete=True`, with no automatic heavy intelligence launch and no startup errors.
+Current Render deployment `dep-dar9kg142hec73dglcq0` is live on exact PR #235 merge SHA `3c252aed...`. Its startup restored `jimmygoodjob` on state `203227df...` with `forecast=True simulation=True value=True complete=True`, no automatic heavy intelligence launch, and no startup errors.
 
-Post-restart physical-device traffic has fetched the repaired static generation and successfully exercised product context, intelligence status, Home, Franchise, and Market. Home/Franchise are responsive, but Market cold load remains an active Performance defect: quick workspace took 36.705s and initial full workspace 48.396s before a cached full call dropped to 0.172s.
+The pre-#235 physical-device baseline was 36.705s for cold quick Market and 48.396s for initial full Market, versus 0.172s once the exact workspace cache was warm. PR #235 passed broad CI plus PR164 and Live Forecast traces, including the full PR #232 discovery-contract regression suite. No authenticated Market request has yet hit the fresh #235 process, so post-optimization cold production timing remains unmeasured.
 
-Remaining Performance gate is truthful visible 7/7/mobile-control confirmation plus repair of the cold Market foreground path. Do not require repeated manual refreshes.
+Remaining Performance gate is one physical-iPhone/Safari acceptance pass confirming visible restored 7/7, populated Home/Franchise/Market, the normal single-line actionable Refresh Intelligence control, and acceptable cold Market foreground latency on #235. Do not require a manual intelligence refresh.
 
 ## Forecast Research — 2026 Late-Start K/DST Exception
 **State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
