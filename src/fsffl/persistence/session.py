@@ -229,11 +229,7 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
 
     if last_good is not None and last_good_state is not None:
         league_state = last_good_state
-        selected = (
-            context.selected_team_id
-            if context.selected_team_id in {team.team_id for team in league_state.teams}
-            else last_good.payload.get("selected_team_id")
-        )
+        selected = last_good.payload.get("selected_team_id")
     else:
         league_record = store.get_league_snapshot(
             provider=context.provider,
