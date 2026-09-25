@@ -1,6 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from threading import Barrier
 
+import pytest
+
 from fsffl.forecast.current_runtime import NamedCurrentProjectionFetcher, build_current_live_forecasts
 from fsffl.forecast.models import ForecastMetric
 from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
