@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from hashlib import sha256
 from math import sqrt
 from statistics import fmean
 from typing import Annotated, Literal
@@ -170,6 +171,65 @@ class WeeklyVolatilitySummary(FrozenModel):
     seasons: tuple[int, ...]
     pooled_coefficient_of_variation: Annotated[float, Field(ge=0.0)]
     method: str = "direct_realized_game_scores:within_subject_centered_pooled_cv"
+
+
+class KDstSeasonHoldoutSummary(FrozenModel):
+    train_sample_size: Annotated[int, Field(ge=1)]
+    holdout_sample_size: Annotated[int, Field(ge=1)]
+    train_relative_rmse: Annotated[float, Field(ge=0.0)]
+    holdout_relative_rmse: Annotated[float, Field(ge=0.0)]
+    holdout_within_one_train_floor_rate: Annotated[float, Field(ge=0.0, le=1.0)]
+    method: str = "subject_hash_holdout_v1:rmse_divided_by_subset_mean_projection"
+
+
+def evaluate_k_dst_season_error_holdout(
+    samples: tuple[KDstCalibrationSample, ...],
+    *,
+    minimum_independent_sources: int = 2,
+    holdout_modulus: int = 5,
+    holdout_bucket: int = 0,
+) -> KDstSeasonHoldoutSummary:
+    """Deterministic non-promoting holdout diagnostic for a scoring fingerprint."""
+
+    if holdout_modulus < 2:
+        raise ValueError("holdout_modulus must be at least two")
+    if holdout_bucket < 0 or holdout_bucket >= holdout_modulus:
+        raise ValueError("holdout_bucket must be within holdout_modulus")
+    eligible = tuple(
+        sample
+        for sample in samples
+        if sample.independent_source_count >= minimum_independent_sources
+    )
+    train: list[KDstCalibrationSample] = []
+    holdout: list[KDstCalibrationSample] = []
+    for sample in eligible:
+        digest = sha256(sample.subject_key.encode("utf-8")).digest()
+        bucket = int.from_bytes(digest[:8], "big") % holdout_modulus
+        (holdout if bucket == holdout_bucket else train).append(sample)
+    if not train or not holdout:
+        raise ValueError("deterministic holdout split requires non-empty train and holdout")
+
+    train_summary = fit_k_dst_season_error(
+        tuple(train),
+        minimum_independent_sources=minimum_independent_sources,
+    )
+    holdout_summary = fit_k_dst_season_error(
+        tuple(holdout),
+        minimum_independent_sources=minimum_independent_sources,
+    )
+    within = sum(
+        1
+        for sample in holdout
+        if abs(sample.realized_points - sample.projected_points)
+        <= train_summary.relative_rmse * abs(sample.projected_points)
+    )
+    return KDstSeasonHoldoutSummary(
+        train_sample_size=len(train),
+        holdout_sample_size=len(holdout),
+        train_relative_rmse=train_summary.relative_rmse,
+        holdout_relative_rmse=holdout_summary.relative_rmse,
+        holdout_within_one_train_floor_rate=within / len(holdout),
+    )
 
 
 def fit_k_dst_season_error(
