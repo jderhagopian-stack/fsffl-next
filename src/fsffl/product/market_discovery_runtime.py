@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterable
+from time import monotonic
 from typing import Any
 
 from fsffl.opportunity import (
@@ -1229,11 +1230,12 @@ def build_market_discovery(
     exact_target_constraint: str | None = None,
     intent: str = "",
     intent_value: str = "",
-    search_generation_diagnostics: dict[str, int] | None = None,
+    search_generation_diagnostics: dict[str, object] | None = None,
     evaluator: TradeEvaluator = evaluate_candidate_path,
 ) -> dict[str, object]:
     """Build governed Opportunity/Path output from raw Search rows."""
 
+    started = monotonic()
     profiles = cardinal_market_profiles(runtime.value_evidence)
     economically_screened_rows: list[dict[str, object]] = []
     cheap_economic_errors = 0
@@ -1257,6 +1259,7 @@ def build_market_discovery(
                 }
             )
 
+    economics_finished = monotonic()
     seeds, family_pruned = _build_path_seeds(
         runtime,
         economically_screened_rows,
@@ -1265,6 +1268,7 @@ def build_market_discovery(
         intent=intent,
         intent_value=intent_value,
     )
+    family_finished = monotonic()
     selected_indices = set(
         select_preliminary_screen_indices(seeds, limit=evaluation_limit)
     )
@@ -1285,6 +1289,7 @@ def build_market_discovery(
                 }
         paths.append(_build_candidate_path(runtime, seed, row))
 
+    decision_finished = monotonic()
     hypotheses, opportunities = _aggregate_opportunities(
         runtime,
         seeds,
@@ -1296,6 +1301,13 @@ def build_market_discovery(
     )
     by_id = {path.path_id: path for path in paths}
     for_you, relaxations = select_for_you(opportunities, by_id)
+    completed = monotonic()
+    search_timing = (
+        dict(search_generation_diagnostics.get("timing_ms") or {})
+        if search_generation_diagnostics
+        and isinstance(search_generation_diagnostics.get("timing_ms"), dict)
+        else {}
+    )
 
     return {
         "hypotheses": [item.model_dump(mode="json") for item in hypotheses],
@@ -1304,6 +1316,26 @@ def build_market_discovery(
         "for_you": [item.model_dump(mode="json") for item in for_you],
         "diagnostics": {
             "hypotheses_generated": len(hypotheses),
+            "scope_label": (
+                search_generation_diagnostics.get("scope_label")
+                if search_generation_diagnostics
+                else None
+            ),
+            "focal_need_positions": (
+                list(search_generation_diagnostics.get("focal_need_positions") or [])
+                if search_generation_diagnostics
+                else []
+            ),
+            "counterparties_considered": (
+                int(search_generation_diagnostics.get("counterparties_considered", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
+            "counterparties_admitted_pre_package": (
+                int(search_generation_diagnostics.get("counterparties_admitted_pre_package", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
             "targets_considered": (
                 int(search_generation_diagnostics.get("targets_considered", 0))
                 if search_generation_diagnostics
@@ -1314,6 +1346,33 @@ def build_market_discovery(
                         for asset_ref in _receive_refs(row)
                     }
                 )
+            ),
+            "targets_admitted_pre_package": (
+                int(search_generation_diagnostics.get("targets_admitted_pre_package", 0))
+                if search_generation_diagnostics
+                else len(
+                    {
+                        asset_ref
+                        for row in rows
+                        for asset_ref in _receive_refs(row)
+                    }
+                )
+            ),
+            "send_assets_considered": (
+                int(search_generation_diagnostics.get("send_assets_considered", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
+            "send_assets_admitted_for_counterparty_need": (
+                int(search_generation_diagnostics.get("send_assets_admitted_for_counterparty_need", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
+            "admission_rejection_reasons": (
+                dict(search_generation_diagnostics.get("admission_rejection_reasons") or {})
+                if search_generation_diagnostics
+                and isinstance(search_generation_diagnostics.get("admission_rejection_reasons"), dict)
+                else {}
             ),
             "raw_packages_generated": len(rows),
             "raw_packages_generated_pre_dedup": (
@@ -1370,6 +1429,40 @@ def build_market_discovery(
             "for_you_selected": len(for_you),
             "diversity_relaxations": relaxations,
             "changed_state_simulation_calls_during_discovery": 0,
+            "search_cache_hit": (
+                bool(search_generation_diagnostics.get("search_cache_hit"))
+                if search_generation_diagnostics
+                and "search_cache_hit" in search_generation_diagnostics
+                else None
+            ),
+            "search_cache_elapsed_ms": (
+                search_generation_diagnostics.get("search_cache_elapsed_ms")
+                if search_generation_diagnostics
+                else None
+            ),
+            "timing_ms": {
+                "search_generation": search_timing,
+                "cheap_economic_screen": round(
+                    (economics_finished - started) * 1000.0,
+                    3,
+                ),
+                "family_prune_and_seed": round(
+                    (family_finished - economics_finished) * 1000.0,
+                    3,
+                ),
+                "preliminary_decision_screen": round(
+                    (decision_finished - family_finished) * 1000.0,
+                    3,
+                ),
+                "opportunity_aggregation_and_diversity": round(
+                    (completed - decision_finished) * 1000.0,
+                    3,
+                ),
+                "market_discovery_total": round(
+                    (completed - started) * 1000.0,
+                    3,
+                ),
+            },
         },
         "authority": {
             "opportunity_aggregation_is_search_owned": True,
