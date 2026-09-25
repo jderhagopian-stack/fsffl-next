@@ -14,7 +14,7 @@ Not complete until evidence demonstrates:
 - Home, Franchise, and Market populated with governed evidence for the correct active league;
 - no cross-league intelligence contamination.
 
-Current status: **ACTIVE — APP-WIDE LIFECYCLE / HODOR COMPLETION / MARKET FOREGROUND LATENCY.**
+Current status: **ACTIVE — MARKET FOREGROUND LATENCY ONLY.**
 
 Evidence already satisfied for the existing FSFFL Dynasty incident:
 - PR #222 fixes terminal failed/interrupted last-good restoration, same-league state-only demotion, restored-readiness precedence, and the mobile Refresh Intelligence grid/button;
@@ -26,15 +26,11 @@ Evidence already satisfied for the existing FSFFL Dynasty incident:
 - PR #235 / merge `3c252aed...` is live through Render deploy `dep-dar9kg142hec73dglcq0`; startup restored `jimmygoodjob` state `203227df...` with Forecast/Simulation/Value complete, no automatic heavy intelligence job and no startup errors;
 - PR #235 removes request-local redundant Market input construction only. Repository-wide CI, PR164 corrective regression, and Live Forecast corrective trace are green, so PR #232 candidate admission, strategic-hypothesis, eight-path bilateral-screen, dominance/diversity, For You, and zero-broad-Simulation tests remain satisfied.
 
-The jimmygoodjob last-good restoration evidence above is retained and must not regress. Management's newer physical test adds an app-wide acceptance failure: Hodor / `jder52` has never completed and was observed at 2/7 with `Intelligence refresh needs attention`, `Not Classified`, and an empty roster view.
+The jimmygoodjob last-good restoration evidence above is retained and must not regress. The separate Hodor/app-wide lifecycle corrective is now complete: PR #242 closed the Performance-owned State/lifecycle behavior, and Forecast PR #244/#245 subsequently populated durable shared Forecast + current Value while truthfully leaving Simulation absent under partial Forecast authority. Final Hodor restart evidence on Render shows `forecast=True simulation=False value=True complete=False` for State `d28de4cc...`.
 
 Still open before Performance is complete:
-- trace the exact Hodor job/stage/blocker from persisted connection and roster State through Forecast (including the provisional 2026 K/DST path), Value, Simulation, readiness and promotion;
-- preserve valid active-league roster State while derived intelligence is incomplete;
-- provide immediate acknowledgement and persistent truthful background-work status for connect, league switch, Refresh League, Refresh Intelligence and recomputation;
-- preserve same-league last-good safely, never serve old-league evidence as the newly selected league, and survive restart/failure without demotion;
-- validate mobile lifecycle controls and state communication on physical iPhone/Safari;
-- improve cold/focused Market foreground latency without weakening PR #232 discovery semantics or authority.
+- improve cold/focused Market foreground latency without weakening accepted Market discovery, Decision-screen, Forecast, or Simulation-authority semantics;
+- preserve already accepted mobile lifecycle/state communication behavior.
 
 The authenticated current-beta Market pass measured ~44.1s internal/~44.9s hosted cold automatic discovery and focused Target Player requests at ~31.8s, ~41.4s and ~47.8s, while a warm full workspace was ~0.137s. Foreground responsiveness therefore remains failed; CI or cache-hit evidence alone is insufficient.
 
@@ -75,11 +71,24 @@ The contract defines governed behavior for a league first connected after presea
 - when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
 
 ## Forecast K/DST implementation gate
-**Status: PROVISIONAL 2026 MODE IMPLEMENTED — EXACT-STATE HARDENING ACTIVE / FULL AUTHORITY EXTERNALLY BLOCKED.**
+**Status: SHARED-FORECAST / PARTIAL-COVERAGE ACCEPTED — FULL K/DST AUTHORITY EXTERNALLY BLOCKED.**
 
 PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` and established the base evidence-independent K/DST contract. PR #233 merged at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` and satisfies the first Management-authorized 2026 late-start implementation contract. PR #237 merged at `33b969b04180893f7e582c0ebd76c54bea81961d` and implements the second bounded private-beta exception: provisional current-ROS K/DST may expose only governed supported coordinates, with unsupported coordinates omitted and explicit partial-rule/provisional authority. Value/Simulation/Team Utility/Decision/Search may not silently consume it as full Forecast truth.
 
-PR #238 is an authorized exact-state safety hardening within the same directive. Its green head `81e0ee4f60958d4920fb2c9e888d04367e104bed` binds provisional persistence/API retrieval to exact league + league-state identity and must be reconciled with current main before merge.
+
+PR #244 merged at `edb9c0f9a1ccea4250761c63f65694d449c2d285` and restores the shared league-agnostic Forecast boundary. PR #245 merged at `7ad0d5ce4be038a2615433467227cdcfd3da85a4` and completes generic Sleeper acceptance plus truthful partial-authority lifecycle messaging. Final head `342f8c8e0ec4b0c8b1ffb5695abaf81ed98cb518` passed 1,620 full-suite tests plus all configured focused Forecast/Home/Atlas validations.
+
+Production acceptance is satisfied for the corrective:
+- Hodor no longer fails Forecast because its scoring includes unsupported coordinates;
+- production emitted 330 explicit partial player-scoring outputs;
+- Simulation was not promoted and reported `partial_player_scoring_coordinates_present` + `separate_k_dst_forecast_authority_required`;
+- current Value became available;
+- final Render deploy `dep-daredcl9fdbs7398s55g` restored Hodor State `d28de4cc...` with `forecast=True simulation=False value=True complete=False`;
+- deterministic tests prove the same behavior across unrelated synthetic Sleeper league identities and materially different scoring profiles.
+
+See `artifacts/implementation/hodor_shared_forecast_20260925/IMPLEMENTATION_HANDOFF.md`.
+
+PR #238's exact-state safety hardening is already present on current main; the stale PR was closed unmerged after its six non-test implementation files were verified byte-identical to main.
 
 Accepted code-level requirements already include:
 - canonical K and D/ST subject identity;
