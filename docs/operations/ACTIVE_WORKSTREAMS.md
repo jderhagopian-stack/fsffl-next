@@ -7,22 +7,13 @@ Updated: 2026-09-25
 Owns sequencing, scope, gates, product decisions, and cross-workstream conflict resolution.
 
 ## Performance
-**State:** ACTIVE — APP-WIDE LIFECYCLE / HODOR COMPLETION / MARKET FOREGROUND LATENCY  
-The prior PR #211 K/DST-only gate and the narrower jimmygoodjob-only restoration framing are obsolete as the top-level Performance state. The existing-league repair remains accepted evidence, but the current owned outcome is the app-wide lifecycle contract plus Hodor completion diagnosis, while foreground Market latency remains an open Performance acceptance dimension.
+**State:** ACTIVE — MARKET FOREGROUND LATENCY ONLY
 
-The existing FSFFL Dynasty league regressed from previously valid 7/7 to visible 3/7 after Market PR #220. Performance traced this to last-good restoration semantics: terminal failed/interrupted enrichment could leave a newer state-only checkpoint restart-authoritative instead of the independently promoted complete bundle.
+The Hodor / `jder52` app-wide lifecycle corrective is **DIRECTIVE COMPLETE — PERFORMANCE** at PR #242 / merge `6bc184487e7e6619350337b374f67976457f8317`, live as Render `dep-darbvcm0tbcc73b02bg0`. Production closeout proves valid Hodor State and a 16-player roster remain usable, the exact blocked stage is Forecast, no cross-league last-good bundle is served, startup launches no heavy intelligence job, and all eight configured workflows are green.
 
-Durable repair chain:
-- PR #222 / merge `514b27e9...`: preserves same-league complete intelligence across revalidation, restores same-league last-good after failed/interrupted refresh, keeps cross-league restore fail-closed, makes restored complete context truthful 7/7, and fixes the narrow mobile Refresh Intelligence grid/button;
-- PR #226 / merge `50614b1d...`: startup readiness observability;
-- PR #227 / merge `ee221b29...`: test-only interrupted-refresh restoration regression;
-- PR #235 / merge `3c252aed...`: exact request-local reuse of canonical ownership, Cardinal/value inputs, forecast-floor inputs, and baseline lineups across Market discovery without altering PR #232 candidate admission, hypotheses, eight-path bilateral screening, dominance/diversity, For You gating, or zero-broad-Simulation authority.
+Hodor's inability to reach full Forecast/Simulation/Value readiness is no longer Performance implementation work. It remains blocked on Forecast/Product authority and evidence gates.
 
-Current Render deployment `dep-dar9kg142hec73dglcq0` is live on exact PR #235 merge SHA `3c252aed...`. Its startup restored `jimmygoodjob` on state `203227df...` with `forecast=True simulation=True value=True complete=True`, no automatic heavy intelligence launch, and no startup errors.
-
-The pre-#235 physical-device baseline was 36.705s for cold quick Market and 48.396s for initial full Market, versus 0.172s once the exact workspace cache was warm. PR #235 passed broad CI plus PR164 and Live Forecast traces, including the full PR #232 discovery-contract regression suite. No authenticated Market request has yet hit the fresh #235 process, so post-optimization cold production timing remains unmeasured.
-
-The earlier jimmygoodjob physical-pass framing is no longer the sole Performance gate. Current completion requires the Hodor/app-wide lifecycle directive below to reach a permitted terminal state, while preserving the accepted existing-league restoration evidence and improving cold/focused Market foreground latency. Do not require repeated manual intelligence refreshes merely to generate evidence.
+The separately open Performance-owned dimension is Market foreground latency. Current physical-device evidence remains approximately 44.1s internal / 44.9s hosted for cold automatic discovery and approximately 31.8s, 41.4s, and 47.8s for focused Target Player requests, versus ~0.137s warm full-workspace response. Further Performance work must reduce cold/focused latency without changing accepted Market discovery, Decision-screen, or Simulation-authority semantics.
 
 ## Forecast Research — League-Agnostic Scoring Coverage
 **State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
@@ -108,6 +99,6 @@ Management has authorized a second bounded 2026-only private-beta exception: For
 
 
 ## Performance / App-wide League Lifecycle Corrective
-**State:** ACTIVE — HODOR NEW-LEAGUE COMPLETION + GLOBAL LIFECYCLE UX
+**State:** DIRECTIVE COMPLETE — PERFORMANCE
 
-Management physical acceptance on 2026-09-25 showed Hodor / `jder52` has never completed intelligence and currently presents 2/7 with an empty roster view. The authorized corrective is canonical in `workstreams/PERFORMANCE.md`: diagnose the exact Hodor pipeline blocker, reconcile the merged PR #237 provisional K/DST path with actual runtime/readiness consumption, and implement the app-wide connect/switch/refresh/background-build lifecycle communication contract. This work is shell/lifecycle authority, not a surface-local workaround and not permission to change Market discovery semantics.
+PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deployed/production-validated. Current Hodor State and roster remain usable while derived intelligence is incomplete; the terminal blocked stage is truthfully Forecast; cross-league intelligence is not served. Remaining Hodor full-intelligence authority is owned by Forecast/Product, not Performance.
