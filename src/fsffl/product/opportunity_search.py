@@ -530,6 +530,7 @@ def build_scoped_trade_candidates(
     counterparty_team_ids: frozenset[str] | None = None,
     target_asset_refs: frozenset[str] | None = None,
     target_positions: frozenset[Position] | None = None,
+    use_focal_need_filter: bool = True,
     require_counterparty_supply: bool = False,
     required_send_asset_ref: str | None = None,
     required_counterparty_need_position: Position | None = None,
@@ -641,7 +642,8 @@ def build_scoped_trade_candidates(
                 rejection_reasons["target_not_focal_need"] += 1
                 continue
             if (
-                target_positions is None
+                use_focal_need_filter
+                and target_positions is None
                 and focal_needs
                 and position not in effective_target_positions
             ):
