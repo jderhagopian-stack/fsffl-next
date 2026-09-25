@@ -23,14 +23,14 @@ The workstream cannot promote production K/DST authority without a qualifying se
 Do not start Stage 3 provider promotion, Stage 4 migration/downstream promotion, or Stage 5/6 lifecycle claims by substituting one-source calibration, non-commercial source content, guessed D/ST semantics, or backdated current data.
 
 ## Market / Trade Discovery Architecture Review
-**State:** MANAGEMENT GATE — ARCHITECTURE REVIEW COMPLETE  
+**State:** DIRECTIVE COMPLETE — MANAGEMENT ACCEPTED  
 The actual shipped Market/Search/Value/Team Utility/Decision/Owner Intelligence/Simulation paths were inspected and the implementation-ready governed contract is persisted in:
 - `workstreams/MARKET_DISCOVERY.md`
 - `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`
 
 The review separates OpportunityHypothesis, MarketOpportunity, CandidatePath, and raw package variants; moves bounded pre-Simulation Decision screening before For You eligibility; defines clustering/diversity; preserves zero broad changed-state Simulation calls; and separates Core 7/7 lifecycle readiness from Market surface readiness.
 
-No broad Market code is authorized by this state. Management acceptance is the next gate.
+Management accepts the governed architecture. Bounded Market implementation is now authorized under the persisted handoff; the architecture review itself is complete.
 
 ## Market acceptance
 **State:** NOT ACCEPTED  
