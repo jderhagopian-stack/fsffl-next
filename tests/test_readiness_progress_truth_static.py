@@ -91,3 +91,25 @@ def test_shared_refresh_acknowledges_tap_before_network_roundtrip() -> None:
     start_index = render.index("window.fsfflManualIntelligenceRefresh?.()")
     assert disabled_index < start_index
     assert label_index < start_index
+
+
+
+def test_terminal_refresh_failure_keeps_complete_last_good_at_seven_of_seven() -> None:
+    source = _shell()
+    snapshot = source.split("function fsfflSharedReadinessSnapshot()", 1)[1].split(
+        "function fsfflSharedReadinessMarkup", 1
+    )[0]
+    assert "const contextComplete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready)" in snapshot
+    assert "if(terminalRefreshFailure&&contextComplete)" in snapshot
+    assert "step:FSFFL_SHARED_READINESS_STEPS" in snapshot
+    assert "Core intelligence retained · latest refresh failed" in snapshot
+    assert "complete:true,retained:true" in snapshot
+
+
+def test_mobile_refresh_control_has_explicit_grid_column_and_never_wraps() -> None:
+    source = _shell()
+    assert "grid-template-columns:14px auto minmax(0,1fr) max-content" in source
+    assert "grid-template-columns:12px auto minmax(0,1fr) max-content" in source
+    assert "white-space:nowrap!important" in source
+    assert "min-width:112px" in source
+    assert "min-width:104px" in source
