@@ -41,7 +41,7 @@ Research has now:
 Current-forward Hodor authority still fails closed on second-source exact-coordinate coverage, live API/source-health validation, target-compatible whole-score uncertainty promotion, and deployable provider rights.
 
 ## Product / Forecast Implementation
-**State:** BLOCKED — BOUNDED IMPLEMENTATION COMPLETE / EXTERNAL SOURCE-AUTHORITY GATES REMAIN  
+**State:** ACTIVE — 2026 PROVISIONAL K/DST DEGRADED-AUTHORITY MODE AUTHORIZED  
 PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. PR #233 merged on canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` after its reconciled head passed full CI, focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace. Durable implementation detail is in `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`.
 
 Management now explicitly authorizes execution of the bounded 2026 late-start implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`. This authorization permits implementation, testing, persisted evidence acquisition where source rights permit, and integration of the already-governed contracts. It does **not** authorize production Forecast promotion where evidence/rights gates remain red.
@@ -81,3 +81,7 @@ All available non-physical corrective validation is exhausted. No authenticated 
 ## Home × Franchise audit
 **State:** DEFERRED  
 Resume after the Market discovery architecture is settled unless Management explicitly reprioritizes it.
+
+
+### 2026 provisional K/DST Management exception
+Management has authorized a second bounded 2026-only private-beta exception: Forecast Implementation may produce provisional current-ROS K/DST Forecast evidence using only governed supported scoring coordinates, while explicitly omitting unsupported 60+ K increments, nonlinear D/ST PA-bucket expectation, and unsupported rare events rather than fabricating them. Provisional/partial-rule authority must be machine-readable and visible downstream; full-authority gates remain unchanged; the mode must fail closed for 2027+. Canonical detail is in `workstreams/RESEARCH.md`.
