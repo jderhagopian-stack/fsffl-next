@@ -253,11 +253,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
       applyConnectedContext(context);
       publishSyncState('current');
-      recordLatency('first_connect_ready',started,'success');
+      recordLatency('first_connect_ready',started,'success','requested='+normalized+';active='+String(context.league_id||''));
     }catch(error){
       if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY);
       else localStorage.setItem(LEAGUE_KEY,previousLeagueId);
-      recordLatency('first_connect_ready',started,'failed',String(error?.message||error));
+      recordLatency('first_connect_ready',started,'failed','requested='+normalized+';'+String(error?.message||error));
       window.alert(`Could not connect league: ${error.message}`);
     }finally{
       interactiveConnectInFlight=false;
