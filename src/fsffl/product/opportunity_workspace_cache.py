@@ -87,12 +87,13 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
             search_only=search_only,
         )
         if key is None:
-            return builder(
-                runtime,
-                candidate_limit=candidate_limit,
-                bilateral_evaluation_limit=bilateral_evaluation_limit,
-                search_only=search_only,
-            )
+            kwargs = {
+                "candidate_limit": candidate_limit,
+                "bilateral_evaluation_limit": bilateral_evaluation_limit,
+            }
+            if search_only:
+                kwargs["search_only"] = True
+            return builder(runtime, **kwargs)
 
         started = monotonic()
         with lock:
@@ -111,12 +112,13 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                 return cached
 
             misses += 1
-            result = builder(
-                runtime,
-                candidate_limit=candidate_limit,
-                bilateral_evaluation_limit=bilateral_evaluation_limit,
-                search_only=search_only,
-            )
+            kwargs = {
+                "candidate_limit": candidate_limit,
+                "bilateral_evaluation_limit": bilateral_evaluation_limit,
+            }
+            if search_only:
+                kwargs["search_only"] = True
+            result = builder(runtime, **kwargs)
             cache[key] = result
             cache.move_to_end(key)
             while len(cache) > _MAX_ENTRIES:
