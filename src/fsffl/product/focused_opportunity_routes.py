@@ -10,7 +10,11 @@ from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 
 from .focused_opportunity_search import build_focused_trade_candidates
-from .market_discovery_runtime import build_market_discovery, evaluate_candidate_path
+from .market_discovery_runtime import (
+    DEFAULT_PRELIMINARY_DECISION_BUDGET,
+    build_market_discovery,
+    evaluate_candidate_path,
+)
 from .opportunity_posture import posture_payload
 from .opportunity_spotlights import build_trade_spotlights
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
@@ -57,7 +61,7 @@ def install_focused_opportunity_routes(
         user_id: str = Depends(require_user),
     ) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
-        base = workspace_builder(runtime)
+        base = workspace_builder(runtime, bilateral_evaluation_limit=0)
         if base.get("status") != "ready":
             return base
         league_state = runtime.league_state
@@ -73,7 +77,7 @@ def install_focused_opportunity_routes(
             raise HTTPException(status_code=409, detail="Market Focus requires current authoritative FSFFL Cardinal Market Value")
 
         browser = build_trade_center_browser_view(league_state, focal_team_id=focal_team_id)
-        canonical = candidate_builder(runtime, browser, cardinal)
+        canonical = candidate_builder(runtime, browser, cardinal) if not intent else None
         requested = _posture(posture)
         focused = build_focused_trade_candidates(
             runtime,
@@ -111,25 +115,14 @@ def install_focused_opportunity_routes(
         focused_market_discovery = build_market_discovery(
             runtime,
             returned,
-            evaluation_limit=int(
-                discovery.get("bilateral_evaluation_limit") or 8
-            ),
+            evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET,
             source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
             exact_target_constraint=(value if intent == "target" and value else None),
             intent=intent,
             intent_value=value,
-            search_generation_diagnostics={
-                "targets_considered": len(
-                    {
-                        str(item.get("asset_ref") or "")
-                        for row in returned
-                        for item in (row.get("receive") or [])
-                        if isinstance(item, dict) and item.get("asset_ref")
-                    }
-                ),
-                "raw_packages_generated_pre_dedup": len(returned),
-                "packages_removed_exact_duplicate": 0,
-            },
+            search_generation_diagnostics=dict(
+                getattr(focused, "diagnostics", {}) or {}
+            ),
             evaluator=focused_evaluator,
         )
         enriched = {
