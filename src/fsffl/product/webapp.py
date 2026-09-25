@@ -3,9 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import re
 import secrets
-import unicodedata
 from pathlib import Path
 from typing import Callable
 
@@ -17,15 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.opportunity import WaiverMove
 from fsffl.persistence.contracts import PersistenceStore
-from fsffl.persistence.provisional_k_dst_forecast import (
-    PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND,
-    PROVISIONAL_K_DST_SCOPE_KIND,
-    decode_provisional_k_dst_forecast,
-)
-from fsffl.forecast.k_dst_provisional import PROVISIONAL_K_DST_MODEL_VERSION
 from fsffl.state.history import StateSnapshotStore
 from fsffl.state.matchups import completed_matchups
-from fsffl.state.models import FrozenModel, LeagueState, Position, canonical_nfl_team
+from fsffl.state.models import FrozenModel, LeagueState, Position
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
 
@@ -204,91 +196,35 @@ def _job_payload(job: IntelligenceJob | None) -> dict[str, object]:
     }
 
 
-def _provisional_subject_name(value: str) -> str:
-    normalized = unicodedata.normalize("NFKD", value)
-    ascii_text = "".join(
-        char for char in normalized if not unicodedata.combining(char)
-    )
-    return "".join(re.findall(r"[a-z0-9]+", ascii_text.lower()))
-
-
 def _provisional_k_dst_status(
-    persistence_store: PersistenceStore | None,
     league_state: LeagueState,
 ) -> dict[str, object]:
-    """Read-only visibility into the bounded 2026 provisional K/DST evidence tier."""
+    """Expose the bounded provisional contract without creating runtime authority."""
 
-    if league_state.league.season != 2026:
-        return {
-            "status": "not_applicable",
-            "contract_available": False,
-            "eligible_subject_count": 0,
-            "persisted_subject_count": 0,
-            "simulation_authorized": False,
-            "value_authorized": False,
-            "reason": "The provisional K/DST exception is authorized only for the 2026 season.",
-        }
-
-    player_states = {item.player_id: item for item in league_state.player_states}
     rostered_ids = {
         entry.player_id
         for team_state in league_state.team_states
         for entry in team_state.roster
     }
-    subject_keys: set[str] = set()
-    for player in league_state.players:
-        if player.player_id not in rostered_ids or player.position not in {Position.K, Position.DST}:
-            continue
-        state_row = player_states.get(player.player_id)
-        nfl_team = player.nfl_team or (state_row.nfl_team if state_row is not None else None)
-        if not nfl_team:
-            continue
-        team = canonical_nfl_team(nfl_team)
-        if player.position == Position.DST:
-            subject_keys.add(f"DST:{team}")
-        else:
-            subject_keys.add(f"K:{_provisional_subject_name(player.full_name)}:{team}")
-
-    available: list[str] = []
-    if persistence_store is not None:
-        for subject_key in sorted(subject_keys):
-            record = persistence_store.get_latest_reusable_artifact(
-                artifact_kind=PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND,
-                scope_kind=PROVISIONAL_K_DST_SCOPE_KIND,
-                scope_id=subject_key,
-                model_version=PROVISIONAL_K_DST_MODEL_VERSION,
-            )
-            if record is None:
-                continue
-            try:
-                decode_provisional_k_dst_forecast(dict(record.payload))
-            except (TypeError, ValueError):
-                continue
-            available.append(subject_key)
-
-    if available:
-        reason = (
-            "Governed provisional 2026 K/DST rows exist for some rostered subjects. "
-            "They remain partial-rule Presentation/Analytics evidence and do not "
-            "authorize Simulation, Value, Team Utility, Decision, or Search."
-        )
-        status = "available_partial"
-    else:
-        reason = (
-            "No qualifying governed 2026 provisional K/DST rows are persisted for "
-            "the active league roster; canonical Forecast remains blocked."
-        )
-        status = "unavailable"
-
+    eligible_subject_count = sum(
+        1
+        for player in league_state.players
+        if player.player_id in rostered_ids and player.position in {Position.K, Position.DST}
+    )
+    applicable = league_state.league.season == 2026 and eligible_subject_count > 0
     return {
-        "status": status,
-        "contract_available": True,
-        "eligible_subject_count": len(subject_keys),
-        "persisted_subject_count": len(available),
-        "persisted_subject_keys": available,
+        "status": "not_attached" if applicable else "not_applicable",
+        "contract_available": bool(applicable),
+        "eligible_subject_count": eligible_subject_count,
+        "runtime_attached_subject_count": 0,
         "simulation_authorized": False,
         "value_authorized": False,
-        "reason": reason,
+        "reason": (
+            "The 2026 provisional K/DST contract is available, but no provisional "
+            "rows are attached to the active runtime. Simulation and Value remain gated."
+            if applicable
+            else "The bounded 2026 provisional K/DST contract is not applicable."
+        ),
     }
 
 
@@ -632,7 +568,6 @@ def create_app(
             ),
         }
         payload["provisional_k_dst"] = _provisional_k_dst_status(
-            persistence_store,
             runtime.league_state,
         )
         return payload
