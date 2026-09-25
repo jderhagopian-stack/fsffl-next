@@ -193,6 +193,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self._restore_lock:
             self._restore_attempted.add(user_id)
         self._checkpoint_async(user_id, context)
+        if (
+            context.league_state is not None
+            and context.league_state.league.league_id == league_state.league.league_id
+            and context.league_state.state_id != league_state.state_id
+        ):
+            # Last-good serving is intentionally atomic, but the fresher canonical
+            # State remains useful point-in-time evidence and must not be discarded.
+            self._checkpoint_state_history_async(league_state)
         return context
 
     def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
