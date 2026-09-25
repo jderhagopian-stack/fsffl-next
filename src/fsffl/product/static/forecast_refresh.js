@@ -50,6 +50,8 @@ function phaseMessage(payload){
 }
 
 function intelligencePipelineReady(context){
+  const governed=context?.capability_readiness?.overall_status;
+  if(governed)return governed==='full';
   return Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
 }
 
@@ -73,8 +75,7 @@ function reflectRefreshAction(context,{running=false}={}){
   const button=ensureIntelligenceRefreshButton();
   if(!button)return;
   if(!context?.league_id){button.hidden=true;return}
-  const ready=intelligencePipelineReady(context);
-  button.hidden=ready||running;
+  button.hidden=false;
   button.disabled=running||fsfflJobStartInFlight;
 }
 
@@ -128,11 +129,11 @@ async function settleCompletedJob(){
     reflectRefreshAction(context);
   },0);
   if(intelligencePipelineReady(context)){
-    setForecastRefreshMessage('Core intelligence is ready.');
+    setForecastRefreshMessage('League sync complete. Governed core intelligence is fully available.');
   }else if(context.forecast_ready&&context.simulation_ready&&!context.value_ready){
     setForecastRefreshMessage('Forecast and simulation are ready; Value finished without an authoritative estimate set. Refresh Intelligence to retry.');
   }else{
-    setForecastRefreshMessage('Core intelligence is incomplete. Use Refresh Intelligence to retry the missing governed evidence.');
+    setForecastRefreshMessage('League sync complete. Intelligence is partially available; unavailable capabilities remain explicitly blocked.');
   }
 }
 
@@ -213,7 +214,7 @@ async function maybeStartIntelligenceJob({manual=false}={}){
   fsfflJobStartInFlight=true;
   fsfflSettledStateId=null;
   clearRefreshTechnicalDetail();
-  setForecastRefreshMessage('Starting intelligence refresh…');
+  setForecastRefreshMessage('Syncing league and refreshing intelligence…');
   reflectRefreshAction(state.context,{running:true});
   try{
     const payload=await api('/api/intelligence/jobs',{method:'POST'});
