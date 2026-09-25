@@ -13,14 +13,14 @@ def test_simulator_public_renderer_does_not_recurse_through_global_binding() -> 
 def test_trade_discovery_suppresses_generic_pick_for_pick_mirrors_and_moves_beyond_flat_matching() -> None:
     workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text(encoding="utf-8")
     search = (ROOT / "src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
-    assert "player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == \"player\")" in search
+    assert 'if target.asset_kind != "player":' in search
     assert "build_roster_aware_trade_candidates" in workspace
     assert "for row in view.position_strengths" in search
     assert "build_league_relative_position_strengths" not in search
     assert "focal_position_strength_index" in search
     assert '"two_for_one"' in search
     assert '"three_for_one"' in search
-    assert "for size in range(1, max_size + 1)" in search
+    assert "for size in range(max(1, minimum_size), max_size + 1)" in search
     assert "_multi_lane_search_order" in search
     assert '"market_gap_ratio"' in search
     assert "composite_score" not in search

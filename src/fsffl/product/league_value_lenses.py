@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+
+from fsffl.forecast.models import ForecastHorizon, ForecastMetric
 from fsffl.value.shapley_intrinsic_contract import (
     ShapleyIntrinsicAvailability,
     ShapleyIntrinsicContract,
@@ -29,6 +31,27 @@ def _ownership(runtime: UserRuntimeContext) -> dict[str, str]:
                 )
             result[entry.player_id] = team_state.team_id
     return result
+
+
+def _latest_season_forecasts(runtime: UserRuntimeContext) -> dict[str, object]:
+    """Return attached governed full-season fantasy-point evidence by player."""
+
+    state = runtime.league_state
+    evidence = runtime.forecast_evidence
+    if state is None or evidence is None:
+        return {}
+    latest: dict[str, object] = {}
+    for observation in evidence.league_scored_forecasts:
+        if (
+            observation.metric != ForecastMetric.FANTASY_POINTS
+            or observation.horizon != ForecastHorizon.SEASON
+            or observation.as_of > state.as_of
+        ):
+            continue
+        current = latest.get(observation.player_id)
+        if current is None or observation.as_of > current.as_of:
+            latest[observation.player_id] = observation
+    return latest
 
 
 def build_league_value_lenses(
@@ -61,6 +84,7 @@ def build_league_value_lenses(
     team_names = {team.team_id: team.display_name for team in state.teams}
     players = {player.player_id: player for player in state.players}
     player_states = {row.player_id: row for row in state.player_states}
+    season_forecasts = _latest_season_forecasts(runtime)
 
     player_ids = (
         sorted(players)
@@ -93,6 +117,7 @@ def build_league_value_lenses(
             else None
         )
         player_state = player_states.get(player_id)
+        season_forecast = season_forecasts.get(player_id)
         rows.append(
             {
                 "player_id": player_id,
@@ -120,6 +145,42 @@ def build_league_value_lenses(
                 "value_index_gap": display_gap,
                 "percentile_gap": gap,
                 "comparison_available": gap is not None,
+                "season_forecast_status": (
+                    "ready" if season_forecast is not None else "unavailable"
+                ),
+                "season_fantasy_points_projection": (
+                    season_forecast.distribution.mean
+                    if season_forecast is not None
+                    else None
+                ),
+                "season_ppg_17": (
+                    season_forecast.distribution.mean / 17.0
+                    if season_forecast is not None
+                    else None
+                ),
+                "season_forecast_stddev": (
+                    season_forecast.distribution.stddev
+                    if season_forecast is not None
+                    else None
+                ),
+                "season_forecast_as_of": (
+                    season_forecast.as_of.isoformat()
+                    if season_forecast is not None
+                    else None
+                ),
+                "season_forecast_model_version": (
+                    season_forecast.model_version
+                    if season_forecast is not None
+                    else None
+                ),
+                "season_forecast_reason": (
+                    None
+                    if season_forecast is not None
+                    else (
+                        "No governed attached full-season fantasy-points Forecast "
+                        "covers this player at the current State."
+                    )
+                ),
             }
         )
 
@@ -209,6 +270,31 @@ def build_league_value_lenses(
             }
         ),
         "players": rows,
+        "all_player_forecast": {
+            "status": (
+                "ready"
+                if season_forecasts and all(
+                    row["season_forecast_status"] == "ready" for row in rows
+                )
+                else ("degraded" if season_forecasts else "unavailable")
+            ),
+            "horizon": ForecastHorizon.SEASON.value,
+            "metric": ForecastMetric.FANTASY_POINTS.value,
+            "covered_players": sum(
+                row["season_forecast_status"] == "ready" for row in rows
+            ),
+            "requested_players": len(rows),
+            "evidence_basis": (
+                runtime.forecast_evidence.evidence_basis
+                if runtime.forecast_evidence is not None
+                else None
+            ),
+            "reason": (
+                None
+                if season_forecasts
+                else "No governed attached full-season Forecast evidence is available."
+            ),
+        },
         "player_universe": "all_players" if include_unrostered else "rostered_players",
         "teams": teams,
         "authority": {

@@ -1,3 +1,5 @@
+from fsffl.product.focused_opportunity_search import candidate_matches_focus
+
 from pathlib import Path
 
 
@@ -80,5 +82,28 @@ def test_workspace_publishes_posture_views_over_one_canonical_candidate_collecti
 def test_draft_capital_focus_waits_for_real_pick_target_search_support() -> None:
     source = _source(SEARCH)
 
-    assert 'asset.asset_kind == "player"' in source
-    assert "player_targets" in source
+    assert 'if target.asset_kind != "player":' in source
+    assert "admitted_targets" in source
+
+
+def test_specific_market_intent_predicate_is_semantically_exact() -> None:
+    row = {
+        "counterparty_team_id": "owner-a",
+        "target_position": "WR",
+        "send": [
+            {"asset_ref": "player:shop-me", "asset_kind": "player"},
+            {"asset_ref": "pick:2027-2", "asset_kind": "pick"},
+        ],
+        "receive": [{"asset_ref": "player:target-me", "asset_kind": "player"}],
+    }
+
+    assert candidate_matches_focus(row, intent="position", intent_value="WR")
+    assert not candidate_matches_focus(row, intent="position", intent_value="RB")
+    assert candidate_matches_focus(row, intent="owner", intent_value="owner-a")
+    assert not candidate_matches_focus(row, intent="owner", intent_value="owner-b")
+    assert candidate_matches_focus(row, intent="target", intent_value="player:target-me")
+    assert not candidate_matches_focus(row, intent="target", intent_value="player:other")
+    assert candidate_matches_focus(row, intent="shop", intent_value="player:shop-me")
+    assert not candidate_matches_focus(row, intent="shop", intent_value="player:other")
+    assert candidate_matches_focus(row, intent="consolidate", intent_value="")
+    assert not candidate_matches_focus(row, intent="owner", intent_value="")

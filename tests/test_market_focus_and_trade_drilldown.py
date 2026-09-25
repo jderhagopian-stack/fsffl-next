@@ -9,7 +9,7 @@ STATIC = ROOT / "static"
 FOCUS_JS = STATIC / "market_focus_server.js"
 DRILLDOWN_JS = STATIC / "market_trade_drilldown.js"
 INDEX = STATIC / "index.html"
-RELEASE = "20260925-lastgood-repair1"
+RELEASE = "20260925-market-corrective1"
 
 
 def _read(path: Path) -> str:
@@ -21,8 +21,9 @@ def test_market_focus_is_server_owned_before_candidate_limit() -> None:
     routes = _read(FOCUSED_ROUTES)
     focus_js = _read(FOCUS_JS)
     assert "build_focused_trade_candidates" in search
-    assert "_shop_focused_candidates" in search
-    assert "Market Focus rebuilt the package neighborhood around the player you chose to shop" in search
+    assert "build_scoped_trade_candidates" in search
+    assert "required_send_asset_ref=intent_value or \"__missing__\"" in search
+    assert "Explicit Market intent constrained discovery before package generation." in search
     assert '"/api/opportunities/focused-workspace"' in routes
     assert '"applied_before_candidate_limit": True' in routes
     assert "focused[:limit]" in routes
@@ -192,3 +193,12 @@ def test_legacy_players_route_delegates_to_market_player_board() -> None:
     assert "fsfflProductRoutes.filter(item=>!item.legacy)" in shell
     decision_block = navigation.split("const DECISIONS=[", 1)[1].split("];", 1)[0]
     assert "players_assets" not in decision_block
+
+
+def test_focus_client_waits_for_required_value_and_rejects_mismatched_payload() -> None:
+    source = _read(FOCUS_JS)
+    assert 'requiresValue=["position","shop","target","owner"].includes(intent)' in source
+    assert "if(requiresValue&&!value)" in source
+    assert 'const applied=payload?.trade_discovery?.focus||{}' in source
+    assert 'String(applied.intent||"")!==String(intent||"")' in source
+    assert 'String(applied.value||"")!==String(value||"")' in source

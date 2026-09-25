@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any, cast
 
+from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.product.league_value_lenses import (
     BROAD_MARKET_SCALE_ID,
     INTRINSIC_PRESENTATION_COORDINATE,
@@ -253,3 +254,85 @@ def test_team_groups_are_coverage_only_not_value_totals_or_ranks() -> None:
     assert "total_value" not in team
     assert "rank" not in team
     assert "score" not in team
+
+
+def test_all_player_value_lens_exposes_attached_unrostered_season_forecast() -> None:
+    state = _state()
+    provenance = Provenance(
+        source="fixture",
+        retrieved_at=NOW,
+        effective_at=NOW,
+        source_version="fixture-v1",
+    )
+    free_agent = Player(
+        player_id="p5",
+        full_name="Free Agent RB",
+        position=Position.RB,
+    )
+    state = state.model_copy(
+        update={
+            "players": (*state.players, free_agent),
+            "player_states": (
+                *state.player_states,
+                PlayerState(player_id="p5", as_of=NOW, provenance=provenance),
+            ),
+        }
+    )
+    observation = ForecastObservation(
+        player_id="p5",
+        position=Position.RB,
+        horizon=ForecastHorizon.SEASON,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=NOW,
+        period_end=NOW + timedelta(days=120),
+        distribution=ForecastDistribution(mean=170.0, stddev=20.0),
+        source="fixture-forecast",
+        model_version="forecast-fixture-v2",
+        as_of=NOW,
+        provenance=provenance,
+    )
+    runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=state,
+        selected_team_id="a",
+        value_evidence=_market(state),
+        forecast_evidence=cast(
+            Any,
+            SimpleNamespace(
+                league_scored_forecasts=(observation,),
+                evidence_basis="fixture_full_season",
+            ),
+        ),
+    )
+
+    payload = build_league_value_lenses(
+        runtime,
+        _intrinsic(),
+        include_unrostered=True,
+    )
+    rows = {row["player_id"]: row for row in payload["players"]}
+    row = rows["p5"]
+
+    assert row["roster_status"] == "available"
+    assert row["season_forecast_status"] == "ready"
+    assert row["season_fantasy_points_projection"] == 170.0
+    assert row["season_ppg_17"] == 10.0
+    assert payload["all_player_forecast"]["covered_players"] == 1
+    assert payload["all_player_forecast"]["evidence_basis"] == "fixture_full_season"
+
+
+def test_all_player_forecast_missing_player_remains_explicitly_unavailable() -> None:
+    state = _state()
+    runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=state,
+        selected_team_id="a",
+        value_evidence=_market(state),
+    )
+    payload = build_league_value_lenses(runtime, _intrinsic(), include_unrostered=True)
+    row = payload["players"][0]
+
+    assert row["season_forecast_status"] == "unavailable"
+    assert row["season_fantasy_points_projection"] is None
+    assert row["season_forecast_reason"]
+    assert payload["all_player_forecast"]["status"] == "unavailable"

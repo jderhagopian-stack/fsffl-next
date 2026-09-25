@@ -6,6 +6,7 @@ from threading import RLock
 from time import monotonic
 from typing import Callable
 
+from .market_discovery_runtime import DEFAULT_PRELIMINARY_DECISION_BUDGET
 from .runtime import UserRuntimeContext
 
 
@@ -51,6 +52,22 @@ def opportunity_workspace_cache_key(
     )
 
 
+def _execution_payload(
+    result: dict[str, object],
+    *,
+    cache_hit: bool,
+    elapsed_ms: float,
+) -> dict[str, object]:
+    return {
+        **result,
+        "execution": {
+            **dict(result.get("execution") or {}),
+            "workspace_cache_hit": cache_hit,
+            "workspace_cache_elapsed_ms": round(elapsed_ms, 3),
+        },
+    }
+
+
 def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBuilder:
     """Reuse an exact Market workspace instead of rebuilding identical Search/Decision.
 
@@ -74,7 +91,7 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
         runtime: UserRuntimeContext,
         *,
         candidate_limit: int = 80,
-        bilateral_evaluation_limit: int = 1,
+        bilateral_evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET,
     ) -> dict[str, object]:
         nonlocal hits, misses
         key = opportunity_workspace_cache_key(
@@ -103,7 +120,11 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                     runtime.league_state.state_id,
                     runtime.selected_team_id,
                 )
-                return cached
+                return _execution_payload(
+                    cached,
+                    cache_hit=True,
+                    elapsed_ms=(monotonic() - started) * 1000.0,
+                )
 
             misses += 1
             result = builder(
@@ -123,7 +144,11 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                 runtime.league_state.state_id,
                 runtime.selected_team_id,
             )
-            return result
+            return _execution_payload(
+                result,
+                cache_hit=False,
+                elapsed_ms=(monotonic() - started) * 1000.0,
+            )
 
     cached_builder.__name__ = getattr(builder, "__name__", "cached_opportunity_workspace")
     cached_builder.__doc__ = getattr(builder, "__doc__", None)

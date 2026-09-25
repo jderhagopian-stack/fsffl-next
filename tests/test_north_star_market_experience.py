@@ -195,10 +195,10 @@ def test_market_mobile_layout_keeps_tabs_tappable_and_identity_sticky() -> None:
 
 def test_market_release_is_eager_and_single_generation() -> None:
     source = _source(INDEX)
-    assert 'north_star_market.css?v=20260925-lastgood-repair1' in source
-    assert 'north_star_market.js?v=20260925-lastgood-repair1' in source
+    assert 'north_star_market.css?v=20260925-market-corrective1' in source
+    assert 'north_star_market.js?v=20260925-market-corrective1' in source
     versions = {token.split("?v=")[1].split('"')[0] for token in source.split() if "?v=" in token}
-    assert versions == {"20260925-lastgood-repair1"}
+    assert versions == {"20260925-market-corrective1"}
 
 
 def test_market_browser_script_parses() -> None:
@@ -209,3 +209,46 @@ def test_market_browser_script_parses() -> None:
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_corrective_trade_finder_exposes_screen_coverage_and_primary_intent_guards() -> None:
+    source = _source(MARKET)
+    assert "preliminary_decision_runs" in source
+    assert "path_families_created" in source
+    assert "path families received the bounded preliminary Decision screen" in source
+    assert 'if(mode!=="improve"&&!selectedValue)return[]' in source
+    assert 'if(mode==="owner")paths=paths.filter' in source
+    assert 'if(mode==="position")paths=paths.filter' in source
+    assert 'if(mode==="target")paths=paths.filter' in source
+    assert 'if(mode==="shop")paths=paths.filter' in source
+    assert 'sort:"authority"' in source
+
+
+def test_corrective_player_board_headers_are_sortable_and_mobile_columns_scroll() -> None:
+    source = _source(MARKET)
+    css = _source(MARKET_CSS)
+    assert "function boardSortHeader" in source
+    assert "data-board-sort-key" in source
+    assert "aria-sort=" in source
+    assert 'boardSortHeader("market_index","Broad Market")' in source
+    assert 'boardSortHeader("intrinsic_index","FSFFL Intrinsic")' in source
+    assert 'boardSortHeader("ppg","PPG"' in source
+    assert 'boardSortHeader("projection","17-game projection"' in source
+    assert ".market-ns-player-table table{min-width:900px!important}" in css
+    assert ".market-ns-player-table .market-ns-secondary-col{display:table-cell!important}" in css
+    assert "min-width:118px!important;max-width:118px!important" in css
+
+
+def test_corrective_free_agents_use_governed_all_player_forecast_fields() -> None:
+    source = _source(MARKET)
+    assert "season_fantasy_points_projection" in source
+    assert "season_ppg_17" in source
+    assert "season_forecast_status" in source
+    assert "Governed full-season Forecast coverage is " in source
+    assert "uncovered players remain explicitly unavailable rather than inferred" in source
+
+
+def test_market_mobile_safe_area_is_protected_on_physical_iphone() -> None:
+    css = _source(MARKET_CSS)
+    assert "env(safe-area-inset-top)" in css
+    assert "body:has(.market-ns-v2)" in css
