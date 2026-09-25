@@ -245,3 +245,35 @@ Accepted implementation now includes:
 - deterministic Gibbs, extreme-economic, dominance, readiness, ranking, observability, and Simulation-boundary coverage.
 
 Implementation-level automated acceptance is satisfied. Market North Star product acceptance is **not closed** until the merged/deployed build passes repeat physical-iPhone/Safari validation.
+
+
+## Physical iPhone acceptance failure — 2026-09-25
+
+**State: ACCEPTANCE FAILED — BOUNDED CORRECTIVE IMPLEMENTATION AUTHORIZED**
+
+Management physically tested the deployed Market implementation on iPhone/Safari after the existing FSFFL league returned to a visible 7/7 state. The Market architecture remains accepted; this is a bounded corrective pass, not authorization to redesign the accepted architecture or lower evidence standards.
+
+Observed acceptance evidence:
+- Core readiness displayed 7/7 with “last-good intelligence retained.”
+- For You displayed **0 worth-attention opportunities**. Zero is permissible if no opportunity clears the governed bar; do not manufacture recommendations. However, this must be reconciled with the incomplete downstream screening state below.
+- Trade Finder displayed 26 candidate paths, while visible paths were uniformly `incomplete · incomplete` / `Needs preliminary screen`.
+- Changing intent among Target a position, Explore an owner/team, and Shop a player appeared to preserve substantially the same ordered RB result neighborhood. Trace whether intent is actually constraining/reranking discovery and fix any defect; do not tune outputs to these screenshots.
+- In Explore owner/team with `Anthonyder` selected, visible results included assets owned by other teams. Determine whether that is contractually intended; if not, correct intent semantics.
+- Player Board rendered, but its Player identity column is far too wide on mobile and pushes comparison/value columns off-screen. This is a presentation defect, not evidence that those columns are absent.
+- Player Board must use a compact frozen/anchored Player identity column, horizontal scrolling for remaining quantitative columns, and interactive sortable applicable quantitative headers with clear ascending/descending state. Preserve Broad Market and FSFFL Intrinsic as separate governed dimensions; never blend them to solve layout.
+- Free Agents rendered candidates, but all visible examples showed PPG and 17-game Forecast as Unavailable despite Core 7/7. Trace whether this is truthful per-player evidence absence or a consumer/readiness wiring defect. Do not fabricate missing Forecast.
+- iPhone safe-area/status-bar overlap remains visible on Market headings/navigation in multiple tabs and fails physical mobile acceptance.
+
+Corrective objective:
+1. Trace the deployed data path for For You and the 26 Trade Finder Candidate Paths through Search → cheap economics → bounded Decision preliminary screen → Market presentation. Explain why paths remain preliminary/incomplete and correct implementation defects.
+2. Verify each Trade Finder intent materially applies its accepted semantic constraints/ranking. Add deterministic tests for intent-specific behavior rather than screenshot-specific outputs.
+3. Reconcile Core 7/7 with Market-surface readiness and consumer evidence. Player Board and Free Agents may partially render, but unavailable fields must be truthful and the reason must be governed/observable.
+4. Correct Player Board mobile table composition: compact anchored identity column, reachable comparison columns, horizontal scroll, and sortable quantitative columns.
+5. Correct Market safe-area/status-bar handling on physical-iPhone/Safari without redesigning accepted surfaces.
+6. Preserve the accepted For You evidence bar. Zero For You opportunities is valid when genuinely earned; never quota-fill or relabel unscreened Search output.
+7. Preserve zero broad changed-state Simulation, authority boundaries, no fake acceptance probability, and all accepted architecture constraints.
+8. Run focused regressions plus relevant Market/Home/Franchise/League and authority tests; merge/deploy only when warranted.
+9. Persist meaningful checkpoints in this workstream file and canonical operations state as execution advances.
+10. Return to Management for another physical-iPhone acceptance only after all non-physical validation has been exhausted.
+
+Required terminal behavior: follow `OPERATING_PROTOCOL.md`. A commit, PR, green CI, or deploy is not completion. Stop only at a permitted terminal state, and immediately before returning ask whether another authorized action can advance this corrective directive; if yes, perform it.
