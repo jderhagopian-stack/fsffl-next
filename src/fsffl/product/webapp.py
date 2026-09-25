@@ -958,8 +958,8 @@ def create_app(
                     or "Forecast authority requirements"
                 )
                 return (
-                    "Canonical Sleeper State, governed Forecast and current Value are "
-                    "ready. Simulation remains unavailable under current Forecast "
+                    "Canonical Sleeper State is current. Governed Forecast and current "
+                    "Value evidence are ready. Simulation remains unavailable under current Forecast "
                     "authority: "
                     + blockers
                     + "."
