@@ -37,6 +37,19 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     if(window.fsfflSyncState?.set)window.fsfflSyncState.set(syncState,message);
     window.dispatchEvent(new CustomEvent('fsffl:sync-state',{detail}));
   };
+  const publishLeagueLifecycle=(lifecycleState,detail={})=>{
+    const payload={
+      state:lifecycleState,
+      requested_league_id:detail.requested_league_id||null,
+      served_league_id:state?.context?.league_id||null,
+      served_state_id:state?.context?.state_id||null,
+      message:detail.message||null,
+      usable_state_available:Boolean(state?.context?.league_id&&state?.context?.state_id),
+      operation:detail.operation||null,
+    };
+    window.fsfflLeagueLifecycleState=payload;
+    window.dispatchEvent(new CustomEvent('fsffl:league-lifecycle',{detail:payload}));
+  };
 
   const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const isTransportError=error=>/Load failed|Failed to fetch|Network request failed|network error/i.test(String(error?.message||''));
@@ -165,6 +178,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
 
   async function refreshStoredLeague(leagueId,baselineStateId){
     publishSyncState('checking');
+    publishLeagueLifecycle('refreshing_state',{
+      requested_league_id:leagueId,
+      operation:'refresh_league',
+      message:'Refreshing current league State in the background.',
+    });
     try{
       const refreshed=await waitForBackgroundImport(leagueId,null,'refresh');
       if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
@@ -172,10 +190,20 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         applyConnectedContext(selected);
       }
       publishSyncState('current');
+      publishLeagueLifecycle('state_ready',{
+        requested_league_id:leagueId,
+        operation:'refresh_league',
+        message:'Current league State is ready.',
+      });
     }catch(error){
       // Stored state remains usable. Revalidation failure should not evict the user
       // from an already-restored league session.
       publishSyncState('stale','Refresh unavailable. Continuing with the last valid stored league.');
+      publishLeagueLifecycle('failed',{
+        requested_league_id:leagueId,
+        operation:'refresh_league',
+        message:'League refresh failed; the last valid State remains usable.',
+      });
       console.warn('FSFFL background league refresh failed; using stored state',error);
     }
   }
@@ -227,11 +255,21 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     if(!leagueId?.trim())return;
     const normalized=leagueId.trim();
     const started=now();
+    publishLeagueLifecycle('switching',{
+      requested_league_id:normalized,
+      operation:'switch_league',
+      message:'Switching to Sleeper league '+normalized+'.',
+    });
     const previousLeagueId=localStorage.getItem(LEAGUE_KEY);
     let canonicalBefore=state.context;
     try{canonicalBefore=await resilientApi('/api/product-context',{},2)}catch(error){if(!isTransportError(error))throw error}
     if(contextMatchesLeague(canonicalBefore,normalized)){
       recordLatency('first_connect_ready',started,'failed','same_active');
+      publishLeagueLifecycle('state_ready',{
+        requested_league_id:normalized,
+        operation:'switch_league',
+        message:'That Sleeper league is already active.',
+      });
       window.alert('That Sleeper league is already active. Enter a different league ID to switch leagues.');
       return;
     }
@@ -253,11 +291,21 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
       applyConnectedContext(context);
       publishSyncState('current');
+      publishLeagueLifecycle('state_ready',{
+        requested_league_id:normalized,
+        operation:'switch_league',
+        message:'League State is active and usable.',
+      });
       recordLatency('first_connect_ready',started,'success','requested='+normalized+';active='+String(context.league_id||''));
     }catch(error){
       if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY);
       else localStorage.setItem(LEAGUE_KEY,previousLeagueId);
       recordLatency('first_connect_ready',started,'failed','requested='+normalized+';'+String(error?.message||error));
+      publishLeagueLifecycle('failed',{
+        requested_league_id:normalized,
+        operation:'switch_league',
+        message:'League switch failed; the prior league remains active.',
+      });
       window.alert(`Could not connect league: ${error.message}`);
     }finally{
       interactiveConnectInFlight=false;
