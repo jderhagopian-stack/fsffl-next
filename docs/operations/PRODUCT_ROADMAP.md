@@ -19,9 +19,9 @@
 
 ### Product / Market path
 1. Physical-iPhone Market acceptance: **FAILED / NOT ACCEPTED** as a product gate.
-2. Market / Trade Discovery Architecture Review: **AUTHORIZED / NEXT**.
-3. Management acceptance of the revised Opportunity + Market contract.
-4. Bounded Market/Search implementation.
+2. Market / Trade Discovery Architecture Review: **COMPLETE — MANAGEMENT GATE**. Handoff: `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`.
+3. Management acceptance of the revised Opportunity + Market contract: **NEXT GATE**.
+4. Bounded Market/Search implementation: **NOT YET AUTHORIZED**.
 5. Repeat physical-iPhone Market acceptance.
 6. Home × Franchise redundancy/information-hierarchy audit.
 7. Trade Center expansion only after discovery/search order of operations is settled.
@@ -51,3 +51,20 @@ For You should surface a deliberately small number of genuinely distinct strateg
 
 ## League-agnostic validation
 “League-agnostic” remains a target, not a fully proven property. Forecast implementation and later lifecycle validation must exercise configurations unlike the original FSFFL league without weakening evidence authority.
+
+
+## Accepted-for-review Market architecture
+The completed review proposes:
+- strategic hypotheses before targets/packages;
+- Opportunity as the scarce-attention object;
+- Candidate Paths as concrete acquisition routes;
+- raw package neighborhoods as subordinate variants;
+- cheap Decision-owned economic screening and a bounded pre-Simulation bilateral screen;
+- family clustering/dominance pruning before feed ranking;
+- deterministic diversity selection instead of package-row lane diversity;
+- maximum four For You opportunities in the private beta, with no duplicate exact target;
+- zero broad changed-state Simulation calls;
+- Core 7/7 readiness separated from Market consumer readiness;
+- opportunity-first For You, progressive Trade Finder, read-only Player Board, and roster-fit-first Free Agents.
+
+Management acceptance of these policies is required before implementation.
