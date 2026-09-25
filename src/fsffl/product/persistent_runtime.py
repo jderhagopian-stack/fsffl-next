@@ -45,6 +45,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             thread_name_prefix="fsffl-persist",
         )
         self._checkpoint_futures: dict[str, Future[bool]] = {}
+        self._last_good_guard_users: set[str] = set()
 
     @property
     def persistence_enabled(self) -> bool:
@@ -144,6 +145,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     )
                 if snapshot.selected_team_id is not None:
                     super().select_team(user_id, snapshot.selected_team_id)
+                if (
+                    snapshot.restored_from_last_good
+                    and snapshot.forecast_evidence is not None
+                    and snapshot.simulation_analytics is not None
+                    and snapshot.value_evidence is not None
+                ):
+                    self._last_good_guard_users.add(user_id)
+                else:
+                    self._last_good_guard_users.discard(user_id)
                 # Existing durable runtime rows may predate the point-in-time history
                 # table. Retain the exact restored canonical state asynchronously so
                 # restart recovery naturally backfills history without reingestion or
@@ -189,18 +199,48 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return current
 
     def set_league_state(self, user_id: str, league_state):
+        current = super().get(user_id)
+        preserve_restored_last_good = (
+            user_id in self._last_good_guard_users
+            and current.league_state is not None
+            and current.league_state.league.league_id == league_state.league.league_id
+            and current.forecast_evidence is not None
+            and current.simulation_analytics is not None
+            and current.value_evidence is not None
+        )
+        if preserve_restored_last_good:
+            valid_team_ids = {team.team_id for team in current.league_state.teams}
+            selected = (
+                current.selected_team_id
+                if current.selected_team_id in valid_team_ids
+                else None
+            )
+            context = replace(
+                current,
+                selected_team_id=selected,
+                intelligence_reused=True,
+            )
+            self._contexts[user_id] = context
+            with self._restore_lock:
+                self._restore_attempted.add(user_id)
+            # Keep the served complete bundle durable while retaining the fresher
+            # provider State separately in point-in-time State history.
+            self._checkpoint_async(user_id, context)
+            if current.league_state.state_id != league_state.state_id:
+                self._checkpoint_state_history_async(league_state)
+            return context
+
+        previous_league_id = (
+            current.league_state.league.league_id
+            if current.league_state is not None
+            else None
+        )
         context = super().set_league_state(user_id, league_state)
+        if previous_league_id != league_state.league.league_id:
+            self._last_good_guard_users.discard(user_id)
         with self._restore_lock:
             self._restore_attempted.add(user_id)
         self._checkpoint_async(user_id, context)
-        if (
-            context.league_state is not None
-            and context.league_state.league.league_id == league_state.league.league_id
-            and context.league_state.state_id != league_state.state_id
-        ):
-            # Last-good serving is intentionally atomic, but the fresher canonical
-            # State remains useful point-in-time evidence and must not be discarded.
-            self._checkpoint_state_history_async(league_state)
         return context
 
     def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
@@ -219,6 +259,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
 
     def set_value_evidence(self, user_id: str, result):
         context = super().set_value_evidence(user_id, result)
+        if (
+            context.league_state is not None
+            and context.league_state.state_id == result.league_state_id
+            and context.forecast_evidence is not None
+            and context.simulation_analytics is not None
+            and context.value_evidence is not None
+        ):
+            self._last_good_guard_users.discard(user_id)
         self._checkpoint_async(user_id, context)
         return context
 
@@ -238,6 +286,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             simulation_analytics=simulation_analytics,
             value_evidence=value_evidence,
         )
+        if (
+            context.league_state is not None
+            and context.league_state.state_id == league_state.state_id
+            and context.forecast_evidence is not None
+            and context.simulation_analytics is not None
+            and context.value_evidence is not None
+        ):
+            self._last_good_guard_users.discard(user_id)
         self._checkpoint_async(user_id, context)
         return context
 
