@@ -291,13 +291,12 @@ class PrivateBetaRuntimeStore:
                 and current.value_evidence is not None
                 and user_id not in self._pending_intelligence
             )
-            if (
-                same_league
-                and complete_bundle
-                and current.league_state is not None
-                and league_material_fingerprint(current.league_state)
-                == league_material_fingerprint(league_state)
-            ):
+            if same_league and complete_bundle and current.league_state is not None:
+                # A same-league provider refresh may discover a newer material State,
+                # but State alone is not an atomic replacement for a complete
+                # Forecast/Simulation/Value bundle. Keep serving the promoted
+                # last-good identity until a refresh assembles and promotes all
+                # governed intelligence for the newer State.
                 reused = UserRuntimeContext(
                     user_id=user_id,
                     league_state=current.league_state,
