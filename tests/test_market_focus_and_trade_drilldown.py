@@ -9,7 +9,7 @@ STATIC = ROOT / "static"
 FOCUS_JS = STATIC / "market_focus_server.js"
 DRILLDOWN_JS = STATIC / "market_trade_drilldown.js"
 INDEX = STATIC / "index.html"
-RELEASE = "20260925-market-corrective1"
+RELEASE = "20260925-market-beta-corrective2"
 
 
 def _read(path: Path) -> str:
@@ -31,14 +31,17 @@ def test_market_focus_is_server_owned_before_candidate_limit() -> None:
     assert "fsffl:market-focus-applied" in focus_js
 
 
-def test_focus_reuses_exact_full_search_catalog() -> None:
+def test_automatic_workspace_reuses_exact_search_catalog_but_focused_submit_builds_its_own_scope() -> None:
     cache = _read(SEARCH_CACHE)
     persistent = _read(PERSISTENT)
+    routes = _read(FOCUSED_ROUTES)
     assert "make_cached_opportunity_search" in cache
     assert "FSFFL Market search catalog timing" in cache
     assert "_cached_opportunity_search" in persistent
     assert "_opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity_search" in persistent
     assert "candidate_builder=_cached_opportunity_search" in persistent
+    assert "canonical = None" in routes
+    assert "generic structural catalog" in routes
 
 
 def test_opportunity_detail_adds_useful_preanalysis_context() -> None:
@@ -119,7 +122,7 @@ def test_trade_finder_owner_focus_is_server_owned_before_candidate_limit() -> No
     assert 'counterparty_team_id' in search
     assert "Explore an owner / team" in source
     assert "window.fsfflMarketIntent?.set" in source
-    assert "window.fsfflMarketFocus?.refresh" in source
+    assert "window.fsfflMarketFocus?.submit" in source
 
 
 def test_player_board_is_read_only_discovery_with_separate_value_lenses() -> None:
@@ -128,7 +131,7 @@ def test_player_board_is_read_only_discovery_with_separate_value_lenses() -> Non
     assert 'api("/api/league/value-lenses?universe=all")' in source
     assert 'api("/api/league/team-views")' in source
     assert "Broad Market and FSFFL Intrinsic are shown side by side and never blended." in source
-    assert "Intrinsic is preparing; Broad Market remains live." in source
+    assert "FSFFL Intrinsic is preparing for the current State/Forecast coordinate; Broad Market remains live." in source
     assert "League Market Value: unavailable" in source
     assert "Team Utility: not part of this board." in source
     for token in (
@@ -195,10 +198,37 @@ def test_legacy_players_route_delegates_to_market_player_board() -> None:
     assert "players_assets" not in decision_block
 
 
-def test_focus_client_waits_for_required_value_and_rejects_mismatched_payload() -> None:
+def test_focus_client_configures_without_request_and_submits_explicitly() -> None:
     source = _read(FOCUS_JS)
-    assert 'requiresValue=["position","shop","target","owner"].includes(intent)' in source
-    assert "if(requiresValue&&!value)" in source
+    assert "function markConfigured()" in source
+    assert "requestSeq+=1" in source
+    assert "dirty=true" in source
+    assert "async function submit()" in source
+    assert "window.fsfflMarketFocus={submit,refresh:submit" in source
+    listener = source.split("window.addEventListener('fsffl:market-intent-changed'", 1)[1].split("\n", 1)[0]
+    assert "markConfigured" in listener
+    assert "submit" not in listener
+    submit = source.split("async function submit()", 1)[1]
+    assert "/api/opportunities/focused-workspace?" in submit
+    assert "missing_required_value" in source
+
+
+def test_focus_client_rejects_stale_or_mismatched_submitted_response() -> None:
+    source = _read(FOCUS_JS)
+    assert "if(id!==requestSeq||!onMarket())return" in source
+    assert "if(keyOf(selected())!==submittedKey){dirty=true;return}" in source
     assert 'const applied=payload?.trade_discovery?.focus||{}' in source
-    assert 'String(applied.intent||"")!==String(intent||"")' in source
-    assert 'String(applied.value||"")!==String(value||"")' in source
+    assert 'String(applied.intent||"")!==String(configured.intent||"")' in source
+    assert 'String(applied.value||"")!==String(configured.value||"")' in source
+    assert 'String(applied.posture||"")!==String(configured.posture||"")' in source
+
+
+def test_trade_finder_renders_explicit_submission_running_and_zero_states() -> None:
+    source = _read(STATIC / "north_star_market.js")
+    assert "Find opportunities" in source
+    assert "Finding opportunities…" in source
+    assert "Prior results are stale and are hidden until you submit the new search." in source
+    assert "No candidate path survived this submitted search" in source
+    assert "focus_outcome" in source
+    render = source.split("function renderNorthStar(payload)", 1)[1].split("function reset()", 1)[0]
+    assert "fsfflMarketFocus?.refresh" not in render

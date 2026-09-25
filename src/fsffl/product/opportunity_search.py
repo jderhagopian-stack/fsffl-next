@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from bisect import bisect_left
 from itertools import combinations
+from statistics import median
 from time import monotonic
 from typing import Mapping
 
+from fsffl.forecast.models import ForecastHorizon, ForecastMetric
 from fsffl.state.models import LeagueState, Position
 from fsffl.team_utility.position_strength import LeagueRelativePositionStrength
+from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 
 from .runtime import UserRuntimeContext
@@ -503,6 +506,139 @@ def supply_positions(
     return tuple(result)
 
 
+def _latest_season_forecast_means(runtime: UserRuntimeContext) -> dict[str, float]:
+    """Consume already-attached governed season Forecast means for Search context."""
+
+    state = runtime.league_state
+    evidence = getattr(runtime, "forecast_evidence", None)
+    if state is None or evidence is None:
+        return {}
+    latest: dict[str, object] = {}
+    for observation in evidence.league_scored_forecasts:
+        if (
+            observation.metric != ForecastMetric.FANTASY_POINTS
+            or observation.horizon != ForecastHorizon.SEASON
+            or observation.as_of > state.as_of
+        ):
+            continue
+        current = latest.get(observation.player_id)
+        if current is None or observation.as_of > current.as_of:
+            latest[observation.player_id] = observation
+    return {
+        player_id: float(observation.distribution.mean)
+        for player_id, observation in latest.items()
+    }
+
+
+def _posture_reference_points(
+    runtime: UserRuntimeContext,
+    browser: TradeCenterBrowserView,
+) -> tuple[dict[Position, float], dict[Position, float], dict[str, float]]:
+    """Build transparent league-current categorical reference points.
+
+    These medians are Search admission boundaries, not Value/Forecast recomputation
+    or a hidden utility score.
+    """
+
+    league_state = runtime.league_state
+    if league_state is None:
+        return {}, {}, {}
+    forecasts = _latest_season_forecast_means(runtime)
+    ages: dict[Position, list[float]] = {}
+    productions: dict[Position, list[float]] = {}
+    for counterparty in browser.counterparties:
+        for asset in counterparty.assets:
+            position = _player_position(league_state, asset)
+            if asset.asset_kind != "player" or position not in _SKILL_POSITIONS:
+                continue
+            if asset.age_years is not None:
+                ages.setdefault(position, []).append(float(asset.age_years))
+            if asset.player_id in forecasts:
+                productions.setdefault(position, []).append(forecasts[asset.player_id])
+    return (
+        {position: float(median(values)) for position, values in ages.items() if values},
+        {
+            position: float(median(values))
+            for position, values in productions.items()
+            if values
+        },
+        forecasts,
+    )
+
+
+def _posture_target_admission(
+    *,
+    league_state: LeagueState,
+    target: TradeAssetOption,
+    posture: OwnerStrategicPosture | None,
+    age_medians: Mapping[Position, float],
+    forecast_medians: Mapping[Position, float],
+    forecasts: Mapping[str, float],
+) -> tuple[bool, str]:
+    """Apply an explicit strategic lens using governed evidence only.
+
+    Missing evidence never becomes a rejection. Exact target intent may bypass this
+    helper at the caller because the user has already fixed the target neighborhood.
+    """
+
+    if posture in {None, OwnerStrategicPosture.DEFAULT_CALCULATED, OwnerStrategicPosture.BALANCED}:
+        return True, "Balanced/default lens does not exclude target neighborhoods."
+    position = _player_position(league_state, target)
+    if position not in _SKILL_POSITIONS:
+        return True, "No skill-position strategic lens applies."
+
+    if posture is OwnerStrategicPosture.WIN_NOW:
+        target_projection = forecasts.get(target.player_id or "")
+        reference = forecast_medians.get(position)
+        if target_projection is None or reference is None:
+            return True, (
+                f"Win-now lens lacked governed season Forecast coverage for the {position.value} "
+                "comparison, so Search did not exclude this target."
+            )
+        admitted = target_projection >= reference
+        return admitted, (
+            f"Win-now lens {'admitted' if admitted else 'excluded'} target using governed "
+            f"{position.value} season Forecast {target_projection:.1f} versus league target "
+            f"median {reference:.1f}."
+        )
+
+    if posture is OwnerStrategicPosture.REBUILD:
+        reference = age_medians.get(position)
+        if target.age_years is None or reference is None:
+            return True, (
+                f"Rebuild lens lacked governed age evidence for the {position.value} comparison, "
+                "so Search did not exclude this target."
+            )
+        age = float(target.age_years)
+        admitted = age <= reference
+        return admitted, (
+            f"Rebuild lens {'admitted' if admitted else 'excluded'} target using governed age "
+            f"{age:.1f} versus league target {position.value} median {reference:.1f}."
+        )
+
+    if posture is OwnerStrategicPosture.RETOOL:
+        age_reference = age_medians.get(position)
+        projection_reference = forecast_medians.get(position)
+        young = target.age_years is not None and age_reference is not None and float(target.age_years) <= age_reference
+        productive = (
+            target.player_id in forecasts
+            and projection_reference is not None
+            and forecasts[target.player_id] >= projection_reference
+        )
+        if age_reference is None and projection_reference is None:
+            return True, (
+                f"Retool lens lacked governed age/Forecast comparison evidence for {position.value}, "
+                "so Search did not exclude this target."
+            )
+        admitted = young or productive
+        return admitted, (
+            f"Retool lens {'admitted' if admitted else 'excluded'} target from categorical "
+            f"youth/current-production evidence for {position.value}."
+        )
+
+    return True, "Strategic lens did not define an additional target exclusion."
+
+
 def _complementary_send_assets(
     league_state: LeagueState,
     focal_assets: tuple[TradeAssetOption, ...],
@@ -535,6 +671,7 @@ def build_scoped_trade_candidates(
     required_send_asset_ref: str | None = None,
     required_counterparty_need_position: Position | None = None,
     minimum_send_count: int = 1,
+    strategic_posture: OwnerStrategicPosture | None = None,
     scope_label: str = "automatic_improve",
 ) -> SearchCandidateCollection:
     """Generate packages only after strategic/counterparty admission.
@@ -562,6 +699,10 @@ def build_scoped_trade_candidates(
         if target_positions is not None
         else frozenset(focal_needs or _SKILL_POSITIONS)
     )
+    age_medians, forecast_medians, season_forecasts = _posture_reference_points(
+        runtime,
+        browser,
+    )
     admission_finished = monotonic()
 
     candidates: list[dict[str, object]] = []
@@ -572,6 +713,8 @@ def build_scoped_trade_candidates(
     counterparties_admitted = 0
     targets_considered = 0
     targets_admitted = 0
+    posture_targets_considered = 0
+    posture_targets_admitted = 0
     send_assets_considered = 0
     send_assets_admitted = 0
     rejection_reasons = {
@@ -580,6 +723,7 @@ def build_scoped_trade_candidates(
         "target_not_selected": 0,
         "target_not_focal_need": 0,
         "target_not_counterparty_supply": 0,
+        "target_outside_competitive_lens": 0,
         "no_complementary_send_assets": 0,
     }
 
@@ -656,6 +800,21 @@ def build_scoped_trade_candidates(
             ):
                 rejection_reasons["target_not_counterparty_supply"] += 1
                 continue
+            posture_reason = ""
+            if strategic_posture is not None and target_asset_refs is None:
+                posture_targets_considered += 1
+                posture_admitted, posture_reason = _posture_target_admission(
+                    league_state=league_state,
+                    target=target,
+                    posture=strategic_posture,
+                    age_medians=age_medians,
+                    forecast_medians=forecast_medians,
+                    forecasts=season_forecasts,
+                )
+                if not posture_admitted:
+                    rejection_reasons["target_outside_competitive_lens"] += 1
+                    continue
+                posture_targets_admitted += 1
             admitted_targets.append(target)
 
         if not admitted_targets:
@@ -684,6 +843,14 @@ def build_scoped_trade_candidates(
                     exact_duplicates_removed += 1
                     continue
                 seen.add(key)
+                _, posture_reason = _posture_target_admission(
+                    league_state=league_state,
+                    target=target,
+                    posture=strategic_posture,
+                    age_medians=age_medians,
+                    forecast_medians=forecast_medians,
+                    forecasts=season_forecasts,
+                )
                 row["search_context"] = [
                     *list(row.get("search_context") or []),
                     (
@@ -691,6 +858,7 @@ def build_scoped_trade_candidates(
                         f"{scope_label}: target/counterparty fit came from governed roster "
                         "and position-strength evidence; Cardinal Value only bounded package cost."
                     ),
+                    *([posture_reason] if strategic_posture is not None else []),
                 ]
                 candidates.append(row)
 
@@ -706,6 +874,18 @@ def build_scoped_trade_candidates(
             "counterparties_admitted_pre_package": counterparties_admitted,
             "targets_considered": targets_considered,
             "targets_admitted_pre_package": targets_admitted,
+            "strategic_posture": strategic_posture.value if strategic_posture is not None else None,
+            "posture_targets_considered": posture_targets_considered,
+            "posture_targets_admitted": posture_targets_admitted,
+            "posture_reference": {
+                "age_median_by_position": {
+                    position.value: value for position, value in age_medians.items()
+                },
+                "season_forecast_median_by_position": {
+                    position.value: value for position, value in forecast_medians.items()
+                },
+                "explicit_target_overrides_posture_gate": target_asset_refs is not None,
+            },
             "send_assets_considered": send_assets_considered,
             "send_assets_admitted_for_counterparty_need": send_assets_admitted,
             "raw_packages_generated_pre_dedup": raw_packages_generated,

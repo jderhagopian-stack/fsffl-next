@@ -145,6 +145,32 @@ def build_league_value_lenses(
                 "value_index_gap": display_gap,
                 "percentile_gap": gap,
                 "comparison_available": gap is not None,
+                "broad_market_status": (
+                    "ready" if market_percentile is not None else "unavailable"
+                ),
+                "broad_market_reason": (
+                    None
+                    if market_percentile is not None
+                    else "No governed Broad Market evidence covers this player in the current league state."
+                ),
+                "intrinsic_status": (
+                    "ready" if intrinsic_percentile is not None else "unavailable"
+                ),
+                "intrinsic_reason": (
+                    None
+                    if intrinsic_percentile is not None
+                    else (
+                        intrinsic_error
+                        or (
+                            intrinsic.status_reason
+                            if intrinsic is not None
+                            and intrinsic.status == ShapleyIntrinsicAvailability.UNAVAILABLE
+                            else None
+                        )
+                        or lens_evidence.reason
+                        or "No governed FSFFL Intrinsic estimate covers this player at the current Forecast/State coordinate."
+                    )
+                ),
                 "season_forecast_status": (
                     "ready" if season_forecast is not None else "unavailable"
                 ),

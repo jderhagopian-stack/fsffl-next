@@ -63,5 +63,5 @@ def test_render_captured_logger_receives_endpoint_and_market_cache_timings() -> 
 def test_static_release_token_advanced_for_repairs() -> None:
     source = INDEX_HTML.read_text(encoding="utf-8")
 
-    assert "20260925-market-corrective1" in source
+    assert "20260925-market-beta-corrective2" in source
     assert "20260913-phase3-intrinsic2" not in source
