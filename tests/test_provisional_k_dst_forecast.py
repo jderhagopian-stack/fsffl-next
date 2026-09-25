@@ -145,6 +145,8 @@ def test_k_50_plus_supports_only_five_point_base_and_omits_60_plus_increment() -
     )
     forecast = build_provisional_k_dst_forecast(
         artifact,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="K:tylerbass:BUF",
         rules=_k_rules(
             ScoringRule(stat="fgm_50_59", points=5),
@@ -195,6 +197,8 @@ def test_governed_60_plus_adds_only_increment_without_reallocating_50_plus() -> 
     )
     forecast = build_provisional_k_dst_forecast(
         artifact,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="K:tylerbass:BUF",
         rules=_k_rules(
             ScoringRule(stat="fgm_50_59", points=5),
@@ -286,6 +290,8 @@ def test_dst_scores_only_two_source_linear_coordinates_and_omits_pa_and_rare_eve
     )
     forecast = build_provisional_k_dst_forecast(
         artifact,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="DST:BUF",
         rules=_dst_rules(
             ScoringRule(stat="sack", points=1),
@@ -326,6 +332,8 @@ def test_provisional_downstream_gate_allows_exposure_but_blocks_model_consumers(
     )
     forecast = build_provisional_k_dst_forecast(
         artifact,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="K:tylerbass:BUF",
         rules=_k_rules(
             ScoringRule(stat="xpm", points=1),
@@ -375,6 +383,8 @@ def test_provisional_persistence_and_presentation_cannot_masquerade_as_canonical
     )
     forecast = build_provisional_k_dst_forecast(
         artifact,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="DST:BUF",
         rules=_dst_rules(
             ScoringRule(stat="sack", points=1),
@@ -384,6 +394,7 @@ def test_provisional_persistence_and_presentation_cannot_masquerade_as_canonical
 
     record = provisional_k_dst_forecast_artifact(forecast=forecast)
     assert record.key.artifact_kind == PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND
+    assert record.key.scope_id == "state-1:DST:BUF"
     assert record.key.artifact_kind != "forecast_runtime"
     assert record.key.artifact_kind != "annual_preseason_projection_snapshot"
     assert decode_provisional_k_dst_forecast(dict(record.payload)) == forecast
@@ -391,6 +402,8 @@ def test_provisional_persistence_and_presentation_cannot_masquerade_as_canonical
     presentation = build_provisional_k_dst_presentation(forecast)
     assert presentation["label"] == "Provisional 2026 ROS K/DST"
     assert presentation["authority_tier"] == "provisional_partial_rule_coverage"
+    assert presentation["league_id"] == "league-1"
+    assert presentation["league_state_id"] == "state-1"
     assert presentation["full_forecast_authority"] is False
     assert presentation["simulation_grade"] is False
     assert presentation["preseason_comparison"]["available"] is False
@@ -416,6 +429,8 @@ def test_builder_hard_rejects_non_2026_even_if_model_is_unsafely_copied() -> Non
     with pytest.raises(ValueError, match="only for 2026"):
         build_provisional_k_dst_forecast(
             unsafe,
+            league_id="league-1",
+            league_state_id="state-1",
             subject_key="K:tylerbass:BUF",
             rules=_k_rules(ScoringRule(stat="xpm", points=1)),
         )
@@ -444,6 +459,8 @@ def test_provisional_path_uses_exact_difference_transform_without_inventing_miss
     )
     forecast = build_provisional_k_dst_forecast(
         artifact,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="K:tylerbass:BUF",
         rules=_k_rules(ScoringRule(stat="fgmiss", points=-1)),
     )
