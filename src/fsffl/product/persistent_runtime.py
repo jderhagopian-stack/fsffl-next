@@ -7,7 +7,11 @@ from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as Futur
 from threading import RLock
 
 from fsffl.persistence import PersistenceStore, persistence_store_from_env
-from fsffl.persistence.session import persist_runtime_snapshot, restore_runtime_snapshot
+from fsffl.persistence.session import (
+    persist_runtime_snapshot,
+    restore_runtime_snapshot,
+    restore_state_bound_intelligence,
+)
 from fsffl.state.history import StateSnapshotStore
 
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
@@ -200,41 +204,6 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
 
     def set_league_state(self, user_id: str, league_state):
         current = super().get(user_id)
-        preserve_restored_last_good = (
-            user_id in self._last_good_guard_users
-            and current.league_state is not None
-            and current.league_state.league.league_id == league_state.league.league_id
-            and all(
-                item is not None
-                for item in (
-                    current.forecast_evidence,
-                    current.simulation_analytics,
-                    current.value_evidence,
-                )
-            )
-        )
-        if preserve_restored_last_good:
-            valid_team_ids = {team.team_id for team in current.league_state.teams}
-            selected = (
-                current.selected_team_id
-                if current.selected_team_id in valid_team_ids
-                else None
-            )
-            context = replace(
-                current,
-                selected_team_id=selected,
-                intelligence_reused=True,
-            )
-            self._contexts[user_id] = context
-            with self._restore_lock:
-                self._restore_attempted.add(user_id)
-            # Keep the served complete bundle durable while retaining the fresher
-            # provider State separately in point-in-time State history.
-            self._checkpoint_async(user_id, context)
-            if current.league_state.state_id != league_state.state_id:
-                self._checkpoint_state_history_async(league_state)
-            return context
-
         previous_league_id = (
             current.league_state.league.league_id
             if current.league_state is not None
@@ -247,6 +216,38 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             self._restore_attempted.add(user_id)
         self._checkpoint_async(user_id, context)
         return context
+
+    def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
+        """Reuse only artifacts bound to the currently selected exact State."""
+
+        current = super().get(user_id)
+        if self._persistence is None or current.league_state is None:
+            return current
+        forecast, simulation, values = restore_state_bound_intelligence(
+            self._persistence,
+            league_state=current.league_state,
+        )
+        if forecast is None:
+            return current
+        restored = super().set_intelligence_bundle(
+            user_id,
+            league_state=current.league_state,
+            forecast_evidence=forecast,
+            simulation_analytics=simulation,
+            value_evidence=values,
+        )
+        reused = replace(restored, intelligence_reused=True)
+        self._contexts[user_id] = reused
+        _logger.info(
+            "FSFFL exact-state intelligence reuse user=%s league=%s state=%s forecast=%s simulation=%s value=%s",
+            user_id,
+            current.league_state.league.league_id,
+            current.league_state.state_id,
+            forecast is not None,
+            simulation is not None,
+            values is not None,
+        )
+        return reused
 
     def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
         context = super().set_forecast_evidence(
