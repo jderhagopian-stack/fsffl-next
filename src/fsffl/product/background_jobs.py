@@ -90,6 +90,7 @@ class IntelligenceJob:
     created_at: datetime
     updated_at: datetime
     error: str | None = None
+    failure_stage: IntelligenceJobPhase | None = None
     phase_timings: tuple[IntelligencePhaseTiming, ...] = ()
     total_elapsed_seconds: float | None = None
 
@@ -171,6 +172,7 @@ class IntelligenceJobCoordinator:
                         "created_at": job.created_at.isoformat(),
                         "updated_at": job.updated_at.isoformat(),
                         "error": job.error,
+                        "failure_stage": job.failure_stage.value if job.failure_stage is not None else None,
                         "phase_timings": [{"phase": t.phase.value, "elapsed_seconds": t.elapsed_seconds} for t in job.phase_timings],
                         "total_elapsed_seconds": job.total_elapsed_seconds,
                     },
@@ -196,6 +198,11 @@ class IntelligenceJobCoordinator:
                 status=IntelligenceJobStatus(str(p["status"])), phase=IntelligenceJobPhase(str(p["phase"])),
                 message=str(p["message"]), created_at=datetime.fromisoformat(str(p["created_at"])),
                 updated_at=datetime.fromisoformat(str(p["updated_at"])), error=p.get("error"),
+                failure_stage=(
+                    IntelligenceJobPhase(str(p["failure_stage"]))
+                    if p.get("failure_stage") is not None
+                    else None
+                ),
                 phase_timings=tuple(IntelligencePhaseTiming(phase=IntelligenceJobPhase(str(t["phase"])), elapsed_seconds=float(t["elapsed_seconds"])) for t in p.get("phase_timings", ())),
                 total_elapsed_seconds=(float(p["total_elapsed_seconds"]) if p.get("total_elapsed_seconds") is not None else None),
             )
@@ -238,6 +245,7 @@ class IntelligenceJobCoordinator:
         phase: IntelligenceJobPhase,
         message: str,
         error: str | None = None,
+        failure_stage: IntelligenceJobPhase | None = None,
     ) -> IntelligenceJob:
         now = datetime.now(UTC)
         now_monotonic = monotonic()
@@ -274,6 +282,7 @@ class IntelligenceJobCoordinator:
                 message=message,
                 updated_at=now,
                 error=error,
+                failure_stage=failure_stage,
                 phase_timings=timings,
                 total_elapsed_seconds=total_elapsed,
             )
@@ -336,12 +345,23 @@ class IntelligenceJobCoordinator:
             self._log_final_timing(interrupted)
             return
         except Exception as exc:
+            current = self.get(job_id)
+            failure_stage = (
+                current.phase
+                if current is not None and current.phase not in {
+                    IntelligenceJobPhase.FAILED,
+                    IntelligenceJobPhase.INTERRUPTED,
+                    IntelligenceJobPhase.COMPLETED,
+                }
+                else None
+            )
             failed = self._update(
                 job_id,
                 status=IntelligenceJobStatus.FAILED,
                 phase=IntelligenceJobPhase.FAILED,
                 message="Intelligence refresh failed.",
                 error=f"{type(exc).__name__}: {exc}",
+                failure_stage=failure_stage,
             )
             self._log_final_timing(failed)
             return
