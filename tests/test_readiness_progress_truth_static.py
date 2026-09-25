@@ -45,8 +45,9 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260925-hodor-lifecycle1" in index
-    assert "/static/product_shell.js?v=20260925-hodor-lifecycle1" in index
+    assert "/static/forecast_refresh.js?v=20260925-state-first1" in index
+    assert "/static/product_shell.js?v=20260925-state-first1" in index
+    assert "/static/home_dashboard.js?v=20260925-state-first1" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current" not in shell
 
