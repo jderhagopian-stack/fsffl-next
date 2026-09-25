@@ -36,7 +36,11 @@ from .trade_center_view import resolve_owned_asset_ref
 from .trade_value_adapter import cardinal_market_profiles
 
 
-DEFAULT_PRELIMINARY_DECISION_BUDGET = 8
+DEFAULT_PRELIMINARY_DECISION_BUDGET = 2
+# Production iPhone/Render benchmark: exact pre-Simulation roster-resilience screening
+# costs roughly 72-125s/path on the free beta instance before the optimization below.
+# The architecture explicitly treats this as tunable product compute policy; two
+# family-first paths keep progressive delivery bounded while preserving authority.
 DEFAULT_FOR_YOU_LIMIT = 4
 _MAX_ALTERNATE_PACKAGES = 2
 
