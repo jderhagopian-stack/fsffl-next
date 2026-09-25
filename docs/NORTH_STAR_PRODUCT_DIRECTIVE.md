@@ -81,3 +81,36 @@ The governed pipeline and authority boundaries remain authoritative:
 `Data → State → Forecast → Value → Decision → Search/Optimization → Analytics/API → Presentation`
 
 Presentation may organize, compress, visualize and explain governed truth. It may not create hidden composite/master scores, acceptance probabilities, Search-created Decision truth, Behavioral contamination of universal Value, arbitrary model multipliers, or presentation-created recommendations.
+
+
+## What-If / Counterfactual Intelligence
+
+What-If is a generalized counterfactual decision surface, not merely a current-roster stress test.
+
+It must support two distinct modes:
+
+### Forward counterfactual
+Start from the current canonical State, change one or more explicit decisions/assumptions, then recompute only the governed downstream consequences. Examples include a trade, player availability, draft selection, waiver/add-drop decision, roster move, or other bounded hypothetical.
+
+### Historical counterfactual
+Start from an authentic point-in-time historical State, replace a real past decision with a specified alternative, and reconstruct what could have followed without leaking later information into the decision point.
+
+Historical counterfactual analysis should preserve and distinguish at least two valid lenses:
+
+1. **Point-in-time probabilistic lens — “What could reasonably have happened from there?”**
+   - use only State, Forecast, Value, Decision evidence, uncertainty and owner/league information that was available at that historical cutoff;
+   - branch the historical State at the decision;
+   - simulate forward from the alternate branch using the governed model appropriate to that evidence horizon;
+   - compare the alternate distribution with the original decision’s point-in-time distribution.
+
+2. **Realized-world replay lens — “Given what actually happened on the field afterward, what would this alternate decision have produced?”**
+   - hold later exogenous NFL outcomes/schedule facts fixed where appropriate;
+   - substitute the alternate ownership/roster/draft decision;
+   - replay downstream fantasy scoring, standings, lineup opportunities and league outcomes;
+   - clearly label this as hindsight replay rather than information that was knowable at the original decision point.
+
+Do not blend these lenses. A decision can have been rational at the time and still have produced a worse realized outcome, or irrational at the time and still have worked out. What-If must preserve that distinction.
+
+The long-term counterfactual engine should be capable of branching from transactions, draft selections, waiver/add-drop decisions, lineup/availability decisions and other historically reconstructable league actions when evidence is sufficient. Multi-step/cascading counterfactuals may be added later, but must retain explicit lineage and avoid pretending unknowable downstream human decisions are deterministic.
+
+The current production What-If implementation (single-player current-availability stress test) is an intentionally narrow first slice and must not be treated as the complete North Star definition.
