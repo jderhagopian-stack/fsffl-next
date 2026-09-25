@@ -6,6 +6,7 @@ from threading import RLock
 from time import monotonic
 from typing import Callable
 
+from .market_discovery_runtime import DEFAULT_PRELIMINARY_DECISION_BUDGET
 from .runtime import UserRuntimeContext
 
 
@@ -74,7 +75,7 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
         runtime: UserRuntimeContext,
         *,
         candidate_limit: int = 80,
-        bilateral_evaluation_limit: int = 1,
+        bilateral_evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET,
     ) -> dict[str, object]:
         nonlocal hits, misses
         key = opportunity_workspace_cache_key(
