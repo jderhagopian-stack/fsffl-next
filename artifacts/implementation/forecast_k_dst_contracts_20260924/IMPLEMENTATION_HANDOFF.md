@@ -3,14 +3,16 @@
 Date: 2026-09-24  
 Workstream: Forecast / Product Implementation  
 Research authority: `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`  
-Implementation PR: #215  
-Code acceptance head: `c57c0423f2fb982b2ece88a0d112542ed5ed1011`
+Implementation PR: #215 — MERGED  
+Code acceptance head: `c57c0423f2fb982b2ece88a0d112542ed5ed1011`  
+Reconciled PR head: `e918429c41310226a8ad73354db1280ecc9636b3`  
+Canonical merge SHA: `407c1bf85e5dc75f92b9906719f82bcd11d97c31`
 
 ## Terminal workstream state
 
 **BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — EMPIRICAL EVIDENCE GATE**
 
-The authorized bounded code work that can be completed without inventing upstream evidence is implemented and regression-clean. Production K/DST Forecast authority cannot advance to the next implementation stage until the retained evidence gates below are satisfied.
+The authorized bounded code work that can be completed without inventing upstream evidence is implemented, regression-clean, reconciled with concurrent Market operating-state changes, and merged to canonical main. Production K/DST Forecast authority cannot advance to the next implementation stage until the retained evidence gates below are satisfied.
 
 ## Accepted implementation scope
 
@@ -49,7 +51,9 @@ On code head `c57c0423f2fb982b2ece88a0d112542ed5ed1011`:
 - PR164 focused corrective regression: **89 passed, 1 warning**;
 - Corrective live provider numerical trace: **PASS via expected active-rule evidence quarantine**;
 - Live Forecast corrective trace: **PASS** (the workflow's persistence-dependent execution remains subject to its existing environment boundary);
-- PR was mergeable at acceptance check.
+- Private-beta Intrinsic live diagnostics: **PASS** on the reconciled head;
+- all five executable PR workflows passed again after reconciliation with current main;
+- PR #215 merged successfully to main.
 
 The live numerical trace's authoritative ensemble still fails closed when the acquired providers do not supply complete evidence for the active `fum_lost` rule. The workflow records that as an expected evidence quarantine; runtime authority is not weakened.
 
@@ -72,6 +76,18 @@ No implementation in PR #215 claims or creates:
 4. **2026 preseason K/DST authority:** no qualifying two-source point-in-time raw package is proven. K/DST preseason comparison must remain unavailable unless such evidence is established.
 
 Because Stage 3 live-provider work is gated by these dependencies, Stage 4 migration/downstream promotion and Stage 5/6 lifecycle completion must not be started speculatively.
+
+## Post-merge evidence-gate check
+
+A bounded recovery/rights check was executed after merge rather than assuming the blocker:
+- dated Razzball 2024 material confirms K/DEF preseason projections existed, but its projection links now resolve to mutable current endpoints rather than an immutable 2024 raw corpus;
+- CBS historical-looking year paths can serve current/week projection content and therefore are not PIT proof;
+- currently published Razzball and CBS terms are non-commercial absent permission, and Sleeper's API documentation requires licensing discussion for commercial use;
+- official Sleeper support documentation confirms points-allowed and team-vs-player special-teams semantics at a high level, but exact weekly truth fixtures remain required for unresolved obscure attribution.
+
+Durable evidence: `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
+
+No qualifying second historical K/DST PIT source was recovered in this check, so the empirical gate remains red.
 
 ## Resume condition
 
