@@ -252,7 +252,10 @@
     if(f.assets==="picks")paths=paths.filter(path=>[...(row(path).send||[]),...(row(path).receive||[])].some(item=>item.asset_kind==="pick"));
     if(f.sort==="closest")paths.sort((a,b)=>(row(a).market_gap_ratio??Infinity)-(row(b).market_gap_ratio??Infinity)||(row(a).search_distance??Infinity)-(row(b).search_distance??Infinity));
     if(f.sort==="need")paths.sort((a,b)=>(row(a).focal_position_strength_index??Infinity)-(row(b).focal_position_strength_index??Infinity));
-    if(f.sort==="authority")paths.sort((a,b)=>({investigate:0,needs:1,match:2}[pathAuthority(a).key]-{investigate:0,needs:1,match:2}[pathAuthority(b).key]));
+    if(f.sort==="authority"){
+      const authorityRank=path=>path?.deep_evaluation_status==="prelim_screened"?({investigate:0,needs:1,match:2}[pathAuthority(path).key]??2):3;
+      paths.sort((a,b)=>authorityRank(a)-authorityRank(b)||((row(a).market_gap_ratio??Infinity)-(row(b).market_gap_ratio??Infinity))||String(a.path_id||"").localeCompare(String(b.path_id||"")));
+    }
     return paths;
   }
   function renderTradeFinder(body,payload){
