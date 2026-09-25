@@ -9,7 +9,7 @@ def test_interactive_opportunity_workspace_bounds_fast_decision_work_and_defers_
     analysis = (ROOT / "src/fsffl/product/trade_analysis_runtime.py").read_text()
 
     runtime = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
-    assert "DEFAULT_PRELIMINARY_DECISION_BUDGET = 8" in runtime
+    assert "DEFAULT_PRELIMINARY_DECISION_BUDGET = 2" in runtime
     assert "bilateral_evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET" in workspace
     assert "bounded_family_first_pre_simulation_decision_screen" in workspace
     assert "Representative Candidate Paths receive the existing pre-Simulation" in workspace
