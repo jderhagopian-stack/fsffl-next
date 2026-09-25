@@ -152,6 +152,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     and snapshot.value_evidence is not None
                 ):
                     self._last_good_guard_users.add(user_id)
+                    restored_context = super().get(user_id)
+                    self._checkpoint_async(user_id, restored_context)
+                    _logger.info(
+                        "FSFFL restored last-good recheckpoint scheduled user=%s league=%s state=%s",
+                        user_id,
+                        snapshot.league_state.league.league_id,
+                        snapshot.league_state.state_id,
+                    )
                 else:
                     self._last_good_guard_users.discard(user_id)
                 # Existing durable runtime rows may predate the point-in-time history
