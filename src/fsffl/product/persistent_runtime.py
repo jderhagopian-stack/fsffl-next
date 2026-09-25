@@ -195,6 +195,26 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self._checkpoint_async(user_id, context)
         return context
 
+    def stage_league_state(self, user_id: str, league_state):
+        active_before = super().get(user_id)
+        context = super().stage_league_state(user_id, league_state)
+        with self._restore_lock:
+            self._restore_attempted.add(user_id)
+
+        # If a complete same-league bundle remains active, retain the newly fetched
+        # State only in point-in-time history until a complete intelligence bundle
+        # for that State is promoted. Do not let a partial State checkpoint displace
+        # restart authority.
+        if (
+            active_before.league_state is not None
+            and context.league_state is not None
+            and context.league_state.state_id != league_state.state_id
+        ):
+            self._checkpoint_state_history_async(league_state)
+        else:
+            self._checkpoint_async(user_id, context)
+        return context
+
     def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
         context = super().set_forecast_evidence(
             user_id,
