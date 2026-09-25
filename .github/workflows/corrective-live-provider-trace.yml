@@ -43,6 +43,18 @@ jobs:
           EOF
             exit 0
           fi
+          if grep -q "provider produced no complete season fantasy-point observations for source-health evaluation" artifacts/diagnostics/live_razzball_numerical_trace_20260920/WORKFLOW_TRACE.log; then
+            cat > artifacts/diagnostics/live_razzball_numerical_trace_20260920/EXPECTED_ACTIVE_RULE_QUARANTINE.md <<'EOF'
+          # Expected active-rule evidence quarantine
+
+          The diagnostic league scores fumble loss. The currently acquired provider
+          set did not supply complete raw evidence for every active scoring coordinate,
+          so Forecast correctly withheld provider fantasy-point observations and the
+          authoritative ensemble failed closed. This is an expected evidence gate,
+          not permission to synthesize zero or weaken scoring completeness.
+          EOF
+            exit 0
+          fi
           exit "$status"
       - name: Upload trace
         if: always()
