@@ -19,7 +19,12 @@ from fsffl.state.history import StateSnapshotStore
 from fsffl.state.matchups import completed_matchups
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
-from fsffl.value.models import AssetValueProfile
+from fsffl.value.models import (
+    AssetValueProfile,
+    MarketPriceEstimate,
+    ValueAssetKind,
+    ValueDistribution,
+)
 
 from .foreground_pressure import foreground_pressure
 from .background_jobs import (
@@ -124,6 +129,88 @@ def require_beta_user(credentials: HTTPBasicCredentials | None = Depends(_securi
     return expected_username
 
 
+def _runtime_capability_readiness(runtime) -> dict[str, object]:
+    """Describe governed capability availability independently of job lifecycle."""
+
+    evidence = runtime.forecast_evidence
+    runtime_result = getattr(evidence, "runtime_result", None) if evidence is not None else None
+    blockers = tuple(getattr(runtime_result, "simulation_authority_blockers", ()) or ())
+    partial_rows = tuple(getattr(runtime_result, "partial_fantasy_point_forecasts", ()) or ())
+    authoritative_rows = tuple(getattr(evidence, "league_scored_forecasts", ()) or ()) if evidence is not None else ()
+    raw_rows = tuple(getattr(evidence, "raw_forecasts", ()) or ()) if evidence is not None else ()
+
+    if evidence is None or not (raw_rows or authoritative_rows or partial_rows):
+        forecast_status = "unavailable"
+        forecast_reason = "Governed Forecast evidence is not loaded."
+    elif blockers or partial_rows or not authoritative_rows:
+        forecast_status = "partial_provisional"
+        forecast_reason = (
+            "Shared raw Forecast evidence is populated, but complete league-scored "
+            "Forecast authority is unavailable"
+            + (": " + ", ".join(blockers) if blockers else "")
+            + "."
+        )
+    else:
+        forecast_status = "full"
+        forecast_reason = "Governed league-scored Forecast authority is available."
+
+    if runtime.simulation_analytics is not None:
+        simulation_status = "full"
+        simulation_reason = "Governed current Simulation is available."
+    else:
+        simulation_status = "unavailable"
+        simulation_reason = (
+            "Simulation is unavailable under current Forecast authority"
+            + (": " + ", ".join(blockers) if blockers else "")
+            + "."
+        )
+
+    value_evidence = runtime.value_evidence
+    value_available = bool(
+        value_evidence is not None
+        and (
+            getattr(value_evidence, "estimates", ())
+            or getattr(value_evidence, "fsffl_cardinal_values", ())
+            or getattr(value_evidence, "pick_variant_market_values", ())
+        )
+    )
+    value_status = "full" if value_available else "unavailable"
+    value_reason = (
+        "Governed current Broad Market / Cardinal Value evidence is available."
+        if value_available
+        else "Governed current Value evidence is unavailable."
+    )
+
+    statuses = (forecast_status, simulation_status, value_status)
+    overall_status = (
+        "full"
+        if all(item == "full" for item in statuses)
+        else "partial"
+        if any(item != "unavailable" for item in statuses)
+        else "unavailable"
+    )
+    return {
+        "overall_status": overall_status,
+        "forecast": {
+            "status": forecast_status,
+            "reason": forecast_reason,
+            "raw_observation_count": len(raw_rows),
+            "authoritative_scored_count": len(authoritative_rows),
+            "partial_scored_count": len(partial_rows),
+            "simulation_blockers": list(blockers),
+        },
+        "simulation": {"status": simulation_status, "reason": simulation_reason},
+        "current_value": {"status": value_status, "reason": value_reason},
+        "intrinsic": {
+            "status": "separate_surface",
+            "reason": (
+                "FSFFL Intrinsic has independent preserved-preseason Forecast authority "
+                "and readiness; it is not inferred from current Value attachment."
+            ),
+        },
+    }
+
+
 def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> dict[str, object]:
     runtime = store.get(user_id)
     league_state = runtime.league_state
@@ -174,6 +261,7 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "value_coverage": value_evidence.coverage if value_evidence is not None else None,
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
+        "capability_readiness": _runtime_capability_readiness(runtime),
         "product_version": "next8-product-v1",
     }
 
@@ -237,7 +325,7 @@ def _team_market_value_payload(value_evidence, team_id: str) -> dict[str, object
 
 
 def _attach_live_value_profiles(view, value_evidence):
-    if value_evidence is None or not value_evidence.estimates:
+    if value_evidence is None:
         return view
     profiles = {
         estimate.asset_id: AssetValueProfile(
@@ -247,6 +335,23 @@ def _attach_live_value_profiles(view, value_evidence):
         )
         for estimate in value_evidence.estimates
     }
+    for score in getattr(value_evidence, "fsffl_cardinal_values", ()):
+        if score.asset_kind != ValueAssetKind.PICK:
+            continue
+        profiles[score.asset_id] = AssetValueProfile(
+            asset_id=score.asset_id,
+            asset_kind=ValueAssetKind.PICK,
+            market_price=MarketPriceEstimate(
+                asset_id=score.asset_id,
+                asset_kind=ValueAssetKind.PICK,
+                distribution=ValueDistribution(mean=score.score),
+                scale=score.scale,
+                as_of=score.as_of,
+                market_context_id=score.market_context_id,
+                model_version=score.model_version,
+                evidence_sources=(score.evidence_source_id,),
+            ),
+        )
     players = tuple(
         row.model_copy(update={"value_profile": profiles.get(row.player_id)})
         for row in view.players
@@ -629,6 +734,7 @@ def create_app(
             if blocked_stage is not None and current_job is not None
             else None
         )
+        payload["capability_readiness"] = _runtime_capability_readiness(runtime)
         payload["job"] = _job_payload(current_job)
         return payload
 
