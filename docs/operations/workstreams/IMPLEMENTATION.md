@@ -1,14 +1,14 @@
 # FSFFL NEXT — Forecast / Product Implementation
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 ## State
-**AUTHORIZED / ACTIVE — PR #215 under acceptance validation.**
+**BLOCKED — EMPIRICAL/SOURCE EVIDENCE GATE.**
 
 Management accepted the completed K/DST + late-connect Research contract and authorized its bounded implementation. The authoritative implementation source is:
 - `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
 
-Active implementation PR: **#215** (`implementation/forecast-k-dst-contracts-20260924`).
+Implementation PR **#215** is merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`.
 
 ## Implemented in the active PR
 ### Stage 1 — contracts and scoring
@@ -43,11 +43,11 @@ The PR does **not** create or claim:
 - any weakening of the existing two-independent-source requirement.
 
 ## Acceptance validation
-The first PR run correctly exposed historical synthetic fixtures that had relied on an implicit missing-`fum_lost` zero. Those fixtures are being repaired by supplying explicit synthetic zero observations only where the fixture itself owns that evidence. Runtime/provider evidence remains fail-closed.
+The first PR run correctly exposed historical synthetic fixtures that had relied on an implicit missing-`fum_lost` zero. Those fixtures were repaired by supplying explicit synthetic zero observations only where the fixture itself owns that evidence. Runtime/provider evidence remains fail-closed.
 
-The corrective live-provider trace is also required to treat missing active-rule evidence as an expected quarantine; this changes the diagnostic expectation, not the Forecast runtime gate.
+After reconciliation with concurrent Market operating-state changes, the final PR #215 head passed full CI, focused corrective regression, private-beta Intrinsic diagnostics, live Forecast corrective trace, and the governed live-provider quarantine trace, then merged to main.
 
-PR #215 must remain unmerged until required CI/regression checks are green.
+Post-merge Stage 2 evidence recovery was also attempted. The result is persisted in `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`: no qualifying second historical independent K/DST PIT corpus was recovered, and candidate production sources remain rights/licensing gated.
 
 ## Remaining evidence gates after Stage 1/2 code acceptance
 Implementation cannot advance to production K/DST authority until the Research handoff's empirical gates are satisfied:
@@ -59,4 +59,6 @@ Implementation cannot advance to production K/DST authority until the Research h
 These are evidence dependencies. They may not be bypassed with offense coefficients, one-source estimates, synthetic production values, average-based D/ST bucket reconstruction, or backdated current data.
 
 ## Next authorized action
-Finish PR #215 acceptance validation and merge only if green. After merge, persist the implementation checkpoint and stop at the empirical evidence gate unless new qualifying evidence is already present.
+No further production-authority implementation is permitted from the presently available evidence. Resume Stage 2/3 only when qualifying evidence clears at least one blocking gate: a second independent historical K/DST PIT corpus, production/licensed source access satisfying content-health requirements, exact remaining Sleeper scoring truth fixtures, or qualifying retained preseason K/DST evidence.
+
+Until then: **BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — EMPIRICAL/SOURCE EVIDENCE GATE**.
