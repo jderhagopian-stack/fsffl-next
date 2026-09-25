@@ -176,3 +176,89 @@ def test_cross_league_switch_invalidates_old_refresh_generation() -> None:
             refreshed_league_state=refreshed_old_state,
         )
     assert store.get("u").league_state == new_state
+
+
+
+def test_changed_same_league_state_is_staged_behind_complete_bundle() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    last_good = _state(t0)
+    provider_state = _state(t0 + timedelta(minutes=5))
+    old_forecast = _evidence()
+    old_simulation = _simulation_for(last_good)
+    old_value = _value_for(last_good)
+    store.set_league_state("u", last_good)
+    store.set_intelligence_bundle(
+        "u",
+        league_state=last_good,
+        forecast_evidence=old_forecast,
+        simulation_analytics=old_simulation,  # type: ignore[arg-type]
+        value_evidence=old_value,  # type: ignore[arg-type]
+    )
+
+    active = store.stage_league_state("u", provider_state)
+
+    assert active.league_state == last_good
+    assert active.forecast_evidence is old_forecast
+    assert active.simulation_analytics is old_simulation
+    assert active.value_evidence is old_value
+    assert store.intelligence_input_state("u") == provider_state
+
+
+def test_failed_staged_enrichment_discards_partial_model_work_but_keeps_retry_state() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    last_good = _state(t0)
+    provider_state = _state(t0 + timedelta(minutes=5))
+    old_forecast = _evidence()
+    old_simulation = _simulation_for(last_good)
+    old_value = _value_for(last_good)
+    store.set_league_state("u", last_good)
+    store.set_intelligence_bundle(
+        "u",
+        league_state=last_good,
+        forecast_evidence=old_forecast,
+        simulation_analytics=old_simulation,  # type: ignore[arg-type]
+        value_evidence=old_value,  # type: ignore[arg-type]
+    )
+    store.stage_league_state("u", provider_state)
+    store.set_forecast_evidence(
+        "u",
+        _evidence(),
+        refreshed_league_state=provider_state,
+    )
+
+    store.discard_pending_intelligence("u")
+
+    retained = store.get("u")
+    assert retained.league_state == last_good
+    assert retained.simulation_analytics is old_simulation
+    assert retained.value_evidence is old_value
+    assert store.intelligence_input_state("u") == provider_state
+
+
+def test_successful_staged_bundle_promotion_clears_staged_state() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    last_good = _state(t0)
+    provider_state = _state(t0 + timedelta(minutes=5))
+    store.set_league_state("u", last_good)
+    store.set_intelligence_bundle(
+        "u",
+        league_state=last_good,
+        forecast_evidence=_evidence(),
+        simulation_analytics=_simulation_for(last_good),  # type: ignore[arg-type]
+        value_evidence=_value_for(last_good),  # type: ignore[arg-type]
+    )
+    store.stage_league_state("u", provider_state)
+
+    promoted = store.set_intelligence_bundle(
+        "u",
+        league_state=provider_state,
+        forecast_evidence=_evidence(),
+        simulation_analytics=_simulation_for(provider_state),  # type: ignore[arg-type]
+        value_evidence=_value_for(provider_state),  # type: ignore[arg-type]
+    )
+
+    assert promoted.league_state == provider_state
+    assert store.intelligence_input_state("u") == provider_state
