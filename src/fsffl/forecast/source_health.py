@@ -6,14 +6,46 @@ from dataclasses import dataclass
 from statistics import median
 
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
-from fsffl.state.models import Position
+from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot, ScoringRule
 
+from .league_scoring import derive_league_fantasy_point_forecasts
 from .models import ForecastHorizon, ForecastMetric, ForecastObservation
 from .season_uncertainty import SEASON_FANTASY_POINT_ERROR_CALIBRATION
 
 
 CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION = (
-    "current-projection-health-v3:revision-agnostic-scale-integrity"
+    "current-projection-health-v4:league-agnostic-offense-scale-integrity"
+)
+LEGACY_COMPATIBLE_PROJECTION_HEALTH_CONTRACT_VERSIONS = frozenset(
+    {
+        "current-projection-health-v3:revision-agnostic-scale-integrity",
+        CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+    }
+)
+
+# Source-health scoring is intentionally league-agnostic. It exists only to compare
+# provider dataset scale across the same ordinary offensive coordinates; target
+# league K/DST, bonus, or custom scoring must never decide whether canonical raw
+# QB/RB/WR/TE evidence is healthy enough to enter the shared ensemble.
+_SOURCE_HEALTH_RULES = LeagueRules(
+    team_count=2,
+    roster_size=1,
+    lineup=(
+        LineupRequirement(slot=RosterSlot.QB, count=1),
+        LineupRequirement(slot=RosterSlot.RB, count=1),
+        LineupRequirement(slot=RosterSlot.WR, count=1),
+        LineupRequirement(slot=RosterSlot.TE, count=1),
+    ),
+    scoring=(
+        ScoringRule(stat="pass_yd", points=0.04),
+        ScoringRule(stat="pass_td", points=4.0),
+        ScoringRule(stat="pass_int", points=-2.0),
+        ScoringRule(stat="rush_yd", points=0.1),
+        ScoringRule(stat="rush_td", points=6.0),
+        ScoringRule(stat="rec", points=0.5),
+        ScoringRule(stat="rec_yd", points=0.1),
+        ScoringRule(stat="rec_td", points=6.0),
+    ),
 )
 
 # The generalized scale threshold is not fitted to any current player or provider.
@@ -29,6 +61,21 @@ REVISION_AGNOSTIC_SCALE_RATIO_THRESHOLD = 1.0 + max(
 REVISION_AGNOSTIC_MIN_COMPARABLE_PLAYERS = 16
 REVISION_AGNOSTIC_MIN_PLAYERS_PER_POSITION = 4
 REVISION_AGNOSTIC_MIN_POSITIONS = 3
+
+
+def build_source_health_fantasy_point_forecasts(
+    observations: tuple[ForecastObservation, ...],
+    *,
+    source: str,
+) -> tuple[ForecastObservation, ...]:
+    """Score a fixed portable offensive fingerprint for provider scale health only."""
+
+    return derive_league_fantasy_point_forecasts(
+        observations,
+        rules=_SOURCE_HEALTH_RULES,
+        source=source,
+        model_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+    )
 
 
 @dataclass(frozen=True)
