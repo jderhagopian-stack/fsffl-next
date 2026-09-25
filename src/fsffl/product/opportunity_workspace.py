@@ -525,6 +525,9 @@ def build_opportunity_workspace(
         )
 
     candidates = build_roster_aware_trade_candidates(runtime, browser, cardinal)
+    search_generation_diagnostics = dict(
+        getattr(candidates, "diagnostics", {}) or {}
+    )
     total_candidate_count = len(candidates)
     returned = candidates[: max(candidate_limit, 0)]
 
@@ -532,6 +535,7 @@ def build_opportunity_workspace(
         runtime,
         returned,
         evaluation_limit=bilateral_evaluation_limit,
+        search_generation_diagnostics=search_generation_diagnostics,
     )
     evaluated_rows = {}
     for path in market_discovery.get("candidate_paths") or []:
