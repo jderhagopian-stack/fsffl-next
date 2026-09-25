@@ -207,6 +207,7 @@ def test_restart_reconciles_durable_running_job_as_interrupted() -> None:
     assert recovered is not None
     assert recovered.status == IntelligenceJobStatus.INTERRUPTED
     assert recovered.phase == IntelligenceJobPhase.INTERRUPTED
+    assert recovered.failure_phase == IntelligenceJobPhase.BUILDING_FORECASTS
     assert recovered.error == "server_restart"
     release.set()
 
@@ -266,3 +267,49 @@ def test_failure_phase_survives_coordinator_restart() -> None:
     assert recovered.status == IntelligenceJobStatus.FAILED
     assert recovered.phase == IntelligenceJobPhase.FAILED
     assert recovered.failure_phase == IntelligenceJobPhase.RUNNING_SIMULATION
+
+
+def test_legacy_failed_lifecycle_infers_failure_phase_from_timings() -> None:
+    persistence = _LifecyclePersistence()
+    from datetime import UTC, datetime
+    from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
+
+    now = datetime.now(UTC)
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind="intelligence_job_lifecycle",
+                scope_kind="user",
+                scope_id="u-legacy",
+                input_fingerprint="legacy-failed",
+                model_version="intelligence-job-lifecycle-v1",
+            ),
+            payload={
+                "job_id": "legacy-failed",
+                "user_id": "u-legacy",
+                "league_state_id": "state-legacy",
+                "status": "failed",
+                "phase": "failed",
+                "message": "Intelligence refresh failed.",
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat(),
+                "error": "LiveForecastSourceHealthFailure: no qualifying sources",
+                "phase_timings": [
+                    {"phase": "building_forecasts", "elapsed_seconds": 0.5}
+                ],
+                "total_elapsed_seconds": 0.5,
+            },
+            computed_at=now,
+        )
+    )
+
+    coordinator = IntelligenceJobCoordinator(
+        max_workers=1,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+    recovered = coordinator.current("u-legacy")
+
+    assert recovered is not None
+    assert recovered.status == IntelligenceJobStatus.FAILED
+    assert recovered.phase == IntelligenceJobPhase.FAILED
+    assert recovered.failure_phase == IntelligenceJobPhase.BUILDING_FORECASTS
