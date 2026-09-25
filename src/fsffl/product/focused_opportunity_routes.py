@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any, Mapping
 
@@ -41,6 +42,96 @@ def _posture(value: str) -> OwnerStrategicPosture:
         return OwnerStrategicPosture(value)
     except ValueError:
         return OwnerStrategicPosture.DEFAULT_CALCULATED
+
+
+_logger = logging.getLogger("uvicorn.error")
+
+
+def _focus_outcome(
+    focused: list[dict[str, object]],
+    market_discovery: dict[str, object],
+) -> dict[str, object]:
+    """Explain whether a focused request found paths or where cheap exploration ended."""
+
+    search_diag = dict(getattr(focused, "diagnostics", {}) or {})
+    discovery_diag = dict(market_discovery.get("diagnostics") or {})
+    path_count = len(market_discovery.get("candidate_paths") or [])
+    opportunity_count = len(market_discovery.get("opportunities") or [])
+    candidates = len(focused)
+    targets_considered = int(search_diag.get("targets_considered", 0) or 0)
+    targets_admitted = int(search_diag.get("targets_admitted_pre_package", 0) or 0)
+    counterparties_considered = int(search_diag.get("counterparties_considered", 0) or 0)
+    counterparties_admitted = int(
+        search_diag.get("counterparties_admitted_pre_package", 0) or 0
+    )
+    packages = int(search_diag.get("raw_packages_generated_pre_dedup", 0) or 0)
+    families = int(discovery_diag.get("path_families_created", 0) or 0)
+    prelim_runs = int(discovery_diag.get("preliminary_decision_runs", 0) or 0)
+
+    if candidates > 0 and path_count > 0:
+        code = "focused_results_ready"
+        message = (
+            f"Search explored {targets_considered} target assets across "
+            f"{counterparties_considered} counterparties, admitted {targets_admitted} "
+            f"targets before package generation, and returned {path_count} candidate "
+            f"path{'s' if path_count != 1 else ''}."
+        )
+    elif counterparties_considered and counterparties_admitted == 0:
+        code = "no_counterparty_admitted"
+        message = (
+            f"Search examined {counterparties_considered} counterparties, but none "
+            "satisfied the submitted owner/roster/strategic constraints before package generation."
+        )
+    elif targets_considered and targets_admitted == 0:
+        code = "no_target_admitted"
+        message = (
+            f"Search examined {targets_considered} target assets across "
+            f"{counterparties_admitted or counterparties_considered} relevant counterparties, "
+            "but none satisfied the submitted intent and strategic lens before package generation."
+        )
+    elif packages == 0:
+        code = "no_package_neighborhood"
+        message = (
+            "Relevant assets were explored, but no governed package neighborhood could be "
+            "constructed from the admitted holdings and current Value coverage."
+        )
+    elif families == 0:
+        code = "no_path_family_after_economic_screen"
+        message = (
+            f"Search generated {packages} package rows, but none formed a surviving "
+            "economically usable candidate-path family."
+        )
+    else:
+        code = "no_final_path_after_screening"
+        message = (
+            f"Search formed {families} path families and spent {prelim_runs} bounded "
+            "preliminary Decision screens, but no path remained for this submitted view."
+        )
+
+    return {
+        "status": "results" if path_count else "zero",
+        "reason_code": code,
+        "message": message,
+        "candidate_count": candidates,
+        "candidate_path_count": path_count,
+        "opportunity_count": opportunity_count,
+        "counterparties_considered": counterparties_considered,
+        "counterparties_admitted_pre_package": counterparties_admitted,
+        "targets_considered": targets_considered,
+        "targets_admitted_pre_package": targets_admitted,
+        "package_rows_generated_pre_dedup": packages,
+        "path_families_created": families,
+        "preliminary_decision_runs": prelim_runs,
+        "preliminary_decision_budget": int(
+            discovery_diag.get("preliminary_decision_budget", 0) or 0
+        ),
+        "changed_state_simulation_calls": int(
+            discovery_diag.get("changed_state_simulation_calls_during_discovery", 0) or 0
+        ),
+        "admission_rejection_reasons": dict(
+            search_diag.get("admission_rejection_reasons") or {}
+        ),
+    }
 
 
 def install_focused_opportunity_routes(
@@ -125,6 +216,23 @@ def install_focused_opportunity_routes(
             ),
             evaluator=focused_evaluator,
         )
+        focus_outcome = _focus_outcome(focused, focused_market_discovery)
+        posture_meta = posture_payload(runtime, requested)
+        _logger.info(
+            "FSFFL Market focused outcome posture=%s effective=%s intent=%s value=%s "
+            "status=%s reason=%s candidates=%d paths=%d prelim_runs=%d simulation_calls=%d",
+            requested.value,
+            posture_meta.get("effective_posture"),
+            intent,
+            value,
+            focus_outcome["status"],
+            focus_outcome["reason_code"],
+            focus_outcome["candidate_count"],
+            focus_outcome["candidate_path_count"],
+            focus_outcome["preliminary_decision_runs"],
+            focus_outcome["changed_state_simulation_calls"],
+        )
+
         enriched = {
             _identity(path.get("representative_package") or {}):
                 path.get("representative_package") or {}
@@ -148,15 +256,17 @@ def install_focused_opportunity_routes(
                 "active_posture": requested.value,
                 "focus": {
                     "posture": requested.value,
+                    "effective_posture": posture_meta.get("effective_posture"),
                     "intent": intent,
                     "value": value,
                     "server_owned": True,
                     "applied_before_candidate_limit": True,
                 },
+                "focus_outcome": focus_outcome,
             }
         )
         payload = dict(base)
-        payload["search_posture"] = posture_payload(runtime, requested)
+        payload["search_posture"] = posture_meta
         payload["trade_discovery"] = discovery
         payload["market_discovery"] = focused_market_discovery
         payload["message"] = "Market Focus applied to the server-owned governed opportunity search."
