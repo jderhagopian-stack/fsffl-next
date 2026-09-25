@@ -16,6 +16,12 @@ from .contracts import (
     canonical_fingerprint,
     utc_now,
 )
+from .late_start_projection_snapshot import (
+    LATE_START_CURRENT_PROJECTION_SNAPSHOT_ARTIFACT_KIND,
+    decode_late_start_current_projection_snapshot,
+    encode_late_start_current_projection_snapshot,
+    late_start_current_projection_snapshot_artifact,
+)
 from .postgres import PostgresPersistenceStore, persistence_store_from_env
 from .projection_history import (
     PostgresProjectionHistoryStore,
@@ -24,6 +30,10 @@ from .projection_history import (
 from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
 
 __all__ = [
+    "late_start_current_projection_snapshot_artifact",
+    "encode_late_start_current_projection_snapshot",
+    "decode_late_start_current_projection_snapshot",
+    "LATE_START_CURRENT_PROJECTION_SNAPSHOT_ARTIFACT_KIND",
     "ArtifactKey",
     "LeagueSnapshotRecord",
     "PersistenceStore",
