@@ -6,6 +6,7 @@ from collections.abc import Callable, Iterable
 from time import monotonic
 from typing import Any
 
+from fsffl.forecast import attach_provisional_position_floor_forecasts
 from fsffl.forecast.models import ForecastHorizon
 from fsffl.opportunity import (
     AttentionStatus,
@@ -603,6 +604,12 @@ def evaluate_candidate_path(
         forecast_evidence.raw_forecasts
         + forecast_evidence.league_scored_forecasts
     )
+    effective_forecasts = attach_provisional_position_floor_forecasts(
+        league_state,
+        forecasts,
+        as_of=league_state.as_of,
+        horizon=ForecastHorizon.SEASON,
+    )
     proposal = _proposal_from_row(runtime, row, prefix="market-prelim")
     scenario = apply_bilateral_trade(league_state, proposal)
     state_validated = monotonic()
@@ -624,7 +631,7 @@ def evaluate_candidate_path(
             return baseline
         return optimize_team_lineup(
             state,
-            forecasts,
+            effective_forecasts,
             team_id=team_id,
             as_of=state.as_of,
             horizon=ForecastHorizon.SEASON,
