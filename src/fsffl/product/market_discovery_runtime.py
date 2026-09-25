@@ -5,6 +5,7 @@ from collections.abc import Callable, Iterable
 from time import monotonic
 from typing import Any
 
+from fsffl.forecast.models import ForecastHorizon
 from fsffl.opportunity import (
     AttentionStatus,
     BilateralPlausibility,
@@ -18,20 +19,26 @@ from fsffl.opportunity import (
     canonical_package_family_key,
     canonical_path_id,
 )
+from fsffl.team_utility import compare_position_strengths, optimize_team_lineup
 from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.trade_decision import (
+    apply_bilateral_trade,
     assess_package_economics,
+    assess_preliminary_bilateral_screen,
+    bind_owner_behavior_evidence,
     calculate_bilateral_economic_net,
     live_bounded_materiality_policy,
     live_bounded_package_premium_prior,
     summarize_bilateral_trade_economics,
     summarize_package_concentration,
+    resolve_mandatory_roster_cuts,
 )
+
+from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
 
 from .behavioral_runtime import cached_behavior_profile_for_team
 from .opportunity_posture import calculated_competitive_state
 from .runtime import UserRuntimeContext
-from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import resolve_owned_asset_ref
 from .trade_value_adapter import cardinal_market_profiles
@@ -569,8 +576,16 @@ def evaluate_candidate_path(
     runtime: UserRuntimeContext,
     row: dict[str, object],
 ) -> dict[str, object]:
-    """Attach governed pre-Simulation Decision evidence to one representative package."""
+    """Attach the bounded cheap Decision-owned pre-Simulation bilateral screen.
 
+    Market discovery deliberately does not invoke the full Trade Center roster
+    consequence analysis here. It consumes already-governed baseline lineups,
+    computes only the changed-roster lineups needed for replacement effects and
+    mandatory-cut legality, and preserves exact Simulation for user-selected deep
+    investigation.
+    """
+
+    started = monotonic()
     league_state = runtime.league_state
     focal_team_id = runtime.selected_team_id
     if league_state is None or focal_team_id is None:
@@ -579,64 +594,208 @@ def evaluate_candidate_path(
     counterparty_team_id = str(row["counterparty_team_id"])
     if not (row.get("send") or []) or not (row.get("receive") or []):
         return row
-
+    forecast_evidence = runtime.forecast_evidence
+    if forecast_evidence is None:
+        raise ValueError("preliminary bilateral screen requires current Forecast evidence")
+    forecasts = (
+        forecast_evidence.raw_forecasts
+        + forecast_evidence.league_scored_forecasts
+    )
     proposal = _proposal_from_row(runtime, row, prefix="market-prelim")
+    scenario = apply_bilateral_trade(league_state, proposal)
+    state_validated = monotonic()
+
+    simulation = runtime.simulation_analytics
+    baseline_by_team = {
+        view.team_id: view.optimized_lineup
+        for view in (simulation.team_views if simulation is not None else ())
+        if view.optimized_lineup is not None
+    }
+
+    def lineup(state, team_id):
+        baseline = (
+            baseline_by_team.get(team_id)
+            if state.state_id == league_state.state_id
+            else None
+        )
+        if baseline is not None:
+            return baseline
+        return optimize_team_lineup(
+            state,
+            forecasts,
+            team_id=team_id,
+            as_of=state.as_of,
+            horizon=ForecastHorizon.SEASON,
+            allow_unfilled_slots=True,
+            model_version="market-preliminary-screen-lineup-v1",
+        )
+
+    after_trade_lineups = {
+        team_id: lineup(scenario.after, team_id)
+        for team_id in (focal_team_id, counterparty_team_id)
+    }
+    protected = {
+        team_id: frozenset(item.player_id for item in current.assignments)
+        for team_id, current in after_trade_lineups.items()
+    }
+    profiles = cardinal_market_profiles(runtime.value_evidence)
+    market_values = {
+        asset_id: profile.market_price.distribution.mean
+        for asset_id, profile in profiles.items()
+        if profile.market_price is not None
+    }
+    roster_resolution = resolve_mandatory_roster_cuts(
+        scenario.after,
+        protected_player_ids_by_team=protected,
+        market_values=market_values,
+    )
+    legal_after = roster_resolution.league_state
+    trade_team_resolutions = tuple(
+        item
+        for item in roster_resolution.resolutions
+        if item.team_id in {focal_team_id, counterparty_team_id}
+    )
+    has_cuts = any(item.required_cut_count > 0 for item in trade_team_resolutions)
+    final_lineups = (
+        {
+            team_id: lineup(legal_after, team_id)
+            for team_id in (focal_team_id, counterparty_team_id)
+        }
+        if has_cuts
+        else after_trade_lineups
+    )
+    lineup_finished = monotonic()
+
+    comparisons = {
+        team_id: compare_position_strengths(
+            lineup(league_state, team_id),
+            final_lineups[team_id],
+            model_version="market-preliminary-position-strength-v1",
+        )
+        for team_id in (focal_team_id, counterparty_team_id)
+    }
+
+    economics = summarize_bilateral_trade_economics(
+        proposal,
+        profiles,
+        model_version="market-preliminary-trade-economics-v1",
+    )
+    economic_net = calculate_bilateral_economic_net(
+        economics,
+        model_version="market-preliminary-economic-net-v1",
+    )
+    adjusted_market = adjust_bilateral_market_net_for_mandatory_cuts(
+        economic_net,
+        trade_team_resolutions,
+    )
+    screen = assess_preliminary_bilateral_screen(
+        proposal,
+        focal_team_id=focal_team_id,
+        roster_adjusted_market_net=adjusted_market,
+        position_strength_comparisons=comparisons,
+    )
+    decision_finished = monotonic()
+
     profile = cached_behavior_profile_for_team(
         league_state,
         counterparty_team_id,
     )
-    analysis = build_private_beta_trade_analysis(
-        runtime,
-        proposal,
-        focal_team_id=focal_team_id,
-        counterparty_behavior_profile=profile,
+    behavioral = (
+        bind_owner_behavior_evidence(
+            proposal,
+            accepting_team_id=counterparty_team_id,
+            profile=profile,
+        )
+        if profile is not None
+        else None
     )
-
-    decision = analysis.get("decision") or {}
-    side_a = decision.get("side_a") or {}
-    side_b = decision.get("side_b") or {}
-    focal_side = side_a if side_a.get("team_id") == focal_team_id else side_b
-    counterparty_side = side_a if side_a.get("team_id") == counterparty_team_id else side_b
-
-    evaluation = analysis.get("evaluation") or {}
-    eval_a = evaluation.get("side_a") or {}
-    eval_b = evaluation.get("side_b") or {}
-    focal_eval = eval_a if eval_a.get("team_id") == focal_team_id else eval_b
-    counterparty_eval = eval_a if eval_a.get("team_id") == counterparty_team_id else eval_b
-    feasibility = analysis.get("negotiation_feasibility") or {}
+    feasibility_shape = {
+        "bilateral_supported": "mutual_gain_candidate",
+        "counterparty_dominated": "counterparty_dominated",
+        "incomplete": "incomplete",
+    }.get(screen.shape.value, "mixed")
+    cut_cost_complete = all(
+        item.required_cut_count == 0 or item.cut_market_value_total is not None
+        for item in trade_team_resolutions
+    )
+    completed = monotonic()
 
     return {
         **row,
-        "bilateral_decision_evaluated": bool(decision),
-        "decision_shape": decision.get("shape"),
-        "focal_decision_shape": focal_side.get("shape"),
-        "counterparty_decision_shape": counterparty_side.get("shape"),
-        "negotiation_feasibility_shape": feasibility.get("shape"),
-        "negotiation_feasibility_evaluated": bool(feasibility),
+        "preliminary_decision_screen_evaluated": True,
+        "bilateral_decision_evaluated": True,
+        "decision_shape": screen.shape.value,
+        "focal_decision_shape": screen.focal.shape.value,
+        "counterparty_decision_shape": screen.counterparty.shape.value,
+        "negotiation_feasibility_shape": feasibility_shape,
+        "negotiation_feasibility_evaluated": True,
         "acceptance_probability": None,
-        "focal_roster_delta": (focal_eval.get("delta") or {}).get("resilience"),
-        "counterparty_roster_delta": (counterparty_eval.get("delta") or {}).get("resilience"),
-        "behavioral_evidence_attached": bool(
-            (analysis.get("availability") or {}).get("behavioral_evidence")
+        "focal_roster_delta": comparisons[focal_team_id].model_dump(mode="json"),
+        "counterparty_roster_delta": comparisons[counterparty_team_id].model_dump(mode="json"),
+        "behavioral_evidence_attached": behavioral is not None,
+        "behavioral_context": (
+            behavioral.model_dump(mode="json") if behavioral is not None else None
         ),
-        "behavioral_context": analysis.get("behavioral_context"),
         "post_trade_simulation_attached": False,
-        "economics": analysis.get("economics"),
-        "economic_net": analysis.get("economic_net"),
-        "roster_adjusted_market_net": analysis.get("roster_adjusted_market_net"),
-        "package_concentration": analysis.get("package_concentration"),
-        "package_economics": analysis.get("package_economics"),
-        "roster_legality": analysis.get("roster_legality") or [],
-        "decision_dimensions": analysis.get("decision_dimensions"),
-        "availability": analysis.get("availability") or {},
-        "decision_completeness": analysis.get("decision_completeness") or {},
+        "economics": economics.model_dump(mode="json"),
+        "economic_net": economic_net.model_dump(mode="json"),
+        "roster_adjusted_market_net": adjusted_market.model_dump(mode="json"),
+        "roster_legality": [
+            item.model_dump(mode="json") for item in trade_team_resolutions
+        ],
+        "position_strength_comparisons": {
+            team_id: comparison.model_dump(mode="json")
+            for team_id, comparison in comparisons.items()
+        },
+        "preliminary_bilateral_screen": screen.model_dump(mode="json"),
+        "decision_completeness": {
+            "status": "partial_pre_simulation",
+            "simulation_backed": False,
+            "final_disposition_available": False,
+            "decision_scope": "lightweight_bilateral_roster_economic_screen",
+            "missing_authorities": (
+                "NEXT-4 Simulation competitive outcomes",
+                "NEXT-5 full material assessment and final trade disposition",
+            ),
+        },
+        "availability": {
+            "roster_consequences": True,
+            "position_strength": True,
+            "negotiation_feasibility": True,
+            "market_economics": True,
+            "economic_net": True,
+            "competitive_outcomes": False,
+            "championship_probability": False,
+            "mandatory_cut_cost": cut_cost_complete,
+            "package_concentration_evidence": row.get("package_concentration") is not None,
+            "bounded_package_economic_guard": row.get("package_economics") is not None,
+            "behavioral_evidence": behavioral is not None,
+            "acceptance_probability": False,
+            "final_trade_disposition": False,
+        },
+        "preliminary_screen_timing_ms": {
+            "state_validation": round((state_validated - started) * 1000.0, 3),
+            "changed_lineup_and_legality": round(
+                (lineup_finished - state_validated) * 1000.0,
+                3,
+            ),
+            "replacement_and_economic_screen": round(
+                (decision_finished - lineup_finished) * 1000.0,
+                3,
+            ),
+            "behavioral_context": round(
+                (completed - decision_finished) * 1000.0,
+                3,
+            ),
+            "total": round((completed - started) * 1000.0, 3),
+        },
         "explanation": (
-            "Representative Candidate Path completed the bounded pre-Simulation Decision screen. "
-            "This is bilateral plausibility evidence, not an acceptance probability, final disposition, "
-            "or exact competitive-outcome claim."
+            "Representative Candidate Path completed the bounded lightweight "
+            "pre-Simulation Decision screen using roster legality, mandatory-cut "
+            "economics and optimized starter replacement effects. It is not an "
+            "acceptance probability, final disposition, or season-outcome claim."
         ),
     }
-
 
 def _side(payload: dict[str, Any] | None, team_id: str) -> dict[str, Any]:
     if not payload:
@@ -728,13 +887,16 @@ def _bilateral_plausibility(
     focal_shape = str(row.get("focal_decision_shape") or "")
     counterparty_shape = str(row.get("counterparty_decision_shape") or "")
     feasibility = str(row.get("negotiation_feasibility_shape") or "")
-    if focal_shape in {"uniform_loss", "incomplete", ""}:
+    if focal_shape in {"uniform_loss", "dominated", "incomplete", ""}:
         return (
             BilateralPlausibility.FOCAL_DOMINATED
-            if focal_shape == "uniform_loss"
+            if focal_shape in {"uniform_loss", "dominated"}
             else BilateralPlausibility.INCOMPLETE
         )
-    if feasibility == "counterparty_dominated" or counterparty_shape == "uniform_loss":
+    if (
+        feasibility == "counterparty_dominated"
+        or counterparty_shape in {"uniform_loss", "dominated"}
+    ):
         return BilateralPlausibility.COUNTERPARTY_DOMINATED
     if feasibility == "incomplete" or counterparty_shape in {"incomplete", ""}:
         return BilateralPlausibility.INCOMPLETE
@@ -743,8 +905,16 @@ def _bilateral_plausibility(
         PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN,
     }:
         return BilateralPlausibility.BILATERAL_FRICTION
-    if feasibility in {"mutual_gain_candidate", "mixed", "neutral"}:
+    if (
+        feasibility == "mutual_gain_candidate"
+        or (
+            focal_shape == "supported"
+            and counterparty_shape == "supported"
+        )
+    ):
         return BilateralPlausibility.BILATERAL_SUPPORTED
+    if feasibility in {"mixed", "neutral"}:
+        return BilateralPlausibility.BILATERAL_FRICTION
     return BilateralPlausibility.BILATERAL_FRICTION
 
 
@@ -803,7 +973,7 @@ def _path_can_support_attention(
     }:
         return False
     if economic_band == PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN:
-        return str(row.get("focal_decision_shape") or "") == "uniform_gain"
+        return str(row.get("focal_decision_shape") or "") in {"uniform_gain", "supported"}
     if economic_band == PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN:
         return (
             str(row.get("counterparty_decision_shape") or "") != "uniform_loss"
