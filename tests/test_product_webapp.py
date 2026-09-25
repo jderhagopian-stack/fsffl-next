@@ -340,6 +340,9 @@ def test_partial_forecast_job_completes_without_simulation_and_keeps_forecast_vi
 
     assert current is not None
     assert current["status"] == "completed"
+    assert "Forecast and current Value evidence are ready" in current["message"]
+    assert "Simulation remains unavailable" in current["message"]
+    assert "separate_k_dst_forecast_authority_required" in current["message"]
     assert simulation_calls == []
     assert current["forecast_ready"] is True
     assert current["forecast_raw_observation_count"] == 1
