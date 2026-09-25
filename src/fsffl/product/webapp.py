@@ -567,7 +567,7 @@ def create_app(
         runtime = store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
-        initial_state = runtime.league_state
+        initial_state = store.intelligence_input_state(user_id) or runtime.league_state
         initial_state_id = initial_state.state_id
         initial_league_id = initial_state.league.league_id
         initial_league_generation = store.league_generation(user_id)
@@ -582,29 +582,33 @@ def create_app(
                 raise IntelligenceJobInterrupted("league_switch")
 
         def work(progress) -> None:
-            progress(IntelligenceJobPhase.BUILDING_FORECASTS, "Building governed multi-source projections.")
-            evidence: LiveForecastEvidence = forecast_loader(initial_state)
-            require_active_league_identity()
+            try:
+                progress(IntelligenceJobPhase.BUILDING_FORECASTS, "Building governed multi-source projections.")
+                evidence: LiveForecastEvidence = forecast_loader(initial_state)
+                require_active_league_identity()
 
-            progress(IntelligenceJobPhase.REFRESHING_STATE, "Refreshing canonical Sleeper state at the evidence cutoff.")
-            refreshed_state = state_loader(_sleeper_external_id(initial_state))
-            require_active_league_identity()
-            store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
+                progress(IntelligenceJobPhase.REFRESHING_STATE, "Refreshing canonical Sleeper state at the evidence cutoff.")
+                refreshed_state = state_loader(_sleeper_external_id(initial_state))
+                require_active_league_identity()
+                store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
 
-            if not evidence.uncertainty_ready:
-                raise ValueError("forecast uncertainty is not ready for authoritative simulation")
+                if not evidence.uncertainty_ready:
+                    raise ValueError("forecast uncertainty is not ready for authoritative simulation")
 
-            progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running 50,000 governed NEXT-4 season simulations.")
-            simulation = simulation_loader(refreshed_state, evidence)
-            require_active_league_identity()
-            store.set_simulation_analytics(user_id, simulation)
+                progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running 50,000 governed NEXT-4 season simulations.")
+                simulation = simulation_loader(refreshed_state, evidence)
+                require_active_league_identity()
+                store.set_simulation_analytics(user_id, simulation)
 
-            progress(IntelligenceJobPhase.BUILDING_VALUES, "Building governed NEXT-3 current market values.")
-            values = value_loader(refreshed_state)
-            require_active_league_identity()
+                progress(IntelligenceJobPhase.BUILDING_VALUES, "Building governed NEXT-3 current market values.")
+                values = value_loader(refreshed_state)
+                require_active_league_identity()
 
-            progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching simulation and Value results to the current canonical league state.")
-            store.set_value_evidence(user_id, values)
+                progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching simulation and Value results to the current canonical league state.")
+                store.set_value_evidence(user_id, values)
+            except Exception:
+                store.discard_pending_intelligence(user_id)
+                raise
 
         job = jobs.start(user_id=user_id, league_state_id=initial_state_id, work=work)
         return {**_job_payload(job), **_runtime_context_payload(store, user_id)}
