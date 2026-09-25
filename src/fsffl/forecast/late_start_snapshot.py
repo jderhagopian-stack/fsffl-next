@@ -72,17 +72,33 @@ class LateStartIndependentCoverage(FrozenModel):
     subject_key: str
     metric: ForecastMetric
     independence_groups: tuple[str, ...]
+    production_rights_independence_groups: tuple[str, ...] = ()
     minimum_required: Annotated[int, Field(ge=1)] = 2
     meets_minimum: bool
+    production_authority_meets_minimum: bool = False
 
     @model_validator(mode="after")
     def validate_count(self) -> "LateStartIndependentCoverage":
         if len(self.independence_groups) != len(set(self.independence_groups)):
             raise ValueError("independence groups must be unique")
+        if len(self.production_rights_independence_groups) != len(
+            set(self.production_rights_independence_groups)
+        ):
+            raise ValueError("production-rights independence groups must be unique")
+        if not set(self.production_rights_independence_groups).issubset(
+            set(self.independence_groups)
+        ):
+            raise ValueError("production-rights groups must be a subset of evidence groups")
         if self.meets_minimum != (
             len(self.independence_groups) >= self.minimum_required
         ):
             raise ValueError("meets_minimum must match independence group count")
+        if self.production_authority_meets_minimum != (
+            len(self.production_rights_independence_groups) >= self.minimum_required
+        ):
+            raise ValueError(
+                "production_authority_meets_minimum must match rights-cleared group count"
+            )
         return self
 
 
@@ -540,6 +556,9 @@ def capture_late_start_current_projection_snapshot(
     groups_by_metric: dict[
         tuple[str, ForecastMetric], set[str]
     ] = {}
+    rights_groups_by_metric: dict[
+        tuple[str, ForecastMetric], set[str]
+    ] = {}
     for snapshot, row in accepted_rows:
         key_subject = ros_subject_key(row)
         source_id = f"{snapshot.provider}:{snapshot.source_version}"
@@ -547,6 +566,13 @@ def capture_late_start_current_projection_snapshot(
             key = (key_subject, metric)
             source_ids_by_metric.setdefault(key, set()).add(source_id)
             groups_by_metric.setdefault(key, set()).add(snapshot.independence_group)
+            if snapshot.rights_status in {
+                ProjectionRightsStatus.LICENSED_BETA,
+                ProjectionRightsStatus.PRODUCTION_CLEARED,
+            }:
+                rights_groups_by_metric.setdefault(key, set()).add(
+                    snapshot.independence_group
+                )
 
     metric_coverage = tuple(
         LateStartMetricCoverage(
@@ -564,8 +590,15 @@ def capture_late_start_current_projection_snapshot(
             subject_key=subject_key,
             metric=metric,
             independence_groups=tuple(sorted(groups)),
+            production_rights_independence_groups=tuple(
+                sorted(rights_groups_by_metric.get((subject_key, metric), set()))
+            ),
             minimum_required=minimum_independent_sources,
             meets_minimum=len(groups) >= minimum_independent_sources,
+            production_authority_meets_minimum=(
+                len(rights_groups_by_metric.get((subject_key, metric), set()))
+                >= minimum_independent_sources
+            ),
         )
         for (subject_key, metric), groups in sorted(
             groups_by_metric.items(),
@@ -585,3 +618,41 @@ def capture_late_start_current_projection_snapshot(
         independent_source_coverage=independent_coverage,
         minimum_independent_sources=minimum_independent_sources,
     )
+
+
+def source_rule_evidence_for_subject(
+    snapshot: LateStartCurrentProjectionSnapshot,
+    *,
+    subject_key: str,
+    require_production_rights: bool = True,
+):
+    """Build rule-level evidence inputs only from healthy accepted subject rows.
+
+    By default research-only sources are excluded so a source-rights failure can
+    never become production scoring authority merely because raw evidence exists.
+    """
+
+    from .k_dst_scoring import SourceRuleEvidence
+
+    output: list[SourceRuleEvidence] = []
+    for provider in snapshot.provider_evidence:
+        if subject_key not in set(provider.accepted_subject_keys):
+            continue
+        if require_production_rights and not provider.production_rights_eligible:
+            continue
+        metrics: set[ForecastMetric] = set()
+        for row in provider.raw_rows:
+            if ros_subject_key(row) != subject_key:
+                continue
+            metrics.update(_row_metrics(row))
+        if not metrics:
+            continue
+        output.append(
+            SourceRuleEvidence(
+                source_id=provider.source_id,
+                independence_group=provider.independence_group,
+                metrics=frozenset(metrics),
+                provenance_ref=f"sha256:{provider.content_sha256}",
+            )
+        )
+    return tuple(sorted(output, key=lambda item: item.source_id))
