@@ -153,6 +153,18 @@ def _missing_material_scored_metrics(
         # for ordinary RB/WR/TE projections while still preventing partial domains.
         if any(metric in by_metric for metric in domain):
             missing.update(configured.difference(by_metric))
+
+    # Fumble loss is a standalone active scoring coordinate rather than a member
+    # of the pass/rush/receiving domain triplets above. If a league scores it,
+    # missing raw evidence must never be interpreted as zero. This closes the
+    # late-connect replay integrity hole identified by Forecast Research.
+    if (
+        coefficient_by_metric.get(ForecastMetric.FUMBLES_LOST, 0.0) != 0.0
+        and by_metric
+        and ForecastMetric.FUMBLES_LOST not in by_metric
+    ):
+        missing.add(ForecastMetric.FUMBLES_LOST)
+
     return tuple(sorted(missing, key=lambda metric: metric.value))
 
 
