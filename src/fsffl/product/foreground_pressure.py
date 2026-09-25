@@ -88,8 +88,13 @@ def install_foreground_pressure(app) -> None:
     async def _track_foreground_pressure(request, call_next):
         path = request.url.path
         # Starting/polling the intelligence job is orchestration, not foreground
-        # product browsing. All other HTTP work counts as foreground demand.
-        interactive = not path.startswith("/api/intelligence/jobs")
+        # product browsing. The full Market workspace is also automatic follow-up
+        # enrichment after the search-only quick view has rendered, so it must yield
+        # to actual browsing rather than count itself as foreground pressure.
+        interactive = (
+            not path.startswith("/api/intelligence/jobs")
+            and path != "/api/opportunities/workspace"
+        )
         started = monotonic()
         if interactive:
             foreground_pressure.begin_request()
