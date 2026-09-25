@@ -4,7 +4,7 @@ Date: 2026-09-25
 Workstream: Market / Trade Discovery Implementation  
 Branch: `implementation/market-discovery-north-star-20260925`  
 PR: #220  
-State: ACTIVE — IMPLEMENTATION ACCEPTANCE IN PROGRESS
+State: IMPLEMENTATION ACCEPTANCE COMPLETE — PHYSICAL IPHONE GATE
 
 ## Authorized contract
 
@@ -115,3 +115,35 @@ Forecast corrective trace has remained green during Market implementation. No Fo
 6. Verify merged main and stop at the next genuine gate. Physical-iPhone/Safari product acceptance remains a separate required gate after deployment/runtime availability.
 
 A green intermediate CI run is evidence, not completion.
+
+
+## Implementation acceptance closeout — 2026-09-25
+
+Implementation-level acceptance is satisfied on PR #220 code head `97ff2a4e59d065b38a6eb751c3ed3a330feee56e`.
+
+Green validation on that exact code head:
+- full repository CI — success;
+- Home North Star focused validation — success;
+- Franchise North Star focused validation — success;
+- League Atlas North Star focused validation — success;
+- PR164 focused corrective regression — success;
+- Live Forecast corrective trace — success.
+
+Final authority/scope audit:
+- no Forecast, Value, Team Utility, or Simulation model implementation file is changed by PR #220;
+- no Market-generated acceptance probability exists;
+- Owner Intelligence remains descriptive-only and does not mutate universal Value;
+- package-premium evidence remains a Decision robustness guard and is not added to Value/utility;
+- broad discovery invokes zero exact changed-state Simulation runs;
+- current baseline Simulation/Team Utility may be consumed as already-authoritative strategic context;
+- cheap Decision economics precede family pruning;
+- the heavier pre-Simulation bilateral screen is bounded to eight representative paths;
+- Search admission is target-family-first before the bounded workspace truncation;
+- For You consumes only `worth_attention` Opportunity objects and never fills from raw/unevaluated Search rows;
+- Player Board keeps Broad Market available while optional Intrinsic builds;
+- Core 7/7 and Market-surface readiness are separate truthful contracts;
+- hosted static generation is `20260925-market-discovery1`.
+
+The implementation workstream has no further authorized code work required before merge/deploy. The next genuine product gate is repeat physical-iPhone/Safari Market acceptance on the deployed merged build.
+
+A passing PR/CI was treated as evidence; this closeout is based on the full implementation contract, deterministic fixtures, authority audit, and all required automated regression suites.
