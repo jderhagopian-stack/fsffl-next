@@ -753,6 +753,13 @@ def create_app(
             league_state=league_state,
             sleeper_league_external_id=league_external_id,
         )
+        reconcile = getattr(
+            application.state,
+            "start_intelligence_reconciliation",
+            None,
+        )
+        if callable(reconcile):
+            reconcile(user_id)
         return _runtime_context_payload(store, user_id)
 
     @application.get("/api/behavioral/status")
