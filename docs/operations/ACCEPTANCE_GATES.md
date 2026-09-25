@@ -79,3 +79,44 @@ The current evidence check is persisted at `artifacts/implementation/forecast_k_
 
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
+
+
+## Market / Trade Discovery architecture review
+**Status: MANAGEMENT GATE — ARCHITECTURE REVIEW COMPLETE.**
+
+Implementation-ready handoff:
+- `docs/operations/workstreams/MARKET_DISCOVERY.md`
+- `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`
+
+Architecture review evidence demonstrates:
+- the repeated-neighborhood failure mechanism in the current package-row-first Search;
+- why additive Cardinal closeness is insufficient before Decision-owned package economics;
+- why current sparse bilateral enrichment cannot support a multi-card high-signal feed;
+- how OpportunityHypothesis → MarketOpportunity → CandidatePath separates strategic attention from package variants;
+- how existing Decision primitives can supply bounded pre-Simulation screening without fabricated acceptance probability;
+- how family clustering, dominance pruning, and diversity selection prevent repeated target neighborhoods from crowding For You;
+- why exact changed-state Simulation remains downstream of a selected transaction;
+- why global 7/7 and lazy all-player Intrinsic readiness are different contracts;
+- how Player Board / Free Agents can render partial governed evidence without weakening fail-closed authority;
+- a deterministic fixture/test matrix including repeated Gibbs neighborhoods and extreme Superflex package shapes;
+- a bounded implementation/migration sequence.
+
+Management acceptance is required before broad Market implementation.
+
+## Market implementation acceptance gate
+**Status: NOT STARTED / NOT AUTHORIZED pending architecture acceptance.**
+
+After authorization, implementation is not accepted until evidence demonstrates:
+- every For You card is a distinct `worth_attention` Opportunity, not a raw package row;
+- every For You Opportunity has at least one bounded pre-Simulation Decision-screened representative path;
+- counterparty-dominated, focal-dominated, stale, and critically incomplete paths cannot qualify for For You;
+- repeated exact targets cannot occupy multiple For You cards;
+- diversity rules and any relaxations are deterministic and observable;
+- no Market-generated acceptance probability;
+- Owner Intelligence never mutates universal Value;
+- package premium evidence is not added to Value or Team Utility;
+- mandatory cut cost is charged exactly once;
+- broad Market discovery performs zero exact changed-state Simulation calls;
+- Core 7/7 copy is scoped truthfully and each Market surface exposes independent readiness;
+- Broad Market rows remain usable while optional Intrinsic is building;
+- physical-iPhone/Safari Market presentation meets the accepted North Star scanability/navigation standard.
