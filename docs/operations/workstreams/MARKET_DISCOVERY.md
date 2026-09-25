@@ -129,3 +129,52 @@ Management should be able to answer from the persisted handoff:
 
 ## Operating behavior
 Follow `../OPERATING_PROTOCOL.md`. Own the architecture-review outcome through an implementation-ready persisted recommendation. Maximize each turn and stop only at DIRECTIVE COMPLETE, BLOCKED, MANAGEMENT GATE, or unavoidable continuation.
+
+
+## Management-approved North Star concept — 2026-09-24
+Management reviewed and approved the revised Market concept direction. Treat this as **product intent**, not permission to force analytical outputs to match a mockup.
+
+### Visual / interaction intent
+The Market must use the same calm North Star grammar as Home, Franchise, and League: clear hierarchy, compact governed intelligence, progressive disclosure, strong scanability, and fewer simultaneous controls. Avoid a separate dense “fantasy management app” aesthetic.
+
+### Four top-level jobs
+- **For You:** “Your best paths right now.” A deliberately small set of distinct strategic opportunities. Opportunity first; packages second.
+- **Trade Finder:** “What are you trying to do?” Intent first. Reveal only controls relevant to the chosen intent, with advanced controls behind progressive disclosure.
+- **Player Board:** visual/read-only market exploration using separate governed Value lenses; player rows lead to Player Intelligence and contextual actions.
+- **Free Agents:** “Available players who can help.” Roster-fit discovery first; explicit add/drop evaluation only after interaction.
+
+### Canonical drill-down grammar
+All Market interactions should follow:
+`SEE → UNDERSTAND → INTERACT → DRILL DEEPER → DECIDE`
+
+Representative paths:
+- For You strategic card → **Opportunity Detail** → candidate acquisition paths → **Candidate Path Detail** → specific transaction → **Trade Center** → targeted Simulation/full evidence when warranted.
+- Market-disagreement/player item → **Player Intelligence**, contextualized to Market → “Find trade paths” returns to Trade Finder pre-filtered to that player.
+- Free-agent item → lightweight fit/context → **Add/Drop Evaluation** → governed roster/value/team-impact comparison.
+- Player Board row → **Player Intelligence**; owner/team context may link to Owner Intelligence; contextual “Find a deal” enters Trade Finder pre-populated.
+
+### Opportunity Detail
+Must explain *why this opportunity exists before showing a trade*:
+- strategic need/opportunity hypothesis;
+- why now;
+- governed expected benefit signals available at this stage;
+- cost/risk band without invented precision;
+- plausible counterparties/acquisition paths;
+- a small set of materially distinct candidate paths;
+- evidence/authority status.
+
+### Candidate Path Detail
+Must explain why a particular path survived preliminary screening:
+- target and counterparty;
+- representative package or package family;
+- strategic fit for user;
+- bilateral rationale supported by governed evidence;
+- important sacrifices/risks;
+- alternative realistic paths;
+- clear escalation to Trade Center rather than pretending preliminary screening is a final trade verdict.
+
+### Trade Center handoff
+Market discovery must not duplicate Trade Center. Trade Center receives a specific transaction/candidate path for full bilateral Decision analysis. Exact Simulation is invoked selectively when it adds decision value.
+
+### Product acceptance implication
+A Market item earns scarce For You space only after the architecture can explain why it deserves attention. “Search generated it” or “Needs full evaluation” alone is insufficient.
