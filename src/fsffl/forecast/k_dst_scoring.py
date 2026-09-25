@@ -254,6 +254,37 @@ def _rule_relevant(stat: str, family: ForecastSubjectFamily) -> bool:
     return False
 
 
+def rule_relevant_for_subject_family(
+    stat: str,
+    family: ForecastSubjectFamily,
+) -> bool:
+    """Public read-only rule-family predicate used by bounded authority adapters."""
+
+    return _rule_relevant(stat, family)
+
+
+def kicker_rule_metric_alternatives(
+    stat: str,
+) -> tuple[tuple[ForecastMetric, ...], ...]:
+    """Return governed exact raw-metric alternatives for one kicker scoring rule."""
+
+    return _K_RULE_REQUIREMENTS.get(stat, ())
+
+
+def kicker_rule_difference_requirement(
+    stat: str,
+) -> tuple[ForecastMetric, ForecastMetric] | None:
+    """Return an exact algebraic kicker transform when one is authorized."""
+
+    return _K_DIFFERENCE_REQUIREMENTS.get(stat)
+
+
+def dst_linear_metric_for_rule(stat: str) -> ForecastMetric | None:
+    """Return the canonical D/ST raw metric for a linear scoring rule."""
+
+    return _DST_LINEAR_RULES.get(stat)
+
+
 def evaluate_rule_evidence_coverage(
     rules: LeagueRules,
     *,
