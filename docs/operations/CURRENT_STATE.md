@@ -14,11 +14,15 @@ Production reached the Performance management gate after PR #211. The newly sele
 
 Full new-league 7/7 acceptance is **not complete**.
 
-The prior research dependency is now resolved: Forecast Research completed the K/DST + late-connect bootstrap directive and persisted the governed contract in:
-- `docs/operations/workstreams/RESEARCH.md`
-- `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+Forecast Research has now completed both the K/DST + late-connect architecture directive and the follow-on empirical/source-gate investigation.
 
-Research history: PR #213 / commit `91018b39967a0775ad830a6a750a2588e7f041d0`.
+Durable research state:
+- `docs/operations/workstreams/RESEARCH.md`
+- architecture: `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+- evidence-gate closeout: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`
+- detailed evidence ledger: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_LEDGER.md`
+
+Architecture research history: PR #213 / commit `91018b39967a0775ad830a6a750a2588e7f041d0`.
 
 The production blocker itself is **not yet resolved**. Bounded Forecast implementation PR #215 is now merged to canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Stage 1 subject/scoring integrity and the non-promoting Stage 2 outcome/calibration harness are implemented and regression-clean. Production K/DST provider/calibration authority remains red at the empirical/source evidence gate.
 
@@ -35,20 +39,35 @@ The accepted research contract establishes:
 - existing offensive-player Forecast authority and two-source governance must not be weakened.
 
 ## Production evidence relevant to the next gate
-Read-only research inspection established:
-- there is no persisted 2026 `annual_preseason_projection_snapshot`;
-- legacy baseline artifact 145 is authentic 2026 offensive PIT evidence from FFToday + Razzball with 1,675 raw ensemble observations;
-- that artifact has no `fumbles_lost` observations and therefore is not universally replayable under arbitrary target scoring;
-- no qualifying persisted two-source 2026 preseason K/DST raw package is proven;
-- PR #215 closed the `fum_lost` integrity gap: active missing evidence now withholds authoritative fantasy points and CBS no longer manufactures a missing FL value as zero;
-- a post-merge evidence check did not recover a qualifying independent historical K/DST source #2; dated Razzball material points to mutable current endpoints and CBS historical-looking paths are not sufficient PIT provenance;
-- candidate Razzball/CBS/Sleeper production use remains rights/licensing gated under the currently published terms/documentation.
+The 2026 evidence-gate Research closeout materially updates the prior checkpoint:
+
+- the official 2026 NFL regular season began **2026-09-09 at 8:20 p.m. ET** (`2026-09-10T00:20:00Z`);
+- artifact **145** is therefore post-opener and must not be described as preseason PIT evidence;
+- artifact **63** is the last recovered authentic FSFFL pre-kickoff offense Forecast artifact:
+  - computed `2026-09-09T23:26:16.657633Z`;
+  - FFToday + Razzball;
+  - raw ensemble observations as-of `2026-09-09T23:23:53.152680Z`;
+  - QB/RB/WR/TE only;
+  - no K/DST and no `fumbles_lost`;
+- there is still no persisted 2026 `annual_preseason_projection_snapshot`;
+- a genuine pre-opener **2024 multi-provider K/DST raw corpus** was recovered from FantasySharks, ESPN and CBS, so the earlier “no historical source #2” assumption is superseded;
+- authentic **2026 pre-opener K snapshots from FFToday + CBS** were recovered externally with retained timestamps and hashes;
+- authentic **2026 pre-opener RotoWire-via-Sleeper D/ST component evidence** was recovered;
+- a pre-opener **FantasyPros D/ST aggregate** was also recovered, but it cannot automatically count as an independent provider because its projections aggregate multiple underlying sources;
+- official Sleeper documentation now resolves the ownership/meaning of K distance bands, blocked-kick misses, D/ST two-point returns, team special-teams forced fumbles/recoveries, PA/YA buckets, and subject separation;
+- provider production rights remain externally gated, and the recovered K/DST evidence is not itself authorization to ingest/store/use those sources in production;
+- PR #215's `fum_lost` fail-closed correction remains valid.
+
+The historical-source gate is therefore **partially cleared**, while production Forecast authority remains **blocked** on rights-cleared, independent, rule-complete provider evidence and promoted K/DST uncertainty.
 
 ## Immediate management priority
-1. Treat Forecast/Product K/DST implementation as **BLOCKED at the empirical/source evidence gate**, not as an unfinished PR.
-2. Keep production K/DST authority fail-closed until a second independent historical PIT corpus, production source rights/content health, and the remaining Sleeper truth-fixture requirements are satisfied.
-3. Keep 2026 K/DST preseason comparison unavailable unless qualifying point-in-time raw evidence is proven; never backdate current data.
-4. Resume new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
+1. Treat Forecast/Product K/DST implementation as **BLOCKED at the narrowed empirical/source authority gate**, not as unfinished Research.
+2. Keep production K/DST authority fail-closed until provider rights are cleared, current rule-complete source independence is proven, and K/DST uncertainty is validly promoted.
+3. For Hodor-like K scoring, require exact 50-59 vs 60+ evidence; never heuristically split 50+ data.
+4. For D/ST, require a second provenance-clean component provider or licensed decomposition proving independence, and preserve game-level/distributional treatment for PA/YA buckets.
+5. Reconcile the artifact-145 timing correction into any preseason migration plan: artifact 145 is post-opener; artifact 63 is the authentic pre-kickoff offense artifact.
+6. Keep 2026 Hodor K/DST preseason comparison unavailable until its specific rule-complete evidence gates pass; never backdate current data.
+7. Resume new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
 5. Merge/deploy the implementation-accepted Market PR #220, then repeat physical-iPhone/Safari Market acceptance.
 6. Keep Market acceptance separate from the blocked Forecast/K/DST empirical/source evidence gate; do not weaken either authority to unblock the other.
 7. Continue Home × Franchise redundancy audit only after Market physical acceptance or explicit Management reprioritization.
