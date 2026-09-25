@@ -19,7 +19,9 @@ Durable repair chain:
 
 Production #226 has already restarted twice with `jimmygoodjob` restored on state `203227df...` and `forecast=True simulation=True value=True complete=True`, with no automatic heavy intelligence launch and no startup errors.
 
-Remaining Performance gate is deployed physical-iPhone acceptance of truthful 7/7/populated Home-Franchise-Market and normal single-line Refresh Intelligence presentation. Do not require repeated manual refreshes.
+Post-restart physical-device traffic has fetched the repaired static generation and successfully exercised product context, intelligence status, Home, Franchise, and Market. Home/Franchise are responsive, but Market cold load remains an active Performance defect: quick workspace took 36.705s and initial full workspace 48.396s before a cached full call dropped to 0.172s.
+
+Remaining Performance gate is truthful visible 7/7/mobile-control confirmation plus repair of the cold Market foreground path. Do not require repeated manual refreshes.
 
 ## Forecast Research — 2026 Late-Start K/DST Exception
 **State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
