@@ -73,7 +73,7 @@ The historical-source gate is therefore **partially cleared**, while production 
 
 ## Immediate management priority
 1. Treat missing 2026 preseason K/DST evidence as **historical/preseason-only**, not a blocker to a properly governed current-forward late-start baseline.
-2. Review/authorize the implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md` if Management wants Product/Forecast Implementation to execute it.
+2. Complete acceptance of the Management-authorized implementation in PR #233; the 2026-only ROS artifact, schedule-aware row health, exact K transforms, rights-aware coverage, and non-promoting empirical replay are implemented there.
 3. Keep Hodor current-forward K authority fail-closed until the first exact 60+ candidate is live-validated, a second independent 60+ source exists, provider rights are cleared, and target-compatible K uncertainty is promoted.
 4. Keep Hodor current-forward D/ST authority fail-closed until the first PA-distribution candidate is live-validated, a second independent PA-distribution source exists, rare-event two-source coverage and provider rights are cleared, and target-compatible D/ST uncertainty is promoted.
 5. Require schedule-aware subject-row source health; Friday snapshots that still include Atlanta/Green Bay's already-completed Thursday game must quarantine those rows rather than be backdated or adjusted heuristically.
