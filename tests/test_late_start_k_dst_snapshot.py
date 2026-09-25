@@ -9,7 +9,9 @@ from fsffl.forecast.late_start_snapshot import (
     PRESEASON_COMPARISON_UNAVAILABLE,
     RowHealthDisposition,
     capture_late_start_current_projection_snapshot,
+    evaluate_late_start_rule_coverage_for_subject,
     evaluate_ros_snapshot_row_health,
+    late_start_subject_is_rule_complete,
     source_rule_evidence_for_subject,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric
@@ -23,7 +25,14 @@ from fsffl.providers.ros_projection_rows import (
     RosProjectionRow,
     RosProjectionSnapshot,
 )
-from fsffl.state.models import Player, Position
+from fsffl.state.models import (
+    LeagueRules,
+    LineupRequirement,
+    Player,
+    Position,
+    RosterSlot,
+    ScoringRule,
+)
 
 
 CAPTURED = datetime(2026, 9, 25, 12, 30, tzinfo=UTC)
@@ -326,3 +335,78 @@ def test_wrong_horizon_cannot_be_coerced_into_ros_snapshot() -> None:
                 "content_sha256": "c" * 64,
             }
         )
+
+
+def test_hodor_like_dst_rule_coverage_stays_red_even_when_common_metrics_exist() -> None:
+    rights = ProjectionRightsStatus.PRODUCTION_CLEARED
+    first = _snapshot(
+        provider="licensed-a",
+        independence_group="a",
+        rights_status=rights,
+        rows=(
+            RosProjectionRow(
+                provider="licensed-a",
+                external_id="DST:BUF:a",
+                subject_name="Buffalo Bills",
+                position=Position.DST,
+                nfl_team="BUF",
+                projected_games=15,
+                stats=(
+                    (ForecastMetric.DST_SACK.value, 40.0),
+                    (ForecastMetric.DST_INTERCEPTION.value, 14.0),
+                ),
+            ),
+        ),
+    )
+    second = _snapshot(
+        provider="licensed-b",
+        independence_group="b",
+        rights_status=rights,
+        rows=(
+            RosProjectionRow(
+                provider="licensed-b",
+                external_id="DST:BUF:b",
+                subject_name="Buffalo Bills",
+                position=Position.DST,
+                nfl_team="BUF",
+                projected_games=15,
+                stats=(
+                    (ForecastMetric.DST_SACK.value, 38.0),
+                    (ForecastMetric.DST_INTERCEPTION.value, 12.0),
+                ),
+            ),
+        ),
+    )
+    artifact = capture_late_start_current_projection_snapshot(
+        season=2026,
+        snapshots=(first, second),
+        schedule_rows=_schedule(),
+        clock=lambda: CAPTURED,
+    )
+    rules = LeagueRules(
+        team_count=12,
+        roster_size=20,
+        lineup=(LineupRequirement(slot=RosterSlot.DST, count=1),),
+        scoring=(
+            ScoringRule(stat="sack", points=1),
+            ScoringRule(stat="int", points=2),
+            ScoringRule(stat="pts_allow_0", points=10),
+        ),
+    )
+
+    coverage = {
+        item.rule_stat: item
+        for item in evaluate_late_start_rule_coverage_for_subject(
+            artifact,
+            subject_key="DST:BUF",
+            rules=rules,
+        )
+    }
+    assert coverage["sack"].status.value == "exact"
+    assert coverage["int"].status.value == "exact"
+    assert coverage["pts_allow_0"].status.value == "unsupported"
+    assert late_start_subject_is_rule_complete(
+        artifact,
+        subject_key="DST:BUF",
+        rules=rules,
+    ) is False
