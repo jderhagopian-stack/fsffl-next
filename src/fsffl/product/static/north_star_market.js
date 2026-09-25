@@ -220,30 +220,42 @@
     }
     return"";
   }
-  function finderRows(){
-    const all=tradeRows(),f=market.finderFilters;let rows=[...all];
-    if(f.position)rows=rows.filter(row=>String(row.target_position||"")===f.position);
-    if(f.team)rows=rows.filter(row=>String(row.counterparty_team_id||"")===f.team);
-    if(f.status)rows=rows.filter(row=>authority(row).key===f.status);
-    if(f.deal==="one")rows=rows.filter(row=>(row.send||[]).length===1);
-    if(f.deal==="multi")rows=rows.filter(row=>(row.send||[]).length>1);
-    if(f.assets==="players")rows=rows.filter(row=>[...(row.send||[]),...(row.receive||[])].every(item=>item.asset_kind==="player"));
-    if(f.assets==="picks")rows=rows.filter(row=>[...(row.send||[]),...(row.receive||[])].some(item=>item.asset_kind==="pick"));
-    if(f.sort==="closest")rows.sort((a,b)=>(a.market_gap_ratio??Infinity)-(b.market_gap_ratio??Infinity)||(a.search_distance??Infinity)-(b.search_distance??Infinity));
-    if(f.sort==="need")rows.sort((a,b)=>(a.focal_position_strength_index??Infinity)-(b.focal_position_strength_index??Infinity));
-    if(f.sort==="authority")rows.sort((a,b)=>({recommended:0,investigate:1,needs:2,match:3}[authority(a).key]-({recommended:0,investigate:1,needs:2,match:3}[authority(b).key])));
-    return rows;
+  function pathAuthority(path){
+    if(path?.bilateral_plausibility==="counterparty_dominated"||path?.bilateral_plausibility==="focal_dominated")return{key:"match",label:"High friction"};
+    if(path?.deep_evaluation_status!=="prelim_screened")return{key:"needs",label:"Needs preliminary screen"};
+    if(path?.bilateral_plausibility==="bilateral_supported")return{key:"investigate",label:"Prelim plausible"};
+    if(path?.bilateral_plausibility==="bilateral_friction")return{key:"needs",label:"Bilateral friction"};
+    return{key:"match",label:"Market match only"};
+  }
+  function finderPaths(payload){
+    const f=market.finderFilters;let paths=[...candidatePaths(payload)];
+    const row=path=>representative(path)||{};
+    if(f.position)paths=paths.filter(path=>String(row(path).target_position||"")===f.position);
+    if(f.team)paths=paths.filter(path=>String(path.counterparty_team_id||"")===f.team);
+    if(f.status)paths=paths.filter(path=>pathAuthority(path).key===f.status);
+    if(f.deal==="one")paths=paths.filter(path=>(row(path).send||[]).length===1);
+    if(f.deal==="multi")paths=paths.filter(path=>(row(path).send||[]).length>1);
+    if(f.assets==="players")paths=paths.filter(path=>[...(row(path).send||[]),...(row(path).receive||[])].every(item=>item.asset_kind==="player"));
+    if(f.assets==="picks")paths=paths.filter(path=>[...(row(path).send||[]),...(row(path).receive||[])].some(item=>item.asset_kind==="pick"));
+    if(f.sort==="closest")paths.sort((a,b)=>(row(a).market_gap_ratio??Infinity)-(row(b).market_gap_ratio??Infinity)||(row(a).search_distance??Infinity)-(row(b).search_distance??Infinity));
+    if(f.sort==="need")paths.sort((a,b)=>(row(a).focal_position_strength_index??Infinity)-(row(b).focal_position_strength_index??Infinity));
+    if(f.sort==="authority")paths.sort((a,b)=>({investigate:0,needs:1,match:2}[pathAuthority(a).key]-({investigate:0,needs:1,match:2}[pathAuthority(b).key)));
+    return paths;
   }
   function renderTradeFinder(body,payload){
+    if(market.pathKey)return renderCandidatePathDetail(body,payload);
     if(!payload||payload.status!=="ready"){body.innerHTML=loading("Loading Trade Finder","Server-owned Search is preparing the current candidate workspace.");return}
     if(!market.playerLoaded&&!market.playerLoading)void ensurePlayerUniverse();
-    const mode=finderMode(),f=market.finderFilters,rows=finderRows(),calc=words(currentCalculatedState(payload));
-    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Trade Finder</p><h2>I know what I am trying to do.</h2><p>Choose an intent and strategic Search lens. Calculated competitive state remains "+esc(calc)+".</p></div><small>"+rows.length+" returned path"+(rows.length===1?"":"s")+"</small></section><div class='market-ns-finder'><div class='market-ns-mode-grid'>"+[["improve","Improve my team"],["target","Target a player"],["shop","Shop a player"],["position","Target a position"],["owner","Explore an owner / team"]].map(([key,label])=>"<button type='button' data-finder-mode='"+key+"' class='"+(mode===key?"active":"")+"'>"+label+"</button>").join("")+"</div><div class='market-ns-finder-controls'><label><span>Strategic lens</span><select data-finder-posture>"+POSTURES.map(([key,label])=>"<option value='"+key+"'"+(selectedPosture()===key?" selected":"")+">"+label+"</option>").join("")+"</select></label>"+intentValueControl(mode)+"<label><span>Position</span><select data-finder-filter='position'><option value=''>All positions</option>"+["QB","RB","WR","TE"].map(v=>"<option value='"+v+"'"+(f.position===v?" selected":"")+">"+v+"</option>").join("")+"</select></label><label><span>Owner / team</span><select data-finder-filter='team'><option value=''>All owners</option>"+ownerOptions().map(([id,name])=>"<option value='"+esc(id)+"'"+(String(f.team)===String(id)?" selected":"")+">"+esc(name)+"</option>").join("")+"</select></label><label><span>Package shape</span><select data-finder-filter='deal'><option value=''>Any</option><option value='one'"+(f.deal==="one"?" selected":"")+">1-for-1</option><option value='multi'"+(f.deal==="multi"?" selected":"")+">Consolidation</option></select></label><label><span>Assets</span><select data-finder-filter='assets'><option value=''>Players / picks</option><option value='players'"+(f.assets==="players"?" selected":"")+">Players only</option><option value='picks'"+(f.assets==="picks"?" selected":"")+">Includes picks</option></select></label><label><span>Status</span><select data-finder-filter='status'><option value=''>Any status</option><option value='recommended'"+(f.status==="recommended"?" selected":"")+">Recommended</option><option value='investigate'"+(f.status==="investigate"?" selected":"")+">Worth investigating</option><option value='needs'"+(f.status==="needs"?" selected":"")+">Needs full evaluation</option><option value='match'"+(f.status==="match"?" selected":"")+">Market match only</option></select></label><label><span>Sort</span><select data-finder-filter='sort'><option value='search'"+(f.sort==="search"?" selected":"")+">Current Search order</option><option value='closest'"+(f.sort==="closest"?" selected":"")+">Closest market match</option><option value='need'"+(f.sort==="need"?" selected":"")+">Biggest roster need addressed</option><option value='authority'"+(f.sort==="authority"?" selected":"")+">Most action-authoritative</option></select></label><button type='button' class='text-button market-ns-reset' data-finder-reset>Reset filters</button></div></div><div class='market-ns-result-list'>"+(rows.length?rows.slice(0,80).map(row=>"<article><button type='button' data-finder-open='"+esc(rowKey(row))+"'><div><small>"+esc(row.target_position||"Trade path")+" · "+esc(row.counterparty_name||"Owner unavailable")+"</small><strong>"+esc(labels(row.receive).join(" + ")||"Target unavailable")+"</strong><span>"+reason(row)+"</span></div>"+statusPill(row)+"<b>"+esc(labels(row.send).join(" + ")||"Unavailable")+" → "+esc(labels(row.receive).join(" + ")||"Unavailable")+"</b></button></article>").join(""):unavailable("No paths match this view","Change the Search intent, strategic lens, or filters."))+"</div>";
+    const mode=finderMode(),f=market.finderFilters,paths=finderPaths(payload),calc=words(currentCalculatedState(payload));
+    const primary="<div class='market-ns-finder-primary'><label><span>Strategic lens</span><select data-finder-posture>"+POSTURES.map(([key,label])=>"<option value='"+key+"'"+(selectedPosture()===key?" selected":"")+">"+label+"</option>").join("")+"</select></label>"+intentValueControl(mode)+"</div>";
+    const advanced="<details class='market-ns-advanced'><summary>Advanced filters</summary><div class='market-ns-finder-controls'><label><span>Position</span><select data-finder-filter='position'><option value=''>All positions</option>"+["QB","RB","WR","TE"].map(v=>"<option value='"+v+"'"+(f.position===v?" selected":"")+">"+v+"</option>").join("")+"</select></label><label><span>Owner / team</span><select data-finder-filter='team'><option value=''>All owners</option>"+ownerOptions().map(([id,name])=>"<option value='"+esc(id)+"'"+(String(f.team)===String(id)?" selected":"")+">"+esc(name)+"</option>").join("")+"</select></label><label><span>Package shape</span><select data-finder-filter='deal'><option value=''>Any</option><option value='one'"+(f.deal==="one"?" selected":"")+">1-for-1</option><option value='multi'"+(f.deal==="multi"?" selected":"")+">Consolidation</option></select></label><label><span>Assets</span><select data-finder-filter='assets'><option value=''>Players / picks</option><option value='players'"+(f.assets==="players"?" selected":"")+">Players only</option><option value='picks'"+(f.assets==="picks"?" selected":"")+">Includes picks</option></select></label><label><span>Status</span><select data-finder-filter='status'><option value=''>Any status</option><option value='investigate'"+(f.status==="investigate"?" selected":"")+">Prelim plausible</option><option value='needs'"+(f.status==="needs"?" selected":"")+">Needs review</option><option value='match'"+(f.status==="match"?" selected":"")+">Market match / friction</option></select></label><label><span>Sort</span><select data-finder-filter='sort'><option value='search'"+(f.sort==="search"?" selected":"")+">Current Search order</option><option value='closest'"+(f.sort==="closest"?" selected":"")+">Closest market match</option><option value='need'"+(f.sort==="need"?" selected":"")+">Biggest roster need addressed</option><option value='authority'"+(f.sort==="authority"?" selected":"")+">Strongest preliminary evidence</option></select></label><button type='button' class='text-button market-ns-reset' data-finder-reset>Reset filters</button></div></details>";
+    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Trade Finder</p><h2>What are you trying to do?</h2><p>Intent first. Calculated competitive state remains "+esc(calc)+". Packages stay subordinate to Candidate Paths.</p></div><small>"+paths.length+" candidate path"+(paths.length===1?"":"s")+"</small></section><div class='market-ns-finder'><div class='market-ns-mode-grid'>"+[["improve","Improve my team"],["target","Target a player"],["shop","Shop a player"],["position","Target a position"],["owner","Explore an owner / team"]].map(([key,label])=>"<button type='button' data-finder-mode='"+key+"' class='"+(mode===key?"active":"")+"'>"+label+"</button>").join("")+"</div>"+primary+advanced+"</div><div class='market-ns-result-list'>"+(paths.length?paths.slice(0,80).map(path=>{const r=representative(path),a=pathAuthority(path);return"<article><button type='button' data-finder-open='"+esc(path.path_id)+"'><div><small>"+esc(r.target_position||"Trade path")+" · "+esc(r.counterparty_name||"Owner unavailable")+"</small><strong>"+esc(labels(r.receive).join(" + ")||"Target unavailable")+"</strong><span>"+esc(words(path.bilateral_plausibility))+" · "+esc(words(path.economic_screen))+"</span></div><span class='market-ns-status "+a.key+"'>"+esc(a.label)+"</span><b>"+esc((path.alternate_packages||[]).length+1)+" package variant"+(((path.alternate_packages||[]).length+1)===1?"":"s")+"</b></button></article>"}).join(""):unavailable("No paths match this view","Change the Search intent, strategic lens, or advanced filters."))+"</div>";
     wireFinder(body,payload,mode);
   }
   function wireFinder(body,payload,mode){
     body.querySelectorAll("[data-finder-mode]").forEach(button=>button.addEventListener("click",()=>{
       const next=button.dataset.finderMode;
+      market.pathKey="";
       if(next==="improve")window.fsfflMarketIntent?.clear?.();else window.fsfflMarketIntent?.set?.(next,"");
       renderBody(payload);
     }));
@@ -251,7 +263,7 @@
     body.querySelector("[data-finder-posture]")?.addEventListener("change",event=>{window.fsfflOpportunityPosture?.setPosture?.(event.target.value);window.fsfflMarketFocus?.refresh?.()});
     body.querySelectorAll("[data-finder-filter]").forEach(select=>select.addEventListener("change",()=>{market.finderFilters[select.dataset.finderFilter]=select.value;renderBody(payload)}));
     body.querySelector("[data-finder-reset]")?.addEventListener("click",()=>{market.finderFilters={position:"",team:"",status:"",deal:"",assets:"",sort:"search"};renderBody(payload)});
-    body.querySelectorAll("[data-finder-open]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.finderOpen;market.detailSection="overview";renderOpportunityDetail(body,payload)}));
+    body.querySelectorAll("[data-finder-open]").forEach(button=>button.addEventListener("click",()=>{const path=pathById(payload,button.dataset.finderOpen);market.pathKey=button.dataset.finderOpen;market.detailKey=path?.opportunity_id||"";renderCandidatePathDetail(body,payload)}));
   }
 
   function projectionFromPlayer(player){
