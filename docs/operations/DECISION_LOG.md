@@ -45,3 +45,18 @@ If qualifying preseason evidence does not exist, preseason comparison is explici
 Decision: the K/DST + new-league Forecast research directive is complete, but the production blocker remains until Management authorizes and accepts governed implementation, empirical evidence promotion, downstream compatibility, and lifecycle validation.
 
 Completion artifact: `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
+
+
+## 2026-09-24 — Market North Star not product-accepted
+Decision: physical-iPhone acceptance does not close the current Market implementation. The four-surface shell is useful, but opportunity quality, readiness truth, and mobile information hierarchy remain below the product acceptance bar.
+
+## 2026-09-24 — Trade Discovery architecture moves ahead of Market acceptance
+Decision: move the Trade Discovery Architecture Review forward as a dependency of Market acceptance rather than treating it as later Trade Center work.
+
+Reason: a small high-signal feed must establish strategic relevance, cheap economic coherence, bilateral plausibility, and diversity before deep Decision/Simulation. Raw package generation plus a “needs full evaluation” label is not sufficient to earn scarce For You attention.
+
+## 2026-09-24 — Opportunity before package
+Decision: the Market review will define an Opportunity as a governed strategic object distinct from a generated trade package. Package variants are candidate implementations of an opportunity and must be clustered/deduplicated before presentation.
+
+## 2026-09-24 — Market mobile simplification
+Decision: Market must be recomposed around SEE → UNDERSTAND → INTERACT → DRILL DEEPER, with progressive disclosure and distinct jobs for For You, Trade Finder, Player Board, and Free Agents. Market-vs-Intrinsic remains a discovery lens rather than mandatory repeated top-level chrome on every surface.
