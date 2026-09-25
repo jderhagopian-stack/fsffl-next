@@ -130,3 +130,9 @@ Market North Star is not product-closed by this decision. Repeat physical-iPhone
 
 ## 2026-09-25 — Market current-beta acceptance failed
 Decision: the accepted Market architecture remains frozen, but the authenticated post-PR-#232/#235 physical-iPhone pass failed product acceptance. A bounded corrective is authorized for competitive-lens discovery semantics, an explicit Find opportunities submission lifecycle, focused zero-result exhaustion evidence, separate Forecast versus FSFFL Intrinsic availability tracing, and remaining mobile safe-area correctness. The existing eight-path preliminary Decision budget and zero broad changed-state Simulation boundary remain protected.
+
+
+## 2026-09-25 — Provisional 2026 K/DST degraded-authority mode
+Decision: Management authorizes a bounded 2026-only provisional K/DST Forecast tier that scores only governed supported coordinates and explicitly omits unsupported coordinates. Presentation, readiness, and analytics may expose the provisional contract with its limitations attached. Full-authority downstream consumers may not silently treat it as complete Forecast truth. The full K/DST authority gates and the 2027+ fail-closed boundary remain unchanged.
+
+PR #237 merged at `33b969b04180893f7e582c0ebd76c54bea81961d`. PR #238 exact-league-state persistence and API binding is accepted as safety hardening within the same authority envelope; it must reconcile with current main and retain green regression coverage before merge.
