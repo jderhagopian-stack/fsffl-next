@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -17,6 +18,7 @@ from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
+_logger = logging.getLogger("uvicorn.error")
 
 
 def install_league_value_lens_routes(
@@ -48,8 +50,10 @@ def install_league_value_lens_routes(
 
         intrinsic = None
         intrinsic_error = None
+        intrinsic_record = None
         if background_coordinator is not None:
             record = background_coordinator.request(runtime)
+            intrinsic_record = record
             if record.status in {
                 IntrinsicBuildStatus.QUEUED,
                 IntrinsicBuildStatus.RUNNING,
@@ -100,6 +104,27 @@ def install_league_value_lens_routes(
                     "league_state_id": runtime.league_state.state_id,
                     "retry_after_ms": loading.get("retry_after_ms"),
                 }
+                payload["intrinsic_execution"] = {
+                    "status": record.status.value,
+                    "league_state_id": record.league_state_id,
+                    "forecast_coordinate": record.forecast_coordinate,
+                    "response_budget_exceeded": record.response_budget_exceeded,
+                    "started_at": record.created_at.isoformat(),
+                    "updated_at": record.updated_at.isoformat(),
+                    "error": record.error,
+                }
+                _logger.info(
+                    "FSFFL Market value lenses universe=%s state=%s forecast_status=%s "
+                    "forecast_covered=%s/%s intrinsic_status=%s intrinsic_build=%s coordinate=%s",
+                    universe,
+                    runtime.league_state.state_id,
+                    forecast_status,
+                    (payload.get("all_player_forecast") or {}).get("covered_players"),
+                    (payload.get("all_player_forecast") or {}).get("requested_players"),
+                    (payload.get("fsffl_intrinsic") or {}).get("status"),
+                    record.status.value,
+                    record.forecast_coordinate,
+                )
                 return payload
             if record.status == IntrinsicBuildStatus.FAILED:
                 intrinsic_error = str(intrinsic_failure_payload(record)["message"])
@@ -154,4 +179,38 @@ def install_league_value_lens_routes(
             "league_state_id": runtime.league_state.state_id,
             "retry_after_ms": None,
         }
+        payload["intrinsic_execution"] = (
+            {
+                "status": intrinsic_record.status.value,
+                "league_state_id": intrinsic_record.league_state_id,
+                "forecast_coordinate": intrinsic_record.forecast_coordinate,
+                "response_budget_exceeded": intrinsic_record.response_budget_exceeded,
+                "started_at": intrinsic_record.created_at.isoformat(),
+                "updated_at": intrinsic_record.updated_at.isoformat(),
+                "error": intrinsic_record.error,
+            }
+            if intrinsic_record is not None
+            else {
+                "status": "synchronous",
+                "league_state_id": runtime.league_state.state_id,
+                "forecast_coordinate": getattr(intrinsic, "forecast_model_version", None),
+                "response_budget_exceeded": False,
+                "started_at": None,
+                "updated_at": None,
+                "error": intrinsic_error,
+            }
+        )
+        _logger.info(
+            "FSFFL Market value lenses universe=%s state=%s forecast_status=%s "
+            "forecast_covered=%s/%s intrinsic_status=%s intrinsic_build=%s coordinate=%s reason=%s",
+            universe,
+            runtime.league_state.state_id,
+            forecast_status,
+            (payload.get("all_player_forecast") or {}).get("covered_players"),
+            (payload.get("all_player_forecast") or {}).get("requested_players"),
+            (payload.get("fsffl_intrinsic") or {}).get("status"),
+            (payload.get("intrinsic_execution") or {}).get("status"),
+            (payload.get("intrinsic_execution") or {}).get("forecast_coordinate"),
+            (payload.get("fsffl_intrinsic") or {}).get("reason"),
+        )
         return payload
