@@ -3,7 +3,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import re
 import secrets
+import unicodedata
 from pathlib import Path
 from typing import Callable
 
@@ -15,9 +17,15 @@ from fastapi.staticfiles import StaticFiles
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueMetric
 from fsffl.opportunity import WaiverMove
 from fsffl.persistence.contracts import PersistenceStore
+from fsffl.persistence.provisional_k_dst_forecast import (
+    PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND,
+    PROVISIONAL_K_DST_SCOPE_KIND,
+    decode_provisional_k_dst_forecast,
+)
+from fsffl.forecast.k_dst_provisional import PROVISIONAL_K_DST_MODEL_VERSION
 from fsffl.state.history import StateSnapshotStore
 from fsffl.state.matchups import completed_matchups
-from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.state.models import FrozenModel, LeagueState, Position, canonical_nfl_team
 from fsffl.trade_decision.models import BilateralTradeProposal
 from fsffl.value.models import AssetValueProfile
 
@@ -146,6 +154,26 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "value_coverage": value_evidence.coverage if value_evidence is not None else None,
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
+        "state_ready": league_state is not None,
+        "intelligence_complete": bool(
+            evidence is not None
+            and evidence.league_scored_forecasts
+            and simulation is not None
+            and value_evidence is not None
+            and value_evidence.estimates
+        ),
+        "serving_last_good": bool(runtime.intelligence_reused),
+        "served_state": (
+            {
+                "league_id": league_state.league.league_id,
+                "league_name": league_state.league.name,
+                "state_id": league_state.state_id,
+                "as_of": league_state.as_of.isoformat(),
+                "team_id": runtime.selected_team_id,
+            }
+            if league_state is not None
+            else None
+        ),
         "product_version": "next8-product-v1",
     }
 
@@ -158,6 +186,7 @@ def _job_payload(job: IntelligenceJob | None) -> dict[str, object]:
             "phase": "idle",
             "message": "No intelligence refresh is running.",
             "error": None,
+            "failure_stage": None,
             "league_state_id": None,
             "created_at": None,
             "updated_at": None,
@@ -168,9 +197,98 @@ def _job_payload(job: IntelligenceJob | None) -> dict[str, object]:
         "phase": job.phase.value,
         "message": job.message,
         "error": job.error,
+        "failure_stage": job.failure_stage.value if job.failure_stage is not None else None,
         "league_state_id": job.league_state_id,
         "created_at": job.created_at.isoformat(),
         "updated_at": job.updated_at.isoformat(),
+    }
+
+
+def _provisional_subject_name(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_text = "".join(
+        char for char in normalized if not unicodedata.combining(char)
+    )
+    return "".join(re.findall(r"[a-z0-9]+", ascii_text.lower()))
+
+
+def _provisional_k_dst_status(
+    persistence_store: PersistenceStore | None,
+    league_state: LeagueState,
+) -> dict[str, object]:
+    """Read-only visibility into the bounded 2026 provisional K/DST evidence tier."""
+
+    if league_state.league.season != 2026:
+        return {
+            "status": "not_applicable",
+            "contract_available": False,
+            "eligible_subject_count": 0,
+            "persisted_subject_count": 0,
+            "simulation_authorized": False,
+            "value_authorized": False,
+            "reason": "The provisional K/DST exception is authorized only for the 2026 season.",
+        }
+
+    player_states = {item.player_id: item for item in league_state.player_states}
+    rostered_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+    }
+    subject_keys: set[str] = set()
+    for player in league_state.players:
+        if player.player_id not in rostered_ids or player.position not in {Position.K, Position.DST}:
+            continue
+        state_row = player_states.get(player.player_id)
+        nfl_team = player.nfl_team or (state_row.nfl_team if state_row is not None else None)
+        if not nfl_team:
+            continue
+        team = canonical_nfl_team(nfl_team)
+        if player.position == Position.DST:
+            subject_keys.add(f"DST:{team}")
+        else:
+            subject_keys.add(f"K:{_provisional_subject_name(player.full_name)}:{team}")
+
+    available: list[str] = []
+    if persistence_store is not None:
+        for subject_key in sorted(subject_keys):
+            record = persistence_store.get_latest_reusable_artifact(
+                artifact_kind=PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND,
+                scope_kind=PROVISIONAL_K_DST_SCOPE_KIND,
+                scope_id=subject_key,
+                model_version=PROVISIONAL_K_DST_MODEL_VERSION,
+            )
+            if record is None:
+                continue
+            try:
+                decode_provisional_k_dst_forecast(dict(record.payload))
+            except (TypeError, ValueError):
+                continue
+            available.append(subject_key)
+
+    if available:
+        reason = (
+            "Governed provisional 2026 K/DST rows exist for some rostered subjects. "
+            "They remain partial-rule Presentation/Analytics evidence and do not "
+            "authorize Simulation, Value, Team Utility, Decision, or Search."
+        )
+        status = "available_partial"
+    else:
+        reason = (
+            "No qualifying governed 2026 provisional K/DST rows are persisted for "
+            "the active league roster; canonical Forecast remains blocked."
+        )
+        status = "unavailable"
+
+    return {
+        "status": status,
+        "contract_available": True,
+        "eligible_subject_count": len(subject_keys),
+        "persisted_subject_count": len(available),
+        "persisted_subject_keys": available,
+        "simulation_authorized": False,
+        "value_authorized": False,
+        "reason": reason,
     }
 
 
@@ -473,7 +591,50 @@ def create_app(
         payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
         payload["cardinal_value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.fsffl_cardinal_values)
         payload["cardinal_value_coverage"] = runtime.value_evidence.cardinal_player_coverage if runtime.value_evidence is not None else None
-        payload["job"] = _job_payload(jobs.current(user_id))
+        current_job = jobs.current(user_id)
+        job_payload = _job_payload(current_job)
+        payload["job"] = job_payload
+        payload["state_ready"] = True
+        payload["intelligence_complete"] = bool(
+            evidence is not None
+            and evidence.league_scored_forecasts
+            and runtime.simulation_analytics is not None
+            and value_ready
+        )
+        payload["served_state"] = {
+            "league_id": runtime.league_state.league.league_id,
+            "league_name": runtime.league_state.league.name,
+            "state_id": runtime.league_state.state_id,
+            "as_of": runtime.league_state.as_of.isoformat(),
+            "team_id": runtime.selected_team_id,
+            "serving_last_good": bool(runtime.intelligence_reused),
+        }
+        payload["lifecycle"] = {
+            "state": (
+                "refreshing_intelligence"
+                if job_payload["status"] in {"queued", "running"}
+                else "blocked"
+                if job_payload["status"] == "failed"
+                else "interrupted"
+                if job_payload["status"] == "interrupted"
+                else "current"
+                if payload["intelligence_complete"]
+                else "state_ready"
+            ),
+            "failure_stage": job_payload["failure_stage"],
+            "usable_state_available": True,
+            "message": (
+                f"{str(job_payload['failure_stage']).replace('_', ' ').title()} blocked; current league State and roster remain available."
+                if job_payload["status"] == "failed" and job_payload["failure_stage"]
+                else "Current league State and roster are available while governed intelligence is incomplete."
+                if not payload["intelligence_complete"]
+                else "Governed intelligence is current."
+            ),
+        }
+        payload["provisional_k_dst"] = _provisional_k_dst_status(
+            persistence_store,
+            runtime.league_state,
+        )
         return payload
 
     @application.post("/api/connect/sleeper")
