@@ -177,6 +177,63 @@ FantasyPros API materials advertise rest-of-season projection access and a comme
 Disposition:
 **may be useful under license, but cannot become an independent second vote unless source decomposition proves it does not re-vote present component providers.**
 
+
+### JerryGM Projections API — strongest exact-rule candidate found
+
+Research check finalized against deployed API documentation at:
+`2026-09-25T13:50:45Z`.
+
+Docs:
+https://api.jerrygm.com/api/ext/v1/docs
+
+Terms:
+https://www.jerrygm.com/terms/
+
+Technical evidence:
+- current 2026 `week=current&horizon=ros` is explicitly supported;
+- ROS carries schedule-aware `gamesRemaining`, `ros.statLine`, `generatedAt` / current-week semantics and a current-source model;
+- K supports custom scoring with separate `fg50to59` and `fg60plus` weights;
+- D/ST exposes sacks, INT, FR, FF, TDs, return TDs, safety, blocked kicks and defensive two-point returns;
+- D/ST retains a points-allowed spread and exposes `paTierExpectedPPG`, explicitly integrating a configurable PA ladder over the distribution instead of scoring only mean PA;
+- arbitrary `paTiers` can reproduce the Hodor PA bands.
+
+Important evidence boundary:
+- the documented raw K `statLine` explicitly lists distance buckets only through `50plus`;
+- the custom scorer nevertheless accepts a distinct `fg60plus` rule;
+- therefore JerryGM cannot be mapped to raw `FG_MADE_60_PLUS` merely from the public schema text.
+- A live licensed/API-key response must prove whether a report-only/custom-scoring breakdown can expose the expected 60+ contribution separately enough to satisfy FSFFL's `DISTRIBUTIONAL` rule-evidence contract.
+- No live provider payload was acquired in this Research directive because API access requires an enabled account/key.
+
+Independence:
+- JerryGM describes this as its own model output derived from nflverse.
+- its internal `jgm_baseline` / `jgm_cofactor` / `nflverse_naive` variants are one provider ecosystem and must never count as multiple independent votes.
+
+Rights:
+- the self-serve API grants application use; Pro permits commercial display;
+- the terms prohibit use of output to train or calibrate a competing projection product and prohibit raw-feed redistribution;
+- because FSFFL would ingest JerryGM as one input to a derived multi-source Forecast, written provider clarification / partner terms are required before treating self-serve access as production-authorized ensemble input.
+
+Disposition:
+**best technical exact-rule candidate found; live response validation + direct rights clarification required; counts as at most one independent provider.**
+
+### Second exact-capability source search — exhausted at public evidence level
+
+Materially distinct current ROS/API candidates were checked after JerryGM surfaced:
+- CBS: no 60+ split; aggregate PA only;
+- LineupExperts: no public distance split; aggregate PA/YA only;
+- RotoWire: public ROS K schema exposes 50+ rather than 60+; DEF exact distribution fields not public;
+- FantasyPros: ROS API exists but product is aggregate/consensus evidence;
+- Fantasy Nerds: ROS API exists and commercial API use is possible, but public documentation does not establish the required K 60+ and D/ST PA-distribution coordinates; it is also a consensus/aggregation-oriented product and cannot be assumed independent;
+- SportsDataIO: season projection K schema collapses 50+ and current maintained in-season product is game-level rather than the authorized ROS path;
+- Razzball: current ROS content failed source health;
+- FFToday: wrong current horizon for the exception.
+
+No second public, provenance-clean, current ROS source was found that explicitly proves both:
+1. the Hodor 60+ K coordinate; and
+2. distributional PA-tier D/ST evidence.
+
+Further resolution now requires provider/API access or direct provider answers, not another undirected public search.
+
 ## Exact current-forward gate analysis
 
 ### A. 2026 time-origin / no-preseason gate
@@ -209,33 +266,45 @@ Presentation/analytics must explicitly expose:
 Do not substitute the late-start baseline into a field labeled preseason.
 
 ### C. Current source existence
-Status: **PARTIALLY CLEARED**
+Status: **CLEARED FOR TECHNICAL EXISTENCE / PARTIALLY CLEARED FOR AUTHORITY**
 
-Current ROS products exist from multiple providers.
+Current ROS K/DST products unquestionably exist.
 
-At the actual 2026-09-25 acquisition instant:
+At the actual 2026-09-25 acquisition/research instant:
 - CBS has usable ROS content for many subjects but stale Atlanta/Green Bay rows;
 - LineupExperts has usable ROS content for many subjects but stale Atlanta/Green Bay rows;
 - RotoWire exposes a current ROS product but usable values/access require licensing;
+- JerryGM explicitly supports 2026 schedule-aware ROS K/DST and is the first public candidate found whose scoring layer can represent Hodor's 60+ K rule and distributional PA tiers;
+- FantasyPros/Fantasy Nerds expose ROS APIs but require aggregate/independence treatment;
 - Razzball fails health;
 - FFToday is the wrong time horizon;
 - SportsDataIO's maintained in-season product is game-level rather than current ROS.
 
+The remaining question is no longer whether current ROS K/DST sources exist. It is whether **at least two independent, rights-cleared sources cover each required active scoring coordinate with healthy current rows**.
+
 The runtime therefore needs **subject-row health**, not only provider-global health.
 
 ### D. Two-source independence
-Status: **PARTIALLY CLEARED TECHNICALLY / BLOCKED FOR DEPLOYED AUTHORITY**
+Status: **PARTIALLY CLEARED GENERALLY / STILL BLOCKED ON THE HODOR-ONLY COORDINATES**
 
-CBS + LineupExperts are plausible independent projection systems.
+CBS, LineupExperts, RotoWire and JerryGM are plausible distinct provider systems, subject to rights and source-health validation.
 
-Before an implementation may count them as two voters:
+For ordinary shared coordinates such as K makes/attempts/XP and D/ST sacks/INT/FF/FR, a two-source path is technically plausible.
+
+For the Hodor-specific hard coordinates, Research found only one current provider candidate with explicit technical support:
+- JerryGM for custom 60+ K scoring;
+- JerryGM for distributional D/ST PA-tier expectation.
+
+No second provenance-clean provider was found publicly proving those same exact coordinates.
+
+Before any implementation counts providers:
 - use a permitted source-access path;
-- preserve independent provider IDs;
-- verify the LineupExperts in-season endpoint is its internal projection model for the relevant rows;
-- map source component provenance;
-- apply the existing per-subject/per-metric two-source gate.
+- preserve provider IDs and underlying source provenance;
+- treat JerryGM internal source variants as one provider;
+- treat aggregate providers as aggregate unless decomposition proves independence;
+- apply the existing per-subject/per-metric/horizon two-source gate.
 
-A provider being healthy somewhere in the dataset does not satisfy a group with only one source.
+A provider being healthy elsewhere in the dataset does not satisfy an undercovered Hodor-specific group.
 
 ### E. K mean/scoring completeness for Hodor
 Status: **STILL BLOCKED**
@@ -261,9 +330,12 @@ Not allowed:
 - a 50+ projection can support the base five points per 50+ make, but the extra one point for each 60+ make remains a missing active scoring coordinate;
 - do not use actual-to-date 60+ frequency, league average, kicker career rate, or a heuristic allocation unless separately authorized as a governed empirical residual.
 
-Current public healthy candidate feeds do not prove two independent `FG_MADE_60_PLUS` projections.
+JerryGM proves that a current ROS provider can technically price a separate 60+ rule, but the public raw schema does not independently expose a `FG_MADE_60_PLUS` stat and no second independent current ROS provider was found with explicit 60+ evidence.
 
-Therefore Hodor authoritative K fantasy points remain fail-closed.
+Therefore Hodor authoritative K fantasy points remain fail-closed until:
+1. a live JerryGM/API response proves rule-specific 60+ evidence acceptable under FSFFL's governed evidence statuses (or another source exposes the raw coordinate); and
+2. a second independent provider supplies the same required coordinate; and
+3. source rights are cleared.
 
 ### F. D/ST mean/scoring completeness for Hodor
 Status: **STILL BLOCKED**
@@ -295,35 +367,74 @@ Most importantly:
 - `score(E[PA])` is not `E[score(PA)]` for bucket scoring;
 - aggregate PA/PA-per-game cannot satisfy the Hodor PA bucket coordinate.
 
-Therefore Hodor authoritative D/ST fantasy points remain fail-closed.
+JerryGM proves a current ROS source can technically carry a PA spread and calculate expected custom PA-tier scoring, and it also exposes many of Hodor's rare D/ST events. That materially clears the **technical-feasibility** question for one provider.
+
+Hodor authoritative D/ST fantasy points nevertheless remain fail-closed because:
+1. no second independent current ROS provider was found with proven distributional PA-tier evidence;
+2. per-rule rare-event two-source coverage remains incomplete;
+3. JerryGM live payload health and rights are not yet cleared.
 
 ### G. K/DST uncertainty
-Status: **BOUNDED RESEARCH TREATMENT AUTHORIZED BY EVIDENCE; PRODUCTION COEFFICIENT NOT YET CLEARED**
+Status: **BOUNDED EMPIRICAL TREATMENT MEASURED; HODOR-TOTAL PROMOTION STILL BLOCKED**
 
-Existing historical evidence is materially sufficient to **run** a bounded empirical study:
-- genuine pre-opener 2024 multi-provider raw K/DST corpora exist;
-- source-separated weekly K/DST projection panels exist across multiple historical seasons;
-- realized NFL K/DST outcomes are reconstructable for a substantial common coordinate;
-- PR #215 already merged non-promoting season-error and weekly-volatility harnesses.
+Research has now executed the bounded empirical study instead of leaving it hypothetical.
 
-But existing evidence does **not** justify declaring a Hodor-total K or D/ST uncertainty coefficient without performing and validating the fit.
+Durable results:
+`artifacts/research/k_dst_late_start_exception_20260925/EMPIRICAL_UNCERTAINTY_CHECK.md`
 
-The reason is scoring-coordinate mismatch:
-- K historical providers generally collapse 50+ and do not support Hodor's 60+ incremental point;
-- D/ST historical raw coverage is incomplete for the full Hodor rule set, especially PA-bucket distribution and rare special-teams coordinates;
-- a coefficient fit on a reduced standard scoring subscore cannot silently be applied to a larger Hodor score.
+#### K reduced fingerprint
+Fingerprint:
+`3 * FGM - (FGA - FGM) + XPM`
 
-Required implementation:
-1. introduce a deterministic `CalibrationScoringFingerprint` identifying exactly which raw metrics/rule transformations the empirical sample represents;
-2. reconstruct realized scores under that exact fingerprint;
-3. construct equal-weight historical projection samples only where >=2 independent PIT providers cover the fingerprint;
-4. run `fit_k_dst_season_error` and `fit_k_dst_weekly_volatility`;
-5. persist sample size, seasons, source IDs, source hashes/provenance, residual diagnostics and held-out/replay checks;
-6. compare calibration fingerprint to target league scoring coverage;
-7. promote an empirical uncertainty floor only when the target coordinate is proven compatible;
-8. otherwise persist the fit as research evidence only and keep target Forecast uncertainty unavailable.
+2024 PIT providers:
+FantasySharks + CBS + ESPN, requiring >=2 per kicker.
 
-No coefficient value is authorized by this Research handoff.
+Season-error result:
+- n = 34 kickers;
+- relative RMSE = **0.3841884793**.
+
+Weekly realized-volatility result:
+- 42 kicker subjects;
+- 542 player-games;
+- pooled within-subject CV = **0.5223274618**.
+
+#### D/ST reduced fingerprint
+Fingerprint:
+`1 * DST_SACK + 2 * DST_INTERCEPTION`
+
+2024 PIT providers:
+FantasySharks + CBS + ESPN, requiring >=2 per team.
+
+Season-error result:
+- n = 30 team units;
+- relative RMSE = **0.2140283312**.
+
+Weekly realized-volatility result:
+- 32 team units;
+- 544 team-games;
+- pooled within-subject CV = **0.6381941339**.
+
+#### Authority implication
+
+This changes the evidence-gate wording:
+
+**It is no longer correct to say K/DST lacks empirical uncertainty evidence.**
+
+Historical evidence is sufficient for bounded empirical uncertainty on explicitly defined common scoring fingerprints.
+
+It is still **not** sufficient to promote these four numbers as Hodor-total uncertainty because the Hodor target contains active coordinates excluded from the fitted fingerprints:
+- K distance premiums, especially the 60+ increment, and XP miss treatment;
+- D/ST FF/FR, safety, blocks, TD families, 2-point returns, special teams and nonlinear PA buckets.
+
+The production-safe implementation requirement is now:
+1. encode `CalibrationScoringFingerprint`;
+2. reproduce these retained measurements;
+3. add replay/holdout diagnostics;
+4. measure additional target-compatible fingerprints if qualifying PIT evidence exists;
+5. prove how uncertainty for every excluded Hodor coordinate is governed;
+6. promote only if the target total is fully covered.
+
+No Hodor-total coefficient is authorized by Research.
 
 ### H. Provider rights for deployed 2026 beta
 Status: **STILL BLOCKED UNTIL SOURCE-SPECIFIC RIGHTS ARE SATISFIED**
@@ -524,11 +635,11 @@ Implementation must include at least:
 | Gate | Current-forward 2026 K | Current-forward 2026 D/ST | 2026 preseason/history | Commercial |
 |---|---|---|---|---|
 | Late-start time origin | **CLEARED** | **CLEARED** | Not preseason | N/A |
-| Current ROS source existence | **PARTIAL** | **PARTIAL** | N/A | N/A |
-| Source health | **PARTIAL** — row quarantine required | **PARTIAL** — row quarantine required | N/A | N/A |
-| >=2 independent sources | **CANDIDATE, not deployed-cleared** | **CANDIDATE, not deployed-cleared** | historical 2024 panel exists | license-specific |
-| Hodor rule completeness | **BLOCKED: 60+** | **BLOCKED: PA distribution + rare events** | preseason comparison unavailable | same technical rules |
-| K/DST empirical uncertainty | **BLOCKED FOR PROMOTION** | **BLOCKED FOR PROMOTION** | enough evidence to run bounded study | validation still required |
+| Current ROS source existence | **CLEARED technically** | **CLEARED technically** | N/A | N/A |
+| Source health | **PARTIAL** — row quarantine / live API validation required | **PARTIAL** — row quarantine / live API validation required | N/A | N/A |
+| >=2 independent sources | **PARTIAL; hard 60+ group still one proven candidate** | **PARTIAL; PA-distribution group still one proven candidate** | historical 2024 multi-source panel exists | license-specific |
+| Hodor rule completeness | **BLOCKED: second-source 60+ evidence** | **BLOCKED: second-source PA distribution + rare events** | preseason comparison unavailable | same technical rules |
+| K/DST empirical uncertainty | **REDUCED FINGERPRINT MEASURED; HODOR TOTAL BLOCKED** | **REDUCED FINGERPRINT MEASURED; HODOR TOTAL BLOCKED** | 2024 empirical results persisted | target compatibility still required |
 | Rights for deployed beta | **BLOCKED until provider rights** | **BLOCKED until provider rights** | historical research evidence retained | separate licenses |
 | 2026 preseason comparison | Not required | Not required | **UNAVAILABLE BY DESIGN** | N/A |
 | 2027 preseason snapshot | N/A | N/A | normal process required | N/A |
@@ -543,9 +654,11 @@ Implementation must include at least:
 ### What still blocks current-forward 2026 Hodor authority
 1. rights-cleared deployable source access;
 2. two independent sources for every required active scoring coordinate;
-3. K: exact evidence for the 60+ incremental scoring coordinate;
-4. D/ST: game/distributional PA bucket evidence and remaining rare event coordinates;
-5. K-specific and D/ST-specific promoted uncertainty compatible with the target scoring fingerprint.
+3. K: a second independent 60+ evidence source plus live validation of the first exact-rule candidate;
+4. D/ST: a second independent game/distributional PA-tier source plus remaining rare-event two-source coverage;
+5. promotion of K-specific and D/ST-specific uncertainty only after full target-scoring compatibility is proven.
+
+The historical uncertainty blocker is now **compatibility**, not absence of empirical measurements.
 
 ### What no longer blocks current-forward authority
 - absence of a 2026 preseason K/DST snapshot;
@@ -568,11 +681,13 @@ Implementation must include at least:
 5. Add K/DST ROS normalization and active-rule coverage maps.
 6. Add the exact coefficient-equivalence transform for equal-scored K distance bands.
 7. Add D/ST team-unit ROS normalization and reject aggregate PA for bucket authority.
-8. Run the historical K and D/ST empirical calibration study under explicit scoring fingerprints; persist results without promotion.
-9. Promote uncertainty only if the target scoring fingerprint is compatible and validation passes.
-10. Only then re-run Hodor current-forward Forecast/readiness acceptance.
-11. Keep preseason comparison unavailable for 2026.
-12. Verify 2027 cannot enter the exception path.
+8. Reproduce the now-persisted historical K/DST empirical results under explicit scoring fingerprints and add replay/holdout diagnostics.
+9. Use a licensed JerryGM key (or equivalent exact-capability source) to validate live 2026 rule-level evidence for 60+ K and D/ST PA tiers; do not count JerryGM's internal model variants as independent.
+10. Obtain/validate a second independent exact-capability source for those hard coordinates, or keep them fail-closed.
+11. Promote uncertainty only if the target scoring fingerprint is fully compatible and validation passes.
+12. Only then re-run Hodor current-forward Forecast/readiness acceptance.
+13. Keep preseason comparison unavailable for 2026.
+14. Verify 2027 cannot enter the exception path.
 
 ## Operating-protocol conclusion
 
@@ -582,6 +697,10 @@ It does.
 
 The missing-preseason gate has been removed from current-forward authority. The remaining current-forward blockers are now precisely rule completeness, independent source coverage, source rights/health, and target-compatible K/DST uncertainty.
 
-Further generic public-source searching is not the next highest-value action. The remaining source questions require rights-cleared API/schema access (particularly for a second source), while the uncertainty question requires bounded implementation/execution of the already-designed empirical harness rather than guessing a coefficient.
+Materially distinct public-source searching has now also identified JerryGM as a technically exact-capability candidate and Fantasy Nerds as another ROS/API path, while failing to recover a second public provider that proves the Hodor-specific 60+ K and distributional PA coordinates.
+
+The bounded empirical uncertainty study has now been executed and persisted; its remaining blocker is target-fingerprint compatibility, not lack of a measurement.
+
+The next unresolved source actions require provider/API credentials, rights clarification, or a newly supplied second exact-capability source rather than another undirected public search.
 
 **DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY**
