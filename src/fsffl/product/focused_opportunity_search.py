@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Mapping
 
+from fsffl.state.models import Position
 from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 
