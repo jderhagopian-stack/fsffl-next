@@ -399,3 +399,39 @@ def test_cross_league_switch_maps_unique_managed_team_name_before_apply() -> Non
         "applyConnectedContext(selectedContext)"
     )
     assert "League is ready. Select the franchise you manage to continue." in interactive
+
+
+
+def test_hosted_switch_activates_state_before_starting_intelligence_reconciliation() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    connect = source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+
+    state_index = connect.index("runtime_store.set_league_state(user_id, league_state)")
+    checkpoint_index = connect.index('getattr(runtime_store, "wait_for_checkpoint", None)')
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", state_index)
+    assert state_index < checkpoint_index < reconcile_index
+    assert "intelligence_reconciler" in connect
+
+
+def test_hosted_refresh_reconciles_missing_intelligence_even_when_state_probe_is_unchanged() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    refresh = source.split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[1].split('@application.get("/api/connect/sleeper/background/current")', 1)[0]
+
+    reused = refresh.split(
+        "FSFFL Sleeper incremental sync reused stored state", 1
+    )[1].split("except Exception as exc", 1)[0]
+    assert "intelligence_reconciler(user_id)" in reused
+    activated = refresh.split(
+        "runtime_store.set_league_state(user_id, league_state)", 1
+    )[1]
+    assert "intelligence_reconciler(user_id)" in activated
