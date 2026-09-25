@@ -55,6 +55,7 @@ from .models import (
     ForecastSubject,
     NflTeamUnitForecastSubject,
     PlayerForecastSubject,
+    TeamUnitForecastBundle,
     TeamUnitForecastObservation,
     forecast_subject_for_roster_asset,
 )
@@ -93,6 +94,7 @@ __all__ = [
     "RuleProbability",
     "SourceRuleEvidence",
     "TeamUnitDistributionalEvidence",
+    "TeamUnitForecastBundle",
     "TeamUnitForecastObservation",
     "apply_career_transition",
     "attach_provisional_position_floor_forecasts",
