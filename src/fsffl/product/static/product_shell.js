@@ -97,6 +97,10 @@ function fsfflSharedReadinessSnapshot(){
   if(lifecycle?.state==='refreshing_state'){
     return{connected:true,step:3,total:FSFFL_SHARED_READINESS_STEPS,label:lifecycle.message||'Refreshing current league State…',failed:false,complete:false};
   }
+  if(lifecycle?.state==='failed'&&lifecycle?.operation!=='refresh_intelligence'){
+    const step=lifecycle?.operation==='refresh_league'?3:1;
+    return{connected:Boolean(context?.league_id||lifecycle?.served_league_id),step,total:FSFFL_SHARED_READINESS_STEPS,label:lifecycle.message||'League lifecycle action failed; prior usable State is retained.',failed:true,complete:false};
+  }
   if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false};
   const contextComplete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
   if((job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted')&&contextComplete){
