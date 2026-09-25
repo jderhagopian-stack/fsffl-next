@@ -17,3 +17,12 @@ def test_focused_route_preserves_search_vs_decision_authority() -> None:
     assert "apply_search_posture" in search
     assert "resolve_search_posture" in search
     assert "Value and Decision authority are unchanged" in search
+
+
+def test_focused_route_spends_decision_budget_only_after_intent_admission() -> None:
+    route = _read(ROUTE)
+
+    assert "workspace_builder(runtime, bilateral_evaluation_limit=0)" in route
+    assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
+    assert "candidate_builder(runtime, browser, cardinal) if not intent else None" in route
+    assert 'getattr(focused, "diagnostics", {})' in route
