@@ -127,6 +127,18 @@ def test_fumbles_lost_is_an_exact_supported_metric() -> None:
     assert result[0].distribution.mean == pytest.approx(36.0)
 
 
+def test_active_fumble_loss_rule_fails_closed_when_raw_evidence_is_missing() -> None:
+    rules = _rules(
+        ScoringRule(stat="rec", points=0.5),
+        ScoringRule(stat="fum_lost", points=-2.0),
+    )
+    result = derive_league_fantasy_point_forecasts(
+        (_observation(ForecastMetric.RECEPTIONS, 80.0),),
+        rules=rules,
+    )
+    assert result == ()
+
+
 def test_dst_and_kicker_rules_can_be_ignored_only_when_positions_are_absent() -> None:
     rules = _rules(
         ScoringRule(stat="sack", points=1.0),
