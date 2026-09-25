@@ -57,7 +57,7 @@ Architecture accepted. Implementation complete at implementation level. PR #220 
 
 Accepted model: `OpportunityHypothesis → MarketOpportunity → CandidatePath → specific transaction → Trade Center / targeted Simulation`. Raw packages are subordinate; For You requires `worth_attention`; default four distinct opportunities; bounded eight-path pre-Simulation Decision screening; clustering/dominance/diversity; zero broad changed-state Simulation; Owner Intelligence descriptive only; Core 7/7 distinct from Market-surface readiness.
 
-Market product acceptance remains open. Physical iPhone/Safari testing paused when the existing league regressed 7/7→3/7. Resume after Performance restores trustworthy lifecycle state, then test For You, Trade Finder, Player Board, Free Agents, readiness, drill-down and mobile scanability.
+Market physical iPhone/Safari acceptance was resumed after the existing league visibly returned to 7/7 with “last-good intelligence retained,” and **acceptance failed**. The architecture remains accepted; a bounded corrective pass is authorized in `workstreams/MARKET_DISCOVERY.md`. Observed failures: 26 Trade Finder paths remain preliminary/incomplete; intent changes appear not to materially alter the result neighborhood and require semantic tracing; Free Agents shows unavailable PPG/17-game evidence across visible rows despite Core 7/7 and requires consumer/readiness diagnosis; Market safe-area/status-bar overlap persists; Player Board's identity column is excessively wide, pushing value columns off-screen. Player Board must use a compact anchored identity column, horizontal scrolling, and sortable applicable quantitative columns. Zero For You opportunities is permissible if genuinely earned; do not manufacture opportunities.
 
 ### Home × Franchise
 DEFERRED until Market physical acceptance unless Management reprioritizes.
@@ -65,9 +65,10 @@ DEFERRED until Market physical acceptance unless Management reprioritizes.
 ## Immediate Management sequence
 1. Let Performance finish the 7/7→3/7 restoration directive; require durable workstream-state reconciliation and a permitted terminal state.
 2. Decide whether to authorize bounded Forecast/Product implementation from the completed 2026 late-start K/DST handoff; do not treat the exception as permission to fabricate exact coordinates or bypass rights.
-3. After Performance restores trustworthy existing-league intelligence, repeat Market physical iPhone/Safari acceptance.
-4. Keep new-league 7/7 separate from existing-league restoration; new-league completion still depends on promoted K/DST Forecast authority.
-5. Resume Home × Franchise only after Market acceptance or explicit reprioritization.
+3. Execute the authorized bounded Market corrective pass from the persisted physical-iPhone acceptance evidence; require implementation-side tracing/tests/deploy before asking Management to retest physically.
+4. Keep Performance lifecycle acceptance and Market product acceptance distinct even though the existing league now visibly reports 7/7; Performance must still close its own full validation directive.
+5. Keep new-league 7/7 separate from existing-league restoration; new-league completion still depends on promoted K/DST Forecast authority.
+6. Resume Home × Franchise only after Market acceptance or explicit reprioritization.
 
 ## Acceptance boundaries
 Do not treat endpoint 200, PR merge, CPU activity or polling as product acceptance. Do not allow failed/in-progress refresh to evict promoted last-good. Do not claim new-league 7/7 until K/DST authority is promoted. Do not call current 2026 K/DST evidence preseason. Do not weaken two-source/rule-completeness/uncertainty governance. Search cannot invent Decision/Value/Forecast truth. No fake acceptance probabilities or hidden master scores. Market requires physical iPhone/Safari acceptance.
