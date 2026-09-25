@@ -1,9 +1,9 @@
 # Workstream — Performance
 
 ## State
-**ACTIVE — PRODUCTION ACCEPTANCE / MARKET COLD-PATH VALIDATION**
+**ACTIVE — APP-WIDE LEAGUE LIFECYCLE + HODOR COMPLETION + MARKET FOREGROUND LATENCY**
 
-The prior PR #211 K/DST-only Management Gate is obsolete for this active directive. Performance is currently executing the production repair caused by the FSFFL Dynasty league regressing from valid 7/7 intelligence to visible 3/7 after the Market deployment.
+The prior PR #211 K/DST-only gate and the later jimmygoodjob-only restoration framing are both superseded as the top-level Performance state. The existing-league last-good repair remains accepted evidence and must not regress, but Management's current directive is the app-wide lifecycle contract recorded below: diagnose Hodor / `jder52` from exact persisted State through readiness/promotion, preserve valid roster State while derived intelligence builds, expose background work truthfully, prevent cross-league contamination, and continue foreground-latency work without changing Market discovery semantics.
 
 ## Incident
 Physical-iPhone acceptance after Market PR #220 / production SHA `ff3e0fbe8ff0827d123e6d465b42116512e6d820` showed the existing FSFFL Dynasty league (`jimmygoodjob`, Sleeper league `1312071960615731200`) at 3/7 with governed Simulation / position-strength evidence unavailable even though a valid promoted complete bundle already existed.
