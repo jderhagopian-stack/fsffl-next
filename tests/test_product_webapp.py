@@ -369,3 +369,166 @@ def test_partial_forecast_job_completes_without_simulation_and_keeps_forecast_vi
     assert payload["simulation_authority_blockers"] == [
         "separate_k_dst_forecast_authority_required"
     ]
+
+
+
+def _full_runtime_fixture(state: LeagueState):
+    observation = SimpleNamespace(as_of=state.as_of)
+    runtime_result = SimpleNamespace(
+        partial_fantasy_point_forecasts=(),
+        family_coverage=(),
+        simulation_authority_blockers=(),
+        evaluation_as_of=state.as_of,
+    )
+    evidence = SimpleNamespace(
+        raw_forecasts=(observation,),
+        league_scored_forecasts=(observation,),
+        successful_source_ids=("provider-a", "provider-b"),
+        failed_sources=(),
+        uncertainty_ready=True,
+        runtime_result=runtime_result,
+        evidence_basis="live_full_season",
+        model_version="fixture-full-evidence-v1",
+    )
+    simulation = SimpleNamespace(
+        league_view=SimpleNamespace(
+            context=SimpleNamespace(league_state_id=state.state_id)
+        ),
+        simulation_result=SimpleNamespace(simulation_count=50_000),
+        team_views=(),
+    )
+    value = SimpleNamespace(
+        league_state_id=state.state_id,
+        estimates=(object(),),
+        successful_source_ids=("market-a",),
+        coverage=1.0,
+        fsffl_cardinal_values=(),
+        cardinal_player_coverage=0.0,
+        pick_variant_market_values=(),
+    )
+    return evidence, simulation, value
+
+
+def test_manual_refresh_syncs_state_before_any_intelligence_loader(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    initial = _canonical_state()
+    synced = initial.model_copy(
+        update={"as_of": datetime(2026, 9, 6, tzinfo=UTC)}
+    )
+    states = [initial, synced]
+    loader_states: list[tuple[str, str]] = []
+
+    def state_loader(_league_id: str) -> LeagueState:
+        return states.pop(0)
+
+    def forecast_loader(state: LeagueState):
+        loader_states.append(("forecast", state.state_id))
+        return _full_runtime_fixture(state)[0]
+
+    def simulation_loader(state: LeagueState, _evidence):
+        loader_states.append(("simulation", state.state_id))
+        return _full_runtime_fixture(state)[1]
+
+    def value_loader(state: LeagueState):
+        loader_states.append(("value", state.state_id))
+        return _full_runtime_fixture(state)[2]
+
+    client = TestClient(
+        create_app(
+            state_loader=state_loader,
+            forecast_loader=forecast_loader,
+            simulation_loader=simulation_loader,
+            value_loader=value_loader,
+        )
+    )
+    connected = client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "123"},
+    )
+    assert connected.status_code == 200
+    assert connected.json()["state_id"] == initial.state_id
+
+    started = client.post("/api/intelligence/jobs")
+    assert started.status_code == 200
+
+    deadline = monotonic() + 2
+    current = None
+    while monotonic() < deadline:
+        current = client.get("/api/intelligence/jobs/current").json()
+        if current["status"] == "completed":
+            break
+        sleep(0.01)
+
+    assert current is not None
+    assert current["status"] == "completed"
+    assert current["state_id"] == synced.state_id
+    assert loader_states == [
+        ("forecast", synced.state_id),
+        ("simulation", synced.state_id),
+        ("value", synced.state_id),
+    ]
+
+
+def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
+    from fsffl.product.runtime import PrivateBetaRuntimeStore
+
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _canonical_state()
+    evidence, simulation, value = _full_runtime_fixture(state)
+
+    class ReuseStore(PrivateBetaRuntimeStore):
+        def restore_exact_state_intelligence(self, user_id: str):
+            current = self.get(user_id)
+            assert current.league_state is not None
+            assert current.league_state.state_id == state.state_id
+            restored = self.set_intelligence_bundle(
+                user_id,
+                league_state=current.league_state,
+                forecast_evidence=evidence,
+                simulation_analytics=simulation,
+                value_evidence=value,
+            )
+            return restored
+
+    calls: list[str] = []
+
+    def fail_forecast(_state):
+        calls.append("forecast")
+        raise AssertionError("exact-state Forecast should be reused")
+
+    def fail_simulation(_state, _evidence):
+        calls.append("simulation")
+        raise AssertionError("exact-state Simulation should be reused")
+
+    def fail_value(_state):
+        calls.append("value")
+        raise AssertionError("exact-state Value should be reused")
+
+    client = TestClient(
+        create_app(
+            runtime_store=ReuseStore(),
+            state_loader=lambda _league_id: state,
+            forecast_loader=fail_forecast,
+            simulation_loader=fail_simulation,
+            value_loader=fail_value,
+        )
+    )
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    started = client.post("/api/intelligence/jobs")
+    assert started.status_code == 200
+
+    deadline = monotonic() + 2
+    current = None
+    while monotonic() < deadline:
+        current = client.get("/api/intelligence/jobs/current").json()
+        if current["status"] == "completed":
+            break
+        sleep(0.01)
+
+    assert current is not None
+    assert current["status"] == "completed"
+    assert "reused for this exact State" in current["message"]
+    assert current["forecast_ready"] is True
+    assert current["simulation_ready"] is True
+    assert current["value_ready"] is True
+    assert calls == []
