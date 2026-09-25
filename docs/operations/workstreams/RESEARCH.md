@@ -65,7 +65,7 @@ Never backdate or heuristically subtract a completed game's projection to make a
 
 ### Hodor K current-forward authority
 
-**STILL BLOCKED.**
+**STILL BLOCKED, but technical exact-rule feasibility is now proven for one provider candidate.**
 
 Exact transforms allowed:
 - Hodor scores both 0–19 and 20–29 at 3 points, so an exact provider 0–29 made coordinate is sufficient for that combined scoring contribution.
@@ -77,11 +77,15 @@ Still missing:
 - healthy current candidate sources found by Research expose 50+ rather than a separate 60+ projection;
 - no heuristic split is authorized.
 
+JerryGM's deployed API documentation now proves a current 2026 ROS source can price a distinct `fg60plus` rule. Its public raw stat-line schema does not independently expose a 60+ component, so live API validation is required to determine whether a rule-specific breakdown can satisfy FSFFL's governed distributional-evidence contract.
+
+No second independent current ROS source was found publicly proving that 60+ coordinate.
+
 Thus current Hodor K fantasy points cannot yet receive full active-rule authority.
 
 ### Hodor D/ST current-forward authority
 
-**STILL BLOCKED.**
+**STILL BLOCKED, but technical PA-distribution feasibility is now proven for one provider candidate.**
 
 Current ROS candidates overlap on sacks, INT, FF and FR and some defensive TD/safety evidence.
 
@@ -99,27 +103,54 @@ A provider-native or separately governed remaining-game PA distribution is requi
 
 ### K/DST uncertainty
 
-**Historical evidence is sufficient to run a bounded empirical study; it is not sufficient to declare a production Hodor-total coefficient without executing and validating that study.**
+**Bounded empirical uncertainty has now been measured on explicit reduced fingerprints; Hodor-total promotion remains blocked.**
 
-Evidence available:
-- genuine pre-opener 2024 multi-provider raw K/DST corpus;
-- source-separated historical weekly K/DST projection panels;
-- realized K/DST outcome reconstruction path;
-- merged non-promoting PR #215 calibration harness.
+Durable empirical artifact:
+`artifacts/research/k_dst_late_start_exception_20260925/EMPIRICAL_UNCERTAINTY_CHECK.md`
 
-Required bounded implementation:
-1. define a `CalibrationScoringFingerprint`;
-2. score historical provider projections only on coordinates that >=2 independent PIT providers actually support;
-3. reconstruct realized outcomes under that exact fingerprint;
-4. fit K and D/ST separately;
-5. persist sources, seasons, sample sizes, hashes/provenance and diagnostics;
-6. validate replay/holdout behavior;
-7. compare the calibration fingerprint to the target league scoring fingerprint;
-8. promote only if compatibility is proven.
+2024 K reduced fingerprint:
+`3*FGM - (FGA-FGM) + XPM`
+- 34 kickers;
+- >=2 PIT providers per sample;
+- season relative RMSE **0.3841884793**;
+- 542 weekly kicker observations / 42 subjects;
+- weekly pooled CV **0.5223274618**.
 
-A reduced standard K or D/ST subscore coefficient must not silently become Hodor-total uncertainty.
+2024 D/ST reduced fingerprint:
+`1*DST_SACK + 2*DST_INTERCEPTION`
+- 30 defenses;
+- >=2 PIT providers per sample;
+- season relative RMSE **0.2140283312**;
+- 544 weekly team observations / 32 subjects;
+- weekly pooled CV **0.6381941339**.
 
-**No K/DST uncertainty coefficient is promoted or authorized by Research.**
+These measurements clear the question of whether bounded empirical K/DST uncertainty can be estimated at all.
+
+They do **not** authorize Hodor-total coefficients because the target includes active coordinates outside the fitted fingerprints, including K 60+ and D/ST PA buckets/rare events.
+
+Required implementation:
+1. encode `CalibrationScoringFingerprint`;
+2. reproduce the retained measurements;
+3. add replay/holdout diagnostics;
+4. govern uncertainty for every excluded target coordinate;
+5. promote only when full target compatibility is proven.
+
+**No Hodor-total K/DST uncertainty coefficient is promoted or authorized by Research.**
+
+### Exact-capability current source finding
+
+JerryGM is the strongest technically aligned source found under this directive:
+- 2026 `week=current&horizon=ros`;
+- K custom scoring includes 50-59 and 60+ separately;
+- D/ST includes blocks, two-point returns and a modeled points-allowed spread;
+- `paTierExpectedPPG` integrates arbitrary PA tiers over that spread.
+
+However:
+- a live API key is required to validate current payload health/content identity;
+- JerryGM's internal model variants count as one provider ecosystem;
+- its terms prohibit using API output to train/calibrate a competing projection product, so FSFFL ensemble use requires written provider clarification/partner terms.
+
+No second public provider was found proving both the Hodor 60+ K coordinate and distributional D/ST PA-tier evidence.
 
 ### Rights
 
@@ -135,9 +166,11 @@ Commercial production remains separately gated on explicit provider agreements f
 Still blocking governed Hodor K/DST Forecast:
 1. rights-cleared deployable provider access;
 2. >=2 independent sources per required active metric/group;
-3. K exact 60+ evidence;
-4. D/ST game/distributional PA bucket evidence and remaining rare-event coordinates;
-5. promoted target-compatible K-specific and D/ST-specific empirical uncertainty.
+3. K: live validation of the first exact 60+ candidate plus a second independent 60+ source;
+4. D/ST: live validation of the first PA-distribution candidate plus a second independent PA-distribution source and remaining rare-event two-source coverage;
+5. target-compatible K-specific and D/ST-specific empirical uncertainty promotion.
+
+Historical uncertainty evidence itself is no longer absent; reduced-fingerprint empirical measurements now exist.
 
 ### No longer a current-forward blocker
 - missing 2026 preseason K/DST snapshot;
