@@ -1251,7 +1251,7 @@ def _aggregate_opportunities(
                     risks.append(risk)
         reason_codes = [
             f"attention:{attention.value}",
-            f"strategic:{('current_position_need' if row.get('focal_position_strength_rank') is not None else ('explicit_market_intent' if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT else 'market_structure'))}",
+            f"strategic:{('explicit_market_intent' if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT else ('current_position_need' if row.get('focal_position_strength_rank') is not None else 'market_structure'))}",
             f"economic:{economic.value}",
             f"bilateral:{bilateral.value}",
         ]
@@ -1276,11 +1276,11 @@ def _aggregate_opportunities(
                 target_family=target_family,
                 why_now=why_now,
                 strategic_relevance=(
-                    "current_position_need"
-                    if row.get("focal_position_strength_rank") is not None
+                    "explicit_market_intent"
+                    if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT
                     else (
-                        "explicit_market_intent"
-                        if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT
+                        "current_position_need"
+                        if row.get("focal_position_strength_rank") is not None
                         else "market_structure"
                     )
                 ),
