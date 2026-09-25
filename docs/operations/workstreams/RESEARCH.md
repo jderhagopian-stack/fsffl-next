@@ -1,217 +1,382 @@
-# Workstream — Forecast Research: 2026 Late-Start K/DST Exception
+# Workstream — Forecast Research: League-Agnostic Scoring Coverage
 
 ## State
 **DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY**
 
 Authorized: 2026-09-25  
-Completed: 2026-09-25  
-Implementation-ready handoff: `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`  
-Current-date source ledger: `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`  
-Prior empirical/source closeout: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`
+Completed: 2026-09-25
 
-## Management direction
+Durable artifacts:
+- `artifacts/research/scoring_coordinate_coverage_20260925/SCORING_COORDINATE_REGISTRY.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/SCORING_COORDINATE_REGISTRY.csv`
+- `artifacts/research/scoring_coordinate_coverage_20260925/PLATFORM_COVERAGE_MATRIX.csv`
+- `artifacts/research/scoring_coordinate_coverage_20260925/PRIMARY_SOURCE_LEDGER.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/GAP_ANALYSIS.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/IMPLEMENTATION_HANDOFF.md`
 
-Management authorizes investigation and implementation planning for a **one-season-only 2026 late-start K/DST Forecast baseline** using qualifying independent current season-long/rest-of-season projections acquired at the actual current date.
+Prior K/DST Research remains complete and authoritative:
+- `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+- `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`
+- `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
 
-Binding:
-- preserve exact acquisition timestamp, source provenance, projection horizon and source-health evidence;
-- never represent late-start evidence as preseason;
-- never backdate;
-- any 2026 K/DST preseason comparison requiring unavailable pre-Week-1 evidence remains unavailable;
-- beginning in 2027 the normal governed annual preseason snapshot process applies with no late-start exception;
-- separately determine whether historical evidence supports bounded empirical K/DST uncertainty;
-- never invent or borrow an unsupported uncertainty coefficient;
-- retain existing two-source, independence, active-rule-completeness, source-health and anti-double-counting governance.
+## Objective
 
-## Final research outcome
+Audit common fantasy-football scoring configurations across major platforms and determine whether FSFFL NEXT's canonical Data → Forecast → scoring contracts can represent and forecast them without heuristic reconstruction.
 
-### What the 2026 exception changes
+The directive required:
+- a league/provider-independent Scoring Coordinate Registry;
+- a governed platform/rule coverage matrix;
+- FULL/PARTIAL/UNSUPPORTED capability taxonomy;
+- provider-acquisition gap analysis;
+- historical-stat/data-retention gap analysis;
+- scoring-engine audit;
+- extensible contract recommendations;
+- prioritized gaps without fabricated prevalence;
+- deterministic fixtures;
+- an implementation-ready handoff.
 
-The absence of a qualifying 2026 pre-Week-1 K/DST snapshot is **no longer a current-forward Forecast blocker**.
+All required deliverables are complete.
 
-A new 2026-only artifact may truthfully represent a current-date rest-of-season baseline if it preserves its real acquisition time and provenance.
+## Primary-source scope completed
 
-It may not:
-- satisfy the annual preseason snapshot contract;
-- be called preseason;
-- be used for a preseason-vs-current comparison;
-- be backdated;
-- become a generic fallback for 2027+.
+Current primary-source or direct platform evidence was reviewed for:
+- Sleeper;
+- ESPN;
+- Yahoo;
+- NFL Fantasy;
+- CBS;
+- Fantrax;
+- MyFantasyLeague;
+- DraftKings Best Ball.
 
-### Current source acquisition
+Provider/data-schema evidence was also reviewed where useful to determine whether richer raw Forecast inputs can technically be preserved without making any provider authorization decision.
 
-Research inspected current 2026 ROS/source surfaces and persisted exact acquisition evidence in the source ledger.
+The research distinguishes:
+- documented defaults/public or contest presets;
+- documented configurable/custom rules;
+- engine-capability examples.
 
-Key dispositions:
-- **CBS:** current 2026 ROS K/DST candidate; useful raw coordinates; Friday-morning ATL/GB rows were stale after Thursday's completed game and require subject-row quarantine; K collapses 50+; D/ST PA is aggregate rather than a game-level bucket distribution.
-- **LineupExperts:** current 2026 ROS candidate and plausible independent internal projection system; public rows also showed stale ATL/GB remaining-game counts; website extraction is prohibited, while a subscribed API path exists and requires rights/schema validation.
-- **RotoWire:** current 2026 ROS product is semantically healthy; usable values/schema are paywalled/licensed; visible K schema still collapses 50+.
-- **Razzball:** quarantined for wrong-year/impossible-game-count content.
-- **FFToday:** current accessible 2026 K/DST season material remains preseason/full-season and is not eligible for the current-date ROS exception.
-- **SportsDataIO:** season-long projections are documented as preseason-only; maintained in-season product is game-level and therefore outside this Management-authorized ROS path unless separately authorized.
-- **FantasyPros:** ROS projection access exists under API/commercial products, but its aggregate projections cannot automatically count as an independent second vote.
+Configurability is not treated as prevalence.
 
-### Source-health architecture
+## Scoring Coordinate Registry result
 
-The late-start path requires **subject-row health**, not just provider-global health.
+The machine-readable registry currently contains **89 canonical football coordinates or scoring-semantic requirements** spanning:
+- passing;
+- rushing;
+- receiving;
+- turnovers;
+- player special teams;
+- kicking;
+- team D/ST;
+- IDP;
+- punting;
+- head-coach/team-result scoring;
+- position predicates;
+- fractional/negative scoring policy;
+- threshold/bucket/stacking/conditional semantics;
+- platform attribution semantics.
 
-At capture time, implementation must compare each row's projected-games/horizon semantics against the canonical remaining NFL schedule.
+The platform matrix contains **48 documented platform/preset or rule-family mappings** to those registry coordinates.
 
-Example:
-- after Atlanta–Green Bay completed Thursday 2026-09-24, a Friday source row still carrying 15 remaining games for ATL/GB is stale and must be quarantined;
-- a team that has not yet played Week 3 may still truthfully have 15 remaining games.
+These counts describe the audit artifact, not a permanent maximum. Future coordinates must be added through registry governance rather than platform-specific Forecast code.
 
-Never backdate or heuristically subtract a completed game's projection to make a stale row pass.
+## Major findings
 
-### Hodor K current-forward authority
+### 1. Conventional offense is the strongest current area
 
-**STILL BLOCKED, but technical exact-rule feasibility is now proven for one provider candidate.**
+FSFFL already natively Forecasts and scores:
+- passing yards/TD/INT;
+- rushing yards/TD;
+- receptions/receiving yards/TD;
+- fumbles lost.
 
-Exact transforms allowed:
-- Hodor scores both 0–19 and 20–29 at 3 points, so an exact provider 0–29 made coordinate is sufficient for that combined scoring contribution.
-- generic misses may be derived as FGA − FGM only when both are complete same-horizon provider evidence.
-- XP misses may be derived as XPA − XPM under the same condition.
+This covers the core of conventional non-PPR/half-PPR/PPR scoring and must remain regression-clean.
 
-Still missing:
-- Hodor separately scores 50–59 at 5 and 60+ at 6;
-- healthy current candidate sources found by Research expose 50+ rather than a separate 60+ projection;
-- no heuristic split is authorized.
+### 2. Direct 2PT and common rare defaults are still provisional/missing
 
-JerryGM's deployed API documentation now proves a current 2026 ROS source can price a distinct `fg60plus` rule. Its public raw stat-line schema does not independently expose a 60+ component, so live API validation is required to determine whether a rule-specific breakdown can satisfy FSFFL's governed distributional-evidence contract.
+Current ordinary scoring uses bounded priors for:
+- pass/rush/rec 2PT;
+- selected player fumble/special-teams events.
 
-No second independent current ROS source was found publicly proving that 60+ coordinate.
+Multiple major platforms directly score 2PT, player return TD and offensive fumble-recovery TD.
 
-Thus current Hodor K fantasy points cannot yet receive full active-rule authority.
+League-agnostic end state should preserve/Forecast those events directly where evidence permits rather than rely on a TD-rate residual.
 
-### Hodor D/ST current-forward authority
+### 3. The next scalar-coordinate gap is material
 
-**STILL BLOCKED, but technical PA-distribution feasibility is now proven for one provider candidate.**
+Major platforms expose configurable scoring for:
+- pass attempts;
+- completions;
+- incompletions;
+- sacks taken;
+- rush attempts;
+- first downs;
+- receiving targets;
+- fumbles;
+- player return yards;
+- pick-six thrown.
 
-Current ROS candidates overlap on sacks, INT, FF and FR and some defensive TD/safety evidence.
+FSFFL's current ordinary provider normalization discards these fields even if a provider can supply them.
 
-Still missing two-source rule-complete authority for:
-- blocked kicks;
-- defensive two-point returns;
-- team special-teams TD;
-- team special-teams FF/FR;
-- exact PA bucket expectation.
+### 4. Nonlinear scoring is a distinct Forecast-evidence problem
 
-Aggregate season ROS PA or PA/game is not sufficient:
-`score(E[PA]) != E[score(PA)]` for nonlinear buckets.
+Documented scoring includes:
+- 300+/400+ passing games;
+- 100+/200+ rushing/receiving games;
+- completion/carry thresholds;
+- long-play bonuses;
+- D/ST PA/YA buckets;
+- IDP threshold bonuses;
+- punt-average ranges;
+- conditional rules.
 
-A provider-native or separately governed remaining-game PA distribution is required.
+For these:
+`score(E[X]) != E[score(X)]` generally.
 
-### K/DST uncertainty
+A season mean is not sufficient. Forecast needs per-game distributions, bucket probabilities, event-count distributions or joint distributions depending on the rule.
 
-**Bounded empirical uncertainty has now been measured on explicit reduced fingerprints; Hodor-total promotion remains blocked.**
+DraftKings 2026 Best Ball uses yardage milestone bonuses as a current contest default, making this a commercial P0 architecture gap rather than merely an exotic custom-league feature.
 
-Durable empirical artifact:
-`artifacts/research/k_dst_late_start_exception_20260925/EMPIRICAL_UNCERTAINTY_CHECK.md`
+### 5. Position-sensitive scoring belongs in scoring semantics
 
-2024 K reduced fingerprint:
-`3*FGM - (FGA-FGM) + XPM`
-- 34 kickers;
-- >=2 PIT providers per sample;
-- season relative RMSE **0.3841884793**;
-- 542 weekly kicker observations / 42 subjects;
-- weekly pooled CV **0.5223274618**.
+Sleeper and Fantrax evidence demonstrate position-sensitive scoring such as TE/position reception bonuses.
 
-2024 D/ST reduced fingerprint:
-`1*DST_SACK + 2*DST_INTERCEPTION`
-- 30 defenses;
-- >=2 PIT providers per sample;
-- season relative RMSE **0.2140283312**;
-- 544 weekly team observations / 32 subjects;
-- weekly pooled CV **0.6381941339**.
+Correct design:
+- Forecast one canonical `RECEPTIONS` coordinate;
+- apply a position predicate in the scoring rule.
 
-These measurements clear the question of whether bounded empirical K/DST uncertainty can be estimated at all.
+Do not create separate TE-reception Forecast truth.
 
-They do **not** authorize Hodor-total coefficients because the target includes active coordinates outside the fitted fingerprints, including K 60+ and D/ST PA buckets/rare events.
+### 6. Current canonical ScoringRule is too narrow
 
-Required implementation:
-1. encode `CalibrationScoringFingerprint`;
-2. reproduce the retained measurements;
-3. add replay/holdout diagnostics;
-4. govern uncertainty for every excluded target coordinate;
-5. promote only when full target compatibility is proven.
+Current:
+`ScoringRule(stat: str, points: float)`
 
-**No Hodor-total K/DST uncertainty coefficient is promoted or authorized by Research.**
+This cannot generically express:
+- position predicates;
+- thresholds/ranges;
+- cumulative vs exclusive stacking;
+- fractional/quantization policy;
+- negative-yardage policy;
+- conditional expressions;
+- platform-specific D/ST semantic profiles.
 
-### Exact-capability current source finding
+Sleeper raw numeric scoring ingestion is relatively flexible, but cross-platform canonical rule semantics are not.
 
-JerryGM is the strongest technically aligned source found under this directive:
-- 2026 `week=current&horizon=ros`;
-- K custom scoring includes 50-59 and 60+ separately;
-- D/ST includes blocks, two-point returns and a modeled points-allowed spread;
-- `paTierExpectedPPG` integrates arbitrary PA tiers over that spread.
+### 7. IDP requires State expansion, not just more Forecast metrics
+
+Current `Position` and `RosterSlot` do not include IDP positions.
+
+Sleeper, ESPN, Yahoo, NFL Fantasy, Fantrax, CBS and MyFantasyLeague all provide evidence that IDP is a commercially relevant configurable family.
+
+D/ST team-unit stats cannot be reused as IDP player stats.
+
+Full IDP support requires:
+- defensive player/slot identity;
+- Forecast coordinates;
+- provider evidence;
+- historical truth;
+- separate uncertainty;
+- downstream lineup/Value/Simulation support under their own authority.
+
+### 8. K/DST architecture is the best model for future expansion
+
+The K/DST work already demonstrates useful patterns:
+- explicit rule-to-coordinate requirements;
+- exact transforms;
+- subject-family isolation;
+- per-coordinate source independence;
+- distributional evidence for nonlinear buckets;
+- scoring-fingerprint-bound calibration.
+
+The broader scoring registry should generalize those patterns rather than create a second architecture.
+
+### 9. Raw provider evidence is currently lost too early
+
+Ordinary provider adapters populate a narrow canonical subset before Forecast sees the data.
+
+Research recommends preserving a rights-permitted provider-native numeric superset with:
+- source/effective/capture time;
+- horizon;
+- raw provider field;
+- value;
+- mapping version;
+- content identity;
+- rights class.
+
+A field may remain unmapped without being discarded.
+
+This is especially important for attempts, completions, carries, targets, 2PT, return stats and IDP.
+
+### 10. Historical Data is structurally flexible but replay is incomplete
+
+`SleeperWeeklyStatsSource` already preserves arbitrary numeric stat keys, which is a strong Data-layer foundation.
 
 However:
-- a live API key is required to validate current payload health/content identity;
-- JerryGM's internal model variants count as one provider ecosystem;
-- its terms prohibit using API output to train/calibrate a competing projection product, so FSFFL ensemble use requires written provider clarification/partner terms.
+- those keys lack a governed cross-platform canonical registry mapping;
+- broader nonlinear/IDP replay is not implemented;
+- D/ST attribution remains semantic-profile dependent;
+- annual/PIT provider evidence today may omit fields discarded by provider adapters.
 
-No second public provider was found proving both the Hodor 60+ K coordinate and distributional D/ST PA-tier evidence.
+Historical retention should preserve raw coordinate supersets and mapping versions before future calibration needs arise.
 
-### Rights
+## Capability taxonomy
 
-Management's model exception does not override external source terms.
+Runtime capability is evaluated at:
+`league × rule × subject family × horizon × evidence cutoff`.
 
-Deployed/private-beta ingestion remains source-rights gated where public terms do not permit the intended automated/storage use.
+### FULL
+Every active material rule:
+- maps to canonical coordinates and semantics;
+- has supported subject identity;
+- has exact or governed distributional Forecast evidence;
+- satisfies independence/rights;
+- has compatible uncertainty where required.
 
-Commercial production remains separately gated on explicit provider agreements for the actual content/storage/derived-output architecture.
+### PARTIAL
+The rule maps, but one or more evidence/uncertainty/source requirements are missing.
 
-## Gate decomposition
+PARTIAL is diagnostic only. It does not authorize an incomplete fantasy-point total.
 
-### Current-forward 2026 blockers
-Still blocking governed Hodor K/DST Forecast:
-1. rights-cleared deployable provider access;
-2. >=2 independent sources per required active metric/group;
-3. K: live validation of the first exact 60+ candidate plus a second independent 60+ source;
-4. D/ST: live validation of the first PA-distribution candidate plus a second independent PA-distribution source and remaining rare-event two-source coverage;
-5. target-compatible K-specific and D/ST-specific empirical uncertainty promotion.
+### UNSUPPORTED
+The rule/subject semantics cannot yet be represented or mapped safely.
 
-Historical uncertainty evidence itself is no longer absent; reduced-fingerprint empirical measurements now exist.
+Required reason codes include:
+- `missing_forecast_coordinate`
+- `missing_distributional_evidence`
+- `unsupported_subject_family`
+- `unsupported_rule_semantics`
+- `platform_semantics_unresolved`
+- `insufficient_independent_sources`
+- `rights_not_cleared`
+- `uncertainty_not_compatible`
 
-### No longer a current-forward blocker
-- missing 2026 preseason K/DST snapshot;
-- inability to produce a true 2026 preseason-vs-current K/DST delta.
+## Proposed architecture
 
-### Historical/preseason-only
-- 2026 K/DST preseason comparison remains unavailable where authentic pre-Week-1 evidence does not exist.
+Separate two contracts:
 
-### Commercial-only/external
-- executed commercial licenses and sublicensing clarity for the eventual production provider set.
+### Scoring Coordinate Registry
+Owns football/statistical facts:
+- canonical coordinate;
+- subject family;
+- evidence shape;
+- exact transforms;
+- historical/calibration requirements.
 
-## Implementation contract
+### Canonical Scoring Rule Contract
+Owns league scoring semantics:
+- operator;
+- period;
+- coefficient;
+- thresholds/ranges;
+- position predicate;
+- stacking policy;
+- fractional/negative policy;
+- semantic profile;
+- provenance to raw platform rule.
 
-The authoritative implementation plan is:
-`artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
+Forecast remains league-agnostic.
 
-It requires:
-- dedicated 2026-only late-start artifact, separate from annual preseason;
-- `ForecastHorizon.REST_OF_SEASON`;
-- immutable capture/provenance/source-health metadata;
-- schedule-aware subject-row freshness;
-- K and D/ST canonical normalization;
-- exact-only scoring transforms;
-- existing two-source/independence governance;
-- no provider-native FPTS shortcut around raw rule coverage;
-- scoring-fingerprint-bound uncertainty calibration;
-- explicit 2026 preseason-unavailable presentation state;
-- hard rejection of the exception for 2027+.
+## Implementation priority
+
+### P0
+- registry + rule contract v2;
+- capability diagnostics;
+- raw provider superset preservation;
+- direct common 2PT/return/fumble-recovery events;
+- position predicates / TE premium;
+- per-game yardage milestone distributions;
+- D/ST semantic profiles.
+
+### P1
+- attempts/completions/incompletions/sacks;
+- rush attempts;
+- first downs;
+- targets;
+- fumbles;
+- player return yards;
+- linear D/ST PA/YA;
+- core IDP subject/Forecast family.
+
+### P2
+- long-play event counts;
+- reception-distance buckets;
+- combined rush+rec milestones;
+- drive outcomes;
+- IDP threshold bonuses.
+
+### P3
+- punter;
+- head coach/team offense;
+- arbitrary conditional rule support beyond capability reporting.
+
+These priorities are based on documented defaults/presets, repeated configurable availability, current commercial contest use and architectural leverage. They are not percentage-of-leagues estimates.
+
+## Recommended bounded implementation
+
+**Stage 0 + Stage 1 only** should be the first implementation package:
+1. registry definitions;
+2. canonical scoring-rule/capability contracts;
+3. compile existing scoring through compatibility lane;
+4. raw provider superset preservation;
+5. explicit FULL/PARTIAL/UNSUPPORTED reporting;
+6. zero new production scoring/model authority.
+
+Stages adding new coordinates, nonlinear Forecast distributions, IDP or new production authority should follow separate evidence/acceptance gates.
+
+Implementation details:
+`artifacts/research/scoring_coordinate_coverage_20260925/IMPLEMENTATION_HANDOFF.md`
+
+## Deterministic fixtures
+
+The handoff/gap analysis defines fixtures for:
+- current conventional PPR regression;
+- Yahoo default half-PPR;
+- ESPN volume scoring;
+- Sleeper TE premium;
+- points-per-first-down;
+- DraftKings milestone bonuses;
+- nested/exclusive long-play stacking;
+- fractional-off scoring;
+- negative-yardage policy;
+- K exact distance transforms;
+- cross-platform D/ST semantic profiles;
+- IDP;
+- player vs team special teams;
+- Fantrax position-sensitive scoring;
+- MFL conditional fail-closed;
+- provider raw-superset retention;
+- unknown custom-rule fail-closed.
+
+## Authority boundary
+
+This Research directive does **not**:
+- add production Forecast coordinates;
+- promote provider evidence;
+- change scoring outputs;
+- add IDP to production;
+- change uncertainty;
+- authorize provider use;
+- merge model behavior.
+
+Existing production authority remains unchanged.
 
 ## Operating-protocol closure
 
-The requested Management investigation and implementation planning are complete.
+Required research paths across major platforms, advanced configurable platforms, current FSFFL code, provider normalization, historical stat ingestion, nonlinear scoring, subject families and commercial best-ball scoring have been materially exhausted.
 
-Further generic public-source searching is no longer the next authorized high-value action. Remaining source questions require licensed/API schema access, while uncertainty requires bounded implementation/execution of the already specified calibration plan.
+Question: **Is there another authorized Research action available now that could materially change the implementation contract?**
 
-No production implementation, Forecast promotion, merge, deployment, or uncertainty coefficient change was performed by Research.
+Answer: **No.** Remaining work is bounded implementation and later coordinate/provider/model evidence, not another undirected scoring-option survey.
+
+The next authority decision belongs to Management: authorize or defer the recommended zero-authority-change Stage 0 + Stage 1 implementation package.
 
 **DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY**
 
 
-## Management decision — 2026 provisional K/DST degraded-authority mode — 2026-09-25
+---
+
+## Preserved prior Management decision — 2026 provisional K/DST degraded-authority mode — 2026-09-25
 
 **State: AUTHORIZED FOR BOUNDED FORECAST IMPLEMENTATION**
 
@@ -247,49 +412,3 @@ The existing full-authority gates remain recorded and unchanged. If they clear, 
 Do not reopen generic source Research. Resume Forecast Implementation from PR #233/main and implement the minimum bounded contracts, calculations, provenance, coverage reporting, downstream gating, tests, and presentation/readiness semantics necessary for this 2026 provisional mode. Preserve all existing fail-closed behavior for 2027+ and for claims requiring full-rule authority.
 
 Persist an implementation handoff and follow OPERATING_PROTOCOL.md to a permitted terminal state.
-
-
-## Management directive — cross-league scoring coverage audit — 2026-09-25
-
-**State: NEW RESEARCH DIRECTIVE AUTHORIZED**
-
-The K/DST late-start work exposed a broader architecture risk: Forecast/scoring evidence acquisition may have been designed around the scoring coordinates needed by the currently modeled leagues rather than the wider set of scoring systems FSFFL NEXT should support commercially.
-
-Research is authorized to perform a league-agnostic **scoring-rule coverage and forecast-input audit** before additional provider/data contracts harden around incomplete assumptions.
-
-### Objective
-Build an evidence-backed scoring-coordinate universe for common fantasy-football league configurations and determine whether the existing Data → Forecast → scoring contracts capture the raw/projected inputs needed to score and forecast those configurations without heuristic reconstruction.
-
-This is not a request to make every conceivable custom rule first-class. Distinguish common rules that should be natively forecastable, less-common but commercially relevant rules that should be architecturally representable, and exotic/unsupported rules that should fail closed with explicit capability reporting.
-
-### External research scope
-Use current authoritative platform documentation and other high-quality primary sources where available to research common configurable scoring rules across major fantasy-football platforms, including at minimum Sleeper, ESPN, Yahoo, NFL Fantasy and CBS, plus materially relevant dynasty/best-ball platforms if their scoring capabilities differ.
-
-Research both standard/default scoring and configurable alternatives. Do not infer popularity merely from configurability; distinguish documented defaults/common presets from optional/custom coordinates.
-
-Cover all materially distinct asset/stat families, including passing, rushing, receiving, first downs, completions/incompletions/attempts, sacks taken, interceptions/pick-sixes, fumbles/fumbles lost, return yards/TDs and special teams, two-point conversions, kicking distance bands/misses/PATs, team defense/special teams events/yards allowed/points allowed/returns/blocks/safeties/conversions, IDP families, position-sensitive scoring such as TE premium, bonuses/thresholds, fractional versus bucket scoring, points per carry/completion/first down, and any other recurring configurable coordinate found in primary-source research.
-
-### Required deliverables
-Produce a governed matrix mapping platform/preset or rule family → scoring coordinate → asset types → raw stat required → Forecast coordinate required → current FSFFL support → provider evidence coverage → exact transform possible? → uncertainty/calibration coverage → status/gap.
-
-Also produce:
-- a canonical proposed **Scoring Coordinate Registry** independent of any single league/provider;
-- a capability taxonomy: FULL / PARTIAL / UNSUPPORTED with explicit missing-coordinate reasons;
-- a provider-acquisition gap analysis showing which raw projection fields should be preserved now even when current FSFFL leagues do not score them;
-- a historical-stat/data-retention gap analysis for future calibration/replay;
-- a scoring-engine audit identifying any rules currently represented only through league-specific assumptions;
-- recommendations for extensible contracts so a new league configuration maps rules to canonical coordinates instead of requiring bespoke Forecast logic;
-- prioritized gaps by prevalence/commercial relevance and implementation cost, without fabricating prevalence where no evidence exists;
-- deterministic fixtures representing materially different common scoring families for future implementation tests.
-
-### Architecture constraints
-Preserve the authority chain. League Configuration owns scoring rules; Forecast should forecast canonical football/statistical coordinates or governed derived distributions, not hard-code a league's fantasy scoring. Scoring converts Forecast evidence under a league configuration. Value/Decision/Simulation remain downstream.
-
-Do not use provider-native fantasy points as a shortcut when raw coordinates are needed for portability. Preserve granular source fields whenever rights permit, even if the current league does not use them, when the field belongs to the supported canonical registry.
-
-Nonlinear scoring (threshold bonuses, distance bands, PA/YA buckets, etc.) must be identified explicitly: scoring an expected aggregate is not automatically equivalent to expected fantasy points. Determine whether distributions/buckets/event probabilities are required.
-
-Do not silently approximate unsupported rules. The product must be able to report why a league/position is FULL, PARTIAL or UNSUPPORTED.
-
-### Execution boundary
-This directive is Research first. Do not alter production Forecast/scoring authority merely because a gap is discovered. Persist the research artifact and implementation-ready handoff, update canonical operations state, and bring architecture/policy decisions requiring Management choice to a MANAGEMENT GATE. Research should exhaust materially distinct primary-source paths before returning under OPERATING_PROTOCOL.md.

@@ -24,22 +24,20 @@ The pre-#235 physical-device baseline was 36.705s for cold quick Market and 48.3
 
 Remaining Performance gate is one physical-iPhone/Safari acceptance pass confirming visible restored 7/7, populated Home/Franchise/Market, the normal single-line actionable Refresh Intelligence control, and acceptable cold Market foreground latency on #235. Do not require a manual intelligence refresh.
 
-## Forecast Research — 2026 Late-Start K/DST Exception
+## Forecast Research — League-Agnostic Scoring Coverage
 **State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
-Management's one-season-only 2026 current-date ROS exception has been fully researched and decomposed.
+The cross-platform scoring-rule and Forecast-input audit is complete.
 
-Durable handoff:
-- `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
-- `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`
+Durable artifacts:
+- `artifacts/research/scoring_coordinate_coverage_20260925/SCORING_COORDINATE_REGISTRY.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/SCORING_COORDINATE_REGISTRY.csv`
+- `artifacts/research/scoring_coordinate_coverage_20260925/PLATFORM_COVERAGE_MATRIX.csv`
+- `artifacts/research/scoring_coordinate_coverage_20260925/GAP_ANALYSIS.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/IMPLEMENTATION_HANDOFF.md`
 
-The exception removes missing pre-Week-1 K/DST evidence from **current-forward 2026** authority. It does not create preseason evidence and cannot be used in 2027+.
+The registry covers 89 canonical coordinate/rule-semantic requirements and the matrix records 48 primary-source platform/preset or rule-family mappings. The audit confirms conventional linear offense is strong, while material gaps remain in direct 2PT/returns, volume/first-down/target coordinates, nonlinear game-threshold distributions, cross-platform rule semantics, IDP subject support, and raw-provider field retention.
 
-Research has now:
-- measured bounded empirical K and D/ST season-error and weekly-volatility on explicit reduced fingerprints;
-- identified JerryGM as one current ROS provider candidate capable of Hodor-style 60+ K scoring and distributional D/ST PA-tier pricing;
-- exhausted materially distinct public paths without finding a second independent source proving those same hard coordinates.
-
-Current-forward Hodor authority still fails closed on second-source exact-coordinate coverage, live API/source-health validation, target-compatible whole-score uncertainty promotion, and deployable provider rights.
+Research recommends a bounded zero-authority-change Stage 0 + Stage 1 implementation: canonical registry/rule/capability contracts plus provider raw-superset preservation. New scoring/model authority is not authorized by this Research completion.
 
 ## Product / Forecast Implementation
 **State:** ACTIVE — 2026 PROVISIONAL K/DST DEGRADED-AUTHORITY MODE AUTHORIZED  
@@ -58,6 +56,19 @@ The bounded implementation must:
 - reject the late-start path for 2027+.
 
 All presently authorized evidence-independent implementation is complete. Provider/source rights, second-source exact Hodor-coordinate coverage, live exact-capability API validation, and target-compatible full-score uncertainty remain external evidence gates for deployed authority. No heuristic substitute is authorized.
+
+## Scoring Coverage Implementation
+**State:** MANAGEMENT GATE — STAGE 0/1 PLAN READY, NOT AUTHORIZED  
+Research recommends the first bounded package contain only:
+- Scoring Coordinate Registry definitions;
+- canonical scoring-rule semantics;
+- FULL/PARTIAL/UNSUPPORTED capability diagnostics;
+- compatibility compilation for existing scoring;
+- rights-permitted raw provider superset preservation.
+
+It must introduce **zero new production scoring/model authority** and preserve current outputs as a regression oracle.
+
+Stages for direct new coordinates, nonlinear distributions, IDP, punter/head-coach families, or new production authority require separate authorization/evidence gates.
 
 ## Market / Trade Discovery Architecture Review
 **State:** DIRECTIVE COMPLETE — MANAGEMENT ACCEPTED  
