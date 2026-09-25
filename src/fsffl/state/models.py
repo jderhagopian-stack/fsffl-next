@@ -7,6 +7,25 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
+_NFL_TEAM_ALIASES = {
+    "JAC": "JAX",
+    "LA": "LAR",
+    "OAK": "LV",
+    "SD": "LAC",
+    "STL": "LAR",
+    "WSH": "WAS",
+}
+
+
+def canonical_nfl_team(value: str) -> str:
+    """Return the canonical NFL team abbreviation used across point-in-time State."""
+
+    normalized = value.strip().upper()
+    if not normalized:
+        raise ValueError("nfl_team cannot be blank")
+    return _NFL_TEAM_ALIASES.get(normalized, normalized)
+
+
 class FrozenModel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -143,10 +162,7 @@ class NflTeamBye(FrozenModel):
     @field_validator("nfl_team")
     @classmethod
     def normalize_team(cls, value: str) -> str:
-        normalized = value.strip().upper()
-        if not normalized:
-            raise ValueError("nfl_team cannot be blank")
-        return normalized
+        return canonical_nfl_team(value)
 
 
 class DraftPick(FrozenModel):

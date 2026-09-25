@@ -117,6 +117,7 @@ def _raw_forecasts(observation: ForecastObservation) -> tuple[ForecastObservatio
     metrics = (
         (ForecastMetric.RUSH_YARDS, float(observation.distribution.mean) * 10.0),
         (ForecastMetric.RUSH_TD, 0.0),
+        (ForecastMetric.FUMBLES_LOST, 0.0),
     )
     return tuple(
         ForecastObservation(
@@ -549,12 +550,14 @@ def _runtime_scoring_case(
             (ForecastMetric.PASS_YARDS, remaining / 0.04),
             (ForecastMetric.PASS_TD, pass_td),
             (ForecastMetric.INTERCEPTIONS, 0.0),
+            (ForecastMetric.FUMBLES_LOST, 0.0),
         )
     else:
         metric_values = (
             (ForecastMetric.RECEPTIONS, 80.0),
             (ForecastMetric.REC_YARDS, source.standard_y1_points / 0.1),
             (ForecastMetric.REC_TD, 0.0),
+            (ForecastMetric.FUMBLES_LOST, 0.0),
         )
 
     raw = tuple(

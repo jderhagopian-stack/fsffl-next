@@ -146,7 +146,6 @@ def _row_from_cells(*, provider: str, position: Position, headers: list[str], ce
             "pass_int": _at(cells, interceptions, 0),
             "rush_yd": _at(cells, yds, 1),
             "rush_td": _at(cells, td, 1),
-            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     elif position == Position.RB:
         stats = {
@@ -155,7 +154,6 @@ def _row_from_cells(*, provider: str, position: Position, headers: list[str], ce
             "rec": _at(cells, rec, 0),
             "rec_yd": _at(cells, yds, 1),
             "rec_td": _at(cells, td, 1),
-            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     elif position == Position.WR:
         stats = {
@@ -164,7 +162,6 @@ def _row_from_cells(*, provider: str, position: Position, headers: list[str], ce
             "rec_td": _at(cells, td, 0),
             "rush_yd": _at(cells, yds, 1, 0.0),
             "rush_td": _at(cells, td, 1, 0.0),
-            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     elif position == Position.TE:
         stats = {
@@ -173,10 +170,14 @@ def _row_from_cells(*, provider: str, position: Position, headers: list[str], ce
             "rec_td": _at(cells, td, 0),
             "rush_yd": 0.0,
             "rush_td": 0.0,
-            "fum_lost": _at(cells, fl, 0, 0.0),
         }
     else:
         return None
+
+    # Missing FL is missing evidence. Never turn an absent provider column into
+    # a projected zero, because active fum_lost scoring must fail closed.
+    if fl:
+        stats["fum_lost"] = _at(cells, fl, 0)
 
     return CurrentProjectionRow(
         provider=provider,

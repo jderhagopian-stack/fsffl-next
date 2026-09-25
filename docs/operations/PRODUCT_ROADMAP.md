@@ -4,8 +4,18 @@
 
 ### Foundation / league-agnostic path
 1. Forecast Research: **COMPLETE**.
-2. Governed Forecast implementation: **AUTHORIZED / ACTIVE**.
-3. Resume and complete new-league 7/7 lifecycle acceptance after the Forecast dependency is actually resolved.
+2. Management acceptance / bounded implementation authorization: **COMPLETE**.
+3. Governed Forecast implementation: **ACTIVE in PR #215; code acceptance checks passed, reconciling with current main**.
+   - K and D/ST subject/scoring contracts;
+   - active-rule completeness and fail-closed missing evidence;
+   - deterministic realized-outcome and non-promoting calibration harnesses;
+   - annual raw-snapshot replay invariants.
+4. Empirical/source promotion gate:
+   - historical independent K/DST source #2;
+   - production provider rights/content-health;
+   - exact Sleeper D/ST truth fixtures;
+   - qualifying 2026 K/DST preseason PIT evidence or explicit preseason unavailability.
+5. Resume and complete new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
 
 ### Product / Market path
 1. Physical-iPhone Market acceptance: **FAILED / NOT ACCEPTED** as a product gate.
@@ -15,6 +25,9 @@
 5. Repeat physical-iPhone Market acceptance.
 6. Home × Franchise redundancy/information-hierarchy audit.
 7. Trade Center expansion only after discovery/search order of operations is settled.
+
+## Forecast authority boundary
+Implemented contracts and research harnesses do not themselves create production K/DST forecasts. No one-source calibration, offensive-position fallback coefficient, aggregate-source double counting, guessed D/ST bucket math, or current/post-opener data backdated as preseason is permitted.
 
 ## Why Market architecture moved forward
 The shipped Market shell established useful concepts, but physical-iPhone evidence showed:
@@ -29,7 +42,7 @@ This is not treated as presentation polish alone.
 Simulation should evaluate shortlisted trades, not perform broad discovery.
 
 Working sequence:
-`League State → strategic needs/opportunity hypotheses → candidate assets/partners → broad cheap package generation → economic screening → bilateral plausibility → clustering/diversity → high-signal opportunity frontier → targeted Decision/Simulation → deeper analysis`
+`League State → strategic needs/opportunity hypotheses → candidate assets/counterparties → broad cheap package generation → economic screening → bilateral plausibility → clustering/diversity → high-signal opportunity frontier → targeted Decision/Simulation → deeper analysis`
 
 Simulation is a microscope, not the searchlight.
 

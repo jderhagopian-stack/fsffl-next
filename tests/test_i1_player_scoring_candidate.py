@@ -34,6 +34,9 @@ def _raw_wr(player_id: str, *, receptions: float, yards: float, touchdowns: floa
         (ForecastMetric.RECEPTIONS, receptions),
         (ForecastMetric.REC_YARDS, yards),
         (ForecastMetric.REC_TD, touchdowns),
+        # Explicit zero is evidence in this synthetic complete-coordinate fixture;
+        # production raw projections may not synthesize missing fumble loss.
+        (ForecastMetric.FUMBLES_LOST, 0.0),
     )
     return tuple(
         ForecastObservation(

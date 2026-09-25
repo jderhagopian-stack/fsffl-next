@@ -46,6 +46,13 @@ Decision: the K/DST + new-league Forecast research directive is complete, but th
 
 Completion artifact: `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
 
+## 2026-09-24 — Bounded K/DST implementation authorized
+Decision: Management accepts the completed K/DST + late-connect Research contract and authorizes the staged implementation sequence in the persisted handoff.
+
+PR #215 may implement contracts, scoring completeness, deterministic fixtures, and non-promoting calibration/outcome harnesses, but must not promote live K/DST provider authority, K/DST uncertainty coefficients, a fabricated 2026 preseason baseline, or downstream K/DST economics before their separate evidence gates pass.
+
+## 2026-09-24 — Synthetic fixture zero is not production evidence
+Decision: deterministic tests may include an explicit zero fumble-loss observation when the fixture itself defines a complete synthetic stat line. Provider/runtime code may not convert an absent fumble-loss field into zero. Missing active production evidence remains fail-closed.
 
 ## 2026-09-24 — Market North Star not product-accepted
 Decision: physical-iPhone acceptance does not close the current Market implementation. The four-surface shell is useful, but opportunity quality, readiness truth, and mobile information hierarchy remain below the product acceptance bar.

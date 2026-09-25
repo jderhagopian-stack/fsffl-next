@@ -14,27 +14,22 @@ from fsffl.state.models import (
     Position,
     Provenance,
     ProviderRef,
+    canonical_nfl_team,
 )
 
-
-_TEAM_ALIASES = {
-    "JAC": "JAX",
-    "OAK": "LV",
-    "SD": "LAC",
-    "STL": "LAR",
-}
 _FANTASY_POSITIONS = {
     "QB": Position.QB,
     "RB": Position.RB,
     "WR": Position.WR,
     "TE": Position.TE,
+    "K": Position.K,
 }
 
 
 class SleeperSnapshotNormalizer:
     """Bridge an acquired Sleeper snapshot into canonical point-in-time State.
 
-    Current live snapshots include the unrostered QB/RB/WR/TE universe by default
+    Current live snapshots include the unrostered QB/RB/WR/TE/K universe by default
     so waiver/free-agent discovery has canonical candidates. Historical callers can
     explicitly disable that enrichment when their snapshot does not carry a valid
     point-in-time player universe.
@@ -103,7 +98,7 @@ def _age_years(raw_age: Any) -> float | None:
 def canonical_players_from_sleeper_player_universe(
     raw_players: Any,
 ) -> tuple[Player, ...]:
-    """Normalize Sleeper's current QB/RB/WR/TE catalog into canonical player identity.
+    """Normalize Sleeper's current QB/RB/WR/TE/K catalog into canonical player identity.
 
     This helper is league-agnostic and intentionally limited to the same fantasy
     positions/team normalization used by live State enrichment.
@@ -246,10 +241,10 @@ def _attach_fantasy_regular_season_horizon(
 def _normalize_team(raw: Any) -> str | None:
     if raw is None:
         return None
-    team = str(raw).strip().upper()
-    if not team:
+    try:
+        return canonical_nfl_team(str(raw))
+    except ValueError:
         return None
-    return _TEAM_ALIASES.get(team, team)
 
 
 def _normalize_nfl_byes(

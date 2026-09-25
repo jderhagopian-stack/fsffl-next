@@ -23,6 +23,7 @@ from fsffl.state.models import (
     ScoringRule,
     Team,
     TeamState,
+    canonical_nfl_team,
 )
 
 
@@ -356,13 +357,27 @@ class SleeperNormalizer:
                 or " ".join(filter(None, [raw.get("first_name"), raw.get("last_name")]))
                 or external_id
             )
-            nfl_team = raw.get("team")
+            raw_nfl_team = raw.get("team")
+            if position == Position.DST:
+                # Sleeper represents D/ST roster assets in its player-id namespace.
+                # Preserve that roster compatibility in State, but attach canonical
+                # team identity so Forecast can map the asset to a team-season unit
+                # rather than modeling it as a human player.
+                try:
+                    nfl_team = canonical_nfl_team(str(raw_nfl_team or external_id))
+                except ValueError:
+                    nfl_team = None
+            else:
+                try:
+                    nfl_team = canonical_nfl_team(str(raw_nfl_team)) if raw_nfl_team else None
+                except ValueError:
+                    nfl_team = None
             players.append(
                 Player(
                     player_id=player_id,
                     full_name=full_name,
                     position=position,
-                    nfl_team=str(nfl_team) if nfl_team else None,
+                    nfl_team=nfl_team,
                     provider_refs=(ProviderRef(provider="sleeper", external_id=external_id),),
                 )
             )
@@ -373,7 +388,7 @@ class SleeperNormalizer:
                     player_id=player_id,
                     as_of=as_of,
                     age_years=self._age_years(raw.get("age")),
-                    nfl_team=str(nfl_team) if nfl_team else None,
+                    nfl_team=nfl_team,
                     status=status,
                     provenance=provenance,
                 )
