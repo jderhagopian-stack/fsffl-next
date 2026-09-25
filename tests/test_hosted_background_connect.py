@@ -232,7 +232,7 @@ def test_hosted_refresh_only_rebuilds_behavior_when_material_state_changed() -> 
 
     assert "league_material_fingerprint" in refresh
     assert "changed =" in refresh
-    assert "runtime_store.set_league_state" in refresh
+    assert "runtime_store.set_league_state_if_generation" in refresh
     assert "if changed:" in refresh
     assert "behavioral_coordinator.start" in refresh
 
@@ -340,10 +340,12 @@ def test_hosted_refresh_is_bound_to_starting_league_generation() -> None:
     capture_index = refresh.index("refresh_generation = runtime_store.league_generation(user_id)")
     guard_index = refresh.index("runtime_store.league_generation(user_id) != refresh_generation")
     active_index = refresh.index("not _matches_sleeper_league(active_state, league_external_id)")
-    write_index = refresh.index("runtime_store.set_league_state(user_id, league_state)")
+    write_index = refresh.index("runtime_store.set_league_state_if_generation(")
     assert capture_index < guard_index < write_index
     assert capture_index < active_index < write_index
     assert "FSFFL Sleeper refresh superseded before activation" in refresh
+    assert "expected_generation=refresh_generation" in refresh
+    assert "FSFFL Sleeper refresh superseded at activation" in refresh
 
 
 def test_manual_connect_cannot_report_same_active_league_as_switch_success() -> None:
