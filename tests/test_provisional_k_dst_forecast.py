@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -24,6 +25,10 @@ from fsffl.persistence.provisional_k_dst_forecast import (
 )
 from fsffl.product.provisional_k_dst_presentation import (
     build_provisional_k_dst_presentation,
+)
+from fsffl.product.provisional_k_dst_routes import (
+    ProvisionalKDstLookupError,
+    load_provisional_k_dst_presentation,
 )
 from fsffl.providers.ros_projection_rows import (
     ProjectionRightsStatus,
@@ -509,3 +514,90 @@ def test_full_authority_supersedes_provisional_when_existing_full_gates_clear() 
                 {K_REDUCED_2024_FINGERPRINT.fingerprint_id}
             ),
         )
+
+
+class _ArtifactStore:
+    def __init__(self, record, *, ignore_scope: bool = False) -> None:
+        self.record = record
+        self.ignore_scope = ignore_scope
+
+    def get_latest_reusable_artifact(
+        self,
+        *,
+        artifact_kind: str,
+        scope_kind: str,
+        scope_id: str,
+        model_version: str,
+    ):
+        if self.ignore_scope:
+            return self.record
+        return self.record if scope_id == self.record.key.scope_id else None
+
+
+def _runtime_stub(*, league_id: str = "league-1", state_id: str = "state-1", season: int = 2026):
+    return SimpleNamespace(
+        league_state=SimpleNamespace(
+            league=SimpleNamespace(league_id=league_id, season=season),
+            state_id=state_id,
+        )
+    )
+
+
+def test_product_lookup_is_scoped_to_exact_league_state_and_revalidates_payload_identity() -> None:
+    artifact = _artifact(
+        _snapshot(
+            "one",
+            position=Position.DST,
+            stats=((ForecastMetric.DST_SACK.value, 40.0),),
+            hash_char="a",
+        ),
+        _snapshot(
+            "two",
+            position=Position.DST,
+            stats=((ForecastMetric.DST_SACK.value, 42.0),),
+            hash_char="b",
+        ),
+    )
+    forecast = build_provisional_k_dst_forecast(
+        artifact,
+        league_id="league-1",
+        league_state_id="state-1",
+        subject_key="DST:BUF",
+        rules=_dst_rules(ScoringRule(stat="sack", points=1)),
+    )
+    record = provisional_k_dst_forecast_artifact(forecast=forecast)
+    store = _ArtifactStore(record)
+
+    payload = load_provisional_k_dst_presentation(
+        _runtime_stub(),
+        persistence_store=store,
+        subject_key="DST:BUF",
+    )
+    assert payload["league_state_id"] == "state-1"
+    assert payload["fantasy_points"] == pytest.approx(41.0)
+
+    with pytest.raises(ProvisionalKDstLookupError) as missing:
+        load_provisional_k_dst_presentation(
+            _runtime_stub(state_id="state-2"),
+            persistence_store=store,
+            subject_key="DST:BUF",
+        )
+    assert missing.value.status_code == 404
+
+    with pytest.raises(ProvisionalKDstLookupError) as mismatch:
+        load_provisional_k_dst_presentation(
+            _runtime_stub(state_id="state-2"),
+            persistence_store=_ArtifactStore(record, ignore_scope=True),
+            subject_key="DST:BUF",
+        )
+    assert mismatch.value.status_code == 409
+
+
+def test_product_lookup_hard_fails_outside_2026() -> None:
+    with pytest.raises(ProvisionalKDstLookupError) as exc:
+        load_provisional_k_dst_presentation(
+            _runtime_stub(season=2027),
+            persistence_store=None,
+            subject_key="DST:BUF",
+        )
+    assert exc.value.status_code == 404
