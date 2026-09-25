@@ -857,7 +857,14 @@ def create_app(
                 active_before_write = require_active_league_identity()
                 if synced_state.league.league_id != active_before_write.league.league_id:
                     raise IntelligenceJobInterrupted("league_switch")
-                store.set_league_state(user_id, synced_state)
+                activated = store.set_league_state_if_generation(
+                    user_id,
+                    synced_state,
+                    expected_generation=expected_generation[0],
+                    expected_league_id=starting_league_id,
+                )
+                if activated is None:
+                    raise IntelligenceJobInterrupted("league_switch")
                 expected_generation[0] = store.league_generation(user_id)
                 wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
                 if callable(wait_for_checkpoint) and not wait_for_checkpoint(
