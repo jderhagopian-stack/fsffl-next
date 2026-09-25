@@ -11,7 +11,10 @@
   "acquisitions": [
     {
       "provider": "CBS Sports",
-      "positions": ["K", "DST"],
+      "positions": [
+        "K",
+        "DST"
+      ],
       "captured_at_utc": "2026-09-25T12:28:54.671206Z",
       "urls": [
         "https://www.cbssports.com/fantasy/football/stats/K/2026/restofseason/projections/ppr/",
@@ -34,7 +37,10 @@
     },
     {
       "provider": "LineupExperts",
-      "positions": ["K", "DST"],
+      "positions": [
+        "K",
+        "DST"
+      ],
       "captured_at_utc": "2026-09-25T12:32:36.550668Z",
       "urls": [
         "https://www.lineupexperts.com/football/projections?flt_pos=K&flt_proj_time_period=RestOfSeason",
@@ -57,7 +63,10 @@
     },
     {
       "provider": "RotoWire",
-      "positions": ["K", "DEF"],
+      "positions": [
+        "K",
+        "DEF"
+      ],
       "captured_at_utc": "2026-09-25T12:29:08.299806Z",
       "urls": [
         "https://www.rotowire.com/football/projections-ros.php"
@@ -78,7 +87,10 @@
     },
     {
       "provider": "Razzball",
-      "positions": ["K", "Team Defense"],
+      "positions": [
+        "K",
+        "Team Defense"
+      ],
       "captured_at_utc": "2026-09-25T12:29:02.640334Z",
       "urls": [
         "https://football.razzball.com/projections-pk-restofseason/",
@@ -98,8 +110,10 @@
     },
     {
       "provider": "FFToday",
-      "positions": ["K", "DEF"],
-      "captured_at_utc": "2026-09-25",
+      "positions": [
+        "K",
+        "DEF"
+      ],
       "declared_horizon": "full_season_preseason",
       "content_year": 2026,
       "source_health": {
@@ -109,11 +123,16 @@
           "It is not a current-date rest-of-season forecast and must not be relabeled or adjusted heuristically."
         ]
       },
-      "production_rights": "commercial_ingestion_rights_not_established"
+      "production_rights": "commercial_ingestion_rights_not_established",
+      "research_check_date": "2026-09-25",
+      "acquisition_status": "not_acquired_for_baseline_not_eligible"
     },
     {
       "provider": "SportsDataIO",
-      "positions": ["K", "FantasyDefense"],
+      "positions": [
+        "K",
+        "FantasyDefense"
+      ],
       "captured_at_utc": "2026-09-25T12:34:20.688359Z",
       "urls": [
         "https://sportsdata.io/developers/workflow-guide/nfl",
@@ -130,6 +149,28 @@
         ]
       },
       "production_rights": "commercial_api_provider; exact licensed_product_scope_required"
+    },
+    {
+      "provider": "FantasyPros",
+      "positions": [
+        "K",
+        "DST"
+      ],
+      "captured_at_utc": "2026-09-25T12:41:40.876182Z",
+      "urls": [
+        "https://www.fantasypros.com/api-data/"
+      ],
+      "declared_horizon": "API_supports_rest_of_season",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "api_product_exists_aggregate_independence_unresolved",
+        "evidence": [
+          "Official API page documents weekly, preseason and rest-of-season NFL projections with full stat lines.",
+          "Commercial tier explicitly offers commercial license, redistribution rights, historical data and bulk access.",
+          "FantasyPros projection product is aggregate/consensus evidence; it cannot automatically count as an independent second source when component overlap is unknown."
+        ]
+      },
+      "production_rights": "commercial_tier_exists; exact contract and source decomposition required"
     }
   ]
 }
