@@ -14,23 +14,56 @@ Not complete until evidence demonstrates:
 - Home, Franchise, and Market populated with governed evidence for the correct active league;
 - no cross-league intelligence contamination.
 
-Current status: **MANAGEMENT GATE / blocked upstream by Forecast authority for the newly connected K/DST league.**
+Current status: **MANAGEMENT GATE / blocked upstream by unimplemented Forecast authority for the newly connected K/DST league.**
 
 ## Forecast K/DST research
-Research is complete only when it provides evidence-backed, implementation-ready contracts covering:
-- K as a distinct forecast problem where evidence supports that distinction;
-- D/ST as a team-unit fantasy asset rather than silently treating it as an ordinary player;
-- provider/raw-data inventory and provenance;
-- historical evidence availability;
+**Status: COMPLETE — RESEARCH.**
+
+Research acceptance is satisfied by the persisted contract and evidence in:
+- `docs/operations/workstreams/RESEARCH.md`
+- `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+
+The completed research provides:
+- K as a distinct Forecast problem;
+- D/ST as a team-unit fantasy asset;
+- provider/raw-data inventory and provenance constraints;
+- historical evidence availability and gaps;
 - league scoring translation requirements;
 - uncertainty/calibration approach;
-- behavior when sufficient governed evidence is unavailable;
-- compatibility with the existing Forecast authority and two-source rules, or an explicit evidence-backed proposal for any governance change;
-- synthetic fixtures for leagues with no K/DST, K only where valid, D/ST only where valid, and K+D/ST;
-- explicit separation of K/DST modeling from new-league baseline/bootstrap.
+- fail-closed behavior when evidence is insufficient;
+- compatibility with existing Forecast authority and two-source governance;
+- synthetic fixtures for no K/DST, K-only, D/ST-only, K+D/ST, and evidence-deficient cases;
+- explicit separation of K/DST modeling from new-league bootstrap;
+- Forecast → Value → Simulation → Decision/Search migration boundaries;
+- implementation sequence and acceptance tests.
+
+No K/DST production coefficient or model authority is promoted merely by this research completion.
 
 ## New-league Forecast bootstrap research
-Complete only when it defines governed behavior for a league first connected after preseason, including what can be reconstructed from league-agnostic raw Forecast evidence and what must fail closed.
+**Status: COMPLETE — RESEARCH.**
+
+The contract defines governed behavior for a league first connected after preseason:
+- use an immutable league-agnostic annual raw Forecast snapshot when it exists;
+- otherwise permit only an evidence-preserving migration of genuinely retained point-in-time raw Forecast evidence;
+- preserve original timestamps, source identity, hashes, and lineage;
+- do not refetch current pages and backdate them as preseason;
+- fail closed on target scoring rules not supported by the retained raw evidence;
+- when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
+
+## Forecast K/DST implementation gate
+**Status: MANAGEMENT GATE — NOT STARTED UNDER THE RESEARCH DIRECTIVE.**
+
+Implementation is not accepted until Management authorizes it and evidence demonstrates:
+- canonical K and D/ST subject identity;
+- active-rule-complete league scoring;
+- no silent missing-metric zero substitution, including `fum_lost`;
+- source health and independence at the relevant metric/rule coordinate;
+- separate promoted K/DST season-error and weekly-volatility evidence;
+- distributional treatment for D/ST scoring bands;
+- annual snapshot/bootstrap migration behavior;
+- downstream compatibility without Value/Simulation/Decision inventing Forecast truth;
+- regression-clean behavior for the original no-K/DST league;
+- successful lifecycle acceptance for the newly connected league.
 
 ## Product principle
-Do not make a red gate green by weakening model authority, fabricating projections, or hiding unsupported assets in Presentation.
+Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
