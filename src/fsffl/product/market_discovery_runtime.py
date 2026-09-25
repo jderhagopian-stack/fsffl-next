@@ -74,10 +74,34 @@ def _target_position(row: dict[str, object]) -> str:
     return str(row.get("target_position") or "UNKNOWN")
 
 
-def _objective_family(row: dict[str, object], source: OpportunitySource) -> str:
-    if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT:
-        return "explicit_trade_intent"
-    return "upgrade_position"
+def _objective_family(
+    row: dict[str, object],
+    source: OpportunitySource,
+    *,
+    intent: str = "",
+) -> str:
+    if source != OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT:
+        return "upgrade_position"
+    return {
+        "target": "target_player",
+        "shop": "shop_player",
+        "position": "target_position",
+        "owner": "explore_owner",
+        "consolidate": "consolidate_assets",
+    }.get(intent, "improve_team")
+
+
+def _need_dimension(
+    row: dict[str, object],
+    *,
+    intent: str = "",
+    intent_value: str = "",
+) -> str:
+    if intent == "position" and intent_value:
+        return intent_value
+    if intent == "owner":
+        return "OWNER"
+    return _target_position(row)
 
 
 def _target_family(
@@ -85,14 +109,27 @@ def _target_family(
     *,
     source: OpportunitySource,
     exact_target_constraint: str | None,
+    intent: str = "",
+    intent_value: str = "",
 ) -> str:
     if exact_target_constraint:
         return exact_target_constraint
-    if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT:
-        receive = _receive_refs(row)
-        if receive:
-            return receive[0]
-    return f"{_target_position(row)}:starter_upgrade"
+    position = _target_position(row)
+    if source != OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT:
+        return f"{position}:starter_upgrade"
+    receive = _receive_refs(row)
+    if intent == "target" and receive:
+        return receive[0]
+    if intent == "position":
+        return f"{intent_value or position}:starter_upgrade"
+    if intent == "owner":
+        owner = intent_value or str(row.get("counterparty_team_id") or "")
+        return f"owner:{owner}"
+    if intent == "shop":
+        return f"shop:{intent_value or 'selected'}:{position}"
+    if intent == "consolidate":
+        return f"{position}:consolidation_target"
+    return f"{position}:starter_upgrade"
 
 
 def _opportunity_identity(
@@ -101,14 +138,18 @@ def _opportunity_identity(
     *,
     source: OpportunitySource,
     exact_target_constraint: str | None,
+    intent: str = "",
+    intent_value: str = "",
 ) -> tuple[str, str, str, str, str]:
     team_id = str(runtime.selected_team_id or "")
-    objective = _objective_family(row, source)
-    need = _target_position(row)
+    objective = _objective_family(row, source, intent=intent)
+    need = _need_dimension(row, intent=intent, intent_value=intent_value)
     target_family = _target_family(
         row,
         source=source,
         exact_target_constraint=exact_target_constraint,
+        intent=intent,
+        intent_value=intent_value,
     )
     family = canonical_opportunity_family_key(
         focal_team_id=team_id,
@@ -232,6 +273,8 @@ def _build_path_seeds(
     *,
     source: OpportunitySource,
     exact_target_constraint: str | None,
+    intent: str = "",
+    intent_value: str = "",
 ) -> tuple[list[dict[str, object]], int]:
     grouped: OrderedDict[tuple[str, str, tuple[str, ...]], list[dict[str, object]]] = OrderedDict()
     for row in rows:
@@ -240,6 +283,8 @@ def _build_path_seeds(
             row,
             source=source,
             exact_target_constraint=exact_target_constraint,
+            intent=intent,
+            intent_value=intent_value,
         )
         key = (
             opportunity_id,
@@ -877,6 +922,8 @@ def _aggregate_opportunities(
     *,
     source: OpportunitySource,
     exact_target_constraint: str | None,
+    intent: str = "",
+    intent_value: str = "",
 ) -> tuple[list[OpportunityHypothesis], list[MarketOpportunity]]:
     league_state = runtime.league_state
     focal_team_id = runtime.selected_team_id
@@ -896,6 +943,8 @@ def _aggregate_opportunities(
             row,
             source=source,
             exact_target_constraint=exact_target_constraint,
+            intent=intent,
+            intent_value=intent_value,
         )
         first_row_by_opportunity.setdefault(opportunity_id, row)
         metadata[opportunity_id] = (family, objective, need, target_family)
@@ -1116,6 +1165,8 @@ def build_market_discovery(
     evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET,
     source: OpportunitySource = OpportunitySource.AUTOMATIC_FOR_YOU,
     exact_target_constraint: str | None = None,
+    intent: str = "",
+    intent_value: str = "",
     evaluator: TradeEvaluator = evaluate_candidate_path,
 ) -> dict[str, object]:
     """Build governed Opportunity/Path output from raw Search rows."""
@@ -1148,6 +1199,8 @@ def build_market_discovery(
         economically_screened_rows,
         source=source,
         exact_target_constraint=exact_target_constraint,
+        intent=intent,
+        intent_value=intent_value,
     )
     selected_indices = set(
         select_preliminary_screen_indices(seeds, limit=evaluation_limit)
@@ -1175,6 +1228,8 @@ def build_market_discovery(
         paths,
         source=source,
         exact_target_constraint=exact_target_constraint,
+        intent=intent,
+        intent_value=intent_value,
     )
     by_id = {path.path_id: path for path in paths}
     for_you, relaxations = select_for_you(opportunities, by_id)
