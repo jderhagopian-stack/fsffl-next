@@ -1,7 +1,9 @@
 # Workstream — Market / Trade Discovery
 
 ## State
-**IMPLEMENTATION COMPLETE — PHYSICAL IPHONE ACCEPTANCE GATE**
+**ACTIVE — CURRENT-BETA CORRECTIVE IMPLEMENTATION AUTHORIZED**
+
+The earlier post-PR-#232 physical-acceptance gate is superseded by the current-beta acceptance failure recorded later in this file. The accepted architecture remains frozen; the active bounded corrective scope is competitive-lens discovery semantics, explicit Find opportunities submission/running/completion lifecycle, focused zero-result search-exhaustion truth, Forecast vs FSFFL Intrinsic availability tracing, and remaining mobile safe-area correctness.
 
 ## Why this workstream moved forward
 Physical-iPhone Market acceptance exposed a product-level problem rather than a narrow presentation defect.
