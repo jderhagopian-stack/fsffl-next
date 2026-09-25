@@ -31,6 +31,8 @@ Still open before this Performance directive is complete:
 - responsive foreground interaction on the accepted deployed build;
 - no stale-job or cross-league contamination.
 
+Latest physical-device timing shows Home/Franchise within sub-second ranges, but Market cold discovery is not yet acceptable: first quick workspace was 36.705s and first full workspace 48.396s, followed by a 0.172s cached full response. The cold Market path must be bounded before Performance acceptance.
+
 The separate new-league K/DST Forecast authority gate remains real, but it is not the stop state for this existing-league restoration incident.
 
 ## Forecast K/DST research
