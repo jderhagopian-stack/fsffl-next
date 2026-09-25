@@ -88,8 +88,9 @@ def test_market_north_star_has_exactly_four_primary_tabs_and_neutral_language() 
     assert tabs.count('["') == 4
     for phrase in (
         "Value disagreement",
-        "Worth investigating",
-        "Needs full evaluation",
+        "Worth attention",
+        "Prelim plausible",
+        "Bilateral friction",
         "Market match only",
     ):
         assert phrase in source
@@ -99,10 +100,10 @@ def test_market_north_star_has_exactly_four_primary_tabs_and_neutral_language() 
 
 def test_market_north_star_for_you_never_auto_runs_full_trade_evaluation() -> None:
     source = _read(STATIC / "north_star_market.js")
-    assert "spotlightRows" in source
-    assert ".slice(0,5)" in source
+    assert "forYouOpportunities" in source
+    assert "Your best paths right now." in source
     assert "Open opportunity" in source
-    assert "Evaluate this package in Trade Center" in source
+    assert "Evaluate in Trade Center" in source
     assert "runTradeEvaluation" not in source
     assert "/api/opportunities/trade" not in source
     assert "/api/trade-center/simulate" not in source
@@ -126,6 +127,7 @@ def test_player_board_is_read_only_discovery_with_separate_value_lenses() -> Non
     assert 'api("/api/league/value-lenses?universe=all")' in source
     assert 'api("/api/league/team-views")' in source
     assert "Broad Market and FSFFL Intrinsic are shown side by side and never blended." in source
+    assert "Intrinsic is preparing; Broad Market remains live." in source
     assert "League Market Value: unavailable" in source
     assert "Team Utility: not part of this board." in source
     for token in (
