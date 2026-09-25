@@ -22,6 +22,8 @@ def build_provisional_k_dst_presentation(
         "status": "ready" if decision.allowed else "unavailable",
         "label": "Provisional 2026 ROS K/DST",
         "authority_tier": forecast.authority_tier,
+        "league_id": forecast.league_id,
+        "league_state_id": forecast.league_state_id,
         "subject_key": forecast.subject_key,
         "subject_family": forecast.subject_family.value,
         "horizon": forecast.horizon,
