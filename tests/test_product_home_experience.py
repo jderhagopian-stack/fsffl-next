@@ -199,11 +199,11 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
 
 def test_shared_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
     release = "20260925-state-first1"
-    assert "/static/app.js?v=20260925-hodor-lifecycle1" in INDEX
+    assert f"/static/app.js?v={release}" in INDEX
     assert f"/static/home_dashboard.js?v={release}" in INDEX
     assert f"/static/product_shell.js?v={release}" in INDEX
     assert f"const homeNorthStarStaticVersion='{release}';" in SHELL
-    assert "const franchiseNorthStarStaticVersion='20260925-hodor-lifecycle1';" in SHELL
+    assert "const franchiseNorthStarStaticVersion='20260925-state-first1';" in SHELL
 
 
 
