@@ -247,3 +247,49 @@ The existing full-authority gates remain recorded and unchanged. If they clear, 
 Do not reopen generic source Research. Resume Forecast Implementation from PR #233/main and implement the minimum bounded contracts, calculations, provenance, coverage reporting, downstream gating, tests, and presentation/readiness semantics necessary for this 2026 provisional mode. Preserve all existing fail-closed behavior for 2027+ and for claims requiring full-rule authority.
 
 Persist an implementation handoff and follow OPERATING_PROTOCOL.md to a permitted terminal state.
+
+
+## Management directive — cross-league scoring coverage audit — 2026-09-25
+
+**State: NEW RESEARCH DIRECTIVE AUTHORIZED**
+
+The K/DST late-start work exposed a broader architecture risk: Forecast/scoring evidence acquisition may have been designed around the scoring coordinates needed by the currently modeled leagues rather than the wider set of scoring systems FSFFL NEXT should support commercially.
+
+Research is authorized to perform a league-agnostic **scoring-rule coverage and forecast-input audit** before additional provider/data contracts harden around incomplete assumptions.
+
+### Objective
+Build an evidence-backed scoring-coordinate universe for common fantasy-football league configurations and determine whether the existing Data → Forecast → scoring contracts capture the raw/projected inputs needed to score and forecast those configurations without heuristic reconstruction.
+
+This is not a request to make every conceivable custom rule first-class. Distinguish common rules that should be natively forecastable, less-common but commercially relevant rules that should be architecturally representable, and exotic/unsupported rules that should fail closed with explicit capability reporting.
+
+### External research scope
+Use current authoritative platform documentation and other high-quality primary sources where available to research common configurable scoring rules across major fantasy-football platforms, including at minimum Sleeper, ESPN, Yahoo, NFL Fantasy and CBS, plus materially relevant dynasty/best-ball platforms if their scoring capabilities differ.
+
+Research both standard/default scoring and configurable alternatives. Do not infer popularity merely from configurability; distinguish documented defaults/common presets from optional/custom coordinates.
+
+Cover all materially distinct asset/stat families, including passing, rushing, receiving, first downs, completions/incompletions/attempts, sacks taken, interceptions/pick-sixes, fumbles/fumbles lost, return yards/TDs and special teams, two-point conversions, kicking distance bands/misses/PATs, team defense/special teams events/yards allowed/points allowed/returns/blocks/safeties/conversions, IDP families, position-sensitive scoring such as TE premium, bonuses/thresholds, fractional versus bucket scoring, points per carry/completion/first down, and any other recurring configurable coordinate found in primary-source research.
+
+### Required deliverables
+Produce a governed matrix mapping platform/preset or rule family → scoring coordinate → asset types → raw stat required → Forecast coordinate required → current FSFFL support → provider evidence coverage → exact transform possible? → uncertainty/calibration coverage → status/gap.
+
+Also produce:
+- a canonical proposed **Scoring Coordinate Registry** independent of any single league/provider;
+- a capability taxonomy: FULL / PARTIAL / UNSUPPORTED with explicit missing-coordinate reasons;
+- a provider-acquisition gap analysis showing which raw projection fields should be preserved now even when current FSFFL leagues do not score them;
+- a historical-stat/data-retention gap analysis for future calibration/replay;
+- a scoring-engine audit identifying any rules currently represented only through league-specific assumptions;
+- recommendations for extensible contracts so a new league configuration maps rules to canonical coordinates instead of requiring bespoke Forecast logic;
+- prioritized gaps by prevalence/commercial relevance and implementation cost, without fabricating prevalence where no evidence exists;
+- deterministic fixtures representing materially different common scoring families for future implementation tests.
+
+### Architecture constraints
+Preserve the authority chain. League Configuration owns scoring rules; Forecast should forecast canonical football/statistical coordinates or governed derived distributions, not hard-code a league's fantasy scoring. Scoring converts Forecast evidence under a league configuration. Value/Decision/Simulation remain downstream.
+
+Do not use provider-native fantasy points as a shortcut when raw coordinates are needed for portability. Preserve granular source fields whenever rights permit, even if the current league does not use them, when the field belongs to the supported canonical registry.
+
+Nonlinear scoring (threshold bonuses, distance bands, PA/YA buckets, etc.) must be identified explicitly: scoring an expected aggregate is not automatically equivalent to expected fantasy points. Determine whether distributions/buckets/event probabilities are required.
+
+Do not silently approximate unsupported rules. The product must be able to report why a league/position is FULL, PARTIAL or UNSUPPORTED.
+
+### Execution boundary
+This directive is Research first. Do not alter production Forecast/scoring authority merely because a gap is discovered. Persist the research artifact and implementation-ready handoff, update canonical operations state, and bring architecture/policy decisions requiring Management choice to a MANAGEMENT GATE. Research should exhaust materially distinct primary-source paths before returning under OPERATING_PROTOCOL.md.
