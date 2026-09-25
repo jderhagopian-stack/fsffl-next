@@ -596,6 +596,7 @@ class PrivateBetaRuntimeStore:
             )
             self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
+            self._pending_league_states.pop(user_id, None)
             return updated
 
     def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
