@@ -14,7 +14,24 @@ Not complete until evidence demonstrates:
 - Home, Franchise, and Market populated with governed evidence for the correct active league;
 - no cross-league intelligence contamination.
 
-Current status: **MANAGEMENT GATE / blocked upstream by unpromoted Forecast authority for the newly connected K/DST league.**
+Current status: **ACTIVE — PRODUCTION ACCEPTANCE / LAST-GOOD RESTORATION.**
+
+Evidence already satisfied for the existing FSFFL Dynasty incident:
+- PR #222 fixes terminal failed/interrupted last-good restoration, same-league state-only demotion, restored-readiness precedence, and the mobile Refresh Intelligence grid/button;
+- PR #226 is live on Render at `50614b1deeeccfe61c7b4fe3acc46111f7ad23cc`;
+- production startup at 2026-09-25T13:52:35Z restored state `203227df...` with Forecast/Simulation/Value all present and `complete=True`;
+- a second production restart at 2026-09-25T14:39:09Z restored the same complete bundle again;
+- no automatic heavy intelligence job launched after either restart;
+- PR #227 adds the interrupted-refresh restore regression and is merged/test-green.
+
+Still open before this Performance directive is complete:
+- physical-iPhone/Safari confirmation that jimmygoodjob visibly presents restored 7/7;
+- Home, Franchise, and Market populated for the correct restored league;
+- normal single-line/actionable Refresh Intelligence presentation on mobile;
+- responsive foreground interaction on the accepted deployed build;
+- no stale-job or cross-league contamination.
+
+The separate new-league K/DST Forecast authority gate remains real, but it is not the stop state for this existing-league restoration incident.
 
 ## Forecast K/DST research
 **Status: COMPLETE — RESEARCH / 2026 LATE-START PLAN READY.**
