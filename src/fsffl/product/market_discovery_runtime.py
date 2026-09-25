@@ -18,7 +18,14 @@ from fsffl.opportunity import (
     canonical_path_id,
 )
 from fsffl.team_utility.utility import OwnerStrategicPosture
-from fsffl.trade_decision import live_bounded_materiality_policy
+from fsffl.trade_decision import (
+    assess_package_economics,
+    calculate_bilateral_economic_net,
+    live_bounded_materiality_policy,
+    live_bounded_package_premium_prior,
+    summarize_bilateral_trade_economics,
+    summarize_package_concentration,
+)
 
 from .behavioral_runtime import cached_behavior_profile_for_team
 from .opportunity_posture import calculated_competitive_state
@@ -26,6 +33,7 @@ from .runtime import UserRuntimeContext
 from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import resolve_owned_asset_ref
+from .trade_value_adapter import cardinal_market_profiles
 
 
 DEFAULT_PRELIMINARY_DECISION_BUDGET = 8
@@ -122,44 +130,85 @@ def _row_search_pair(row: dict[str, object]) -> tuple[float, float]:
     )
 
 
-def _prune_package_neighborhood(rows: list[dict[str, object]]) -> tuple[dict[str, object], tuple[dict[str, object], ...], int]:
-    """Collapse one exact target/counterparty neighborhood before Decision work.
+_ECONOMIC_BAND_ORDER = {
+    PreliminaryEconomicBand.ROBUST_OR_ORDINARY.value: 0,
+    PreliminaryEconomicBand.BOUNDED_UNCERTAINTY.value: 1,
+    PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN.value: 2,
+    PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN.value: 3,
+    PreliminaryEconomicBand.INCOMPLETE.value: 4,
+}
 
-    Within each package shape, a row with both a larger relative market gap and a
-    larger absolute search distance is Search-dominated by a closer row. This uses
-    Search's existing coordinates only; it does not claim Decision or utility
-    dominance. One best row per materially distinct package shape is retained.
+
+def _cheap_band_rank(row: dict[str, object]) -> int:
+    return _ECONOMIC_BAND_ORDER.get(
+        str(row.get("preliminary_economic_band") or ""),
+        _ECONOMIC_BAND_ORDER[PreliminaryEconomicBand.INCOMPLETE.value],
+    )
+
+
+def _row_dominates(left: dict[str, object], right: dict[str, object]) -> bool:
+    """Search-owned Pareto pruning over already-governed Decision/Search evidence."""
+
+    left_gap, left_distance = _row_search_pair(left)
+    right_gap, right_distance = _row_search_pair(right)
+    left_values = (
+        _cheap_band_rank(left),
+        left_gap,
+        left_distance,
+        len(left.get("send") or []),
+    )
+    right_values = (
+        _cheap_band_rank(right),
+        right_gap,
+        right_distance,
+        len(right.get("send") or []),
+    )
+    return all(a <= b for a, b in zip(left_values, right_values, strict=True)) and any(
+        a < b for a, b in zip(left_values, right_values, strict=True)
+    )
+
+
+def _prune_package_neighborhood(rows: list[dict[str, object]]) -> tuple[dict[str, object], tuple[dict[str, object], ...], int]:
+    """Prune one target/counterparty neighborhood after cheap Decision economics.
+
+    Search does not invent an economic score. It consumes the categorical
+    preliminary economic band plus its own distance/complexity coordinates and
+    removes only rows that are Pareto-dominated on every available governed
+    dimension. Materially different shapes/economic bands can therefore survive
+    even when they are not the single closest additive Cardinal package.
     """
 
-    by_shape: OrderedDict[str, list[dict[str, object]]] = OrderedDict()
-    for row in rows:
-        by_shape.setdefault(str(row.get("package_shape") or "unknown"), []).append(row)
-
-    survivors: list[dict[str, object]] = []
-    pruned = 0
-    for shape_rows in by_shape.values():
-        ordered = sorted(
-            shape_rows,
-            key=lambda row: (
-                _row_search_pair(row),
-                int(row.get("package_variant_rank") or 999),
-                _send_refs(row),
-            ),
+    survivors = [
+        row
+        for index, row in enumerate(rows)
+        if not any(
+            other_index != index and _row_dominates(other, row)
+            for other_index, other in enumerate(rows)
         )
-        if ordered:
-            survivors.append(ordered[0])
-            pruned += max(0, len(ordered) - 1)
-
+    ]
     survivors.sort(
         key=lambda row: (
+            _cheap_band_rank(row),
             _row_search_pair(row),
             len(row.get("send") or []),
+            int(row.get("package_variant_rank") or 999),
             _send_refs(row),
         )
     )
+    if not survivors:
+        survivors = sorted(
+            rows,
+            key=lambda row: (
+                _cheap_band_rank(row),
+                _row_search_pair(row),
+                len(row.get("send") or []),
+                _send_refs(row),
+            ),
+        )[:1]
     representative = survivors[0]
     alternates = tuple(survivors[1 : 1 + _MAX_ALTERNATE_PACKAGES])
-    pruned += max(0, len(survivors) - 1 - len(alternates))
+    kept = 1 + len(alternates)
+    pruned = max(0, len(rows) - kept)
     return representative, alternates, pruned
 
 
@@ -243,22 +292,21 @@ def select_preliminary_screen_indices(
     return tuple(sorted(selected))
 
 
-def evaluate_candidate_path(
+def _proposal_from_row(
     runtime: UserRuntimeContext,
     row: dict[str, object],
-) -> dict[str, object]:
-    """Attach governed pre-Simulation Decision evidence to one representative package."""
-
+    *,
+    prefix: str,
+):
     league_state = runtime.league_state
     focal_team_id = runtime.selected_team_id
     if league_state is None or focal_team_id is None:
-        return row
-
-    counterparty_team_id = str(row["counterparty_team_id"])
+        raise ValueError("trade screen requires loaded State and managed team")
+    counterparty_team_id = str(row.get("counterparty_team_id") or "")
     send = row.get("send") or []
     receive = row.get("receive") or []
-    if not send or not receive:
-        return row
+    if not counterparty_team_id or not send or not receive:
+        raise ValueError("trade screen requires bilateral package assets")
 
     focal_assets = tuple(
         resolve_owned_asset_ref(
@@ -278,7 +326,7 @@ def evaluate_candidate_path(
     )
     draft = TradeDraft(
         draft_id=(
-            f"market-prelim:{league_state.state_id}:{focal_team_id}:"
+            f"{prefix}:{league_state.state_id}:{focal_team_id}:"
             f"{counterparty_team_id}:"
             f"{'-'.join(str(item['asset_ref']) for item in send)}:"
             f"{'-'.join(str(item['asset_ref']) for item in receive)}"
@@ -291,7 +339,188 @@ def evaluate_candidate_path(
             assets=counterparty_assets,
         ),
     )
-    proposal = submit_trade_draft(draft, as_of=league_state.as_of)
+    return submit_trade_draft(draft, as_of=league_state.as_of)
+
+
+def _economic_side(payload: dict[str, Any] | None, team_id: str) -> dict[str, Any]:
+    if not payload:
+        return {}
+    for key in ("side_a", "side_b"):
+        side = payload.get(key) or {}
+        if str(side.get("team_id") or "") == team_id:
+            return side
+    return {}
+
+
+def _cheap_economic_band(
+    runtime: UserRuntimeContext,
+    row: dict[str, object],
+) -> PreliminaryEconomicBand:
+    league_state = runtime.league_state
+    focal_team_id = str(runtime.selected_team_id or "")
+    counterparty_team_id = str(row.get("counterparty_team_id") or "")
+    net = row.get("economic_net")
+    focal = _economic_side(net if isinstance(net, dict) else None, focal_team_id)
+    counterparty = _economic_side(
+        net if isinstance(net, dict) else None,
+        counterparty_team_id,
+    )
+    focal_market = focal.get("market") or {}
+    counterparty_market = counterparty.get("market") or {}
+    if (
+        league_state is None
+        or focal_market.get("status") != "complete"
+        or counterparty_market.get("status") != "complete"
+        or focal_market.get("mean_delta") is None
+        or counterparty_market.get("mean_delta") is None
+    ):
+        return PreliminaryEconomicBand.INCOMPLETE
+
+    try:
+        threshold = live_bounded_materiality_policy(
+            as_of=league_state.as_of
+        ).economic.mean_value_abs
+    except ValueError:
+        return PreliminaryEconomicBand.INCOMPLETE
+
+    focal_delta = float(focal_market["mean_delta"])
+    counterparty_delta = float(counterparty_market["mean_delta"])
+    package = row.get("package_economics")
+    resolution = str(package.get("resolution") or "") if isinstance(package, dict) else ""
+    singleton_sender = (
+        str(package.get("singleton_sender_team_id") or "")
+        if isinstance(package, dict)
+        else ""
+    )
+    package_sender = (
+        str(package.get("package_sender_team_id") or "")
+        if isinstance(package, dict)
+        else ""
+    )
+
+    if focal_delta < -threshold:
+        return PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN
+    if counterparty_delta < -threshold:
+        return PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN
+    if resolution == "singleton_underpaid":
+        if singleton_sender == focal_team_id:
+            return PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN
+        if singleton_sender == counterparty_team_id:
+            return PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN
+    if resolution == "package_clears_upper_bound":
+        if package_sender == focal_team_id:
+            return PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN
+        if package_sender == counterparty_team_id:
+            return PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN
+    if resolution == "within_provisional_band":
+        return PreliminaryEconomicBand.BOUNDED_UNCERTAINTY
+    return PreliminaryEconomicBand.ROBUST_OR_ORDINARY
+
+
+def evaluate_candidate_economics(
+    runtime: UserRuntimeContext,
+    row: dict[str, object],
+    *,
+    profiles=None,
+) -> dict[str, object]:
+    """Attach cheap Decision-owned economics before Search family pruning.
+
+    This stage intentionally excludes lineup optimization, Team Utility, owner
+    behavior and changed-state Simulation. It exists only to prevent additive
+    Search closeness from deciding which package survives into the bounded
+    bilateral screen.
+    """
+
+    league_state = runtime.league_state
+    if league_state is None:
+        return {
+            **row,
+            "preliminary_economic_band": PreliminaryEconomicBand.INCOMPLETE.value,
+            "cheap_economic_screen_complete": False,
+        }
+    profiles = profiles if profiles is not None else cardinal_market_profiles(
+        runtime.value_evidence
+    )
+    if not profiles:
+        return {
+            **row,
+            "preliminary_economic_band": PreliminaryEconomicBand.INCOMPLETE.value,
+            "cheap_economic_screen_complete": False,
+        }
+
+    proposal = _proposal_from_row(runtime, row, prefix="market-economic")
+    economics = summarize_bilateral_trade_economics(
+        proposal,
+        profiles,
+        model_version="market-discovery-economic-screen-v1",
+    )
+    economic_net = calculate_bilateral_economic_net(
+        economics,
+        model_version="market-discovery-economic-net-v1",
+    )
+    market_values = {
+        asset_id: profile.market_price.distribution.mean
+        for asset_id, profile in profiles.items()
+        if profile.market_price is not None
+    }
+    concentration = (
+        summarize_package_concentration(
+            proposal,
+            market_values,
+            model_version="market-discovery-package-concentration-v1",
+        )
+        if market_values
+        else None
+    )
+    package_economics = (
+        assess_package_economics(
+            concentration,
+            prior=live_bounded_package_premium_prior(as_of=proposal.as_of),
+            model_version="market-discovery-package-economic-screen-v1",
+        )
+        if concentration is not None
+        else None
+    )
+    result = {
+        **row,
+        "economics": economics.model_dump(mode="json"),
+        "economic_net": economic_net.model_dump(mode="json"),
+        "package_concentration": (
+            concentration.model_dump(mode="json")
+            if concentration is not None
+            else None
+        ),
+        "package_economics": (
+            package_economics.model_dump(mode="json")
+            if package_economics is not None
+            else None
+        ),
+        "cheap_economic_screen_complete": True,
+        "cheap_economic_screen_authority": "decision",
+    }
+    result["preliminary_economic_band"] = _cheap_economic_band(
+        runtime,
+        result,
+    ).value
+    return result
+
+
+def evaluate_candidate_path(
+    runtime: UserRuntimeContext,
+    row: dict[str, object],
+) -> dict[str, object]:
+    """Attach governed pre-Simulation Decision evidence to one representative package."""
+
+    league_state = runtime.league_state
+    focal_team_id = runtime.selected_team_id
+    if league_state is None or focal_team_id is None:
+        return row
+
+    counterparty_team_id = str(row["counterparty_team_id"])
+    if not (row.get("send") or []) or not (row.get("receive") or []):
+        return row
+
+    proposal = _proposal_from_row(runtime, row, prefix="market-prelim")
     profile = cached_behavior_profile_for_team(
         league_state,
         counterparty_team_id,
@@ -877,9 +1106,32 @@ def build_market_discovery(
 ) -> dict[str, object]:
     """Build governed Opportunity/Path output from raw Search rows."""
 
+    profiles = cardinal_market_profiles(runtime.value_evidence)
+    economically_screened_rows: list[dict[str, object]] = []
+    cheap_economic_errors = 0
+    for raw_row in rows:
+        try:
+            economically_screened_rows.append(
+                evaluate_candidate_economics(
+                    runtime,
+                    dict(raw_row),
+                    profiles=profiles,
+                )
+            )
+        except ValueError as exc:
+            cheap_economic_errors += 1
+            economically_screened_rows.append(
+                {
+                    **raw_row,
+                    "preliminary_economic_band": PreliminaryEconomicBand.INCOMPLETE.value,
+                    "cheap_economic_screen_complete": False,
+                    "cheap_economic_screen_error": str(exc),
+                }
+            )
+
     seeds, family_pruned = _build_path_seeds(
         runtime,
-        rows,
+        economically_screened_rows,
         source=source,
         exact_target_constraint=exact_target_constraint,
     )
@@ -920,6 +1172,14 @@ def build_market_discovery(
         "for_you": [item.model_dump(mode="json") for item in for_you],
         "diagnostics": {
             "raw_packages_generated": len(rows),
+            "packages_screened_economic": len(economically_screened_rows),
+            "packages_economic_incomplete": sum(
+                1
+                for row in economically_screened_rows
+                if row.get("preliminary_economic_band")
+                == PreliminaryEconomicBand.INCOMPLETE.value
+            ),
+            "cheap_economic_screen_errors": cheap_economic_errors,
             "path_families_created": len(seeds),
             "packages_collapsed_family_neighborhood": family_pruned,
             "preliminary_decision_budget": max(evaluation_limit, 0),
@@ -949,6 +1209,7 @@ def build_market_discovery(
         },
         "authority": {
             "opportunity_aggregation_is_search_owned": True,
+            "cheap_economic_screen_is_decision_owned": True,
             "preliminary_screen_is_decision_owned": True,
             "owner_context_descriptive_only": True,
             "acceptance_probability": None,
