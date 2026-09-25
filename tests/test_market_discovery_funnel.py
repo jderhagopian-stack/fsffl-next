@@ -3,10 +3,12 @@ from types import SimpleNamespace
 
 from fsffl.opportunity import (
     BilateralPlausibility,
+    OpportunitySource,
     PreliminaryEconomicBand,
 )
 from fsffl.product.market_discovery_runtime import (
     _build_path_seeds,
+    _opportunity_identity,
     _path_can_support_attention,
     _prune_package_neighborhood,
     _row_dominates,
@@ -169,3 +171,87 @@ def test_cheap_decision_economics_precedes_family_pruning_and_excludes_heavy_ana
     assert "build_private_beta_trade_analysis" not in cheap
     assert "cached_behavior_profile_for_team" not in cheap
     assert "run_live_simulation_analytics" not in cheap
+
+
+def test_explicit_trade_finder_intents_group_at_the_approved_opportunity_level() -> None:
+    runtime = SimpleNamespace(
+        selected_team_id="team-me",
+        league_state=SimpleNamespace(state_id="state-1"),
+    )
+    gibbs = _gibbs_row("one_for_one", 1, 1, 0.02)
+    bijan = {
+        **_gibbs_row("one_for_one", 1, 1, 0.03),
+        "counterparty_team_id": "team-bijan",
+        "receive": [
+            {
+                "asset_ref": "player:bijan",
+                "label": "Bijan Robinson",
+                "asset_kind": "player",
+            }
+        ],
+    }
+
+    target_gibbs = _opportunity_identity(
+        runtime,
+        gibbs,
+        source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+        exact_target_constraint="player:gibbs",
+        intent="target",
+        intent_value="player:gibbs",
+    )
+    target_bijan = _opportunity_identity(
+        runtime,
+        bijan,
+        source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+        exact_target_constraint="player:bijan",
+        intent="target",
+        intent_value="player:bijan",
+    )
+    assert target_gibbs[0] != target_bijan[0]
+
+    position_gibbs = _opportunity_identity(
+        runtime,
+        gibbs,
+        source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+        exact_target_constraint=None,
+        intent="position",
+        intent_value="RB",
+    )
+    position_bijan = _opportunity_identity(
+        runtime,
+        bijan,
+        source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+        exact_target_constraint=None,
+        intent="position",
+        intent_value="RB",
+    )
+    assert position_gibbs[0] == position_bijan[0]
+    assert position_gibbs[2:] == ("target_position", "RB", "RB:starter_upgrade")
+
+    owner_gibbs = _opportunity_identity(
+        runtime,
+        gibbs,
+        source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+        exact_target_constraint=None,
+        intent="owner",
+        intent_value="team-gibbs",
+    )
+    owner_other_target = _opportunity_identity(
+        runtime,
+        {
+            **gibbs,
+            "receive": [
+                {
+                    "asset_ref": "player:other",
+                    "label": "Other Player",
+                    "asset_kind": "player",
+                }
+            ],
+        },
+        source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+        exact_target_constraint=None,
+        intent="owner",
+        intent_value="team-gibbs",
+    )
+    assert owner_gibbs[0] == owner_other_target[0]
+    assert owner_gibbs[2:] == ("explore_owner", "OWNER", "owner:team-gibbs")
