@@ -282,8 +282,13 @@ class PrivateBetaRuntimeStore:
                 if current.league_state is not None
                 else None
             )
+            previous_state_id = (
+                current.league_state.state_id
+                if current.league_state is not None
+                else None
+            )
             incoming_league_id = league_state.league.league_id
-            if previous_league_id != incoming_league_id:
+            if previous_state_id != league_state.state_id:
                 self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1
             valid_team_ids = {team.team_id for team in league_state.teams}
             selected = current.selected_team_id if current.selected_team_id in valid_team_ids else None
