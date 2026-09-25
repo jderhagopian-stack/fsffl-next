@@ -10,17 +10,19 @@ Owns sequencing, scope, gates, product decisions, and cross-workstream conflict 
 **State:** MANAGEMENT GATE  
 Lifecycle/league-switch repair remains gated on governed Forecast authority for the newly connected league. Performance must not weaken Forecast/model authority to force 7/7.
 
-## Forecast Research — K/DST + New-League Bootstrap
+## Forecast Research — K/DST Empirical Evidence & Source Gates
 **State:** DIRECTIVE COMPLETE — RESEARCH  
-The implementation-ready research contract is persisted in `workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
+The architecture contract remains complete at `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`. The subsequent empirical/source-gate investigation is complete at `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`, with detailed provenance in `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_LEDGER.md`.
+
+Research recovered a genuine 2024 multi-provider PIT K/DST corpus, authentic 2026 pre-opener K evidence from FFToday + CBS, 2026 pre-opener RotoWire-via-Sleeper D/ST components, and official Sleeper semantics that resolve most prior category-definition ambiguity. Remaining dependencies are external licensing/data access and later bounded implementation, not unfinished generic source searching.
 
 ## Product / Forecast Implementation
 **State:** BLOCKED — EMPIRICAL/SOURCE EVIDENCE GATE  
 PR #215 is merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. The evidence-independent Stage 1 contracts/scoring work and Stage 2 non-promoting outcome/calibration harness are implemented and regression-clean.
 
-The workstream cannot promote production K/DST authority without a qualifying second historical independent source, production source rights/content-health clearance, remaining exact Sleeper truth fixtures, and qualifying preseason evidence where required. The post-merge recovery check is persisted in `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
+The historical-source discovery gate is now partially cleared, but production authority remains blocked. Required evidence still includes: rights-cleared provider use; >=2 independent rule-complete current providers per required K/DST coordinate; a second provenance-clean component-level D/ST source or licensed decomposition proving independence; exact K 50-59 vs 60+ evidence where target scoring requires it; validated K/DST uncertainty; and implementation of the remaining official-stat truth fixtures. The post-merge implementation checkpoint remains `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`; the updated Research disposition is in the 2026-09-25 closeout.
 
-Do not start Stage 3 provider promotion, Stage 4 migration/downstream promotion, or Stage 5/6 lifecycle claims by substituting one-source calibration, non-commercial source content, guessed D/ST semantics, or backdated current data.
+Do not start provider/authority promotion, migration/downstream promotion, or lifecycle claims by treating aggregate consensus as an independent vote, using non-commercial source content without rights, heuristically splitting K 50+ evidence, substituting season-average PA/YA for game-bucket distributions, or backdating current data.
 
 ## Market / Trade Discovery Architecture Review
 **State:** DIRECTIVE COMPLETE — MANAGEMENT ACCEPTED  
