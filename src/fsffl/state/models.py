@@ -9,9 +9,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 _NFL_TEAM_ALIASES = {
     "JAC": "JAX",
+    "LA": "LAR",
     "OAK": "LV",
     "SD": "LAC",
     "STL": "LAR",
+    "WSH": "WAS",
 }
 
 
