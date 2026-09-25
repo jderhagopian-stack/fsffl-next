@@ -119,11 +119,51 @@ def _focus_outcome(
         "counterparties_admitted_pre_package": counterparties_admitted,
         "targets_considered": targets_considered,
         "targets_admitted_pre_package": targets_admitted,
+        "send_assets_considered": int(search_diag.get("send_assets_considered", 0) or 0),
+        "send_assets_admitted_for_counterparty_need": int(
+            search_diag.get("send_assets_admitted_for_counterparty_need", 0) or 0
+        ),
         "package_rows_generated_pre_dedup": packages,
+        "packages_removed_exact_duplicate": int(
+            search_diag.get("packages_removed_exact_duplicate", 0) or 0
+        ),
+        "packages_screened_economic": int(
+            discovery_diag.get("packages_screened_economic", 0) or 0
+        ),
+        "packages_economic_incomplete": int(
+            discovery_diag.get("packages_economic_incomplete", 0) or 0
+        ),
+        "cheap_economic_screen_errors": int(
+            discovery_diag.get("cheap_economic_screen_errors", 0) or 0
+        ),
         "path_families_created": families,
+        "packages_collapsed_family_neighborhood": int(
+            discovery_diag.get("packages_collapsed_family_neighborhood", 0) or 0
+        ),
         "preliminary_decision_runs": prelim_runs,
         "preliminary_decision_budget": int(
             discovery_diag.get("preliminary_decision_budget", 0) or 0
+        ),
+        "preliminary_decision_errors": int(
+            discovery_diag.get("preliminary_decision_errors", 0) or 0
+        ),
+        "counterparty_dominated_count": int(
+            discovery_diag.get("counterparty_dominated_count", 0) or 0
+        ),
+        "focal_dominated_count": int(
+            discovery_diag.get("focal_dominated_count", 0) or 0
+        ),
+        "opportunities_suppressed": int(
+            discovery_diag.get("opportunities_suppressed", 0) or 0
+        ),
+        "opportunities_market_match_only": int(
+            discovery_diag.get("opportunities_market_match_only", 0) or 0
+        ),
+        "opportunities_attention_ready": int(
+            discovery_diag.get("opportunities_attention_ready", 0) or 0
+        ),
+        "final_for_you_count": int(
+            discovery_diag.get("for_you_selected", 0) or 0
         ),
         "changed_state_simulation_calls": int(
             discovery_diag.get("changed_state_simulation_calls_during_discovery", 0) or 0
@@ -131,6 +171,7 @@ def _focus_outcome(
         "admission_rejection_reasons": dict(
             search_diag.get("admission_rejection_reasons") or {}
         ),
+        "timing_ms": dict(discovery_diag.get("timing_ms") or {}),
     }
 
 
@@ -168,7 +209,9 @@ def install_focused_opportunity_routes(
             raise HTTPException(status_code=409, detail="Market Focus requires current authoritative FSFFL Cardinal Market Value")
 
         browser = build_trade_center_browser_view(league_state, focal_team_id=focal_team_id)
-        canonical = candidate_builder(runtime, browser, cardinal) if not intent else None
+        # Focused discovery now always constructs the submitted strategic neighborhood
+        # directly; do not touch the generic structural catalog merely to submit a lens.
+        canonical = None
         requested = _posture(posture)
         focused = build_focused_trade_candidates(
             runtime,
