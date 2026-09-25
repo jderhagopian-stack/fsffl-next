@@ -96,6 +96,28 @@ The current-forward blockers are no longer “missing preseason evidence,” “
 The 2026 preseason comparison remains unavailable by design. See `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
 
 
+## League-agnostic scoring coverage checkpoint — 2026-09-25
+Forecast Research completed the Management-authorized scoring-rule coverage and Forecast-input audit across Sleeper, ESPN, Yahoo, NFL Fantasy, CBS, Fantrax, MyFantasyLeague, DraftKings Best Ball, and current FSFFL code/data contracts.
+
+Durable artifacts:
+- `artifacts/research/scoring_coordinate_coverage_20260925/SCORING_COORDINATE_REGISTRY.csv` — 89 audited coordinates/rule semantics;
+- `artifacts/research/scoring_coordinate_coverage_20260925/PLATFORM_COVERAGE_MATRIX.csv` — 48 platform/preset or rule-family mappings;
+- `artifacts/research/scoring_coordinate_coverage_20260925/PRIMARY_SOURCE_LEDGER.md`;
+- `artifacts/research/scoring_coordinate_coverage_20260925/GAP_ANALYSIS.md`;
+- `artifacts/research/scoring_coordinate_coverage_20260925/IMPLEMENTATION_HANDOFF.md`.
+
+Key findings:
+- current conventional QB/RB/WR/TE linear scoring is the strongest supported family;
+- K/DST's explicit coordinate/source/distribution contracts are the architectural template for broader scoring support;
+- ordinary offense lacks native attempts/completions/sacks, rush attempts, first downs, targets, player returns, direct 2PT and several common event coordinates;
+- per-game milestone bonuses and other nonlinear rules require distributions rather than aggregate means;
+- current `ScoringRule(stat, points)` cannot generically encode position predicates, thresholds/ranges, stacking, fractional/negative policy, conditional expressions, or platform D/ST semantics;
+- IDP requires State/roster subject expansion; D/ST team-unit metrics cannot substitute;
+- current provider normalization discards potentially valuable provider-native raw fields before future leagues can use them;
+- historical raw-stat ingestion is structurally flexible but broader canonical replay/calibration is not yet implemented.
+
+The recommended next package is **Stage 0 + Stage 1 only**: registry/rule/capability contracts plus raw-provider superset preservation, with zero production authority change. This implementation is at a Management gate and is not authorized merely by Research completion.
+
 ## Market discovery architecture checkpoint — 2026-09-24
 The Market / Trade Discovery Architecture Review is complete and has stopped at **MANAGEMENT GATE**.
 
