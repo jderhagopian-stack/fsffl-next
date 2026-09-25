@@ -22,6 +22,7 @@ from fsffl.forecast.models import (
     ForecastObservation,
     NflTeamUnitForecastSubject,
     PlayerForecastSubject,
+    TeamUnitForecastBundle,
     TeamUnitForecastObservation,
     forecast_subject_for_roster_asset,
 )
@@ -94,6 +95,20 @@ def _dst_obs(
         as_of=AS_OF,
         provenance=PROVENANCE,
     )
+
+
+def test_team_unit_bundle_rejects_cross_team_observation_mix() -> None:
+    den = NflTeamUnitForecastSubject(season=2026, nfl_team="DEN")
+    buf = NflTeamUnitForecastSubject(season=2026, nfl_team="BUF")
+    observation = _dst_obs(buf, ForecastMetric.DST_SACK, 40)
+
+    with pytest.raises(ValueError, match="team-unit subject"):
+        TeamUnitForecastBundle(
+            subject=den,
+            as_of=AS_OF,
+            observations=(observation,),
+            model_version="fixture-v1",
+        )
 
 
 def test_dst_is_team_season_subject_and_aliases_are_deterministic() -> None:
