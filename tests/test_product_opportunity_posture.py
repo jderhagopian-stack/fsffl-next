@@ -72,7 +72,7 @@ def test_posture_ui_selects_only_server_owned_views() -> None:
     assert "views=discovery&&discovery.posture_views" in script
     assert "fsffl.tradeFinderPosture" in script
     assert "Strategic choices constrain the submitted Trade Finder discovery neighborhood" in script
-    assert "server-published posture views" in script
+    assert "setPosture:value=>{rememberPosture(value||DEFAULT);broadcastIntent()" in script
     assert "opportunity_posture_ui.js?v=" in index
     assert '"posture_views": posture_views' in workspace
     assert '"owner_strategic_posture_is_search_lens_only": True' in workspace
