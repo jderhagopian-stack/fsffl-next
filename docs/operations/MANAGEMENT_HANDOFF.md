@@ -11,6 +11,10 @@ Product grammar: `SEE → UNDERSTAND → INTERACT → DRILL DEEPER → DECIDE`.
 
 Repository state is the durable interchange. Worker chats execute authorized scope and persist meaningful checkpoints; Management reconciles them, decides scope/priority/acceptance, and persists decisions. Commits, PRs, CI and deploys are evidence, not terminal states. Workers stop only at permitted `OPERATING_PROTOCOL.md` states and must first ask whether another authorized action can advance the directive.
 
+### Reconciled current state
+
+Use the later 2026-09-25 lifecycle and Market acceptance sections as current truth. Performance now owns the app-wide Hodor completion/lifecycle issue and cold Market responsiveness; Market has an active bounded corrective after the current-beta physical failure. PR #237 is merged for the provisional 2026 K/DST tier, and PR #238 is in-scope exact-state safety hardening that must reconcile with current main before merge. Scoring Coverage Stage 0/1 remains unstarted at its Management gate; Home × Franchise remains deferred.
+
 ## Cross-workstream state
 
 ### Performance / production lifecycle
