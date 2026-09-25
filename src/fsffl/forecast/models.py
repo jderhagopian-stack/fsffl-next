@@ -274,6 +274,31 @@ class TeamUnitForecastObservation(FrozenModel):
         return self.subject.roster_asset_key
 
 
+class TeamUnitForecastBundle(FrozenModel):
+    """Bundle of observations for one canonical NFL team-season unit."""
+
+    subject: NflTeamUnitForecastSubject
+    as_of: datetime
+    observations: tuple[TeamUnitForecastObservation, ...]
+    model_version: str
+
+    @field_validator("as_of")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("as_of must be timezone-aware")
+        return value
+
+    @model_validator(mode="after")
+    def validate_bundle_consistency(self) -> "TeamUnitForecastBundle":
+        for observation in self.observations:
+            if observation.subject != self.subject:
+                raise ValueError("bundle observations must match bundle team-unit subject")
+            if observation.as_of != self.as_of:
+                raise ValueError("bundle observations must match bundle as_of")
+        return self
+
+
 class ForecastBundle(FrozenModel):
     player_id: str
     as_of: datetime
