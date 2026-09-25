@@ -110,6 +110,7 @@ class CandidatePath(FrozenModel):
     evidence_completeness: str
     missing_evidence: tuple[str, ...] = ()
     risks: tuple[str, ...] = ()
+    reason_codes: tuple[str, ...] = ()
     authority: dict[str, Any] = {}
     model_version: str = "market-candidate-path-v1"
 
@@ -150,6 +151,7 @@ class MarketOpportunity(FrozenModel):
     representative_path_ids: tuple[str, ...]
     alternate_path_count: int = 0
     top_risks: tuple[str, ...] = ()
+    reason_codes: tuple[str, ...] = ()
     authority: dict[str, Any] = {}
     freshness: dict[str, Any] = {}
     model_version: str = "market-opportunity-v1"
