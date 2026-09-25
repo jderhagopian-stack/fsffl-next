@@ -11,7 +11,17 @@ from .contracts import ArtifactKey, ReusableArtifactRecord, canonical_fingerprin
 
 
 PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND = "late_start_provisional_k_dst_forecast"
-PROVISIONAL_K_DST_SCOPE_KIND = "forecast_subject"
+PROVISIONAL_K_DST_SCOPE_KIND = "league_state_forecast_subject"
+
+
+def provisional_k_dst_scope_id(
+    *,
+    league_state_id: str,
+    subject_key: str,
+) -> str:
+    if not league_state_id.strip() or not subject_key.strip():
+        raise ValueError("provisional K/DST scope requires league state and subject")
+    return f"{league_state_id}:{subject_key}"
 
 _adapter = TypeAdapter(ProvisionalKDstForecast)
 
@@ -44,10 +54,15 @@ def provisional_k_dst_forecast_artifact(
         key=ArtifactKey(
             artifact_kind=PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND,
             scope_kind=PROVISIONAL_K_DST_SCOPE_KIND,
-            scope_id=forecast.subject_key,
+            scope_id=provisional_k_dst_scope_id(
+                league_state_id=forecast.league_state_id,
+                subject_key=forecast.subject_key,
+            ),
             input_fingerprint=canonical_fingerprint(
                 forecast.season,
                 forecast.exception_version,
+                forecast.league_id,
+                forecast.league_state_id,
                 forecast.subject_key,
                 forecast.as_of.isoformat(),
                 tuple(
