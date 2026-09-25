@@ -15,6 +15,7 @@ from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import (
     build_trade_center_browser_view,
+    owned_asset_index,
     resolve_owned_asset_ref,
 )
 
@@ -536,6 +537,7 @@ def build_opportunity_workspace(
         returned,
         evaluation_limit=bilateral_evaluation_limit,
         search_generation_diagnostics=search_generation_diagnostics,
+        asset_index=owned_asset_index(browser),
     )
     evaluated_rows = {}
     for path in market_discovery.get("candidate_paths") or []:
