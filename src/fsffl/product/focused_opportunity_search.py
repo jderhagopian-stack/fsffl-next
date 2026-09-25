@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from itertools import combinations
 from typing import Mapping
 
 from fsffl.team_utility.utility import OwnerStrategicPosture
@@ -12,10 +11,12 @@ from .opportunity_posture import (
     resolve_search_posture,
 )
 from .opportunity_search import (
-    _asset_value,
-    _candidate,
+    SearchCandidateCollection,
+    _player_position,
     _position_strengths,
+    actionable_need_positions,
     build_roster_aware_trade_candidates,
+    build_scoped_trade_candidates,
 )
 from .runtime import UserRuntimeContext
 from .trade_center_view import TradeAssetOption, TradeCenterBrowserView
@@ -26,121 +27,6 @@ _VALID_INTENTS = {"", "position", "shop", "target", "owner", "consolidate"}
 
 def _row_has_ref(row: dict[str, object], side: str, asset_ref: str) -> bool:
     return any(str(item.get("asset_ref")) == asset_ref for item in (row.get(side) or []))
-
-
-def _shop_catalog(
-    focal_assets: tuple[TradeAssetOption, ...],
-    cardinal: Mapping[str, FSFFLCardinalValueScore],
-    *,
-    shop_asset_ref: str,
-) -> dict[int, tuple[tuple[float, tuple[TradeAssetOption, ...]], ...]]:
-    valued = tuple(
-        (asset, float(value))
-        for asset in focal_assets
-        if (value := _asset_value(asset, cardinal)) is not None
-    )
-    selected = next((asset for asset, _ in valued if asset.asset_ref == shop_asset_ref), None)
-    if selected is None:
-        return {}
-    result: dict[int, tuple[tuple[float, tuple[TradeAssetOption, ...]], ...]] = {}
-    for size in range(1, min(3, len(valued)) + 1):
-        rows: list[tuple[float, tuple[TradeAssetOption, ...]]] = []
-        for package in combinations(valued, size):
-            assets = tuple(asset for asset, _ in package)
-            if all(asset.asset_ref != shop_asset_ref for asset in assets):
-                continue
-            rows.append((sum(value for _, value in package), assets))
-        rows.sort(key=lambda item: (item[0], tuple(asset.asset_ref for asset in item[1])))
-        result[size] = tuple(rows)
-    return result
-
-
-def _nearest_shop_package(
-    catalog: dict[int, tuple[tuple[float, tuple[TradeAssetOption, ...]], ...]],
-    *,
-    size: int,
-    target_value: float,
-) -> tuple[TradeAssetOption, ...] | None:
-    rows = catalog.get(size) or ()
-    if not rows:
-        return None
-    return min(
-        rows,
-        key=lambda item: (
-            abs(item[0] - target_value),
-            tuple(asset.asset_ref for asset in item[1]),
-        ),
-    )[1]
-
-
-def _shop_focused_candidates(
-    runtime: UserRuntimeContext,
-    browser: TradeCenterBrowserView,
-    cardinal: Mapping[str, FSFFLCardinalValueScore],
-    *,
-    shop_asset_ref: str,
-) -> list[dict[str, object]]:
-    league_state = runtime.league_state
-    focal_team_id = runtime.selected_team_id
-    if league_state is None or focal_team_id is None:
-        return []
-    catalog = _shop_catalog(
-        browser.focal_team.assets,
-        cardinal,
-        shop_asset_ref=shop_asset_ref,
-    )
-    if not catalog:
-        return []
-    strengths = _position_strengths(runtime)
-    candidates: list[dict[str, object]] = []
-    seen: set[tuple[str, tuple[str, ...], str]] = set()
-    for counterparty in browser.counterparties:
-        for target in (asset for asset in counterparty.assets if asset.asset_kind == "player"):
-            target_value = _asset_value(target, cardinal)
-            if target_value is None:
-                continue
-            for size in sorted(catalog):
-                package = _nearest_shop_package(
-                    catalog,
-                    size=size,
-                    target_value=float(target_value),
-                )
-                if package is None:
-                    continue
-                row = _candidate(
-                    league_state=league_state,
-                    focal_team_id=focal_team_id,
-                    counterparty_team_id=counterparty.team_id,
-                    counterparty_name=counterparty.display_name,
-                    send_assets=package,
-                    receive_asset=target,
-                    cardinal=cardinal,
-                    strengths=strengths,
-                )
-                if row is None:
-                    continue
-                key = (
-                    counterparty.team_id,
-                    tuple(sorted(str(item["asset_ref"]) for item in row["send"])),
-                    str(row["receive"][0]["asset_ref"]),
-                )
-                if key in seen:
-                    continue
-                seen.add(key)
-                row["search_context"] = [
-                    *(row.get("search_context") or []),
-                    "Market Focus rebuilt the package neighborhood around the player you chose to shop. "
-                    "Value and Decision authority are unchanged.",
-                ]
-                candidates.append(row)
-    return sorted(
-        candidates,
-        key=lambda row: (
-            float(row.get("market_gap_ratio") or 0.0),
-            float(row.get("search_distance") or 0.0),
-            str(row.get("counterparty_team_id") or ""),
-        ),
-    )
 
 
 def candidate_matches_focus(
@@ -176,39 +62,120 @@ def build_focused_trade_candidates(
     requested_posture: OwnerStrategicPosture = OwnerStrategicPosture.DEFAULT_CALCULATED,
     intent: str = "",
     intent_value: str = "",
-) -> list[dict[str, object]]:
-    """Apply explicit Market Focus before the product candidate limit.
+) -> SearchCandidateCollection:
+    """Apply explicit Market intent before target/package generation.
 
-    Position, target, owner and consolidation focus narrow the full structural catalog.
-    Shopping a player rebuilds package neighborhoods constrained to include that asset,
-    so it is not merely a browser filter over previously returned rows. Strategic
-    posture changes Search ordering only and never rewrites State, Value or Decision.
+    Specific intents construct their own strategically constrained candidate
+    neighborhood instead of filtering a generic value-nearest catalog after the
+    fact. Strategic posture remains ordering-only and cannot rewrite upstream
+    State, Value, Team Utility, Decision or acceptance truth.
     """
 
     normalized_intent = intent if intent in _VALID_INTENTS else ""
-    if normalized_intent == "shop" and intent_value:
-        rows = _shop_focused_candidates(
-            runtime,
-            browser,
-            cardinal,
-            shop_asset_ref=intent_value,
-        )
-    else:
-        rows = list(
+    strengths = _position_strengths(runtime)
+    focal_team_id = str(runtime.selected_team_id or "")
+    focal_needs = actionable_need_positions(
+        runtime,
+        focal_team_id,
+        strengths=strengths,
+    ) if focal_team_id else ()
+    need_filter = frozenset(focal_needs) if focal_needs else None
+
+    if not normalized_intent:
+        raw = (
             canonical_candidates
             if canonical_candidates is not None
             else build_roster_aware_trade_candidates(runtime, browser, cardinal)
         )
-        if normalized_intent:
-            rows = [
-                row
-                for row in rows
-                if candidate_matches_focus(
-                    row,
-                    intent=normalized_intent,
-                    intent_value=intent_value,
-                )
-            ]
+        diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
+        rows = list(raw)
+    elif normalized_intent == "position":
+        try:
+            requested_position = Position(intent_value)
+        except ValueError:
+            raw = SearchCandidateCollection(
+                [],
+                diagnostics={
+                    "scope_label": "intent:position",
+                    "admission_rejection_reasons": {"invalid_position": 1},
+                },
+            )
+        else:
+            raw = build_scoped_trade_candidates(
+                runtime,
+                browser,
+                cardinal,
+                target_positions=frozenset({requested_position}),
+                require_counterparty_supply=False,
+                scope_label=f"intent:position:{requested_position.value}",
+            )
+        diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
+        rows = list(raw)
+    elif normalized_intent == "target":
+        raw = build_scoped_trade_candidates(
+            runtime,
+            browser,
+            cardinal,
+            target_asset_refs=(frozenset({intent_value}) if intent_value else frozenset()),
+            require_counterparty_supply=False,
+            scope_label=f"intent:target:{intent_value or 'missing'}",
+        )
+        diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
+        rows = list(raw)
+    elif normalized_intent == "owner":
+        raw = build_scoped_trade_candidates(
+            runtime,
+            browser,
+            cardinal,
+            counterparty_team_ids=(frozenset({intent_value}) if intent_value else frozenset()),
+            target_positions=need_filter,
+            require_counterparty_supply=False,
+            scope_label=f"intent:owner:{intent_value or 'missing'}",
+        )
+        diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
+        rows = list(raw)
+    elif normalized_intent == "shop":
+        selected = next(
+            (
+                asset
+                for asset in browser.focal_team.assets
+                if asset.asset_ref == intent_value
+            ),
+            None,
+        )
+        selected_position = (
+            _player_position(runtime.league_state, selected)
+            if runtime.league_state is not None and selected is not None
+            else None
+        )
+        raw = build_scoped_trade_candidates(
+            runtime,
+            browser,
+            cardinal,
+            target_positions=need_filter,
+            require_counterparty_supply=True,
+            required_send_asset_ref=intent_value or "__missing__",
+            required_counterparty_need_position=selected_position,
+            scope_label=f"intent:shop:{intent_value or 'missing'}",
+        )
+        diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
+        rows = list(raw)
+    elif normalized_intent == "consolidate":
+        raw = build_scoped_trade_candidates(
+            runtime,
+            browser,
+            cardinal,
+            target_positions=need_filter,
+            require_counterparty_supply=True,
+            minimum_send_count=2,
+            scope_label="intent:consolidate",
+        )
+        diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
+        rows = list(raw)
+    else:
+        raw = build_roster_aware_trade_candidates(runtime, browser, cardinal)
+        diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
+        rows = list(raw)
 
     if normalized_intent:
         rows = [
@@ -220,8 +187,26 @@ def build_focused_trade_candidates(
                 intent_value=intent_value,
             )
         ]
+        for row in rows:
+            row["search_context"] = [
+                *list(row.get("search_context") or []),
+                (
+                    "Explicit Market intent constrained discovery before package generation. "
+                    "Value and Decision authority are unchanged."
+                ),
+            ]
+
     effective = resolve_search_posture(
         requested_posture,
         calculated_competitive_state(runtime),
     )
-    return apply_search_posture(rows, effective)
+    ordered = apply_search_posture(rows, effective)
+    return SearchCandidateCollection(
+        ordered,
+        diagnostics={
+            **diagnostics,
+            "intent": normalized_intent,
+            "intent_value": intent_value,
+            "focused_candidates_after_intent_validation": len(ordered),
+        },
+    )
