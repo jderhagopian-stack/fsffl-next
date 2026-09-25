@@ -1,35 +1,37 @@
 # FSFFL NEXT — Active Workstreams
 
-Updated: 2026-09-24
+Updated: 2026-09-25
 
 ## Management
 **State:** ACTIVE  
-Owns sequencing, scope, gates, product decisions, acceptance of the completed Forecast research contract, and authorization of any implementation directive.
+Owns sequencing, scope, gates, product decisions, and cross-workstream conflict resolution.
 
 ## Performance
 **State:** MANAGEMENT GATE  
-Lifecycle/league-switch repair has reached an upstream Forecast dependency. See `workstreams/PERFORMANCE.md`. Performance must not change Forecast/model authority to force 7/7.
+Lifecycle/league-switch repair remains gated on governed Forecast authority for the newly connected league. Performance must not weaken Forecast/model authority to force 7/7.
 
 ## Forecast Research — K/DST + New-League Bootstrap
 **State:** DIRECTIVE COMPLETE — RESEARCH  
-The implementation-ready research contract, evidence, unresolved risks, fixture matrix, and downstream handoff are persisted in:
-- `workstreams/RESEARCH.md`
-- `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
-
-Research PR/history: #213 / `91018b39967a0775ad830a6a750a2588e7f041d0`.
-
-No production K/DST authority was promoted and no implementation was begun.
+The implementation-ready research contract is persisted in `workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
 
 ## Product / Forecast Implementation
-**State:** AUTHORIZED / ACTIVE — PR #215 IN ACCEPTANCE VALIDATION  
-Management accepted the completed Research contract and authorized bounded implementation. Durable implementation state is in `workstreams/IMPLEMENTATION.md`.
+**State:** AUTHORIZED / ACTIVE — PR #215 RECONCILING WITH CURRENT MAIN  
+Management accepted the completed Research contract and authorized bounded implementation. Durable implementation state is in `workstreams/IMPLEMENTATION.md` and `artifacts/implementation/forecast_k_dst_contracts_20260924/IMPLEMENTATION_HANDOFF.md`.
 
-PR #215 implements the Stage 1 governed subject/scoring contracts and the non-promoting Stage 2 outcome/calibration harness. It does not promote live K/DST providers, K/DST uncertainty, a 2026 K/DST preseason baseline, or downstream K/DST economics. Merge remains gated on regression-clean CI and fail-closed evidence behavior.
+PR #215 implements the governed K/DST subject/scoring contracts, active-rule completeness including fail-closed `fum_lost`, deterministic K/DST realized-outcome reconstruction, and non-promoting calibration harnesses. Required executable checks passed on the implementation head. Main subsequently advanced through Market PR #216, so PR #215 is being reconciled without dropping either workstream's state.
 
-After code acceptance, the next dependency remains empirical/source evidence promotion, not speculative implementation.
+No production K/DST provider authority, uncertainty calibration, fabricated 2026 preseason baseline, or downstream K/DST economics are promoted. After code reconciliation/merge, the workstream is expected to stop at the empirical/source evidence gate unless qualifying evidence is already present.
 
-## Deferred sequence
-After the bounded Forecast implementation and empirical evidence gates are completed, and the new-league lifecycle passes acceptance:
-- Market physical-iPhone acceptance
-- Home × Franchise redundancy audit
-- Trade Discovery architecture review before Trade Center expansion
+## Market / Trade Discovery Architecture Review
+**State:** AUTHORIZED / NEXT  
+Physical-iPhone acceptance showed that Market is functionally implemented but not product-accepted. The issue is both discovery quality and mobile information architecture. See `workstreams/MARKET_DISCOVERY.md`.
+
+This review may run in parallel with Forecast implementation because it must not alter Forecast/K/DST authority.
+
+## Market acceptance
+**State:** NOT ACCEPTED  
+Do not close Market North Star on the current implementation. Player Board / Free Agents readiness contradiction and opportunity-quality/discovery architecture remain open.
+
+## Home × Franchise audit
+**State:** DEFERRED  
+Resume after the Market discovery architecture is settled unless Management explicitly reprioritizes it.
