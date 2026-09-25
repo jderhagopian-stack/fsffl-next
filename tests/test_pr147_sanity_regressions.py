@@ -74,6 +74,7 @@ def _raw_rb_forecasts(player_id: str = "rb") -> tuple[ForecastObservation, ...]:
         (ForecastMetric.RECEPTIONS, 80.0),
         (ForecastMetric.REC_YARDS, 1000.0),
         (ForecastMetric.REC_TD, 10.0),
+        (ForecastMetric.FUMBLES_LOST, 0.0),
     )
     return tuple(
         ForecastObservation(
