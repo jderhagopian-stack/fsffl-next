@@ -21,8 +21,9 @@ def test_market_focus_is_server_owned_before_candidate_limit() -> None:
     routes = _read(FOCUSED_ROUTES)
     focus_js = _read(FOCUS_JS)
     assert "build_focused_trade_candidates" in search
-    assert "_shop_focused_candidates" in search
-    assert "Market Focus rebuilt the package neighborhood around the player you chose to shop" in search
+    assert "build_scoped_trade_candidates" in search
+    assert "required_send_asset_ref=intent_value or \"__missing__\"" in search
+    assert "Explicit Market intent constrained discovery before package generation." in search
     assert '"/api/opportunities/focused-workspace"' in routes
     assert '"applied_before_candidate_limit": True' in routes
     assert "focused[:limit]" in routes
