@@ -1,9 +1,11 @@
 # Workstream — Performance
 
 ## State
-**ACTIVE — APP-WIDE LEAGUE LIFECYCLE + HODOR COMPLETION + MARKET FOREGROUND LATENCY**
+**ACTIVE — MARKET FOREGROUND LATENCY ONLY**
 
-The prior PR #211 K/DST-only gate and the later jimmygoodjob-only restoration framing are both superseded as the top-level Performance state. The existing-league last-good repair remains accepted evidence and must not regress, but Management's current directive is the app-wide lifecycle contract recorded below: diagnose Hodor / `jder52` from exact persisted State through readiness/promotion, preserve valid roster State while derived intelligence builds, expose background work truthfully, prevent cross-league contamination, and continue foreground-latency work without changing Market discovery semantics.
+The Hodor / `jder52` app-wide lifecycle corrective is **DIRECTIVE COMPLETE — PERFORMANCE** as of PR #242. Performance no longer owns “make Hodor reach 7/7” as an implementation outcome: production proves current State and the 16-player roster are usable, the terminal blocked stage is Forecast, cross-league last-good is not being served, and no authority was fabricated. The remaining Hodor full-intelligence blocker belongs to Forecast/Product authority.
+
+The separately remaining Performance-owned work is Market foreground latency. The latest physical-device evidence still shows cold/focused Market requests in the tens of seconds while warm-cache response is fast. That latency work is orthogonal to the completed Hodor lifecycle corrective and must preserve accepted Market discovery semantics.
 
 ## Incident
 Physical-iPhone acceptance after Market PR #220 / production SHA `ff3e0fbe8ff0827d123e6d465b42116512e6d820` showed the existing FSFFL Dynasty league (`jimmygoodjob`, Sleeper league `1312071960615731200`) at 3/7 with governed Simulation / position-strength evidence unavailable even though a valid promoted complete bundle already existed.
@@ -135,7 +137,7 @@ The separate K/DST Forecast authority work remains a Forecast/Product concern. I
 
 ## App-wide league lifecycle acceptance directive — 2026-09-25
 
-**State: ACTIVE — NEW-LEAGUE COMPLETION + GLOBAL LIFECYCLE UX CORRECTIVE AUTHORIZED.**
+**State: DIRECTIVE COMPLETE — PERFORMANCE.**
 
 Management physical-iPhone evidence now includes switching to the Hodor league / franchise `jder52`. This league has **never fully loaded**. The observed state showed `2 / 7 Intelligence refresh needs attention`, franchise `Not Classified`, and an empty Roster view (`No players in this roster view.`). This is not a regression from a prior Hodor 7/7 state and must not be diagnosed as last-good restoration failure.
 
@@ -165,6 +167,25 @@ It applies to:
 5. **No cross-league masquerading.** During a switch, old-league data must never appear as though it belongs to the newly selected league. If prior content must remain visible during transition, it must remain explicitly identified as the prior league or be covered by a switching state until new-league State is safe to render.
 6. **Atomic promotion and explicit terminal state.** On success, transition to the newly promoted evidence and truthful readiness. On failure, identify the failed/stalled stage, whether usable prior/current State or last-good intelligence remains served, and the appropriate retry action. Generic `needs attention` alone is insufficient.
 7. **Refresh controls share the same contract.** Refresh League and Refresh Intelligence must not be opaque fire-and-forget actions. Acknowledgement, active work, served-state identity, completion/failure and retry semantics must be consistent.
+
+### PR #242 production closeout — lifecycle directive complete
+
+PR #242 — **Performance: complete Hodor lifecycle truth and State-only usability** — merged at `6bc184487e7e6619350337b374f67976457f8317` and deployed live as Render `dep-darbvcm0tbcc73b02bg0`.
+
+Validated production evidence:
+- exact restored Hodor league: `sleeper:1397623301961981952`;
+- exact restored State: `3da88ba8907c51aa90d62b7119fe4b1bbc0e8a2414a38828c07cc93a7412fd52`;
+- selected team: `sleeper:1397623301961981952:team:3` / `jder52`;
+- selected-team roster: 16 players;
+- Forecast=False / Simulation=False / Value=False / complete=False, truthfully preserved rather than masquerading as complete;
+- latest durable lifecycle remains terminal failed and PR #242 reconstructs the blocked stage as Forecast from persisted timing evidence without rerunning work;
+- no automatic intelligence POST on startup;
+- no startup/runtime errors;
+- no reusable provisional K/DST artifacts currently exist;
+- all promoted `runtime_last_good_bundle` rows belong to the separate FSFFL Dynasty league, so Hodor is not cross-served old-league intelligence;
+- all eight configured PR workflows passed.
+
+The remaining Hodor completion blocker is Forecast/Product authority: qualifying rights-cleared independent full-season/provisional evidence, missing exact K/DST coordinates and PA distribution coverage, target-compatible uncertainty, or actual qualifying provisional ROS rows under the authorized 2026 bounded exception. Performance must not weaken those gates.
 
 ### Hodor diagnostic acceptance
 Trace the exact Hodor lifecycle from persisted connection/context through State, roster population, Forecast (including the merged provisional 2026 K/DST path), Value, Simulation, readiness and promotion. Determine the exact reason it has never reached completion. Do not force repeated manual refreshes merely to generate evidence and do not weaken Forecast/Value/Simulation authority to make 7/7 green.
