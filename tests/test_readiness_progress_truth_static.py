@@ -43,8 +43,8 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260925-market-discovery1" in index
-    assert "/static/product_shell.js?v=20260925-market-discovery1" in index
+    assert "/static/forecast_refresh.js?v=20260925-lastgood-repair1" in index
+    assert "/static/product_shell.js?v=20260925-lastgood-repair1" in index
     assert "Core intelligence current" in shell
 
 
@@ -91,3 +91,24 @@ def test_shared_refresh_acknowledges_tap_before_network_roundtrip() -> None:
     start_index = render.index("window.fsfflManualIntelligenceRefresh?.()")
     assert disabled_index < start_index
     assert label_index < start_index
+
+
+def test_restored_complete_context_wins_over_terminal_failed_job() -> None:
+    source = _shell()
+    snapshot = source.split("function fsfflSharedReadinessSnapshot()", 1)[1].split(
+        "function fsfflSharedReadinessMarkup", 1
+    )[0]
+    complete_index = snapshot.index("const contextComplete=Boolean")
+    terminal_complete_index = snapshot.index("&&contextComplete")
+    terminal_failure_index = snapshot.index("const prior=Number.isFinite")
+    assert complete_index < terminal_complete_index < terminal_failure_index
+    assert "label:'Last-good intelligence retained'" in snapshot
+    assert "step:FSFFL_SHARED_READINESS_STEPS" in snapshot
+
+
+def test_mobile_refresh_control_owns_explicit_fourth_grid_column() -> None:
+    source = _shell()
+    assert "grid-template-columns:14px auto minmax(0,1fr) auto" in source
+    assert "grid-template-columns:12px auto minmax(0,1fr) auto" in source
+    assert "white-space:nowrap" in source
+    assert "min-width:max-content" in source
