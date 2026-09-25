@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 from fsffl.product.runtime import LiveForecastEvidence, PrivateBetaRuntimeStore
+from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 
@@ -178,8 +179,8 @@ def test_cross_league_switch_invalidates_old_refresh_generation() -> None:
     assert store.get("u").league_state == new_state
 
 
-def test_same_league_provider_revalidation_cannot_demote_complete_bundle() -> None:
-    store = PrivateBetaRuntimeStore()
+def test_restored_last_good_guard_blocks_same_league_provider_demotion() -> None:
+    store = PersistentPrivateBetaRuntimeStore(persistence_store=None)
     t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
     last_good_state = _state(t0)
     newer_provider_state = _state(t0 + timedelta(minutes=5))
@@ -194,6 +195,7 @@ def test_same_league_provider_revalidation_cannot_demote_complete_bundle() -> No
         simulation_analytics=old_simulation,  # type: ignore[arg-type]
         value_evidence=old_value,  # type: ignore[arg-type]
     )
+    store._last_good_guard_users.add("u")
 
     retained = store.set_league_state("u", newer_provider_state)
 
