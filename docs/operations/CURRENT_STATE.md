@@ -27,16 +27,15 @@ Architecture research history: PR #213 / commit `91018b39967a0775ad830a6a750a258
 The production blocker itself is **not yet resolved**. Bounded Forecast implementation PR #215 is now merged to canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Stage 1 subject/scoring integrity and the non-promoting Stage 2 outcome/calibration harness are implemented and regression-clean. Production K/DST provider/calibration authority remains red at the empirical/source evidence gate.
 
 ## Completed research determination
-The accepted research contract establishes:
-- K is a distinct Forecast family but remains an individual-player subject.
-- D/ST is a canonical NFL team-season unit rather than an ordinary player.
-- provider eligibility and source independence are rule/metric specific;
-- D/ST points/yards-allowed buckets require distributional game-level treatment rather than season-average substitution;
-- K and D/ST require separate empirical uncertainty calibration;
-- annual preseason Forecast authority should remain league-agnostic raw evidence;
-- late-connected leagues may use an existing annual snapshot or evidence-preserving migration of genuine retained point-in-time raw evidence;
-- absent qualifying preseason evidence, preseason comparison must fail closed while current-forward Forecast may operate independently if its own authority gates pass;
-- existing offensive-player Forecast authority and two-source governance must not be weakened.
+The accepted architecture and empirical/source research remain authoritative, with a new Management exception layered on top for 2026 only.
+
+New 2026 late-start Research handoff:
+- `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
+- `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`
+
+The exception permits a truthful **current-date 2026 rest-of-season K/DST baseline**. It does not create or repair a preseason baseline.
+
+Beginning with 2027, normal governed preseason snapshot capture is mandatory with no late-start fallback.
 
 ## Production evidence relevant to the next gate
 The 2026 evidence-gate Research closeout materially updates the prior checkpoint:
@@ -61,19 +60,27 @@ The 2026 evidence-gate Research closeout materially updates the prior checkpoint
 The historical-source gate is therefore **partially cleared**, while production Forecast authority remains **blocked** on rights-cleared, independent, rule-complete provider evidence and promoted K/DST uncertainty.
 
 ## Immediate management priority
-1. Treat Forecast/Product K/DST implementation as **BLOCKED at the narrowed empirical/source authority gate**, not as unfinished Research.
-2. Keep production K/DST authority fail-closed until provider rights are cleared, current rule-complete source independence is proven, and K/DST uncertainty is validly promoted.
-3. For Hodor-like K scoring, require exact 50-59 vs 60+ evidence; never heuristically split 50+ data.
-4. For D/ST, require a second provenance-clean component provider or licensed decomposition proving independence, and preserve game-level/distributional treatment for PA/YA buckets.
-5. Reconcile the artifact-145 timing correction into any preseason migration plan: artifact 145 is post-opener; artifact 63 is the authentic pre-kickoff offense artifact.
-6. Keep 2026 Hodor K/DST preseason comparison unavailable until its specific rule-complete evidence gates pass; never backdate current data.
-7. Resume new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
-5. Merge/deploy the implementation-accepted Market PR #220, then repeat physical-iPhone/Safari Market acceptance.
-6. Keep Market acceptance separate from the blocked Forecast/K/DST empirical/source evidence gate; do not weaken either authority to unblock the other.
-7. Continue Home × Franchise redundancy audit only after Market physical acceptance or explicit Management reprioritization.
+1. Treat missing 2026 preseason K/DST evidence as **historical/preseason-only**, not a blocker to a properly governed current-forward late-start baseline.
+2. Review/authorize the implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md` if Management wants Product/Forecast Implementation to execute it.
+3. Keep Hodor current-forward K authority fail-closed until exact 60+ evidence, per-group two-source independence, provider rights, and target-compatible K uncertainty are satisfied.
+4. Keep Hodor current-forward D/ST authority fail-closed until game/distributional PA-bucket evidence, rare-event coverage, per-group two-source independence, provider rights, and target-compatible D/ST uncertainty are satisfied.
+5. Require schedule-aware subject-row source health; Friday snapshots that still include Atlanta/Green Bay's already-completed Thursday game must quarantine those rows rather than be backdated or adjusted heuristically.
+6. Keep 2026 preseason comparison unavailable where authentic pre-Week-1 K/DST evidence is unavailable.
+7. Hard-disable the exception for 2027+ and use the normal annual preseason snapshot process.
+8. Resume new-league 7/7 lifecycle acceptance only after current-forward K/DST Forecast authority is actually promoted.
+9. Merge/deploy the implementation-accepted Market PR #220, then repeat physical-iPhone/Safari Market acceptance.
+10. Keep Market acceptance separate from Forecast/K/DST authority; do not weaken either to unblock the other.
+11. Continue Home × Franchise redundancy audit only after Market physical acceptance or explicit Management reprioritization.
 
 ## Important distinction
-Research and bounded code implementation are complete for the currently authorized evidence-independent scope. Production Forecast support is still blocked on empirical/source evidence promotion and subsequent downstream/lifecycle acceptance. See `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
+Research and implementation planning for the 2026 late-start exception are complete. Production K/DST Forecast authority is **not** promoted.
+
+The current-forward blockers are no longer “missing preseason evidence.” They are now:
+- rights-cleared, independent current source coverage;
+- Hodor rule completeness (K 60+; D/ST PA distribution/rare events);
+- target-compatible K/DST empirical uncertainty.
+
+The 2026 preseason comparison remains unavailable by design. See `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
 
 
 ## Market discovery architecture checkpoint — 2026-09-24
