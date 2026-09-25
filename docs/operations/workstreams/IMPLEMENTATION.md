@@ -3,7 +3,7 @@
 Updated: 2026-09-25
 
 ## State
-**ACTIVE — 2026 LATE-START IMPLEMENTATION / PR #233 ACCEPTANCE VALIDATION.**
+**BLOCKED — BOUNDED 2026 LATE-START IMPLEMENTATION COMPLETE; PRODUCTION AUTHORITY AWAITS EXTERNAL EVIDENCE / RIGHTS.**
 
 Management accepted the completed K/DST + late-connect Research contract and authorized its bounded implementation. The base architecture remains authoritative:
 - `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
@@ -13,6 +13,8 @@ Management's current implementation authority is:
 - `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`
 
 Implementation PR **#215** is merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`.
+
+Management-authorized late-start implementation PR **#233** is merged on canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8`. Its reconciled head `1e9eb293c7029b0953c3ecec8353b8c2638ea35e` passed full CI, PR164 focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace before merge.
 
 ## Implemented in the active PR
 ### Stage 1 — contracts and scoring
@@ -53,19 +55,26 @@ After reconciliation with concurrent Market operating-state changes, the final P
 
 Post-merge Stage 2 evidence recovery was also attempted. The result is persisted in `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`: no qualifying second historical independent K/DST PIT corpus was recovered, and candidate production sources remain rights/licensing gated.
 
-## Remaining evidence gates after Stage 1/2 code acceptance
-Implementation cannot advance to production K/DST authority until the Research handoff's empirical gates are satisfied:
-1. a second independent historical point-in-time K/DST projection source is recovered and validated for calibration;
-2. provider source rights/content-health requirements are resolved for any production adapter;
-3. exact Sleeper truth fixtures resolve obscure D/ST scoring semantics before those rules are promoted;
-4. a qualifying 2026 K/DST preseason raw package is proven or preseason K/DST comparison remains explicitly unavailable.
+## Remaining evidence gates after PR #233
+The bounded implementation is complete. Production K/DST authority remains fail-closed until:
+1. authorized live API/source access and deployable rights are available for an exact-capability provider path;
+2. a second independent current ROS source proves the Hodor-specific K 60+ coordinate;
+3. a second independent current ROS source proves D/ST remaining-game PA distribution plus the remaining rare-event coordinates;
+4. target-compatible full-score K and D/ST uncertainty is empirically promoted under an exact scoring fingerprint;
+5. only after Forecast authority is genuinely green, the new-league lifecycle is re-run for downstream acceptance.
 
-These are evidence dependencies. They may not be bypassed with offense coefficients, one-source estimates, synthetic production values, average-based D/ST bucket reconstruction, or backdated current data.
+The 2026 preseason comparison remains explicitly unavailable where authentic pre-Week-1 K/DST evidence does not exist. Missing preseason evidence is no longer a current-forward blocker.
+
+These are external evidence/rights dependencies. They may not be bypassed with offense coefficients, one-source estimates, synthetic production values, zero uncertainty, average-based D/ST bucket reconstruction, or backdated current data.
 
 ## 2026 late-start exception implementation
-Management has superseded the prior blanket implementation stop with a bounded one-season-only 2026 current-date ROS authorization. PR #233 implements the evidence-independent contract while preserving the remaining rights/exact-coordinate/uncertainty gates.
+Management superseded the prior blanket implementation stop with a bounded one-season-only 2026 current-date ROS authorization. PR #233 completed that evidence-independent implementation while preserving the remaining rights/exact-coordinate/uncertainty gates.
+
+The merged implementation includes the dedicated non-preseason artifact, hard 2026 boundary, schedule-aware row quarantine, rights-aware independent-source coverage, K/DST ROS normalization, exact K algebraic transforms, explicit calibration fingerprints, deterministic replay/holdout diagnostics, and no-zero-uncertainty authority assessment.
 
 The late-start artifact is not preseason authority. It is hard-disabled for 2027+.
 
 ## Next authorized action
-Complete PR #233 acceptance against current main and merge when green. After merge, continue only if authorized API/source access can clear a remaining exact-coordinate or rights gate. Otherwise stop at the external evidence/source-rights blocker; do not substitute heuristics.
+No further production-authority implementation is possible from presently available governed evidence. Resume only when authorized API/source access or a newly supplied independent exact-capability source can materially clear a remaining gate. Do not substitute heuristics.
+
+**BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — EXTERNAL SOURCE RIGHTS + SECOND-SOURCE EXACT COORDINATES + TARGET-COMPATIBLE UNCERTAINTY**
