@@ -1,118 +1,178 @@
-# Workstream — Forecast Research: K/DST Empirical Evidence & Source Gates
+# Workstream — Forecast Research: 2026 Late-Start K/DST Exception
 
 ## State
-**DIRECTIVE COMPLETE — RESEARCH**
+**DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY**
 
 Authorized: 2026-09-25  
 Completed: 2026-09-25  
-Completion artifact: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`  
-Evidence ledger: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_LEDGER.md`
+Implementation-ready handoff: `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`  
+Current-date source ledger: `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`  
+Prior empirical/source closeout: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`
 
-## Objective
-Determine whether the remaining empirical/source gates blocking governed K/DST Forecast authority can be cleared with legitimate evidence, without reopening the completed K/DST architecture and without implementing or promoting production Forecast/model changes.
+## Management direction
 
-**Outcome:** complete. Research materially decomposed the gate, recovered additional historical and 2026 PIT evidence, corrected the 2026 kickoff/preseason cutoff, narrowed Sleeper scoring truth, and identified the remaining dependencies as external licensing/data-access or later bounded Implementation work.
+Management authorizes investigation and implementation planning for a **one-season-only 2026 late-start K/DST Forecast baseline** using qualifying independent current season-long/rest-of-season projections acquired at the actual current date.
 
-No production Forecast/model implementation, authority promotion, persistence mutation, merge, or deployment was performed by Research.
+Binding:
+- preserve exact acquisition timestamp, source provenance, projection horizon and source-health evidence;
+- never represent late-start evidence as preseason;
+- never backdate;
+- any 2026 K/DST preseason comparison requiring unavailable pre-Week-1 evidence remains unavailable;
+- beginning in 2027 the normal governed annual preseason snapshot process applies with no late-start exception;
+- separately determine whether historical evidence supports bounded empirical K/DST uncertainty;
+- never invent or borrow an unsupported uncertainty coefficient;
+- retain existing two-source, independence, active-rule-completeness, source-health and anti-double-counting governance.
 
-## Authoritative starting state retained
-- The K/DST architecture directive remains complete at `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
-- Forecast implementation PR #215 completed evidence-independent contracts/scoring work and the non-promoting calibration harness.
-- Existing two-independent-source governance, fail-closed scoring semantics, source-independence rules, and no-backdating rules remain binding.
+## Final research outcome
 
-## Final research determinations
+### What the 2026 exception changes
 
-### Historical PIT evidence
-- A genuine pre-opener 2024 source-specific K/DST corpus was recovered from FantasySharks, ESPN and CBS.
-- This disproves the prior assumption that an independent historical K/DST source #2 could not be recovered.
-- The historical-source gate is **PARTIALLY CLEARED**, not fully promoted: rule coverage, rights, and production-grade uncertainty validation remain outstanding.
+The absence of a qualifying 2026 pre-Week-1 K/DST snapshot is **no longer a current-forward Forecast blocker**.
 
-### 2026 K evidence
-- Authentic pre-opener 2026 FFToday and CBS K snapshots were recovered with provider identity, timestamps and retained hashes.
-- 2026 K PIT existence/provenance is **CLEARED**.
-- Hodor K authority remains **STILL BLOCKED** because its 50-59 and 60+ rules are not exactly supported by the recovered two-source coordinates and public-use rights are unresolved.
+A new 2026-only artifact may truthfully represent a current-date rest-of-season baseline if it preserves its real acquisition time and provenance.
 
-### 2026 D/ST evidence
-- Authentic pre-opener RotoWire-via-Sleeper component evidence was recovered.
-- Authentic pre-opener FantasyPros aggregate D/ST evidence was recovered.
-- FantasyPros cannot automatically count as an independent second provider because its projections are aggregated from multiple underlying sources.
-- A second provenance-clean independent component D/ST source was not recovered.
-- 2026 D/ST PIT recovery is **PARTIALLY CLEARED**.
+It may not:
+- satisfy the annual preseason snapshot contract;
+- be called preseason;
+- be used for a preseason-vs-current comparison;
+- be backdated;
+- become a generic fallback for 2027+.
 
-### Sleeper scoring truth
-Official Sleeper documentation now establishes:
-- blocked FG/PAT counts as a kicker miss;
-- K distance categories include separate 50-59 and 60+;
-- Team Defense includes 2-point conversion returns;
-- Special Teams Defense includes team ST TD / forced-fumble / fumble-recovery;
-- Special Teams Player remains separate;
-- PA/YA are mutually exclusive bucket outcomes with documented accounting;
-- scoring categories stack when the underlying NFL play truthfully earns each stat.
+### Current source acquisition
 
-Remaining work is exact official-stat/gamebook truth-fixture implementation for rare combined events, not guesswork about category ownership.
+Research inspected current 2026 ROS/source surfaces and persisted exact acquisition evidence in the source ledger.
 
-### Correct 2026 preseason cutoff
-Official NFL scheduling establishes the season began **2026-09-09 at 8:20 p.m. ET** (`2026-09-10T00:20:00Z`).
+Key dispositions:
+- **CBS:** current 2026 ROS K/DST candidate; useful raw coordinates; Friday-morning ATL/GB rows were stale after Thursday's completed game and require subject-row quarantine; K collapses 50+; D/ST PA is aggregate rather than a game-level bucket distribution.
+- **LineupExperts:** current 2026 ROS candidate and plausible independent internal projection system; public rows also showed stale ATL/GB remaining-game counts; website extraction is prohibited, while a subscribed API path exists and requires rights/schema validation.
+- **RotoWire:** current 2026 ROS product is semantically healthy; usable values/schema are paywalled/licensed; visible K schema still collapses 50+.
+- **Razzball:** quarantined for wrong-year/impossible-game-count content.
+- **FFToday:** current accessible 2026 K/DST season material remains preseason/full-season and is not eligible for the current-date ROS exception.
+- **SportsDataIO:** season-long projections are documented as preseason-only; maintained in-season product is game-level and therefore outside this Management-authorized ROS path unless separately authorized.
+- **FantasyPros:** ROS projection access exists under API/commercial products, but its aggregate projections cannot automatically count as an independent second vote.
 
-Therefore:
-- artifact 145 is post-opener and must not be described as preseason PIT evidence;
-- artifact 63 is the last recovered authentic FSFFL pre-kickoff offense Forecast evidence;
-- artifact 63 contains QB/RB/WR/TE only and no K/DST or `fumbles_lost`.
+### Source-health architecture
 
-This correction must be reconciled into canonical Management state before annual-preseason migration work.
+The late-start path requires **subject-row health**, not just provider-global health.
 
-### Production rights
-Current candidate providers remain externally rights-gated:
-- FantasyPros offers an explicit commercial licensing path;
-- Sleeper requires commercial licensing;
-- RotoWire requires written authorization for the proposed automated/storage/derived use;
-- CBS/Razzball remain permission/license gated;
-- ESPN's undocumented endpoint does not establish production rights;
-- FFToday/FantasySharks public accessibility does not establish commercial ingestion/storage rights.
+At capture time, implementation must compare each row's projected-games/horizon semantics against the canonical remaining NFL schedule.
 
-Private beta status does not create permission.
+Example:
+- after Atlanta–Green Bay completed Thursday 2026-09-24, a Friday source row still carrying 15 remaining games for ATL/GB is stale and must be quarantined;
+- a team that has not yet played Week 3 may still truthfully have 15 remaining games.
 
-## Final gate disposition
+Never backdate or heuristically subtract a completed game's projection to make a stale row pass.
 
-- Historical independent PIT discovery: **PARTIALLY CLEARED**
-- 2026 K PIT existence/provenance: **CLEARED**
-- 2026 D/ST PIT existence/provenance: **PARTIALLY CLEARED**
-- Sleeper semantic definition: **PARTIALLY CLEARED**, with major prior ambiguities resolved
-- Empirical K/DST uncertainty promotion: **PARTIALLY CLEARED / NOT PROMOTED**
-- Current-forward K/DST Forecast: **STILL BLOCKED**
-- Hodor K preseason comparison: **STILL BLOCKED**
-- Hodor D/ST preseason comparison: **STILL BLOCKED**
-- Weekly K/DST volatility promotion: **PARTIALLY CLEARED / NOT PROMOTED**
-- Provider rights for private beta/commercial production: **STILL BLOCKED**
-- Simulation/Value/Decision/Search downstream authority: **STILL BLOCKED** pending Forecast promotion
-- New-league 7/7 acceptance: **STILL BLOCKED** pending governed K/DST Forecast authority
+### Hodor K current-forward authority
 
-## External dependencies / Management actions
+**STILL BLOCKED.**
 
-The remaining gates cannot be resolved by further undirected public Research. Resolution requires one or more of:
+Exact transforms allowed:
+- Hodor scores both 0–19 and 20–29 at 3 points, so an exact provider 0–29 made coordinate is sufficient for that combined scoring contribution.
+- generic misses may be derived as FGA − FGM only when both are complete same-horizon provider evidence.
+- XP misses may be derived as XPA − XPM under the same condition.
 
-1. obtain written provider permission / commercial data licenses covering ingestion, storage, historical use, derived outputs, private beta and commercial production;
-2. if using Sleeper-hosted RotoWire data, establish whether commercial Sleeper rights actually sublicense the underlying RotoWire content;
-3. obtain a rights-cleared second independent component-level D/ST source or licensed source decomposition proving independence;
-4. obtain exact K 50-59 vs 60+ projection evidence for Hodor-like rules;
-5. authorize later bounded Implementation to add the now-documented Sleeper truth fixtures, fit/validate calibration, and promote authority only if evidence passes.
+Still missing:
+- Hodor separately scores 50–59 at 5 and 60+ at 6;
+- healthy current candidate sources found by Research expose 50+ rather than a separate 60+ projection;
+- no heuristic split is authorized.
 
-Durable license/permission evidence must be retained before production promotion.
+Thus current Hodor K fantasy points cannot yet receive full active-rule authority.
+
+### Hodor D/ST current-forward authority
+
+**STILL BLOCKED.**
+
+Current ROS candidates overlap on sacks, INT, FF and FR and some defensive TD/safety evidence.
+
+Still missing two-source rule-complete authority for:
+- blocked kicks;
+- defensive two-point returns;
+- team special-teams TD;
+- team special-teams FF/FR;
+- exact PA bucket expectation.
+
+Aggregate season ROS PA or PA/game is not sufficient:
+`score(E[PA]) != E[score(PA)]` for nonlinear buckets.
+
+A provider-native or separately governed remaining-game PA distribution is required.
+
+### K/DST uncertainty
+
+**Historical evidence is sufficient to run a bounded empirical study; it is not sufficient to declare a production Hodor-total coefficient without executing and validating that study.**
+
+Evidence available:
+- genuine pre-opener 2024 multi-provider raw K/DST corpus;
+- source-separated historical weekly K/DST projection panels;
+- realized K/DST outcome reconstruction path;
+- merged non-promoting PR #215 calibration harness.
+
+Required bounded implementation:
+1. define a `CalibrationScoringFingerprint`;
+2. score historical provider projections only on coordinates that >=2 independent PIT providers actually support;
+3. reconstruct realized outcomes under that exact fingerprint;
+4. fit K and D/ST separately;
+5. persist sources, seasons, sample sizes, hashes/provenance and diagnostics;
+6. validate replay/holdout behavior;
+7. compare the calibration fingerprint to the target league scoring fingerprint;
+8. promote only if compatibility is proven.
+
+A reduced standard K or D/ST subscore coefficient must not silently become Hodor-total uncertainty.
+
+**No K/DST uncertainty coefficient is promoted or authorized by Research.**
+
+### Rights
+
+Management's model exception does not override external source terms.
+
+Deployed/private-beta ingestion remains source-rights gated where public terms do not permit the intended automated/storage use.
+
+Commercial production remains separately gated on explicit provider agreements for the actual content/storage/derived-output architecture.
+
+## Gate decomposition
+
+### Current-forward 2026 blockers
+Still blocking governed Hodor K/DST Forecast:
+1. rights-cleared deployable provider access;
+2. >=2 independent sources per required active metric/group;
+3. K exact 60+ evidence;
+4. D/ST game/distributional PA bucket evidence and remaining rare-event coordinates;
+5. promoted target-compatible K-specific and D/ST-specific empirical uncertainty.
+
+### No longer a current-forward blocker
+- missing 2026 preseason K/DST snapshot;
+- inability to produce a true 2026 preseason-vs-current K/DST delta.
+
+### Historical/preseason-only
+- 2026 K/DST preseason comparison remains unavailable where authentic pre-Week-1 evidence does not exist.
+
+### Commercial-only/external
+- executed commercial licenses and sublicensing clarity for the eventual production provider set.
+
+## Implementation contract
+
+The authoritative implementation plan is:
+`artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
+
+It requires:
+- dedicated 2026-only late-start artifact, separate from annual preseason;
+- `ForecastHorizon.REST_OF_SEASON`;
+- immutable capture/provenance/source-health metadata;
+- schedule-aware subject-row freshness;
+- K and D/ST canonical normalization;
+- exact-only scoring transforms;
+- existing two-source/independence governance;
+- no provider-native FPTS shortcut around raw rule coverage;
+- scoring-fingerprint-bound uncertainty calibration;
+- explicit 2026 preseason-unavailable presentation state;
+- hard rejection of the exception for 2027+.
 
 ## Operating-protocol closure
 
-Research exhausted materially distinct available paths across governed persistence, Git history, public retained snapshots, historical source-specific files, provider/API rights documentation, official Sleeper documentation, and independent provenance implementations.
+The requested Management investigation and implementation planning are complete.
 
-No further authorized Research action presently available can materially resolve the remaining external dependencies.
+Further generic public-source searching is no longer the next authorized high-value action. Remaining source questions require licensed/API schema access, while uncertainty requires bounded implementation/execution of the already specified calibration plan.
 
-**DIRECTIVE COMPLETE — RESEARCH**
+No production implementation, Forecast promotion, merge, deployment, or uncertainty coefficient change was performed by Research.
 
-## Original prohibitions remain binding
-- no production Forecast/model implementation or promotion under this Research directive;
-- no fabricated projections;
-- no one-source evidence presented as independent calibration;
-- no aggregate consensus double-counting;
-- no mutable current page relabeled as PIT evidence;
-- no guessed D/ST semantics;
-- no weakening the two-source or uncertainty authority requirements;
-- no synthetic 2026 preseason evidence.
+**DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY**
