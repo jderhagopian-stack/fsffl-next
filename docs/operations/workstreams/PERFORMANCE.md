@@ -131,3 +131,51 @@ Restart/failure preservation is production-validated again on #235, including co
 Do not weaken Forecast/Simulation/Value authority, fabricate missing evidence, change canonical 50,000 Simulation fidelity, or force a fresh refresh merely to make readiness green.
 
 The separate K/DST Forecast authority work remains a Forecast/Product concern. It is not the current Performance stop state for this existing-league restoration directive.
+
+
+## App-wide league lifecycle acceptance directive — 2026-09-25
+
+**State: ACTIVE — NEW-LEAGUE COMPLETION + GLOBAL LIFECYCLE UX CORRECTIVE AUTHORIZED.**
+
+Management physical-iPhone evidence now includes switching to the Hodor league / franchise `jder52`. This league has **never fully loaded**. The observed state showed `2 / 7 Intelligence refresh needs attention`, franchise `Not Classified`, and an empty Roster view (`No players in this roster view.`). This is not a regression from a prior Hodor 7/7 state and must not be diagnosed as last-good restoration failure.
+
+Separately, PR #237 has merged to main at `33b969b04180893f7e582c0ebd76c54bea81961d`, implementing the Management-authorized 2026 provisional K/DST partial-rule authority and explicit downstream gating. Do not assume that merge alone makes Hodor complete. Trace whether qualifying provisional rows exist, whether readiness consumes them, and what exact current stage/gate prevents this league from progressing beyond 2/7.
+
+### App-wide lifecycle product contract
+This is not a Franchise-, Home-, Market-, or other surface-specific patch. The shell/lifecycle must communicate league identity, served evidence, background work, and terminal outcome consistently across the application.
+
+The required lifecycle is:
+
+`user action → immediate acknowledgement → safe usable current/last-good State where valid → persistent background-work status → validated atomic promotion → explicit current or failed state`.
+
+It applies to:
+- first league connection;
+- switching leagues;
+- Refresh League;
+- Refresh Intelligence;
+- background recomputation/invalidation;
+- restart restoration;
+- failed/interrupted refresh recovery.
+
+### Required behavior
+1. **Immediate acknowledgement.** Changing leagues or invoking a refresh must immediately acknowledge the requested action and league identity. A league switch should visibly enter a switching/loading state rather than silently replacing selectors while the body remains ambiguous.
+2. **Truthful served-state identity.** If a prior promoted/last-good intelligence bundle is being served while fresher work runs, the shell must clearly say that prior intelligence is being shown and identify its freshness/as-of state where available. Never present stale/last-good evidence as current.
+3. **Persistent background activity.** While work continues, expose a compact app-wide status that survives surface navigation and truthfully describes the active stage/readiness (for example league State loading vs intelligence building). Do not fabricate progress percentages. Existing governed stage/readiness data should drive the status.
+4. **Do not blank valid State because derived intelligence is incomplete.** Once the selected league's current State/roster is valid, surfaces capable of rendering that State should remain usable while Forecast/Value/Simulation or other derived intelligence builds. An incomplete intelligence pipeline must not by itself produce an apparently empty valid roster.
+5. **No cross-league masquerading.** During a switch, old-league data must never appear as though it belongs to the newly selected league. If prior content must remain visible during transition, it must remain explicitly identified as the prior league or be covered by a switching state until new-league State is safe to render.
+6. **Atomic promotion and explicit terminal state.** On success, transition to the newly promoted evidence and truthful readiness. On failure, identify the failed/stalled stage, whether usable prior/current State or last-good intelligence remains served, and the appropriate retry action. Generic `needs attention` alone is insufficient.
+7. **Refresh controls share the same contract.** Refresh League and Refresh Intelligence must not be opaque fire-and-forget actions. Acknowledgement, active work, served-state identity, completion/failure and retry semantics must be consistent.
+
+### Hodor diagnostic acceptance
+Trace the exact Hodor lifecycle from persisted connection/context through State, roster population, Forecast (including the merged provisional 2026 K/DST path), Value, Simulation, readiness and promotion. Determine the exact reason it has never reached completion. Do not force repeated manual refreshes merely to generate evidence and do not weaken Forecast/Value/Simulation authority to make 7/7 green.
+
+Required evidence before closeout:
+- correct selected league and Sleeper identity throughout;
+- valid roster/State renders when available even if downstream intelligence is incomplete;
+- exact job/stage and blocker for the historical/current Hodor 2/7 state;
+- whether provisional K/DST rows are actually available and consumed by readiness, with truthful downstream gating;
+- no cross-league contamination;
+- lifecycle UX behavior covered by deterministic tests across connect, switch, refresh, background build, success, failure and last-good serving;
+- production/deployment validation before Management is asked for another physical-device pass.
+
+This directive is orthogonal to Market discovery semantics. Do not modify Market candidate admission, strategic hypotheses, screening budgets, diversity/dominance, or Simulation boundaries while implementing the app-wide lifecycle contract.
