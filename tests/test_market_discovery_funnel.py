@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -6,7 +7,11 @@ from fsffl.opportunity import (
     OpportunitySource,
     PreliminaryEconomicBand,
 )
+from fsffl.state.models import PlayerAsset
+
 from fsffl.product.market_discovery_runtime import (
+    DEFAULT_PRELIMINARY_DECISION_BUDGET,
+    _proposal_from_row,
     _build_path_seeds,
     _candidate_path_order,
     _opportunity_identity,
@@ -344,3 +349,42 @@ def test_market_funnel_exposes_early_admission_rejections_timings_and_zero_simul
     assert "build_scoped_trade_candidates" in search
     assert "Cardinal Value only bounded package cost" in search
     assert "FSFFL Market discovery funnel" in source
+
+
+def test_pr232_discovery_budget_and_simulation_boundary_remain_invariant() -> None:
+    assert DEFAULT_PRELIMINARY_DECISION_BUDGET == 8
+    source = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
+    assert '"changed_state_simulation_calls_during_discovery": 0' in source
+    assert '"acceptance_probability": None' in source
+    assert "select_preliminary_screen_indices(seeds, limit=evaluation_limit)" in source
+
+
+def test_request_local_asset_index_does_not_change_trade_proposal_semantics() -> None:
+    runtime = SimpleNamespace(
+        selected_team_id="team-me",
+        league_state=SimpleNamespace(
+            state_id="state-1",
+            as_of=datetime(2026, 9, 25, 12, 0, tzinfo=UTC),
+        ),
+    )
+    row = {
+        "counterparty_team_id": "team-them",
+        "send": [{"asset_ref": "player:mine"}],
+        "receive": [{"asset_ref": "player:theirs"}],
+    }
+    asset_index = {
+        ("team-me", "player:mine"): PlayerAsset(player_id="mine"),
+        ("team-them", "player:theirs"): PlayerAsset(player_id="theirs"),
+    }
+
+    proposal = _proposal_from_row(
+        runtime,
+        row,
+        prefix="market-economic",
+        asset_index=asset_index,
+    )
+
+    assert proposal.side_a.team_id == "team-me"
+    assert proposal.side_b.team_id == "team-them"
+    assert proposal.side_a.sends == (PlayerAsset(player_id="mine"),)
+    assert proposal.side_b.sends == (PlayerAsset(player_id="theirs"),)
