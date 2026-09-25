@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from fsffl.product.opportunity_search import _multi_lane_search_order
+from fsffl.product.opportunity_search import (
+    _family_first_search_order,
+    _multi_lane_search_order,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,3 +58,36 @@ def test_both_trade_finder_spotlights_can_seed_nearby_package_frontier() -> None
     assert "runSpotlightFrontier('decision')" in ui
     assert "spotlightFrontierKind" in ui
     assert "oppSpotlightSeedKey(kind)===requestKey" in ui
+
+
+def test_family_first_search_order_admits_distinct_targets_before_package_repeats() -> None:
+    rows = []
+    for target, gap in (("gibbs", 0.01), ("bijan", 0.02), ("breece", 0.03)):
+        for variant in range(1, 4):
+            row = _row(
+                f"{target}-{variant}",
+                gap=gap + variant / 1000,
+                target_value=95.0 - variant,
+                focal=70.0,
+                counterparty=75.0,
+                send_count=variant,
+            )
+            row["counterparty_team_id"] = f"owner-{target}"
+            row["receive"] = [{"asset_ref": f"player:{target}"}]
+            rows.append(row)
+
+    ordered = _family_first_search_order(rows)
+
+    first_three = {
+        (
+            row["counterparty_team_id"],
+            row["receive"][0]["asset_ref"],
+        )
+        for row in ordered[:3]
+    }
+    assert len(first_three) == 3
+    assert {
+        row["receive"][0]["asset_ref"]
+        for row in ordered[:3]
+    } == {"player:gibbs", "player:bijan", "player:breece"}
+    assert len(ordered) == len(rows)
