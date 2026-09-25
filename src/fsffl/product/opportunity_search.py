@@ -331,6 +331,60 @@ def _multi_lane_search_order(candidates: list[dict[str, object]]) -> list[dict[s
     return [candidates[index] for index in ordered]
 
 
+def _target_path_family_key(row: dict[str, object]) -> tuple[str, tuple[str, ...]]:
+    return (
+        str(row.get("counterparty_team_id") or ""),
+        tuple(
+            sorted(
+                str(item.get("asset_ref") or "")
+                for item in (row.get("receive") or [])
+                if isinstance(item, dict) and item.get("asset_ref")
+            )
+        ),
+    )
+
+
+def _family_first_search_order(
+    candidates: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Preserve target/path diversity before the workspace candidate bound.
+
+    Multi-lane Search still determines the first appearance and within-family
+    ordering. This second pass changes only admission order: every distinct
+    target/counterparty path family gets one row before any family gets a second
+    package variant. It prevents package-neighborhood repetition from consuming
+    the bounded workspace before Opportunity/Decision screening.
+    """
+
+    ordered = _multi_lane_search_order(candidates)
+    families: dict[
+        tuple[str, tuple[str, ...]],
+        list[dict[str, object]],
+    ] = {}
+    family_order: list[tuple[str, tuple[str, ...]]] = []
+    for row in ordered:
+        key = _target_path_family_key(row)
+        if key not in families:
+            families[key] = []
+            family_order.append(key)
+        families[key].append(row)
+
+    result: list[dict[str, object]] = []
+    depth = 0
+    while len(result) < len(ordered):
+        progressed = False
+        for key in family_order:
+            rows = families[key]
+            if depth >= len(rows):
+                continue
+            result.append(rows[depth])
+            progressed = True
+        if not progressed:
+            break
+        depth += 1
+    return result
+
+
 def build_roster_aware_trade_candidates(
     runtime: UserRuntimeContext,
     browser: TradeCenterBrowserView,
@@ -365,4 +419,4 @@ def build_roster_aware_trade_candidates(
                 if key not in seen:
                     seen.add(key)
                     candidates.append(row)
-    return _multi_lane_search_order(candidates)
+    return _family_first_search_order(candidates)
