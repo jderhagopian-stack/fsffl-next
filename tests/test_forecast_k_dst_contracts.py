@@ -99,6 +99,20 @@ def _dst_obs(
 def test_dst_is_team_season_subject_and_aliases_are_deterministic() -> None:
     with pytest.raises(ValueError, match="D/ST Forecast subjects"):
         PlayerForecastSubject(player_id="sleeper:player:JAC", position=Position.DST)
+    with pytest.raises(ValueError, match="TeamUnitForecastObservation"):
+        ForecastObservation(
+            player_id="sleeper:player:JAC",
+            position=Position.DST,
+            horizon=ForecastHorizon.SEASON,
+            metric=ForecastMetric.DST_SACK,
+            period_start=AS_OF,
+            period_end=END,
+            distribution=ForecastDistribution(mean=40, stddev=4),
+            source="invalid-player-shaped-dst",
+            model_version="fixture-v1",
+            as_of=AS_OF,
+            provenance=PROVENANCE,
+        )
 
     subject = forecast_subject_for_roster_asset(
         player_id="sleeper:player:JAC",
