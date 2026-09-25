@@ -155,24 +155,27 @@ Architecture review evidence demonstrates:
 Management accepted the architecture on 2026-09-25 and authorized the bounded implementation executed in PR #220.
 
 ## Market implementation acceptance gate
-**Status: IMPLEMENTATION ACCEPTANCE SATISFIED — PHYSICAL IPHONE / SAFARI GATE NEXT.**
+**Status: CORRECTIVE IMPLEMENTATION ACCEPTED NON-PHYSICALLY — REPEAT PHYSICAL IPHONE / SAFARI GATE NEXT.**
 
-PR #220 satisfies the implementation-level gate. Final code head `97ff2a4e59d065b38a6eb751c3ed3a330feee56e` passed full CI, Home North Star, Franchise North Star, League Atlas North Star, PR164 corrective regression, and the live Forecast corrective trace.
+PR #232 merged at `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b` and is live through Render deploy `dep-dar9cdrtqb8s73819ap0`, static generation `20260925-market-corrective1`.
 
-Implementation acceptance evidence demonstrates:
-- every For You card is a distinct `worth_attention` Opportunity, not a raw package row;
-- every For You Opportunity has at least one bounded pre-Simulation Decision-screened representative path;
-- counterparty-dominated, focal-dominated, stale, and critically incomplete paths cannot qualify for For You;
-- repeated exact targets cannot occupy multiple For You cards;
-- diversity rules and any relaxations are deterministic and observable;
-- no Market-generated acceptance probability;
-- Owner Intelligence never mutates universal Value;
-- package premium evidence is not added to Value or Team Utility;
-- mandatory cut cost is charged exactly once;
-- broad Market discovery performs zero exact changed-state Simulation calls;
-- Core 7/7 copy is scoped truthfully and each Market surface exposes independent readiness;
-- Broad Market rows remain usable while optional Intrinsic is building;
-- physical-iPhone/Safari Market presentation meets the accepted North Star scanability/navigation standard.
+Non-physical acceptance demonstrates:
+- Improve-my-team discovery begins from governed need/fragility hypotheses and complementary counterparty evidence before package generation;
+- Target position, Target player, Shop player, Explore owner/team, and Consolidate constrain early candidate admission where semantically appropriate;
+- Cardinal/market equivalence is an economic screen/neighborhood tool, not the definition of an opportunity;
+- the Management-approved eight-path pre-Simulation Decision budget is preserved;
+- focused requests do not first spend Decision work on a generic workspace;
+- the broad preliminary screen is lightweight, Decision-owned, includes roster legality/mandatory cuts/replacement effects/economics, and invokes zero exact changed-state Simulation;
+- For You remains gated by screened bilateral/economic evidence and may validly contain zero items;
+- Player Board / Free Agents consume governed all-player Forecast evidence when attached and expose missing coverage truthfully;
+- mobile Board scrolling/sticky identity/sort headers and Market safe-area corrections are present in the deployed static bundle;
+- funnel diagnostics expose early-stage counts, rejection reasons, timings, preliminary-screen count, zero-Simulation count, and cache/reuse behavior;
+- all configured CI/focused authority regressions are green;
+- production startup restored the correct existing league as Forecast=True / Simulation=True / Value=True / complete=True with no post-deploy errors.
 
+Remaining acceptance:
+1. repeat physical-iPhone/Safari validation of For You, Trade Finder, Player Board, Free Agents, drill-down, readiness, scrolling/sorting and safe-area behavior;
+2. exercise at least one authenticated Trade Finder intent so production funnel telemetry is emitted;
+3. inspect that telemetry afterward for candidate admission/rejection counts, eight-path-or-fewer preliminary Decision runs, zero broad Simulation, bounded wall-clock timing, and cache reuse.
 
-Market **product** acceptance remains open until the merged/deployed implementation passes repeat physical-iPhone/Safari validation. That validation must confirm the accepted four-surface jobs, Opportunity-first For You flow, truthful surface readiness, drill-down interaction, and mobile scanability without weakening any analytical authority.
+Market product acceptance remains open until those physical/runtime observations pass.
