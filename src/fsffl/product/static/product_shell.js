@@ -25,10 +25,10 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260924-live-usability-hotfix1';
-const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
+const leagueAtlasStaticVersion='20260925-state-first1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260925-hodor-lifecycle1';
-const franchiseNorthStarStaticVersion='20260925-hodor-lifecycle1';
+const homeNorthStarStaticVersion='20260925-state-first1';
+const franchiseNorthStarStaticVersion='20260925-state-first1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
