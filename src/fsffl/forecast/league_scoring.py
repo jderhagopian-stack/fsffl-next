@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from math import sqrt
+from typing import Literal
 
 from fsffl.state.models import FrozenModel, LeagueRules, Position, Provenance, RosterSlot
 
-from .models import ForecastDistribution, ForecastMetric, ForecastObservation
+from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
 
 
 class ScoringCoverageStatus(StrEnum):
@@ -16,13 +18,57 @@ class ScoringCoverageStatus(StrEnum):
     INCOMPLETE = "incomplete"
 
 
+class ForecastCapabilityStatus(StrEnum):
+    FULL = "FULL"
+    PARTIAL_PROVISIONAL = "PARTIAL_PROVISIONAL"
+    UNSUPPORTED = "UNSUPPORTED"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
 class ScoringCoverage(FrozenModel):
     status: ScoringCoverageStatus
+    capability_status: ForecastCapabilityStatus
     supported_rule_stats: tuple[str, ...]
     provisional_residual_rule_stats: tuple[str, ...] = ()
     unsupported_rule_stats: tuple[str, ...]
     ignored_non_lineup_rule_stats: tuple[str, ...]
-    model_version: str = "next2-league-scoring-bridge-v3"
+    separate_subject_rule_stats: tuple[str, ...] = ()
+    blocks_full_downstream_authority: bool = False
+    model_version: str = "next2-league-scoring-bridge-v4:subject-family-isolation"
+
+
+class ForecastRuleFamilyCoverage(FrozenModel):
+    family: Literal["player_offense", "kicker", "dst"]
+    status: ForecastCapabilityStatus
+    supported_rule_stats: tuple[str, ...] = ()
+    provisional_rule_stats: tuple[str, ...] = ()
+    omitted_rule_stats: tuple[str, ...] = ()
+    reason_codes: tuple[str, ...] = ()
+    blocks_full_downstream_authority: bool
+
+
+class PartialFantasyPointForecast(FrozenModel):
+    authority_tier: Literal["partial_provisional"] = "partial_provisional"
+    player_id: str
+    position: Position
+    horizon: ForecastHorizon
+    period_start: datetime
+    period_end: datetime
+    distribution: ForecastDistribution
+    supported_rule_stats: tuple[str, ...]
+    omitted_rule_stats: tuple[str, ...]
+    omission_reasons: tuple[str, ...]
+    source: str
+    model_version: str
+    as_of: datetime
+    provenance: Provenance
+
+
+class LeagueScoringResult(FrozenModel):
+    authoritative_forecasts: tuple[ForecastObservation, ...]
+    partial_forecasts: tuple[PartialFantasyPointForecast, ...]
+    coverage: ScoringCoverage
+    family_coverage: tuple[ForecastRuleFamilyCoverage, ...]
 
 
 @dataclass(frozen=True)
@@ -98,6 +144,7 @@ def classify_scoring_coverage(rules: LeagueRules) -> ScoringCoverage:
     provisional: list[str] = []
     unsupported: list[str] = []
     ignored: list[str] = []
+    separate: list[str] = []
     has_dst = _has_lineup_slot(rules, RosterSlot.DST)
     has_k = _has_lineup_slot(rules, RosterSlot.K)
 
@@ -111,27 +158,102 @@ def classify_scoring_coverage(rules: LeagueRules) -> ScoringCoverage:
         if stat in _TWO_POINT_RULES or stat in _RARE_EVENT_PRIORS:
             provisional.append(stat)
             continue
-        if not has_dst and stat.startswith(_DST_PREFIXES):
-            ignored.append(stat)
+        if stat.startswith(_DST_PREFIXES):
+            (separate if has_dst else ignored).append(stat)
             continue
-        if not has_k and stat.startswith(_KICKER_PREFIXES):
-            ignored.append(stat)
+        if stat.startswith(_KICKER_PREFIXES):
+            (separate if has_k else ignored).append(stat)
             continue
         unsupported.append(stat)
 
     if unsupported:
         status = ScoringCoverageStatus.INCOMPLETE
+        capability = (
+            ForecastCapabilityStatus.PARTIAL_PROVISIONAL
+            if supported or provisional
+            else ForecastCapabilityStatus.UNSUPPORTED
+        )
+        blocks = True
     elif provisional:
         status = ScoringCoverageStatus.PROVISIONAL
+        capability = ForecastCapabilityStatus.PARTIAL_PROVISIONAL
+        # Existing bounded residual priors remain governed by their prior contract.
+        # Merely labeling them provisional must not regress accepted leagues.
+        blocks = False
     else:
         status = ScoringCoverageStatus.COMPLETE
+        capability = ForecastCapabilityStatus.FULL
+        blocks = False
     return ScoringCoverage(
         status=status,
+        capability_status=capability,
         supported_rule_stats=tuple(sorted(supported)),
         provisional_residual_rule_stats=tuple(sorted(provisional)),
         unsupported_rule_stats=tuple(sorted(unsupported)),
         ignored_non_lineup_rule_stats=tuple(sorted(ignored)),
+        separate_subject_rule_stats=tuple(sorted(separate)),
+        blocks_full_downstream_authority=blocks,
     )
+
+
+def classify_forecast_rule_family_coverage(
+    rules: LeagueRules,
+) -> tuple[ForecastRuleFamilyCoverage, ...]:
+    """Report authority by scoring subject family without cross-family collapse."""
+
+    offense = classify_scoring_coverage(rules)
+    offense_reasons: list[str] = []
+    if offense.unsupported_rule_stats:
+        offense_reasons.append("unsupported_player_offense_rules")
+    if offense.provisional_residual_rule_stats:
+        offense_reasons.append("bounded_provisional_residual_rules")
+    if not offense_reasons:
+        offense_reasons.append("all_active_player_offense_rules_supported")
+
+    output: list[ForecastRuleFamilyCoverage] = [
+        ForecastRuleFamilyCoverage(
+            family="player_offense",
+            status=offense.capability_status,
+            supported_rule_stats=offense.supported_rule_stats,
+            provisional_rule_stats=offense.provisional_residual_rule_stats,
+            omitted_rule_stats=offense.unsupported_rule_stats,
+            reason_codes=tuple(offense_reasons),
+            blocks_full_downstream_authority=offense.blocks_full_downstream_authority,
+        )
+    ]
+
+    for family, slot, prefixes in (
+        ("kicker", RosterSlot.K, _KICKER_PREFIXES),
+        ("dst", RosterSlot.DST, _DST_PREFIXES),
+    ):
+        active = tuple(
+            sorted(
+                rule.stat
+                for rule in rules.scoring
+                if rule.points != 0 and rule.stat.startswith(prefixes)
+            )
+        )
+        if not _has_lineup_slot(rules, slot):
+            output.append(
+                ForecastRuleFamilyCoverage(
+                    family=family,
+                    status=ForecastCapabilityStatus.NOT_APPLICABLE,
+                    omitted_rule_stats=(),
+                    reason_codes=("lineup_slot_not_active",),
+                    blocks_full_downstream_authority=False,
+                )
+            )
+            continue
+        output.append(
+            ForecastRuleFamilyCoverage(
+                family=family,
+                status=ForecastCapabilityStatus.UNSUPPORTED,
+                omitted_rule_stats=active,
+                reason_codes=("separate_k_dst_forecast_authority_required",),
+                blocks_full_downstream_authority=True,
+            )
+        )
+    return tuple(output)
 
 
 def _missing_material_scored_metrics(
@@ -202,25 +324,28 @@ def _provisional_residual(
     return mean_points, variance_points, tuple(sorted(applied))
 
 
-def derive_league_fantasy_point_forecasts(
+def derive_league_scoring_result(
     observations: tuple[ForecastObservation, ...],
     *,
     rules: LeagueRules,
     source: str = "fsffl:league_scored",
-    model_version: str = "next2-league-scoring-bridge-v3",
-) -> tuple[ForecastObservation, ...]:
-    coverage = classify_scoring_coverage(rules)
-    if coverage.status == ScoringCoverageStatus.INCOMPLETE:
-        raise ValueError(
-            "league scoring cannot be reproduced from current raw forecast metrics; "
-            f"unsupported rules: {list(coverage.unsupported_rule_stats)}"
-        )
+    model_version: str = "next2-league-scoring-bridge-v4:subject-family-isolation",
+) -> LeagueScoringResult:
+    """Score supported player-offense coordinates without hiding canonical Forecast.
 
+    K/DST rules are a separate subject family and never invalidate ordinary player
+    offense here. Unsupported ordinary player rules produce an explicit partial
+    subtotal rather than an authoritative FANTASY_POINTS observation.
+    """
+
+    coverage = classify_scoring_coverage(rules)
     coefficient_by_metric: dict[ForecastMetric, float] = {}
+    rule_stats_by_metric: dict[ForecastMetric, list[str]] = defaultdict(list)
     for rule in rules.scoring:
         metric = _SLEEPER_LINEAR_RULES.get(rule.stat)
         if metric is not None and rule.points != 0:
             coefficient_by_metric[metric] = coefficient_by_metric.get(metric, 0.0) + rule.points
+            rule_stats_by_metric[metric].append(rule.stat)
 
     grouped: dict[tuple[object, ...], list[ForecastObservation]] = defaultdict(list)
     for observation in observations:
@@ -238,17 +363,14 @@ def derive_league_fantasy_point_forecasts(
         )
         grouped[key].append(observation)
 
-    output: list[ForecastObservation] = []
+    authoritative: list[ForecastObservation] = []
+    partial: list[PartialFantasyPointForecast] = []
     for items in grouped.values():
         by_metric = {item.metric: item for item in items}
-        if _missing_material_scored_metrics(
+        missing_metrics = _missing_material_scored_metrics(
             by_metric=by_metric,
             coefficient_by_metric=coefficient_by_metric,
-        ):
-            # Missing material scoring evidence must not be interpreted as zero.
-            # Fail closed for this player/horizon rather than publishing a partial
-            # total under the authoritative fantasy-points metric.
-            continue
+        )
         active = [
             (metric, coefficient, by_metric[metric])
             for metric, coefficient in coefficient_by_metric.items()
@@ -256,6 +378,7 @@ def derive_league_fantasy_point_forecasts(
         ]
         if not active:
             continue
+
         first = items[0]
         mean = sum(coefficient * item.distribution.mean for _, coefficient, item in active)
         variance = sum((coefficient * item.distribution.stddev) ** 2 for _, coefficient, item in active)
@@ -274,10 +397,64 @@ def derive_league_fantasy_point_forecasts(
             effective_at=effective,
             source_version=model_version,
         )
+        supported_stats = tuple(
+            sorted(
+                {
+                    stat
+                    for metric, _coefficient, _item in active
+                    for stat in rule_stats_by_metric.get(metric, ())
+                }
+                | set(applied_residuals)
+            )
+        )
+        missing_rule_stats = {
+            stat
+            for metric in missing_metrics
+            for stat in rule_stats_by_metric.get(metric, ())
+        }
+        omitted_stats = tuple(
+            sorted(set(coverage.unsupported_rule_stats) | missing_rule_stats)
+        )
+        omission_reasons: list[str] = []
+        if coverage.unsupported_rule_stats:
+            omission_reasons.append(
+                "unsupported active player-offense scoring coordinates are omitted"
+            )
+        if missing_metrics:
+            omission_reasons.append(
+                "material raw Forecast metrics are undercovered and are not interpreted as zero: "
+                + ",".join(metric.value for metric in missing_metrics)
+            )
+
+        distribution = ForecastDistribution(
+            mean=mean,
+            stddev=sqrt(max(variance, 0.0)),
+        )
         suffix = ":independent_metric_variance"
         if applied_residuals:
             suffix += ":bounded_provisional_residual_v1"
-        output.append(
+
+        if omitted_stats:
+            partial.append(
+                PartialFantasyPointForecast(
+                    player_id=first.player_id,
+                    position=first.position,
+                    horizon=first.horizon,
+                    period_start=first.period_start,
+                    period_end=first.period_end,
+                    distribution=distribution,
+                    supported_rule_stats=supported_stats,
+                    omitted_rule_stats=omitted_stats,
+                    omission_reasons=tuple(omission_reasons),
+                    source=source,
+                    model_version=f"{model_version}:partial_supported_subtotal{suffix}",
+                    as_of=first.as_of,
+                    provenance=provenance,
+                )
+            )
+            continue
+
+        authoritative.append(
             ForecastObservation(
                 player_id=first.player_id,
                 position=first.position,
@@ -285,7 +462,7 @@ def derive_league_fantasy_point_forecasts(
                 metric=ForecastMetric.FANTASY_POINTS,
                 period_start=first.period_start,
                 period_end=first.period_end,
-                distribution=ForecastDistribution(mean=mean, stddev=sqrt(max(variance, 0.0))),
+                distribution=distribution,
                 source=source,
                 model_version=f"{model_version}{suffix}",
                 as_of=first.as_of,
@@ -293,4 +470,55 @@ def derive_league_fantasy_point_forecasts(
             )
         )
 
-    return tuple(sorted(output, key=lambda item: (item.player_id, item.horizon.value, item.period_start, item.source)))
+    return LeagueScoringResult(
+        authoritative_forecasts=tuple(
+            sorted(
+                authoritative,
+                key=lambda item: (
+                    item.player_id,
+                    item.horizon.value,
+                    item.period_start,
+                    item.source,
+                ),
+            )
+        ),
+        partial_forecasts=tuple(
+            sorted(
+                partial,
+                key=lambda item: (
+                    item.player_id,
+                    item.horizon.value,
+                    item.period_start,
+                    item.source,
+                ),
+            )
+        ),
+        coverage=coverage,
+        family_coverage=classify_forecast_rule_family_coverage(rules),
+    )
+
+
+def derive_league_fantasy_point_forecasts(
+    observations: tuple[ForecastObservation, ...],
+    *,
+    rules: LeagueRules,
+    source: str = "fsffl:league_scored",
+    model_version: str = "next2-league-scoring-bridge-v4:subject-family-isolation",
+) -> tuple[ForecastObservation, ...]:
+    """Strict authoritative scorer retained for consumers that require full offense truth."""
+
+    result = derive_league_scoring_result(
+        observations,
+        rules=rules,
+        source=source,
+        model_version=model_version,
+    )
+    if result.coverage.status == ScoringCoverageStatus.INCOMPLETE:
+        raise ValueError(
+            "league player-offense scoring cannot be fully reproduced from current raw "
+            "forecast metrics; unsupported rules: "
+            f"{list(result.coverage.unsupported_rule_stats)}"
+        )
+    # Per-subject missing material metrics remain fail-closed and therefore appear
+    # only in partial_forecasts; authoritative output contains no silent zeroes.
+    return result.authoritative_forecasts
