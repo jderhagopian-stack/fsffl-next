@@ -1205,6 +1205,7 @@ def build_market_discovery(
     exact_target_constraint: str | None = None,
     intent: str = "",
     intent_value: str = "",
+    search_generation_diagnostics: dict[str, int] | None = None,
     evaluator: TradeEvaluator = evaluate_candidate_path,
 ) -> dict[str, object]:
     """Build governed Opportunity/Path output from raw Search rows."""
@@ -1279,14 +1280,28 @@ def build_market_discovery(
         "for_you": [item.model_dump(mode="json") for item in for_you],
         "diagnostics": {
             "hypotheses_generated": len(hypotheses),
-            "targets_considered": len(
-                {
-                    asset_ref
-                    for row in rows
-                    for asset_ref in _receive_refs(row)
-                }
+            "targets_considered": (
+                int(search_generation_diagnostics.get("targets_considered", 0))
+                if search_generation_diagnostics
+                else len(
+                    {
+                        asset_ref
+                        for row in rows
+                        for asset_ref in _receive_refs(row)
+                    }
+                )
             ),
             "raw_packages_generated": len(rows),
+            "raw_packages_generated_pre_dedup": (
+                int(search_generation_diagnostics.get("raw_packages_generated_pre_dedup", len(rows)))
+                if search_generation_diagnostics
+                else len(rows)
+            ),
+            "packages_removed_exact_duplicate": (
+                int(search_generation_diagnostics.get("packages_removed_exact_duplicate", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
             "packages_screened_economic": len(economically_screened_rows),
             "packages_economic_incomplete": sum(
                 1
