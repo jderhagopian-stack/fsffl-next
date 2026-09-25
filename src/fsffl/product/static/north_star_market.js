@@ -4,7 +4,7 @@
  */
 (function(){
   "use strict";
-  const VERSION="20260924-market-north-star1";
+  const VERSION="20260925-market-current-beta-corrective1";
   const SAVE_KEY="fsffl.market.savedOpportunities";
   const WATCH_KEY="fsffl.market.watchedPlayers";
   const TABS=[
@@ -258,14 +258,60 @@
     }
     return paths;
   }
+  function focusLifecycle(){
+    return window.fsfflMarketFocus?.status?.()||{
+      busy:false,dirty:false,needs_submit:false,error:"",configured:{...selectedIntent(),posture:selectedPosture()},
+      submitted:null,completed:null,missing_required_value:false
+    };
+  }
+  function focusCriteriaCopy(value){
+    if(!value)return"";
+    const mode=value.intent==="target"?"Target player":value.intent==="shop"?"Shop player":value.intent==="position"?"Target position":value.intent==="owner"?"Explore owner/team":"Improve team";
+    const posture=POSTURES.find(row=>row[0]===value.posture)?.[1]||words(value.posture||"Calculated");
+    return mode+(value.value?" · "+value.value:"")+" · "+posture;
+  }
+  function finderResultMarkup(payload,paths,lifecycle){
+    if(lifecycle.busy){
+      return loading("Finding opportunities","The submitted Search is running. No percentage progress is invented; prior results are hidden until this request completes.");
+    }
+    if(lifecycle.error){
+      return unavailable("Search did not complete",lifecycle.error);
+    }
+    if(lifecycle.needs_submit){
+      const copy=lifecycle.missing_required_value
+        ?"Choose the required player, position, or owner, then submit the search."
+        :"Your criteria changed. Prior results are stale and are hidden until you submit the new search.";
+      return unavailable("Ready to find opportunities",copy);
+    }
+    if(paths.length){
+      return paths.slice(0,80).map(path=>{
+        const r=representative(path),a=pathAuthority(path);
+        return"<article><button type='button' data-finder-open='"+esc(path.path_id)+"'><div><small>"+esc(r.target_position||"Trade path")+" · "+esc(r.counterparty_name||"Owner unavailable")+"</small><strong>"+esc(labels(r.receive).join(" + ")||"Target unavailable")+"</strong><span>"+esc(words(path.bilateral_plausibility))+" · "+esc(words(path.economic_screen))+"</span></div><span class='market-ns-status "+a.key+"'>"+esc(a.label)+"</span><b>"+esc((path.alternate_packages||[]).length+1)+" package variant"+(((path.alternate_packages||[]).length+1)===1?"":"s")+"</b></button></article>";
+      }).join("");
+    }
+    const outcome=payload?.trade_discovery?.focus_outcome||lifecycle.completed?.outcome||null;
+    if(outcome?.status==="zero"){
+      return unavailable("No candidate path survived this submitted search",outcome.message||"The requested neighborhood was explored but did not produce a surviving candidate path.");
+    }
+    return unavailable("No paths match this view","The submitted Search may have results outside the current advanced filters.");
+  }
   function renderTradeFinder(body,payload){
     if(market.pathKey)return renderCandidatePathDetail(body,payload);
     if(!payload||payload.status!=="ready"){body.innerHTML=loading("Loading Trade Finder","Server-owned Search is preparing the current candidate workspace.");return}
     if(!market.playerLoaded&&!market.playerLoading)void ensurePlayerUniverse();
-    const mode=finderMode(),f=market.finderFilters,paths=finderPaths(payload),calc=words(currentCalculatedState(payload)),diag=marketDiscovery(payload)?.diagnostics||{},screened=Number(diag.preliminary_decision_runs||0),families=Number(diag.path_families_created||candidatePaths(payload).length||0),searchOnly=payload?.delivery?.completeness==="search_only",screenCopy=searchOnly?"Preliminary screening is still running. Search-only matches remain explorable, not recommendations.":screened+" of "+families+" path families received the bounded preliminary Decision screen; unscreened paths remain explicitly marked.";
-    const primary="<div class='market-ns-finder-primary'><label><span>Strategic lens</span><select data-finder-posture>"+POSTURES.map(([key,label])=>"<option value='"+key+"'"+(selectedPosture()===key?" selected":"")+">"+label+"</option>").join("")+"</select></label>"+intentValueControl(mode)+"</div>";
+    const lifecycle=focusLifecycle(),mode=finderMode(),f=market.finderFilters,paths=finderPaths(payload),calc=words(currentCalculatedState(payload)),diag=marketDiscovery(payload)?.diagnostics||{},screened=Number(diag.preliminary_decision_runs||0),families=Number(diag.path_families_created||candidatePaths(payload).length||0),searchOnly=payload?.delivery?.completeness==="search_only",screenCopy=searchOnly?"Preliminary screening is still running. Search-only matches remain explorable, not recommendations.":screened+" of "+families+" path families received the bounded preliminary Decision screen; unscreened paths remain explicitly marked.";
+    const configured=focusCriteriaCopy(lifecycle.configured),completed=focusCriteriaCopy(lifecycle.completed),submitDisabled=lifecycle.busy||lifecycle.missing_required_value;
+    const lifecycleCopy=lifecycle.busy
+      ?"Running submitted criteria: "+focusCriteriaCopy(lifecycle.submitted)
+      :lifecycle.needs_submit
+        ?"Configured, not submitted: "+configured
+        :completed
+          ?"Completed criteria: "+completed
+          :"Current automatic workspace; change criteria and submit to run focused discovery.";
+    const primary="<div class='market-ns-finder-primary'><label><span>Strategic lens</span><select data-finder-posture>"+POSTURES.map(([key,label])=>"<option value='"+key+"'"+(selectedPosture()===key?" selected":"")+">"+label+"</option>").join("")+"</select></label>"+intentValueControl(mode)+"<div class='market-ns-submit-row'><button type='button' class='primary-button' data-finder-submit "+(submitDisabled?"disabled":"")+">"+(lifecycle.busy?"Finding opportunities…":"Find opportunities")+"</button><span aria-live='polite'>"+esc(lifecycleCopy)+"</span></div></div>";
     const advanced="<details class='market-ns-advanced'><summary>Advanced filters</summary><div class='market-ns-finder-controls'><label><span>Position</span><select data-finder-filter='position'><option value=''>All positions</option>"+["QB","RB","WR","TE"].map(v=>"<option value='"+v+"'"+(f.position===v?" selected":"")+">"+v+"</option>").join("")+"</select></label><label><span>Owner / team</span><select data-finder-filter='team'><option value=''>All owners</option>"+ownerOptions().map(([id,name])=>"<option value='"+esc(id)+"'"+(String(f.team)===String(id)?" selected":"")+">"+esc(name)+"</option>").join("")+"</select></label><label><span>Package shape</span><select data-finder-filter='deal'><option value=''>Any</option><option value='one'"+(f.deal==="one"?" selected":"")+">1-for-1</option><option value='multi'"+(f.deal==="multi"?" selected":"")+">Consolidation</option></select></label><label><span>Assets</span><select data-finder-filter='assets'><option value=''>Players / picks</option><option value='players'"+(f.assets==="players"?" selected":"")+">Players only</option><option value='picks'"+(f.assets==="picks"?" selected":"")+">Includes picks</option></select></label><label><span>Status</span><select data-finder-filter='status'><option value=''>Any status</option><option value='investigate'"+(f.status==="investigate"?" selected":"")+">Prelim plausible</option><option value='needs'"+(f.status==="needs"?" selected":"")+">Needs review</option><option value='match'"+(f.status==="match"?" selected":"")+">Market match / friction</option></select></label><label><span>Sort</span><select data-finder-filter='sort'><option value='search'"+(f.sort==="search"?" selected":"")+">Current Search order</option><option value='closest'"+(f.sort==="closest"?" selected":"")+">Closest market match</option><option value='need'"+(f.sort==="need"?" selected":"")+">Biggest roster need addressed</option><option value='authority'"+(f.sort==="authority"?" selected":"")+">Strongest preliminary evidence</option></select></label><button type='button' class='text-button market-ns-reset' data-finder-reset>Reset filters</button></div></details>";
-    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Trade Finder</p><h2>What are you trying to do?</h2><p>Intent first. Calculated competitive state remains "+esc(calc)+". Packages stay subordinate to Candidate Paths.</p><p class='market-ns-screen-coverage'>"+esc(screenCopy)+"</p></div><small>"+paths.length+" candidate path"+(paths.length===1?"":"s")+"</small></section><div class='market-ns-finder'><div class='market-ns-mode-grid'>"+[["improve","Improve my team"],["target","Target a player"],["shop","Shop a player"],["position","Target a position"],["owner","Explore an owner / team"]].map(([key,label])=>"<button type='button' data-finder-mode='"+key+"' class='"+(mode===key?"active":"")+"'>"+label+"</button>").join("")+"</div>"+primary+advanced+"</div><div class='market-ns-result-list'>"+(paths.length?paths.slice(0,80).map(path=>{const r=representative(path),a=pathAuthority(path);return"<article><button type='button' data-finder-open='"+esc(path.path_id)+"'><div><small>"+esc(r.target_position||"Trade path")+" · "+esc(r.counterparty_name||"Owner unavailable")+"</small><strong>"+esc(labels(r.receive).join(" + ")||"Target unavailable")+"</strong><span>"+esc(words(path.bilateral_plausibility))+" · "+esc(words(path.economic_screen))+"</span></div><span class='market-ns-status "+a.key+"'>"+esc(a.label)+"</span><b>"+esc((path.alternate_packages||[]).length+1)+" package variant"+(((path.alternate_packages||[]).length+1)===1?"":"s")+"</b></button></article>"}).join(""):unavailable("No paths match this view","Change the Search intent, strategic lens, or advanced filters."))+"</div>";
+    const visibleCount=(lifecycle.busy||lifecycle.needs_submit)?0:paths.length;
+    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>Trade Finder</p><h2>What are you trying to do?</h2><p>Configure first, then submit. Calculated competitive state remains "+esc(calc)+"; the strategic lens governs Search admission only where current evidence supports it.</p><p class='market-ns-screen-coverage'>"+esc(screenCopy)+"</p></div><small>"+visibleCount+" candidate path"+(visibleCount===1?"":"s")+"</small></section><div class='market-ns-finder'><div class='market-ns-mode-grid'>"+[["improve","Improve my team"],["target","Target a player"],["shop","Shop a player"],["position","Target a position"],["owner","Explore an owner / team"]].map(([key,label])=>"<button type='button' data-finder-mode='"+key+"' class='"+(mode===key?"active":"")+"'>"+label+"</button>").join("")+"</div>"+primary+advanced+"</div><div class='market-ns-result-list'>"+finderResultMarkup(payload,paths,lifecycle)+"</div>";
     wireFinder(body,payload,mode);
   }
   function wireFinder(body,payload,mode){
@@ -275,8 +321,9 @@
       if(next==="improve")window.fsfflMarketIntent?.clear?.();else window.fsfflMarketIntent?.set?.(next,"");
       renderBody(payload);
     }));
-    body.querySelector("[data-finder-intent-value]")?.addEventListener("change",event=>{if(mode!=="improve")window.fsfflMarketIntent?.set?.(mode,event.target.value||"")});
-    body.querySelector("[data-finder-posture]")?.addEventListener("change",event=>{window.fsfflOpportunityPosture?.setPosture?.(event.target.value);window.fsfflMarketFocus?.refresh?.()});
+    body.querySelector("[data-finder-intent-value]")?.addEventListener("change",event=>{if(mode!=="improve"){window.fsfflMarketIntent?.set?.(mode,event.target.value||"");renderBody(payload)}});
+    body.querySelector("[data-finder-posture]")?.addEventListener("change",event=>{window.fsfflOpportunityPosture?.setPosture?.(event.target.value);renderBody(payload)});
+    body.querySelector("[data-finder-submit]")?.addEventListener("click",()=>window.fsfflMarketFocus?.submit?.());
     body.querySelectorAll("[data-finder-filter]").forEach(select=>select.addEventListener("change",()=>{market.finderFilters[select.dataset.finderFilter]=select.value;renderBody(payload)}));
     body.querySelector("[data-finder-reset]")?.addEventListener("click",()=>{market.finderFilters={position:"",team:"",status:"",deal:"",assets:"",sort:"authority"};renderBody(payload)});
     body.querySelectorAll("[data-finder-open]").forEach(button=>button.addEventListener("click",()=>{const path=pathById(payload,button.dataset.finderOpen);market.pathKey=button.dataset.finderOpen;market.detailKey=path?.opportunity_id||"";renderCandidatePathDetail(body,payload)}));
@@ -441,10 +488,6 @@
     const pending=consumeMarketDeepLink();
     if(!pending&&market.tab==="player_board"&&payload?.status==="ready"){}else if(!pending&&!TABS.some(row=>row[0]===market.tab))market.tab="for_you";
     shell(payload);
-    const focus=payload?.trade_discovery?.focus||null,intent=selectedIntent();
-    if(market.tab==="trade_finder"&&intent.intent&&(!focus||focus.intent!==intent.intent||String(focus.value||"")!==String(intent.value||""))){
-      setTimeout(()=>window.fsfflMarketFocus?.refresh?.(),0);
-    }
   }
   function reset(){
     clearTimeout(market.playerRefreshTimer);market.playerRefreshTimer=null;market.playerRows=[];market.playerLoaded=false;market.playerLoading=false;market.playerError=null;market.playerReadiness=null;market.playerForecastSummary=null;market.detailKey="";market.pathKey="";market.waiverPlayer=null;market.waiverResult=null;market.waiverSeq+=1;
@@ -455,4 +498,5 @@
   window.fsfflMarketNorthStar={version:VERSION,bootReadOnly,openTab,openTradeFinder,openFreeAgent,openOwner,render:renderNorthStar};
   window.addEventListener("fsffl:product-context-updated",reset);
   window.addEventListener("fsffl:market-focus-applied",()=>{if(onMarket())shell(opp()?.payload||null)});
+  window.addEventListener("fsffl:market-focus-state-changed",()=>{if(onMarket()&&market.tab==="trade_finder")renderBody(opp()?.payload||null)});
 })();
