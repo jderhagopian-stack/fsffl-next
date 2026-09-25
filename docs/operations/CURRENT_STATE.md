@@ -10,21 +10,26 @@ FSFFL NEXT is in private beta. The canonical authority chain remains:
 The North Star directive remains authoritative for product intent and presentation.
 
 ## Production / lifecycle checkpoint
-Production reached the Performance management gate after PR #211. The newly selected Sleeper league is durably active; league switching and the visible Refresh Intelligence interaction are working, refresh is single-flight, and restart does not automatically launch heavy intelligence.
+Performance is actively closing a production regression on the existing FSFFL Dynasty league (`jimmygoodjob`).
 
-Full new-league 7/7 acceptance is **not complete**.
+After Market PR #220 / SHA `ff3e0fbe8ff0827d123e6d465b42116512e6d820`, physical-iPhone testing showed the league at 3/7 despite previously promoted 7/7 intelligence. The promoted bundle was still present; restart restoration was selecting a newer state-only checkpoint after a terminal failed enrichment.
 
-Forecast Research has now completed both the K/DST + late-connect architecture directive and the follow-on empirical/source-gate investigation.
+Repair chain:
+- PR #222 / merge `514b27e9ee55d6b1984bd72e004a8eb826b174d4`: last-good restoration + same-league preservation + truthful readiness + mobile Refresh Intelligence layout;
+- PR #226 / merge `50614b1deeeccfe61c7b4fe3acc46111f7ad23cc`: startup readiness observability; **currently live on Render**;
+- PR #227 / merge `ee221b29969c5fd83c75e7ea45903deca25c6410`: interrupted-refresh restoration regression, test-only.
 
-Durable research state:
-- `docs/operations/workstreams/RESEARCH.md`
-- architecture: `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
-- evidence-gate closeout: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`
-- detailed evidence ledger: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_LEDGER.md`
+Current production evidence on #226:
+- startup at 2026-09-25T13:52:35Z restored `sleeper:1312071960615731200`, state `203227df...`, Forecast/Simulation/Value all present, `complete=True`;
+- a later restart at 2026-09-25T14:39:09Z restored the same complete bundle again;
+- neither restart auto-launched heavy intelligence;
+- no startup errors were observed.
 
-Architecture research history: PR #213 / commit `91018b39967a0775ad830a6a750a2588e7f041d0`.
+The durable runtime-context row can still point at newer state-only evidence (`3014bb76...`) from the failed refresh. This is not a loss of last-good authority. The independently promoted `runtime_last_good_bundle` `203227df...` remains reusable and has current Forecast, Simulation, and Value artifacts.
 
-The production blocker itself is **not yet resolved**. Bounded Forecast implementation PR #215 is now merged to canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Stage 1 subject/scoring integrity and the non-promoting Stage 2 outcome/calibration harness are implemented and regression-clean. Production K/DST provider/calibration authority remains red at the empirical/source evidence gate.
+Performance remains **ACTIVE**, not at the obsolete PR #211 K/DST Management Gate. Remaining production acceptance is physical-iPhone confirmation of visible 7/7, populated Home/Franchise/Market for jimmygoodjob, responsive foreground behavior, and corrected single-line Refresh Intelligence rendering.
+
+The separate K/DST Forecast authority program remains governed by Research/Product Forecast and must not be weakened to close this existing-league Performance incident.
 
 ## Completed research determination
 The accepted architecture and empirical/source research remain authoritative, with a new Management exception layered on top for 2026 only.
