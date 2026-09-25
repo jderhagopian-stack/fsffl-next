@@ -737,7 +737,7 @@ def create_app(
             ):
                 raise IntelligenceJobInterrupted("league_switch")
 
-        def work(progress) -> None:
+        def work(progress) -> str | None:
             progress(IntelligenceJobPhase.BUILDING_FORECASTS, "Building governed multi-source projections.")
             evidence: LiveForecastEvidence = forecast_loader(initial_state)
             require_active_league_identity()
@@ -748,7 +748,8 @@ def create_app(
             store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
 
             progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Evaluating governed NEXT-4 simulation authority.")
-            if evidence.uncertainty_ready:
+            simulation_ready = evidence.uncertainty_ready
+            if simulation_ready:
                 simulation = simulation_loader(refreshed_state, evidence)
                 require_active_league_identity()
                 store.set_simulation_analytics(user_id, simulation)
@@ -764,8 +765,17 @@ def create_app(
             values = value_loader(refreshed_state)
             require_active_league_identity()
 
-            progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching simulation and Value results to the current canonical league state.")
+            progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching governed Forecast, Simulation when authorized, and Value results to the current canonical league state.")
             store.set_value_evidence(user_id, values)
+            if not simulation_ready:
+                blockers = ", ".join(evidence.runtime_result.simulation_authority_blockers) or "Forecast authority requirements"
+                return (
+                    "Governed Forecast and current Value evidence are ready. "
+                    "Simulation remains unavailable under current Forecast authority: "
+                    + blockers
+                    + "."
+                )
+            return None
 
         job = jobs.start(user_id=user_id, league_state_id=initial_state_id, work=work)
         return {**_job_payload(job), **_runtime_context_payload(store, user_id)}
