@@ -191,27 +191,42 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
     context = store.get_user_runtime_context(user_id=user_id)
     if context is None:
         return None
-    # Ordinary/selective state checkpoints remain restart-authoritative. Only an
-    # in-flight refresh is allowed to fall back to the independently promoted
-    # complete bundle; this preserves Stage 2 selective invalidation semantics.
+    # A partial refresh checkpoint must never displace the last complete runtime
+    # merely because the lifecycle has become terminal. Queued/running/failed/
+    # interrupted jobs all represent an enrichment attempt that did not promote a
+    # newer complete bundle. Fall back only when the preserved last-good artifact
+    # belongs to the same active league and season; never roll across league switches.
     lifecycle = store.get_latest_reusable_artifact(
         artifact_kind=JOB_LIFECYCLE_ARTIFACT_KIND,
         scope_kind=LAST_GOOD_SCOPE_KIND,
         scope_id=user_id,
         model_version=JOB_LIFECYCLE_MODEL_VERSION,
     )
-    refresh_was_in_flight = (
+    enrichment_not_promoted = (
         lifecycle is not None
-        and lifecycle.payload.get("status") in {"queued", "running"}
+        and lifecycle.payload.get("status") in {"queued", "running", "failed", "interrupted"}
     )
     last_good = None
-    if refresh_was_in_flight:
-        last_good = store.get_latest_reusable_artifact(
+    if enrichment_not_promoted:
+        candidate_last_good = store.get_latest_reusable_artifact(
             artifact_kind=LAST_GOOD_ARTIFACT_KIND,
             scope_kind=LAST_GOOD_SCOPE_KIND,
             scope_id=user_id,
             model_version=LAST_GOOD_MODEL_VERSION,
         )
+        if candidate_last_good is not None:
+            try:
+                candidate_state = LeagueState.model_validate(
+                    candidate_last_good.payload["league_state"]
+                )
+            except (KeyError, TypeError, ValueError):
+                candidate_state = None
+            if (
+                candidate_state is not None
+                and candidate_state.league.league_id == context.league_id
+                and candidate_state.league.season == context.season
+            ):
+                last_good = candidate_last_good
 
     if last_good is not None:
         try:
