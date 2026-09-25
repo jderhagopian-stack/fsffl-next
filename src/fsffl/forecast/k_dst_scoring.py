@@ -180,6 +180,11 @@ _K_RULE_REQUIREMENTS: dict[str, tuple[tuple[ForecastMetric, ...], ...]] = {
     "xpmiss": ((ForecastMetric.XP_MISS,),),
 }
 
+_K_DIFFERENCE_REQUIREMENTS: dict[str, tuple[ForecastMetric, ForecastMetric]] = {
+    "fgmiss": (ForecastMetric.FG_ATTEMPT, ForecastMetric.FG_MADE),
+    "xpmiss": (ForecastMetric.XP_ATTEMPT, ForecastMetric.XP_MADE),
+}
+
 _DST_LINEAR_RULES: dict[str, ForecastMetric] = {
     "sack": ForecastMetric.DST_SACK,
     "int": ForecastMetric.DST_INTERCEPTION,
@@ -295,11 +300,38 @@ def evaluate_rule_evidence_coverage(
                     )
                 )
                 continue
-            direct_eligible = [source for source in sources if set(alternatives[0]).issubset(source.metrics)]
+            direct_eligible = [
+                source
+                for source in sources
+                if set(alternatives[0]).issubset(source.metrics)
+            ]
+            derived_requirements = list(alternatives[1:])
+            difference = _K_DIFFERENCE_REQUIREMENTS.get(stat)
+            if difference is not None:
+                derived_requirements.append(difference)
+
+            # Hodor's 0-19 and 20-29 rules are exactly combinable only when both
+            # are active at the same coefficient. A provider-native 0-29 total
+            # then gives the exact combined scoring contribution without inventing
+            # a split between the two bands.
+            equal_0_29 = False
+            if stat in {"fgm_0_19", "fgm_20_29"}:
+                peer = "fgm_20_29" if stat == "fgm_0_19" else "fgm_0_19"
+                peer_rules = [
+                    item for item in rules.scoring
+                    if item.stat == peer and item.points != 0
+                ]
+                equal_0_29 = bool(
+                    peer_rules and all(item.points == rule.points for item in peer_rules)
+                )
+                if equal_0_29:
+                    derived_requirements.append((ForecastMetric.FG_MADE_0_29,))
+
             any_eligible = [
                 source
                 for source in sources
-                if any(set(option).issubset(source.metrics) for option in alternatives)
+                if set(alternatives[0]).issubset(source.metrics)
+                or any(set(option).issubset(source.metrics) for option in derived_requirements)
             ]
             direct_groups = {item.independence_group for item in direct_eligible}
             any_groups = {item.independence_group for item in any_eligible}
@@ -313,11 +345,18 @@ def evaluate_rule_evidence_coverage(
                 eligible = any_eligible
                 required = tuple(
                     sorted(
-                        {metric for option in alternatives for metric in option},
+                        {
+                            metric
+                            for option in (*alternatives, *derived_requirements)
+                            for metric in option
+                        },
                         key=lambda item: item.value,
                     )
                 )
-                explanation = "rule is covered by exact algebraic raw-metric alternatives"
+                explanation = (
+                    "rule is covered by an exact governed algebraic transform; "
+                    "no distance split or missing-event heuristic is introduced"
+                )
             else:
                 status = RuleEvidenceStatus.UNSUPPORTED
                 eligible = any_eligible
@@ -405,12 +444,43 @@ def _combined_distribution(
     return None
 
 
+def _difference_distribution(
+    by_metric: dict[ForecastMetric, ForecastObservation | TeamUnitForecastObservation],
+    minuend: ForecastMetric,
+    subtrahend: ForecastMetric,
+) -> ForecastDistribution | None:
+    left = by_metric.get(minuend)
+    right = by_metric.get(subtrahend)
+    if left is None or right is None:
+        return None
+    mean = left.distribution.mean - right.distribution.mean
+    if mean < -1e-9:
+        return None
+    return ForecastDistribution(
+        mean=max(mean, 0.0),
+        stddev=sqrt(left.distribution.stddev ** 2 + right.distribution.stddev ** 2),
+    )
+
+
+def _k_rule_distribution(
+    stat: str,
+    by_metric: dict[ForecastMetric, ForecastObservation],
+) -> ForecastDistribution | None:
+    direct = _combined_distribution(by_metric, _K_RULE_REQUIREMENTS[stat])
+    if direct is not None:
+        return direct
+    difference = _K_DIFFERENCE_REQUIREMENTS.get(stat)
+    if difference is None:
+        return None
+    return _difference_distribution(by_metric, difference[0], difference[1])
+
+
 def derive_kicker_fantasy_point_forecasts(
     observations: tuple[ForecastObservation, ...],
     *,
     rules: LeagueRules,
     source: str = "fsffl:kicker_league_scored",
-    model_version: str = "next2-kicker-scoring-v1",
+    model_version: str = "next2-kicker-scoring-v2:late-start-exact-transforms",
 ) -> tuple[ForecastObservation, ...]:
     """Score authoritative K raw-event observations under league rules."""
 
@@ -446,8 +516,25 @@ def derive_kicker_fantasy_point_forecasts(
         by_metric = {item.metric: item for item in items}
         scored: list[tuple[float, ForecastDistribution]] = []
         missing = False
+        consumed_equal_band_rules: set[str] = set()
+
+        low = next((item for item in active_rules if item.stat == "fgm_0_19"), None)
+        high = next((item for item in active_rules if item.stat == "fgm_20_29"), None)
+        if (
+            low is not None
+            and high is not None
+            and low.points == high.points
+            and ForecastMetric.FG_MADE_0_19 not in by_metric
+            and ForecastMetric.FG_MADE_20_29 not in by_metric
+            and ForecastMetric.FG_MADE_0_29 in by_metric
+        ):
+            scored.append((low.points, by_metric[ForecastMetric.FG_MADE_0_29].distribution))
+            consumed_equal_band_rules.update({"fgm_0_19", "fgm_20_29"})
+
         for rule in active_rules:
-            distribution = _combined_distribution(by_metric, _K_RULE_REQUIREMENTS[rule.stat])
+            if rule.stat in consumed_equal_band_rules:
+                continue
+            distribution = _k_rule_distribution(rule.stat, by_metric)
             if distribution is None:
                 missing = True
                 break

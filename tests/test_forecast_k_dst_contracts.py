@@ -385,3 +385,122 @@ def test_fixture_g_k_and_dst_can_be_scored_without_cross_family_double_counting(
     # Player special-teams rule st_td is not a D/ST coordinate and therefore
     # cannot duplicate the team-unit def_st_td credit.
     assert dst[0].distribution.mean != pytest.approx(24)
+
+
+def test_equal_scored_0_19_and_20_29_can_use_exact_combined_0_29_projection() -> None:
+    rules = _rules(
+        k=True,
+        scoring=(
+            ScoringRule(stat="fgm_0_19", points=3),
+            ScoringRule(stat="fgm_20_29", points=3),
+            ScoringRule(stat="xpm", points=1),
+        ),
+    )
+    observations = (
+        _k_obs(ForecastMetric.FG_MADE_0_29, 7),
+        _k_obs(ForecastMetric.XP_MADE, 20),
+    )
+
+    scored = derive_kicker_fantasy_point_forecasts(observations, rules=rules)
+
+    assert len(scored) == 1
+    assert scored[0].distribution.mean == pytest.approx(41.0)
+
+
+def test_combined_0_29_projection_fails_closed_when_band_coefficients_differ() -> None:
+    rules = _rules(
+        k=True,
+        scoring=(
+            ScoringRule(stat="fgm_0_19", points=2),
+            ScoringRule(stat="fgm_20_29", points=3),
+        ),
+    )
+    scored = derive_kicker_fantasy_point_forecasts(
+        (_k_obs(ForecastMetric.FG_MADE_0_29, 7),),
+        rules=rules,
+    )
+    assert scored == ()
+
+
+def test_kicker_generic_misses_are_exactly_derived_from_same_horizon_attempts_and_makes() -> None:
+    rules = _rules(
+        k=True,
+        scoring=(
+            ScoringRule(stat="fgm", points=3),
+            ScoringRule(stat="fgmiss", points=-1),
+            ScoringRule(stat="xpm", points=1),
+            ScoringRule(stat="xpmiss", points=-1),
+        ),
+    )
+    observations = (
+        _k_obs(ForecastMetric.FG_MADE, 20),
+        _k_obs(ForecastMetric.FG_ATTEMPT, 24),
+        _k_obs(ForecastMetric.XP_MADE, 30),
+        _k_obs(ForecastMetric.XP_ATTEMPT, 32),
+    )
+
+    scored = derive_kicker_fantasy_point_forecasts(observations, rules=rules)
+
+    assert len(scored) == 1
+    assert scored[0].distribution.mean == pytest.approx(84.0)
+
+
+def test_one_source_rare_dst_event_cannot_satisfy_two_source_rule_coverage() -> None:
+    rules = _rules(
+        dst=True,
+        scoring=(
+            ScoringRule(stat="blk_kick", points=2),
+            ScoringRule(stat="def_2pt", points=2),
+        ),
+    )
+    coverage = evaluate_rule_evidence_coverage(
+        rules,
+        subject_family=ForecastSubjectFamily.DST,
+        sources=(
+            SourceRuleEvidence(
+                source_id="one",
+                independence_group="one",
+                metrics=frozenset(
+                    {
+                        ForecastMetric.DST_BLOCKED_KICK,
+                        ForecastMetric.DST_DEFENSIVE_TWO_POINT_RETURN,
+                    }
+                ),
+            ),
+        ),
+    )
+    assert {item.status for item in coverage} == {RuleEvidenceStatus.UNSUPPORTED}
+
+
+def test_kicker_coverage_accepts_difference_metrics_but_not_50_plus_for_60_plus() -> None:
+    rules = _rules(
+        k=True,
+        scoring=(
+            ScoringRule(stat="fgmiss", points=-1),
+            ScoringRule(stat="fgm_60p", points=6),
+        ),
+    )
+    sources = tuple(
+        SourceRuleEvidence(
+            source_id=source_id,
+            independence_group=source_id,
+            metrics=frozenset(
+                {
+                    ForecastMetric.FG_ATTEMPT,
+                    ForecastMetric.FG_MADE,
+                    ForecastMetric.FG_MADE_50_PLUS,
+                }
+            ),
+        )
+        for source_id in ("a", "b")
+    )
+    coverage = {
+        item.rule_stat: item
+        for item in evaluate_rule_evidence_coverage(
+            rules,
+            subject_family=ForecastSubjectFamily.KICKER,
+            sources=sources,
+        )
+    }
+    assert coverage["fgmiss"].status == RuleEvidenceStatus.EXACT_DERIVED
+    assert coverage["fgm_60p"].status == RuleEvidenceStatus.UNSUPPORTED
