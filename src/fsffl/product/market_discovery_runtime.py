@@ -1509,23 +1509,32 @@ def build_market_discovery(
     )
     effective_forecasts = None
     baseline_by_team = None
-    if selected_indices and evaluator is evaluate_candidate_path and runtime.forecast_evidence is not None:
-        forecasts = (
-            runtime.forecast_evidence.raw_forecasts
-            + runtime.forecast_evidence.league_scored_forecasts
-        )
-        effective_forecasts = attach_provisional_position_floor_forecasts(
-            runtime.league_state,
-            forecasts,
-            as_of=runtime.league_state.as_of,
-            horizon=ForecastHorizon.SEASON,
-        )
-        simulation = runtime.simulation_analytics
-        baseline_by_team = {
-            view.team_id: view.optimized_lineup
-            for view in (simulation.team_views if simulation is not None else ())
-            if view.optimized_lineup is not None
-        }
+    preliminary_shared_error: ValueError | None = None
+    if (
+        selected_indices
+        and evaluator is evaluate_candidate_path
+        and runtime.league_state is not None
+        and runtime.forecast_evidence is not None
+    ):
+        try:
+            forecasts = (
+                runtime.forecast_evidence.raw_forecasts
+                + runtime.forecast_evidence.league_scored_forecasts
+            )
+            effective_forecasts = attach_provisional_position_floor_forecasts(
+                runtime.league_state,
+                forecasts,
+                as_of=runtime.league_state.as_of,
+                horizon=ForecastHorizon.SEASON,
+            )
+            simulation = runtime.simulation_analytics
+            baseline_by_team = {
+                view.team_id: view.optimized_lineup
+                for view in (simulation.team_views if simulation is not None else ())
+                if view.optimized_lineup is not None
+            }
+        except ValueError as exc:
+            preliminary_shared_error = exc
     paths: list[CandidatePath] = []
     decision_errors = 0
     for index, seed in enumerate(seeds):
@@ -1533,6 +1542,8 @@ def build_market_discovery(
         if index in selected_indices:
             try:
                 if evaluator is evaluate_candidate_path:
+                    if preliminary_shared_error is not None:
+                        raise ValueError(str(preliminary_shared_error))
                     row = evaluate_candidate_path(
                         runtime,
                         row,
