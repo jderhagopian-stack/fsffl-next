@@ -9,6 +9,20 @@ FSFFL NEXT is in private beta. The canonical authority chain remains:
 
 The North Star directive remains authoritative for product intent and presentation.
 
+
+## Superseding management reconciliation — 2026-09-25
+
+This section supersedes older same-file wording that still frames the next gates as jimmygoodjob-only restoration, pre-PR-#237 K/DST authority, or a pending first post-PR-#232 Market physical pass.
+
+- **Performance:** ACTIVE on the app-wide lifecycle contract, Hodor / `jder52` completion diagnosis, and Market foreground latency. The earlier jimmygoodjob last-good/restart repair remains accepted evidence and must not regress.
+- **Hodor:** physical testing showed a never-completed league at 2/7, `Intelligence refresh needs attention`, `Not Classified`, and an empty roster view. Performance must trace persisted State → Forecast → Value → Simulation → readiness/promotion and must keep valid roster State usable while derived intelligence is incomplete.
+- **Forecast K/DST:** PR #237 is merged at `33b969b04180893f7e582c0ebd76c54bea81961d`, creating the authorized 2026 provisional partial-rule tier with explicit downstream gating. PR #238 is authorized exact-league-state safety hardening within that same directive; its green head `81e0ee4f60958d4920fb2c9e888d04367e104bed` must reconcile with current main before merge. Full K/DST authority remains externally gated.
+- **Market:** the authenticated current-beta physical pass after PR #232/#235 failed. The bounded corrective is active for competitive-lens upstream discovery, explicit **Find opportunities** submission/running/completion lifecycle, focused zero-result exhaustion truth, separate Forecast vs FSFFL Intrinsic availability tracing, and remaining safe-area correctness. Accepted discovery architecture remains frozen.
+- **Performance latency:** the same pass measured automatic discovery at ~44.1s internally/~44.9s hosted cold and focused Target Player requests at ~31.8s, ~41.4s and ~47.8s; warm full workspace was ~0.137s. Cold/focused foreground responsiveness therefore remains failed.
+- **Scoring Coverage Stage 0/1:** remains at Management gate; do not start it while the active lifecycle and Market acceptance failures remain unresolved unless Management explicitly reprioritizes.
+- **Home × Franchise:** remains deferred until Market acceptance or explicit reprioritization.
+
+
 ## Production / lifecycle checkpoint
 Performance is actively closing a production regression on the existing FSFFL Dynasty league (`jimmygoodjob`).
 
