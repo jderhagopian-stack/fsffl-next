@@ -2,7 +2,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from fsffl.providers.cbs_live import CBSLiveProjectionSource
+from fsffl.providers.cbs_live import CBSLiveProjectionSource, _row_from_cells
+from fsffl.state.models import Position
 
 
 def test_cbs_live_parses_current_position_pages() -> None:
@@ -81,3 +82,14 @@ def test_cbs_live_rejects_rest_of_season_content_as_full_season() -> None:
     )
     with pytest.raises(ValueError, match="not a full-season projection page"):
         source.fetch_latest(season=2026)
+
+
+def test_cbs_missing_fl_column_does_not_fabricate_zero_fumble_loss() -> None:
+    row = _row_from_cells(
+        provider="cbs",
+        position=Position.WR,
+        headers=["PLAYER", "GP", "TGT", "REC", "YDS", "YDS/G", "AVG", "TD", "ATT", "YDS", "AVG", "TD", "FPTS"],
+        cells=["Drake London WR ATL", "17", "153", "94", "1257", "73.9", "13.4", "12", "0", "0", "0", "0", "187"],
+    )
+    assert row is not None
+    assert "fum_lost" not in row.stats
