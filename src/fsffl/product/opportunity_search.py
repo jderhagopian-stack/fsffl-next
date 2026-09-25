@@ -14,6 +14,7 @@ from .trade_center_view import TradeAssetOption, TradeCenterBrowserView
 
 _SKILL_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
 _MAX_DISCOVERY_PACKAGE_SIZE = 3
+_PACKAGE_NEIGHBORHOOD_PER_SIZE = 3
 
 PackageCatalog = dict[int, tuple[tuple[float, tuple[str, ...], tuple[TradeAssetOption, ...]], ...]]
 
@@ -201,18 +202,34 @@ def _build_package_catalog(
     return catalog
 
 
-def _nearest_package(catalog: PackageCatalog, *, size: int, target_value: float) -> tuple[TradeAssetOption, ...] | None:
+def _nearest_packages(
+    catalog: PackageCatalog,
+    *,
+    size: int,
+    target_value: float,
+    limit: int = _PACKAGE_NEIGHBORHOOD_PER_SIZE,
+) -> tuple[tuple[TradeAssetOption, ...], ...]:
+    """Return a bounded Cardinal neighborhood without creating a package score.
+
+    Search deliberately keeps several nearby structures so the single closest
+    additive package cannot monopolize the path before Decision-owned economics
+    and bilateral screening run. The neighborhood size is product compute policy,
+    not Value or Decision authority.
+    """
+
     entries = catalog.get(size) or ()
-    if not entries:
-        return None
+    if not entries or limit <= 0:
+        return ()
     totals = [item[0] for item in entries]
     insertion = bisect_left(totals, target_value)
-    candidate_indices = {max(0, insertion - 1), min(len(entries) - 1, insertion)}
-    _, _, assets = min(
-        (entries[index] for index in candidate_indices),
+    radius = max(limit * 2, 4)
+    start = max(0, insertion - radius)
+    end = min(len(entries), insertion + radius + 1)
+    ordered = sorted(
+        entries[start:end],
         key=lambda item: (abs(item[0] - target_value), item[1]),
     )
-    return assets
+    return tuple(item[2] for item in ordered[:limit])
 
 
 def _nearest_packages_for_target(
@@ -238,26 +255,31 @@ def _nearest_packages_for_target(
         return ()
     rows: list[dict[str, object]] = []
     for size in sorted(package_catalog):
-        package = _nearest_package(package_catalog, size=size, target_value=float(target_value))
-        if package is None:
-            continue
-        row = _candidate(
-            league_state=league_state,
-            focal_team_id=focal_team_id,
-            counterparty_team_id=counterparty_team_id,
-            counterparty_name=counterparty_name,
-            send_assets=package,
-            receive_asset=target,
-            cardinal=cardinal,
-            strengths=strengths,
+        packages = _nearest_packages(
+            package_catalog,
+            size=size,
+            target_value=float(target_value),
         )
-        if row is not None:
-            row["search_context"] = [
-                *(row.get("search_context") or []),
-                f"Search retained the nearest governed {size}-asset market structure for this target. "
-                "Package size is exploratory; Decision owns whether the structure is actually good.",
-            ]
-            rows.append(row)
+        for variant_rank, package in enumerate(packages, start=1):
+            row = _candidate(
+                league_state=league_state,
+                focal_team_id=focal_team_id,
+                counterparty_team_id=counterparty_team_id,
+                counterparty_name=counterparty_name,
+                send_assets=package,
+                receive_asset=target,
+                cardinal=cardinal,
+                strengths=strengths,
+            )
+            if row is not None:
+                row["package_variant_rank"] = variant_rank
+                row["search_context"] = [
+                    *(row.get("search_context") or []),
+                    f"Search retained bounded governed {size}-asset market-neighborhood variant "
+                    f"#{variant_rank} for this target. Package size and neighborhood rank are "
+                    "exploratory product policy; Decision owns whether the structure is actually good.",
+                ]
+                rows.append(row)
     return tuple(rows)
 
 
