@@ -311,6 +311,62 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
     assert restored.selected_team_id == "t2"
 
 
+
+def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
+    persistence = MemoryPersistence()
+    last_good = _league_state()
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=last_good,
+        selected_team_id="t2",
+    )
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+                scope_kind=LAST_GOOD_SCOPE_KIND,
+                scope_id="jimmy",
+                input_fingerprint=last_good.state_id,
+                model_version=LAST_GOOD_MODEL_VERSION,
+            ),
+            payload={
+                "league_state": last_good.model_dump(mode="json"),
+                "selected_team_id": "t2",
+            },
+            computed_at=datetime.now(UTC),
+        )
+    )
+    interrupted_state = last_good.model_copy(
+        update={"as_of": datetime(2026, 9, 8, 12, 15, tzinfo=UTC)}
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=interrupted_state,
+        selected_team_id="t1",
+    )
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind="intelligence_job_lifecycle",
+                scope_kind="user",
+                scope_id="jimmy",
+                input_fingerprint="job-interrupted",
+                model_version="intelligence-job-lifecycle-v1",
+            ),
+            payload={"status": "interrupted"},
+            computed_at=datetime.now(UTC),
+        )
+    )
+
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy")
+
+    assert restored is not None
+    assert restored.league_state.state_id == last_good.state_id
+    assert restored.selected_team_id == "t2"
+
+
 def test_failed_refresh_never_restores_last_good_from_different_league() -> None:
     persistence = MemoryPersistence()
     old = _league_state()
