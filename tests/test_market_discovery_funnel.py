@@ -306,3 +306,41 @@ def test_representative_path_order_prefers_governed_categories_before_market_dis
         path_id="friction",
     )
     assert _candidate_path_order(supported) < _candidate_path_order(closer_but_friction)
+
+
+def test_market_preliminary_screen_is_lightweight_decision_not_full_trade_analysis() -> None:
+    source = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
+    evaluator = source.split("def evaluate_candidate_path(", 1)[1].split("def _side(", 1)[0]
+
+    assert "assess_preliminary_bilateral_screen" in evaluator
+    assert "resolve_mandatory_roster_cuts" in evaluator
+    assert "compare_position_strengths" in evaluator
+    assert "optimize_team_lineup" in evaluator
+    assert "build_private_beta_trade_analysis" not in evaluator
+    assert "build_post_trade_simulation_comparison" not in evaluator
+    assert "run_live_simulation_analytics" not in evaluator
+    assert '"post_trade_simulation_attached": False' in evaluator
+
+
+def test_market_funnel_exposes_early_admission_rejections_timings_and_zero_simulation() -> None:
+    source = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
+    search = (ROOT / "src/fsffl/product/opportunity_search.py").read_text()
+
+    for token in (
+        '"counterparties_considered"',
+        '"counterparties_admitted_pre_package"',
+        '"targets_admitted_pre_package"',
+        '"send_assets_admitted_for_counterparty_need"',
+        '"admission_rejection_reasons"',
+        '"search_cache_hit"',
+        '"timing_ms"',
+        '"cheap_economic_screen"',
+        '"preliminary_decision_screen"',
+        '"changed_state_simulation_calls_during_discovery": 0',
+    ):
+        assert token in source
+    assert "actionable_need_positions" in search
+    assert "supply_positions" in search
+    assert "build_scoped_trade_candidates" in search
+    assert "Cardinal Value only bounded package cost" in search
+    assert "FSFFL Market discovery funnel" in source
