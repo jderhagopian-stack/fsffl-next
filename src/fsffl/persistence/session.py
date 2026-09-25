@@ -51,6 +51,7 @@ class DurableRuntimeSnapshot:
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
+    restored_from_last_good: bool = False
 
 
 def _provider_external_id(league_state: LeagueState) -> tuple[str, str]:
@@ -305,4 +306,5 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         forecast_evidence=forecast,
         simulation_analytics=simulation,
         value_evidence=values,
+        restored_from_last_good=(last_good is not None and last_good_state is not None),
     )
