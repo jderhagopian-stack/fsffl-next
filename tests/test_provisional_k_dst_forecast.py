@@ -234,6 +234,8 @@ def test_research_only_or_non_independent_evidence_cannot_activate_private_beta_
     )
     research_forecast = build_provisional_k_dst_forecast(
         research,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="K:tylerbass:BUF",
         rules=_k_rules(ScoringRule(stat="xpm", points=1)),
     )
@@ -258,6 +260,8 @@ def test_research_only_or_non_independent_evidence_cannot_activate_private_beta_
     )
     shared_forecast = build_provisional_k_dst_forecast(
         shared,
+        league_id="league-1",
+        league_state_id="state-1",
         subject_key="K:tylerbass:BUF",
         rules=_k_rules(ScoringRule(stat="xpm", points=1)),
     )
@@ -497,6 +501,8 @@ def test_full_authority_supersedes_provisional_when_existing_full_gates_clear() 
     with pytest.raises(ValueError, match="full K/DST Forecast authority is available"):
         build_provisional_k_dst_forecast(
             artifact,
+            league_id="league-1",
+            league_state_id="state-1",
             subject_key="K:tylerbass:BUF",
             rules=rules,
             promoted_uncertainty_fingerprint_ids=frozenset(
