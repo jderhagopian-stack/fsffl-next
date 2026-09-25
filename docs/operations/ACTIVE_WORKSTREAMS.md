@@ -22,7 +22,7 @@ Current Render deployment `dep-dar9kg142hec73dglcq0` is live on exact PR #235 me
 
 The pre-#235 physical-device baseline was 36.705s for cold quick Market and 48.396s for initial full Market, versus 0.172s once the exact workspace cache was warm. PR #235 passed broad CI plus PR164 and Live Forecast traces, including the full PR #232 discovery-contract regression suite. No authenticated Market request has yet hit the fresh #235 process, so post-optimization cold production timing remains unmeasured.
 
-Remaining Performance gate is one physical-iPhone/Safari acceptance pass confirming visible restored 7/7, populated Home/Franchise/Market, the normal single-line actionable Refresh Intelligence control, and acceptable cold Market foreground latency on #235. Do not require a manual intelligence refresh.
+The earlier jimmygoodjob physical-pass framing is no longer the sole Performance gate. Current completion requires the Hodor/app-wide lifecycle directive below to reach a permitted terminal state, while preserving the accepted existing-league restoration evidence and improving cold/focused Market foreground latency. Do not require repeated manual intelligence refreshes merely to generate evidence.
 
 ## Forecast Research — League-Agnostic Scoring Coverage
 **State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
