@@ -118,6 +118,18 @@ def install_focused_opportunity_routes(
             exact_target_constraint=(value if intent == "target" and value else None),
             intent=intent,
             intent_value=value,
+            search_generation_diagnostics={
+                "targets_considered": len(
+                    {
+                        str(item.get("asset_ref") or "")
+                        for row in returned
+                        for item in (row.get("receive") or [])
+                        if isinstance(item, dict) and item.get("asset_ref")
+                    }
+                ),
+                "raw_packages_generated_pre_dedup": len(returned),
+                "packages_removed_exact_duplicate": 0,
+            },
             evaluator=focused_evaluator,
         )
         enriched = {
