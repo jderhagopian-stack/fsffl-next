@@ -152,3 +152,11 @@ A league-specific scoring rule does not create a separate underlying player-proj
 For material missing coordinates whose absence would make the resulting fantasy-point total misleading, the affected subject/consumer may remain blocked. For bounded rare or special-event coordinates where no credible projection exists (for example a 60+ field-goal increment or certain rare special-teams events), the system may expose a partial/provisional scored Forecast that omits the unsupported contribution, provided the omission, coverage status, and downstream authority limits are machine-readable and visible. Missing evidence must never be silently treated as zero, but it also must not erase valid projections for coordinates that can be forecasted.
 
 This rule applies beyond Hodor/K-DST and should be implemented through the canonical FULL/PARTIAL/UNSUPPORTED capability model rather than league-specific exceptions.
+
+
+## 2026-09-25 — Study single-source authority for bounded auxiliary coordinates
+Decision: authorize a bounded Research study of whether one governed source can support selected empirically low-materiality auxiliary Forecast coordinates. No production authority changes yet.
+
+Research must classify coordinates by measured scoring/outcome materiality and source quality, not by rarity or convenience. It must evaluate at minimum FUMBLES_LOST, the 60+ FG incremental contribution, low-frequency K/special-teams events, and appropriate material controls; quantify player/rank/lineup/team/50,000-run Simulation sensitivity where feasible; compare omission vs one-source vs multi-source vs realized outcomes; and propose a league-agnostic quantitative authority contract for a later Management decision.
+
+Existing two-source, rights, semantic, uncertainty, exact-state and no-silent-zero rules remain authoritative during the study.
