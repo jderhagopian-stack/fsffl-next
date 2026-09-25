@@ -1,7 +1,7 @@
 from pathlib import Path
 
 INDEX = Path("src/fsffl/product/static/index.html")
-RELEASE = "20260924-readiness-control7"
+RELEASE = "20260925-market-discovery1"
 
 
 def test_focus_and_drilldown_share_current_release_token() -> None:
