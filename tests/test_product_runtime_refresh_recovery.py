@@ -176,3 +176,29 @@ def test_cross_league_switch_invalidates_old_refresh_generation() -> None:
             refreshed_league_state=refreshed_old_state,
         )
     assert store.get("u").league_state == new_state
+
+
+def test_same_league_provider_revalidation_cannot_demote_complete_bundle() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    last_good_state = _state(t0)
+    newer_provider_state = _state(t0 + timedelta(minutes=5))
+    old_forecast = _evidence()
+    old_simulation = _simulation_for(last_good_state)
+    old_value = _value_for(last_good_state)
+    store.set_league_state("u", last_good_state)
+    store.set_intelligence_bundle(
+        "u",
+        league_state=last_good_state,
+        forecast_evidence=old_forecast,
+        simulation_analytics=old_simulation,  # type: ignore[arg-type]
+        value_evidence=old_value,  # type: ignore[arg-type]
+    )
+
+    retained = store.set_league_state("u", newer_provider_state)
+
+    assert retained.league_state == last_good_state
+    assert retained.forecast_evidence is old_forecast
+    assert retained.simulation_analytics is old_simulation
+    assert retained.value_evidence is old_value
+    assert retained.intelligence_reused is True
