@@ -148,6 +148,8 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
     assert "homeReadiness" not in HOME
     assert "FSFFL_SHARED_READINESS_STEPS=7" in SHELL
     assert "fsffl-shared-readiness-strip" in SHELL
+    assert "Core intelligence current" not in SHELL
+    assert "fsffl-capability-chip" in SHELL
     for label in (
         "Preparing current intelligence…",
         "Building projections…",
@@ -155,7 +157,8 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
         "Running season outlook…",
         "Building market values…",
         "Attaching current intelligence…",
-        "Core intelligence current",
+        "Build lifecycle complete",
+        "Current core runtime fully available",
     ):
         assert label in SHELL
     assert "min-height:32px" in SHELL
