@@ -1,31 +1,99 @@
 # Workstream — Performance
 
 ## State
-**MANAGEMENT GATE**
+**ACTIVE — PRODUCTION ACCEPTANCE / LAST-GOOD RESTORATION**
 
-## Last accepted checkpoint
-Production PR #211 / SHA `2fd62e9786843a35c0aa335362cf7e6fa061fe98`.
+The prior PR #211 K/DST-only Management Gate is obsolete for this active directive. Performance is currently executing the production repair caused by the FSFFL Dynasty league regressing from valid 7/7 intelligence to visible 3/7 after the Market deployment.
 
-Observed/worker-reported checkpoint:
-- new Sleeper league switch is durably active;
-- refresh control is physically actionable and visibly changes to Refreshing;
-- refresh is single-flight;
-- restart does not automatically launch heavy intelligence;
-- CI was green for PR #211.
+## Incident
+Physical-iPhone acceptance after Market PR #220 / production SHA `ff3e0fbe8ff0827d123e6d465b42116512e6d820` showed the existing FSFFL Dynasty league (`jimmygoodjob`, Sleeper league `1312071960615731200`) at 3/7 with governed Simulation / position-strength evidence unavailable even though a valid promoted complete bundle already existed.
 
-## Current blocker
-The newly connected league cannot complete governed intelligence because production Forecast authority for its K/DST scoring configuration is not implemented/promoted.
+The newest provider/state checkpoint and a failed enrichment were being treated as restart authority. `restore_runtime_snapshot()` used `runtime_last_good_bundle` only for queued/running jobs, not terminal failed/interrupted refreshes. This allowed a failed newer state refresh to displace a previously promoted complete bundle on restoration. Readiness Presentation also allowed a terminal failed job to override a complete restored context.
 
-Forecast Research has completed the architecture and late-connect bootstrap contract. See:
-- `RESEARCH.md`
-- `../../../artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+The mobile Refresh Intelligence control separately rendered abnormally narrow because its readiness grid defined three columns while rendering four elements.
 
-Research completion does not remove the runtime blocker.
+## Repair sequence
+### PR #222 — merged
+Title: **Hotfix: preserve promoted 7/7 intelligence across failed refreshes**
+
+Merge SHA: `514b27e9ee55d6b1984bd72e004a8eb826b174d4`
+
+Repair:
+- same-league provider revalidation cannot demote an already complete Forecast/Simulation/Value runtime merely because a fresher State exists;
+- fresher State history is retained while the promoted bundle remains serving authority;
+- failed/interrupted enrichment may restore the same-league promoted last-good bundle;
+- cross-league last-good restoration remains forbidden;
+- terminal failed/interrupted lifecycle status no longer makes a genuinely complete restored context render below 7/7;
+- Refresh Intelligence now owns an explicit fourth readiness-grid column and uses no-wrap/min-content sizing on mobile;
+- static assets cache-busted to `20260925-lastgood-repair1`.
+
+All six applicable PR validation workflows were green on head `a56d1991145717a39296f7d83a6f82426b7bac5d`.
+
+### PR #226 — merged and currently live
+Title: **Performance: log restored runtime readiness after startup**
+
+Merge SHA / current Render production SHA:
+`50614b1deeeccfe61c7b4fe3acc46111f7ad23cc`
+
+Render deployment:
+`dep-dar7oi0473hc73a5hs4g` — **LIVE**
+
+Adds explicit startup evidence for restored league/state and Forecast/Simulation/Value completeness.
+
+Production evidence:
+- 2026-09-25 13:52:35Z startup:
+  `league=sleeper:1312071960615731200 state=203227df... forecast=True simulation=True value=True complete=True`
+- 2026-09-25 14:39:09Z subsequent restart:
+  same league/state and `forecast=True simulation=True value=True complete=True`;
+- no automatic `POST /api/intelligence/jobs` after those restarts;
+- no startup errors observed.
+
+This is direct production evidence that the promoted last-good bundle survives restart after the terminal failed refresh.
+
+### PR #227 — merged, test-only
+Title: **Test: lock interrupted-refresh last-good restoration**
+
+Merge SHA:
+`ee221b29969c5fd83c75e7ea45903deca25c6410`
+
+PR #227 adds the missing interrupted-refresh restoration regression. Its workflows were green. It contains no production runtime code and therefore does not require a distinct production deploy to make the #222 behavior active.
+
+## Persisted production truth
+Latest durable user context still records the fresher failed-refresh State `3014bb7625...`, which is expected state-history/runtime-context evidence and is not the serving complete-bundle identity.
+
+Latest promoted `runtime_last_good_bundle` is:
+`203227df88b78cdd1c0a0861bc16cae0157abd91b52a3ef9ee1278f129a462ed`
+
+That state has current reusable:
+- `current_forecast_evidence`;
+- `live_simulation_analytics`;
+- `current_market_value`.
+
+The latest lifecycle row remains terminal failed for a newer enrichment attempt. Production startup nevertheless restores the promoted complete bundle, as intended.
+
+## Mobile Refresh Intelligence state
+Live `product_shell.js` on production SHA #226 uses:
+- cache generation `20260925-lastgood-repair1`;
+- four explicit readiness columns: mark / step / copy / action;
+- `white-space: nowrap`;
+- `min-width: max-content`;
+- mobile-specific compact padding/font sizing.
+
+Code/CI validation is complete. Physical-iPhone confirmation of the corrected width remains required before Presentation acceptance is claimed.
+
+## Remaining acceptance work
+Continue without asking Management to repeatedly refresh.
+
+Remaining gates:
+1. authenticated physical-iPhone request after the live #226 build must show the existing FSFFL Dynasty league as truthful 7/7 from restored last-good;
+2. Home, Franchise, and Market must remain populated from the correct league after restore;
+3. mobile Refresh Intelligence must render as a normal single-line actionable control;
+4. foreground surfaces must remain responsive;
+5. no stale-job or cross-league contamination may appear.
+
+Restart/failure preservation itself is now production-validated by the two #226 startup records above.
 
 ## Boundary
-Do not change Forecast rules, evidence requirements, scoring authority, or fabricate projections to make lifecycle acceptance pass.
+Do not weaken Forecast/Simulation/Value authority, fabricate missing evidence, change canonical 50,000 Simulation fidelity, or force a fresh refresh merely to make readiness green.
 
-Do not treat Research completion as authority for Performance to implement Forecast changes.
-
-## Resume condition
-Resume lifecycle acceptance only after Management-authorized Forecast implementation and required evidence promotion remove the upstream blocker. Then complete every gate in `../ACCEPTANCE_GATES.md`, including 7/7, atomic promotion, correct-league populated surfaces, restart survival, stale-job reconciliation, and foreground latency.
+The separate K/DST Forecast authority work remains a Forecast/Product concern. It is not the current Performance stop state for this existing-league restoration directive.
