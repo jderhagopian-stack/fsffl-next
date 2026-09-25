@@ -19,6 +19,19 @@ _PACKAGE_NEIGHBORHOOD_PER_SIZE = 3
 PackageCatalog = dict[int, tuple[tuple[float, tuple[str, ...], tuple[TradeAssetOption, ...]], ...]]
 
 
+class SearchCandidateCollection(list[dict[str, object]]):
+    """List-compatible Search output with non-authoritative generation diagnostics."""
+
+    def __init__(
+        self,
+        rows: list[dict[str, object]],
+        *,
+        diagnostics: dict[str, int],
+    ) -> None:
+        super().__init__(rows)
+        self.diagnostics = diagnostics
+
+
 def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Position | None:
     if option.asset_kind != "player" or option.player_id is None:
         return None
@@ -398,9 +411,13 @@ def build_roster_aware_trade_candidates(
     package_catalog = _build_package_catalog(browser.focal_team.assets, cardinal)
     candidates: list[dict[str, object]] = []
     seen: set[tuple[str, tuple[str, ...], str]] = set()
+    raw_packages_generated = 0
+    exact_duplicates_removed = 0
+    targets_considered = 0
     for counterparty in browser.counterparties:
         player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == "player")
         for target in player_targets:
+            targets_considered += 1
             for row in _nearest_packages_for_target(
                 league_state=league_state,
                 focal_team_id=focal_team_id,
@@ -411,6 +428,7 @@ def build_roster_aware_trade_candidates(
                 cardinal=cardinal,
                 strengths=strengths,
             ):
+                raw_packages_generated += 1
                 key = (
                     counterparty.team_id,
                     tuple(sorted(str(item["asset_ref"]) for item in row["send"])),
@@ -419,4 +437,15 @@ def build_roster_aware_trade_candidates(
                 if key not in seen:
                     seen.add(key)
                     candidates.append(row)
-    return _family_first_search_order(candidates)
+                else:
+                    exact_duplicates_removed += 1
+    ordered = _family_first_search_order(candidates)
+    return SearchCandidateCollection(
+        ordered,
+        diagnostics={
+            "targets_considered": targets_considered,
+            "raw_packages_generated_pre_dedup": raw_packages_generated,
+            "packages_removed_exact_duplicate": exact_duplicates_removed,
+            "candidate_rows_after_exact_dedup": len(ordered),
+        },
+    )
