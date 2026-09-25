@@ -10,6 +10,7 @@ from fsffl.forecast.late_start_snapshot import (
     RowHealthDisposition,
     capture_late_start_current_projection_snapshot,
     evaluate_ros_snapshot_row_health,
+    source_rule_evidence_for_subject,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric
 from fsffl.persistence.late_start_projection_snapshot import (
@@ -192,6 +193,8 @@ def test_partial_evidence_is_persisted_without_fabricating_two_source_authority(
     assert len(metric.source_ids) == 2
     assert independent.independence_groups == ("shared",)
     assert independent.meets_minimum is False
+    assert independent.production_rights_independence_groups == ()
+    assert independent.production_authority_meets_minimum is False
 
 
 def test_research_only_source_can_be_retained_but_is_not_production_rights_eligible() -> None:
@@ -202,6 +205,19 @@ def test_research_only_source_can_be_retained_but_is_not_production_rights_eligi
         clock=lambda: CAPTURED,
     )
     assert artifact.provider_evidence[0].production_rights_eligible is False
+
+    assert source_rule_evidence_for_subject(
+        artifact,
+        subject_key="DST:BUF",
+        require_production_rights=True,
+    ) == ()
+    research_evidence = source_rule_evidence_for_subject(
+        artifact,
+        subject_key="DST:BUF",
+        require_production_rights=False,
+    )
+    assert len(research_evidence) == 1
+    assert research_evidence[0].metrics == frozenset({ForecastMetric.DST_SACK})
 
 
 def test_late_start_persistence_is_a_distinct_non_preseason_artifact_kind() -> None:
