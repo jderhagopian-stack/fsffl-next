@@ -209,3 +209,41 @@ Further generic public-source searching is no longer the next authorized high-va
 No production implementation, Forecast promotion, merge, deployment, or uncertainty coefficient change was performed by Research.
 
 **DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY**
+
+
+## Management decision — 2026 provisional K/DST degraded-authority mode — 2026-09-25
+
+**State: AUTHORIZED FOR BOUNDED FORECAST IMPLEMENTATION**
+
+Management accepts the completed Research finding that the normal full Hodor K/DST authority gates remain red, but clarifies the product purpose of the one-season-only late-start exception: the 2026 private-beta league must be able to obtain useful current-forward K/DST intelligence without fabricating unsupported scoring coordinates.
+
+This is a second, explicit and strictly bounded 2026 exception. It does not alter the normal Forecast authority standard and must expire for 2027+.
+
+### Authorized behavior
+Forecast Implementation may produce a clearly identified **2026 provisional K/DST Forecast** from qualifying current ROS evidence using only scoring coordinates that are actually supported by governed evidence.
+
+The provisional Forecast must:
+- use the true current-date ROS horizon and acquisition/provenance/source-health metadata;
+- retain the strongest available independence/governance for supported coordinates;
+- score only evidence-supported coordinates and exact algebraic transforms;
+- explicitly identify omitted/undercovered active scoring coordinates;
+- expose partial-rule-coverage / provisional authority in machine-readable contracts and Presentation;
+- preserve uncertainty honestly and distinguish empirically supported uncertainty from additional uncertainty caused by omitted coordinates;
+- remain ineligible to masquerade as full-rule-complete Hodor Forecast authority;
+- remain ineligible for any 2026 preseason comparison;
+- fail closed outside season 2026 and be impossible to use as the 2027+ preseason/production standard.
+
+### Specific treatment
+For K, a provider's governed 50+ projection may support the Hodor base five-point contribution for 50+ makes. The additional +1 contribution specific to 60+ makes must remain omitted unless governed 60+ evidence exists. Do not estimate or allocate 60+ frequency heuristically under this authorization.
+
+For D/ST, governed projected coordinates may contribute where supported. Unsupported nonlinear PA-bucket expectation and unsupported rare-event coordinates must remain omitted rather than imputed, reverse-engineered, or fabricated. Aggregate PA must not be passed through the nonlinear Hodor PA ladder as though it were a distribution.
+
+### Authority and downstream use
+This provisional tier exists for 2026 private-beta usability. Downstream consumers must be able to distinguish it from full Forecast authority. Implementation must explicitly determine and test which downstream surfaces/calculations can safely consume provisional K/DST evidence and which require full authority; no consumer may silently upgrade provisional evidence.
+
+The existing full-authority gates remain recorded and unchanged. If they clear, full governed K/DST authority supersedes the provisional tier.
+
+### Implementation directive
+Do not reopen generic source Research. Resume Forecast Implementation from PR #233/main and implement the minimum bounded contracts, calculations, provenance, coverage reporting, downstream gating, tests, and presentation/readiness semantics necessary for this 2026 provisional mode. Preserve all existing fail-closed behavior for 2027+ and for claims requiring full-rule authority.
+
+Persist an implementation handoff and follow OPERATING_PROTOCOL.md to a permitted terminal state.
