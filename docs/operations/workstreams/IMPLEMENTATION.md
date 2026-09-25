@@ -253,3 +253,29 @@ Acceptance interpretation:
 6. Regression acceptance now requires switching Hodor → FSFFL → Hodor (and arbitrary valid Sleeper identities) without cross-state/cross-league readiness leakage, while preserving exact-state authority.
 
 Do not use this incident to weaken exact-state binding or silently reuse stale Simulation. Repair switch/restoration/readiness orchestration and continue the already-authorized post-PR245 corrective through tests, merge, Render deployment, production Hodor validation, and production existing-FSFFL switch/regression validation before physical Market acceptance resumes.
+
+
+### League-switch recomputation requirement
+Management clarifies that last-good/exact-state restoration is an optimization and resilience mechanism, not a prerequisite for correctness.
+
+When a user selects or reconnects any valid Sleeper league:
+1. load and expose the current canonical LeagueState immediately;
+2. attempt to reuse only intelligence artifacts that are provably compatible with that exact State / Forecast coordinate under existing authority rules;
+3. if no compatible current bundle exists, automatically start or resume the normal governed enrichment pipeline for that newly selected State;
+4. surface persistent progress/status while enrichment runs;
+5. promote Forecast / Simulation / Value / derived analytics atomically when each authority gate clears;
+6. if a stage cannot clear, expose the exact capability blocker while preserving usable State and any independently valid upstream evidence.
+
+A previously complete league must therefore be able to reproduce its intelligence from canonical State + governed Forecast/Value inputs even if its prior complete bundle cannot be reattached. The product may not depend on finding a historical last-good artifact in order to become useful again.
+
+Acceptance must prove both paths:
+- **reuse path:** compatible persisted intelligence is restored without recomputation;
+- **rebuild path:** when compatible intelligence is absent or stale, the app automatically recomputes the current State to the same governed capability level that the league's rules/evidence permit.
+
+Do not weaken exact-state binding, source authority, or uncertainty gates to achieve this. The rebuild must use the same canonical Data → State → Forecast → Value → Simulation/Team Utility authority chain as a fresh valid league load.
+
+For the current FSFFL regression, Management expects that the new State either:
+- reuses compatible Forecast components and recomputes only invalidated downstream layers where allowed; or
+- performs a full governed enrichment for the new State if compatibility cannot be proven.
+
+In neither case may the shell claim green/full readiness before the current-State capabilities actually exist.
