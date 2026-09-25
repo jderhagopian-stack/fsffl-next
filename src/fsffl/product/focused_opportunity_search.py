@@ -73,6 +73,10 @@ def build_focused_trade_candidates(
     """
 
     normalized_intent = intent if intent in _VALID_INTENTS else ""
+    effective = resolve_search_posture(
+        requested_posture,
+        calculated_competitive_state(runtime),
+    )
     strengths = _position_strengths(runtime)
     focal_team_id = str(runtime.selected_team_id or "")
     focal_needs = actionable_need_positions(
@@ -83,10 +87,13 @@ def build_focused_trade_candidates(
     need_filter = frozenset(focal_needs) if focal_needs else None
 
     if not normalized_intent:
-        raw = (
-            canonical_candidates
-            if canonical_candidates is not None
-            else build_roster_aware_trade_candidates(runtime, browser, cardinal)
+        raw = build_scoped_trade_candidates(
+            runtime,
+            browser,
+            cardinal,
+            require_counterparty_supply=True,
+            strategic_posture=effective,
+            scope_label=f"automatic_improve:{effective.value}",
         )
         diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
         rows = list(raw)
@@ -108,7 +115,8 @@ def build_focused_trade_candidates(
                 cardinal,
                 target_positions=frozenset({requested_position}),
                 require_counterparty_supply=False,
-                scope_label=f"intent:position:{requested_position.value}",
+                strategic_posture=effective,
+                scope_label=f"intent:position:{requested_position.value}:{effective.value}",
             )
         diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
         rows = list(raw)
@@ -120,7 +128,8 @@ def build_focused_trade_candidates(
             target_asset_refs=(frozenset({intent_value}) if intent_value else frozenset()),
             use_focal_need_filter=False,
             require_counterparty_supply=False,
-            scope_label=f"intent:target:{intent_value or 'missing'}",
+            strategic_posture=effective,
+            scope_label=f"intent:target:{intent_value or 'missing'}:{effective.value}",
         )
         diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
         rows = list(raw)
@@ -132,7 +141,8 @@ def build_focused_trade_candidates(
             counterparty_team_ids=(frozenset({intent_value}) if intent_value else frozenset()),
             target_positions=need_filter,
             require_counterparty_supply=False,
-            scope_label=f"intent:owner:{intent_value or 'missing'}",
+            strategic_posture=effective,
+            scope_label=f"intent:owner:{intent_value or 'missing'}:{effective.value}",
         )
         diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
         rows = list(raw)
@@ -158,7 +168,8 @@ def build_focused_trade_candidates(
             require_counterparty_supply=True,
             required_send_asset_ref=intent_value or "__missing__",
             required_counterparty_need_position=selected_position,
-            scope_label=f"intent:shop:{intent_value or 'missing'}",
+            strategic_posture=effective,
+            scope_label=f"intent:shop:{intent_value or 'missing'}:{effective.value}",
         )
         diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
         rows = list(raw)
@@ -170,7 +181,8 @@ def build_focused_trade_candidates(
             target_positions=need_filter,
             require_counterparty_supply=True,
             minimum_send_count=2,
-            scope_label="intent:consolidate",
+            strategic_posture=effective,
+            scope_label=f"intent:consolidate:{effective.value}",
         )
         diagnostics = dict(getattr(raw, "diagnostics", {}) or {})
         rows = list(raw)
@@ -198,10 +210,6 @@ def build_focused_trade_candidates(
                 ),
             ]
 
-    effective = resolve_search_posture(
-        requested_posture,
-        calculated_competitive_state(runtime),
-    )
     ordered = apply_search_posture(rows, effective)
     return SearchCandidateCollection(
         ordered,
@@ -209,6 +217,8 @@ def build_focused_trade_candidates(
             **diagnostics,
             "intent": normalized_intent,
             "intent_value": intent_value,
+            "requested_posture": requested_posture.value,
+            "effective_posture": effective.value,
             "focused_candidates_after_intent_validation": len(ordered),
         },
     )
