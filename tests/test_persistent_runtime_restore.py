@@ -225,7 +225,7 @@ def test_incompatible_persisted_state_still_fails_closed_on_startup_restore() ->
     assert restored.value_evidence is None
 
 
-def test_partial_checkpoint_cannot_displace_durable_last_good_identity() -> None:
+def test_partial_checkpoint_restores_current_state_without_promoting_stale_last_good() -> None:
     persistence = MemoryPersistence()
     last_good = _league_state()
     persist_runtime_snapshot(persistence, user_id="jimmy", league_state=last_good, selected_team_id="t2")
@@ -252,11 +252,12 @@ def test_partial_checkpoint_cannot_displace_durable_last_good_identity() -> None
 
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
     assert restored is not None
-    assert restored.league_state.state_id == last_good.state_id
-    assert restored.selected_team_id == "t2"
+    assert restored.league_state.state_id == partial.state_id
+    assert restored.selected_team_id == "t1"
+    assert restored.restored_from_last_good is False
 
 
-def test_failed_refresh_restores_durable_last_good_identity() -> None:
+def test_failed_refresh_restores_current_canonical_state_and_keeps_last_good_durable() -> None:
     persistence = MemoryPersistence()
     last_good = _league_state()
     persist_runtime_snapshot(
@@ -307,12 +308,13 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
 
     assert restored is not None
-    assert restored.league_state.state_id == last_good.state_id
-    assert restored.selected_team_id == "t2"
+    assert restored.league_state.state_id == failed_state.state_id
+    assert restored.selected_team_id == "t1"
+    assert restored.restored_from_last_good is False
 
 
 
-def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
+def test_interrupted_refresh_restores_current_canonical_state_without_stale_promotion() -> None:
     persistence = MemoryPersistence()
     last_good = _league_state()
     persist_runtime_snapshot(
@@ -363,8 +365,9 @@ def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
 
     assert restored is not None
-    assert restored.league_state.state_id == last_good.state_id
-    assert restored.selected_team_id == "t2"
+    assert restored.league_state.state_id == interrupted_state.state_id
+    assert restored.selected_team_id == "t1"
+    assert restored.restored_from_last_good is False
 
 
 def test_failed_refresh_never_restores_last_good_from_different_league() -> None:
