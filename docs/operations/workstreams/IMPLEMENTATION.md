@@ -127,3 +127,38 @@ The late-start artifact is not preseason authority. It is hard-disabled for 2027
 No further production-authority implementation is possible from presently available governed evidence. Resume only when authorized API/source access or a newly supplied independent exact-capability source can materially clear a remaining gate. Do not substitute heuristics.
 
 **BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — EXTERNAL SOURCE RIGHTS + SECOND-SOURCE EXACT COORDINATES + TARGET-COMPATIBLE UNCERTAINTY**
+
+
+## Physical iPhone acceptance — Hodor partial-Forecast pass
+**State: ACCEPTANCE FAILED — READINESS/PRESENTATION SEMANTICS CORRECTIVE REQUIRED**
+
+Management physical-iPhone/Safari evidence after the Hodor shared-Forecast corrective shows materially improved lifecycle population but an internally inconsistent product state.
+
+Observed:
+- prior state showed Hodor / jder52 at 2/7 with an empty roster;
+- current state shows Hodor / jder52 at 7/7 with “Core intelligence current” and a valid 16-player roster;
+- Home simultaneously shows Position pressure point unavailable and Current Simulation unavailable;
+- Franchise shows “Forecast / Simulation-derived fields are unavailable,” no position-strength evidence, and Not Classified;
+- League Atlas standings/position-strength cells remain unavailable while the surface text still references 50,000 simulations using current standings, rosters and forecast evidence;
+- Value Map shows Broad Market values for players where available but FSFFL Intrinsic remains unavailable;
+- future-pick rows show Broad Market value unavailable.
+
+Management acceptance interpretation:
+1. The architectural correction is directionally successful: valid State/roster now survive and shared Forecast can populate without K/DST collapsing the entire league.
+2. The green 7/7 “Core intelligence current” presentation is not acceptable when governed Simulation/position-strength/classification/Intrinsic outputs that the UI presents as core intelligence are unavailable.
+3. Job/lifecycle completion must be distinguished from intelligence-capability readiness. “Completed” may truthfully mean the pipeline exhausted all authorized work and reached a stable partial-authority state; it must not automatically render as “7/7 Core intelligence current.”
+4. The readiness UI must expose capability state, not just stage completion. Full vs partial/provisional vs unavailable must be explicit for Forecast, Simulation, Value/Intrinsic, and derived surfaces.
+5. Surfaces must not display descriptive copy that implies unavailable analytics are present (for example “50,000 simulations using current standings, rosters and forecast evidence”) when Simulation is authority-blocked.
+6. A valid arbitrary Sleeper league may legitimately reach a stable partial-authority state; that state is acceptable only if the UI accurately represents what is and is not available.
+7. Hodor-specific behavior remains prohibited. The corrective must apply generically to any valid Sleeper league/state.
+
+Required corrective:
+- separate lifecycle/job completion from intelligence readiness;
+- redefine the top readiness indicator so green/full status is earned only by the capabilities that the label claims are current;
+- if retaining a 7-stage lifecycle counter, label it as lifecycle/build completion and separately show capability readiness;
+- ensure Home/Franchise/League/Market copy and badges consume the same governed capability truth;
+- preserve the existing partial-Forecast architecture and do not weaken K/DST/Simulation/Value authority merely to make the badge green;
+- validate on Hodor plus arbitrary/synthetic Sleeper league IDs and at least one fully supported existing league;
+- continue through tests, merge, Render deployment, and production physical-device-ready validation before returning control.
+
+This is a product truth/acceptance issue, not permission to fabricate missing Simulation, Intrinsic, position-strength, or K/DST authority.
