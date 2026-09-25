@@ -198,6 +198,10 @@ def test_league_value_lenses_keep_market_and_intrinsic_separate() -> None:
 
     rows = {row["player_id"]: row for row in payload["players"]}
     assert rows["p1"]["broad_market_percentile"] == 0.90
+    assert rows["p1"]["broad_market_status"] == "ready"
+    assert rows["p1"]["broad_market_reason"] is None
+    assert rows["p1"]["intrinsic_status"] == "ready"
+    assert rows["p1"]["intrinsic_reason"] is None
     assert rows["p2"]["intrinsic_percentile"] > rows["p2"]["broad_market_percentile"]
     assert rows["p3"]["intrinsic_percentile"] > rows["p3"]["broad_market_percentile"]
     assert rows["p2"]["broad_market_value_index"] is not None
@@ -233,6 +237,8 @@ def test_intrinsic_failure_does_not_replace_broad_market_lens() -> None:
     assert payload["broad_market"]["status"] == "ready"
     assert payload["fsffl_intrinsic"]["status"] == "unavailable"
     assert all(row["intrinsic_percentile"] is None for row in payload["players"])
+    assert all(row["intrinsic_status"] == "unavailable" for row in payload["players"])
+    assert all(row["intrinsic_reason"] == "fixture unavailable" for row in payload["players"])
     assert any(row["broad_market_percentile"] is not None for row in payload["players"])
 
 
