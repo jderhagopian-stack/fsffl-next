@@ -4,6 +4,21 @@ let fsfflJobStateId=null;
 let fsfflSettledStateId=null;
 let fsfflSessionStartedJobId=null;
 
+function publishIntelligenceLifecycle(lifecycleState,detail={}){
+  const payload={
+    state:lifecycleState,
+    operation:'refresh_intelligence',
+    requested_league_id:(state?.context?.league_id||'').replace(/^sleeper:/,'')||null,
+    served_league_id:state?.context?.league_id||null,
+    served_state_id:state?.context?.state_id||null,
+    message:detail.message||null,
+    failure_stage:detail.failure_stage||null,
+    usable_state_available:Boolean(state?.context?.league_id&&state?.context?.state_id),
+  };
+  window.fsfflLeagueLifecycleState=payload;
+  window.dispatchEvent(new CustomEvent('fsffl:league-lifecycle',{detail:payload}));
+}
+
 function setForecastRefreshMessage(message){
   const title=document.querySelector('#runtime-status-title');
   if(title)title.textContent=message;
@@ -128,6 +143,7 @@ async function settleCompletedJob(){
     reflectRefreshAction(context);
   },0);
   if(intelligencePipelineReady(context)){
+    publishIntelligenceLifecycle('state_ready',{message:'Governed intelligence is current.'});
     setForecastRefreshMessage('Core intelligence is ready.');
   }else if(context.forecast_ready&&context.simulation_ready&&!context.value_ready){
     setForecastRefreshMessage('Forecast and simulation are ready; Value finished without an authoritative estimate set. Refresh Intelligence to retry.');
@@ -152,6 +168,7 @@ async function manualIntelligenceRefresh(){
   fsfflJobStateId=null;
   fsfflSessionStartedJobId=null;
   clearRefreshTechnicalDetail();
+  publishIntelligenceLifecycle('refreshing_intelligence',{message:'Refreshing governed intelligence for the active league.'});
   await maybeStartIntelligenceJob({manual:true});
 }
 
@@ -176,6 +193,12 @@ async function pollIntelligenceJob(){
 
     if(payload.status==='failed'){
       console.error('FSFFL intelligence job failed',payload.error);
+      publishIntelligenceLifecycle('failed',{
+        failure_stage:payload.failure_stage||null,
+        message:payload.failure_stage==='building_forecasts'
+          ?'Forecast blocked; current league State and roster remain available.'
+          :'Intelligence refresh failed; usable State remains available.',
+      });
       settleFailedJob(payload);
       return;
     }
@@ -186,6 +209,7 @@ async function pollIntelligenceJob(){
       fsfflJobStateId=null;
       fsfflSessionStartedJobId=null;
       setForecastRefreshMessage('Intelligence refresh was interrupted. Last-good intelligence remains active; use Refresh Intelligence to start a new refresh.');
+      publishIntelligenceLifecycle('interrupted',{message:'Intelligence refresh was interrupted; usable State remains available.'});
       reflectRefreshAction(state.context);
       return;
     }
