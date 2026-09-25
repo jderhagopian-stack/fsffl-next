@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from time import monotonic, sleep
 import hashlib
 
 from fastapi.testclient import TestClient
@@ -222,3 +223,46 @@ def test_home_and_franchise_use_lightweight_read_path_while_job_is_active() -> N
     source = Path("src/fsffl/product/webapp.py").read_text()
     assert source.count("state_only_while_enriching=enrichment_running") >= 2
     assert 'current_job.status.value in {"queued", "running"}' in source
+
+
+def test_failed_forecast_reports_exact_blocked_stage_and_keeps_state_usable(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+
+    def failed_forecast(_state):
+        raise RuntimeError("forecast source gate")
+
+    client = TestClient(
+        create_app(
+            state_loader=lambda _: _canonical_state(),
+            forecast_loader=failed_forecast,
+        )
+    )
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    client.post("/api/select-team", json={"team_id": "a"})
+    started = client.post("/api/intelligence/jobs")
+    assert started.status_code == 200
+
+    deadline = monotonic() + 2
+    status_payload = None
+    while monotonic() < deadline:
+        status_payload = client.get("/api/intelligence/status").json()
+        if status_payload["job"]["status"] == "failed":
+            break
+        sleep(0.01)
+
+    assert status_payload is not None
+    assert status_payload["job"]["status"] == "failed"
+    assert status_payload["job"]["failure_phase"] == "building_forecasts"
+    assert status_payload["blocked_stage"] == "forecast"
+    assert status_payload["served_state"]["league_id"] == "sleeper:123"
+    assert status_payload["served_state"]["selected_team_id"] == "a"
+    assert status_payload["served_state"]["roster_usable"] is True
+    readiness = {item["stage"]: item for item in status_payload["stages"]}
+    assert readiness["state"]["readiness"] == "ready"
+    assert readiness["analytics"]["readiness"] == "ready"
+    assert readiness["forecast"]["readiness"] == "blocked"
+    assert "roster State remains usable" in readiness["forecast"]["message"]
+
+    team = client.get("/api/my-team")
+    assert team.status_code == 200
+    assert team.json()["team_id"] == "a"
