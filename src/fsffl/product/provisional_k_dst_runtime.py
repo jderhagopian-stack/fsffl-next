@@ -46,14 +46,14 @@ def materialize_provisional_k_dst_for_state(
 
     rights_cleared = tuple(
         sorted(
-            item.source_id
+            item.provider
             for item in snapshot.provider_evidence
             if item.production_rights_eligible
         )
     )
     research_only = tuple(
         sorted(
-            item.source_id
+            item.provider
             for item in snapshot.provider_evidence
             if not item.production_rights_eligible
         )
