@@ -126,3 +126,7 @@ Evidence:
 - full CI plus Home, Franchise, League Atlas, PR164 corrective regression, and live Forecast trace are green on the accepted code head.
 
 Market North Star is not product-closed by this decision. Repeat physical-iPhone/Safari validation of the merged/deployed build is the next required gate.
+
+
+## 2026-09-25 — Market current-beta acceptance failed
+Decision: the accepted Market architecture remains frozen, but the authenticated post-PR-#232/#235 physical-iPhone pass failed product acceptance. A bounded corrective is authorized for competitive-lens discovery semantics, an explicit Find opportunities submission lifecycle, focused zero-result exhaustion evidence, separate Forecast versus FSFFL Intrinsic availability tracing, and remaining mobile safe-area correctness. The existing eight-path preliminary Decision budget and zero broad changed-state Simulation boundary remain protected.
