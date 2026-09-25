@@ -10,9 +10,9 @@ Owns sequencing, scope, gates, product decisions, and cross-workstream conflict 
 **State:** MANAGEMENT GATE  
 Lifecycle/league-switch repair remains gated on governed Forecast authority for the newly connected league. Performance must not weaken Forecast/model authority to force 7/7.
 
-## Forecast Research — K/DST + New-League Bootstrap
-**State:** DIRECTIVE COMPLETE — RESEARCH  
-The implementation-ready research contract is persisted in `workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
+## Forecast Research — K/DST Empirical Evidence & Source Gates
+**State:** ACTIVE — MANAGEMENT AUTHORIZED  
+The prior architecture research remains complete. Research is now narrowly authorized to resolve or decompose the empirical/source gates recorded in `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`. No production Forecast implementation or authority promotion is authorized.
 
 ## Product / Forecast Implementation
 **State:** BLOCKED — EMPIRICAL/SOURCE EVIDENCE GATE  
