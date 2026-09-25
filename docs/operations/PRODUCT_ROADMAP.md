@@ -3,19 +3,27 @@
 ## Current parallel critical paths
 
 ### Foundation / league-agnostic path
-1. Forecast Research: **COMPLETE**.
-2. Management acceptance / bounded implementation authorization: **COMPLETE**.
-3. Governed Forecast implementation, evidence-independent scope: **MERGED / COMPLETE at PR #215, main `407c1bf85e5dc75f92b9906719f82bcd11d97c31`**.
-   - K and D/ST subject/scoring contracts;
-   - active-rule completeness and fail-closed missing evidence;
-   - deterministic realized-outcome and non-promoting calibration harnesses;
-   - annual raw-snapshot replay invariants.
-4. Empirical/source promotion gate: **BLOCKED**:
-   - historical independent K/DST source #2;
-   - production provider rights/content-health;
-   - exact Sleeper D/ST truth fixtures;
-   - qualifying 2026 K/DST preseason PIT evidence or explicit preseason unavailability.
-5. Resume and complete new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
+1. K/DST architecture + evidence-independent implementation: **COMPLETE / MERGED**.
+2. 2026 K/DST late-start/provisional exception work: **SEPARATE ACTIVE/EXTERNAL-EVIDENCE TRACK** under its persisted contracts.
+3. Cross-league scoring-rule / Forecast-input audit: **DIRECTIVE COMPLETE — RESEARCH**.
+   - 89-coordinate/rule-semantic registry;
+   - 48-row platform coverage matrix;
+   - primary-source ledger;
+   - provider/historical/scoring-engine gap analysis;
+   - deterministic fixtures;
+   - implementation-ready handoff.
+4. Scoring Coverage Stage 0 + Stage 1: **MANAGEMENT GATE — PLAN READY, NOT AUTHORIZED**.
+   - canonical registry/rule/capability contracts;
+   - compatibility compilation for existing scoring;
+   - raw provider superset preservation;
+   - zero new production authority.
+5. Later scoring expansion, each separately gated:
+   - direct 2PT/returns/common event coordinates;
+   - nonlinear per-game milestone distributions;
+   - attempts/completions/carries/first downs/targets/returns;
+   - IDP subject/Forecast family;
+   - advanced long-play/punter/head-coach/conditional rules.
+6. League-agnostic validation must prove materially different scoring families without weakening evidence authority before the product claims broad league-agnostic scoring support.
 
 ### Product / Market path
 1. Prior physical-iPhone Market acceptance: **FAILED / NOT ACCEPTED** as a product gate.
