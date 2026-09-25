@@ -43,8 +43,8 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260924-readiness-control7" in index
-    assert "/static/product_shell.js?v=20260924-readiness-control7" in index
+    assert "/static/forecast_refresh.js?v=20260925-market-discovery1" in index
+    assert "/static/product_shell.js?v=20260925-market-discovery1" in index
     assert "Core intelligence current" in shell
 
 
