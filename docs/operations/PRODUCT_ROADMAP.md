@@ -1,32 +1,40 @@
 # FSFFL NEXT — Product Roadmap
 
-## Current critical path
-1. **Forecast Research: COMPLETE.** Governed K/DST + late-connect bootstrap contract is persisted in `docs/operations/workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
-2. Management review / acceptance of the completed research contract and authorization of a bounded implementation directive.
-3. Governed Forecast implementation:
-   - K and D/ST subject/scoring contracts;
-   - active-rule completeness;
-   - empirical K/DST calibration/source promotion;
-   - annual snapshot v2 / evidence-preserving late-connect migration;
-   - downstream compatibility.
-4. Resume and complete new-league 7/7 lifecycle acceptance.
-5. Physical-iPhone Market acceptance.
+## Current parallel critical paths
+
+### Foundation / league-agnostic path
+1. Forecast Research: **COMPLETE**.
+2. Governed Forecast implementation: **AUTHORIZED / ACTIVE**.
+3. Resume and complete new-league 7/7 lifecycle acceptance after the Forecast dependency is actually resolved.
+
+### Product / Market path
+1. Physical-iPhone Market acceptance: **FAILED / NOT ACCEPTED** as a product gate.
+2. Market / Trade Discovery Architecture Review: **AUTHORIZED / NEXT**.
+3. Management acceptance of the revised Opportunity + Market contract.
+4. Bounded Market/Search implementation.
+5. Repeat physical-iPhone Market acceptance.
 6. Home × Franchise redundancy/information-hierarchy audit.
-7. Trade Discovery architecture review.
-8. Trade Center work only after the discovery/search order of operations is settled.
+7. Trade Center expansion only after discovery/search order of operations is settled.
 
-## Current management gate
-Research is no longer the blocker. The unresolved blocker is **unimplemented/unpromoted Forecast authority** for the newly connected K/DST league.
+## Why Market architecture moved forward
+The shipped Market shell established useful concepts, but physical-iPhone evidence showed:
+- a supposedly high-signal For You feed can contain repeated target neighborhoods and packages still requiring substantial evaluation;
+- discovery is spending user attention before enough cheap economic/bilateral screening and diversity control;
+- Player Board and Free Agents can be unavailable while global readiness reports 7/7;
+- Market is denser and less immediately readable/navigable than the accepted North Star surfaces.
 
-Do not interpret the completed research contract as authorization to implement or as evidence that production K/DST Forecast is green.
+This is not treated as presentation polish alone.
 
 ## Trade Discovery principle
 Simulation should evaluate shortlisted trades, not perform broad discovery.
 
-Target sequence:
-`League State → needs/opportunities → candidate assets/partners → broad cheap package generation → governed filtering → bilateral plausibility → opportunity frontier → targeted simulation → deeper decision analysis`
+Working sequence:
+`League State → strategic needs/opportunity hypotheses → candidate assets/partners → broad cheap package generation → economic screening → bilateral plausibility → clustering/diversity → high-signal opportunity frontier → targeted Decision/Simulation → deeper analysis`
 
 Simulation is a microscope, not the searchlight.
 
+## Product principle
+For You should surface a deliberately small number of genuinely distinct strategic opportunities, not merely raw packages Search can construct. The product must be able to explain why each item deserves scarce user attention before asking the user to enter a deep evaluation.
+
 ## League-agnostic validation
-“League-agnostic” is a target, not yet a fully proven property. Future validation must deliberately exercise configurations unlike the original FSFFL league, including K/DST where governed evidence supports them, different roster structures, and scoring differences.
+“League-agnostic” remains a target, not a fully proven property. Forecast implementation and later lifecycle validation must exercise configurations unlike the original FSFFL league without weakening evidence authority.
