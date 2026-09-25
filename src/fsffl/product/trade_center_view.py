@@ -123,6 +123,27 @@ def build_trade_center_browser_view(
     )
 
 
+def asset_from_trade_option(option: TradeAssetOption) -> Asset:
+    """Convert one already ownership-validated browser option to canonical Asset."""
+
+    if option.asset_kind == "player" and option.player_id is not None:
+        return PlayerAsset(player_id=option.player_id)
+    if option.asset_kind == "pick" and option.pick_id is not None:
+        return PickAsset(pick_id=option.pick_id)
+    raise ValueError("unsupported trade asset option")
+
+
+def owned_asset_index(view: TradeCenterBrowserView) -> dict[tuple[str, str], Asset]:
+    """Index exact canonical ownership once for request-local trade evaluation reuse."""
+
+    teams = (view.focal_team, *view.counterparties)
+    return {
+        (team.team_id, option.asset_ref): asset_from_trade_option(option)
+        for team in teams
+        for option in team.assets
+    }
+
+
 def resolve_owned_asset_ref(
     league_state: LeagueState,
     *,
@@ -135,8 +156,4 @@ def resolve_owned_asset_ref(
     option = next((item for item in browser.assets if item.asset_ref == asset_ref), None)
     if option is None:
         raise ValueError("submitted asset is not currently owned by the specified team")
-    if option.asset_kind == "player" and option.player_id is not None:
-        return PlayerAsset(player_id=option.player_id)
-    if option.asset_kind == "pick" and option.pick_id is not None:
-        return PickAsset(pick_id=option.pick_id)
-    raise ValueError("unsupported trade asset option")
+    return asset_from_trade_option(option)
