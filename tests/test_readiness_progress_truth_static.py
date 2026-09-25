@@ -22,7 +22,9 @@ def test_shared_readiness_maps_authoritative_lifecycle_phases() -> None:
     assert "running_simulation:[4,'Running season outlook…']" in source
     assert "building_values:[5,'Building market values…']" in source
     assert "attaching_results:[6,'Attaching current intelligence…']" in source
-    assert "completed:[7,'Core intelligence current']" in source
+    assert "completed:[7,'Build lifecycle complete']" in source
+    assert "Core intelligence current" not in source
+    assert "capability_readiness" in source
 
 
 def test_manual_refresh_restarts_readiness_polling() -> None:
@@ -45,7 +47,8 @@ def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     shell = _shell()
     assert "/static/forecast_refresh.js?v=20260925-hodor-lifecycle1" in index
     assert "/static/product_shell.js?v=20260925-hodor-lifecycle1" in index
-    assert "Core intelligence current" in shell
+    assert "Build lifecycle complete" in shell
+    assert "Core intelligence current" not in shell
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
@@ -93,16 +96,16 @@ def test_shared_refresh_acknowledges_tap_before_network_roundtrip() -> None:
     assert label_index < start_index
 
 
-def test_restored_complete_context_wins_over_terminal_failed_job() -> None:
+def test_full_capability_context_wins_over_terminal_failed_job() -> None:
     source = _shell()
     snapshot = source.split("function fsfflSharedReadinessSnapshot()", 1)[1].split(
         "function fsfflSharedReadinessMarkup", 1
     )[0]
-    complete_index = snapshot.index("const contextComplete=Boolean")
-    terminal_complete_index = snapshot.index("&&contextComplete")
+    capability_index = snapshot.index("const capabilityFull=")
+    terminal_complete_index = snapshot.index("&&capabilityFull")
     terminal_failure_index = snapshot.index("const prior=Number.isFinite")
-    assert complete_index < terminal_complete_index < terminal_failure_index
-    assert "label:'Last-good intelligence retained'" in snapshot
+    assert capability_index < terminal_complete_index < terminal_failure_index
+    assert "label:'Last-good core runtime retained'" in snapshot
     assert "step:FSFFL_SHARED_READINESS_STEPS" in snapshot
 
 
