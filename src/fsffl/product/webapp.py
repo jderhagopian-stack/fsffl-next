@@ -453,6 +453,47 @@ def create_app(
             return runtime_payload
         return {**runtime_payload, "league_id": view.context.league_id, "state_id": view.context.league_state_id, "evidence_as_of": view.context.as_of.isoformat()}
 
+    @application.get("/api/forecast/current/coverage")
+    def current_forecast_coverage(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        """Expose shared Forecast population separately from downstream authority."""
+
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        evidence = runtime.forecast_evidence
+        if evidence is None:
+            raise HTTPException(status_code=409, detail="Current Forecast evidence is not loaded")
+        player_names = {
+            player.player_id: player.full_name
+            for player in runtime.league_state.players
+        }
+        return {
+            "league_id": runtime.league_state.league.league_id,
+            "league_state_id": runtime.league_state.state_id,
+            "evidence_basis": evidence.evidence_basis,
+            "successful_sources": list(evidence.successful_source_ids),
+            "failed_sources": list(evidence.failed_sources),
+            "raw_observation_count": len(evidence.raw_forecasts),
+            "authoritative_scored_count": len(evidence.league_scored_forecasts),
+            "partial_scored_count": len(
+                evidence.runtime_result.partial_fantasy_point_forecasts
+            ),
+            "family_coverage": [
+                item.model_dump(mode="json")
+                for item in evidence.runtime_result.family_coverage
+            ],
+            "simulation_authority_blockers": list(
+                evidence.runtime_result.simulation_authority_blockers
+            ),
+            "partial_forecasts": [
+                {
+                    **item.model_dump(mode="json"),
+                    "display_name": player_names.get(item.player_id, item.player_id),
+                }
+                for item in evidence.runtime_result.partial_fantasy_point_forecasts
+            ],
+        }
+
     @application.get("/api/intelligence/status")
     def intelligence_status(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
