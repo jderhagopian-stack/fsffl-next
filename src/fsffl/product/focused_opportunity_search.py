@@ -143,6 +143,30 @@ def _shop_focused_candidates(
     )
 
 
+def candidate_matches_focus(
+    row: dict[str, object],
+    *,
+    intent: str,
+    intent_value: str,
+) -> bool:
+    """Return whether a candidate satisfies the explicit user-selected Market task."""
+
+    normalized_intent = intent if intent in _VALID_INTENTS else ""
+    if normalized_intent in {"position", "target", "owner", "shop"} and not intent_value:
+        return False
+    if normalized_intent == "position":
+        return str(row.get("target_position") or "") == intent_value
+    if normalized_intent == "target":
+        return _row_has_ref(row, "receive", intent_value)
+    if normalized_intent == "owner":
+        return str(row.get("counterparty_team_id") or "") == intent_value
+    if normalized_intent == "shop":
+        return _row_has_ref(row, "send", intent_value)
+    if normalized_intent == "consolidate":
+        return len(row.get("send") or []) > 1
+    return True
+
+
 def build_focused_trade_candidates(
     runtime: UserRuntimeContext,
     browser: TradeCenterBrowserView,
@@ -175,19 +199,27 @@ def build_focused_trade_candidates(
             if canonical_candidates is not None
             else build_roster_aware_trade_candidates(runtime, browser, cardinal)
         )
-        if normalized_intent == "position" and intent_value:
-            rows = [row for row in rows if str(row.get("target_position") or "") == intent_value]
-        elif normalized_intent == "target" and intent_value:
-            rows = [row for row in rows if _row_has_ref(row, "receive", intent_value)]
-        elif normalized_intent == "owner" and intent_value:
+        if normalized_intent:
             rows = [
                 row
                 for row in rows
-                if str(row.get("counterparty_team_id") or "") == intent_value
+                if candidate_matches_focus(
+                    row,
+                    intent=normalized_intent,
+                    intent_value=intent_value,
+                )
             ]
-        elif normalized_intent == "consolidate":
-            rows = [row for row in rows if len(row.get("send") or []) > 1]
 
+    if normalized_intent:
+        rows = [
+            row
+            for row in rows
+            if candidate_matches_focus(
+                row,
+                intent=normalized_intent,
+                intent_value=intent_value,
+            )
+        ]
     effective = resolve_search_posture(
         requested_posture,
         calculated_competitive_state(runtime),
