@@ -72,7 +72,7 @@ The contract defines governed behavior for a league first connected after presea
 - when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
 
 ## Forecast K/DST implementation gate
-**Status: MANAGEMENT GATE — 2026 LATE-START IMPLEMENTATION PLAN READY; PRODUCTION AUTHORITY STILL BLOCKED.**
+**Status: ACTIVE — PR #233 IMPLEMENTS THE AUTHORIZED 2026 LATE-START CONTRACT; PRODUCTION AUTHORITY STILL BLOCKED.**
 
 PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` and satisfies the evidence-independent code-level contract.
 
