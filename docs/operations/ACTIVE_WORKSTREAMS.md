@@ -7,8 +7,8 @@ Updated: 2026-09-25
 Owns sequencing, scope, gates, product decisions, and cross-workstream conflict resolution.
 
 ## Performance
-**State:** ACTIVE — PRODUCTION ACCEPTANCE / MARKET COLD-PATH VALIDATION  
-The prior PR #211 K/DST-only Management Gate is obsolete for the active Performance directive.
+**State:** ACTIVE — APP-WIDE LIFECYCLE / HODOR COMPLETION / MARKET FOREGROUND LATENCY  
+The prior PR #211 K/DST-only gate and the narrower jimmygoodjob-only restoration framing are obsolete as the top-level Performance state. The existing-league repair remains accepted evidence, but the current owned outcome is the app-wide lifecycle contract plus Hodor completion diagnosis, while foreground Market latency remains an open Performance acceptance dimension.
 
 The existing FSFFL Dynasty league regressed from previously valid 7/7 to visible 3/7 after Market PR #220. Performance traced this to last-good restoration semantics: terminal failed/interrupted enrichment could leave a newer state-only checkpoint restart-authoritative instead of the independently promoted complete bundle.
 
@@ -40,7 +40,7 @@ The registry covers 89 canonical coordinate/rule-semantic requirements and the m
 Research recommends a bounded zero-authority-change Stage 0 + Stage 1 implementation: canonical registry/rule/capability contracts plus provider raw-superset preservation. New scoring/model authority is not authorized by this Research completion.
 
 ## Product / Forecast Implementation
-**State:** ACTIVE — 2026 PROVISIONAL K/DST DEGRADED-AUTHORITY MODE AUTHORIZED  
+**State:** ACTIVE — 2026 PROVISIONAL MODE MERGED / EXACT-STATE HARDENING PR #238 ACTIVE  
 PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. PR #233 merged on canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` after its reconciled head passed full CI, focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace. Durable implementation detail is in `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`.
 
 Management now explicitly authorizes execution of the bounded 2026 late-start implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`. This authorization permits implementation, testing, persisted evidence acquisition where source rights permit, and integration of the already-governed contracts. It does **not** authorize production Forecast promotion where evidence/rights gates remain red.
@@ -55,7 +55,11 @@ The bounded implementation must:
 - reproduce the persisted reduced-fingerprint empirical measurements and promote uncertainty only after target compatibility is proven;
 - reject the late-start path for 2027+.
 
-All presently authorized evidence-independent implementation is complete. Provider/source rights, second-source exact Hodor-coordinate coverage, live exact-capability API validation, and target-compatible full-score uncertainty remain external evidence gates for deployed authority. No heuristic substitute is authorized.
+PR #237 is merged on canonical main at `33b969b04180893f7e582c0ebd76c54bea81961d`, implementing the Management-authorized 2026 provisional partial-rule tier with machine-readable downstream gating: Presentation/readiness/analytics may expose the provisional contract, while Value/Simulation/Team Utility/Decision/Search remain blocked from silently treating it as full Forecast truth.
+
+PR #238 (`Forecast: bind provisional K/DST artifacts to exact league state`) is an authorized safety hardening within that same bounded directive. Its current head `81e0ee4f60958d4920fb2c9e888d04367e104bed` is CI-green and binds persistence/API presentation to exact league + league-state identity; it must reconcile with current main before merge because provisional totals are league-scoring-specific. This is not new model authority.
+
+Provider/source rights, qualifying production ROS evidence, second-source exact Hodor-coordinate coverage, live exact-capability API validation, and target-compatible full-score uncertainty remain external gates for **full** K/DST authority. No heuristic substitute is authorized.
 
 ## Scoring Coverage Implementation
 **State:** MANAGEMENT GATE — STAGE 0/1 PLAN READY, NOT AUTHORIZED  
@@ -87,8 +91,10 @@ PR #232 contains the Management-authorized physical-iPhone corrective implementa
 Full/focused CI is green. Production startup restored the correct existing league with Forecast/Simulation/Value complete and no startup errors. Broad discovery preserves the approved eight-path preliminary Decision budget and zero exact changed-state Simulation calls; strategic and explicit-intent admission occurs before package generation, and the lightweight Decision-owned screen replaces broad full Trade Center analysis.
 
 ## Market acceptance
-**State:** MANAGEMENT GATE — REPEAT PHYSICAL IPHONE / SAFARI  
-All available non-physical corrective validation is exhausted. No authenticated Market request has yet hit the newly deployed instance, so production funnel telemetry cannot be truthfully observed until the next real authenticated interaction. Repeat physical-iPhone/Safari validation must exercise the four surfaces and at least one Trade Finder intent; afterward inspect the emitted candidate-count/rejection/timing/cache/preliminary-screen diagnostics before product closeout.
+**State:** ACTIVE — CURRENT-BETA CORRECTIVE IMPLEMENTATION AUTHORIZED  
+Management completed the post-PR-#232/#235 authenticated physical-iPhone pass and acceptance failed. Current corrective scope is persisted in `workstreams/MARKET_DISCOVERY.md`: competitive lens must govern upstream discovery; Trade Finder must use explicit configuration → **Find opportunities** → visible running/completion lifecycle; focused zero-result cases must distinguish genuine search exhaustion from insufficient exploration; Forecast and FSFFL Intrinsic availability must be traced separately; remaining safe-area issues must be corrected. The accepted architecture, eight-path preliminary Decision budget, and zero broad changed-state Simulation boundary must not regress.
+
+The same pass measured automatic discovery at ~44.1s internally/~44.9s hosted cold and focused Target Player requests at ~31.8s, ~41.4s and ~47.8s, so foreground cold/focused responsiveness remains failed. Performance owns general cold-path optimization; Market may remove only Market-owned redundant work that preserves discovery semantics.
 
 ## Home × Franchise audit
 **State:** DEFERRED  
