@@ -163,7 +163,7 @@ async function pollIntelligenceJob(){
     const payload=await api('/api/intelligence/jobs/current');
     state.context={...state.context,...payload};
     fsfflCurrentJobId=payload.job_id||null;
-    fsfflJobStateId=payload.league_state_id||null;
+    fsfflJobStateId=payload.state_id||payload.league_state_id||null;
 
     await refreshVisibleEvidenceIfAdvanced(previousContext,payload);
     setForecastRefreshMessage(phaseMessage(payload));
@@ -220,7 +220,7 @@ async function maybeStartIntelligenceJob({manual=false}={}){
     const payload=await api('/api/intelligence/jobs',{method:'POST'});
     fsfflCurrentJobId=payload.job_id||null;
     fsfflSessionStartedJobId=payload.job_id||null;
-    fsfflJobStateId=payload.league_state_id||stateId;
+    fsfflJobStateId=payload.state_id||payload.league_state_id||stateId;
     setForecastRefreshMessage(phaseMessage(payload));
     // The shared strip may have stopped its idle polling before a user manually
     // launched heavy intelligence. Restart it from the authoritative status
