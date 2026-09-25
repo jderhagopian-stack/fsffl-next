@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
+from fsffl.forecast.annual_preseason_snapshot import (
+    ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION,
+    AnnualPreseasonProjectionSnapshot,
+)
 from fsffl.forecast.current_runtime import LiveForecastRuntimeResult
 from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
 from fsffl.forecast.models import (
@@ -18,6 +22,11 @@ from fsffl.forecast.preseason_baseline import (
     baseline_from_runtime,
     build_runtime_from_preseason_baseline,
     state_is_preseason_capture_eligible,
+)
+from fsffl.persistence.annual_preseason_snapshot import (
+    ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND,
+    NFL_SEASON_SCOPE_KIND,
+    annual_preseason_projection_snapshot_artifact,
 )
 from fsffl.persistence.runtime_cache import (
     LEAGUE_SEASON_SCOPE_KIND,
@@ -177,19 +186,28 @@ def _evidence(runtime: LiveForecastRuntimeResult) -> LiveForecastEvidence:
 
 
 class _Store:
-    def __init__(self, record=None):
+    def __init__(self, record=None, annual_record=None):
         self.record = record
+        self.annual_record = annual_record
         self.puts = []
 
     def get_latest_reusable_artifact(self, **kwargs):
-        assert kwargs["artifact_kind"] == PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND
-        assert kwargs["scope_kind"] == LEAGUE_SEASON_SCOPE_KIND
-        assert kwargs["model_version"] == PRESEASON_BASELINE_MODEL_VERSION
-        return self.record
+        if kwargs["artifact_kind"] == PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND:
+            assert kwargs["scope_kind"] == LEAGUE_SEASON_SCOPE_KIND
+            assert kwargs["model_version"] == PRESEASON_BASELINE_MODEL_VERSION
+            return self.record
+        if kwargs["artifact_kind"] == ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND:
+            assert kwargs["scope_kind"] == NFL_SEASON_SCOPE_KIND
+            assert kwargs["model_version"] == ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION
+            return self.annual_record
+        raise AssertionError(f"unexpected artifact lookup: {kwargs}")
 
     def put_artifact(self, record):
         self.puts.append(record)
-        self.record = record
+        if record.key.artifact_kind == PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND:
+            self.record = record
+        elif record.key.artifact_kind == ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND:
+            self.annual_record = record
 
 
 def test_preseason_capture_closes_once_scoring_exists():
@@ -320,6 +338,36 @@ def test_preseason_authority_loader_is_independent_of_healthy_live_forecast():
 def test_preseason_authority_loader_fails_closed_without_baseline():
     with pytest.raises(ValueError, match="valid preserved preseason Year-1 baseline is unavailable"):
         make_preseason_baseline_authority_loader(_Store())(_state(scored=True))
+
+
+def test_preseason_authority_loader_replays_governed_annual_raw_snapshot_for_late_connect():
+    state = _state(scored=True)
+    runtime = _raw_qb_runtime()
+    snapshot = AnnualPreseasonProjectionSnapshot(
+        season=state.league.season,
+        opener_date=date(2026, 9, 10),
+        opener_coordinate_source="fixture_schedule",
+        target_capture_date=date(2026, 8, 27),
+        captured_at=NOW - timedelta(days=14),
+        capture_offset_days_before_opener=14,
+        provider_evidence=(),
+        provider_failures=(),
+        governed_raw_ensemble=runtime.raw_ensemble,
+        governed_raw_ensemble_sha256="fixture-raw-ensemble",
+        coverage=runtime.coverage,
+        successful_source_ids=runtime.successful_source_ids,
+        source_runtime_model_version=runtime.model_version,
+    )
+    annual = annual_preseason_projection_snapshot_artifact(snapshot=snapshot)
+
+    evidence = make_preseason_baseline_authority_loader(
+        _Store(annual_record=annual)
+    )(state)
+
+    assert evidence.evidence_basis == "preseason_baseline"
+    assert evidence.successful_source_ids == ("fftoday", "razzball")
+    assert evidence.runtime_result.evaluation_as_of == runtime.evaluation_as_of
+    assert evidence.league_scored_forecasts[0].distribution.mean == pytest.approx(250.0)
 
 
 def test_preseason_authority_loader_fails_closed_for_invalid_source_coverage():
