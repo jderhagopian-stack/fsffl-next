@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict, defaultdict
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from time import monotonic
 from typing import Any
 
@@ -42,7 +42,11 @@ from .behavioral_runtime import cached_behavior_profile_for_team
 from .opportunity_posture import calculated_competitive_state
 from .runtime import UserRuntimeContext
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
-from .trade_center_view import resolve_owned_asset_ref
+from .trade_center_view import (
+    build_trade_center_browser_view,
+    owned_asset_index,
+    resolve_owned_asset_ref,
+)
 from .trade_value_adapter import cardinal_market_profiles
 
 
@@ -367,6 +371,7 @@ def _proposal_from_row(
     row: dict[str, object],
     *,
     prefix: str,
+    asset_index: Mapping[tuple[str, str], object] | None = None,
 ):
     league_state = runtime.league_state
     focal_team_id = runtime.selected_team_id
@@ -378,20 +383,23 @@ def _proposal_from_row(
     if not counterparty_team_id or not send or not receive:
         raise ValueError("trade screen requires bilateral package assets")
 
-    focal_assets = tuple(
-        resolve_owned_asset_ref(
+    def resolve(team_id: str, asset_ref: str):
+        if asset_index is not None:
+            cached = asset_index.get((team_id, asset_ref))
+            if cached is not None:
+                return cached
+        return resolve_owned_asset_ref(
             league_state,
-            team_id=focal_team_id,
-            asset_ref=str(item["asset_ref"]),
+            team_id=team_id,
+            asset_ref=asset_ref,
         )
+
+    focal_assets = tuple(
+        resolve(focal_team_id, str(item["asset_ref"]))
         for item in send
     )
     counterparty_assets = tuple(
-        resolve_owned_asset_ref(
-            league_state,
-            team_id=counterparty_team_id,
-            asset_ref=str(item["asset_ref"]),
-        )
+        resolve(counterparty_team_id, str(item["asset_ref"]))
         for item in receive
     )
     draft = TradeDraft(
@@ -492,6 +500,8 @@ def evaluate_candidate_economics(
     row: dict[str, object],
     *,
     profiles=None,
+    market_values: Mapping[str, float] | None = None,
+    asset_index: Mapping[tuple[str, str], object] | None = None,
 ) -> dict[str, object]:
     """Attach cheap Decision-owned economics before Search family pruning.
 
@@ -518,7 +528,12 @@ def evaluate_candidate_economics(
             "cheap_economic_screen_complete": False,
         }
 
-    proposal = _proposal_from_row(runtime, row, prefix="market-economic")
+    proposal = _proposal_from_row(
+        runtime,
+        row,
+        prefix="market-economic",
+        asset_index=asset_index,
+    )
     economics = summarize_bilateral_trade_economics(
         proposal,
         profiles,
@@ -528,11 +543,15 @@ def evaluate_candidate_economics(
         economics,
         model_version="market-discovery-economic-net-v1",
     )
-    market_values = {
-        asset_id: profile.market_price.distribution.mean
-        for asset_id, profile in profiles.items()
-        if profile.market_price is not None
-    }
+    market_values = (
+        market_values
+        if market_values is not None
+        else {
+            asset_id: profile.market_price.distribution.mean
+            for asset_id, profile in profiles.items()
+            if profile.market_price is not None
+        }
+    )
     concentration = (
         summarize_package_concentration(
             proposal,
@@ -578,6 +597,12 @@ def evaluate_candidate_economics(
 def evaluate_candidate_path(
     runtime: UserRuntimeContext,
     row: dict[str, object],
+    *,
+    profiles=None,
+    market_values: Mapping[str, float] | None = None,
+    asset_index: Mapping[tuple[str, str], object] | None = None,
+    effective_forecasts=None,
+    baseline_by_team: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Attach the bounded cheap Decision-owned pre-Simulation bilateral screen.
 
@@ -600,26 +625,33 @@ def evaluate_candidate_path(
     forecast_evidence = runtime.forecast_evidence
     if forecast_evidence is None:
         raise ValueError("preliminary bilateral screen requires current Forecast evidence")
-    forecasts = (
-        forecast_evidence.raw_forecasts
-        + forecast_evidence.league_scored_forecasts
+    if effective_forecasts is None:
+        forecasts = (
+            forecast_evidence.raw_forecasts
+            + forecast_evidence.league_scored_forecasts
+        )
+        effective_forecasts = attach_provisional_position_floor_forecasts(
+            league_state,
+            forecasts,
+            as_of=league_state.as_of,
+            horizon=ForecastHorizon.SEASON,
+        )
+    proposal = _proposal_from_row(
+        runtime,
+        row,
+        prefix="market-prelim",
+        asset_index=asset_index,
     )
-    effective_forecasts = attach_provisional_position_floor_forecasts(
-        league_state,
-        forecasts,
-        as_of=league_state.as_of,
-        horizon=ForecastHorizon.SEASON,
-    )
-    proposal = _proposal_from_row(runtime, row, prefix="market-prelim")
     scenario = apply_bilateral_trade(league_state, proposal)
     state_validated = monotonic()
 
-    simulation = runtime.simulation_analytics
-    baseline_by_team = {
-        view.team_id: view.optimized_lineup
-        for view in (simulation.team_views if simulation is not None else ())
-        if view.optimized_lineup is not None
-    }
+    if baseline_by_team is None:
+        simulation = runtime.simulation_analytics
+        baseline_by_team = {
+            view.team_id: view.optimized_lineup
+            for view in (simulation.team_views if simulation is not None else ())
+            if view.optimized_lineup is not None
+        }
 
     def lineup(state, team_id):
         baseline = (
@@ -647,12 +679,18 @@ def evaluate_candidate_path(
         team_id: frozenset(item.player_id for item in current.assignments)
         for team_id, current in after_trade_lineups.items()
     }
-    profiles = cardinal_market_profiles(runtime.value_evidence)
-    market_values = {
-        asset_id: profile.market_price.distribution.mean
-        for asset_id, profile in profiles.items()
-        if profile.market_price is not None
-    }
+    profiles = profiles if profiles is not None else cardinal_market_profiles(
+        runtime.value_evidence
+    )
+    market_values = (
+        market_values
+        if market_values is not None
+        else {
+            asset_id: profile.market_price.distribution.mean
+            for asset_id, profile in profiles.items()
+            if profile.market_price is not None
+        }
+    )
     roster_resolution = resolve_mandatory_roster_cuts(
         scenario.after,
         protected_player_ids_by_team=protected,
@@ -1411,11 +1449,27 @@ def build_market_discovery(
     intent_value: str = "",
     search_generation_diagnostics: dict[str, object] | None = None,
     evaluator: TradeEvaluator = evaluate_candidate_path,
+    asset_index: Mapping[tuple[str, str], object] | None = None,
 ) -> dict[str, object]:
     """Build governed Opportunity/Path output from raw Search rows."""
 
     started = monotonic()
     profiles = cardinal_market_profiles(runtime.value_evidence)
+    market_values = {
+        asset_id: profile.market_price.distribution.mean
+        for asset_id, profile in profiles.items()
+        if profile.market_price is not None
+    }
+    if asset_index is None and runtime.league_state is not None and runtime.selected_team_id is not None:
+        try:
+            asset_index = owned_asset_index(
+                build_trade_center_browser_view(
+                    runtime.league_state,
+                    focal_team_id=runtime.selected_team_id,
+                )
+            )
+        except ValueError:
+            asset_index = None
     economically_screened_rows: list[dict[str, object]] = []
     cheap_economic_errors = 0
     for raw_row in rows:
@@ -1425,6 +1479,8 @@ def build_market_discovery(
                     runtime,
                     dict(raw_row),
                     profiles=profiles,
+                    market_values=market_values,
+                    asset_index=asset_index,
                 )
             )
         except ValueError as exc:
@@ -1451,13 +1507,54 @@ def build_market_discovery(
     selected_indices = set(
         select_preliminary_screen_indices(seeds, limit=evaluation_limit)
     )
+    effective_forecasts = None
+    baseline_by_team = None
+    preliminary_shared_error: ValueError | None = None
+    if (
+        selected_indices
+        and evaluator is evaluate_candidate_path
+        and runtime.league_state is not None
+        and runtime.forecast_evidence is not None
+    ):
+        try:
+            forecasts = (
+                runtime.forecast_evidence.raw_forecasts
+                + runtime.forecast_evidence.league_scored_forecasts
+            )
+            effective_forecasts = attach_provisional_position_floor_forecasts(
+                runtime.league_state,
+                forecasts,
+                as_of=runtime.league_state.as_of,
+                horizon=ForecastHorizon.SEASON,
+            )
+            simulation = runtime.simulation_analytics
+            baseline_by_team = {
+                view.team_id: view.optimized_lineup
+                for view in (simulation.team_views if simulation is not None else ())
+                if view.optimized_lineup is not None
+            }
+        except ValueError as exc:
+            preliminary_shared_error = exc
     paths: list[CandidatePath] = []
     decision_errors = 0
     for index, seed in enumerate(seeds):
         row = dict(seed["representative"])
         if index in selected_indices:
             try:
-                row = evaluator(runtime, row)
+                if evaluator is evaluate_candidate_path:
+                    if preliminary_shared_error is not None:
+                        raise ValueError(str(preliminary_shared_error))
+                    row = evaluate_candidate_path(
+                        runtime,
+                        row,
+                        profiles=profiles,
+                        market_values=market_values,
+                        asset_index=asset_index,
+                        effective_forecasts=effective_forecasts,
+                        baseline_by_team=baseline_by_team,
+                    )
+                else:
+                    row = evaluator(runtime, row)
             except ValueError as exc:
                 decision_errors += 1
                 row = {

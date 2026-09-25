@@ -9,6 +9,13 @@ from fsffl.product.trade_center import (
     remove_asset_from_draft,
     submit_trade_draft,
 )
+from fsffl.product.trade_center_view import (
+    TeamTradeBrowser,
+    TradeAssetOption,
+    TradeCenterBrowserView,
+    asset_from_trade_option,
+    owned_asset_index,
+)
 from fsffl.state.models import PickAsset, PlayerAsset
 
 
@@ -58,3 +65,44 @@ def test_trade_submission_uses_next5_proposal_contract() -> None:
     assert proposal.side_b.team_id == "b"
     assert proposal.side_a.sends == (PlayerAsset(player_id="p1"),)
     assert proposal.side_b.sends == (PickAsset(pick_id="pick-b"),)
+
+
+def test_owned_asset_index_reuses_exact_canonical_asset_conversion() -> None:
+    player_option = TradeAssetOption(
+        asset_ref="player:p1",
+        asset_kind="player",
+        label="Player One",
+        detail="RB",
+        player_id="p1",
+    )
+    pick_option = TradeAssetOption(
+        asset_ref="pick:pick-b",
+        asset_kind="pick",
+        label="2027 Round 1",
+        detail="Originally B",
+        pick_id="pick-b",
+    )
+    view = TradeCenterBrowserView(
+        focal_team=TeamTradeBrowser(
+            team_id="a",
+            display_name="A",
+            assets=(player_option,),
+            faab_balance=100,
+        ),
+        counterparties=(
+            TeamTradeBrowser(
+                team_id="b",
+                display_name="B",
+                assets=(pick_option,),
+                faab_balance=100,
+            ),
+        ),
+        state_id="state-1",
+    )
+
+    indexed = owned_asset_index(view)
+
+    assert indexed[("a", "player:p1")] == asset_from_trade_option(player_option)
+    assert indexed[("a", "player:p1")] == PlayerAsset(player_id="p1")
+    assert indexed[("b", "pick:pick-b")] == asset_from_trade_option(pick_option)
+    assert indexed[("b", "pick:pick-b")] == PickAsset(pick_id="pick-b")
