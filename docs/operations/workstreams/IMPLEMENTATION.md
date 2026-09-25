@@ -32,6 +32,23 @@ Forecast Implementation must:
 
 Full K/DST authority still requires its existing external source/rights/exact-coordinate/uncertainty gates. This directive does not authorize fabricated 60+ FG frequency, nonlinear PA-bucket reconstruction from aggregate means, invented rare-event rates, invented source rights, or silent promotion of partial evidence into full Value/Simulation/Decision/Search authority.
 
+
+
+### Generic Sleeper-league acceptance requirement
+This corrective is architectural, not Hodor-specific. Production behavior must contain no special casing for Hodor, `jder52`, any known Sleeper league ID, or any known franchise ID.
+
+Acceptance must prove that the same pipeline works when supplied an arbitrary valid Sleeper league identity/state:
+- connect/select the league through the normal Sleeper path;
+- preserve the league's actual scoring/rules/state identity;
+- reuse canonical league-agnostic player/stat Forecast evidence;
+- derive league-specific scored outputs from those rules;
+- isolate K/DST or other unsupported subject/rule families without erasing unrelated valid Forecast;
+- emit FULL / PARTIAL_PROVISIONAL / UNSUPPORTED / NOT_APPLICABLE from capability/evidence, not league-name or league-ID branches.
+
+Hodor may remain a regression fixture because it exposed the defect, but Hodor-specific fixture names or expected outputs are not sufficient acceptance. Add deterministic coverage using arbitrary/synthetic league IDs and materially different scoring profiles. Existing Sleeper cross-league selection tests must remain green.
+
+The intended product contract is: a user may enter/select any valid Sleeper league ID; FSFFL NEXT loads its State/roster and computes every intelligence layer that the league's rules and governed evidence support. Unsupported or unforecastable coordinates degrade only the affected capability and are reported explicitly rather than causing league-wide failure.
+
 ### Acceptance target
 Production acceptance requires the correct Hodor league/state and roster plus supported canonical Forecasts populated from shared player/stat evidence, truthful FULL/PARTIAL/UNSUPPORTED coverage by affected subject/rule family, explicit omitted-coordinate reasons, and a precise residual blocker for any downstream capability that still cannot operate.
 
