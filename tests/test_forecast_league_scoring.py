@@ -3,9 +3,12 @@ from datetime import UTC, datetime
 import pytest
 
 from fsffl.forecast.league_scoring import (
+    ForecastCapabilityStatus,
     ScoringCoverageStatus,
+    classify_forecast_rule_family_coverage,
     classify_scoring_coverage,
     derive_league_fantasy_point_forecasts,
+    derive_league_scoring_result,
 )
 from fsffl.forecast.models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, Provenance, RosterSlot, ScoringRule
@@ -179,3 +182,108 @@ def test_truly_unknown_offensive_rule_still_fails_closed() -> None:
     assert coverage.unsupported_rule_stats == ("mystery_bonus",)
     with pytest.raises(ValueError, match="mystery_bonus"):
         derive_league_fantasy_point_forecasts((_observation(ForecastMetric.RECEPTIONS, 80.0),), rules=rules)
+
+
+
+def test_active_k_dst_rules_do_not_collapse_ordinary_player_offense_scoring() -> None:
+    rules = LeagueRules(
+        team_count=12,
+        roster_size=20,
+        lineup=(
+            LineupRequirement(slot=RosterSlot.QB, count=1),
+            LineupRequirement(slot=RosterSlot.WR, count=2),
+            LineupRequirement(slot=RosterSlot.K, count=1),
+            LineupRequirement(slot=RosterSlot.DST, count=1),
+        ),
+        scoring=(
+            ScoringRule(stat="rec", points=0.5),
+            ScoringRule(stat="rec_yd", points=0.1),
+            ScoringRule(stat="rec_td", points=6.0),
+            ScoringRule(stat="fgm_50p", points=5.0),
+            ScoringRule(stat="sack", points=1.0),
+            ScoringRule(stat="pts_allow_0", points=10.0),
+        ),
+    )
+    coverage = classify_scoring_coverage(rules)
+    assert coverage.status == ScoringCoverageStatus.COMPLETE
+    assert coverage.capability_status == ForecastCapabilityStatus.FULL
+    assert set(coverage.separate_subject_rule_stats) == {
+        "fgm_50p",
+        "pts_allow_0",
+        "sack",
+    }
+    assert coverage.unsupported_rule_stats == ()
+
+    scored = derive_league_fantasy_point_forecasts(
+        (
+            _observation(ForecastMetric.RECEPTIONS, 80.0),
+            _observation(ForecastMetric.REC_YARDS, 1000.0),
+            _observation(ForecastMetric.REC_TD, 8.0),
+        ),
+        rules=rules,
+    )
+    assert len(scored) == 1
+    assert scored[0].distribution.mean == pytest.approx(188.0)
+
+    families = {
+        item.family: item
+        for item in classify_forecast_rule_family_coverage(rules)
+    }
+    assert families["player_offense"].status == ForecastCapabilityStatus.FULL
+    assert families["player_offense"].blocks_full_downstream_authority is False
+    assert families["kicker"].status == ForecastCapabilityStatus.UNSUPPORTED
+    assert families["dst"].status == ForecastCapabilityStatus.UNSUPPORTED
+    assert families["kicker"].blocks_full_downstream_authority is True
+    assert families["dst"].blocks_full_downstream_authority is True
+    assert families["kicker"].omitted_rule_stats == ("fgm_50p",)
+    assert set(families["dst"].omitted_rule_stats) == {"pts_allow_0", "sack"}
+
+
+def test_unknown_player_rule_emits_explicit_partial_subtotal_but_strict_consumer_still_fails() -> None:
+    rules = _rules(
+        ScoringRule(stat="rec", points=0.5),
+        ScoringRule(stat="mystery_bonus", points=3.0),
+    )
+    result = derive_league_scoring_result(
+        (_observation(ForecastMetric.RECEPTIONS, 80.0),),
+        rules=rules,
+    )
+
+    assert result.authoritative_forecasts == ()
+    assert len(result.partial_forecasts) == 1
+    partial = result.partial_forecasts[0]
+    assert partial.authority_tier == "partial_provisional"
+    assert partial.distribution.mean == pytest.approx(40.0)
+    assert partial.supported_rule_stats == ("rec",)
+    assert partial.omitted_rule_stats == ("mystery_bonus",)
+    assert "unsupported active player-offense scoring coordinates are omitted" in partial.omission_reasons
+    assert result.coverage.capability_status == ForecastCapabilityStatus.PARTIAL_PROVISIONAL
+    assert result.coverage.blocks_full_downstream_authority is True
+
+    with pytest.raises(ValueError, match="mystery_bonus"):
+        derive_league_fantasy_point_forecasts(
+            (_observation(ForecastMetric.RECEPTIONS, 80.0),),
+            rules=rules,
+        )
+
+
+def test_missing_material_metric_becomes_partial_omission_not_silent_zero() -> None:
+    rules = _rules(
+        ScoringRule(stat="rec", points=0.5),
+        ScoringRule(stat="rec_yd", points=0.1),
+        ScoringRule(stat="rec_td", points=6.0),
+    )
+    result = derive_league_scoring_result(
+        (
+            _observation(ForecastMetric.RECEPTIONS, 80.0),
+            _observation(ForecastMetric.REC_YARDS, 1000.0),
+        ),
+        rules=rules,
+    )
+
+    assert result.authoritative_forecasts == ()
+    assert len(result.partial_forecasts) == 1
+    partial = result.partial_forecasts[0]
+    assert partial.distribution.mean == pytest.approx(140.0)
+    assert partial.omitted_rule_stats == ("rec_td",)
+    assert any("rec_td" in reason for reason in partial.omission_reasons)
