@@ -192,3 +192,12 @@ def test_legacy_players_route_delegates_to_market_player_board() -> None:
     assert "fsfflProductRoutes.filter(item=>!item.legacy)" in shell
     decision_block = navigation.split("const DECISIONS=[", 1)[1].split("];", 1)[0]
     assert "players_assets" not in decision_block
+
+
+def test_focus_client_waits_for_required_value_and_rejects_mismatched_payload() -> None:
+    source = _read(FOCUS_JS)
+    assert 'requiresValue=["position","shop","target","owner"].includes(intent)' in source
+    assert "if(requiresValue&&!value)" in source
+    assert 'const applied=payload?.trade_discovery?.focus||{}' in source
+    assert 'String(applied.intent||"")!==String(intent||"")' in source
+    assert 'String(applied.value||"")!==String(value||"")' in source
