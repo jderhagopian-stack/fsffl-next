@@ -35,6 +35,7 @@ class ForecastMetric(StrEnum):
     FG_MADE = "fg_made"
     FG_MISS = "fg_miss"
     FG_MADE_0_19 = "fg_made_0_19"
+    FG_MADE_0_29 = "fg_made_0_29"
     FG_MADE_20_29 = "fg_made_20_29"
     FG_MADE_30_39 = "fg_made_30_39"
     FG_MADE_40_49 = "fg_made_40_49"
