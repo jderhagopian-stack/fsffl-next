@@ -27,8 +27,10 @@ def test_exact_runtime_workspace_is_reused_without_rebuilding() -> None:
     first = cached(runtime)
     second = cached(runtime)
 
-    assert first is second
-    assert first == {"status": "ready", "call": 1}
+    assert first["status"] == second["status"] == "ready"
+    assert first["call"] == second["call"] == 1
+    assert first["execution"]["workspace_cache_hit"] is False
+    assert second["execution"]["workspace_cache_hit"] is True
     assert len(calls) == 1
     assert calls[0][2] == DEFAULT_PRELIMINARY_DECISION_BUDGET
 
