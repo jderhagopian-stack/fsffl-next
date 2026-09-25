@@ -377,3 +377,12 @@ Implementation resumed from the existing corrective branch after Management's di
 Production evidence motivating the lightweight screen remains the 2026-09-25 Render trace in which full pre-Simulation trade analysis spent approximately 16–114 seconds per path in roster-consequence Decision work while package economics was approximately 0.1 seconds. The corrective implementation preserves the eight-path policy by changing the broad screening primitive and pruning earlier, not by weakening the approved evidence budget.
 
 Validation is in progress on PR #232. The first clarified full-CI run found only stale implementation-string/cache-identity assertions; five focused/authority workflows passed. Those tests were updated to assert the new semantic contracts and the replacement full-CI run is active. Merge/deploy and production non-physical validation remain pending. Physical-iPhone/Safari acceptance remains the final Management gate.
+
+
+### PR #232 merge checkpoint — 2026-09-25
+
+PR #232 merged to canonical `main` at `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b` after the latest head passed full CI, Home North Star focused validation, Franchise North Star focused validation, League Atlas focused validation, the live Forecast corrective trace, and the focused regression suite.
+
+The merged implementation preserves the Management-approved eight-path preliminary Decision budget and the zero-broad-Simulation boundary. It moves strategic need/counterparty admission ahead of package construction, reserves focused Decision spend for the selected intent neighborhood, replaces the full Trade Center roster-consequence call in broad screening with the lightweight Decision-owned preliminary screen, and emits stage/count/cache diagnostics for production validation.
+
+Render production deployment and non-physical production funnel validation are the remaining implementation actions before the physical-iPhone/Safari Management acceptance gate. Do not mark Market accepted from merge/CI alone.
