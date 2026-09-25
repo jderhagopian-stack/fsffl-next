@@ -215,6 +215,8 @@ class ForecastObservation(FrozenModel):
 
     @model_validator(mode="after")
     def validate_point_in_time_semantics(self) -> "ForecastObservation":
+        if self.position == Position.DST:
+            raise ValueError("D/ST Forecast observations must use TeamUnitForecastObservation")
         if self.period_end <= self.period_start:
             raise ValueError("forecast period_end must be after period_start")
         if self.provenance.effective_at > self.as_of:
@@ -256,17 +258,11 @@ class TeamUnitForecastObservation(FrozenModel):
             raise ValueError("forecast period_end must be after period_start")
         if self.provenance.effective_at > self.as_of:
             raise ValueError("forecast evidence cannot postdate observation as_of")
-        if self.metric in {
-            ForecastMetric.PASS_YARDS,
-            ForecastMetric.PASS_TD,
-            ForecastMetric.RUSH_YARDS,
-            ForecastMetric.RUSH_TD,
-            ForecastMetric.RECEPTIONS,
-            ForecastMetric.REC_YARDS,
-            ForecastMetric.REC_TD,
-            ForecastMetric.FUMBLES_LOST,
-        }:
-            raise ValueError("D/ST team-unit observations cannot use player offensive metrics")
+        if (
+            self.metric != ForecastMetric.FANTASY_POINTS
+            and not self.metric.value.startswith("dst_")
+        ):
+            raise ValueError("D/ST team-unit observations require D/ST raw metrics")
         return self
 
     @property
