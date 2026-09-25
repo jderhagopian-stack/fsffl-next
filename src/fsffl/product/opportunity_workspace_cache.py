@@ -26,6 +26,7 @@ def opportunity_workspace_cache_key(
     *,
     candidate_limit: int,
     bilateral_evaluation_limit: int,
+    search_only: bool = False,
 ) -> tuple[object, ...] | None:
     """Key only on authoritative inputs consumed by the Market workspace.
 
@@ -48,6 +49,7 @@ def opportunity_workspace_cache_key(
         _evidence_identity(runtime.value_evidence),
         candidate_limit,
         bilateral_evaluation_limit,
+        search_only,
     )
 
 
@@ -75,18 +77,21 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
         *,
         candidate_limit: int = 80,
         bilateral_evaluation_limit: int = 1,
+        search_only: bool = False,
     ) -> dict[str, object]:
         nonlocal hits, misses
         key = opportunity_workspace_cache_key(
             runtime,
             candidate_limit=candidate_limit,
             bilateral_evaluation_limit=bilateral_evaluation_limit,
+            search_only=search_only,
         )
         if key is None:
             return builder(
                 runtime,
                 candidate_limit=candidate_limit,
                 bilateral_evaluation_limit=bilateral_evaluation_limit,
+                search_only=search_only,
             )
 
         started = monotonic()
@@ -110,6 +115,7 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                 runtime,
                 candidate_limit=candidate_limit,
                 bilateral_evaluation_limit=bilateral_evaluation_limit,
+                search_only=search_only,
             )
             cache[key] = result
             cache.move_to_end(key)
