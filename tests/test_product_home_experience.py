@@ -163,7 +163,7 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
     assert "function fsfflSharedReadinessHost()" in SHELL
     assert "document.querySelector('#fsffl-sync-state')" in SHELL
     assert "fsffl-shared-readiness-host" in SHELL
-    assert "pointer-events:none" in SHELL
+    assert "display:block!important;pointer-events:auto;overflow:hidden" in SHELL
     assert "white-space:normal" in SHELL
     assert "overflow-wrap:anywhere" in SHELL
 
