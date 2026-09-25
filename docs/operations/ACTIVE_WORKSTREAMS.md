@@ -97,3 +97,9 @@ Resume after the Market discovery architecture is settled unless Management expl
 
 ### 2026 provisional K/DST Management exception
 Management has authorized a second bounded 2026-only private-beta exception: Forecast Implementation may produce provisional current-ROS K/DST Forecast evidence using only governed supported scoring coordinates, while explicitly omitting unsupported 60+ K increments, nonlinear D/ST PA-bucket expectation, and unsupported rare events rather than fabricating them. Provisional/partial-rule authority must be machine-readable and visible downstream; full-authority gates remain unchanged; the mode must fail closed for 2027+. Canonical detail is in `workstreams/RESEARCH.md`.
+
+
+## Performance / App-wide League Lifecycle Corrective
+**State:** ACTIVE — HODOR NEW-LEAGUE COMPLETION + GLOBAL LIFECYCLE UX
+
+Management physical acceptance on 2026-09-25 showed Hodor / `jder52` has never completed intelligence and currently presents 2/7 with an empty roster view. The authorized corrective is canonical in `workstreams/PERFORMANCE.md`: diagnose the exact Hodor pipeline blocker, reconcile the merged PR #237 provisional K/DST path with actual runtime/readiness consumption, and implement the app-wide connect/switch/refresh/background-build lifecycle communication contract. This work is shell/lifecycle authority, not a surface-local workaround and not permission to change Market discovery semantics.
