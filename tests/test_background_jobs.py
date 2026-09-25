@@ -97,6 +97,7 @@ def test_job_failure_is_persisted_for_polling_client() -> None:
     assert current.status == IntelligenceJobStatus.FAILED
     assert current.phase == IntelligenceJobPhase.FAILED
     assert current.error == "ValueError: boom"
+    assert current.failure_stage == IntelligenceJobPhase.BUILDING_FORECASTS
     assert current.total_elapsed_seconds is not None
     assert current.total_elapsed_seconds >= 0.0
     assert current.phase_timings
@@ -240,3 +241,33 @@ def test_superseded_job_is_interrupted_not_failed() -> None:
     assert current.status == IntelligenceJobStatus.INTERRUPTED
     assert current.phase == IntelligenceJobPhase.INTERRUPTED
     assert current.error == "league_switch"
+
+
+def test_failure_preserves_exact_runtime_stage_across_restart() -> None:
+    persistence = _LifecyclePersistence()
+    coordinator = IntelligenceJobCoordinator(
+        max_workers=1,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+
+    def work(progress) -> None:
+        progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running simulation")
+        raise RuntimeError("simulation unavailable")
+
+    coordinator.start(user_id="u-stage", league_state_id="state-1", work=work)
+    failed = _wait_for_status(
+        coordinator,
+        user_id="u-stage",
+        status=IntelligenceJobStatus.FAILED,
+    )
+    assert failed is not None
+    assert failed.failure_stage == IntelligenceJobPhase.RUNNING_SIMULATION
+
+    restarted = IntelligenceJobCoordinator(
+        max_workers=1,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+    restored = restarted.current("u-stage")
+    assert restored is not None
+    assert restored.status == IntelligenceJobStatus.FAILED
+    assert restored.failure_stage == IntelligenceJobPhase.RUNNING_SIMULATION
