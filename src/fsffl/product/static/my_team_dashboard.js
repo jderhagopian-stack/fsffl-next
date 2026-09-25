@@ -22,7 +22,7 @@ function myTeamLeagueOutcomeRank(metric){const rows=fsfflMyTeamState.leagueViews
 function myTeamTeamName(teamId){if(!teamId)return'';if(teamId===state?.context?.team_id)return'own';return(state?.context?.teams||[]).find(team=>team.team_id===teamId)?.display_name||'original team'}
 function myTeamOrdinalRound(round){const n=Number(round);if(n===1)return'1st';if(n===2)return'2nd';if(n===3)return'3rd';return`${n}th`}
 function myTeamPickLabel(row){const pick=row.pick||{};const season=pick.season??'Future';const round=pick.round!=null?myTeamOrdinalRound(pick.round):'pick';const owner=myTeamTeamName(pick.original_team_id);return `${season} ${round}${owner?` (${owner})`:''}`}
-function myTeamStateLabel(value){return value&&value!=='unknown'?String(value).replaceAll('_',' '):'Not classified'}
+function myTeamStateLabel(value){return value&&value!=='unknown'?String(value).replaceAll('_',' '):'Intelligence pending'}
 function myTeamStrengths(view){return(view?.position_strengths||[]).filter(row=>typeof row?.strength_index==='number'&&Number.isFinite(row.strength_index)).sort((a,b)=>b.strength_index-a.strength_index)}
 function myTeamAverageAge(players){const ages=(players||[]).map(row=>row.age_years).filter(value=>typeof value==='number'&&Number.isFinite(value));return ages.length?ages.reduce((sum,value)=>sum+value,0)/ages.length:null}
 function myTeamRankedAssets(players){const useIntrinsic=(fsfflMyTeamState.valueLenses?.fsffl_intrinsic?.status||'')!=='unavailable';return(players||[]).map(player=>({player,value:useIntrinsic?myTeamIntrinsicNumber(player.player_id):myTeamMarketNumber(player),lens:useIntrinsic?'FSFFL Intrinsic':'Broad Market'})).filter(row=>row.value!=null).sort((a,b)=>b.value-a.value)}
@@ -352,12 +352,18 @@ function franchiseNSOverview(){
 }
 function franchiseNSRoster(){
   const roster=myTeamRosterRows(fsfflMyTeamState.view?.players||[]);
-  const filter=fsfflMyTeamState.franchiseRosterFilter;
+  const lineupReady=Boolean(fsfflMyTeamState.view?.optimized_lineup)||roster.some(franchiseNSProjectedStarter);
+  const requestedFilter=fsfflMyTeamState.franchiseRosterFilter;
+  const filter=lineupReady?requestedFilter:'all';
   const rows=filter==='starters'?roster.filter(franchiseNSProjectedStarter):filter==='bench'?roster.filter(player=>!franchiseNSProjectedStarter(player)):roster;
+  const stateOnlyNote=!lineupReady&&roster.length
+    ?'<p class="franchise-ns-note">Current roster is loaded from league State. Starter / bench classification and projections remain unavailable until governed Forecast intelligence attaches.</p>'
+    :'';
   return '<section class="franchise-ns-view" data-franchise-view="roster">'+
-    '<div class="franchise-ns-roster-head"><div><p class="eyebrow">Roster</p><h3>Lineup and depth</h3><p>PPG and projected season points use the same governed full-season Forecast on a 17-game display basis.</p></div>'+
-    '<div class="franchise-ns-segment franchise-ns-roster-filter" role="group" aria-label="Roster filter"><button type="button" data-franchise-roster-filter="starters" aria-pressed="'+(filter==='starters')+'">Starters</button><button type="button" data-franchise-roster-filter="bench" aria-pressed="'+(filter==='bench')+'">Bench</button><button type="button" data-franchise-roster-filter="all" aria-pressed="'+(filter==='all')+'">All Players</button></div></div>'+
-    '<div class="franchise-ns-player-list">'+(rows.length?rows.map(franchiseNSPlayerRow).join(''):'<p class="franchise-ns-empty">No players in this roster view.</p>')+'</div>'+
+    '<div class="franchise-ns-roster-head"><div><p class="eyebrow">Roster</p><h3>Lineup and depth</h3><p>PPG and projected season points appear only when governed Forecast evidence is available.</p></div>'+
+    '<div class="franchise-ns-segment franchise-ns-roster-filter" role="group" aria-label="Roster filter"><button type="button" data-franchise-roster-filter="starters" aria-pressed="'+(filter==='starters')+'" '+(lineupReady?'':'disabled')+'>Starters</button><button type="button" data-franchise-roster-filter="bench" aria-pressed="'+(filter==='bench')+'" '+(lineupReady?'':'disabled')+'>Bench</button><button type="button" data-franchise-roster-filter="all" aria-pressed="'+(filter==='all')+'">All Players</button></div></div>'+
+    stateOnlyNote+
+    '<div class="franchise-ns-player-list">'+(rows.length?rows.map(franchiseNSPlayerRow).join(''):'<p class="franchise-ns-empty">No players are present in the current league State.</p>')+'</div>'+
   '</section>';
 }
 function franchiseNSAssets(){
@@ -435,10 +441,15 @@ async function loadFranchiseNorthStar(){
   const expectedStateId=state.context?.state_id||null;
   fsfflMyTeamState.valueLensGeneration+=1;
   fsfflMyTeamState.valueLensLoading=false;
-  // Keep the accepted last-good Franchise visible while fresh reads are in flight.
-  // This prevents a prior Market body from occupying Franchise during refresh and
-  // avoids replacing usable governed evidence with a generic loading takeover.
-  const hasLastGood=Boolean(fsfflMyTeamState.view);
+  // Keep only same-league last-good Franchise evidence visible while fresh reads
+  // are in flight. A cross-league switch must never render the previous league's
+  // roster under the newly selected league identity.
+  const cachedLeagueId=fsfflMyTeamState.view?.context?.league_id||null;
+  const hasLastGood=Boolean(
+    fsfflMyTeamState.view
+    && cachedLeagueId
+    && cachedLeagueId===state?.context?.league_id
+  );
   if(hasLastGood){
     renderFranchiseNorthStar();
   }else if(panel){
@@ -461,6 +472,20 @@ async function loadFranchiseNorthStar(){
     if(panel)panel.innerHTML='<div class="franchise-ns-shell"><p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2><p class="lead">'+myTeamEsc(error?.message||String(error))+'</p></div>';
   }
 }
+window.addEventListener('fsffl:league-context-changed',event=>{
+  const previous=event.detail?.previous_league_id||null;
+  const current=event.detail?.current_league_id||null;
+  if(previous===current)return;
+  fsfflMyTeamState.view=null;
+  fsfflMyTeamState.valueLenses=null;
+  fsfflMyTeamState.leagueViews=[];
+  fsfflMyTeamState.leagueSource='';
+  fsfflMyTeamState.franchiseHome=null;
+  fsfflMyTeamState.valueLensGeneration+=1;
+  fsfflMyTeamState.valueLensLoading=false;
+  fsfflMyTeamState.franchiseRosterFilter='starters';
+  if(state?.route==='my_team')setTimeout(()=>loadFranchiseNorthStar(),0);
+});
 window.renderFsfflMyTeam=loadFranchiseNorthStar;
 
 (function installFranchiseNorthStarStyles(){
