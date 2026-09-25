@@ -92,3 +92,33 @@
  .market-ns-player-sticky{min-width:180px}
 }
 @media(max-width:390px){.market-ns-board-advanced .market-ns-board-controls{grid-template-columns:1fr}}
+
+
+/* 2026-09-25 physical-iPhone corrective acceptance. */
+.market-ns-screen-coverage{margin-top:5px!important;color:#7291a9!important;font-size:8px!important;line-height:1.4!important}
+.market-ns-sort-head{border:0;background:transparent;color:inherit;font:inherit;text-transform:inherit;letter-spacing:inherit;padding:0;white-space:nowrap;cursor:pointer}
+.market-ns-sort-head.active{color:#bfe8ff}
+.market-ns-player-table th[aria-sort="ascending"] .market-ns-sort-head,
+.market-ns-player-table th[aria-sort="descending"] .market-ns-sort-head{font-weight:900}
+.market-ns-player-table{touch-action:pan-x pan-y;overscroll-behavior-x:contain}
+.market-ns-player-table th:first-child,.market-ns-player-sticky{width:132px;min-width:132px;max-width:132px}
+.market-ns-player-link{width:100%;max-width:100%;overflow:hidden}
+.market-ns-player-link strong,.market-ns-player-link small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+@media(max-width:760px){
+  body:has(.market-ns-v2) .fsffl-product-architecture .topbar{
+    min-height:calc(58px + env(safe-area-inset-top));
+    padding-top:max(8px,env(safe-area-inset-top));
+  }
+  .market-ns-v2{padding-top:8px!important;scroll-padding-top:calc(70px + env(safe-area-inset-top))}
+  .market-ns-player-table{overflow-x:auto!important;overflow-y:visible!important;-webkit-overflow-scrolling:touch!important}
+  .market-ns-player-table table{min-width:900px!important}
+  .market-ns-player-table .market-ns-secondary-col{display:table-cell!important}
+  .market-ns-player-table th:first-child,.market-ns-player-sticky{width:118px!important;min-width:118px!important;max-width:118px!important;padding-left:6px!important;padding-right:6px!important}
+  .market-ns-player-link strong{font-size:8px!important}
+  .market-ns-player-link small{font-size:6px!important}
+  .market-ns-player-table th,.market-ns-player-table td{padding:7px 8px}
+}
+@media(max-width:390px){
+  .market-ns-player-table th:first-child,.market-ns-player-sticky{width:108px!important;min-width:108px!important;max-width:108px!important}
+}
