@@ -41,12 +41,12 @@ Research has now:
 Current-forward Hodor authority still fails closed on second-source exact-coordinate coverage, live API/source-health validation, target-compatible whole-score uncertainty promotion, and deployable provider rights.
 
 ## Product / Forecast Implementation
-**State:** MANAGEMENT GATE — 2026 LATE-START EXCEPTION PLAN READY  
+**State:** ACTIVE — BOUNDED 2026 LATE-START IMPLEMENTATION AUTHORIZED  
 PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Evidence-independent K/DST contracts/scoring and the non-promoting calibration harness are already implemented.
 
-Management has now authorized the 2026 late-start exception **for investigation and implementation planning**, not production promotion. The implementation-ready plan is `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
+Management now explicitly authorizes execution of the bounded 2026 late-start implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`. This authorization permits implementation, testing, persisted evidence acquisition where source rights permit, and integration of the already-governed contracts. It does **not** authorize production Forecast promotion where evidence/rights gates remain red.
 
-A bounded implementation may proceed only when Management explicitly authorizes execution. It must:
+The bounded implementation must:
 - persist a dedicated 2026-only current ROS artifact, never a preseason artifact;
 - preserve exact acquisition/provenance/horizon/source-health;
 - enforce schedule-aware subject-row freshness;
