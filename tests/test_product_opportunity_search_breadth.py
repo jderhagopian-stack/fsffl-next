@@ -1,9 +1,14 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from fsffl.product.opportunity_search import (
     _family_first_search_order,
     _multi_lane_search_order,
+    _posture_target_admission,
 )
+from fsffl.product.trade_center_view import TradeAssetOption
+from fsffl.state.models import Position
+from fsffl.team_utility.utility import OwnerStrategicPosture
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,3 +96,92 @@ def test_family_first_search_order_admits_distinct_targets_before_package_repeat
         for row in ordered[:3]
     } == {"player:gibbs", "player:bijan", "player:breece"}
     assert len(ordered) == len(rows)
+
+
+
+def test_competitive_posture_can_change_early_target_admission_without_composite_score() -> None:
+    state = SimpleNamespace(
+        players=(
+            SimpleNamespace(player_id="young", position=Position.WR),
+            SimpleNamespace(player_id="veteran", position=Position.WR),
+        )
+    )
+    young = TradeAssetOption(
+        asset_ref="player:young",
+        asset_kind="player",
+        label="Young WR",
+        player_id="young",
+        age_years=22.0,
+    )
+    veteran = TradeAssetOption(
+        asset_ref="player:veteran",
+        asset_kind="player",
+        label="Veteran WR",
+        player_id="veteran",
+        age_years=29.0,
+    )
+    age_medians = {Position.WR: 25.0}
+    forecast_medians = {Position.WR: 180.0}
+    forecasts = {"young": 150.0, "veteran": 220.0}
+
+    young_win, young_win_reason = _posture_target_admission(
+        league_state=state,
+        target=young,
+        posture=OwnerStrategicPosture.WIN_NOW,
+        age_medians=age_medians,
+        forecast_medians=forecast_medians,
+        forecasts=forecasts,
+    )
+    veteran_win, _ = _posture_target_admission(
+        league_state=state,
+        target=veteran,
+        posture=OwnerStrategicPosture.WIN_NOW,
+        age_medians=age_medians,
+        forecast_medians=forecast_medians,
+        forecasts=forecasts,
+    )
+    young_rebuild, young_rebuild_reason = _posture_target_admission(
+        league_state=state,
+        target=young,
+        posture=OwnerStrategicPosture.REBUILD,
+        age_medians=age_medians,
+        forecast_medians=forecast_medians,
+        forecasts=forecasts,
+    )
+    veteran_rebuild, _ = _posture_target_admission(
+        league_state=state,
+        target=veteran,
+        posture=OwnerStrategicPosture.REBUILD,
+        age_medians=age_medians,
+        forecast_medians=forecast_medians,
+        forecasts=forecasts,
+    )
+
+    assert (young_win, veteran_win) == (False, True)
+    assert (young_rebuild, veteran_rebuild) == (True, False)
+    assert "season Forecast" in young_win_reason
+    assert "governed age" in young_rebuild_reason
+
+
+def test_competitive_posture_missing_evidence_does_not_fabricate_exclusion() -> None:
+    state = SimpleNamespace(
+        players=(SimpleNamespace(player_id="unknown", position=Position.RB),)
+    )
+    target = TradeAssetOption(
+        asset_ref="player:unknown",
+        asset_kind="player",
+        label="Unknown RB",
+        player_id="unknown",
+    )
+
+    admitted, reason = _posture_target_admission(
+        league_state=state,
+        target=target,
+        posture=OwnerStrategicPosture.WIN_NOW,
+        age_medians={},
+        forecast_medians={},
+        forecasts={},
+    )
+
+    assert admitted is True
+    assert "did not exclude" in reason
