@@ -42,8 +42,8 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
-    assert "/static/forecast_refresh.js?v=20260924-readiness-control6" in index
-    assert "/static/product_shell.js?v=20260924-readiness-control6" in index
+    assert "/static/forecast_refresh.js?v=20260924-readiness-control7" in index
+    assert "/static/product_shell.js?v=20260924-readiness-control7" in index
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
@@ -51,9 +51,13 @@ def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_comple
     assert "fsffl-shared-readiness-refresh" in source
     assert "Refresh Intelligence" in source
     assert "window.fsfflManualIntelligenceRefresh?.()" in source
-    assert "const refreshAction=(!fsfflSharedReadinessJobActive())?" in source
+    assert "const active=fsfflSharedReadinessJobActive()" in source
+    assert "Refresh Intelligence" in source
+    assert "Refreshing…" in source
+    assert "disabled aria-disabled=\"true\"" in source
     assert "!status.complete&&!fsfflSharedReadinessJobActive()" not in source
     assert ".fsffl-shared-readiness-refresh{pointer-events:auto" in source
+    assert "display:block!important;pointer-events:auto;overflow:hidden" in source
 
 
 def test_manual_refresh_bypasses_already_ready_short_circuit() -> None:
@@ -64,3 +68,24 @@ def test_manual_refresh_bypasses_already_ready_short_circuit() -> None:
     assert "if(!manual&&intelligencePipelineReady(state.context))" in start
     assert "if(intelligencePipelineReady(state.context))" not in start
     assert "api('/api/intelligence/jobs',{method:'POST'})" in start
+
+
+def test_manual_refresh_single_flight_survives_server_acceptance() -> None:
+    source = _refresh()
+    manual = source.split("async function manualIntelligenceRefresh()", 1)[1].split(
+        "async function pollIntelligenceJob", 1
+    )[0]
+    assert "fsfflJobStartInFlight||fsfflCurrentJobId" in manual
+    assert "fsfflCurrentJobId=null" not in manual
+
+
+def test_shared_refresh_acknowledges_tap_before_network_roundtrip() -> None:
+    source = _shell()
+    render = source.split("function fsfflRenderSharedReadiness()", 1)[1].split(
+        "function fsfflStopSharedReadinessPolling", 1
+    )[0]
+    disabled_index = render.index("refresh.disabled=true")
+    label_index = render.index("refresh.textContent='Refreshing…'")
+    start_index = render.index("window.fsfflManualIntelligenceRefresh?.()")
+    assert disabled_index < start_index
+    assert label_index < start_index

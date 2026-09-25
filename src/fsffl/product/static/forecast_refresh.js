@@ -147,9 +147,8 @@ function settleFailedJob(payload){
 }
 
 async function manualIntelligenceRefresh(){
-  if(!state?.context?.league_id||fsfflJobStartInFlight)return;
+  if(!state?.context?.league_id||fsfflJobStartInFlight||fsfflCurrentJobId)return;
   fsfflSettledStateId=null;
-  fsfflCurrentJobId=null;
   fsfflJobStateId=null;
   fsfflSessionStartedJobId=null;
   clearRefreshTechnicalDetail();

@@ -185,10 +185,10 @@ def test_market_mobile_layout_keeps_tabs_tappable_and_identity_sticky() -> None:
 
 def test_market_release_is_eager_and_single_generation() -> None:
     source = _source(INDEX)
-    assert 'north_star_market.css?v=20260924-readiness-control6' in source
-    assert 'north_star_market.js?v=20260924-readiness-control6' in source
+    assert 'north_star_market.css?v=20260924-readiness-control7' in source
+    assert 'north_star_market.js?v=20260924-readiness-control7' in source
     versions = {token.split("?v=")[1].split('"')[0] for token in source.split() if "?v=" in token}
-    assert versions == {"20260924-readiness-control6"}
+    assert versions == {"20260924-readiness-control7"}
 
 
 def test_market_browser_script_parses() -> None:

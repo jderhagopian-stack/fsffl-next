@@ -27,7 +27,7 @@ const fsfflProductSurfaceCopy={
 const fsfflStaticVersion='20260924-live-usability-hotfix1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260924-readiness-control6';
+const homeNorthStarStaticVersion='20260924-readiness-control7';
 const franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
@@ -109,7 +109,10 @@ function fsfflSharedReadinessSnapshot(){
 }
 function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const pct=status.total?Math.max(0,Math.min(100,(status.step/status.total)*100)):0;
-  const refreshAction=(!fsfflSharedReadinessJobActive())?'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>':'';
+  const active=fsfflSharedReadinessJobActive();
+  const refreshAction=active
+    ?'<button type="button" class="fsffl-shared-readiness-refresh" disabled aria-disabled="true">Refreshing…</button>'
+    :'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>';
   return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':'●')+'</span><strong>'+status.step+' / '+status.total+'</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){
@@ -132,7 +135,12 @@ function fsfflRenderSharedReadiness(){
   node.innerHTML=fsfflSharedReadinessMarkup(status);
   node.hidden=false;
   const refresh=node.querySelector('.fsffl-shared-readiness-refresh');
-  if(refresh)refresh.addEventListener('click',()=>window.fsfflManualIntelligenceRefresh?.());
+  if(refresh&&!refresh.disabled)refresh.addEventListener('click',()=>{
+    refresh.disabled=true;
+    refresh.setAttribute('aria-disabled','true');
+    refresh.textContent='Refreshing…';
+    window.fsfflManualIntelligenceRefresh?.();
+  });
 }
 function fsfflStopSharedReadinessPolling(){
   if(fsfflSharedReadinessState.pollTimer){clearInterval(fsfflSharedReadinessState.pollTimer);fsfflSharedReadinessState.pollTimer=null}
@@ -173,7 +181,7 @@ function installFsfflSharedReadinessStyles(){
   if(document.querySelector('#fsffl-shared-readiness-style'))return;
   const style=document.createElement('style');
   style.id='fsffl-shared-readiness-style';
-  style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:none;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr);align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}.fsffl-shared-readiness-refresh{pointer-events:auto;position:relative;z-index:1}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr);gap:6px}}';
+  style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:auto;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr);align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}.fsffl-shared-readiness-refresh{pointer-events:auto;position:relative;z-index:1}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr);gap:6px}}';
   document.head.appendChild(style);
 }
 window.fsfflSharedReadiness={
