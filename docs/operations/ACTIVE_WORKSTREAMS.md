@@ -18,7 +18,14 @@ Durable handoff:
 - `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
 - `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`
 
-The exception removes missing pre-Week-1 K/DST evidence from **current-forward 2026** authority. It does not create preseason evidence and cannot be used in 2027+. Current-forward Hodor authority still fails closed on exact K 60+ evidence, D/ST PA-bucket/rare-event coverage, target-compatible K/DST uncertainty, per-metric two-source independence, and deployable provider rights.
+The exception removes missing pre-Week-1 K/DST evidence from **current-forward 2026** authority. It does not create preseason evidence and cannot be used in 2027+.
+
+Research has now:
+- measured bounded empirical K and D/ST season-error and weekly-volatility on explicit reduced fingerprints;
+- identified JerryGM as one current ROS provider candidate capable of Hodor-style 60+ K scoring and distributional D/ST PA-tier pricing;
+- exhausted materially distinct public paths without finding a second independent source proving those same hard coordinates.
+
+Current-forward Hodor authority still fails closed on second-source exact-coordinate coverage, live API/source-health validation, target-compatible whole-score uncertainty promotion, and deployable provider rights.
 
 ## Product / Forecast Implementation
 **State:** MANAGEMENT GATE — 2026 LATE-START EXCEPTION PLAN READY  
@@ -31,9 +38,9 @@ A bounded implementation may proceed only when Management explicitly authorizes 
 - preserve exact acquisition/provenance/horizon/source-health;
 - enforce schedule-aware subject-row freshness;
 - retain >=2 independent sources per required metric/group;
-- keep Hodor K fail-closed without exact 60+ evidence;
-- keep Hodor D/ST fail-closed without game/distributional PA-bucket evidence and rare-event coverage;
-- run K/DST-specific scoring-fingerprint-bound uncertainty calibration without inventing a coefficient;
+- keep Hodor K fail-closed until the 60+ coordinate has two independent governed sources;
+- keep Hodor D/ST fail-closed until PA-tier distribution and rare-event coordinates have two independent governed sources;
+- reproduce the persisted reduced-fingerprint empirical measurements and promote uncertainty only after target compatibility is proven;
 - reject the late-start path for 2027+.
 
 Provider/source rights remain external gates for deployed use.
