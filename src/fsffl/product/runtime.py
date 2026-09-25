@@ -351,6 +351,30 @@ class PrivateBetaRuntimeStore:
                 self._pending_intelligence.pop(user_id, None)
             return context
 
+    def set_league_state_if_generation(
+        self,
+        user_id: str,
+        league_state: LeagueState,
+        *,
+        expected_generation: int,
+        expected_league_id: str | None = None,
+    ) -> UserRuntimeContext | None:
+        """Atomically activate State only while the caller still owns refresh authority."""
+
+        with self._lock:
+            if self._league_generations.get(user_id, 0) != expected_generation:
+                return None
+            current = self.get(user_id)
+            if (
+                expected_league_id is not None
+                and (
+                    current.league_state is None
+                    or current.league_state.league.league_id != expected_league_id
+                )
+            ):
+                return None
+            return self.set_league_state(user_id, league_state)
+
     def set_forecast_evidence(
         self,
         user_id: str,
