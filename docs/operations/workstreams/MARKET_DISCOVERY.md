@@ -1,7 +1,7 @@
-# Workstream — Market / Trade Discovery Architecture Review
+# Workstream — Market / Trade Discovery
 
 ## State
-**MANAGEMENT GATE — ARCHITECTURE REVIEW COMPLETE**
+**IMPLEMENTATION COMPLETE — PHYSICAL IPHONE ACCEPTANCE GATE**
 
 ## Why this workstream moved forward
 Physical-iPhone Market acceptance exposed a product-level problem rather than a narrow presentation defect.
@@ -220,3 +220,28 @@ Management accepts the persisted implementation handoff without architecture cha
 Implementation is not authorized to weaken evidence/authority gates, fabricate acceptance probability, turn Owner Intelligence into universal Value, use broad exact Simulation for discovery, or relabel unevaluated Search rows as worth-attention opportunities.
 
 Repeat physical-iPhone acceptance is required before Market North Star can be closed.
+
+
+## Bounded implementation outcome — 2026-09-25
+Management-authorized implementation is complete on PR #220 and implementation-level acceptance is green.
+
+Durable implementation evidence:
+- `artifacts/implementation/market_discovery_north_star_20260925/IMPLEMENTATION_HANDOFF.md`
+
+Accepted implementation now includes:
+- OpportunityHypothesis → MarketOpportunity → CandidatePath runtime contracts;
+- target-family-first Search admission before candidate truncation;
+- cheap Decision-owned economic screening before family pruning;
+- bounded family-first eight-path pre-Simulation bilateral screening;
+- package-family clustering and deterministic categorical diversity/ranking;
+- For You `worth_attention` gating with no raw-row quota fill;
+- explicit Trade Finder intent grouping;
+- descriptive-only Owner Intelligence;
+- zero broad changed-state Simulation;
+- Core 7/7 versus Market-surface readiness;
+- partial Player Board delivery while optional Intrinsic builds;
+- Opportunity-first / Candidate-Path drilldown North Star presentation;
+- hosted static generation `20260925-market-discovery1`;
+- deterministic Gibbs, extreme-economic, dominance, readiness, ranking, observability, and Simulation-boundary coverage.
+
+Implementation-level automated acceptance is satisfied. Market North Star product acceptance is **not closed** until the merged/deployed build passes repeat physical-iPhone/Safari validation.
