@@ -77,6 +77,10 @@ DEFERRED until Market physical acceptance unless Management reprioritizes.
 ## Acceptance boundaries
 Do not treat endpoint 200, PR merge, CPU activity or polling as product acceptance. Do not allow failed/in-progress refresh to evict promoted last-good. Do not claim new-league 7/7 until K/DST authority is promoted. Do not call current 2026 K/DST evidence preseason. Do not weaken two-source/rule-completeness/uncertainty governance. Search cannot invent Decision/Value/Forecast truth. No fake acceptance probabilities or hidden master scores. Market requires physical iPhone/Safari acceptance.
 
+### Repo-first worker prompt rule
+
+Management must persist substantive directives in canonical `docs/operations/` state first, then use only a short worker continuation prompt that points the worker back to that state. Do not make long chat-only prompts the durable source of implementation scope. This rule is part of `OPERATING_PROTOCOL.md` and must be preserved by successor Management chats.
+
 ## Durable-interchange hygiene
 Management keeps this file current when cross-workstream decisions, acceptance gates, deployment/production state, or next-action sequencing materially change. Worker details belong in worker files. If a worker file conflicts with durable commits/deployment evidence, reconcile the inconsistency explicitly.
 
