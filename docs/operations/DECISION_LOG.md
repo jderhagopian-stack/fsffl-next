@@ -136,3 +136,9 @@ Decision: the accepted Market architecture remains frozen, but the authenticated
 Decision: Management authorizes a bounded 2026-only provisional K/DST Forecast tier that scores only governed supported coordinates and explicitly omits unsupported coordinates. Presentation, readiness, and analytics may expose the provisional contract with its limitations attached. Full-authority downstream consumers may not silently treat it as complete Forecast truth. The full K/DST authority gates and the 2027+ fail-closed boundary remain unchanged.
 
 PR #237 merged at `33b969b04180893f7e582c0ebd76c54bea81961d`. PR #238 exact-league-state persistence and API binding is accepted as safety hardening within the same authority envelope; it must reconcile with current main and retain green regression coverage before merge.
+
+
+## 2026-09-25 — App-wide lifecycle and Hodor corrective
+Decision: Hodor is a new-league completion plus app-wide lifecycle failure, not a regression from a previously complete Hodor state. Performance owns the cross-surface lifecycle contract: user action → immediate acknowledgement → safe usable current or valid last-good State → persistent background-work status → validated atomic promotion → explicit current or failed state. Valid roster State must remain visible while derived intelligence is incomplete, and old-league evidence must never masquerade as the newly selected league.
+
+Performance must trace the exact persisted State through Forecast, including the PR #237 provisional K/DST path, then Value, Simulation, readiness, and promotion before attributing the observed 2/7 condition to any stage.
