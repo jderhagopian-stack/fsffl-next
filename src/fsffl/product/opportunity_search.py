@@ -815,7 +815,6 @@ def build_scoped_trade_candidates(
                     rejection_reasons["target_outside_competitive_lens"] += 1
                     continue
                 posture_targets_admitted += 1
-            setattr(target, "_market_posture_reason", posture_reason) if False else None
             admitted_targets.append(target)
 
         if not admitted_targets:
