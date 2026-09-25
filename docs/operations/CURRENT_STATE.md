@@ -73,7 +73,7 @@ The historical-source gate is therefore **partially cleared**, while production 
 
 ## Immediate management priority
 1. Treat missing 2026 preseason K/DST evidence as **historical/preseason-only**, not a blocker to a properly governed current-forward late-start baseline.
-2. Complete acceptance of the Management-authorized implementation in PR #233; the 2026-only ROS artifact, schedule-aware row health, exact K transforms, rights-aware coverage, and non-promoting empirical replay are implemented there.
+2. PR #233 is merged on canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8`; the bounded 2026-only ROS artifact, schedule-aware row health, exact K transforms, rights-aware coverage, scoring-fingerprint calibration guardrails, and non-promoting empirical replay are implementation-complete.
 3. Keep Hodor current-forward K authority fail-closed until the first exact 60+ candidate is live-validated, a second independent 60+ source exists, provider rights are cleared, and target-compatible K uncertainty is promoted.
 4. Keep Hodor current-forward D/ST authority fail-closed until the first PA-distribution candidate is live-validated, a second independent PA-distribution source exists, rare-event two-source coverage and provider rights are cleared, and target-compatible D/ST uncertainty is promoted.
 5. Require schedule-aware subject-row source health; Friday snapshots that still include Atlanta/Green Bay's already-completed Thursday game must quarantine those rows rather than be backdated or adjusted heuristically.
@@ -87,10 +87,10 @@ The historical-source gate is therefore **partially cleared**, while production 
 ## Important distinction
 Research and implementation planning for the 2026 late-start exception are complete. Production K/DST Forecast authority is **not** promoted.
 
-The current-forward blockers are no longer “missing preseason evidence” or “no empirical K/DST uncertainty exists.” They are now:
+The current-forward blockers are no longer “missing preseason evidence,” “no empirical K/DST uncertainty exists,” or missing implementation plumbing. PR #233 completed the bounded implementation. The remaining blockers are:
 - rights-cleared, independent current source coverage;
 - second-source exact Hodor coordinates (K 60+; D/ST PA distribution/rare events);
-- live validation of the first exact-capability API candidate;
+- authorized live validation of the first exact-capability API candidate;
 - promotion of K/DST uncertainty only after full target-scoring compatibility is proven.
 
 The 2026 preseason comparison remains unavailable by design. See `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
