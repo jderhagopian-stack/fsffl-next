@@ -76,3 +76,27 @@ def test_hosted_entrypoint_installs_foreground_pressure() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text()
     assert "from .foreground_pressure import install_foreground_pressure" in source
     assert "install_foreground_pressure(app)" in source
+
+
+def test_full_market_enrichment_does_not_count_itself_as_foreground_pressure() -> None:
+    app = FastAPI()
+    install_foreground_pressure(app)
+    baseline = foreground_pressure.snapshot().active_requests
+
+    @app.get("/api/opportunities/workspace")
+    def full_workspace():
+        return {"active": foreground_pressure.snapshot().active_requests}
+
+    @app.get("/api/opportunities/workspace/quick")
+    def quick_workspace():
+        return {"active": foreground_pressure.snapshot().active_requests}
+
+    client = TestClient(app)
+    full = client.get("/api/opportunities/workspace")
+    quick = client.get("/api/opportunities/workspace/quick")
+
+    assert full.status_code == 200
+    assert full.json()["active"] == baseline
+    assert quick.status_code == 200
+    assert quick.json()["active"] == baseline + 1
+    assert foreground_pressure.snapshot().active_requests == baseline

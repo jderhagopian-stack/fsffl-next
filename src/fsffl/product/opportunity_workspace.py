@@ -469,6 +469,7 @@ def build_opportunity_workspace(
     *,
     candidate_limit: int = 80,
     bilateral_evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET,
+    search_only: bool = False,
 ) -> dict[str, object]:
     """Build a responsive Opportunity workspace with progressive governed evidence.
 
@@ -531,21 +532,67 @@ def build_opportunity_workspace(
     total_candidate_count = len(candidates)
     returned = candidates[: max(candidate_limit, 0)]
 
-    market_discovery = build_market_discovery(
-        runtime,
-        returned,
-        evaluation_limit=bilateral_evaluation_limit,
-        search_generation_diagnostics=search_generation_diagnostics,
-    )
-    evaluated_rows = {}
-    for path in market_discovery.get("candidate_paths") or []:
-        package = path.get("representative_package") or {}
-        if package.get("bilateral_decision_evaluated"):
-            evaluated_rows[_legacy_row_identity(package)] = package
-    returned = [
-        evaluated_rows.get(_legacy_row_identity(row), row)
-        for row in returned
-    ]
+    if search_only:
+        # Progressive delivery intentionally stops after governed structural Search.
+        # Market-family economics and bounded Decision enrichment belong to the
+        # follow-up full workspace request; doing them here defeats the quick path
+        # while adding no authority the search-only UI is allowed to present.
+        market_discovery = {
+            "hypotheses": [],
+            "candidate_paths": [],
+            "opportunities": [],
+            "for_you": [],
+            "diagnostics": {
+                "targets_considered": int(
+                    search_generation_diagnostics.get("targets_considered", 0)
+                ),
+                "raw_packages_generated": total_candidate_count,
+                "raw_packages_generated_pre_dedup": int(
+                    search_generation_diagnostics.get(
+                        "raw_packages_generated_pre_dedup",
+                        total_candidate_count,
+                    )
+                ),
+                "packages_removed_exact_duplicate": int(
+                    search_generation_diagnostics.get(
+                        "packages_removed_exact_duplicate",
+                        0,
+                    )
+                ),
+                "packages_screened_economic": 0,
+                "preliminary_decision_budget": 0,
+                "preliminary_decision_runs": 0,
+                "opportunities_created": 0,
+                "for_you_selected": 0,
+                "search_only_delivery": True,
+                "changed_state_simulation_calls_during_discovery": 0,
+            },
+            "authority": {
+                "opportunity_aggregation_is_search_owned": True,
+                "cheap_economic_screen_is_decision_owned": True,
+                "preliminary_screen_is_decision_owned": True,
+                "acceptance_probability": None,
+                "recommendation_authority": False,
+                "search_only_delivery": True,
+                "changed_state_simulation_calls_during_discovery": 0,
+            },
+        }
+    else:
+        market_discovery = build_market_discovery(
+            runtime,
+            returned,
+            evaluation_limit=bilateral_evaluation_limit,
+            search_generation_diagnostics=search_generation_diagnostics,
+        )
+        evaluated_rows = {}
+        for path in market_discovery.get("candidate_paths") or []:
+            package = path.get("representative_package") or {}
+            if package.get("bilateral_decision_evaluated"):
+                evaluated_rows[_legacy_row_identity(package)] = package
+        returned = [
+            evaluated_rows.get(_legacy_row_identity(row), row)
+            for row in returned
+        ]
 
     trade_spotlights = build_trade_spotlights(returned)
     posture_views = _posture_views(runtime, returned)

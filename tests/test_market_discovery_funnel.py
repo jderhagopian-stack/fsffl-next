@@ -306,3 +306,13 @@ def test_representative_path_order_prefers_governed_categories_before_market_dis
         path_id="friction",
     )
     assert _candidate_path_order(supported) < _candidate_path_order(closer_but_friction)
+
+
+def test_full_market_enrichment_has_explicit_foreground_yield_boundaries() -> None:
+    source = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
+    build = source.split("def build_market_discovery(", 1)[1]
+    assert "from .foreground_pressure import foreground_pressure" in source
+    assert build.count("foreground_pressure.cooperative_yield()") >= 2
+    assert build.index("evaluate_candidate_economics(") < build.index(
+        "foreground_pressure.cooperative_yield()"
+    )

@@ -129,7 +129,11 @@ def install_progressive_delivery_routes(
     def opportunity_workspace_quick(user_id: str = Depends(require_user)) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
         started = monotonic()
-        result = workspace_builder(runtime, bilateral_evaluation_limit=0)
+        result = workspace_builder(
+            runtime,
+            bilateral_evaluation_limit=0,
+            search_only=True,
+        )
         completed = monotonic()
         _logger.info(
             "FSFFL progressive Market quick timing total=%.3fs state=%s status=%s candidates=%s",

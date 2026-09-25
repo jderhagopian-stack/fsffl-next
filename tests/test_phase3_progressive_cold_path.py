@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from threading import Event, Lock
 import json
@@ -9,7 +10,9 @@ import time
 
 import pytest
 
+from fsffl.product import opportunity_workspace as opportunity_workspace_module
 from fsffl.product import scenario_cache
+from fsffl.product.opportunity_workspace_cache import make_cached_opportunity_workspace
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,7 +36,8 @@ def test_market_quick_path_uses_same_workspace_builder_without_decision_enrichme
     routes = _text(PRODUCT / "progressive_delivery_routes.py")
     persistent = _text(PRODUCT / "persistent_webapp.py")
     assert '"/api/opportunities/workspace/quick"' in routes
-    assert "workspace_builder(runtime, bilateral_evaluation_limit=0)" in routes
+    assert "bilateral_evaluation_limit=0" in routes
+    assert "search_only=True" in routes
     assert '"completeness": "search_only"' in routes
     assert '"decision_enrichment_pending"' in routes
     assert "workspace_builder=_webapp.build_opportunity_workspace" in persistent
@@ -238,3 +242,125 @@ def test_identical_concurrent_simulations_share_one_authoritative_run_and_near_r
     assert cache_hit is False
     assert calls == 2
     scenario_cache.clear_scenario_cache()
+
+
+def test_search_only_workspace_skips_market_family_and_economic_enrichment(monkeypatch) -> None:
+    class Browser:
+        focal_team = SimpleNamespace(display_name="Managed Team")
+
+    runtime = SimpleNamespace(
+        league_state=SimpleNamespace(
+            state_id="state-search-only",
+            as_of=datetime(2026, 9, 25, 12, 0, tzinfo=UTC),
+            team_states=(),
+            player_states=(),
+            players=(),
+        ),
+        selected_team_id="team-me",
+        forecast_evidence=None,
+        simulation_analytics=None,
+        value_evidence=SimpleNamespace(
+            model_version="value-test-v1",
+            fsffl_cardinal_values=(SimpleNamespace(asset_id="player:p1", score=100.0),),
+        ),
+    )
+    rows = [
+        {
+            "kind": "trade",
+            "counterparty_team_id": "team-other",
+            "counterparty_name": "Other",
+            "target_position": "RB",
+            "market_gap_ratio": 0.01,
+            "search_distance": 1.0,
+            "package_shape": "one_for_one",
+            "send": [{"asset_ref": "player:p1", "label": "P1", "asset_kind": "player"}],
+            "receive": [{"asset_ref": "player:p2", "label": "P2", "asset_kind": "player"}],
+        }
+    ]
+
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "build_trade_center_browser_view",
+        lambda *_args, **_kwargs: Browser(),
+    )
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "build_roster_aware_trade_candidates",
+        lambda *_args, **_kwargs: rows,
+    )
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "build_trade_spotlights",
+        lambda current: [{"count": len(current)}],
+    )
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "_posture_views",
+        lambda *_args, **_kwargs: {},
+    )
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "_market_surface_readiness",
+        lambda *_args, **_kwargs: {},
+    )
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "posture_payload",
+        lambda *_args, **_kwargs: {},
+    )
+
+    def forbidden_market_discovery(*_args, **_kwargs):
+        raise AssertionError("search-only delivery must not run Market-family economics")
+
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "build_market_discovery",
+        forbidden_market_discovery,
+    )
+
+    payload = opportunity_workspace_module.build_opportunity_workspace(
+        runtime,
+        bilateral_evaluation_limit=0,
+        search_only=True,
+    )
+
+    assert payload["status"] == "ready"
+    assert payload["trade_discovery"]["candidate_count"] == 1
+    assert payload["trade_discovery"]["candidates"] == rows
+    assert payload["market_discovery"]["candidate_paths"] == []
+    assert payload["market_discovery"]["for_you"] == []
+    assert payload["market_discovery"]["diagnostics"]["search_only_delivery"] is True
+    assert payload["market_discovery"]["diagnostics"]["packages_screened_economic"] == 0
+    assert payload["authority"]["recommendation_authority"] is False
+
+
+def test_search_only_and_full_workspace_cache_entries_cannot_alias() -> None:
+    calls = []
+
+    def builder(runtime, **kwargs):
+        calls.append(dict(kwargs))
+        return {
+            "state": runtime.league_state.state_id,
+            "search_only": bool(kwargs.get("search_only")),
+        }
+
+    runtime = SimpleNamespace(
+        league_state=SimpleNamespace(state_id="state-cache"),
+        selected_team_id="team-me",
+        forecast_evidence=None,
+        simulation_analytics=None,
+        value_evidence=None,
+    )
+    cached = make_cached_opportunity_workspace(builder)
+
+    quick = cached(runtime, bilateral_evaluation_limit=0, search_only=True)
+    quick_again = cached(runtime, bilateral_evaluation_limit=0, search_only=True)
+    full = cached(runtime, bilateral_evaluation_limit=0, search_only=False)
+    full_again = cached(runtime, bilateral_evaluation_limit=0, search_only=False)
+
+    assert quick is quick_again
+    assert full is full_again
+    assert quick is not full
+    assert len(calls) == 2
+    assert calls[0]["search_only"] is True
+    assert calls[1]["search_only"] is False
