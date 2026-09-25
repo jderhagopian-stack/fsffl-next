@@ -14,7 +14,7 @@ def test_home_stays_presentation_only_after_north_star_recomposition() -> None:
     assert "most_promising_evaluated" not in home
     assert "/api/opportunities/workspace" not in home
     runtime = Path("src/fsffl/product/market_discovery_runtime.py").read_text()
-    assert "DEFAULT_PRELIMINARY_DECISION_BUDGET = 2" in runtime
+    assert "DEFAULT_PRELIMINARY_DECISION_BUDGET = 8" in runtime
     assert "bilateral_evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET" in workspace
     assert "build_market_discovery" in workspace
     assert "_evaluate_structural_trade" in workspace
