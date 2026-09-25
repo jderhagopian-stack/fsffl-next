@@ -70,6 +70,14 @@ def test_opportunity_and_candidate_path_drilldown_preserve_decision_boundary() -
     assert "/api/trade-center/simulate" not in source
 
 
+def test_candidate_path_detail_never_claims_unscreened_paths_survived_screening() -> None:
+    source = _source(MARKET)
+    assert 'screened=path.deep_evaluation_status==="prelim_screened"' in source
+    assert "This route survived bounded preliminary screening." in source
+    assert "bounded bilateral screening has not run for it yet." in source
+    assert "pathStatus=pathAuthority(path)" in source
+
+
 def test_trade_finder_preserves_owner_controlled_search_modes_and_postures() -> None:
     source = _source(MARKET)
     for label in (
