@@ -64,6 +64,24 @@ from .k_dst_ros_normalization import (
     LateStartNormalizedEvidence,
     normalize_late_start_provider_evidence,
 )
+from .k_dst_provisional import (
+    DST_REDUCED_2024_SEASON_RELATIVE_RMSE,
+    DST_REDUCED_2024_WEEKLY_CV,
+    K_REDUCED_2024_SEASON_RELATIVE_RMSE,
+    K_REDUCED_2024_WEEKLY_CV,
+    PROVISIONAL_K_DST_EXCEPTION_VERSION,
+    PROVISIONAL_K_DST_MODEL_VERSION,
+    ProvisionalKDstConsumer,
+    ProvisionalKDstConsumerDecision,
+    ProvisionalKDstCoordinate,
+    ProvisionalKDstForecast,
+    ProvisionalKDstOmission,
+    ProvisionalKDstReadiness,
+    ProvisionalKDstUncertainty,
+    assess_provisional_k_dst_consumer,
+    build_provisional_k_dst_forecast,
+    provisional_k_dst_readiness,
+)
 from .k_dst_scoring import (
     ForecastSubjectFamily,
     GameRuleProbabilityDistribution,
@@ -100,6 +118,22 @@ from .models import (
 )
 
 __all__ = [
+    "provisional_k_dst_readiness",
+    "build_provisional_k_dst_forecast",
+    "assess_provisional_k_dst_consumer",
+    "ProvisionalKDstUncertainty",
+    "ProvisionalKDstReadiness",
+    "ProvisionalKDstOmission",
+    "ProvisionalKDstForecast",
+    "ProvisionalKDstCoordinate",
+    "ProvisionalKDstConsumerDecision",
+    "ProvisionalKDstConsumer",
+    "PROVISIONAL_K_DST_MODEL_VERSION",
+    "PROVISIONAL_K_DST_EXCEPTION_VERSION",
+    "K_REDUCED_2024_WEEKLY_CV",
+    "K_REDUCED_2024_SEASON_RELATIVE_RMSE",
+    "DST_REDUCED_2024_WEEKLY_CV",
+    "DST_REDUCED_2024_SEASON_RELATIVE_RMSE",
     "assess_late_start_subject_authority",
     "LateStartAuthorityAssessment",
     "late_start_subject_is_rule_complete",
