@@ -2,8 +2,8 @@
 
 ## Current critical path
 1. **Forecast Research: COMPLETE.** Governed K/DST + late-connect bootstrap contract is persisted in `docs/operations/workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
-2. Management review / acceptance of the completed research contract and authorization of a bounded implementation directive.
-3. Governed Forecast implementation:
+2. **Management acceptance/authorization: COMPLETE.** Bounded Forecast/Product implementation is authorized from the persisted handoff.
+3. **Governed Forecast implementation: ACTIVE in PR #215:**
    - K and D/ST subject/scoring contracts;
    - active-rule completeness;
    - empirical K/DST calibration/source promotion;
@@ -16,9 +16,9 @@
 8. Trade Center work only after the discovery/search order of operations is settled.
 
 ## Current management gate
-Research is no longer the blocker. The unresolved blocker is **unimplemented/unpromoted Forecast authority** for the newly connected K/DST league.
+Research is complete and bounded implementation is authorized. PR #215 now carries the Stage 1 contracts/scoring implementation and Stage 2 non-promoting harness.
 
-Do not interpret the completed research contract as authorization to implement or as evidence that production K/DST Forecast is green.
+The unresolved blocker is **unpromoted empirical/source Forecast authority** for K/DST plus the late-connect preseason evidence gap. Do not interpret implemented contracts or research harnesses as production K/DST forecasts.
 
 ## Trade Discovery principle
 Simulation should evaluate shortlisted trades, not perform broad discovery.
