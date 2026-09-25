@@ -4,34 +4,30 @@ Updated: 2026-09-24
 
 ## Management
 **State:** ACTIVE  
-Owns sequencing, scope, gates, product decisions, acceptance of the completed Forecast research contract, and authorization of any implementation directive.
+Owns sequencing, scope, gates, product decisions, and cross-workstream conflict resolution.
 
 ## Performance
 **State:** MANAGEMENT GATE  
-Lifecycle/league-switch repair has reached an upstream Forecast dependency. See `workstreams/PERFORMANCE.md`. Performance must not change Forecast/model authority to force 7/7.
+Lifecycle/league-switch repair remains gated on governed Forecast implementation. Performance must not weaken Forecast/model authority to force 7/7.
 
 ## Forecast Research — K/DST + New-League Bootstrap
 **State:** DIRECTIVE COMPLETE — RESEARCH  
-The implementation-ready research contract, evidence, unresolved risks, fixture matrix, and downstream handoff are persisted in:
-- `workstreams/RESEARCH.md`
-- `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
-
-Research PR/history: #213 / `91018b39967a0775ad830a6a750a2588e7f041d0`.
-
-No production K/DST authority was promoted and no implementation was begun.
+The implementation-ready research contract is persisted in `workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
 
 ## Product / Forecast Implementation
-**State:** MANAGEMENT GATE — CONTRACT READY, NOT YET AUTHORIZED  
-Research has supplied the governed implementation sequence. Do not begin speculative K/DST/model work until Management explicitly authorizes the implementation directive.
+**State:** AUTHORIZED — ACTIVE / PARALLEL DEPENDENCY  
+Management accepts the completed Research contract and has authorized bounded implementation under its persisted handoff. Preserve all fail-closed/evidence gates. This workstream owns the K/DST + late-connect production dependency.
 
-The remaining production dependency includes:
-- K/DST subject + rule-complete scoring implementation;
-- historical calibration/source-evidence promotion;
-- governed new-league bootstrap/migration behavior;
-- downstream compatibility and lifecycle acceptance.
+## Market / Trade Discovery Architecture Review
+**State:** AUTHORIZED / NEXT  
+Physical-iPhone acceptance showed that Market is functionally implemented but not product-accepted. The issue is both discovery quality and mobile information architecture. See `workstreams/MARKET_DISCOVERY.md`.
 
-## Deferred sequence
-After Forecast implementation is authorized, completed, and the new-league lifecycle passes acceptance:
-- Market physical-iPhone acceptance
-- Home × Franchise redundancy audit
-- Trade Discovery architecture review before Trade Center expansion
+This review may run in parallel with Forecast implementation because it must not alter Forecast/K/DST authority.
+
+## Market acceptance
+**State:** NOT ACCEPTED  
+Do not close Market North Star on the current implementation. Player Board / Free Agents readiness contradiction and opportunity-quality/discovery architecture remain open.
+
+## Home × Franchise audit
+**State:** DEFERRED  
+Resume after the Market discovery architecture is settled unless Management explicitly reprioritizes it.
