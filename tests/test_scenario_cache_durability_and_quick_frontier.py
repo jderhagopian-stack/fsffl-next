@@ -6,7 +6,7 @@ PERSISTENT = ROOT / "persistent_webapp.py"
 QUICK_ROUTE = ROOT / "quick_frontier_routes.py"
 QUICK_JS = ROOT / "static/quick_counter_frontier.js"
 INDEX = ROOT / "static/index.html"
-RELEASE = "20260925-market-corrective1"
+RELEASE = "20260925-market-beta-corrective2"
 
 
 def _read(path: Path) -> str:
