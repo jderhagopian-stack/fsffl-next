@@ -23,7 +23,8 @@ def test_focused_route_spends_decision_budget_only_after_intent_admission() -> N
     route = _read(ROUTE)
     search = _read(SEARCH)
 
-    assert "workspace_builder(runtime, bilateral_evaluation_limit=0)" in route
+    assert "candidate_limit=0" in route
+    assert "bilateral_evaluation_limit=0" in route
     assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
     assert "canonical = None" in route
     assert 'getattr(focused, "diagnostics", {})' in route
@@ -49,3 +50,19 @@ def test_focused_route_exposes_search_exhaustion_without_weakening_budget() -> N
         assert token in route
     assert "DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
     assert "acceptance_probability" not in route
+
+
+def test_focused_route_reuses_canonical_request_local_evaluator_inputs() -> None:
+    route = _read(ROUTE)
+    assert "asset_index=owned_asset_index(browser)" in route
+    assert "def focused_evaluator" not in route
+    assert "evaluate_candidate_path(" not in route
+    assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
+    assert "canonical = None" in route
+
+
+def test_focused_shell_skips_generic_market_discovery_rows_before_focus() -> None:
+    route = _read(ROUTE)
+    base_call = route.split("base = workspace_builder(", 1)[1].split(")", 1)[0]
+    assert "candidate_limit=0" in base_call
+    assert "bilateral_evaluation_limit=0" in base_call
