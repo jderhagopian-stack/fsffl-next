@@ -17,25 +17,27 @@ Not complete until evidence demonstrates:
 Current status: **MANAGEMENT GATE / blocked upstream by unpromoted Forecast authority for the newly connected K/DST league.**
 
 ## Forecast K/DST research
-**Status: COMPLETE — RESEARCH.**
+**Status: COMPLETE — RESEARCH / 2026 LATE-START PLAN READY.**
 
-Research acceptance is satisfied by the persisted contract and evidence in:
+Research acceptance is satisfied by:
 - `docs/operations/workstreams/RESEARCH.md`
-- `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+- architecture: `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+- empirical/source closeout: `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`
+- 2026 late-start plan: `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
+- current-date source ledger: `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`
+- bounded empirical uncertainty results: `artifacts/research/k_dst_late_start_exception_20260925/EMPIRICAL_UNCERTAINTY_CHECK.md`
 
-The completed research provides:
-- K as a distinct Forecast problem;
-- D/ST as a team-unit fantasy asset;
-- provider/raw-data inventory and provenance constraints;
-- historical evidence availability and gaps;
-- league scoring translation requirements;
-- uncertainty/calibration approach;
-- fail-closed behavior when evidence is insufficient;
-- compatibility with existing Forecast authority and two-source governance;
-- synthetic fixtures for no K/DST, K-only, D/ST-only, K+D/ST, and evidence-deficient cases;
-- explicit separation of K/DST modeling from new-league bootstrap;
-- Forecast → Value → Simulation → Decision/Search migration boundaries;
-- implementation sequence and acceptance tests.
+The completed research establishes:
+- K as an individual-player Forecast family and D/ST as a team-unit asset;
+- rule-level source independence and active-rule completeness;
+- a one-season-only 2026 current-date ROS baseline exception with exact provenance and no backdating;
+- explicit separation between current-forward 2026 authority and unavailable preseason comparison;
+- subject-row source health against the real remaining NFL schedule;
+- bounded empirical K and D/ST uncertainty measurements on explicit reduced scoring fingerprints;
+- one current exact-capability provider candidate for Hodor-style 60+ K scoring and distributional D/ST PA tiers;
+- no second public independent source yet proving those same hard coordinates;
+- no Hodor-total uncertainty promotion from reduced fingerprints;
+- no 2027+ late-start fallback.
 
 No K/DST production coefficient or model authority is promoted merely by this research completion.
 
@@ -51,31 +53,58 @@ The contract defines governed behavior for a league first connected after presea
 - when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
 
 ## Forecast K/DST implementation gate
-**Status: PARTIAL ACCEPTANCE / BLOCKED — EMPIRICAL/SOURCE EVIDENCE.**
+**Status: MANAGEMENT GATE — 2026 LATE-START IMPLEMENTATION PLAN READY; PRODUCTION AUTHORITY STILL BLOCKED.**
 
-PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` after the reconciled head passed full CI, focused corrective regression, private-beta Intrinsic diagnostics, live Forecast corrective trace, and the governed live-provider quarantine trace.
+PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` and satisfies the evidence-independent code-level contract.
 
-Accepted code-level requirements:
+Accepted code-level requirements already include:
 - canonical K and D/ST subject identity;
-- active-rule-complete scoring contracts, including active missing `fum_lost` fail-closed;
-- no provider/runtime silent missing-metric zero substitution for CBS FL;
-- rule-level source independence contracts;
-- exact/derived kicker coverage without 50+ heuristic splitting;
+- active-rule-complete scoring contracts;
+- rule-level source-independence contracts;
+- exact/derived kicker coverage without heuristic 50+ splitting;
 - distributional D/ST bucket-scoring contract;
 - deterministic K/DST realized-outcome and non-promoting calibration harnesses;
-- immutable annual raw-snapshot replay under different league scoring;
+- immutable annual raw-snapshot replay;
 - regression-clean no-K/no-DST behavior.
 
-Still required before production K/DST support can be accepted:
-- at least two eligible independent historical projection sources for empirical K/DST calibration;
-- production source rights plus content-health/provenance;
-- separate promoted K/DST season-error and weekly-volatility evidence;
-- remaining exact Sleeper weekly truth fixtures for obscure D/ST attribution/bucket behavior;
-- annual snapshot/evidence migration only from qualifying retained PIT evidence;
-- downstream compatibility without Value/Simulation/Decision inventing Forecast truth;
-- successful lifecycle acceptance for the newly connected league.
+Management's 2026 exception changes the remaining acceptance gate:
 
-The current evidence check is persisted at `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
+### Cleared for current-forward 2026
+- a K/DST baseline no longer needs pre-Week-1 provenance;
+- a current-date ROS artifact may be acquired in 2026 if its real capture time, horizon, provenance and source-health are preserved;
+- missing 2026 preseason K/DST evidence does **not** by itself block current-forward Forecast.
+
+### Still unavailable
+- any 2026 K/DST preseason comparison that lacks authentic pre-Week-1 evidence;
+- the late-start artifact may never satisfy or masquerade as the annual preseason artifact.
+
+### Empirical uncertainty evidence now available
+Research has measured bounded reduced-fingerprint evidence:
+- K season relative RMSE `0.3841884793`; weekly CV `0.5223274618`;
+- D/ST sacks+INT season relative RMSE `0.2140283312`; weekly CV `0.6381941339`.
+
+These are **research measurements only**. They are not accepted Hodor-total uncertainty coefficients because the fitted fingerprints exclude active Hodor coordinates.
+
+### Current-forward Hodor blockers
+Production K/DST support remains unaccepted until evidence demonstrates:
+- rights-cleared source access for the actual deployed provider set;
+- >=2 independent healthy sources for each required subject/metric/horizon group;
+- K: live validation of an exact 60+ evidence path plus a second independent 60+ source;
+- D/ST: live validation of distributional PA-tier evidence plus a second independent PA-distribution source and remaining rare-event two-source coverage;
+- target-compatible K and D/ST uncertainty promotion with explicit scoring-fingerprint compatibility;
+- implementation of schedule-aware row freshness so stale post-game ROS rows are quarantined rather than backdated or heuristically adjusted;
+- the 2026-only artifact cannot be created for 2027+;
+- downstream Value/Simulation/Decision do not invent missing Forecast truth;
+- successful new-league lifecycle acceptance after Forecast authority is actually promoted.
+
+JerryGM is one technically exact-capability current ROS candidate:
+- its docs support 60+ K custom scoring;
+- its D/ST model exposes a PA spread and expected custom PA-tier value;
+- its current ROS path is schedule-aware.
+It remains an **external-access/rights candidate**, not production authority, until a live payload is validated and written usage rights permit FSFFL's derived multi-source Forecast use.
+
+The controlling Research plan is:
+`artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
 
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
