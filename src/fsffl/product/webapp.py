@@ -27,6 +27,7 @@ from .background_jobs import (
     IntelligenceJobCoordinator,
     IntelligenceJobInterrupted,
     IntelligenceJobPhase,
+    IntelligenceJobStatus,
 )
 from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
