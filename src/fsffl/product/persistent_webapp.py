@@ -165,7 +165,7 @@ def _log_startup_runtime_readiness() -> None:
         complete,
     )
 
-app.add_event_handler("startup", _log_startup_runtime_readiness)
+app.router.add_event_handler("startup", _log_startup_runtime_readiness)
 install_annual_preseason_scheduler_route(
     app,
     persistence_store=_persistence_store,
