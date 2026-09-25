@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 from time import monotonic, sleep
+from types import SimpleNamespace
 import hashlib
 
 from fastapi.testclient import TestClient
@@ -266,3 +267,102 @@ def test_failed_forecast_reports_exact_blocked_stage_and_keeps_state_usable(monk
     team = client.get("/api/my-team")
     assert team.status_code == 200
     assert team.json()["team_id"] == "a"
+
+
+
+def test_partial_forecast_job_completes_without_simulation_and_keeps_forecast_visible(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _canonical_state()
+    observation = SimpleNamespace(as_of=state.as_of)
+    family = SimpleNamespace(
+        model_dump=lambda mode="json": {
+            "family": "kicker",
+            "status": "UNSUPPORTED",
+            "supported_rule_stats": [],
+            "provisional_rule_stats": [],
+            "omitted_rule_stats": ["fgm_50p"],
+            "reason_codes": ["separate_k_dst_forecast_authority_required"],
+            "blocks_full_downstream_authority": True,
+        }
+    )
+    runtime_result = SimpleNamespace(
+        partial_fantasy_point_forecasts=(),
+        family_coverage=(family,),
+        simulation_authority_blockers=(
+            "separate_k_dst_forecast_authority_required",
+        ),
+        model_version="fixture-shared-forecast-v1",
+        evaluation_as_of=state.as_of,
+    )
+    evidence = SimpleNamespace(
+        raw_forecasts=(observation,),
+        league_scored_forecasts=(),
+        successful_source_ids=("provider-a", "provider-b"),
+        failed_sources=(),
+        uncertainty_ready=False,
+        runtime_result=runtime_result,
+        evidence_basis="live_full_season",
+        model_version="fixture-evidence-v1",
+    )
+    value = SimpleNamespace(
+        league_state_id=state.state_id,
+        estimates=(),
+        successful_source_ids=(),
+        coverage="unavailable",
+        fsffl_cardinal_values=(),
+        cardinal_player_coverage="unavailable",
+    )
+    simulation_calls = []
+
+    def should_not_simulate(*args, **kwargs):
+        simulation_calls.append((args, kwargs))
+        raise AssertionError("partial Forecast must not be silently promoted to Simulation")
+
+    client = TestClient(
+        create_app(
+            state_loader=lambda _: state,
+            forecast_loader=lambda _state: evidence,
+            simulation_loader=should_not_simulate,
+            value_loader=lambda _state: value,
+        )
+    )
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    started = client.post("/api/intelligence/jobs")
+    assert started.status_code == 200
+
+    deadline = monotonic() + 2
+    current = None
+    while monotonic() < deadline:
+        current = client.get("/api/intelligence/jobs/current").json()
+        if current["status"] == "completed":
+            break
+        sleep(0.01)
+
+    assert current is not None
+    assert current["status"] == "completed"
+    assert simulation_calls == []
+    assert current["forecast_ready"] is True
+    assert current["forecast_raw_observation_count"] == 1
+    assert current["simulation_ready"] is False
+    assert current["value_ready"] is False
+
+    status_payload = client.get("/api/intelligence/status").json()
+    assert status_payload["forecast_raw_observation_count"] == 1
+    assert status_payload["forecast_simulation_blockers"] == [
+        "separate_k_dst_forecast_authority_required"
+    ]
+    readiness = {
+        item["stage"]: item
+        for item in status_payload["stages"]
+    }
+    assert readiness["forecast"]["readiness"] == "ready"
+    assert readiness["team_utility"]["readiness"] == "waiting_for_input"
+
+    coverage = client.get("/api/forecast/current/coverage")
+    assert coverage.status_code == 200
+    payload = coverage.json()
+    assert payload["raw_observation_count"] == 1
+    assert payload["authoritative_scored_count"] == 0
+    assert payload["simulation_authority_blockers"] == [
+        "separate_k_dst_forecast_authority_required"
+    ]
