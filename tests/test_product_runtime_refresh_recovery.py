@@ -206,3 +206,19 @@ def test_same_league_provider_state_advances_before_downstream_reconciliation() 
     # outputs may not masquerade as current.
     assert current.forecast_evidence is old_forecast
     assert current.intelligence_reused is False
+
+
+
+def test_same_league_state_change_advances_job_generation_but_exact_state_reuse_does_not() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    first = _state(t0)
+    second = _state(t0 + timedelta(minutes=1))
+
+    store.set_league_state("u-generation", first)
+    after_first = store.league_generation("u-generation")
+    store.set_league_state("u-generation", first)
+    assert store.league_generation("u-generation") == after_first
+
+    store.set_league_state("u-generation", second)
+    assert store.league_generation("u-generation") == after_first + 1
