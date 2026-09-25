@@ -31,6 +31,7 @@ The registry covers 89 canonical coordinate/rule-semantic requirements and the m
 Research recommends a bounded zero-authority-change Stage 0 + Stage 1 implementation: canonical registry/rule/capability contracts plus provider raw-superset preservation. New scoring/model authority is not authorized by this Research completion.
 
 ## Product / Forecast Implementation
+Management physical-iPhone acceptance now shows Hodor at green 7/7 while Simulation, position strength, classification and Intrinsic remain unavailable. This is an acceptance failure in readiness/presentation semantics: pipeline completion must not masquerade as full core-intelligence readiness. Canonical corrective detail is in `workstreams/IMPLEMENTATION.md`.
 **State:** ACTIVE — HODOR SHARED-FORECAST POPULATION / PARTIAL-COVERAGE CORRECTIVE / PR #238 HARDENING  
 Management has superseded the prior blanket Forecast implementation stop for the current Hodor population issue. Full K/DST authority remains externally gated, but valid canonical forecastable coordinates must populate under the newly codified FULL/PARTIAL/UNSUPPORTED rule; bounded unsupported rare/special-event coordinates may remain explicit omissions and must not collapse unrelated Forecast coverage. Canonical detail is in `workstreams/IMPLEMENTATION.md`.
 
