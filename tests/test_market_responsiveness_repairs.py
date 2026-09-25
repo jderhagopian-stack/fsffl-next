@@ -65,3 +65,24 @@ def test_static_release_token_advanced_for_repairs() -> None:
 
     assert "20260925-hodor-lifecycle1" in source
     assert "20260913-phase3-intrinsic2" not in source
+
+
+def test_performance_corrective_reuses_work_without_changing_market_authority() -> None:
+    focused = (PRODUCT / "focused_opportunity_routes.py").read_text(encoding="utf-8")
+    discovery = (PRODUCT / "market_discovery_runtime.py").read_text(encoding="utf-8")
+    hosted = (PRODUCT / "persistent_webapp.py").read_text(encoding="utf-8")
+
+    assert "candidate_limit=0" in focused
+    assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in focused
+    assert "asset_index=owned_asset_index(browser)" in focused
+    assert "def focused_evaluator" not in focused
+
+    assert "DEFAULT_PRELIMINARY_DECISION_BUDGET = 8" in discovery
+    assert "select_preliminary_screen_indices(seeds, limit=evaluation_limit)" in discovery
+    assert '"changed_state_simulation_calls_during_discovery": 0' in discovery
+    assert '"acceptance_probability": None' in discovery
+    assert "_prune_package_neighborhood" in discovery
+    assert "select_for_you(opportunities, by_id)" in discovery
+
+    assert "make_cached_candidate_economics" in hosted
+    assert "_market_discovery_runtime.evaluate_candidate_economics" in hosted
