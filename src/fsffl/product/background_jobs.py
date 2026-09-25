@@ -90,6 +90,7 @@ class IntelligenceJob:
     created_at: datetime
     updated_at: datetime
     error: str | None = None
+    failure_phase: IntelligenceJobPhase | None = None
     phase_timings: tuple[IntelligencePhaseTiming, ...] = ()
     total_elapsed_seconds: float | None = None
 
@@ -134,10 +135,12 @@ class IntelligenceJobCoordinator:
         if restored is None:
             return None
         if restored.status in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}:
+            interrupted_phase = restored.phase
             restored = replace(
                 restored,
                 status=IntelligenceJobStatus.INTERRUPTED,
                 phase=IntelligenceJobPhase.INTERRUPTED,
+                failure_phase=interrupted_phase,
                 message="Intelligence refresh was interrupted by a server restart. Last-good intelligence remains active; start a new refresh when ready.",
                 updated_at=datetime.now(UTC),
                 error="server_restart",
@@ -171,6 +174,7 @@ class IntelligenceJobCoordinator:
                         "created_at": job.created_at.isoformat(),
                         "updated_at": job.updated_at.isoformat(),
                         "error": job.error,
+                        "failure_phase": job.failure_phase.value if job.failure_phase is not None else None,
                         "phase_timings": [{"phase": t.phase.value, "elapsed_seconds": t.elapsed_seconds} for t in job.phase_timings],
                         "total_elapsed_seconds": job.total_elapsed_seconds,
                     },
@@ -191,12 +195,29 @@ class IntelligenceJobCoordinator:
             if record is None:
                 return None
             p = record.payload
+            phase_timings = tuple(
+                IntelligencePhaseTiming(
+                    phase=IntelligenceJobPhase(str(t["phase"])),
+                    elapsed_seconds=float(t["elapsed_seconds"]),
+                )
+                for t in p.get("phase_timings", ())
+            )
+            failure_phase = (
+                IntelligenceJobPhase(str(p["failure_phase"]))
+                if p.get("failure_phase")
+                else (
+                    phase_timings[-1].phase
+                    if p.get("status") in {"failed", "interrupted"} and phase_timings
+                    else None
+                )
+            )
             return IntelligenceJob(
                 job_id=str(p["job_id"]), user_id=str(p["user_id"]), league_state_id=str(p["league_state_id"]),
                 status=IntelligenceJobStatus(str(p["status"])), phase=IntelligenceJobPhase(str(p["phase"])),
                 message=str(p["message"]), created_at=datetime.fromisoformat(str(p["created_at"])),
                 updated_at=datetime.fromisoformat(str(p["updated_at"])), error=p.get("error"),
-                phase_timings=tuple(IntelligencePhaseTiming(phase=IntelligenceJobPhase(str(t["phase"])), elapsed_seconds=float(t["elapsed_seconds"])) for t in p.get("phase_timings", ())),
+                failure_phase=failure_phase,
+                phase_timings=phase_timings,
                 total_elapsed_seconds=(float(p["total_elapsed_seconds"]) if p.get("total_elapsed_seconds") is not None else None),
             )
         except Exception as exc:
@@ -238,6 +259,7 @@ class IntelligenceJobCoordinator:
         phase: IntelligenceJobPhase,
         message: str,
         error: str | None = None,
+        failure_phase: IntelligenceJobPhase | None = None,
     ) -> IntelligenceJob:
         now = datetime.now(UTC)
         now_monotonic = monotonic()
@@ -274,6 +296,7 @@ class IntelligenceJobCoordinator:
                 message=message,
                 updated_at=now,
                 error=error,
+                failure_phase=failure_phase if failure_phase is not None else current.failure_phase,
                 phase_timings=timings,
                 total_elapsed_seconds=total_elapsed,
             )
@@ -326,22 +349,26 @@ class IntelligenceJobCoordinator:
         try:
             work(progress)
         except IntelligenceJobInterrupted as exc:
+            active = self.get(job_id)
             interrupted = self._update(
                 job_id,
                 status=IntelligenceJobStatus.INTERRUPTED,
                 phase=IntelligenceJobPhase.INTERRUPTED,
                 message="Intelligence refresh was superseded by a league switch. Last-good intelligence remains active.",
                 error=str(exc) or "league_switch",
+                failure_phase=(active.phase if active is not None and active.phase not in {IntelligenceJobPhase.FAILED, IntelligenceJobPhase.INTERRUPTED, IntelligenceJobPhase.COMPLETED} else None),
             )
             self._log_final_timing(interrupted)
             return
         except Exception as exc:
+            active = self.get(job_id)
             failed = self._update(
                 job_id,
                 status=IntelligenceJobStatus.FAILED,
                 phase=IntelligenceJobPhase.FAILED,
                 message="Intelligence refresh failed.",
                 error=f"{type(exc).__name__}: {exc}",
+                failure_phase=(active.phase if active is not None and active.phase not in {IntelligenceJobPhase.FAILED, IntelligenceJobPhase.INTERRUPTED, IntelligenceJobPhase.COMPLETED} else None),
             )
             self._log_final_timing(failed)
             return

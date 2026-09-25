@@ -27,6 +27,7 @@ from .background_jobs import (
     IntelligenceJobCoordinator,
     IntelligenceJobInterrupted,
     IntelligenceJobPhase,
+    IntelligenceJobStatus,
 )
 from .behavioral_runtime import BehavioralRuntimeCoordinator, BehavioralRuntimeStatus
 from .dashboard import build_league_metric_chart
@@ -158,6 +159,7 @@ def _job_payload(job: IntelligenceJob | None) -> dict[str, object]:
             "phase": "idle",
             "message": "No intelligence refresh is running.",
             "error": None,
+            "failure_phase": None,
             "league_state_id": None,
             "created_at": None,
             "updated_at": None,
@@ -168,6 +170,7 @@ def _job_payload(job: IntelligenceJob | None) -> dict[str, object]:
         "phase": job.phase.value,
         "message": job.message,
         "error": job.error,
+        "failure_phase": job.failure_phase.value if job.failure_phase is not None else None,
         "league_state_id": job.league_state_id,
         "created_at": job.created_at.isoformat(),
         "updated_at": job.updated_at.isoformat(),
@@ -469,11 +472,61 @@ def create_app(
             "reused_historical_seasons": len(behavior.result.reused_historical_league_ids) if behavior.result is not None else 0,
             "error": behavior.error,
         }
+        selected_team_state = next(
+            (
+                row
+                for row in runtime.league_state.team_states
+                if row.team_id == runtime.selected_team_id
+            ),
+            None,
+        )
+        current_job = jobs.current(user_id)
+        failure_stage_by_phase = {
+            IntelligenceJobPhase.BUILDING_FORECASTS: "forecast",
+            IntelligenceJobPhase.REFRESHING_STATE: "state_refresh",
+            IntelligenceJobPhase.RUNNING_SIMULATION: "simulation",
+            IntelligenceJobPhase.BUILDING_VALUES: "value",
+            IntelligenceJobPhase.ATTACHING_RESULTS: "promotion",
+        }
+        blocked_stage = (
+            failure_stage_by_phase.get(current_job.failure_phase)
+            if current_job is not None
+            and current_job.status in {IntelligenceJobStatus.FAILED, IntelligenceJobStatus.INTERRUPTED}
+            else None
+        )
+        if blocked_stage == "forecast":
+            for stage in payload["stages"]:
+                if stage["stage"] == "forecast":
+                    stage["readiness"] = "blocked"
+                    stage["message"] = (
+                        "Current Forecast authority is blocked by governed source-health / "
+                        "scoring-coverage requirements. Canonical roster State remains usable."
+                    )
         payload["value_ready"] = value_ready
         payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
         payload["cardinal_value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.fsffl_cardinal_values)
         payload["cardinal_value_coverage"] = runtime.value_evidence.cardinal_player_coverage if runtime.value_evidence is not None else None
-        payload["job"] = _job_payload(jobs.current(user_id))
+        payload["served_state"] = {
+            "league_id": runtime.league_state.league.league_id,
+            "league_name": runtime.league_state.league.name,
+            "league_state_id": runtime.league_state.state_id,
+            "as_of": runtime.league_state.as_of.isoformat(),
+            "selected_team_id": runtime.selected_team_id,
+            "roster_usable": selected_team_state is not None,
+            "roster_count": len(selected_team_state.roster) if selected_team_state is not None else 0,
+            "last_good_intelligence": bool(
+                runtime.forecast_evidence is not None
+                and runtime.simulation_analytics is not None
+                and runtime.value_evidence is not None
+            ),
+        }
+        payload["blocked_stage"] = blocked_stage
+        payload["blocking_error"] = (
+            current_job.error
+            if blocked_stage is not None and current_job is not None
+            else None
+        )
+        payload["job"] = _job_payload(current_job)
         return payload
 
     @application.post("/api/connect/sleeper")

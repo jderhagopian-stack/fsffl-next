@@ -277,8 +277,9 @@ def test_mobile_connect_commits_saved_league_only_after_identity_match() -> None
     wait_index = interactive.index("await waitForBackgroundImport(normalized")
     verify_index = interactive.index("if(!contextMatchesLeague(context,normalized)||!context?.state_id)")
     save_index = interactive.index("localStorage.setItem(LEAGUE_KEY,normalized)")
-    apply_index = interactive.index("applyConnectedContext(context)")
-    assert previous_index < wait_index < verify_index < save_index < apply_index
+    select_index = interactive.index("const selectedContext=await restoreSelectedTeam(context,canonicalBefore)")
+    apply_index = interactive.index("applyConnectedContext(selectedContext)")
+    assert previous_index < wait_index < verify_index < save_index < select_index < apply_index
     assert "localStorage.setItem(LEAGUE_KEY,normalized);" not in interactive[:wait_index]
     assert "if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY)" in interactive
     assert "else localStorage.setItem(LEAGUE_KEY,previousLeagueId)" in interactive
@@ -306,8 +307,8 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    assert "20260925-market-beta-corrective2" in source
-    assert "mobile_safari_recovery.js?v=20260925-market-beta-corrective2" in source
+    assert "20260925-hodor-lifecycle1" in source
+    assert "mobile_safari_recovery.js?v=20260925-hodor-lifecycle1" in source
 
 
 def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
@@ -375,3 +376,26 @@ def test_connect_request_target_is_emitted_on_visible_performance_logger() -> No
     )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
     assert '_performance_logger = logging.getLogger("fsffl.product.performance")' in source
     assert "FSFFL Sleeper connect request user=%s requested=%s active=%s already_loaded=%s" in connect
+
+
+def test_cross_league_switch_maps_unique_managed_team_name_before_apply() -> None:
+    source = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+    helper = source.split("async function restoreSelectedTeam", 1)[1].split(
+        "async function refreshStoredLeague", 1
+    )[0]
+    interactive = source.split("async function interactiveConnect()", 1)[1].split(
+        "window.fsfflRestoreSession=restoreSavedSession", 1
+    )[0]
+
+    assert "const previousName=selectedTeamName(previousContext)" in helper
+    assert "matches.length===1" in helper
+    assert "resilientApi('/api/select-team'" in helper
+    assert "localStorage.setItem(TEAM_KEY,matches[0].team_id)" in helper
+    assert "const selectedContext=await restoreSelectedTeam(context,canonicalBefore)" in interactive
+    assert interactive.index("restoreSelectedTeam(context,canonicalBefore)") < interactive.index(
+        "applyConnectedContext(selectedContext)"
+    )
+    assert "League is ready. Select the franchise you manage to continue." in interactive

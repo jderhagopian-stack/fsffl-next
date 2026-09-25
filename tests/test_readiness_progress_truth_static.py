@@ -43,8 +43,8 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260925-market-beta-corrective2" in index
-    assert "/static/product_shell.js?v=20260925-market-beta-corrective2" in index
+    assert "/static/forecast_refresh.js?v=20260925-hodor-lifecycle1" in index
+    assert "/static/product_shell.js?v=20260925-hodor-lifecycle1" in index
     assert "Core intelligence current" in shell
 
 
@@ -112,3 +112,15 @@ def test_mobile_refresh_control_owns_explicit_fourth_grid_column() -> None:
     assert "grid-template-columns:12px auto minmax(0,1fr) auto" in source
     assert "white-space:nowrap" in source
     assert "min-width:max-content" in source
+
+
+def test_failed_forecast_readiness_names_blocker_and_usable_roster() -> None:
+    source = _shell()
+    snapshot = source.split("function fsfflSharedReadinessSnapshot()", 1)[1].split(
+        "function fsfflSharedReadinessMarkup", 1
+    )[0]
+    assert "job?.failure_phase" in snapshot
+    assert "state?.intelligence?.served_state?.roster_usable" in snapshot
+    assert "state?.intelligence?.blocked_stage" in snapshot
+    assert "Forecast blocked — roster State remains usable" in snapshot
+    assert "fsfflSharedReadinessPhases[failedPhase][0]" in snapshot

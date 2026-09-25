@@ -28,6 +28,7 @@ from .provisional_k_dst_forecast import (
     decode_provisional_k_dst_forecast,
     encode_provisional_k_dst_forecast,
     provisional_k_dst_forecast_artifact,
+    provisional_k_dst_scope_id,
 )
 from .postgres import PostgresPersistenceStore, persistence_store_from_env
 from .projection_history import (
@@ -37,6 +38,7 @@ from .projection_history import (
 from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
 
 __all__ = [
+    "provisional_k_dst_scope_id",
     "provisional_k_dst_forecast_artifact",
     "encode_provisional_k_dst_forecast",
     "decode_provisional_k_dst_forecast",

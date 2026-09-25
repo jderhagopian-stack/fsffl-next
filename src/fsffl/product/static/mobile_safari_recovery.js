@@ -155,11 +155,32 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     applyContext();
   }
 
-  async function restoreSelectedTeam(context){
+  function selectedTeamName(context){
+    const selectedId=context?.team_id;
+    return (context?.teams||[]).find(team=>team.team_id===selectedId)?.display_name||null;
+  }
+
+  async function restoreSelectedTeam(context,previousContext=null){
     const teamId=localStorage.getItem(TEAM_KEY);
-    if(teamId&&(context.teams||[]).some(team=>team.team_id===teamId)&&context.team_id!==teamId){
+    if(teamId&&(context.teams||[]).some(team=>team.team_id===teamId)){
+      if(context.team_id===teamId)return context;
       return resilientApi('/api/select-team',{method:'POST',body:JSON.stringify({team_id:teamId})},2);
     }
+
+    // Team ids are league-scoped. During a cross-league switch, preserve the
+    // managed franchise only when the previous selected display name maps
+    // uniquely into the requested league. This keeps Hodor/jder52 and equivalent
+    // owner-named franchises atomic without guessing when names are ambiguous.
+    const previousName=selectedTeamName(previousContext);
+    if(previousName){
+      const matches=(context.teams||[]).filter(team=>String(team.display_name||'').trim().toLowerCase()===String(previousName).trim().toLowerCase());
+      if(matches.length===1){
+        const selected=await resilientApi('/api/select-team',{method:'POST',body:JSON.stringify({team_id:matches[0].team_id})},2);
+        localStorage.setItem(TEAM_KEY,matches[0].team_id);
+        return selected;
+      }
+    }
+    if(teamId)localStorage.removeItem(TEAM_KEY);
     return context;
   }
 
@@ -168,7 +189,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     try{
       const refreshed=await waitForBackgroundImport(leagueId,null,'refresh');
       if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
-        const selected=await restoreSelectedTeam(refreshed);
+        const selected=await restoreSelectedTeam(refreshed,state.context);
         applyConnectedContext(selected);
       }
       publishSyncState('current');
@@ -191,7 +212,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       // immediately before any provider acquisition begins.
       let context=await resilientApi('/api/product-context',{},3);
       if(contextMatchesLeague(context,leagueId)&&context.state_id){
-        context=await restoreSelectedTeam(context);
+        context=await restoreSelectedTeam(context,state.context);
         applyConnectedContext(context);
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
         recordLatency('restore_ready',started,'success','durable_restore');
@@ -202,7 +223,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       // First connection (or a missing durable snapshot) still uses the governed
       // server-owned import path and waits only until canonical league State is usable.
       context=await waitForBackgroundImport(leagueId,null,'connect');
-      context=await restoreSelectedTeam(context);
+      context=await restoreSelectedTeam(context,state.context);
       applyConnectedContext(context);
       if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
       publishSyncState('current');
@@ -247,12 +268,14 @@ window.fsfflMobileSafariRecoveryDisabled=true;
         throw new Error('The requested Sleeper league did not become active.');
       }
       localStorage.setItem(LEAGUE_KEY,normalized);
-      const savedTeamId=localStorage.getItem(TEAM_KEY);
-      if(savedTeamId&&!(context.teams||[]).some(team=>team.team_id===savedTeamId)){
-        localStorage.removeItem(TEAM_KEY);
-      }
-      applyConnectedContext(context);
-      publishSyncState('current');
+      const selectedContext=await restoreSelectedTeam(context,canonicalBefore);
+      applyConnectedContext(selectedContext);
+      publishSyncState(
+        'current',
+        selectedContext.team_id
+          ? 'League and managed franchise are ready.'
+          : 'League is ready. Select the franchise you manage to continue.'
+      );
       recordLatency('first_connect_ready',started,'success','requested='+normalized+';active='+String(context.league_id||''));
     }catch(error){
       if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY);

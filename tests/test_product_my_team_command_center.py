@@ -163,7 +163,7 @@ def test_franchise_north_star_is_the_only_primary_franchise_renderer() -> None:
     assert NORTH_STAR.rfind("window.renderFsfflMyTeam=") == NORTH_STAR.rfind(
         "window.renderFsfflMyTeam=loadFranchiseNorthStar;"
     )
-    assert "franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1'" in SHELL
+    assert "franchiseNorthStarStaticVersion='20260925-hodor-lifecycle1'" in SHELL
     assert "lazyProductScript(\'renderFsfflMyTeam\',\'/static/my_team_dashboard.js\'" in SHELL
     assert "franchiseNorthStarStaticVersion)" in SHELL
 
@@ -219,3 +219,20 @@ def test_franchise_pick_labels_preserve_original_team_attribution_and_fail_close
     assert "myTeamTeamName(pick.original_team_id)" in SOURCE
     assert "Value unavailable" in NORTH_STAR
     assert "Broad Market pick Value evidence is unavailable" in NORTH_STAR
+
+
+def test_franchise_state_only_mode_shows_complete_roster_instead_of_empty_starters() -> None:
+    renderer = NORTH_STAR.split("function renderFranchiseNorthStar(){", 1)[1].split(
+        "async function loadFranchiseNorthStarValueLenses", 1
+    )[0]
+    loader = NORTH_STAR.split("async function loadFranchiseNorthStar()", 1)[1].split(
+        "window.renderFsfflMyTeam=loadFranchiseNorthStar", 1
+    )[0]
+
+    assert "const stateOnly=!view.forecast_authority?.evidence_basis" in renderer
+    assert "Roster State current · " in renderer
+    assert "canonical roster remains usable" in renderer
+    assert "if(!results[0]?.forecast_authority?.evidence_basis)" in loader
+    assert "fsfflMyTeamState.franchiseTab='roster'" in loader
+    assert "fsfflMyTeamState.franchiseRosterFilter='all'" in loader
+    assert "no governed starter classification" in loader
