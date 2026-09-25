@@ -6,6 +6,7 @@ POSTURE_JS = Path("src/fsffl/product/static/opportunity_posture_ui.js")
 INDEX_HTML = Path("src/fsffl/product/static/index.html")
 LATENCY_PY = Path("src/fsffl/product/latency_observability.py")
 WORKSPACE_CACHE_PY = Path("src/fsffl/product/opportunity_workspace_cache.py")
+PRODUCT = Path("src/fsffl/product")
 
 
 def test_identical_inflight_gets_are_coalesced_and_invalidated_by_mutations() -> None:
