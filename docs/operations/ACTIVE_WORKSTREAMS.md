@@ -41,8 +41,8 @@ Research has now:
 Current-forward Hodor authority still fails closed on second-source exact-coordinate coverage, live API/source-health validation, target-compatible whole-score uncertainty promotion, and deployable provider rights.
 
 ## Product / Forecast Implementation
-**State:** ACTIVE — PR #233 / 2026 LATE-START ACCEPTANCE VALIDATION  
-PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. PR #233 now carries the Management-authorized 2026-only current ROS implementation and its deterministic acceptance suite. Durable implementation detail is in `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`.
+**State:** BLOCKED — BOUNDED IMPLEMENTATION COMPLETE / EXTERNAL SOURCE-AUTHORITY GATES REMAIN  
+PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. PR #233 merged on canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` after its reconciled head passed full CI, focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace. Durable implementation detail is in `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`.
 
 Management now explicitly authorizes execution of the bounded 2026 late-start implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`. This authorization permits implementation, testing, persisted evidence acquisition where source rights permit, and integration of the already-governed contracts. It does **not** authorize production Forecast promotion where evidence/rights gates remain red.
 
@@ -56,7 +56,7 @@ The bounded implementation must:
 - reproduce the persisted reduced-fingerprint empirical measurements and promote uncertainty only after target compatibility is proven;
 - reject the late-start path for 2027+.
 
-Provider/source rights remain external gates for deployed use.
+All presently authorized evidence-independent implementation is complete. Provider/source rights, second-source exact Hodor-coordinate coverage, live exact-capability API validation, and target-compatible full-score uncertainty remain external evidence gates for deployed authority. No heuristic substitute is authorized.
 
 ## Market / Trade Discovery Architecture Review
 **State:** DIRECTIVE COMPLETE — MANAGEMENT ACCEPTED  
