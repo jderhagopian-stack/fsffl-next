@@ -143,7 +143,10 @@ def test_final_acceptance_overview_is_full_league_sortable_table() -> None:
     assert 'class="atlas-race-table"' in source
     assert "Current Season" in source
     assert "Outlook from Today" in source
-    assert "50,000 simulations using current standings, rosters and forecast evidence." in source
+    assert "governed simulations using current standings, rosters and Forecast evidence." in source
+    assert "Season-outlook Simulation is unavailable under current Forecast authority." in source
+    assert "sim.status==='ready'" in source
+    assert "50,000 simulations using current standings, rosters and forecast evidence." not in source
     for label in ("PF", "PA", "Max PF", "Projected Finish", "Playoffs", "Championship", "Projected Final Wins", "1st Place"):
         assert label in source
     assert "Forward details" not in source
