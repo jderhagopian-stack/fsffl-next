@@ -21,6 +21,7 @@ from .webapp import ConnectSleeperLeagueRequest, require_beta_user
 
 
 _logger = logging.getLogger("fsffl.product.persistence")
+_performance_logger = logging.getLogger("fsffl.product.performance")
 _SYNC_SCOPE_KIND = "league_refresh"
 
 
@@ -265,6 +266,18 @@ def install_hosted_connect_routes(
 
         runtime = runtime_store.get(user_id)
         already_loaded = _matches_sleeper_league(runtime.league_state, league_external_id)
+        active_league_id = (
+            runtime.league_state.league.league_id
+            if runtime.league_state is not None
+            else None
+        )
+        _performance_logger.info(
+            "FSFFL Sleeper connect request user=%s requested=%s active=%s already_loaded=%s",
+            user_id,
+            league_external_id,
+            active_league_id,
+            already_loaded,
+        )
 
         def work() -> None:
             if already_loaded:
@@ -333,6 +346,7 @@ def install_hosted_connect_routes(
         previous_fingerprint = (
             league_material_fingerprint(previous_state) if previous_state is not None else None
         )
+        refresh_generation = runtime_store.league_generation(user_id)
 
         def work() -> None:
             now = datetime.now(UTC)
@@ -378,12 +392,22 @@ def install_hosted_connect_routes(
                 or league_material_fingerprint(league_state) != previous_fingerprint
             )
             current_job = jobs.current(user_id)
-            if current_job is not None and current_job.league_external_id != league_external_id:
-                _logger.info(
-                    "FSFFL Sleeper refresh superseded before activation user=%s requested=%s current=%s",
+            active_state = runtime_store.get(user_id).league_state
+            if (
+                runtime_store.league_generation(user_id) != refresh_generation
+                or not _matches_sleeper_league(active_state, league_external_id)
+                or (
+                    current_job is not None
+                    and current_job.league_external_id != league_external_id
+                )
+            ):
+                _performance_logger.info(
+                    "FSFFL Sleeper refresh superseded before activation user=%s requested=%s current_job=%s generation_start=%s generation_now=%s",
                     user_id,
                     league_external_id,
-                    current_job.league_external_id,
+                    current_job.league_external_id if current_job is not None else None,
+                    refresh_generation,
+                    runtime_store.league_generation(user_id),
                 )
                 return
             runtime_store.set_league_state(user_id, league_state)

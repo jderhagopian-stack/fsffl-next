@@ -219,11 +219,22 @@ window.fsfflMobileSafariRecoveryDisabled=true;
 
   async function interactiveConnect(){
     if(interactiveConnectInFlight)return;
-    const leagueId=window.prompt('Enter your Sleeper league ID');
+    const activeBefore=(state.context?.league_id||'').replace(/^sleeper:/,'');
+    const promptText=activeBefore
+      ? 'Enter a different Sleeper league ID. Current league: '+activeBefore
+      : 'Enter your Sleeper league ID';
+    const leagueId=window.prompt(promptText);
     if(!leagueId?.trim())return;
     const normalized=leagueId.trim();
     const started=now();
     const previousLeagueId=localStorage.getItem(LEAGUE_KEY);
+    let canonicalBefore=state.context;
+    try{canonicalBefore=await resilientApi('/api/product-context',{},2)}catch(error){if(!isTransportError(error))throw error}
+    if(contextMatchesLeague(canonicalBefore,normalized)){
+      recordLatency('first_connect_ready',started,'failed','same_active');
+      window.alert('That Sleeper league is already active. Enter a different league ID to switch leagues.');
+      return;
+    }
     interactiveConnectInFlight=true;
     const button=document.querySelector('#connect-button');
     const original=button?.textContent||'Connect Sleeper League';
@@ -242,11 +253,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
       applyConnectedContext(context);
       publishSyncState('current');
-      recordLatency('first_connect_ready',started,'success');
+      recordLatency('first_connect_ready',started,'success','requested='+normalized+';active='+String(context.league_id||''));
     }catch(error){
       if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY);
       else localStorage.setItem(LEAGUE_KEY,previousLeagueId);
-      recordLatency('first_connect_ready',started,'failed',String(error?.message||error));
+      recordLatency('first_connect_ready',started,'failed','requested='+normalized+';'+String(error?.message||error));
       window.alert(`Could not connect league: ${error.message}`);
     }finally{
       interactiveConnectInFlight=false;

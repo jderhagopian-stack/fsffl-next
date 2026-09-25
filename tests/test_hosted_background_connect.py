@@ -306,8 +306,8 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    assert "20260924-readiness-control5" in source
-    assert "mobile_safari_recovery.js?v=20260924-readiness-control5" in source
+    assert "20260924-readiness-control6" in source
+    assert "mobile_safari_recovery.js?v=20260924-readiness-control6" in source
 
 
 def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
@@ -325,3 +325,53 @@ def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> 
     assert set_index < wait_index < verify_index < behavioral_index
     assert 'raise RuntimeError("Sleeper league activation could not be durably checkpointed")' in connect
     assert 'raise RuntimeError("Sleeper league activation lost requested identity")' in connect
+
+
+def test_hosted_refresh_is_bound_to_starting_league_generation() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    refresh = source.split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[1].split('@application.get("/api/connect/sleeper/background/current")', 1)[0]
+
+    capture_index = refresh.index("refresh_generation = runtime_store.league_generation(user_id)")
+    guard_index = refresh.index("runtime_store.league_generation(user_id) != refresh_generation")
+    active_index = refresh.index("not _matches_sleeper_league(active_state, league_external_id)")
+    write_index = refresh.index("runtime_store.set_league_state(user_id, league_state)")
+    assert capture_index < guard_index < write_index
+    assert capture_index < active_index < write_index
+    assert "FSFFL Sleeper refresh superseded before activation" in refresh
+
+
+def test_manual_connect_cannot_report_same_active_league_as_switch_success() -> None:
+    source = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+    interactive = source.split("async function interactiveConnect()", 1)[1].split(
+        "window.fsfflRestoreSession=restoreSavedSession", 1
+    )[0]
+
+    active_index = interactive.index("const activeBefore=")
+    canonical_index = interactive.index("canonicalBefore=await resilientApi('/api/product-context'")
+    same_index = interactive.index("if(contextMatchesLeague(canonicalBefore,normalized))")
+    start_index = interactive.index("interactiveConnectInFlight=true")
+    wait_index = interactive.index("await waitForBackgroundImport(normalized")
+    assert active_index < canonical_index < same_index < start_index < wait_index
+    assert "same_active" in interactive
+    assert "Enter a different league ID to switch leagues." in interactive
+    assert "'requested='+normalized+';active='" in interactive
+
+
+def test_connect_request_target_is_emitted_on_visible_performance_logger() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    connect = source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+    assert '_performance_logger = logging.getLogger("fsffl.product.performance")' in source
+    assert "FSFFL Sleeper connect request user=%s requested=%s active=%s already_loaded=%s" in connect
