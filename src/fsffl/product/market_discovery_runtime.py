@@ -835,6 +835,26 @@ def _build_candidate_path(
         package_family_key=str(seed["package_family_key"]),
         send_asset_refs=_send_refs(row),
     )
+    reason_codes = [
+        "search_family_representative",
+        f"economic:{economic_band.value}",
+        f"bilateral:{plausibility.value}",
+        (
+            "preliminary_decision_screen_complete"
+            if row.get("bilateral_decision_evaluated")
+            else "preliminary_decision_screen_pending"
+        ),
+        (
+            "owner_context_observed"
+            if owner_status == "observed_history"
+            else "owner_context_unavailable"
+        ),
+    ]
+    if alternates:
+        reason_codes.append("package_variants_clustered")
+    if missing:
+        reason_codes.append("evidence_incomplete")
+
     return CandidatePath(
         path_id=path_id,
         opportunity_id=str(seed["opportunity_id"]),
@@ -866,6 +886,7 @@ def _build_candidate_path(
         evidence_completeness="complete" if not missing else "partial",
         missing_evidence=tuple(missing),
         risks=_path_risks(row, economic_band, plausibility),
+        reason_codes=tuple(reason_codes),
         authority={
             "search_generated_structure": True,
             "decision_pre_simulation_screened": bool(
@@ -1010,6 +1031,22 @@ def _aggregate_opportunities(
             for risk in path.risks:
                 if risk not in risks:
                     risks.append(risk)
+        reason_codes = [
+            f"attention:{attention.value}",
+            f"strategic:{('current_position_need' if row.get('focal_position_strength_rank') is not None else ('explicit_market_intent' if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT else 'market_structure'))}",
+            f"economic:{economic.value}",
+            f"bilateral:{bilateral.value}",
+        ]
+        if survivors:
+            reason_codes.append("attention_eligible_path_present")
+        elif screened:
+            reason_codes.append("screened_path_requires_more_review")
+        elif related:
+            reason_codes.append("market_structure_only")
+        else:
+            reason_codes.append("no_candidate_path")
+        if len(related) > len(path_ids):
+            reason_codes.append("alternate_paths_clustered")
         opportunities.append(
             MarketOpportunity(
                 opportunity_id=opportunity_id,
@@ -1042,6 +1079,7 @@ def _aggregate_opportunities(
                 representative_path_ids=path_ids,
                 alternate_path_count=max(0, len(related) - len(path_ids)),
                 top_risks=tuple(risks[:3]),
+                reason_codes=tuple(reason_codes),
                 authority={
                     "search_aggregation_only": True,
                     "decision_truth_preserved": True,
@@ -1240,6 +1278,14 @@ def build_market_discovery(
         "opportunities": [item.model_dump(mode="json") for item in opportunities],
         "for_you": [item.model_dump(mode="json") for item in for_you],
         "diagnostics": {
+            "hypotheses_generated": len(hypotheses),
+            "targets_considered": len(
+                {
+                    asset_ref
+                    for row in rows
+                    for asset_ref in _receive_refs(row)
+                }
+            ),
             "raw_packages_generated": len(rows),
             "packages_screened_economic": len(economically_screened_rows),
             "packages_economic_incomplete": sum(
@@ -1267,6 +1313,16 @@ def build_market_discovery(
                 == BilateralPlausibility.FOCAL_DOMINATED
             ),
             "opportunities_created": len(opportunities),
+            "opportunities_suppressed": sum(
+                1
+                for opportunity in opportunities
+                if opportunity.attention_status == AttentionStatus.SUPPRESSED
+            ),
+            "opportunities_market_match_only": sum(
+                1
+                for opportunity in opportunities
+                if opportunity.attention_status == AttentionStatus.MARKET_MATCH_ONLY
+            ),
             "opportunities_attention_ready": sum(
                 1
                 for opportunity in opportunities
