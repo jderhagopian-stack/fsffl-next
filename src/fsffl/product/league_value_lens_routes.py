@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import JSONResponse
 
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
 
@@ -55,12 +54,39 @@ def install_league_value_lens_routes(
                 IntrinsicBuildStatus.QUEUED,
                 IntrinsicBuildStatus.RUNNING,
             }:
-                payload = intrinsic_loading_payload(record)
-                payload["message"] = (
-                    "League value lenses are loading the shared governed "
-                    "FSFFL Intrinsic artifact server-side."
+                loading = intrinsic_loading_payload(record)
+                payload = build_league_value_lenses(
+                    runtime,
+                    None,
+                    intrinsic_error=(
+                        "Governed FSFFL Intrinsic is preparing server-side. "
+                        "Broad Market remains independently usable."
+                    ),
+                    include_unrostered=universe == "all",
                 )
-                return JSONResponse(status_code=202, content=payload)
+                payload["status"] = (
+                    "degraded"
+                    if payload.get("broad_market", {}).get("status") == "ready"
+                    else "building"
+                )
+                payload["fsffl_intrinsic"] = {
+                    **dict(payload.get("fsffl_intrinsic") or {}),
+                    "status": "building",
+                    "reason": loading["message"],
+                    "retry_after_ms": loading.get("retry_after_ms"),
+                    "build_status": loading.get("build_status"),
+                }
+                payload["surface_readiness"] = {
+                    "surface": "player_board",
+                    "status": "building_optional",
+                    "required_dependencies": ["canonical_state", "broad_market_value"],
+                    "optional_dependencies": ["fsffl_intrinsic_all_player"],
+                    "blockers": [],
+                    "missing_optional": ["fsffl_intrinsic_all_player"],
+                    "league_state_id": runtime.league_state.state_id,
+                    "retry_after_ms": loading.get("retry_after_ms"),
+                }
+                return payload
             if record.status == IntrinsicBuildStatus.FAILED:
                 intrinsic_error = str(intrinsic_failure_payload(record)["message"])
             else:
@@ -76,9 +102,37 @@ def install_league_value_lens_routes(
                     f"{type(exc).__name__}: {exc}"
                 )
 
-        return build_league_value_lenses(
+        payload = build_league_value_lenses(
             runtime,
             intrinsic,
             intrinsic_error=intrinsic_error,
             include_unrostered=universe == "all",
         )
+        payload["surface_readiness"] = {
+            "surface": "player_board",
+            "status": (
+                "ready"
+                if payload.get("broad_market", {}).get("status") == "ready"
+                and payload.get("fsffl_intrinsic", {}).get("status") != "unavailable"
+                else (
+                    "degraded"
+                    if payload.get("broad_market", {}).get("status") == "ready"
+                    else "blocked"
+                )
+            ),
+            "required_dependencies": ["canonical_state", "broad_market_value"],
+            "optional_dependencies": ["fsffl_intrinsic_all_player"],
+            "blockers": (
+                []
+                if payload.get("broad_market", {}).get("status") == "ready"
+                else ["broad_market_value"]
+            ),
+            "missing_optional": (
+                []
+                if payload.get("fsffl_intrinsic", {}).get("status") != "unavailable"
+                else ["fsffl_intrinsic_all_player"]
+            ),
+            "league_state_id": runtime.league_state.state_id,
+            "retry_after_ms": None,
+        }
+        return payload
