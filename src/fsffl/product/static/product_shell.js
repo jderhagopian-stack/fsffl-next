@@ -28,7 +28,7 @@ const fsfflStaticVersion='20260924-live-usability-hotfix1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const homeNorthStarStaticVersion='20260925-market-beta-corrective2';
-const franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1';
+const franchiseNorthStarStaticVersion='20260925-hodor-lifecycle1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
@@ -95,7 +95,17 @@ function fsfflSharedReadinessSnapshot(){
   }
   if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
     const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
-    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:(job?.status==='interrupted'||job?.phase==='interrupted')?'Refresh interrupted — last-good intelligence retained':'Intelligence refresh needs attention',failed:true,complete:false};
+    const failedPhase=job?.failure_phase;
+    const failedPhaseStep=failedPhase&&fsfflSharedReadinessPhases[failedPhase]?fsfflSharedReadinessPhases[failedPhase][0]:prior;
+    const rosterUsable=Boolean(state?.intelligence?.served_state?.roster_usable);
+    const blockedStage=state?.intelligence?.blocked_stage||null;
+    const interrupted=job?.status==='interrupted'||job?.phase==='interrupted';
+    const label=interrupted
+      ?'Refresh interrupted — last-good intelligence retained'
+      :(blockedStage==='forecast'&&rosterUsable
+        ?'Forecast blocked — roster State remains usable'
+        :(blockedStage?blockedStage.replaceAll('_',' ')+' blocked — current State remains usable':'Intelligence refresh needs attention'));
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,failedPhaseStep)),total:FSFFL_SHARED_READINESS_STEPS,label,failed:true,complete:false};
   }
   if(job&&fsfflSharedReadinessPhases[job.phase]){
     const [step,label]=fsfflSharedReadinessPhases[job.phase];
