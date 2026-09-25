@@ -13,7 +13,7 @@ from fsffl.providers.ros_projection_rows import (
     RosProjectionRow,
     RosProjectionSnapshot,
 )
-from fsffl.state.models import FrozenModel, Position, canonical_nfl_team
+from fsffl.state.models import FrozenModel, LeagueRules, Position, canonical_nfl_team
 
 from .models import ForecastHorizon, ForecastMetric
 
@@ -656,3 +656,58 @@ def source_rule_evidence_for_subject(
             )
         )
     return tuple(sorted(output, key=lambda item: item.source_id))
+
+
+def evaluate_late_start_rule_coverage_for_subject(
+    snapshot: LateStartCurrentProjectionSnapshot,
+    *,
+    subject_key: str,
+    rules: LeagueRules,
+    require_production_rights: bool = True,
+):
+    """Translate healthy subject evidence into league-rule coverage diagnostics."""
+
+    from .k_dst_scoring import ForecastSubjectFamily, evaluate_rule_evidence_coverage
+
+    family = (
+        ForecastSubjectFamily.DST
+        if subject_key.startswith("DST:")
+        else ForecastSubjectFamily.KICKER
+        if subject_key.startswith("K:")
+        else None
+    )
+    if family is None:
+        raise ValueError("late-start rule coverage subject must be K or D/ST")
+    sources = source_rule_evidence_for_subject(
+        snapshot,
+        subject_key=subject_key,
+        require_production_rights=require_production_rights,
+    )
+    return evaluate_rule_evidence_coverage(
+        rules,
+        subject_family=family,
+        sources=sources,
+        minimum_independent_sources=snapshot.minimum_independent_sources,
+    )
+
+
+def late_start_subject_is_rule_complete(
+    snapshot: LateStartCurrentProjectionSnapshot,
+    *,
+    subject_key: str,
+    rules: LeagueRules,
+    require_production_rights: bool = True,
+) -> bool:
+    """Return true only when every active family rule has governed coverage."""
+
+    from .k_dst_scoring import RuleEvidenceStatus
+
+    coverage = evaluate_late_start_rule_coverage_for_subject(
+        snapshot,
+        subject_key=subject_key,
+        rules=rules,
+        require_production_rights=require_production_rights,
+    )
+    if not coverage:
+        return False
+    return all(item.status != RuleEvidenceStatus.UNSUPPORTED for item in coverage)
