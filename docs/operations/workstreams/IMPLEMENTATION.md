@@ -3,10 +3,14 @@
 Updated: 2026-09-25
 
 ## State
-**BLOCKED — EMPIRICAL/SOURCE EVIDENCE GATE.**
+**ACTIVE — 2026 LATE-START IMPLEMENTATION / PR #233 ACCEPTANCE VALIDATION.**
 
-Management accepted the completed K/DST + late-connect Research contract and authorized its bounded implementation. The authoritative implementation source is:
+Management accepted the completed K/DST + late-connect Research contract and authorized its bounded implementation. The base architecture remains authoritative:
 - `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
+
+Management's current implementation authority is:
+- `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
+- `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`
 
 Implementation PR **#215** is merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`.
 
@@ -58,7 +62,10 @@ Implementation cannot advance to production K/DST authority until the Research h
 
 These are evidence dependencies. They may not be bypassed with offense coefficients, one-source estimates, synthetic production values, average-based D/ST bucket reconstruction, or backdated current data.
 
-## Next authorized action
-No further production-authority implementation is permitted from the presently available evidence. Resume Stage 2/3 only when qualifying evidence clears at least one blocking gate: a second independent historical K/DST PIT corpus, production/licensed source access satisfying content-health requirements, exact remaining Sleeper scoring truth fixtures, or qualifying retained preseason K/DST evidence.
+## 2026 late-start exception implementation
+Management has superseded the prior blanket implementation stop with a bounded one-season-only 2026 current-date ROS authorization. PR #233 implements the evidence-independent contract while preserving the remaining rights/exact-coordinate/uncertainty gates.
 
-Until then: **BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — EMPIRICAL/SOURCE EVIDENCE GATE**.
+The late-start artifact is not preseason authority. It is hard-disabled for 2027+.
+
+## Next authorized action
+Complete PR #233 acceptance against current main and merge when green. After merge, continue only if authorized API/source access can clear a remaining exact-coordinate or rights gate. Otherwise stop at the external evidence/source-rights blocker; do not substitute heuristics.
