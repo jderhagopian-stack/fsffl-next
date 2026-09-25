@@ -138,8 +138,35 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "state_id": league_state.state_id if league_state is not None else None,
         "evidence_as_of": league_state.as_of.isoformat() if league_state is not None else None,
         "teams": ([{"team_id": team.team_id, "display_name": team.display_name} for team in league_state.teams] if league_state is not None else []),
-        "forecast_ready": evidence is not None and bool(evidence.league_scored_forecasts),
+        "forecast_ready": (
+            evidence is not None
+            and bool(
+                evidence.raw_forecasts
+                or evidence.league_scored_forecasts
+                or evidence.runtime_result.partial_fantasy_point_forecasts
+            )
+        ),
         "forecast_sources": list(evidence.successful_source_ids) if evidence is not None else [],
+        "forecast_raw_observation_count": len(evidence.raw_forecasts) if evidence is not None else 0,
+        "forecast_scored_player_count": len(evidence.league_scored_forecasts) if evidence is not None else 0,
+        "forecast_partial_player_count": (
+            len(evidence.runtime_result.partial_fantasy_point_forecasts)
+            if evidence is not None
+            else 0
+        ),
+        "forecast_family_coverage": (
+            [
+                item.model_dump(mode="json")
+                for item in evidence.runtime_result.family_coverage
+            ]
+            if evidence is not None
+            else []
+        ),
+        "forecast_simulation_blockers": (
+            list(evidence.runtime_result.simulation_authority_blockers)
+            if evidence is not None
+            else []
+        ),
         "simulation_ready": simulation is not None,
         "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
         "value_ready": value_evidence is not None and bool(value_evidence.estimates),
@@ -445,13 +472,48 @@ def create_app(
                     "Authoritative NEXT-2 ensemble loaded from independent sources: "
                     + ", ".join(evidence.successful_source_ids) + "."
                 )
+        forecast_ready = bool(
+            evidence is not None
+            and (
+                evidence.raw_forecasts
+                or evidence.league_scored_forecasts
+                or evidence.runtime_result.partial_fantasy_point_forecasts
+            )
+        )
+        if evidence is not None and evidence.runtime_result.simulation_authority_blockers:
+            message = (
+                "Canonical shared Forecast evidence is populated. Full downstream "
+                "Simulation authority remains blocked by: "
+                + ", ".join(evidence.runtime_result.simulation_authority_blockers)
+                + "."
+            )
         payload = state_first_runtime_status(
             runtime.league_state,
-            forecast_ready=evidence is not None and bool(evidence.league_scored_forecasts),
+            forecast_ready=forecast_ready,
             forecast_message=message,
         ).model_dump(mode="json")
         payload["forecast_evidence_basis"] = evidence.evidence_basis if evidence is not None else None
         payload["forecast_failed_sources"] = list(evidence.failed_sources) if evidence is not None else []
+        payload["forecast_raw_observation_count"] = len(evidence.raw_forecasts) if evidence is not None else 0
+        payload["forecast_scored_player_count"] = len(evidence.league_scored_forecasts) if evidence is not None else 0
+        payload["forecast_partial_player_count"] = (
+            len(evidence.runtime_result.partial_fantasy_point_forecasts)
+            if evidence is not None
+            else 0
+        )
+        payload["forecast_family_coverage"] = (
+            [
+                item.model_dump(mode="json")
+                for item in evidence.runtime_result.family_coverage
+            ]
+            if evidence is not None
+            else []
+        )
+        payload["forecast_simulation_blockers"] = (
+            list(evidence.runtime_result.simulation_authority_blockers)
+            if evidence is not None
+            else []
+        )
         value_ready = runtime.value_evidence is not None and bool(runtime.value_evidence.estimates)
         for stage in payload["stages"]:
             if stage["stage"] == "value" and value_ready:
@@ -644,13 +706,18 @@ def create_app(
             require_active_league_identity()
             store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
 
-            if not evidence.uncertainty_ready:
-                raise ValueError("forecast uncertainty is not ready for authoritative simulation")
-
-            progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Running 50,000 governed NEXT-4 season simulations.")
-            simulation = simulation_loader(refreshed_state, evidence)
-            require_active_league_identity()
-            store.set_simulation_analytics(user_id, simulation)
+            progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Evaluating governed NEXT-4 simulation authority.")
+            if evidence.uncertainty_ready:
+                simulation = simulation_loader(refreshed_state, evidence)
+                require_active_league_identity()
+                store.set_simulation_analytics(user_id, simulation)
+            else:
+                _logger.warning(
+                    "FSFFL simulation not promoted league=%s blockers=%s partial_players=%s",
+                    refreshed_state.league.league_id,
+                    list(evidence.runtime_result.simulation_authority_blockers),
+                    len(evidence.runtime_result.partial_fantasy_point_forecasts),
+                )
 
             progress(IntelligenceJobPhase.BUILDING_VALUES, "Building governed NEXT-3 current market values.")
             values = value_loader(refreshed_state)
@@ -720,6 +787,14 @@ def create_app(
             "forecast_evaluation_as_of": evidence.runtime_result.evaluation_as_of.isoformat(),
             "ensemble_groups": len(evidence.raw_forecasts),
             "league_scored_players": len(evidence.league_scored_forecasts),
+            "partial_scored_players": len(evidence.runtime_result.partial_fantasy_point_forecasts),
+            "forecast_family_coverage": [
+                item.model_dump(mode="json")
+                for item in evidence.runtime_result.family_coverage
+            ],
+            "simulation_authority_blockers": list(
+                evidence.runtime_result.simulation_authority_blockers
+            ),
             "uncertainty_ready": evidence.uncertainty_ready,
             "simulation_ready": simulation is not None,
             "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
