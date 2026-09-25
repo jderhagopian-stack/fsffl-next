@@ -88,9 +88,15 @@ function fsfflSharedReadinessEscape(value){return String(value??'').replaceAll('
 function fsfflSharedReadinessSnapshot(){
   const context=state?.context||{},job=state?.intelligence?.job||null;
   if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false};
-  if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
+  const contextComplete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
+  const terminalRefreshFailure=Boolean(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted');
+  if(terminalRefreshFailure&&contextComplete){
+    fsfflSharedReadinessState.lastStep=FSFFL_SHARED_READINESS_STEPS;
+    return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Core intelligence retained · latest refresh failed',failed:false,complete:true,retained:true};
+  }
+  if(terminalRefreshFailure){
     const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
-    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:(job?.status==='interrupted'||job?.phase==='interrupted')?'Refresh interrupted — last-good intelligence retained':'Intelligence refresh needs attention',failed:true,complete:false};
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,prior)),total:FSFFL_SHARED_READINESS_STEPS,label:(job?.status==='interrupted'||job?.phase==='interrupted')?'Refresh interrupted — last-good intelligence retained':'Intelligence refresh needs attention',failed:true,complete:false,retained:false};
   }
   if(job&&fsfflSharedReadinessPhases[job.phase]){
     const [step,label]=fsfflSharedReadinessPhases[job.phase];
@@ -101,7 +107,7 @@ function fsfflSharedReadinessSnapshot(){
   if(context?.forecast_ready)step=Math.max(step,2);
   if(context?.simulation_ready)step=Math.max(step,4);
   if(context?.value_ready)step=Math.max(step,5);
-  const complete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
+  const complete=contextComplete;
   if(complete)step=FSFFL_SHARED_READINESS_STEPS;
   fsfflSharedReadinessState.lastStep=step;
   const label=complete?'Core intelligence current':!context?.forecast_ready?'Building projections…':!context?.simulation_ready?'Running season outlook…':!context?.value_ready?'Building market values…':'Attaching current intelligence…';
@@ -113,7 +119,7 @@ function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const refreshAction=active
     ?'<button type="button" class="fsffl-shared-readiness-refresh" disabled aria-disabled="true">Refreshing…</button>'
     :'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>';
-  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':'●')+'</span><strong>'+status.step+' / '+status.total+'</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+'</span>'+refreshAction+'</div>';
+  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.failed?'failed ':'')+(status.retained?'retained':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':'●')+'</span><strong>'+status.step+' / '+status.total+'</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){
   let node=document.querySelector('#fsffl-sync-state');
@@ -181,7 +187,7 @@ function installFsfflSharedReadinessStyles(){
   if(document.querySelector('#fsffl-shared-readiness-style'))return;
   const style=document.createElement('style');
   style.id='fsffl-shared-readiness-style';
-  style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:auto;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr);align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}.fsffl-shared-readiness-refresh{pointer-events:auto;position:relative;z-index:1}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr);gap:6px}}';
+  style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:auto;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr) max-content;align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-strip.retained:after{background:#f5b942}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}.fsffl-shared-readiness-refresh{pointer-events:auto;position:relative;z-index:1;box-sizing:border-box;width:auto!important;max-width:none!important;min-width:112px;justify-self:end;white-space:nowrap!important;padding:5px 8px!important;line-height:1.1!important}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr) max-content;gap:6px}.fsffl-shared-readiness-refresh{min-width:104px;font-size:9px!important}}';
   document.head.appendChild(style);
 }
 window.fsfflSharedReadiness={
