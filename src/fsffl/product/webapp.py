@@ -740,6 +740,12 @@ def create_app(
 
     @application.post("/api/connect/sleeper")
     def connect_sleeper(request: ConnectSleeperLeagueRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        previous_runtime = store.get(user_id)
+        previous_league_id = (
+            previous_runtime.league_state.league.league_id
+            if previous_runtime.league_state is not None
+            else None
+        )
         league_external_id = request.league_external_id.strip()
         if not league_external_id:
             raise HTTPException(status_code=422, detail="Sleeper league id cannot be blank")
@@ -758,7 +764,11 @@ def create_app(
             "start_intelligence_reconciliation",
             None,
         )
-        if callable(reconcile):
+        if (
+            callable(reconcile)
+            and previous_league_id is not None
+            and previous_league_id != league_state.league.league_id
+        ):
             reconcile(user_id)
         return _runtime_context_payload(store, user_id)
 
