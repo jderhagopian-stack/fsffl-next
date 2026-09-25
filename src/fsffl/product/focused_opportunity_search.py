@@ -118,6 +118,7 @@ def build_focused_trade_candidates(
             browser,
             cardinal,
             target_asset_refs=(frozenset({intent_value}) if intent_value else frozenset()),
+            use_focal_need_filter=False,
             require_counterparty_supply=False,
             scope_label=f"intent:target:{intent_value or 'missing'}",
         )
