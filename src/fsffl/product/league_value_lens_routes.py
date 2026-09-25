@@ -76,13 +76,27 @@ def install_league_value_lens_routes(
                     "retry_after_ms": loading.get("retry_after_ms"),
                     "build_status": loading.get("build_status"),
                 }
+                forecast_status = str(
+                    (payload.get("all_player_forecast") or {}).get("status")
+                    or "unavailable"
+                )
                 payload["surface_readiness"] = {
                     "surface": "player_board",
                     "status": "building_optional",
                     "required_dependencies": ["canonical_state", "broad_market_value"],
-                    "optional_dependencies": ["fsffl_intrinsic_all_player"],
+                    "optional_dependencies": [
+                        "fsffl_intrinsic_all_player",
+                        "all_player_season_forecast",
+                    ],
                     "blockers": [],
-                    "missing_optional": ["fsffl_intrinsic_all_player"],
+                    "missing_optional": [
+                        "fsffl_intrinsic_all_player",
+                        *(
+                            []
+                            if forecast_status == "ready"
+                            else ["all_player_season_forecast_partial"]
+                        ),
+                    ],
                     "league_state_id": runtime.league_state.state_id,
                     "retry_after_ms": loading.get("retry_after_ms"),
                 }
@@ -108,30 +122,35 @@ def install_league_value_lens_routes(
             intrinsic_error=intrinsic_error,
             include_unrostered=universe == "all",
         )
+        broad_ready = payload.get("broad_market", {}).get("status") == "ready"
+        intrinsic_ready = (
+            payload.get("fsffl_intrinsic", {}).get("status") != "unavailable"
+        )
+        forecast_status = str(
+            (payload.get("all_player_forecast") or {}).get("status")
+            or "unavailable"
+        )
         payload["surface_readiness"] = {
             "surface": "player_board",
             "status": (
                 "ready"
-                if payload.get("broad_market", {}).get("status") == "ready"
-                and payload.get("fsffl_intrinsic", {}).get("status") != "unavailable"
-                else (
-                    "degraded"
-                    if payload.get("broad_market", {}).get("status") == "ready"
-                    else "blocked"
-                )
+                if broad_ready and intrinsic_ready and forecast_status == "ready"
+                else ("degraded" if broad_ready else "blocked")
             ),
             "required_dependencies": ["canonical_state", "broad_market_value"],
-            "optional_dependencies": ["fsffl_intrinsic_all_player"],
-            "blockers": (
-                []
-                if payload.get("broad_market", {}).get("status") == "ready"
-                else ["broad_market_value"]
-            ),
-            "missing_optional": (
-                []
-                if payload.get("fsffl_intrinsic", {}).get("status") != "unavailable"
-                else ["fsffl_intrinsic_all_player"]
-            ),
+            "optional_dependencies": [
+                "fsffl_intrinsic_all_player",
+                "all_player_season_forecast",
+            ],
+            "blockers": [] if broad_ready else ["broad_market_value"],
+            "missing_optional": [
+                *([] if intrinsic_ready else ["fsffl_intrinsic_all_player"]),
+                *(
+                    []
+                    if forecast_status == "ready"
+                    else ["all_player_season_forecast_partial"]
+                ),
+            ],
             "league_state_id": runtime.league_state.state_id,
             "retry_after_ms": None,
         }
