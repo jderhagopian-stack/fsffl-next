@@ -91,6 +91,15 @@ Remaining gates:
 4. foreground surfaces must remain responsive;
 5. no stale-job or cross-league contamination may appear.
 
+Post-restart physical-device timing on the live #226 build now proves Home/Franchise are responsive but exposes a Market cold-path defect:
+- `/api/home`: approximately 0.3–0.7s;
+- `/api/my-team`: approximately 0.1–0.5s;
+- first `/api/opportunities/workspace/quick`: **36.705s**;
+- first `/api/opportunities/workspace`: **48.396s**;
+- subsequent cached full workspace: **0.172s**.
+
+Therefore the foreground-responsiveness gate remains red specifically on cold Market discovery. Performance must repair/bound that cold path without changing Search/Decision/Simulation authority.
+
 Restart/failure preservation itself is now production-validated by the two #226 startup records above.
 
 ## Boundary
