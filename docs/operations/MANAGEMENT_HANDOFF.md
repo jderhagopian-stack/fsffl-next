@@ -82,3 +82,7 @@ Management keeps this file current when cross-workstream decisions, acceptance g
 
 ## Management decision — parallel K/DST execution
 Management authorizes bounded Forecast/Product implementation now, in parallel with Market corrective work. The two workstreams must preserve authority boundaries and avoid overlapping ownership: Forecast/Product owns K/DST late-start Forecast/bootstrap implementation; Market owns its persisted corrective acceptance directive; Performance owns lifecycle/foreground performance and must not change Market discovery semantics while repairing cold-path latency.
+
+
+## Market discovery acceptance clarification — 2026-09-25
+Management clarified that the active Market corrective pass must prove opportunity discovery quality, not merely UI filtering or approximate value matching. Market/Intrinsic values are economic evidence/screens, not the definition of an opportunity. Initial discovery should use cheap governed franchise needs/surpluses, complementary counterparty state, candidate assets, economics and bounded bilateral Decision screening before a small diverse opportunity frontier. Broad discovery remains zero exact changed-state Simulation; deep Simulation belongs after user-selected investigation. Funnel candidate/rejection counts, preliminary-screen counts, stage timings and Simulation-call counts must be observable. Canonical detail is persisted in `workstreams/MARKET_DISCOVERY.md`.
