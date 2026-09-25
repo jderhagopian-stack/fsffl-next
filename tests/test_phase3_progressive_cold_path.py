@@ -303,6 +303,11 @@ def test_search_only_workspace_skips_market_family_and_economic_enrichment(monke
         "_market_surface_readiness",
         lambda *_args, **_kwargs: {},
     )
+    monkeypatch.setattr(
+        opportunity_workspace_module,
+        "posture_payload",
+        lambda *_args, **_kwargs: {},
+    )
 
     def forbidden_market_discovery(*_args, **_kwargs):
         raise AssertionError("search-only delivery must not run Market-family economics")
