@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from fsffl.providers.sleeper import SleeperNormalizer, SleeperPayloadBundle
+from fsffl.providers.sleeper_snapshot import canonical_players_from_sleeper_player_universe
 from fsffl.state.models import Position, RosterSlot
 
 
@@ -293,3 +294,16 @@ def test_rostered_sleeper_dst_retains_canonical_team_identity_without_forecast_p
     alpha = next(item for item in state.team_states if item.team_id.endswith(":team:1"))
     dst_entry = next(item for item in alpha.roster if item.player_id == "sleeper:player:JAC")
     assert dst_entry.slot == RosterSlot.DST
+
+
+def test_current_player_universe_includes_kickers_but_not_dst_pseudo_players() -> None:
+    players = canonical_players_from_sleeper_player_universe(
+        {
+            "k1": {"full_name": "Kicker One", "position": "K", "team": "BUF"},
+            "DEN": {"full_name": "Denver Broncos", "position": "DEF", "team": "DEN"},
+        }
+    )
+
+    assert [(item.player_id, item.position, item.nfl_team) for item in players] == [
+        ("sleeper:player:k1", Position.K, "BUF"),
+    ]
