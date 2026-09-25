@@ -96,7 +96,7 @@ class IntelligenceJob:
 
 
 ProgressCallback = Callable[[IntelligenceJobPhase, str], None]
-JobWork = Callable[[ProgressCallback], None]
+JobWork = Callable[[ProgressCallback], str | None]
 
 
 class IntelligenceJobCoordinator:
@@ -347,7 +347,7 @@ class IntelligenceJobCoordinator:
             )
 
         try:
-            work(progress)
+            completion_message = work(progress)
         except IntelligenceJobInterrupted as exc:
             active = self.get(job_id)
             interrupted = self._update(
@@ -376,6 +376,9 @@ class IntelligenceJobCoordinator:
             job_id,
             status=IntelligenceJobStatus.COMPLETED,
             phase=IntelligenceJobPhase.COMPLETED,
-            message="Forecasts, simulation and current Value evidence are ready.",
+            message=(
+                completion_message
+                or "Forecasts, simulation and current Value evidence are ready."
+            ),
         )
         self._log_final_timing(completed)
