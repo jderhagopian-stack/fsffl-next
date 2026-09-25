@@ -165,6 +165,10 @@
     if(market.detailKey)return renderOpportunityDetail(body,payload);
     if(!payload||payload.status!=="ready"){body.innerHTML=loading("Preparing your Market","For You waits for governed strategic, economic and bilateral evidence; it does not promote raw Search rows.");return}
     const readiness=payload?.surface_readiness?.for_you||{},rows=forYouOpportunities(payload);
+    if(payload?.delivery?.completeness==="search_only"){
+      body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>For You</p><h2>Your best paths right now.</h2><p>Search is ready. Bounded bilateral screening is still running before anything earns scarce attention.</p></div></section>"+loading("Screening distinct opportunity families","No raw Search row is promoted into For You while Decision evidence is pending.");
+      return;
+    }
     if(readiness.status==="blocked"){
       body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>For You</p><h2>Your best paths right now.</h2><p>Automatic opportunities remain gated until the required current team-utility and Value evidence is ready.</p></div></section>"+unavailable("For You is not ready yet","Trade Finder can still support explicit intent when its required evidence is available.");
       return;
