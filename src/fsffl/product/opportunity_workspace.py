@@ -27,6 +27,7 @@ _DECISION_BUDGET_POLICY = "bounded_family_first_pre_simulation_decision_screen"
 def _market_surface_readiness(runtime: UserRuntimeContext) -> dict[str, dict[str, object]]:
     league_state = runtime.league_state
     state_id = league_state.state_id if league_state is not None else None
+    team_ready = runtime.selected_team_id is not None
     value_ready = bool(
         runtime.value_evidence is not None
         and runtime.value_evidence.fsffl_cardinal_values
@@ -83,13 +84,14 @@ def _market_surface_readiness(runtime: UserRuntimeContext) -> dict[str, dict[str
             "for_you",
             (
                 MarketSurfaceStatus.READY
-                if value_ready and simulation_ready
+                if team_ready and value_ready and simulation_ready
                 else MarketSurfaceStatus.BLOCKED
             ),
             ("canonical_state", "managed_team", "cardinal_value", "baseline_team_utility"),
             blockers=tuple(
                 item
                 for item, ready in (
+                    ("managed_team", team_ready),
                     ("cardinal_value", value_ready),
                     ("baseline_team_utility", simulation_ready),
                 )
@@ -100,9 +102,18 @@ def _market_surface_readiness(runtime: UserRuntimeContext) -> dict[str, dict[str
         ),
         "trade_finder": payload(
             "trade_finder",
-            MarketSurfaceStatus.READY if value_ready else MarketSurfaceStatus.BLOCKED,
+            MarketSurfaceStatus.READY
+            if team_ready and value_ready
+            else MarketSurfaceStatus.BLOCKED,
             ("canonical_state", "managed_team", "cardinal_value"),
-            blockers=(() if value_ready else ("cardinal_value",)),
+            blockers=tuple(
+                item
+                for item, ready in (
+                    ("managed_team", team_ready),
+                    ("cardinal_value", value_ready),
+                )
+                if not ready
+            ),
             optional=("baseline_team_utility", "owner_intelligence"),
             missing_optional=tuple(
                 item
