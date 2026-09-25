@@ -936,6 +936,38 @@ def _hypothesis_for_opportunity(
     )
 
 
+_BILATERAL_PATH_ORDER = {
+    BilateralPlausibility.BILATERAL_SUPPORTED: 0,
+    BilateralPlausibility.BILATERAL_FRICTION: 1,
+    BilateralPlausibility.INCOMPLETE: 2,
+    BilateralPlausibility.COUNTERPARTY_DOMINATED: 3,
+    BilateralPlausibility.FOCAL_DOMINATED: 4,
+}
+_ECONOMIC_PATH_ORDER = {
+    PreliminaryEconomicBand.ROBUST_OR_ORDINARY: 0,
+    PreliminaryEconomicBand.BOUNDED_UNCERTAINTY: 1,
+    PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN: 2,
+    PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN: 3,
+    PreliminaryEconomicBand.INCOMPLETE: 4,
+}
+
+
+def _candidate_path_order(path: CandidatePath) -> tuple[object, ...]:
+    row = path.representative_package
+    return (
+        _BILATERAL_PATH_ORDER[path.bilateral_plausibility],
+        _ECONOMIC_PATH_ORDER[path.economic_screen],
+        0 if path.evidence_completeness == "complete" else 1,
+        float(row.get("market_gap_ratio"))
+        if isinstance(row.get("market_gap_ratio"), (int, float))
+        else float("inf"),
+        float(row.get("search_distance"))
+        if isinstance(row.get("search_distance"), (int, float))
+        else float("inf"),
+        path.path_id,
+    )
+
+
 def _aggregate_opportunities(
     runtime: UserRuntimeContext,
     seeds: list[dict[str, object]],
@@ -986,20 +1018,26 @@ def _aggregate_opportunities(
         )
         hypotheses.append(hypothesis)
         related = paths_by_opportunity.get(opportunity_id, [])
-        survivors = [
-            path
-            for path in related
-            if _path_can_support_attention(
-                path.representative_package,
-                path.economic_screen,
-                path.bilateral_plausibility,
-            )
-        ]
-        screened = [
-            path
-            for path in related
-            if path.deep_evaluation_status == DeepEvaluationStatus.PRELIM_SCREENED
-        ]
+        survivors = sorted(
+            (
+                path
+                for path in related
+                if _path_can_support_attention(
+                    path.representative_package,
+                    path.economic_screen,
+                    path.bilateral_plausibility,
+                )
+            ),
+            key=_candidate_path_order,
+        )
+        screened = sorted(
+            (
+                path
+                for path in related
+                if path.deep_evaluation_status == DeepEvaluationStatus.PRELIM_SCREENED
+            ),
+            key=_candidate_path_order,
+        )
         if source == OpportunitySource.AUTOMATIC_FOR_YOU and survivors:
             attention = AttentionStatus.WORTH_ATTENTION
         elif survivors or screened:
@@ -1110,26 +1148,12 @@ def select_for_you(
         if opportunity.attention_status == AttentionStatus.WORTH_ATTENTION
     ]
 
-    bilateral_order = {
-        BilateralPlausibility.BILATERAL_SUPPORTED: 0,
-        BilateralPlausibility.BILATERAL_FRICTION: 1,
-        BilateralPlausibility.INCOMPLETE: 2,
-        BilateralPlausibility.COUNTERPARTY_DOMINATED: 3,
-        BilateralPlausibility.FOCAL_DOMINATED: 4,
-    }
-    economic_order = {
-        PreliminaryEconomicBand.ROBUST_OR_ORDINARY: 0,
-        PreliminaryEconomicBand.BOUNDED_UNCERTAINTY: 1,
-        PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN: 2,
-        PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN: 3,
-        PreliminaryEconomicBand.INCOMPLETE: 4,
-    }
     ordered = sorted(
         eligible,
         key=lambda item: (
             0 if item.strategic_relevance == "current_position_need" else 1,
-            bilateral_order[item.bilateral_plausibility],
-            economic_order[item.preliminary_economic_band],
+            _BILATERAL_PATH_ORDER[item.bilateral_plausibility],
+            _ECONOMIC_PATH_ORDER[item.preliminary_economic_band],
             0 if item.evidence_completeness == "complete" else 1,
             min(
                 (
