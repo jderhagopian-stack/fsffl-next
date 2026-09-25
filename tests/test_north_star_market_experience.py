@@ -62,7 +62,8 @@ def test_opportunity_and_candidate_path_drilldown_preserve_decision_boundary() -
     for label in ("Opportunity Detail", "Candidate Paths", "Fit & Risk", "Candidate Path Detail"):
         assert label in source
     assert "Why first. Packages second." in source
-    assert "This route survived preliminary screening. It is not a final trade verdict." in source
+    assert "This route survived bounded preliminary screening. It is not a final trade verdict." in source
+    assert "bounded bilateral screening has not run for it yet." in source
     assert "Evaluate in Trade Center" in source
     assert "fsfflOpenOpportunityInTradeCenter" in source
     assert "50,000-run Simulation" in source
