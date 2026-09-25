@@ -49,9 +49,9 @@ Read-only research inspection established:
 2. Keep production K/DST authority fail-closed until a second independent historical PIT corpus, production source rights/content health, and the remaining Sleeper truth-fixture requirements are satisfied.
 3. Keep 2026 K/DST preseason comparison unavailable unless qualifying point-in-time raw evidence is proven; never backdate current data.
 4. Resume new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
-5. Review the completed Market / Trade Discovery architecture handoff; if accepted, authorize bounded Market implementation and repeat physical-iPhone acceptance.
-6. Keep Market implementation separate from the blocked Forecast/K/DST empirical/source evidence gate; do not weaken either authority to unblock the other.
-7. Continue Home × Franchise redundancy audit only after the Market discovery contract is accepted or Management explicitly reprioritizes it.
+5. Merge/deploy the implementation-accepted Market PR #220, then repeat physical-iPhone/Safari Market acceptance.
+6. Keep Market acceptance separate from the blocked Forecast/K/DST empirical/source evidence gate; do not weaken either authority to unblock the other.
+7. Continue Home × Franchise redundancy audit only after Market physical acceptance or explicit Management reprioritization.
 
 ## Important distinction
 Research and bounded code implementation are complete for the currently authorized evidence-independent scope. Production Forecast support is still blocked on empirical/source evidence promotion and subsequent downstream/lifecycle acceptance. See `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
@@ -73,4 +73,15 @@ Key determination:
 - exact changed-state Simulation does not need to become broad discovery and remains downstream of a selected transaction;
 - global 7/7 proves the core State/Forecast/current-Simulation/Value lifecycle, not the separately lazy all-player Intrinsic/Market consumer contract, which explains the current Player Board / Free Agents contradiction.
 
-Management review of the persisted architecture is required before broad Market implementation. Market product acceptance remains open.
+Management subsequently accepted the architecture and authorized bounded implementation. PR #220 now satisfies implementation-level acceptance; Market product acceptance remains open only for the required merged/deployed physical-iPhone/Safari validation.
+
+
+## Market implementation checkpoint — 2026-09-25
+The Management-authorized Market / Trade Discovery implementation is complete at the implementation level.
+
+Evidence:
+- PR #220;
+- `artifacts/implementation/market_discovery_north_star_20260925/IMPLEMENTATION_HANDOFF.md`;
+- final code head `97ff2a4e59d065b38a6eb751c3ed3a330feee56e` passed full CI, Home, Franchise, League Atlas, PR164 corrective regression, and live Forecast corrective trace.
+
+The implementation preserves the accepted authority chain and zero broad changed-state Simulation. The next gate is merged/deployed physical-iPhone/Safari product acceptance, not additional speculative redesign.

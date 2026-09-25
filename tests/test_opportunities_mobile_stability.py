@@ -8,10 +8,12 @@ def test_interactive_opportunity_workspace_bounds_fast_decision_work_and_defers_
     workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
     analysis = (ROOT / "src/fsffl/product/trade_analysis_runtime.py").read_text()
 
-    assert "bilateral_evaluation_limit: int = 1" in workspace
-    assert "bounded_lead_evaluation_for_interactive_workspace" in workspace
-    assert "one bounded server-owned bilateral Decision" in workspace
-    assert "Full changed-state Decision and Simulation remain behind the explicit Evaluate offer" in workspace
+    runtime = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
+    assert "DEFAULT_PRELIMINARY_DECISION_BUDGET = 8" in runtime
+    assert "bilateral_evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET" in workspace
+    assert "bounded_family_first_pre_simulation_decision_screen" in workspace
+    assert "Representative Candidate Paths receive the existing pre-Simulation" in workspace
+    assert "changed-state Simulation remains behind explicit transaction-level escalation" in workspace
     assert '"competitive_outcomes": False' in analysis
     assert "until the post-trade state is run through Simulation authority" in analysis
 

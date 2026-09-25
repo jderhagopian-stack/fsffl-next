@@ -5,10 +5,12 @@ from typing import Any, Mapping
 
 from fastapi import Depends, FastAPI, HTTPException
 
+from fsffl.opportunity import OpportunitySource
 from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 
 from .focused_opportunity_search import build_focused_trade_candidates
+from .market_discovery_runtime import build_market_discovery, evaluate_candidate_path
 from .opportunity_posture import posture_payload
 from .opportunity_spotlights import build_trade_spotlights
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
@@ -93,6 +95,55 @@ def install_focused_opportunity_routes(
             if isinstance(row, dict)
         }
         returned = [base_rows.get(_identity(row), row) for row in focused[:limit]]
+
+        already_screened = {}
+        for path in ((base.get("market_discovery") or {}).get("candidate_paths") or []):
+            package = path.get("representative_package") or {}
+            if package.get("bilateral_decision_evaluated"):
+                already_screened[_identity(package)] = package
+
+        def focused_evaluator(current_runtime, row):
+            return already_screened.get(_identity(row)) or evaluate_candidate_path(
+                current_runtime,
+                row,
+            )
+
+        focused_market_discovery = build_market_discovery(
+            runtime,
+            returned,
+            evaluation_limit=int(
+                discovery.get("bilateral_evaluation_limit") or 8
+            ),
+            source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+            exact_target_constraint=(value if intent == "target" and value else None),
+            intent=intent,
+            intent_value=value,
+            search_generation_diagnostics={
+                "targets_considered": len(
+                    {
+                        str(item.get("asset_ref") or "")
+                        for row in returned
+                        for item in (row.get("receive") or [])
+                        if isinstance(item, dict) and item.get("asset_ref")
+                    }
+                ),
+                "raw_packages_generated_pre_dedup": len(returned),
+                "packages_removed_exact_duplicate": 0,
+            },
+            evaluator=focused_evaluator,
+        )
+        enriched = {
+            _identity(path.get("representative_package") or {}):
+                path.get("representative_package") or {}
+            for path in focused_market_discovery.get("candidate_paths") or []
+            if (path.get("representative_package") or {}).get(
+                "bilateral_decision_evaluated"
+            )
+        }
+        returned = [
+            enriched.get(_identity(row), row)
+            for row in returned
+        ]
         discovery.update(
             {
                 "candidate_count": len(focused),
@@ -114,5 +165,6 @@ def install_focused_opportunity_routes(
         payload = dict(base)
         payload["search_posture"] = posture_payload(runtime, requested)
         payload["trade_discovery"] = discovery
-        payload["message"] = "Market Focus applied to the server-owned trade search."
+        payload["market_discovery"] = focused_market_discovery
+        payload["message"] = "Market Focus applied to the server-owned governed opportunity search."
         return payload

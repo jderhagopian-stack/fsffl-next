@@ -11,6 +11,21 @@ from .frontier_search import (
     FrontierSearchResult,
     explore_negotiation_frontier,
 )
+from .market_discovery import (
+    AttentionStatus,
+    BilateralPlausibility,
+    CandidatePath,
+    DeepEvaluationStatus,
+    MarketOpportunity,
+    MarketSurfaceReadiness,
+    MarketSurfaceStatus,
+    OpportunityHypothesis,
+    OpportunitySource,
+    PreliminaryEconomicBand,
+    canonical_opportunity_family_key,
+    canonical_package_family_key,
+    canonical_path_id,
+)
 from .models import (
     ActionAuthority,
     CandidateReason,
@@ -65,6 +80,16 @@ from .waiver_evaluation import (
 
 __all__ = [
     "ActionAuthority",
+    "AttentionStatus",
+    "BilateralPlausibility",
+    "CandidatePath",
+    "DeepEvaluationStatus",
+    "MarketOpportunity",
+    "MarketSurfaceReadiness",
+    "MarketSurfaceStatus",
+    "OpportunityHypothesis",
+    "OpportunitySource",
+    "PreliminaryEconomicBand",
     "BilateralFrontierPoint",
     "CandidateReason",
     "DiscoveryStatus",
@@ -99,6 +124,9 @@ __all__ = [
     "candidate_from_trade_evaluation",
     "candidate_from_waiver_evaluation",
     "canonical_frontier_point_id",
+    "canonical_opportunity_family_key",
+    "canonical_package_family_key",
+    "canonical_path_id",
     "canonical_package_id",
     "derive_action_authority",
     "dominates",

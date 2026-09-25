@@ -14,8 +14,22 @@ from .trade_center_view import TradeAssetOption, TradeCenterBrowserView
 
 _SKILL_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
 _MAX_DISCOVERY_PACKAGE_SIZE = 3
+_PACKAGE_NEIGHBORHOOD_PER_SIZE = 3
 
 PackageCatalog = dict[int, tuple[tuple[float, tuple[str, ...], tuple[TradeAssetOption, ...]], ...]]
+
+
+class SearchCandidateCollection(list[dict[str, object]]):
+    """List-compatible Search output with non-authoritative generation diagnostics."""
+
+    def __init__(
+        self,
+        rows: list[dict[str, object]],
+        *,
+        diagnostics: dict[str, int],
+    ) -> None:
+        super().__init__(rows)
+        self.diagnostics = diagnostics
 
 
 def _player_position(league_state: LeagueState, option: TradeAssetOption) -> Position | None:
@@ -201,18 +215,34 @@ def _build_package_catalog(
     return catalog
 
 
-def _nearest_package(catalog: PackageCatalog, *, size: int, target_value: float) -> tuple[TradeAssetOption, ...] | None:
+def _nearest_packages(
+    catalog: PackageCatalog,
+    *,
+    size: int,
+    target_value: float,
+    limit: int = _PACKAGE_NEIGHBORHOOD_PER_SIZE,
+) -> tuple[tuple[TradeAssetOption, ...], ...]:
+    """Return a bounded Cardinal neighborhood without creating a package score.
+
+    Search deliberately keeps several nearby structures so the single closest
+    additive package cannot monopolize the path before Decision-owned economics
+    and bilateral screening run. The neighborhood size is product compute policy,
+    not Value or Decision authority.
+    """
+
     entries = catalog.get(size) or ()
-    if not entries:
-        return None
+    if not entries or limit <= 0:
+        return ()
     totals = [item[0] for item in entries]
     insertion = bisect_left(totals, target_value)
-    candidate_indices = {max(0, insertion - 1), min(len(entries) - 1, insertion)}
-    _, _, assets = min(
-        (entries[index] for index in candidate_indices),
+    radius = max(limit * 2, 4)
+    start = max(0, insertion - radius)
+    end = min(len(entries), insertion + radius + 1)
+    ordered = sorted(
+        entries[start:end],
         key=lambda item: (abs(item[0] - target_value), item[1]),
     )
-    return assets
+    return tuple(item[2] for item in ordered[:limit])
 
 
 def _nearest_packages_for_target(
@@ -238,26 +268,31 @@ def _nearest_packages_for_target(
         return ()
     rows: list[dict[str, object]] = []
     for size in sorted(package_catalog):
-        package = _nearest_package(package_catalog, size=size, target_value=float(target_value))
-        if package is None:
-            continue
-        row = _candidate(
-            league_state=league_state,
-            focal_team_id=focal_team_id,
-            counterparty_team_id=counterparty_team_id,
-            counterparty_name=counterparty_name,
-            send_assets=package,
-            receive_asset=target,
-            cardinal=cardinal,
-            strengths=strengths,
+        packages = _nearest_packages(
+            package_catalog,
+            size=size,
+            target_value=float(target_value),
         )
-        if row is not None:
-            row["search_context"] = [
-                *(row.get("search_context") or []),
-                f"Search retained the nearest governed {size}-asset market structure for this target. "
-                "Package size is exploratory; Decision owns whether the structure is actually good.",
-            ]
-            rows.append(row)
+        for variant_rank, package in enumerate(packages, start=1):
+            row = _candidate(
+                league_state=league_state,
+                focal_team_id=focal_team_id,
+                counterparty_team_id=counterparty_team_id,
+                counterparty_name=counterparty_name,
+                send_assets=package,
+                receive_asset=target,
+                cardinal=cardinal,
+                strengths=strengths,
+            )
+            if row is not None:
+                row["package_variant_rank"] = variant_rank
+                row["search_context"] = [
+                    *(row.get("search_context") or []),
+                    f"Search retained bounded governed {size}-asset market-neighborhood variant "
+                    f"#{variant_rank} for this target. Package size and neighborhood rank are "
+                    "exploratory product policy; Decision owns whether the structure is actually good.",
+                ]
+                rows.append(row)
     return tuple(rows)
 
 
@@ -309,6 +344,60 @@ def _multi_lane_search_order(candidates: list[dict[str, object]]) -> list[dict[s
     return [candidates[index] for index in ordered]
 
 
+def _target_path_family_key(row: dict[str, object]) -> tuple[str, tuple[str, ...]]:
+    return (
+        str(row.get("counterparty_team_id") or ""),
+        tuple(
+            sorted(
+                str(item.get("asset_ref") or "")
+                for item in (row.get("receive") or [])
+                if isinstance(item, dict) and item.get("asset_ref")
+            )
+        ),
+    )
+
+
+def _family_first_search_order(
+    candidates: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Preserve target/path diversity before the workspace candidate bound.
+
+    Multi-lane Search still determines the first appearance and within-family
+    ordering. This second pass changes only admission order: every distinct
+    target/counterparty path family gets one row before any family gets a second
+    package variant. It prevents package-neighborhood repetition from consuming
+    the bounded workspace before Opportunity/Decision screening.
+    """
+
+    ordered = _multi_lane_search_order(candidates)
+    families: dict[
+        tuple[str, tuple[str, ...]],
+        list[dict[str, object]],
+    ] = {}
+    family_order: list[tuple[str, tuple[str, ...]]] = []
+    for row in ordered:
+        key = _target_path_family_key(row)
+        if key not in families:
+            families[key] = []
+            family_order.append(key)
+        families[key].append(row)
+
+    result: list[dict[str, object]] = []
+    depth = 0
+    while len(result) < len(ordered):
+        progressed = False
+        for key in family_order:
+            rows = families[key]
+            if depth >= len(rows):
+                continue
+            result.append(rows[depth])
+            progressed = True
+        if not progressed:
+            break
+        depth += 1
+    return result
+
+
 def build_roster_aware_trade_candidates(
     runtime: UserRuntimeContext,
     browser: TradeCenterBrowserView,
@@ -322,9 +411,13 @@ def build_roster_aware_trade_candidates(
     package_catalog = _build_package_catalog(browser.focal_team.assets, cardinal)
     candidates: list[dict[str, object]] = []
     seen: set[tuple[str, tuple[str, ...], str]] = set()
+    raw_packages_generated = 0
+    exact_duplicates_removed = 0
+    targets_considered = 0
     for counterparty in browser.counterparties:
         player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == "player")
         for target in player_targets:
+            targets_considered += 1
             for row in _nearest_packages_for_target(
                 league_state=league_state,
                 focal_team_id=focal_team_id,
@@ -335,6 +428,7 @@ def build_roster_aware_trade_candidates(
                 cardinal=cardinal,
                 strengths=strengths,
             ):
+                raw_packages_generated += 1
                 key = (
                     counterparty.team_id,
                     tuple(sorted(str(item["asset_ref"]) for item in row["send"])),
@@ -343,4 +437,15 @@ def build_roster_aware_trade_candidates(
                 if key not in seen:
                     seen.add(key)
                     candidates.append(row)
-    return _multi_lane_search_order(candidates)
+                else:
+                    exact_duplicates_removed += 1
+    ordered = _family_first_search_order(candidates)
+    return SearchCandidateCollection(
+        ordered,
+        diagnostics={
+            "targets_considered": targets_considered,
+            "raw_packages_generated_pre_dedup": raw_packages_generated,
+            "packages_removed_exact_duplicate": exact_duplicates_removed,
+            "candidate_rows_after_exact_dedup": len(ordered),
+        },
+    )

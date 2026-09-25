@@ -82,7 +82,7 @@ Do not make a red gate green by weakening model authority, fabricating projectio
 
 
 ## Market / Trade Discovery architecture review
-**Status: MANAGEMENT GATE — ARCHITECTURE REVIEW COMPLETE.**
+**Status: COMPLETE — MANAGEMENT ACCEPTED.**
 
 Implementation-ready handoff:
 - `docs/operations/workstreams/MARKET_DISCOVERY.md`
@@ -101,12 +101,14 @@ Architecture review evidence demonstrates:
 - a deterministic fixture/test matrix including repeated Gibbs neighborhoods and extreme Superflex package shapes;
 - a bounded implementation/migration sequence.
 
-Management acceptance is required before broad Market implementation.
+Management accepted the architecture on 2026-09-25 and authorized the bounded implementation executed in PR #220.
 
 ## Market implementation acceptance gate
-**Status: NOT STARTED / NOT AUTHORIZED pending architecture acceptance.**
+**Status: IMPLEMENTATION ACCEPTANCE SATISFIED — PHYSICAL IPHONE / SAFARI GATE NEXT.**
 
-After authorization, implementation is not accepted until evidence demonstrates:
+PR #220 satisfies the implementation-level gate. Final code head `97ff2a4e59d065b38a6eb751c3ed3a330feee56e` passed full CI, Home North Star, Franchise North Star, League Atlas North Star, PR164 corrective regression, and the live Forecast corrective trace.
+
+Implementation acceptance evidence demonstrates:
 - every For You card is a distinct `worth_attention` Opportunity, not a raw package row;
 - every For You Opportunity has at least one bounded pre-Simulation Decision-screened representative path;
 - counterparty-dominated, focal-dominated, stale, and critically incomplete paths cannot qualify for For You;
@@ -120,3 +122,6 @@ After authorization, implementation is not accepted until evidence demonstrates:
 - Core 7/7 copy is scoped truthfully and each Market surface exposes independent readiness;
 - Broad Market rows remain usable while optional Intrinsic is building;
 - physical-iPhone/Safari Market presentation meets the accepted North Star scanability/navigation standard.
+
+
+Market **product** acceptance remains open until the merged/deployed implementation passes repeat physical-iPhone/Safari validation. That validation must confirm the accepted four-surface jobs, Opportunity-first For You flow, truthful surface readiness, drill-down interaction, and mobile scanability without weakening any analytical authority.

@@ -65,3 +65,30 @@
 }
 @media(max-width:390px){.market-ns-tabs button small{display:none}.market-ns-tabs button{min-height:42px}.market-ns-package{grid-template-columns:minmax(0,1fr) 14px minmax(0,1fr)}.market-ns-package strong{font-size:7px}.market-ns-finder-controls,.market-ns-board-controls,.market-ns-free-controls{grid-template-columns:1fr}.market-ns-finder-controls label:first-child,.market-ns-board-controls input,.market-ns-free-controls input,.market-ns-reset{grid-column:1}.market-ns-free-player{grid-template-columns:minmax(150px,1.5fr) minmax(58px,.6fr)}.market-ns-free-player>span:nth-child(3){display:none}}
 @media(prefers-reduced-motion:reduce){.market-ns-empty i{animation:none}}
+
+/* Governed Market discovery implementation — opportunity first, packages second. */
+.market-ns-opportunity-evidence{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:7px}
+.market-ns-opportunity-evidence>span{display:grid;gap:2px;padding:7px;border:1px solid rgba(137,171,205,.08);border-radius:8px;background:rgba(255,255,255,.015)}
+.market-ns-opportunity-evidence small,.market-ns-risk-strip small,.market-ns-alt-package>small{font-size:6px;text-transform:uppercase;letter-spacing:.07em;color:#71879a}
+.market-ns-opportunity-evidence strong{font-size:8px;line-height:1.3;color:#b7c8d6}
+.market-ns-detail-copy{margin:5px 0 0;color:#8298aa;font-size:9px;line-height:1.4}
+.market-ns-path-heading{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.market-ns-path-heading>div{display:grid;gap:2px}.market-ns-path-heading strong{font-size:10px}.market-ns-path-heading>span{font-size:7px;color:#7dbce7;text-transform:capitalize}
+.market-ns-paths article p{margin:6px 0;color:#7d92a4;font-size:8px;line-height:1.4}
+.market-ns-risk-strip,.market-ns-alt-package,.market-ns-deep-note{margin-top:10px;border:1px solid rgba(137,171,205,.1);border-radius:10px;background:#091522;padding:9px}
+.market-ns-risk-strip{display:grid;gap:3px}.market-ns-risk-strip strong{font-size:9px;line-height:1.35}
+.market-ns-alt-package{display:grid;gap:6px}.market-ns-deep-note{color:#778da0;font-size:8px;line-height:1.45}
+.market-ns-finder-primary{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:6px;margin-top:8px}
+.market-ns-finder-primary label{display:grid;gap:3px}.market-ns-finder-primary label>span{font-size:6px;text-transform:uppercase;letter-spacing:.07em;color:#6f8599}
+.market-ns-finder-primary select{width:100%;min-height:40px;border:1px solid rgba(137,171,205,.16);border-radius:9px;background:#091522;color:#c2d0dc;padding:0 9px;font:inherit;font-size:8px}
+.market-ns-advanced{margin-top:8px;border:1px solid rgba(137,171,205,.1);border-radius:10px;background:#08121f;padding:7px 9px}
+.market-ns-advanced>summary{cursor:pointer;color:#86a0b5;font-size:8px;font-weight:800}
+.market-ns-board-advanced{margin-bottom:8px}
+@media(max-width:760px){
+ .market-ns-opportunity-evidence{grid-template-columns:1fr}.market-ns-opportunity-evidence>span:nth-child(2){display:none}
+ .market-ns-finder-primary{grid-template-columns:1fr}
+ .market-ns-board-advanced .market-ns-board-controls{grid-template-columns:1fr 1fr}
+ .market-ns-player-table table{min-width:520px}
+ .market-ns-player-table .market-ns-secondary-col{display:none}
+ .market-ns-player-sticky{min-width:180px}
+}
+@media(max-width:390px){.market-ns-board-advanced .market-ns-board-controls{grid-template-columns:1fr}}

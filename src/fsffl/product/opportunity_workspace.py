@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+from fsffl.opportunity import MarketSurfaceReadiness, MarketSurfaceStatus
 from fsffl.team_utility.utility import OwnerStrategicPosture
 
+from .market_discovery_runtime import (
+    DEFAULT_PRELIMINARY_DECISION_BUDGET,
+    build_market_discovery,
+)
 from .opportunity_posture import apply_search_posture, posture_payload
 from .opportunity_search import build_roster_aware_trade_candidates
 from .opportunity_spotlights import build_trade_spotlights
@@ -15,7 +20,150 @@ from .trade_center_view import (
 
 
 _SEARCH_ORDERING = "multi_lane_market_premium_focal_counterparty_structural"
-_DECISION_BUDGET_POLICY = "bounded_lead_evaluation_for_interactive_workspace"
+_DECISION_BUDGET_POLICY = "bounded_family_first_pre_simulation_decision_screen"
+
+
+
+def _market_surface_readiness(runtime: UserRuntimeContext) -> dict[str, dict[str, object]]:
+    league_state = runtime.league_state
+    state_id = league_state.state_id if league_state is not None else None
+    team_ready = runtime.selected_team_id is not None
+    value_ready = bool(
+        runtime.value_evidence is not None
+        and runtime.value_evidence.fsffl_cardinal_values
+    )
+    forecast_ready = bool(
+        runtime.forecast_evidence is not None
+        and runtime.forecast_evidence.league_scored_forecasts
+    )
+    simulation_ready = runtime.simulation_analytics is not None
+
+    def payload(
+        surface: str,
+        status: MarketSurfaceStatus,
+        required: tuple[str, ...],
+        *,
+        optional: tuple[str, ...] = (),
+        blockers: tuple[str, ...] = (),
+        missing_optional: tuple[str, ...] = (),
+    ) -> dict[str, object]:
+        return MarketSurfaceReadiness(
+            surface=surface,
+            status=status,
+            required_dependencies=required,
+            optional_dependencies=optional,
+            blockers=blockers,
+            missing_optional=missing_optional,
+            league_state_id=state_id,
+            evidence_coordinates={
+                "state": state_id,
+                "forecast": getattr(runtime.forecast_evidence, "model_version", None),
+                "value": getattr(runtime.value_evidence, "model_version", None),
+                "simulation": (
+                    getattr(runtime.simulation_analytics.simulation_result, "model_version", None)
+                    if runtime.simulation_analytics is not None
+                    else None
+                ),
+            },
+        ).model_dump(mode="json")
+
+    if league_state is None:
+        blocked = ("canonical_state",)
+        return {
+            surface: payload(
+                surface,
+                MarketSurfaceStatus.BLOCKED,
+                ("canonical_state",),
+                blockers=blocked,
+            )
+            for surface in ("for_you", "trade_finder", "player_board", "free_agents")
+        }
+
+    return {
+        "for_you": payload(
+            "for_you",
+            (
+                MarketSurfaceStatus.READY
+                if team_ready and value_ready and simulation_ready
+                else MarketSurfaceStatus.BLOCKED
+            ),
+            ("canonical_state", "managed_team", "cardinal_value", "baseline_team_utility"),
+            blockers=tuple(
+                item
+                for item, ready in (
+                    ("managed_team", team_ready),
+                    ("cardinal_value", value_ready),
+                    ("baseline_team_utility", simulation_ready),
+                )
+                if not ready
+            ),
+            optional=("owner_intelligence",),
+            missing_optional=(() if False else ("owner_intelligence_may_be_partial",)),
+        ),
+        "trade_finder": payload(
+            "trade_finder",
+            MarketSurfaceStatus.READY
+            if team_ready and value_ready
+            else MarketSurfaceStatus.BLOCKED,
+            ("canonical_state", "managed_team", "cardinal_value"),
+            blockers=tuple(
+                item
+                for item, ready in (
+                    ("managed_team", team_ready),
+                    ("cardinal_value", value_ready),
+                )
+                if not ready
+            ),
+            optional=("baseline_team_utility", "owner_intelligence"),
+            missing_optional=tuple(
+                item
+                for item, ready in (
+                    ("baseline_team_utility", simulation_ready),
+                    ("owner_intelligence_may_be_partial", False),
+                )
+                if not ready
+            ),
+        ),
+        "player_board": payload(
+            "player_board",
+            MarketSurfaceStatus.READY if value_ready else MarketSurfaceStatus.BLOCKED,
+            ("canonical_state", "broad_market_value"),
+            blockers=(() if value_ready else ("broad_market_value",)),
+            optional=("fsffl_intrinsic_all_player", "all_player_forecast_enrichment"),
+            missing_optional=("resolved_on_surface_load",),
+        ),
+        "free_agents": payload(
+            "free_agents",
+            (
+                MarketSurfaceStatus.READY
+                if forecast_ready
+                else MarketSurfaceStatus.DEGRADED
+            ),
+            ("canonical_state",),
+            optional=("forecast_roster_fit", "value_lenses"),
+            missing_optional=(() if forecast_ready else ("forecast_roster_fit",)),
+        ),
+    }
+
+
+def _legacy_row_identity(row: dict[str, object]) -> tuple[str, tuple[str, ...], tuple[str, ...]]:
+    return (
+        str(row.get("counterparty_team_id") or ""),
+        tuple(
+            sorted(
+                str(item.get("asset_ref") or "")
+                for item in (row.get("send") or [])
+                if isinstance(item, dict)
+            )
+        ),
+        tuple(
+            sorted(
+                str(item.get("asset_ref") or "")
+                for item in (row.get("receive") or [])
+                if isinstance(item, dict)
+            )
+        ),
+    )
 
 
 def _empty_workspace(
@@ -59,6 +207,21 @@ def _empty_workspace(
             "posture_views": {},
             "candidates": [],
         },
+        "market_discovery": {
+            "hypotheses": [],
+            "candidate_paths": [],
+            "opportunities": [],
+            "for_you": [],
+            "diagnostics": {
+                "changed_state_simulation_calls_during_discovery": 0,
+            },
+            "authority": {
+                "acceptance_probability": None,
+                "recommendation_authority": False,
+                "changed_state_simulation_calls_during_discovery": 0,
+            },
+        },
+        "surface_readiness": _market_surface_readiness(runtime),
         "available_players": {"count": 0, "players": []},
         "capabilities": {
             "structural_trade_discovery": False,
@@ -305,15 +468,14 @@ def build_opportunity_workspace(
     runtime: UserRuntimeContext,
     *,
     candidate_limit: int = 80,
-    bilateral_evaluation_limit: int = 1,
+    bilateral_evaluation_limit: int = DEFAULT_PRELIMINARY_DECISION_BUDGET,
 ) -> dict[str, object]:
     """Build a responsive Opportunity workspace with progressive governed evidence.
 
-    The interactive Trade Finder performs one bounded server-owned bilateral Decision
-    enrichment by default so its evaluated spotlight is reachable. Home never launches
-    this work: it only reuses a Trade Finder workspace that has already been loaded.
-    Full changed-state Decision and Simulation remain behind the explicit Evaluate offer
-    action, preserving authority while bounding automatic workspace compute.
+    The workspace builds Opportunity families before spending a bounded Decision
+    budget. Representative Candidate Paths receive the existing pre-Simulation
+    bilateral Decision screen; raw package variants remain subordinate. Exact
+    changed-state Simulation remains behind explicit transaction-level escalation.
     """
 
     league_state = runtime.league_state
@@ -363,23 +525,27 @@ def build_opportunity_workspace(
         )
 
     candidates = build_roster_aware_trade_candidates(runtime, browser, cardinal)
+    search_generation_diagnostics = dict(
+        getattr(candidates, "diagnostics", {}) or {}
+    )
     total_candidate_count = len(candidates)
     returned = candidates[: max(candidate_limit, 0)]
 
-    evaluation_indices = _select_bilateral_evaluation_indices(
+    market_discovery = build_market_discovery(
+        runtime,
         returned,
-        limit=bilateral_evaluation_limit,
+        evaluation_limit=bilateral_evaluation_limit,
+        search_generation_diagnostics=search_generation_diagnostics,
     )
-    for index in evaluation_indices:
-        try:
-            returned[index] = _evaluate_structural_trade(runtime, returned[index])
-        except ValueError as exc:
-            returned[index] = {
-                **returned[index],
-                "bilateral_decision_evaluated": False,
-                "negotiation_feasibility_evaluated": False,
-                "decision_error": str(exc),
-            }
+    evaluated_rows = {}
+    for path in market_discovery.get("candidate_paths") or []:
+        package = path.get("representative_package") or {}
+        if package.get("bilateral_decision_evaluated"):
+            evaluated_rows[_legacy_row_identity(package)] = package
+    returned = [
+        evaluated_rows.get(_legacy_row_identity(row), row)
+        for row in returned
+    ]
 
     trade_spotlights = build_trade_spotlights(returned)
     posture_views = _posture_views(runtime, returned)
@@ -444,7 +610,9 @@ def build_opportunity_workspace(
             "truncated": total_candidate_count > len(returned),
             "ordering": _SEARCH_ORDERING,
             "bilateral_evaluated_count": sum(
-                1 for row in returned if row.get("bilateral_decision_evaluated")
+                1
+                for path in (market_discovery.get("candidate_paths") or [])
+                if (path.get("representative_package") or {}).get("bilateral_decision_evaluated")
             ),
             "bilateral_evaluation_limit": bilateral_evaluation_limit,
             "bilateral_evaluation_policy": _DECISION_BUDGET_POLICY,
@@ -452,6 +620,8 @@ def build_opportunity_workspace(
             "posture_views": posture_views,
             "candidates": returned,
         },
+        "market_discovery": market_discovery,
+        "surface_readiness": _market_surface_readiness(runtime),
         "available_players": {"count": len(available_players), "players": available_players},
         "capabilities": {
             "structural_trade_discovery": True,
@@ -460,7 +630,9 @@ def build_opportunity_workspace(
             "owner_strategic_posture_search": True,
             "two_for_one_consolidation_search": True,
             "three_for_one_consolidation_search": True,
-            "bilateral_decision_evaluation": bool(evaluation_indices),
+            "bilateral_decision_evaluation": bool(
+                (market_discovery.get("diagnostics") or {}).get("preliminary_decision_runs")
+            ),
             "negotiation_feasibility": any(
                 row.get("negotiation_feasibility_evaluated") for row in returned
             ),

@@ -32,9 +32,15 @@ The review separates OpportunityHypothesis, MarketOpportunity, CandidatePath, an
 
 Management accepts the governed architecture. Bounded Market implementation is now authorized under the persisted handoff; the architecture review itself is complete.
 
+## Market / Trade Discovery Implementation
+**State:** IMPLEMENTATION COMPLETE — PHYSICAL IPHONE ACCEPTANCE GATE  
+PR #220 implements the Management-accepted Opportunity/Search/Market contract. Full CI, Home, Franchise, League Atlas, PR164 corrective regression, and live Forecast corrective trace are green on the final code head. Durable evidence is in `artifacts/implementation/market_discovery_north_star_20260925/IMPLEMENTATION_HANDOFF.md`.
+
+No further broad Market implementation is authorized before deployed physical acceptance unless that validation reveals a defect.
+
 ## Market acceptance
-**State:** NOT ACCEPTED  
-Do not close Market North Star on the current implementation. The architecture diagnosis is now complete, including the Player Board / Free Agents readiness contradiction, but bounded implementation and repeat physical-iPhone acceptance remain outstanding.
+**State:** MANAGEMENT GATE — REPEAT PHYSICAL IPHONE / SAFARI  
+Implementation-level acceptance is satisfied, but Market North Star is not product-closed until the merged/deployed build is validated on the physical iPhone/Safari experience against the accepted For You, Trade Finder, Player Board, Free Agents, readiness, and mobile scanability contract.
 
 ## Home × Franchise audit
 **State:** DEFERRED  

@@ -32,44 +32,51 @@ def test_market_has_exactly_four_primary_jobs_to_be_done_tabs() -> None:
         assert old not in tabs
 
 
-def test_for_you_is_small_governed_discovery_not_a_frontend_score() -> None:
+def test_for_you_is_opportunity_first_and_never_fills_from_raw_search_rows() -> None:
     source = _source(MARKET)
-    assert "spotlightRows" in source
-    assert ".slice(0,5)" in source
-    assert "current governed Search and Decision evidence" in source
-    assert "Open opportunity" in source
-    assert "presentation score" not in source.lower()
+    assert "forYouOpportunities" in source
+    assert "Your best paths right now." in source
+    assert "Distinct strategic opportunities that earned attention before exact Simulation." in source
+    assert "Nothing has earned For You space" in source
+    assert "packageMarkup(row)" not in source.split("function opportunityCard", 1)[1].split("function renderForYou", 1)[0]
+    assert "spotlightRows" not in source
     assert "acceptance_probability" not in source
     assert "realistic %" not in source
-    assert "Buy low" not in source
-    assert "Sell high" not in source
 
 
 def test_market_consumer_statuses_are_authority_bounded() -> None:
     source = _source(MARKET)
     for label in (
-        "Recommended",
-        "Worth investigating",
-        "Needs full evaluation",
+        "Worth attention",
+        "Explorable",
         "Market match only",
+        "Prelim plausible",
+        "Bilateral friction",
     ):
         assert label in source
-    assert 'if(action==="actionable"||action==="recommended")' in source
-    assert "Existing Decision authority supports action." in source
-    assert "Search found a plausible structure; Decision has not evaluated this package." in source
+    assert "At least one path survived governed economic and bilateral screening." in source
+    assert "not an acceptance probability" in source.lower()
 
-
-def test_opportunity_detail_is_predecision_and_hands_exact_package_to_trade_center() -> None:
+def test_opportunity_and_candidate_path_drilldown_preserve_decision_boundary() -> None:
     source = _source(MARKET)
-    for label in ("Opportunity Detail", "Overview", "Acquisition Paths", "Fit & Impact"):
+    for label in ("Opportunity Detail", "Candidate Paths", "Fit & Risk", "Candidate Path Detail"):
         assert label in source
-    assert "Search-discovered acquisition path · not an acceptance prediction" in source
-    assert "Exact season impact" in source
-    assert "Not run merely to preview this opportunity." in source
-    assert "Evaluate this package in Trade Center" in source
+    assert "Why first. Packages second." in source
+    assert "This route survived bounded preliminary screening. It is not a final trade verdict." in source
+    assert "bounded bilateral screening has not run for it yet." in source
+    assert "Evaluate in Trade Center" in source
     assert "fsfflOpenOpportunityInTradeCenter" in source
+    assert "50,000-run Simulation" in source
     assert "runTradeEvaluation" not in source
     assert "/api/trade-center/simulate" not in source
+
+
+def test_candidate_path_detail_never_claims_unscreened_paths_survived_screening() -> None:
+    source = _source(MARKET)
+    assert 'screened=path.deep_evaluation_status==="prelim_screened"' in source
+    assert "This route survived bounded preliminary screening." in source
+    assert "bounded bilateral screening has not run for it yet." in source
+    assert "pathStatus=pathAuthority(path)" in source
 
 
 def test_trade_finder_preserves_owner_controlled_search_modes_and_postures() -> None:
@@ -101,7 +108,7 @@ def test_trade_finder_filters_and_sorts_only_governed_returned_rows() -> None:
         "Current Search order",
         "Closest market match",
         "Biggest roster need addressed",
-        "Most action-authoritative",
+        "Strongest preliminary evidence",
     ):
         assert label in source
     assert "market_gap_ratio" in source
@@ -114,6 +121,8 @@ def test_player_board_is_read_only_and_keeps_value_lenses_separate() -> None:
     assert 'api("/api/league/value-lenses?universe=all")' in source
     assert 'api("/api/league/team-views")' in source
     assert "Reading current State, Forecast team views and governed Value lenses. No Search or Decision work is launched." in source
+    assert "Intrinsic is preparing; Broad Market remains live." in source
+    assert "Filters & ordering" in source
     assert "Broad Market and FSFFL Intrinsic are shown side by side and never blended." in source
     assert "League Market Value: unavailable" in source
     assert "Team Utility: not part of this board." in source
@@ -154,6 +163,7 @@ def test_player_board_preserves_governed_value_disagreement_discovery() -> None:
 def test_free_agents_browse_immediately_and_evaluate_only_on_explicit_click() -> None:
     source = _source(MARKET)
     assert "Available-player discovery is immediate; add/drop evaluation is explicit." in source
+    assert "Roster-fit evidence unavailable until governed Forecast coverage is available." in source
     assert "Evaluate add/drop" in source
     assert 'body.querySelector("[data-waiver-run]")?.addEventListener("click",runWaiver)' in source
     before, after = source.split("async function runWaiver(){", 1)
@@ -185,10 +195,10 @@ def test_market_mobile_layout_keeps_tabs_tappable_and_identity_sticky() -> None:
 
 def test_market_release_is_eager_and_single_generation() -> None:
     source = _source(INDEX)
-    assert 'north_star_market.css?v=20260924-readiness-control7' in source
-    assert 'north_star_market.js?v=20260924-readiness-control7' in source
+    assert 'north_star_market.css?v=20260925-market-discovery1' in source
+    assert 'north_star_market.js?v=20260925-market-discovery1' in source
     versions = {token.split("?v=")[1].split('"')[0] for token in source.split() if "?v=" in token}
-    assert versions == {"20260924-readiness-control7"}
+    assert versions == {"20260925-market-discovery1"}
 
 
 def test_market_browser_script_parses() -> None:

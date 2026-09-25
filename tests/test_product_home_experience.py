@@ -155,7 +155,7 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
         "Running season outlook…",
         "Building market values…",
         "Attaching current intelligence…",
-        "Intelligence current",
+        "Core intelligence current",
     ):
         assert label in SHELL
     assert "min-height:32px" in SHELL
@@ -195,7 +195,7 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
 
 
 def test_shared_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    release = "20260924-readiness-control7"
+    release = "20260925-market-discovery1"
     assert f"/static/app.js?v={release}" in INDEX
     assert f"/static/home_dashboard.js?v={release}" in INDEX
     assert f"/static/product_shell.js?v={release}" in INDEX

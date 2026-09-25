@@ -107,3 +107,22 @@ Accepted contract includes:
 - approved North Star interaction grammar and progressive-disclosure presentation.
 
 Implementation must preserve authority boundaries and deterministic fixtures. The eight-path budget is a product compute policy, not model authority, and may be tuned only with retained benchmark/acceptance evidence. Physical-iPhone acceptance remains required after implementation.
+
+
+## 2026-09-25 — Market implementation-level acceptance
+Decision: PR #220 satisfies the Management-authorized Market / Trade Discovery implementation contract and may proceed to merge/deploy for physical product acceptance.
+
+Evidence:
+- OpportunityHypothesis → MarketOpportunity → CandidatePath is implemented;
+- Search admission is target-family-first before bounded candidate truncation;
+- cheap Decision-owned economics precede package-family pruning;
+- the heavier pre-Simulation bilateral screen is bounded to eight representative paths;
+- For You contains only `worth_attention` Opportunities and does not backfill from raw Search rows;
+- exact changed-state Simulation calls during broad discovery remain zero;
+- Owner Intelligence is descriptive only and does not alter universal Value;
+- Core 7/7 is separate from Market-surface readiness;
+- Player Board preserves Broad Market while optional Intrinsic builds;
+- static release generation is `20260925-market-discovery1`;
+- full CI plus Home, Franchise, League Atlas, PR164 corrective regression, and live Forecast trace are green on the accepted code head.
+
+Market North Star is not product-closed by this decision. Repeat physical-iPhone/Safari validation of the merged/deployed build is the next required gate.

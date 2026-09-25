@@ -18,11 +18,11 @@
 5. Resume and complete new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
 
 ### Product / Market path
-1. Physical-iPhone Market acceptance: **FAILED / NOT ACCEPTED** as a product gate.
-2. Market / Trade Discovery Architecture Review: **COMPLETE — MANAGEMENT GATE**. Handoff: `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`.
-3. Management acceptance of the revised Opportunity + Market contract: **NEXT GATE**.
-4. Bounded Market/Search implementation: **NOT YET AUTHORIZED**.
-5. Repeat physical-iPhone Market acceptance.
+1. Prior physical-iPhone Market acceptance: **FAILED / NOT ACCEPTED** as a product gate.
+2. Market / Trade Discovery Architecture Review: **COMPLETE**. Handoff: `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`.
+3. Management acceptance of revised Opportunity + Market contract: **COMPLETE**.
+4. Bounded Market/Search/North Star implementation: **IMPLEMENTATION ACCEPTANCE COMPLETE — PR #220**. Handoff: `artifacts/implementation/market_discovery_north_star_20260925/IMPLEMENTATION_HANDOFF.md`.
+5. Merge/deploy PR #220 and repeat physical-iPhone/Safari Market acceptance: **NEXT GATE**.
 6. Home × Franchise redundancy/information-hierarchy audit.
 7. Trade Center expansion only after discovery/search order of operations is settled.
 
@@ -67,4 +67,4 @@ The completed review proposes:
 - Core 7/7 readiness separated from Market consumer readiness;
 - opportunity-first For You, progressive Trade Finder, read-only Player Board, and roster-fit-first Free Agents.
 
-Management acceptance of these policies is required before implementation.
+Management accepted these policies on 2026-09-25; PR #220 implements them and has satisfied implementation-level automated acceptance.

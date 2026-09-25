@@ -35,3 +35,11 @@ def test_primary_league_presentation_uses_approved_value_hierarchy() -> None:
     assert "remove()" in corrections
     assert "Broad Market + FSFFL Intrinsic" in league
     assert "Total FSFFL Cardinal Value" not in league
+
+
+def test_player_board_intrinsic_build_is_optional_not_route_blocking() -> None:
+    routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
+    assert '"status": "building_optional"' in routes
+    assert '"Broad Market remains independently usable."' in routes
+    assert "JSONResponse(status_code=202" not in routes
+    assert 'payload["fsffl_intrinsic"]' in routes

@@ -27,7 +27,7 @@ const fsfflProductSurfaceCopy={
 const fsfflStaticVersion='20260924-live-usability-hotfix1';
 const leagueAtlasStaticVersion='20260923-league-atlas-home-links1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260924-readiness-control7';
+const homeNorthStarStaticVersion='20260925-market-discovery1';
 const franchiseNorthStarStaticVersion='20260924-live-usability-hotfix1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
@@ -82,7 +82,7 @@ const fsfflSharedReadinessPhases={
   running_simulation:[4,'Running season outlook…'],
   building_values:[5,'Building market values…'],
   attaching_results:[6,'Attaching current intelligence…'],
-  completed:[7,'Intelligence current'],
+  completed:[7,'Core intelligence current'],
 };
 function fsfflSharedReadinessEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 function fsfflSharedReadinessSnapshot(){
@@ -104,7 +104,7 @@ function fsfflSharedReadinessSnapshot(){
   const complete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
   if(complete)step=FSFFL_SHARED_READINESS_STEPS;
   fsfflSharedReadinessState.lastStep=step;
-  const label=complete?'Intelligence current':!context?.forecast_ready?'Building projections…':!context?.simulation_ready?'Running season outlook…':!context?.value_ready?'Building market values…':'Attaching current intelligence…';
+  const label=complete?'Core intelligence current':!context?.forecast_ready?'Building projections…':!context?.simulation_ready?'Running season outlook…':!context?.value_ready?'Building market values…':'Attaching current intelligence…';
   return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete};
 }
 function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){

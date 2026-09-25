@@ -22,7 +22,7 @@ def test_shared_readiness_maps_authoritative_lifecycle_phases() -> None:
     assert "running_simulation:[4,'Running season outlook…']" in source
     assert "building_values:[5,'Building market values…']" in source
     assert "attaching_results:[6,'Attaching current intelligence…']" in source
-    assert "completed:[7,'Intelligence current']" in source
+    assert "completed:[7,'Core intelligence current']" in source
 
 
 def test_manual_refresh_restarts_readiness_polling() -> None:
@@ -42,8 +42,10 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
-    assert "/static/forecast_refresh.js?v=20260924-readiness-control7" in index
-    assert "/static/product_shell.js?v=20260924-readiness-control7" in index
+    shell = _shell()
+    assert "/static/forecast_refresh.js?v=20260925-market-discovery1" in index
+    assert "/static/product_shell.js?v=20260925-market-discovery1" in index
+    assert "Core intelligence current" in shell
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
