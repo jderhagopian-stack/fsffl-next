@@ -144,6 +144,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     )
                 if snapshot.selected_team_id is not None:
                     super().select_team(user_id, snapshot.selected_team_id)
+
+                # Restoration may intentionally select an independently promoted
+                # last-good bundle instead of a newer failed partial checkpoint.
+                # Re-checkpoint the exact restored context so durable active context
+                # matches what the product is serving on subsequent restarts.
+                restored_context = super().get(user_id)
+                self._checkpoint_async(user_id, restored_context)
+
                 # Existing durable runtime rows may predate the point-in-time history
                 # table. Retain the exact restored canonical state asynchronously so
                 # restart recovery naturally backfills history without reingestion or
