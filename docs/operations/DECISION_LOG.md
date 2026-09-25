@@ -90,3 +90,20 @@ Decision proposed for Management acceptance: global 7/7 is explicitly Core Intel
 
 ## 2026-09-24 — Market vs Intrinsic is a discovery lens
 Decision proposed for Management acceptance: Broad Market vs FSFFL Intrinsic disagreement remains prominent in Player Board and Player Intelligence and may seed a discovery hypothesis, but the two lenses are not blended and are not repeated as mandatory organizing chrome across every Market surface.
+
+
+## 2026-09-25 — Accept Market / Trade Discovery architecture
+Decision: Management accepts the persisted Market / Trade Discovery architecture handoff and authorizes its bounded implementation sequence.
+
+Accepted contract includes:
+- OpportunityHypothesis → MarketOpportunity → CandidatePath separation;
+- package variants subordinate to Candidate Paths;
+- For You worth-attention gating before presentation;
+- four-card private-beta feed with family/diversity controls;
+- bounded eight-path pre-Simulation Decision screening as a tunable compute policy;
+- zero broad changed-state Simulation calls;
+- descriptive-only Owner Intelligence role;
+- Core 7/7 readiness separated from per-surface Market readiness;
+- approved North Star interaction grammar and progressive-disclosure presentation.
+
+Implementation must preserve authority boundaries and deterministic fixtures. The eight-path budget is a product compute policy, not model authority, and may be tuned only with retained benchmark/acceptance evidence. Physical-iPhone acceptance remains required after implementation.
