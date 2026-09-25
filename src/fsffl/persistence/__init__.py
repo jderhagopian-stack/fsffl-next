@@ -22,6 +22,13 @@ from .late_start_projection_snapshot import (
     encode_late_start_current_projection_snapshot,
     late_start_current_projection_snapshot_artifact,
 )
+from .provisional_k_dst_forecast import (
+    PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND,
+    PROVISIONAL_K_DST_SCOPE_KIND,
+    decode_provisional_k_dst_forecast,
+    encode_provisional_k_dst_forecast,
+    provisional_k_dst_forecast_artifact,
+)
 from .postgres import PostgresPersistenceStore, persistence_store_from_env
 from .projection_history import (
     PostgresProjectionHistoryStore,
@@ -30,6 +37,11 @@ from .projection_history import (
 from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
 
 __all__ = [
+    "provisional_k_dst_forecast_artifact",
+    "encode_provisional_k_dst_forecast",
+    "decode_provisional_k_dst_forecast",
+    "PROVISIONAL_K_DST_SCOPE_KIND",
+    "PROVISIONAL_K_DST_FORECAST_ARTIFACT_KIND",
     "late_start_current_projection_snapshot_artifact",
     "encode_late_start_current_projection_snapshot",
     "decode_late_start_current_projection_snapshot",
