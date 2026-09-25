@@ -82,8 +82,8 @@ def test_workspace_publishes_posture_views_over_one_canonical_candidate_collecti
 def test_draft_capital_focus_waits_for_real_pick_target_search_support() -> None:
     source = _source(SEARCH)
 
-    assert 'asset.asset_kind == "player"' in source
-    assert "player_targets" in source
+    assert 'if target.asset_kind != "player":' in source
+    assert "admitted_targets" in source
 
 
 def test_specific_market_intent_predicate_is_semantically_exact() -> None:
