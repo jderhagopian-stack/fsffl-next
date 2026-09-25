@@ -308,7 +308,7 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
 
     assert restored is not None
     assert restored.league_state.state_id == last_good.state_id
-    assert restored.selected_team_id == "t1"
+    assert restored.selected_team_id == "t2"
 
 
 def test_failed_refresh_never_restores_last_good_from_different_league() -> None:
