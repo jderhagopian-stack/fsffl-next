@@ -198,24 +198,22 @@ Architecture review evidence demonstrates:
 Management accepted the architecture on 2026-09-25 and authorized the bounded implementation executed in PR #220.
 
 ## Market implementation acceptance gate
-**Status: ACCEPTANCE FAILED — CURRENT-BETA BOUNDED CORRECTIVE IMPLEMENTATION ACTIVE.**
+**Status: CURRENT-BETA CORRECTIVE IMPLEMENTATION SATISFIED NON-PHYSICALLY — PHYSICAL IPHONE / SAFARI GATE NEXT.**
 
-PR #232 merged at `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b` and is live through Render deploy `dep-dar9cdrtqb8s73819ap0`, static generation `20260925-market-corrective1`.
+PR #240 is merged at `7b7f44ef0b3bf22008d80a3363aec1e6ce6f19d9` and live on Render as `dep-darb4lid0e5s73e2nnkg`, static generation `20260925-market-beta-corrective2`.
 
-Non-physical acceptance demonstrates:
-- Improve-my-team discovery begins from governed need/fragility hypotheses and complementary counterparty evidence before package generation;
-- Target position, Target player, Shop player, Explore owner/team, and Consolidate constrain early candidate admission where semantically appropriate;
-- Cardinal/market equivalence is an economic screen/neighborhood tool, not the definition of an opportunity;
-- the Management-approved eight-path pre-Simulation Decision budget is preserved;
-- focused requests do not first spend Decision work on a generic workspace;
-- the broad preliminary screen is lightweight, Decision-owned, includes roster legality/mandatory cuts/replacement effects/economics, and invokes zero exact changed-state Simulation;
-- For You remains gated by screened bilateral/economic evidence and may validly contain zero items;
-- Player Board / Free Agents consume governed all-player Forecast evidence when attached and expose missing coverage truthfully;
-- mobile Board scrolling/sticky identity/sort headers and Market safe-area corrections are present in the deployed static bundle;
-- funnel diagnostics expose early-stage counts, rejection reasons, timings, preliminary-screen count, zero-Simulation count, and cache/reuse behavior;
-- all configured CI/focused authority regressions are green;
-- production startup restored the correct existing league as Forecast=True / Simulation=True / Value=True / complete=True with no post-deploy errors.
+Acceptance evidence now includes:
+- competitive posture materially constrains early target admission from governed age/season-Forecast evidence where available instead of remaining order-only;
+- deterministic fixtures demonstrate appropriate Win-now/Rebuild divergence and fail-open overlap when evidence is missing;
+- selector changes are configuration-only and cannot automatically launch focused Search;
+- **Find opportunities** is the explicit expensive-work boundary with visible running/stale/completed state and response-race guards;
+- focused zeroes expose where the submitted neighborhood exhausted, with candidate/admission/package/economic/family/preliminary-screen/dominance/final counts;
+- the eight-path preliminary Decision budget is unchanged and does not truncate cheap Search exploration;
+- broad discovery remains at zero exact changed-state Simulation calls;
+- Forecast, Broad Market and FSFFL Intrinsic availability are independent, with per-player reasons and Intrinsic build/coordinate diagnostics;
+- mobile Board/safe-area/Free Agent/Player Intelligence corrective behavior remains covered;
+- full CI, all configured focused product regressions and live Forecast trace passed.
 
-Management subsequently completed the authenticated current-beta physical-iPhone pass. The accepted architecture remains valid, but product acceptance failed on four functional dimensions: competitive-lens changes did not materially govern visible discovery; selector changes silently triggered/replaced expensive work without an explicit Find opportunities lifecycle; focused zero-result cases did not prove meaningful neighborhood exhaustion; and Market Forecast/FSFFL Intrinsic availability still requires separate end-to-end tracing. Remaining safe-area crowding also remains in scope.
+Production deployment is healthy with no application errors. The process currently restores the separate Hodor/new-league Performance context with derived intelligence incomplete, so no authenticated PR #240 focused/value-lens request has yet exercised the new production diagnostics.
 
-The bounded corrective implementation must exhaust nonphysical tracing, deterministic/regression tests, CI, deploy and production validation before the next physical gate. It must preserve strategic admission before package construction, the eight-path preliminary Decision policy, dominance/dedup/diversity, truthful zero-result behavior, and zero broad exact changed-state Simulation.
+**Remaining acceptance:** repeat physical iPhone/Safari Market validation on a context with sufficient governed evidence, followed by inspection of the emitted focus/value-lens telemetry. Do not weaken Market or lifecycle authority if Hodor remains incomplete.

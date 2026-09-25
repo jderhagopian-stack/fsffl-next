@@ -491,3 +491,77 @@ Retain the improvements already achieved in Free Agents Forecast coverage, Playe
 
 ### Required closeout
 Execute the bounded corrective pass under OPERATING_PROTOCOL.md. Exhaust nonphysical tracing, deterministic tests, regression tests, CI, deployment and production validation before asking Management for another physical-device pass. Persist exact findings, fixes, telemetry, limitations and any genuine Management gate in this workstream file and the applicable canonical operations state. Do not return merely at diagnosis, commit, PR, merge or deploy.
+
+
+## Current-beta corrective deployment checkpoint — PR #240 — 2026-09-25
+
+**State: MANAGEMENT GATE — REPEAT PHYSICAL IPHONE / SAFARI ACCEPTANCE.**
+
+The bounded current-beta corrective directive above has been implemented, merged, CI-validated, and deployed.
+
+Exact execution identity:
+- implementation PR: **#240**;
+- tested branch head: `4abc641d123c86e68de4e90e608854f2c3601beb`;
+- merge commit: `7b7f44ef0b3bf22008d80a3363aec1e6ce6f19d9`;
+- hosted static generation: `20260925-market-beta-corrective2`;
+- Render deploy: `dep-darb4lid0e5s73e2nnkg` — **LIVE**.
+
+All configured validation passed before merge:
+- full CI;
+- Home North Star focused validation;
+- Franchise North Star focused validation;
+- League Atlas North Star focused validation;
+- PR164 focused corrective regression;
+- live Forecast corrective trace.
+
+### Corrective findings and implementation
+1. **Competitive lens root cause/fix.** The prior posture contract was ordering-only after generic candidate generation. PR #240 moves the lens into early target admission where governed evidence supports it:
+   - Win-now uses already-attached governed season fantasy-point Forecast within-position medians;
+   - Rebuild uses canonical within-position age medians;
+   - Retool uses transparent categorical youth/current-production evidence;
+   - missing evidence never fabricates an exclusion;
+   - an explicitly selected target overrides the posture gate.
+   Deterministic fixtures prove Win-now and Rebuild can admit materially different early target neighborhoods while missing evidence preserves legitimate overlap.
+
+2. **Explicit Search lifecycle root cause/fix.** Physical zeroes and long overlapping work were amplified because intent/posture selector changes automatically launched focused requests, while the browser locally filtered the prior payload under the newly configured criteria. The current contract is now:
+   `configure → Find opportunities → visible running state → exact submitted result/zero`.
+   Selector changes invalidate prior results but launch no focused request. Prior rows are hidden while criteria are stale/running. Returned league/team/intent/value/posture and request sequence must match before a response may replace the visible workspace. No percentage progress is fabricated.
+
+3. **Focused zero semantics.** The focused endpoint now returns `focus_outcome` with candidate/path/opportunity counts and a bounded reason code identifying whether exhaustion occurred at counterparty admission, target admission, package construction, economic/family screening, or later screening. Diagnostics include send-asset admission, exact dedup, economic incompleteness/errors, family collapse, preliminary Decision runs/errors, dominance, final attention counts, timings, and exact broad changed-state Simulation calls. The approved eight-path preliminary Decision budget is unchanged and continues to bound expensive screening rather than cheap exploration.
+
+4. **Forecast / Intrinsic availability.** Market now keeps these authorities independent end-to-end:
+   - per-player Broad Market, season Forecast, and FSFFL Intrinsic status/reason fields;
+   - all-player Forecast coverage remains separately reported;
+   - Intrinsic background build state, exact State/Forecast coordinate, response-budget crossing, timestamps, and failure reason are exposed in `intrinsic_execution`;
+   - Player Board / Free Agents poll while optional Intrinsic is genuinely building and present the actual governed missing prerequisite when it is unavailable instead of a generic label.
+   Forecast availability does not imply Intrinsic authority.
+
+5. **Presentation retained/corrected.** Compact sticky Player identity, horizontal quantitative Board scrolling, sortable headers, Free Agents Forecast coverage, and Player Intelligence handoff are retained. The explicit submit row is mobile-safe and the Market topbar safe-area padding is reinforced.
+
+### Preserved authority / compute policy
+PR #240 does **not** change:
+- the Management-approved eight-path pre-Simulation Decision budget;
+- the zero broad exact changed-state Simulation boundary;
+- For You evidence eligibility;
+- dominance/dedup/diversity authority;
+- Value, Forecast, Team Utility, Decision, Owner Intelligence, or Simulation ownership;
+- acceptance-probability prohibition;
+- Performance-owned general cold/focused latency work.
+
+### Production validation and current external constraint
+Render deployed the exact merge SHA successfully. Build and application startup completed with no post-deploy error logs.
+
+The new process restored the currently selected Hodor/new-league context `sleeper:1397623301961981952` at State `3da88ba8907c51aa90d62b7119fe4b1bbc0e8a2414a38828c07cc93a7412fd52`, with Forecast=False, Simulation=False, Value=False, complete=False. This is consistent with the separately canonical Performance directive that Hodor is still incomplete; it is not evidence that PR #240 regressed Market. The immediately previous PR #235 process had restored the earlier league `sleeper:1312071960615731200` with Forecast=True, Simulation=True, Value=True, complete=True before Management switched league context.
+
+No authenticated focused-workspace or all-player value-lens request has hit the PR #240 process after deployment, so the new production `focus_outcome` and Intrinsic-coordinate telemetry cannot be truthfully exercised non-physically. An external unauthenticated probe remains rejected as expected. Do not fabricate session traffic.
+
+### Remaining gate
+All authorized non-physical Market work is exhausted. Management must repeat physical iPhone/Safari validation on a league/context with enough governed evidence to exercise Market. The pass should verify:
+- Contend / Win now versus Rebuild changes the submitted early discovery neighborhood where the displayed governed evidence warrants a difference, with legitimate overlap allowed;
+- changing controls alone performs no focused Search and visibly marks prior results stale;
+- **Find opportunities** explicitly starts the submitted request and shows a running state without fake percentage progress;
+- submitted zeroes display the server-produced exploration/exhaustion reason;
+- Forecast and Intrinsic availability/reasons are distinct and truthful on Player Board / Free Agents;
+- retained Board scrolling/sorting, Player Intelligence handoff, and iPhone safe area remain usable.
+
+After that authenticated pass, inspect the emitted production focus/value-lens diagnostics before final Market product closeout. If the currently selected Hodor lifecycle still lacks the governed evidence needed to exercise these surfaces, that prerequisite remains owned by the active Performance workstream rather than Market.

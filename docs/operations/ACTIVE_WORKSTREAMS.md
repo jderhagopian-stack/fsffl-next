@@ -91,12 +91,12 @@ PR #232 contains the Management-authorized physical-iPhone corrective implementa
 Full/focused CI is green. Production startup restored the correct existing league with Forecast/Simulation/Value complete and no startup errors. Broad discovery preserves the approved eight-path preliminary Decision budget and zero exact changed-state Simulation calls; strategic and explicit-intent admission occurs before package generation, and the lightweight Decision-owned screen replaces broad full Trade Center analysis.
 
 ## Market acceptance
-**State:** ACTIVE — CURRENT-BETA CORRECTIVE IMPLEMENTATION AUTHORIZED  
-PR #240 merged at `7b7f44ef0b3bf22008d80a3363aec1e6ce6f19d9` after all configured workflows passed. This is implementation evidence, not product acceptance: deployment, production validation, durable Market closeout, and then repeat physical-iPhone/Safari acceptance remain required.
+**State:** MANAGEMENT GATE — PR #240 DEPLOYED; REPEAT PHYSICAL IPHONE / SAFARI  
+PR #240 is merged at `7b7f44ef0b3bf22008d80a3363aec1e6ce6f19d9` and live as Render deploy `dep-darb4lid0e5s73e2nnkg`, static generation `20260925-market-beta-corrective2`. Full CI and every configured focused/authority workflow are green.
 
-Management completed the post-PR-#232/#235 authenticated physical-iPhone pass and acceptance failed. Current corrective scope is persisted in `workstreams/MARKET_DISCOVERY.md`: competitive lens must govern upstream discovery; Trade Finder must use explicit configuration → **Find opportunities** → visible running/completion lifecycle; focused zero-result cases must distinguish genuine search exhaustion from insufficient exploration; Forecast and FSFFL Intrinsic availability must be traced separately; remaining safe-area issues must be corrected. The accepted architecture, eight-path preliminary Decision budget, and zero broad changed-state Simulation boundary must not regress.
+The corrective pass makes competitive posture an early Search-admission lens where governed evidence supports it, changes Trade Finder to explicit configure → **Find opportunities** → running/completion, publishes focused-search exhaustion reasons, and separates Forecast from Intrinsic build/coverage truth. The eight-path preliminary Decision budget and zero broad exact changed-state Simulation boundary are unchanged.
 
-The same pass measured automatic discovery at ~44.1s internally/~44.9s hosted cold and focused Target Player requests at ~31.8s, ~41.4s and ~47.8s, so foreground cold/focused responsiveness remains failed. Performance owns general cold-path optimization; Market may remove only Market-owned redundant work that preserves discovery semantics.
+All non-physical Market validation is exhausted. The current deployed process restored Hodor/new-league State without Forecast/Simulation/Value, consistent with the separate active Performance lifecycle blocker; no authenticated PR #240 Market request has yet emitted the new production focus/value-lens telemetry. Repeat physical iPhone/Safari Market acceptance plus subsequent telemetry inspection is now required. If Hodor remains too incomplete to exercise Market, the prerequisite belongs to Performance, not a Market authority workaround.
 
 ## Home × Franchise audit
 **State:** DEFERRED  

@@ -178,3 +178,17 @@ The corrective implementation:
 The deployed process restored the promoted complete FSFFL bundle for the correct league with Forecast/Simulation/Value all present and no startup error. Full and focused CI are green.
 
 No authenticated Market request has occurred on this newly deployed instance yet, so representative production funnel telemetry cannot be truthfully validated non-physically. The next permitted stop is **MANAGEMENT GATE — repeat physical iPhone/Safari Market acceptance**, after which the emitted production funnel telemetry must also be inspected before final Market product closeout.
+
+
+## Market current-beta corrective checkpoint — PR #240 — 2026-09-25
+The Management-authorized current-beta Market corrective is implementation-complete and deployed.
+
+- PR #240 tested head: `4abc641d123c86e68de4e90e608854f2c3601beb`;
+- merge: `7b7f44ef0b3bf22008d80a3363aec1e6ce6f19d9`;
+- Render: `dep-darb4lid0e5s73e2nnkg` live;
+- static: `20260925-market-beta-corrective2`;
+- full CI + Home/Franchise/League Atlas/PR164 focused validations + live Forecast trace: green.
+
+The corrective fixes competitive-lens early admission, explicit Search submission/race truth, focused zero/exhaustion diagnostics, and independent Forecast/Intrinsic availability reasons while preserving eight preliminary Decision screens and zero broad exact Simulation.
+
+The deployed service is error-free. Its startup restored the currently selected Hodor/new-league State but no Forecast/Simulation/Value bundle, matching the separately active Performance lifecycle blocker. No authenticated Market request has yet exercised PR #240's new focus/value-lens production telemetry. Market therefore stops at **MANAGEMENT GATE — repeat physical iPhone/Safari acceptance**, with Performance owning any prerequisite Hodor lifecycle completion.
