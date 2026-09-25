@@ -8,6 +8,8 @@ from fsffl.opportunity import (
 from fsffl.product.market_discovery_runtime import (
     _build_path_seeds,
     _path_can_support_attention,
+    _prune_package_neighborhood,
+    _row_dominates,
     select_preliminary_screen_indices,
 )
 
@@ -130,3 +132,40 @@ def test_broad_market_discovery_never_imports_or_runs_changed_state_simulation()
     assert "50_000" not in source
     assert '"changed_state_simulation_calls_during_discovery": 0' in source
     assert '"acceptance_probability": None' in source
+
+
+def test_package_pruning_preserves_distinct_shapes_and_economic_categories() -> None:
+    robust = _gibbs_row("one_for_one", 1, 1, 0.04)
+    robust["preliminary_economic_band"] = PreliminaryEconomicBand.ROBUST_OR_ORDINARY.value
+    strained = _gibbs_row("one_for_one", 1, 2, 0.01)
+    strained["preliminary_economic_band"] = PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN.value
+    consolidation = _gibbs_row("two_for_one", 2, 1, 0.02)
+    consolidation["preliminary_economic_band"] = PreliminaryEconomicBand.BOUNDED_UNCERTAINTY.value
+
+    assert not _row_dominates(strained, robust)
+    assert not _row_dominates(robust, strained)
+    representative, alternates, pruned = _prune_package_neighborhood(
+        [strained, robust, consolidation]
+    )
+    assert representative["preliminary_economic_band"] == PreliminaryEconomicBand.ROBUST_OR_ORDINARY.value
+    assert {representative["package_shape"], *(row["package_shape"] for row in alternates)} == {
+        "one_for_one",
+        "two_for_one",
+    }
+    assert pruned == 0
+
+
+def test_cheap_decision_economics_precedes_family_pruning_and_excludes_heavy_analysis() -> None:
+    source = (ROOT / "src/fsffl/product/market_discovery_runtime.py").read_text()
+    build = source.split("def build_market_discovery(", 1)[1]
+    assert build.index("evaluate_candidate_economics(") < build.index("_build_path_seeds(")
+    cheap = source.split("def evaluate_candidate_economics(", 1)[1].split(
+        "def evaluate_candidate_path(", 1
+    )[0]
+    assert "summarize_bilateral_trade_economics" in cheap
+    assert "calculate_bilateral_economic_net" in cheap
+    assert "summarize_package_concentration" in cheap
+    assert "assess_package_economics" in cheap
+    assert "build_private_beta_trade_analysis" not in cheap
+    assert "cached_behavior_profile_for_team" not in cheap
+    assert "run_live_simulation_analytics" not in cheap
