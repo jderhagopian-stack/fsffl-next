@@ -8,6 +8,7 @@ from fsffl.forecast.k_dst_ros_normalization import normalize_late_start_provider
 from fsffl.forecast.late_start_snapshot import (
     PRESEASON_COMPARISON_UNAVAILABLE,
     RowHealthDisposition,
+    assess_late_start_subject_authority,
     capture_late_start_current_projection_snapshot,
     evaluate_late_start_rule_coverage_for_subject,
     evaluate_ros_snapshot_row_health,
@@ -410,3 +411,36 @@ def test_hodor_like_dst_rule_coverage_stays_red_even_when_common_metrics_exist()
         subject_key="DST:BUF",
         rules=rules,
     ) is False
+
+
+def test_authority_assessment_never_uses_zero_uncertainty_or_research_only_rights() -> None:
+    artifact = capture_late_start_current_projection_snapshot(
+        season=2026,
+        snapshots=(_snapshot(),),
+        schedule_rows=_schedule(),
+        clock=lambda: CAPTURED,
+    )
+    rules = LeagueRules(
+        team_count=12,
+        roster_size=20,
+        lineup=(LineupRequirement(slot=RosterSlot.DST, count=1),),
+        scoring=(
+            ScoringRule(stat="sack", points=1),
+            ScoringRule(stat="int", points=2),
+            ScoringRule(stat="pts_allow_0", points=10),
+        ),
+    )
+
+    assessment = assess_late_start_subject_authority(
+        artifact,
+        subject_key="DST:BUF",
+        rules=rules,
+    )
+
+    assert assessment.authoritative is False
+    assert assessment.production_rights_source_count == 0
+    assert assessment.uncertainty_promoted is False
+    assert "insufficient_rights_cleared_independent_sources" in assessment.blockers
+    assert "active_rule_coverage_incomplete" in assessment.blockers
+    assert "calibration_scoring_fingerprint_incompatible" in assessment.blockers
+    assert "simulation_grade_uncertainty_not_promoted" in assessment.blockers
