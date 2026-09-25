@@ -8,6 +8,7 @@ from fsffl.opportunity import (
 )
 from fsffl.product.market_discovery_runtime import (
     _build_path_seeds,
+    _candidate_path_order,
     _opportunity_identity,
     _path_can_support_attention,
     _prune_package_neighborhood,
@@ -287,3 +288,21 @@ def test_market_discovery_observability_exposes_required_counts_and_reason_codes
     assert '"package_variants_clustered"' in runtime_source
     assert "class SearchCandidateCollection" in search_source
     assert '"packages_removed_exact_duplicate": exact_duplicates_removed' in search_source
+
+
+def test_representative_path_order_prefers_governed_categories_before_market_distance() -> None:
+    supported = SimpleNamespace(
+        bilateral_plausibility=BilateralPlausibility.BILATERAL_SUPPORTED,
+        economic_screen=PreliminaryEconomicBand.ROBUST_OR_ORDINARY,
+        evidence_completeness="complete",
+        representative_package={"market_gap_ratio": 0.15, "search_distance": 150.0},
+        path_id="supported",
+    )
+    closer_but_friction = SimpleNamespace(
+        bilateral_plausibility=BilateralPlausibility.BILATERAL_FRICTION,
+        economic_screen=PreliminaryEconomicBand.ROBUST_OR_ORDINARY,
+        evidence_completeness="complete",
+        representative_package={"market_gap_ratio": 0.01, "search_distance": 10.0},
+        path_id="friction",
+    )
+    assert _candidate_path_order(supported) < _candidate_path_order(closer_but_friction)
