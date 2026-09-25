@@ -116,6 +116,8 @@ def install_focused_opportunity_routes(
             ),
             source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
             exact_target_constraint=(value if intent == "target" and value else None),
+            intent=intent,
+            intent_value=value,
             evaluator=focused_evaluator,
         )
         enriched = {
