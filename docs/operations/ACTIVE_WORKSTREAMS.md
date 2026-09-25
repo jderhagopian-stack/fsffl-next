@@ -10,17 +10,40 @@ Owns sequencing, scope, gates, product decisions, and cross-workstream conflict 
 **State:** MANAGEMENT GATE  
 Lifecycle/league-switch repair remains gated on governed Forecast authority for the newly connected league. Performance must not weaken Forecast/model authority to force 7/7.
 
-## Forecast Research — K/DST + New-League Bootstrap
-**State:** DIRECTIVE COMPLETE — RESEARCH  
-The implementation-ready research contract is persisted in `workstreams/RESEARCH.md` and `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`.
+## Forecast Research — 2026 Late-Start K/DST Exception
+**State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
+Management's one-season-only 2026 current-date ROS exception has been fully researched and decomposed.
+
+Durable handoff:
+- `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
+- `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`
+
+The exception removes missing pre-Week-1 K/DST evidence from **current-forward 2026** authority. It does not create preseason evidence and cannot be used in 2027+.
+
+Research has now:
+- measured bounded empirical K and D/ST season-error and weekly-volatility on explicit reduced fingerprints;
+- identified JerryGM as one current ROS provider candidate capable of Hodor-style 60+ K scoring and distributional D/ST PA-tier pricing;
+- exhausted materially distinct public paths without finding a second independent source proving those same hard coordinates.
+
+Current-forward Hodor authority still fails closed on second-source exact-coordinate coverage, live API/source-health validation, target-compatible whole-score uncertainty promotion, and deployable provider rights.
 
 ## Product / Forecast Implementation
-**State:** BLOCKED — EMPIRICAL/SOURCE EVIDENCE GATE  
-PR #215 is merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. The evidence-independent Stage 1 contracts/scoring work and Stage 2 non-promoting outcome/calibration harness are implemented and regression-clean.
+**State:** MANAGEMENT GATE — 2026 LATE-START EXCEPTION PLAN READY  
+PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Evidence-independent K/DST contracts/scoring and the non-promoting calibration harness are already implemented.
 
-The workstream cannot promote production K/DST authority without a qualifying second historical independent source, production source rights/content-health clearance, remaining exact Sleeper truth fixtures, and qualifying preseason evidence where required. The post-merge recovery check is persisted in `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
+Management has now authorized the 2026 late-start exception **for investigation and implementation planning**, not production promotion. The implementation-ready plan is `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
 
-Do not start Stage 3 provider promotion, Stage 4 migration/downstream promotion, or Stage 5/6 lifecycle claims by substituting one-source calibration, non-commercial source content, guessed D/ST semantics, or backdated current data.
+A bounded implementation may proceed only when Management explicitly authorizes execution. It must:
+- persist a dedicated 2026-only current ROS artifact, never a preseason artifact;
+- preserve exact acquisition/provenance/horizon/source-health;
+- enforce schedule-aware subject-row freshness;
+- retain >=2 independent sources per required metric/group;
+- keep Hodor K fail-closed until the 60+ coordinate has two independent governed sources;
+- keep Hodor D/ST fail-closed until PA-tier distribution and rare-event coordinates have two independent governed sources;
+- reproduce the persisted reduced-fingerprint empirical measurements and promote uncertainty only after target compatibility is proven;
+- reject the late-start path for 2027+.
+
+Provider/source rights remain external gates for deployed use.
 
 ## Market / Trade Discovery Architecture Review
 **State:** DIRECTIVE COMPLETE — MANAGEMENT ACCEPTED  

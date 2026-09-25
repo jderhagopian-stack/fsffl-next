@@ -1,0 +1,204 @@
+{
+  "artifact": "fsffl_next_2026_late_start_k_dst_source_acquisition_ledger",
+  "created_date": "2026-09-25",
+  "directive": "one-season-only 2026 late-start K/DST Forecast baseline exception",
+  "principles": {
+    "preseason_label_forbidden": true,
+    "backdating_forbidden": true,
+    "forecast_horizon_required": "rest_of_season_or_current_season_long",
+    "normal_preseason_process_resumes": 2027
+  },
+  "acquisitions": [
+    {
+      "provider": "CBS Sports",
+      "positions": [
+        "K",
+        "DST"
+      ],
+      "captured_at_utc": "2026-09-25T12:28:54.671206Z",
+      "urls": [
+        "https://www.cbssports.com/fantasy/football/stats/K/2026/restofseason/projections/ppr/",
+        "https://www.cbssports.com/fantasy/football/stats/DST/2026/restofseason/projections/ppr/"
+      ],
+      "declared_horizon": "rest_of_season",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "partially_accepted_row_level_quarantine_required",
+        "evidence": [
+          "Page explicitly identifies Rest of Season Proj and 2026.",
+          "K exposes FGM/FGA, 1-19, 20-29, 30-39, 40-49, 50+, XPM/XPA.",
+          "DST exposes INT, safety, sacks, tackles, defensive FR/FF/TD, aggregate points allowed and yards allowed.",
+          "Atlanta and Green Bay rows still imply 15 remaining games after their 2026-09-24 Week 3 game was final; those subject rows are stale at this acquisition instant and must be quarantined.",
+          "K 50+ does not distinguish 50-59 from 60+.",
+          "DST aggregate points-allowed/points-per-game is not a game-level bucket distribution."
+        ]
+      },
+      "production_rights": "not_established_public_terms_require_permission_or_license"
+    },
+    {
+      "provider": "LineupExperts",
+      "positions": [
+        "K",
+        "DST"
+      ],
+      "captured_at_utc": "2026-09-25T12:32:36.550668Z",
+      "urls": [
+        "https://www.lineupexperts.com/football/projections?flt_pos=K&flt_proj_time_period=RestOfSeason",
+        "https://www.lineupexperts.com/football/projections?flt_pos=DST&flt_proj_time_period=RestOfSeason"
+      ],
+      "declared_horizon": "rest_of_season",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "partially_accepted_row_level_quarantine_required",
+        "evidence": [
+          "Pages explicitly identify Rest of Season and 2026.",
+          "K public surface exposes XP made/attempted and FG made/attempted but no distance buckets.",
+          "DST public surface exposes sacks, interceptions, forced fumbles, fumble recoveries, aggregate points and yards allowed.",
+          "Atlanta and Green Bay D/ST rows still show 15 projected games after their 2026-09-24 Week 3 game was final; those rows are stale and must be quarantined.",
+          "Provider documentation describes LineupExperts' projections as its own internally modeled projections, supporting provider independence at the product level.",
+          "API documentation offers in-season rest-of-season projection intervals, but exact premium raw-field coverage must be contract-tested before authority."
+        ]
+      },
+      "production_rights": "website_extraction_prohibited; API_subscription_exists_but_FSFFL_usage_scope_requires_confirmation"
+    },
+    {
+      "provider": "RotoWire",
+      "positions": [
+        "K",
+        "DEF"
+      ],
+      "captured_at_utc": "2026-09-25T12:29:08.299806Z",
+      "urls": [
+        "https://www.rotowire.com/football/projections-ros.php"
+      ],
+      "declared_horizon": "rest_of_season",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "horizon_healthy_values_not_qualified",
+        "evidence": [
+          "Page explicitly states 2026 rest-of-season projections and says totals cover the remainder of the season.",
+          "K scoring inputs visibly include XPM, FGM29, FGM39, FGM49 and FGM50.",
+          "Public player pages expose FGM/FGA/FG%/50+/XP ROS schema but projection values are locked.",
+          "No separate 60+ projected coordinate is visible.",
+          "Full DEF raw ROS schema and schedule-relative row freshness were not publicly verifiable."
+        ]
+      },
+      "production_rights": "written_authorization_or_license_required; Sleeper_hosting_does_not_prove_RotoWire_sublicense"
+    },
+    {
+      "provider": "Razzball",
+      "positions": [
+        "K",
+        "Team Defense"
+      ],
+      "captured_at_utc": "2026-09-25T12:29:02.640334Z",
+      "urls": [
+        "https://football.razzball.com/projections-pk-restofseason/",
+        "https://football.razzball.com/projections-teamdefense-restofseason/"
+      ],
+      "declared_horizon": "rest_of_season",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "quarantined",
+        "evidence": [
+          "K page content identifies itself as 2025 despite 2026 site context.",
+          "Rows showed impossible ~30-32 games remaining for a 2026 NFL rest-of-season projection.",
+          "This is a content-semantic failure, not a reachability failure."
+        ]
+      },
+      "production_rights": "permission_or_license_required"
+    },
+    {
+      "provider": "FFToday",
+      "positions": [
+        "K",
+        "DEF"
+      ],
+      "declared_horizon": "full_season_preseason",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "not_eligible_for_late_start_exception",
+        "evidence": [
+          "Current 2026 season projection material remains the preseason/full-season slate updated before Week 1.",
+          "It is not a current-date rest-of-season forecast and must not be relabeled or adjusted heuristically."
+        ]
+      },
+      "production_rights": "commercial_ingestion_rights_not_established",
+      "research_check_date": "2026-09-25",
+      "acquisition_status": "not_acquired_for_baseline_not_eligible"
+    },
+    {
+      "provider": "SportsDataIO",
+      "positions": [
+        "K",
+        "FantasyDefense"
+      ],
+      "captured_at_utc": "2026-09-25T12:34:20.688359Z",
+      "urls": [
+        "https://sportsdata.io/developers/workflow-guide/nfl",
+        "https://sportsdata.io/developers/data-dictionary/nfl"
+      ],
+      "declared_horizon": "season_long_preseason_and_game_level_in_season",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "not_eligible_for_late_start_ROS_baseline_as_documented",
+        "evidence": [
+          "Provider documentation states season-long NFL projections are preseason only and are not maintained after Week 1.",
+          "In-season game projections exist, but that is a different horizon than the Management-authorized season-long/ROS acquisition path.",
+          "K projection schema exposes 50+ rather than separate 50-59 and 60+."
+        ]
+      },
+      "production_rights": "commercial_api_provider; exact licensed_product_scope_required"
+    },
+    {
+      "provider": "FantasyPros",
+      "positions": [
+        "K",
+        "DST"
+      ],
+      "captured_at_utc": "2026-09-25T12:41:40.876182Z",
+      "urls": [
+        "https://www.fantasypros.com/api-data/"
+      ],
+      "declared_horizon": "API_supports_rest_of_season",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "api_product_exists_aggregate_independence_unresolved",
+        "evidence": [
+          "Official API page documents weekly, preseason and rest-of-season NFL projections with full stat lines.",
+          "Commercial tier explicitly offers commercial license, redistribution rights, historical data and bulk access.",
+          "FantasyPros projection product is aggregate/consensus evidence; it cannot automatically count as an independent second source when component overlap is unknown."
+        ]
+      },
+      "production_rights": "commercial_tier_exists; exact contract and source decomposition required"
+    },
+    {
+      "provider": "JerryGM Projections API",
+      "positions": [
+        "K",
+        "DST"
+      ],
+      "captured_at_utc": "2026-09-25T13:50:45Z",
+      "urls": [
+        "https://www.jerrygm.com/api/",
+        "https://api.jerrygm.com/api/ext/v1/docs",
+        "https://www.jerrygm.com/terms/"
+      ],
+      "declared_horizon": "rest_of_season via week=current&horizon=ros",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "strong_candidate_external_api_access_required",
+        "evidence": [
+          "Deployed v1 docs explicitly support season=2026, week=current and horizon=ros with schedule-aware gamesRemaining and ros.statLine.",
+          "K statLine documents FG attempts/makes and distance buckets through 50plus; custom scoring separately supports fg50to59 and fg60plus weights.",
+          "DST statLine documents sacks, interceptions, fumble recoveries, forced fumbles, defensive TDs, return TDs, safeties, blocks, defensive two-point returns, pointsAllowed and yardsAllowed.",
+          "DST breakdown exposes pointsAllowedSd and paTierExpectedPPG; the provider explicitly prices PA tier expectation over a distribution rather than scoring only the mean.",
+          "Custom defense scoring accepts arbitrary paTiers and blocked-kick / sack / INT / FR / TD / safety categories.",
+          "A live current response requires an API key; no provider row/value was acquired under this Research directive, so current row-level health and response content identity remain unverified.",
+          "JerryGM describes the projections as its own model output derived from nflverse; its internal source variants must count as one provider ecosystem, not multiple independent votes."
+        ]
+      },
+      "production_rights": "self-serve API permits app use and Pro commercial display, but terms prohibit using output to train or calibrate a competing projection product; FSFFL ensemble/derived-Forecast use requires written clarification or a partner/license agreement"
+    }
+  ]
+}
