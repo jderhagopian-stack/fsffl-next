@@ -10,6 +10,7 @@ from fsffl.persistence import (
 )
 from fsffl.providers.sleeper_live import SleeperLiveSource
 
+from . import market_discovery_runtime as _market_discovery_runtime
 from . import opportunity_workspace as _opportunity_workspace
 from . import webapp as _webapp
 from .annual_preseason_scheduler_routes import install_annual_preseason_scheduler_route
@@ -27,6 +28,7 @@ from .intrinsic_market_discovery_routes import install_intrinsic_market_discover
 from .intrinsic_value_routes import install_intrinsic_value_v1_routes
 from .league_value_lens_routes import install_league_value_lens_routes
 from .latency_observability import install_latency_observability
+from .market_economics_cache import make_cached_candidate_economics
 from .opportunity_search_cache import make_cached_opportunity_search
 from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
@@ -116,6 +118,13 @@ _player_future_forecast_cache = PlayerFutureForecastCache(
 _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _shapley_intrinsic_loader,
     max_workers=1,
+)
+
+# Reuse only exact Decision-owned package economics across progressive Market
+# requests. Search row metadata is overlaid fresh on every hit, while State/Value
+# replacement or a different ordered package identity produces a miss.
+_market_discovery_runtime.evaluate_candidate_economics = make_cached_candidate_economics(
+    _market_discovery_runtime.evaluate_candidate_economics
 )
 
 # Build the expensive structural candidate catalog once per exact authoritative
