@@ -7,8 +7,21 @@ Updated: 2026-09-25
 Owns sequencing, scope, gates, product decisions, and cross-workstream conflict resolution.
 
 ## Performance
-**State:** MANAGEMENT GATE  
-Lifecycle/league-switch repair remains gated on governed Forecast authority for the newly connected league. Performance must not weaken Forecast/model authority to force 7/7.
+**State:** ACTIVE — PRODUCTION ACCEPTANCE / LAST-GOOD RESTORATION  
+The prior PR #211 K/DST-only Management Gate is obsolete for the active Performance directive.
+
+The existing FSFFL Dynasty league regressed from previously valid 7/7 to visible 3/7 after Market PR #220. Performance traced this to last-good restoration semantics: terminal failed/interrupted enrichment could leave a newer state-only checkpoint restart-authoritative instead of the independently promoted complete bundle.
+
+Durable repair chain:
+- PR #222 / merge `514b27e9...`: preserves same-league complete intelligence across revalidation, restores same-league last-good after failed/interrupted refresh, keeps cross-league restore fail-closed, makes restored complete context truthful 7/7, and fixes the narrow mobile Refresh Intelligence grid/button;
+- PR #226 / merge `50614b1d...`: startup readiness observability; this is the current live Render SHA;
+- PR #227 / merge `ee221b29...`: test-only interrupted-refresh restoration regression.
+
+Production #226 has already restarted twice with `jimmygoodjob` restored on state `203227df...` and `forecast=True simulation=True value=True complete=True`, with no automatic heavy intelligence launch and no startup errors.
+
+Post-restart physical-device traffic has fetched the repaired static generation and successfully exercised product context, intelligence status, Home, Franchise, and Market. Home/Franchise are responsive, but Market cold load remains an active Performance defect: quick workspace took 36.705s and initial full workspace 48.396s before a cached full call dropped to 0.172s.
+
+Remaining Performance gate is truthful visible 7/7/mobile-control confirmation plus repair of the cold Market foreground path. Do not require repeated manual refreshes.
 
 ## Forecast Research — 2026 Late-Start K/DST Exception
 **State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
@@ -28,12 +41,12 @@ Research has now:
 Current-forward Hodor authority still fails closed on second-source exact-coordinate coverage, live API/source-health validation, target-compatible whole-score uncertainty promotion, and deployable provider rights.
 
 ## Product / Forecast Implementation
-**State:** MANAGEMENT GATE — 2026 LATE-START EXCEPTION PLAN READY  
+**State:** ACTIVE — BOUNDED 2026 LATE-START IMPLEMENTATION AUTHORIZED  
 PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Evidence-independent K/DST contracts/scoring and the non-promoting calibration harness are already implemented.
 
-Management has now authorized the 2026 late-start exception **for investigation and implementation planning**, not production promotion. The implementation-ready plan is `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
+Management now explicitly authorizes execution of the bounded 2026 late-start implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`. This authorization permits implementation, testing, persisted evidence acquisition where source rights permit, and integration of the already-governed contracts. It does **not** authorize production Forecast promotion where evidence/rights gates remain red.
 
-A bounded implementation may proceed only when Management explicitly authorizes execution. It must:
+The bounded implementation must:
 - persist a dedicated 2026-only current ROS artifact, never a preseason artifact;
 - preserve exact acquisition/provenance/horizon/source-health;
 - enforce schedule-aware subject-row freshness;

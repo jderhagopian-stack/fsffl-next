@@ -48,9 +48,9 @@ Research changed the gate:
 Current-forward authority remains fail-closed on rights-cleared deployable access, two-source exact active-rule coverage, live exact-capability validation, and target-compatible uncertainty promotion.
 
 ### Forecast / Product Implementation
-`MANAGEMENT GATE — 2026 LATE-START EXCEPTION PLAN READY`.
+`ACTIVE — BOUNDED 2026 LATE-START IMPLEMENTATION AUTHORIZED`.
 
-PR #215 is merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`; evidence-independent K/DST contracts/scoring and non-promoting calibration harness exist. Management must explicitly decide whether to authorize the bounded implementation in the new Research handoff. Any execution must retain two-source independence, exact active-rule completeness, fail-closed behavior, source rights/health, scoring-fingerprint-bound uncertainty, 2026-only semantics, and rejection for 2027+.
+PR #215 is merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`; evidence-independent K/DST contracts/scoring and non-promoting calibration harness exist. Management has explicitly authorized execution of the bounded implementation in the completed Research handoff. This does not authorize production promotion through unresolved evidence/rights gates. Execution must retain two-source independence, exact active-rule completeness, fail-closed behavior, source rights/health, scoring-fingerprint-bound uncertainty, 2026-only semantics, and rejection for 2027+.
 
 ### Market / Trade Discovery
 Architecture accepted. Implementation complete at implementation level. PR #220 merged/deployed at `ff3e0fbe8ff0827d123e6d465b42116512e6d820`.
@@ -64,7 +64,7 @@ DEFERRED until Market physical acceptance unless Management reprioritizes.
 
 ## Immediate Management sequence
 1. Let Performance finish the 7/7→3/7 restoration directive; require durable workstream-state reconciliation and a permitted terminal state.
-2. Decide whether to authorize bounded Forecast/Product implementation from the completed 2026 late-start K/DST handoff; do not treat the exception as permission to fabricate exact coordinates or bypass rights.
+2. Forecast/Product Implementation is authorized to execute the bounded 2026 late-start K/DST handoff in parallel; do not treat authorization as permission to fabricate exact coordinates, bypass rights, or promote unsupported production authority.
 3. Execute the authorized bounded Market corrective pass from the persisted physical-iPhone acceptance evidence; require implementation-side tracing/tests/deploy before asking Management to retest physically.
 4. Keep Performance lifecycle acceptance and Market product acceptance distinct even though the existing league now visibly reports 7/7; Performance must still close its own full validation directive.
 5. Keep new-league 7/7 separate from existing-league restoration; new-league completion still depends on promoted K/DST Forecast authority.
@@ -78,3 +78,11 @@ Management keeps this file current when cross-workstream decisions, acceptance g
 
 ## Minimal continuation prompt
 `CONTINUE — MANAGEMENT. Read docs/operations/MANAGEMENT_HANDOFF.md and the canonical operations files it references. Resume from the exact durable state; do not restart completed work. Reconcile any stale workstream records before making new decisions.`
+
+
+## Management decision — parallel K/DST execution
+Management authorizes bounded Forecast/Product implementation now, in parallel with Market corrective work. The two workstreams must preserve authority boundaries and avoid overlapping ownership: Forecast/Product owns K/DST late-start Forecast/bootstrap implementation; Market owns its persisted corrective acceptance directive; Performance owns lifecycle/foreground performance and must not change Market discovery semantics while repairing cold-path latency.
+
+
+## Market discovery acceptance clarification — 2026-09-25
+Management clarified that the active Market corrective pass must prove opportunity discovery quality, not merely UI filtering or approximate value matching. Market/Intrinsic values are economic evidence/screens, not the definition of an opportunity. Initial discovery should use cheap governed franchise needs/surpluses, complementary counterparty state, candidate assets, economics and bounded bilateral Decision screening before a small diverse opportunity frontier. Broad discovery remains zero exact changed-state Simulation; deep Simulation belongs after user-selected investigation. Funnel candidate/rejection counts, preliminary-screen counts, stage timings and Simulation-call counts must be observable. Canonical detail is persisted in `workstreams/MARKET_DISCOVERY.md`.
