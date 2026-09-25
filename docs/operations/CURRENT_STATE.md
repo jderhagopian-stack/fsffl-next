@@ -40,6 +40,13 @@ Beginning with 2027, normal governed preseason snapshot capture is mandatory wit
 ## Production evidence relevant to the next gate
 The 2026 evidence-gate Research closeout materially updates the prior checkpoint:
 
+The subsequent 2026 late-start exception research adds:
+- bounded empirical K season relative RMSE **0.3841884793** on a 34-kicker reduced fingerprint and weekly CV **0.5223274618** over 542 kicker-games;
+- bounded empirical D/ST season relative RMSE **0.2140283312** on a 30-defense sacks+INT fingerprint and weekly CV **0.6381941339** over 544 team-games;
+- JerryGM as one technically exact-capability current ROS candidate for separate 60+ K scoring and distributional D/ST PA-tier expected value;
+- no second public provenance-clean current ROS provider proving those same hard coordinates;
+- no Hodor-total uncertainty promotion from the reduced fingerprints.
+
 - the official 2026 NFL regular season began **2026-09-09 at 8:20 p.m. ET** (`2026-09-10T00:20:00Z`);
 - artifact **145** is therefore post-opener and must not be described as preseason PIT evidence;
 - artifact **63** is the last recovered authentic FSFFL pre-kickoff offense Forecast artifact:
@@ -62,8 +69,8 @@ The historical-source gate is therefore **partially cleared**, while production 
 ## Immediate management priority
 1. Treat missing 2026 preseason K/DST evidence as **historical/preseason-only**, not a blocker to a properly governed current-forward late-start baseline.
 2. Review/authorize the implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md` if Management wants Product/Forecast Implementation to execute it.
-3. Keep Hodor current-forward K authority fail-closed until exact 60+ evidence, per-group two-source independence, provider rights, and target-compatible K uncertainty are satisfied.
-4. Keep Hodor current-forward D/ST authority fail-closed until game/distributional PA-bucket evidence, rare-event coverage, per-group two-source independence, provider rights, and target-compatible D/ST uncertainty are satisfied.
+3. Keep Hodor current-forward K authority fail-closed until the first exact 60+ candidate is live-validated, a second independent 60+ source exists, provider rights are cleared, and target-compatible K uncertainty is promoted.
+4. Keep Hodor current-forward D/ST authority fail-closed until the first PA-distribution candidate is live-validated, a second independent PA-distribution source exists, rare-event two-source coverage and provider rights are cleared, and target-compatible D/ST uncertainty is promoted.
 5. Require schedule-aware subject-row source health; Friday snapshots that still include Atlanta/Green Bay's already-completed Thursday game must quarantine those rows rather than be backdated or adjusted heuristically.
 6. Keep 2026 preseason comparison unavailable where authentic pre-Week-1 K/DST evidence is unavailable.
 7. Hard-disable the exception for 2027+ and use the normal annual preseason snapshot process.
@@ -75,10 +82,11 @@ The historical-source gate is therefore **partially cleared**, while production 
 ## Important distinction
 Research and implementation planning for the 2026 late-start exception are complete. Production K/DST Forecast authority is **not** promoted.
 
-The current-forward blockers are no longer “missing preseason evidence.” They are now:
+The current-forward blockers are no longer “missing preseason evidence” or “no empirical K/DST uncertainty exists.” They are now:
 - rights-cleared, independent current source coverage;
-- Hodor rule completeness (K 60+; D/ST PA distribution/rare events);
-- target-compatible K/DST empirical uncertainty.
+- second-source exact Hodor coordinates (K 60+; D/ST PA distribution/rare events);
+- live validation of the first exact-capability API candidate;
+- promotion of K/DST uncertainty only after full target-scoring compatibility is proven.
 
 The 2026 preseason comparison remains unavailable by design. See `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
 
