@@ -14,7 +14,7 @@ Not complete until evidence demonstrates:
 - Home, Franchise, and Market populated with governed evidence for the correct active league;
 - no cross-league intelligence contamination.
 
-Current status: **MANAGEMENT GATE / blocked upstream by unimplemented Forecast authority for the newly connected K/DST league.**
+Current status: **MANAGEMENT GATE / blocked upstream by unpromoted Forecast authority for the newly connected K/DST league.**
 
 ## Forecast K/DST research
 **Status: COMPLETE — RESEARCH.**
@@ -51,21 +51,31 @@ The contract defines governed behavior for a league first connected after presea
 - when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
 
 ## Forecast K/DST implementation gate
-**Status: ACTIVE — PR #215 UNDER ACCEPTANCE VALIDATION.**
+**Status: PARTIAL ACCEPTANCE / BLOCKED — EMPIRICAL/SOURCE EVIDENCE.**
 
-Management has authorized the bounded implementation. Stage 1 contracts/scoring and a non-promoting Stage 2 research harness are implemented in PR #215, but production K/DST authority is not yet accepted.
+PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` after the reconciled head passed full CI, focused corrective regression, private-beta Intrinsic diagnostics, live Forecast corrective trace, and the governed live-provider quarantine trace.
 
-Implementation is not fully accepted until evidence demonstrates:
-- canonical K and D/ST subject identity; **implemented in PR #215, pending merge acceptance**;
-- active-rule-complete league scoring; **implemented for the governed contract in PR #215, with active missing `fum_lost` fail-closed**;
-- no silent missing-metric zero substitution, including `fum_lost`;
-- source health and independence at the relevant metric/rule coordinate;
+Accepted code-level requirements:
+- canonical K and D/ST subject identity;
+- active-rule-complete scoring contracts, including active missing `fum_lost` fail-closed;
+- no provider/runtime silent missing-metric zero substitution for CBS FL;
+- rule-level source independence contracts;
+- exact/derived kicker coverage without 50+ heuristic splitting;
+- distributional D/ST bucket-scoring contract;
+- deterministic K/DST realized-outcome and non-promoting calibration harnesses;
+- immutable annual raw-snapshot replay under different league scoring;
+- regression-clean no-K/no-DST behavior.
+
+Still required before production K/DST support can be accepted:
+- at least two eligible independent historical projection sources for empirical K/DST calibration;
+- production source rights plus content-health/provenance;
 - separate promoted K/DST season-error and weekly-volatility evidence;
-- distributional treatment for D/ST scoring bands; **contract/scoring implementation present; empirical provider evidence still gated**;
-- annual snapshot/bootstrap migration behavior;
+- remaining exact Sleeper weekly truth fixtures for obscure D/ST attribution/bucket behavior;
+- annual snapshot/evidence migration only from qualifying retained PIT evidence;
 - downstream compatibility without Value/Simulation/Decision inventing Forecast truth;
-- regression-clean behavior for the original no-K/DST league;
 - successful lifecycle acceptance for the newly connected league.
+
+The current evidence check is persisted at `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
 
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
