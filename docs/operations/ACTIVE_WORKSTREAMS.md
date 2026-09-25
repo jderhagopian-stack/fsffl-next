@@ -30,6 +30,12 @@ The registry covers 89 canonical coordinate/rule-semantic requirements and the m
 
 Research recommends a bounded zero-authority-change Stage 0 + Stage 1 implementation: canonical registry/rule/capability contracts plus provider raw-superset preservation. New scoring/model authority is not authorized by this Research completion.
 
+
+## Forecast Research — Auxiliary Single-Source Authority
+**State:** ACTIVE — BOUNDED MATERIALITY / SOURCE-AUTHORITY STUDY
+
+Management has authorized a new narrow study of whether one governed source may be sufficient for empirically low-materiality auxiliary coordinates. The study is league-agnostic and must quantify scoring, lineup, team and downstream Simulation sensitivity plus source quality; FUMBLES_LOST and the 60+ FG incremental contribution are required candidates, with nonlinear D/ST PA scoring as a material control. Existing production authority remains unchanged. Canonical scope and outputs are in `workstreams/RESEARCH.md`.
+
 ## Product / Forecast Implementation
 Management physical-iPhone acceptance now shows Hodor at green 7/7 while Simulation, position strength, classification and Intrinsic remain unavailable. This is an acceptance failure in readiness/presentation semantics: pipeline completion must not masquerade as full core-intelligence readiness. Canonical corrective detail is in `workstreams/IMPLEMENTATION.md`.
 **State:** ACTIVE — HODOR SHARED-FORECAST POPULATION / PARTIAL-COVERAGE CORRECTIVE / PR #238 HARDENING  
