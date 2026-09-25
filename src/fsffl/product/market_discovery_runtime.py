@@ -28,6 +28,7 @@ from fsffl.trade_decision import (
 )
 
 from .behavioral_runtime import cached_behavior_profile_for_team
+from .foreground_pressure import foreground_pressure
 from .opportunity_posture import calculated_competitive_state
 from .runtime import UserRuntimeContext
 from .trade_analysis_runtime import build_private_beta_trade_analysis
@@ -1256,6 +1257,11 @@ def build_market_discovery(
                     "cheap_economic_screen_error": str(exc),
                 }
             )
+        finally:
+            # Full Market enrichment runs after the search-only quick response.
+            # Yield only when another interactive request is active/recovering;
+            # this changes scheduling, never Search/Decision output or ordering.
+            foreground_pressure.cooperative_yield()
 
     seeds, family_pruned = _build_path_seeds(
         runtime,
@@ -1284,6 +1290,7 @@ def build_market_discovery(
                     "decision_error": str(exc),
                 }
         paths.append(_build_candidate_path(runtime, seed, row))
+        foreground_pressure.cooperative_yield()
 
     hypotheses, opportunities = _aggregate_opportunities(
         runtime,
