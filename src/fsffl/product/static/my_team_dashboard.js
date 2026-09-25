@@ -384,6 +384,7 @@ function renderFranchiseNorthStar(){
   if(!panel)return;
   if(!view){panel.innerHTML='<div class="franchise-ns-shell"><p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2></div>';return}
   const stateLabel=myTeamStateLabel(view.utility?.calculated_competitive_state),rank=franchiseNSCurrentRank();
+  const stateOnly=!view.forecast_authority?.evidence_basis;
   const fallback=view.forecast_authority?.fallback_active;
   panel.innerHTML='<div class="franchise-ns-shell">'+
     '<header class="franchise-ns-header"><div class="franchise-ns-mark" aria-hidden="true">'+myTeamEsc((view.display_name||'?').slice(0,1).toUpperCase())+'</div><div><p class="eyebrow">Franchise</p><h2>'+myTeamEsc(view.display_name)+'</h2><p><strong>'+myTeamEsc(stateLabel)+'</strong>'+(rank?' · #'+rank+' of '+franchiseNSStandings().length:' · League rank unavailable')+'</p></div></header>'+
@@ -392,7 +393,7 @@ function renderFranchiseNorthStar(){
       myTeamTabButton('roster','Roster',fsfflMyTeamState.franchiseTab==='roster')+
       myTeamTabButton('assets','Assets & Picks',fsfflMyTeamState.franchiseTab==='assets')+
     '</nav>'+
-    (fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':'')+
+    (stateOnly?'<aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Roster State current · '+myTeamRosterRows(view.players||[]).length+' players</strong><span>Forecast / Simulation-derived fields are unavailable. The canonical roster remains usable; see readiness for the exact blocker.</span></aside>':(fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':''))+
     (fsfflMyTeamState.franchiseTab==='overview'?franchiseNSOverview():fsfflMyTeamState.franchiseTab==='roster'?franchiseNSRoster():franchiseNSAssets())+
   '</div>';
   panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseTab=button.dataset.franchiseTab;renderFranchiseNorthStar()}));
@@ -454,6 +455,12 @@ async function loadFranchiseNorthStar(){
     ]);
     if(state?.context?.state_id!==expectedStateId)return;
     fsfflMyTeamState.view=results[0];
+    if(!results[0]?.forecast_authority?.evidence_basis){
+      // Without Forecast authority there is no governed starter classification.
+      // Show the complete canonical roster instead of an empty "Starters" filter.
+      fsfflMyTeamState.franchiseTab='roster';
+      fsfflMyTeamState.franchiseRosterFilter='all';
+    }
     fsfflMyTeamState.leagueViews=results[1]?.team_views||[];
     fsfflMyTeamState.leagueSource=results[1]?.source_level||'';
     fsfflMyTeamState.franchiseHome=results[2]&&results[2].league_state_id===results[0]?.context?.league_state_id?results[2]:null;
