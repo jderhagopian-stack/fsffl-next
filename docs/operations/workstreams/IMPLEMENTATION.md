@@ -3,7 +3,39 @@
 Updated: 2026-09-25
 
 ## State
-**BLOCKED — BOUNDED 2026 LATE-START IMPLEMENTATION COMPLETE; PRODUCTION AUTHORITY AWAITS EXTERNAL EVIDENCE / RIGHTS.**
+**ACTIVE — HODOR SHARED-FORECAST POPULATION + PARTIAL-COVERAGE CORRECTIVE**
+
+Management has superseded the prior blanket “external evidence blocks further implementation” stop for the current Hodor population issue. Full K/DST authority remains externally gated, but that gate may not collapse otherwise valid canonical Forecast coverage.
+
+The governing decisions are now:
+- one canonical league-agnostic player/stat Forecast truth; league scoring is a downstream transformation;
+- valid governed forecastable coordinates remain usable even when some active scoring events are unsupported or inherently unforecastable;
+- missing evidence must never silently become zero;
+- bounded rare/special-event gaps may produce explicit PARTIAL / PROVISIONAL scored outputs with omitted-coordinate metadata and downstream authority limits;
+- only a materially disqualifying missing coordinate may block the affected subject/consumer, not unrelated positions or the entire league;
+- the Hodor Performance lifecycle corrective is complete at PR #242; Forecast/Product now owns the remaining Hodor population blocker.
+
+### Current Hodor production evidence
+Production serves the correct Hodor league State, selected franchise `jder52`, and a 16-player roster. The historical intelligence job failed during `BUILDING_FORECASTS` with `LiveForecastSourceHealthFailure: authoritative live ensemble found 0 qualifying independent full-season sources under Hodor scoring`. Hodor has no promoted Forecast/Simulation/Value bundle and currently has zero reusable provisional K/DST artifacts.
+
+### Authorized corrective
+Forecast Implementation must:
+1. trace why league-specific Hodor scoring is rejecting or hiding otherwise valid shared canonical QB/RB/WR/TE statistical Forecast evidence;
+2. restore the approved boundary: canonical football-stat Forecast is league-agnostic, and Hodor scoring is applied downstream without creating a duplicate league-specific projection database;
+3. implement FULL / PARTIAL-PROVISIONAL / UNSUPPORTED behavior so supported coordinates populate even when bounded scoring components cannot credibly be forecasted;
+4. ensure unsupported events are explicit omissions with reason/coverage metadata, never fabricated and never silently zeroed;
+5. isolate materiality at the affected subject/consumer boundary rather than treating one unsupported coordinate as a total-league Forecast failure;
+6. reconcile PR #238 onto current main and preserve exact league/state binding for provisional K/DST scored outputs;
+7. trace the 2026 provisional K/DST path end-to-end and explain/repair why production currently has zero provisional artifacts wherever governed supported evidence is actually available;
+8. keep genuinely unavailable K/DST components explicit while allowing independently valid offensive Forecasts and other supported projections to populate;
+9. carry the corrective through tests, merge, Render deployment, and production Hodor validation before returning control.
+
+Full K/DST authority still requires its existing external source/rights/exact-coordinate/uncertainty gates. This directive does not authorize fabricated 60+ FG frequency, nonlinear PA-bucket reconstruction from aggregate means, invented rare-event rates, invented source rights, or silent promotion of partial evidence into full Value/Simulation/Decision/Search authority.
+
+### Acceptance target
+Production acceptance requires the correct Hodor league/state and roster plus supported canonical Forecasts populated from shared player/stat evidence, truthful FULL/PARTIAL/UNSUPPORTED coverage by affected subject/rule family, explicit omitted-coordinate reasons, and a precise residual blocker for any downstream capability that still cannot operate.
+
+Do not reopen generic source Research merely because a bounded scoring event lacks a credible projection. Some scoring events may remain explicitly unforecastable; that is a coverage condition, not automatically a total Forecast failure.
 
 Management accepted the completed K/DST + late-connect Research contract and authorized its bounded implementation. The base architecture remains authoritative:
 - `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`
