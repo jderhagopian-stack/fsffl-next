@@ -10,3 +10,12 @@ def test_hosted_entrypoint_emits_existing_performance_timing_logs() -> None:
     assert "FSFFL intelligence refresh timing" in coordinator
     assert "phase_timings" in coordinator
     assert "total_elapsed_seconds" in coordinator
+
+
+def test_hosted_entrypoint_logs_post_restore_runtime_readiness() -> None:
+    source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
+
+    assert "def _log_startup_runtime_readiness()" in source
+    assert 'logging.getLogger("uvicorn.error").info(' in source
+    assert "FSFFL startup runtime readiness user=%s league=%s state=%s forecast=%s simulation=%s value=%s complete=%s" in source
+    assert 'app.add_event_handler("startup", _log_startup_runtime_readiness)' in source
