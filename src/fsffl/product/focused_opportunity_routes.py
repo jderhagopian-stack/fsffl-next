@@ -14,12 +14,15 @@ from .focused_opportunity_search import build_focused_trade_candidates
 from .market_discovery_runtime import (
     DEFAULT_PRELIMINARY_DECISION_BUDGET,
     build_market_discovery,
-    evaluate_candidate_path,
 )
 from .opportunity_posture import posture_payload
 from .opportunity_spotlights import build_trade_spotlights
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
-from .trade_center_view import TradeCenterBrowserView, build_trade_center_browser_view
+from .trade_center_view import (
+    TradeCenterBrowserView,
+    build_trade_center_browser_view,
+    owned_asset_index,
+)
 
 
 WorkspaceBuilder = Callable[..., dict[str, object]]
@@ -193,7 +196,14 @@ def install_focused_opportunity_routes(
         user_id: str = Depends(require_user),
     ) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
-        base = workspace_builder(runtime, bilateral_evaluation_limit=0)
+        # Focus only needs the workspace shell/readiness/available-player context.
+        # Building the generic 80-row Market discovery here duplicates economics
+        # and family work before the submitted focused neighborhood is evaluated.
+        base = workspace_builder(
+            runtime,
+            candidate_limit=0,
+            bilateral_evaluation_limit=0,
+        )
         if base.get("status") != "ready":
             return base
         league_state = runtime.league_state
@@ -227,25 +237,11 @@ def install_focused_opportunity_routes(
         limit = int(discovery.get("returned_count") or 80)
         if limit <= 0:
             limit = 80
-        base_rows = {
-            _identity(row): row
-            for row in (discovery.get("candidates") or [])
-            if isinstance(row, dict)
-        }
-        returned = [base_rows.get(_identity(row), row) for row in focused[:limit]]
+        returned = list(focused[:limit])
 
-        already_screened = {}
-        for path in ((base.get("market_discovery") or {}).get("candidate_paths") or []):
-            package = path.get("representative_package") or {}
-            if package.get("bilateral_decision_evaluated"):
-                already_screened[_identity(package)] = package
-
-        def focused_evaluator(current_runtime, row):
-            return already_screened.get(_identity(row)) or evaluate_candidate_path(
-                current_runtime,
-                row,
-            )
-
+        # Use the canonical evaluator directly so build_market_discovery can share
+        # exact Value profiles, ownership resolution, Forecast floor evidence and
+        # baseline lineups across the unchanged bounded preliminary-screen budget.
         focused_market_discovery = build_market_discovery(
             runtime,
             returned,
@@ -257,7 +253,7 @@ def install_focused_opportunity_routes(
             search_generation_diagnostics=dict(
                 getattr(focused, "diagnostics", {}) or {}
             ),
-            evaluator=focused_evaluator,
+            asset_index=owned_asset_index(browser),
         )
         focus_outcome = _focus_outcome(focused, focused_market_discovery)
         posture_meta = posture_payload(runtime, requested)
