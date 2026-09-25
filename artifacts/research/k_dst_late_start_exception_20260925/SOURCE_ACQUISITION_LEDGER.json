@@ -171,6 +171,34 @@
         ]
       },
       "production_rights": "commercial_tier_exists; exact contract and source decomposition required"
+    },
+    {
+      "provider": "JerryGM Projections API",
+      "positions": [
+        "K",
+        "DST"
+      ],
+      "captured_at_utc": "2026-09-25T13:50:45Z",
+      "urls": [
+        "https://www.jerrygm.com/api/",
+        "https://api.jerrygm.com/api/ext/v1/docs",
+        "https://www.jerrygm.com/terms/"
+      ],
+      "declared_horizon": "rest_of_season via week=current&horizon=ros",
+      "content_year": 2026,
+      "source_health": {
+        "disposition": "strong_candidate_external_api_access_required",
+        "evidence": [
+          "Deployed v1 docs explicitly support season=2026, week=current and horizon=ros with schedule-aware gamesRemaining and ros.statLine.",
+          "K statLine documents FG attempts/makes and distance buckets through 50plus; custom scoring separately supports fg50to59 and fg60plus weights.",
+          "DST statLine documents sacks, interceptions, fumble recoveries, forced fumbles, defensive TDs, return TDs, safeties, blocks, defensive two-point returns, pointsAllowed and yardsAllowed.",
+          "DST breakdown exposes pointsAllowedSd and paTierExpectedPPG; the provider explicitly prices PA tier expectation over a distribution rather than scoring only the mean.",
+          "Custom defense scoring accepts arbitrary paTiers and blocked-kick / sack / INT / FR / TD / safety categories.",
+          "A live current response requires an API key; no provider row/value was acquired under this Research directive, so current row-level health and response content identity remain unverified.",
+          "JerryGM describes the projections as its own model output derived from nflverse; its internal source variants must count as one provider ecosystem, not multiple independent votes."
+        ]
+      },
+      "production_rights": "self-serve API permits app use and Pro commercial display, but terms prohibit using output to train or calibrate a competing projection product; FSFFL ensemble/derived-Forecast use requires written clarification or a partner/license agreement"
     }
   ]
 }
