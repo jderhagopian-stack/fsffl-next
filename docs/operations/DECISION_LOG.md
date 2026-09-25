@@ -142,3 +142,13 @@ PR #237 merged at `33b969b04180893f7e582c0ebd76c54bea81961d`. PR #238 exact-leag
 Decision: Hodor is a new-league completion plus app-wide lifecycle failure, not a regression from a previously complete Hodor state. Performance owns the cross-surface lifecycle contract: user action → immediate acknowledgement → safe usable current or valid last-good State → persistent background-work status → validated atomic promotion → explicit current or failed state. Valid roster State must remain visible while derived intelligence is incomplete, and old-league evidence must never masquerade as the newly selected league.
 
 Performance must trace the exact persisted State through Forecast, including the PR #237 provisional K/DST path, then Value, Simulation, readiness, and promotion before attributing the observed 2/7 condition to any stage.
+
+
+## 2026-09-25 — Partial Forecast coverage must remain usable
+Decision: unsupported or inherently unforecastable scoring events must not collapse otherwise valid Forecast coverage. FSFFL NEXT must preserve and expose every forecastable governed coordinate and score the supported portion of a league's rules while explicitly identifying omitted, unsupported, or unforecastable scoring components.
+
+A league-specific scoring rule does not create a separate underlying player-projection truth. Canonical player/stat Forecast remains league-agnostic; league scoring transforms those shared coordinates downstream.
+
+For material missing coordinates whose absence would make the resulting fantasy-point total misleading, the affected subject/consumer may remain blocked. For bounded rare or special-event coordinates where no credible projection exists (for example a 60+ field-goal increment or certain rare special-teams events), the system may expose a partial/provisional scored Forecast that omits the unsupported contribution, provided the omission, coverage status, and downstream authority limits are machine-readable and visible. Missing evidence must never be silently treated as zero, but it also must not erase valid projections for coordinates that can be forecasted.
+
+This rule applies beyond Hodor/K-DST and should be implemented through the canonical FULL/PARTIAL/UNSUPPORTED capability model rather than league-specific exceptions.
