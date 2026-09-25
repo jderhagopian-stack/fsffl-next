@@ -31,12 +31,14 @@ from .late_start_snapshot import (
     LATE_START_EXCEPTION_VERSION,
     LATE_START_SNAPSHOT_MODEL_VERSION,
     PRESEASON_COMPARISON_UNAVAILABLE,
+    LateStartAuthorityAssessment,
     LateStartCurrentProjectionSnapshot,
     LateStartIndependentCoverage,
     LateStartMetricCoverage,
     LateStartProviderEvidence,
     LateStartSourceHealthEvent,
     RowHealthDisposition,
+    assess_late_start_subject_authority,
     capture_late_start_current_projection_snapshot,
     evaluate_late_start_rule_coverage_for_subject,
     evaluate_ros_snapshot_row_health,
@@ -98,6 +100,8 @@ from .models import (
 )
 
 __all__ = [
+    "assess_late_start_subject_authority",
+    "LateStartAuthorityAssessment",
     "late_start_subject_is_rule_complete",
     "evaluate_late_start_rule_coverage_for_subject",
     "source_rule_evidence_for_subject",
