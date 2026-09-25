@@ -204,9 +204,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             user_id in self._last_good_guard_users
             and current.league_state is not None
             and current.league_state.league.league_id == league_state.league.league_id
-            and current.forecast_evidence is not None
-            and current.simulation_analytics is not None
-            and current.value_evidence is not None
+            and all(
+                item is not None
+                for item in (
+                    current.forecast_evidence,
+                    current.simulation_analytics,
+                    current.value_evidence,
+                )
+            )
         )
         if preserve_restored_last_good:
             valid_team_ids = {team.team_id for team in current.league_state.teams}
@@ -262,9 +267,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         if (
             context.league_state is not None
             and context.league_state.state_id == result.league_state_id
-            and context.forecast_evidence is not None
-            and context.simulation_analytics is not None
-            and context.value_evidence is not None
+            and all(
+                item is not None
+                for item in (
+                    context.forecast_evidence,
+                    context.simulation_analytics,
+                    context.value_evidence,
+                )
+            )
         ):
             self._last_good_guard_users.discard(user_id)
         self._checkpoint_async(user_id, context)
@@ -289,9 +299,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         if (
             context.league_state is not None
             and context.league_state.state_id == league_state.state_id
-            and context.forecast_evidence is not None
-            and context.simulation_analytics is not None
-            and context.value_evidence is not None
+            and all(
+                item is not None
+                for item in (
+                    context.forecast_evidence,
+                    context.simulation_analytics,
+                    context.value_evidence,
+                )
+            )
         ):
             self._last_good_guard_users.discard(user_id)
         self._checkpoint_async(user_id, context)
