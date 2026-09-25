@@ -108,6 +108,8 @@ class ProvisionalKDstForecast(FrozenModel):
     authority_tier: Literal["provisional_partial_rule_coverage"] = (
         "provisional_partial_rule_coverage"
     )
+    league_id: str
+    league_state_id: str
     subject_key: str
     subject_family: ForecastSubjectFamily
     horizon: Literal["rest_of_season"] = ForecastHorizon.REST_OF_SEASON.value
@@ -134,6 +136,8 @@ class ProvisionalKDstForecast(FrozenModel):
 
     @model_validator(mode="after")
     def validate_partial_contract(self) -> "ProvisionalKDstForecast":
+        if not self.league_id.strip() or not self.league_state_id.strip():
+            raise ValueError("provisional K/DST Forecast requires league and exact league-state identity")
         for name in ("period_start", "period_end", "as_of"):
             value = getattr(self, name)
             if not isinstance(value, datetime) or value.tzinfo is None:
@@ -597,6 +601,8 @@ def _uncertainty(family: ForecastSubjectFamily) -> ProvisionalKDstUncertainty:
 def build_provisional_k_dst_forecast(
     snapshot: LateStartCurrentProjectionSnapshot,
     *,
+    league_id: str,
+    league_state_id: str,
     subject_key: str,
     rules: LeagueRules,
     promoted_uncertainty_fingerprint_ids: frozenset[str] = frozenset(),
@@ -610,6 +616,8 @@ def build_provisional_k_dst_forecast(
 
     if snapshot.season != 2026:
         raise ValueError("provisional K/DST exception is authorized only for 2026")
+    if not league_id.strip() or not league_state_id.strip():
+        raise ValueError("provisional K/DST Forecast requires league and exact league-state identity")
     family = _subject_family(subject_key)
     _require_active_slot(rules, family)
 
@@ -671,6 +679,8 @@ def build_provisional_k_dst_forecast(
     mean = sum(item.fantasy_points for item in included) if available else None
 
     return ProvisionalKDstForecast(
+        league_id=league_id,
+        league_state_id=league_state_id,
         subject_key=subject_key,
         subject_family=family,
         period_start=snapshot.period_start,
