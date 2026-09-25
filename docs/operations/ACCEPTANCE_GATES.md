@@ -130,6 +130,42 @@ It remains an **external-access/rights candidate**, not production authority, un
 The controlling Research plan is:
 `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
 
+## League-agnostic scoring coverage research
+**Status: COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY.**
+
+Research acceptance is satisfied by:
+- `artifacts/research/scoring_coordinate_coverage_20260925/SCORING_COORDINATE_REGISTRY.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/SCORING_COORDINATE_REGISTRY.csv`
+- `artifacts/research/scoring_coordinate_coverage_20260925/PLATFORM_COVERAGE_MATRIX.csv`
+- `artifacts/research/scoring_coordinate_coverage_20260925/PRIMARY_SOURCE_LEDGER.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/GAP_ANALYSIS.md`
+- `artifacts/research/scoring_coordinate_coverage_20260925/IMPLEMENTATION_HANDOFF.md`
+
+The completed audit demonstrates:
+- documented major-platform defaults/custom scoring were researched without treating configurability as prevalence;
+- a provider-neutral coordinate registry and rule-semantics model are defined;
+- current FSFFL State/Forecast/scoring/provider/history gaps are explicitly mapped;
+- nonlinear rules are separated from scalar-mean scoring;
+- IDP is identified as a distinct subject-family expansion;
+- provider raw-field preservation and historical replay requirements are defined;
+- FULL/PARTIAL/UNSUPPORTED capability semantics and reason codes are defined;
+- deterministic cross-platform fixtures are specified;
+- implementation is staged without promoting production authority.
+
+## Scoring coverage Stage 0/1 implementation gate
+**Status: MANAGEMENT GATE — NOT AUTHORIZED BY RESEARCH COMPLETION.**
+
+If Management authorizes implementation, Stage 0/1 is accepted only when evidence demonstrates:
+- canonical registry/rule/capability contracts are versioned;
+- raw platform scoring rules remain preserved alongside compiled mappings;
+- current FSFFL scoring outputs are regression-identical through the compatibility lane;
+- unknown/custom rules survive import and become explicit UNSUPPORTED rather than disappearing;
+- position predicates, thresholds, stacking and semantic-profile fields are representable even when Forecast evidence is not yet available;
+- rights-permitted provider raw numeric fields can be retained before canonical reduction;
+- an unmapped provider field can be preserved without acquiring scoring authority;
+- PARTIAL capability never publishes an incomplete authoritative fantasy-point total;
+- no new production Forecast metric, provider authority, uncertainty coefficient, IDP support, or nonlinear model is promoted by Stage 0/1.
+
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
 
