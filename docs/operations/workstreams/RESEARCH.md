@@ -412,3 +412,122 @@ The existing full-authority gates remain recorded and unchanged. If they clear, 
 Do not reopen generic source Research. Resume Forecast Implementation from PR #233/main and implement the minimum bounded contracts, calculations, provenance, coverage reporting, downstream gating, tests, and presentation/readiness semantics necessary for this 2026 provisional mode. Preserve all existing fail-closed behavior for 2027+ and for claims requiring full-rule authority.
 
 Persist an implementation handoff and follow OPERATING_PROTOCOL.md to a permitted terminal state.
+
+
+---
+
+## Management directive — Single-source authority for bounded auxiliary Forecast coordinates
+**State: ACTIVE — BOUNDED MATERIALITY / SOURCE-AUTHORITY STUDY**
+
+Management authorizes a narrow Research study to determine whether FSFFL NEXT should permit **one governed production projection source** for selected low-materiality auxiliary scoring coordinates instead of applying the normal two-independent-source standard uniformly to every coordinate.
+
+This directive is motivated by current evidence that missing low-frequency coordinates can block otherwise strong Forecast/Simulation coverage. It does **not** pre-decide that one source is sufficient and it does **not** change production authority. Existing source/rights/uncertainty gates remain in force until Management explicitly accepts a resulting rule.
+
+### Research question
+Under what empirically defensible conditions can a single rights-cleared, semantically exact Forecast source support an auxiliary scoring coordinate without materially degrading player, lineup, team, or Simulation outcomes?
+
+The study must distinguish:
+1. **core/material coordinates** — remain subject to normal multi-source authority;
+2. **bounded auxiliary coordinates** — candidates for single-source authority if empirical impact and source quality support it;
+3. **unforecastable/tail coordinates** — remain explicit omissions rather than fabricated values.
+
+Do not define these classes by eccentricity, frequency, or intuition alone. Classification must be based on measured scoring/outcome materiality plus evidence quality.
+
+### Candidate coordinate set
+At minimum evaluate:
+- `fumbles_lost`;
+- 60+ field-goal makes / the incremental 60+ scoring contribution;
+- field-goal misses where separately scored;
+- XP misses where separately scored;
+- common two-point conversion coordinates;
+- low-frequency player/team special-teams scoring events already represented in the canonical scoring registry;
+- other currently undercovered coordinates that the registry identifies as plausible bounded auxiliaries.
+
+Treat nonlinear D/ST points-allowed distributions, major volume statistics, passing/rushing/receiving yards and TDs, receptions, and other obviously material core coordinates as **controls**, not presumed single-source candidates.
+
+A coordinate with a rare event but a very large scoring coefficient must not qualify merely because the event is infrequent.
+
+### Required materiality measurements
+For each candidate coordinate, using authentic historical/PIT evidence where available:
+- event frequency and zero-rate;
+- mean absolute seasonal fantasy-point contribution;
+- median, p90, p95 and p99 absolute seasonal contribution;
+- contribution as a share of player fantasy points and of total scored variance;
+- impact on positional/player rank ordering;
+- impact on optimized lineup selection and starter/bench decisions;
+- impact on team projected points;
+- impact on league-relative position strength / Team Utility where applicable;
+- impact on 50,000-run Simulation outputs when feasible, including expected wins and playoff/championship probability deltas;
+- worst observed and bounded stress-case effects.
+
+Use deterministic seeds/replay for Simulation sensitivity. Do not use the 2022 startup as an FSFFL historical acceptance sample.
+
+### Required source-quality measurements
+For any proposed single-source coordinate, evaluate:
+- exact semantic match to the canonical coordinate and platform scoring meaning;
+- production/data-use rights;
+- acquisition timestamp and provenance;
+- PIT availability and revision behavior;
+- missingness/coverage stability;
+- historical bias, MAE/RMSE and calibration where target evidence exists;
+- source stability across seasons;
+- whether the source is direct or derived/aggregate;
+- independence status relative to other providers;
+- disagreement with additional sources during historical periods where overlap exists.
+
+When two or more historical sources overlap, compare the single-source estimate against both actual outcomes and the multi-source ensemble so Management can quantify the cost of relaxing the second-source requirement.
+
+### Authority framework to test
+Research should test and recommend quantitative boundaries rather than assume them.
+
+A candidate **bounded auxiliary** rule should require all of the following in principle:
+- exact coordinate semantics;
+- rights-cleared production use;
+- a direct governed source rather than an opaque consensus unless independence/provenance is resolved;
+- empirically bounded scoring/outcome sensitivity;
+- non-zero, target-compatible uncertainty;
+- explicit provenance and authority tier in machine-readable contracts;
+- automatic demotion to PARTIAL/UNSUPPORTED when source health or coverage fails;
+- no silent zero, heuristic frequency allocation, or substitution from a neighboring statistic.
+
+Research must determine whether thresholds should be absolute, position-relative, scoring-relative, or multi-dimensional. It must not choose a threshold merely to make Hodor or any one league pass.
+
+### Specific hypotheses to test
+- **60+ FG incremental scoring:** likely bounded auxiliary because only the incremental points above the supported 50+ contribution are at issue; test rather than assume.
+- **FUMBLES_LOST:** potentially eligible for single-source treatment but presumptively more material than 60+ FG because it applies broadly across offensive players; require stronger historical/source validation.
+- **Nonlinear D/ST PA distribution:** presumptively material/non-auxiliary control because it can move D/ST totals substantially and requires distributional evidence; test sensitivity but do not collapse it into the rare-event category.
+- **Rare special-teams events:** candidate auxiliary only when both event frequency and scoring sensitivity are bounded.
+
+### Counterfactual comparison
+For each viable candidate, compare at least these conditions:
+A. coordinate omitted / current partial-authority behavior;
+B. one governed source;
+C. two-or-more-source ensemble where historically available;
+D. realized outcome.
+
+Report whether B materially improves total Forecast accuracy and downstream usefulness relative to A, and how much authority/accuracy is lost versus C.
+
+### Required outputs
+Persist a durable Research package containing at minimum:
+- `AUXILIARY_COORDINATE_MATERIALITY.csv` — per-coordinate impact metrics and tested scoring profiles;
+- `SINGLE_SOURCE_QUALITY_LEDGER.csv` — provider/coordinate provenance, rights, semantic fit and historical error;
+- `SINGLE_VS_MULTI_SOURCE_REPLAY.csv` — comparable replay results where overlapping sources exist;
+- `DOWNSTREAM_SENSITIVITY.md` — lineup/team/Simulation effects, including 50,000-run sensitivity where feasible;
+- `AUTHORITY_TIER_RECOMMENDATION.md` — proposed general rule/thresholds, exceptions and failure behavior;
+- `RESEARCH_HANDOFF.md` — exact Management decision options and implementation implications.
+
+The recommendation must be league-agnostic and coordinate-based. Hodor may be used as an illustrative scoring profile, not as the rule definition.
+
+### Authority boundary
+This study authorizes research and analysis only. It does **not**:
+- weaken the current two-independent-source production rule;
+- promote a one-source K/DST, FUMBLES_LOST or other coordinate;
+- change current Forecast/Simulation/Value/Decision/Search outputs;
+- invent source rights;
+- permit heuristic 60+ allocation from a 50+ bucket;
+- treat absent evidence as zero;
+- reopen unrelated completed Forecast Research.
+
+If evidence supports a generalized single-source auxiliary tier, return at **MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION** with the proposed quantitative contract. If evidence does not support it, return **DIRECTIVE COMPLETE — RESEARCH** with the negative finding and retain current authority.
+
+Follow `OPERATING_PROTOCOL.md`; do not stop at an intermediate source failure while another authorized analysis can materially advance the directive.

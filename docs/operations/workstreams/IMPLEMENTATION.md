@@ -219,3 +219,92 @@ Required protections:
 - accepted Market discovery, Decision-screen, zero-broad-changed-state-Simulation, Value authority separation, and existing lifecycle last-good restoration semantics must not change;
 - the readiness correction may change labels/status presentation where the prior UI overstated capability; this is an intentional truthfulness correction, not permission to regress actual available intelligence;
 - regression validation must include Hodor, arbitrary/synthetic Sleeper leagues with different scoring, and at least one existing fully supported league with previously complete intelligence. Existing full-capability outputs should remain within expected deterministic/model-version deltas and any intentional numerical change must be explained by the corrected Forecast coordinate.
+
+
+## Physical iPhone acceptance — existing FSFFL league regressed after league switch
+**State: ACCEPTANCE FAILED — EXISTING FULLY SUPPORTED LEAGUE / SWITCH-RESTORATION NON-REGRESSION**
+
+Management physically switched from Hodor back to the existing fully supported FSFFL Dynasty league (`sleeper:1312071960615731200`, managed team `jimmygoodjob`) on iPhone/Safari.
+
+Observed UI:
+- shell reports green `7/7 Core intelligence current`;
+- Home simultaneously shows `Position pressure point unavailable`;
+- Current Simulation is unavailable;
+- expected wins / playoff / championship are blank;
+- franchise classification is `Not Classified`;
+- position-strength rows are blank.
+
+Durable database evidence:
+- prior accepted fully supported State `203227df88b78cdd1c0a0861bc16cae0157abd91b52a3ef9ee1278f129a462ed` still has non-invalidated `current_forecast_evidence`, `live_simulation_analytics`, and `current_market_value` artifacts;
+- current selected FSFFL runtime context moved to State `8cd7b3cb80c924304e8a1bc33eecce020236efd175b33ef138ac66e97fe0c5ab`;
+- the old complete intelligence bundle was therefore not deleted or corrupted;
+- the new State is not byte-identical to the old State: league/teams/draft-pick ownership remain equal, while time-sensitive fields such as matchups, player/player-state, team-state, NFL byes, provenance and as-of changed.
+
+Acceptance interpretation:
+1. This is not evidence loss. The accepted complete FSFFL bundle still exists.
+2. Because the newly selected canonical State materially differs, exact-state binding correctly prevents blindly attaching the old Simulation/Value bundle as current truth.
+3. The product still fails the switching/lifecycle contract because a switch to an existing league may not present `7/7 Core intelligence current` while serving a new exact State with no current Simulation/position-strength/classification.
+4. League switch must immediately distinguish:
+   - usable canonical current State;
+   - compatible reusable Forecast evidence;
+   - last-good but stale exact-state intelligence;
+   - current enrichment status / exact blocker.
+5. If the current State requires recomputation, the shell must show that work truthfully and preserve safe last-good context only as explicitly stale/non-current evidence. It must not present lifecycle completion from the previous state/league as current 7/7.
+6. Regression acceptance now requires switching Hodor → FSFFL → Hodor (and arbitrary valid Sleeper identities) without cross-state/cross-league readiness leakage, while preserving exact-state authority.
+
+Do not use this incident to weaken exact-state binding or silently reuse stale Simulation. Repair switch/restoration/readiness orchestration and continue the already-authorized post-PR245 corrective through tests, merge, Render deployment, production Hodor validation, and production existing-FSFFL switch/regression validation before physical Market acceptance resumes.
+
+
+### League-switch recomputation requirement
+Management clarifies that last-good/exact-state restoration is an optimization and resilience mechanism, not a prerequisite for correctness.
+
+When a user selects or reconnects any valid Sleeper league:
+1. load and expose the current canonical LeagueState immediately;
+2. attempt to reuse only intelligence artifacts that are provably compatible with that exact State / Forecast coordinate under existing authority rules;
+3. if no compatible current bundle exists, automatically start or resume the normal governed enrichment pipeline for that newly selected State;
+4. surface persistent progress/status while enrichment runs;
+5. promote Forecast / Simulation / Value / derived analytics atomically when each authority gate clears;
+6. if a stage cannot clear, expose the exact capability blocker while preserving usable State and any independently valid upstream evidence.
+
+A previously complete league must therefore be able to reproduce its intelligence from canonical State + governed Forecast/Value inputs even if its prior complete bundle cannot be reattached. The product may not depend on finding a historical last-good artifact in order to become useful again.
+
+Acceptance must prove both paths:
+- **reuse path:** compatible persisted intelligence is restored without recomputation;
+- **rebuild path:** when compatible intelligence is absent or stale, the app automatically recomputes the current State to the same governed capability level that the league's rules/evidence permit.
+
+Do not weaken exact-state binding, source authority, or uncertainty gates to achieve this. The rebuild must use the same canonical Data → State → Forecast → Value → Simulation/Team Utility authority chain as a fresh valid league load.
+
+For the current FSFFL regression, Management expects that the new State either:
+- reuses compatible Forecast components and recomputes only invalidated downstream layers where allowed; or
+- performs a full governed enrichment for the new State if compatibility cannot be proven.
+
+In neither case may the shell claim green/full readiness before the current-State capabilities actually exist.
+
+
+### Refresh Intelligence = league sync + intelligence reconciliation
+Management defines the user-facing **Refresh Intelligence** action as the canonical manual league-sync/update operation, not merely a model rerun against the currently loaded State.
+
+Required order of operations:
+1. fetch/revalidate the currently selected Sleeper league from the provider;
+2. persist/select the resulting canonical current LeagueState;
+3. compare the new State to the prior State and determine which persisted intelligence remains provably compatible;
+4. reuse compatible artifacts only under existing exact-state/input-fingerprint authority rules;
+5. automatically rebuild every invalidated or missing governed layer for the new State;
+6. expose persistent progress and exact capability/blocker status until reconciliation terminates;
+7. atomically promote newly valid Forecast / Simulation / Value / derived analytics for the current State.
+
+The current implementation path is not sufficient for this contract because `POST /api/intelligence/jobs` presently invokes the Forecast loader on the already-loaded `initial_state` before it refreshes canonical Sleeper State. A manual sync must not compute new intelligence from an old State and then attach/reconcile it onto a newly fetched State unless compatibility is explicitly proven.
+
+Acceptance:
+- a no-change sync should cheaply retain/reuse current governed intelligence;
+- a changed-State sync should invalidate only affected layers and recompute them;
+- a material roster/rules/matchup/player-state change must never leave stale downstream intelligence labeled current;
+- if current evidence cannot rebuild a layer, the exact blocker must be surfaced while current canonical State remains usable;
+- repeated manual Refresh Intelligence calls must be idempotent for an unchanged provider State;
+- league switching and manual refresh must use the same underlying State-first reconciliation contract rather than separate semantics.
+
+Product semantics:
+**Refresh Intelligence = Sync league + refresh/reconcile intelligence.**
+The existing button label may remain for now, but user-facing status should make the sync/rebuild lifecycle clear. A future wording change such as `Sync & Refresh` may be considered separately if physical testing shows the action remains ambiguous.
+
+Do not weaken exact-state binding, Forecast authority, Value authority, Simulation gates, or last-good safety to satisfy this behavior.
