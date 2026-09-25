@@ -174,3 +174,15 @@ Decision: What-If is a generalized counterfactual engine with both current-forwa
 Historical What-If must be able to branch from an authentic point-in-time league State and substitute a different past decision. It must keep two outputs distinct: (1) a point-in-time probabilistic counterfactual using only information knowable at the historical cutoff, and (2) a realized-world hindsight replay that holds later exogenous NFL outcomes fixed where appropriate and shows what the alternate decision would actually have produced.
 
 These lenses may never be blended. “Good decision with bad outcome” and “bad decision with good outcome” must remain representable. Historical transaction/draft/waiver/roster lineage, point-in-time evidence, Forecast/Value/Decision versions and uncertainty should support the counterfactual rather than being replaced by present-day values.
+
+
+## 2026-09-25 — Persistent league intelligence is the product-development filter
+Decision: competitive review does not trigger a product pivot or immediate workstream reprioritization. FSFFL NEXT remains a persistent governed intelligence model of a fantasy league rather than a collection of isolated calculators.
+
+Roadmap work should normally strengthen at least one of three dimensions: (1) the persistent league model, (2) the usability/time-to-value of governed intelligence, or (3) the value/shareability/identity of the league itself.
+
+Immediate sequencing remains: league lifecycle/readiness correctness first; governed intelligence completeness second; Market quality/responsiveness third; unified core-surface experience next. Record Book, generalized historical What-If, behavioral/needs-aware Mock Draft and other long-term surfaces remain part of the North Star but should not displace current reliability work.
+
+Owner Intelligence, historical persistence and counterfactual State are shared capabilities to be reused across future surfaces, not one-off feature silos. Preserve point-in-time evidence now so future historical analysis/counterfactuals remain possible.
+
+Commercial differentiation should be described as the integration of Forecast, separate Value dimensions, league/owner behavior, Decision/Search, Simulation, history and counterfactuals against one governed league model—not as uniqueness of any single feature.

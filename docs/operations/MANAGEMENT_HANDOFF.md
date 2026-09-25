@@ -116,3 +116,13 @@ Forecast state has materially advanced beyond the stale wording elsewhere in thi
 Management has authorized an app-wide lifecycle corrective in `workstreams/PERFORMANCE.md`. Canonical product contract: `user action → immediate acknowledgement → safe usable current/last-good State where valid → persistent background-work status → validated atomic promotion → explicit current or failed state`. It applies across first connect, league switch, Refresh League, Refresh Intelligence, background recomputation, restart restoration and failed/interrupted recovery. Valid roster State must not disappear merely because derived intelligence is incomplete; old-league data must never masquerade as the newly selected league; served last-good evidence and active background work must be visibly identified.
 
 Performance owns this shell/lifecycle behavior and Hodor completion diagnosis. Surface-specific workstreams must not independently patch around it. Market discovery semantics remain protected.
+
+
+## Strategic product filter — preserve across Management transitions
+FSFFL NEXT should be managed as a **persistent intelligence model of a real fantasy league**, not a collection of standalone calculators. Competitive review strengthened rather than changed this thesis.
+
+Use the North Star product-development filter for sequencing: roadmap work should strengthen the shared league model, make governed intelligence materially easier/faster to use, or make the league/history/identity more valuable and shareable. The current priority remains lifecycle/readiness reliability → intelligence completeness → Market quality/responsiveness → unified core UX. Do not pull Record Book, generalized historical What-If, behavioral Mock Draft or other long-term breadth ahead of unresolved core reliability merely because those capabilities are strategically attractive.
+
+Preserve Owner Intelligence, historical persistence and counterfactual State as reusable cross-surface infrastructure. Preserve point-in-time evidence/provenance now so later history, replay and counterfactual products do not require reconstruction from present-day truth.
+
+The consumer experience should hide architectural complexity by default while retaining evidence drill-down. The user should experience one product that knows their league.

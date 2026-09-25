@@ -114,3 +114,76 @@ Do not blend these lenses. A decision can have been rational at the time and sti
 The long-term counterfactual engine should be capable of branching from transactions, draft selections, waiver/add-drop decisions, lineup/availability decisions and other historically reconstructable league actions when evidence is sufficient. Multi-step/cascading counterfactuals may be added later, but must retain explicit lineage and avoid pretending unknowable downstream human decisions are deterministic.
 
 The current production What-If implementation (single-player current-availability stress test) is an intentionally narrow first slice and must not be treated as the complete North Star definition.
+
+
+## Strategic product-development filter
+
+FSFFL NEXT is not a collection of fantasy calculators. The product is a **persistent intelligence model of a real fantasy league**. Every major surface should feel like a different question asked of the same governed league model.
+
+Future roadmap choices should be evaluated against three tests. A proposed capability should materially do at least one of the following:
+1. **Strengthen the persistent league model** — improve State, Forecast, Value, Decision, Owner Intelligence, historical lineage, uncertainty, or counterfactual understanding shared across surfaces.
+2. **Make league intelligence easier to use** — reduce time-to-value, simplify a real user job, improve explanation/trust, or turn governed evidence into an obvious next action.
+3. **Make the league itself more valuable/shareable** — deepen franchise/owner identity, history, rivalries, records, stories, social participation, or artifacts that naturally bring additional league members into the product.
+
+Capabilities that do none of these should normally remain behind higher-value work.
+
+### Product experience principle
+Keep the analytical architecture deep and explicit internally, but make the default consumer experience simple. Users should not need to understand the authority pipeline to benefit from it.
+
+Internal truth remains:
+`Data → State → Forecast → Value → Decision → Search/Optimization → Analytics/API → Presentation`
+
+Consumer questions should feel closer to:
+- What should I know?
+- What should I do?
+- Why?
+- What happens if I do it?
+- What did this look like then?
+- What could have happened instead?
+- What does this owner tend to do?
+- What is happening in the history of this league?
+
+Every material conclusion should support a bounded “why/evidence” drill-down rather than requiring technical knowledge up front.
+
+### Time-to-value is a product requirement
+The critical commercial workflow is:
+`connect/select/sync league → current canonical State → reuse/rebuild governed intelligence → truthful readiness → useful answer`.
+
+League connection, league switching, and Refresh Intelligence are therefore first-class product behavior, not implementation plumbing. A sophisticated downstream capability has little product value if the user cannot reliably reach current intelligence.
+
+### Shared capabilities, not isolated features
+Owner Intelligence, historical persistence, counterfactual state, Forecast provenance, league-specific behavior, and Value coordinates are shared infrastructure. They should be designed so multiple surfaces can consume the same governed evidence:
+- Owner Intelligence can inform Market, Trade Center, future Mock Draft, Record Book/franchise history and counterfactual plausibility without contaminating universal Value.
+- Historical persistence should support Record Book, historical trade analysis, historical What-If, owner/franchise identity and future draft/decision replay.
+- Counterfactual State should support Trade Center, current What-If, historical What-If, draft alternatives and other bounded decision scenarios.
+- League identity/history should be useful both analytically and socially.
+
+### Breadth follows reliability
+The intended roadmap remains broad, including deeper Record Book/history, generalized What-If, behavioral/needs-aware Mock Draft, Owner Intelligence, Simulator and other league-intelligence surfaces. Do not accelerate those at the expense of a reliable core.
+
+Before materially expanding breadth, prioritize:
+1. bulletproof league lifecycle and truthful readiness;
+2. governed intelligence completeness;
+3. high-quality and responsive Market/opportunity discovery;
+4. a unified product experience across existing core surfaces.
+
+This principle sharpens sequencing; it does not cancel already accepted long-term product intent.
+
+### Commercial differentiation principle
+Do not position FSFFL around a claim that an individual feature is unique. Many individual capabilities exist elsewhere.
+
+The intended differentiation is the integration of:
+- canonical football Forecast;
+- league-specific scoring;
+- separate Broad Market / FSFFL Intrinsic / League Market / Team Utility dimensions;
+- Owner Intelligence;
+- point-in-time historical evidence;
+- Search and bilateral Decision;
+- targeted Simulation;
+- forward and historical counterfactuals;
+- franchise/league history and identity;
+- future behavior/needs-aware draft simulation;
+
+all operating against the same governed league model with provenance and uncertainty preserved.
+
+The goal is for users to experience one system that **knows their league**, not a navigation menu full of unrelated tools.
