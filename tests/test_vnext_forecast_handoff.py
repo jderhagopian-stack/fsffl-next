@@ -101,6 +101,7 @@ def _fixture(player_index: int = 0):
         for metric, mean in (
             (ForecastMetric.RUSH_YARDS, float(source.standard_y1_points) * 10.0),
             (ForecastMetric.RUSH_TD, 0.0),
+            (ForecastMetric.FUMBLES_LOST, 0.0),
         )
     )
     year_one = (
