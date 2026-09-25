@@ -10,19 +10,33 @@ Owns sequencing, scope, gates, product decisions, and cross-workstream conflict 
 **State:** MANAGEMENT GATE  
 Lifecycle/league-switch repair remains gated on governed Forecast authority for the newly connected league. Performance must not weaken Forecast/model authority to force 7/7.
 
-## Forecast Research — K/DST Empirical Evidence & Source Gates
-**State:** DIRECTIVE COMPLETE — RESEARCH  
-The architecture contract remains complete at `artifacts/research/forecast_k_dst_bootstrap_20260924/RESEARCH_HANDOFF.md`. The subsequent empirical/source-gate investigation is complete at `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_CLOSEOUT.md`, with detailed provenance in `artifacts/research/k_dst_evidence_gate_20260925/RESEARCH_LEDGER.md`.
+## Forecast Research — 2026 Late-Start K/DST Exception
+**State:** DIRECTIVE COMPLETE — RESEARCH / IMPLEMENTATION PLAN READY  
+Management's one-season-only 2026 current-date ROS exception has been fully researched and decomposed.
 
-Research recovered a genuine 2024 multi-provider PIT K/DST corpus, authentic 2026 pre-opener K evidence from FFToday + CBS, 2026 pre-opener RotoWire-via-Sleeper D/ST components, and official Sleeper semantics that resolve most prior category-definition ambiguity. Remaining dependencies are external licensing/data access and later bounded implementation, not unfinished generic source searching.
+Durable handoff:
+- `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`
+- `artifacts/research/k_dst_late_start_exception_20260925/SOURCE_ACQUISITION_LEDGER.json`
+
+The exception removes missing pre-Week-1 K/DST evidence from **current-forward 2026** authority. It does not create preseason evidence and cannot be used in 2027+. Current-forward Hodor authority still fails closed on exact K 60+ evidence, D/ST PA-bucket/rare-event coverage, target-compatible K/DST uncertainty, per-metric two-source independence, and deployable provider rights.
 
 ## Product / Forecast Implementation
-**State:** BLOCKED — EMPIRICAL/SOURCE EVIDENCE GATE  
-PR #215 is merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. The evidence-independent Stage 1 contracts/scoring work and Stage 2 non-promoting outcome/calibration harness are implemented and regression-clean.
+**State:** MANAGEMENT GATE — 2026 LATE-START EXCEPTION PLAN READY  
+PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. Evidence-independent K/DST contracts/scoring and the non-promoting calibration harness are already implemented.
 
-The historical-source discovery gate is now partially cleared, but production authority remains blocked. Required evidence still includes: rights-cleared provider use; >=2 independent rule-complete current providers per required K/DST coordinate; a second provenance-clean component-level D/ST source or licensed decomposition proving independence; exact K 50-59 vs 60+ evidence where target scoring requires it; validated K/DST uncertainty; and implementation of the remaining official-stat truth fixtures. The post-merge implementation checkpoint remains `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`; the updated Research disposition is in the 2026-09-25 closeout.
+Management has now authorized the 2026 late-start exception **for investigation and implementation planning**, not production promotion. The implementation-ready plan is `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`.
 
-Do not start provider/authority promotion, migration/downstream promotion, or lifecycle claims by treating aggregate consensus as an independent vote, using non-commercial source content without rights, heuristically splitting K 50+ evidence, substituting season-average PA/YA for game-bucket distributions, or backdating current data.
+A bounded implementation may proceed only when Management explicitly authorizes execution. It must:
+- persist a dedicated 2026-only current ROS artifact, never a preseason artifact;
+- preserve exact acquisition/provenance/horizon/source-health;
+- enforce schedule-aware subject-row freshness;
+- retain >=2 independent sources per required metric/group;
+- keep Hodor K fail-closed without exact 60+ evidence;
+- keep Hodor D/ST fail-closed without game/distributional PA-bucket evidence and rare-event coverage;
+- run K/DST-specific scoring-fingerprint-bound uncertainty calibration without inventing a coefficient;
+- reject the late-start path for 2027+.
+
+Provider/source rights remain external gates for deployed use.
 
 ## Market / Trade Discovery Architecture Review
 **State:** DIRECTIVE COMPLETE — MANAGEMENT ACCEPTED  
