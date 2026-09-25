@@ -325,3 +325,48 @@ def test_team_and_player_special_teams_rule_names_do_not_cross_contaminate() -> 
     )
     assert len(scored) == 1
     assert scored[0].distribution.mean == pytest.approx(6.0)
+
+
+def test_fixture_a_no_k_or_dst_leaves_offense_path_and_family_coverage_unchanged() -> None:
+    rules = _rules(scoring=(ScoringRule(stat="pass_yd", points=0.04),))
+    assert evaluate_rule_evidence_coverage(
+        rules,
+        subject_family=ForecastSubjectFamily.KICKER,
+        sources=(),
+    ) == ()
+    assert evaluate_rule_evidence_coverage(
+        rules,
+        subject_family=ForecastSubjectFamily.DST,
+        sources=(),
+    ) == ()
+
+
+def test_fixture_g_k_and_dst_can_be_scored_without_cross_family_double_counting() -> None:
+    rules = LeagueRules(
+        team_count=12,
+        roster_size=18,
+        lineup=(
+            LineupRequirement(slot=RosterSlot.K, count=1),
+            LineupRequirement(slot=RosterSlot.DST, count=1),
+        ),
+        scoring=(
+            ScoringRule(stat="xpm", points=1),
+            ScoringRule(stat="def_st_td", points=6),
+            ScoringRule(stat="st_td", points=6),
+        ),
+    )
+    kicker = derive_kicker_fantasy_point_forecasts(
+        (_k_obs(ForecastMetric.XP_MADE, 20),),
+        rules=rules,
+    )
+    subject = NflTeamUnitForecastSubject(season=2026, nfl_team="DEN")
+    dst = derive_dst_fantasy_point_forecasts(
+        (_dst_obs(subject, ForecastMetric.DST_TEAM_ST_TD, 2),),
+        rules=rules,
+    )
+
+    assert kicker[0].distribution.mean == pytest.approx(20)
+    assert dst[0].distribution.mean == pytest.approx(12)
+    # Player special-teams rule st_td is not a D/ST coordinate and therefore
+    # cannot duplicate the team-unit def_st_td credit.
+    assert dst[0].distribution.mean != pytest.approx(24)
