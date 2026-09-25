@@ -25,6 +25,23 @@ def _evidence_identity(value: object | None) -> tuple[int, str | None]:
     return id(value), getattr(value, "model_version", None) if value is not None else None
 
 
+def _annotate_cache(result: list[dict[str, object]], *, cache_hit: bool, elapsed_ms: float):
+    diagnostics = getattr(result, "diagnostics", None)
+    if not isinstance(diagnostics, dict):
+        return result
+    try:
+        return type(result)(
+            list(result),
+            diagnostics={
+                **diagnostics,
+                "search_cache_hit": cache_hit,
+                "search_cache_elapsed_ms": round(elapsed_ms, 3),
+            },
+        )
+    except TypeError:
+        return result
+
+
 def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilder:
     """Reuse the exact full structural candidate catalog for one authoritative runtime.
 
@@ -68,7 +85,11 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
                     league_state.state_id,
                     runtime.selected_team_id,
                 )
-                return cached
+                return _annotate_cache(
+                    cached,
+                    cache_hit=True,
+                    elapsed_ms=(monotonic() - started) * 1000.0,
+                )
             misses += 1
             result = builder(runtime, browser, cardinal)
             cache[key] = result
@@ -84,6 +105,10 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
                 runtime.selected_team_id,
                 len(result),
             )
-            return result
+            return _annotate_cache(
+                result,
+                cache_hit=False,
+                elapsed_ms=(monotonic() - started) * 1000.0,
+            )
 
     return cached_builder

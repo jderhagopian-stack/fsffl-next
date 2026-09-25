@@ -42,7 +42,7 @@ def test_trade_search_supports_three_asset_premium_target_structures_without_con
 
     assert "_MAX_DISCOVERY_PACKAGE_SIZE = 3" in source
     assert '3: "three_for_one"' in source
-    assert "for size in range(1, max_size + 1)" in source
+    assert "for size in range(max(1, minimum_size), max_size + 1)" in source
     assert "the best single asset to veto all package complexity" in source
     assert "consolidation coefficient" in source
     assert "composite_score" not in source

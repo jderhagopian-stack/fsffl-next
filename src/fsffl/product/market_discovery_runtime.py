@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from collections import OrderedDict, defaultdict
+import logging
 from collections.abc import Callable, Iterable
+from time import monotonic
 from typing import Any
 
+from fsffl.forecast import attach_provisional_position_floor_forecasts
+from fsffl.forecast.models import ForecastHorizon
 from fsffl.opportunity import (
     AttentionStatus,
     BilateralPlausibility,
@@ -17,20 +21,26 @@ from fsffl.opportunity import (
     canonical_package_family_key,
     canonical_path_id,
 )
+from fsffl.team_utility import compare_position_strengths, optimize_team_lineup
 from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.trade_decision import (
+    apply_bilateral_trade,
     assess_package_economics,
+    assess_preliminary_bilateral_screen,
+    bind_owner_behavior_evidence,
     calculate_bilateral_economic_net,
     live_bounded_materiality_policy,
     live_bounded_package_premium_prior,
     summarize_bilateral_trade_economics,
     summarize_package_concentration,
+    resolve_mandatory_roster_cuts,
 )
+
+from fsffl.trade_decision.roster_economics import adjust_bilateral_market_net_for_mandatory_cuts
 
 from .behavioral_runtime import cached_behavior_profile_for_team
 from .opportunity_posture import calculated_competitive_state
 from .runtime import UserRuntimeContext
-from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
 from .trade_center_view import resolve_owned_asset_ref
 from .trade_value_adapter import cardinal_market_profiles
@@ -39,6 +49,7 @@ from .trade_value_adapter import cardinal_market_profiles
 DEFAULT_PRELIMINARY_DECISION_BUDGET = 8
 DEFAULT_FOR_YOU_LIMIT = 4
 _MAX_ALTERNATE_PACKAGES = 2
+_logger = logging.getLogger("uvicorn.error")
 
 TradeEvaluator = Callable[[UserRuntimeContext, dict[str, object]], dict[str, object]]
 
@@ -568,8 +579,16 @@ def evaluate_candidate_path(
     runtime: UserRuntimeContext,
     row: dict[str, object],
 ) -> dict[str, object]:
-    """Attach governed pre-Simulation Decision evidence to one representative package."""
+    """Attach the bounded cheap Decision-owned pre-Simulation bilateral screen.
 
+    Market discovery deliberately does not invoke the full Trade Center roster
+    consequence analysis here. It consumes already-governed baseline lineups,
+    computes only the changed-roster lineups needed for replacement effects and
+    mandatory-cut legality, and preserves exact Simulation for user-selected deep
+    investigation.
+    """
+
+    started = monotonic()
     league_state = runtime.league_state
     focal_team_id = runtime.selected_team_id
     if league_state is None or focal_team_id is None:
@@ -578,64 +597,214 @@ def evaluate_candidate_path(
     counterparty_team_id = str(row["counterparty_team_id"])
     if not (row.get("send") or []) or not (row.get("receive") or []):
         return row
-
+    forecast_evidence = runtime.forecast_evidence
+    if forecast_evidence is None:
+        raise ValueError("preliminary bilateral screen requires current Forecast evidence")
+    forecasts = (
+        forecast_evidence.raw_forecasts
+        + forecast_evidence.league_scored_forecasts
+    )
+    effective_forecasts = attach_provisional_position_floor_forecasts(
+        league_state,
+        forecasts,
+        as_of=league_state.as_of,
+        horizon=ForecastHorizon.SEASON,
+    )
     proposal = _proposal_from_row(runtime, row, prefix="market-prelim")
+    scenario = apply_bilateral_trade(league_state, proposal)
+    state_validated = monotonic()
+
+    simulation = runtime.simulation_analytics
+    baseline_by_team = {
+        view.team_id: view.optimized_lineup
+        for view in (simulation.team_views if simulation is not None else ())
+        if view.optimized_lineup is not None
+    }
+
+    def lineup(state, team_id):
+        baseline = (
+            baseline_by_team.get(team_id)
+            if state.state_id == league_state.state_id
+            else None
+        )
+        if baseline is not None:
+            return baseline
+        return optimize_team_lineup(
+            state,
+            effective_forecasts,
+            team_id=team_id,
+            as_of=state.as_of,
+            horizon=ForecastHorizon.SEASON,
+            allow_unfilled_slots=True,
+            model_version="market-preliminary-screen-lineup-v1",
+        )
+
+    after_trade_lineups = {
+        team_id: lineup(scenario.after, team_id)
+        for team_id in (focal_team_id, counterparty_team_id)
+    }
+    protected = {
+        team_id: frozenset(item.player_id for item in current.assignments)
+        for team_id, current in after_trade_lineups.items()
+    }
+    profiles = cardinal_market_profiles(runtime.value_evidence)
+    market_values = {
+        asset_id: profile.market_price.distribution.mean
+        for asset_id, profile in profiles.items()
+        if profile.market_price is not None
+    }
+    roster_resolution = resolve_mandatory_roster_cuts(
+        scenario.after,
+        protected_player_ids_by_team=protected,
+        market_values=market_values,
+    )
+    legal_after = roster_resolution.league_state
+    trade_team_resolutions = tuple(
+        item
+        for item in roster_resolution.resolutions
+        if item.team_id in {focal_team_id, counterparty_team_id}
+    )
+    has_cuts = any(item.required_cut_count > 0 for item in trade_team_resolutions)
+    final_lineups = (
+        {
+            team_id: lineup(legal_after, team_id)
+            for team_id in (focal_team_id, counterparty_team_id)
+        }
+        if has_cuts
+        else after_trade_lineups
+    )
+    lineup_finished = monotonic()
+
+    comparisons = {
+        team_id: compare_position_strengths(
+            lineup(league_state, team_id),
+            final_lineups[team_id],
+            model_version="market-preliminary-position-strength-v1",
+        )
+        for team_id in (focal_team_id, counterparty_team_id)
+    }
+
+    economics = summarize_bilateral_trade_economics(
+        proposal,
+        profiles,
+        model_version="market-preliminary-trade-economics-v1",
+    )
+    economic_net = calculate_bilateral_economic_net(
+        economics,
+        model_version="market-preliminary-economic-net-v1",
+    )
+    adjusted_market = adjust_bilateral_market_net_for_mandatory_cuts(
+        economic_net,
+        trade_team_resolutions,
+    )
+    screen = assess_preliminary_bilateral_screen(
+        proposal,
+        focal_team_id=focal_team_id,
+        roster_adjusted_market_net=adjusted_market,
+        position_strength_comparisons=comparisons,
+    )
+    decision_finished = monotonic()
+
     profile = cached_behavior_profile_for_team(
         league_state,
         counterparty_team_id,
     )
-    analysis = build_private_beta_trade_analysis(
-        runtime,
-        proposal,
-        focal_team_id=focal_team_id,
-        counterparty_behavior_profile=profile,
+    behavioral = (
+        bind_owner_behavior_evidence(
+            proposal,
+            accepting_team_id=counterparty_team_id,
+            profile=profile,
+        )
+        if profile is not None
+        else None
     )
-
-    decision = analysis.get("decision") or {}
-    side_a = decision.get("side_a") or {}
-    side_b = decision.get("side_b") or {}
-    focal_side = side_a if side_a.get("team_id") == focal_team_id else side_b
-    counterparty_side = side_a if side_a.get("team_id") == counterparty_team_id else side_b
-
-    evaluation = analysis.get("evaluation") or {}
-    eval_a = evaluation.get("side_a") or {}
-    eval_b = evaluation.get("side_b") or {}
-    focal_eval = eval_a if eval_a.get("team_id") == focal_team_id else eval_b
-    counterparty_eval = eval_a if eval_a.get("team_id") == counterparty_team_id else eval_b
-    feasibility = analysis.get("negotiation_feasibility") or {}
+    feasibility_shape = {
+        "bilateral_supported": "mutual_gain_candidate",
+        "counterparty_dominated": "counterparty_dominated",
+        "incomplete": "incomplete",
+    }.get(screen.shape.value, "mixed")
+    cut_cost_complete = all(
+        item.required_cut_count == 0 or item.cut_market_value_total is not None
+        for item in trade_team_resolutions
+    )
+    completed = monotonic()
 
     return {
         **row,
-        "bilateral_decision_evaluated": bool(decision),
-        "decision_shape": decision.get("shape"),
-        "focal_decision_shape": focal_side.get("shape"),
-        "counterparty_decision_shape": counterparty_side.get("shape"),
-        "negotiation_feasibility_shape": feasibility.get("shape"),
-        "negotiation_feasibility_evaluated": bool(feasibility),
+        "preliminary_decision_screen_evaluated": True,
+        "bilateral_decision_evaluated": True,
+        "decision_shape": screen.shape.value,
+        "focal_decision_shape": screen.focal.shape.value,
+        "counterparty_decision_shape": screen.counterparty.shape.value,
+        "negotiation_feasibility_shape": feasibility_shape,
+        "negotiation_feasibility_evaluated": True,
         "acceptance_probability": None,
-        "focal_roster_delta": (focal_eval.get("delta") or {}).get("resilience"),
-        "counterparty_roster_delta": (counterparty_eval.get("delta") or {}).get("resilience"),
-        "behavioral_evidence_attached": bool(
-            (analysis.get("availability") or {}).get("behavioral_evidence")
+        "focal_roster_delta": comparisons[focal_team_id].model_dump(mode="json"),
+        "counterparty_roster_delta": comparisons[counterparty_team_id].model_dump(mode="json"),
+        "behavioral_evidence_attached": behavioral is not None,
+        "behavioral_context": (
+            behavioral.model_dump(mode="json") if behavioral is not None else None
         ),
-        "behavioral_context": analysis.get("behavioral_context"),
         "post_trade_simulation_attached": False,
-        "economics": analysis.get("economics"),
-        "economic_net": analysis.get("economic_net"),
-        "roster_adjusted_market_net": analysis.get("roster_adjusted_market_net"),
-        "package_concentration": analysis.get("package_concentration"),
-        "package_economics": analysis.get("package_economics"),
-        "roster_legality": analysis.get("roster_legality") or [],
-        "decision_dimensions": analysis.get("decision_dimensions"),
-        "availability": analysis.get("availability") or {},
-        "decision_completeness": analysis.get("decision_completeness") or {},
+        "economics": economics.model_dump(mode="json"),
+        "economic_net": economic_net.model_dump(mode="json"),
+        "roster_adjusted_market_net": adjusted_market.model_dump(mode="json"),
+        "roster_legality": [
+            item.model_dump(mode="json") for item in trade_team_resolutions
+        ],
+        "position_strength_comparisons": {
+            team_id: comparison.model_dump(mode="json")
+            for team_id, comparison in comparisons.items()
+        },
+        "preliminary_bilateral_screen": screen.model_dump(mode="json"),
+        "decision_completeness": {
+            "status": "partial_pre_simulation",
+            "simulation_backed": False,
+            "final_disposition_available": False,
+            "decision_scope": "lightweight_bilateral_roster_economic_screen",
+            "missing_authorities": (
+                "NEXT-4 Simulation competitive outcomes",
+                "NEXT-5 full material assessment and final trade disposition",
+            ),
+        },
+        "availability": {
+            "roster_consequences": True,
+            "position_strength": True,
+            "negotiation_feasibility": True,
+            "market_economics": True,
+            "economic_net": True,
+            "competitive_outcomes": False,
+            "championship_probability": False,
+            "mandatory_cut_cost": cut_cost_complete,
+            "package_concentration_evidence": row.get("package_concentration") is not None,
+            "bounded_package_economic_guard": row.get("package_economics") is not None,
+            "behavioral_evidence": behavioral is not None,
+            "acceptance_probability": False,
+            "final_trade_disposition": False,
+        },
+        "preliminary_screen_timing_ms": {
+            "state_validation": round((state_validated - started) * 1000.0, 3),
+            "changed_lineup_and_legality": round(
+                (lineup_finished - state_validated) * 1000.0,
+                3,
+            ),
+            "replacement_and_economic_screen": round(
+                (decision_finished - lineup_finished) * 1000.0,
+                3,
+            ),
+            "behavioral_context": round(
+                (completed - decision_finished) * 1000.0,
+                3,
+            ),
+            "total": round((completed - started) * 1000.0, 3),
+        },
         "explanation": (
-            "Representative Candidate Path completed the bounded pre-Simulation Decision screen. "
-            "This is bilateral plausibility evidence, not an acceptance probability, final disposition, "
-            "or exact competitive-outcome claim."
+            "Representative Candidate Path completed the bounded lightweight "
+            "pre-Simulation Decision screen using roster legality, mandatory-cut "
+            "economics and optimized starter replacement effects. It is not an "
+            "acceptance probability, final disposition, or season-outcome claim."
         ),
     }
-
 
 def _side(payload: dict[str, Any] | None, team_id: str) -> dict[str, Any]:
     if not payload:
@@ -727,13 +896,16 @@ def _bilateral_plausibility(
     focal_shape = str(row.get("focal_decision_shape") or "")
     counterparty_shape = str(row.get("counterparty_decision_shape") or "")
     feasibility = str(row.get("negotiation_feasibility_shape") or "")
-    if focal_shape in {"uniform_loss", "incomplete", ""}:
+    if focal_shape in {"uniform_loss", "dominated", "incomplete", ""}:
         return (
             BilateralPlausibility.FOCAL_DOMINATED
-            if focal_shape == "uniform_loss"
+            if focal_shape in {"uniform_loss", "dominated"}
             else BilateralPlausibility.INCOMPLETE
         )
-    if feasibility == "counterparty_dominated" or counterparty_shape == "uniform_loss":
+    if (
+        feasibility == "counterparty_dominated"
+        or counterparty_shape in {"uniform_loss", "dominated"}
+    ):
         return BilateralPlausibility.COUNTERPARTY_DOMINATED
     if feasibility == "incomplete" or counterparty_shape in {"incomplete", ""}:
         return BilateralPlausibility.INCOMPLETE
@@ -742,8 +914,16 @@ def _bilateral_plausibility(
         PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN,
     }:
         return BilateralPlausibility.BILATERAL_FRICTION
-    if feasibility in {"mutual_gain_candidate", "mixed", "neutral"}:
+    if (
+        feasibility == "mutual_gain_candidate"
+        or (
+            focal_shape == "supported"
+            and counterparty_shape == "supported"
+        )
+    ):
         return BilateralPlausibility.BILATERAL_SUPPORTED
+    if feasibility in {"mixed", "neutral"}:
+        return BilateralPlausibility.BILATERAL_FRICTION
     return BilateralPlausibility.BILATERAL_FRICTION
 
 
@@ -802,7 +982,7 @@ def _path_can_support_attention(
     }:
         return False
     if economic_band == PreliminaryEconomicBand.FOCAL_ECONOMIC_STRAIN:
-        return str(row.get("focal_decision_shape") or "") == "uniform_gain"
+        return str(row.get("focal_decision_shape") or "") in {"uniform_gain", "supported"}
     if economic_band == PreliminaryEconomicBand.COUNTERPARTY_ECONOMIC_STRAIN:
         return (
             str(row.get("counterparty_decision_shape") or "") != "uniform_loss"
@@ -1071,7 +1251,7 @@ def _aggregate_opportunities(
                     risks.append(risk)
         reason_codes = [
             f"attention:{attention.value}",
-            f"strategic:{('current_position_need' if row.get('focal_position_strength_rank') is not None else ('explicit_market_intent' if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT else 'market_structure'))}",
+            f"strategic:{('explicit_market_intent' if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT else ('current_position_need' if row.get('focal_position_strength_rank') is not None else 'market_structure'))}",
             f"economic:{economic.value}",
             f"bilateral:{bilateral.value}",
         ]
@@ -1096,11 +1276,11 @@ def _aggregate_opportunities(
                 target_family=target_family,
                 why_now=why_now,
                 strategic_relevance=(
-                    "current_position_need"
-                    if row.get("focal_position_strength_rank") is not None
+                    "explicit_market_intent"
+                    if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT
                     else (
-                        "explicit_market_intent"
-                        if source == OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT
+                        "current_position_need"
+                        if row.get("focal_position_strength_rank") is not None
                         else "market_structure"
                     )
                 ),
@@ -1229,11 +1409,12 @@ def build_market_discovery(
     exact_target_constraint: str | None = None,
     intent: str = "",
     intent_value: str = "",
-    search_generation_diagnostics: dict[str, int] | None = None,
+    search_generation_diagnostics: dict[str, object] | None = None,
     evaluator: TradeEvaluator = evaluate_candidate_path,
 ) -> dict[str, object]:
     """Build governed Opportunity/Path output from raw Search rows."""
 
+    started = monotonic()
     profiles = cardinal_market_profiles(runtime.value_evidence)
     economically_screened_rows: list[dict[str, object]] = []
     cheap_economic_errors = 0
@@ -1257,6 +1438,7 @@ def build_market_discovery(
                 }
             )
 
+    economics_finished = monotonic()
     seeds, family_pruned = _build_path_seeds(
         runtime,
         economically_screened_rows,
@@ -1265,6 +1447,7 @@ def build_market_discovery(
         intent=intent,
         intent_value=intent_value,
     )
+    family_finished = monotonic()
     selected_indices = set(
         select_preliminary_screen_indices(seeds, limit=evaluation_limit)
     )
@@ -1285,6 +1468,7 @@ def build_market_discovery(
                 }
         paths.append(_build_candidate_path(runtime, seed, row))
 
+    decision_finished = monotonic()
     hypotheses, opportunities = _aggregate_opportunities(
         runtime,
         seeds,
@@ -1296,6 +1480,56 @@ def build_market_discovery(
     )
     by_id = {path.path_id: path for path in paths}
     for_you, relaxations = select_for_you(opportunities, by_id)
+    completed = monotonic()
+    _logger.info(
+        "FSFFL Market discovery funnel scope=%s rows=%d counterparties=%s/%s targets=%s/%s "
+        "economic_ms=%.3f family_ms=%.3f prelim_runs=%d prelim_ms=%.3f opportunities=%d "
+        "for_you=%d simulation_calls=0 cache_hit=%s total_ms=%.3f",
+        (
+            search_generation_diagnostics.get("scope_label")
+            if search_generation_diagnostics
+            else None
+        ),
+        len(rows),
+        (
+            search_generation_diagnostics.get("counterparties_admitted_pre_package")
+            if search_generation_diagnostics
+            else None
+        ),
+        (
+            search_generation_diagnostics.get("counterparties_considered")
+            if search_generation_diagnostics
+            else None
+        ),
+        (
+            search_generation_diagnostics.get("targets_admitted_pre_package")
+            if search_generation_diagnostics
+            else None
+        ),
+        (
+            search_generation_diagnostics.get("targets_considered")
+            if search_generation_diagnostics
+            else None
+        ),
+        (economics_finished - started) * 1000.0,
+        (family_finished - economics_finished) * 1000.0,
+        len(selected_indices),
+        (decision_finished - family_finished) * 1000.0,
+        len(opportunities),
+        len(for_you),
+        (
+            search_generation_diagnostics.get("search_cache_hit")
+            if search_generation_diagnostics
+            else None
+        ),
+        (completed - started) * 1000.0,
+    )
+    search_timing = (
+        dict(search_generation_diagnostics.get("timing_ms") or {})
+        if search_generation_diagnostics
+        and isinstance(search_generation_diagnostics.get("timing_ms"), dict)
+        else {}
+    )
 
     return {
         "hypotheses": [item.model_dump(mode="json") for item in hypotheses],
@@ -1304,6 +1538,26 @@ def build_market_discovery(
         "for_you": [item.model_dump(mode="json") for item in for_you],
         "diagnostics": {
             "hypotheses_generated": len(hypotheses),
+            "scope_label": (
+                search_generation_diagnostics.get("scope_label")
+                if search_generation_diagnostics
+                else None
+            ),
+            "focal_need_positions": (
+                list(search_generation_diagnostics.get("focal_need_positions") or [])
+                if search_generation_diagnostics
+                else []
+            ),
+            "counterparties_considered": (
+                int(search_generation_diagnostics.get("counterparties_considered", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
+            "counterparties_admitted_pre_package": (
+                int(search_generation_diagnostics.get("counterparties_admitted_pre_package", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
             "targets_considered": (
                 int(search_generation_diagnostics.get("targets_considered", 0))
                 if search_generation_diagnostics
@@ -1314,6 +1568,33 @@ def build_market_discovery(
                         for asset_ref in _receive_refs(row)
                     }
                 )
+            ),
+            "targets_admitted_pre_package": (
+                int(search_generation_diagnostics.get("targets_admitted_pre_package", 0))
+                if search_generation_diagnostics
+                else len(
+                    {
+                        asset_ref
+                        for row in rows
+                        for asset_ref in _receive_refs(row)
+                    }
+                )
+            ),
+            "send_assets_considered": (
+                int(search_generation_diagnostics.get("send_assets_considered", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
+            "send_assets_admitted_for_counterparty_need": (
+                int(search_generation_diagnostics.get("send_assets_admitted_for_counterparty_need", 0))
+                if search_generation_diagnostics
+                else 0
+            ),
+            "admission_rejection_reasons": (
+                dict(search_generation_diagnostics.get("admission_rejection_reasons") or {})
+                if search_generation_diagnostics
+                and isinstance(search_generation_diagnostics.get("admission_rejection_reasons"), dict)
+                else {}
             ),
             "raw_packages_generated": len(rows),
             "raw_packages_generated_pre_dedup": (
@@ -1370,6 +1651,40 @@ def build_market_discovery(
             "for_you_selected": len(for_you),
             "diversity_relaxations": relaxations,
             "changed_state_simulation_calls_during_discovery": 0,
+            "search_cache_hit": (
+                bool(search_generation_diagnostics.get("search_cache_hit"))
+                if search_generation_diagnostics
+                and "search_cache_hit" in search_generation_diagnostics
+                else None
+            ),
+            "search_cache_elapsed_ms": (
+                search_generation_diagnostics.get("search_cache_elapsed_ms")
+                if search_generation_diagnostics
+                else None
+            ),
+            "timing_ms": {
+                "search_generation": search_timing,
+                "cheap_economic_screen": round(
+                    (economics_finished - started) * 1000.0,
+                    3,
+                ),
+                "family_prune_and_seed": round(
+                    (family_finished - economics_finished) * 1000.0,
+                    3,
+                ),
+                "preliminary_decision_screen": round(
+                    (decision_finished - family_finished) * 1000.0,
+                    3,
+                ),
+                "opportunity_aggregation_and_diversity": round(
+                    (completed - decision_finished) * 1000.0,
+                    3,
+                ),
+                "market_discovery_total": round(
+                    (completed - started) * 1000.0,
+                    3,
+                ),
+            },
         },
         "authority": {
             "opportunity_aggregation_is_search_owned": True,

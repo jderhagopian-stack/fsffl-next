@@ -5,7 +5,7 @@ from datetime import datetime
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.state.models import LeagueState
 
-from .lineup import marginal_lineup_impact, optimize_team_lineup
+from .lineup import optimize_team_lineup
 from .utility import RosterResilience
 
 
@@ -38,16 +38,21 @@ def build_roster_resilience(
         horizon=horizon,
     )
 
+    # The baseline lineup above is authoritative for every marginal-loss
+    # comparison. Re-running the same baseline inside marginal_lineup_impact for
+    # every starter is mathematically redundant and was the dominant Market
+    # pre-Simulation cost on the hosted beta. Compute only each exact
+    # leave-one-starter-out lineup here; semantics are identical.
     drops: list[tuple[str, float]] = []
     for assignment in lineup.assignments:
         try:
-            impact = marginal_lineup_impact(
+            without = optimize_team_lineup(
                 league_state,
                 forecasts,
                 team_id=team_id,
-                player_id=assignment.player_id,
                 as_of=as_of,
                 horizon=horizon,
+                excluded_player_ids=frozenset({assignment.player_id}),
             )
         except ValueError as exc:
             # If removing a starter makes the lineup impossible to fill, the
@@ -57,7 +62,7 @@ def build_roster_resilience(
                 raise
             drop = assignment.expected_points
         else:
-            drop = impact.marginal_expected_points
+            drop = max(0.0, lineup.expected_points - without.expected_points)
         drops.append((assignment.player_id, drop))
 
     largest_drop = max((drop for _, drop in drops), default=0.0)

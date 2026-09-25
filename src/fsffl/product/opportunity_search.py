@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from bisect import bisect_left
 from itertools import combinations
+from time import monotonic
 from typing import Mapping
 
 from fsffl.state.models import LeagueState, Position
@@ -26,7 +27,7 @@ class SearchCandidateCollection(list[dict[str, object]]):
         self,
         rows: list[dict[str, object]],
         *,
-        diagnostics: dict[str, int],
+        diagnostics: dict[str, object],
     ) -> None:
         super().__init__(rows)
         self.diagnostics = diagnostics
@@ -188,12 +189,15 @@ def _candidate(
 def _build_package_catalog(
     focal_assets: tuple[TradeAssetOption, ...],
     cardinal: Mapping[str, FSFFLCardinalValueScore],
+    *,
+    required_asset_ref: str | None = None,
+    minimum_size: int = 1,
 ) -> PackageCatalog:
-    """Enumerate the focal package universe once, not once per opposing target.
+    """Enumerate only strategically admitted package ingredients.
 
-    With the discovery cap at three assets this is O(focal_assets^3) once per
-    workspace. Target lookup then uses a binary search over package totals, avoiding
-    the previous O(targets × focal_assets^3) synchronous path.
+    Search may constrain the focal asset set before package construction using
+    already-governed roster/position evidence. Cardinal Value is then used only
+    to build a bounded economic neighborhood inside that admitted universe.
     """
 
     valued_focal = tuple(
@@ -201,12 +205,20 @@ def _build_package_catalog(
         for asset in focal_assets
         if (value := _asset_value(asset, cardinal)) is not None
     )
+    if required_asset_ref and all(
+        asset.asset_ref != required_asset_ref for asset, _ in valued_focal
+    ):
+        return {}
     catalog: PackageCatalog = {}
     max_size = min(_MAX_DISCOVERY_PACKAGE_SIZE, len(valued_focal))
-    for size in range(1, max_size + 1):
+    for size in range(max(1, minimum_size), max_size + 1):
         entries: list[tuple[float, tuple[str, ...], tuple[TradeAssetOption, ...]]] = []
         for package in combinations(valued_focal, size):
             assets = tuple(asset for asset, _ in package)
+            if required_asset_ref and all(
+                asset.asset_ref != required_asset_ref for asset in assets
+            ):
+                continue
             total = sum(value for _, value in package)
             refs = tuple(sorted(asset.asset_ref for asset in assets))
             entries.append((total, refs, assets))
@@ -398,26 +410,260 @@ def _family_first_search_order(
     return result
 
 
-def build_roster_aware_trade_candidates(
+def _fragility_positions(
+    runtime: UserRuntimeContext,
+    team_id: str,
+) -> tuple[Position, ...]:
+    simulation = runtime.simulation_analytics
+    league_state = runtime.league_state
+    if simulation is None or league_state is None:
+        return ()
+    view = next((row for row in simulation.team_views if row.team_id == team_id), None)
+    resilience = (
+        view.utility.roster_resilience
+        if view is not None
+        and view.utility is not None
+        and view.utility.roster_resilience is not None
+        else None
+    )
+    if resilience is None:
+        return ()
+    players = {player.player_id: player for player in league_state.players}
+    result: list[Position] = []
+    for player_id in resilience.largest_single_player_lineup_drop_player_ids:
+        player = players.get(player_id)
+        if player is not None and player.position in _SKILL_POSITIONS and player.position not in result:
+            result.append(player.position)
+    return tuple(result)
+
+
+def actionable_need_positions(
+    runtime: UserRuntimeContext,
+    team_id: str,
+    *,
+    strengths: dict[str, dict[Position, LeagueRelativePositionStrength]] | None = None,
+) -> tuple[Position, ...]:
+    """Return transparent roster-need hypotheses from existing Team Utility evidence.
+
+    Positions in the bottom half of league-relative optimized starter production
+    are admitted as needs. A current largest-fragility driver position is also
+    admitted. If governed strength evidence exists but no position is below the
+    median, the single weakest position remains an explicit exploration hypothesis.
+    No cross-dimension score is created.
+    """
+
+    resolved = strengths if strengths is not None else _position_strengths(runtime)
+    rows = list(resolved.get(team_id, {}).values())
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            row.strength_index if row.strength_index is not None else float("inf"),
+            -row.league_rank,
+            row.position.value,
+        ),
+    )
+    result: list[Position] = [
+        row.position
+        for row in ordered
+        if row.league_rank > max(1, row.team_count // 2)
+    ]
+    if not result and ordered:
+        result.append(ordered[0].position)
+    for position in _fragility_positions(runtime, team_id):
+        if position not in result:
+            result.append(position)
+    return tuple(result)
+
+
+def supply_positions(
+    runtime: UserRuntimeContext,
+    team_id: str,
+    *,
+    strengths: dict[str, dict[Position, LeagueRelativePositionStrength]] | None = None,
+) -> tuple[Position, ...]:
+    """Return positions where a team has top-half governed starter strength."""
+
+    resolved = strengths if strengths is not None else _position_strengths(runtime)
+    rows = list(resolved.get(team_id, {}).values())
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            row.league_rank,
+            -(row.strength_index if row.strength_index is not None else 0.0),
+            row.position.value,
+        ),
+    )
+    result = [
+        row.position
+        for row in ordered
+        if row.league_rank <= max(1, row.team_count // 2)
+    ]
+    if not result and ordered:
+        result.append(ordered[0].position)
+    return tuple(result)
+
+
+def _complementary_send_assets(
+    league_state: LeagueState,
+    focal_assets: tuple[TradeAssetOption, ...],
+    *,
+    counterparty_needs: tuple[Position, ...],
+) -> tuple[TradeAssetOption, ...]:
+    """Admit picks plus focal players that address a governed counterparty need."""
+
+    if not counterparty_needs:
+        return focal_assets
+    admitted = tuple(
+        asset
+        for asset in focal_assets
+        if asset.asset_kind == "pick"
+        or _player_position(league_state, asset) in counterparty_needs
+    )
+    return admitted
+
+
+def build_scoped_trade_candidates(
     runtime: UserRuntimeContext,
     browser: TradeCenterBrowserView,
     cardinal: Mapping[str, FSFFLCardinalValueScore],
-) -> list[dict[str, object]]:
+    *,
+    counterparty_team_ids: frozenset[str] | None = None,
+    target_asset_refs: frozenset[str] | None = None,
+    target_positions: frozenset[Position] | None = None,
+    use_focal_need_filter: bool = True,
+    require_counterparty_supply: bool = False,
+    required_send_asset_ref: str | None = None,
+    required_counterparty_need_position: Position | None = None,
+    minimum_send_count: int = 1,
+    scope_label: str = "automatic_improve",
+) -> SearchCandidateCollection:
+    """Generate packages only after strategic/counterparty admission.
+
+    This is Search/Optimization orchestration over existing State, Team Utility and
+    Value evidence. Need/supply categories decide which neighborhoods are worth
+    constructing; Cardinal Value only chooses bounded package neighbors *inside*
+    that strategically admitted universe.
+    """
+
+    started = monotonic()
     league_state = runtime.league_state
     focal_team_id = runtime.selected_team_id
     if league_state is None or focal_team_id is None:
-        return []
+        return SearchCandidateCollection([], diagnostics={})
+
     strengths = _position_strengths(runtime)
-    package_catalog = _build_package_catalog(browser.focal_team.assets, cardinal)
+    focal_needs = actionable_need_positions(
+        runtime,
+        focal_team_id,
+        strengths=strengths,
+    )
+    effective_target_positions = (
+        target_positions
+        if target_positions is not None
+        else frozenset(focal_needs or _SKILL_POSITIONS)
+    )
+    admission_finished = monotonic()
+
     candidates: list[dict[str, object]] = []
     seen: set[tuple[str, tuple[str, ...], str]] = set()
     raw_packages_generated = 0
     exact_duplicates_removed = 0
+    counterparties_considered = 0
+    counterparties_admitted = 0
     targets_considered = 0
+    targets_admitted = 0
+    send_assets_considered = 0
+    send_assets_admitted = 0
+    rejection_reasons = {
+        "counterparty_not_selected": 0,
+        "counterparty_lacks_required_need": 0,
+        "target_not_selected": 0,
+        "target_not_focal_need": 0,
+        "target_not_counterparty_supply": 0,
+        "no_complementary_send_assets": 0,
+    }
+
     for counterparty in browser.counterparties:
-        player_targets = tuple(asset for asset in counterparty.assets if asset.asset_kind == "player")
-        for target in player_targets:
+        counterparties_considered += 1
+        if (
+            counterparty_team_ids is not None
+            and counterparty.team_id not in counterparty_team_ids
+        ):
+            rejection_reasons["counterparty_not_selected"] += 1
+            continue
+        counterparty_needs = actionable_need_positions(
+            runtime,
+            counterparty.team_id,
+            strengths=strengths,
+        )
+        counterparty_supply = supply_positions(
+            runtime,
+            counterparty.team_id,
+            strengths=strengths,
+        )
+        if (
+            required_counterparty_need_position is not None
+            and counterparty_needs
+            and required_counterparty_need_position not in counterparty_needs
+        ):
+            rejection_reasons["counterparty_lacks_required_need"] += 1
+            continue
+
+        admitted_focal_assets = _complementary_send_assets(
+            league_state,
+            browser.focal_team.assets,
+            counterparty_needs=counterparty_needs,
+        )
+        send_assets_considered += len(browser.focal_team.assets)
+        send_assets_admitted += len(admitted_focal_assets)
+        package_catalog = _build_package_catalog(
+            admitted_focal_assets,
+            cardinal,
+            required_asset_ref=required_send_asset_ref,
+            minimum_size=minimum_send_count,
+        )
+        if not package_catalog:
+            rejection_reasons["no_complementary_send_assets"] += 1
+            continue
+
+        admitted_targets: list[TradeAssetOption] = []
+        for target in counterparty.assets:
+            if target.asset_kind != "player":
+                continue
             targets_considered += 1
+            if target_asset_refs is not None and target.asset_ref not in target_asset_refs:
+                rejection_reasons["target_not_selected"] += 1
+                continue
+            position = _player_position(league_state, target)
+            if (
+                target_positions is not None
+                and position not in effective_target_positions
+            ):
+                rejection_reasons["target_not_focal_need"] += 1
+                continue
+            if (
+                use_focal_need_filter
+                and target_positions is None
+                and focal_needs
+                and position not in effective_target_positions
+            ):
+                rejection_reasons["target_not_focal_need"] += 1
+                continue
+            if (
+                require_counterparty_supply
+                and counterparty_supply
+                and position not in counterparty_supply
+            ):
+                rejection_reasons["target_not_counterparty_supply"] += 1
+                continue
+            admitted_targets.append(target)
+
+        if not admitted_targets:
+            continue
+        counterparties_admitted += 1
+        targets_admitted += len(admitted_targets)
+
+        for target in admitted_targets:
             for row in _nearest_packages_for_target(
                 league_state=league_state,
                 focal_team_id=focal_team_id,
@@ -434,18 +680,68 @@ def build_roster_aware_trade_candidates(
                     tuple(sorted(str(item["asset_ref"]) for item in row["send"])),
                     str(row["receive"][0]["asset_ref"]),
                 )
-                if key not in seen:
-                    seen.add(key)
-                    candidates.append(row)
-                else:
+                if key in seen:
                     exact_duplicates_removed += 1
+                    continue
+                seen.add(key)
+                row["search_context"] = [
+                    *list(row.get("search_context") or []),
+                    (
+                        f"Candidate neighborhood admitted before package generation by "
+                        f"{scope_label}: target/counterparty fit came from governed roster "
+                        "and position-strength evidence; Cardinal Value only bounded package cost."
+                    ),
+                ]
+                candidates.append(row)
+
+    package_generation_finished = monotonic()
     ordered = _family_first_search_order(candidates)
+    completed = monotonic()
     return SearchCandidateCollection(
         ordered,
         diagnostics={
+            "scope_label": scope_label,
+            "focal_need_positions": tuple(position.value for position in focal_needs),
+            "counterparties_considered": counterparties_considered,
+            "counterparties_admitted_pre_package": counterparties_admitted,
             "targets_considered": targets_considered,
+            "targets_admitted_pre_package": targets_admitted,
+            "send_assets_considered": send_assets_considered,
+            "send_assets_admitted_for_counterparty_need": send_assets_admitted,
             "raw_packages_generated_pre_dedup": raw_packages_generated,
             "packages_removed_exact_duplicate": exact_duplicates_removed,
             "candidate_rows_after_exact_dedup": len(ordered),
+            "admission_rejection_reasons": rejection_reasons,
+            "timing_ms": {
+                "strategic_admission_setup": round(
+                    (admission_finished - started) * 1000.0,
+                    3,
+                ),
+                "package_generation": round(
+                    (package_generation_finished - admission_finished) * 1000.0,
+                    3,
+                ),
+                "ordering": round(
+                    (completed - package_generation_finished) * 1000.0,
+                    3,
+                ),
+                "total": round((completed - started) * 1000.0, 3),
+            },
         },
+    )
+
+
+def build_roster_aware_trade_candidates(
+    runtime: UserRuntimeContext,
+    browser: TradeCenterBrowserView,
+    cardinal: Mapping[str, FSFFLCardinalValueScore],
+) -> SearchCandidateCollection:
+    """Build automatic discovery from actionable needs and complementary rosters."""
+
+    return build_scoped_trade_candidates(
+        runtime,
+        browser,
+        cardinal,
+        require_counterparty_supply=True,
+        scope_label="automatic_improve",
     )

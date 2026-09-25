@@ -26,7 +26,9 @@
   }
   async function refresh(){
     if(!onMarket())return;const s=stateRef();if(!s?.payload||s.payload.status!=='ready')return;
-    const id=++requestSeq,{posture,intent,value}=selected();setBusy(true);
+    const id=++requestSeq,{posture,intent,value}=selected(),requiresValue=["position","shop","target","owner"].includes(intent);
+    if(requiresValue&&!value){setBusy(false);updateMethods();return}
+    setBusy(true);
     try{
       const params=new URLSearchParams({posture,intent,value});
       const payload=await api(`/api/opportunities/focused-workspace?${params.toString()}`);
@@ -34,6 +36,8 @@
       const context=window.state?.context||state?.context||{};
       if(payload?.league_state_id&&context.state_id&&payload.league_state_id!==context.state_id)return;
       if(payload?.focal_team_id&&context.team_id&&payload.focal_team_id!==context.team_id)return;
+      const applied=payload?.trade_discovery?.focus||{};
+      if(String(applied.intent||"")!==String(intent||"")||String(applied.value||"")!==String(value||""))return;
       s.payload=payload;s.nsSelectedTradeKey='';s.nsVisibleCount=4;s.tradeEvaluation=null;s.tradeEvaluationKey=null;
       if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace();
       window.dispatchEvent(new CustomEvent('fsffl:market-focus-applied',{detail:payload.trade_discovery?.focus||{posture,intent,value}}));

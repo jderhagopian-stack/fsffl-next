@@ -19,7 +19,7 @@ def test_trade_finder_broadens_package_complexity_without_inventing_consolidatio
     source = Path("src/fsffl/product/opportunity_search.py").read_text(encoding="utf-8")
 
     assert "_MAX_DISCOVERY_PACKAGE_SIZE = 3" in source
-    assert "for size in range(1, max_size + 1)" in source
+    assert "for size in range(max(1, minimum_size), max_size + 1)" in source
     assert "best single asset to veto all package complexity" in source
     assert "consolidation coefficient" in source
     assert "Decision owns whether the structure is actually good" in source

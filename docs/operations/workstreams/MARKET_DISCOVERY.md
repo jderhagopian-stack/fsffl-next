@@ -356,3 +356,24 @@ Optimize by pruning cheaply and early rather than weakening evidence. Expensive 
 
 ### Acceptance question
 Implementation is not accepted merely because it can generate economically similar packages quickly. It must demonstrate that FSFFL can surface a small, diverse set of **strategically grounded, bilaterally coherent, economically plausible** opportunities using inexpensive governed evidence first, with deep compute reserved for investigation after selection.
+
+
+## Corrective execution checkpoint — discovery quality + compute discipline — 2026-09-25
+
+**State: ACTIVE — PR #232 VALIDATION.**
+
+Implementation resumed from the existing corrective branch after Management's discovery-quality clarification. Completed corrective work at branch head `756bbd598dbc1907de4454db6e3065eb81bc7acd` includes:
+
+- restored the approved eight-path bounded pre-Simulation Decision budget; the temporary two-path compute-policy reduction was reverted because Management did not authorize that policy change;
+- automatic Improve-my-team discovery now admits neighborhoods from existing governed positional weakness / fragility evidence and complementary counterparty strength/need evidence **before** package construction;
+- Target a position, Target a player, Shop a player, Explore an owner/team, and Consolidate now constrain candidate admission before package generation where semantically appropriate; an exact user-selected target may override the automatic focal-need gate;
+- Cardinal / market evidence is used to bound acquisition-cost neighborhoods after strategic admission rather than defining an opportunity through approximate value equality;
+- focused Trade Finder requests now obtain Search-only base context and reserve the approved eight preliminary Decision screens for the selected intent neighborhood instead of first spending Decision work on a generic workspace;
+- Market preliminary screening no longer calls the full Trade Center roster-consequence analysis. A Decision-owned lightweight pre-Simulation screen consumes existing baseline optimized lineups, changed-roster legality, mandatory-cut economics, optimized starter replacement effects, and optional descriptive owner history. Full Trade Center Decision and exact 50,000-run Simulation remain downstream of user-selected investigation;
+- broad Market discovery continues to make zero exact changed-state Simulation calls;
+- funnel diagnostics now expose pre-package counterparty/target/asset admission counts, rejection reason counts, package/economic/family/preliminary-screen/aggregation timings, preliminary Decision screen count, and Search/workspace cache behavior; Render logs emit a compact representative funnel line;
+- the earlier physical-iPhone corrective work remains on the same PR: all-player governed Forecast consumption and coverage truth for Player Board / Free Agents, compact anchored Player identity, horizontal quantitative scrolling, sortable quantitative headers, safe-area correction, intent response race guards, and screened-path-first presentation.
+
+Production evidence motivating the lightweight screen remains the 2026-09-25 Render trace in which full pre-Simulation trade analysis spent approximately 16–114 seconds per path in roster-consequence Decision work while package economics was approximately 0.1 seconds. The corrective implementation preserves the eight-path policy by changing the broad screening primitive and pruning earlier, not by weakening the approved evidence budget.
+
+Validation is in progress on PR #232. The first clarified full-CI run found only stale implementation-string/cache-identity assertions; five focused/authority workflows passed. Those tests were updated to assert the new semantic contracts and the replacement full-CI run is active. Merge/deploy and production non-physical validation remain pending. Physical-iPhone/Safari acceptance remains the final Management gate.
