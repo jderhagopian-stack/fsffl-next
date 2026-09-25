@@ -69,14 +69,14 @@ The review separates OpportunityHypothesis, MarketOpportunity, CandidatePath, an
 Management accepts the governed architecture. Bounded Market implementation is now authorized under the persisted handoff; the architecture review itself is complete.
 
 ## Market / Trade Discovery Implementation
-**State:** IMPLEMENTATION COMPLETE — PHYSICAL IPHONE ACCEPTANCE GATE  
-PR #220 implements the Management-accepted Opportunity/Search/Market contract. Full CI, Home, Franchise, League Atlas, PR164 corrective regression, and live Forecast corrective trace are green on the final code head. Durable evidence is in `artifacts/implementation/market_discovery_north_star_20260925/IMPLEMENTATION_HANDOFF.md`.
+**State:** IMPLEMENTATION COMPLETE — CORRECTIVE DEPLOYED  
+PR #232 contains the Management-authorized physical-iPhone corrective implementation plus the discovery-quality / compute-discipline clarification. It is merged at `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b` and live on Render through canonical main `33657f9f612fad2cbc4d112531e0912e04140762` / deploy `dep-dar9cdrtqb8s73819ap0`.
 
-No further broad Market implementation is authorized before deployed physical acceptance unless that validation reveals a defect.
+Full/focused CI is green. Production startup restored the correct existing league with Forecast/Simulation/Value complete and no startup errors. Broad discovery preserves the approved eight-path preliminary Decision budget and zero exact changed-state Simulation calls; strategic and explicit-intent admission occurs before package generation, and the lightweight Decision-owned screen replaces broad full Trade Center analysis.
 
 ## Market acceptance
 **State:** MANAGEMENT GATE — REPEAT PHYSICAL IPHONE / SAFARI  
-Implementation-level acceptance is satisfied, but Market North Star is not product-closed until the merged/deployed build is validated on the physical iPhone/Safari experience against the accepted For You, Trade Finder, Player Board, Free Agents, readiness, and mobile scanability contract.
+All available non-physical corrective validation is exhausted. No authenticated Market request has yet hit the newly deployed instance, so production funnel telemetry cannot be truthfully observed until the next real authenticated interaction. Repeat physical-iPhone/Safari validation must exercise the four surfaces and at least one Trade Finder intent; afterward inspect the emitted candidate-count/rejection/timing/cache/preliminary-screen diagnostics before product closeout.
 
 ## Home × Franchise audit
 **State:** DEFERRED  
