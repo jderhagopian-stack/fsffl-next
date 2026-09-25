@@ -254,6 +254,7 @@ class PrivateBetaRuntimeStore:
         self._lock = RLock()
         self._contexts: dict[str, UserRuntimeContext] = {}
         self._pending_intelligence: dict[str, _PendingIntelligenceSnapshot] = {}
+        self._pending_league_states: dict[str, LeagueState] = {}
         self._league_generations: dict[str, int] = {}
 
     def get(self, user_id: str) -> UserRuntimeContext:
@@ -337,9 +338,61 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=forecast_evidence if forecast_reusable else None,
             )
             self._contexts[user_id] = context
+            self._pending_league_states.pop(user_id, None)
             if not same_league:
                 self._pending_intelligence.pop(user_id, None)
             return context
+
+    def stage_league_state(self, user_id: str, league_state: LeagueState) -> UserRuntimeContext:
+        """Stage same-league State without tearing down a complete last-good bundle.
+
+        Provider revalidation may discover a newer canonical State before Forecast,
+        Simulation and Value for that State are ready. When a complete internally
+        consistent bundle is already serving the same league, keep that bundle active
+        and retain the newer State as the input to the next governed intelligence job.
+        Cross-league changes and incomplete runtimes still activate State immediately.
+        """
+
+        if not user_id.strip():
+            raise ValueError("user_id cannot be blank")
+        with self._lock:
+            current = self.get(user_id)
+            same_league = (
+                current.league_state is not None
+                and current.league_state.league.league_id == league_state.league.league_id
+            )
+            if same_league and _complete_intelligence(current):
+                self._pending_league_states[user_id] = league_state
+                return UserRuntimeContext(
+                    user_id=user_id,
+                    league_state=current.league_state,
+                    selected_team_id=current.selected_team_id,
+                    forecast_evidence=current.forecast_evidence,
+                    simulation_analytics=current.simulation_analytics,
+                    value_evidence=current.value_evidence,
+                    intelligence_reused=True,
+                )
+            return self.set_league_state(user_id, league_state)
+
+    def intelligence_input_state(self, user_id: str) -> LeagueState | None:
+        """Return the newest same-league State eligible for governed enrichment."""
+
+        with self._lock:
+            current = self.get(user_id)
+            staged = self._pending_league_states.get(user_id)
+            if (
+                staged is not None
+                and current.league_state is not None
+                and staged.league.league_id == current.league_state.league.league_id
+            ):
+                return staged
+            return current.league_state
+
+    def discard_pending_intelligence(self, user_id: str) -> None:
+        """Discard failed partial model work while retaining staged provider State."""
+
+        with self._lock:
+            self._pending_intelligence.pop(user_id, None)
 
     def set_forecast_evidence(
         self,
@@ -502,6 +555,7 @@ class PrivateBetaRuntimeStore:
             )
             self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
+            self._pending_league_states.pop(user_id, None)
             return updated
 
     def set_intelligence_bundle(
@@ -542,6 +596,7 @@ class PrivateBetaRuntimeStore:
             )
             self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
+            self._pending_league_states.pop(user_id, None)
             return updated
 
     def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
@@ -570,4 +625,5 @@ class PrivateBetaRuntimeStore:
         with self._lock:
             self._contexts.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
+            self._pending_league_states.pop(user_id, None)
             self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1

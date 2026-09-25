@@ -232,7 +232,8 @@ def test_hosted_refresh_only_rebuilds_behavior_when_material_state_changed() -> 
 
     assert "league_material_fingerprint" in refresh
     assert "changed =" in refresh
-    assert "runtime_store.set_league_state" in refresh
+    assert "runtime_store.stage_league_state" in refresh
+    assert "FSFFL Sleeper refresh staged state pending intelligence" in refresh
     assert "if changed:" in refresh
     assert "behavioral_coordinator.start" in refresh
 
@@ -306,8 +307,8 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    assert "20260925-market-discovery1" in source
-    assert "mobile_safari_recovery.js?v=20260925-market-discovery1" in source
+    assert "20260925-last-good-recovery1" in source
+    assert "mobile_safari_recovery.js?v=20260925-last-good-recovery1" in source
 
 
 def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
@@ -339,7 +340,7 @@ def test_hosted_refresh_is_bound_to_starting_league_generation() -> None:
     capture_index = refresh.index("refresh_generation = runtime_store.league_generation(user_id)")
     guard_index = refresh.index("runtime_store.league_generation(user_id) != refresh_generation")
     active_index = refresh.index("not _matches_sleeper_league(active_state, league_external_id)")
-    write_index = refresh.index("runtime_store.set_league_state(user_id, league_state)")
+    write_index = refresh.index("runtime_store.stage_league_state(user_id, league_state)")
     assert capture_index < guard_index < write_index
     assert capture_index < active_index < write_index
     assert "FSFFL Sleeper refresh superseded before activation" in refresh
@@ -375,3 +376,20 @@ def test_connect_request_target_is_emitted_on_visible_performance_logger() -> No
     )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
     assert '_performance_logger = logging.getLogger("fsffl.product.performance")' in source
     assert "FSFFL Sleeper connect request user=%s requested=%s active=%s already_loaded=%s" in connect
+
+
+
+def test_intelligence_job_uses_staged_state_and_discards_failed_partial_work() -> None:
+    source = open(
+        "src/fsffl/product/webapp.py",
+        encoding="utf-8",
+    ).read()
+    route = source.split(
+        '@application.post("/api/intelligence/jobs")', 1
+    )[1].split('@application.get("/api/intelligence/jobs/current")', 1)[0]
+
+    staged_index = route.index("store.intelligence_input_state(user_id)")
+    start_index = route.index("initial_state_id = initial_state.state_id")
+    discard_index = route.index("store.discard_pending_intelligence(user_id)")
+    assert staged_index < start_index < discard_index
+    assert "simulation_count=50_000" in source

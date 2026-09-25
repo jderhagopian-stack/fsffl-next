@@ -410,7 +410,18 @@ def install_hosted_connect_routes(
                     runtime_store.league_generation(user_id),
                 )
                 return
-            runtime_store.set_league_state(user_id, league_state)
+            active_context = runtime_store.stage_league_state(user_id, league_state)
+            if (
+                active_context.league_state is not None
+                and active_context.league_state.state_id != league_state.state_id
+            ):
+                _performance_logger.info(
+                    "FSFFL Sleeper refresh staged state pending intelligence user=%s league=%s staged=%s active_last_good=%s",
+                    user_id,
+                    league_external_id,
+                    league_state.state_id,
+                    active_context.league_state.state_id,
+                )
             if changed:
                 behavioral_coordinator.start(
                     user_id=user_id,

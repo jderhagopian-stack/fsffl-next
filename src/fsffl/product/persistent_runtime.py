@@ -144,6 +144,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     )
                 if snapshot.selected_team_id is not None:
                     super().select_team(user_id, snapshot.selected_team_id)
+
+                # Restoration may intentionally select an independently promoted
+                # last-good bundle instead of a newer failed partial checkpoint.
+                # Re-checkpoint the exact restored context so durable active context
+                # matches what the product is serving on subsequent restarts.
+                restored_context = super().get(user_id)
+                self._checkpoint_async(user_id, restored_context)
+
                 # Existing durable runtime rows may predate the point-in-time history
                 # table. Retain the exact restored canonical state asynchronously so
                 # restart recovery naturally backfills history without reingestion or
@@ -193,6 +201,26 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self._restore_lock:
             self._restore_attempted.add(user_id)
         self._checkpoint_async(user_id, context)
+        return context
+
+    def stage_league_state(self, user_id: str, league_state):
+        active_before = super().get(user_id)
+        context = super().stage_league_state(user_id, league_state)
+        with self._restore_lock:
+            self._restore_attempted.add(user_id)
+
+        # If a complete same-league bundle remains active, retain the newly fetched
+        # State only in point-in-time history until a complete intelligence bundle
+        # for that State is promoted. Do not let a partial State checkpoint displace
+        # restart authority.
+        if (
+            active_before.league_state is not None
+            and context.league_state is not None
+            and context.league_state.state_id != league_state.state_id
+        ):
+            self._checkpoint_state_history_async(league_state)
+        else:
+            self._checkpoint_async(user_id, context)
         return context
 
     def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
