@@ -21,6 +21,7 @@ def test_focused_route_preserves_search_vs_decision_authority() -> None:
 
 def test_focused_route_spends_decision_budget_only_after_intent_admission() -> None:
     route = _read(ROUTE)
+    search = _read(SEARCH)
 
     assert "workspace_builder(runtime, bilateral_evaluation_limit=0)" in route
     assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
