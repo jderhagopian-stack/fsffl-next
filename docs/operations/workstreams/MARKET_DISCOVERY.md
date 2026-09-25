@@ -386,3 +386,25 @@ PR #232 merged to canonical `main` at `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b`
 The merged implementation preserves the Management-approved eight-path preliminary Decision budget and the zero-broad-Simulation boundary. It moves strategic need/counterparty admission ahead of package construction, reserves focused Decision spend for the selected intent neighborhood, replaces the full Trade Center roster-consequence call in broad screening with the lightweight Decision-owned preliminary screen, and emits stage/count/cache diagnostics for production validation.
 
 Render production deployment and non-physical production funnel validation are the remaining implementation actions before the physical-iPhone/Safari Management acceptance gate. Do not mark Market accepted from merge/CI alone.
+
+
+### PR #232 deployed corrective checkpoint — 2026-09-25
+
+**State: MANAGEMENT GATE — REPEAT PHYSICAL IPHONE / SAFARI ACCEPTANCE.**
+
+The bounded corrective implementation is merged and deployed:
+- PR #232 merge commit: `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b`;
+- canonical deployed main: `33657f9f612fad2cbc4d112531e0912e04140762`;
+- Render deploy: `dep-dar9cdrtqb8s73819ap0` — **LIVE**;
+- hosted static generation: `20260925-market-corrective1`.
+
+Non-physical validation is exhausted:
+- PR #232 head `02c0d0be5b83491fca22703f02d9f22bd302657b` passed full CI, Home North Star, Franchise North Star, League Atlas North Star, PR164 corrective regression, and the live Forecast corrective trace;
+- the deployed process restored `jimmy` / Sleeper league `1312071960615731200` on promoted state `203227df88b78cdd1c0a0861bc16cae0157abd91b52a3ef9ee1278f129a462ed` with Forecast=True, Simulation=True, Value=True, complete=True;
+- application startup completed successfully and no post-deploy error logs are present;
+- the merged static bundle exposes the corrective safe-area, compact sticky Player column, horizontal quantitative Board scrolling, sortable Board headers, all-player Forecast consumption, focused-intent response guards, and screened-path-first presentation;
+- deterministic tests prove early strategic/counterparty admission, intent-specific pre-package discovery, the approved eight-path preliminary Decision budget, lightweight pre-Simulation screening, cache observability, and zero broad changed-state Simulation.
+
+Production funnel diagnostics are instrumented and will emit on the next authenticated Market request. No authenticated Market request has occurred on the new instance yet; an unauthenticated external probe correctly returned HTTP 401. There is no safe non-physical mechanism available to impersonate the Management session, so production request-level funnel timing/cache telemetry must be observed from the next real authenticated Market interaction rather than fabricated.
+
+No further implementation action is authorized or warranted before repeat physical-iPhone/Safari validation. The device test should exercise all four Market surfaces and at least one explicit Trade Finder intent so the new production funnel telemetry can be inspected afterward.
