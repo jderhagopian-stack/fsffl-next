@@ -13,6 +13,7 @@ from fsffl.state.models import (
     PlayerState,
     Position,
     Provenance,
+    ProviderRef,
     RosterSlot,
     ScoringRule,
     Team,
@@ -210,3 +211,111 @@ def test_unknown_player_scoring_keeps_shared_raw_forecast_and_exposes_partial_su
     assert partial.omitted_rule_stats == ("mystery_bonus",)
     assert "partial_player_scoring_coordinates_present" in result.simulation_authority_blockers
     assert "unsupported_player_offense_rules" in result.simulation_authority_blockers
+
+
+
+def _synthetic_sleeper_state(
+    *,
+    external_id: str,
+    scoring: tuple[ScoringRule, ...],
+    lineup: tuple[LineupRequirement, ...],
+) -> LeagueState:
+    base = state()
+    league_id = f"sleeper:{external_id}"
+    rules = LeagueRules(
+        team_count=2,
+        roster_size=4,
+        lineup=lineup,
+        scoring=scoring,
+    )
+    league = base.league.model_copy(
+        update={
+            "league_id": league_id,
+            "name": f"Synthetic {external_id}",
+            "rules": rules,
+            "provider_refs": (
+                ProviderRef(provider="sleeper", external_id=external_id),
+            ),
+        }
+    )
+    teams = tuple(
+        team.model_copy(update={"league_id": league_id})
+        for team in base.teams
+    )
+    return base.model_copy(update={"league": league, "teams": teams})
+
+
+def test_shared_forecast_pipeline_is_generic_across_unrelated_sleeper_leagues() -> None:
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+    offense_only = _synthetic_sleeper_state(
+        external_id="900000000000000001",
+        lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
+        scoring=(
+            ScoringRule(stat="pass_yd", points=0.05),
+            ScoringRule(stat="pass_td", points=6.0),
+            ScoringRule(stat="pass_int", points=-1.0),
+            ScoringRule(stat="rush_yd", points=0.1),
+            ScoringRule(stat="rush_td", points=6.0),
+        ),
+    )
+    k_dst_league = _synthetic_sleeper_state(
+        external_id="900000000000000777",
+        lineup=(
+            LineupRequirement(slot=RosterSlot.QB, count=1),
+            LineupRequirement(slot=RosterSlot.K, count=1),
+            LineupRequirement(slot=RosterSlot.DST, count=1),
+        ),
+        scoring=(
+            ScoringRule(stat="pass_yd", points=0.04),
+            ScoringRule(stat="pass_td", points=4.0),
+            ScoringRule(stat="pass_int", points=-2.0),
+            ScoringRule(stat="rush_yd", points=0.1),
+            ScoringRule(stat="rush_td", points=6.0),
+            ScoringRule(stat="fgm_50p", points=5.0),
+            ScoringRule(stat="sack", points=1.0),
+            ScoringRule(stat="pts_allow_0", points=10.0),
+        ),
+    )
+
+    offense_result = build_current_live_forecasts(
+        offense_only,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+    )
+    k_dst_result = build_current_live_forecasts(
+        k_dst_league,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+    )
+
+    # Canonical raw player/stat Forecast truth is league-agnostic.
+    assert [
+        (item.player_id, item.metric, item.distribution.mean)
+        for item in offense_result.raw_ensemble
+    ] == [
+        (item.player_id, item.metric, item.distribution.mean)
+        for item in k_dst_result.raw_ensemble
+    ]
+    assert offense_result.successful_source_ids == ("cbs", "fftoday")
+    assert k_dst_result.successful_source_ids == ("cbs", "fftoday")
+
+    # League rules are applied only downstream and therefore produce the
+    # appropriate scored result/capability without ID- or name-specific behavior.
+    assert offense_result.fantasy_point_forecasts[0].distribution.mean == pytest.approx(485.0)
+    assert k_dst_result.fantasy_point_forecasts[0].distribution.mean == pytest.approx(374.0)
+    assert offense_result.simulation_authority_blockers == ()
+    assert k_dst_result.simulation_authority_blockers == (
+        "separate_k_dst_forecast_authority_required",
+    )
+
+    offense_families = {item.family: item for item in offense_result.family_coverage}
+    k_dst_families = {item.family: item for item in k_dst_result.family_coverage}
+    assert offense_families["player_offense"].status == "FULL"
+    assert offense_families["kicker"].status == "NOT_APPLICABLE"
+    assert offense_families["dst"].status == "NOT_APPLICABLE"
+    assert k_dst_families["player_offense"].status == "FULL"
+    assert k_dst_families["kicker"].status == "UNSUPPORTED"
+    assert k_dst_families["dst"].status == "UNSUPPORTED"
