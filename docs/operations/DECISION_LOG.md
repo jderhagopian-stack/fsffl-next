@@ -166,3 +166,11 @@ Existing two-source, rights, semantic, uncertainty, exact-state and no-silent-ze
 Decision: the user-facing Refresh Intelligence action is the canonical manual league sync/update command. It must refresh Sleeper State first, establish the exact new canonical State, reuse only provably compatible persisted intelligence, and automatically rebuild invalidated/missing downstream layers.
 
 The current ordering that builds Forecast from the pre-refresh State and refreshes Sleeper afterward is not the target contract unless compatibility is explicitly proven. League switching and manual refresh should converge on the same State-first reconciliation lifecycle.
+
+
+## 2026-09-25 — What-If includes historical counterfactual replay
+Decision: What-If is a generalized counterfactual engine with both current-forward and historical modes. The current single-player unavailability scenario is only a thin initial implementation.
+
+Historical What-If must be able to branch from an authentic point-in-time league State and substitute a different past decision. It must keep two outputs distinct: (1) a point-in-time probabilistic counterfactual using only information knowable at the historical cutoff, and (2) a realized-world hindsight replay that holds later exogenous NFL outcomes fixed where appropriate and shows what the alternate decision would actually have produced.
+
+These lenses may never be blended. “Good decision with bad outcome” and “bad decision with good outcome” must remain representable. Historical transaction/draft/waiver/roster lineage, point-in-time evidence, Forecast/Value/Decision versions and uncertainty should support the counterfactual rather than being replaced by present-day values.
