@@ -18,4 +18,4 @@ def test_hosted_entrypoint_logs_post_restore_runtime_readiness() -> None:
     assert "def _log_startup_runtime_readiness()" in source
     assert 'logging.getLogger("uvicorn.error").info(' in source
     assert "FSFFL startup runtime readiness user=%s league=%s state=%s forecast=%s simulation=%s value=%s complete=%s" in source
-    assert 'app.add_event_handler("startup", _log_startup_runtime_readiness)' in source
+    assert 'app.router.add_event_handler("startup", _log_startup_runtime_readiness)' in source
