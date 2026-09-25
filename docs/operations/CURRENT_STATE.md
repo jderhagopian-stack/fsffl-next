@@ -124,3 +124,19 @@ Evidence:
 - final code head `97ff2a4e59d065b38a6eb751c3ed3a330feee56e` passed full CI, Home, Franchise, League Atlas, PR164 corrective regression, and live Forecast corrective trace.
 
 The implementation preserves the accepted authority chain and zero broad changed-state Simulation. The next gate is merged/deployed physical-iPhone/Safari product acceptance, not additional speculative redesign.
+
+
+## Market corrective deployment checkpoint — 2026-09-25
+PR #232 is merged at `eac3ac1074b80e4199e4e4f4cd3c708ffffbd02b` and deployed on canonical main `33657f9f612fad2cbc4d112531e0912e04140762` as Render deploy `dep-dar9cdrtqb8s73819ap0`.
+
+The corrective implementation:
+- moves governed strategic/intent admission before package generation;
+- preserves the eight-path preliminary Decision policy;
+- uses a lightweight roster/economic bilateral screen instead of full Trade Center analysis during broad discovery;
+- preserves zero broad changed-state Simulation;
+- exposes funnel counts/rejections/timings/cache behavior;
+- corrects Market all-player Forecast consumption/readiness, Player Board mobile composition/sorting, intent race/semantic guards, and iPhone safe-area handling.
+
+The deployed process restored the promoted complete FSFFL bundle for the correct league with Forecast/Simulation/Value all present and no startup error. Full and focused CI are green.
+
+No authenticated Market request has occurred on this newly deployed instance yet, so representative production funnel telemetry cannot be truthfully validated non-physically. The next permitted stop is **MANAGEMENT GATE — repeat physical iPhone/Safari Market acceptance**, after which the emitted production funnel telemetry must also be inspected before final Market product closeout.
