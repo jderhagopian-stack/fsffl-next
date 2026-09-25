@@ -16,18 +16,20 @@ After Market PR #220 / SHA `ff3e0fbe8ff0827d123e6d465b42116512e6d820`, physical-
 
 Repair chain:
 - PR #222 / merge `514b27e9ee55d6b1984bd72e004a8eb826b174d4`: last-good restoration + same-league preservation + truthful readiness + mobile Refresh Intelligence layout;
-- PR #226 / merge `50614b1deeeccfe61c7b4fe3acc46111f7ad23cc`: startup readiness observability; **currently live on Render**;
-- PR #227 / merge `ee221b29969c5fd83c75e7ea45903deca25c6410`: interrupted-refresh restoration regression, test-only.
+- PR #226 / merge `50614b1deeeccfe61c7b4fe3acc46111f7ad23cc`: startup readiness observability;
+- PR #227 / merge `ee221b29969c5fd83c75e7ea45903deca25c6410`: interrupted-refresh restoration regression, test-only;
+- PR #235 / merge `3c252aedb5974f40fabe2c16cce01e8e106a2b74`: request-local exact-input reuse for Market cold discovery, preserving PR #232 discovery semantics and authority; **currently live on Render** via `dep-dar9kg142hec73dglcq0`.
 
-Current production evidence on #226:
-- startup at 2026-09-25T13:52:35Z restored `sleeper:1312071960615731200`, state `203227df...`, Forecast/Simulation/Value all present, `complete=True`;
-- a later restart at 2026-09-25T14:39:09Z restored the same complete bundle again;
-- neither restart auto-launched heavy intelligence;
+Current production evidence:
+- #226 startup at 2026-09-25T13:52:35Z restored `sleeper:1312071960615731200`, state `203227df...`, Forecast/Simulation/Value all present, `complete=True`;
+- a later #226 restart at 2026-09-25T14:39:09Z restored the same complete bundle again;
+- #235 startup at 2026-09-25T16:00:24.900936Z restored the same league/state with `forecast=True simulation=True value=True complete=True`;
+- none of those restarts auto-launched heavy intelligence;
 - no startup errors were observed.
 
-The durable runtime-context row can still point at newer state-only evidence (`3014bb76...`) from the failed refresh. This is not a loss of last-good authority. The independently promoted `runtime_last_good_bundle` `203227df...` remains reusable and has current Forecast, Simulation, and Value artifacts.
+The durable runtime-context row now points directly to `203227df...`, matching the independently promoted `runtime_last_good_bundle`.
 
-Performance remains **ACTIVE**, not at the obsolete PR #211 K/DST Management Gate. Remaining production acceptance is physical-iPhone confirmation of visible 7/7, populated Home/Franchise/Market for jimmygoodjob, responsive foreground behavior, and corrected single-line Refresh Intelligence rendering.
+Performance remains **ACTIVE**, not at the obsolete PR #211 K/DST Management Gate. The pre-#235 physical baseline showed Home/Franchise responsive but cold Market at 36.705s quick / 48.396s full before a 0.172s exact-cache hit. PR #235 is live and passed repository-wide PR #232 discovery-contract regressions while removing only redundant exact-input construction. No authenticated Market request has yet hit the fresh #235 process, so post-optimization production cold timing remains unmeasured. Remaining acceptance is one physical-iPhone confirmation of visible 7/7, populated Home/Franchise/Market, acceptable cold Market latency, and corrected single-line Refresh Intelligence rendering.
 
 The separate K/DST Forecast authority program remains governed by Research/Product Forecast and must not be weakened to close this existing-league Performance incident.
 

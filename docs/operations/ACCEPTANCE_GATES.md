@@ -14,7 +14,7 @@ Not complete until evidence demonstrates:
 - Home, Franchise, and Market populated with governed evidence for the correct active league;
 - no cross-league intelligence contamination.
 
-Current status: **ACTIVE — PRODUCTION ACCEPTANCE / LAST-GOOD RESTORATION.**
+Current status: **ACTIVE — PRODUCTION ACCEPTANCE / MARKET COLD-PATH VALIDATION.**
 
 Evidence already satisfied for the existing FSFFL Dynasty incident:
 - PR #222 fixes terminal failed/interrupted last-good restoration, same-league state-only demotion, restored-readiness precedence, and the mobile Refresh Intelligence grid/button;
@@ -22,7 +22,9 @@ Evidence already satisfied for the existing FSFFL Dynasty incident:
 - production startup at 2026-09-25T13:52:35Z restored state `203227df...` with Forecast/Simulation/Value all present and `complete=True`;
 - a second production restart at 2026-09-25T14:39:09Z restored the same complete bundle again;
 - no automatic heavy intelligence job launched after either restart;
-- PR #227 adds the interrupted-refresh restore regression and is merged/test-green.
+- PR #227 adds the interrupted-refresh restore regression and is merged/test-green;
+- PR #235 / merge `3c252aed...` is live through Render deploy `dep-dar9kg142hec73dglcq0`; startup restored `jimmygoodjob` state `203227df...` with Forecast/Simulation/Value complete, no automatic heavy intelligence job and no startup errors;
+- PR #235 removes request-local redundant Market input construction only. Repository-wide CI, PR164 corrective regression, and Live Forecast corrective trace are green, so PR #232 candidate admission, strategic-hypothesis, eight-path bilateral-screen, dominance/diversity, For You, and zero-broad-Simulation tests remain satisfied.
 
 Still open before this Performance directive is complete:
 - physical-iPhone/Safari confirmation that jimmygoodjob visibly presents restored 7/7;
@@ -31,7 +33,7 @@ Still open before this Performance directive is complete:
 - responsive foreground interaction on the accepted deployed build;
 - no stale-job or cross-league contamination.
 
-Latest physical-device timing shows Home/Franchise within sub-second ranges, but Market cold discovery is not yet acceptable: first quick workspace was 36.705s and first full workspace 48.396s, followed by a 0.172s cached full response. The cold Market path must be bounded before Performance acceptance.
+The pre-#235 physical-device timing showed Home/Franchise within sub-second ranges but Market cold discovery at 36.705s quick and 48.396s full, followed by a 0.172s cached full response. PR #235 is the bounded cold-path repair and is live, but no authenticated Market request has yet reached the fresh process. Performance acceptance therefore requires one post-#235 physical cold Market observation demonstrating acceptable foreground latency; CI/cache-hit evidence alone is insufficient.
 
 The separate new-league K/DST Forecast authority gate remains real, but it is not the stop state for this existing-league restoration incident.
 
