@@ -160,3 +160,9 @@ Decision: authorize a bounded Research study of whether one governed source can 
 Research must classify coordinates by measured scoring/outcome materiality and source quality, not by rarity or convenience. It must evaluate at minimum FUMBLES_LOST, the 60+ FG incremental contribution, low-frequency K/special-teams events, and appropriate material controls; quantify player/rank/lineup/team/50,000-run Simulation sensitivity where feasible; compare omission vs one-source vs multi-source vs realized outcomes; and propose a league-agnostic quantitative authority contract for a later Management decision.
 
 Existing two-source, rights, semantic, uncertainty, exact-state and no-silent-zero rules remain authoritative during the study.
+
+
+## 2026-09-25 — Refresh Intelligence is the canonical league sync action
+Decision: the user-facing Refresh Intelligence action is the canonical manual league sync/update command. It must refresh Sleeper State first, establish the exact new canonical State, reuse only provably compatible persisted intelligence, and automatically rebuild invalidated/missing downstream layers.
+
+The current ordering that builds Forecast from the pre-refresh State and refreshes Sleeper afterward is not the target contract unless compatibility is explicitly proven. League switching and manual refresh should converge on the same State-first reconciliation lifecycle.
