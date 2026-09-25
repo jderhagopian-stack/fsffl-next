@@ -16,6 +16,8 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
+import fsffl.team_utility.resilience as resilience_module
+
 from fsffl.team_utility import (
     CalculatedCompetitiveState,
     CompetitiveStatePolicy,
@@ -172,3 +174,29 @@ def test_assembly_rejects_policy_without_simulation_outcome() -> None:
         assert "requires a supplied competitive outcome" in str(exc)
     else:
         raise AssertionError("expected policy without simulation outcome to fail closed")
+
+
+def test_resilience_reuses_one_exact_baseline_lineup_per_vector(monkeypatch) -> None:
+    state, forecasts = _state_and_forecasts()
+    original = resilience_module.optimize_team_lineup
+    calls = 0
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(resilience_module, "optimize_team_lineup", counted)
+    result = assemble_team_utility_vector(
+        state,
+        forecasts,
+        team_id="team:1",
+        as_of=AS_OF,
+        horizon=ForecastHorizon.SEASON,
+    )
+
+    assert result.roster_resilience is not None
+    assert result.roster_resilience.largest_single_player_lineup_drop == 100.0
+    # One baseline + one exact leave-one-starter-out optimization. The old path
+    # redundantly recomputed the same baseline inside marginal_lineup_impact.
+    assert calls == 2
