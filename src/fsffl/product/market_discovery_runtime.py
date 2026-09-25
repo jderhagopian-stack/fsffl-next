@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict, defaultdict
+import logging
 from collections.abc import Callable, Iterable
 from time import monotonic
 from typing import Any
@@ -47,6 +48,7 @@ from .trade_value_adapter import cardinal_market_profiles
 DEFAULT_PRELIMINARY_DECISION_BUDGET = 8
 DEFAULT_FOR_YOU_LIMIT = 4
 _MAX_ALTERNATE_PACKAGES = 2
+_logger = logging.getLogger("uvicorn.error")
 
 TradeEvaluator = Callable[[UserRuntimeContext, dict[str, object]], dict[str, object]]
 
@@ -1472,6 +1474,49 @@ def build_market_discovery(
     by_id = {path.path_id: path for path in paths}
     for_you, relaxations = select_for_you(opportunities, by_id)
     completed = monotonic()
+    _logger.info(
+        "FSFFL Market discovery funnel scope=%s rows=%d counterparties=%s/%s targets=%s/%s "
+        "economic_ms=%.3f family_ms=%.3f prelim_runs=%d prelim_ms=%.3f opportunities=%d "
+        "for_you=%d simulation_calls=0 cache_hit=%s total_ms=%.3f",
+        (
+            search_generation_diagnostics.get("scope_label")
+            if search_generation_diagnostics
+            else None
+        ),
+        len(rows),
+        (
+            search_generation_diagnostics.get("counterparties_admitted_pre_package")
+            if search_generation_diagnostics
+            else None
+        ),
+        (
+            search_generation_diagnostics.get("counterparties_considered")
+            if search_generation_diagnostics
+            else None
+        ),
+        (
+            search_generation_diagnostics.get("targets_admitted_pre_package")
+            if search_generation_diagnostics
+            else None
+        ),
+        (
+            search_generation_diagnostics.get("targets_considered")
+            if search_generation_diagnostics
+            else None
+        ),
+        (economics_finished - started) * 1000.0,
+        (family_finished - economics_finished) * 1000.0,
+        len(selected_indices),
+        (decision_finished - family_finished) * 1000.0,
+        len(opportunities),
+        len(for_you),
+        (
+            search_generation_diagnostics.get("search_cache_hit")
+            if search_generation_diagnostics
+            else None
+        ),
+        (completed - started) * 1000.0,
+    )
     search_timing = (
         dict(search_generation_diagnostics.get("timing_ms") or {})
         if search_generation_diagnostics
