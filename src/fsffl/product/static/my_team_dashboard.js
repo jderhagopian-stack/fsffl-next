@@ -251,13 +251,21 @@ function franchiseNSAssetCard(row,index,lens){
     '<b aria-hidden="true">›</b>'+
   '</button>';
 }
-function franchiseNSPickPercentile(row){
+function franchiseNSPickMarketEstimate(row){
   const estimate=row?.value_profile?.market_price;
-  if(estimate?.scale?.scale_id!=='dynasty-market-percentile')return null;
-  const value=estimate?.distribution?.mean;
-  return typeof value==='number'&&Number.isFinite(value)?value:null;
+  return estimate&&typeof estimate?.distribution?.mean==='number'&&Number.isFinite(estimate.distribution.mean)?estimate:null;
+}
+function franchiseNSPickPercentile(row){
+  const estimate=franchiseNSPickMarketEstimate(row);
+  return estimate?.scale?.scale_id==='dynasty-market-percentile'?estimate.distribution.mean:null;
+}
+function franchiseNSPickCardinal(row){
+  const estimate=franchiseNSPickMarketEstimate(row);
+  return estimate?.scale?.scale_id==='fsffl-market-cardinal'?estimate.distribution.mean:null;
 }
 function franchiseNSPickValueLabel(row){
+  const cardinal=franchiseNSPickCardinal(row);
+  if(cardinal!=null)return Math.round(cardinal).toLocaleString()+' Market';
   const pct=franchiseNSPickPercentile(row);
   return pct==null?'Value unavailable':Math.round(pct*100)+'th pct';
 }
@@ -283,7 +291,9 @@ function franchiseNSPickSeasonMarkup(compact){
   }).join('');
 }
 function franchiseNSPickValueAvailable(){
-  return (fsfflMyTeamState.view?.draft_picks||[]).some(row=>franchiseNSPickPercentile(row)!=null);
+  return (fsfflMyTeamState.view?.draft_picks||[]).some(
+    row=>franchiseNSPickPercentile(row)!=null||franchiseNSPickCardinal(row)!=null
+  );
 }
 function franchiseNSCurrentRank(){
   const standing=franchiseNSStanding();
