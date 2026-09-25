@@ -38,7 +38,9 @@ from .late_start_snapshot import (
     LateStartSourceHealthEvent,
     RowHealthDisposition,
     capture_late_start_current_projection_snapshot,
+    evaluate_late_start_rule_coverage_for_subject,
     evaluate_ros_snapshot_row_health,
+    late_start_subject_is_rule_complete,
     source_rule_evidence_for_subject,
 )
 from .k_dst_calibration import (
@@ -96,6 +98,8 @@ from .models import (
 )
 
 __all__ = [
+    "late_start_subject_is_rule_complete",
+    "evaluate_late_start_rule_coverage_for_subject",
     "source_rule_evidence_for_subject",
     "normalize_late_start_provider_evidence",
     "fit_k_dst_weekly_volatility",
