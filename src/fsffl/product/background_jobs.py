@@ -135,10 +135,12 @@ class IntelligenceJobCoordinator:
         if restored is None:
             return None
         if restored.status in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}:
+            interrupted_phase = restored.phase
             restored = replace(
                 restored,
                 status=IntelligenceJobStatus.INTERRUPTED,
                 phase=IntelligenceJobPhase.INTERRUPTED,
+                failure_phase=interrupted_phase,
                 message="Intelligence refresh was interrupted by a server restart. Last-good intelligence remains active; start a new refresh when ready.",
                 updated_at=datetime.now(UTC),
                 error="server_restart",
@@ -193,13 +195,29 @@ class IntelligenceJobCoordinator:
             if record is None:
                 return None
             p = record.payload
+            phase_timings = tuple(
+                IntelligencePhaseTiming(
+                    phase=IntelligenceJobPhase(str(t["phase"])),
+                    elapsed_seconds=float(t["elapsed_seconds"]),
+                )
+                for t in p.get("phase_timings", ())
+            )
+            failure_phase = (
+                IntelligenceJobPhase(str(p["failure_phase"]))
+                if p.get("failure_phase")
+                else (
+                    phase_timings[-1].phase
+                    if p.get("status") in {"failed", "interrupted"} and phase_timings
+                    else None
+                )
+            )
             return IntelligenceJob(
                 job_id=str(p["job_id"]), user_id=str(p["user_id"]), league_state_id=str(p["league_state_id"]),
                 status=IntelligenceJobStatus(str(p["status"])), phase=IntelligenceJobPhase(str(p["phase"])),
                 message=str(p["message"]), created_at=datetime.fromisoformat(str(p["created_at"])),
                 updated_at=datetime.fromisoformat(str(p["updated_at"])), error=p.get("error"),
-                failure_phase=(IntelligenceJobPhase(str(p["failure_phase"])) if p.get("failure_phase") else None),
-                phase_timings=tuple(IntelligencePhaseTiming(phase=IntelligenceJobPhase(str(t["phase"])), elapsed_seconds=float(t["elapsed_seconds"])) for t in p.get("phase_timings", ())),
+                failure_phase=failure_phase,
+                phase_timings=phase_timings,
                 total_elapsed_seconds=(float(p["total_elapsed_seconds"]) if p.get("total_elapsed_seconds") is not None else None),
             )
         except Exception as exc:
