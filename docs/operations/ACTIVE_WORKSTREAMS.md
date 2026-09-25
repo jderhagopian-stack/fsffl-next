@@ -23,14 +23,18 @@ The workstream cannot promote production K/DST authority without a qualifying se
 Do not start Stage 3 provider promotion, Stage 4 migration/downstream promotion, or Stage 5/6 lifecycle claims by substituting one-source calibration, non-commercial source content, guessed D/ST semantics, or backdated current data.
 
 ## Market / Trade Discovery Architecture Review
-**State:** AUTHORIZED / NEXT  
-Physical-iPhone acceptance showed that Market is functionally implemented but not product-accepted. The issue is both discovery quality and mobile information architecture. See `workstreams/MARKET_DISCOVERY.md`.
+**State:** MANAGEMENT GATE — ARCHITECTURE REVIEW COMPLETE  
+The actual shipped Market/Search/Value/Team Utility/Decision/Owner Intelligence/Simulation paths were inspected and the implementation-ready governed contract is persisted in:
+- `workstreams/MARKET_DISCOVERY.md`
+- `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`
 
-This review may run in parallel with Forecast implementation because it must not alter Forecast/K/DST authority.
+The review separates OpportunityHypothesis, MarketOpportunity, CandidatePath, and raw package variants; moves bounded pre-Simulation Decision screening before For You eligibility; defines clustering/diversity; preserves zero broad changed-state Simulation calls; and separates Core 7/7 lifecycle readiness from Market surface readiness.
+
+No broad Market code is authorized by this state. Management acceptance is the next gate.
 
 ## Market acceptance
 **State:** NOT ACCEPTED  
-Do not close Market North Star on the current implementation. Player Board / Free Agents readiness contradiction and opportunity-quality/discovery architecture remain open.
+Do not close Market North Star on the current implementation. The architecture diagnosis is now complete, including the Player Board / Free Agents readiness contradiction, but bounded implementation and repeat physical-iPhone acceptance remain outstanding.
 
 ## Home × Franchise audit
 **State:** DEFERRED  

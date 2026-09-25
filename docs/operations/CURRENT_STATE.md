@@ -49,7 +49,28 @@ Read-only research inspection established:
 2. Keep production K/DST authority fail-closed until a second independent historical PIT corpus, production source rights/content health, and the remaining Sleeper truth-fixture requirements are satisfied.
 3. Keep 2026 K/DST preseason comparison unavailable unless qualifying point-in-time raw evidence is proven; never backdate current data.
 4. Resume new-league 7/7 lifecycle acceptance only after the required Forecast authority is actually promoted.
-5. Market / Trade Discovery architecture may continue in parallel because it does not own Forecast/K/DST authority.
+5. Review the completed Market / Trade Discovery architecture handoff; if accepted, authorize bounded Market implementation and repeat physical-iPhone acceptance.
+6. Keep Market implementation separate from the blocked Forecast/K/DST empirical/source evidence gate; do not weaken either authority to unblock the other.
+7. Continue Home × Franchise redundancy audit only after the Market discovery contract is accepted or Management explicitly reprioritizes it.
 
 ## Important distinction
 Research and bounded code implementation are complete for the currently authorized evidence-independent scope. Production Forecast support is still blocked on empirical/source evidence promotion and subsequent downstream/lifecycle acceptance. See `artifacts/implementation/forecast_k_dst_contracts_20260924/EVIDENCE_GATE_CHECK_20260925.md`.
+
+
+## Market discovery architecture checkpoint — 2026-09-24
+The Market / Trade Discovery Architecture Review is complete and has stopped at **MANAGEMENT GATE**.
+
+Persisted handoff:
+- `artifacts/architecture/market_trade_discovery_20260924/IMPLEMENTATION_HANDOFF.md`
+
+Key determination:
+- current broad Search is package-row-first;
+- it emits nearest one-, two-, and three-asset Cardinal matches per opposing player target;
+- exact-only deduplication and multi-lane package ordering allow repeated target neighborhoods before opportunity-family clustering;
+- the quick Market payload contains zero bilateral Decision enrichment and the full workspace normally evaluates only one row;
+- For You then fills remaining “high-signal” slots from raw Search order;
+- Decision already owns the package-economics, cut-cost, bilateral consequence, and negotiation-feasibility primitives needed for a bounded pre-Simulation screen;
+- exact changed-state Simulation does not need to become broad discovery and remains downstream of a selected transaction;
+- global 7/7 proves the core State/Forecast/current-Simulation/Value lifecycle, not the separately lazy all-player Intrinsic/Market consumer contract, which explains the current Player Board / Free Agents contradiction.
+
+Management review of the persisted architecture is required before broad Market implementation. Market product acceptance remains open.

@@ -67,3 +67,26 @@ Decision: the Market review will define an Opportunity as a governed strategic o
 
 ## 2026-09-24 — Market mobile simplification
 Decision: Market must be recomposed around SEE → UNDERSTAND → INTERACT → DRILL DEEPER, with progressive disclosure and distinct jobs for For You, Trade Finder, Player Board, and Free Agents. Market-vs-Intrinsic remains a discovery lens rather than mandatory repeated top-level chrome on every surface.
+
+
+## 2026-09-24 — Market discovery unit is Opportunity, not package
+Decision proposed for Management acceptance: discovery uses three governed layers — OpportunityHypothesis, MarketOpportunity, and CandidatePath. Raw one-/two-/three-asset packages are subordinate variants inside CandidatePath families and cannot independently consume For You cards.
+
+Reason: the shipped package-row-first implementation mechanically produces repeated target neighborhoods and spends attention before strategic/economic/bilateral screening.
+
+## 2026-09-24 — Pre-Simulation Decision screen before For You eligibility
+Decision proposed for Management acceptance: at least one representative path behind every For You item must complete a bounded pre-Simulation Decision screen using existing governed economics, package concentration/economics, mandatory-cut cost, roster consequences, and negotiation feasibility. Broad discovery must launch zero exact changed-state Simulation runs.
+
+The default private-beta compute budget proposed by the review is eight representative paths, allocated one per distinct Opportunity family before second representatives. This is a tunable compute policy, not analytical authority.
+
+## 2026-09-24 — For You is a diversity-constrained attention frontier
+Decision proposed for Management acceptance: For You renders only `worth_attention` MarketOpportunity objects, maximum four by default. Search applies deterministic categorical ordering followed by explicit diversity caps. Exact named-target duplication never relaxes. The feed is not filled with market-match-only or unevaluated rows to meet a quota.
+
+## 2026-09-24 — Bilateral plausibility without acceptance odds
+Decision proposed for Management acceptance: negotiation-feasibility shapes and pre-Simulation bilateral consequences supply the primary plausibility evidence. Owner Intelligence may attach context-controlled descriptive owner behavior as optional evidence/tie-breaker. Market does not generate an acceptance probability and Owner Intelligence does not alter universal Value.
+
+## 2026-09-24 — Core lifecycle readiness is not surface readiness
+Decision proposed for Management acceptance: global 7/7 is explicitly Core Intelligence readiness. Player Board, Free Agents, For You, and Trade Finder publish separate consumer readiness. Optional Shapley Intrinsic preparation may degrade or progressively enrich a Market surface but must not blank already-governed Broad Market/State evidence.
+
+## 2026-09-24 — Market vs Intrinsic is a discovery lens
+Decision proposed for Management acceptance: Broad Market vs FSFFL Intrinsic disagreement remains prominent in Player Board and Player Intelligence and may seed a discovery hypothesis, but the two lenses are not blended and are not repeated as mandatory organizing chrome across every Market surface.
