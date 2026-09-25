@@ -628,40 +628,22 @@ def _materialization_state(rules: LeagueRules):
 
 
 def test_provisional_materializer_persists_only_rights_cleared_supported_subjects() -> None:
-    k_rows_one = (
-        RosProjectionRow(
-            provider="one",
-            external_id="K:BUF:one",
-            subject_name="Tyler Bass",
-            position=Position.K,
-            nfl_team="BUF",
-            projected_games=15,
-            stats=((ForecastMetric.XP_MADE.value, 20.0),),
-        ),
-    )
-    k_rows_two = (
-        RosProjectionRow(
-            provider="two",
-            external_id="K:BUF:two",
-            subject_name="Tyler Bass",
-            position=Position.K,
-            nfl_team="BUF",
-            projected_games=15,
-            stats=((ForecastMetric.XP_MADE.value, 22.0),),
-        ),
-    )
     artifact = _artifact(
         _snapshot(
-            provider="one",
+            "one",
+            position=Position.K,
+            stats=((ForecastMetric.XP_MADE.value, 20.0),),
             independence_group="one",
-            rows=k_rows_one,
             rights_status=ProjectionRightsStatus.LICENSED_BETA,
+            hash_char="a",
         ),
         _snapshot(
-            provider="two",
+            "two",
+            position=Position.K,
+            stats=((ForecastMetric.XP_MADE.value, 22.0),),
             independence_group="two",
-            rows=k_rows_two,
             rights_status=ProjectionRightsStatus.PRODUCTION_CLEARED,
+            hash_char="b",
         ),
     )
     store = _CaptureArtifactStore()
@@ -687,9 +669,12 @@ def test_provisional_materializer_persists_only_rights_cleared_supported_subject
 def test_provisional_materializer_keeps_research_only_snapshot_non_promoting() -> None:
     artifact = _artifact(
         _snapshot(
-            provider="cbs",
+            "cbs",
+            position=Position.DST,
+            stats=((ForecastMetric.DST_SACK.value, 40.0),),
             independence_group="cbs",
             rights_status=ProjectionRightsStatus.RESEARCH_ONLY,
+            hash_char="c",
         ),
     )
     store = _CaptureArtifactStore()
