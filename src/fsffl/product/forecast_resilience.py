@@ -3,13 +3,20 @@ from __future__ import annotations
 import logging
 from typing import Callable
 
+from fsffl.forecast.annual_preseason_snapshot import ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION
 from fsffl.forecast.current_runtime import LiveForecastSourceHealthFailure
 from fsffl.forecast.preseason_baseline import (
     PRESEASON_BASELINE_MODEL_VERSION,
+    PreseasonForecastBaseline,
     baseline_from_runtime,
     build_runtime_from_preseason_baseline,
     preseason_scope_id,
     state_is_preseason_capture_eligible,
+)
+from fsffl.persistence.annual_preseason_snapshot import (
+    ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND,
+    NFL_SEASON_SCOPE_KIND,
+    decode_annual_preseason_projection_snapshot,
 )
 from fsffl.persistence.contracts import PersistenceStore
 from fsffl.persistence.runtime_cache import (
@@ -25,6 +32,43 @@ from .runtime import LiveForecastEvidence, default_live_forecast_loader
 
 _logger = logging.getLogger("fsffl.product.forecast")
 ForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
+
+
+def _league_baseline_from_annual_snapshot(
+    league_state: LeagueState,
+    *,
+    artifact,
+) -> PreseasonForecastBaseline:
+    """Bind immutable NFL-season raw preseason evidence to one league's rules.
+
+    The annual artifact is league-agnostic raw-stat Forecast truth captured before
+    kickoff. This adapter never changes timestamps, source ids, raw observations, or
+    source coverage. It only supplies the target league identity required by the
+    existing replay path so scoring remains a downstream transformation.
+    """
+
+    snapshot = decode_annual_preseason_projection_snapshot(dict(artifact.payload))
+    if snapshot.model_version != ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION:
+        raise ValueError("annual preseason snapshot model version is stale")
+    if snapshot.season != league_state.league.season:
+        raise ValueError("annual preseason snapshot belongs to a different season")
+    if len(set(snapshot.successful_source_ids)) < 2:
+        raise ValueError("annual preseason snapshot lacks two-source Forecast authority")
+    if not snapshot.governed_raw_ensemble:
+        raise ValueError("annual preseason snapshot has no governed raw Forecast ensemble")
+    evaluation_as_of = max(
+        item.as_of for item in snapshot.governed_raw_ensemble
+    )
+    return PreseasonForecastBaseline(
+        league_id=league_state.league.league_id,
+        season=league_state.league.season,
+        raw_ensemble=snapshot.governed_raw_ensemble,
+        coverage=snapshot.coverage,
+        successful_source_ids=snapshot.successful_source_ids,
+        evaluation_as_of=evaluation_as_of,
+        source_runtime_model_version=snapshot.source_runtime_model_version,
+        source_artifact_id=artifact.key.input_fingerprint,
+    )
 
 
 def _evidence_from_baseline(
@@ -81,12 +125,31 @@ def make_preseason_baseline_authority_loader(
             scope_id=scope_id,
             model_version=PRESEASON_BASELINE_MODEL_VERSION,
         )
-        if existing is None:
-            raise ValueError(
-                "valid preserved preseason Year-1 baseline is unavailable for "
-                f"{scope_id}"
+        if existing is not None:
+            baseline = decode_preseason_forecast_baseline(dict(existing.payload))
+        else:
+            annual = persistence_store.get_latest_reusable_artifact(
+                artifact_kind=ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND,
+                scope_kind=NFL_SEASON_SCOPE_KIND,
+                scope_id=str(league_state.league.season),
+                model_version=ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION,
             )
-        baseline = decode_preseason_forecast_baseline(dict(existing.payload))
+            if annual is None:
+                raise ValueError(
+                    "valid preserved preseason Year-1 baseline is unavailable for "
+                    f"{scope_id}; no governed league-agnostic annual preseason raw snapshot exists"
+                )
+            baseline = _league_baseline_from_annual_snapshot(
+                league_state,
+                artifact=annual,
+            )
+            _logger.info(
+                "FSFFL late-connect preseason authority replay league=%s season=%s annual_artifact=%s sources=%s",
+                league_state.league.league_id,
+                league_state.league.season,
+                annual.key.input_fingerprint,
+                list(baseline.successful_source_ids),
+            )
         evidence = _evidence_from_baseline(
             league_state,
             baseline=baseline,
