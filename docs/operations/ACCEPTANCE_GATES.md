@@ -72,9 +72,9 @@ The contract defines governed behavior for a league first connected after presea
 - when qualifying preseason evidence does not exist, surface preseason evidence as unavailable while permitting separately authoritative current-forward Forecast where valid.
 
 ## Forecast K/DST implementation gate
-**Status: ACTIVE — PR #233 IMPLEMENTS THE AUTHORIZED 2026 LATE-START CONTRACT; PRODUCTION AUTHORITY STILL BLOCKED.**
+**Status: IMPLEMENTATION ACCEPTANCE SATISFIED — PRODUCTION AUTHORITY BLOCKED ON EXTERNAL EVIDENCE / RIGHTS.**
 
-PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` and satisfies the evidence-independent code-level contract.
+PR #215 merged at `407c1bf85e5dc75f92b9906719f82bcd11d97c31` and established the base evidence-independent K/DST contract. PR #233 merged at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` and satisfies the Management-authorized 2026 late-start implementation contract. Its reconciled head passed full CI, PR164 focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace.
 
 Accepted code-level requirements already include:
 - canonical K and D/ST subject identity;
@@ -111,10 +111,13 @@ Production K/DST support remains unaccepted until evidence demonstrates:
 - K: live validation of an exact 60+ evidence path plus a second independent 60+ source;
 - D/ST: live validation of distributional PA-tier evidence plus a second independent PA-distribution source and remaining rare-event two-source coverage;
 - target-compatible K and D/ST uncertainty promotion with explicit scoring-fingerprint compatibility;
-- implementation of schedule-aware row freshness so stale post-game ROS rows are quarantined rather than backdated or heuristically adjusted;
-- the 2026-only artifact cannot be created for 2027+;
 - downstream Value/Simulation/Decision do not invent missing Forecast truth;
 - successful new-league lifecycle acceptance after Forecast authority is actually promoted.
+
+Already satisfied in PR #233:
+- schedule-aware row freshness quarantines stale post-game ROS rows rather than backdating or heuristically adjusting them;
+- the dedicated late-start artifact is hard-rejected outside 2026;
+- research-only provider evidence and zero-uncertainty states cannot acquire production authority.
 
 JerryGM is one technically exact-capability current ROS candidate:
 - its docs support 60+ K custom scoring;
