@@ -142,6 +142,30 @@ app = _webapp.create_app(
     state_snapshot_store=_state_snapshot_store,
     persistence_store=_persistence_store,
 )
+
+def _log_startup_runtime_readiness() -> None:
+    if not _beta_restore_user:
+        return
+    context = _runtime_store.get(_beta_restore_user)
+    league_state = context.league_state
+    complete = bool(
+        league_state is not None
+        and context.forecast_evidence is not None
+        and context.simulation_analytics is not None
+        and context.value_evidence is not None
+    )
+    logging.getLogger("uvicorn.error").info(
+        "FSFFL startup runtime readiness user=%s league=%s state=%s forecast=%s simulation=%s value=%s complete=%s",
+        _beta_restore_user,
+        league_state.league.league_id if league_state is not None else None,
+        league_state.state_id if league_state is not None else None,
+        context.forecast_evidence is not None,
+        context.simulation_analytics is not None,
+        context.value_evidence is not None,
+        complete,
+    )
+
+app.add_event_handler("startup", _log_startup_runtime_readiness)
 install_annual_preseason_scheduler_route(
     app,
     persistence_store=_persistence_store,
