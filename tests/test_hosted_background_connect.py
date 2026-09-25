@@ -307,8 +307,8 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    assert "20260925-hodor-lifecycle1" in source
-    assert "mobile_safari_recovery.js?v=20260925-hodor-lifecycle1" in source
+    assert "20260925-state-first1" in source
+    assert "mobile_safari_recovery.js?v=20260925-state-first1" in source
 
 
 def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
