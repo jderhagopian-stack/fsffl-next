@@ -33,6 +33,7 @@
     freeSort:{key:"market_index",direction:"desc"},
     finderFilters:{position:"",team:"",status:"",deal:"",assets:"",sort:"search"},
     detailKey:"",
+    pathKey:"",
     detailSection:"overview",
     waiverPlayer:null,
     waiverDrop:"",
@@ -56,6 +57,13 @@
   const context=()=>{try{return state?.context||window.state?.context||{}}catch(_){return{}}};
   const onMarket=()=>{try{return state?.route==="opportunities"||window.state?.route==="opportunities"}catch(_){return false}};
   const tradeRows=()=>opp()?.payload?.trade_discovery?.candidates||[];
+  const marketDiscovery=payload=>payload?.market_discovery||opp()?.payload?.market_discovery||{};
+  const opportunities=payload=>marketDiscovery(payload)?.opportunities||[];
+  const forYouOpportunities=payload=>marketDiscovery(payload)?.for_you||[];
+  const candidatePaths=payload=>marketDiscovery(payload)?.candidate_paths||[];
+  const pathById=(payload,id)=>candidatePaths(payload).find(path=>String(path.path_id)===String(id))||null;
+  const opportunityById=(payload,id)=>opportunities(payload).find(item=>String(item.opportunity_id)===String(id))||null;
+  const representative=path=>path?.representative_package||null;
   const rowKey=row=>String(row?.counterparty_team_id||"")+":"+(row?.send||[]).map(x=>x.asset_ref).join("+")+":"+(row?.receive||[]).map(x=>x.asset_ref).join("+");
   const refs=items=>(items||[]).map(x=>x.asset_ref).filter(Boolean);
   const labels=items=>(items||[]).map(x=>x.label||x.asset_ref).filter(Boolean);
@@ -108,7 +116,7 @@
   }
   function openTab(key){
     if(!TABS.some(row=>row[0]===key))return;
-    market.tab=key;market.detailKey="";market.detailSection="overview";
+    market.tab=key;market.detailKey="";market.pathKey="";market.detailSection="overview";
     if((key==="for_you"||key==="trade_finder")&&opp()?.payload?.status!=="ready"){
       market.readOnly=false;
       shell();
@@ -128,44 +136,63 @@
     if(market.tab==="free_agents")return renderFreeAgents(body);
   }
 
-  function spotlightRows(rows,payload){
-    const spots=payload?.trade_discovery?.spotlights||{},desired=[spots.most_promising_evaluated,spots.closest_market_match,spots.premium_target,spots.position_need].filter(Boolean);
-    const byKey=new Map(rows.map(row=>[rowKey(row),row])),ordered=[];
-    desired.forEach(row=>{const match=byKey.get(rowKey(row));if(match&&!ordered.includes(match))ordered.push(match)});
-    rows.forEach(row=>{if(!ordered.includes(row))ordered.push(row)});
-    return ordered.slice(0,5);
+  function opportunityTitle(item,payload){
+    const paths=(item?.representative_path_ids||[]).map(id=>pathById(payload,id)).filter(Boolean);
+    const targets=unique(paths.map(path=>labels(representative(path)?.receive).join(" + ")).filter(Boolean));
+    if(item?.objective_family==="upgrade_position"&&item?.need_dimension)return "Upgrade "+item.need_dimension+" starter quality";
+    if(targets.length===1)return "Acquire "+targets[0];
+    return item?.need_dimension&&item.need_dimension!=="UNKNOWN" ? item.need_dimension+" market opportunity" : "Strategic market opportunity";
   }
-  function opportunityCard(row){
-    const a=authority(row),target=labels(row.receive).join(" + ")||row.target_position||"Trade path",saved=storageSet(SAVE_KEY).has(rowKey(row));
-    return"<article class='market-ns-opportunity "+a.key+"'><button type='button' data-market-open='"+esc(rowKey(row))+"'><span class='market-ns-orb'>"+(a.key==="recommended"?"✓":a.key==="investigate"?"↗":a.key==="needs"?"?":"·")+"</span><div><div class='market-ns-card-top'><small>"+esc(row.target_position||"Opportunity")+(saved?" · Saved":"")+"</small>"+statusPill(row)+"</div><h3>"+esc(target)+"</h3><p>"+esc(row.counterparty_name||"Counterparty unavailable")+" · "+reason(row)+"</p>"+packageMarkup(row)+"<span class='market-ns-card-cta'>Open opportunity →</span></div></button></article>";
+  function opportunityStatus(item){
+    const value=String(item?.attention_status||"");
+    if(value==="worth_attention")return{key:"investigate",label:"Worth attention",copy:"At least one path survived governed economic and bilateral screening."};
+    if(value==="explorable")return{key:"needs",label:"Explorable",copy:"Strategically relevant, but not yet strong enough for For You."};
+    if(value==="market_match_only")return{key:"match",label:"Market match only",copy:"Search found structures without enough governed support for scarce attention."};
+    return{key:"match",label:"Suppressed",copy:"This family does not qualify for the attention frontier."};
+  }
+  function opportunityPill(item){const a=opportunityStatus(item);return"<span class='market-ns-status "+a.key+"'>"+esc(a.label)+"</span>"}
+  function opportunityCard(item,payload){
+    const a=opportunityStatus(item),paths=(item?.representative_path_ids||[]).map(id=>pathById(payload,id)).filter(Boolean),saved=storageSet(SAVE_KEY).has(String(item.opportunity_id));
+    const targets=unique(paths.map(path=>labels(representative(path)?.receive).join(" + ")).filter(Boolean)).slice(0,3);
+    const why=(item?.why_now||[])[0]||"A governed strategic path survived preliminary screening.";
+    const risk=(item?.top_risks||[])[0]||"Exact competitive impact remains a Trade Center decision.";
+    return"<article class='market-ns-opportunity "+a.key+"'><button type='button' data-market-open='"+esc(item.opportunity_id)+"'><span class='market-ns-orb'>↗</span><div><div class='market-ns-card-top'><small>"+esc(item.need_dimension||"Opportunity")+(saved?" · Saved":"")+"</small>"+opportunityPill(item)+"</div><h3>"+esc(opportunityTitle(item,payload))+"</h3><p>"+esc(why)+"</p><div class='market-ns-opportunity-evidence'><span><small>Candidate paths</small><strong>"+esc(paths.length)+" preliminarily screened</strong></span><span><small>Example targets</small><strong>"+esc(targets.join(" · ")||"See paths")+"</strong></span><span><small>Primary risk</small><strong>"+esc(risk)+"</strong></span></div><span class='market-ns-card-cta'>Open opportunity →</span></div></button></article>";
   }
   function renderForYou(body,payload){
+    if(market.pathKey)return renderCandidatePathDetail(body,payload);
     if(market.detailKey)return renderOpportunityDetail(body,payload);
-    if(!payload||payload.status!=="ready"){body.innerHTML=loading("Preparing your Market","For You uses the current governed Search workspace; it does not invent a recommendation feed.");return}
-    const rows=spotlightRows(tradeRows(),payload);
-    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>For You</p><h2>What might be worth your attention?</h2><p>A deliberately small set from current governed Search and Decision evidence.</p></div><small>"+rows.length+" high-signal item"+(rows.length===1?"":"s")+"</small></section><div class='market-ns-opportunity-list'>"+(rows.length?rows.map(opportunityCard).join(""):unavailable("No current opportunities surfaced","Try Trade Finder to set an explicit direction or use Player Board to explore independently."))+"</div>";
-    body.querySelectorAll("[data-market-open]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.marketOpen;market.detailSection="overview";renderBody(payload)}));
+    if(!payload||payload.status!=="ready"){body.innerHTML=loading("Preparing your Market","For You waits for governed strategic, economic and bilateral evidence; it does not promote raw Search rows.");return}
+    const readiness=payload?.surface_readiness?.for_you||{},rows=forYouOpportunities(payload);
+    if(readiness.status==="blocked"){
+      body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>For You</p><h2>Your best paths right now.</h2><p>Automatic opportunities remain gated until the required current team-utility and Value evidence is ready.</p></div></section>"+unavailable("For You is not ready yet","Trade Finder can still support explicit intent when its required evidence is available.");
+      return;
+    }
+    body.innerHTML="<section class='market-ns-section-head'><div><p class='eyebrow'>For You</p><h2>Your best paths right now.</h2><p>Distinct strategic opportunities that earned attention before exact Simulation.</p></div><small>"+rows.length+" worth-attention opportunit"+(rows.length===1?"y":"ies")+"</small></section><div class='market-ns-opportunity-list'>"+(rows.length?rows.map(item=>opportunityCard(item,payload)).join(""):unavailable("Nothing has earned For You space","Trade Finder and Player Board remain available without lowering the evidence bar."))+"</div>";
+    body.querySelectorAll("[data-market-open]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.marketOpen;market.pathKey="";market.detailSection="overview";renderBody(payload)}));
   }
-  function acquisitionPaths(row,rows){
-    const target=refs(row.receive)[0];if(!target)return[row];
-    const matches=rows.filter(item=>refs(item.receive).includes(target));
-    return matches.length?matches.slice(0,4):[row];
+  function pathsForOpportunity(item,payload){
+    return (item?.representative_path_ids||[]).map(id=>pathById(payload,id)).filter(Boolean);
   }
   function renderOpportunityDetail(body,payload){
-    const rows=tradeRows(),row=rows.find(item=>rowKey(item)===market.detailKey);
-    if(!row){market.detailKey="";return renderForYou(body,payload)}
-    const a=authority(row),paths=acquisitionPaths(row,rows),section=market.detailSection;
-    const overview="<div class='market-ns-detail-grid'><article><small>Why it surfaced</small><strong>"+reason(row)+"</strong></article><article><small>Search / Decision status</small><strong>"+esc(a.label)+"</strong><span>"+esc(a.copy)+"</span></article><article><small>Owner history coverage</small><strong>"+esc(ownerCoverage(row.counterparty_team_id))+"</strong></article><article><small>Value context</small><strong>"+(finite(row.market_gap_ratio)?(row.market_gap_ratio*100).toFixed(1)+"% relative package gap":"Unavailable")+"</strong><span>Broad Market and Intrinsic are not blended here.</span></article></div>";
-    const pathMarkup="<div class='market-ns-paths'>"+paths.map(item=>"<article>"+packageMarkup(item)+"<small>Search-discovered acquisition path · not an acceptance prediction</small><button type='button' class='secondary-button' data-market-path='"+esc(rowKey(item))+"'>Use this package</button></article>").join("")+"</div>";
-    const fit="<div class='market-ns-detail-grid'><article><small>Roster need</small><strong>"+esc(row.target_position||"Unavailable")+(row.focal_position_strength_rank?" · #"+esc(row.focal_position_strength_rank):"")+"</strong></article><article><small>Package shape</small><strong>"+esc(words(row.package_shape||((row.send||[]).length>1?"consolidation":"trade")))+"</strong></article><article><small>Counterparty context</small><strong>"+esc(ownerCoverage(row.counterparty_team_id))+"</strong><span>Descriptive only; no acceptance probability.</span></article><article><small>Exact season impact</small><strong>Trade Center</strong><span>Not run merely to preview this opportunity.</span></article></div>";
-    body.innerHTML="<section class='market-ns-detail'><div class='market-ns-detail-top'><button type='button' class='text-button' data-market-back>‹ Back</button>"+statusPill(row)+"</div><div class='market-ns-detail-hero'><div><p class='eyebrow'>Opportunity Detail</p><h2>"+esc(labels(row.receive).join(" + ")||row.target_position||"Trade opportunity")+"</h2><button type='button' class='market-ns-owner-link' data-market-owner='"+esc(row.counterparty_team_id||"")+"'>"+esc(row.counterparty_name||"Counterparty")+" → Owner Intelligence</button></div><div class='market-ns-detail-actions'><button type='button' class='secondary-button' data-market-save>"+(storageSet(SAVE_KEY).has(rowKey(row))?"Saved ✓":"Save")+"</button>"+(refs(row.receive)[0]?"<button type='button' class='secondary-button' data-market-watch>"+(storageSet(WATCH_KEY).has(refs(row.receive)[0])?"Watching ✓":"Watch target")+"</button>":"")+"<button type='button' class='primary-button' data-market-trade='"+esc(rowKey(row))+"'>Evaluate this package in Trade Center</button></div></div>"+packageMarkup(row)+"<nav class='market-ns-detail-tabs'><button data-detail-section='overview' class='"+(section==="overview"?"active":"")+"'>Overview</button><button data-detail-section='paths' class='"+(section==="paths"?"active":"")+"'>Acquisition Paths</button><button data-detail-section='fit' class='"+(section==="fit"?"active":"")+"'>Fit & Impact</button></nav>"+(section==="paths"?pathMarkup:section==="fit"?fit:overview)+"</section>";
-    body.querySelector("[data-market-back]")?.addEventListener("click",()=>{market.detailKey="";renderBody(payload)});
-    body.querySelectorAll("[data-detail-section]").forEach(button=>button.addEventListener("click",()=>{market.detailSection=button.dataset.detailSection;renderBody(payload)}));
-    body.querySelectorAll("[data-market-path]").forEach(button=>button.addEventListener("click",()=>{market.detailKey=button.dataset.marketPath;market.detailSection="overview";renderBody(payload)}));
+    const item=opportunityById(payload,market.detailKey);
+    if(!item){market.detailKey="";return renderForYou(body,payload)}
+    const paths=pathsForOpportunity(item,payload),section=market.detailSection,why=item.why_now||[],risks=item.top_risks||[];
+    const overview="<div class='market-ns-detail-grid'><article><small>Why this exists</small><strong>"+esc(why[0]||"Governed strategic evidence")+"</strong><span>"+esc(why[1]||"Opportunity family established before package selection.")+"</span></article><article><small>Attention status</small><strong>"+esc(opportunityStatus(item).label)+"</strong><span>"+esc(opportunityStatus(item).copy)+"</span></article><article><small>Preliminary economics</small><strong>"+esc(words(item.preliminary_economic_band))+"</strong><span>Decision-owned screening; no synthetic opportunity score.</span></article><article><small>Bilateral plausibility</small><strong>"+esc(words(item.bilateral_plausibility))+"</strong><span>Not an acceptance probability.</span></article></div>";
+    const pathMarkup="<div class='market-ns-paths'>"+paths.map(path=>{const row=representative(path);return"<article><div class='market-ns-path-heading'><div><small>"+esc(row?.counterparty_name||"Counterparty")+"</small><strong>"+esc(labels(row?.receive).join(" + ")||item.need_dimension)+"</strong></div><span>"+esc(words(path.bilateral_plausibility))+"</span></div><p>"+esc((path.risks||[])[0]||"Preliminary screen complete; exact competitive impact remains downstream.")+"</p><button type='button' class='secondary-button' data-market-path='"+esc(path.path_id)+"'>Open candidate path</button></article>"}).join("")+"</div>";
+    const fit="<div class='market-ns-detail-grid'><article><small>Strategic need</small><strong>"+esc(item.need_dimension||"Unavailable")+"</strong></article><article><small>Target family</small><strong>"+esc(words(item.target_family||"Unavailable"))+"</strong></article><article><small>Path count</small><strong>"+esc(paths.length)+" screened</strong><span>"+esc(item.alternate_path_count||0)+" additional path(s) remain outside the first view.</span></article><article><small>Exact season impact</small><strong>Trade Center</strong><span>Simulation is not run merely to preview this Opportunity.</span></article></div>";
+    body.innerHTML="<section class='market-ns-detail'><div class='market-ns-detail-top'><button type='button' class='text-button' data-market-back>‹ Back</button>"+opportunityPill(item)+"</div><div class='market-ns-detail-hero'><div><p class='eyebrow'>Opportunity Detail</p><h2>"+esc(opportunityTitle(item,payload))+"</h2><p class='market-ns-detail-copy'>Why first. Packages second. Exact transaction decisions remain downstream.</p></div><div class='market-ns-detail-actions'><button type='button' class='secondary-button' data-market-save>"+(storageSet(SAVE_KEY).has(String(item.opportunity_id))?"Saved ✓":"Save opportunity")+"</button></div></div><nav class='market-ns-detail-tabs'><button data-detail-section='overview' class='"+(section==="overview"?"active":"")+"'>Overview</button><button data-detail-section='paths' class='"+(section==="paths"?"active":"")+"'>Candidate Paths</button><button data-detail-section='fit' class='"+(section==="fit"?"active":"")+"'>Fit & Risk</button></nav>"+(section==="paths"?pathMarkup:section==="fit"?fit:overview)+(risks.length?"<div class='market-ns-risk-strip'><small>Top risk</small><strong>"+esc(risks[0])+"</strong></div>":"")+"</section>";
+    body.querySelector("[data-market-back]")?.addEventListener("click",()=>{market.detailKey="";market.pathKey="";renderBody(payload)});
+    body.querySelectorAll("[data-detail-section]").forEach(button=>button.addEventListener("click",()=>{market.detailSection=button.dataset.detailSection;renderOpportunityDetail(body,payload)}));
+    body.querySelectorAll("[data-market-path]").forEach(button=>button.addEventListener("click",()=>{market.pathKey=button.dataset.marketPath;renderCandidatePathDetail(body,payload)}));
+    body.querySelector("[data-market-save]")?.addEventListener("click",()=>{const set=storageSet(SAVE_KEY),key=String(item.opportunity_id);set.has(key)?set.delete(key):set.add(key);persistSet(SAVE_KEY,set);renderOpportunityDetail(body,payload)});
+  }
+  function renderCandidatePathDetail(body,payload){
+    const path=pathById(payload,market.pathKey),item=opportunityById(payload,path?.opportunity_id),row=representative(path);
+    if(!path||!item||!row){market.pathKey="";return renderOpportunityDetail(body,payload)}
+    const alt=(path.alternate_packages||[])[0]||null,owner=path.owner_context_status==="observed_history"?"Observed history attached":"Owner history unavailable",risks=path.risks||[];
+    body.innerHTML="<section class='market-ns-detail market-ns-path-detail'><div class='market-ns-detail-top'><button type='button' class='text-button' data-path-back>‹ Opportunity</button><span class='market-ns-status investigate'>Prelim screened</span></div><div class='market-ns-detail-hero'><div><p class='eyebrow'>Candidate Path Detail</p><h2>"+esc(labels(row.receive).join(" + ")||item.need_dimension)+" via "+esc(row.counterparty_name||"counterparty")+"</h2><p class='market-ns-detail-copy'>This route survived preliminary screening. It is not a final trade verdict.</p></div><div class='market-ns-detail-actions'><button type='button' class='primary-button' data-market-trade>Evaluate in Trade Center</button></div></div>"+packageMarkup(row)+"<div class='market-ns-detail-grid'><article><small>Strategic fit</small><strong>"+esc(item.need_dimension)+" · "+esc(item.strategic_relevance)+"</strong></article><article><small>Economics</small><strong>"+esc(words(path.economic_screen))+"</strong></article><article><small>Bilateral rationale</small><strong>"+esc(words(path.bilateral_plausibility))+"</strong><span>"+esc(words(path.negotiation_feasibility_shape||"unavailable"))+"</span></article><article><small>Owner context</small><strong>"+esc(owner)+"</strong><span>Descriptive only; no acceptance probability.</span></article></div>"+(risks.length?"<div class='market-ns-risk-strip'><small>Important sacrifice / risk</small><strong>"+esc(risks[0])+"</strong></div>":"")+(alt?"<div class='market-ns-alt-package'><small>Materially distinct alternative package</small>"+packageMarkup(alt)+"</div>":"")+"<p class='market-ns-deep-note'>Exact season impact has not been run for discovery. Trade Center owns full bilateral Decision and targeted 50,000-run Simulation.</p></section>";
+    body.querySelector("[data-path-back]")?.addEventListener("click",()=>{market.pathKey="";renderOpportunityDetail(body,payload)});
     body.querySelector("[data-market-trade]")?.addEventListener("click",()=>window.fsfflOpenOpportunityInTradeCenter?.(row));
-    body.querySelector("[data-market-owner]")?.addEventListener("click",()=>openOwner(row.counterparty_team_id));
-    body.querySelector("[data-market-save]")?.addEventListener("click",()=>{const set=storageSet(SAVE_KEY),key=rowKey(row);set.has(key)?set.delete(key):set.add(key);persistSet(SAVE_KEY,set);renderOpportunityDetail(body,payload)});
-    body.querySelector("[data-market-watch]")?.addEventListener("click",()=>{const ref=refs(row.receive)[0];if(!ref)return;const set=storageSet(WATCH_KEY);set.has(ref)?set.delete(ref):set.add(ref);persistSet(WATCH_KEY,set);renderOpportunityDetail(body,payload)});
   }
 
   function currentCalculatedState(payload){
@@ -368,7 +395,7 @@
     }
   }
   function reset(){
-    market.playerRows=[];market.playerLoaded=false;market.playerLoading=false;market.playerError=null;market.detailKey="";market.waiverPlayer=null;market.waiverResult=null;market.waiverSeq+=1;
+    market.playerRows=[];market.playerLoaded=false;market.playerLoading=false;market.playerError=null;market.detailKey="";market.pathKey="";market.waiverPlayer=null;market.waiverResult=null;market.waiverSeq+=1;
   }
 
   window.fsfflMarketNorthStarV2=true;
