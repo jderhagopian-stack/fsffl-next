@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from fsffl.product.market_discovery_runtime import DEFAULT_PRELIMINARY_DECISION_BUDGET
 from fsffl.product.opportunity_workspace_cache import make_cached_opportunity_workspace
 
 
@@ -29,6 +30,7 @@ def test_exact_runtime_workspace_is_reused_without_rebuilding() -> None:
     assert first is second
     assert first == {"status": "ready", "call": 1}
     assert len(calls) == 1
+    assert calls[0][2] == DEFAULT_PRELIMINARY_DECISION_BUDGET
 
 
 def test_replacing_authoritative_evidence_forces_cache_miss() -> None:
