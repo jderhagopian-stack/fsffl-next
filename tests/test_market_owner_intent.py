@@ -43,7 +43,7 @@ def test_strategic_owner_intent_uses_server_published_posture_ordering_not_ui_sc
     assert "candidate_indices" in source
     assert "applyServerPostureView" in source
     assert "fsffl.tradeFinderPosture" in source
-    assert "Strategic choices change Trade Finder discovery order only" in source
+    assert "Strategic choices constrain the submitted Trade Finder discovery neighborhood" in source
     assert "server-published posture views" in source
 
 
