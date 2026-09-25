@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from datetime import UTC, datetime
 from time import monotonic, sleep
 
@@ -369,3 +370,19 @@ def test_failed_refresh_never_restores_last_good_from_different_league() -> None
 
     assert restored is not None
     assert restored.league_state.league.league_id == "sleeper:456"
+
+
+
+def test_complete_last_good_restore_recheckpoints_active_durable_context() -> None:
+    source = Path("src/fsffl/product/persistent_runtime.py").read_text(encoding="utf-8")
+    restore = source.split("def _restore_once", 1)[1].split("def restore_user", 1)[0]
+
+    guard_index = restore.index("snapshot.restored_from_last_good")
+    context_index = restore.index("restored_context = super().get(user_id)")
+    checkpoint_index = restore.index("self._checkpoint_async(user_id, restored_context)")
+    log_index = restore.index("FSFFL restored last-good recheckpoint scheduled")
+
+    assert guard_index < context_index < checkpoint_index < log_index
+    assert "snapshot.forecast_evidence is not None" in restore
+    assert "snapshot.simulation_analytics is not None" in restore
+    assert "snapshot.value_evidence is not None" in restore
