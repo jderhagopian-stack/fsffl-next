@@ -102,6 +102,18 @@ class LateStartIndependentCoverage(FrozenModel):
         return self
 
 
+class LateStartAuthorityAssessment(FrozenModel):
+    subject_key: str
+    rule_complete: bool
+    production_rights_source_count: Annotated[int, Field(ge=0)]
+    minimum_independent_sources: Annotated[int, Field(ge=2)]
+    calibration_fingerprint_id: str
+    calibration_compatible: bool
+    uncertainty_promoted: bool
+    authoritative: bool
+    blockers: tuple[str, ...]
+
+
 class LateStartProviderEvidence(FrozenModel):
     provider: str
     source_id: str
@@ -711,3 +723,72 @@ def late_start_subject_is_rule_complete(
     if not coverage:
         return False
     return all(item.status != RuleEvidenceStatus.UNSUPPORTED for item in coverage)
+
+
+def assess_late_start_subject_authority(
+    snapshot: LateStartCurrentProjectionSnapshot,
+    *,
+    subject_key: str,
+    rules: LeagueRules,
+    promoted_uncertainty_fingerprint_ids: frozenset[str] = frozenset(),
+) -> LateStartAuthorityAssessment:
+    """Expose the exact remaining gates without zero-uncertainty fallback."""
+
+    from .k_dst_calibration import (
+        DST_REDUCED_2024_FINGERPRINT,
+        K_REDUCED_2024_FINGERPRINT,
+        evaluate_calibration_fingerprint_compatibility,
+    )
+
+    fingerprint = (
+        DST_REDUCED_2024_FINGERPRINT
+        if subject_key.startswith("DST:")
+        else K_REDUCED_2024_FINGERPRINT
+        if subject_key.startswith("K:")
+        else None
+    )
+    if fingerprint is None:
+        raise ValueError("late-start authority subject must be K or D/ST")
+
+    sources = source_rule_evidence_for_subject(
+        snapshot,
+        subject_key=subject_key,
+        require_production_rights=True,
+    )
+    groups = {item.independence_group for item in sources}
+    rule_complete = late_start_subject_is_rule_complete(
+        snapshot,
+        subject_key=subject_key,
+        rules=rules,
+        require_production_rights=True,
+    )
+    compatibility = evaluate_calibration_fingerprint_compatibility(
+        fingerprint,
+        rules,
+    )
+    uncertainty_promoted = (
+        fingerprint.fingerprint_id in promoted_uncertainty_fingerprint_ids
+        and compatibility.compatible
+    )
+
+    blockers: list[str] = []
+    if len(groups) < snapshot.minimum_independent_sources:
+        blockers.append("insufficient_rights_cleared_independent_sources")
+    if not rule_complete:
+        blockers.append("active_rule_coverage_incomplete")
+    if not compatibility.compatible:
+        blockers.append("calibration_scoring_fingerprint_incompatible")
+    if not uncertainty_promoted:
+        blockers.append("simulation_grade_uncertainty_not_promoted")
+
+    return LateStartAuthorityAssessment(
+        subject_key=subject_key,
+        rule_complete=rule_complete,
+        production_rights_source_count=len(groups),
+        minimum_independent_sources=snapshot.minimum_independent_sources,
+        calibration_fingerprint_id=fingerprint.fingerprint_id,
+        calibration_compatible=compatibility.compatible,
+        uncertainty_promoted=uncertainty_promoted,
+        authoritative=not blockers,
+        blockers=tuple(blockers),
+    )
