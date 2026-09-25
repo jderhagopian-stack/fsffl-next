@@ -35,7 +35,11 @@ Management physical-iPhone acceptance now shows Hodor at green 7/7 while Simulat
 **State:** ACTIVE — HODOR SHARED-FORECAST POPULATION / PARTIAL-COVERAGE CORRECTIVE / PR #238 HARDENING  
 Management has superseded the prior blanket Forecast implementation stop for the current Hodor population issue. Full K/DST authority remains externally gated, but valid canonical forecastable coordinates must populate under the newly codified FULL/PARTIAL/UNSUPPORTED rule; bounded unsupported rare/special-event coordinates may remain explicit omissions and must not collapse unrelated Forecast coverage. Canonical detail is in `workstreams/IMPLEMENTATION.md`.
 
-PR #244 (`Forecast: restore shared Hodor population with partial coverage`) is the active implementation PR. Its current head `264b5771106a...` implements league-agnostic offensive source health, scoring-family isolation, explicit partial/provisional coverage, separate Simulation gating, and exact-state provisional K/DST materialization from caller-supplied governed ROS evidence. Focused/trace workflows are green; the broad test workflow is currently failing, so the PR is not merge-ready and no deployment/production acceptance may be claimed yet.
+PR #244 is merged at `edb9c0f9a1ccea4250761c63f65694d449c2d285`, resolving the league-scoring/source-health coupling and adding league-agnostic source health, scoring-family isolation, explicit partial coverage, separate Simulation gating, exact-state provisional K/DST materialization, and current Forecast coverage diagnostics.
+
+PR #245 is merged at `7ad0d5ce4be038a2615433467227cdcfd3da85a4`. Its accepted head `342f8c8e0ec4b0c8b1ffb5695abaf81ed98cb518` passed 1,620 full-suite tests plus PR164, Live Forecast, Home and League Atlas focused validations. It adds generic acceptance across unrelated synthetic Sleeper league identities/scoring profiles and makes partial-authority job completion text truthful.
+
+Render deploy `dep-daredcl9fdbs7398s55g` is live on PR #245's exact merge. Production Hodor now durably restores `forecast=True simulation=False value=True complete=False` on refreshed State `d28de4cc...`. The shared Forecast corrective is complete; the absent Simulation is an explicit authority outcome, not a Forecast pipeline failure.
 
 PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. PR #233 merged on canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` after its reconciled head passed full CI, focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace. Durable implementation detail is in `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`.
 
@@ -53,9 +57,15 @@ The bounded implementation must:
 
 PR #237 is merged on canonical main at `33b969b04180893f7e582c0ebd76c54bea81961d`, implementing the Management-authorized 2026 provisional partial-rule tier with machine-readable downstream gating: Presentation/readiness/analytics may expose the provisional contract, while Value/Simulation/Team Utility/Decision/Search remain blocked from silently treating it as full Forecast truth.
 
-PR #238 (`Forecast: bind provisional K/DST artifacts to exact league state`) is an authorized safety hardening within that same bounded directive. Its current head `81e0ee4f60958d4920fb2c9e888d04367e104bed` is CI-green and binds persistence/API presentation to exact league + league-state identity; it must reconcile with current main before merge because provisional totals are league-scoring-specific. This is not new model authority.
+PR #238 is closed unmerged as superseded/reconciled: its six non-test implementation files were verified byte-identical to current main, so its exact league/state provisional K/DST safety hardening is already present and no replay merge is required.
 
 Provider/source rights, qualifying production ROS evidence, second-source exact Hodor-coordinate coverage, live exact-capability API validation, and target-compatible full-score uncertainty remain external gates for **full** K/DST authority. No heuristic substitute is authorized.
+
+
+Durable corrective closeout:
+- `artifacts/implementation/hodor_shared_forecast_20260925/IMPLEMENTATION_HANDOFF.md`
+
+This Product / Forecast corrective has reached **DIRECTIVE COMPLETE**. The external full-K/DST gates above are residual authority dependencies, not unfinished shared-Forecast implementation.
 
 ## Scoring Coverage Implementation
 **State:** MANAGEMENT GATE — STAGE 0/1 PLAN READY, NOT AUTHORIZED  
