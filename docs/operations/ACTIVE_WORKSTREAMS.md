@@ -31,7 +31,9 @@ The registry covers 89 canonical coordinate/rule-semantic requirements and the m
 Research recommends a bounded zero-authority-change Stage 0 + Stage 1 implementation: canonical registry/rule/capability contracts plus provider raw-superset preservation. New scoring/model authority is not authorized by this Research completion.
 
 ## Product / Forecast Implementation
-**State:** ACTIVE — 2026 PROVISIONAL MODE MERGED / EXACT-STATE HARDENING PR #238 ACTIVE  
+**State:** ACTIVE — HODOR SHARED-FORECAST POPULATION / PARTIAL-COVERAGE CORRECTIVE / PR #238 HARDENING  
+Management has superseded the prior blanket Forecast implementation stop for the current Hodor population issue. Full K/DST authority remains externally gated, but valid canonical forecastable coordinates must populate under the newly codified FULL/PARTIAL/UNSUPPORTED rule; bounded unsupported rare/special-event coordinates may remain explicit omissions and must not collapse unrelated Forecast coverage. Canonical detail is in `workstreams/IMPLEMENTATION.md`.
+
 PR #215 remains merged on canonical main at `407c1bf85e5dc75f92b9906719f82bcd11d97c31`. PR #233 merged on canonical main at `79c1f0c0aa094e4b1e3f6aa41eacd08c6bf1d6e8` after its reconciled head passed full CI, focused corrective regression, Live Forecast corrective trace, and Corrective live provider numerical trace. Durable implementation detail is in `artifacts/implementation/k_dst_late_start_20260925/IMPLEMENTATION_HANDOFF.md`.
 
 Management now explicitly authorizes execution of the bounded 2026 late-start implementation plan in `artifacts/research/k_dst_late_start_exception_20260925/RESEARCH_HANDOFF.md`. This authorization permits implementation, testing, persisted evidence acquisition where source rights permit, and integration of the already-governed contracts. It does **not** authorize production Forecast promotion where evidence/rights gates remain red.
