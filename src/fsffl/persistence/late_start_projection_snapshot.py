@@ -70,7 +70,9 @@ def late_start_current_projection_snapshot_artifact(
                         item.subject_key,
                         item.metric.value,
                         item.independence_groups,
+                        item.production_rights_independence_groups,
                         item.meets_minimum,
+                        item.production_authority_meets_minimum,
                     )
                     for item in snapshot.independent_source_coverage
                 ),
