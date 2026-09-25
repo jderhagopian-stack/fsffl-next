@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
 from enum import StrEnum
 from math import sqrt
 from typing import Annotated, Literal
@@ -108,22 +109,23 @@ class TeamUnitDistributionalEvidence(FrozenModel):
     subject: NflTeamUnitForecastSubject
     family: Literal["points_allowed", "yards_allowed"]
     horizon: ForecastHorizon
-    period_start: object
-    period_end: object
+    period_start: datetime
+    period_end: datetime
     games: tuple[GameRuleProbabilityDistribution, ...]
     source: str
     model_version: str
-    as_of: object
+    as_of: datetime
     provenance: Provenance
+
+    @field_validator("period_start", "period_end", "as_of")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("distributional evidence timestamps must be timezone-aware")
+        return value
 
     @model_validator(mode="after")
     def validate_metadata(self) -> "TeamUnitDistributionalEvidence":
-        from datetime import datetime
-
-        for name in ("period_start", "period_end", "as_of"):
-            value = getattr(self, name)
-            if not isinstance(value, datetime) or value.tzinfo is None:
-                raise ValueError(f"{name} must be a timezone-aware datetime")
         if self.period_end <= self.period_start:
             raise ValueError("period_end must be after period_start")
         if self.provenance.effective_at > self.as_of:
