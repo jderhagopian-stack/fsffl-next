@@ -3,11 +3,134 @@ from __future__ import annotations
 from collections import defaultdict
 from math import sqrt
 from statistics import fmean
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
-from fsffl.state.models import FrozenModel
+from fsffl.state.models import FrozenModel, LeagueRules, RosterSlot
+
+from .models import ForecastMetric
+
+
+class CalibrationScoringFingerprint(FrozenModel):
+    """Exact scoring coordinate represented by one empirical calibration."""
+
+    fingerprint_id: str
+    subject_family: Literal["K", "DST"]
+    formula: str
+    rule_weights: tuple[tuple[str, float], ...]
+    metric_weights: tuple[tuple[ForecastMetric, float], ...]
+
+    @field_validator("fingerprint_id", "formula")
+    @classmethod
+    def require_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("calibration fingerprint text cannot be blank")
+        return value
+
+    @model_validator(mode="after")
+    def unique_coordinates(self) -> "CalibrationScoringFingerprint":
+        rules = [key for key, _value in self.rule_weights]
+        metrics = [key for key, _value in self.metric_weights]
+        if not rules or len(rules) != len(set(rules)):
+            raise ValueError("fingerprint rule coordinates must be unique and non-empty")
+        if not metrics or len(metrics) != len(set(metrics)):
+            raise ValueError("fingerprint metric coordinates must be unique and non-empty")
+        return self
+
+
+class CalibrationFingerprintCompatibility(FrozenModel):
+    fingerprint_id: str
+    compatible: bool
+    active_rule_weights: tuple[tuple[str, float], ...]
+    missing_from_fingerprint: tuple[str, ...]
+    coefficient_mismatches: tuple[str, ...]
+
+
+K_REDUCED_2024_FINGERPRINT = CalibrationScoringFingerprint(
+    fingerprint_id="k-2024-reduced-fgm-fgmiss-xpm-v1",
+    subject_family="K",
+    formula="3*FGM - (FGA-FGM) + XPM",
+    rule_weights=(("fgm", 3.0), ("fgmiss", -1.0), ("xpm", 1.0)),
+    metric_weights=(
+        (ForecastMetric.FG_MADE, 4.0),
+        (ForecastMetric.FG_ATTEMPT, -1.0),
+        (ForecastMetric.XP_MADE, 1.0),
+    ),
+)
+
+DST_REDUCED_2024_FINGERPRINT = CalibrationScoringFingerprint(
+    fingerprint_id="dst-2024-reduced-sack-int-v1",
+    subject_family="DST",
+    formula="1*DST_SACK + 2*DST_INTERCEPTION",
+    rule_weights=(("sack", 1.0), ("int", 2.0)),
+    metric_weights=(
+        (ForecastMetric.DST_SACK, 1.0),
+        (ForecastMetric.DST_INTERCEPTION, 2.0),
+    ),
+)
+
+
+def evaluate_calibration_fingerprint_compatibility(
+    fingerprint: CalibrationScoringFingerprint,
+    rules: LeagueRules,
+) -> CalibrationFingerprintCompatibility:
+    """Require exact family scoring identity before a relative error floor can promote."""
+
+    slot = RosterSlot.K if fingerprint.subject_family == "K" else RosterSlot.DST
+    has_slot = any(item.slot == slot and item.count > 0 for item in rules.lineup)
+    if not has_slot:
+        return CalibrationFingerprintCompatibility(
+            fingerprint_id=fingerprint.fingerprint_id,
+            compatible=False,
+            active_rule_weights=(),
+            missing_from_fingerprint=("required_lineup_slot_missing",),
+            coefficient_mismatches=(),
+        )
+
+    if fingerprint.subject_family == "K":
+        prefixes = ("fg", "xp")
+        active = tuple(
+            sorted(
+                (item.stat, float(item.points))
+                for item in rules.scoring
+                if item.points != 0 and item.stat.startswith(prefixes)
+            )
+        )
+    else:
+        dst_prefixes = (
+            "blk_kick", "def_", "def_st_", "ff", "fum_rec", "int",
+            "pts_allow_", "safe", "sack", "tkl", "qb_hit", "pass_def",
+            "yds_allow_", "three_and_out", "fourth_down_stop", "forced_punt",
+        )
+        active = tuple(
+            sorted(
+                (item.stat, float(item.points))
+                for item in rules.scoring
+                if item.points != 0 and item.stat.startswith(dst_prefixes)
+            )
+        )
+
+    expected = dict(fingerprint.rule_weights)
+    active_map = dict(active)
+    missing = tuple(sorted(stat for stat in active_map if stat not in expected))
+    mismatches = tuple(
+        sorted(
+            stat
+            for stat, weight in active_map.items()
+            if stat in expected and expected[stat] != weight
+        )
+    )
+    omitted_expected = tuple(sorted(stat for stat in expected if stat not in active_map))
+    incompatible = tuple(sorted(set(missing) | set(omitted_expected)))
+    return CalibrationFingerprintCompatibility(
+        fingerprint_id=fingerprint.fingerprint_id,
+        compatible=not incompatible and not mismatches,
+        active_rule_weights=active,
+        missing_from_fingerprint=incompatible,
+        coefficient_mismatches=mismatches,
+    )
 
 
 class KDstCalibrationSample(FrozenModel):
