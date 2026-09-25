@@ -29,7 +29,7 @@ LEGACY_COMPATIBLE_PROJECTION_HEALTH_CONTRACT_VERSIONS = frozenset(
 # QB/RB/WR/TE evidence is healthy enough to enter the shared ensemble.
 _SOURCE_HEALTH_RULES = LeagueRules(
     team_count=2,
-    roster_size=1,
+    roster_size=4,
     lineup=(
         LineupRequirement(slot=RosterSlot.QB, count=1),
         LineupRequirement(slot=RosterSlot.RB, count=1),
