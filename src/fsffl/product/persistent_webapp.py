@@ -39,6 +39,7 @@ from .vnext_future_forecast_provider import (
     build_vnext_future_forecast_contract,
 )
 from .progressive_delivery_routes import install_progressive_delivery_routes
+from .provisional_k_dst_routes import install_provisional_k_dst_routes
 from .quick_frontier_routes import install_quick_frontier_routes
 from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
@@ -215,6 +216,12 @@ install_player_intelligence_routes(
     intrinsic_coordinator=_shapley_intrinsic_coordinator,
     future_cache=_player_future_forecast_cache,
     persistence_store=_persistence_store,
+)
+install_provisional_k_dst_routes(
+    app,
+    runtime_store=_runtime_store,
+    persistence_store=_persistence_store,
+    require_user=_webapp.require_beta_user,
 )
 install_focused_opportunity_routes(
     app,
