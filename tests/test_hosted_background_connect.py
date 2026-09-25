@@ -434,6 +434,6 @@ def test_hosted_refresh_reconciles_missing_intelligence_even_when_state_probe_is
     )[1].split("except Exception as exc", 1)[0]
     assert "intelligence_reconciler(user_id)" in reused
     activated = refresh.split(
-        "runtime_store.set_league_state(user_id, league_state)", 1
+        "runtime_store.set_league_state_if_generation(", 1
     )[1]
     assert "intelligence_reconciler(user_id)" in activated
