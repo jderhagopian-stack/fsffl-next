@@ -82,16 +82,24 @@ const fsfflSharedReadinessPhases={
   running_simulation:[4,'Running season outlook…'],
   building_values:[5,'Building market values…'],
   attaching_results:[6,'Attaching current intelligence…'],
-  completed:[7,'Core intelligence current'],
+  completed:[7,'Build lifecycle complete'],
 };
 function fsfflSharedReadinessEscape(value){return String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+function fsfflCapabilityReadiness(){
+  return state?.intelligence?.capability_readiness||state?.context?.capability_readiness||{};
+}
+function fsfflCapabilityStatus(key){
+  return String(fsfflCapabilityReadiness()?.[key]?.status||'unavailable');
+}
 function fsfflSharedReadinessSnapshot(){
-  const context=state?.context||{},job=state?.intelligence?.job||null;
-  if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false};
-  const contextComplete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
-  if((job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted')&&contextComplete){
+  const context=state?.context||{},job=state?.intelligence?.job||null,capabilities=fsfflCapabilityReadiness();
+  if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false,lifecycleComplete:false,partial:false,capabilities};
+  const capabilityFull=capabilities?.overall_status==='full'||(
+    !capabilities?.overall_status&&Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready)
+  );
+  if((job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted')&&capabilityFull){
     fsfflSharedReadinessState.lastStep=FSFFL_SHARED_READINESS_STEPS;
-    return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Last-good intelligence retained',failed:false,complete:true};
+    return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Last-good core runtime retained',failed:false,complete:true,lifecycleComplete:true,partial:false,capabilities};
   }
   if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
     const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
@@ -105,22 +113,31 @@ function fsfflSharedReadinessSnapshot(){
       :(blockedStage==='forecast'&&rosterUsable
         ?'Forecast blocked — roster State remains usable'
         :(blockedStage?blockedStage.replaceAll('_',' ')+' blocked — current State remains usable':'Intelligence refresh needs attention'));
-    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,failedPhaseStep)),total:FSFFL_SHARED_READINESS_STEPS,label,failed:true,complete:false};
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,failedPhaseStep)),total:FSFFL_SHARED_READINESS_STEPS,label,failed:true,complete:false,lifecycleComplete:true,partial:capabilities?.overall_status==='partial',capabilities};
   }
   if(job&&fsfflSharedReadinessPhases[job.phase]){
-    const [step,label]=fsfflSharedReadinessPhases[job.phase];
+    const [step,phaseLabel]=fsfflSharedReadinessPhases[job.phase];
     fsfflSharedReadinessState.lastStep=step;
-    return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:step===FSFFL_SHARED_READINESS_STEPS};
+    const lifecycleComplete=step===FSFFL_SHARED_READINESS_STEPS;
+    const partial=lifecycleComplete&&!capabilityFull;
+    const label=lifecycleComplete
+      ?(capabilityFull?'Build complete · core runtime fully available':'Build complete · intelligence partially available')
+      :phaseLabel;
+    return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete,partial,capabilities};
   }
   let step=1;
   if(context?.forecast_ready)step=Math.max(step,2);
   if(context?.simulation_ready)step=Math.max(step,4);
   if(context?.value_ready)step=Math.max(step,5);
-  const complete=Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);
-  if(complete)step=FSFFL_SHARED_READINESS_STEPS;
+  if(capabilityFull)step=FSFFL_SHARED_READINESS_STEPS;
   fsfflSharedReadinessState.lastStep=step;
-  const label=complete?'Core intelligence current':!context?.forecast_ready?'Building projections…':!context?.simulation_ready?'Running season outlook…':!context?.value_ready?'Building market values…':'Attaching current intelligence…';
-  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete};
+  const label=capabilityFull?'Current core runtime fully available':!context?.forecast_ready?'Building projections…':!context?.simulation_ready?'Simulation unavailable under current authority':!context?.value_ready?'Building market values…':'Intelligence partially available';
+  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete:capabilityFull,partial:capabilities?.overall_status==='partial',capabilities};
+}
+function fsfflCapabilityChip(label,key){
+  const status=fsfflCapabilityStatus(key);
+  const display=status==='partial_provisional'?'Partial':status==='full'?'Full':status==='separate_surface'?'Separate':'Unavailable';
+  return '<span class="fsffl-capability-chip '+fsfflSharedReadinessEscape(status)+'"><b>'+fsfflSharedReadinessEscape(label)+'</b> '+fsfflSharedReadinessEscape(display)+'</span>';
 }
 function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const pct=status.total?Math.max(0,Math.min(100,(status.step/status.total)*100)):0;
@@ -128,7 +145,8 @@ function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const refreshAction=active
     ?'<button type="button" class="fsffl-shared-readiness-refresh" disabled aria-disabled="true">Refreshing…</button>'
     :'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>';
-  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':'●')+'</span><strong>'+status.step+' / '+status.total+'</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+'</span>'+refreshAction+'</div>';
+  const chips='<span class="fsffl-capability-summary">'+fsfflCapabilityChip('Forecast','forecast')+fsfflCapabilityChip('Simulation','simulation')+fsfflCapabilityChip('Value','current_value')+'</span>';
+  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.partial?'partial ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':status.partial?'◐':'●')+'</span><strong>'+status.step+' / '+status.total+' build</strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+chips+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){
   let node=document.querySelector('#fsffl-sync-state');
@@ -172,7 +190,7 @@ async function fsfflPollSharedReadinessOnce(){
     state.intelligence=await api('/api/intelligence/status');
     fsfflRenderSharedReadiness();
     const status=fsfflSharedReadinessSnapshot();
-    if(status.complete||status.failed||state?.intelligence?.job?.status==='interrupted')fsfflStopSharedReadinessPolling();
+    if(status.lifecycleComplete||status.complete||status.failed||state?.intelligence?.job?.status==='interrupted')fsfflStopSharedReadinessPolling();
   }catch(_error){
     fsfflRenderSharedReadiness();
   }finally{
@@ -182,7 +200,7 @@ async function fsfflPollSharedReadinessOnce(){
 function fsfflStartSharedReadinessPolling(){
   fsfflRenderSharedReadiness();
   const status=fsfflSharedReadinessSnapshot();
-  if(!status.connected||status.complete||status.failed){fsfflStopSharedReadinessPolling();return}
+  if(!status.connected||status.lifecycleComplete||status.complete||status.failed){fsfflStopSharedReadinessPolling();return}
   if(fsfflSharedReadinessState.pollTimer)return;
   fsfflSharedReadinessState.pollAttempts=0;
   void fsfflPollSharedReadinessOnce();
@@ -196,7 +214,7 @@ function installFsfflSharedReadinessStyles(){
   if(document.querySelector('#fsffl-shared-readiness-style'))return;
   const style=document.createElement('style');
   style.id='fsffl-shared-readiness-style';
-  style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:auto;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr) auto;align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}.fsffl-shared-readiness-refresh{pointer-events:auto;position:relative;z-index:1;justify-self:end;white-space:nowrap;min-width:max-content;padding:4px 8px;line-height:1}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr) auto;gap:6px}.fsffl-shared-readiness-refresh{padding:4px 6px;font-size:8px}}';
+  style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:auto;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr) auto;align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.partial:after{background:#f0b35a}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.partial .fsffl-shared-readiness-mark{color:#f0b35a}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}.fsffl-capability-summary{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}.fsffl-capability-chip{display:inline-flex;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 5px;font-size:8px;color:#8fa8bd}.fsffl-capability-chip.full{color:#7ee2ba}.fsffl-capability-chip.partial_provisional{color:#f0c47c}.fsffl-capability-chip.unavailable{color:#c7a1a8}.fsffl-shared-readiness-refresh{pointer-events:auto;position:relative;z-index:1;justify-self:end;white-space:nowrap;min-width:max-content;padding:4px 8px;line-height:1}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr) auto;gap:6px}.fsffl-shared-readiness-refresh{padding:4px 6px;font-size:8px}}';
   document.head.appendChild(style);
 }
 window.fsfflSharedReadiness={
