@@ -164,6 +164,48 @@ def test_valid_capture_preserves_provider_rows_and_replays_later_league_scoring(
     assert scored[0].source == "fsffl:annual_preseason_snapshot_league_scored"
 
 
+def test_same_annual_raw_snapshot_replays_under_two_scoring_configs_without_mutation() -> None:
+    snapshot = capture_annual_preseason_projection_snapshot(
+        season=2027,
+        canonical_players=PLAYERS,
+        schedule_rows=SCHEDULE,
+        fetchers=(_fetcher("alpha", 4000.0), _fetcher("beta", 4200.0)),
+        clock=lambda: CAPTURED_AT,
+    )
+    raw_hash = snapshot.governed_raw_ensemble_sha256
+    source_ids = snapshot.successful_source_ids
+    effective_times = tuple(item.effective_at for item in snapshot.provider_evidence)
+
+    four_point = LeagueRules(
+        team_count=12,
+        roster_size=18,
+        lineup=(),
+        scoring=(
+            ScoringRule(stat="pass_yd", points=0.04),
+            ScoringRule(stat="pass_td", points=4.0),
+            ScoringRule(stat="pass_int", points=-2.0),
+            ScoringRule(stat="rush_yd", points=0.1),
+            ScoringRule(stat="rush_td", points=6.0),
+        ),
+    )
+    six_point = four_point.model_copy(
+        update={
+            "scoring": tuple(
+                rule.model_copy(update={"points": 6.0}) if rule.stat == "pass_td" else rule
+                for rule in four_point.scoring
+            )
+        }
+    )
+
+    first = replay_annual_preseason_snapshot_for_league_rules(snapshot, rules=four_point)
+    second = replay_annual_preseason_snapshot_for_league_rules(snapshot, rules=six_point)
+
+    assert first[0].distribution.mean != second[0].distribution.mean
+    assert snapshot.governed_raw_ensemble_sha256 == raw_hash
+    assert snapshot.successful_source_ids == source_ids
+    assert tuple(item.effective_at for item in snapshot.provider_evidence) == effective_times
+
+
 def test_failed_attempt_writes_nothing_and_later_valid_attempt_can_retry() -> None:
     store = _Store()
 
