@@ -43,8 +43,8 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260925-market-corrective1" in index
-    assert "/static/product_shell.js?v=20260925-market-corrective1" in index
+    assert "/static/forecast_refresh.js?v=20260925-market-corrective1&lc=20260925-lifecycle1" in index
+    assert "/static/product_shell.js?v=20260925-market-corrective1&lc=20260925-lifecycle1" in index
     assert "Core intelligence current" in shell
 
 
@@ -112,3 +112,29 @@ def test_mobile_refresh_control_owns_explicit_fourth_grid_column() -> None:
     assert "grid-template-columns:12px auto minmax(0,1fr) auto" in source
     assert "white-space:nowrap" in source
     assert "min-width:max-content" in source
+
+
+def test_failed_forecast_names_blocked_stage_and_retains_state() -> None:
+    source = _shell()
+    snapshot = source.split("function fsfflSharedReadinessSnapshot()", 1)[1].split(
+        "function fsfflSharedReadinessMarkup", 1
+    )[0]
+    assert "const failureStage=job?.failure_stage||null" in snapshot
+    assert "Forecast blocked — current league roster remains available" in snapshot
+    assert "failureStage&&fsfflSharedReadinessPhases[failureStage]" in snapshot
+
+
+def test_shared_readiness_exposes_cross_league_switch_lifecycle() -> None:
+    source = _shell()
+    assert "lifecycle?.state==='switching'" in source
+    assert "Switching to Sleeper league" in source
+    assert "fsffl:league-context-changed" in source
+    assert "previous_league_id" in source
+    assert "current_league_id" in source
+
+
+def test_manual_intelligence_refresh_publishes_app_wide_lifecycle() -> None:
+    source = _refresh()
+    assert "function publishIntelligenceLifecycle" in source
+    assert "publishIntelligenceLifecycle('refreshing_intelligence'" in source
+    assert "Forecast blocked; current league State and roster remain available." in source
