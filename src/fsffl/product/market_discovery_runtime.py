@@ -147,22 +147,18 @@ def _cheap_band_rank(row: dict[str, object]) -> int:
 
 
 def _row_dominates(left: dict[str, object], right: dict[str, object]) -> bool:
-    """Search-owned Pareto pruning over already-governed Decision/Search evidence."""
+    """Search-owned Pareto pruning over comparable governed package variants."""
 
+    if str(left.get("package_shape") or "") != str(right.get("package_shape") or ""):
+        return False
+    if str(left.get("preliminary_economic_band") or "") != str(
+        right.get("preliminary_economic_band") or ""
+    ):
+        return False
     left_gap, left_distance = _row_search_pair(left)
     right_gap, right_distance = _row_search_pair(right)
-    left_values = (
-        _cheap_band_rank(left),
-        left_gap,
-        left_distance,
-        len(left.get("send") or []),
-    )
-    right_values = (
-        _cheap_band_rank(right),
-        right_gap,
-        right_distance,
-        len(right.get("send") or []),
-    )
+    left_values = (left_gap, left_distance)
+    right_values = (right_gap, right_distance)
     return all(a <= b for a, b in zip(left_values, right_values, strict=True)) and any(
         a < b for a, b in zip(left_values, right_values, strict=True)
     )
@@ -205,10 +201,28 @@ def _prune_package_neighborhood(rows: list[dict[str, object]]) -> tuple[dict[str
                 _send_refs(row),
             ),
         )[:1]
-    representative = survivors[0]
-    alternates = tuple(survivors[1 : 1 + _MAX_ALTERNATE_PACKAGES])
-    kept = 1 + len(alternates)
-    pruned = max(0, len(rows) - kept)
+
+    kept_rows: list[dict[str, object]] = [survivors[0]]
+    kept_shapes = {str(survivors[0].get("package_shape") or "unknown")}
+    for row in survivors[1:]:
+        shape = str(row.get("package_shape") or "unknown")
+        if shape in kept_shapes:
+            continue
+        kept_rows.append(row)
+        kept_shapes.add(shape)
+        if len(kept_rows) >= 1 + _MAX_ALTERNATE_PACKAGES:
+            break
+    if len(kept_rows) < 1 + _MAX_ALTERNATE_PACKAGES:
+        for row in survivors[1:]:
+            if row in kept_rows:
+                continue
+            kept_rows.append(row)
+            if len(kept_rows) >= 1 + _MAX_ALTERNATE_PACKAGES:
+                break
+
+    representative = kept_rows[0]
+    alternates = tuple(kept_rows[1:])
+    pruned = max(0, len(rows) - len(kept_rows))
     return representative, alternates, pruned
 
 
