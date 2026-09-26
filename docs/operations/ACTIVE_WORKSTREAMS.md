@@ -218,3 +218,8 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Intrinsic Research:** ACTIVE — comprehensive Y4-Y8 architecture study. Feature discovery, target decomposition, model-family selection, and position/horizon routing are now one joint Research problem. The old `two_part_state` result is only a baseline conditional on the inherited 10-feature set. Different models by position/horizon, shared/hierarchical models, and ensembles are all eligible under nested chronological validation.
 - **Production H3:** unchanged and not part of this implementation path.
 - **Forecast/Product Implementation:** remains the app critical path independently; Research expansion must not block or alter PR #262 corrective acceptance.
+
+## PR #263 core-acceptance transition
+- **Implementation:** ACTIVE — PR #263 merged at `4cd5715...`; post-merge CI/deploy/full FSFFL → Hodor → FSFFL → restart production acceptance is the immediate blocker to Management Market testing.
+- **Performance:** ACTIVE but downstream of that acceptance by only one gate. As soon as core acceptance passes, immediately collect fresh authenticated Market timings and continue cold/focused latency optimization; no further Management authorization is needed.
+- **Market:** accepted corrective remains deployed; physical acceptance resumes as soon as core switch/Intrinsic/readiness reliability is proven.
