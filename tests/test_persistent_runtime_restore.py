@@ -149,6 +149,96 @@ def test_restore_fails_closed_when_snapshot_hash_does_not_match_context() -> Non
     assert restore_runtime_snapshot(persistence, user_id="jimmy") is None
 
 
+def test_restore_uses_user_exact_last_good_when_shared_league_snapshot_advances() -> None:
+    persistence = MemoryPersistence()
+    exact = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=exact,
+        selected_team_id="t2",
+    )
+    jimmy_context = persistence.user
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+                scope_kind=LAST_GOOD_SCOPE_KIND,
+                scope_id="jimmy",
+                input_fingerprint=exact.state_id,
+                model_version=LAST_GOOD_MODEL_VERSION,
+            ),
+            payload={
+                "league_state": exact.model_dump(mode="json"),
+                "selected_team_id": "t2",
+            },
+            computed_at=datetime.now(UTC),
+        )
+    )
+
+    # Reproduce the production acceptance-user interaction: another isolated
+    # session advances the shared latest league_snapshot while Jimmy's own
+    # user_runtime_context still points to his exact prior State.
+    advanced = _league_state(as_of=datetime(2026, 9, 8, 12, 5, tzinfo=UTC))
+    persist_runtime_snapshot(
+        persistence,
+        user_id="state-first-production-acceptance",
+        league_state=advanced,
+        selected_team_id="t1",
+    )
+    persistence.user = jimmy_context
+
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy")
+
+    assert restored is not None
+    assert restored.league_state.state_id == exact.state_id
+    assert restored.league_state.state_id != persistence.league.state_hash
+    assert restored.selected_team_id == "t2"
+    assert restored.restored_from_last_good is True
+
+
+def test_restore_does_not_use_nonmatching_last_good_after_shared_snapshot_advances() -> None:
+    persistence = MemoryPersistence()
+    exact = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=exact,
+        selected_team_id="t2",
+    )
+    jimmy_context = persistence.user
+
+    unrelated_last_good = _league_state(
+        as_of=datetime(2026, 9, 8, 11, 55, tzinfo=UTC)
+    )
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+                scope_kind=LAST_GOOD_SCOPE_KIND,
+                scope_id="jimmy",
+                input_fingerprint=unrelated_last_good.state_id,
+                model_version=LAST_GOOD_MODEL_VERSION,
+            ),
+            payload={
+                "league_state": unrelated_last_good.model_dump(mode="json"),
+                "selected_team_id": "t1",
+            },
+            computed_at=datetime.now(UTC),
+        )
+    )
+    advanced = _league_state(as_of=datetime(2026, 9, 8, 12, 5, tzinfo=UTC))
+    persist_runtime_snapshot(
+        persistence,
+        user_id="state-first-production-acceptance",
+        league_state=advanced,
+        selected_team_id="t1",
+    )
+    persistence.user = jimmy_context
+
+    assert restore_runtime_snapshot(persistence, user_id="jimmy") is None
+
+
 def test_runtime_restore_backfills_exact_state_into_history_off_request_path() -> None:
     persistence = MemoryPersistence()
     state = _league_state()
