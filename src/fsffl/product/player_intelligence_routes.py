@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
+import logging
 from threading import RLock
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -24,6 +25,7 @@ from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
 
 INVALID_PLAYER_IDS = {"", "null", "undefined", "none"}
+_logger = logging.getLogger("uvicorn.error")
 
 
 def _validated_player_id(player_id: str) -> str:
@@ -228,6 +230,19 @@ def install_player_intelligence_routes(
             IntrinsicBuildStatus.RUNNING,
         }:
             payload["retry_after_ms"] = 1500
+        forecast_years = [
+            item.get("year_index")
+            for item in payload.get("forecast", {}).get("rows", [])
+            if item.get("year_index") is not None
+        ]
+        _logger.info(
+            "FSFFL Player Intelligence served state=%s intrinsic=%s lifecycle=%s forecast_years=%s future_error=%s",
+            runtime.league_state.state_id,
+            value.get("intrinsic_status"),
+            value.get("intrinsic_lifecycle_status"),
+            forecast_years,
+            bool(payload.get("forecast", {}).get("future_error")),
+        )
         return payload
 
     @app.get("/api/player-intelligence/{player_id}/history")

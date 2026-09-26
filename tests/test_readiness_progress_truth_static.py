@@ -21,10 +21,12 @@ def test_shared_readiness_maps_authoritative_lifecycle_phases() -> None:
     assert "refreshing_state:[3,'Refreshing league state…']" in source
     assert "running_simulation:[4,'Running season outlook…']" in source
     assert "building_values:[5,'Building market values…']" in source
+    assert "building_intrinsic:[6,'Building FSFFL Intrinsic…']" in source
     assert "attaching_results:[6,'Attaching current intelligence…']" in source
     assert "completed:[7,'Build lifecycle complete']" in source
-    assert "Core intelligence current" not in source
     assert "capability_readiness" in source
+    assert "fsfflCapabilityChip('Intrinsic','intrinsic')" in source
+    assert "fsfflReadinessAsOf" in source
 
 
 def test_manual_refresh_restarts_readiness_polling() -> None:
@@ -49,7 +51,10 @@ def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     assert "/static/product_shell.js?v=20260926-combined-acceptance1" in index
     assert "/static/home_dashboard.js?v=20260926-combined-acceptance1" in index
     assert "Build lifecycle complete" in shell
-    assert "Core intelligence current" not in shell
+    assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
+    assert "As of " in shell
+    assert "product_shell.js?v=20260926-combined-acceptance1" in index
+    assert "const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';" in shell
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
@@ -106,7 +111,7 @@ def test_full_capability_context_wins_over_terminal_failed_job() -> None:
     terminal_complete_index = snapshot.index("&&capabilityFull")
     terminal_failure_index = snapshot.index("const prior=Number.isFinite")
     assert capability_index < terminal_complete_index < terminal_failure_index
-    assert "label:'Last-good core runtime retained'" in snapshot
+    assert "label:'Last-good product intelligence retained'" in snapshot
     assert "step:FSFFL_SHARED_READINESS_STEPS" in snapshot
 
 
@@ -152,3 +157,30 @@ def test_mobile_building_hides_full_capability_chips_but_partial_and_failed_show
     ) in source
     assert "status.step+' / '+status.total" in source
     assert "Refreshing…" in source
+
+
+
+def test_product_readiness_never_false_greens_when_intrinsic_or_league_surface_is_unavailable() -> None:
+    source = _shell()
+    snapshot = source.split("function fsfflSharedReadinessSnapshot()", 1)[1].split(
+        "function fsfflCapabilityChip", 1
+    )[0]
+    assert "capabilities?.overall_status==='full'" in snapshot
+    assert "const surfaceIssue=fsfflSurfaceReadinessIssue()" in snapshot
+    assert "const capabilityFull=serverFull&&!surfaceIssue" in snapshot
+    assert "Core intelligence current · FSFFL Intrinsic unavailable" in snapshot
+    assert "Core intelligence current · '+surfaceIssue" in snapshot
+    assert "league_comparison==='failed'" in source
+    assert "fsfflSetSurfaceHealth('league_comparison','failed')" in source
+
+
+def test_readiness_as_of_is_derived_from_governed_payload_not_browser_now() -> None:
+    source = _shell()
+    helper = source.split("function fsfflReadinessAsOf()", 1)[1].split(
+        "function fsfflSurfaceReadinessIssue", 1
+    )[0]
+    assert "fsfflCapabilityReadiness()?.as_of" in helper
+    assert "served_state?.as_of" in helper
+    assert "context?.evidence_as_of" in helper
+    assert "new Date()" not in helper
+    assert "Date.now()" not in helper

@@ -148,7 +148,7 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
     assert "homeReadiness" not in HOME
     assert "FSFFL_SHARED_READINESS_STEPS=7" in SHELL
     assert "fsffl-shared-readiness-strip" in SHELL
-    assert "Core intelligence current" not in SHELL
+    assert "Core intelligence current · FSFFL Intrinsic unavailable" in SHELL
     assert "fsffl-capability-chip" in SHELL
     for label in (
         "Preparing current intelligence…",
@@ -203,7 +203,7 @@ def test_shared_readiness_assets_are_cache_busted_without_splitting_release_gene
     assert f"/static/home_dashboard.js?v={release}" in INDEX
     assert f"/static/product_shell.js?v={release}" in INDEX
     assert f"const homeNorthStarStaticVersion='{release}';" in SHELL
-    assert "const franchiseNorthStarStaticVersion='20260926-combined-acceptance1';" in SHELL
+    assert f"const franchiseNorthStarStaticVersion='{release}';" in SHELL
 
 
 

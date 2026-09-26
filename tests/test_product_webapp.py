@@ -495,6 +495,13 @@ def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
             return restored
 
     calls: list[str] = []
+    product_calls: list[str] = []
+
+    def reconcile_product(runtime):
+        assert runtime.league_state is not None
+        assert runtime.league_state.state_id == state.state_id
+        product_calls.append(runtime.league_state.state_id)
+        return {"status": "full", "reason": "fixture Intrinsic ready"}
 
     def fail_forecast(_state):
         calls.append("forecast")
@@ -515,6 +522,7 @@ def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
             forecast_loader=fail_forecast,
             simulation_loader=fail_simulation,
             value_loader=fail_value,
+            product_capability_reconciler=reconcile_product,
         )
     )
     client.post("/api/connect/sleeper", json={"league_external_id": "123"})
@@ -536,6 +544,7 @@ def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
     assert current["simulation_ready"] is True
     assert current["value_ready"] is True
     assert calls == []
+    assert product_calls == [state.state_id]
 
 
 
@@ -831,3 +840,80 @@ def test_intelligence_job_does_not_complete_before_final_durable_checkpoint() ->
     assert current is not None
     assert current.status.value == "completed"
     assert store.wait_calls == 1
+
+
+
+def test_custom_product_capability_reader_prevents_core_only_false_green(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _canonical_state()
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", state)
+    evidence, simulation, value = _full_runtime_fixture(state)
+    store.set_intelligence_bundle(
+        "local-beta-user",
+        league_state=state,
+        forecast_evidence=evidence,
+        simulation_analytics=simulation,
+        value_evidence=value,
+    )
+
+    def hosted_readiness(runtime):
+        base = _runtime_capability_readiness(runtime)
+        base["intrinsic"] = {
+            "status": "unavailable",
+            "reason": "fixture Intrinsic unavailable",
+        }
+        base["overall_status"] = "partial"
+        base["product_required_capabilities"] = [
+            "forecast",
+            "simulation",
+            "current_value",
+            "intrinsic",
+        ]
+        return base
+
+    client = TestClient(
+        create_app(
+            runtime_store=store,
+            capability_readiness_reader=hosted_readiness,
+        )
+    )
+    context = client.get("/api/product-context").json()
+    status = client.get("/api/intelligence/status").json()
+
+    assert context["forecast_ready"] is True
+    assert context["simulation_ready"] is True
+    assert context["value_ready"] is True
+    assert context["capability_readiness"]["overall_status"] == "partial"
+    assert context["capability_readiness"]["intrinsic"]["status"] == "unavailable"
+    assert context["capability_readiness"]["as_of"] == state.as_of.isoformat()
+    assert status["capability_readiness"]["overall_status"] == "partial"
+
+
+def test_product_capability_failure_phase_is_reported_separately_from_core_authority(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _canonical_state()
+
+    def reconcile_product(_runtime):
+        raise RuntimeError("intrinsic fixture boom")
+
+    client = TestClient(
+        create_app(
+            state_loader=lambda _league_id: state,
+            forecast_loader=lambda current: _full_runtime_fixture(current)[0],
+            simulation_loader=lambda current, _evidence: _full_runtime_fixture(current)[1],
+            value_loader=lambda current: _full_runtime_fixture(current)[2],
+            product_capability_reconciler=reconcile_product,
+        )
+    )
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    client.post("/api/intelligence/jobs")
+    terminal = _wait_completed(client)
+
+    assert terminal["status"] == "failed"
+    assert terminal["failure_phase"] == "building_intrinsic"
+    status = client.get("/api/intelligence/status").json()
+    assert status["blocked_stage"] == "intrinsic"
+    # Core evidence completed before the separately owned product capability failed.
+    assert status["forecast_raw_observation_count"] == 1
+    assert status["value_ready"] is True

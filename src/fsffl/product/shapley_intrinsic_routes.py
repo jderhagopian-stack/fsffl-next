@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Callable
+import logging
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -22,6 +23,7 @@ from .webapp import require_beta_user
 
 
 ShapleyIntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract | None]
+_logger = logging.getLogger("uvicorn.error")
 
 
 def install_shapley_intrinsic_routes(
@@ -82,4 +84,11 @@ def install_shapley_intrinsic_routes(
                 ),
                 missing_required_fact_families=("completed_source_i1_facts",),
             )
+        _logger.info(
+            "FSFFL Intrinsic endpoint served state=%s status=%s estimates=%s forecast=%s",
+            getattr(state, "state_id", "unknown"),
+            contract.status.value,
+            len(contract.estimates),
+            contract.forecast_model_version,
+        )
         return contract.model_dump(mode="json")

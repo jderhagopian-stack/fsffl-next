@@ -75,6 +75,8 @@ LeagueViewProvider = Callable[[], LeagueAnalyticsView | None]
 StateLoader = Callable[[str], LeagueState]
 TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, object]]
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
+CapabilityReadinessReader = Callable[[object], dict[str, object]]
+ProductCapabilityReconciler = Callable[[object], dict[str, object]]
 
 
 class ConnectSleeperLeagueRequest(FrozenModel):
@@ -193,6 +195,42 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         else "Governed current Value evidence is unavailable."
     )
 
+    league_state = getattr(runtime, "league_state", None)
+    served_state_as_of = (
+        league_state.as_of.isoformat()
+        if league_state is not None
+        else None
+    )
+    forecast_as_of = (
+        runtime_result.evaluation_as_of.isoformat()
+        if runtime_result is not None
+        and getattr(runtime_result, "evaluation_as_of", None) is not None
+        else None
+    )
+    simulation_context = (
+        getattr(getattr(runtime, "simulation_analytics", None), "league_view", None)
+    )
+    simulation_context = getattr(simulation_context, "context", None)
+    simulation_as_of = (
+        simulation_context.as_of.isoformat()
+        if simulation_context is not None
+        and getattr(simulation_context, "as_of", None) is not None
+        else None
+    )
+    value_as_of_candidates = [
+        item.as_of
+        for item in (
+            tuple(getattr(value_evidence, "estimates", ()) or ())
+            + tuple(getattr(value_evidence, "fsffl_cardinal_values", ()) or ())
+        )
+        if getattr(item, "as_of", None) is not None
+    ]
+    value_as_of = (
+        max(value_as_of_candidates).isoformat()
+        if value_as_of_candidates
+        else None
+    )
+
     statuses = (forecast_status, simulation_status, value_status)
     overall_status = (
         "full"
@@ -217,6 +255,14 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         },
         "simulation": {"status": simulation_status, "reason": simulation_reason},
         "current_value": {"status": value_status, "reason": value_reason},
+        "as_of": served_state_as_of,
+        "as_of_basis": "canonical_league_state",
+        "as_of_detail": {
+            "served_state": served_state_as_of,
+            "forecast": forecast_as_of,
+            "simulation": simulation_as_of,
+            "current_value": value_as_of,
+        },
         "intrinsic": {
             "status": "separate_surface",
             "reason": (
@@ -227,7 +273,12 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     }
 
 
-def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> dict[str, object]:
+def _runtime_context_payload(
+    store: PrivateBetaRuntimeStore,
+    user_id: str,
+    *,
+    capability_reader: CapabilityReadinessReader = _runtime_capability_readiness,
+) -> dict[str, object]:
     runtime = store.get(user_id)
     league_state = runtime.league_state
     evidence = runtime.forecast_evidence
@@ -277,7 +328,7 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "value_coverage": value_evidence.coverage if value_evidence is not None else None,
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
-        "capability_readiness": _runtime_capability_readiness(runtime),
+        "capability_readiness": capability_reader(runtime),
         "product_version": "next8-product-v1",
     }
 
@@ -549,11 +600,22 @@ def create_app(
     value_loader: LiveValueLoader = default_live_value_loader,
     trade_evaluator: TradeEvaluator | None = None,
     behavioral_coordinator: BehavioralRuntimeCoordinator | None = None,
+    capability_readiness_reader: CapabilityReadinessReader | None = None,
+    product_capability_reconciler: ProductCapabilityReconciler | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
     jobs = IntelligenceJobCoordinator(max_workers=2, persistence_store=persistence_store)
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
+    read_capabilities = capability_readiness_reader or _runtime_capability_readiness
+
+    def runtime_context_payload(user_id: str) -> dict[str, object]:
+        return _runtime_context_payload(
+            store,
+            user_id,
+            capability_reader=read_capabilities,
+        )
+
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
     @application.get("/health")
@@ -566,7 +628,7 @@ def create_app(
 
     @application.get("/api/product-context")
     def product_context(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
-        runtime_payload = _runtime_context_payload(store, user_id)
+        runtime_payload = runtime_context_payload(user_id)
         if runtime_payload["league_id"] is not None:
             return runtime_payload
         view = league_view_provider() if league_view_provider is not None else None
@@ -713,6 +775,7 @@ def create_app(
             IntelligenceJobPhase.REFRESHING_STATE: "state_refresh",
             IntelligenceJobPhase.RUNNING_SIMULATION: "simulation",
             IntelligenceJobPhase.BUILDING_VALUES: "value",
+            IntelligenceJobPhase.BUILDING_INTRINSIC: "intrinsic",
             IntelligenceJobPhase.ATTACHING_RESULTS: "promotion",
         }
         blocked_stage = (
@@ -753,7 +816,7 @@ def create_app(
             if blocked_stage is not None and current_job is not None
             else None
         )
-        payload["capability_readiness"] = _runtime_capability_readiness(runtime)
+        payload["capability_readiness"] = read_capabilities(runtime)
         payload["job"] = _job_payload(current_job)
         return payload
 
@@ -789,7 +852,7 @@ def create_app(
             and previous_league_id != league_state.league.league_id
         ):
             reconcile(user_id)
-        return _runtime_context_payload(store, user_id)
+        return runtime_context_payload(user_id)
 
     @application.get("/api/behavioral/status")
     def behavioral_status(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -858,7 +921,7 @@ def create_app(
             store.select_team(user_id, request.team_id)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return _runtime_context_payload(store, user_id)
+        return runtime_context_payload(user_id)
 
     def _start_intelligence_reconciliation(
         user_id: str,
@@ -932,14 +995,33 @@ def create_app(
                 )
             )
             if terminal_reuse:
+                product_capability = None
+                if product_capability_reconciler is not None:
+                    progress(
+                        IntelligenceJobPhase.BUILDING_INTRINSIC,
+                        "Preparing governed FSFFL Intrinsic and future Forecast evidence.",
+                    )
+                    product_capability = product_capability_reconciler(context)
+                    require_active_league_identity()
+                product_status = (
+                    str(product_capability.get("status"))
+                    if product_capability is not None
+                    else "not_configured"
+                )
+                if product_status not in {"full", "ready"}:
+                    return (
+                        "Canonical Sleeper State is current. Compatible governed core "
+                        "intelligence was reused for this exact State. Product intelligence "
+                        f"remains partially available: Intrinsic {product_status}."
+                    )
                 return (
-                    "Canonical Sleeper State is current. Compatible governed "
-                    "intelligence was reused for this exact State."
+                    "Canonical Sleeper State is current. Compatible governed core "
+                    "intelligence and FSFFL Intrinsic were reused for this exact State."
                     if simulation is not None
                     else
-                    "Canonical Sleeper State is current. Compatible governed Forecast "
-                    "and Value were reused; Simulation remains unavailable under current "
-                    "Forecast authority."
+                    "Canonical Sleeper State is current. Compatible governed Forecast, "
+                    "Value and FSFFL Intrinsic were reused; Simulation remains unavailable "
+                    "under current Forecast authority."
                 )
 
             if evidence is None:
@@ -991,6 +1073,15 @@ def create_app(
                 require_active_league_identity()
                 store.set_value_evidence(user_id, values)
 
+            product_capability = None
+            if product_capability_reconciler is not None:
+                progress(
+                    IntelligenceJobPhase.BUILDING_INTRINSIC,
+                    "Preparing governed FSFFL Intrinsic and future Forecast evidence.",
+                )
+                product_capability = product_capability_reconciler(store.get(user_id))
+                require_active_league_identity()
+
             progress(
                 IntelligenceJobPhase.ATTACHING_RESULTS,
                 "Reconciling governed intelligence with the exact current LeagueState.",
@@ -1004,6 +1095,12 @@ def create_app(
                     "Reconciled intelligence could not be durably checkpointed"
                 )
             current = store.get(user_id)
+            intrinsic_status = (
+                str(product_capability.get("status"))
+                if product_capability is not None
+                else "not_configured"
+            )
+            intrinsic_ready = intrinsic_status in {"full", "ready"}
             if not simulation_ready:
                 blockers = (
                     ", ".join(evidence.runtime_result.simulation_authority_blockers)
@@ -1011,18 +1108,29 @@ def create_app(
                 )
                 return (
                     "Canonical Sleeper State is current. Governed Forecast and current "
-                    "Value evidence are ready. Simulation remains unavailable under current Forecast "
-                    "authority: "
+                    "Value evidence are ready. Simulation remains unavailable under current "
+                    "Forecast authority: "
                     + blockers
-                    + "."
+                    + (
+                        ". FSFFL Intrinsic is ready."
+                        if intrinsic_ready
+                        else f". FSFFL Intrinsic is {intrinsic_status}."
+                    )
                 )
             if current.simulation_analytics is None:
                 return (
                     "Canonical Sleeper State, governed Forecast and current Value are "
-                    "ready. Simulation did not produce an authoritative result."
+                    "ready. Simulation did not produce an authoritative result. "
+                    f"FSFFL Intrinsic is {intrinsic_status}."
+                )
+            if not intrinsic_ready and product_capability_reconciler is not None:
+                return (
+                    "Canonical Sleeper State and governed core intelligence are "
+                    "reconciled. Product intelligence remains partially available: "
+                    f"FSFFL Intrinsic is {intrinsic_status}."
                 )
             return (
-                "Canonical Sleeper State and all currently governed core intelligence "
+                "Canonical Sleeper State and all currently governed product intelligence "
                 "are reconciled."
             )
 
@@ -1031,7 +1139,7 @@ def create_app(
             league_state_id=starting_state.state_id,
             work=work,
         )
-        return {**_job_payload(job), **_runtime_context_payload(store, user_id)}
+        return {**_job_payload(job), **runtime_context_payload(user_id)}
 
     # Hosted league switching activates State first, then calls this non-blocking
     # reconciler. Manual Refresh Intelligence uses the same worker with sync_state=True.
@@ -1048,6 +1156,8 @@ def create_app(
         )
     )
     application.state.intelligence_jobs = jobs
+    application.state.capability_readiness_reader = read_capabilities
+    application.state.product_capability_reconciler = product_capability_reconciler
 
     @application.post("/api/intelligence/jobs")
     def start_intelligence_job(
@@ -1060,7 +1170,7 @@ def create_app(
 
     @application.get("/api/intelligence/jobs/current")
     def current_intelligence_job(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
-        return {**_job_payload(jobs.current(user_id)), **_runtime_context_payload(store, user_id)}
+        return {**_job_payload(jobs.current(user_id)), **runtime_context_payload(user_id)}
 
     @application.post("/api/intelligence/refresh-forecasts")
     def refresh_forecasts(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -1115,7 +1225,7 @@ def create_app(
         simulation = current.simulation_analytics
         values = current.value_evidence
         return {
-            **_runtime_context_payload(store, user_id),
+            **runtime_context_payload(user_id),
             "successful_sources": list(evidence.successful_source_ids),
             "failed_sources": list(evidence.failed_sources),
             "forecast_evidence_basis": evidence.evidence_basis,
@@ -1393,13 +1503,21 @@ def create_app(
                         f"{type(exc).__name__}: {exc}"
                     )
 
-        return build_league_atlas_payload(
+        atlas_payload = build_league_atlas_payload(
             runtime,
             preseason_team_views=preseason_views,
             preseason_as_of=preseason_as_of,
             preseason_reason=preseason_reason,
             preseason_baseline=preseason_baseline,
         )
+        logging.getLogger("uvicorn.error").info(
+            "FSFFL League Atlas served state=%s standings=%s simulation=%s preseason=%s",
+            league_state.state_id,
+            len(atlas_payload.get("standings", ())),
+            runtime.simulation_analytics is not None,
+            atlas_payload.get("preseason_status"),
+        )
+        return atlas_payload
 
     @application.get("/api/opportunities/workspace")
     def opportunity_workspace(user_id: str = Depends(require_beta_user)) -> dict[str, object]:

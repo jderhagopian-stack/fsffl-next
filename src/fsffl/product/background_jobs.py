@@ -65,6 +65,7 @@ class IntelligenceJobPhase(StrEnum):
     REFRESHING_STATE = "refreshing_state"
     RUNNING_SIMULATION = "running_simulation"
     BUILDING_VALUES = "building_values"
+    BUILDING_INTRINSIC = "building_intrinsic"
     ATTACHING_RESULTS = "attaching_results"
     COMPLETED = "completed"
     FAILED = "failed"

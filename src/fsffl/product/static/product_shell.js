@@ -25,7 +25,7 @@ const fsfflProductSurfaceCopy={
 };
 
 const fsfflStaticVersion='20260926-combined-acceptance1';
-const leagueAtlasStaticVersion='20260925-state-first1';
+const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
 const homeNorthStarStaticVersion='20260926-combined-acceptance1';
 const franchiseNorthStarStaticVersion='20260926-combined-acceptance1';
@@ -41,7 +41,28 @@ let whatIfScriptPromise=null;
 let simulatorScriptPromise=null;
 function injectMobileTouchFix(){if(document.querySelector('link[data-fsffl-touch-fix]'))return;const link=document.createElement('link');link.rel='stylesheet';link.dataset.fsfflTouchFix='true';link.href=`/static/mobile_touch_fix.css?v=${mobileTouchStaticVersion}`;document.head.appendChild(link)}
 function lazyProductScript(existingName,path,errorMessage,promiseGetter,promiseSetter,version=null){if(typeof window[existingName]==='function')return Promise.resolve();const existing=promiseGetter();if(existing)return existing;const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`${path}?v=${fsfflStaticVersion}`;if(version)script.src=`${path}?v=${version}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error(errorMessage));document.head.appendChild(script)});promiseSetter(promise);return promise}
-function ensureLeagueComparisonScript(){if(typeof window.renderFsfflLeagueComparison==='function')return Promise.resolve();if(leagueComparisonScriptPromise)return leagueComparisonScriptPromise;leagueComparisonScriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`/static/league_comparison.js?v=${leagueAtlasStaticVersion}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error('Unable to load League presentation module'));document.head.appendChild(script)});return leagueComparisonScriptPromise}
+const fsfflProductSurfaceHealth={league_comparison:'unknown'};
+function fsfflSetSurfaceHealth(route,status){fsfflProductSurfaceHealth[route]=status;window.fsfflRenderSharedReadiness?.()}
+function ensureLeagueComparisonScript(){
+  if(typeof window.renderFsfflLeagueComparison==='function'){fsfflSetSurfaceHealth('league_comparison','ready');return Promise.resolve()}
+  if(leagueComparisonScriptPromise)return leagueComparisonScriptPromise;
+  leagueComparisonScriptPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src=`/static/league_comparison.js?v=${leagueAtlasStaticVersion}`;
+    script.defer=true;
+    script.onload=()=>{
+      if(typeof window.renderFsfflLeagueComparison==='function'){fsfflSetSurfaceHealth('league_comparison','ready');resolve();return}
+      fsfflSetSurfaceHealth('league_comparison','failed');
+      reject(new Error('League presentation module loaded without registering its renderer'));
+    };
+    script.onerror=()=>{
+      fsfflSetSurfaceHealth('league_comparison','failed');
+      reject(new Error('Unable to load League presentation module'));
+    };
+    document.head.appendChild(script);
+  }).catch(error=>{leagueComparisonScriptPromise=null;throw error});
+  return leagueComparisonScriptPromise
+}
 function ensureMyTeamScript(){return lazyProductScript('renderFsfflMyTeam','/static/my_team_dashboard.js','Unable to load Franchise presentation module',()=>myTeamScriptPromise,value=>myTeamScriptPromise=value,franchiseNorthStarStaticVersion)}
 function ensureReportsScript(){return lazyProductScript('renderFsfflReports','/static/reports.js','Unable to load Reports presentation module',()=>reportsScriptPromise,value=>reportsScriptPromise=value)}
 function ensureHomeScript(){if(typeof window.installFsfflHomeExperience==='function')return Promise.resolve();if(homeScriptPromise)return homeScriptPromise;homeScriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=`/static/home_dashboard.js?v=${homeNorthStarStaticVersion}`;script.defer=true;script.onload=resolve;script.onerror=()=>reject(new Error('Unable to load Home presentation module'));document.head.appendChild(script)});return homeScriptPromise}
@@ -81,6 +102,7 @@ const fsfflSharedReadinessPhases={
   refreshing_state:[3,'Refreshing league state…'],
   running_simulation:[4,'Running season outlook…'],
   building_values:[5,'Building market values…'],
+  building_intrinsic:[6,'Building FSFFL Intrinsic…'],
   attaching_results:[6,'Attaching current intelligence…'],
   completed:[7,'Build lifecycle complete'],
 };
@@ -91,15 +113,28 @@ function fsfflCapabilityReadiness(){
 function fsfflCapabilityStatus(key){
   return String(fsfflCapabilityReadiness()?.[key]?.status||'unavailable');
 }
+function fsfflReadinessAsOf(){
+  const raw=fsfflCapabilityReadiness()?.as_of||state?.intelligence?.served_state?.as_of||state?.context?.evidence_as_of||null;
+  if(!raw)return null;
+  const date=new Date(raw);if(Number.isNaN(date.getTime()))return null;
+  try{return new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(date)}
+  catch(_error){return raw}
+}
+function fsfflSurfaceReadinessIssue(){
+  return fsfflProductSurfaceHealth.league_comparison==='failed'?'League presentation unavailable':null;
+}
 function fsfflSharedReadinessSnapshot(){
   const context=state?.context||{},job=state?.intelligence?.job||null,capabilities=fsfflCapabilityReadiness();
-  if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false,lifecycleComplete:false,partial:false,capabilities};
-  const capabilityFull=capabilities?.overall_status==='full'||(
+  if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false,lifecycleComplete:false,partial:false,capabilities,asOf:null};
+  const serverFull=capabilities?.overall_status==='full'||(
     !capabilities?.overall_status&&Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready)
   );
+  const surfaceIssue=fsfflSurfaceReadinessIssue();
+  const capabilityFull=serverFull&&!surfaceIssue;
+  const asOf=fsfflReadinessAsOf();
   if((job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted')&&capabilityFull){
     fsfflSharedReadinessState.lastStep=FSFFL_SHARED_READINESS_STEPS;
-    return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Last-good core runtime retained',failed:false,complete:true,lifecycleComplete:true,partial:false,capabilities};
+    return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Last-good product intelligence retained',failed:false,complete:true,lifecycleComplete:true,partial:false,capabilities,asOf};
   }
   if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
     const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
@@ -113,17 +148,18 @@ function fsfflSharedReadinessSnapshot(){
       :(blockedStage==='forecast'&&rosterUsable
         ?'Forecast blocked — roster State remains usable'
         :(blockedStage?blockedStage.replaceAll('_',' ')+' blocked — current State remains usable':'Intelligence refresh needs attention'));
-    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,failedPhaseStep)),total:FSFFL_SHARED_READINESS_STEPS,label,failed:true,complete:false,lifecycleComplete:true,partial:capabilities?.overall_status==='partial',capabilities};
+    return{connected:true,step:Math.max(1,Math.min(FSFFL_SHARED_READINESS_STEPS,failedPhaseStep)),total:FSFFL_SHARED_READINESS_STEPS,label,failed:true,complete:false,lifecycleComplete:true,partial:capabilities?.overall_status==='partial'||Boolean(surfaceIssue),capabilities,asOf};
   }
   if(job&&fsfflSharedReadinessPhases[job.phase]){
     const [step,phaseLabel]=fsfflSharedReadinessPhases[job.phase];
     fsfflSharedReadinessState.lastStep=step;
     const lifecycleComplete=step===FSFFL_SHARED_READINESS_STEPS;
     const partial=lifecycleComplete&&!capabilityFull;
+    const lastGoodAvailable=Boolean(context?.forecast_ready||context?.simulation_ready||context?.value_ready);
     const label=lifecycleComplete
-      ?(capabilityFull?'Build complete · core runtime fully available':'Build complete · intelligence partially available')
-      :phaseLabel;
-    return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete,partial,capabilities};
+      ?(capabilityFull?'Build complete · Current core runtime fully available · product intelligence verified':surfaceIssue?'Build complete · '+surfaceIssue:'Build complete · intelligence partially available')
+      :phaseLabel+(lastGoodAvailable?' · Last-good available':'');
+    return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete,partial,capabilities,asOf};
   }
   let step=1;
   if(context?.forecast_ready)step=Math.max(step,2);
@@ -131,12 +167,26 @@ function fsfflSharedReadinessSnapshot(){
   if(context?.value_ready)step=Math.max(step,5);
   if(capabilityFull)step=FSFFL_SHARED_READINESS_STEPS;
   fsfflSharedReadinessState.lastStep=step;
-  const label=capabilityFull?'Current core runtime fully available':!context?.forecast_ready?'Building projections…':!context?.simulation_ready?'Simulation unavailable under current authority':!context?.value_ready?'Building market values…':'Intelligence partially available';
-  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete:capabilityFull,partial:capabilities?.overall_status==='partial',capabilities};
+  const intrinsicStatus=fsfflCapabilityStatus('intrinsic');
+  const label=capabilityFull
+    ?'Current core runtime fully available · product intelligence verified'
+    :surfaceIssue
+      ?'Core intelligence current · '+surfaceIssue
+      :intrinsicStatus==='building'
+        ?'Core intelligence current · Building FSFFL Intrinsic…'
+        :intrinsicStatus==='unavailable'
+          ?'Core intelligence current · FSFFL Intrinsic unavailable'
+          :intrinsicStatus==='partial_provisional'
+            ?'Core intelligence current · FSFFL Intrinsic partial'
+            :!context?.forecast_ready?'Building projections…'
+            :!context?.simulation_ready?'Simulation unavailable under current authority'
+            :!context?.value_ready?'Building market values…'
+            :'Intelligence partially available';
+  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete:capabilityFull,partial:capabilities?.overall_status==='partial'||Boolean(surfaceIssue),capabilities,asOf};
 }
 function fsfflCapabilityChip(label,key){
   const status=fsfflCapabilityStatus(key);
-  const display=status==='partial_provisional'?'Partial':status==='full'?'Full':status==='separate_surface'?'Separate':'Unavailable';
+  const display=status==='partial_provisional'?'Partial':status==='full'?'Full':status==='building'?'Building':status==='separate_surface'?'Separate':'Unavailable';
   return '<span class="fsffl-capability-chip '+fsfflSharedReadinessEscape(status)+'"><b>'+fsfflSharedReadinessEscape(label)+'</b> '+fsfflSharedReadinessEscape(display)+'</span>';
 }
 function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
@@ -145,11 +195,12 @@ function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const refreshAction=active
     ?'<button type="button" class="fsffl-shared-readiness-refresh" disabled aria-disabled="true">Refreshing…</button>'
     :'<button type="button" class="fsffl-shared-readiness-refresh">Refresh Intelligence</button>';
-  const chips='<span class="fsffl-capability-summary">'+fsfflCapabilityChip('Forecast','forecast')+fsfflCapabilityChip('Simulation','simulation')+fsfflCapabilityChip('Value','current_value')+'</span>';
+  const chips='<span class="fsffl-capability-summary">'+fsfflCapabilityChip('Forecast','forecast')+fsfflCapabilityChip('Simulation','simulation')+fsfflCapabilityChip('Value','current_value')+fsfflCapabilityChip('Intrinsic','intrinsic')+'</span>';
+  const asOf=status.asOf?' · As of '+status.asOf:'';
   const mobilePrimary=status.complete
-    ?'✓ Intelligence current'
-    :(status.partial?'◐ Intelligence partial':status.failed?'Intelligence needs attention':status.step+' / '+status.total);
-  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.partial?'partial ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':status.partial?'◐':'●')+'</span><strong><span class="fsffl-readiness-desktop-step">'+status.step+' / '+status.total+' build</span><span class="fsffl-readiness-mobile-step">'+fsfflSharedReadinessEscape(mobilePrimary)+'</span></strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+chips+'</span>'+refreshAction+'</div>';
+    ?'✓ Intelligence current'+asOf
+    :(status.partial?'◐ Intelligence partial'+asOf:status.failed?'Intelligence needs attention':status.step+' / '+status.total);
+  return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.partial?'partial ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':status.partial?'◐':'●')+'</span><strong><span class="fsffl-readiness-desktop-step">'+status.step+' / '+status.total+' build</span><span class="fsffl-readiness-mobile-step">'+fsfflSharedReadinessEscape(mobilePrimary)+'</span></strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+(status.asOf?'<span class="fsffl-readiness-asof">As of '+fsfflSharedReadinessEscape(status.asOf)+'</span>':'')+chips+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){
   let node=document.querySelector('#fsffl-sync-state');
@@ -219,6 +270,10 @@ function installFsfflSharedReadinessStyles(){
   style.id='fsffl-shared-readiness-style';
   style.textContent='.fsffl-sync-state.fsffl-shared-readiness-host{box-sizing:border-box;margin:8px 18px 0!important;max-width:calc(100% - 36px);min-height:32px!important;padding:0 11px!important;border:1px solid var(--line)!important;border-radius:10px!important;background:#0a1120!important;display:block!important;pointer-events:auto;overflow:hidden}.fsffl-shared-readiness-strip{--fsffl-readiness:0%;position:relative;display:grid;grid-template-columns:14px auto minmax(0,1fr) auto;align-items:center;gap:7px;min-height:31px;padding:6px 0 7px;color:#8fa8bd;font-size:9px;line-height:1.2;overflow:hidden}.fsffl-shared-readiness-strip:after{content:"";position:absolute;left:0;bottom:0;width:var(--fsffl-readiness);height:2px;background:#38bdf8;transition:width .25s ease}.fsffl-shared-readiness-strip.complete:after{background:#35d399}.fsffl-shared-readiness-strip.partial:after{background:#f0b35a}.fsffl-shared-readiness-strip.failed:after{background:#ef6478}.fsffl-shared-readiness-mark{font-size:8px;color:#38bdf8}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{color:#35d399}.fsffl-shared-readiness-strip.partial .fsffl-shared-readiness-mark{color:#f0b35a}.fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-mark{color:#ef6478}.fsffl-shared-readiness-strip strong{font-size:9px;color:#c7d7e5;white-space:nowrap}.fsffl-shared-readiness-copy{min-width:0;white-space:normal;overflow-wrap:anywhere}.fsffl-capability-summary{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}.fsffl-capability-chip{display:inline-flex;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 5px;font-size:8px;color:#8fa8bd}.fsffl-capability-chip.full{color:#7ee2ba}.fsffl-capability-chip.partial_provisional{color:#f0c47c}.fsffl-capability-chip.unavailable{color:#c7a1a8}.fsffl-readiness-mobile-step{display:none}.fsffl-shared-readiness-refresh{pointer-events:auto;position:relative;z-index:1;justify-self:end;white-space:nowrap;min-width:max-content;padding:4px 8px;line-height:1}@media(max-width:760px){.fsffl-sync-state.fsffl-shared-readiness-host{margin:7px 10px 0!important;max-width:calc(100% - 20px);padding:0 9px!important}.fsffl-shared-readiness-strip{grid-template-columns:12px auto minmax(0,1fr) auto;gap:6px}.fsffl-readiness-desktop-step{display:none}.fsffl-readiness-mobile-step{display:inline}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{display:none}.fsffl-shared-readiness-strip.complete{grid-template-columns:auto minmax(0,1fr) auto}.fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-copy{font-size:0}.fsffl-shared-readiness-strip.complete .fsffl-capability-summary{display:none}.fsffl-shared-readiness-strip:not(.partial):not(.failed):not(.complete) .fsffl-capability-summary{display:none}.fsffl-shared-readiness-strip.partial .fsffl-capability-summary,.fsffl-shared-readiness-strip.failed .fsffl-capability-summary{display:flex}.fsffl-shared-readiness-refresh{padding:4px 6px;font-size:8px}}';
   document.head.appendChild(style);
+  const asOfStyle=document.createElement('style');
+  asOfStyle.id='fsffl-readiness-asof-style';
+  asOfStyle.textContent='.fsffl-readiness-asof{display:inline-block;margin-left:7px;color:#6f879a;font-size:8px;white-space:nowrap}@media(max-width:760px){.fsffl-readiness-asof{display:none}}';
+  document.head.appendChild(asOfStyle);
 }
 window.fsfflSharedReadiness={
   snapshot:fsfflSharedReadinessSnapshot,
@@ -227,7 +282,7 @@ window.fsfflSharedReadiness={
 };
 
 function productSurfaceError(label,error){const panel=document.querySelector('#generic-screen .panel');if(panel)panel.innerHTML=`<p class="eyebrow">${label}</p><h2>Unable to load this view.</h2><p class="lead">${String(error.message||error)}</p>`}
-function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];if(!copy)return;if(route==='players_assets'){window.fsfflSetDeepLinkIntent?.({route:'opportunities',marketTab:'player_board'});if(typeof setRoute==='function')setTimeout(()=>setRoute('opportunities'),0);return}const panel=document.querySelector('#generic-screen .panel');if(route!=='league_comparison')panel?.classList.remove('league-structure-panel');const eyebrow=document.querySelector('#generic-eyebrow'),title=document.querySelector('#generic-title'),body=document.querySelector('#generic-copy');if(eyebrow)eyebrow.textContent=copy[0];if(title)title.textContent=copy[1];if(body)body.textContent=copy[2];if(route==='my_team')ensureMyTeamScript().then(()=>{installProjectionPresentation();window.renderFsfflMyTeam?.();setTimeout(installProjectionPresentation,0)}).catch(error=>productSurfaceError('Franchise',error));if(route==='players_assets'&&typeof window.renderFsfflExplorer==='function'){installExplorerSortSemantics();installProjectionPresentation();window.renderFsfflExplorer(route);setTimeout(()=>{installProjectionPresentation();installExplorerSortSemantics()},0)}if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>window.renderFsfflLeagueComparison?.()).catch(error=>productSurfaceError('League',error));if(route==='opportunities')ensureOpportunitiesScript().then(()=>window.renderFsfflOpportunities?.()).catch(error=>productSurfaceError('Opportunity Engine',error));if(route==='behavioral_intelligence')ensureBehavioralIntelligenceScript().then(()=>window.renderFsfflBehavioralIntelligence?.()).catch(error=>productSurfaceError('Behavioral Intelligence',error));if(route==='what_if')ensureWhatIfScript().then(()=>window.renderFsfflWhatIf?.()).catch(error=>productSurfaceError('What-If',error));if(route==='simulator')ensureSimulatorScript().then(()=>window.renderFsfflSimulator?.()).catch(error=>productSurfaceError('Simulator',error));if(route==='analytics')ensureAnalyticsTerminalScript().then(()=>window.renderFsfflAnalyticsTerminal?.()).catch(error=>productSurfaceError('Analytics Terminal',error));if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error))}
+function renderProductSurface(route){const copy=fsfflProductSurfaceCopy[route];if(!copy)return;if(route==='players_assets'){window.fsfflSetDeepLinkIntent?.({route:'opportunities',marketTab:'player_board'});if(typeof setRoute==='function')setTimeout(()=>setRoute('opportunities'),0);return}const panel=document.querySelector('#generic-screen .panel');if(route!=='league_comparison')panel?.classList.remove('league-structure-panel');const eyebrow=document.querySelector('#generic-eyebrow'),title=document.querySelector('#generic-title'),body=document.querySelector('#generic-copy');if(eyebrow)eyebrow.textContent=copy[0];if(title)title.textContent=copy[1];if(body)body.textContent=copy[2];if(route==='my_team')ensureMyTeamScript().then(()=>{installProjectionPresentation();window.renderFsfflMyTeam?.();setTimeout(installProjectionPresentation,0)}).catch(error=>productSurfaceError('Franchise',error));if(route==='players_assets'&&typeof window.renderFsfflExplorer==='function'){installExplorerSortSemantics();installProjectionPresentation();window.renderFsfflExplorer(route);setTimeout(()=>{installProjectionPresentation();installExplorerSortSemantics()},0)}if(route==='league_comparison')ensureLeagueComparisonScript().then(()=>{window.renderFsfflLeagueComparison?.();fsfflSetSurfaceHealth('league_comparison','ready')}).catch(error=>{fsfflSetSurfaceHealth('league_comparison','failed');productSurfaceError('League',error)});if(route==='opportunities')ensureOpportunitiesScript().then(()=>window.renderFsfflOpportunities?.()).catch(error=>productSurfaceError('Opportunity Engine',error));if(route==='behavioral_intelligence')ensureBehavioralIntelligenceScript().then(()=>window.renderFsfflBehavioralIntelligence?.()).catch(error=>productSurfaceError('Behavioral Intelligence',error));if(route==='what_if')ensureWhatIfScript().then(()=>window.renderFsfflWhatIf?.()).catch(error=>productSurfaceError('What-If',error));if(route==='simulator')ensureSimulatorScript().then(()=>window.renderFsfflSimulator?.()).catch(error=>productSurfaceError('Simulator',error));if(route==='analytics')ensureAnalyticsTerminalScript().then(()=>window.renderFsfflAnalyticsTerminal?.()).catch(error=>productSurfaceError('Analytics Terminal',error));if(route==='reports')ensureReportsScript().then(()=>window.renderFsfflReports?.()).catch(error=>productSurfaceError('Reports',error))}
 function rebuildProductNavigation(){const nav=document.querySelector('#primary-nav');if(!nav)return;nav.innerHTML='';const hasTeam=Boolean(state?.context?.team_id);fsfflProductRoutes.filter(item=>!item.legacy).forEach(item=>{const button=document.createElement('button');button.type='button';button.className='nav-item';button.dataset.route=item.route;if(item.route===state?.route)button.classList.add('active');if(item.teamScoped&&!hasTeam)button.classList.add('locked');button.innerHTML=`<span>${item.label}</span>${item.teamScoped&&!hasTeam?'<small>Select team</small>':''}`;button.addEventListener('click',event=>{event.preventDefault();if(button.classList.contains('locked'))return;if(typeof setRoute==='function')setRoute(item.route)});nav.appendChild(button)})}
 function productRouteAwareSetRoute(route){if(!fsfflProductSurfaceCopy[route])return;document.querySelectorAll('.route-screen').forEach(item=>item.hidden=item.id!=='generic-screen');document.querySelectorAll('.nav-item').forEach(item=>item.classList.toggle('active',item.dataset.route===route));renderProductSurface(route)}
 function renderMobileRecoveryControls(){const topbar=document.querySelector('.topbar');const leagueScreen=document.querySelector('#league-screen');if(!topbar||!leagueScreen)return;let nav=document.querySelector('#mobile-direct-nav');if(!nav){nav=document.createElement('nav');nav.id='mobile-direct-nav';nav.className='mobile-direct-nav';nav.setAttribute('aria-label','Quick section navigation');topbar.insertAdjacentElement('afterend',nav)}nav.innerHTML='';fsfflProductRoutes.filter(item=>['league','my_team','league_comparison','trade_center','opportunities','what_if','simulator','analytics','reports','behavioral_intelligence'].includes(item.route)).forEach(item=>{const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.directRoute=item.route;const locked=item.teamScoped&&!state?.context?.team_id;button.disabled=locked;button.addEventListener('click',()=>{if(!button.disabled)setRoute(item.route)});nav.appendChild(button)});let chooser=document.querySelector('#mobile-team-chooser');if(!state?.context?.league_id||state?.context?.team_id){chooser?.remove();return}if(!chooser){chooser=document.createElement('section');chooser.id='mobile-team-chooser';chooser.className='panel mobile-team-chooser';const hero=leagueScreen.querySelector('.hero-row');hero?.insertAdjacentElement('afterend',chooser)}chooser.innerHTML='<p class="eyebrow">Choose your team</p><h2>Select the franchise you manage</h2><p class="lead">Use these buttons if the Managing dropdown is unreliable on your phone.</p><div class="mobile-team-grid"></div>';const grid=chooser.querySelector('.mobile-team-grid');(state.context.teams||[]).forEach(team=>{const button=document.createElement('button');button.type='button';button.className='secondary-button';button.textContent=team.display_name;button.addEventListener('click',async()=>{button.disabled=true;try{await selectTeam(team.team_id)}finally{button.disabled=false;renderMobileRecoveryControls();rebuildProductNavigation()}});grid.appendChild(button)})}
