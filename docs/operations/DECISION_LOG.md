@@ -246,3 +246,20 @@ The existing preserved preseason/full-season raw Forecast for all other ordinary
 This is not a license to mix arbitrary horizons. It is a bounded coordinate-level current-intelligence bridge where target-period normalization is explicit and provenance remains machine-readable.
 
 The objective is to restore current FSFFL Forecast/Simulation without changing unrelated player projections.
+
+
+## 2026-09-25 — Intrinsic Value should expose a horizon term structure
+Decision: the current three-year Intrinsic implementation is a validated bounded production coordinate, not the permanent definition of dynasty value horizon.
+
+North Star Value should expose **horizon-specific FSFFL Intrinsic coordinates** rather than only one blended long-term number. The intended conceptual structure is:
+- near-term / current-window Intrinsic;
+- validated three-year Intrinsic;
+- longer-horizon dynasty Intrinsic using increasingly state/survival/role/terminal-value evidence rather than fabricated precise stat lines.
+
+The long-horizon layer should not require exact Y4/Y5 box-score projections if the evidence cannot support them. Forecast should instead model the quantities that remain governable farther out: career-state/survival probability, expected role/production tier conditional on state, age/position trajectory, replacement surplus, uncertainty, and discounted terminal value.
+
+These horizon-specific coordinates remain parts of **FSFFL Intrinsic**, not new universal Value families. Broad Market, League Market, and Team Utility remain separate dimensions.
+
+Decision/Search may use the shape of a player's Intrinsic horizon curve as governed evidence. Examples include identifying immediate-production assets versus durable dynasty assets, matching opportunities to an owner's competitive horizon, and comparing packages that shift value from present to future. Search may not turn the horizon curve into a hidden master score or fabricated acceptance probability.
+
+Implementation is not authorized by this decision. A later bounded Research program must determine validated longer-horizon targets, historical calibration, discount/terminal treatment, uncertainty, and whether a 5-year-plus or terminal formulation is empirically preferable.
