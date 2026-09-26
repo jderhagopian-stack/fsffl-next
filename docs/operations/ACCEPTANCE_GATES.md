@@ -228,30 +228,40 @@ The external JerryGM + LineupExperts route remains fallback/benchmark only. It i
 The auxiliary single-source tier remains irrelevant because this is a Forecast-owned empirical model, not a one-provider authority exception.
 
 
-## Intrinsic term-structure Research gate
-**Status: MANAGEMENT GATE — ARCHITECTURE CANDIDATE / NO PRODUCTION AUTHORITY.**
+## Intrinsic long-horizon comparative Research gate
+**Status: MANAGEMENT GATE — NO MODEL-FAMILY BREAKPOINT PROMOTED / NO PRODUCTION AUTHORITY.**
 
-Research evidence supports a term-structure architecture while preserving the current production H3 coordinate:
-- H1 near-term component;
-- governed H3 unchanged;
-- separate H5 challenger;
-- non-cardinal terminal/career band.
+The expanded six-family chronological Y4-Y8 study supersedes the earlier H5-centered gate.
 
-Research does **not** accept exact Y6-Y8/career cardinal production value.
+Research selection:
+- annual post-H3 Research family: `two_part_state` for QB/RB/WR/TE at Y4-Y8;
+- empirical model-family breakpoint: **none**;
+- position/horizon model router: **not accepted**;
+- survival/hazard: diagnostic/model-risk challenger only;
+- career-state transition: terminal/persistence-state challenger only;
+- production H3: unchanged.
 
-Before any H5 production authority can be considered, a later authorized implementation/research package must at minimum clear:
-1. QB-specific Y4/Y5 magnitude calibration or an equivalent validated position-safe Forecast extension;
-2. current PIT/identity coverage and fail-closed behavior;
-3. cross-horizon covariance/scenario uncertainty sufficient for cumulative H5 Value uncertainty;
+Why routing is rejected:
+- direct ridge wins MAE in 17/20 cells but RMSE/tail-RMSE in 0/20 through upper-tail compression;
+- paired dynamic-route testing lowers MAE at later horizons while significantly worsening squared error;
+- no challenger establishes stable multi-objective dominance sufficient to justify routing complexity.
+
+Before any Y4+ cardinal production authority can be considered, a later Management-authorized package must clear:
+1. PIT chronology and current identity/feature coverage;
+2. per-position/horizon uncertainty and survival calibration;
+3. cross-year covariance/scenario uncertainty for cumulative Value;
 4. exact H3 semantic/output preservation;
-5. Shapley deployment-game parity/efficiency;
-6. discount/magnitude governance not selected from market or named-player aesthetics;
-7. downstream containment so separate horizon coordinates do not become Team Utility, market price or acceptance probability.
+5. Shapley deployment-game parity and efficiency;
+6. cardinal-scale/discount governance independent of current-player aesthetics or market prices;
+7. fail-closed handling where annual precision is too weak;
+8. downstream containment: Market, Decision and Team Utility may consume promoted coordinates but may not manufacture or rewrite them.
 
-Durable Research handoff:
-`artifacts/research/intrinsic_term_structure_20260926/RESEARCH_CLOSEOUT.md`.
+The study does **not** establish that Y4-Y8 are equally precise merely because one family is retained. It also does **not** establish an exact terminal/career cardinal value.
 
-No H5/terminal production implementation is currently authorized.
+Durable handoff:
+`artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_CLOSEOUT.md`.
+
+No Y4+ production implementation is currently authorized.
 
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
