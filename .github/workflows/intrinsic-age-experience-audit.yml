@@ -1,0 +1,61 @@
+name: Intrinsic Age Experience Exposure Audit
+on:
+  push:
+    branches: [research/intrinsic-cell-routing-y4-y8-20260926]
+    paths:
+      - scripts/run_intrinsic_age_experience_audit.py
+      - artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_AUDIT_FREEZE.json
+      - .github/workflows/intrinsic-age-experience-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Restore governed historical inputs and corrected rolling-origin plan
+        run: |
+          mkdir -p /tmp/panel /tmp/term /tmp/rolling
+          gh api repos/${{ github.repository }}/actions/artifacts/10912862252/zip > /tmp/panel.zip
+          unzip -oq /tmp/panel.zip -d /tmp/panel
+          gh api repos/${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/term.zip
+          unzip -oq /tmp/term.zip -d /tmp/term
+          gh api repos/${{ github.repository }}/actions/artifacts/10916355135/zip > /tmp/rolling.zip
+          unzip -oq /tmp/rolling.zip -d /tmp/rolling
+      - name: Run frozen age experience exposure audit
+        run: |
+          python scripts/run_intrinsic_age_experience_audit.py \
+            --development-module scripts/run_intrinsic_comprehensive_development.py \
+            --origin-plan /tmp/rolling/OUTER_ORIGIN_PLAN.json \
+            --model-a-rows /tmp/term/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results /tmp/term/frozen/qb/qb_career_state_deployment_results.json \
+            --raw-seasons /tmp/panel/RAW_PLAYER_SEASONS_RICH.csv \
+            --players /tmp/panel/PLAYERS.csv
+      - name: Upload trajectory-audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-age-experience-exposure-audit
+          path: |
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_ROLLING_PREDICTIONS.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_CELL_METRICS.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_OUTER_METRICS.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_INCREMENTAL_EFFECTS.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_STABILITY.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_ERA_SENSITIVITY.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_TRAJECTORY_CURVES.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_POSITION_SUMMARY.csv
+            artifacts/research/intrinsic_cell_routing_y4_y8_20260926/AGE_EXPERIENCE_AUDIT_RESULT.json
+          retention-days: 14
