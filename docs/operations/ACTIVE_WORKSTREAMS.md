@@ -253,11 +253,11 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Intrinsic Y4-Y8 Research:** **MANAGEMENT GATE.** Comprehensive study is closed pending Management architecture/product/promotion decisions; no production authority.
 
 ## Long-horizon Research reopened after all-or-nothing fallback review
-- **Intrinsic Y4-Y8 Research:** ACTIVE — cell-specific routing / validation corrective. The prior sealed holdout remains valid evidence that the frozen blanket 75/25 architecture failed QB Y8, but Management rejects automatic all-20-cell fallback to the incumbent baseline. Research must evaluate a general position × horizon routing/shrinkage policy without post-hoc use of the already-seen holdout.
+- **Intrinsic Y4-Y8 Research:** **MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE.** Repeated rolling validation selects soft cell shrinkage as the best general Y4-Y7 Research policy; exact support clears QB Y4, WR Y4 and QB Y6, while 13 other Y4-Y7 cells remain shrinkage-with-uncertainty and all Y8 cells remain coarse/uncertain for insufficient outer evidence. The incumbent has no blanket authority. The required age/experience/exposure audit is complete; nonlinear QB target-age/exposure is the strongest trajectory challenger. Production H3 remains unchanged.
 - **Production H3:** unchanged.
 - **Implementation/Product:** independent critical path; do not mix this Research corrective into the beta-restoration work.
 
 ## PR #265 physical acceptance remains open
 - **Forecast/Product Implementation:** ACTIVE — deployed PR #265 improved lifecycle truth and restored League backend serving, but physical iPhone acceptance still fails on (a) vNext mapped-subject / governed Year-1 Intrinsic compatibility and (b) catastrophic mobile completed-readiness layout collapse.
 - **Performance / Market latency:** HOLD until this deployed product gate closes.
-- **Intrinsic long-horizon Research:** continues independently.
+- **Intrinsic long-horizon Research:** **MANAGEMENT GATE.** Cell-specific routing/shrinkage and age/experience/exposure corrective is complete pending Management architecture/promotion decisions.
