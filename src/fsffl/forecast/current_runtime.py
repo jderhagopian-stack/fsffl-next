@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Callable
 
+from pydantic import Field
+
 from fsffl.providers.cbs_live import CBSLiveProjectionSource
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource
@@ -13,6 +15,10 @@ from fsffl.providers.razzball_season_live import RazzballSeasonProjectionSource
 from fsffl.state.models import FrozenModel, LeagueState
 
 from .current_normalization import current_snapshot_from_razzball, normalize_current_projection_snapshot
+from .fumbles_lost_first_party import (
+    FirstPartyFumblesLostSupplement,
+    build_first_party_fumbles_lost_supplement,
+)
 from .league_scoring import (
     ForecastRuleFamilyCoverage,
     PartialFantasyPointForecast,
@@ -23,6 +29,7 @@ from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_
 from .models import ForecastObservation
 from .regular_season import derive_fantasy_regular_season_forecasts
 from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
+from .supplemental_coordinate import league_consumes_fumbles_lost
 from .source_health import (
     CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
     RevisionAgnosticScaleHealth,
@@ -35,6 +42,10 @@ from .source_health import (
 
 CurrentSnapshotFetcher = Callable[[int], CurrentProjectionSnapshot]
 Clock = Callable[[], datetime]
+FumblesLostSupplementBuilder = Callable[
+    [LeagueState, tuple[ForecastObservation, ...]],
+    FirstPartyFumblesLostSupplement,
+]
 
 
 @dataclass(frozen=True)
@@ -93,7 +104,14 @@ class LiveForecastRuntimeResult(FrozenModel):
     fantasy_regular_season_forecasts: tuple[ForecastObservation, ...] = ()
     source_provenance: tuple[LiveForecastSourceProvenance, ...] = ()
     source_health_events: tuple[LiveForecastSourceHealthEvent, ...] = ()
-    model_version: str = "next2-current-runtime-v8:shared-forecast-partial-coverage"
+    fumbles_lost_supplement_authority_fingerprint: str | None = None
+    fumbles_lost_supplement_player_count: int = 0
+    fumbles_lost_supplement_failure: str | None = None
+    first_party_fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = Field(
+        default=None,
+        exclude=True,
+    )
+    model_version: str = "next2-current-runtime-v9:first-party-fumbles-lost"
 
 
 def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher, ...]:
@@ -219,6 +237,7 @@ def build_current_live_forecasts(
     minimum_independent_sources: int = 2,
     reference_raw_forecasts: tuple[ForecastObservation, ...] | None = None,
     reference_id: str = "preserved_preseason_multi_source_raw_ensemble",
+    fumbles_lost_supplement_builder: FumblesLostSupplementBuilder | None = None,
 ) -> LiveForecastRuntimeResult:
     """Build current authoritative FSFFL forecasts from independent live evidence.
 
@@ -483,11 +502,35 @@ def build_current_live_forecasts(
         tuple(batches),
         minimum_independent_sources=minimum_independent_sources,
     )
+
+    fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = None
+    fumbles_lost_failure: str | None = None
+    supplemental_observations: tuple[ForecastObservation, ...] = ()
+    if league_consumes_fumbles_lost(league_state.league.rules):
+        builder = fumbles_lost_supplement_builder
+        if builder is None:
+            builder = lambda state, observations: build_first_party_fumbles_lost_supplement(
+                state,
+                base_observations=observations,
+            )
+        try:
+            fumbles_lost_supplement = builder(league_state, raw_ensemble)
+            if fumbles_lost_supplement.league_state_id != league_state.state_id:
+                raise ValueError(
+                    "first-party FUMBLES_LOST supplement does not match canonical State"
+                )
+            supplemental_observations = fumbles_lost_supplement.observations
+        except Exception as exc:
+            # Fail the material coordinate closed, not the unrelated raw Forecast.
+            # The ordinary scorer will emit explicit partial outputs for fum_lost.
+            fumbles_lost_failure = f"{type(exc).__name__}: {exc}"
+
     scoring = derive_league_scoring_result(
         raw_ensemble,
         rules=league_state.league.rules,
+        supplemental_observations=supplemental_observations,
         source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v8:shared-forecast-partial-coverage",
+        model_version="next2-current-runtime-v9:first-party-fumbles-lost",
     )
     fantasy_points = (
         apply_empirical_season_fantasy_point_uncertainty(
@@ -533,4 +576,16 @@ def build_current_live_forecasts(
             for source_id in sorted(successful)
         ),
         source_health_events=tuple(health_events),
+        fumbles_lost_supplement_authority_fingerprint=(
+            fumbles_lost_supplement.authority_fingerprint
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        fumbles_lost_supplement_player_count=(
+            len(fumbles_lost_supplement.observations)
+            if fumbles_lost_supplement is not None
+            else 0
+        ),
+        fumbles_lost_supplement_failure=fumbles_lost_failure,
+        first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )

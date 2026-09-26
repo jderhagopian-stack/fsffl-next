@@ -5,6 +5,10 @@ from typing import Literal
 
 from pydantic import TypeAdapter
 
+from fsffl.forecast.fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    FirstPartyFumblesLostSupplement,
+)
 from fsffl.forecast.supplemental_coordinate import (
     SUPPLEMENTAL_COORDINATE_CONTRACT_VERSION,
     SupplementalCoordinateEnsemble,
@@ -42,6 +46,7 @@ SUPPLEMENTAL_COORDINATE_SCOPE_KIND = "nfl_season_coordinate"
 
 _package_adapter = TypeAdapter(SupplementalCoordinateEvidencePackage)
 _ensemble_adapter = TypeAdapter(SupplementalCoordinateEnsemble)
+_first_party_adapter = TypeAdapter(FirstPartyFumblesLostSupplement)
 
 
 class SupplementalCoordinateInvalidationPlan(FrozenModel):
@@ -118,6 +123,51 @@ def decode_supplemental_coordinate_ensemble(
     if ensemble.model_version != SUPPLEMENTAL_COORDINATE_CONTRACT_VERSION:
         raise ValueError("stored supplemental coordinate ensemble model version is stale")
     return ensemble
+
+
+def encode_first_party_fumbles_lost_supplement(
+    supplement: FirstPartyFumblesLostSupplement,
+) -> dict[str, object]:
+    return _first_party_adapter.dump_python(supplement, mode="json")
+
+
+def decode_first_party_fumbles_lost_supplement(
+    payload: dict[str, object],
+) -> FirstPartyFumblesLostSupplement:
+    supplement = _first_party_adapter.validate_python(payload)
+    if (
+        supplement.supplement_model_version
+        != FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+    ):
+        raise ValueError("stored first-party FUMBLES_LOST supplement model is stale")
+    return supplement
+
+
+def first_party_fumbles_lost_supplement_artifact(
+    supplement: FirstPartyFumblesLostSupplement,
+) -> ReusableArtifactRecord:
+    """Persist Forecast-owned current FUMBLES_LOST under the existing supplement seam."""
+
+    payload = encode_first_party_fumbles_lost_supplement(supplement)
+    return ReusableArtifactRecord(
+        key=ArtifactKey(
+            artifact_kind=SUPPLEMENTAL_COORDINATE_ENSEMBLE_ARTIFACT_KIND,
+            scope_kind=SUPPLEMENTAL_COORDINATE_SCOPE_KIND,
+            scope_id=supplemental_coordinate_scope_id(season=supplement.season),
+            input_fingerprint=canonical_fingerprint(
+                supplement.season,
+                supplement.league_state_id,
+                supplement.completed_through_week,
+                supplement.model_version,
+                supplement.calibration_scalar,
+                supplement.current_input_sha256,
+                supplement.authority_fingerprint,
+            ),
+            model_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+        ),
+        payload=payload,
+        computed_at=supplement.authority_valid_from,
+    )
 
 
 def supplemental_coordinate_ensemble_artifact(

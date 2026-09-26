@@ -36,10 +36,13 @@ from .supplemental_coordinate import (
     SUPPLEMENTAL_COORDINATE_SCOPE_KIND,
     SupplementalCoordinateInvalidationPlan,
     apply_fumbles_lost_supplement_invalidation,
+    decode_first_party_fumbles_lost_supplement,
     decode_supplemental_coordinate_ensemble,
     decode_supplemental_coordinate_package,
+    encode_first_party_fumbles_lost_supplement,
     encode_supplemental_coordinate_ensemble,
     encode_supplemental_coordinate_package,
+    first_party_fumbles_lost_supplement_artifact,
     plan_fumbles_lost_supplement_invalidation,
     supplemental_coordinate_ensemble_artifact,
     supplemental_coordinate_evidence_artifact,
@@ -53,6 +56,9 @@ from .projection_history import (
 from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
 
 __all__ = [
+    "first_party_fumbles_lost_supplement_artifact",
+    "encode_first_party_fumbles_lost_supplement",
+    "decode_first_party_fumbles_lost_supplement",
     "supplemental_coordinate_scope_id",
     "supplemental_coordinate_evidence_artifact",
     "supplemental_coordinate_ensemble_artifact",

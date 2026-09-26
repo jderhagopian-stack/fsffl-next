@@ -18,6 +18,16 @@ from .fallback import (
     PROVISIONAL_POSITION_FLOOR_SOURCE,
     attach_provisional_position_floor_forecasts,
 )
+from .fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SOURCE,
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    FIRST_PARTY_FUMBLES_LOST_UNCERTAINTY_VERSION,
+    SLEEPER_CURRENT_INPUT_VERSION,
+    FirstPartyFumblesLostEvidenceTier,
+    FirstPartyFumblesLostPlayerEvidence,
+    FirstPartyFumblesLostSupplement,
+    build_first_party_fumbles_lost_supplement,
+)
 from .future_contract import (
     FUTURE_FORECAST_CONTRACT_VERSION,
     ForecastUncertaintyKind,
@@ -141,6 +151,14 @@ from .models import (
 )
 
 __all__ = [
+    "build_first_party_fumbles_lost_supplement",
+    "FirstPartyFumblesLostSupplement",
+    "FirstPartyFumblesLostPlayerEvidence",
+    "FirstPartyFumblesLostEvidenceTier",
+    "SLEEPER_CURRENT_INPUT_VERSION",
+    "FIRST_PARTY_FUMBLES_LOST_UNCERTAINTY_VERSION",
+    "FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION",
+    "FIRST_PARTY_FUMBLES_LOST_SOURCE",
     "league_consumes_fumbles_lost",
     "evaluate_supplemental_coordinate_reuse",
     "build_certified_supplemental_coordinate",
