@@ -196,3 +196,7 @@ Research is complete. The evidence supports `H1 | governed H3 | H5 challenger | 
 **State:** ACTIVE — RESEARCH ONLY / NO PRODUCTION AUTHORITY CHANGE
 
 Management has reopened Intrinsic term-structure Research for empirical model-family comparison from Y4 onward. The study must not assume Y5 is the breakpoint or preassign any model to a timeframe. Different models by position and/or horizon are allowed only if chronological out-of-time evidence supports the extra complexity. Production H3 remains authoritative. The plain-language Management PDF is due at the end of this expanded study.
+
+
+## PR #261 live acceptance — switching still open
+- **Forecast/Product:** ACTIVE. Existing FSFFL is FULL in production, but cross-league State-first acceptance still fails on Hodor switch because the persisted first-party FUMBLES_LOST supplement is bound to a different State than the checkpoint target. Do not call full app switching accepted yet.
