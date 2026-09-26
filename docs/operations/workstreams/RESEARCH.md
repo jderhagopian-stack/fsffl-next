@@ -828,7 +828,7 @@ Answer: **No.**
 
 
 ## Management directive — long-horizon Intrinsic term-structure research
-**State: ACTIVE — RESEARCH ONLY / NO PRODUCTION AUTHORITY CHANGE**
+**State: MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE**
 
 The prior FUMBLES_LOST directive's instruction not to reopen long-horizon Intrinsic work is satisfied and superseded for this separate workstream because that Research directive is now complete. Forecast/Product Implementation continues the FSFFL recovery independently.
 
@@ -903,3 +903,53 @@ The report must explain, without assuming modeling expertise:
 Include clear charts/tables for horizon rank movement, positional distributions, uncertainty by horizon and at least a few representative player value curves. Keep the production three-year coordinate unchanged until Management explicitly decides otherwise.
 
 Research should continue beyond the completed historical model-selection pass through current-player post-selection shadows, position/ranking interpretation and this Management-ready report. Do not return control merely because the workflow is green.
+
+
+### Long-horizon Intrinsic Research closeout — 2026-09-26
+
+**State: MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE**
+
+Research completed the full bounded term-structure directive without changing production Intrinsic.
+
+Durable handoff:
+- `artifacts/research/intrinsic_term_structure_20260926/RESEARCH_CLOSEOUT.md`
+- `artifacts/research/intrinsic_term_structure_20260926/PROPOSED_TERM_STRUCTURE_CONTRACT.md`
+- `artifacts/research/intrinsic_term_structure_20260926/CURRENT_DIAGNOSTICS.md`
+- `artifacts/research/intrinsic_term_structure_20260926/REPRODUCIBILITY.md`
+- `artifacts/research/intrinsic_term_structure_20260926/CURRENT_SHADOW_SUMMARY.json`
+
+Historical result:
+- frozen selected extension: `two_part_state`;
+- untouched Y4 OOT: MAE improves **10.5%**, RMSE **2.7%**, Spearman **+0.098** versus Y3 carry;
+- untouched Y5 OOT: MAE improves **16.8%**, RMSE **1.7%**, Spearman **+0.088**;
+- Y6/Y7/Y8 ordering remains non-random but weakens (Spearman ~**0.419 / 0.386 / 0.346**);
+- QB Y4/Y5 rank signal improves but magnitude RMSE remains worse than Y3 carry, so QB is an explicit future H5 gate.
+
+Post-selection 2026 shadow:
+- 335 players;
+- H3 shadow vs persisted production H3 Spearman **0.99654**;
+- H3→H5 median absolute rank move **7**, p90 **19**;
+- 36.1% move at least 10 ranks and 9.3% at least 20;
+- H3→H8 diagnostic median **12**, p90 **30**;
+- young QB/WR/TE cohorts generally gain relative rank with horizon while aging RB/WR/TE generally lose rank;
+- current top-25 composition changes from H3 **88% QB / 8% RB / 4% WR** to H5 **76% / 8% / 16%**.
+
+Uncertainty remains large. H5 OOT residual floors are approximately QB **101.1**, RB **52.4**, WR **35.4**, TE **30.4** fantasy points and exceed current mean expected H5 production for every position. Raw later-horizon RMSE can fall because more players realize zero; Research therefore retains a monotone uncertainty floor and does not interpret lower raw Y8 RMSE as higher certainty.
+
+Discount sensitivity shows ranking is relatively stable across 0.70/0.85/0.95 but cardinal magnitude/error is sensitive. Research does not claim a newly optimized H5 discount.
+
+Research recommendation:
+`H1 near-term | H3 governed | H5 challenger | terminal/career band`.
+
+- H3 remains current production authority unchanged.
+- H5 is empirically supported as a separate challenger horizon, not as a replacement master score.
+- exact Y6-Y8/career cardinal value is not supported.
+- terminal/career should next be modeled as a coarse persistence/state band with explicit uncertainty.
+- no hidden blended master score, market anchor, youth bonus, QB premium or Team Utility input is authorized.
+
+Management decisions are enumerated in the closeout. No production implementation is authorized by this Research result.
+
+Historical workflow: `36220635330`.  
+Current-shadow workflow: `36241799792`.
+
+**MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE**
