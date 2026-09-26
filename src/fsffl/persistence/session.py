@@ -341,56 +341,10 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
             return None
         selected = context.selected_team_id
 
-    forecast = None
-    simulation = None
-    values = None
-    forecast_record = store.get_latest_reusable_artifact(
-        artifact_kind=FORECAST_ARTIFACT_KIND,
-        scope_kind=LEAGUE_SCOPE_KIND,
-        scope_id=league_state.state_id,
-        model_version=FORECAST_MODEL_VERSION,
+    forecast, simulation, values = restore_state_bound_intelligence(
+        store,
+        league_state=league_state,
     )
-    if forecast_record is not None:
-        try:
-            forecast = decode_forecast_evidence(dict(forecast_record.payload))
-        except (TypeError, ValueError):
-            forecast = None
-
-    if forecast is not None:
-        simulation_record = store.get_latest_reusable_artifact(
-            artifact_kind=SIMULATION_ARTIFACT_KIND,
-            scope_kind=LEAGUE_SCOPE_KIND,
-            scope_id=league_state.state_id,
-            model_version=SIMULATION_MODEL_VERSION,
-        )
-        if simulation_record is not None:
-            try:
-                candidate = decode_simulation(dict(simulation_record.payload))
-                has_current_team_views = all(
-                    view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
-                    for view in candidate.team_views
-                )
-                if (
-                    candidate.league_view.context.league_state_id == league_state.state_id
-                    and has_current_team_views
-                ):
-                    simulation = candidate
-            except (TypeError, ValueError):
-                simulation = None
-
-    value_record = store.get_latest_reusable_artifact(
-        artifact_kind=VALUE_ARTIFACT_KIND,
-        scope_kind=LEAGUE_SCOPE_KIND,
-        scope_id=league_state.state_id,
-        model_version=VALUE_MODEL_VERSION,
-    )
-    if value_record is not None:
-        try:
-            candidate = decode_value_result(dict(value_record.payload))
-            if candidate.league_state_id == league_state.state_id:
-                values = candidate
-        except (TypeError, ValueError):
-            values = None
 
     if selected not in {team.team_id for team in league_state.teams}:
         selected = None
