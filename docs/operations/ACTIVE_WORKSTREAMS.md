@@ -150,8 +150,8 @@ PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deploy
 
 
 ## Superseding critical path — bounded FUMBLES_LOST supplementation
-- **Research:** ACTIVE — certify two independent current exact FUMBLES_LOST sources and define current-only target-period normalization/uncertainty.
-- **Implementation:** AUTHORIZED PENDING EVIDENCE — preserve all existing ordinary-offense Forecast coordinates and add only the bounded current FUMBLES_LOST supplement.
+- **Research:** **BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS.** Current-only normalization/uncertainty is implementation-ready; shortest technical pair is JerryGM + LineupExperts Premium. Certification awaits written rights/independence confirmation plus authenticated full-pool live captures.
+- **Implementation:** AUTHORIZED PENDING EXTERNAL EVIDENCE — preserve all existing ordinary-offense Forecast coordinates and add only the bounded current FUMBLES_LOST supplement after source certification. Research handoff: `artifacts/research/fumbles_lost_current_only_certification_20260926/IMPLEMENTATION_HANDOFF.md`.
 - **Whole ordinary-offense ROS rebase:** SUPERSEDED / NOT AUTHORIZED.
 - **Historical/preseason use:** supplemental fumble evidence is explicitly ineligible before its acquisition time and must never be written into the preseason baseline.
 - **Market acceptance:** remains paused until current FSFFL Simulation is legitimately restored.
