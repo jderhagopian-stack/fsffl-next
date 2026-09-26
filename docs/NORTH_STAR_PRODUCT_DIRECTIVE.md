@@ -210,3 +210,11 @@ The horizon curve is itself product intelligence. It can reveal:
 Trade Center, Market/Search, Franchise and Player Intelligence may consume these separate governed horizon coordinates. Team Utility may interpret them downstream in team context. Owner Intelligence may provide descriptive context but may not alter the universal Intrinsic coordinates.
 
 Do not collapse the horizon curve into an unexplained master score. Users should be able to see the component horizons and the evidence/uncertainty behind them.
+
+
+### Horizon-comparison diagnostics
+The horizon-specific Intrinsic program should make temporal value structure observable, not merely compute additional hidden numbers.
+
+Player Intelligence / Analytics should eventually be able to show how a player's rank and value change across horizons. League-wide analysis should show how each position's value distribution changes as the horizon extends, including top-end share, dispersion, age effects, uncertainty and crossover players.
+
+The purpose is explanatory and decision-useful: reveal when short-window production and durable dynasty value disagree, and let Market/Trade/Franchise surfaces use that disagreement as governed evidence. The system must not force QB/RB/WR/TE distributions toward a predetermined shape.
