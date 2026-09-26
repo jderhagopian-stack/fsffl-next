@@ -574,3 +574,33 @@ PR #266 is merged, green, and live on Render at `fa3c1a5fc559d7ab3cb11ae6a0675e4
 The prior hard vNext Year-1 compatibility failure has improved to an authoritative reduced/fallback Intrinsic path, but hosted product acceptance still fails because Intrinsic is not fully available for the accepted FSFFL product scope. Mobile layout fixes are live but still need physical iPhone/Safari confirmation.
 
 Implementation remains ACTIVE and is still the beta-availability critical path.
+
+
+## Cell-specific Y4-Y8 Intrinsic Research closeout — 2026-09-26
+
+Research is at **MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE**.
+
+Management's correction to the all-or-nothing fallback interpretation is now empirically resolved.
+
+The incumbent baseline did not earn blanket authority. Repeated rolling-origin validation selects **soft cell shrinkage** as the best general Y4-Y7 Research policy:
+- 15/20 cells better than baseline on the rolling composite;
+- aggregate RMSE **43.20 vs 45.64** baseline;
+- tail RMSE **113.34 vs 134.77**;
+- Spearman **0.5067 vs 0.4942**;
+- substantially reduced systematic bias.
+
+Exact support is deliberately narrow: QB Y4, WR Y4 and QB Y6. Thirteen other Y4-Y7 cells remain shrinkage-with-uncertainty. All Y8 cells are coarse/uncertain because only two qualifying repeated outer origins exist.
+
+The old blanket 75/25 QB Y8 failure remains valid and visible; no post-hoc repair is claimed.
+
+The required target-age / NFL-experience / career-exposure audit finds:
+- strong nonlinear QB age/exposure signal Y4-Y7;
+- accumulated RB workload mostly helps survival/relevance, not conditional production;
+- WR cumulative exposure does not improve conditional production;
+- TE benefits require nonlinear interactions rather than a simple polynomial age curve;
+- workload is not a universal causal wear coefficient.
+
+Production H3 remains unchanged and no Y4+ implementation is authorized.
+
+Durable package:
+`artifacts/research/intrinsic_cell_routing_y4_y8_20260926/`.
