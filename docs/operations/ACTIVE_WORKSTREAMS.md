@@ -142,11 +142,12 @@ PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deploy
 - **Performance:** State-first/lifecycle work is closed; separate Market foreground latency remains its only open dimension.
 
 
-## Current critical path — 2026-09-26 ordinary-offense ROS recovery
-- **Research:** ACTIVE — certify/acquire a complete two-independent-source 2026 current-ROS ordinary-offense Forecast ensemble, including FUMBLES_LOST, under staged rights and uncertainty governance.
-- **Implementation:** AUTHORIZED PENDING EVIDENCE — prepare provider-neutral ROS lane contracts/tests; production promotion waits for certified source evidence.
-- **Existing FSFFL:** partial remains non-accepted; target is legitimate full current-forward Forecast + Simulation restoration.
-- **Market acceptance:** remains paused until FSFFL full current-forward capability is restored.
+## Superseded history — 2026-09-26 ordinary-offense ROS recovery
+The whole ordinary-offense ROS recovery path was authorized briefly and then explicitly superseded by Management's bounded current-only FUMBLES_LOST correction. It is **not an active workstream** and must not be resumed unless Management re-authorizes it.
+- **Research:** SUPERSEDED / CLOSED.
+- **Implementation:** SUPERSEDED / NOT AUTHORIZED.
+- **Existing FSFFL:** current partial state remains non-accepted pending the bounded FUMBLES_LOST supplement.
+- **Market acceptance:** remains paused until FSFFL full current-forward capability is legitimately restored.
 
 
 ## Superseding critical path — bounded FUMBLES_LOST supplementation
