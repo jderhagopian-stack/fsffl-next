@@ -30,6 +30,21 @@ from .provisional_k_dst_forecast import (
     provisional_k_dst_forecast_artifact,
     provisional_k_dst_scope_id,
 )
+from .supplemental_coordinate import (
+    SUPPLEMENTAL_COORDINATE_ENSEMBLE_ARTIFACT_KIND,
+    SUPPLEMENTAL_COORDINATE_EVIDENCE_ARTIFACT_KIND,
+    SUPPLEMENTAL_COORDINATE_SCOPE_KIND,
+    SupplementalCoordinateInvalidationPlan,
+    apply_fumbles_lost_supplement_invalidation,
+    decode_supplemental_coordinate_ensemble,
+    decode_supplemental_coordinate_package,
+    encode_supplemental_coordinate_ensemble,
+    encode_supplemental_coordinate_package,
+    plan_fumbles_lost_supplement_invalidation,
+    supplemental_coordinate_ensemble_artifact,
+    supplemental_coordinate_evidence_artifact,
+    supplemental_coordinate_scope_id,
+)
 from .postgres import PostgresPersistenceStore, persistence_store_from_env
 from .projection_history import (
     PostgresProjectionHistoryStore,
@@ -38,6 +53,19 @@ from .projection_history import (
 from .state_history import PostgresStateSnapshotStore, state_snapshot_store_from_env
 
 __all__ = [
+    "supplemental_coordinate_scope_id",
+    "supplemental_coordinate_evidence_artifact",
+    "supplemental_coordinate_ensemble_artifact",
+    "plan_fumbles_lost_supplement_invalidation",
+    "encode_supplemental_coordinate_package",
+    "encode_supplemental_coordinate_ensemble",
+    "decode_supplemental_coordinate_package",
+    "decode_supplemental_coordinate_ensemble",
+    "apply_fumbles_lost_supplement_invalidation",
+    "SupplementalCoordinateInvalidationPlan",
+    "SUPPLEMENTAL_COORDINATE_SCOPE_KIND",
+    "SUPPLEMENTAL_COORDINATE_EVIDENCE_ARTIFACT_KIND",
+    "SUPPLEMENTAL_COORDINATE_ENSEMBLE_ARTIFACT_KIND",
     "provisional_k_dst_scope_id",
     "provisional_k_dst_forecast_artifact",
     "encode_provisional_k_dst_forecast",
