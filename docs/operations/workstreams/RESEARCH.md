@@ -1220,3 +1220,33 @@ Question: **Is another authorized Research action available now that materially 
 Answer: **No.**
 
 **MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE**
+
+### Management reopen — cell-specific long-horizon architecture after global holdout failure
+**State: ACTIVE — CELL-SPECIFIC LONG-HORIZON ROUTING / VALIDATION CORRECTIVE**
+
+The comprehensive study's sealed holdout correctly rejected the frozen 75% specialist / 25% shared architecture as a **blanket Y4-Y8 promotion** because QB Y8 materially regressed. Management does not accept the resulting all-20-cell fallback as the final architecture conclusion.
+
+Important distinction:
+- preserve the original holdout failure as valid evidence;
+- do not post-hoc patch the exact frozen candidate and claim it passed;
+- do not treat `specialist|forecast10|two_part_ridge` as authority merely because it was the fallback;
+- the baseline must earn each position × horizon role under the same evidence standard as challengers.
+
+Reopened research question:
+> What model/feature/pooling choice is best supported for each position × horizon cell, and what general routing/shrinkage policy can select among them without using a single bad cell to veto improvements elsewhere?
+
+Required:
+1. audit the original final-holdout cell matrix to identify which cells materially favor the richer candidate, which favor the baseline, and which are statistically/operationally indistinguishable;
+2. treat QB Y8 as a diagnostic failure requiring explanation, not as authority to revert unrelated cells;
+3. define a **general** cell-routing / shrinkage policy using development-only evidence and repeated rolling-origin outer validation; candidate policies may include:
+   - specialist model per position × horizon;
+   - partial pooling/hierarchical shrinkage;
+   - fallback-to-simpler model only when a cell fails stability/materiality standards;
+   - coarse state/band representation rather than exact cardinal output for cells where cardinal precision is not defensible;
+4. preserve complexity penalties, minimum sample requirements, tail/economic diagnostics, uncertainty calibration and stability across eras;
+5. do not use the already-exposed final holdout to hand-select the QB Y8 replacement or any other cell. If no new untouched Y8 years exist, explicitly acknowledge that there is no second untouched final holdout and use transparent repeated historical outer validation rather than pretending otherwise;
+6. report cell-level evidence and routing confidence. A different model at QB Y8 is allowed if the general selection framework supports it; likewise, richer models may remain supported in other cells even if QB Y8 requires a simpler or coarser treatment;
+7. compare the resulting routed architecture against both the incumbent baseline and the previously rejected blanket 75/25 architecture;
+8. stop at a Management gate with a plain-language report. No production H3 or Y4-Y8 implementation change is authorized.
+
+The objective is not to rescue the richer model. The objective is to answer the original question without granting the incumbent baseline automatic authority or allowing one failed cell to erase independent evidence from the other 19 cells.
