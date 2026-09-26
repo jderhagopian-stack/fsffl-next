@@ -14,7 +14,7 @@ function myTeamMarketIndex(player){const row=myTeamLensMap().get(player?.player_
 function myTeamProjectionObservation(player){if(typeof window.fsfflDisplayedProjectionObservation==='function')return window.fsfflDisplayedProjectionObservation(player);const observations=player?.forecasts||[];return observations.find(item=>item.metric==='fantasy_points'&&item.horizon==='season')||null}
 function myTeamProjectionNumber(player){const obs=myTeamProjectionObservation(player);return typeof obs?.distribution?.mean==='number'&&Number.isFinite(obs.distribution.mean)?obs.distribution.mean:null}
 function myTeamProjection(player){const value=myTeamProjectionNumber(player);return value==null?'—':value.toFixed(1)}
-function myTeamMarket(player){const index=myTeamMarketIndex(player),pct=myTeamMarketNumber(player);return index==null?(pct==null?'—':`${Math.round(pct*100)}th pct`):`${Math.round(index).toLocaleString()}<small>${pct==null?'':`${Math.round(pct*100)}th pct`}</small>`}
+function myTeamMarket(player){const estimate=player?.value_profile?.market_price,index=myTeamMarketIndex(player),pct=myTeamMarketNumber(player);if(estimate?.scale?.scale_id==='fsffl-market-cardinal'&&typeof estimate?.distribution?.mean==='number'&&Number.isFinite(estimate.distribution.mean))return `${Math.round(estimate.distribution.mean).toLocaleString()}<small>Broad Market Cardinal</small>`;return index==null?(pct==null?'—':`${Math.round(pct*100)}th pct`):`${Math.round(index).toLocaleString()}<small>${pct==null?'':`${Math.round(pct*100)}th pct`}</small>`}
 function myTeamAllLeaguePlayers(){return fsfflMyTeamState.leagueViews.flatMap(team=>team.players||[])}
 function myTeamPositionRank(player,kind){const candidates=myTeamAllLeaguePlayers().filter(row=>row.position===player.position).map(row=>({id:row.player_id,value:kind==='projection'?myTeamProjectionNumber(row):kind==='intrinsic'?myTeamIntrinsicNumber(row.player_id):myTeamMarketNumber(row)})).filter(row=>typeof row.value==='number').sort((a,b)=>b.value-a.value);const index=candidates.findIndex(row=>row.id===player.player_id);return index<0?null:{rank:index+1,count:candidates.length}}
 function myTeamRankText(rank){return rank?`#${rank.rank} of ${rank.count}`:'—'}
@@ -37,6 +37,14 @@ function myTeamPlayerTable(rows,emptyText){const body=rows.map(player=>`<tr><td>
 function myTeamTabButton(id,label,active){return `<button type="button" role="tab" data-franchise-tab="${id}" aria-selected="${active?'true':'false'}">${label}</button>`}
 function myTeamDiagnosisSentence(view,strongest,weakest){if(!view?.forecast_authority?.evidence_basis)return`Canonical roster State is current for ${view.display_name}. Forecast, Simulation-derived classification and position strength are not currently authoritative.`;const stateLabel=myTeamStateLabel(view.utility?.calculated_competitive_state);if(strongest&&weakest&&strongest.position!==weakest.position)return`${view.display_name} profiles as ${stateLabel}. ${strongest.position} is the clearest current lineup advantage; ${weakest.position} is the first position to investigate.`;if(strongest)return`${view.display_name} profiles as ${stateLabel}, with ${strongest.position} providing the clearest current lineup edge.`;return`${view.display_name} profiles as ${stateLabel}. Position-strength evidence is not currently available.`}
 
+function myTeamCapabilityNote(){
+  const readiness=state?.context?.capability_readiness||{},overall=readiness?.overall_status;
+  if(!overall||overall==='full')return'';
+  const forecast=readiness?.forecast?.status==='partial_provisional'?'Forecast partial':readiness?.forecast?.status==='full'?'Forecast full':'Forecast unavailable';
+  const simulation=readiness?.simulation?.status==='full'?'Simulation full':'Simulation unavailable';
+  const value=readiness?.current_value?.status==='full'?'Current Value full':'Current Value unavailable';
+  return `<aside class="franchise-forecast-authority partial"><strong>Current intelligence is partially available</strong><span>${myTeamEsc(forecast)} · ${myTeamEsc(simulation)} · ${myTeamEsc(value)}. Unavailable fields below remain blank rather than using substitutes.</span></aside>`;
+}
 function renderMyTeamCommandCenter(){
   const panel=myTeamPanel();if(!panel)return;const view=fsfflMyTeamState.view;
   if(!view){panel.innerHTML='<p class="eyebrow">Franchise</p><h2>Unable to load your franchise.</h2>';return}
@@ -51,6 +59,7 @@ function renderMyTeamCommandCenter(){
   const pickRows=picks.length?picks.map(row=>`<tr><td><strong>${myTeamEsc(myTeamPickLabel(row))}</strong></td><td>${myTeamMarket({value_profile:row.value_profile})}</td></tr>`).join(''):'<tr><td colspan="2">No owned picks exposed.</td></tr>';
 
   panel.innerHTML=`<div class="franchise-shell">
+    ${myTeamCapabilityNote()}
     <header class="franchise-header"><div><p class="eyebrow">Franchise</p><h2>${myTeamEsc(view.display_name)}</h2><p>${myTeamEsc(myTeamDiagnosisSentence(view,strongest,weakest))}</p></div><span class="franchise-state">${myTeamEsc(stateLabel)}</span></header>
     <nav class="franchise-tabs" role="tablist" aria-label="Franchise views">${myTeamTabButton('diagnosis','Diagnosis',true)}${myTeamTabButton('roster','Roster',false)}${myTeamTabButton('assets','Assets & picks',false)}</nav>
     ${view.forecast_authority?.fallback_active?`<aside class="franchise-forecast-authority fallback"><strong>Preseason Forecast fallback active</strong><span>Season projections use the immutable preserved baseline from ${myTeamEsc(view.forecast_authority.evaluation_as_of||'the preseason snapshot')}. Live provider refresh did not satisfy the current source-health gate. Sources: ${myTeamEsc((view.forecast_authority.successful_source_ids||[]).join(', ')||'preserved baseline')}.</span></aside>`:`<aside class="franchise-forecast-authority"><strong>Current governed Forecast</strong><span>Evidence basis: ${myTeamEsc(view.forecast_authority?.evidence_basis||'unavailable')} · Sources: ${myTeamEsc((view.forecast_authority?.successful_source_ids||[]).join(', ')||'unavailable')} · As of ${myTeamEsc(view.forecast_authority?.evaluation_as_of||'—')}.</span></aside>`}
@@ -242,13 +251,21 @@ function franchiseNSAssetCard(row,index,lens){
     '<b aria-hidden="true">›</b>'+
   '</button>';
 }
-function franchiseNSPickPercentile(row){
+function franchiseNSPickMarketEstimate(row){
   const estimate=row?.value_profile?.market_price;
-  if(estimate?.scale?.scale_id!=='dynasty-market-percentile')return null;
-  const value=estimate?.distribution?.mean;
-  return typeof value==='number'&&Number.isFinite(value)?value:null;
+  return estimate&&typeof estimate?.distribution?.mean==='number'&&Number.isFinite(estimate.distribution.mean)?estimate:null;
+}
+function franchiseNSPickPercentile(row){
+  const estimate=franchiseNSPickMarketEstimate(row);
+  return estimate?.scale?.scale_id==='dynasty-market-percentile'?estimate.distribution.mean:null;
+}
+function franchiseNSPickCardinal(row){
+  const estimate=franchiseNSPickMarketEstimate(row);
+  return estimate?.scale?.scale_id==='fsffl-market-cardinal'?estimate.distribution.mean:null;
 }
 function franchiseNSPickValueLabel(row){
+  const cardinal=franchiseNSPickCardinal(row);
+  if(cardinal!=null)return Math.round(cardinal).toLocaleString()+' Market';
   const pct=franchiseNSPickPercentile(row);
   return pct==null?'Value unavailable':Math.round(pct*100)+'th pct';
 }
@@ -274,7 +291,9 @@ function franchiseNSPickSeasonMarkup(compact){
   }).join('');
 }
 function franchiseNSPickValueAvailable(){
-  return (fsfflMyTeamState.view?.draft_picks||[]).some(row=>franchiseNSPickPercentile(row)!=null);
+  return (fsfflMyTeamState.view?.draft_picks||[]).some(
+    row=>franchiseNSPickPercentile(row)!=null||franchiseNSPickCardinal(row)!=null
+  );
 }
 function franchiseNSCurrentRank(){
   const standing=franchiseNSStanding();

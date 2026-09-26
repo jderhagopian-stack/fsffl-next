@@ -179,7 +179,7 @@ def test_cross_league_switch_invalidates_old_refresh_generation() -> None:
     assert store.get("u").league_state == new_state
 
 
-def test_restored_last_good_guard_blocks_same_league_provider_demotion() -> None:
+def test_same_league_provider_state_advances_before_downstream_reconciliation() -> None:
     store = PersistentPrivateBetaRuntimeStore(persistence_store=None)
     t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
     last_good_state = _state(t0)
@@ -197,10 +197,28 @@ def test_restored_last_good_guard_blocks_same_league_provider_demotion() -> None
     )
     store._last_good_guard_users.add("u")
 
-    retained = store.set_league_state("u", newer_provider_state)
+    current = store.set_league_state("u", newer_provider_state)
 
-    assert retained.league_state == last_good_state
-    assert retained.forecast_evidence is old_forecast
-    assert retained.simulation_analytics is old_simulation
-    assert retained.value_evidence is old_value
-    assert retained.intelligence_reused is True
+    assert current.league_state == newer_provider_state
+    assert current.simulation_analytics is None
+    assert current.value_evidence is None
+    # Compatible raw Forecast may be reused, but old exact-State downstream
+    # outputs may not masquerade as current.
+    assert current.forecast_evidence is old_forecast
+    assert current.intelligence_reused is False
+
+
+
+def test_same_league_state_change_advances_job_generation_but_exact_state_reuse_does_not() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    first = _state(t0)
+    second = _state(t0 + timedelta(minutes=1))
+
+    store.set_league_state("u-generation", first)
+    after_first = store.league_generation("u-generation")
+    store.set_league_state("u-generation", first)
+    assert store.league_generation("u-generation") == after_first
+
+    store.set_league_state("u-generation", second)
+    assert store.league_generation("u-generation") == after_first + 1

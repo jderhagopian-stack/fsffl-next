@@ -189,6 +189,7 @@ install_hosted_connect_routes(
     sync_probe_loader=lambda league_id: _sleeper_probe_source.fetch_sync_probe(
         league_external_id=league_id
     ),
+    intelligence_reconciler=app.state.start_intelligence_reconciliation,
     full_refresh_seconds=_full_refresh_seconds,
 )
 install_in_season_forecast_routes(

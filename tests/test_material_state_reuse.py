@@ -139,20 +139,23 @@ def test_forecast_input_fingerprint_changes_when_active_lineup_domains_change() 
     assert forecast_input_fingerprint(qb_only) != forecast_input_fingerprint(with_kicker)
 
 
-def test_same_material_state_preserves_completed_intelligence_and_team_selection() -> None:
+def test_same_material_but_new_state_advances_state_and_reuses_only_forecast_compatible_evidence() -> None:
     store = PrivateBetaRuntimeStore()
     original = _state(as_of=BASE)
-    context, fake_forecast, fake_simulation, fake_value = _complete_context(original)
+    context, fake_forecast, _, _ = _complete_context(original)
     store._contexts["u"] = context
+    current = _state(as_of=BASE + timedelta(minutes=5))
 
-    returned = store.set_league_state("u", _state(as_of=BASE + timedelta(minutes=5)))
+    returned = store.set_league_state("u", current)
 
-    assert returned.league_state is original
+    assert league_material_fingerprint(original) == league_material_fingerprint(current)
+    assert original.state_id != current.state_id
+    assert returned.league_state is current
     assert returned.forecast_evidence is fake_forecast
-    assert returned.simulation_analytics is fake_simulation
-    assert returned.value_evidence is fake_value
+    assert returned.simulation_analytics is None
+    assert returned.value_evidence is None
     assert returned.selected_team_id == "team:a"
-    assert returned.intelligence_reused is True
+    assert returned.intelligence_reused is False
 
 
 def test_forecast_compatible_material_change_preserves_forecast_only() -> None:

@@ -19,7 +19,12 @@ from fsffl.state.history import StateSnapshotStore
 from fsffl.state.matchups import completed_matchups
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.trade_decision.models import BilateralTradeProposal
-from fsffl.value.models import AssetValueProfile
+from fsffl.value.models import (
+    AssetValueProfile,
+    MarketPriceEstimate,
+    ValueAssetKind,
+    ValueDistribution,
+)
 
 from .foreground_pressure import foreground_pressure
 from .background_jobs import (
@@ -124,6 +129,88 @@ def require_beta_user(credentials: HTTPBasicCredentials | None = Depends(_securi
     return expected_username
 
 
+def _runtime_capability_readiness(runtime) -> dict[str, object]:
+    """Describe governed capability availability independently of job lifecycle."""
+
+    evidence = runtime.forecast_evidence
+    runtime_result = getattr(evidence, "runtime_result", None) if evidence is not None else None
+    blockers = tuple(getattr(runtime_result, "simulation_authority_blockers", ()) or ())
+    partial_rows = tuple(getattr(runtime_result, "partial_fantasy_point_forecasts", ()) or ())
+    authoritative_rows = tuple(getattr(evidence, "league_scored_forecasts", ()) or ()) if evidence is not None else ()
+    raw_rows = tuple(getattr(evidence, "raw_forecasts", ()) or ()) if evidence is not None else ()
+
+    if evidence is None or not (raw_rows or authoritative_rows or partial_rows):
+        forecast_status = "unavailable"
+        forecast_reason = "Governed Forecast evidence is not loaded."
+    elif blockers or partial_rows or not authoritative_rows:
+        forecast_status = "partial_provisional"
+        forecast_reason = (
+            "Shared raw Forecast evidence is populated, but complete league-scored "
+            "Forecast authority is unavailable"
+            + (": " + ", ".join(blockers) if blockers else "")
+            + "."
+        )
+    else:
+        forecast_status = "full"
+        forecast_reason = "Governed league-scored Forecast authority is available."
+
+    if runtime.simulation_analytics is not None:
+        simulation_status = "full"
+        simulation_reason = "Governed current Simulation is available."
+    else:
+        simulation_status = "unavailable"
+        simulation_reason = (
+            "Simulation is unavailable under current Forecast authority"
+            + (": " + ", ".join(blockers) if blockers else "")
+            + "."
+        )
+
+    value_evidence = runtime.value_evidence
+    value_available = bool(
+        value_evidence is not None
+        and (
+            getattr(value_evidence, "estimates", ())
+            or getattr(value_evidence, "fsffl_cardinal_values", ())
+            or getattr(value_evidence, "pick_variant_market_values", ())
+        )
+    )
+    value_status = "full" if value_available else "unavailable"
+    value_reason = (
+        "Governed current Broad Market / Cardinal Value evidence is available."
+        if value_available
+        else "Governed current Value evidence is unavailable."
+    )
+
+    statuses = (forecast_status, simulation_status, value_status)
+    overall_status = (
+        "full"
+        if all(item == "full" for item in statuses)
+        else "partial"
+        if any(item != "unavailable" for item in statuses)
+        else "unavailable"
+    )
+    return {
+        "overall_status": overall_status,
+        "forecast": {
+            "status": forecast_status,
+            "reason": forecast_reason,
+            "raw_observation_count": len(raw_rows),
+            "authoritative_scored_count": len(authoritative_rows),
+            "partial_scored_count": len(partial_rows),
+            "simulation_blockers": list(blockers),
+        },
+        "simulation": {"status": simulation_status, "reason": simulation_reason},
+        "current_value": {"status": value_status, "reason": value_reason},
+        "intrinsic": {
+            "status": "separate_surface",
+            "reason": (
+                "FSFFL Intrinsic has independent preserved-preseason Forecast authority "
+                "and readiness; it is not inferred from current Value attachment."
+            ),
+        },
+    }
+
+
 def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> dict[str, object]:
     runtime = store.get(user_id)
     league_state = runtime.league_state
@@ -174,6 +261,7 @@ def _runtime_context_payload(store: PrivateBetaRuntimeStore, user_id: str) -> di
         "value_coverage": value_evidence.coverage if value_evidence is not None else None,
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
+        "capability_readiness": _runtime_capability_readiness(runtime),
         "product_version": "next8-product-v1",
     }
 
@@ -237,7 +325,7 @@ def _team_market_value_payload(value_evidence, team_id: str) -> dict[str, object
 
 
 def _attach_live_value_profiles(view, value_evidence):
-    if value_evidence is None or not value_evidence.estimates:
+    if value_evidence is None:
         return view
     profiles = {
         estimate.asset_id: AssetValueProfile(
@@ -247,6 +335,23 @@ def _attach_live_value_profiles(view, value_evidence):
         )
         for estimate in value_evidence.estimates
     }
+    for score in getattr(value_evidence, "fsffl_cardinal_values", ()):
+        if score.asset_kind != ValueAssetKind.PICK:
+            continue
+        profiles[score.asset_id] = AssetValueProfile(
+            asset_id=score.asset_id,
+            asset_kind=ValueAssetKind.PICK,
+            market_price=MarketPriceEstimate(
+                asset_id=score.asset_id,
+                asset_kind=ValueAssetKind.PICK,
+                distribution=ValueDistribution(mean=score.score),
+                scale=score.scale,
+                as_of=score.as_of,
+                market_context_id=score.market_context_id,
+                model_version=score.model_version,
+                evidence_sources=(score.evidence_source_id,),
+            ),
+        )
     players = tuple(
         row.model_copy(update={"value_profile": profiles.get(row.player_id)})
         for row in view.players
@@ -629,11 +734,18 @@ def create_app(
             if blocked_stage is not None and current_job is not None
             else None
         )
+        payload["capability_readiness"] = _runtime_capability_readiness(runtime)
         payload["job"] = _job_payload(current_job)
         return payload
 
     @application.post("/api/connect/sleeper")
     def connect_sleeper(request: ConnectSleeperLeagueRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        previous_runtime = store.get(user_id)
+        previous_league_id = (
+            previous_runtime.league_state.league.league_id
+            if previous_runtime.league_state is not None
+            else None
+        )
         league_external_id = request.league_external_id.strip()
         if not league_external_id:
             raise HTTPException(status_code=422, detail="Sleeper league id cannot be blank")
@@ -647,6 +759,17 @@ def create_app(
             league_state=league_state,
             sleeper_league_external_id=league_external_id,
         )
+        reconcile = getattr(
+            application.state,
+            "start_intelligence_reconciliation",
+            None,
+        )
+        if (
+            callable(reconcile)
+            and previous_league_id is not None
+            and previous_league_id != league_state.league.league_id
+        ):
+            reconcile(user_id)
         return _runtime_context_payload(store, user_id)
 
     @application.get("/api/behavioral/status")
@@ -718,67 +841,188 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return _runtime_context_payload(store, user_id)
 
-    @application.post("/api/intelligence/jobs")
-    def start_intelligence_job(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+    def _start_intelligence_reconciliation(
+        user_id: str,
+        *,
+        sync_state: bool,
+    ) -> dict[str, object]:
         runtime = store.get(user_id)
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
-        initial_state = runtime.league_state
-        initial_state_id = initial_state.state_id
-        initial_league_id = initial_state.league.league_id
-        initial_league_generation = store.league_generation(user_id)
+        starting_state = runtime.league_state
+        starting_league_id = starting_state.league.league_id
+        starting_external_id = _sleeper_external_id(starting_state)
+        expected_generation = [store.league_generation(user_id)]
 
-        def require_active_league_identity() -> None:
+        def require_active_league_identity() -> LeagueState:
             active = store.get(user_id).league_state
             if (
-                store.league_generation(user_id) != initial_league_generation
+                store.league_generation(user_id) != expected_generation[0]
                 or active is None
-                or active.league.league_id != initial_league_id
+                or active.league.league_id != starting_league_id
             ):
                 raise IntelligenceJobInterrupted("league_switch")
+            return active
 
         def work(progress) -> str | None:
-            progress(IntelligenceJobPhase.BUILDING_FORECASTS, "Building governed multi-source projections.")
-            evidence: LiveForecastEvidence = forecast_loader(initial_state)
-            require_active_league_identity()
+            if sync_state:
+                progress(
+                    IntelligenceJobPhase.REFRESHING_STATE,
+                    "Syncing canonical Sleeper State before intelligence reconciliation.",
+                )
+                synced_state = state_loader(starting_external_id)
+                active_before_write = require_active_league_identity()
+                if synced_state.league.league_id != active_before_write.league.league_id:
+                    raise IntelligenceJobInterrupted("league_switch")
+                activated = store.set_league_state_if_generation(
+                    user_id,
+                    synced_state,
+                    expected_generation=expected_generation[0],
+                    expected_league_id=starting_league_id,
+                )
+                if activated is None:
+                    raise IntelligenceJobInterrupted("league_switch")
+                expected_generation[0] = store.league_generation(user_id)
+                wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+                if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+                    user_id,
+                    timeout=30.0,
+                ):
+                    raise RuntimeError(
+                        "Synced Sleeper State could not be durably checkpointed"
+                    )
 
-            progress(IntelligenceJobPhase.REFRESHING_STATE, "Refreshing canonical Sleeper state at the evidence cutoff.")
-            refreshed_state = state_loader(_sleeper_external_id(initial_state))
-            require_active_league_identity()
-            store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
+            working_state = require_active_league_identity()
+            restore_exact = getattr(store, "restore_exact_state_intelligence", None)
+            if callable(restore_exact):
+                restore_exact(user_id)
+            context = store.get(user_id)
+            if context.league_state is None:
+                raise IntelligenceJobInterrupted("league_switch")
+            working_state = context.league_state
 
-            progress(IntelligenceJobPhase.RUNNING_SIMULATION, "Evaluating governed NEXT-4 simulation authority.")
+            evidence = context.forecast_evidence
+            simulation = context.simulation_analytics
+            values = context.value_evidence
+            terminal_reuse = bool(
+                evidence is not None
+                and values is not None
+                and (
+                    simulation is not None
+                    or not evidence.uncertainty_ready
+                )
+            )
+            if terminal_reuse:
+                return (
+                    "Canonical Sleeper State is current. Compatible governed "
+                    "intelligence was reused for this exact State."
+                    if simulation is not None
+                    else
+                    "Canonical Sleeper State is current. Compatible governed Forecast "
+                    "and Value were reused; Simulation remains unavailable under current "
+                    "Forecast authority."
+                )
+
+            if evidence is None:
+                progress(
+                    IntelligenceJobPhase.BUILDING_FORECASTS,
+                    "Building governed multi-source projections for the synced State.",
+                )
+                evidence = forecast_loader(working_state)
+                require_active_league_identity()
+                store.set_forecast_evidence(
+                    user_id,
+                    evidence,
+                    refreshed_league_state=working_state,
+                )
+            else:
+                progress(
+                    IntelligenceJobPhase.BUILDING_FORECASTS,
+                    "Reusing compatible governed Forecast evidence for the synced State.",
+                )
+
+            progress(
+                IntelligenceJobPhase.RUNNING_SIMULATION,
+                "Evaluating governed NEXT-4 simulation authority for the synced State.",
+            )
             simulation_ready = evidence.uncertainty_ready
-            if simulation_ready:
-                simulation = simulation_loader(refreshed_state, evidence)
+            current = store.get(user_id)
+            simulation = current.simulation_analytics
+            if simulation_ready and simulation is None:
+                simulation = simulation_loader(working_state, evidence)
                 require_active_league_identity()
                 store.set_simulation_analytics(user_id, simulation)
-            else:
+            elif not simulation_ready:
                 _logger.warning(
-                    "FSFFL simulation not promoted league=%s blockers=%s partial_players=%s",
-                    refreshed_state.league.league_id,
+                    "FSFFL simulation not promoted league=%s state=%s blockers=%s partial_players=%s",
+                    working_state.league.league_id,
+                    working_state.state_id,
                     list(evidence.runtime_result.simulation_authority_blockers),
                     len(evidence.runtime_result.partial_fantasy_point_forecasts),
                 )
 
-            progress(IntelligenceJobPhase.BUILDING_VALUES, "Building governed NEXT-3 current market values.")
-            values = value_loader(refreshed_state)
-            require_active_league_identity()
+            progress(
+                IntelligenceJobPhase.BUILDING_VALUES,
+                "Building or reusing governed NEXT-3 current market values for the synced State.",
+            )
+            current = store.get(user_id)
+            values = current.value_evidence
+            if values is None or values.league_state_id != working_state.state_id:
+                values = value_loader(working_state)
+                require_active_league_identity()
+                store.set_value_evidence(user_id, values)
 
-            progress(IntelligenceJobPhase.ATTACHING_RESULTS, "Attaching governed Forecast, Simulation when authorized, and Value results to the current canonical league state.")
-            store.set_value_evidence(user_id, values)
+            progress(
+                IntelligenceJobPhase.ATTACHING_RESULTS,
+                "Reconciling governed intelligence with the exact current LeagueState.",
+            )
+            current = store.get(user_id)
             if not simulation_ready:
-                blockers = ", ".join(evidence.runtime_result.simulation_authority_blockers) or "Forecast authority requirements"
+                blockers = (
+                    ", ".join(evidence.runtime_result.simulation_authority_blockers)
+                    or "Forecast authority requirements"
+                )
                 return (
-                    "Governed Forecast and current Value evidence are ready. "
-                    "Simulation remains unavailable under current Forecast authority: "
+                    "Canonical Sleeper State is current. Governed Forecast and current "
+                    "Value evidence are ready. Simulation remains unavailable under current Forecast "
+                    "authority: "
                     + blockers
                     + "."
                 )
-            return None
+            if current.simulation_analytics is None:
+                return (
+                    "Canonical Sleeper State, governed Forecast and current Value are "
+                    "ready. Simulation did not produce an authoritative result."
+                )
+            return (
+                "Canonical Sleeper State and all currently governed core intelligence "
+                "are reconciled."
+            )
 
-        job = jobs.start(user_id=user_id, league_state_id=initial_state_id, work=work)
+        job = jobs.start(
+            user_id=user_id,
+            league_state_id=starting_state.state_id,
+            work=work,
+        )
         return {**_job_payload(job), **_runtime_context_payload(store, user_id)}
+
+    # Hosted league switching activates State first, then calls this non-blocking
+    # reconciler. Manual Refresh Intelligence uses the same worker with sync_state=True.
+    application.state.start_intelligence_reconciliation = (
+        lambda user_id: _start_intelligence_reconciliation(
+            user_id,
+            sync_state=False,
+        )
+    )
+
+    @application.post("/api/intelligence/jobs")
+    def start_intelligence_job(
+        user_id: str = Depends(require_beta_user),
+    ) -> dict[str, object]:
+        return _start_intelligence_reconciliation(
+            user_id,
+            sync_state=True,
+        )
 
     @application.get("/api/intelligence/jobs/current")
     def current_intelligence_job(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -790,9 +1034,16 @@ def create_app(
         if runtime.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
         try:
-            evidence: LiveForecastEvidence = forecast_loader(runtime.league_state)
             refreshed_state = state_loader(_sleeper_external_id(runtime.league_state))
-            store.set_forecast_evidence(user_id, evidence, refreshed_league_state=refreshed_state)
+            if refreshed_state.league.league_id != runtime.league_state.league.league_id:
+                raise ValueError("Sleeper state loader returned a different league")
+            store.set_league_state(user_id, refreshed_state)
+            evidence: LiveForecastEvidence = forecast_loader(refreshed_state)
+            store.set_forecast_evidence(
+                user_id,
+                evidence,
+                refreshed_league_state=refreshed_state,
+            )
         except Exception as exc:
             _logger.warning(
                 "FSFFL forecast refresh failed league=%s team=%s error=%s",

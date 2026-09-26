@@ -48,6 +48,7 @@ class LeagueConnectJob:
 ConnectWork = Callable[[], None]
 StateLoader = Callable[[str], LeagueState]
 SyncProbeLoader = Callable[[str], SleeperSyncProbe]
+IntelligenceReconciler = Callable[[str], object]
 
 
 class LeagueConnectCoordinator:
@@ -247,6 +248,7 @@ def install_hosted_connect_routes(
     coordinator: LeagueConnectCoordinator | None = None,
     persistence_store: PersistenceStore | None = None,
     sync_probe_loader: SyncProbeLoader | None = None,
+    intelligence_reconciler: IntelligenceReconciler | None = None,
     full_refresh_seconds: int = 3600,
 ) -> LeagueConnectCoordinator:
     """Attach hosted-only background connect and refresh routes to the beta app."""
@@ -286,6 +288,8 @@ def install_hosted_connect_routes(
                     user_id,
                     league_external_id,
                 )
+                if intelligence_reconciler is not None:
+                    intelligence_reconciler(user_id)
                 return
             league_state = state_loader(league_external_id)
             if not _matches_sleeper_league(league_state, league_external_id):
@@ -317,6 +321,8 @@ def install_hosted_connect_routes(
                 league_state=league_state,
                 sleeper_league_external_id=league_external_id,
             )
+            if intelligence_reconciler is not None:
+                intelligence_reconciler(user_id)
 
         return _job_payload(
             jobs.start(
@@ -373,6 +379,8 @@ def install_hosted_connect_routes(
                             league_external_id,
                             probe.week,
                         )
+                        if intelligence_reconciler is not None:
+                            intelligence_reconciler(user_id)
                         return
                 except Exception as exc:
                     # The probe is an optimization only. Any probe/cursor failure must
@@ -410,13 +418,27 @@ def install_hosted_connect_routes(
                     runtime_store.league_generation(user_id),
                 )
                 return
-            runtime_store.set_league_state(user_id, league_state)
+            activated = runtime_store.set_league_state_if_generation(
+                user_id,
+                league_state,
+                expected_generation=refresh_generation,
+                expected_league_id=runtime.league_state.league.league_id,
+            )
+            if activated is None:
+                _performance_logger.info(
+                    "FSFFL Sleeper refresh superseded at activation user=%s requested=%s",
+                    user_id,
+                    league_external_id,
+                )
+                return
             if changed:
                 behavioral_coordinator.start(
                     user_id=user_id,
                     league_state=league_state,
                     sleeper_league_external_id=league_external_id,
                 )
+            if intelligence_reconciler is not None:
+                intelligence_reconciler(user_id)
 
             if persistence_store is not None and probe is not None:
                 try:

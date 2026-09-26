@@ -78,7 +78,7 @@ class MemoryPersistence:
         self.market.append(kwargs)
 
 
-def _league_state() -> LeagueState:
+def _league_state(*, as_of: datetime | None = None) -> LeagueState:
     league_id = "sleeper:123"
     rules = LeagueRules(
         team_count=2,
@@ -94,7 +94,7 @@ def _league_state() -> LeagueState:
             rules=rules,
             provider_refs=(ProviderRef(provider="sleeper", external_id="123"),),
         ),
-        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC),
+        as_of=as_of or datetime(2026, 9, 8, 12, 0, tzinfo=UTC),
         teams=(
             Team(team_id="t1", league_id=league_id, display_name="One"),
             Team(team_id="t2", league_id=league_id, display_name="Two"),
@@ -225,7 +225,7 @@ def test_incompatible_persisted_state_still_fails_closed_on_startup_restore() ->
     assert restored.value_evidence is None
 
 
-def test_partial_checkpoint_cannot_displace_durable_last_good_identity() -> None:
+def test_running_refresh_restores_durable_last_good_identity() -> None:
     persistence = MemoryPersistence()
     last_good = _league_state()
     persist_runtime_snapshot(persistence, user_id="jimmy", league_state=last_good, selected_team_id="t2")
@@ -247,13 +247,18 @@ def test_partial_checkpoint_cannot_displace_durable_last_good_identity() -> None
             computed_at=datetime.now(UTC),
         )
     )
-    partial = last_good.model_copy(update={"as_of": datetime(2026, 9, 8, 12, 5, tzinfo=UTC)})
+    partial = _league_state(as_of=datetime(2026, 9, 8, 12, 5, tzinfo=UTC))
     persist_runtime_snapshot(persistence, user_id="jimmy", league_state=partial, selected_team_id="t1")
 
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
     assert restored is not None
     assert restored.league_state.state_id == last_good.state_id
     assert restored.selected_team_id == "t2"
+    assert any(
+        row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
+        and row.key.input_fingerprint == last_good.state_id
+        for row in persistence.artifacts
+    )
 
 
 def test_failed_refresh_restores_durable_last_good_identity() -> None:
@@ -281,8 +286,8 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
             computed_at=datetime.now(UTC),
         )
     )
-    failed_state = last_good.model_copy(
-        update={"as_of": datetime(2026, 9, 8, 12, 10, tzinfo=UTC)}
+    failed_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
     )
     persist_runtime_snapshot(
         persistence,
@@ -309,7 +314,11 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == last_good.state_id
     assert restored.selected_team_id == "t2"
-
+    assert any(
+        row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
+        and row.key.input_fingerprint == last_good.state_id
+        for row in persistence.artifacts
+    )
 
 
 def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
@@ -337,8 +346,8 @@ def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
             computed_at=datetime.now(UTC),
         )
     )
-    interrupted_state = last_good.model_copy(
-        update={"as_of": datetime(2026, 9, 8, 12, 15, tzinfo=UTC)}
+    interrupted_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 15, tzinfo=UTC)
     )
     persist_runtime_snapshot(
         persistence,
@@ -365,6 +374,11 @@ def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == last_good.state_id
     assert restored.selected_team_id == "t2"
+    assert any(
+        row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
+        and row.key.input_fingerprint == last_good.state_id
+        for row in persistence.artifacts
+    )
 
 
 def test_failed_refresh_never_restores_last_good_from_different_league() -> None:

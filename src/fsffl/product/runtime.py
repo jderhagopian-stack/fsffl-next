@@ -282,8 +282,13 @@ class PrivateBetaRuntimeStore:
                 if current.league_state is not None
                 else None
             )
+            previous_state_id = (
+                current.league_state.state_id
+                if current.league_state is not None
+                else None
+            )
             incoming_league_id = league_state.league.league_id
-            if previous_league_id != incoming_league_id:
+            if previous_state_id != league_state.state_id:
                 self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1
             valid_team_ids = {team.team_id for team in league_state.teams}
             selected = current.selected_team_id if current.selected_team_id in valid_team_ids else None
@@ -301,12 +306,11 @@ class PrivateBetaRuntimeStore:
                 same_league
                 and complete_bundle
                 and current.league_state is not None
-                and league_material_fingerprint(current.league_state)
-                == league_material_fingerprint(league_state)
+                and current.league_state.state_id == league_state.state_id
             ):
                 reused = UserRuntimeContext(
                     user_id=user_id,
-                    league_state=current.league_state,
+                    league_state=league_state,
                     selected_team_id=selected,
                     forecast_evidence=current.forecast_evidence,
                     simulation_analytics=current.simulation_analytics,
@@ -346,6 +350,30 @@ class PrivateBetaRuntimeStore:
             if not same_league:
                 self._pending_intelligence.pop(user_id, None)
             return context
+
+    def set_league_state_if_generation(
+        self,
+        user_id: str,
+        league_state: LeagueState,
+        *,
+        expected_generation: int,
+        expected_league_id: str | None = None,
+    ) -> UserRuntimeContext | None:
+        """Atomically activate State only while the caller still owns refresh authority."""
+
+        with self._lock:
+            if self._league_generations.get(user_id, 0) != expected_generation:
+                return None
+            current = self.get(user_id)
+            if (
+                expected_league_id is not None
+                and (
+                    current.league_state is None
+                    or current.league_state.league.league_id != expected_league_id
+                )
+            ):
+                return None
+            return self.set_league_state(user_id, league_state)
 
     def set_forecast_evidence(
         self,

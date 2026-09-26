@@ -186,6 +186,70 @@ def persist_runtime_snapshot(
             )
         )
 
+def restore_state_bound_intelligence(
+    store: PersistenceStore,
+    *,
+    league_state: LeagueState,
+) -> tuple[
+    "LiveForecastEvidence | None",
+    "LiveSimulationAnalyticsResult | None",
+    "CurrentMarketValueRuntimeResult | None",
+]:
+    """Load only artifacts proven compatible with this exact canonical State."""
+
+    forecast = None
+    simulation = None
+    values = None
+    forecast_record = store.get_latest_reusable_artifact(
+        artifact_kind=FORECAST_ARTIFACT_KIND,
+        scope_kind=LEAGUE_SCOPE_KIND,
+        scope_id=league_state.state_id,
+        model_version=FORECAST_MODEL_VERSION,
+    )
+    if forecast_record is not None:
+        try:
+            forecast = decode_forecast_evidence(dict(forecast_record.payload))
+        except (TypeError, ValueError):
+            forecast = None
+
+    if forecast is not None:
+        simulation_record = store.get_latest_reusable_artifact(
+            artifact_kind=SIMULATION_ARTIFACT_KIND,
+            scope_kind=LEAGUE_SCOPE_KIND,
+            scope_id=league_state.state_id,
+            model_version=SIMULATION_MODEL_VERSION,
+        )
+        if simulation_record is not None:
+            try:
+                candidate = decode_simulation(dict(simulation_record.payload))
+                has_current_team_views = all(
+                    view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
+                    for view in candidate.team_views
+                )
+                if (
+                    candidate.league_view.context.league_state_id == league_state.state_id
+                    and has_current_team_views
+                ):
+                    simulation = candidate
+            except (TypeError, ValueError):
+                simulation = None
+
+    value_record = store.get_latest_reusable_artifact(
+        artifact_kind=VALUE_ARTIFACT_KIND,
+        scope_kind=LEAGUE_SCOPE_KIND,
+        scope_id=league_state.state_id,
+        model_version=VALUE_MODEL_VERSION,
+    )
+    if value_record is not None:
+        try:
+            candidate = decode_value_result(dict(value_record.payload))
+            if candidate.league_state_id == league_state.state_id:
+                values = candidate
+        except (TypeError, ValueError):
+            values = None
+    return forecast, simulation, values
+
+
 def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> DurableRuntimeSnapshot | None:
     """Restore only an internally consistent, current-model runtime snapshot."""
 

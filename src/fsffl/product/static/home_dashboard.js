@@ -83,6 +83,14 @@ function homeWireActions(root){
     renderFsfflHomeNorthStar();
   }));
 }
+function homeCapabilityNote(){
+  const readiness=state?.context?.capability_readiness||{},overall=readiness?.overall_status;
+  if(!overall||overall==='full')return'';
+  const forecast=readiness?.forecast?.status==='partial_provisional'?'Forecast partial':readiness?.forecast?.status==='full'?'Forecast full':'Forecast unavailable';
+  const simulation=readiness?.simulation?.status==='full'?'Simulation full':'Simulation unavailable';
+  const value=readiness?.current_value?.status==='full'?'Current Value full':'Current Value unavailable';
+  return `<aside class="home-card home-capability-note"><strong>Current intelligence is partially available</strong><small>${homeEscape(forecast)} · ${homeEscape(simulation)} · ${homeEscape(value)}. State and supported evidence remain usable.</small></aside>`;
+}
 function homeCircle(row){
   if(!row)return'<span class="home-position-pill unavailable"><b>—</b><small>Unavailable</small></span>';
   const mode=fsfflHomeNorthStarState.positionLens;
@@ -124,6 +132,7 @@ function renderFsfflHomeNorthStar(){
   const around=adjacent.map(row=>`<span class="${row.team_id===homeManagedTeamId()?'managed':''}"><b>#${row.rank}</b><strong>${homeEscape(row.team_name)}</strong><small>${homeRecord(row)}</small></span>`).join('');
 
   container.innerHTML=`<section class="home-north-star">
+    ${homeCapabilityNote()}
     <button type="button" class="home-identity" data-home-action="franchise" aria-label="Open managed franchise overview">
       <span class="home-team-mark" aria-hidden="true">${homeEscape((view.display_name||'?').slice(0,1).toUpperCase())}</span>
       <span class="home-identity-copy"><strong>${homeEscape(view.display_name)}</strong><span>${homeRecord(standing)} · #${standing?.rank??'—'} of ${homeStandings().length||'—'}</span><small>${homeEscape(competitiveState)}</small></span><b aria-hidden="true">›</b>

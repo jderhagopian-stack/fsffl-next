@@ -148,6 +148,8 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
     assert "homeReadiness" not in HOME
     assert "FSFFL_SHARED_READINESS_STEPS=7" in SHELL
     assert "fsffl-shared-readiness-strip" in SHELL
+    assert "Core intelligence current" not in SHELL
+    assert "fsffl-capability-chip" in SHELL
     for label in (
         "Preparing current intelligence…",
         "Building projections…",
@@ -155,7 +157,8 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
         "Running season outlook…",
         "Building market values…",
         "Attaching current intelligence…",
-        "Core intelligence current",
+        "Build lifecycle complete",
+        "Current core runtime fully available",
     ):
         assert label in SHELL
     assert "min-height:32px" in SHELL
@@ -195,12 +198,12 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
 
 
 def test_shared_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    release = "20260925-hodor-lifecycle1"
+    release = "20260925-state-first1"
     assert f"/static/app.js?v={release}" in INDEX
     assert f"/static/home_dashboard.js?v={release}" in INDEX
-    assert "/static/product_shell.js?v=20260925-hodor-lifecycle1" in INDEX
+    assert f"/static/product_shell.js?v={release}" in INDEX
     assert f"const homeNorthStarStaticVersion='{release}';" in SHELL
-    assert "const franchiseNorthStarStaticVersion='20260925-hodor-lifecycle1';" in SHELL
+    assert "const franchiseNorthStarStaticVersion='20260925-state-first1';" in SHELL
 
 
 

@@ -369,3 +369,322 @@ def test_partial_forecast_job_completes_without_simulation_and_keeps_forecast_vi
     assert payload["simulation_authority_blockers"] == [
         "separate_k_dst_forecast_authority_required"
     ]
+
+
+
+def _full_runtime_fixture(state: LeagueState):
+    observation = SimpleNamespace(as_of=state.as_of)
+    runtime_result = SimpleNamespace(
+        partial_fantasy_point_forecasts=(),
+        family_coverage=(),
+        simulation_authority_blockers=(),
+        evaluation_as_of=state.as_of,
+    )
+    evidence = SimpleNamespace(
+        raw_forecasts=(observation,),
+        league_scored_forecasts=(observation,),
+        successful_source_ids=("provider-a", "provider-b"),
+        failed_sources=(),
+        uncertainty_ready=True,
+        runtime_result=runtime_result,
+        evidence_basis="live_full_season",
+        model_version="fixture-full-evidence-v1",
+    )
+    simulation = SimpleNamespace(
+        league_view=SimpleNamespace(
+            context=SimpleNamespace(league_state_id=state.state_id)
+        ),
+        simulation_result=SimpleNamespace(simulation_count=50_000),
+        team_views=(),
+    )
+    value = SimpleNamespace(
+        league_state_id=state.state_id,
+        estimates=(object(),),
+        successful_source_ids=("market-a",),
+        coverage=1.0,
+        fsffl_cardinal_values=(),
+        cardinal_player_coverage=0.0,
+        pick_variant_market_values=(),
+    )
+    return evidence, simulation, value
+
+
+def test_manual_refresh_syncs_state_before_any_intelligence_loader(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    initial = _canonical_state()
+    synced = initial.model_copy(
+        update={"as_of": datetime(2026, 9, 6, tzinfo=UTC)}
+    )
+    states = [initial, synced]
+    loader_states: list[tuple[str, str]] = []
+
+    def state_loader(_league_id: str) -> LeagueState:
+        return states.pop(0)
+
+    def forecast_loader(state: LeagueState):
+        loader_states.append(("forecast", state.state_id))
+        return _full_runtime_fixture(state)[0]
+
+    def simulation_loader(state: LeagueState, _evidence):
+        loader_states.append(("simulation", state.state_id))
+        return _full_runtime_fixture(state)[1]
+
+    def value_loader(state: LeagueState):
+        loader_states.append(("value", state.state_id))
+        return _full_runtime_fixture(state)[2]
+
+    client = TestClient(
+        create_app(
+            state_loader=state_loader,
+            forecast_loader=forecast_loader,
+            simulation_loader=simulation_loader,
+            value_loader=value_loader,
+        )
+    )
+    connected = client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "123"},
+    )
+    assert connected.status_code == 200
+    assert connected.json()["state_id"] == initial.state_id
+
+    started = client.post("/api/intelligence/jobs")
+    assert started.status_code == 200
+
+    deadline = monotonic() + 2
+    current = None
+    while monotonic() < deadline:
+        current = client.get("/api/intelligence/jobs/current").json()
+        if current["status"] == "completed":
+            break
+        sleep(0.01)
+
+    assert current is not None
+    assert current["status"] == "completed"
+    assert current["state_id"] == synced.state_id
+    assert loader_states == [
+        ("forecast", synced.state_id),
+        ("simulation", synced.state_id),
+        ("value", synced.state_id),
+    ]
+
+
+def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
+    from fsffl.product.runtime import PrivateBetaRuntimeStore
+
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _canonical_state()
+    evidence, simulation, value = _full_runtime_fixture(state)
+
+    class ReuseStore(PrivateBetaRuntimeStore):
+        def restore_exact_state_intelligence(self, user_id: str):
+            current = self.get(user_id)
+            assert current.league_state is not None
+            assert current.league_state.state_id == state.state_id
+            restored = self.set_intelligence_bundle(
+                user_id,
+                league_state=current.league_state,
+                forecast_evidence=evidence,
+                simulation_analytics=simulation,
+                value_evidence=value,
+            )
+            return restored
+
+    calls: list[str] = []
+
+    def fail_forecast(_state):
+        calls.append("forecast")
+        raise AssertionError("exact-state Forecast should be reused")
+
+    def fail_simulation(_state, _evidence):
+        calls.append("simulation")
+        raise AssertionError("exact-state Simulation should be reused")
+
+    def fail_value(_state):
+        calls.append("value")
+        raise AssertionError("exact-state Value should be reused")
+
+    client = TestClient(
+        create_app(
+            runtime_store=ReuseStore(),
+            state_loader=lambda _league_id: state,
+            forecast_loader=fail_forecast,
+            simulation_loader=fail_simulation,
+            value_loader=fail_value,
+        )
+    )
+    client.post("/api/connect/sleeper", json={"league_external_id": "123"})
+    started = client.post("/api/intelligence/jobs")
+    assert started.status_code == 200
+
+    deadline = monotonic() + 2
+    current = None
+    while monotonic() < deadline:
+        current = client.get("/api/intelligence/jobs/current").json()
+        if current["status"] == "completed":
+            break
+        sleep(0.01)
+
+    assert current is not None
+    assert current["status"] == "completed"
+    assert "reused for this exact State" in current["message"]
+    assert current["forecast_ready"] is True
+    assert current["simulation_ready"] is True
+    assert current["value_ready"] is True
+    assert calls == []
+
+
+
+def _canonical_state_for(external_id: str, *, day: int = 5) -> LeagueState:
+    as_of = datetime(2026, 9, day, tzinfo=UTC)
+    league_id = f"sleeper:{external_id}"
+    league = League(
+        league_id=league_id,
+        name=f"League {external_id}",
+        season=2026,
+        rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
+    )
+    teams = (
+        Team(team_id=f"{external_id}-a", league_id=league_id, display_name="Alpha"),
+        Team(team_id=f"{external_id}-b", league_id=league_id, display_name="Beta"),
+    )
+    return LeagueState(
+        league=league,
+        as_of=as_of,
+        teams=teams,
+        team_states=(
+            TeamState(team_id=teams[0].team_id, roster=()),
+            TeamState(team_id=teams[1].team_id, roster=()),
+        ),
+        players=(),
+        player_states=(),
+    )
+
+
+def _wait_completed(client: TestClient, *, timeout: float = 2.0) -> dict[str, object]:
+    deadline = monotonic() + timeout
+    payload = {}
+    while monotonic() < deadline:
+        payload = client.get("/api/intelligence/jobs/current").json()
+        if payload.get("status") in {"completed", "failed", "interrupted"}:
+            return payload
+        sleep(0.01)
+    return payload
+
+
+def test_manual_refresh_reuses_exact_state_bundle_on_repeated_no_change_sync(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    current = _canonical_state_for("123")
+    calls = {"state": 0, "forecast": 0, "simulation": 0, "value": 0}
+
+    def state_loader(_league_id: str) -> LeagueState:
+        calls["state"] += 1
+        return current
+
+    def forecast_loader(state: LeagueState):
+        calls["forecast"] += 1
+        return _full_runtime_fixture(state)[0]
+
+    def simulation_loader(state: LeagueState, _evidence):
+        calls["simulation"] += 1
+        return _full_runtime_fixture(state)[1]
+
+    def value_loader(state: LeagueState):
+        calls["value"] += 1
+        return _full_runtime_fixture(state)[2]
+
+    client = TestClient(
+        create_app(
+            state_loader=state_loader,
+            forecast_loader=forecast_loader,
+            simulation_loader=simulation_loader,
+            value_loader=value_loader,
+        )
+    )
+    assert client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "123"},
+    ).status_code == 200
+
+    first = client.post("/api/intelligence/jobs")
+    assert first.status_code == 200
+    completed = _wait_completed(client)
+    assert completed["status"] == "completed"
+    assert calls == {"state": 2, "forecast": 1, "simulation": 1, "value": 1}
+
+    second = client.post("/api/intelligence/jobs")
+    assert second.status_code == 200
+    reused = _wait_completed(client)
+    assert reused["status"] == "completed"
+    assert "reused for this exact State" in reused["message"]
+    assert calls == {"state": 3, "forecast": 1, "simulation": 1, "value": 1}
+
+
+def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    league_a = _canonical_state_for("123", day=5)
+    league_b = _canonical_state_for("456", day=6)
+    states = {"123": league_a, "456": league_b}
+    loader_states: list[tuple[str, str]] = []
+
+    def state_loader(external_id: str) -> LeagueState:
+        return states[external_id]
+
+    def forecast_loader(state: LeagueState):
+        loader_states.append(("forecast", state.league.league_id))
+        return _full_runtime_fixture(state)[0]
+
+    def simulation_loader(state: LeagueState, _evidence):
+        loader_states.append(("simulation", state.league.league_id))
+        return _full_runtime_fixture(state)[1]
+
+    def value_loader(state: LeagueState):
+        loader_states.append(("value", state.league.league_id))
+        return _full_runtime_fixture(state)[2]
+
+    client = TestClient(
+        create_app(
+            state_loader=state_loader,
+            forecast_loader=forecast_loader,
+            simulation_loader=simulation_loader,
+            value_loader=value_loader,
+        )
+    )
+
+    assert client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "123"},
+    ).status_code == 200
+    assert client.post("/api/intelligence/jobs").status_code == 200
+    assert _wait_completed(client)["status"] == "completed"
+    before = client.get("/api/product-context").json()
+    assert before["league_id"] == "sleeper:123"
+    assert before["simulation_ready"] is True
+
+    switched = client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "456"},
+    )
+    assert switched.status_code == 200
+    switched_payload = switched.json()
+    assert switched_payload["league_id"] == "sleeper:456"
+    assert switched_payload["state_id"] == league_b.state_id
+    assert switched_payload["simulation_ready"] is False
+    assert switched_payload["value_ready"] is False
+
+    completed = _wait_completed(client)
+    assert completed["status"] == "completed"
+    after = client.get("/api/product-context").json()
+    assert after["league_id"] == "sleeper:456"
+    assert after["state_id"] == league_b.state_id
+    assert after["forecast_ready"] is True
+    assert after["simulation_ready"] is True
+    assert after["value_ready"] is True
+    assert loader_states == [
+        ("forecast", "sleeper:123"),
+        ("simulation", "sleeper:123"),
+        ("value", "sleeper:123"),
+        ("forecast", "sleeper:456"),
+        ("simulation", "sleeper:456"),
+        ("value", "sleeper:456"),
+    ]

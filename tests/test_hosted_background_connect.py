@@ -232,7 +232,7 @@ def test_hosted_refresh_only_rebuilds_behavior_when_material_state_changed() -> 
 
     assert "league_material_fingerprint" in refresh
     assert "changed =" in refresh
-    assert "runtime_store.set_league_state" in refresh
+    assert "runtime_store.set_league_state_if_generation" in refresh
     assert "if changed:" in refresh
     assert "behavioral_coordinator.start" in refresh
 
@@ -307,8 +307,8 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    assert "20260925-hodor-lifecycle1" in source
-    assert "mobile_safari_recovery.js?v=20260925-hodor-lifecycle1" in source
+    assert "20260925-state-first1" in source
+    assert "mobile_safari_recovery.js?v=20260925-state-first1" in source
 
 
 def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
@@ -340,10 +340,12 @@ def test_hosted_refresh_is_bound_to_starting_league_generation() -> None:
     capture_index = refresh.index("refresh_generation = runtime_store.league_generation(user_id)")
     guard_index = refresh.index("runtime_store.league_generation(user_id) != refresh_generation")
     active_index = refresh.index("not _matches_sleeper_league(active_state, league_external_id)")
-    write_index = refresh.index("runtime_store.set_league_state(user_id, league_state)")
+    write_index = refresh.index("runtime_store.set_league_state_if_generation(")
     assert capture_index < guard_index < write_index
     assert capture_index < active_index < write_index
     assert "FSFFL Sleeper refresh superseded before activation" in refresh
+    assert "expected_generation=refresh_generation" in refresh
+    assert "FSFFL Sleeper refresh superseded at activation" in refresh
 
 
 def test_manual_connect_cannot_report_same_active_league_as_switch_success() -> None:
@@ -399,3 +401,39 @@ def test_cross_league_switch_maps_unique_managed_team_name_before_apply() -> Non
         "applyConnectedContext(selectedContext)"
     )
     assert "League is ready. Select the franchise you manage to continue." in interactive
+
+
+
+def test_hosted_switch_activates_state_before_starting_intelligence_reconciliation() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    connect = source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+
+    state_index = connect.index("runtime_store.set_league_state(user_id, league_state)")
+    checkpoint_index = connect.index('getattr(runtime_store, "wait_for_checkpoint", None)')
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", state_index)
+    assert state_index < checkpoint_index < reconcile_index
+    assert "intelligence_reconciler" in connect
+
+
+def test_hosted_refresh_reconciles_missing_intelligence_even_when_state_probe_is_unchanged() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    refresh = source.split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[1].split('@application.get("/api/connect/sleeper/background/current")', 1)[0]
+
+    reused = refresh.split(
+        "FSFFL Sleeper incremental sync reused stored state", 1
+    )[1].split("except Exception as exc", 1)[0]
+    assert "intelligence_reconciler(user_id)" in reused
+    activated = refresh.split(
+        "runtime_store.set_league_state_if_generation(", 1
+    )[1]
+    assert "intelligence_reconciler(user_id)" in activated
