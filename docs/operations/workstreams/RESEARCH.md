@@ -961,7 +961,7 @@ Technical Research has reached the long-horizon architecture Management gate, bu
 
 
 ## Management continuation — comparative Y4+ model-family research
-**State: ACTIVE — COMPARATIVE LONG-HORIZON MODEL SELECTION / RESEARCH ONLY**
+**State: MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE**
 
 The prior term-structure study established that post-H3 signal exists, but Management is not accepting Y5 as an assumed breakpoint or two_part_state as the final post-H3 model. Research is reopened for a bounded comparative model-selection phase covering Y4 onward, while production H3 remains unchanged.
 
@@ -980,7 +980,7 @@ Longer-horizon coordinates may ultimately be additional decision lenses rather t
 Deliverables: comparative model matrix by position × horizon, empirical breakpoint/routing analysis, calibration and uncertainty diagnostics, post-selection current-player shadows, and an updated plain-language Management PDF. Return at MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE or DIRECTIVE COMPLETE — RESEARCH with insufficient evidence. No production implementation.
 
 ### Comparative Y4+ execution checkpoint — current branch evidence
-**State: ACTIVE — POST-SELECTION INTERPRETATION / MANAGEMENT PDF REMAINS**
+**State: MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE**
 
 Current comparative branch:
 `research/intrinsic-y4plus-model-family-20260926`.
@@ -1004,3 +1004,53 @@ Do not return merely because the current-shadow workflow is green. Continue thro
 5. the updated accessible **plain-language Management PDF**, including what changed relative to the earlier H5-centered study and the exact Management decisions required.
 
 Stop only at `MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE` or `DIRECTIVE COMPLETE — RESEARCH` with an evidence-supported negative finding. No production implementation is authorized.
+
+
+### Comparative Y4+ final Research closeout — 2026-09-26
+
+**State: MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE**
+
+Management's reopened model-family study is complete.
+
+Durable Research handoff:
+- `artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_CLOSEOUT.md`
+- `artifacts/research/intrinsic_y4plus_model_family_20260926/CURRENT_COMPARATIVE_DIAGNOSTICS.md`
+- `artifacts/research/intrinsic_y4plus_model_family_20260926/PROPOSED_LONG_HORIZON_CONTRACT.md`
+- `artifacts/research/intrinsic_y4plus_model_family_20260926/REPRODUCIBILITY.md`
+
+Historical comparative result:
+- six families compared chronologically across QB/RB/WR/TE × Y4-Y8;
+- `two_part_state` wins RMSE in **14/20** cells and survival Brier in **14/20**;
+- `direct_ridge` wins MAE in **17/20** but RMSE and top-decile tail RMSE in **0/20**, demonstrating central-error improvement through economically material upper-tail compression;
+- the development-routed architecture is **not** promoted: at Y6-Y8 it lowers paired MAE but significantly worsens paired MSE, and at Y4-Y5 it does not establish a broad gain;
+- `survival_hazard` remains a useful QB/persistence model-risk challenger but does not earn a separate annual-cardinal route;
+- `career_state_transition` is more promising as a terminal/persistence-state lens than as annual cardinal expected points.
+
+Final annual Y4-Y8 Research family:
+**`two_part_state` for every position and tested horizon.**
+
+Promoted model-family breakpoint:
+**none**.
+
+Current 335-player comparative shadows:
+- H3 research shadow vs persisted production H3 Spearman **0.99654**;
+- primary vs rejected routed sensitivity Spearman declines only from **0.9995 at H4** to **0.9947 at H8**, but tail rank differences widen materially;
+- H3→H4/H5/H6/H7/H8 median absolute rank movement = **4 / 7 / 10 / 11 / 12**;
+- no current-player discontinuity establishes Y5 as a model breakpoint;
+- longer horizons gradually shift top-end composition away from RB toward WR while QB remains dominant;
+- young QB/WR/TE cohorts generally gain relative standing while aging RB/WR/TE lose standing, without manual age/youth premiums.
+
+Precision:
+- the retained family remains the best robust annual-cardinal challenger, but annual uncertainty is large relative to expected magnitude and rank signal declines continuously;
+- this prevents interpreting “one family across Y4-Y8” as “equal precision across Y4-Y8”;
+- terminal/career state/persistence remains a separate semantic research opportunity.
+
+Production H3 is preserved unchanged. No H1-Y3 replacement claim is made because the post-H3 challengers use governed Y1-Y3 Forecasts as input features.
+
+Updated Management PDF is the human-readable gate deliverable.
+
+Question: **Is another authorized Research action available now that materially advances the directive without Management choosing the next architecture?**
+
+Answer: **No.**
+
+**MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE**
