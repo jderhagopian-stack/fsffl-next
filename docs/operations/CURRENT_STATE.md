@@ -472,3 +472,13 @@ Durable final handoff:
 `artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_CLOSEOUT.md`.
 
 The updated plain-language Management PDF is the human-readable gate deliverable.
+
+## Management accepts comparative Y4+ architecture — next Research phase
+
+Management has accepted the comparative Y4+ Research result. `two_part_state` is the Research-standard annual cardinal family for Y4-Y8 across positions, with **no promoted model-family breakpoint or routed position/horizon architecture**.
+
+The next product-facing long-horizon cardinal set is intentionally simple: **H1 / governed H3 / H5**. H4/H6/H7/H8 remain Research/diagnostic coordinates rather than separate default top-level scores. H5 is a useful decision lens, not an empirically discovered regime boundary.
+
+Research is authorized next on a separate terminal/career-state representation plus the uncertainty/presentation contract required before any Y4+ production promotion. Production H3 remains unchanged and long-horizon implementation remains unauthorized.
+
+Implementation remains the app critical path. PR #262 is open but not merge-ready: current CI has 13 failures, mostly stale static-generation expectations plus one substantive exact same-State Forecast-evidence reuse regression that must be fixed before merge/deploy/production acceptance.
