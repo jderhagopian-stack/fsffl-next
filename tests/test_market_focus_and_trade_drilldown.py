@@ -9,7 +9,7 @@ STATIC = ROOT / "static"
 FOCUS_JS = STATIC / "market_focus_server.js"
 DRILLDOWN_JS = STATIC / "market_trade_drilldown.js"
 INDEX = STATIC / "index.html"
-RELEASE = "20260926-combined-acceptance1"
+RELEASE = "20260926-post265-intrinsic-mobile1"
 
 
 def _read(path: Path) -> str:
