@@ -219,3 +219,14 @@ The predecessor FSFFL repo contains two important assets to study:
 Do not blindly port either implementation. Recover compatible execution ideas and product semantics under NEXT's current authority contracts.
 
 Modern Multiverse output should preserve auditable interesting universes but contextualize absolute extremes because the maximum observed outcome becomes more extreme as simulation count rises. Use rarity/percentile/frequency context and keep this downstream of Simulation authority.
+
+### Promotion / record-keeping enforcement correction
+Management must treat worker terminal markers as claims, not automatic promotion. The post-PR263 incident demonstrated why: State-first core acceptance passed, but lazy hosted Intrinsic and League presentation were not exercised and physical evidence later contradicted the product-wide closeout.
+
+Going forward Management must:
+- persist directives before worker prompts;
+- require workers to persist exact execution identity/evidence/limitations;
+- independently reconcile terminal claims against canonical state and live evidence;
+- distinguish research/core-runtime/derived-capability/endpoint/rendered-surface/physical-device acceptance;
+- advance dependent workstreams only after the layers they actually depend on are proven;
+- reopen only the failed layer when newer evidence contradicts a promoted state, preserving lower-layer evidence that remains valid.
