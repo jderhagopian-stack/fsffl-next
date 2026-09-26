@@ -88,6 +88,51 @@ def _snapshot(
                 getattr(runtime_result, "fumbles_lost_supplement_player_count", 0)
                 or 0
             ),
+            "subject_universe_player_count": int(
+                getattr(
+                    runtime_result,
+                    "fumbles_lost_subject_universe_player_count",
+                    0,
+                )
+                or 0
+            ),
+            "provider_absent_player_ids": list(
+                getattr(
+                    runtime_result,
+                    "fumbles_lost_provider_absent_player_ids",
+                    (),
+                )
+                or ()
+            ),
+            "frozen_prior_absent_player_ids": list(
+                getattr(
+                    runtime_result,
+                    "fumbles_lost_frozen_prior_absent_player_ids",
+                    (),
+                )
+                or ()
+            ),
+            "omitted_player_ids": list(
+                getattr(
+                    runtime_result,
+                    "fumbles_lost_omitted_player_ids",
+                    (),
+                )
+                or ()
+            ),
+            "supplement_model_version": getattr(
+                runtime_result,
+                "fumbles_lost_supplement_model_version",
+                None,
+            ),
+            "simulation_material_partial_player_ids": list(
+                getattr(
+                    runtime_result,
+                    "simulation_material_partial_player_ids",
+                    (),
+                )
+                or ()
+            ),
             "failure": getattr(
                 runtime_result,
                 "fumbles_lost_supplement_failure",
@@ -117,6 +162,10 @@ def _require_full_fsffl(snapshot: dict[str, object]) -> None:
         not isinstance(supplement, dict)
         or not supplement.get("authority_fingerprint")
         or int(supplement.get("player_count") or 0) <= 0
+        or int(supplement.get("subject_universe_player_count") or 0)
+        != int(supplement.get("player_count") or 0)
+        or bool(supplement.get("omitted_player_ids"))
+        or bool(supplement.get("simulation_material_partial_player_ids"))
         or supplement.get("failure") is not None
     ):
         raise StateFirstAcceptanceError(

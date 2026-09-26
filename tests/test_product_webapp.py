@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueTeamAnalyticsRow
 from fsffl.analytics.models import AnalyticsContext
-from fsffl.product.webapp import create_app
+from fsffl.product.webapp import _runtime_capability_readiness, create_app
 from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 
@@ -291,6 +291,7 @@ def test_partial_forecast_job_completes_without_simulation_and_keeps_forecast_vi
         simulation_authority_blockers=(
             "separate_k_dst_forecast_authority_required",
         ),
+        simulation_material_partial_player_ids=(),
         model_version="fixture-shared-forecast-v1",
         evaluation_as_of=state.as_of,
     )
@@ -378,6 +379,7 @@ def _full_runtime_fixture(state: LeagueState):
         partial_fantasy_point_forecasts=(),
         family_coverage=(),
         simulation_authority_blockers=(),
+        simulation_material_partial_player_ids=(),
         evaluation_as_of=state.as_of,
     )
     evidence = SimpleNamespace(
@@ -688,3 +690,67 @@ def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -
         ("simulation", "sleeper:456"),
         ("value", "sleeper:456"),
     ]
+
+
+
+def test_capability_readiness_does_not_globalize_non_material_partial_subject() -> None:
+    partial = SimpleNamespace(player_id="free-agent-partial")
+    runtime_result = SimpleNamespace(
+        partial_fantasy_point_forecasts=(partial,),
+        simulation_material_partial_player_ids=(),
+        simulation_authority_blockers=(),
+    )
+    evidence = SimpleNamespace(
+        raw_forecasts=(object(),),
+        league_scored_forecasts=(object(),),
+        runtime_result=runtime_result,
+    )
+    runtime = SimpleNamespace(
+        forecast_evidence=evidence,
+        simulation_analytics=SimpleNamespace(),
+        value_evidence=SimpleNamespace(
+            estimates=(object(),),
+            fsffl_cardinal_values=(),
+            pick_variant_market_values=(),
+        ),
+    )
+
+    readiness = _runtime_capability_readiness(runtime)
+
+    assert readiness["forecast"]["status"] == "full"
+    assert readiness["forecast"]["partial_scored_count"] == 1
+    assert readiness["forecast"]["material_partial_player_ids"] == []
+    assert readiness["forecast"]["non_material_partial_scored_count"] == 1
+    assert "non-material subject" in readiness["forecast"]["reason"]
+    assert readiness["simulation"]["status"] == "full"
+    assert readiness["overall_status"] == "full"
+
+
+def test_capability_readiness_keeps_material_partial_subject_provisional() -> None:
+    partial = SimpleNamespace(player_id="active-partial")
+    runtime_result = SimpleNamespace(
+        partial_fantasy_point_forecasts=(partial,),
+        simulation_material_partial_player_ids=("active-partial",),
+        simulation_authority_blockers=("partial_player_scoring_coordinates_present",),
+    )
+    evidence = SimpleNamespace(
+        raw_forecasts=(object(),),
+        league_scored_forecasts=(object(),),
+        runtime_result=runtime_result,
+    )
+    runtime = SimpleNamespace(
+        forecast_evidence=evidence,
+        simulation_analytics=None,
+        value_evidence=SimpleNamespace(
+            estimates=(object(),),
+            fsffl_cardinal_values=(),
+            pick_variant_market_values=(),
+        ),
+    )
+
+    readiness = _runtime_capability_readiness(runtime)
+
+    assert readiness["forecast"]["status"] == "partial_provisional"
+    assert readiness["forecast"]["material_partial_player_ids"] == ["active-partial"]
+    assert readiness["simulation"]["status"] == "unavailable"
+    assert readiness["overall_status"] == "partial"

@@ -12,10 +12,11 @@ from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource
 from fsffl.providers.nfl_fantasy_live import NFLFantasyLiveProjectionSource
 from fsffl.providers.razzball_season_live import RazzballSeasonProjectionSource
-from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.state.models import FrozenModel, LeagueState, RosterSlot
 
 from .current_normalization import current_snapshot_from_razzball, normalize_current_projection_snapshot
 from .fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
     FirstPartyFumblesLostSupplement,
     build_first_party_fumbles_lost_supplement,
 )
@@ -106,7 +107,13 @@ class LiveForecastRuntimeResult(FrozenModel):
     source_health_events: tuple[LiveForecastSourceHealthEvent, ...] = ()
     fumbles_lost_supplement_authority_fingerprint: str | None = None
     fumbles_lost_supplement_player_count: int = 0
+    fumbles_lost_subject_universe_player_count: int = 0
+    fumbles_lost_provider_absent_player_ids: tuple[str, ...] = ()
+    fumbles_lost_frozen_prior_absent_player_ids: tuple[str, ...] = ()
+    fumbles_lost_omitted_player_ids: tuple[str, ...] = ()
     fumbles_lost_supplement_failure: str | None = None
+    fumbles_lost_supplement_model_version: str | None = None
+    simulation_material_partial_player_ids: tuple[str, ...] = ()
     first_party_fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = Field(
         default=None,
         exclude=True,
@@ -544,6 +551,21 @@ def build_current_live_forecasts(
         if league_state.matchups and fantasy_points
         else ()
     )
+    active_simulation_player_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
+    }
+    simulation_material_partial_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in scoring.partial_forecasts
+                if item.player_id in active_simulation_player_ids
+            }
+        )
+    )
     simulation_blockers = tuple(
         sorted(
             {
@@ -554,7 +576,7 @@ def build_current_live_forecasts(
             }
             | (
                 {"partial_player_scoring_coordinates_present"}
-                if scoring.partial_forecasts
+                if simulation_material_partial_player_ids
                 else set()
             )
         )
@@ -586,6 +608,32 @@ def build_current_live_forecasts(
             if fumbles_lost_supplement is not None
             else 0
         ),
+        fumbles_lost_subject_universe_player_count=(
+            len(fumbles_lost_supplement.subject_universe_player_ids)
+            if fumbles_lost_supplement is not None
+            else 0
+        ),
+        fumbles_lost_provider_absent_player_ids=(
+            fumbles_lost_supplement.provider_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_frozen_prior_absent_player_ids=(
+            fumbles_lost_supplement.frozen_prior_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_omitted_player_ids=(
+            fumbles_lost_supplement.omitted_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
         fumbles_lost_supplement_failure=fumbles_lost_failure,
+        fumbles_lost_supplement_model_version=(
+            FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )

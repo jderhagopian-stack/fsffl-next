@@ -8,6 +8,9 @@ from fsffl.forecast.current_runtime import (
     LiveForecastSourceHealthEvent,
     LiveForecastSourceProvenance,
 )
+from fsffl.forecast.fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+)
 from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
 from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
 from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
@@ -573,4 +576,63 @@ def test_restore_keeps_same_legacy_forecast_for_non_fum_lost_league() -> None:
     assert restored is not None
     assert restored.forecast_evidence is not None
     assert restored.forecast_evidence.model_version == forecast.model_version
+    assert restored.value_evidence is not None
+
+
+
+def test_restore_rejects_prior_first_party_supplement_contract_but_preserves_value() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    consuming = state.model_copy(
+        update={
+            "league": state.league.model_copy(
+                update={
+                    "rules": state.league.rules.model_copy(
+                        update={
+                            "scoring": (
+                                ScoringRule(stat="fum_lost", points=-2.0),
+                            )
+                        }
+                    )
+                }
+            )
+        }
+    )
+    forecast = _stale_forecast_without_first_party_fumbles_lost(consuming)
+    old_runtime = forecast.runtime_result.model_copy(
+        update={
+            "fumbles_lost_supplement_authority_fingerprint": "legacy-authority",
+            "fumbles_lost_supplement_player_count": 330,
+            "fumbles_lost_supplement_model_version": (
+                "current-supplemental-coordinate-v3:first-party-fumbles-lost"
+            ),
+        }
+    )
+    assert (
+        old_runtime.fumbles_lost_supplement_model_version
+        != FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+    )
+    old_forecast = LiveForecastEvidence(
+        raw_forecasts=forecast.raw_forecasts,
+        league_scored_forecasts=forecast.league_scored_forecasts,
+        successful_source_ids=forecast.successful_source_ids,
+        failed_sources=forecast.failed_sources,
+        uncertainty_ready=forecast.uncertainty_ready,
+        runtime_result=old_runtime,
+        evidence_basis=forecast.evidence_basis,
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=consuming,
+        selected_team_id="t2",
+        forecast_evidence=old_forecast,
+        value_evidence=_empty_value(consuming),
+    )
+
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy")
+
+    assert restored is not None
+    assert restored.forecast_evidence is None
+    assert restored.simulation_analytics is None
     assert restored.value_evidence is not None

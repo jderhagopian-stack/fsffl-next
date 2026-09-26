@@ -425,13 +425,14 @@ def test_preseason_replay_emits_partial_instead_of_silently_dropping_fum_lost_pl
     assert result.league_scoring_coverage.capability_status == "FULL"
     assert result.family_coverage[0].family == "player_offense"
     assert result.family_coverage[0].status == "FULL"
-    assert result.simulation_authority_blockers == (
-        "partial_player_scoring_coordinates_present",
-    )
+    # p1 is not rostered in this fixture, so the explicit partial remains
+    # available for diagnostics without becoming a Simulation-consumer blocker.
+    assert result.simulation_material_partial_player_ids == ()
+    assert result.simulation_authority_blockers == ()
     assert result.model_version == PRESEASON_AUTHORITY_RUNTIME_VERSION
 
 
-def test_resilient_preseason_fallback_keeps_partial_coverage_and_blocks_simulation_uncertainty() -> None:
+def test_resilient_preseason_fallback_uses_current_fumbles_supplement_without_mutating_baseline() -> None:
     state = _state_scoring_fumbles_lost()
     baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
     record = preseason_forecast_baseline_artifact(
@@ -449,15 +450,17 @@ def test_resilient_preseason_fallback_keeps_partial_coverage_and_blocks_simulati
     )(state)
 
     assert evidence.evidence_basis == "preseason_baseline"
-    assert evidence.league_scored_forecasts == ()
-    assert len(evidence.runtime_result.partial_fantasy_point_forecasts) == 1
-    assert evidence.runtime_result.partial_fantasy_point_forecasts[0].omitted_rule_stats == (
-        "fum_lost",
-    )
-    assert evidence.runtime_result.simulation_authority_blockers == (
-        "partial_player_scoring_coordinates_present",
-    )
-    assert evidence.uncertainty_ready is False
+    # The preserved ordinary preseason raw ensemble is immutable; only current
+    # league-scoring consumption receives the current first-party coordinate.
+    assert evidence.raw_forecasts == baseline.raw_ensemble
+    assert len(evidence.league_scored_forecasts) == 2
+    assert evidence.runtime_result.partial_fantasy_point_forecasts == ()
+    assert evidence.runtime_result.simulation_authority_blockers == ()
+    assert evidence.runtime_result.fumbles_lost_supplement_player_count == 1
+    assert evidence.runtime_result.fumbles_lost_subject_universe_player_count == 1
+    assert evidence.runtime_result.fumbles_lost_omitted_player_ids == ()
+    assert evidence.runtime_result.fumbles_lost_supplement_failure is None
+    assert evidence.uncertainty_ready is True
 
 
 def test_preseason_replay_stays_full_when_fumbles_lost_is_not_scored() -> None:
