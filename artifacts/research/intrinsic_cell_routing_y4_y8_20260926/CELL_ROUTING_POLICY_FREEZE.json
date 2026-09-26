@@ -1,0 +1,217 @@
+{
+  "state": "ROUTING_POLICY_FROZEN_BEFORE_REPEATED_OUTER_VALIDATION",
+  "authority": "research_only_no_production_change",
+  "source_development_workflow": {
+    "run_id": 36263509294,
+    "artifact_id": 10913506052,
+    "digest": "sha256:4ec805f2ea33c86b7790f7fc518f3610f60a09b500cbd454ad0978ac9284476a"
+  },
+  "candidate_pool_rule": "per cell: five lowest development-only specialist cell_score candidates; always include incumbent comparator if not already present; add one development-selected shared anchor",
+  "specialist_shortlists": {
+    "QB|Y4": [
+      "specialist|football_plus|histgb_direct",
+      "specialist|full_rich|state_histgb",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|forecast10|histgb_direct",
+      "specialist|full_no_pedigree|two_part_histgb",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "RB|Y4": [
+      "specialist|pedigree_plus|two_part_ridge",
+      "specialist|full_no_football|two_part_ridge",
+      "specialist|forecast10|two_part_ridge",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|football_plus|two_part_ridge"
+    ],
+    "TE|Y4": [
+      "specialist|full_no_uncertainty|two_part_histgb",
+      "specialist|full_rich|two_part_histgb",
+      "specialist|full_no_football|two_part_histgb",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|full_rich|histgb_direct",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "WR|Y4": [
+      "specialist|football_plus|histgb_direct",
+      "specialist|full_no_pedigree|two_part_histgb",
+      "specialist|football_plus|two_part_histgb",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|forecast_rich|two_part_histgb",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "QB|Y5": [
+      "specialist|football_plus|histgb_direct",
+      "specialist|full_no_pedigree|two_part_histgb",
+      "specialist|forecast10|histgb_direct",
+      "specialist|football_plus|two_part_histgb",
+      "specialist|full_rich|state_histgb",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "RB|Y5": [
+      "specialist|forecast10|two_part_ridge",
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|football_plus|two_part_ridge",
+      "specialist|trajectory_plus|two_part_ridge",
+      "specialist|full_no_pedigree|two_part_histgb"
+    ],
+    "TE|Y5": [
+      "specialist|full_rich|state_histgb",
+      "specialist|full_no_uncertainty|two_part_histgb",
+      "specialist|full_rich|two_part_histgb",
+      "specialist|full_no_trajectory|two_part_histgb",
+      "specialist|pedigree_plus|two_part_histgb",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "WR|Y5": [
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|forecast10|two_part_ridge",
+      "specialist|trajectory_plus|two_part_ridge",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|forecast10|two_part_histgb"
+    ],
+    "QB|Y6": [
+      "specialist|football_plus|histgb_direct",
+      "specialist|full_no_pedigree|two_part_histgb",
+      "specialist|football_plus|two_part_histgb",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|forecast_rich|two_part_histgb",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "RB|Y6": [
+      "specialist|football_plus|ridge_direct",
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|forecast_rich|ridge_direct",
+      "specialist|forecast10|two_part_ridge",
+      "specialist|forecast10|ridge_direct"
+    ],
+    "TE|Y6": [
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|forecast10|two_part_ridge",
+      "specialist|football_plus|two_part_histgb",
+      "specialist|forecast_rich|ridge_direct",
+      "specialist|full_no_pedigree|two_part_histgb"
+    ],
+    "WR|Y6": [
+      "specialist|forecast10|two_part_ridge",
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|full_no_pedigree|two_part_histgb",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|football_plus|histgb_direct"
+    ],
+    "QB|Y7": [
+      "specialist|football_plus|histgb_direct",
+      "specialist|trajectory_plus|two_part_histgb",
+      "specialist|forecast10|histgb_direct",
+      "specialist|full_no_pedigree|two_part_histgb",
+      "specialist|forecast_rich|two_part_histgb",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "RB|Y7": [
+      "specialist|full_rich|ridge_direct",
+      "specialist|forecast10|ridge_direct",
+      "specialist|forecast_rich|ridge_direct",
+      "specialist|football_plus|ridge_direct",
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "TE|Y7": [
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|full_no_trajectory|two_part_ridge",
+      "specialist|forecast_rich|ridge_direct",
+      "specialist|forecast10|two_part_ridge",
+      "specialist|trajectory_plus|two_part_histgb"
+    ],
+    "WR|Y7": [
+      "specialist|forecast10|two_part_ridge",
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|full_no_trajectory|two_part_ridge",
+      "specialist|full_rich|ridge_direct",
+      "specialist|full_no_uncertainty|two_part_ridge"
+    ],
+    "QB|Y8": [
+      "specialist|full_rich|ridge_direct",
+      "specialist|forecast10|two_part_histgb",
+      "specialist|forecast10|two_part_ridge",
+      "specialist|forecast_rich|two_part_histgb",
+      "specialist|trajectory_plus|two_part_histgb"
+    ],
+    "RB|Y8": [
+      "specialist|full_rich|ridge_direct",
+      "specialist|football_plus|ridge_direct",
+      "specialist|forecast10|ridge_direct",
+      "specialist|forecast_rich|ridge_direct",
+      "specialist|full_rich|state_histgb",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "TE|Y8": [
+      "specialist|full_rich|ridge_direct",
+      "specialist|forecast10|ridge_direct",
+      "specialist|forecast_rich|ridge_direct",
+      "specialist|football_plus|ridge_direct",
+      "specialist|full_rich|two_part_ridge",
+      "specialist|forecast10|two_part_ridge"
+    ],
+    "WR|Y8": [
+      "specialist|forecast10|two_part_ridge",
+      "specialist|full_no_pedigree|two_part_histgb",
+      "specialist|football_plus|two_part_histgb",
+      "specialist|forecast_rich|two_part_ridge",
+      "specialist|trajectory_plus|two_part_histgb"
+    ]
+  },
+  "incumbent_comparator": "specialist|forecast10|two_part_ridge",
+  "shared_anchor": "global_continuous|football_plus|two_part_ridge",
+  "rejected_blanket_comparator": {
+    "specialist_weight": 0.75,
+    "shared_weight": 0.25,
+    "route_source": "artifacts/research/intrinsic_comprehensive_y4_y8_20260926/FROZEN_ARCHITECTURE_CANDIDATE.json",
+    "status": "comparison_only_prior_holdout_failure_preserved"
+  },
+  "rolling_contract": {
+    "inner_origin_window": 5,
+    "minimum_inner_origins": 3,
+    "chronology": "for outer origin T, all fitted training rows must have target_season < T; candidate selection may use only evaluation origins U < T",
+    "outer_origins_per_horizon_max": 5,
+    "minimum_outer_origins": 2,
+    "outer_origin_rule": "use the latest up to five origins that each have at least three earlier eligible origins; require at least two outer origins to run validation, but at least three outer origins to support an exact-cardinal cell route",
+    "minimum_outer_origins_for_exact_support": 3
+  },
+  "selection_loss": {
+    "reference": "within-cell median candidate metric on permitted inner origins; incumbent is not the reference authority",
+    "weights": {
+      "rmse": 0.32,
+      "mae": 0.16,
+      "tail_rmse": 0.22,
+      "spearman": 0.15,
+      "bias": 0.05
+    },
+    "complexity": "reuse comprehensive development candidate_complexity penalty"
+  },
+  "policies": {
+    "hard_router": "minimum permitted inner multi-objective loss",
+    "soft_stack": "top three candidates by permitted inner loss; weights proportional to exp(-(loss-min_loss)/tau), tau=max(MAD(loss),0.02)",
+    "baseline": "incumbent comparator only",
+    "blanket_75_25": "previously rejected frozen architecture, comparison only"
+  },
+  "final_cell_interpretation": {
+    "no_automatic_baseline": "baseline must earn a cell through rolling evidence like any other candidate",
+    "coarse_allowed": true,
+    "exact_support_rule": "cell policy must show repeatable outer performance, adequate rank signal and no persistent severe error instability; otherwise report uncertain/coarse rather than force exact cardinal authority",
+    "thresholds": {
+      "adequate_rank_spearman_min": 0.25,
+      "coarse_relative_q90_min": 0.75,
+      "repeatable_outer_policy_win_share_min": 0.6,
+      "material_policy_score_margin_min": 0.01,
+      "persistent_severe_instability_rule": "more than one rolling outer origin with policy RMSE > 1.20x the median RMSE across baseline/hard/soft/blanket policies for that same cell-origin",
+      "indistinguishable_policy_score_margin_abs_max": 0.01,
+      "minimum_outer_origins_for_exact_support": 3
+    }
+  },
+  "guards": {
+    "prior_final_holdout_used_for_candidate_selection": false,
+    "prior_final_holdout_used_for_policy_tuning": false,
+    "current_named_players_used": false,
+    "production_h3_changed": false,
+    "market_owner_team_utility_inputs": false
+  }
+}
