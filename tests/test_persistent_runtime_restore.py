@@ -3,8 +3,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from time import monotonic, sleep
 
-from fsffl.forecast.current_runtime import LiveForecastRuntimeResult
+from fsffl.forecast.current_runtime import (
+    LiveForecastRuntimeResult,
+    LiveForecastSourceHealthEvent,
+    LiveForecastSourceProvenance,
+)
 from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
+from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
 from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
 from fsffl.persistence.session import (
     LAST_GOOD_ARTIFACT_KIND, LAST_GOOD_MODEL_VERSION, LAST_GOOD_SCOPE_KIND,
@@ -450,6 +455,29 @@ def test_failed_refresh_never_restores_last_good_from_different_league() -> None
 def _stale_forecast_without_first_party_fumbles_lost(
     state: LeagueState,
 ) -> LiveForecastEvidence:
+    provenance = tuple(
+        LiveForecastSourceProvenance(
+            provider=provider,
+            source_version=f"{provider}-v1",
+            captured_at=state.as_of,
+            effective_at=state.as_of,
+            usage_class="projection",
+            provider_payload_sha256=(char * 64),
+            health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+        )
+        for provider, char in (("one", "a"), ("two", "b"))
+    )
+    health = tuple(
+        LiveForecastSourceHealthEvent(
+            provider=provider,
+            disposition="accepted",
+            check="revision_agnostic_scale_health",
+            reason="synthetic valid legacy cache fixture",
+            health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+            provider_payload_sha256=(char * 64),
+        )
+        for provider, char in (("one", "a"), ("two", "b"))
+    )
     runtime = LiveForecastRuntimeResult(
         raw_ensemble=(),
         fantasy_point_forecasts=(),
@@ -463,6 +491,8 @@ def _stale_forecast_without_first_party_fumbles_lost(
         successful_source_ids=("one", "two"),
         failed_sources=(),
         evaluation_as_of=state.as_of,
+        source_provenance=provenance,
+        source_health_events=health,
     )
     assert runtime.fumbles_lost_supplement_authority_fingerprint is None
     return LiveForecastEvidence(
