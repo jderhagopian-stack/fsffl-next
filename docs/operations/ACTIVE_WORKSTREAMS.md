@@ -156,3 +156,11 @@ The whole ordinary-offense ROS recovery path was authorized briefly and then exp
 - **Whole ordinary-offense ROS rebase:** SUPERSEDED / NOT AUTHORIZED.
 - **Historical/preseason use:** supplemental fumble evidence is explicitly ineligible before its acquisition time and must never be written into the preseason baseline.
 - **Market acceptance:** remains paused until current FSFFL Simulation is legitimately restored.
+
+
+## Superseding FSFFL recovery path — first-party FUMBLES_LOST model
+- **Research:** ACTIVE — build/validate a first-party FSFFL exact FUMBLES_LOST Forecast model from governed historical outcomes and current point-in-time inputs.
+- **External provider permission path:** FALLBACK ONLY; no longer the immediate dependency for restoring FSFFL.
+- **Implementation:** supplement plumbing from PR #253/#255 remains reusable. Production promotion waits for a validated first-party Research handoff.
+- **Existing FSFFL:** current partial state remains non-accepted; target remains legitimate full current Forecast + Simulation.
+- **Market acceptance:** paused until FSFFL Simulation is restored.
