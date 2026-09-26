@@ -430,3 +430,7 @@ Research recommendation and exact Management decisions are in:
 `RESEARCH_CLOSEOUT.md`.
 
 The active FSFFL restoration remains owned by Forecast/Product and is unaffected by this Research closeout.
+
+
+## 2026-09-26 09:12 ET — PR #260 live; FSFFL FULL, switch acceptance still open
+PR #260 is merged and live. A fresh production FSFFL State reached FULL Forecast, FULL Simulation, FULL Value and overall FULL with no material partial-player blockers; the FUMBLES_LOST supplement now covers the canonical 827-player offensive subject universe with zero omitted subjects in that accepted snapshot. The remaining production-acceptance failure is a Hodor-switch durable persistence checkpoint timeout (`hodor_switch canonical State did not durably checkpoint`). The critical path is now cross-league persistence/switch completion, not FUMBLES_LOST authority.
