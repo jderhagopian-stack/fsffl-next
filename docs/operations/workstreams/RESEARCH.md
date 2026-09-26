@@ -1222,7 +1222,7 @@ Answer: **No.**
 **MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE**
 
 ### Management reopen — cell-specific long-horizon architecture after global holdout failure
-**State: ACTIVE — CELL-SPECIFIC LONG-HORIZON ROUTING / VALIDATION CORRECTIVE**
+**State: MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE**
 
 The comprehensive study's sealed holdout correctly rejected the frozen 75% specialist / 25% shared architecture as a **blanket Y4-Y8 promotion** because QB Y8 materially regressed. Management does not accept the resulting all-20-cell fallback as the final architecture conclusion.
 
@@ -1268,3 +1268,84 @@ Required:
 9. do not allow a simple linear age/experience specification to retain authority merely because it belongs to the incumbent fallback. It must earn each routed cell under the same validation standard as richer nonlinear alternatives.
 
 No production age penalty, youth bonus, or manual dynasty curve is authorized. Any trajectory effect must emerge from governed PIT evidence.
+
+
+### Cell-specific long-horizon Research closeout — 2026-09-26
+
+**State: MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE**
+
+The reopened routing/shrinkage corrective and required age / experience / accumulated-exposure audit are complete.
+
+Durable handoff:
+`artifacts/research/intrinsic_cell_routing_y4_y8_20260926/MANAGEMENT_HANDOFF.md`.
+
+#### Routing conclusion
+
+The incumbent `specialist|forecast10|two_part_ridge` comparator does **not** receive automatic authority.
+
+A routing policy was frozen before repeated rolling-origin validation and did not consume the previously exposed comprehensive final-holdout artifact.
+
+Across **11,940** rolling player-origin rows:
+- **soft cell shrinkage**: RMSE **43.20**, MAE **20.73**, bias **+0.23**, Spearman **0.5067**, tail RMSE **113.34**;
+- rejected blanket 75/25 comparator: RMSE **43.48**, MAE **20.71**, Spearman **0.5034**, tail RMSE **114.19**, worst-cell RMSE ratio vs baseline **1.311×**;
+- hard router: RMSE **44.03**, MAE **20.91**, Spearman **0.4964**, tail RMSE **113.52**;
+- incumbent baseline: RMSE **45.64**, MAE **19.96**, bias **-5.70**, Spearman **0.4942**, tail RMSE **134.77**.
+
+Soft shrinkage beats the incumbent in **15/20** cells on the rolling multi-objective composite and has the best general robustness profile. The cost is modestly worse MAE, which remains visible rather than hidden.
+
+Exact repeated-validation support clears only:
+- **QB Y4**
+- **WR Y4**
+- **QB Y6**
+
+Thirteen other Y4-Y7 cells are classified **indistinguishable_or_unstable** and should use soft shrinkage only with explicit uncertainty rather than hard exact routing.
+
+All four Y8 cells are **insufficient_outer_evidence**. Preserving chronology leaves only two qualifying Y8 outer origins, below the frozen three-origin minimum for exact-cardinal support. No second untouched Y8 holdout is claimed.
+
+The previously observed QB Y8 blanket failure remains valid:
+- baseline RMSE ~**78.00**;
+- soft shrinkage ~**78.35**;
+- old blanket 75/25 ~**102.23**.
+
+This invalidates blanket 75/25 promotion but does not grant unrelated cells to the incumbent.
+
+#### Age / NFL experience / accumulated exposure
+
+The required trajectory audit separately tested:
+- chronological target age;
+- target NFL experience;
+- cumulative PIT career workload;
+- nonlinear interactions with recent role/production;
+- effects on survival/relevance versus conditional production.
+
+No manual age curve or workload penalty was imposed.
+
+Main findings:
+- **QB:** strongest evidence. Nonlinear target-age/exposure challenger improves the inherited linear model in 5/5 Y4-Y8 cells on the audit composite; Y4-Y7 improvements are stable across rolling eras. Effects operate through both survival and conditional production.
+- **RB:** cumulative exposure adds small predictive information in 5/5 cells versus recent-role-only, primarily through survival (4/5); conditional production improves only 1/5. Do not interpret workload as causal wear.
+- **WR:** cumulative exposure does not improve conditional production in any tested cell (0/5). Age/workload evidence is mainly survival/tail information.
+- **TE:** simple polynomial target age is worse than inherited linear age, but nonlinear interactions improve 4/5 cells; Y6-Y7 are more era-sensitive and Y8 remains evidence-limited.
+
+The long-horizon age effect is generally stronger on **probability of remaining relevant** than on a mechanical reduction in scoring among players who remain active. Accumulated workload often proxies sustained talent/role and must not become a universal wear-and-tear coefficient.
+
+The nonlinear age/exposure challenger does not replace soft shrinkage overall. It is most compelling as a QB component/challenger in a later production-promotion study.
+
+#### Final Research disposition
+
+Recommended Research architecture:
+1. production H3 unchanged;
+2. Y4-Y7 general policy: **soft position × horizon shrinkage** across development-qualified candidates;
+3. exact cell support today only QB Y4, WR Y4, QB Y6;
+4. other Y4-Y7 cells: shrinkage estimates with explicit model/forecast uncertainty;
+5. Y8: coarse/uncertain only;
+6. target-age/experience modeled nonlinearly where evidence supports it, especially QB;
+7. cumulative exposure used selectively as PIT predictive evidence, principally in survival/relevance;
+8. no universal age cliff, youth premium or workload penalty.
+
+No Y4-Y8 production implementation is authorized.
+
+Question: **Is another authorized Research action available now that materially advances the reopened directive without a new Management decision?**
+
+Answer: **No.**
+
+**MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE**
