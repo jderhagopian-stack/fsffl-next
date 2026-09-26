@@ -567,3 +567,10 @@ What remains broken:
 - product-wide acceptance remains open and Performance/Market optimization remains held.
 
 Implementation remains the immediate beta-availability critical path.
+
+## PR #266 live checkpoint — hosted acceptance still open
+PR #266 is merged, green, and live on Render at `fa3c1a5fc559d7ab3cb11ae6a0675e419481de9d`.
+
+The prior hard vNext Year-1 compatibility failure has improved to an authoritative reduced/fallback Intrinsic path, but hosted product acceptance still fails because Intrinsic is not fully available for the accepted FSFFL product scope. Mobile layout fixes are live but still need physical iPhone/Safari confirmation.
+
+Implementation remains ACTIVE and is still the beta-availability critical path.
