@@ -16,6 +16,7 @@ from fsffl.state.models import FrozenModel, LeagueState, RosterSlot
 
 from .current_normalization import current_snapshot_from_razzball, normalize_current_projection_snapshot
 from .fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
     FirstPartyFumblesLostSupplement,
     build_first_party_fumbles_lost_supplement,
 )
@@ -107,6 +108,7 @@ class LiveForecastRuntimeResult(FrozenModel):
     fumbles_lost_supplement_authority_fingerprint: str | None = None
     fumbles_lost_supplement_player_count: int = 0
     fumbles_lost_supplement_failure: str | None = None
+    fumbles_lost_supplement_model_version: str | None = None
     simulation_material_partial_player_ids: tuple[str, ...] = ()
     first_party_fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = Field(
         default=None,
@@ -603,6 +605,11 @@ def build_current_live_forecasts(
             else 0
         ),
         fumbles_lost_supplement_failure=fumbles_lost_failure,
+        fumbles_lost_supplement_model_version=(
+            FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            if fumbles_lost_supplement is not None
+            else None
+        ),
         simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )
