@@ -425,9 +425,10 @@ def test_preseason_replay_emits_partial_instead_of_silently_dropping_fum_lost_pl
     assert result.league_scoring_coverage.capability_status == "FULL"
     assert result.family_coverage[0].family == "player_offense"
     assert result.family_coverage[0].status == "FULL"
-    assert result.simulation_authority_blockers == (
-        "partial_player_scoring_coordinates_present",
-    )
+    # p1 is not rostered in this fixture, so the explicit partial remains
+    # available for diagnostics without becoming a Simulation-consumer blocker.
+    assert result.simulation_material_partial_player_ids == ()
+    assert result.simulation_authority_blockers == ()
     assert result.model_version == PRESEASON_AUTHORITY_RUNTIME_VERSION
 
 
