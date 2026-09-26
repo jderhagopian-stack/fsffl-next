@@ -281,3 +281,17 @@ Required comparative outputs should include:
 These are analytical diagnostics, not permission to tune the model to produce a desired positional mix. Position distributions must emerge from Forecast/Value evidence and league economics, not from manual balancing.
 
 Decision/Search may later consume governed horizon-specific coordinates and rank changes as evidence, while preserving separate universal Intrinsic values and downstream Team Utility context.
+
+
+## 2026-09-25 — Do not make vendor permission the FSFFL recovery dependency
+Decision: Management rejects a recovery plan that requires the user to solicit bespoke permission from external projection vendors before FSFFL can regain ordinary current intelligence.
+
+The JerryGM + LineupExperts path remains documented as a possible future external evidence path, but it is removed from the immediate critical path.
+
+Research is authorized to pursue a **first-party FSFFL FUMBLES_LOST Forecast model** using already-governed historical football outcomes/evidence and current canonical opportunity inputs. This is a Forecast-owned predictive model, not a one-source provider shortcut.
+
+Authority for a first-party model is earned through preregistered target/feature definitions, strict point-in-time chronology, out-of-time validation, calibration/error analysis, non-zero uncertainty, current-population coverage, versioned artifacts, and fail-closed runtime behavior. The external two-independent-provider rule remains applicable to provider-ensemble evidence; it is not automatically a requirement that a separately validated first-party FSFFL model have two external vendor votes.
+
+The model must predict exact FUMBLES_LOST rather than silently map total fumbles to lost fumbles. It may use governed current Forecast opportunity coordinates and historical player/team/position evidence only when those inputs are available at the evaluation cutoff. Market, dynasty value, Owner Intelligence, and current/future outcomes may not leak into training.
+
+No production promotion is authorized until Research demonstrates a validated model materially better than omission / simple transparent baselines and hands off a frozen implementation contract.
