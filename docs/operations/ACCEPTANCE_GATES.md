@@ -180,6 +180,23 @@ If Management authorizes implementation, Stage 0/1 is accepted only when evidenc
 - PARTIAL capability never publishes an incomplete authoritative fantasy-point total;
 - no new production Forecast metric, provider authority, uncertainty coefficient, IDP support, or nonlinear model is promoted by Stage 0/1.
 
+
+## Forecast FUMBLES_LOST authority gate
+**Status: MANAGEMENT GATE — NO TWO-SOURCE SAME-HORIZON AUTHORITY UNDER CURRENT ROUTE.**
+
+Bounded Research closeout is persisted in:
+- `artifacts/research/fumbles_lost_authority_recovery_20260926/SOURCE_AUTHORITY_LEDGER.md`
+- `artifacts/research/fumbles_lost_authority_recovery_20260926/RESEARCH_HANDOFF.md`
+
+Current FSFFL full player-scoring authority remains red because the authentic preserved 2026 season/preseason offense evidence contains no `FUMBLES_LOST`.
+
+This gate may clear only through one of the following governed paths:
+- two independent, private-beta-rights-eligible, exact lost-fumble sources compatible with the authentic 2026 pre-opener/season evidence and target uncertainty; or
+- a restored current full-season/season Forecast route with two healthy exact sources and compatible uncertainty; or
+- an explicit Management authorization for a bounded ordinary-offense current-ROS Forecast lane/rebase, followed by two-source same-horizon rights, health, independence, coverage, provenance and uncertainty acceptance.
+
+A current-ROS `FUMBLES_LOST` projection may **not** be inserted into the preserved season/preseason baseline as a coordinate-only patch. The accepted auxiliary single-source tier remains unavailable because FUMBLES_LOST is core/material.
+
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
 
