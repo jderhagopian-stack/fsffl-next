@@ -347,11 +347,15 @@ def cell_interpretation(dev,pred,cell_metrics,fold_metrics,policy_scores,freeze)
             rel_q90=q90/p90_actual
             coarse=(float(cm.spearman)<float(th["adequate_rank_spearman_min"]) and
                     rel_q90>=float(th["coarse_relative_q90_min"]))
-            exact=(not coarse and
+            enough_outer=len(wg)>=int(th["minimum_outer_origins_for_exact_support"])
+            exact=(not coarse and enough_outer and
                    win_share>=float(th["repeatable_outer_policy_win_share_min"]) and
                    margin>=float(th["material_policy_score_margin_min"]) and
                    severe<=1)
-            if coarse:
+            if not enough_outer:
+                status="insufficient_outer_evidence"
+                recommendation="coarse_or_uncertain_no_exact_route"
+            elif coarse:
                 status="coarse_only"
                 recommendation="coarse_or_state_band"
             elif exact and best=="baseline":
@@ -370,6 +374,7 @@ def cell_interpretation(dev,pred,cell_metrics,fold_metrics,policy_scores,freeze)
             base=cell_metrics[(cell_metrics.horizon==h)&(cell_metrics.position==pos)&(cell_metrics.policy=="baseline")].iloc[0]
             rows.append({
                 "position":pos,"horizon":h,"rolling_best_policy":best,
+                "outer_origin_count":int(len(wg)),
                 "policy_score_margin_vs_runner":margin,"outer_policy_win_share":win_share,
                 "severe_instability_origin_count":severe,"best_rmse":float(cm.rmse),
                 "best_mae":float(cm.mae),"best_tail_rmse":float(cm.tail_rmse),
