@@ -309,6 +309,32 @@ Historical guard:
 
 Market acceptance remains paused until current FSFFL Simulation can be legitimately restored.
 
+## Current-only FUMBLES_LOST implementation checkpoint — 2026-09-26
+
+Forecast/Product has completed the evidence-independent bounded supplement plumbing without promoting a provider.
+
+Merged acceptance:
+- PR #253 merge `407050092186b72386f4b264cf675837ebeaa606`; accepted head `f72690ba56ca08c388a1ea18a7cc768aff4493cb`; 1,647 full-suite tests plus focused/live Forecast/provider traces green.
+- PR #255 merge `91ee2acef8e8dc8e1f2371d237c9c765f2061ae1`; accepted head `6380dcb68fbdcc8281a3cf87761cca34d691f276`; 1,651 full-suite tests plus focused/live Forecast/provider traces green.
+
+Implemented, but not production-activated:
+- provider-neutral exact lost-fumble source/evidence contract;
+- immutable ROS acquisition/effective/source-period provenance and content identity;
+- source remaining-game state must match canonical schedule at capture;
+- 17-game season-equivalent current-pace normalization using canonical remaining games;
+- exactly two independent, rights-eligible, source-health-green sources required for future certification;
+- non-zero uncertainty `max(abs(x_A-x_B)/2, 1.13855744535)`;
+- `authority_valid_from=max(two source capture times)`;
+- no preseason, annual-preseason, historical PIT or backfill eligibility;
+- separate supplemental scorer input that does not rewrite the ordinary raw Forecast source/model/as-of;
+- mixed-vintage current scored lineage only when consumed;
+- stale/changed supplement invalidates only current Forecast/Simulation for leagues scoring `fum_lost`, while preseason and independently governed current Value remain preserved.
+
+Production authority remains **BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS**. JerryGM + LineupExperts Premium remains the shortest technical pair identified by Research, but neither is registered by Implementation. Current FSFFL therefore remains partial and Simulation remains unavailable.
+
+Durable implementation handoff:
+- `artifacts/implementation/fumbles_lost_current_supplement_20260926/IMPLEMENTATION_HANDOFF.md`
+
 
 ## Long-horizon Intrinsic product direction
 Management accepted horizon-specific Intrinsic Value as a North Star direction: the current three-year Intrinsic remains the governed production coordinate, while future Research should evaluate a longer-horizon/terminal dynasty component and separate horizon values. This is deferred product/research direction and does not displace the active FSFFL/FUMBLES_LOST reliability critical path.
