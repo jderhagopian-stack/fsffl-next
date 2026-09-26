@@ -14,7 +14,11 @@ from fsffl.product.intrinsic_background import (
     intrinsic_failure_payload,
     intrinsic_loading_payload,
 )
-from fsffl.product.player_intelligence_routes import _validated_player_id
+from fsffl.product.player_intelligence_routes import (
+    PlayerHistoryBackgroundCoordinator,
+    PlayerHistoryBuildStatus,
+    _validated_player_id,
+)
 from fsffl.product.runtime import UserRuntimeContext
 
 
@@ -332,3 +336,40 @@ def test_completed_intrinsic_contract_marks_non_h3_player_individually_unavailab
     assert value["intrinsic_lifecycle_status"] == "completed"
     assert value["intrinsic_status"] == "unavailable"
     assert "outside the governed H3/Future-I1 subject cohort" in value["intrinsic_error"]
+
+
+def test_player_history_background_requests_remain_coalesced_while_memory_bounded_service_runs() -> None:
+    started = Event()
+    release = Event()
+    calls = 0
+
+    class _Service:
+        def player_history(self, _context, _player_id):
+            nonlocal calls
+            calls += 1
+            started.set()
+            release.wait(timeout=1.0)
+            return ()
+
+    coordinator = PlayerHistoryBackgroundCoordinator(cast(Any, _Service()), max_workers=1)
+    context = _context()
+    first = coordinator.request(context, "sleeper:player:123")
+    assert first.status in {PlayerHistoryBuildStatus.QUEUED, PlayerHistoryBuildStatus.RUNNING}
+    assert started.wait(timeout=1.0)
+
+    for _ in range(20):
+        current = coordinator.request(context, "sleeper:player:123")
+        assert current.status in {PlayerHistoryBuildStatus.QUEUED, PlayerHistoryBuildStatus.RUNNING}
+    assert calls == 1
+
+    release.set()
+    deadline = monotonic() + 1.0
+    completed = None
+    while monotonic() < deadline:
+        completed = coordinator.request(context, "sleeper:player:123")
+        if completed.status == PlayerHistoryBuildStatus.COMPLETED:
+            break
+        sleep(0.005)
+    assert completed is not None
+    assert completed.status == PlayerHistoryBuildStatus.COMPLETED
+    assert calls == 1
