@@ -181,3 +181,7 @@ Management has authorized a bounded empirical study of horizon-specific FSFFL In
 ## Current Management direction — localized partials + horizon report
 - **Forecast/Product:** ACTIVE. Fix the generic current-subject reconciliation gap so two provider-absent/current-State WRs do not unnecessarily hold league Simulation hostage; preserve fail-closed semantics only where an unresolved subject can materially affect the consumer.
 - **Intrinsic term-structure Research:** ACTIVE. Continue from the green historical selection pass through post-selection current-player/position diagnostics and a plain-language Management PDF at the architecture gate. No production implementation is authorized.
+
+
+## Simulation readiness scope correction — 2026-09-26
+- **Forecast/Product:** ACTIVE. Current two partial FUMBLES_LOST players are verified unrostered. Simulation must gate on roster/consumer dependencies, not every universal Forecast row. Preserve the player-level partials while restoring roster-based Simulation, then complete generic supplement-universe reconciliation and production acceptance.
