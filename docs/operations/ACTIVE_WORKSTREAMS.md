@@ -229,3 +229,11 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - Existing cache/reuse/coalescing/progressive-delivery work does not close this objective; the fresh kernel itself remains the target.
 - First exhaust exact-output-preserving software optimizations. Any non-bit-identical but mathematically equivalent kernel change requires a separate Management reproducibility/statistical-equivalence gate.
 - Do not reduce the canonical 50,000 runs merely for speed.
+
+## Sequenced legacy recovery pipeline
+- **NOW:** PR #263 production acceptance → Market physical acceptance → Market foreground latency.
+- **NEXT:** dedicated Simulation modernization: convergence-count study + fresh-kernel/vectorization work + preserve replayable Multiverse identity.
+- **THEN:** historical intelligence foundation: PIT State reconstruction, player franchise history, asset lineage, dated intelligence snapshots.
+- **AFTER FAST SIMULATION:** repeated-seed Decision sensitivity and context-normalized Owner Intelligence.
+- **LATER PRODUCTIZATION:** Multiverse stories, trade genealogy, Record Book, historical trade review, Alternate History, preseason media guide and other league-memory surfaces.
+- **PARALLEL:** comprehensive long-horizon Forecast/Intrinsic Research continues independently.
