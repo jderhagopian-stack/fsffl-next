@@ -164,3 +164,9 @@ The whole ordinary-offense ROS recovery path was authorized briefly and then exp
 - **Implementation:** **AUTHORIZED NEXT — FIRST-PARTY MODEL INTEGRATION / PRODUCTION ACCEPTANCE.** Reuse PR #253/#255 supplement plumbing; preserve all other offense coordinates and PIT/preseason guards; rebuild current FSFFL and promote Simulation only after implementation tests and current authority acceptance.
 - **Existing FSFFL:** current partial state remains non-accepted; target remains legitimate full current Forecast + Simulation.
 - **Market acceptance:** paused until FSFFL Simulation is restored.
+
+
+## Intrinsic Value Research — Horizon Term Structure
+**State:** ACTIVE — RESEARCH ONLY / NO IMPLEMENTATION AUTHORITY
+
+Management has authorized a bounded empirical study of horizon-specific FSFFL Intrinsic Value in parallel with Forecast/Product's FSFFL production-restoration work. Research will compare the current three-year model against longer discrete and terminal/career formulations; measure rank/value changes and position-level distributions across horizons; validate uncertainty, discounting and terminal treatment chronologically; and return at a Management gate with a recommended architecture or a negative finding. Production three-year Intrinsic remains unchanged.
