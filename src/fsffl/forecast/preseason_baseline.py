@@ -5,6 +5,7 @@ from datetime import datetime
 from fsffl.state.models import FrozenModel, LeagueState
 
 from .current_runtime import LiveForecastRuntimeResult
+from .fumbles_lost_first_party import FirstPartyFumblesLostSupplement
 from .league_scoring import derive_league_scoring_result
 from .live_ensemble import LiveEnsembleCoverage
 from .models import ForecastHorizon, ForecastObservation
@@ -15,7 +16,7 @@ from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
 PRESEASON_BASELINE_MODEL_VERSION = "next2-preseason-baseline-v1"
 PRESEASON_FALLBACK_RUNTIME_VERSION = "next2-current-runtime-v5:preseason-baseline-fallback"
 PRESEASON_AUTHORITY_RUNTIME_VERSION = (
-    "next2-current-runtime-v9:preseason-baseline-partial-coverage"
+    "next2-current-runtime-v10:preseason-baseline-current-supplement"
 )
 
 
@@ -82,6 +83,8 @@ def baseline_from_runtime(
 def build_runtime_from_preseason_baseline(
     league_state: LeagueState,
     baseline: PreseasonForecastBaseline,
+    *,
+    fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = None,
 ) -> LiveForecastRuntimeResult:
     if baseline.model_version != PRESEASON_BASELINE_MODEL_VERSION:
         raise ValueError("preseason baseline model version is stale")
@@ -92,9 +95,20 @@ def build_runtime_from_preseason_baseline(
     if len(set(baseline.successful_source_ids)) < 2:
         raise ValueError("preseason baseline does not satisfy independent-source authority")
 
+    if (
+        fumbles_lost_supplement is not None
+        and fumbles_lost_supplement.league_state_id != league_state.state_id
+    ):
+        raise ValueError("current FUMBLES_LOST supplement belongs to a different LeagueState")
+    supplemental_observations = (
+        fumbles_lost_supplement.observations
+        if fumbles_lost_supplement is not None
+        else ()
+    )
     scoring = derive_league_scoring_result(
         baseline.raw_ensemble,
         rules=league_state.league.rules,
+        supplemental_observations=supplemental_observations,
         source="fsffl:preseason_baseline_league_scored",
         model_version=PRESEASON_AUTHORITY_RUNTIME_VERSION,
     )
@@ -125,6 +139,12 @@ def build_runtime_from_preseason_baseline(
             )
         )
     )
+    evaluation_as_of = baseline.evaluation_as_of
+    if supplemental_observations:
+        evaluation_as_of = max(
+            evaluation_as_of,
+            *(item.as_of for item in supplemental_observations),
+        )
     return LiveForecastRuntimeResult(
         raw_ensemble=baseline.raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
@@ -136,6 +156,17 @@ def build_runtime_from_preseason_baseline(
         coverage=baseline.coverage,
         successful_source_ids=baseline.successful_source_ids,
         failed_sources=(),
-        evaluation_as_of=baseline.evaluation_as_of,
+        evaluation_as_of=evaluation_as_of,
+        fumbles_lost_supplement_authority_fingerprint=(
+            fumbles_lost_supplement.authority_fingerprint
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        fumbles_lost_supplement_player_count=(
+            len(fumbles_lost_supplement.observations)
+            if fumbles_lost_supplement is not None
+            else 0
+        ),
+        first_party_fumbles_lost_supplement=fumbles_lost_supplement,
         model_version=PRESEASON_AUTHORITY_RUNTIME_VERSION,
     )
