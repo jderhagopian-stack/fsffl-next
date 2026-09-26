@@ -72,11 +72,17 @@ def generate_bank(dev,long,freeze):
     origin_plan={}
     for h in HORIZONS:
         elig=eligible_origins(long,h,dev.MIN_TRAIN_ROWS)
-        need=outer_n+inner_w
-        if len(elig)<need:
-            raise SystemExit(f"insufficient eligible rolling origins for Y{h}: {elig}")
-        bank=elig[-need:]
-        outer=bank[-outer_n:]
+        outer_eligible=[T for i,T in enumerate(elig) if i>=int(freeze["rolling_contract"]["minimum_inner_origins"])]
+        outer=outer_eligible[-outer_n:]
+        if len(outer)<outer_n:
+            raise SystemExit(f"insufficient eligible rolling outer origins for Y{h}: eligible={elig}, outer={outer}")
+        needed=set(outer)
+        for T in outer:
+            prior=[x for x in elig if x<T][-inner_w:]
+            if len(prior)<int(freeze["rolling_contract"]["minimum_inner_origins"]):
+                raise SystemExit(f"insufficient prior origins for Y{h} T{T}: {prior}")
+            needed.update(prior)
+        bank=sorted(needed)
         origin_plan[str(h)]={"eligible_all":elig,"bank":bank,"outer":outer}
         for T in bank:
             evh=long[(long.horizon==h)&(long.base_season==T)]
