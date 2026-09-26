@@ -632,3 +632,7 @@ Under the current Forecast route, a current-ROS lost-fumble coordinate may not b
 No zero, single-source, cross-horizon, stale-artifact, or auxiliary-tier workaround is authorized.
 
 **MANAGEMENT GATE — RESEARCH / FUMBLES_LOST SAME-HORIZON AUTHORITY**
+
+
+### Management acceptance constraint — existing FSFFL must recover full capability
+The acceptance-policy path that would simply redefine existing FSFFL partial capability as acceptable is closed. Research should pursue the shortest evidence-compliant FUMBLES_LOST path needed to restore the previously fully supported FSFFL league under the current governed model. Return an exact external blocker if evidence cannot clear it; do not recommend acceptance downgrade merely to close the incident.
