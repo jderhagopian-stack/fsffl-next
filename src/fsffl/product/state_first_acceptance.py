@@ -66,14 +66,34 @@ def _snapshot(
 ) -> dict[str, object]:
     runtime = store.get(user_id)
     state = runtime.league_state
+    evidence = runtime.forecast_evidence
+    runtime_result = getattr(evidence, "runtime_result", None)
     return {
         "league_id": state.league.league_id if state is not None else None,
         "state_id": state.state_id if state is not None else None,
         "state_as_of": state.as_of.isoformat() if state is not None else None,
-        "forecast": runtime.forecast_evidence is not None,
+        "forecast": evidence is not None,
         "simulation": runtime.simulation_analytics is not None,
         "value": runtime.value_evidence is not None,
         "intelligence_reused": runtime.intelligence_reused,
+        "forecast_evidence_basis": getattr(evidence, "evidence_basis", None),
+        "forecast_runtime_model_version": getattr(runtime_result, "model_version", None),
+        "fumbles_lost_supplement": {
+            "authority_fingerprint": getattr(
+                runtime_result,
+                "fumbles_lost_supplement_authority_fingerprint",
+                None,
+            ),
+            "player_count": int(
+                getattr(runtime_result, "fumbles_lost_supplement_player_count", 0)
+                or 0
+            ),
+            "failure": getattr(
+                runtime_result,
+                "fumbles_lost_supplement_failure",
+                None,
+            ),
+        },
         "capability_readiness": capability_reader(runtime),
     }
 
@@ -92,6 +112,16 @@ def _require_full_fsffl(snapshot: dict[str, object]) -> None:
             raise StateFirstAcceptanceError(
                 f"FSFFL {key} was not full: {snapshot}"
             )
+    supplement = snapshot.get("fumbles_lost_supplement") or {}
+    if (
+        not isinstance(supplement, dict)
+        or not supplement.get("authority_fingerprint")
+        or int(supplement.get("player_count") or 0) <= 0
+        or supplement.get("failure") is not None
+    ):
+        raise StateFirstAcceptanceError(
+            f"FSFFL first-party FUMBLES_LOST was not consumed: {snapshot}"
+        )
 
 
 def _require_truthful_hodor(snapshot: dict[str, object]) -> None:
