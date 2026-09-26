@@ -32,9 +32,15 @@ Research recommends a bounded zero-authority-change Stage 0 + Stage 1 implementa
 
 
 ## Forecast Research — Auxiliary Single-Source Authority
-**State:** ACTIVE — BOUNDED MATERIALITY / SOURCE-AUTHORITY STUDY
+**State:** MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION
 
-Management has authorized a new narrow study of whether one governed source may be sufficient for empirically low-materiality auxiliary coordinates. The study is league-agnostic and must quantify scoring, lineup, team and downstream Simulation sensitivity plus source quality; FUMBLES_LOST and the 60+ FG incremental contribution are required candidates, with nonlinear D/ST PA scoring as a material control. Existing production authority remains unchanged. Canonical scope and outputs are in `workstreams/RESEARCH.md`.
+The bounded materiality/source-quality study is complete. Durable evidence is in `artifacts/research/auxiliary_single_source_authority_20260925/`.
+
+Research supports a generalized certified auxiliary single-source tier in principle but recommends **zero initial coordinate/source promotions**. The strongest materiality case is the +1 incremental 60+ FG premium; XP misses, D/ST safety, and defensive 2PT returns also pass the materiality side. Current source-quality/rights/history evidence does not yet certify any of them.
+
+FUMBLES_LOST, FG misses, common 2PT, D/ST blocked kicks, ST TDs, forced fumbles/recoveries, nonlinear PA, and ordinary volume/TD/reception coordinates remain core/material under the measured thresholds.
+
+Production authority is unchanged. Management must accept or reject the proposed certification policy before any authority-infrastructure implementation or source-specific certification begins.
 
 ## Product / Forecast Implementation
 Management now defines Refresh Intelligence as the canonical manual league sync/update: refresh Sleeper State first, then reuse/rebuild governed intelligence for that exact State. Current code forecasts against pre-refresh State before provider State refresh, so the active corrective must reconcile this ordering.
