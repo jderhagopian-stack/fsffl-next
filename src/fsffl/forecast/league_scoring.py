@@ -10,6 +10,7 @@ from typing import Literal
 from fsffl.state.models import FrozenModel, LeagueRules, Position, Provenance, RosterSlot
 
 from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
+from .supplemental_coordinate import SUPPLEMENTAL_COORDINATE_SOURCE
 
 
 class ScoringCoverageStatus(StrEnum):
@@ -391,11 +392,24 @@ def derive_league_scoring_result(
         variance += residual_variance
         effective = max(item.provenance.effective_at for _, _, item in active)
         retrieved = max(item.provenance.retrieved_at for _, _, item in active)
+        supplemental_mixed_vintage = any(
+            item.provenance.source == SUPPLEMENTAL_COORDINATE_SOURCE
+            for _metric, _coefficient, item in active
+        )
+        lineage_suffix = (
+            ":supplemental_mixed_vintage_current"
+            if supplemental_mixed_vintage
+            else ""
+        )
         provenance = Provenance(
-            source=f"{source}[{first.source}]",
+            source=(
+                f"{source}[{first.source};supplemental_mixed_vintage_current]"
+                if supplemental_mixed_vintage
+                else f"{source}[{first.source}]"
+            ),
             retrieved_at=retrieved,
             effective_at=effective,
-            source_version=model_version,
+            source_version=f"{model_version}{lineage_suffix}",
         )
         supported_stats = tuple(
             sorted(
@@ -433,6 +447,7 @@ def derive_league_scoring_result(
         suffix = ":independent_metric_variance"
         if applied_residuals:
             suffix += ":bounded_provisional_residual_v1"
+        suffix += lineage_suffix
 
         if omitted_stats:
             partial.append(
