@@ -224,9 +224,13 @@ def bins(rr,n=5):
 def uncertainty(allpred,selected):
     rr=primary([r for r in allpred if r["model"]==selected]); out={}
     overall=metrics(rr)["rmse"]
+    cold=[r for r in allpred if r["model"]==selected and r["tier"]=="cold_start"]
+    cold_rmse=metrics(cold)["rmse"] if cold else overall
     for p in POS:
         x=[r for r in rr if r["pos"]==p]; out[p]={"n":len(x),"residual_rmse_floor":metrics(x)["rmse"] if x else overall}
-    out["OVERALL"]={"n":len(rr),"residual_rmse_floor":overall}; return out
+    out["OVERALL"]={"n":len(rr),"residual_rmse_floor":overall}
+    out["COLD_START"]={"n":len(cold),"residual_rmse_floor":cold_rmse}
+    return out
 
 def _norm_name(v):
     s=unicodedata.normalize("NFKD",v or "")
@@ -256,7 +260,9 @@ def current_shadows(rows_by,selected,unc):
         if r is None:r={"season":2026,"pid":gid or "unmapped","name":"","pos":p,"early_games":0,"early_opp":0.0,"early_fl":0.0,"games":0,"opp":0.0,"fl":0.0,"future_games":0,"future_fl":0.0}
         h=ph.get(gid); t=tier(r,h) if gid else "unmapped"; tc[t]+=1; ro=role(r,h,ps[p])
         vals={"position_opportunity_rate":NFL_GAMES*ro*ps[p]["fl_po"],"calibrated_position_opportunity_rate":scale*NFL_GAMES*ro*ps[p]["fl_po"],"player_history_shrunk":NFL_GAMES*ro*shrunk(h,ps[p]),"player_history_plus_current":NFL_GAMES*ro*augmented(r,h,ps[p])}
-        pred=max(0.0,vals[selected]); sd=max(math.sqrt(pred),float(unc[p]["residual_rmse_floor"]))
+        pred=max(0.0,vals[selected]); floor=float(unc[p]["residual_rmse_floor"])
+        if t in {"cold_start","unmapped"}: floor=max(floor,float(unc["COLD_START"]["residual_rmse_floor"]))
+        sd=max(math.sqrt(pred),floor)
         out.append({"player_id":b.get("player_id"),"historical_gsis_id":gid,"identity_method":identity_method,"position":p,"evidence_tier":t,"weeks_observed_current":r["early_games"],"current_opportunities":round(r["early_opp"],6),"current_fumbles_lost":round(r["early_fl"],6),"history_games":h["games"] if h else 0,"history_opportunities":round(h["opp"],6) if h else 0.0,"history_fumbles_lost":round(h["fl"],6) if h else 0.0,"predicted_season_equivalent_fumbles_lost":round(pred,8),"predictive_stddev":round(sd,8),"model":selected})
     cov=mapped/len(out) if out else 0
     return out,{"board_rows":len(out),"mapped_gsis":mapped,"identity_coverage":cov,"tier_counts":dict(tc),"passes":cov>=GATES["min_current_identity_coverage"]}
