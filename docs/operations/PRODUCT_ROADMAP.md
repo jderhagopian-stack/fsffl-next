@@ -81,3 +81,12 @@ Management accepted these policies on 2026-09-25; PR #220 implements them and ha
 Following completion of current reliability acceptance and the immediate Market foreground-latency corrective, prioritize a dedicated general Simulation efficiency program before lower-priority product breadth.
 
 The product already benefits from persistent exact Simulation reuse, coalescing and progressive delivery, but fresh canonical 50,000-run Simulation remains a core latency dependency for intelligence refresh and deep scenario/trade analysis. The next phase should optimize the engine itself under the existing authority contract, beginning with exact-output-preserving software improvements and only escalating to statistically equivalent/non-bit-identical numerical architecture under a separate Management gate.
+
+## Simulation Multiverse / alternative-futures product
+Recover the original FSFFL Multiverse concept after the core Simulation engine is modernized.
+
+Purpose: preserve the richness that disappears when thousands of modeled seasons are reduced to expected wins and probabilities. Surface auditable, model-consistent alternative futures such as surprise breakouts, dominant/collapse seasons, unlikely playoff paths, high-seed champions and historically interesting scoring outcomes.
+
+Product rule: clearly separate **expected outcome** from **interesting possible universe**. Extreme-of-N values are sample-size dependent, so pair them with rarity/percentile/frequency context and avoid presenting them as forecasts.
+
+Prefer deriving the Multiverse catalog from the same canonical Simulation pass with replayable simulation IDs/provenance. Potential surfaces include preseason Reports, Home, League Atlas, team pages and shareable league-story cards.
