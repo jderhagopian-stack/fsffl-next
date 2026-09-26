@@ -1,0 +1,11 @@
+feature_set,best_mean_cell_score,best_candidate
+full_no_pedigree,0.0017966839738247,specialist|full_no_pedigree|two_part_histgb
+football_plus,0.0046140599423108,specialist|football_plus|two_part_histgb
+trajectory_plus,0.0084793823764287,specialist|trajectory_plus|two_part_histgb
+forecast_rich,0.0116953988947419,specialist|forecast_rich|two_part_histgb
+forecast10,0.0151337347344198,specialist|forecast10|two_part_histgb
+full_rich,0.0541824588882788,specialist|full_rich|ridge_direct
+full_no_uncertainty,0.0863879614352267,specialist|full_no_uncertainty|two_part_histgb
+full_no_trajectory,0.0898760105304821,specialist|full_no_trajectory|two_part_histgb
+pedigree_plus,0.0899727375705945,specialist|pedigree_plus|two_part_ridge
+full_no_football,0.1042243645562618,specialist|full_no_football|two_part_histgb
