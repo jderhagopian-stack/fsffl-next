@@ -342,3 +342,7 @@ Management accepted horizon-specific Intrinsic Value as a North Star direction: 
 
 ## Horizon research diagnostic scope
 Future long-horizon Intrinsic research must compare player rankings and position-level value distributions across horizons, including crossover players, positional top-end share, dispersion, age effects and uncertainty. This remains deferred behind the current reliability/FUMBLES_LOST critical path and is not active implementation.
+
+
+## FSFFL recovery path changed to first-party FUMBLES_LOST model
+Management removed bespoke external-vendor permission from the immediate recovery dependency. Research now owns a bounded first-party exact FUMBLES_LOST Forecast model using governed historical football outcomes and point-in-time current inputs, validated chronologically with explicit uncertainty and fail-closed coverage. Existing supplemental-coordinate implementation remains reusable if the model is promoted. The external JerryGM + LineupExperts path remains fallback only.
