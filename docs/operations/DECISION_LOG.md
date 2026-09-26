@@ -227,3 +227,22 @@ Required boundaries:
 - 2027+ returns to the normal governed preseason capture plus in-season current-forecast process; this 2026 authorization exists to recover a late-start private-beta current-forward baseline and must not become a permanent shortcut.
 
 Immediate objective: restore legitimate full current-forward FSFFL capability, including FUMBLES_LOST, from a complete governed same-horizon ordinary-offense ROS ensemble.
+
+
+## 2026-09-25 — Supersede whole-offense ROS rebase with current-only FUMBLES_LOST supplement
+Decision: Management supersedes the immediately prior authorization for a whole ordinary-offense current-ROS rebase. That scope was unnecessarily broad.
+
+The governed recovery path is now a **current-only supplemental FUMBLES_LOST coordinate** for present/future intelligence.
+
+The existing preserved preseason/full-season raw Forecast for all other ordinary offensive coordinates remains authoritative and unchanged. FUMBLES_LOST may be supplied from qualifying current evidence only if the system:
+- preserves the source's actual acquisition time and declared ROS horizon;
+- converts/normalizes the coordinate into the target period/rate required by the current scorer/Simulation without pretending the source itself was preseason/full-season evidence;
+- uses at least two independent eligible sources because FUMBLES_LOST remains core/material;
+- carries non-zero target-compatible uncertainty;
+- labels the resulting current Forecast lineage as mixed-vintage/current-supplemented where appropriate;
+- excludes the supplemental coordinate from preseason comparison, historical PIT replay, and any claim about what was knowable before the source acquisition date;
+- never writes the supplemental coordinate into or backdates the immutable preseason artifact.
+
+This is not a license to mix arbitrary horizons. It is a bounded coordinate-level current-intelligence bridge where target-period normalization is explicit and provenance remains machine-readable.
+
+The objective is to restore current FSFFL Forecast/Simulation without changing unrelated player projections.
