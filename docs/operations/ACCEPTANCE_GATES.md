@@ -346,3 +346,27 @@ Acceptance requires:
 - regression evidence proves the active provider can be replaced without requiring downstream model-specific changes.
 
 Validated numerical reuse is allowed. Hidden implementation inheritance is not.
+
+## Player Intelligence history memory / beta-availability gate
+**Status: CODE ACCEPTED + EXACT DEPLOY LIVE — HOSTED LOAD / PHYSICAL ACCEPTANCE BLOCKED.**
+
+PR #267 merge: `d737012079345768ef5cfd19debff97e0ede1bba`.
+Exact Render deploy: `dep-das4k27avr4c73909lsg`.
+Deterministic evidence: 1,704 full-suite tests plus all configured focused validations green.
+
+Implementation acceptance requires and now proves:
+- no concurrent multi-season PI career materialization;
+- no unbounded full-population season cache retained by Player History;
+- one-player season extraction before transformed materialization;
+- durable player-season retrieval and durable final-career reuse;
+- unchanged HTTP 202/loading semantics and request coalescing.
+
+Production promotion is **not complete** until one real authenticated PI history build on the live
+512 MB instance proves:
+- 202 → ready/200 without 502/503;
+- same instance survives;
+- memory remains safely below the 536,870,900-byte limit and materially below the prior failure curve;
+- repeat open reuses the persisted career result without recreating the build spike;
+- physical iPhone and iPad Player Intelligence render/interaction succeeds.
+
+This gate is independent of Intrinsic authority and State-first persistence.
