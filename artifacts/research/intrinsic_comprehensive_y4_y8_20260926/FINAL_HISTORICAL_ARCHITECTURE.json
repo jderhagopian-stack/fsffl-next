@@ -1,0 +1,91 @@
+{
+  "authority": "research_only_no_production_change",
+  "holdout_status": "FINAL_HOLDOUT_REJECTED_FALLBACK_PRESERVED",
+  "state": "HISTORICAL_ARCHITECTURE_FINALIZED_BEFORE_CURRENT_PLAYER_INSPECTION",
+  "effective_architecture": {
+    "type": "fixed",
+    "candidate": "specialist|forecast10|two_part_ridge"
+  },
+  "frozen_selected_architecture": {
+    "type": "hierarchical_blend",
+    "specialist_weight": 0.75,
+    "shared_architecture": "global_continuous",
+    "shared_candidate": "global_continuous|football_plus|two_part_ridge"
+  },
+  "aggregate": {
+    "selected": {
+      "n": 8579,
+      "rmse": 43.603021147136836,
+      "mae": 19.79718674178787,
+      "bias": 0.49120809586783487,
+      "spearman": 0.4941827830454856,
+      "tail_rmse": 113.40483759271366,
+      "survival_brier": 0.12738715758434563
+    },
+    "fallback": {
+      "n": 8579,
+      "rmse": 44.18453979619444,
+      "mae": 18.755891487004533,
+      "bias": -4.993220102118329,
+      "spearman": 0.4905794083740253,
+      "tail_rmse": 130.48199184153924,
+      "survival_brier": 0.12828895946983745
+    }
+  },
+  "ratios": {
+    "selected_to_fallback_rmse": 0.9868388659983804,
+    "mae": 1.0555183023694086,
+    "tail_rmse": 0.8691225202205334
+  },
+  "rejection_reason": "cell_rmse_QB_Y8",
+  "uncertainty": {
+    "effective_overall_coverage80": 0.876559039515095,
+    "effective_overall_coverage90": 0.9432334770952325,
+    "method": "development OOF absolute-residual conformal bands by position/horizon with monotone horizon floor"
+  },
+  "economic_bridge": {
+    "selected_mean_shapley_mae": 16.623519893936173,
+    "fallback_mean_shapley_mae": 16.372174994590907,
+    "selected_mean_shapley_spearman": 0.4610245705204917,
+    "fallback_mean_shapley_spearman": 0.45095167194869956
+  },
+  "untouched_final_holdout_by_horizon": {
+    "4": [
+      2020,
+      2021,
+      2022
+    ],
+    "5": [
+      2019,
+      2020,
+      2021
+    ],
+    "6": [
+      2018,
+      2019,
+      2020
+    ],
+    "7": [
+      2017,
+      2018,
+      2019
+    ],
+    "8": [
+      2016,
+      2017,
+      2018
+    ]
+  },
+  "guards": {
+    "current_players_inspected": false,
+    "candidate_definitions_changed_after_holdout": false,
+    "production_h3_changed": false,
+    "market_owner_team_utility_inputs": false
+  },
+  "workflow": {
+    "run_id": 36267110470,
+    "head_sha": "4be8313170181b91ea3a7c4bbf29b22beb5dca13",
+    "artifact_id": 10914389074,
+    "digest": "sha256:b9d9c905982f0ff9923bbdd6a8ebc7214b08811f64ea3662e7cd1d4893959de8"
+  }
+}
