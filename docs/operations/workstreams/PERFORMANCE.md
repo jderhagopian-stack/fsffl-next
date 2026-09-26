@@ -200,3 +200,20 @@ Required evidence before closeout:
 - production/deployment validation before Management is asked for another physical-device pass.
 
 This directive is orthogonal to Market discovery semantics. Do not modify Market candidate admission, strategic hypotheses, screening budgets, diversity/dominance, or Simulation boundaries while implementing the app-wide lifecycle contract.
+
+## Management trigger — resume immediately after core #263 acceptance
+**State remains: ACTIVE — MARKET FOREGROUND LATENCY ONLY**
+
+Do not take ownership of PR #263 or the core restart/switch persistence issue; that remains Forecast/Product Implementation.
+
+However, once Implementation proves the deployed #263 build through FSFFL → Hodor → FSFFL → restart acceptance, Performance is automatically authorized to resume without another Management architecture decision.
+
+Immediate Performance sequence:
+1. capture fresh authenticated iPhone/Safari cold and focused Market timings against the accepted/deployed Market corrective;
+2. compare them against the existing ~44.9s cold automatic and ~31.8–47.8s focused baseline plus ~0.137s warm workspace;
+3. trace stage-level time using the existing Market diagnostics;
+4. optimize the actual dominant cold/focused costs without changing candidate admission, Decision screening budget, zero-broad-Simulation policy, Forecast/Value/Intrinsic authority, or result semantics;
+5. prefer reuse/persist-first, duplicate-work removal, precomputation, bounded caching, query/index and orchestration improvements before reducing analytical fidelity;
+6. deploy and physically remeasure until latency is acceptable or a genuine cost/architecture Management gate is reached.
+
+The goal is not merely faster endpoints; it is to make the accepted Market workflow responsive enough for sustained physical product testing while preserving decision quality.
