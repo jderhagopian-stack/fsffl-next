@@ -5,7 +5,7 @@ from datetime import datetime
 from fsffl.state.models import FrozenModel, LeagueState
 
 from .current_runtime import LiveForecastRuntimeResult
-from .league_scoring import derive_league_fantasy_point_forecasts
+from .league_scoring import derive_league_scoring_result
 from .live_ensemble import LiveEnsembleCoverage
 from .models import ForecastHorizon, ForecastObservation
 from .regular_season import derive_fantasy_regular_season_forecasts
@@ -14,7 +14,9 @@ from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
 
 PRESEASON_BASELINE_MODEL_VERSION = "next2-preseason-baseline-v1"
 PRESEASON_FALLBACK_RUNTIME_VERSION = "next2-current-runtime-v5:preseason-baseline-fallback"
-PRESEASON_AUTHORITY_RUNTIME_VERSION = "next2-current-runtime-v6:preseason-baseline-authority"
+PRESEASON_AUTHORITY_RUNTIME_VERSION = (
+    "next2-current-runtime-v9:preseason-baseline-partial-coverage"
+)
 
 
 class PreseasonForecastBaseline(FrozenModel):
@@ -90,21 +92,46 @@ def build_runtime_from_preseason_baseline(
     if len(set(baseline.successful_source_ids)) < 2:
         raise ValueError("preseason baseline does not satisfy independent-source authority")
 
-    league_scored = derive_league_fantasy_point_forecasts(
+    scoring = derive_league_scoring_result(
         baseline.raw_ensemble,
         rules=league_state.league.rules,
         source="fsffl:preseason_baseline_league_scored",
         model_version=PRESEASON_AUTHORITY_RUNTIME_VERSION,
     )
-    fantasy_points = apply_empirical_season_fantasy_point_uncertainty(league_scored)
+    fantasy_points = (
+        apply_empirical_season_fantasy_point_uncertainty(
+            scoring.authoritative_forecasts
+        )
+        if scoring.authoritative_forecasts
+        else ()
+    )
     fantasy_regular_season = (
         derive_fantasy_regular_season_forecasts(league_state, fantasy_points)
-        if league_state.matchups
+        if league_state.matchups and fantasy_points
         else ()
+    )
+    simulation_blockers = tuple(
+        sorted(
+            {
+                reason
+                for family in scoring.family_coverage
+                if family.blocks_full_downstream_authority
+                for reason in family.reason_codes
+            }
+            | (
+                {"partial_player_scoring_coordinates_present"}
+                if scoring.partial_forecasts
+                else set()
+            )
+        )
     )
     return LiveForecastRuntimeResult(
         raw_ensemble=baseline.raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
+        partial_fantasy_point_forecasts=scoring.partial_forecasts,
+        league_scoring_coverage=scoring.coverage,
+        family_coverage=scoring.family_coverage,
+        simulation_authority_blockers=simulation_blockers,
         fantasy_regular_season_forecasts=fantasy_regular_season,
         coverage=baseline.coverage,
         successful_source_ids=baseline.successful_source_ids,

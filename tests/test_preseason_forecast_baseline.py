@@ -381,3 +381,82 @@ def test_preseason_authority_loader_fails_closed_for_invalid_source_coverage():
 
     with pytest.raises(ValueError, match="independent-source authority"):
         make_preseason_baseline_authority_loader(_Store(record))(state)
+
+
+
+def _state_scoring_fumbles_lost() -> LeagueState:
+    state = _state(scored=True)
+    rules = state.league.rules.model_copy(
+        update={
+            "scoring": state.league.rules.scoring
+            + (ScoringRule(stat="fum_lost", points=-1.0),)
+        }
+    )
+    return state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
+
+
+def test_preseason_replay_emits_partial_instead_of_silently_dropping_fum_lost_players() -> None:
+    state = _state_scoring_fumbles_lost()
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+
+    result = build_runtime_from_preseason_baseline(state, baseline)
+
+    assert result.fantasy_point_forecasts == ()
+    assert len(result.partial_fantasy_point_forecasts) == 1
+    partial = result.partial_fantasy_point_forecasts[0]
+    assert partial.player_id == "p1"
+    assert partial.omitted_rule_stats == ("fum_lost",)
+    assert any(
+        "fumbles_lost" in reason
+        for reason in partial.omission_reasons
+    )
+    assert result.league_scoring_coverage is not None
+    assert result.league_scoring_coverage.capability_status == "FULL"
+    assert result.family_coverage[0].family == "player_offense"
+    assert result.family_coverage[0].status == "FULL"
+    assert result.simulation_authority_blockers == (
+        "partial_player_scoring_coordinates_present",
+    )
+    assert result.model_version == PRESEASON_AUTHORITY_RUNTIME_VERSION
+
+
+def test_resilient_preseason_fallback_keeps_partial_coverage_and_blocks_simulation_uncertainty() -> None:
+    state = _state_scoring_fumbles_lost()
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+    record = preseason_forecast_baseline_artifact(
+        league_season_scope_id="league-1:2026",
+        baseline=baseline,
+    )
+    store = _Store(record)
+
+    def fail(_):
+        raise ValueError("only one healthy live source")
+
+    evidence = make_resilient_forecast_loader(
+        store,
+        live_loader=fail,
+    )(state)
+
+    assert evidence.evidence_basis == "preseason_baseline"
+    assert evidence.league_scored_forecasts == ()
+    assert len(evidence.runtime_result.partial_fantasy_point_forecasts) == 1
+    assert evidence.runtime_result.partial_fantasy_point_forecasts[0].omitted_rule_stats == (
+        "fum_lost",
+    )
+    assert evidence.runtime_result.simulation_authority_blockers == (
+        "partial_player_scoring_coordinates_present",
+    )
+    assert evidence.uncertainty_ready is False
+
+
+def test_preseason_replay_stays_full_when_fumbles_lost_is_not_scored() -> None:
+    state = _state(scored=True)
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+
+    result = build_runtime_from_preseason_baseline(state, baseline)
+
+    assert len(result.fantasy_point_forecasts) == 1
+    assert result.partial_fantasy_point_forecasts == ()
+    assert result.simulation_authority_blockers == ()
