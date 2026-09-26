@@ -71,3 +71,32 @@ This protocol applies to Management successors as well as current Management. A 
 
 ### Minimal worker continuation pattern
 `CONTINUE — [WORKSTREAM]. Read the current canonical docs/operations/ state, especially [workstream file]. Reconcile it with your exact durable execution state, do not restart completed work, and continue under OPERATING_PROTOCOL.md to a permitted terminal state.`
+
+## Promotion + durable-record enforcement
+A workstream result is not promoted merely because a worker reports success, creates a PR, merges, deploys, or writes a closeout.
+
+### Promotion rule
+Before Management or another workstream may treat a result as current accepted truth:
+1. the worker must persist the exact execution identity, tests, deployment/runtime evidence, limitations, and requested terminal state in the canonical workstream record and/or a referenced durable acceptance artifact;
+2. every acceptance condition named in the directive must have direct evidence, not inferred compatibility;
+3. lazy/runtime/product endpoints that matter to the claimed outcome must be exercised through their real hosted path when production acceptance is claimed;
+4. Management must reconcile the worker's claimed terminal state against CURRENT_STATE, ACTIVE_WORKSTREAMS, ACCEPTANCE_GATES, live GitHub/Render evidence, and any physical evidence supplied by the user;
+5. only then may Management update cross-workstream state from ACTIVE/HOLD to ACCEPTED/DIRECTIVE COMPLETE or advance a dependent workstream.
+
+A terminal phrase inside a worker artifact is a **claim to evaluate**, not self-authorizing promotion.
+
+### Contradiction rule
+Any newer physical, hosted, test, or runtime evidence that contradicts a promoted state automatically reopens the narrow affected acceptance layer. Preserve earlier evidence that still holds; do not erase valid lower-layer acceptance merely because a downstream layer failed.
+
+### Record-keeping rule
+Every material Management decision, reopened gate, supersession, accepted terminal state, and sequencing change must be persisted in `docs/operations/` before a worker is instructed to act. Worker closeouts must persist exact commit/PR/deploy/test identity and unresolved limitations before returning control.
+
+### Management self-check before advancing the pipeline
+Before telling the user or another worker that a gate is complete, Management must ask:
+- What exact layer is accepted: model/research, core runtime, derived capability, hosted endpoint, rendered surface, physical device?
+- Was that layer actually exercised?
+- Is there any contradictory evidence?
+- Is the accepted state durably recorded?
+- Are dependent workstreams being advanced only on evidence this gate actually proves?
+
+If any answer is no, do not promote.
