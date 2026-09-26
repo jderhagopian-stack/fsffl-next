@@ -1,0 +1,27 @@
+name: FUMBLES_LOST First-Party Research
+on:
+  push:
+    branches: [research/fumbles-first-party-20260926]
+    paths:
+      - scripts/run_fumbles_lost_first_party_research.py
+      - .github/workflows/fumbles-lost-first-party-research.yml
+  workflow_dispatch:
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run chronological first-party FUMBLES_LOST study
+        run: python scripts/run_fumbles_lost_first_party_research.py
+      - name: Upload governed research outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: fumbles-lost-first-party-research
+          path: artifacts/fumbles-lost-first-party-research/*
+          retention-days: 14
