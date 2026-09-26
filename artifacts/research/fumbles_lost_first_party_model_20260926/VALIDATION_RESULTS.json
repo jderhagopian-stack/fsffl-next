@@ -1,4 +1,10 @@
 {
+  "calibration_scales": {
+    "2023": 0.6955593949914197,
+    "2024": 0.6645928163671334,
+    "2025": 0.6376446223777328,
+    "2026": 0.6158756078393594
+  },
   "cold_start_stress": [
     {
       "actual_p90": 1.1333333333333333,
@@ -167,7 +173,7 @@
     }
   ],
   "features": {
-    "QB": "attempts+sacks+carries",
+    "QB": "attempts+sacks_suffered+carries",
     "RB_WR_TE": "carries+receptions",
     "calibration": "one global multiplier learned only from prior pseudo-current seasons",
     "current": "Weeks 1-2 only",
