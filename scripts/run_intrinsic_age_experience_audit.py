@@ -22,8 +22,8 @@ BASE_FORECAST=(
 )
 RECENT=(
     "l1_games","games_mean2","games_mean3",
-    "l1_opportunities","opp_mean2","opp_mean3","opp_slope12",
-    "l1_role_share","role_mean2","role_mean3","role_slope12",
+    "l1_opportunities","opportunities_mean2","opportunities_mean3","opportunities_slope12",
+    "l1_role_share","role_share_mean2","role_share_mean3","role_share_slope12",
     "l1_points_per_game","l1_points_per_opp","fantasy_slope12"
 )
 
@@ -86,11 +86,11 @@ def build_long(dev,args):
     long["log_career_primary"]=np.log1p(long["career_primary_workload"].clip(lower=0))
     long["log_career_secondary"]=np.log1p(long["career_secondary_workload"].clip(lower=0))
     long["workload_per_season"]=long["career_primary_workload"]/long["career_seasons"].clip(lower=1)
-    long["recent_to_career_workload"]=(long["opp_mean2"].fillna(0)*2)/long["career_primary_workload"].clip(lower=1)
+    long["recent_to_career_workload"]=(long["opportunities_mean2"].fillna(0)*2)/long["career_primary_workload"].clip(lower=1)
     long["age_x_logwork"]=long["age_at_target"]*long["log_career_primary"]
     long["exp_x_logwork"]=long["experience_at_target"]*long["log_career_primary"]
-    long["age_x_recent_role"]=long["age_at_target"]*long["role_mean2"].fillna(0)
-    long["exp_x_recent_role"]=long["experience_at_target"]*long["role_mean2"].fillna(0)
+    long["age_x_recent_role"]=long["age_at_target"]*long["role_share_mean2"].fillna(0)
+    long["exp_x_recent_role"]=long["experience_at_target"]*long["role_share_mean2"].fillna(0)
     return long
 
 def features_for(variant):
@@ -239,8 +239,8 @@ def main():
                             "experience_at_target":float(r.experience_at_target) if np.isfinite(r.experience_at_target) else np.nan,
                             "career_games":float(r.career_games),"career_seasons":float(r.career_seasons),
                             "career_primary_workload":float(r.career_primary_workload),
-                            "recent_role":float(r.role_mean2) if np.isfinite(r.role_mean2) else np.nan,
-                            "recent_opportunities":float(r.opp_mean2) if np.isfinite(r.opp_mean2) else np.nan,
+                            "recent_role":float(r.role_share_mean2) if np.isfinite(r.role_share_mean2) else np.nan,
+                            "recent_opportunities":float(r.opportunities_mean2) if np.isfinite(r.opportunities_mean2) else np.nan,
                         })
     pred=pd.DataFrame(rec)
     pred.to_csv(OUT/"AGE_EXPERIENCE_ROLLING_PREDICTIONS.csv",index=False)
