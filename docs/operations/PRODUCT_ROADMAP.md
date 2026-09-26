@@ -76,3 +76,8 @@ The completed review proposes:
 - opportunity-first For You, progressive Trade Finder, read-only Player Board, and roster-fit-first Free Agents.
 
 Management accepted these policies on 2026-09-25; PR #220 implements them and has satisfied implementation-level automated acceptance.
+
+## Near-term infrastructure/performance priority — Simulation kernel efficiency
+Following completion of current reliability acceptance and the immediate Market foreground-latency corrective, prioritize a dedicated general Simulation efficiency program before lower-priority product breadth.
+
+The product already benefits from persistent exact Simulation reuse, coalescing and progressive delivery, but fresh canonical 50,000-run Simulation remains a core latency dependency for intelligence refresh and deep scenario/trade analysis. The next phase should optimize the engine itself under the existing authority contract, beginning with exact-output-preserving software improvements and only escalating to statistically equivalent/non-bit-identical numerical architecture under a separate Management gate.
