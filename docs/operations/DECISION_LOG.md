@@ -194,3 +194,11 @@ Decision: FSFFL NEXT remains provider-agnostic by architecture. External provide
 Source rights are evaluated separately for the actual deployment stage. Private-beta use requires that the provider's terms/license permit the specific beta acquisition/storage/derivation/display pattern, but it does **not** require that long-term commercial rights already be secured. Sources permitted for beta but not yet cleared commercially must be tagged `commercial_recheck_required` and re-audited/replaced/licensed before any commercial launch.
 
 Do not conflate analytical Forecast authority, private-beta usage eligibility, and commercial usage eligibility. Canonical policy: `docs/operations/SOURCE_GOVERNANCE.md`.
+
+
+## 2026-09-25 — Accept auxiliary single-source certification framework with zero certifications
+Decision: Management accepts the Research-recommended generalized `AUXILIARY_SINGLE_SOURCE` certification framework **in principle**, with **zero initial provider/coordinate certifications**.
+
+This does not promote any production source or coordinate. FUMBLES_LOST remains core/material and is not eligible for this exception under the current measured thresholds. Source-specific certification remains a separate evidence-bearing action subject to semantic fit, source health, stage-appropriate rights, historical quality/stability, uncertainty, and automatic demotion rules.
+
+Immediate implication: the framework is accepted for future bounded auxiliary coordinates, but it does not clear the current FSFFL FUMBLES_LOST blocker.
