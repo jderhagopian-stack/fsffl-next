@@ -241,6 +241,23 @@ class _PendingIntelligenceSnapshot:
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
 
 
+def _forecast_supplement_compatible(
+    league_state: LeagueState,
+    evidence: LiveForecastEvidence | None,
+) -> bool:
+    if evidence is None:
+        return False
+    if not league_consumes_fumbles_lost(league_state.league.rules):
+        return True
+    return bool(
+        getattr(
+            evidence.runtime_result,
+            "fumbles_lost_supplement_authority_fingerprint",
+            None,
+        )
+    )
+
+
 def _complete_intelligence(context: UserRuntimeContext) -> bool:
     return (
         context.league_state is not None
@@ -303,6 +320,10 @@ class PrivateBetaRuntimeStore:
                 and current.simulation_analytics is not None
                 and current.value_evidence is not None
                 and user_id not in self._pending_intelligence
+                and _forecast_supplement_compatible(
+                    league_state,
+                    current.forecast_evidence,
+                )
             )
             if (
                 same_league
@@ -339,6 +360,10 @@ class PrivateBetaRuntimeStore:
                 and forecast_evidence is not None
                 and user_id not in self._pending_intelligence
                 and forecast_cutoff_compatible
+                and _forecast_supplement_compatible(
+                    league_state,
+                    forecast_evidence,
+                )
                 and forecast_input_fingerprint(current.league_state)
                 == forecast_input_fingerprint(league_state)
             )
