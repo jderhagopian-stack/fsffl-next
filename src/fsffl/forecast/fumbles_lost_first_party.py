@@ -366,6 +366,8 @@ def build_first_party_fumbles_lost_supplement(
     if not canonical_subjects:
         raise ValueError("first-party FUMBLES_LOST found no canonical offensive subjects")
     for player in canonical_subjects:
+        if player.player_id in base_subject_ids:
+            continue
         key = (
             player.player_id,
             player.position,
@@ -373,7 +375,7 @@ def build_first_party_fumbles_lost_supplement(
             period_start,
             period_end,
         )
-        targets.setdefault(key, None)
+        targets[key] = None
 
     now = (clock or (lambda: datetime.now(UTC)))()
     if now.tzinfo is None:
