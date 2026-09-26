@@ -389,3 +389,9 @@ PR #257 is merged and live on Render (`dep-darki1g473hc73bb7aeg`), but the first
 
 ## Long-horizon Intrinsic Research activated — 2026-09-26
 Management has now activated the previously deferred long-horizon Intrinsic direction as a **Research-only** parallel workstream. The study must compare horizon architectures empirically, including ranking and positional-distribution effects, and may not alter production three-year Intrinsic or distract Forecast/Product from the current FSFFL restoration. Implementation remains separately unauthorized pending a later Management gate.
+
+
+## 2026-09-26 morning status — restoration + long-horizon Research
+PR #258 and #259 are merged, main CI is green, and #259 is live on Render. Post-deploy production acceptance initially reached full Forecast/Simulation/Value on State `04f384...`, proving the first-party FUMBLES_LOST path can close the original league-wide gap. A later fresh State `1a92ea...` introduced two WR subjects (`sleeper:player:11630`, `sleeper:player:6149`) outside the 330-player first-party supplement, leaving only `fum_lost` omitted for those two players. Forecast is therefore partial and Simulation unavailable again. The remaining restoration defect is now a narrow current-population coverage/reconciliation issue, not the original model-authority problem.
+
+Long-horizon Intrinsic Research has completed a green historical model-selection pass on branch `research/intrinsic-term-structure-20260926`. The selected `two_part_state` extension improves Y4/Y5 OOT MAE and rank correlation versus simply carrying Y3 forward; uncertainty is explicitly horizon/position based and grows monotonically. Research is not complete yet: current-player horizon/rank shadows, positional-distribution interpretation, and the final Management-gate architecture recommendation remain outstanding. Production three-year Intrinsic is unchanged.
