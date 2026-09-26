@@ -342,6 +342,10 @@ class PrivateBetaShapleyContractLoader:
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
             )
+            if not isinstance(future_contract, FutureForecastContract):
+                raise ValueError(
+                    "Future Forecast provider must return FutureForecastContract"
+                )
             _logger.info(
                 "FSFFL Intrinsic phase future-contract forecast=%s players=%s elapsed=%.3fs",
                 future_contract.forecast_model_version,
