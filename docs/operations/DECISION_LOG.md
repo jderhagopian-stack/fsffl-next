@@ -311,3 +311,18 @@ Required analytical outputs include horizon-specific player values/ranks, player
 Research should also identify how separate governed horizon coordinates could later inform Trade/Market/Search and roster construction while preserving universal Intrinsic coordinates and keeping Team Utility downstream. Do not create a hidden master score or acceptance probability.
 
 Return at a Management gate with the empirical comparison, recommended horizon architecture, validation limits, and an implementation-ready contract only if the evidence supports one. Production three-year Intrinsic remains authoritative until a later explicit implementation decision.
+
+
+## 2026-09-26 — Partial player coverage must be localized, not system-wide
+Decision: a missing Forecast coordinate for one or a small number of players must not make unrelated FSFFL capabilities unavailable. Partial authority is subject-scoped and consumer-scoped.
+
+State, unaffected player Forecasts, Broad Market/Value, historical evidence, and unrelated product surfaces must remain usable. A downstream consumer may be withheld only when the incomplete subject can materially enter that consumer's calculation and no governed bounded treatment exists.
+
+For current Simulation specifically:
+- do not fabricate or silently zero a missing material coordinate;
+- first attempt to produce the coordinate under the already-accepted first-party model's governed history-only/current-only/cold-start/identity-light paths and non-zero uncertainty;
+- the model population must be reconciled against the current canonical forecastable offensive subject universe, not merely the subset present in one provider Forecast batch;
+- if a truly unresolved subject is outside the Simulation-relevant population, it must not block league Simulation merely because it exists in State;
+- if a truly unresolved subject can materially enter simulated lineups/outcomes, preserve fail-closed truth for the affected Simulation authority until Research/Implementation has an authorized bounded treatment. Do not solve this by pretending the coordinate is zero.
+
+The current two-WR incident is presumed to be a population/reconciliation defect until disproven: both subjects have deterministic Sleeper identity and position and were already present in prior State snapshots. Implementation should repair the generic supplement-universe/reconciliation path before considering any new authority-policy exception.
