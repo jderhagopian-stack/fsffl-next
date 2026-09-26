@@ -69,7 +69,10 @@ def lost(row,cols):
     raise SystemExit("exact FUMBLES_LOST field/components unavailable")
 
 def opp(row,pos):
-    return (num(row.get("attempts"))+num(row.get("sacks"))+num(row.get("carries"))) if pos=="QB" else (num(row.get("carries"))+num(row.get("receptions")))
+    # nflverse names quarterback sacks as sacks_suffered; retain a defensive
+    # fallback only for schema compatibility, never as a tuning choice.
+    sacks=num(row.get("sacks_suffered")) if "sacks_suffered" in row else num(row.get("sacks"))
+    return (num(row.get("attempts"))+sacks+num(row.get("carries"))) if pos=="QB" else (num(row.get("carries"))+num(row.get("receptions")))
 
 def load(year):
     p=get(year); g={}; sem=None
