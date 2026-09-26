@@ -182,45 +182,50 @@ If Management authorizes implementation, Stage 0/1 is accepted only when evidenc
 
 
 ## Forecast FUMBLES_LOST authority gate
-**Status: BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS FOR CURRENT-ONLY SUPPLEMENT.**
+**Status: RESEARCH ACCEPTED — FIRST-PARTY MODEL READY FOR IMPLEMENTATION / PRODUCTION ACCEPTANCE.**
 
-Management's current-only supplement correction supersedes the earlier requirement that this coordinate must share the preserved preseason/season evidence horizon. It does **not** authorize historical relabeling or an ordinary-offense rebase.
+Management superseded the external-provider-permission critical path with the first-party Forecast-model directive.
 
-Acceptance now requires:
-- two independent current/ROS sources with exact **lost-fumble**, not total-fumble, semantics;
-- private-beta rights for the actual acquisition, minimal persistence, derivation and display pattern;
-- source ownership/independence sufficient to prevent aggregate re-voting;
-- authenticated current payloads with healthy schedule/effective-time semantics;
-- complete per-player two-source coverage for the scorer-relevant QB/RB/WR/TE population;
-- explicit normalization from each provider's current remaining window to the same 17-game season-equivalent current pace;
-- equal-weight combination under existing two-source governance;
-- non-zero coordinate uncertainty of at least **1.13855744535 lost fumbles** on the season-equivalent target, increased when live source disagreement is larger;
-- a separate current supplemental artifact whose `authority_valid_from` is the later of the two source acquisition timestamps;
-- hard exclusion from every evaluation cutoff earlier than `authority_valid_from`, from annual/preseason snapshots, from 2026 preseason comparisons, and from historical PIT backfill;
-- unchanged hashes/content for the ordinary retained preseason/season raw Forecast;
-- fail-closed partial scoring for any player whose supplement loses source health, rights, independence or two-source coverage.
+Research acceptance is satisfied by:
+- `artifacts/research/fumbles_lost_first_party_model_20260926/MODEL_SPEC.md`;
+- `artifacts/research/fumbles_lost_first_party_model_20260926/CURRENT_INPUT_ASSESSMENT.md`;
+- `artifacts/research/fumbles_lost_first_party_model_20260926/PRODUCTION_READINESS_HANDOFF.md`;
+- machine-readable OOT validation and shadows in the same directory.
 
-Research's shortest technical path is **JerryGM + LineupExperts Premium In-Season**. It remains externally blocked on written rights/independence confirmation and authenticated full-pool live API access.
+Accepted Research model:
+`next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate`.
 
-Durable acceptance contract:
-- `artifacts/research/fumbles_lost_current_only_certification_20260926/CERTIFICATION_LEDGER.md`
-- `artifacts/research/fumbles_lost_current_only_certification_20260926/NORMALIZATION_UNCERTAINTY_CONTRACT.md`
-- `artifacts/research/fumbles_lost_current_only_certification_20260926/IMPLEMENTATION_HANDOFF.md`
+Evidence:
+- exact lost-fumble semantics only;
+- chronological OOT folds 2023/2024/2025;
+- combined primary OOT n=1,599;
+- RMSE 0.8105 vs omission 1.0425 and position-game baseline 1.0475;
+- bias +0.0509;
+- zero-calibration gap 0.0347;
+- current identity coverage 327/335 = 97.61%;
+- non-zero position and cold-start residual uncertainty floors;
+- model/features/gates frozen before 2026 named-player shadow inspection;
+- no unrelated offense coordinate rebased.
 
-Evidence-independent Implementation acceptance is also satisfied:
-- PR #253 merged at `407050092186b72386f4b264cf675837ebeaa606`;
-- PR #255 merged at `91ee2acef8e8dc8e1f2371d237c9c765f2061ae1`;
-- final PR #255 head `6380dcb68fbdcc8281a3cf87761cca34d691f276` passed 1,651 full-suite tests plus PR164 focused regression, Live Forecast trace and live-provider numerical trace;
-- the ordinary retained offense Forecast remains a separate immutable scorer input;
-- future supplement scoring uses a separate mixed-vintage current input and cannot rewrite baseline source/model/as-of identity;
-- schedule advance makes persisted ROS evidence stale and invalidates only affected current Forecast/Simulation;
-- current supplement artifact identity is `current_supplemental_forecast_coordinate`;
-- no source adapter/provider is registered and no production FUMBLES_LOST authority is promoted.
+Production acceptance is **not** satisfied merely by Research. Forecast/Product Implementation must demonstrate:
+1. exact lost-fumble target semantics; total fumbles cannot substitute;
+2. strict prior-season training and canonical completed-week current cutoff;
+3. frozen 2026 scalar `0.6158756078393594` reproduced from governed pseudo-current evidence;
+4. current input semantics exactly match the accepted opportunity definitions;
+5. non-zero uncertainty floors and explicit degraded identity/cold-start tiers;
+6. current State cutoff mismatch invalidates the model supplement;
+7. the supplement is overlaid only into current player scoring;
+8. retained preseason/ordinary offense raw Forecast content and identity remain unchanged;
+9. no current first-party output is visible to an earlier PIT cutoff or 2026 preseason comparison;
+10. missing/ambiguous model evidence never becomes a silent zero;
+11. current FSFFL rebuild reaches legitimate full player-scoring authority before Simulation promotion;
+12. existing Hodor/other-league partial-authority behavior does not regress.
 
-Durable Implementation handoff:
-- `artifacts/implementation/fumbles_lost_current_supplement_20260926/IMPLEMENTATION_HANDOFF.md`
+Existing PR #253/#255 supplement plumbing remains the intended integration seam.
 
-The auxiliary single-source tier remains unavailable because FUMBLES_LOST is core/material.
+The external JerryGM + LineupExperts route remains fallback/benchmark only. It is no longer an acceptance prerequisite for the first-party path.
+
+The auxiliary single-source tier remains irrelevant because this is a Forecast-owned empirical model, not a one-provider authority exception.
 
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.

@@ -727,7 +727,7 @@ If LineupExperts cannot clear rights/independence, SportsDataIO is the strongest
 
 
 ## Management directive — first-party FUMBLES_LOST Forecast model
-**State: ACTIVE — FIRST-PARTY FUMBLES_LOST MODEL RESEARCH**
+**State: DIRECTIVE COMPLETE — FIRST-PARTY FUMBLES_LOST MODEL READY FOR IMPLEMENTATION**
 
 Management removes bespoke external-vendor permission from the immediate FSFFL recovery critical path.
 
@@ -750,3 +750,78 @@ Required research:
 The JerryGM + LineupExperts external path remains a fallback/benchmark only and should not block this work.
 
 Do not reopen unrelated Forecast coordinates or long-horizon Intrinsic research.
+
+
+### First-party FUMBLES_LOST model closeout — 2026-09-26
+
+**State: DIRECTIVE COMPLETE — RESEARCH / FIRST-PARTY FUMBLES_LOST MODEL READY FOR IMPLEMENTATION**
+
+Durable package:
+- `artifacts/research/fumbles_lost_first_party_model_20260926/MODEL_SPEC.md`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/CURRENT_INPUT_ASSESSMENT.md`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/PRODUCTION_READINESS_HANDOFF.md`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/VALIDATION_RESULTS.json`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/OOT_METRICS.csv`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/CALIBRATION.csv`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/COLD_START_STRESS.csv`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/CURRENT_SHADOWS.csv`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/DATA_LINEAGE.json`
+
+Research selected the smallest model that cleared the predeclared evidence bar:
+`next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate`.
+
+Chronological OOT:
+- 2023 held out after training through 2022;
+- 2024 held out after training through 2023;
+- 2025 held out after training through 2024;
+- only Weeks 1–2 of each target season are permitted as target-season inputs;
+- no random split, future leakage or named-player tuning.
+
+Combined primary OOT sample: 1,599 player-seasons.
+
+Selected result:
+- RMSE **0.8105091976** vs zero/omission **1.0425150391** and position game-rate **1.0475162746**;
+- MAE **0.4868439130**;
+- bias **+0.0508840912**;
+- Spearman **0.4450645773**;
+- zero-calibration gap **0.0347225013**;
+- tail RMSE **1.3696260176** vs omission **2.2032564354**.
+
+Held-out RMSE:
+- 2023 **0.9103468343**;
+- 2024 **0.7819080813**;
+- 2025 **0.7332392771**.
+
+Current 2026 train-only global calibration scalar:
+`0.6158756078393594`.
+
+Non-zero OOT residual uncertainty floors:
+- QB **1.7266303754**;
+- RB **0.7375205714**;
+- WR **0.4424922528**;
+- TE **0.4524060196**;
+- cold-start stress **0.7899186992** lost fumbles.
+
+Current 335-player shadow:
+- 327/335 deterministic identities = **97.6119%**;
+- 258 history+current;
+- 40 history-only;
+- 28 current-only;
+- 1 cold-start;
+- 8 identity-light/unmapped.
+
+The eight identity-light current FSFFL rows are BENCH/TAXI in the current State; they remain explicit degraded-evidence rows and must not be interpreted as zeros.
+
+The current canonical FSFFL State reports `completed_through_week=2`, exactly matching the validated cutoff.
+
+The retained 1,675-observation provider Forecast bundle was evaluated as a possible feature source but does not contain the exact opportunity variables required by the accepted model and lacks a comparable multi-season Week-2 PIT archive. It is therefore excluded from v1 rather than used through an unvalidated proxy.
+
+The model output is current-only Forecast evidence. It is ineligible for 2026 preseason comparison, annual preseason snapshots, historical PIT queries before its actual authority timestamp, or backfill.
+
+The external JerryGM + LineupExperts route is now fallback/benchmark only and is not the production-readiness critical path for this coordinate.
+
+Question: **Is there another authorized Research action available now that materially advances the directive before Forecast Implementation begins?**
+
+Answer: **No.**
+
+**DIRECTIVE COMPLETE — RESEARCH / FIRST-PARTY FUMBLES_LOST MODEL READY FOR IMPLEMENTATION**

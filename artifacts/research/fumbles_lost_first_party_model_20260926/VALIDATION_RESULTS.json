@@ -1,0 +1,398 @@
+{
+  "calibration_scales": {
+    "2023": 0.6955593949914197,
+    "2024": 0.6645928163671334,
+    "2025": 0.6376446223777328,
+    "2026": 0.6158756078393594
+  },
+  "cold_start_stress": [
+    {
+      "actual_p90": 1.1333333333333333,
+      "actual_p95": 1.1333333333333333,
+      "actual_zero_rate": 0.8700564971751412,
+      "bias": -0.256120527306968,
+      "mae": 0.256120527306968,
+      "model": "zero_omission",
+      "n": 177,
+      "pred_p90": 0.0,
+      "pred_p95": 0.0,
+      "pred_zero_rate": 1.0,
+      "rmse": 0.8852845946696022,
+      "spearman": 0.0,
+      "tail_n": 23,
+      "tail_rmse": 2.4558714029496915,
+      "zero_brier": 0.12994350282485875,
+      "zero_gap": 0.12994350282485878
+    },
+    {
+      "actual_p90": 1.1333333333333333,
+      "actual_p95": 1.1333333333333333,
+      "actual_zero_rate": 0.8700564971751412,
+      "bias": 0.5452402724228007,
+      "mae": 0.6853884522792602,
+      "model": "position_game_rate",
+      "n": 177,
+      "pred_p90": 3.0357142857142856,
+      "pred_p95": 3.126959847036329,
+      "pred_zero_rate": 0.6228652005044493,
+      "rmse": 1.0531819396883675,
+      "spearman": 0.3646188933934986,
+      "tail_n": 23,
+      "tail_rmse": 1.4995492965284682,
+      "zero_brier": 0.15514103222345949,
+      "zero_gap": 0.24719129667069195
+    },
+    {
+      "actual_p90": 1.1333333333333333,
+      "actual_p95": 1.1333333333333333,
+      "actual_zero_rate": 0.8700564971751412,
+      "bias": 0.5452402724228007,
+      "mae": 0.6853884522792602,
+      "model": "position_opportunity_rate",
+      "n": 177,
+      "pred_p90": 3.0357142857142856,
+      "pred_p95": 3.1269598470363285,
+      "pred_zero_rate": 0.6228652005044493,
+      "rmse": 1.0531819396883673,
+      "spearman": 0.3646188933934986,
+      "tail_n": 23,
+      "tail_rmse": 1.4995492965284682,
+      "zero_brier": 0.15514103222345949,
+      "zero_gap": 0.24719129667069195
+    },
+    {
+      "actual_p90": 1.1333333333333333,
+      "actual_p95": 1.1333333333333333,
+      "actual_zero_rate": 0.8700564971751412,
+      "bias": 0.2769817825384787,
+      "mae": 0.48413532011847943,
+      "model": "calibrated_position_opportunity_rate",
+      "n": 177,
+      "pred_p90": 1.9938891308538131,
+      "pred_p95": 2.1115195919382383,
+      "pred_zero_rate": 0.7056324095587342,
+      "rmse": 0.789918699230448,
+      "spearman": 0.3584635656584059,
+      "tail_n": 23,
+      "tail_rmse": 1.4307406595202277,
+      "zero_brier": 0.11572376518281939,
+      "zero_gap": 0.16442408761640703
+    },
+    {
+      "actual_p90": 1.1333333333333333,
+      "actual_p95": 1.1333333333333333,
+      "actual_zero_rate": 0.8700564971751412,
+      "bias": 0.5452402724228007,
+      "mae": 0.6853884522792602,
+      "model": "player_history_shrunk",
+      "n": 177,
+      "pred_p90": 3.0357142857142856,
+      "pred_p95": 3.1269598470363285,
+      "pred_zero_rate": 0.6228652005044493,
+      "rmse": 1.0531819396883673,
+      "spearman": 0.3646188933934986,
+      "tail_n": 23,
+      "tail_rmse": 1.4995492965284682,
+      "zero_brier": 0.15514103222345949,
+      "zero_gap": 0.24719129667069195
+    },
+    {
+      "actual_p90": 1.1333333333333333,
+      "actual_p95": 1.1333333333333333,
+      "actual_zero_rate": 0.8700564971751412,
+      "bias": 0.5452402724228007,
+      "mae": 0.6853884522792602,
+      "model": "player_history_plus_current",
+      "n": 177,
+      "pred_p90": 3.035714285714286,
+      "pred_p95": 3.126959847036329,
+      "pred_zero_rate": 0.6228652005044493,
+      "rmse": 1.0531819396883675,
+      "spearman": 0.3646188933934986,
+      "tail_n": 23,
+      "tail_rmse": 1.4995492965284682,
+      "zero_brier": 0.15514103222345949,
+      "zero_gap": 0.24719129667069195
+    }
+  ],
+  "current_coverage": {
+    "board_rows": 335,
+    "identity_coverage": 0.9761194029850746,
+    "mapped_gsis": 327,
+    "passes": true,
+    "tier_counts": {
+      "cold_start": 1,
+      "current_only": 28,
+      "history_only": 40,
+      "history_plus_current": 258,
+      "unmapped": 8
+    }
+  },
+  "data_lineage": [
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 633,
+      "season": 2021,
+      "sha256": "41915fb49238902ad1f129ebf0405b11a1e710454ae0fe8f7b3e4f9145875f48",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2021.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 608,
+      "season": 2022,
+      "sha256": "ad426c3fe5bf1cc30c3f137fdfe96d054e19d400879ee4413129da49fa7b54be",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2022.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 577,
+      "season": 2023,
+      "sha256": "f19cb71a5de0dce7fd09376026237c9ee9d5a93fe13815a2ea3ec2d37204cb17",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2023.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 589,
+      "season": 2024,
+      "sha256": "3ddc45a84f759aa348ce465ae001752c530575455717657cdfe1f8abfcdb4759",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2024.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 610,
+      "season": 2025,
+      "sha256": "e5e0615b3d96a3eaebfaee91e55afb4a4e7fe0caf057454177bcd7d6ad4bcfc2",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2025.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 415,
+      "season": 2026,
+      "sha256": "315cfb8d5abbd44c6a36c43e3e8ad78c96351193c8e2fe717fcff8413df43b2b",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv"
+    }
+  ],
+  "features": {
+    "QB": "attempts+sacks_suffered+carries",
+    "RB_WR_TE": "carries+receptions",
+    "calibration": "one global multiplier learned only from prior pseudo-current seasons",
+    "current": "Weeks 1-2 only",
+    "history": "strictly prior seasons only",
+    "role_prior_games": 4.0,
+    "shrink_opportunities": 100.0
+  },
+  "folds": [
+    {
+      "held_out": 2023,
+      "training_seasons": [
+        2021,
+        2022
+      ]
+    },
+    {
+      "held_out": 2024,
+      "training_seasons": [
+        2021,
+        2022,
+        2023
+      ]
+    },
+    {
+      "held_out": 2025,
+      "training_seasons": [
+        2021,
+        2022,
+        2023,
+        2024
+      ]
+    }
+  ],
+  "gate": {
+    "baselines": {
+      "position_game_rate": {
+        "actual_p90": 1.1333333333333333,
+        "actual_p95": 2.2666666666666666,
+        "actual_zero_rate": 0.7761100687929956,
+        "bias": 0.3480996602935634,
+        "mae": 0.7013385811633903,
+        "n": 1599,
+        "pred_p90": 3.0357142857142856,
+        "pred_p95": 3.126959847036329,
+        "pred_zero_rate": 0.6290524554838168,
+        "rmse": 1.0475162745637812,
+        "spearman": 0.3204754817075689,
+        "tail_n": 358,
+        "tail_rmse": 1.3532986610350521,
+        "zero_brier": 0.18176788244833367,
+        "zero_gap": 0.14705761330917877
+      },
+      "zero_omission": {
+        "actual_p90": 1.1333333333333333,
+        "actual_p95": 2.2666666666666666,
+        "actual_zero_rate": 0.7761100687929956,
+        "bias": -0.4117990410673337,
+        "mae": 0.4117990410673337,
+        "n": 1599,
+        "pred_p90": 0.0,
+        "pred_p95": 0.0,
+        "pred_zero_rate": 1.0,
+        "rmse": 1.0425150391421731,
+        "spearman": 0.0,
+        "tail_n": 358,
+        "tail_rmse": 2.2032564353532504,
+        "zero_brier": 0.22388993120700437,
+        "zero_gap": 0.2238899312070044
+      }
+    },
+    "candidates": {
+      "calibrated_position_opportunity_rate": {
+        "metrics": {
+          "actual_p90": 1.1333333333333333,
+          "actual_p95": 2.2666666666666666,
+          "actual_zero_rate": 0.7761100687929956,
+          "bias": 0.05088409116369245,
+          "mae": 0.48684391295520824,
+          "n": 1599,
+          "pred_p90": 1.460736521874034,
+          "pred_p95": 2.2351234653849947,
+          "pred_zero_rate": 0.7413875674875714,
+          "rmse": 0.8105091976152538,
+          "spearman": 0.44506457729084836,
+          "tail_n": 358,
+          "tail_rmse": 1.369626017555314,
+          "zero_brier": 0.14160324751710535,
+          "zero_gap": 0.0347225013054242
+        },
+        "passes": true,
+        "reasons": []
+      },
+      "player_history_plus_current": {
+        "metrics": {
+          "actual_p90": 1.1333333333333333,
+          "actual_p95": 2.2666666666666666,
+          "actual_zero_rate": 0.7761100687929956,
+          "bias": 0.29463534000017,
+          "mae": 0.6515705968305676,
+          "n": 1599,
+          "pred_p90": 1.8863202414923366,
+          "pred_p95": 3.11984561362412,
+          "pred_zero_rate": 0.6947560560334893,
+          "rmse": 1.2126160279981633,
+          "spearman": 0.3946221495454066,
+          "tail_n": 358,
+          "tail_rmse": 1.9605643473775345,
+          "zero_brier": 0.16171152592085739,
+          "zero_gap": 0.08135401275950627
+        },
+        "passes": false,
+        "reasons": [
+          "rmse_vs_zero",
+          "rmse_vs_position_game",
+          "bias",
+          "zero_calibration",
+          "2023_rmse_stability",
+          "2024_rmse_stability",
+          "2025_rmse_stability"
+        ]
+      },
+      "player_history_shrunk": {
+        "metrics": {
+          "actual_p90": 1.1333333333333333,
+          "actual_p95": 2.2666666666666666,
+          "actual_zero_rate": 0.7761100687929956,
+          "bias": 0.29264730012961293,
+          "mae": 0.6231220958665286,
+          "n": 1599,
+          "pred_p90": 2.00130761756227,
+          "pred_p95": 3.286240373735857,
+          "pred_zero_rate": 0.6874376390150363,
+          "rmse": 1.1102846866041307,
+          "spearman": 0.4085800952611749,
+          "tail_n": 358,
+          "tail_rmse": 1.6451925137118713,
+          "zero_brier": 0.16086020755872785,
+          "zero_gap": 0.0886724297779593
+        },
+        "passes": false,
+        "reasons": [
+          "rmse_vs_zero",
+          "rmse_vs_position_game",
+          "bias",
+          "zero_calibration",
+          "2025_rmse_stability"
+        ]
+      },
+      "position_opportunity_rate": {
+        "metrics": {
+          "actual_p90": 1.1333333333333333,
+          "actual_p95": 2.2666666666666666,
+          "actual_zero_rate": 0.7761100687929956,
+          "bias": 0.28320920591072074,
+          "mae": 0.5962997322164248,
+          "n": 1599,
+          "pred_p90": 2.2220962503064223,
+          "pred_p95": 3.3575644313363,
+          "pred_zero_rate": 0.6677378389515711,
+          "rmse": 0.9565772879567873,
+          "spearman": 0.44514029389622845,
+          "tail_n": 358,
+          "tail_rmse": 1.3061012397516116,
+          "zero_brier": 0.1554884533206134,
+          "zero_gap": 0.10837222984142447
+        },
+        "passes": false,
+        "reasons": [
+          "bias",
+          "zero_calibration"
+        ]
+      }
+    },
+    "production_fail_reasons": [],
+    "production_ready": true,
+    "selected": "calibrated_position_opportunity_rate",
+    "thresholds": {
+      "max_abs_bias": 0.15,
+      "max_mae_vs_pos_game": 1.05,
+      "max_rmse_vs_pos_game": 0.98,
+      "max_rmse_vs_zero": 0.95,
+      "max_year_rmse_vs_zero": 1.1,
+      "max_zero_gap": 0.05,
+      "min_combined_n": 500,
+      "min_current_identity_coverage": 0.95,
+      "min_year_n": 100
+    }
+  },
+  "study": "FSFFL first-party FUMBLES_LOST model",
+  "target": {
+    "coordinate": "FUMBLES_LOST",
+    "cutoff_week": 2,
+    "formula": "17 * exact lost fumbles in Weeks 3+ / 15",
+    "semantics": "exact lost fumbles; total fumbles forbidden"
+  },
+  "uncertainty": {
+    "COLD_START": {
+      "n": 177,
+      "residual_rmse_floor": 0.789918699230448
+    },
+    "OVERALL": {
+      "n": 1599,
+      "residual_rmse_floor": 0.8105091976152538
+    },
+    "QB": {
+      "n": 213,
+      "residual_rmse_floor": 1.7266303753562966
+    },
+    "RB": {
+      "n": 405,
+      "residual_rmse_floor": 0.7375205714435535
+    },
+    "TE": {
+      "n": 343,
+      "residual_rmse_floor": 0.4524060195836409
+    },
+    "WR": {
+      "n": 638,
+      "residual_rmse_floor": 0.4424922528480551
+    }
+  }
+}
