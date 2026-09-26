@@ -185,7 +185,7 @@ def build_predictions(base,player):
     for h in range(4,9):
         allh=base.copy()
         allh["target"]=allh["season"]+h-1
-        allh["actual"]=[pm.get((pid,int(ts)),0) for pid,ts in zip(allh.player_id,allh.target)]
+        allh["actual"]=[max(0.0,pm.get((pid,int(ts)),0)) for pid,ts in zip(allh.player_id,allh.target)]
         allh=allh[allh.target<=maxseason].copy()
         for T in sorted(allh.season.unique()):
             ev=allh[allh.season==T].copy()
