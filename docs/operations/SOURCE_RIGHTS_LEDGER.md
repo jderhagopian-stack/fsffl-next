@@ -21,7 +21,8 @@ The intended K/DST use is not merely "show the provider's projection." It is gen
 | Provider | Intended FSFFL Forecast-input status | Private-beta operational status | Commercial status | Key reason / next action |
 |---|---|---|---|---|
 | JerryGM Projections API | Potentially strong exact-coordinate candidate | **REVIEW_REQUIRED** | Commercial plan exists, but model-input use still requires clarification | API terms expressly allow output in one's own apps and Pro permits paid-product display, but prohibit using output to train or calibrate a competing projection product. FSFFL's ensemble/derived-Forecast use could fall within that restriction. Obtain written clarification specifically authorizing use as governed Forecast evidence/ensemble input, not merely display. |
-| LineupExperts API | Potential K/DST independent candidate | **REVIEW_REQUIRED** | Recheck/contract review required | API terms contemplate use in declared websites/apps and require every usage forum to be registered, but prohibit benchmarking/competitive use and do not clearly state rights for incorporation into a derived projection model. Obtain written confirmation for FSFFL private-beta model-input use; if confirmed, classify `PRIVATE_BETA_ALLOWED` for the declared app/API plan. |
+| LineupExperts API | Exact current/ROS FUMBLES_LOST direct-provider candidate; K/DST candidate | **REVIEW_REQUIRED** | Recheck/contract review required | Premium In-Season public demo proves distinct exact lost-fumble field `FmblL`; Premium In-Season supports rest-of-season intervals. API terms contemplate use in declared sites/apps/forums, but persisted derived Forecast/model-input use is not explicit and API terms note some content may be third-party. Obtain written confirmation for FSFFL private-beta model-input/persistence use and that Premium NFL projection values are LineupExperts-generated rather than an aggregate/third-party feed. |
+| SportsDataIO | Direct exact FUMBLES_LOST licensed fallback | **REVIEW_REQUIRED until a license covering hosted FSFFL model/analytics input is executed** | Commercial/model-input licenses available | NFL projection schemas expose exact `FumblesLost`, and SportsDataIO offers in-season/partial-season projection products. Discovery Lab/personal-use access is not sufficient for the hosted private-beta deployment. A suitable license can explicitly cover storage and model/analytics input and is the strongest fallback if the LineupExperts path fails. |
 | Fantasy Nerds API | Exact-stat API candidate, but projection product is a weighted multi-site consensus | **PRIVATE_BETA_ALLOWED only through an active paid API package; analytical independence unresolved** | Commercial tier/terms must be re-audited for the actual launch posture | Current API terms permit API data in applications and provider guidance permits local caching, subject to plan/access and redistribution restrictions. This rights classification does not make Nerd Rank an independent Forecast vote: Fantasy Nerds documents a weighted aggregation of multiple projection sites, so underlying-source overlap with any other FSFFL provider must be resolved before it can count toward the two-source rule. |
 | FantasyPros API | Aggregate/reference candidate; independence unresolved | **PROHIBITED for intended self-serve Forecast-input use absent written agreement** | Commercial agreement required for commercial apps | Premium permits personal/non-commercial production apps, but API terms also prohibit using the data to develop a product/service that competes with FantasyPros. FSFFL is sufficiently adjacent that Management should not rely on the personal-use grant. A negotiated agreement could supersede this. Aggregate source decomposition remains a separate analytical issue. |
 | CBS Sports public fantasy/projection content | Historical/reference evidence; not a preferred adapter target | **PROHIBITED for deployment absent written permission/license** | Commercial permission/license required | Current CBS fantasy terms grant personal/non-commercial use and prohibit redistribution/commercial exploitation; CBS terms also restrict derivative/redistribution rights. Do not build automated production ingestion from public CBS pages without written permission. |
@@ -69,9 +70,24 @@ Before any paid/commercial launch, re-audit every deployed provider. Any source 
 The bounded FUMBLES_LOST recovery separates rights from analytical authority:
 - Fantasy Nerds has a plausible private-beta API-use path under an active paid package, but its weighted-consensus construction is not automatically an independent provider vote;
 - JerryGM remains `REVIEW_REQUIRED` for FSFFL ensemble/derived-Forecast input;
-- LineupExperts remains `REVIEW_REQUIRED` and its public NFL API documentation does not establish an exact lost-fumble projection field;
+- LineupExperts remains `REVIEW_REQUIRED`; its Premium In-Season public demo now establishes exact `FmblL` semantics and its paid product supports ROS intervals, but live full-pool coverage, persisted model-input rights and endpoint ownership/independence still require paid access plus written confirmation;
 - Razzball current ROS lost-fumble pages fail source-health checks and still require consent for model/aggregation use;
 - retained 2024 CBS/FantasySharks exact lost-fumble evidence remains research-only and cannot substitute for 2026 deployment rights.
 
 Detailed evidence and horizon analysis:
 `artifacts/research/fumbles_lost_authority_recovery_20260926/SOURCE_AUTHORITY_LEDGER.md`
+
+
+## Current-only FUMBLES_LOST certification rights result — 2026-09-26
+
+The shortest technical two-source path is now **JerryGM + LineupExperts Premium In-Season**.
+
+- **JerryGM:** exact `fumblesLost`, explicit current/ROS schema and provider-owned model; remains `REVIEW_REQUIRED` because the current license restricts using output to train/calibrate a competing projection product and does not unambiguously authorize FSFFL's narrow two-source derived-Forecast input pattern.
+- **LineupExperts Premium:** exact `FmblL` is publicly demonstrated and Premium In-Season supports ROS; remains `REVIEW_REQUIRED` until FSFFL's declared private-beta application is authorized for minimal persistence/derived Forecast use and LineupExperts confirms the Premium NFL projection values are its own projection output rather than a third-party/aggregate feed.
+- **Fantasy Nerds:** technically exact but remains analytically unsuitable as the preferred second independent vote because its projection product is a weighted multi-site consensus without source decomposition.
+- **SportsDataIO:** strongest direct licensed fallback; exact `FumblesLost` exists, but a hosted/model-input-capable license is required. Discovery Lab/personal-use access is not enough for this deployment.
+
+No provider is promoted by this rights review. Full certification still requires an authenticated current live capture from both accepted sources and per-player two-source coverage.
+
+Durable Research package:
+`artifacts/research/fumbles_lost_current_only_certification_20260926/`
