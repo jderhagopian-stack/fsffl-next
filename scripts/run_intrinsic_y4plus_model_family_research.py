@@ -183,7 +183,7 @@ def predict_conditional_cohort(hist, train: pd.DataFrame, ev: pd.DataFrame, pos:
         X,med=prep_matrix(posrows)
         sc=StandardScaler().fit(X)
         rg=Ridge(alpha=10.0).fit(sc.transform(X),np.log1p(posrows["actual"].to_numpy(float)))
-        Xe,_=prep_matrix(ev,med)
+        Xe,_=prep_matrix(ev,med=med)
         cp=np.expm1(rg.predict(sc.transform(Xe))).clip(0,600)
     return (p*cp).clip(0,600),p
 
@@ -218,7 +218,7 @@ def predict_survival_hazard(hist, base: pd.DataFrame, player: pd.DataFrame, cuto
     sc0=StandardScaler().fit(X0)
     if init["active3"].nunique()>1:
         lg0=LogisticRegression(C=1.0,solver="lbfgs",max_iter=2000,random_state=RANDOM_SEED).fit(sc0.transform(X0),init["active3"].astype(int))
-        Xe,_=prep_matrix(ev,med0)
+        Xe,_=prep_matrix(ev,med=med0)
         p=lg0.predict_proba(sc0.transform(Xe))[:,1]
     else:
         p=np.repeat(float(init["active3"].mean()),len(ev))
@@ -232,8 +232,8 @@ def predict_survival_hazard(hist, base: pd.DataFrame, player: pd.DataFrame, cuto
             e1=ev.copy(); e0=ev.copy()
             e1["step"]=step; e0["step"]=step
             e1["prev_active"]=1.0; e0["prev_active"]=0.0
-            X1,_=prep_matrix(e1,trans_features,medt)
-            X0e,_=prep_matrix(e0,trans_features,medt)
+            X1,_=prep_matrix(e1,trans_features,med=medt)
+            X0e,_=prep_matrix(e0,trans_features,med=medt)
             p1=lgt.predict_proba(sct.transform(X1))[:,1]
             p0=lgt.predict_proba(sct.transform(X0e))[:,1]
             p=p*p1+(1-p)*p0
@@ -249,7 +249,7 @@ def predict_survival_hazard(hist, base: pd.DataFrame, player: pd.DataFrame, cuto
         Xc,medc=prep_matrix(ctrain)
         scc=StandardScaler().fit(Xc)
         rg=Ridge(alpha=10.0).fit(scc.transform(Xc),np.log1p(ctrain["actual"].to_numpy(float)))
-        Xe,_=prep_matrix(ev,medc)
+        Xe,_=prep_matrix(ev,med=medc)
         cp=np.expm1(rg.predict(scc.transform(Xe))).clip(0,600)
     return (p*cp).clip(0,600),p
 
