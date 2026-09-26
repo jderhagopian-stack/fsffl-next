@@ -18,8 +18,8 @@ OUT = Path("artifacts/research/intrinsic_comprehensive_y4_y8_20260926")
 POSITIONS = ("QB","RB","WR","TE")
 HORIZONS = (4,5,6,7,8)
 RANDOM_SEED = 20260926
-MIN_TRAIN_ROWS = 250
-MIN_POSITIVE_ROWS = 35
+MIN_TRAIN_ROWS = 80
+MIN_POSITIVE_ROWS = 25
 MIN_MATERIAL_IMPROVEMENT = 0.005
 MAX_INNER_FOLDS = 4
 
@@ -854,8 +854,8 @@ def main():
         "authority":"research_only_no_production_change",
         "historical_base_seasons":[int(base.base_season.min()),int(base.base_season.max())],
         "horizons":HORIZONS,
-        "final_holdout_by_horizon":{str(h):list(holds[h]) for h in HORIZONS},
-        "inner_validation_folds":{str(h):list(folds[h]) for h in HORIZONS},
+        "final_holdout_by_horizon":{str(h):[int(x) for x in holds[h]] for h in HORIZONS},
+        "inner_validation_folds":{str(h):[int(x) for x in folds[h]] for h in HORIZONS},
         "selected_architecture":selected_spec,
         "selected_development_score":selected_score,
         "fallback_if_final_rejected":{"type":"fixed","candidate":"specialist|forecast10|two_part_ridge"},
