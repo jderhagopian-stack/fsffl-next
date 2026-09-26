@@ -221,3 +221,9 @@ Result:
 The next authority decision belongs to Management: accept or reject the generalized certification framework. Research recommends accepting the framework with **zero initial certifications** and, if accepted, implementing certification infrastructure separately from any provider promotion.
 
 **Research state: MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION.**
+
+
+## Source-governance clarification — 2026-09-25
+FSFFL source architecture is provider-agnostic. Private-beta eligibility and future commercial eligibility are separate rights classes. A source may be used in beta only when its terms/license permit the actual beta use; if commercial rights are not already established, it must carry `commercial_recheck_required=true` and be re-audited/replaced/licensed before commercial launch. Commercial licensing is not itself a prerequisite for a terms-compliant beta source.
+
+Analytical authority, beta-use eligibility, and commercial-use eligibility are separate gates. Canonical policy: `SOURCE_GOVERNANCE.md`.
