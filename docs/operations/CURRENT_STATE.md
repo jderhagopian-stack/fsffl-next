@@ -611,3 +611,21 @@ PR #266 fixed the prior mobile readiness layout, but physical Player Intelligenc
 Opening Player Intelligence triggered historical-stat background materialization; Render memory reached ~532.9 MB of a 536.9 MB limit and the sole web instance restarted, producing user-visible HTTP 502/503. The current history service loads full-population aggregates for every historical season, with multi-season concurrency and durable in-process retention, even though the UI needs one player's career rows.
 
 Implementation remains ACTIVE. The corrective must make Player Intelligence history memory-bounded on the existing free-tier instance. This is separate from Intrinsic completeness/labeling.
+
+## Player Intelligence history-memory corrective — PR #267
+PR #267 is merged at `d737012079345768ef5cfd19debff97e0ede1bba`; exact Render deploy
+`dep-das4k27avr4c73909lsg` is live on that product-code merge.
+
+The service now processes one player's historical seasons sequentially, does not retain the
+legacy full-population season cache in the PI path, persists player-season evidence, and persists
+the final scored career result for reuse. Full CI passed 1,704 tests.
+
+The previous incident approached the 536,870,900-byte service limit and restarted the sole web
+instance. The new instance has remained alive through fresh startup observations, but **no
+authenticated post-deploy PI history request has yet exercised the new path**. Therefore hosted
+memory-under-load and physical iPhone/iPad acceptance remain unproven rather than inferred.
+
+Current terminal checkpoint:
+**BLOCKED — PHYSICAL / AUTHENTICATED HOSTED PLAYER INTELLIGENCE HISTORY ACCEPTANCE REQUIRED.**
+
+Do not reopen Intrinsic authority or State-first persistence for this incident without new direct evidence.
