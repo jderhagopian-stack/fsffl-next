@@ -995,6 +995,14 @@ def create_app(
                 IntelligenceJobPhase.ATTACHING_RESULTS,
                 "Reconciling governed intelligence with the exact current LeagueState.",
             )
+            wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+            if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+                user_id,
+                timeout=180.0,
+            ):
+                raise RuntimeError(
+                    "Reconciled intelligence could not be durably checkpointed"
+                )
             current = store.get(user_id)
             if not simulation_ready:
                 blockers = (
