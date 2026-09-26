@@ -19,8 +19,9 @@ This makes the incumbent one candidate among others. It receives no automatic au
 ## Repeated rolling-origin contract
 
 For every horizon:
-- evaluate the latest five eligible historical origins;
+- evaluate the latest **up to five** eligible historical origins, with a minimum of three outer origins per horizon;
 - require at least three earlier eligible origins before an outer origin can be scored;
+- when a deep horizon has fewer than five defensible outer origins, use all available qualifying origins rather than fabricate or relax chronology;
 - use at most the five most recent earlier origins for route selection;
 - for outer origin T, every fitted training row must satisfy `target_season < T`;
 - route selection for T may use only earlier evaluation origins U<T.
