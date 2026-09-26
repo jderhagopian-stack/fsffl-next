@@ -132,3 +132,11 @@ Management has authorized a second bounded 2026-only private-beta exception: For
 **State:** DIRECTIVE COMPLETE — PERFORMANCE
 
 PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deployed/production-validated. Current Hodor State and roster remain usable while derived intelligence is incomplete; the terminal blocked stage is truthfully Forecast; cross-league intelligence is not served. Remaining Hodor full-intelligence authority is owned by Forecast/Product, not Performance.
+
+
+## Current superseding checkpoint — 2026-09-26
+- **Forecast/Product Implementation:** **MANAGEMENT GATE — FUMBLES_LOST FORECAST AUTHORITY.** State-first sync/reuse-or-rebuild/truthful-readiness is complete and deployed through PR #246/#249/#251/#252. Current FSFFL rebuild is truthfully partial because the governed raw Forecast lacks FUMBLES_LOST; Simulation is not promoted.
+- **Forecast Research — FUMBLES_LOST:** **ACTIVE — BOUNDED SOURCE / AUTHORITY RECOVERY.** Find the shortest two-source, same-horizon, stage-rights-compliant path for the core/material FUMBLES_LOST coordinate.
+- **Auxiliary single-source policy:** **MANAGEMENT ACCEPTED — ZERO INITIAL CERTIFICATIONS.** FUMBLES_LOST is explicitly outside that exception.
+- **Market acceptance:** **PAUSED** for full product acceptance until current FSFFL can legitimately promote Simulation. Physical lifecycle/readiness truth may still be tested independently.
+- **Performance:** State-first/lifecycle work is closed; separate Market foreground latency remains its only open dimension.
