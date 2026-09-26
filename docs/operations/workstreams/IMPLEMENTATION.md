@@ -693,3 +693,37 @@ Required continuation:
 6. physically validate the #266 mobile completed/partial readiness layout on iPhone/Safari before terminal acceptance.
 
 Do not reopen completed State-first persistence or the vNext/P0 boundary absent direct evidence.
+
+## Physical Player Intelligence failure — history materialization exhausts beta memory
+**State: ACTIVE — BETA AVAILABILITY / MEMORY CORRECTIVE**
+
+Physical iPhone/iPad Safari evidence at ~18:21 ET after PR #266:
+- Player Intelligence modal returned **HTTP 503** on iPhone and **HTTP 502** on iPad.
+- Other ordinary product APIs were healthy immediately beforehand.
+
+Hosted evidence:
+- Player Intelligence history for the selected player repeatedly returned `202 Accepted` while the background history build ran.
+- Render memory rose from ~473 MB to **532.9 MB** against a **536.9 MB** service limit.
+- At 22:22Z CPU dropped to zero, memory reset to ~96 MB, and Uvicorn/application startup ran again at 22:22:34Z.
+- The 502/503 therefore coincides with a single-instance restart at the memory ceiling.
+- After restart memory rose back to ~380 MB within ~90 seconds.
+
+Code-path diagnosis:
+- `PlayerHistoryBackgroundCoordinator` correctly coalesces requests for one State/player and uses one outer worker, so browser polling itself is not spawning duplicate player jobs.
+- However `PlayerHistoryService.player_history()` requests every detailed historical season concurrently (up to six workers).
+- Each `_season()` materializes a dictionary for the **entire provider player population**, persists it, stores it permanently in the in-process season cache, and `player_history()` also holds each full season again in `by_season` while only one player's rows are ultimately needed.
+- This whole-season × multi-season in-memory materialization is incompatible with the current 512 MB private-beta instance.
+
+Required corrective:
+1. make one-player Player Intelligence history memory-bounded; do **not** materialize/retain full-population multi-season maps merely to return one player's history;
+2. prefer persisted player-season / player-career retrieval or stream/project the requested player from season evidence before retaining it;
+3. if the existing season artifact must remain, process seasons sequentially or with strictly bounded concurrency and release each full-season structure immediately after extracting the requested player;
+4. do not retain full-season provider maps indefinitely in process; use durable persistence as the cache and keep only bounded/player-specific in-memory results;
+5. persist/reuse the final player-history result so repeated PI opens do not rebuild career history;
+6. preserve the existing `202 loading` UX and request coalescing, but a background task must never be able to OOM/restart the only web instance;
+7. add memory/shape regression coverage proving one player request does not load all historical seasons/populations concurrently or retain them after completion;
+8. validate on the current free-tier 512 MB Render instance before considering a paid-plan workaround.
+
+This failure is independent of Intrinsic authority. The latest persisted Intrinsic contract contains 335/335 governed estimates; the PI 502/503 is a runtime memory failure in historical-stat materialization.
+
+Continue through tests, merge, exact Render deploy, hosted memory validation, and physical iPhone/iPad Player Intelligence acceptance. Do not return at green CI alone.
