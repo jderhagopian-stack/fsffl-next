@@ -325,3 +325,15 @@ Required layers where applicable:
 A passing lower layer does not promote higher layers. In particular, Forecast/Simulation/Value core readiness does not imply Intrinsic, League Atlas, Player Intelligence or Market surface readiness.
 
 Promotion to a dependent workstream requires direct evidence for every layer that dependent work assumes.
+
+## Forecast model-replaceability architecture gate
+A promoted Forecast model is not fully accepted if its active production adapter depends on superseded model-specific orchestration in a way that can create divergent fixes, hidden population assumptions, or downstream coupling.
+
+Acceptance requires:
+- reusable inherited mathematical primitives are explicitly named/versioned and exposed through model-neutral boundaries;
+- active model orchestration is owned by the active model/provider adapter;
+- downstream consumers depend on stable Forecast contracts rather than prior-model internals;
+- a subject/population rule has one authoritative implementation path;
+- regression evidence proves the active provider can be replaced without requiring downstream model-specific changes.
+
+Validated numerical reuse is allowed. Hidden implementation inheritance is not.
