@@ -273,3 +273,7 @@ Management requires the existing FSFFL Dynasty league to return to legitimate fu
 Management authorized a bounded 2026 current-rest-of-season ordinary-offense Forecast lane as the governed recovery path for the existing-FSFFL FUMBLES_LOST blocker. This is a whole current-forward horizon rebase, not a coordinate splice. Authentic preseason evidence remains separate and immutable.
 
 Research now owns provider certification/acquisition; Implementation may prepare provider-neutral contracts but may not promote ROS authority without qualifying multi-source evidence. Market acceptance remains paused.
+
+
+## FUMBLES_LOST recovery scope correction
+Management superseded the whole ordinary-offense ROS recovery authorization. The current path is a bounded current-only FUMBLES_LOST supplement with explicit source-horizon provenance and target-period normalization. All unrelated ordinary-offense Forecast coordinates remain unchanged; the supplemental fumble evidence is excluded from preseason/PIT historical comparisons and cannot be backdated.
