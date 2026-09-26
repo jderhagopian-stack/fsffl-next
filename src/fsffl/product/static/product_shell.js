@@ -24,11 +24,11 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260926-post264-product-acceptance1';
+const fsfflStaticVersion='20260926-combined-acceptance1';
 const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260926-post264-product-acceptance1';
-const franchiseNorthStarStaticVersion='20260926-post264-product-acceptance1';
+const homeNorthStarStaticVersion='20260926-combined-acceptance1';
+const franchiseNorthStarStaticVersion='20260926-combined-acceptance1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
@@ -156,7 +156,7 @@ function fsfflSharedReadinessSnapshot(){
     const lifecycleComplete=step===FSFFL_SHARED_READINESS_STEPS;
     const partial=lifecycleComplete&&!capabilityFull;
     const label=lifecycleComplete
-      ?(capabilityFull?'Build complete · product intelligence fully available':surfaceIssue?'Build complete · '+surfaceIssue:'Build complete · intelligence partially available')
+      ?(capabilityFull?'Build complete · Current core runtime fully available · product intelligence verified':surfaceIssue?'Build complete · '+surfaceIssue:'Build complete · intelligence partially available')
       :phaseLabel;
     return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete,partial,capabilities,asOf};
   }
@@ -168,7 +168,7 @@ function fsfflSharedReadinessSnapshot(){
   fsfflSharedReadinessState.lastStep=step;
   const intrinsicStatus=fsfflCapabilityStatus('intrinsic');
   const label=capabilityFull
-    ?'Product intelligence fully available'
+    ?'Current core runtime fully available · product intelligence verified'
     :surfaceIssue
       ?'Core intelligence current · '+surfaceIssue
       :intrinsicStatus==='building'
