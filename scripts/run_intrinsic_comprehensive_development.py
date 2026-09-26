@@ -20,36 +20,36 @@ HORIZONS = (4,5,6,7,8)
 RANDOM_SEED = 20260926
 MIN_TRAIN_ROWS = 250
 MIN_POSITIVE_ROWS = 35
-MIN_MATERIAL_IMPROVEMENT = 0.01
+MIN_MATERIAL_IMPROVEMENT = 0.005
 MAX_INNER_FOLDS = 4
 
 MODEL_COMPLEXITY = {
     "carry_y3":0.0,
-    "ridge_direct":0.05,
-    "two_part_ridge":0.10,
-    "histgb_direct":0.25,
-    "two_part_histgb":0.35,
-    "state_histgb":0.40,
-    "extra_trees":0.45,
+    "ridge_direct":0.001,
+    "two_part_ridge":0.002,
+    "histgb_direct":0.004,
+    "two_part_histgb":0.005,
+    "state_histgb":0.006,
+    "extra_trees":0.006,
 }
 FEATURE_COMPLEXITY = {
     "forecast10":0.0,
-    "forecast_rich":0.04,
-    "pedigree_plus":0.07,
-    "football_plus":0.10,
-    "trajectory_plus":0.10,
-    "full_rich":0.16,
-    "full_no_pedigree":0.13,
-    "full_no_football":0.11,
-    "full_no_trajectory":0.13,
-    "full_no_uncertainty":0.13,
+    "forecast_rich":0.001,
+    "pedigree_plus":0.002,
+    "football_plus":0.003,
+    "trajectory_plus":0.003,
+    "full_rich":0.004,
+    "full_no_pedigree":0.003,
+    "full_no_football":0.003,
+    "full_no_trajectory":0.003,
+    "full_no_uncertainty":0.003,
 }
 ARCH_COMPLEXITY = {
-    "specialist":0.14,
-    "shared_horizon":0.08,
-    "position_continuous":0.08,
+    "specialist":0.006,
+    "shared_horizon":0.003,
+    "position_continuous":0.003,
     "global_continuous":0.0,
-    "hierarchical_blend":0.10,
+    "hierarchical_blend":0.005,
 }
 
 BASE10 = (
@@ -656,22 +656,23 @@ def fold_stability(oof,base_candidate="specialist|forecast10|two_part_ridge"):
     spec=oof[oof.architecture=="specialist"]
     for (h,pos),gcell in spec.groupby(["horizon","position"]):
         folds=sorted(gcell.base_season.unique())
-        wins=defaultdict(int)
-        for T in folds:
-            gg=gcell[gcell.base_season==T]
-            bg=gg[gg.candidate==base_candidate]
-            if bg.empty: continue
-            bm=metric(bg)
-            best=None
-            for cand,g in gg.groupby("candidate"):
-                arch,fs,model=cand.split("|")
-                mm=metric(g)
-                sc=composite(mm,bm,candidate_complexity(arch,fs,model))
-                key=(sc,cand)
-                if best is None or key<best: best=key
-            if best: wins[best[1]]+=1
-        for cand,n in wins.items():
-            rows.append({"horizon":h,"position":pos,"candidate":cand,"fold_wins":n,"fold_count":len(folds),"win_share":n/max(1,len(folds))})
+        candidates=sorted(gcell.candidate.unique())
+        for cand in candidates:
+            beats=0; usable=0; margins=[]
+            arch,fs,model=cand.split("|")
+            for T in folds:
+                gg=gcell[gcell.base_season==T]
+                bg=gg[gg.candidate==base_candidate]
+                cg=gg[gg.candidate==cand]
+                if bg.empty or cg.empty: continue
+                bm=metric(bg); cm=metric(cg)
+                sc=composite(cm,bm,candidate_complexity(arch,fs,model))
+                usable+=1; margins.append(sc)
+                if sc < 0: beats+=1
+            if usable:
+                rows.append({"horizon":h,"position":pos,"candidate":cand,
+                             "fold_wins":beats,"fold_count":usable,
+                             "win_share":beats/usable,"mean_fold_score":float(np.mean(margins))})
     return pd.DataFrame(rows)
 
 def select_specialist_route(scoretab,stability):
@@ -804,13 +805,16 @@ def main():
     route_pred=architecture_prediction(oof,route)
     route_score=arch_score(route_pred,base_pred,ARCH_COMPLEXITY["specialist"])
 
-    arch_rows=[{"architecture":"specialist_route","candidate":"cell_specific","development_arch_score":route_score}]
+    arch_rows=[
+        {"architecture":"incumbent_baseline","candidate":"specialist|forecast10|two_part_ridge","development_arch_score":0.0},
+        {"architecture":"specialist_route","candidate":"cell_specific","development_arch_score":route_score},
+    ]
     fixed={}
     for arch_name in ("shared_horizon","position_continuous","global_continuous"):
         cand,tab=choose_fixed_architecture(oof,arch_name,base_pred)
         fixed[arch_name]=cand
-        if len(tab):
-            arch_rows.append({"architecture":arch_name,"candidate":str(cand) if cand else "no_material_gain",
+        if len(tab) and cand:
+            arch_rows.append({"architecture":arch_name,"candidate":str(cand),
                               "development_arch_score":float(tab.iloc[0].development_arch_score)})
 
     # Hierarchical/ensemble blend between specialist route and best valid shared architecture.
@@ -833,6 +837,8 @@ def main():
     selected_spec={}
     if selected_arch=="specialist_route":
         selected_spec={"type":"specialist_route","route":{f"{p}|Y{h}":c for (p,h),c in route.items()}}
+    elif selected_arch=="incumbent_baseline":
+        selected_spec={"type":"fixed","candidate":"specialist|forecast10|two_part_ridge"}
     elif selected_arch in fixed:
         selected_spec={"type":"fixed","candidate":fixed[selected_arch]}
     elif selected_arch=="hierarchical_blend":
