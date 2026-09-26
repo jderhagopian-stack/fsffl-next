@@ -14,15 +14,17 @@ from fsffl.forecast.models import ForecastHorizon, ForecastObservation
 from fsffl.state.models import LeagueState, Position
 
 from .future_state_primitive_assets import (
-    P0_CURRENT_SOURCE_CSV,
-    P0_CURRENT_SOURCE_CSV_SHA256,
-    P0_PACKAGE_JSON,
-    P0_PACKAGE_SHA256,
+    FUTURE_STATE_ORIGIN_PACKAGE_SHA256,
+    FUTURE_STATE_PACKAGE_JSON,
+    FUTURE_STATE_PACKAGE_SHA256,
+    FUTURE_STATE_SOURCE_CSV,
+    FUTURE_STATE_SOURCE_CSV_SHA256,
 )
 
 
 FUTURE_STATE_PRIMITIVE_VERSION = (
-    "future-state-probability-primitive-v1:" + P0_PACKAGE_SHA256[:12]
+    "future-state-probability-primitive-v1:"
+    + FUTURE_STATE_ORIGIN_PACKAGE_SHA256[:12]
 )
 FUTURE_STATE_SOURCE_SEASON = 2026
 FUTURE_STATE_SOURCE_ROW_COUNT = 335
@@ -88,8 +90,9 @@ class FutureStateProbabilityMaterialization:
 
     players: Mapping[str, FutureStateProbabilityPlayer]
     primitive_version: str = FUTURE_STATE_PRIMITIVE_VERSION
-    package_sha256: str = P0_PACKAGE_SHA256
-    source_sha256: str = P0_CURRENT_SOURCE_CSV_SHA256
+    origin_package_sha256: str = FUTURE_STATE_ORIGIN_PACKAGE_SHA256
+    primitive_package_sha256: str = FUTURE_STATE_PACKAGE_SHA256
+    source_sha256: str = FUTURE_STATE_SOURCE_CSV_SHA256
     source_season: int = FUTURE_STATE_SOURCE_SEASON
 
     @property
@@ -101,14 +104,16 @@ def _sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-if _sha256(P0_PACKAGE_JSON) != P0_PACKAGE_SHA256:
+if _sha256(FUTURE_STATE_PACKAGE_JSON) != FUTURE_STATE_PACKAGE_SHA256:
     raise ValueError("embedded future-state fitted package byte hash mismatch")
-if _sha256(P0_CURRENT_SOURCE_CSV) != P0_CURRENT_SOURCE_CSV_SHA256:
+if _sha256(FUTURE_STATE_SOURCE_CSV) != FUTURE_STATE_SOURCE_CSV_SHA256:
     raise ValueError("embedded future-state source coordinate byte hash mismatch")
 
-_PACKAGE = json.loads(P0_PACKAGE_JSON)
-if _PACKAGE.get("schema_version") != "fsffl-redeveloped-forecast-fit-v1":
-    raise ValueError("embedded future-state package schema mismatch")
+_PACKAGE = json.loads(FUTURE_STATE_PACKAGE_JSON)
+if _PACKAGE.get("schema_version") != "fsffl-future-state-probability-primitive-v1":
+    raise ValueError("embedded future-state primitive schema mismatch")
+if _PACKAGE.get("origin_schema_version") != "fsffl-redeveloped-forecast-fit-v1":
+    raise ValueError("embedded future-state origin schema mismatch")
 
 # The charter-correct primitive deliberately retains only the fitted state layer.
 # P0 production models, D0/D1 routes, and conditional point scorers are not exposed
@@ -131,7 +136,7 @@ def _optional_float(value: str | None) -> float | None:
 
 def _load_source_rows() -> tuple[FutureStateSourceRow, ...]:
     rows: list[FutureStateSourceRow] = []
-    for raw in csv.DictReader(io.StringIO(P0_CURRENT_SOURCE_CSV)):
+    for raw in csv.DictReader(io.StringIO(FUTURE_STATE_SOURCE_CSV)):
         rows.append(
             FutureStateSourceRow(
                 player_id=str(raw["player_id"]),
