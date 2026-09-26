@@ -31,6 +31,7 @@ from .p0_forecast_runtime import (
     P0_SOURCE_SEASON,
     P0_STANDARD_Y1_BOARD_SHA256,
     build_p0_standard_future_materialization,
+    governed_p0_player_ids,
 )
 
 
@@ -72,13 +73,41 @@ def build_p0_future_forecast_contract(
     requiring downstream product code to know D0/D1 internals.
     """
 
-    standard_year_one = derive_future_i1_standard_year_one(
-        raw_forecasts=raw_forecasts,
+    governed_ids = set(governed_p0_player_ids(league_state))
+    if not governed_ids:
+        raise ValueError("frozen P0/H3 authority has no mapped subjects in current State")
+
+    # Restrict scoring compatibility to the subjects actually owned by frozen P0/H3.
+    # Current State/provider universes may be larger, but they cannot broaden H3
+    # authority or collapse eligible subjects merely by containing additional players.
+    governed_raw = tuple(
+        item for item in raw_forecasts if item.player_id in governed_ids
+    )
+    governed_league_year_one = tuple(
+        item for item in league_year_one if item.player_id in governed_ids
+    )
+    standard_year_one_all = derive_future_i1_standard_year_one(
+        raw_forecasts=governed_raw,
         rules=league_state.league.rules,
     )
+    standard_ids = {item.player_id for item in standard_year_one_all}
+    league_ids = {item.player_id for item in governed_league_year_one}
+    eligible_ids = governed_ids & standard_ids & league_ids
+    if not eligible_ids:
+        raise ValueError(
+            "frozen P0/H3 mapped subjects lack compatible governed Year-1 evidence"
+        )
+    standard_year_one = tuple(
+        item for item in standard_year_one_all if item.player_id in eligible_ids
+    )
+    eligible_league_year_one = tuple(
+        item for item in governed_league_year_one if item.player_id in eligible_ids
+    )
     scoring_multipliers = build_future_i1_player_scoring_multipliers(
-        raw_forecasts=raw_forecasts,
-        league_year_one=league_year_one,
+        raw_forecasts=tuple(
+            item for item in governed_raw if item.player_id in eligible_ids
+        ),
+        league_year_one=eligible_league_year_one,
         rules=league_state.league.rules,
     )
     p0 = build_p0_standard_future_materialization(
@@ -141,6 +170,15 @@ def build_p0_future_forecast_contract(
         "future_i1_scoring_version": FUTURE_I1_PLAYER_SCORING_VERSION,
         "future_i1_scoring_method": "player_specific_year1_league_standard_ratio",
         "future_i1_scoring_player_count": len(scoring_multipliers),
+        "future_i1_governed_state_subject_count": len(governed_ids),
+        "future_i1_eligible_subject_count": len(eligible_ids),
+        "future_i1_excluded_non_h3_subject_count": len(
+            {
+                item.player_id
+                for item in league_year_one
+                if item.player_id not in governed_ids
+            }
+        ),
         "future_i1_scoring_multiplier_sha256": _multiplier_digest(scoring_multipliers),
     }
     contract = FutureForecastContract(
