@@ -1250,3 +1250,21 @@ Required:
 8. stop at a Management gate with a plain-language report. No production H3 or Y4-Y8 implementation change is authorized.
 
 The objective is not to rescue the richer model. The objective is to answer the original question without granting the incumbent baseline automatic authority or allowing one failed cell to erase independent evidence from the other 19 cells.
+
+#### Required age / experience / career-exposure trajectory audit
+The reopened cell-specific long-horizon study must explicitly test whether current age/experience treatment is too coarse for Y4-Y8.
+
+Current evidence implementation includes base-season `age` and `experience` (years since rookie season) in the inherited Forecast10 baseline; richer challengers add rookie age, recent games/opportunities/role, recent QB starter seasons, career-stage/trajectory features and other usage evidence. This is not sufficient by itself to establish that long-horizon aging and accumulated-playing-time effects are modeled correctly.
+
+Required:
+1. distinguish **chronological age**, **NFL experience**, and **accumulated playing exposure**; do not treat them as interchangeable;
+2. construct PIT cumulative-exposure features where governed historical evidence permits, including position-appropriate cumulative games and workload (e.g. pass attempts/dropbacks for QB, carries/targets/touches for RB, targets/routes/opportunities where available for WR/TE);
+3. evaluate target-horizon age/experience explicitly (`age_at_target`, `experience_at_target`) rather than relying only on base-year age plus separate horizon models;
+4. test nonlinear position-specific aging curves and thresholds using development-only evidence (splines/bins/trees or other governed nonlinear forms), not a manually imposed dynasty age curve;
+5. test interactions among age, experience, accumulated workload, recent role/production trajectory, and horizon;
+6. separate effects on **survival/relevance probability** from effects on **conditional production if active**;
+7. test whether cumulative workload adds information beyond age/experience and recent usage, especially for RB and QB;
+8. report position × horizon aging/experience curves, sample support, uncertainty and era sensitivity;
+9. do not allow a simple linear age/experience specification to retain authority merely because it belongs to the incumbent fallback. It must earn each routed cell under the same validation standard as richer nonlinear alternatives.
+
+No production age penalty, youth bonus, or manual dynasty curve is authorized. Any trajectory effect must emerge from governed PIT evidence.
