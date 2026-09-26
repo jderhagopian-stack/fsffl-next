@@ -385,3 +385,7 @@ Next owner: Forecast/Product Implementation should wire the frozen first-party m
 
 ## PR #257 live but production acceptance still open
 PR #257 is merged and live on Render (`dep-darki1g473hc73bb7aeg`), but the first post-merge main CI run failed one cross-league-switch readiness regression (1660 passed / 1 failed). Startup on the new deploy restored the existing FSFFL State with Forecast and Value present but Simulation still unavailable. The active Forecast/Product task is therefore to resolve the post-merge CI failure, rerun green, then rebuild/validate the current FSFFL State with the first-party FUMBLES_LOST supplement before Management physical testing resumes.
+
+
+## Long-horizon Intrinsic Research activated — 2026-09-26
+Management has now activated the previously deferred long-horizon Intrinsic direction as a **Research-only** parallel workstream. The study must compare horizon architectures empirically, including ranking and positional-distribution effects, and may not alter production three-year Intrinsic or distract Forecast/Product from the current FSFFL restoration. Implementation remains separately unauthorized pending a later Management gate.
