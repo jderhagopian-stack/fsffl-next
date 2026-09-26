@@ -342,3 +342,13 @@ Required semantics:
 - readiness must report scoped capability truth rather than letting unrelated universal-player incompleteness collapse the core league product.
 
 This is a dependency-graph correction, not an authority relaxation. Missing evidence remains visible and fail-closed for the affected subject/consumer.
+
+
+## 2026-09-26 — Long-horizon model selection must be empirical
+Management does not want FSFFL to assume that Y5 is the correct breakpoint or that one model family should own every post-H3 horizon. The next Research phase must compare models from Y4 onward and let chronological out-of-time evidence determine whether different horizons or positions need different model families.
+
+Production H3 remains the governed Intrinsic authority. New models may be benchmarked against H3, but nothing replaces H3 unless a later study shows materially better performance on the existing Y1-Y3 problem and Management separately authorizes a change.
+
+Research may compare the current two_part_state benchmark with survival/hazard, multi-state career or role-transition, conditional-production, and other defensible model families across Y4-Y8. Position-specific and horizon-specific routing is allowed only when it is supported by stable validation and sufficient sample size. Simpler models should win when added complexity does not produce durable improvement.
+
+Longer-horizon Intrinsic coordinates are intended as additional decision lenses that can be viewed according to the user's decision horizon or franchise timeline. They do not need to replace H3, and Team Utility remains downstream.
