@@ -352,3 +352,11 @@ Production H3 remains the governed Intrinsic authority. New models may be benchm
 Research may compare the current two_part_state benchmark with survival/hazard, multi-state career or role-transition, conditional-production, and other defensible model families across Y4-Y8. Position-specific and horizon-specific routing is allowed only when it is supported by stable validation and sufficient sample size. Simpler models should win when added complexity does not produce durable improvement.
 
 Longer-horizon Intrinsic coordinates are intended as additional decision lenses that can be viewed according to the user's decision horizon or franchise timeline. They do not need to replace H3, and Team Utility remains downstream.
+
+
+## 2026-09-26 — Intrinsic eligibility is scoped; universal player expansion must not collapse H3
+Production H3 Intrinsic remains governed by its frozen Future-Forecast / I1 authority and must not be implicitly expanded merely because the current canonical player universe or a supplemental current scoring coordinate covers more players.
+
+An unsupported player outside the governed H3/Future-Forecast subject set may have Intrinsic unavailable for that player, but must not make otherwise eligible players or the entire Intrinsic surface unavailable. Future-I1 scoring compatibility checks must be evaluated against the subjects that the H3 contract actually owns, with explicit per-subject unsupported status outside that set.
+
+Implementation must preserve exact H3 values/ranks for the existing governed cohort and may not synthesize new H3 authority, silently zero missing coordinates, or use the broader FUMBLES_LOST supplement universe as authority to extend Intrinsic.
