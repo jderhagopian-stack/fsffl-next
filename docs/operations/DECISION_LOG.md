@@ -521,3 +521,14 @@ This layer must not alter Forecast or Simulation probabilities. It should consum
 Important correction for the modern product: the single most extreme observation is sample-size dependent and should not be presented as a stable forecast. Prefer rarity/context labels, percentile or empirical-frequency context, and representative interesting universes alongside absolute extrema. These are plausible/model-consistent alternative futures, not predictions.
 
 The Multiverse layer belongs downstream of Simulation in Analytics/Presentation and may later feed Home, League Atlas, Reports, season previews and shareable league storytelling.
+
+## 2026-09-26 — Core runtime acceptance is not product-surface acceptance
+Management physical testing invalidated the assumption that successful State-first Forecast/Simulation/Value/restart acceptance is sufficient to close app acceptance.
+
+From now on, acceptance is layered:
+1. **core runtime acceptance** — State/Forecast/Simulation/Value/authority/persistence;
+2. **product capability acceptance** — Intrinsic/future forecast and other supported derived capabilities;
+3. **surface acceptance** — actual hosted endpoint + rendered major surface behavior on target mobile/browser;
+4. **readiness truth** — the shell status may summarize only what these accepted capabilities actually justify.
+
+A lazy/derived endpoint that was not exercised cannot be inferred healthy from compatible inputs. “Intelligence current” must have explicit scope and a governed as-of timestamp; partial capabilities must remain visible rather than hidden behind a green core status.
