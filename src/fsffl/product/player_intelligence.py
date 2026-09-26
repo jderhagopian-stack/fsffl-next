@@ -149,13 +149,17 @@ class PlayerFutureForecastCache:
                 if row.metric == ForecastMetric.FANTASY_POINTS
                 and row.horizon == ForecastHorizon.SEASON
             )
-            materialized = self._future_forecast_builder(
+            contract = self._future_forecast_builder(
                 league_state=state,
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
             )
+            if not isinstance(contract, FutureForecastContract):
+                raise TypeError(
+                    "Future Forecast provider must return FutureForecastContract"
+                )
             self._key = key
-            self._contract = materialized.contract
+            self._contract = contract
             return self._contract
 
 
