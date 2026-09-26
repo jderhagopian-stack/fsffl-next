@@ -64,7 +64,8 @@ def eligible_origins(long,h,min_train):
     return out
 
 def generate_bank(dev,long,freeze):
-    outer_n=int(freeze["rolling_contract"]["outer_origins_per_horizon"])
+    outer_n=int(freeze["rolling_contract"]["outer_origins_per_horizon_max"])
+    min_outer=int(freeze["rolling_contract"]["minimum_outer_origins"])
     inner_w=int(freeze["rolling_contract"]["inner_origin_window"])
     baseline=freeze["incumbent_comparator"]
     shared=freeze["shared_anchor"]
@@ -74,8 +75,8 @@ def generate_bank(dev,long,freeze):
         elig=eligible_origins(long,h,dev.MIN_TRAIN_ROWS)
         outer_eligible=[T for i,T in enumerate(elig) if i>=int(freeze["rolling_contract"]["minimum_inner_origins"])]
         outer=outer_eligible[-outer_n:]
-        if len(outer)<outer_n:
-            raise SystemExit(f"insufficient eligible rolling outer origins for Y{h}: eligible={elig}, outer={outer}")
+        if len(outer)<min_outer:
+            raise SystemExit(f"insufficient repeated rolling outer origins for Y{h}: eligible={elig}, outer={outer}")
         needed=set(outer)
         for T in outer:
             prior=[x for x in elig if x<T][-inner_w:]
@@ -211,7 +212,7 @@ def annotate_outer(outer_combo,policy,q80,q90):
     return z
 
 def run_outer(dev,bank,origin_plan,freeze,blanket):
-    outer_n=int(freeze["rolling_contract"]["outer_origins_per_horizon"])
+    outer_n=int(freeze["rolling_contract"]["outer_origins_per_horizon_max"])
     inner_w=int(freeze["rolling_contract"]["inner_origin_window"])
     min_inner=int(freeze["rolling_contract"]["minimum_inner_origins"])
     baseline=freeze["incumbent_comparator"]
