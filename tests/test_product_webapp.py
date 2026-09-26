@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from threading import Event
 from time import monotonic, sleep
 from types import SimpleNamespace
 import hashlib
@@ -8,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from fsffl.analytics.league import LeagueAnalyticsView, LeagueTeamAnalyticsRow
 from fsffl.analytics.models import AnalyticsContext
+from fsffl.product.runtime import PrivateBetaRuntimeStore
 from fsffl.product.webapp import _runtime_capability_readiness, create_app
 from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
@@ -754,3 +756,78 @@ def test_capability_readiness_keeps_material_partial_subject_provisional() -> No
     assert readiness["forecast"]["material_partial_player_ids"] == ["active-partial"]
     assert readiness["simulation"]["status"] == "unavailable"
     assert readiness["overall_status"] == "partial"
+
+
+
+class _BlockingCheckpointRuntimeStore(PrivateBetaRuntimeStore):
+    def __init__(self) -> None:
+        super().__init__()
+        self.checkpoint_started = Event()
+        self.release_checkpoint = Event()
+        self.wait_calls = 0
+
+    def wait_for_checkpoint(self, user_id: str, *, timeout: float = 30.0) -> bool:
+        self.wait_calls += 1
+        self.checkpoint_started.set()
+        return self.release_checkpoint.wait(timeout=2)
+
+
+def test_intelligence_job_does_not_complete_before_final_durable_checkpoint() -> None:
+    state = _canonical_state()
+    store = _BlockingCheckpointRuntimeStore()
+    store.set_league_state("u-durable", state)
+
+    evidence = SimpleNamespace(
+        raw_forecasts=(SimpleNamespace(as_of=state.as_of),),
+        league_scored_forecasts=(),
+        successful_source_ids=("provider-a", "provider-b"),
+        failed_sources=(),
+        uncertainty_ready=False,
+        runtime_result=SimpleNamespace(
+            partial_fantasy_point_forecasts=(),
+            family_coverage=(),
+            simulation_authority_blockers=("test_authority_blocker",),
+            model_version="fixture-runtime-v1",
+            evaluation_as_of=state.as_of,
+        ),
+        evidence_basis="fixture",
+        model_version="fixture-evidence-v1",
+    )
+    value = SimpleNamespace(
+        league_state_id=state.state_id,
+        estimates=(),
+        fsffl_cardinal_values=(),
+        pick_variant_market_values=(),
+        cardinal_player_coverage="unavailable",
+    )
+
+    application = create_app(
+        runtime_store=store,
+        state_loader=lambda _external_id: state,
+        forecast_loader=lambda _state: evidence,
+        simulation_loader=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("blocked Simulation must not run")
+        ),
+        value_loader=lambda _state: value,
+    )
+
+    started = application.state.start_intelligence_reconciliation("u-durable")
+    assert started["job_id"]
+    assert store.checkpoint_started.wait(timeout=1)
+
+    running = application.state.intelligence_jobs.current("u-durable")
+    assert running is not None
+    assert running.status.value == "running"
+    assert running.phase.value == "attaching_results"
+
+    store.release_checkpoint.set()
+    deadline = monotonic() + 2
+    while monotonic() < deadline:
+        current = application.state.intelligence_jobs.current("u-durable")
+        if current is not None and current.status.value == "completed":
+            break
+        sleep(0.01)
+
+    assert current is not None
+    assert current.status.value == "completed"
+    assert store.wait_calls == 1

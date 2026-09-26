@@ -49,6 +49,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             thread_name_prefix="fsffl-persist",
         )
         self._checkpoint_futures: dict[str, Future[bool]] = {}
+        self._checkpoint_state_ids: dict[str, str] = {}
         self._last_good_guard_users: set[str] = set()
 
     @property
@@ -71,6 +72,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     def _persist_context(self, user_id: str, context: UserRuntimeContext) -> bool:
         if context.league_state is None:
             return True
+        started = monotonic()
         durable = True
         if self._persistence is not None:
             try:
@@ -87,6 +89,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 durable = False
                 _logger.warning("FSFFL persistence checkpoint failed user=%s error=%s", user_id, exc)
         self._persist_state_history(context.league_state)
+        _logger.info(
+            "FSFFL persistence checkpoint completed user=%s league=%s state=%s forecast=%s simulation=%s value=%s durable=%s elapsed=%.3fs",
+            user_id,
+            context.league_state.league.league_id,
+            context.league_state.state_id,
+            bool(context.forecast_evidence),
+            bool(context.simulation_analytics),
+            bool(context.value_evidence),
+            durable,
+            max(0.0, monotonic() - started),
+        )
         return durable
 
     def _checkpoint_async(
@@ -98,12 +111,33 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             self._persistence is None and self._state_history is None
         ):
             return None
-        # One worker is deliberate: an earlier state-only snapshot can never finish
-        # after and overwrite a later, richer intelligence snapshot. State-history
-        # retention follows the same mutation order.
-        future = self._checkpoint_executor.submit(self._persist_context, user_id, context)
+        # One worker preserves mutation order. Within the same exact State, a newer
+        # context subsumes an older queued checkpoint (State -> Forecast -> Simulation
+        # -> Value), so cancel queued superseded work before appending the latest
+        # snapshot. A running checkpoint is never interrupted, and cross-State work is
+        # never cancelled: prior-state durability must remain intact across switches.
+        state_id = context.league_state.state_id
         with self._restore_lock:
+            previous = self._checkpoint_futures.get(user_id)
+            previous_state_id = self._checkpoint_state_ids.get(user_id)
+            if (
+                previous is not None
+                and previous_state_id == state_id
+                and not previous.done()
+                and previous.cancel()
+            ):
+                _logger.info(
+                    "FSFFL persistence checkpoint coalesced user=%s state=%s",
+                    user_id,
+                    state_id,
+                )
+            future = self._checkpoint_executor.submit(
+                self._persist_context,
+                user_id,
+                context,
+            )
             self._checkpoint_futures[user_id] = future
+            self._checkpoint_state_ids[user_id] = state_id
         return future
 
     def wait_for_checkpoint(self, user_id: str, *, timeout: float = 30.0) -> bool:

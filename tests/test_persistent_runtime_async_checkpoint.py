@@ -181,3 +181,48 @@ def test_checkpoint_barrier_reports_failed_durable_write() -> None:
 
     assert runtime.wait_for_checkpoint("jimmy", timeout=2) is False
     assert persistence.get_user_runtime_context(user_id="jimmy") is None
+
+
+
+class BlockingPersistence(MemoryPersistence):
+    def __init__(self) -> None:
+        super().__init__()
+        self.first_started = Event()
+        self.release_first = Event()
+        self.league_write_count = 0
+        self.runtime_context_writes = []
+
+    def put_league_snapshot(self, record):
+        self.league_write_count += 1
+        if self.league_write_count == 1:
+            self.first_started.set()
+            self.release_first.wait(timeout=2)
+        super().put_league_snapshot(record)
+
+    def put_user_runtime_context(self, record):
+        self.runtime_context_writes.append(record)
+        super().put_user_runtime_context(record)
+
+
+def test_same_state_checkpoint_queue_coalesces_to_latest_context() -> None:
+    persistence = BlockingPersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    state = _state()
+
+    runtime.set_league_state("jimmy", state)
+    assert persistence.first_started.wait(timeout=1)
+
+    # These mutations are the same exact State. The second selected-team context
+    # supersedes the first queued one while the initial State checkpoint is running.
+    runtime.select_team("jimmy", "team:a")
+    runtime.select_team("jimmy", "team:b")
+
+    persistence.release_first.set()
+    assert runtime.wait_for_checkpoint("jimmy", timeout=2) is True
+
+    assert persistence.league_write_count == 2
+    assert [row.selected_team_id for row in persistence.runtime_context_writes] == [
+        None,
+        "team:b",
+    ]
+    assert persistence.get_user_runtime_context(user_id="jimmy").selected_team_id == "team:b"
