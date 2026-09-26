@@ -482,3 +482,11 @@ The next product-facing long-horizon cardinal set is intentionally simple: **H1 
 Research is authorized next on a separate terminal/career-state representation plus the uncertainty/presentation contract required before any Y4+ production promotion. Production H3 remains unchanged and long-horizon implementation remains unauthorized.
 
 Implementation remains the app critical path. PR #262 is open but not merge-ready: current CI has 13 failures, mostly stale static-generation expectations plus one substantive exact same-State Forecast-evidence reuse regression that must be fixed before merge/deploy/production acceptance.
+
+## Long-horizon Research correction — feature sufficiency not yet proven
+
+Management review of the actual comparative code and frozen evidence found that the Y4-Y8 model-family comparison used only 10 inherited predictors: age, experience, prior production percentile/points, and level/shape features from the governed Y1-Y3 Forecast trajectory.
+
+The six-family conclusion is therefore conditional: `two_part_state` is the strongest robust family **within that information set**, not proof that FSFFL has found the best long-horizon predictor set.
+
+The same frozen evidence package contains unused draft/physical/player metadata and separate seasonal-stat evidence, while several trajectory/residual/volatility signals were previously rejected on Y2/Y3 gates rather than Y4-Y8 targets. Research is now ACTIVE on a PIT long-horizon predictor-discovery/ablation phase before terminal/career modeling. Production H3 and the app critical path are unchanged.
