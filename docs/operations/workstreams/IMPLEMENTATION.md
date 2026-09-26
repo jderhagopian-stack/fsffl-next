@@ -561,3 +561,46 @@ Continue without returning control through:
 5. persist the exact acceptance evidence and finish only at a permitted `OPERATING_PROTOCOL.md` terminal state.
 
 If this passes, core reliability no longer blocks Market physical acceptance; Management/Performance should proceed immediately to Market testing and latency work.
+
+## Physical acceptance reopened — product surfaces + readiness truth
+**State: ACTIVE — PHYSICAL PRODUCT ACCEPTANCE CORRECTIVE**
+
+Management physical iPhone/Safari evidence after the prior post-PR263 closeout invalidates the terminal acceptance conclusion for the product as a whole.
+
+Observed production failures on the selected FSFFL league:
+- Player Intelligence / Franchise surfaces show **FSFFL Intrinsic unavailable** for governed players;
+- Player Intelligence Career & Forecast renders only the current-season point with Y2/Y3 distribution details unavailable, despite the production H3/future contract being expected to serve governed subjects;
+- League Atlas fails to render with **“Unable to load League presentation module”**;
+- the shared strip simultaneously reports **“✓ Intelligence current”**, which overstates readiness while material product capabilities are unavailable.
+
+The post-PR263 State-first persistence acceptance remains valid for the narrower State/Forecast/Simulation/Value/restart contract, but it is **not sufficient product acceptance**. Do not reopen already-proven State-first persistence unless evidence points there.
+
+### Required corrective
+1. Reproduce and fix the exact production Intrinsic/future-forecast failure using the actual hosted vNext loader and selected FSFFL State. The acceptance harness previously did not exercise the lazy hosted H3/Intrinsic endpoint; add a production-path regression that does.
+2. Reproduce and fix the League Atlas presentation-module failure on the actual hosted route.
+3. Validate Player Intelligence Overview + Career & Forecast, Franchise player cards, League Atlas, Player Board/Market Intrinsic consumption, and the canonical Intrinsic endpoint against the same accepted league/user/State.
+4. Preserve existing H3/vNext authority and governed subject scope. Do not broaden authority or patch with current-market/owner data.
+5. Add a **product-surface acceptance gate**: a terminal app-acceptance state requires successful actual endpoint/render-path exercise for the major surfaces whose data is claimed ready, not only underlying runtime artifacts.
+6. Re-run physical iPhone/Safari validation after deployment.
+
+### Shared Intelligence / loading strip contract
+The current binary “Intelligence current” treatment is insufficient.
+
+While a refresh/build is active, the strip should temporarily expand enough to communicate:
+- current phase in plain language (for example: Refreshing league state → Building projections → Running season outlook → Building values → Building Intrinsic / attaching intelligence);
+- completed/usable capability state without fabricated percent completion;
+- whether last-good intelligence is being served while new work runs;
+- the last-good **as-of timestamp** when applicable;
+- a disabled “Refreshing…” control.
+
+When the required supported intelligence is healthy, collapse back to the thin mobile strip. The compact completed state should include:
+- a truthful scope label, e.g. **“✓ Intelligence current”** only when the product-required supported intelligence is actually available;
+- **“As of Sep 26, 3:00 PM”** (localized presentation) or equivalent;
+- Refresh Intelligence;
+- optional tap/expand affordance for provenance/details.
+
+If core Forecast/Simulation/Value are current but an important separate capability such as governed Intrinsic is unavailable, do **not** use the unqualified “Intelligence current” label. Show **“Intelligence partially available”** or **“Core intelligence current · Intrinsic unavailable”** with the relevant exception. A surface/presentation failure also prevents full product acceptance even if core data is current.
+
+Timestamp semantics must be explicit and derived from governed evidence/served State, not browser clock guesswork. Prefer the latest compatible promoted intelligence timestamp and expose State/Forecast as-of detail through expansion.
+
+Do not return control until tests, CI, deploy, hosted endpoint validation, and physical acceptance reach a permitted OPERATING_PROTOCOL.md terminal state.
