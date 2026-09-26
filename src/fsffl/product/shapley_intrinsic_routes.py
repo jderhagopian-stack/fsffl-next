@@ -86,7 +86,7 @@ def install_shapley_intrinsic_routes(
             )
         _logger.info(
             "FSFFL Intrinsic endpoint served state=%s status=%s estimates=%s forecast=%s",
-            state.state_id,
+            getattr(state, "state_id", "unknown"),
             contract.status.value,
             len(contract.estimates),
             contract.forecast_model_version,
