@@ -572,3 +572,15 @@ No production authority changed.
 Operating-protocol test: no further authorized Research action can materially resolve the policy decision without crossing into source-specific certification under a policy Management has not yet accepted.
 
 **MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION**
+
+
+### Management clarification — provider-neutral rights staging
+Research source-quality recommendations must follow `../SOURCE_GOVERNANCE.md`.
+
+FSFFL is provider-agnostic. A provider-coordinate certification must distinguish analytical authority from usage-rights stage:
+- a source may qualify analytically and be `PRIVATE_BETA_ALLOWED` while still carrying `commercial_recheck_required=true`;
+- commercial licensing is not a prerequisite for a terms-compliant private-beta source;
+- ambiguous/prohibited beta use remains ineligible;
+- any commercial transition requires explicit re-audit of all non-`COMMERCIAL_ALLOWED` sources.
+
+Accordingly, references in this workstream/handoffs to "production rights" or "rights-cleared" must be interpreted against the intended deployment stage, not automatically as "commercially licensed today." The auxiliary certification framework should require rights eligibility for the intended deployment stage plus a separate commercial-status field.
