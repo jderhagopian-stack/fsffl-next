@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from threading import Thread
 
 from fsffl.persistence import (
     persistence_store_from_env,
@@ -46,6 +47,7 @@ from .quick_frontier_routes import install_quick_frontier_routes
 from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
 from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
+from .state_first_acceptance import run_state_first_production_acceptance
 
 
 # Hosted private-beta observability only. The coordinator already records exact
@@ -175,7 +177,55 @@ def _log_startup_runtime_readiness() -> None:
         complete,
     )
 
+def _maybe_start_state_first_production_acceptance() -> None:
+    enabled = os.getenv("FSFFL_RUN_STATE_FIRST_ACCEPTANCE", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if not enabled:
+        return
+    if _persistence_store is None:
+        logging.getLogger("uvicorn.error").error(
+            "FSFFL STATE-FIRST ACCEPTANCE FAILED production persistence is unavailable"
+        )
+        return
+    acceptance_user = os.getenv(
+        "FSFFL_STATE_FIRST_ACCEPTANCE_USER",
+        "state-first-production-acceptance",
+    ).strip()
+    if not acceptance_user:
+        logging.getLogger("uvicorn.error").error(
+            "FSFFL STATE-FIRST ACCEPTANCE FAILED isolated user id is blank"
+        )
+        return
+
+    def run() -> None:
+        try:
+            run_state_first_production_acceptance(
+                store=_runtime_store,
+                user_id=acceptance_user,
+                state_loader=default_sleeper_state_loader,
+                start_reconciliation=app.state.start_intelligence_reconciliation,
+                start_sync_reconciliation=app.state.start_intelligence_sync_reconciliation,
+                jobs=app.state.intelligence_jobs,
+                capability_reader=_webapp._runtime_capability_readiness,
+            )
+        except Exception:
+            logging.getLogger("uvicorn.error").exception(
+                "FSFFL STATE-FIRST ACCEPTANCE FAILED"
+            )
+
+    Thread(
+        target=run,
+        name="fsffl-state-first-production-acceptance",
+        daemon=True,
+    ).start()
+
+
 app.router.add_event_handler("startup", _log_startup_runtime_readiness)
+app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
 install_annual_preseason_scheduler_route(
     app,
     persistence_store=_persistence_store,
