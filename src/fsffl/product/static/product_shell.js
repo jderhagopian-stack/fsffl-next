@@ -155,9 +155,10 @@ function fsfflSharedReadinessSnapshot(){
     fsfflSharedReadinessState.lastStep=step;
     const lifecycleComplete=step===FSFFL_SHARED_READINESS_STEPS;
     const partial=lifecycleComplete&&!capabilityFull;
+    const lastGoodAvailable=Boolean(context?.forecast_ready||context?.simulation_ready||context?.value_ready);
     const label=lifecycleComplete
       ?(capabilityFull?'Build complete · Current core runtime fully available · product intelligence verified':surfaceIssue?'Build complete · '+surfaceIssue:'Build complete · intelligence partially available')
-      :phaseLabel;
+      :phaseLabel+(lastGoodAvailable?' · Last-good available':'');
     return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete,partial,capabilities,asOf};
   }
   let step=1;
@@ -185,7 +186,7 @@ function fsfflSharedReadinessSnapshot(){
 }
 function fsfflCapabilityChip(label,key){
   const status=fsfflCapabilityStatus(key);
-  const display=status==='partial_provisional'?'Partial':status==='full'?'Full':status==='separate_surface'?'Separate':'Unavailable';
+  const display=status==='partial_provisional'?'Partial':status==='full'?'Full':status==='building'?'Building':status==='separate_surface'?'Separate':'Unavailable';
   return '<span class="fsffl-capability-chip '+fsfflSharedReadinessEscape(status)+'"><b>'+fsfflSharedReadinessEscape(label)+'</b> '+fsfflSharedReadinessEscape(display)+'</span>';
 }
 function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
@@ -198,7 +199,7 @@ function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const asOf=status.asOf?' · As of '+status.asOf:'';
   const mobilePrimary=status.complete
     ?'✓ Intelligence current'+asOf
-    :(status.partial?'◐ Intelligence partial':status.failed?'Intelligence needs attention':status.step+' / '+status.total);
+    :(status.partial?'◐ Intelligence partial'+asOf:status.failed?'Intelligence needs attention':status.step+' / '+status.total);
   return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.partial?'partial ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':status.partial?'◐':'●')+'</span><strong><span class="fsffl-readiness-desktop-step">'+status.step+' / '+status.total+' build</span><span class="fsffl-readiness-mobile-step">'+fsfflSharedReadinessEscape(mobilePrimary)+'</span></strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+(status.asOf?'<span class="fsffl-readiness-asof">As of '+fsfflSharedReadinessEscape(status.asOf)+'</span>':'')+chips+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){
