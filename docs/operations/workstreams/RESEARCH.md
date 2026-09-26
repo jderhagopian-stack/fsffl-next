@@ -825,3 +825,43 @@ Question: **Is there another authorized Research action available now that mater
 Answer: **No.**
 
 **DIRECTIVE COMPLETE — RESEARCH / FIRST-PARTY FUMBLES_LOST MODEL READY FOR IMPLEMENTATION**
+
+
+## Management directive — long-horizon Intrinsic term-structure research
+**State: ACTIVE — RESEARCH ONLY / NO PRODUCTION AUTHORITY CHANGE**
+
+The prior FUMBLES_LOST directive's instruction not to reopen long-horizon Intrinsic work is satisfied and superseded for this separate workstream because that Research directive is now complete. Forecast/Product Implementation continues the FSFFL recovery independently.
+
+Research must evaluate the defensible time structure of FSFFL Intrinsic Value rather than assume the current three-year production horizon is permanent.
+
+### Core research questions
+- Compare candidate horizon architectures, including at minimum: current/near-term, existing three-year, a longer discrete horizon such as five years, and a terminal/career formulation.
+- Determine whether Years 4+ support detailed statistical Forecasts or should instead use career-state/survival, expected role tier, age/position transition, conditional production, replacement surplus and terminal-value evidence.
+- Quantify incremental predictive/economic signal beyond the existing Y1–Y3 architecture and identify the point at which extra horizon adds mostly uncertainty rather than useful information.
+- Evaluate discounting/decay and terminal-value treatment empirically; do not select coefficients merely because they yield intuitive player rankings.
+- Define uncertainty by horizon and require it to widen appropriately where evidence degrades.
+
+### Validation contract
+- preserve the current production three-year Intrinsic as the baseline/oracle for the existing governed horizon;
+- use historical point-in-time inputs and chronological/out-of-time evaluation wherever the data permit;
+- no future leakage, random future-season mixing, current-player outcome leakage, or named-player tuning;
+- freeze candidate definitions/metrics before inspecting current-player rank effects where feasible;
+- distinguish Forecast-model accuracy from Value-model economic usefulness;
+- report where the historical record is insufficient to validate a claimed horizon rather than filling the gap with precision by assumption;
+- preserve Value authority separation: Broad Market, League Market and Team Utility are not substitutes for FSFFL Intrinsic and may not leak into its universal coordinates.
+
+### Required horizon-comparison diagnostics
+- value and rank for each player at each supported horizon;
+- rank/value deltas and crossover players across horizons;
+- QB/RB/WR/TE value distributions by horizon;
+- positional share of top 25 / top 50 / top 100 and top-percentile assets;
+- within-position concentration, dispersion and tail behavior;
+- age/experience effects and decay/persistence by position;
+- uncertainty growth and sensitivity to terminal/discount assumptions;
+- examples where a single blended three-year value hides materially different temporal value profiles.
+
+### Downstream design study
+Describe, without implementing, how governed horizon coordinates could later support Trade/Market/Search questions such as near-term-for-long-term exchanges, durable-value acquisition, competitive-window matching and package horizon shifts. Keep Team Utility downstream and do not collapse the term structure into an unexplained master score or fabricated acceptance probability.
+
+### Deliverables / stop condition
+Persist reproducible research artifacts, methodology, historical validation, comparative diagnostics, current-player shadows only after the model-selection discipline above, limitations, and a proposed contract. Return control only at `MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE` if evidence supports a candidate architecture, or `DIRECTIVE COMPLETE — RESEARCH` with a negative/insufficient-evidence finding. Do not implement production changes in this workstream.
