@@ -661,7 +661,7 @@ This authorization does not promote JerryGM, Fantasy Nerds, LineupExperts or any
 
 
 ## Management correction — FUMBLES_LOST current-only supplement
-**State: ACTIVE — BOUNDED CURRENT-ONLY FUMBLES_LOST CERTIFICATION**
+**State: BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS**
 
 The prior whole ordinary-offense ROS-lane authorization is superseded. Research should not rebase all ordinary offensive statistics.
 
@@ -679,3 +679,48 @@ Required Research output:
 6. produce an implementation-ready handoff.
 
 Do not alter unrelated offensive coordinates or reopen broad ordinary-offense source selection.
+
+
+### Current-only FUMBLES_LOST certification closeout — 2026-09-26
+
+**State: BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS**
+
+Research completed the bounded current-only certification contract without rebasing any unrelated offensive Forecast coordinate.
+
+Durable artifacts:
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/CERTIFICATION_LEDGER.md`
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/NORMALIZATION_UNCERTAINTY_CONTRACT.md`
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/IMPLEMENTATION_HANDOFF.md`
+
+Result:
+- shortest technical direct-source pair: **JerryGM + LineupExperts Premium In-Season**;
+- JerryGM exact `fumblesLost` current/ROS semantics and health/provenance schema are established publicly;
+- LineupExperts Premium publicly proves exact `FmblL`, supports ROS intervals, and its public ROS board demonstrates current schedule-aware projected-game behavior;
+- both sources still require external rights/account evidence before private-beta authority can be promoted;
+- LineupExperts must additionally confirm endpoint ownership/independence because its general API terms permit third-party content;
+- authenticated full-pool live payloads and canonical per-player coverage cannot be validated without provider credentials/entitlements.
+
+The implementation contract keeps source evidence truthfully current/ROS and derives only a **17-game season-equivalent current pace** for the existing current-scoring/Simulation interface. It does not mutate or re-label the ordinary season/preseason Forecast.
+
+Non-zero uncertainty is explicitly required:
+- equal-source retained PIT raw-event RMSE floor = **1.13855744535 lost fumbles**;
+- provider-disagreement standard deviation = `abs(source_A - source_B) / 2` on the season-equivalent target;
+- coordinate stddev = `max(provider_disagreement_std, 1.13855744535)`.
+
+The persisted supplement is ineligible before:
+`authority_valid_from = max(source_A.captured_at, source_B.captured_at)`.
+
+It must carry:
+- `preseason_eligible=false`;
+- `annual_preseason_snapshot_eligible=false`;
+- `historical_pit_before_authority_valid_from=false`;
+- `backfill_allowed=false`.
+
+Remaining external dependencies:
+1. JerryGM API access plus written narrow derived-ensemble/model-input permission.
+2. LineupExperts Premium ROS API entitlement, FSFFL application registration, written model-input/persistence permission, and written confirmation of projection ownership/independence.
+3. One governed live two-source capture proving player identity, schedule freshness, row health and per-player coverage.
+
+If LineupExperts cannot clear rights/independence, SportsDataIO is the strongest direct licensed fallback. Fantasy Nerds remains aggregate and cannot automatically count as the second vote.
+
+**BLOCKED — RESEARCH / EXTERNAL PROVIDER RIGHTS AND LIVE CREDENTIALS**
