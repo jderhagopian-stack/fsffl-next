@@ -281,3 +281,54 @@ def test_completed_but_unavailable_intrinsic_surfaces_governed_reason(monkeypatc
     assert value["intrinsic_lifecycle_status"] == "completed"
     assert value["intrinsic_status"] == "unavailable"
     assert value["intrinsic_error"] == "fixture governed unavailable reason"
+
+
+
+def test_completed_intrinsic_contract_marks_non_h3_player_individually_unavailable(monkeypatch) -> None:
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    import fsffl.product.player_intelligence_routes as routes
+    from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
+
+    context = _context()
+    intrinsic = SimpleNamespace(
+        status=ShapleyIntrinsicAvailability.DEGRADED,
+        estimates=(SimpleNamespace(player_id="governed-h3-player"),),
+        status_reason="governed H3 cohort is available",
+    )
+    coordinator = SimpleNamespace(
+        request=lambda _runtime: SimpleNamespace(
+            status=IntrinsicBuildStatus.COMPLETED,
+            contract=intrinsic,
+            error=None,
+        )
+    )
+    store = SimpleNamespace(get=lambda _user: context)
+    monkeypatch.setattr(
+        routes,
+        "build_player_intelligence_overview",
+        lambda *_args, **_kwargs: {
+            "value": {
+                "raw_shapley_marginal_points": None,
+                "intrinsic_value_index": None,
+                "intrinsic_percentile": None,
+            }
+        },
+    )
+    app = FastAPI()
+    routes.install_player_intelligence_routes(
+        app,
+        runtime_store=cast(Any, store),
+        require_user=lambda: "u",
+        intrinsic_coordinator=cast(Any, coordinator),
+        future_cache=cast(Any, SimpleNamespace()),
+        history_coordinator=cast(Any, SimpleNamespace()),
+    )
+
+    response = TestClient(app).get("/api/player-intelligence/outside-h3")
+    assert response.status_code == 200
+    value = response.json()["value"]
+    assert value["intrinsic_lifecycle_status"] == "completed"
+    assert value["intrinsic_status"] == "unavailable"
+    assert "outside the governed H3/Future-I1 subject cohort" in value["intrinsic_error"]

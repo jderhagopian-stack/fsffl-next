@@ -796,3 +796,109 @@ def test_promoted_vnext_shapley_consumes_vnext_y2_y3_and_preserves_y1_authority(
         VNEXT_FORECAST_VERSION in item.provenance.model_version
         for item in estimate.contributions[1:]
     )
+
+
+
+def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without_changing_values() -> None:
+    state, observation = _fixture()
+    baseline_materialization = build_p0_future_forecast_contract(
+        league_state=state,
+        raw_forecasts=_raw_forecasts(observation),
+        league_year_one=(observation,),
+    )
+    baseline_contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )(_context(state, observation))
+    assert baseline_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+
+    unknown = Player(
+        player_id="outside-h3",
+        full_name="Outside H3 Authority",
+        position=Position.QB,
+        provider_refs=(ProviderRef(provider="sleeper", external_id="outside-h3"),),
+    )
+    expanded_state = state.model_copy(
+        update={
+            "players": state.players + (unknown,),
+            "player_states": state.player_states
+            + (
+                PlayerState(
+                    player_id=unknown.player_id,
+                    as_of=state.as_of,
+                    provenance=state.player_states[0].provenance,
+                ),
+            ),
+        }
+    )
+    unknown_year_one = observation.model_copy(
+        update={
+            "player_id": unknown.player_id,
+            "source": "fsffl:preseason_baseline_league_scored",
+            "model_version": "authority-fixture-v1",
+        }
+    )
+    expanded_raw = _raw_forecasts(observation) + tuple(
+        item.model_copy(update={"player_id": unknown.player_id})
+        for item in _raw_forecasts(observation)
+    )
+    expanded_materialization = build_p0_future_forecast_contract(
+        league_state=expanded_state,
+        raw_forecasts=expanded_raw,
+        league_year_one=(observation, unknown_year_one),
+    )
+    assert expanded_materialization.contract.player_ids == ("canonical-player",)
+    assert (
+        expanded_materialization.contract.forecasts
+        == baseline_materialization.contract.forecasts
+    )
+    assert (
+        expanded_materialization.contract.provenance[
+            "future_i1_excluded_non_h3_subject_count"
+        ]
+        == 1
+    )
+
+    evidence = _authority_evidence(observation)
+    evidence.raw_forecasts = expanded_raw
+    evidence.league_scored_forecasts = (
+        observation.model_copy(
+            update={
+                "source": "fsffl:preseason_baseline_league_scored",
+                "model_version": "authority-fixture-v1",
+            }
+        ),
+        unknown_year_one,
+    )
+    expanded_context = UserRuntimeContext(
+        user_id="user",
+        league_state=expanded_state,
+        forecast_evidence=cast(
+            Any,
+            SimpleNamespace(
+                raw_forecasts=expanded_raw,
+                league_scored_forecasts=(observation, unknown_year_one),
+            ),
+        ),
+    )
+    expanded_contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: evidence
+    )(expanded_context)
+
+    assert expanded_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert expanded_contract.coverage.player_count == 1
+    assert [item.player_id for item in expanded_contract.estimates] == [
+        "canonical-player"
+    ]
+    assert (
+        expanded_contract.estimates[0].raw_intrinsic_value
+        == pytest.approx(baseline_contract.estimates[0].raw_intrinsic_value)
+    )
+    assert [
+        item.discounted_contribution
+        for item in expanded_contract.estimates[0].contributions
+    ] == pytest.approx(
+        [
+            item.discounted_contribution
+            for item in baseline_contract.estimates[0].contributions
+        ]
+    )

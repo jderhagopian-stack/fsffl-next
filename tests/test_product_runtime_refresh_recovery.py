@@ -2,9 +2,19 @@ import pytest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
+from fsffl.forecast.fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+)
 from fsffl.product.runtime import LiveForecastEvidence, PrivateBetaRuntimeStore
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
-from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
+from fsffl.state.models import (
+    League,
+    LeagueRules,
+    LeagueState,
+    ScoringRule,
+    Team,
+    TeamState,
+)
 
 
 def _state(as_of: datetime, *, league_id: str = "sleeper:123") -> LeagueState:
@@ -222,3 +232,56 @@ def test_same_league_state_change_advances_job_generation_but_exact_state_reuse_
 
     store.set_league_state("u-generation", second)
     assert store.league_generation("u-generation") == after_first + 1
+
+
+
+def _fum_lost_state(as_of: datetime) -> LeagueState:
+    state = _state(as_of)
+    rules = state.league.rules.model_copy(
+        update={"scoring": (ScoringRule(stat="fum_lost", points=-2.0),)}
+    )
+    return state.model_copy(
+        update={"league": state.league.model_copy(update={"rules": rules})}
+    )
+
+
+def _state_bound_fum_lost_evidence(state: LeagueState) -> LiveForecastEvidence:
+    return LiveForecastEvidence(
+        raw_forecasts=(),
+        league_scored_forecasts=(),
+        successful_source_ids=("one", "two"),
+        failed_sources=(),
+        uncertainty_ready=True,
+        runtime_result=SimpleNamespace(
+            fumbles_lost_supplement_authority_fingerprint="authority",
+            fumbles_lost_supplement_model_version=(
+                FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            ),
+            fumbles_lost_supplement_league_state_id=state.state_id,
+            model_version="state-bound-fixture-v1",
+            evaluation_as_of=state.as_of,
+        ),  # type: ignore[arg-type]
+    )
+
+
+def test_same_league_state_advance_never_reuses_fum_lost_supplement_from_prior_state() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    first = _fum_lost_state(t0)
+    second = _fum_lost_state(t0 + timedelta(minutes=1))
+    evidence = _state_bound_fum_lost_evidence(first)
+
+    store.set_league_state("u-fum", first)
+    store.set_forecast_evidence(
+        "u-fum",
+        evidence,
+        refreshed_league_state=first,
+    )
+    exact = store.set_league_state("u-fum", first)
+    assert exact.forecast_evidence is evidence
+
+    advanced = store.set_league_state("u-fum", second)
+    assert advanced.league_state == second
+    assert advanced.forecast_evidence is None
+    assert advanced.simulation_analytics is None
+    assert advanced.value_evidence is None

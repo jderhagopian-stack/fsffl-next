@@ -569,6 +569,24 @@ def _source_for_player(league_state: LeagueState, player_id: str) -> P0SourceRow
     return next(iter(candidates.values()))
 
 
+def governed_p0_player_ids(league_state: LeagueState) -> tuple[str, ...]:
+    """Return canonical current player ids owned by the frozen P0/H3 authority.
+
+    Membership is determined only by the frozen P0 identity table and canonical
+    player/provider refs. Current State size or provider Forecast coverage cannot
+    broaden this governed cohort.
+    """
+
+    governed: list[str] = []
+    for player in league_state.players:
+        try:
+            _source_for_player(league_state, player.player_id)
+        except ValueError:
+            continue
+        governed.append(player.player_id)
+    return tuple(sorted(set(governed)))
+
+
 def build_p0_standard_future_materialization(
     *,
     league_state: LeagueState,

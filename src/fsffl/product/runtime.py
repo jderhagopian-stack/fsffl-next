@@ -253,19 +253,31 @@ def _forecast_supplement_compatible(
         return False
     if not league_consumes_fumbles_lost(league_state.league.rules):
         return True
-    return bool(
-        getattr(
-            evidence.runtime_result,
-            "fumbles_lost_supplement_authority_fingerprint",
-            None,
+    runtime = evidence.runtime_result
+    return (
+        bool(
+            getattr(
+                runtime,
+                "fumbles_lost_supplement_authority_fingerprint",
+                None,
+            )
         )
-    ) and (
-        getattr(
-            evidence.runtime_result,
-            "fumbles_lost_supplement_model_version",
-            None,
+        and (
+            getattr(
+                runtime,
+                "fumbles_lost_supplement_model_version",
+                None,
+            )
+            == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
         )
-        == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+        and (
+            getattr(
+                runtime,
+                "fumbles_lost_supplement_league_state_id",
+                None,
+            )
+            == league_state.state_id
+        )
     )
 
 
@@ -365,11 +377,16 @@ class PrivateBetaRuntimeStore:
                     )
                 )
             )
+            pending = self._pending_intelligence.get(user_id)
+            pending_compatible = (
+                pending is None
+                or pending.league_state.state_id == league_state.state_id
+            )
             forecast_reusable = (
                 same_league
                 and current.league_state is not None
                 and forecast_evidence is not None
-                and user_id not in self._pending_intelligence
+                and pending_compatible
                 and forecast_cutoff_compatible
                 and _forecast_supplement_compatible(
                     league_state,

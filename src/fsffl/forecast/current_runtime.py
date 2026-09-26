@@ -113,6 +113,7 @@ class LiveForecastRuntimeResult(FrozenModel):
     fumbles_lost_omitted_player_ids: tuple[str, ...] = ()
     fumbles_lost_supplement_failure: str | None = None
     fumbles_lost_supplement_model_version: str | None = None
+    fumbles_lost_supplement_league_state_id: str | None = None
     simulation_material_partial_player_ids: tuple[str, ...] = ()
     first_party_fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = Field(
         default=None,
@@ -631,6 +632,11 @@ def build_current_live_forecasts(
         fumbles_lost_supplement_failure=fumbles_lost_failure,
         fumbles_lost_supplement_model_version=(
             FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        fumbles_lost_supplement_league_state_id=(
+            fumbles_lost_supplement.league_state_id
             if fumbles_lost_supplement is not None
             else None
         ),
