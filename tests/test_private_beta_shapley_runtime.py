@@ -37,6 +37,7 @@ from fsffl.product.runtime import UserRuntimeContext
 from fsffl.product.vnext_future_forecast_provider import (
     VNEXT_FORECAST_VERSION,
     build_vnext_future_forecast_contract,
+    provide_vnext_future_forecast_contract,
 )
 from fsffl.state.models import (
     League,
@@ -148,11 +149,15 @@ def _context(state: LeagueState, observation: ForecastObservation) -> UserRuntim
         forecast_evidence=cast(Any, evidence),
     )
 
+def _legacy_p0_contract_builder(**kwargs):
+    return build_p0_future_forecast_contract(**kwargs).contract
+
+
 def _legacy_p0_loader(**kwargs) -> PrivateBetaShapleyContractLoader:
     """Legacy-reference helper; production composition must inject vNext explicitly."""
 
     return PrivateBetaShapleyContractLoader(
-        future_forecast_builder=build_p0_future_forecast_contract,
+        future_forecast_builder=_legacy_p0_contract_builder,
         future_forecast_model_version=P0_FORECAST_VERSION,
         future_missing_fact_family="p0_future_forecast_coordinate",
         **kwargs,
@@ -722,10 +727,7 @@ def _versioned_future_builder(version: str, calls: list[str]):
                 ),
             }
         )
-        return SimpleNamespace(
-            contract=contract,
-            scoring_multipliers=materialized.scoring_multipliers,
-        )
+        return contract
 
     return builder
 
@@ -785,7 +787,7 @@ def test_promoted_vnext_shapley_consumes_vnext_y2_y3_and_preserves_y1_authority(
     state, observation = _fixture()
     loader = PrivateBetaShapleyContractLoader(
         year_one_loader=lambda _state: _authority_evidence(observation),
-        future_forecast_builder=build_vnext_future_forecast_contract,
+        future_forecast_builder=provide_vnext_future_forecast_contract,
         future_forecast_model_version=VNEXT_FORECAST_VERSION,
         future_missing_fact_family="vnext_future_forecast_coordinate",
     )
@@ -822,7 +824,7 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
     )
     baseline_contract = PrivateBetaShapleyContractLoader(
         year_one_loader=lambda _state: _authority_evidence(observation),
-        future_forecast_builder=build_vnext_future_forecast_contract,
+        future_forecast_builder=provide_vnext_future_forecast_contract,
         future_forecast_model_version=VNEXT_FORECAST_VERSION,
         future_missing_fact_family="vnext_future_forecast_coordinate",
     )(_context(state, observation))
@@ -899,7 +901,7 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
     )
     expanded_contract = PrivateBetaShapleyContractLoader(
         year_one_loader=lambda _state: evidence,
-        future_forecast_builder=build_vnext_future_forecast_contract,
+        future_forecast_builder=provide_vnext_future_forecast_contract,
         future_forecast_model_version=VNEXT_FORECAST_VERSION,
         future_missing_fact_family="vnext_future_forecast_coordinate",
     )(expanded_context)
