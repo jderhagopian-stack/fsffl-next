@@ -1,0 +1,54 @@
+name: Intrinsic Y4+ Comparative Model Family Research
+on:
+  push:
+    branches: [research/intrinsic-y4plus-model-family-20260926]
+    paths:
+      - scripts/run_intrinsic_term_structure_research.py
+      - scripts/run_intrinsic_y4plus_model_family_research.py
+      - .github/workflows/intrinsic-y4plus-model-family-research.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  comparative:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Restore frozen historical evidence
+        run: |
+          mkdir -p artifacts/research/intrinsic_y4plus_model_family_20260926/frozen
+          gh api repos/${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/history.zip
+          unzip -oq /tmp/history.zip -d artifacts/research/intrinsic_y4plus_model_family_20260926/frozen
+      - name: Run comparative Y4+ research
+        run: |
+          python scripts/run_intrinsic_y4plus_model_family_research.py \
+            --model-a-rows artifacts/research/intrinsic_y4plus_model_family_20260926/frozen/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/research/intrinsic_y4plus_model_family_20260926/frozen/frozen/qb/qb_career_state_deployment_results.json \
+            --player-seasons artifacts/research/intrinsic_y4plus_model_family_20260926/frozen/PLAYER_SEASONS.csv
+      - name: Upload comparative evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-y4plus-model-family-research
+          path: |
+            artifacts/research/intrinsic_y4plus_model_family_20260926/OOT_PREDICTIONS.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/COMPARATIVE_MODEL_MATRIX.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/HOLDOUT_SEASON_METRICS.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/DEVELOPMENT_CELL_SCORES.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/DEVELOPMENT_ROUTE_STABILITY.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/EMPIRICAL_ROUTING.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/ARCHITECTURE_HOLDOUT_METRICS.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/ROUTED_UNCERTAINTY.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/ROUTING_SUMMARY.json
+          retention-days: 14
