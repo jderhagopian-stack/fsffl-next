@@ -289,7 +289,11 @@ def test_unknown_player_scoring_keeps_shared_raw_forecast_and_exposes_partial_su
     partial = result.partial_fantasy_point_forecasts[0]
     assert partial.player_id == "p1"
     assert partial.omitted_rule_stats == ("mystery_bonus",)
-    assert "partial_player_scoring_coordinates_present" in result.simulation_authority_blockers
+    # This fixture has no active roster, so the partial subject itself is not a
+    # Simulation-material blocker. The unknown league scoring family remains a
+    # separate global authority blocker.
+    assert result.simulation_material_partial_player_ids == ()
+    assert "partial_player_scoring_coordinates_present" not in result.simulation_authority_blockers
     assert "unsupported_player_offense_rules" in result.simulation_authority_blockers
 
 
