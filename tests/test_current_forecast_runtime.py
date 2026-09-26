@@ -26,6 +26,7 @@ from fsffl.state.models import (
     Position,
     Provenance,
     ProviderRef,
+    RosterEntry,
     RosterSlot,
     ScoringRule,
     Team,
@@ -491,6 +492,10 @@ def test_fumbles_lost_supplement_promotes_material_player_scoring_to_full() -> N
     assert without.fantasy_point_forecasts == ()
     assert len(without.partial_fantasy_point_forecasts) == 1
     assert without.partial_fantasy_point_forecasts[0].omitted_rule_stats == ("fum_lost",)
+    # p1 is not rostered in this fixture, so its unresolved coordinate cannot
+    # affect the Simulation consumer and must not create a league-wide blocker.
+    assert without.simulation_material_partial_player_ids == ()
+    assert "partial_player_scoring_coordinates_present" not in without.simulation_authority_blockers
 
     with_supplement = build_current_live_forecasts(
         state_with_cutoff,
@@ -537,3 +542,91 @@ def test_league_not_scoring_fumbles_lost_never_invokes_first_party_model() -> No
     assert result.fumbles_lost_supplement_authority_fingerprint is None
     assert result.fumbles_lost_supplement_failure is None
     assert result.fantasy_point_forecasts[0].distribution.mean == pytest.approx(374.0)
+
+
+
+def test_unresolved_fumbles_lost_blocks_simulation_only_for_active_roster_subject() -> None:
+    base = state()
+    active_state = base.model_copy(
+        update={
+            "completed_through_week": 2,
+            "league": base.league.model_copy(
+                update={
+                    "rules": base.league.rules.model_copy(
+                        update={
+                            "scoring": base.league.rules.scoring
+                            + (ScoringRule(stat="fum_lost", points=-2.0),)
+                        }
+                    )
+                }
+            ),
+            "team_states": (
+                TeamState(
+                    team_id="a",
+                    roster=(RosterEntry(player_id="p1", slot=RosterSlot.BENCH),),
+                ),
+                TeamState(team_id="b", roster=()),
+            ),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+
+    result = build_current_live_forecasts(
+        active_state,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=lambda _state, _raw: (_ for _ in ()).throw(
+            ValueError("unresolved subject evidence")
+        ),
+    )
+
+    assert len(result.partial_fantasy_point_forecasts) == 1
+    assert result.partial_fantasy_point_forecasts[0].player_id == "p1"
+    assert result.simulation_material_partial_player_ids == ("p1",)
+    assert "partial_player_scoring_coordinates_present" in result.simulation_authority_blockers
+
+
+def test_taxi_or_ir_partial_subject_does_not_block_simulation_consumer() -> None:
+    base = state()
+    scoped_state = base.model_copy(
+        update={
+            "completed_through_week": 2,
+            "league": base.league.model_copy(
+                update={
+                    "rules": base.league.rules.model_copy(
+                        update={
+                            "scoring": base.league.rules.scoring
+                            + (ScoringRule(stat="fum_lost", points=-2.0),)
+                        }
+                    )
+                }
+            ),
+            "team_states": (
+                TeamState(
+                    team_id="a",
+                    roster=(RosterEntry(player_id="p1", slot=RosterSlot.TAXI),),
+                ),
+                TeamState(team_id="b", roster=()),
+            ),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+
+    result = build_current_live_forecasts(
+        scoped_state,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=lambda _state, _raw: (_ for _ in ()).throw(
+            ValueError("unresolved taxi subject evidence")
+        ),
+    )
+
+    assert len(result.partial_fantasy_point_forecasts) == 1
+    assert result.simulation_material_partial_player_ids == ()
+    assert "partial_player_scoring_coordinates_present" not in result.simulation_authority_blockers
