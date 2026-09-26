@@ -207,6 +207,19 @@ Durable acceptance contract:
 - `artifacts/research/fumbles_lost_current_only_certification_20260926/NORMALIZATION_UNCERTAINTY_CONTRACT.md`
 - `artifacts/research/fumbles_lost_current_only_certification_20260926/IMPLEMENTATION_HANDOFF.md`
 
+Evidence-independent Implementation acceptance is also satisfied:
+- PR #253 merged at `407050092186b72386f4b264cf675837ebeaa606`;
+- PR #255 merged at `91ee2acef8e8dc8e1f2371d237c9c765f2061ae1`;
+- final PR #255 head `6380dcb68fbdcc8281a3cf87761cca34d691f276` passed 1,651 full-suite tests plus PR164 focused regression, Live Forecast trace and live-provider numerical trace;
+- the ordinary retained offense Forecast remains a separate immutable scorer input;
+- future supplement scoring uses a separate mixed-vintage current input and cannot rewrite baseline source/model/as-of identity;
+- schedule advance makes persisted ROS evidence stale and invalidates only affected current Forecast/Simulation;
+- current supplement artifact identity is `current_supplemental_forecast_coordinate`;
+- no source adapter/provider is registered and no production FUMBLES_LOST authority is promoted.
+
+Durable Implementation handoff:
+- `artifacts/implementation/fumbles_lost_current_supplement_20260926/IMPLEMENTATION_HANDOFF.md`
+
 The auxiliary single-source tier remains unavailable because FUMBLES_LOST is core/material.
 
 ## Product principle
