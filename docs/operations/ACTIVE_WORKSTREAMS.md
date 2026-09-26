@@ -140,3 +140,10 @@ PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deploy
 - **Auxiliary single-source policy:** **MANAGEMENT ACCEPTED — ZERO INITIAL CERTIFICATIONS.** FUMBLES_LOST is explicitly outside that exception.
 - **Market acceptance:** **PAUSED** for full product acceptance until current FSFFL can legitimately promote Simulation. Physical lifecycle/readiness truth may still be tested independently.
 - **Performance:** State-first/lifecycle work is closed; separate Market foreground latency remains its only open dimension.
+
+
+## Current critical path — 2026-09-26 ordinary-offense ROS recovery
+- **Research:** ACTIVE — certify/acquire a complete two-independent-source 2026 current-ROS ordinary-offense Forecast ensemble, including FUMBLES_LOST, under staged rights and uncertainty governance.
+- **Implementation:** AUTHORIZED PENDING EVIDENCE — prepare provider-neutral ROS lane contracts/tests; production promotion waits for certified source evidence.
+- **Existing FSFFL:** partial remains non-accepted; target is legitimate full current-forward Forecast + Simulation restoration.
+- **Market acceptance:** remains paused until FSFFL full current-forward capability is restored.
