@@ -202,3 +202,11 @@ Decision: Management accepts the Research-recommended generalized `AUXILIARY_SIN
 This does not promote any production source or coordinate. FUMBLES_LOST remains core/material and is not eligible for this exception under the current measured thresholds. Source-specific certification remains a separate evidence-bearing action subject to semantic fit, source health, stage-appropriate rights, historical quality/stability, uncertainty, and automatic demotion rules.
 
 Immediate implication: the framework is accepted for future bounded auxiliary coordinates, but it does not clear the current FSFFL FUMBLES_LOST blocker.
+
+
+## 2026-09-25 — Existing FSFFL full-capability acceptance remains required
+Decision: Management rejects the acceptance-policy escape hatch for the existing FSFFL Dynasty league. A previously fully supported league may not be reclassified as acceptably partial merely because stricter Forecast semantics exposed a missing material coordinate.
+
+The current objective is to restore legitimate full capability under the governed model by supplying/recovering qualifying FUMBLES_LOST evidence or, only if supported by new evidence and a separate explicit Management decision, changing the underlying authority policy. Do not solve this by silently zeroing, stale-artifact reuse, weakening exact-state binding, or declaring the partial state acceptable.
+
+Until this is resolved, physical Market acceptance and broader product testing that depends on Simulation remain paused.
