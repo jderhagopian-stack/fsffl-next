@@ -1,6 +1,6 @@
 # FSFFL NEXT — Management Handoff
 
-Updated: 2026-09-25
+Updated: 2026-09-26
 Owner: Management
 Purpose: durable cross-chat recovery surface for Management. Read this with `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, `ACCEPTANCE_GATES.md`, `DECISION_LOG.md`, and named workstream files. Worker-specific evidence remains authoritative in its handoff.
 
@@ -126,3 +126,35 @@ Use the North Star product-development filter for sequencing: roadmap work shoul
 Preserve Owner Intelligence, historical persistence and counterfactual State as reusable cross-surface infrastructure. Preserve point-in-time evidence/provenance now so later history, replay and counterfactual products do not require reconstruction from present-day truth.
 
 The consumer experience should hide architectural complexity by default while retaining evidence drill-down. The user should experience one product that knows their league.
+
+## Superseding Management handoff — 2026-09-26
+
+This section supersedes the older September 25 immediate-sequence wording above. Read it with `CURRENT_STATE.md`, `ACTIVE_WORKSTREAMS.md`, and the named worker files.
+
+### Current critical path
+1. **Forecast/Product Implementation — ACTIVE.** The existing FSFFL league itself is again proven capable of FULL Forecast + Simulation + Value. PR #261 is merged/live and main CI is green, but full app acceptance remains open because the Hodor cross-league sequence still fails exact-State persistence: the first-party FUMBLES_LOST supplement being checkpointed can be bound to a different canonical State generation than the State being persisted.
+2. **Production H3 Intrinsic — ACTIVE CORRECTIVE.** Physical iPhone/Safari testing exposed a separate subject-scope regression: current universal/player expansion can cause unrelated subjects outside the frozen Future-I1/H3 authority set to collapse Intrinsic globally. H3 compatibility must be evaluated only over the governed H3 subject set. Unsupported players may be unavailable individually; they must not erase governed H3 Intrinsic for eligible players. Existing governed H3 values/ranks must not change.
+3. **Mobile readiness presentation — ACTIVE CORRECTIVE.** On narrow/mobile layouts, healthy FULL intelligence should collapse to a compact one-line current state plus Refresh. Building should show the thin lifecycle/progress line and one short active-phase message. Detailed capability chips belong only to exceptions or progressive disclosure.
+4. **Intrinsic Y4+ Research — ACTIVE, RESEARCH ONLY.** The reopened six-family Y4–Y8 comparison is progressing on `research/intrinsic-y4plus-model-family-20260926`. Historical holdout selection currently supports no empirical breakpoint and retains `two_part_state` as the robust annual cardinal family across QB/RB/WR/TE and Y4–Y8; alternative hazard/transition/cohort/direct models remain model-risk or terminal-state lenses unless later evidence changes that conclusion. Current-player comparative shadows have completed successfully. Research still owes final interpretation, durable closeout, and the updated plain-language Management PDF. Production H3 remains unchanged.
+5. **Market — HOLD FOR CORE ACCEPTANCE.** Do not restart Market redesign. PR #240's corrective contract remains the accepted implementation. Resume physical iPhone/Safari Market acceptance after switch reliability and production H3 Intrinsic availability are stable.
+6. **Performance — MARKET LATENCY ONLY.** Hodor lifecycle work is complete. Performance's remaining responsibility is cold/focused Market foreground latency without changing accepted Market/Search/Decision/Simulation semantics. Fresh authenticated physical timing is required before closing it.
+7. **Home × Franchise and broader Scoring Coverage — DEFERRED.** Do not pull roadmap breadth ahead of the current reliability/acceptance path.
+
+### Required Implementation acceptance sequence
+Implementation must not return at an intermediate diagnosis, commit, PR, merge, or partial validation. It should:
+- fix the exact-State cross-league persistence/binding defect first;
+- fix H3 Intrinsic subject scoping without broadening or changing H3 authority;
+- compact the shared mobile readiness strip under the existing truthful lifecycle contract;
+- run deterministic regressions for FSFFL, Hodor, arbitrary league identities, switch/restart, H3 cohort stability, player/Market Intrinsic consumption, and readiness presentation;
+- merge/deploy only after CI/focused authority tests are green;
+- rerun the complete **FSFFL → Hodor → FSFFL → restart** production acceptance sequence;
+- prove FSFFL remains FULL, Hodor remains truthfully governed by its own available authority, no stale/cross-league evidence is served, governed H3 Intrinsic is available for eligible subjects, and mobile readiness is usable;
+- stop only at a permitted `OPERATING_PROTOCOL.md` terminal state.
+
+Management should not ask for another broad physical-device pass until that sequence is complete.
+
+### Required Research finish line
+Research should continue from its current comparative branch state without restarting the original term-structure study. Complete the model-family matrix/routing interpretation, post-selection current-player effects, uncertainty/terminal-state conclusions, and an updated accessible plain-language Management PDF. No production long-horizon implementation is authorized before the resulting Management gate.
+
+### Management next action after worker closeouts
+When Implementation reaches a valid terminal state, Management performs the next physical iPhone/Safari acceptance pass. If core switch/readiness/Intrinsic acceptance is clean, immediately exercise the already-deployed Market corrective and capture fresh authenticated cold/focused timing for Performance. Only after those gates are resolved should Home × Franchise or broader Scoring Coverage resume.
