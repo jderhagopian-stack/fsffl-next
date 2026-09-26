@@ -663,3 +663,33 @@ Required corrective:
 
 Do not reopen already-proven State-first switch/restart persistence or the charter-correct vNext/P0 boundary unless new evidence directly implicates them.
 Do not return at unit/focused CI. Terminal acceptance requires the deployed FSFFL State to show healthy governed Intrinsic plus a physically usable mobile readiness layout.
+
+## PR #266 live hosted acceptance failure — Intrinsic reduced/fallback availability
+**State: ACTIVE — HOSTED ACCEPTANCE FAILED AFTER DEPLOY**
+
+Exact corrective:
+- PR #266 merged to `fa3c1a5fc559d7ab3cb11ae6a0675e419481de9d`;
+- post-merge CI green;
+- Render deploy `dep-das3lh0jo6nc73a2tif0` is live.
+
+The corrective targeted the post-#265 vNext Year-1 compatibility failure and catastrophic mobile terminal-readiness layout.
+
+Fresh hosted acceptance after deploy failed at 2026-09-26 21:40Z:
+- startup product readiness was partial with Intrinsic unavailable before reconciliation;
+- hosted product acceptance then failed because governed Intrinsic was not **fully** available;
+- exact runtime reason: `Authoritative Intrinsic is available through a validated reduced/fallback evidence path; missing fact-family coverage is explicit and no provider absence is inferred as football state.`
+
+Interpretation:
+- this is progress from the #265 hard incompatibility failure; the runtime now has an authoritative reduced/fallback Intrinsic path rather than the prior mapped-subject/Year-1 incompatibility collapse;
+- however, product acceptance is still open because the deployed build has not demonstrated the required governed Intrinsic completeness for the accepted FSFFL product scope;
+- the mobile layout corrective is deployed but still requires physical iPhone/Safari confirmation.
+
+Required continuation:
+1. determine exactly which Intrinsic fact families/subjects remain reduced or missing and whether that partial state is expected governed authority or a remediable production gap;
+2. do not weaken the acceptance gate merely to make the probe green;
+3. if full governed Intrinsic is legitimately available from existing authoritative evidence, repair the remaining composition/reconciliation path;
+4. if only partial Intrinsic is defensible for some subjects, localize that partiality to the affected subjects/surfaces and ensure product readiness truthfully represents it rather than collapsing the whole capability;
+5. rerun hosted product acceptance on the same deployed FSFFL State;
+6. physically validate the #266 mobile completed/partial readiness layout on iPhone/Safari before terminal acceptance.
+
+Do not reopen completed State-first persistence or the vNext/P0 boundary absent direct evidence.
