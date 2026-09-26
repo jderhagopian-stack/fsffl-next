@@ -1503,13 +1503,21 @@ def create_app(
                         f"{type(exc).__name__}: {exc}"
                     )
 
-        return build_league_atlas_payload(
+        atlas_payload = build_league_atlas_payload(
             runtime,
             preseason_team_views=preseason_views,
             preseason_as_of=preseason_as_of,
             preseason_reason=preseason_reason,
             preseason_baseline=preseason_baseline,
         )
+        logging.getLogger("uvicorn.error").info(
+            "FSFFL League Atlas served state=%s standings=%s simulation=%s preseason=%s",
+            league_state.state_id,
+            len(atlas_payload.get("standings", ())),
+            runtime.simulation_analytics is not None,
+            atlas_payload.get("preseason_status"),
+        )
+        return atlas_payload
 
     @application.get("/api/opportunities/workspace")
     def opportunity_workspace(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
