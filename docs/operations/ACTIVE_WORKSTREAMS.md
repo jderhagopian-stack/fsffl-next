@@ -147,3 +147,11 @@ PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deploy
 - **Implementation:** AUTHORIZED PENDING EVIDENCE — prepare provider-neutral ROS lane contracts/tests; production promotion waits for certified source evidence.
 - **Existing FSFFL:** partial remains non-accepted; target is legitimate full current-forward Forecast + Simulation restoration.
 - **Market acceptance:** remains paused until FSFFL full current-forward capability is restored.
+
+
+## Superseding critical path — bounded FUMBLES_LOST supplementation
+- **Research:** ACTIVE — certify two independent current exact FUMBLES_LOST sources and define current-only target-period normalization/uncertainty.
+- **Implementation:** AUTHORIZED PENDING EVIDENCE — preserve all existing ordinary-offense Forecast coordinates and add only the bounded current FUMBLES_LOST supplement.
+- **Whole ordinary-offense ROS rebase:** SUPERSEDED / NOT AUTHORIZED.
+- **Historical/preseason use:** supplemental fumble evidence is explicitly ineligible before its acquisition time and must never be written into the preseason baseline.
+- **Market acceptance:** remains paused until current FSFFL Simulation is legitimately restored.
