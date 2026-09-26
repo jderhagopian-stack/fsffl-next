@@ -553,3 +553,17 @@ Durable package:
 `artifacts/research/intrinsic_comprehensive_y4_y8_20260926/`.
 
 No long-horizon production implementation is authorized by this Research closeout.
+
+## PR #265 deployed physical regression — 2026-09-26 17:04 ET
+PR #265 is merged and live on Render, but physical iPhone/Safari acceptance failed.
+
+What improved:
+- refresh lifecycle visibly advances with truthful phase/progress and last-good availability;
+- League Atlas backend now serves successfully.
+
+What remains broken:
+- governed Intrinsic still becomes unavailable after build completion because vNext mapped subjects lack compatible governed Year-1 evidence;
+- the shared completed/partial readiness component collapses into a narrow vertical column with a large empty card on mobile across Home/League;
+- product-wide acceptance remains open and Performance/Market optimization remains held.
+
+Implementation remains the immediate beta-availability critical path.
