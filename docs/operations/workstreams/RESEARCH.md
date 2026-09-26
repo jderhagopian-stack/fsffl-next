@@ -882,3 +882,24 @@ Current empirical checkpoint:
 - no current named-player ranks were inspected before historical candidate selection was frozen.
 
 Generated diagnostics include Forecast/value horizon metrics, uncertainty by horizon, historical crossovers, position distributions, discount sensitivity, and Shapley bridge validation. Research must still complete the directive's post-selection work, including current-player shadows/rank movement and the final architecture recommendation/limitations, then persist a durable Management-gate handoff. No production Intrinsic change is authorized.
+
+
+### Management deliverable requirement — plain-language long-horizon report
+
+At the eventual `MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE`, Research must provide a plain-language Management report in addition to reproducible technical artifacts. The preferred user-facing deliverable is a PDF, with a concise executive summary and technical appendix.
+
+The report must explain, without assuming modeling expertise:
+- what the current three-year Intrinsic does today;
+- what candidate longer-horizon structures were tested and why;
+- what the evidence says about Y4/Y5 versus terminal/career value;
+- where predictive signal remains useful and where uncertainty becomes too large for precise claims;
+- how player values/ranks change by horizon, with representative risers/fallers and crossover examples;
+- how QB/RB/WR/TE distributions change by horizon, including top-25/top-50/top-100 share, concentration and age effects;
+- what discount/terminal assumptions matter materially;
+- what Research recommends, what it does not recommend, and why;
+- how horizon-specific Intrinsic could later change Trade/Market/Search behavior without creating a hidden master score;
+- the exact Management decisions required before any implementation begins.
+
+Include clear charts/tables for horizon rank movement, positional distributions, uncertainty by horizon and at least a few representative player value curves. Keep the production three-year coordinate unchanged until Management explicitly decides otherwise.
+
+Research should continue beyond the completed historical model-selection pass through current-player post-selection shadows, position/ranking interpretation and this Management-ready report. Do not return control merely because the workflow is green.
