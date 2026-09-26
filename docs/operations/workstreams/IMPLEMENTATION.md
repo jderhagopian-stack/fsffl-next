@@ -308,3 +308,24 @@ Product semantics:
 The existing button label may remain for now, but user-facing status should make the sync/rebuild lifecycle clear. A future wording change such as `Sync & Refresh` may be considered separately if physical testing shows the action remains ambiguous.
 
 Do not weaken exact-state binding, Forecast authority, Value authority, Simulation gates, or last-good safety to satisfy this behavior.
+
+
+## State-first corrective terminal handoff — 2026-09-26
+**State: MANAGEMENT GATE — FUMBLES_LOST FORECAST AUTHORITY**
+
+PR #246 and PR #249 complete the State-first league-sync, reuse-or-rebuild, and truthful capability-readiness contract. PR #251 makes preserved-preseason fallback replay retain truthful partial coverage; PR #252 invalidates stale pre-corrective Forecast artifacts so current State rebuilds under the new contract.
+
+Production acceptance on current FSFFL State proves:
+- canonical State current;
+- current Broad Market/Value FULL;
+- 1,675 raw Forecast observations;
+- 335 partial player Forecasts;
+- Forecast `partial_provisional`;
+- Simulation unavailable;
+- unique omitted active ordinary-player rule: `FUMBLES_LOST`.
+
+The remaining failure is not league switching/rebuild/readiness orchestration. Under current authority, FUMBLES_LOST is core/material and the two-source preserved baseline contains no such coordinate. Implementation may not fabricate zero, borrow a different horizon, reuse stale full artifacts, or apply the auxiliary-single-source exception.
+
+Durable handoff: `artifacts/implementation/state_first_fumbles_authority_20260926/IMPLEMENTATION_HANDOFF.md`.
+
+Implementation waits for qualifying evidence or an explicit Management authority-policy decision. Market full physical acceptance remains paused because the current FSFFL state cannot promote Simulation.
