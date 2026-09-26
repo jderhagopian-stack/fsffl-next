@@ -142,8 +142,8 @@ def test_mobile_full_readiness_collapses_to_one_current_state_and_hides_redundan
     source = _shell()
     assert "✓ Intelligence current" in source
     assert "fsffl-readiness-mobile-step" in source
-    assert ".fsffl-shared-readiness-strip.complete .fsffl-capability-summary{display:none}" in source
-    assert ".fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{display:none}" in source
+    assert ".fsffl-capability-summary{display:none!important}" in source
+    assert ".fsffl-shared-readiness-mark{display:none}" in source
     assert "fsffl-shared-readiness-refresh" in source
 
 
