@@ -452,7 +452,7 @@ def uncertainty_table(pred,selected):
     z=pred[
         (pred.model==selected)&(
             ((pred.season.isin(HOLDOUT_FOLDS))&(pred.horizon.isin([4,5])))|
-            ((pred.season.isin(TERMINAL_FOLDS))&(pred.horizon.isin([6,7,8]))
+            ((pred.season.isin(TERMINAL_FOLDS))&(pred.horizon.isin([6,7,8])))
         )
     ]
     rows=[]
