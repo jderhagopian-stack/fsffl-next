@@ -377,11 +377,16 @@ class PrivateBetaRuntimeStore:
                     )
                 )
             )
+            pending = self._pending_intelligence.get(user_id)
+            pending_compatible = (
+                pending is None
+                or pending.league_state.state_id == league_state.state_id
+            )
             forecast_reusable = (
                 same_league
                 and current.league_state is not None
                 and forecast_evidence is not None
-                and user_id not in self._pending_intelligence
+                and pending_compatible
                 and forecast_cutoff_compatible
                 and _forecast_supplement_compatible(
                     league_state,
