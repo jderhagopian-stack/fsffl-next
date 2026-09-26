@@ -200,3 +200,9 @@ Management has reopened Intrinsic term-structure Research for empirical model-fa
 
 ## PR #261 live acceptance — switching still open
 - **Forecast/Product:** ACTIVE. Existing FSFFL is FULL in production, but cross-league State-first acceptance still fails on Hodor switch because the persisted first-party FUMBLES_LOST supplement is bound to a different State than the checkpoint target. Do not call full app switching accepted yet.
+
+
+## Latest physical acceptance findings — Intrinsic + readiness UI
+- **Forecast/Product Implementation:** ACTIVE. In addition to the exact-State Hodor switch defect already open, physical iPhone acceptance now exposes a production H3 Intrinsic subject-scope regression: unrelated players outside the frozen Future-I1 standard coordinate can collapse Intrinsic globally. Fix by scoping H3 compatibility to its governed subjects while preserving per-player unavailability outside authority.
+- **Presentation:** mobile shared readiness strip must be compacted. FULL = one-line intelligence-current + Refresh; building = progress + short active phase; capability chips appear only for exceptions/details.
+- **Y4+ Intrinsic Research:** remains separate and must not be used to patch production H3.
