@@ -1,0 +1,55 @@
+name: Intrinsic Y4+ Current Comparative Shadows
+on:
+  push:
+    branches: [research/intrinsic-y4plus-model-family-20260926]
+    paths:
+      - artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_HISTORICAL_SELECTION.json
+      - scripts/run_intrinsic_y4plus_current_shadows.py
+      - scripts/run_intrinsic_term_structure_current_shadows.py
+      - .github/workflows/intrinsic-y4plus-current-shadows.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  shadows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Restore historical and comparative evidence
+        run: |
+          mkdir -p artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_history
+          gh api repos/${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/history.zip
+          unzip -oq /tmp/history.zip -d artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_history
+          mkdir -p artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_compare
+          gh api repos/${{ github.repository }}/actions/artifacts/10909006505/zip > /tmp/compare.zip
+          unzip -oq /tmp/compare.zip -d artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_compare
+      - name: Run post-selection current comparative shadows
+        run: |
+          python scripts/run_intrinsic_y4plus_current_shadows.py \
+            --model-a-rows artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_history/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_history/frozen/qb/qb_career_state_deployment_results.json \
+            --player-seasons artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_history/PLAYER_SEASONS.csv \
+            --routing artifacts/research/intrinsic_y4plus_model_family_20260926/frozen_compare/EMPIRICAL_ROUTING.csv
+      - name: Upload current comparative shadows
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-y4plus-current-comparative-shadows
+          path: |
+            artifacts/research/intrinsic_y4plus_model_family_20260926/CURRENT_COMPARATIVE_SHADOWS.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/CURRENT_ARCHITECTURE_SENSITIVITY.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/CURRENT_POSITION_DISTRIBUTIONS_COMPARATIVE.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/CURRENT_MODEL_SENSITIVITY_PLAYERS.csv
+            artifacts/research/intrinsic_y4plus_model_family_20260926/CURRENT_COMPARATIVE_SUMMARY.json
+          retention-days: 14
