@@ -195,3 +195,29 @@ The Management-authorized current-beta Market corrective is implementation-compl
 The corrective fixes competitive-lens early admission, explicit Search submission/race truth, focused zero/exhaustion diagnostics, and independent Forecast/Intrinsic availability reasons while preserving eight preliminary Decision screens and zero broad exact Simulation.
 
 The deployed service is error-free. Its startup restored the currently selected Hodor/new-league State but no Forecast/Simulation/Value bundle, matching the separately active Performance lifecycle blocker. No authenticated Market request has yet exercised PR #240's new focus/value-lens production telemetry. Market therefore stops at **MANAGEMENT GATE — repeat physical iPhone/Safari acceptance**, with Performance owning any prerequisite Hodor lifecycle completion.
+
+
+## Auxiliary single-source authority research checkpoint — 2026-09-25
+
+Forecast Research completed the bounded single-source auxiliary study.
+
+Durable package:
+- `artifacts/research/auxiliary_single_source_authority_20260925/AUXILIARY_COORDINATE_MATERIALITY.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/SINGLE_SOURCE_QUALITY_LEDGER.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/SINGLE_VS_MULTI_SOURCE_REPLAY.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/DOWNSTREAM_SENSITIVITY.md`
+- `artifacts/research/auxiliary_single_source_authority_20260925/AUTHORITY_TIER_RECOMMENDATION.md`
+- `artifacts/research/auxiliary_single_source_authority_20260925/RESEARCH_HANDOFF.md`
+
+The study used authentic 2023–2025 nflverse outcomes, retained 2024 pre-opener provider evidence, deterministic lineup optimization, and paired 50,000-run Simulation sensitivity; it did not use the 2022 startup.
+
+Result:
+- a bounded auxiliary materiality class is empirically defensible;
+- K 60+ incremental premium, K XP miss, D/ST safety, and defensive two-point return pass the materiality side in the tested profiles;
+- no current provider-coordinate pair passes the full proposed source-quality/rights/stability contract;
+- FUMBLES_LOST, FG misses, common 2PT, D/ST blocked kicks/ST TD/FF/FR, nonlinear PA distributions, and ordinary volume scoring remain core/material;
+- production Forecast authority remains unchanged.
+
+The next authority decision belongs to Management: accept or reject the generalized certification framework. Research recommends accepting the framework with **zero initial certifications** and, if accepted, implementing certification infrastructure separately from any provider promotion.
+
+**Research state: MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION.**
