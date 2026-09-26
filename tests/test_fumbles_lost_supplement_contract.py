@@ -20,6 +20,7 @@ from fsffl.forecast.supplemental_coordinate import (
     SupplementalTargetPeriod,
     apply_certified_supplemental_coordinate,
     build_certified_supplemental_coordinate,
+    evaluate_supplemental_coordinate_reuse,
 )
 from fsffl.persistence.annual_preseason_snapshot import (
     ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND,
@@ -381,6 +382,48 @@ def test_scorer_refuses_supplement_if_ordinary_raw_forecast_already_has_fumbles_
                 ScoringRule(stat="fum_lost", points=-2.0),
             ),
         )
+
+
+
+def test_persisted_supplement_reuse_fails_after_remaining_game_state_advances() -> None:
+    ensemble = build_certified_supplemental_coordinate(_package(), target=_target())
+
+    current = evaluate_supplemental_coordinate_reuse(
+        ensemble,
+        season=2026,
+        current_nfl_team_by_player={"p1": "BUF"},
+        canonical_remaining_games_by_player={"p1": 14},
+        rights_still_eligible=True,
+        source_health_still_passed=True,
+    )
+    assert current.reusable is True
+    assert current.reason_codes == ()
+
+    after_game = evaluate_supplemental_coordinate_reuse(
+        ensemble,
+        season=2026,
+        current_nfl_team_by_player={"p1": "BUF"},
+        canonical_remaining_games_by_player={"p1": 13},
+        rights_still_eligible=True,
+        source_health_still_passed=True,
+    )
+    assert after_game.reusable is False
+    assert after_game.stale_player_ids == ("p1",)
+    assert "canonical_remaining_game_state_advanced_or_mismatched" in after_game.reason_codes
+
+    plan = plan_fumbles_lost_supplement_invalidation(
+        _rules(ScoringRule(stat="fum_lost", points=-2.0)),
+        previous_authority_fingerprint="certified-v2",
+        new_authority_fingerprint="certified-v2",
+        reuse_assessment=after_game,
+    )
+    assert plan.cause_kind == "supplemental_coordinate_stale"
+    assert plan.invalidate_artifact_kinds == (
+        FORECAST_ARTIFACT_KIND,
+        SIMULATION_ARTIFACT_KIND,
+    )
+    assert PRESEASON_FORECAST_BASELINE_ARTIFACT_KIND in plan.preserve_artifact_kinds
+    assert VALUE_ARTIFACT_KIND in plan.preserve_artifact_kinds
 
 
 def test_invalidation_is_selective_and_preserves_preseason_and_independent_value() -> None:
