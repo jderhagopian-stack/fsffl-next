@@ -438,3 +438,53 @@ Selection must be nested chronological and avoid winner's-curse overfitting acro
 If evidence supports different models for QB/RB/WR/TE, different models at Y4/Y5/Y6/Y7/Y8, or both, Research should recommend that architecture. If a pooled/shared model wins, recommend that instead. If no material gain survives holdout, preserve the simpler baseline.
 
 Production H3 remains untouched. A challenger may expose evidence relevant to H1-Y3 only as a separate, independently validated Management question. No long-horizon production implementation is authorized until this comprehensive study closes.
+
+## 2026-09-26 — Dedicated Simulation engine efficiency phase after core/Market latency gates
+Management directs a dedicated **general Simulation engine efficiency** phase immediately after the current core reliability acceptance and immediate Market foreground-latency corrective are cleared.
+
+This is distinct from prior work that improved perceived or repeated latency through:
+- durable exact-Simulation reuse/persistence;
+- exact concurrent-request coalescing/single-flight;
+- progressive answer delivery;
+- quick-counter/frontier staging;
+- foreground-cooperative pacing;
+- State-only foreground reads while background Simulation runs.
+
+Those remain valuable and must be preserved. However, PR #127 explicitly left the fresh 50,000-run Simulation kernel unchanged for later optimization. That deferred kernel work is now a planned near-term Performance priority.
+
+Sequence:
+1. finish current PR #263/core restart-switch acceptance;
+2. immediately close the currently measured Market cold/focused foreground-latency problem because broad Market discovery intentionally performs zero changed-state Simulation and Simulation optimization will not solve that blocker;
+3. then begin the general Simulation engine efficiency phase before resuming lower-priority product breadth.
+
+Simulation optimization must start with measurement, not assumptions:
+- benchmark canonical fresh 50,000-run league Simulation;
+- benchmark changed-State/Trade Simulation;
+- benchmark repeat/reuse path separately;
+- profile RNG generation, player outcome sampling, lineup selection/optimization, scoring aggregation, matchup/standings updates, playoff/championship resolution, serialization/persistence, and orchestration overhead;
+- distinguish CPU kernel cost from persistence/database/network/UI time.
+
+Tier A optimization authority — preferred and pre-authorized:
+- hoist invariant work out of Monte Carlo loops;
+- reuse exact Forecast/scoring/schedule/state structures;
+- replace repeated Python object/dict work with compact arrays/indexes where behavior is unchanged;
+- vectorize or batch mathematically identical operations where deterministic output identity can be preserved;
+- preallocate/reuse buffers;
+- remove duplicate scoring/lineup computations;
+- reuse exact stochastic/player-draw inputs across exact-compatible downstream evaluations when doing so preserves the canonical random experiment;
+- preserve exact caching, durable reuse, single-flight and restart-safe semantics;
+- improve instrumentation and stage-level timing.
+
+Tier B — requires a new Management gate before implementation:
+If meaningful additional gains require changing RNG consumption order, floating-point reduction order, common-random-number strategy, parallel decomposition, or another implementation detail that may make outputs non-bit-identical while preserving the same 50,000-run probabilistic model, Research/Performance must first define and pass a deterministic reproducibility + statistical-equivalence contract. Do not treat “bitwise different” as automatically wrong, but do not relax exactness informally.
+
+Not authorized merely for speed:
+- reducing the canonical 50,000 iteration count;
+- changing Forecast inputs/distributions;
+- weakening lineup/scoring/standings/playoff fidelity;
+- approximating changed-State Simulation without explicit separate authority;
+- silently changing RNG/model semantics;
+- moving analytical work into frontend presentation;
+- paying for materially larger infrastructure before software-efficiency evidence is exhausted and Management explicitly approves cost.
+
+The objective is end-to-end faster **fresh** Simulation while preserving analytical quality, reproducibility, and authority—not just faster cache hits.
