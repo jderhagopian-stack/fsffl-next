@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,3 +25,21 @@ jobs:
           name: fumbles-lost-first-party-research
           path: artifacts/fumbles-lost-first-party-research/*
           retention-days: 14
+      - name: Persist final research evidence on branch
+        run: |
+          rm -rf artifacts/research/fumbles_lost_first_party_model_20260926
+          mkdir -p artifacts/research/fumbles_lost_first_party_model_20260926
+          cp artifacts/fumbles-lost-first-party-research/VALIDATION_RESULTS.json artifacts/research/fumbles_lost_first_party_model_20260926/
+          cp artifacts/fumbles-lost-first-party-research/OOT_METRICS.csv artifacts/research/fumbles_lost_first_party_model_20260926/
+          cp artifacts/fumbles-lost-first-party-research/COLD_START_STRESS.csv artifacts/research/fumbles_lost_first_party_model_20260926/
+          cp artifacts/fumbles-lost-first-party-research/CALIBRATION.csv artifacts/research/fumbles_lost_first_party_model_20260926/
+          cp artifacts/fumbles-lost-first-party-research/CURRENT_SHADOWS.csv artifacts/research/fumbles_lost_first_party_model_20260926/
+          cp artifacts/fumbles-lost-first-party-research/DATA_LINEAGE.json artifacts/research/fumbles_lost_first_party_model_20260926/
+          cp artifacts/fumbles-lost-first-party-research/REPORT.md artifacts/research/fumbles_lost_first_party_model_20260926/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/research/fumbles_lost_first_party_model_20260926
+          if ! git diff --cached --quiet; then
+            git commit -m "Research: persist first-party FUMBLES_LOST evidence"
+            git push
+          fi
