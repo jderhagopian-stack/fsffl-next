@@ -4,6 +4,12 @@ from threading import Barrier
 import pytest
 
 from fsffl.forecast.current_runtime import NamedCurrentProjectionFetcher, build_current_live_forecasts
+from fsffl.forecast.fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SOURCE,
+    FirstPartyFumblesLostEvidenceTier,
+    FirstPartyFumblesLostPlayerEvidence,
+    FirstPartyFumblesLostSupplement,
+)
 from fsffl.forecast.models import ForecastMetric
 from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
 from fsffl.state.models import (
@@ -116,7 +122,7 @@ def test_independent_provider_fetches_overlap_instead_of_running_serially() -> N
         clock=lambda: NOW,
     )
     assert result.successful_source_ids == ("cbs", "fftoday")
-    assert result.model_version == "next2-current-runtime-v8:shared-forecast-partial-coverage"
+    assert result.model_version == "next2-current-runtime-v9:first-party-fumbles-lost"
     assert {event.provider for event in result.source_health_events} == {"cbs", "fftoday"}
     assert all(event.disposition == "accepted" for event in result.source_health_events)
 
@@ -321,3 +327,142 @@ def test_shared_forecast_pipeline_is_generic_across_unrelated_sleeper_leagues() 
     assert k_dst_families["player_offense"].status == "FULL"
     assert k_dst_families["kicker"].status == "UNSUPPORTED"
     assert k_dst_families["dst"].status == "UNSUPPORTED"
+
+
+
+def _fake_fumbles_lost_supplement(
+    league_state: LeagueState,
+    observations,
+) -> FirstPartyFumblesLostSupplement:
+    first = next(
+        row
+        for row in observations
+        if row.player_id == "p1"
+        and row.horizon.value == "season"
+        and row.metric != ForecastMetric.FANTASY_POINTS
+    )
+    supplement_observation = first.model_copy(
+        update={
+            "metric": ForecastMetric.FUMBLES_LOST,
+            "distribution": first.distribution.model_copy(
+                update={"mean": 1.0, "stddev": 1.0}
+            ),
+            "source": FIRST_PARTY_FUMBLES_LOST_SOURCE,
+            "model_version": "next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate",
+            "provenance": first.provenance.model_copy(
+                update={
+                    "source": FIRST_PARTY_FUMBLES_LOST_SOURCE,
+                    "source_version": "next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate",
+                }
+            ),
+        }
+    )
+    evidence = FirstPartyFumblesLostPlayerEvidence(
+        player_id="p1",
+        position=Position.QB,
+        historical_gsis_id="00-test",
+        identity_method="retained_gsis",
+        evidence_tier=FirstPartyFumblesLostEvidenceTier.HISTORY_PLUS_CURRENT,
+        history_games=17,
+        history_opportunities=500.0,
+        current_games=2,
+        current_opportunities=70.0,
+        historical_role_opportunities_per_game=500.0 / 17.0,
+        role_opportunities_per_game=32.0,
+        position_lost_fumble_per_opportunity=0.005,
+        mean_fumbles_lost=1.0,
+        predictive_stddev=1.0,
+    )
+    return FirstPartyFumblesLostSupplement(
+        season=2026,
+        league_state_id=league_state.state_id,
+        completed_through_week=2,
+        current_input_captured_at=NOW,
+        built_at=NOW,
+        authority_valid_from=NOW,
+        observed_schema_keys=("pass_att", "rec", "rush_att", "sack"),
+        current_input_sha256="a" * 64,
+        player_evidence=(evidence,),
+        observations=(supplement_observation,),
+    )
+
+
+def test_fumbles_lost_supplement_promotes_material_player_scoring_to_full() -> None:
+    base = state()
+    state_with_cutoff = base.model_copy(
+        update={
+            "completed_through_week": 2,
+            "league": base.league.model_copy(
+                update={
+                    "rules": base.league.rules.model_copy(
+                        update={
+                            "scoring": base.league.rules.scoring
+                            + (ScoringRule(stat="fum_lost", points=-2.0),)
+                        }
+                    )
+                }
+            ),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+
+    without = build_current_live_forecasts(
+        state_with_cutoff,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=lambda _state, _raw: (_ for _ in ()).throw(
+            ValueError("no supplement")
+        ),
+    )
+    assert without.fantasy_point_forecasts == ()
+    assert len(without.partial_fantasy_point_forecasts) == 1
+    assert without.partial_fantasy_point_forecasts[0].omitted_rule_stats == ("fum_lost",)
+
+    with_supplement = build_current_live_forecasts(
+        state_with_cutoff,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=_fake_fumbles_lost_supplement,
+    )
+    assert len(with_supplement.fantasy_point_forecasts) == 1
+    assert with_supplement.partial_fantasy_point_forecasts == ()
+    assert with_supplement.fantasy_point_forecasts[0].distribution.mean == pytest.approx(372.0)
+    assert with_supplement.fumbles_lost_supplement_player_count == 1
+    assert with_supplement.fumbles_lost_supplement_failure is None
+    assert with_supplement.fumbles_lost_supplement_authority_fingerprint
+    assert "supplemental_mixed_vintage_current" in with_supplement.fantasy_point_forecasts[0].model_version
+    assert FIRST_PARTY_FUMBLES_LOST_SOURCE in with_supplement.fantasy_point_forecasts[0].provenance.source
+
+    # The canonical raw provider ensemble is not rebased by the supplement.
+    assert with_supplement.raw_ensemble == without.raw_ensemble
+    assert all(
+        row.metric != ForecastMetric.FUMBLES_LOST
+        for row in with_supplement.raw_ensemble
+    )
+
+
+def test_league_not_scoring_fumbles_lost_never_invokes_first_party_model() -> None:
+    calls = []
+
+    def unexpected(_state, _raw):
+        calls.append(True)
+        raise AssertionError("non-consuming league invoked FUMBLES_LOST supplement")
+
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+    result = build_current_live_forecasts(
+        state(),
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=unexpected,
+    )
+    assert calls == []
+    assert result.fumbles_lost_supplement_player_count == 0
+    assert result.fumbles_lost_supplement_authority_fingerprint is None
+    assert result.fumbles_lost_supplement_failure is None
+    assert result.fantasy_point_forecasts[0].distribution.mean == pytest.approx(374.0)
