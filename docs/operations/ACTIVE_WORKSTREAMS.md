@@ -213,3 +213,8 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Market:** HOLD for core acceptance; accepted corrective remains deployed and should be physically exercised after #262 closes the switch/Intrinsic/readiness path.
 - **Performance:** ACTIVE only on Market foreground latency; await fresh authenticated post-core Market timings.
 - **Home × Franchise / broader Scoring Coverage:** deferred pending current reliability/acceptance gates.
+
+## Long-horizon Research scope expansion — comprehensive architecture
+- **Intrinsic Research:** ACTIVE — comprehensive Y4-Y8 architecture study. Feature discovery, target decomposition, model-family selection, and position/horizon routing are now one joint Research problem. The old `two_part_state` result is only a baseline conditional on the inherited 10-feature set. Different models by position/horizon, shared/hierarchical models, and ensembles are all eligible under nested chronological validation.
+- **Production H3:** unchanged and not part of this implementation path.
+- **Forecast/Product Implementation:** remains the app critical path independently; Research expansion must not block or alter PR #262 corrective acceptance.
