@@ -187,3 +187,26 @@ The intended differentiation is the integration of:
 all operating against the same governed league model with provenance and uncertainty preserved.
 
 The goal is for users to experience one system that **knows their league**, not a navigation menu full of unrelated tools.
+
+
+## Horizon-specific Intrinsic Value
+FSFFL Intrinsic should eventually be experienced as a **value-over-time curve**, not only a single blended dynasty number.
+
+The existing governed three-year coordinate remains useful and authoritative within its validated horizon. It should not be interpreted as proof that dynasty value ends after Year 3.
+
+North Star should support distinct horizon views such as:
+- present / near-term intrinsic contribution;
+- three-year intrinsic value;
+- longer-term dynasty value / terminal component.
+
+Farther-horizon forecasts should become less falsely precise as distance increases. Where exact future box-score statistics are not empirically defensible, Forecast should model career-state persistence, role tier, age/position transition, conditional production, replacement surplus and uncertainty rather than inventing precise Y4/Y5 stat lines.
+
+The horizon curve is itself product intelligence. It can reveal:
+- players whose value is concentrated in the current competitive window;
+- players whose dynasty value persists or grows relative to their immediate contribution;
+- packages that exchange near-term for long-term Intrinsic;
+- roster construction mismatches between a team's competitive horizon and its assets.
+
+Trade Center, Market/Search, Franchise and Player Intelligence may consume these separate governed horizon coordinates. Team Utility may interpret them downstream in team context. Owner Intelligence may provide descriptive context but may not alter the universal Intrinsic coordinates.
+
+Do not collapse the horizon curve into an unexplained master score. Users should be able to see the component horizons and the evidence/uncertainty behind them.
