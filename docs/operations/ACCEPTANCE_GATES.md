@@ -182,20 +182,32 @@ If Management authorizes implementation, Stage 0/1 is accepted only when evidenc
 
 
 ## Forecast FUMBLES_LOST authority gate
-**Status: MANAGEMENT GATE — NO TWO-SOURCE SAME-HORIZON AUTHORITY UNDER CURRENT ROUTE.**
+**Status: BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS FOR CURRENT-ONLY SUPPLEMENT.**
 
-Bounded Research closeout is persisted in:
-- `artifacts/research/fumbles_lost_authority_recovery_20260926/SOURCE_AUTHORITY_LEDGER.md`
-- `artifacts/research/fumbles_lost_authority_recovery_20260926/RESEARCH_HANDOFF.md`
+Management's current-only supplement correction supersedes the earlier requirement that this coordinate must share the preserved preseason/season evidence horizon. It does **not** authorize historical relabeling or an ordinary-offense rebase.
 
-Current FSFFL full player-scoring authority remains red because the authentic preserved 2026 season/preseason offense evidence contains no `FUMBLES_LOST`.
+Acceptance now requires:
+- two independent current/ROS sources with exact **lost-fumble**, not total-fumble, semantics;
+- private-beta rights for the actual acquisition, minimal persistence, derivation and display pattern;
+- source ownership/independence sufficient to prevent aggregate re-voting;
+- authenticated current payloads with healthy schedule/effective-time semantics;
+- complete per-player two-source coverage for the scorer-relevant QB/RB/WR/TE population;
+- explicit normalization from each provider's current remaining window to the same 17-game season-equivalent current pace;
+- equal-weight combination under existing two-source governance;
+- non-zero coordinate uncertainty of at least **1.13855744535 lost fumbles** on the season-equivalent target, increased when live source disagreement is larger;
+- a separate current supplemental artifact whose `authority_valid_from` is the later of the two source acquisition timestamps;
+- hard exclusion from every evaluation cutoff earlier than `authority_valid_from`, from annual/preseason snapshots, from 2026 preseason comparisons, and from historical PIT backfill;
+- unchanged hashes/content for the ordinary retained preseason/season raw Forecast;
+- fail-closed partial scoring for any player whose supplement loses source health, rights, independence or two-source coverage.
 
-This gate may clear only through one of the following governed paths:
-- two independent, private-beta-rights-eligible, exact lost-fumble sources compatible with the authentic 2026 pre-opener/season evidence and target uncertainty; or
-- a restored current full-season/season Forecast route with two healthy exact sources and compatible uncertainty; or
-- an explicit Management authorization for a bounded ordinary-offense current-ROS Forecast lane/rebase, followed by two-source same-horizon rights, health, independence, coverage, provenance and uncertainty acceptance.
+Research's shortest technical path is **JerryGM + LineupExperts Premium In-Season**. It remains externally blocked on written rights/independence confirmation and authenticated full-pool live API access.
 
-A current-ROS `FUMBLES_LOST` projection may **not** be inserted into the preserved season/preseason baseline as a coordinate-only patch. The accepted auxiliary single-source tier remains unavailable because FUMBLES_LOST is core/material.
+Durable acceptance contract:
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/CERTIFICATION_LEDGER.md`
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/NORMALIZATION_UNCERTAINTY_CONTRACT.md`
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/IMPLEMENTATION_HANDOFF.md`
+
+The auxiliary single-source tier remains unavailable because FUMBLES_LOST is core/material.
 
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
