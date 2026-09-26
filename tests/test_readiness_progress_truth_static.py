@@ -47,13 +47,14 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260926-post264-product-acceptance1" in index
-    assert "/static/product_shell.js?v=20260926-post264-product-acceptance1" in index
-    assert "/static/home_dashboard.js?v=20260926-post264-product-acceptance1" in index
+    assert "/static/forecast_refresh.js?v=20260926-combined-acceptance1" in index
+    assert "/static/product_shell.js?v=20260926-combined-acceptance1" in index
+    assert "/static/home_dashboard.js?v=20260926-combined-acceptance1" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
-    assert "/static/league_comparison.js?v=20260926-post264-product-acceptance1" in index
+    assert "product_shell.js?v=20260926-combined-acceptance1&readiness=20260926-post264-acceptance1" in index
+    assert "const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';" in shell
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
@@ -178,7 +179,7 @@ def test_readiness_as_of_is_derived_from_governed_payload_not_browser_now() -> N
     helper = source.split("function fsfflReadinessAsOf()", 1)[1].split(
         "function fsfflSurfaceReadinessIssue", 1
     )[0]
-    assert "capabilityReadiness()?.as_of" in helper
+    assert "fsfflCapabilityReadiness()?.as_of" in helper
     assert "served_state?.as_of" in helper
     assert "context?.evidence_as_of" in helper
     assert "new Date()" not in helper
