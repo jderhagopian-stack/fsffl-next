@@ -604,3 +604,10 @@ Production H3 remains unchanged and no Y4+ implementation is authorized.
 
 Durable package:
 `artifacts/research/intrinsic_cell_routing_y4_y8_20260926/`.
+
+## Player Intelligence memory regression — 2026-09-26 18:21 ET
+PR #266 fixed the prior mobile readiness layout, but physical Player Intelligence testing exposed a new beta-availability blocker.
+
+Opening Player Intelligence triggered historical-stat background materialization; Render memory reached ~532.9 MB of a 536.9 MB limit and the sole web instance restarted, producing user-visible HTTP 502/503. The current history service loads full-population aggregates for every historical season, with multi-season concurrency and durable in-process retention, even though the UI needs one player's career rows.
+
+Implementation remains ACTIVE. The corrective must make Player Intelligence history memory-bounded on the existing free-tier instance. This is separate from Intrinsic completeness/labeling.
