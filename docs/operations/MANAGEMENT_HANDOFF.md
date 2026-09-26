@@ -174,3 +174,16 @@ The frozen evidence already exposes additional draft/physical metadata, and earl
 Accordingly, the previous direct move into terminal/career-state Research is superseded. Research must first run a point-in-time long-horizon predictor discovery/ablation study, including position-specific usage/efficiency, pedigree/entry timing, physical profile, durability/availability, role/team continuity where reconstructable, and previously rejected near-term trajectory states. Selection must be nested chronological and prove incremental value beyond Y1-Y3 Forecasts without Market/Team Utility leakage.
 
 The `two_part_state` result remains the baseline winner conditional on the old feature set. H1/H3/H5 remains a provisional product-design simplification, not a production promotion or final long-horizon architecture.
+
+### Comprehensive long-horizon architecture directive
+The long-horizon Research scope has been broadened again after Management review. Do not interpret the prior six-family result as closing the question of model routing.
+
+Research now owns a comprehensive joint search over:
+- all defensible point-in-time predictors available/reconstructable;
+- direct versus survival/state/conditional-production target decompositions;
+- shared versus position-specific versus horizon-specific versus position × horizon models;
+- hierarchical/multi-task/continuous-horizon structures and ensembles where justified.
+
+`two_part_state` is only the baseline winner under the prior 10-feature input set. H5 is not a presumed statistical breakpoint. H1/H3/H5 is at most a provisional product simplification pending the expanded evidence.
+
+Require nested chronological selection, untouched final holdout, explicit complexity/stability penalties, tail/upside accuracy, calibration, missingness/era robustness, and feature/model freeze before current-player shadows. Production H3 remains untouched and no long-horizon implementation is authorized.
