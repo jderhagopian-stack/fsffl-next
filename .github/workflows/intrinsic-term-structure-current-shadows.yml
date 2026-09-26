@@ -1,0 +1,62 @@
+name: Intrinsic Term Structure Current Shadows
+on:
+  push:
+    branches: [research/intrinsic-term-structure-20260926]
+    paths:
+      - scripts/run_intrinsic_term_structure_current_shadows.py
+      - artifacts/research/intrinsic_term_structure_20260926/CURRENT_PRODUCTION_H3_REFERENCE.json
+      - .github/workflows/intrinsic-term-structure-current-shadows.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  shadows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: \${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Rebuild governed player-season evidence
+        run: Rscript scripts/extract_long_horizon_player_seasons.R
+      - name: Download frozen governed baseline artifacts
+        run: |
+          mkdir -p artifacts/research/intrinsic_term_structure_20260926/frozen/modela \
+                   artifacts/research/intrinsic_term_structure_20260926/frozen/qb
+          gh api repos/\${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/modela.zip
+          gh api repos/\${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          unzip -q /tmp/modela.zip -d artifacts/research/intrinsic_term_structure_20260926/frozen/modela
+          unzip -q /tmp/qb.zip -d artifacts/research/intrinsic_term_structure_20260926/frozen/qb
+      - name: Download completed historical term-structure evidence
+        run: |
+          gh api repos/\${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/term.zip
+          unzip -oq /tmp/term.zip -d artifacts/research/intrinsic_term_structure_20260926
+      - name: Run post-selection current shadows
+        run: |
+          python scripts/run_intrinsic_term_structure_current_shadows.py \
+            --model-a-rows artifacts/research/intrinsic_term_structure_20260926/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/research/intrinsic_term_structure_20260926/frozen/qb/qb_career_state_deployment_results.json \
+            --player-seasons artifacts/research/intrinsic_term_structure_20260926/PLAYER_SEASONS.csv
+      - name: Upload current shadow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-term-structure-current-shadows
+          path: |
+            artifacts/research/intrinsic_term_structure_20260926/CURRENT_HORIZON_SHADOWS.csv
+            artifacts/research/intrinsic_term_structure_20260926/CURRENT_CROSSOVERS.csv
+            artifacts/research/intrinsic_term_structure_20260926/CURRENT_POSITION_DISTRIBUTIONS.csv
+            artifacts/research/intrinsic_term_structure_20260926/CURRENT_AGE_EFFECTS.csv
+            artifacts/research/intrinsic_term_structure_20260926/CURRENT_UNCERTAINTY_INTERPRETATION.csv
+            artifacts/research/intrinsic_term_structure_20260926/REPRESENTATIVE_PLAYER_CURVES.csv
+            artifacts/research/intrinsic_term_structure_20260926/CURRENT_SHADOW_SUMMARY.json
+          retention-days: 14
