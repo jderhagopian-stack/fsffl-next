@@ -346,3 +346,38 @@ Future long-horizon Intrinsic research must compare player rankings and position
 
 ## FSFFL recovery path changed to first-party FUMBLES_LOST model
 Management removed bespoke external-vendor permission from the immediate recovery dependency. Research now owns a bounded first-party exact FUMBLES_LOST Forecast model using governed historical football outcomes and point-in-time current inputs, validated chronologically with explicit uncertainty and fail-closed coverage. Existing supplemental-coordinate implementation remains reusable if the model is promoted. The external JerryGM + LineupExperts path remains fallback only.
+
+
+## First-party FUMBLES_LOST model Research closeout — 2026-09-26
+
+Management's first-party recovery path has cleared Research.
+
+**Research state: DIRECTIVE COMPLETE — FIRST-PARTY FUMBLES_LOST MODEL READY FOR IMPLEMENTATION.**
+
+Durable handoff:
+- `artifacts/research/fumbles_lost_first_party_model_20260926/PRODUCTION_READINESS_HANDOFF.md`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/MODEL_SPEC.md`
+
+Accepted model:
+`next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate`.
+
+The model uses governed exact lost-fumble outcomes, prior-season position opportunity rates, Weeks 1–2 current role evidence and one global train-only calibration scalar. It changes no unrelated Forecast coordinate.
+
+Chronological 2023–2025 OOT evidence over 1,599 primary player-seasons:
+- RMSE **0.8105** vs omission **1.0425**;
+- bias **+0.0509**;
+- zero-calibration gap **0.0347**;
+- held-out RMSE improves in 2023, 2024 and 2025 individually.
+
+Current 335-player shadow:
+- 327 mapped / **97.61%** identity coverage;
+- 8 identity-light rows remain explicit degraded evidence;
+- current canonical State is `completed_through_week=2`, matching the validated cutoff.
+
+Uncertainty is non-zero and position-specific; QB carries the largest residual floor.
+
+The current model artifact must never masquerade as preseason/PIT evidence before its actual authority time. The retained ordinary offense Forecast remains unchanged.
+
+External JerryGM + LineupExperts permissions are no longer the immediate FSFFL recovery dependency. That path remains fallback/benchmark only.
+
+Next owner: Forecast/Product Implementation should wire the frozen first-party model through the already-merged current-supplement infrastructure, run deterministic authority regressions, rebuild current FSFFL, and promote Simulation only when current scoring is legitimately complete.
