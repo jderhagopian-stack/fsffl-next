@@ -100,3 +100,16 @@ Before telling the user or another worker that a gate is complete, Management mu
 - Are dependent workstreams being advanced only on evidence this gate actually proves?
 
 If any answer is no, do not promote.
+
+## Private-beta availability discipline
+FSFFL NEXT is a live private beta, not only an implementation workspace. Management must preserve the user's ability to exercise the product while deeper work continues.
+
+When a newly deployed regression prevents meaningful product testing:
+1. classify it as a **beta-availability incident** and move restoration ahead of nonessential feature breadth, performance tuning, and architectural expansion;
+2. restore the smallest charter-correct usable path first;
+3. localize failures to the affected capability whenever authority permits — one broken derived capability must not unnecessarily blank unrelated State, Forecast, Value, League, or Market surfaces;
+4. if a prior deployed build is materially more usable and does not violate current authority/data safety, prefer rollback or feature-gating over leaving the beta broadly unusable while a larger corrective is developed;
+5. preserve a durable last-known-good release/deploy identity and the acceptance layers it actually proved;
+6. after usability is restored, continue deeper refactoring/auditing without re-blocking the whole beta unless the architecture change is itself required for correctness/safety.
+
+A charter cleanup may not become an excuse for a multi-day product outage. Conversely, a hotfix may not knowingly preserve the exact hidden coupling that caused the incident when a small clean boundary can remove it immediately.
