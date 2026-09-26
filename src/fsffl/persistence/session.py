@@ -14,6 +14,9 @@ from .contracts import (
     UserRuntimeContextRecord,
     utc_now,
 )
+from .supplemental_coordinate import (
+    first_party_fumbles_lost_supplement_artifact,
+)
 from .runtime_cache import (
     FORECAST_ARTIFACT_KIND,
     FORECAST_MODEL_VERSION,
@@ -121,6 +124,19 @@ def persist_runtime_snapshot(
 
     forecast_record = None
     if forecast_evidence is not None:
+        supplement = getattr(
+            forecast_evidence.runtime_result,
+            "first_party_fumbles_lost_supplement",
+            None,
+        )
+        if supplement is not None:
+            if supplement.league_state_id != league_state.state_id:
+                raise ValueError(
+                    "first-party FUMBLES_LOST supplement does not match persisted State"
+                )
+            store.put_artifact(
+                first_party_fumbles_lost_supplement_artifact(supplement)
+            )
         forecast_record = forecast_artifact(
             league_state_id=league_state.state_id,
             evidence=forecast_evidence,
