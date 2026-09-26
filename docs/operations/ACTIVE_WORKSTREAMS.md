@@ -193,9 +193,9 @@ Research is complete. The evidence supports `H1 | governed H3 | H5 challenger | 
 
 
 ## Intrinsic long-horizon comparative modeling — 2026-09-26
-**State:** ACTIVE — RESEARCH ONLY / NO PRODUCTION AUTHORITY CHANGE
+**State:** **MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE**
 
-Management has reopened Intrinsic term-structure Research for empirical model-family comparison from Y4 onward. The study must not assume Y5 is the breakpoint or preassign any model to a timeframe. Different models by position and/or horizon are allowed only if chronological out-of-time evidence supports the extra complexity. Production H3 remains authoritative. The plain-language Management PDF is due at the end of this expanded study.
+The reopened six-family Y4+ comparison is complete. No defensible cardinal model-family breakpoint or position/horizon routing is promoted. `two_part_state` remains the robust annual Y4-Y8 Research family across all positions; hazard and career-transition models remain diagnostic/terminal-state challengers. Production H3 remains unchanged. Durable handoff: `artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_CLOSEOUT.md`.
 
 
 ## PR #261 live acceptance — switching still open
@@ -205,4 +205,4 @@ Management has reopened Intrinsic term-structure Research for empirical model-fa
 ## Latest physical acceptance findings — Intrinsic + readiness UI
 - **Forecast/Product Implementation:** ACTIVE. In addition to the exact-State Hodor switch defect already open, physical iPhone acceptance now exposes a production H3 Intrinsic subject-scope regression: unrelated players outside the frozen Future-I1 standard coordinate can collapse Intrinsic globally. Fix by scoping H3 compatibility to its governed subjects while preserving per-player unavailability outside authority.
 - **Presentation:** mobile shared readiness strip must be compacted. FULL = one-line intelligence-current + Refresh; building = progress + short active phase; capability chips appear only for exceptions/details.
-- **Y4+ Intrinsic Research:** remains separate and must not be used to patch production H3.
+- **Y4+ Intrinsic Research:** **MANAGEMENT GATE.** Comparative model-family work is complete and remains separate from the production H3 restoration corrective; do not use Y4+ research to patch H3.
