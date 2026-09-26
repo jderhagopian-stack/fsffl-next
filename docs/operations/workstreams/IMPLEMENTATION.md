@@ -620,3 +620,16 @@ Required:
 7. add architecture/regression tests proving a future model promotion can replace the Forecast provider without reintroducing P0-specific runtime assumptions.
 
 Do not perform a broad rewrite. The objective is the smallest clean boundary that restores the charter while fixing the live failure.
+
+### Immediate priority — restore a usable beta before broader architecture cleanup
+Management considers the current multi-day inability to meaningfully test the private beta a beta-availability incident.
+
+Execution priority inside the active corrective:
+1. restore the affected hosted surfaces to a usable, truthful state as fast as possible;
+2. use the **smallest charter-correct** vNext/Forecast boundary change needed to remove the live P0 orchestration coupling and repair governed H3 subject scope;
+3. fix the League static-module load failure and readiness truth in the same deploy;
+4. do not broaden this into a large Forecast rewrite before the beta is usable;
+5. if the active branch cannot restore usability quickly, evaluate whether a known-good deploy or capability-level feature gate can safely restore unaffected product testing while the deeper corrective continues;
+6. once the beta is usable again, complete the remaining architecture audit/regression hardening before closing the directive.
+
+Acceptance must include actual authenticated hosted endpoint/render-path validation and physical iPhone/Safari evidence. A green unit suite without a usable product is not sufficient.
