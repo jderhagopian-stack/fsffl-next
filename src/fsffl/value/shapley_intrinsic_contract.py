@@ -134,11 +134,10 @@ def _future_provenance(
     year_index: int,
 ) -> tuple[ShapleyHorizonProvenance, ShapleyHorizonUncertainty]:
     item = coordinate.year_2 if year_index == 2 else coordinate.year_3
-    is_p0 = item.result.model_version.startswith("p0-redeveloped-v1:")
     return (
         ShapleyHorizonProvenance(
-            authority=("frozen_p0_future_forecast" if is_p0 else "completed_source_direct_i1"),
-            source=("standard_non_ppr_p0_then_player_scoring" if is_p0 else "canonical_completed_source_facts"),
+            authority="governed_future_forecast_contract",
+            source="forecast_owned_future_contract",
             model_version=item.result.model_version,
             source_season=item.source_season,
             direct_i1_horizon=item.horizon,

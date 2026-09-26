@@ -9,10 +9,19 @@ from dataclasses import dataclass
 from typing import Mapping
 
 from fsffl.forecast.future_contract import (
+    CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
     ForecastUncertaintyKind,
     FutureForecastContract,
     FutureForecastScenario,
     FuturePlayerHorizonForecast,
+)
+from fsffl.forecast.future_state_primitive import (
+    FUTURE_STATE_PRIMITIVE_VERSION,
+    FUTURE_STATE_PROBABILITY_TOLERANCE,
+    FUTURE_STATE_SOURCE_SEASON,
+    build_future_state_probability_materialization,
+    frozen_future_state_source_rows,
+    governed_future_state_player_ids,
 )
 from fsffl.forecast.integrated_i1 import STATE_NAMES
 from fsffl.forecast.models import ForecastObservation
@@ -32,12 +41,6 @@ from .i1_player_scoring import (
     build_future_i1_player_scoring_multipliers,
     derive_future_i1_standard_year_one,
 )
-from .p0_forecast_runtime import (
-    P0_PROBABILITY_TOLERANCE,
-    P0_SOURCE_SEASON,
-    build_p0_standard_future_materialization,
-)
-from .p0_future_forecast_provider import P0_FUTURE_SCORING_COORDINATE
 
 
 VNEXT_FORECAST_VERSION = "forecast-vnext-a2-burr-20260922"
@@ -179,7 +182,7 @@ def _weighted_quantile(
         )
     values_and_weights.sort(key=lambda item: item[0])
     total = sum(weight for _, weight in values_and_weights)
-    if not math.isclose(total, 1.0, rel_tol=0.0, abs_tol=P0_PROBABILITY_TOLERANCE):
+    if not math.isclose(total, 1.0, rel_tol=0.0, abs_tol=FUTURE_STATE_PROBABILITY_TOLERANCE):
         raise ValueError(f"vNext uncertainty probability mass mismatch: {total}")
     cumulative = 0.0
     for value, weight in values_and_weights:
@@ -250,7 +253,7 @@ def vnext_shadow_identity() -> dict[str, object]:
     canonical precision.
     """
 
-    p0 = build_p0_standard_future_materialization(
+    primitive = build_future_state_probability_materialization(
         league_state=_frozen_source_league_state(),
         standard_year_one=_frozen_source_year_one(),
     )
@@ -258,14 +261,13 @@ def vnext_shadow_identity() -> dict[str, object]:
     forecast_rows: list[list[object]] = []
     max_probability_mass_error = 0.0
     max_expected_identity_error = 0.0
-    for player_id in sorted(p0.players):
-        player = p0.players[player_id]
+    for player_id in sorted(primitive.players):
+        player = primitive.players[player_id]
         position = str(player.source.position)
         sleeper_external_id = player.source.sleeper_external_id
         for horizon in (2, 3):
-            result = player.result_for(horizon)
             probabilities = {
-                state: float(result.probabilities[state])
+                state: float(player.probabilities_for(horizon)[state])
                 for state in STATE_NAMES
             }
             max_probability_mass_error = max(
@@ -310,7 +312,7 @@ def vnext_shadow_identity() -> dict[str, object]:
                 [player_id, horizon, expected, q10, q50, q90, q99]
             )
     return {
-        "players": len(p0.players),
+        "players": len(primitive.players),
         "rows": len(forecast_rows),
         "probability_canonical_sha256_11dp": _canonical_digest(
             probability_rows,
@@ -358,7 +360,7 @@ def _frozen_source_league_state() -> LeagueState:
         league=League(
             league_id="fsffl:vnext-shadow",
             name="vNext shadow identity",
-            season=P0_SOURCE_SEASON,
+            season=FUTURE_STATE_SOURCE_SEASON,
             rules=LeagueRules(team_count=2, roster_size=1, lineup=(), scoring=()),
         ),
         as_of=now,
@@ -413,9 +415,7 @@ def _frozen_source_year_one() -> tuple[ForecastObservation, ...]:
 
 
 def _frozen_source_rows():
-    from .p0_forecast_runtime import frozen_p0_source_rows
-
-    return frozen_p0_source_rows()
+    return frozen_future_state_source_rows()
 
 
 def build_vnext_future_forecast_contract(
@@ -426,40 +426,80 @@ def build_vnext_future_forecast_contract(
 ) -> VNextFutureForecastContractMaterialization:
     """Materialize the frozen A2 + Burr XII Forecast vNext Y2/Y3 authority.
 
-    P0's already-governed current-coordinate probability layer is reused because
-    the research freeze demonstrated byte/numerical parity with frozen A2 state
-    probabilities. Conditional state means come only from the verified Stage D
+    The Forecast-owned future-state probability primitive is reused because the
+    research freeze demonstrated byte/numerical parity with frozen A2 state
+    probabilities. Its P0-origin identity/probability evidence is retained without
+    P0 production orchestration. Conditional state means come only from Stage D
     A2 handoff. Burr XII changes QB positive-state within-state uncertainty only;
     direct-Gamma remains attached to RB/WR/TE. No fitting, route selection,
     clipping, market input, or post-hoc scaling occurs here.
     """
 
-    standard_year_one = derive_future_i1_standard_year_one(
-        raw_forecasts=raw_forecasts,
+    governed_ids = set(governed_future_state_player_ids(league_state))
+    if not governed_ids:
+        raise ValueError(
+            "vNext future Forecast has no mapped governed subjects in current State"
+        )
+
+    # vNext owns its complete production subject scope. A broader current State or
+    # Year-1 provider universe cannot broaden H3 authority or collapse the governed
+    # cohort merely by containing newer/unsupported players.
+    governed_raw = tuple(
+        item for item in raw_forecasts if item.player_id in governed_ids
+    )
+    governed_league_year_one = tuple(
+        item for item in league_year_one if item.player_id in governed_ids
+    )
+    standard_year_one_all = derive_future_i1_standard_year_one(
+        raw_forecasts=governed_raw,
         rules=league_state.league.rules,
+    )
+    standard_ids = {item.player_id for item in standard_year_one_all}
+    league_ids = {item.player_id for item in governed_league_year_one}
+    eligible_ids = governed_ids & standard_ids & league_ids
+    if not eligible_ids:
+        raise ValueError(
+            "vNext mapped subjects lack compatible governed Year-1 evidence"
+        )
+
+    standard_year_one = tuple(
+        item for item in standard_year_one_all if item.player_id in eligible_ids
+    )
+    eligible_raw = tuple(
+        item for item in governed_raw if item.player_id in eligible_ids
+    )
+    eligible_league_year_one = tuple(
+        item for item in governed_league_year_one if item.player_id in eligible_ids
     )
     scoring_multipliers = build_future_i1_player_scoring_multipliers(
-        raw_forecasts=raw_forecasts,
-        league_year_one=league_year_one,
+        raw_forecasts=eligible_raw,
+        league_year_one=eligible_league_year_one,
         rules=league_state.league.rules,
     )
-    p0 = build_p0_standard_future_materialization(
+    primitive = build_future_state_probability_materialization(
         league_state=league_state,
         standard_year_one=standard_year_one,
     )
-    if set(p0.players) != set(scoring_multipliers):
-        raise ValueError("vNext future Forecast/scoring coverage mismatch")
+    if set(primitive.players) != set(scoring_multipliers):
+        missing_scoring = sorted(set(primitive.players) - set(scoring_multipliers))
+        extra_scoring = sorted(set(scoring_multipliers) - set(primitive.players))
+        raise ValueError(
+            "vNext future Forecast/scoring coverage mismatch; "
+            f"missing_scoring={missing_scoring}; extra_scoring={extra_scoring}"
+        )
 
     rows: list[FuturePlayerHorizonForecast] = []
-    for player_id in sorted(p0.players):
-        player_forecast = p0.players[player_id]
+    for player_id in sorted(primitive.players):
+        player_forecast = primitive.players[player_id]
         position = str(player_forecast.source.position)
         sleeper_external_id = player_forecast.source.sleeper_external_id
         multiplier = float(scoring_multipliers[player_id])
         for year_index in (2, 3):
-            p0_result = player_forecast.result_for(year_index)
             probabilities = {
-                state: max(0.0, float(p0_result.probabilities[state]))
+                state: max(
+                    0.0,
+                    float(player_forecast.probabilities_for(year_index)[state]),
+                )
                 for state in STATE_NAMES
             }
             total_probability = sum(probabilities.values())
@@ -467,7 +507,7 @@ def build_vnext_future_forecast_contract(
                 total_probability,
                 1.0,
                 rel_tol=0.0,
-                abs_tol=P0_PROBABILITY_TOLERANCE,
+                abs_tol=FUTURE_STATE_PROBABILITY_TOLERANCE,
             ):
                 raise ValueError(
                     f"vNext state probability mass mismatch for {player_id} Y{year_index}"
@@ -502,11 +542,11 @@ def build_vnext_future_forecast_contract(
                 FuturePlayerHorizonForecast(
                     player_id=player_id,
                     position=Position(position),
-                    evaluation_season=P0_SOURCE_SEASON,
+                    evaluation_season=FUTURE_STATE_SOURCE_SEASON,
                     year_index=year_index,
-                    target_season=P0_SOURCE_SEASON + year_index - 1,
+                    target_season=FUTURE_STATE_SOURCE_SEASON + year_index - 1,
                     central_expectation=max(0.0, float(anticipated)),
-                    scoring_coordinate=P0_FUTURE_SCORING_COORDINATE,
+                    scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
                     model_version=VNEXT_FORECAST_VERSION,
                     source=VNEXT_FUTURE_FORECAST_SOURCE,
                     uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
@@ -558,6 +598,18 @@ def build_vnext_future_forecast_contract(
         "current_source_refresh_authority": VNEXT_CURRENT_SOURCE_REFRESH_AUTHORITY,
         "new_player_policy": VNEXT_NEW_PLAYER_POLICY,
         "runtime_generalizes_beyond_frozen_source_coordinate": False,
+        "future_state_primitive_version": FUTURE_STATE_PRIMITIVE_VERSION,
+        "future_state_primitive_origin": "P0_frozen_identity_and_probability_only",
+        "future_state_primitive_excludes_p0_production_routes": True,
+        "governed_state_subject_count": len(governed_ids),
+        "eligible_subject_count": len(eligible_ids),
+        "excluded_non_h3_subject_count": len(
+            {
+                item.player_id
+                for item in league_year_one
+                if item.player_id not in governed_ids
+            }
+        ),
         "state_probability_authority": "frozen_A2_equal_to_current_P0_within_3.33e-16",
         "conditional_state_mean_authority": "frozen_A2_stage_d_current_coordinate",
         "qb_within_state_family": "BURR12_M1",
@@ -590,8 +642,8 @@ def build_vnext_future_forecast_contract(
         ),
     }
     contract = FutureForecastContract(
-        evaluation_season=P0_SOURCE_SEASON,
-        scoring_coordinate=P0_FUTURE_SCORING_COORDINATE,
+        evaluation_season=FUTURE_STATE_SOURCE_SEASON,
+        scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
         forecast_model_version=VNEXT_FORECAST_VERSION,
         forecast_source=VNEXT_FUTURE_FORECAST_SOURCE,
         forecasts=tuple(rows),
@@ -601,3 +653,19 @@ def build_vnext_future_forecast_contract(
         contract=contract,
         scoring_multipliers=dict(scoring_multipliers),
     )
+
+
+
+def provide_vnext_future_forecast_contract(
+    *,
+    league_state: LeagueState,
+    raw_forecasts: tuple[ForecastObservation, ...],
+    league_year_one: tuple[ForecastObservation, ...],
+) -> FutureForecastContract:
+    """Stable production boundary: expose only the Forecast-owned contract."""
+
+    return build_vnext_future_forecast_contract(
+        league_state=league_state,
+        raw_forecasts=raw_forecasts,
+        league_year_one=league_year_one,
+    ).contract

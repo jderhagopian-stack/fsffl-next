@@ -39,7 +39,7 @@ from .phase1_latency import install_phase1_latency_routes
 from .private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from .vnext_future_forecast_provider import (
     VNEXT_FORECAST_VERSION,
-    build_vnext_future_forecast_contract,
+    provide_vnext_future_forecast_contract,
 )
 from .progressive_delivery_routes import install_progressive_delivery_routes
 from .provisional_k_dst_routes import install_provisional_k_dst_routes
@@ -109,12 +109,12 @@ _preseason_forecast_loader = make_preseason_baseline_authority_loader(_persisten
 _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
     year_one_loader=_preseason_forecast_loader,
     persistence_store=_persistence_store,
-    future_forecast_builder=build_vnext_future_forecast_contract,
+    future_forecast_builder=provide_vnext_future_forecast_contract,
     future_forecast_model_version=VNEXT_FORECAST_VERSION,
     future_missing_fact_family="vnext_future_forecast_coordinate",
 )
 _player_future_forecast_cache = PlayerFutureForecastCache(
-    future_forecast_builder=build_vnext_future_forecast_contract,
+    future_forecast_builder=provide_vnext_future_forecast_contract,
     forecast_model_version=VNEXT_FORECAST_VERSION,
 )
 _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(

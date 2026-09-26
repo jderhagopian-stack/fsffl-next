@@ -7,7 +7,14 @@ from typing import Any, cast
 
 import pytest
 
-from fsffl.forecast.future_contract import FUTURE_FORECAST_CONTRACT_VERSION
+from fsffl.forecast.future_contract import (
+    CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+    FUTURE_FORECAST_CONTRACT_VERSION,
+    ForecastUncertaintyKind,
+    FutureForecastContract,
+    FutureForecastScenario,
+    FuturePlayerHorizonForecast,
+)
 from fsffl.forecast.integrated_i1 import I1ForecastInput, I1ForecastResult, STATE_NAMES
 from fsffl.forecast.league_scoring import derive_league_fantasy_point_forecasts
 from fsffl.forecast.models import (
@@ -37,6 +44,7 @@ from fsffl.product.runtime import UserRuntimeContext
 from fsffl.product.vnext_future_forecast_provider import (
     VNEXT_FORECAST_VERSION,
     build_vnext_future_forecast_contract,
+    provide_vnext_future_forecast_contract,
 )
 from fsffl.state.models import (
     League,
@@ -148,6 +156,21 @@ def _context(state: LeagueState, observation: ForecastObservation) -> UserRuntim
         forecast_evidence=cast(Any, evidence),
     )
 
+def _legacy_p0_contract_builder(**kwargs):
+    return build_p0_future_forecast_contract(**kwargs).contract
+
+
+def _legacy_p0_loader(**kwargs) -> PrivateBetaShapleyContractLoader:
+    """Legacy-reference helper; production composition must inject vNext explicitly."""
+
+    return PrivateBetaShapleyContractLoader(
+        future_forecast_builder=_legacy_p0_contract_builder,
+        future_forecast_model_version=P0_FORECAST_VERSION,
+        future_missing_fact_family="p0_future_forecast_coordinate",
+        **kwargs,
+    )
+
+
 
 def _authority_evidence(observation: ForecastObservation):
     year_one = observation.model_copy(
@@ -187,7 +210,7 @@ def test_pinned_activation_bundle_round_trips_and_has_stable_digest() -> None:
 
 def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> None:
     state, observation = _fixture()
-    loader = PrivateBetaShapleyContractLoader(
+    loader = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )
     contract = loader(_context(state, observation))
@@ -211,7 +234,7 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
     state, observation = _fixture()
-    loader = PrivateBetaShapleyContractLoader(
+    loader = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )
     first = loader(_context(state, observation))
@@ -234,7 +257,7 @@ def test_loader_fails_closed_when_preseason_standard_coordinate_drifts() -> None
             )
         }
     )
-    loader = PrivateBetaShapleyContractLoader(
+    loader = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(changed)
     )
     contract = loader(_context(state, observation))
@@ -277,7 +300,7 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
         league_state=unknown_state,
         forecast_evidence=cast(Any, evidence),
     )
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(unknown_forecast)
     )(context)
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
@@ -288,16 +311,19 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
 # This focused file intentionally triggers the lightweight activation/API diagnostic workflow.
 
 
-def test_loader_fails_closed_without_preseason_authority_loader() -> None:
+def test_loader_fails_closed_without_injected_future_forecast_provider() -> None:
     state, observation = _fixture()
-    contract = PrivateBetaShapleyContractLoader()(_context(state, observation))
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )(_context(state, observation))
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
-    assert "preseason_year1_forecast" in contract.coverage.missing_required_fact_families
+    assert "future_forecast_coordinate" in contract.coverage.missing_required_fact_families
+    assert "not configured" in (contract.status_reason or "")
 
 
 def test_contract_exposes_preseason_year_one_provenance() -> None:
     state, observation = _fixture()
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )(_context(state, observation))
 
@@ -457,7 +483,7 @@ def test_current_i1_facts_are_locked_to_standard_research_coordinate() -> None:
 
 def test_contract_future_i1_provenance_contains_exactly_one_player_scoring_translation() -> None:
     state, observation = _fixture()
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )(_context(state, observation))
     future = contract.estimates[0].contributions[1:]
@@ -490,7 +516,7 @@ def test_loader_fails_closed_when_preseason_two_source_lineage_is_missing() -> N
         independent_source_ids=("fftoday",),
         minimum_independent_sources=2,
     )
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: evidence
     )(_context(state, observation))
 
@@ -606,7 +632,7 @@ def _runtime_scoring_case(
         ),
     )
     context = UserRuntimeContext(user_id="user", league_state=state)
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: evidence
     )(context)
     return contract, scored[0]
@@ -708,12 +734,93 @@ def _versioned_future_builder(version: str, calls: list[str]):
                 ),
             }
         )
-        return SimpleNamespace(
-            contract=contract,
-            scoring_multipliers=materialized.scoring_multipliers,
-        )
+        return contract
 
     return builder
+
+
+def _contract_only_fixture_provider(**kwargs) -> FutureForecastContract:
+    league_year_one = tuple(kwargs["league_year_one"])
+    assert len(league_year_one) == 1
+    year_one = league_year_one[0]
+    probabilities = {
+        "out": 0.10,
+        "depth": 0.10,
+        "usable": 0.15,
+        "starter": 0.30,
+        "premium": 0.20,
+        "elite": 0.15,
+    }
+    rows = []
+    for year_index, scale in ((2, 1.0), (3, 0.9)):
+        means = {
+            "out": 0.0,
+            "depth": 40.0 * scale,
+            "usable": 90.0 * scale,
+            "starter": 160.0 * scale,
+            "premium": 230.0 * scale,
+            "elite": 300.0 * scale,
+        }
+        expectation = sum(
+            probabilities[state] * means[state]
+            for state in STATE_NAMES
+        )
+        rows.append(
+            FuturePlayerHorizonForecast(
+                player_id=year_one.player_id,
+                position=year_one.position,
+                evaluation_season=2026,
+                year_index=year_index,
+                target_season=2026 + year_index - 1,
+                central_expectation=expectation,
+                scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+                model_version="future-model-zeta-v1",
+                source="fixture:future-model-zeta",
+                uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
+                scenarios=tuple(
+                    FutureForecastScenario(
+                        scenario_id=state,
+                        probability=probabilities[state],
+                        fantasy_points=means[state],
+                    )
+                    for state in STATE_NAMES
+                ),
+                evidence_path="fixture_contract_only_provider",
+            )
+        )
+    return FutureForecastContract(
+        evaluation_season=2026,
+        scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+        forecast_model_version="future-model-zeta-v1",
+        forecast_source="fixture:future-model-zeta",
+        forecasts=tuple(rows),
+        provenance={"provider_neutral_contract": True},
+    )
+
+
+def test_intrinsic_accepts_replacement_future_model_using_contract_only_boundary() -> None:
+    state, observation = _fixture()
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        future_forecast_builder=_contract_only_fixture_provider,
+        future_forecast_model_version="future-model-zeta-v1",
+        future_missing_fact_family="future_model_zeta_coordinate",
+    )
+    contract = loader(_context(state, observation))
+
+    assert contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert contract.forecast_model_version == "future-model-zeta-v1"
+    assert contract.coverage.player_count == 1
+    future = contract.estimates[0].contributions[1:]
+    assert len(future) == 2
+    assert all(
+        item.provenance.authority == "governed_future_forecast_contract"
+        for item in future
+    )
+    assert all(
+        item.provenance.source == "forecast_owned_future_contract"
+        for item in future
+    )
 
 
 def test_persisted_intrinsic_contract_is_forecast_version_scoped_and_reused() -> None:
@@ -771,7 +878,7 @@ def test_promoted_vnext_shapley_consumes_vnext_y2_y3_and_preserves_y1_authority(
     state, observation = _fixture()
     loader = PrivateBetaShapleyContractLoader(
         year_one_loader=lambda _state: _authority_evidence(observation),
-        future_forecast_builder=build_vnext_future_forecast_contract,
+        future_forecast_builder=provide_vnext_future_forecast_contract,
         future_forecast_model_version=VNEXT_FORECAST_VERSION,
         future_missing_fact_family="vnext_future_forecast_coordinate",
     )
@@ -801,13 +908,16 @@ def test_promoted_vnext_shapley_consumes_vnext_y2_y3_and_preserves_y1_authority(
 
 def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without_changing_values() -> None:
     state, observation = _fixture()
-    baseline_materialization = build_p0_future_forecast_contract(
+    baseline_materialization = build_vnext_future_forecast_contract(
         league_state=state,
         raw_forecasts=_raw_forecasts(observation),
         league_year_one=(observation,),
     )
     baseline_contract = PrivateBetaShapleyContractLoader(
-        year_one_loader=lambda _state: _authority_evidence(observation)
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        future_forecast_builder=provide_vnext_future_forecast_contract,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
     )(_context(state, observation))
     assert baseline_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
 
@@ -841,7 +951,7 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
         item.model_copy(update={"player_id": unknown.player_id})
         for item in _raw_forecasts(observation)
     )
-    expanded_materialization = build_p0_future_forecast_contract(
+    expanded_materialization = build_vnext_future_forecast_contract(
         league_state=expanded_state,
         raw_forecasts=expanded_raw,
         league_year_one=(observation, unknown_year_one),
@@ -853,7 +963,7 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
     )
     assert (
         expanded_materialization.contract.provenance[
-            "future_i1_excluded_non_h3_subject_count"
+            "excluded_non_h3_subject_count"
         ]
         == 1
     )
@@ -881,7 +991,10 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
         ),
     )
     expanded_contract = PrivateBetaShapleyContractLoader(
-        year_one_loader=lambda _state: evidence
+        year_one_loader=lambda _state: evidence,
+        future_forecast_builder=provide_vnext_future_forecast_contract,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
     )(expanded_context)
 
     assert expanded_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE

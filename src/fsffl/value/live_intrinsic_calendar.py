@@ -21,7 +21,7 @@ from .shapley_intrinsic import (
     build_intrinsic_shapley_estimates,
 )
 
-LIVE_INTRINSIC_CALENDAR_VERSION = "live-intrinsic-calendar-v2:preseason-y1-p0-y2-y3-direct"
+LIVE_INTRINSIC_CALENDAR_VERSION = "live-intrinsic-calendar-v3:preseason-y1-future-contract-y2-y3"
 
 
 class I1Predictor(Protocol):

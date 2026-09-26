@@ -10,6 +10,7 @@ from fsffl.state.models import FrozenModel, Position
 
 
 FUTURE_FORECAST_CONTRACT_VERSION = "future-forecast-contract-v2:iqr"
+CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE = "connected_league_fantasy_points"
 
 
 class ForecastUncertaintyKind(StrEnum):

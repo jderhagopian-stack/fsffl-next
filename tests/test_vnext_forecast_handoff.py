@@ -12,7 +12,7 @@ from fsffl.forecast.models import (
     ForecastObservation,
 )
 from fsffl.product.i1_scoring_bridge import FROZEN_I1_STANDARD_SCORING
-from fsffl.product.p0_forecast_runtime import frozen_p0_source_rows
+from fsffl.forecast.future_state_primitive import frozen_future_state_source_rows
 from fsffl.product.vnext_future_forecast_provider import (
     VNEXT_ARCHIVE_SHA256,
     VNEXT_CURRENT_SOURCE_PLAYER_COUNT,
@@ -44,7 +44,7 @@ from fsffl.state.models import (
 
 
 def _fixture(player_index: int = 0):
-    source = frozen_p0_source_rows()[player_index]
+    source = frozen_future_state_source_rows()[player_index]
     now = datetime(2026, 9, 1, 12, tzinfo=UTC)
     provenance = Provenance(
         source="fixture",
@@ -238,7 +238,7 @@ def test_vnext_current_coordinate_fails_closed_for_player_outside_governed_refre
         item.model_copy(update={"player_id": "unmapped-player"})
         for item in year_one
     )
-    with pytest.raises(ValueError, match="current source"):
+    with pytest.raises(ValueError, match="no mapped governed subjects"):
         build_vnext_future_forecast_contract(
             league_state=unknown_state,
             raw_forecasts=unknown_raw,
