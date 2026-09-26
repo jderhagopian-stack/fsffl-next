@@ -448,3 +448,27 @@ PR #261 is merged/deployed and the current FSFFL league again reaches FULL Forec
 Current FSFFL Home can display Forecast FULL / Simulation FULL / Value FULL, but Player Intelligence Intrinsic is presently unavailable because the Future-I1 compatibility check is being applied across a broader current player universe than the frozen H3 standard coordinate owns. This is a production regression in Intrinsic subject scoping, not evidence that the governed H3 model itself is invalid. Eligible H3 players should remain available; unsupported extra players should fail only at their own subject boundary.
 
 The app-wide readiness strip is also visually overgrown on iPhone. Management wants the mobile FULL state reduced to a compact one-line “Intelligence current” presentation with Refresh, and the building state reduced to progress + active phase. FULL capability chips should not consume a second row; exception chips/details remain available when partial/unavailable.
+
+
+## Comparative Y4+ Intrinsic Research final closeout — 2026-09-26
+
+Research is now at **MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE**.
+
+The reopened comparative study did not validate the prior assumption that Y5 is a model breakpoint. It also did not validate position/horizon-specific model routing.
+
+Across six families and 20 position × horizon cells, the robust annual-cardinal Research selection is:
+`two_part_state` for QB/RB/WR/TE at Y4-Y8.
+
+The apparent routed architecture is rejected because later-horizon MAE gains come with significantly worse squared/tail error. Survival/hazard remains a useful persistence/model-risk challenger; career-state transition is more promising for a separate terminal/career-state representation.
+
+Current 335-player shadows remain highly continuous with H3 while gradually diverging with horizon:
+- median absolute H3→H4/H5/H6/H7/H8 movement = **4 / 7 / 10 / 11 / 12** ranks;
+- H3→H8 rank Spearman remains **0.9672**;
+- no discontinuity identifies a natural model breakpoint.
+
+Production H3 remains unchanged. The comparative Research must not be used to patch the active H3 subject-scope production corrective.
+
+Durable final handoff:
+`artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_CLOSEOUT.md`.
+
+The updated plain-language Management PDF is the human-readable gate deliverable.
