@@ -1103,7 +1103,7 @@ Required evaluation:
 Production H3 remains unchanged. Market/Team Utility/owner behavior are forbidden inputs. No H5/Y4+ implementation is authorized. The terminal/career-state study is held until this feature-discovery gate is resolved.
 
 ### Management expansion — comprehensive joint feature/model/horizon study
-**State: ACTIVE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE RESEARCH**
+**State: MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE**
 
 This supersedes any wording that frames the next step as feature discovery only, assumes `two_part_state` remains the annual model after richer features are found, assumes one family across horizons, or treats H5 as the likely statistical breakpoint.
 
@@ -1157,3 +1157,66 @@ Deliver a plain-language Management PDF plus machine-readable model/feature/rout
 Production H3 remains unchanged. Market, dynasty values, Owner Intelligence and Team Utility remain prohibited Forecast inputs. No H5/Y4+ implementation is authorized.
 
 Return only at `MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE` or an evidence-supported negative `DIRECTIVE COMPLETE — RESEARCH`.
+
+
+### Comprehensive Y4-Y8 final Research closeout — 2026-09-26
+
+**State: MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE**
+
+The expanded joint feature/model/target/routing study is complete.
+
+Durable Management handoff:
+`artifacts/research/intrinsic_comprehensive_y4_y8_20260926/MANAGEMENT_HANDOFF.md`.
+
+Core result:
+- a much richer PIT evidence/model search selected a **75% position×horizon specialist / 25% shared continuous-horizon blend** during nested development;
+- that richer architecture was frozen before the untouched final holdout;
+- the untouched holdout **rejected** it under the predeclared cell-catastrophe rule because QB Y8 RMSE was **100.44 vs 77.84** for the simpler fallback (1.290×, above the frozen 1.15× limit);
+- Research did not retune, reroute or remove the failing cell after seeing the final outcomes.
+
+Final supported Research architecture for all QB/RB/WR/TE × Y4-Y8 cells:
+`specialist | forecast10 | two_part_ridge`.
+
+This means:
+- the same 10-feature/model contract is retained;
+- each position × horizon cell is fit separately;
+- no model-family router is promoted;
+- no pooled/shared/hierarchical architecture is promoted;
+- no H5 or other breakpoint is empirically promoted;
+- richer football/pedigree/trajectory evidence remains retained challenger evidence, not authority;
+- production H3 is unchanged.
+
+Untouched final holdout, 8,579 rows:
+- effective fallback RMSE **44.185**;
+- MAE **18.756**;
+- Spearman **0.4906**;
+- top-decile tail RMSE **130.48**.
+The rejected richer candidate improved RMSE/tail/rank modestly but worsened MAE and failed the frozen QB-Y8 safety rule.
+
+Uncertainty:
+- development-OOF conformal absolute-residual bands by position × horizon with a monotone horizon floor;
+- final holdout coverage: **87.66%** for nominal 80%, **94.32%** for nominal 90%;
+- cross-horizon covariance is not validated, so no precise cumulative Y4-Y8 variance is promoted.
+
+Post-freeze 335-player shadows:
+- H3 shadow vs governed production H3 Spearman **0.99654**;
+- median absolute H3→H4/H5/H6/H7/H8 rank movement **4 / 7 / 10 / 11 / 12**;
+- H3→H8 Spearman **0.96788**;
+- no current-player discontinuity identifies a breakpoint;
+- current shadows were generated only after historical architecture freeze and were not tuning inputs.
+
+Durable machine-readable evidence includes:
+- `FINAL_RESULT.json`;
+- `FINAL_POSITION_HORIZON_MATRIX.csv`;
+- `FEATURE_FAMILY_CONCLUSIONS.csv`;
+- `CURRENT_RANK_MOVEMENT.csv`;
+- `CURRENT_POSITION_DISTRIBUTIONS.csv`;
+- `CURRENT_AGE_EFFECTS.csv`;
+- `CURRENT_REPRESENTATIVE_CROSSOVERS.csv`;
+- `REPRODUCIBILITY.md`.
+
+Question: **Is another authorized Research action available now that materially advances the comprehensive directive without a new Management decision?**
+
+Answer: **No.**
+
+**MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE**
