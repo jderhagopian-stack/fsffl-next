@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from enum import StrEnum
 from statistics import fmean
@@ -333,6 +334,62 @@ class SupplementalApplicationResult(FrozenModel):
     base_observations: tuple[ForecastObservation, ...]
     supplemental_observations: tuple[ForecastObservation, ...]
     lineage: SupplementalApplicationLineage
+
+
+class SupplementalCoordinateReuseAssessment(FrozenModel):
+    reusable: bool
+    stale_player_ids: tuple[str, ...] = ()
+    identity_mismatch_player_ids: tuple[str, ...] = ()
+    reason_codes: tuple[str, ...] = ()
+
+
+def evaluate_supplemental_coordinate_reuse(
+    supplement: SupplementalCoordinateEnsemble,
+    *,
+    season: int,
+    current_nfl_team_by_player: Mapping[str, str],
+    canonical_remaining_games_by_player: Mapping[str, int],
+    rights_still_eligible: bool,
+    source_health_still_passed: bool,
+) -> SupplementalCoordinateReuseAssessment:
+    """Fail closed when a persisted ROS coordinate is no longer current.
+
+    No subtraction of completed-game actuals or old projected values is allowed.
+    Any schedule advance requires a fresh governed two-source acquisition.
+    """
+
+    reasons: list[str] = []
+    stale: set[str] = set()
+    identity_mismatch: set[str] = set()
+    if season != 2026:
+        reasons.append("supplement_not_authorized_for_season")
+    if not rights_still_eligible:
+        reasons.append("source_rights_no_longer_eligible")
+    if not source_health_still_passed:
+        reasons.append("source_health_no_longer_passes")
+
+    for row in supplement.normalized_source_values:
+        current_team = current_nfl_team_by_player.get(row.player_id)
+        if current_team is None or canonical_nfl_team(current_team) != row.nfl_team:
+            identity_mismatch.add(row.player_id)
+            continue
+        current_remaining = canonical_remaining_games_by_player.get(row.player_id)
+        if (
+            current_remaining is None
+            or current_remaining != row.canonical_remaining_games_at_capture
+        ):
+            stale.add(row.player_id)
+
+    if identity_mismatch:
+        reasons.append("canonical_player_team_identity_changed")
+    if stale:
+        reasons.append("canonical_remaining_game_state_advanced_or_mismatched")
+    return SupplementalCoordinateReuseAssessment(
+        reusable=not reasons,
+        stale_player_ids=tuple(sorted(stale)),
+        identity_mismatch_player_ids=tuple(sorted(identity_mismatch)),
+        reason_codes=tuple(reasons),
+    )
 
 
 def _normalize_source_values(
