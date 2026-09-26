@@ -193,7 +193,15 @@
   "final_cell_interpretation": {
     "no_automatic_baseline": "baseline must earn a cell through rolling evidence like any other candidate",
     "coarse_allowed": true,
-    "exact_support_rule": "cell policy must show repeatable outer performance, adequate rank signal and no persistent severe error instability; otherwise report uncertain/coarse rather than force exact cardinal authority"
+    "exact_support_rule": "cell policy must show repeatable outer performance, adequate rank signal and no persistent severe error instability; otherwise report uncertain/coarse rather than force exact cardinal authority",
+    "thresholds": {
+      "adequate_rank_spearman_min": 0.25,
+      "coarse_relative_q90_min": 0.75,
+      "repeatable_outer_policy_win_share_min": 0.6,
+      "material_policy_score_margin_min": 0.01,
+      "persistent_severe_instability_rule": "more than one rolling outer origin with policy RMSE > 1.20x the median RMSE across baseline/hard/soft/blanket policies for that same cell-origin",
+      "indistinguishable_policy_score_margin_abs_max": 0.01
+    }
   },
   "guards": {
     "prior_final_holdout_used_for_candidate_selection": false,
