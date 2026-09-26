@@ -8,6 +8,9 @@ from threading import RLock
 from typing import Callable
 
 from fsffl.forecast.current_runtime import LiveForecastRuntimeResult, build_current_live_forecasts
+from fsffl.forecast.fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+)
 from fsffl.forecast.models import ForecastObservation
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.providers.acquisition import ProviderBackedStateService
@@ -256,6 +259,13 @@ def _forecast_supplement_compatible(
             "fumbles_lost_supplement_authority_fingerprint",
             None,
         )
+    ) and (
+        getattr(
+            evidence.runtime_result,
+            "fumbles_lost_supplement_model_version",
+            None,
+        )
+        == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
     )
 
 
