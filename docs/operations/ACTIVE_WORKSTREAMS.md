@@ -136,7 +136,7 @@ PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deploy
 
 ## Current superseding checkpoint — 2026-09-26
 - **Forecast/Product Implementation:** **MANAGEMENT GATE — FUMBLES_LOST FORECAST AUTHORITY.** State-first sync/reuse-or-rebuild/truthful-readiness is complete and deployed through PR #246/#249/#251/#252. Current FSFFL rebuild is truthfully partial because the governed raw Forecast lacks FUMBLES_LOST; Simulation is not promoted.
-- **Forecast Research — FUMBLES_LOST:** **BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS.** Management superseded the same-horizon/whole-ROS alternatives with a bounded current-only supplement. Research's shortest technical pair is now JerryGM + LineupExperts Premium, with normalization/uncertainty and historical guards persisted in `artifacts/research/fumbles_lost_current_only_certification_20260926/`. No unrelated offense Forecast coordinate is rebased.
+- **Forecast Research — FUMBLES_LOST:** **DIRECTIVE COMPLETE — FIRST-PARTY MODEL READY FOR IMPLEMENTATION.** The governed first-party calibrated position-opportunity model clears chronological OOT accuracy/stability/coverage gates. Durable handoff: `artifacts/research/fumbles_lost_first_party_model_20260926/PRODUCTION_READINESS_HANDOFF.md`. External provider permissions are fallback only.
 - **Auxiliary single-source policy:** **MANAGEMENT ACCEPTED — ZERO INITIAL CERTIFICATIONS.** FUMBLES_LOST is explicitly outside that exception.
 - **Market acceptance:** **PAUSED** for full product acceptance until current FSFFL can legitimately promote Simulation. Physical lifecycle/readiness truth may still be tested independently.
 - **Performance:** State-first/lifecycle work is closed; separate Market foreground latency remains its only open dimension.
@@ -159,8 +159,8 @@ The whole ordinary-offense ROS recovery path was authorized briefly and then exp
 
 
 ## Superseding FSFFL recovery path — first-party FUMBLES_LOST model
-- **Research:** ACTIVE — build/validate a first-party FSFFL exact FUMBLES_LOST Forecast model from governed historical outcomes and current point-in-time inputs.
+- **Research:** **DIRECTIVE COMPLETE — FIRST-PARTY MODEL READY FOR IMPLEMENTATION.** Accepted model is `next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate`; combined OOT RMSE 0.8105 vs 1.0425 omission, current identity coverage 97.61%, non-zero position/cold-start uncertainty persisted.
 - **External provider permission path:** FALLBACK ONLY; no longer the immediate dependency for restoring FSFFL.
-- **Implementation:** supplement plumbing from PR #253/#255 remains reusable. Production promotion waits for a validated first-party Research handoff.
+- **Implementation:** **AUTHORIZED NEXT — FIRST-PARTY MODEL INTEGRATION / PRODUCTION ACCEPTANCE.** Reuse PR #253/#255 supplement plumbing; preserve all other offense coordinates and PIT/preseason guards; rebuild current FSFFL and promote Simulation only after implementation tests and current authority acceptance.
 - **Existing FSFFL:** current partial state remains non-accepted; target remains legitimate full current Forecast + Simulation.
 - **Market acceptance:** paused until FSFFL Simulation is restored.
