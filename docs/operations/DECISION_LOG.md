@@ -210,3 +210,20 @@ Decision: Management rejects the acceptance-policy escape hatch for the existing
 The current objective is to restore legitimate full capability under the governed model by supplying/recovering qualifying FUMBLES_LOST evidence or, only if supported by new evidence and a separate explicit Management decision, changing the underlying authority policy. Do not solve this by silently zeroing, stale-artifact reuse, weakening exact-state binding, or declaring the partial state acceptable.
 
 Until this is resolved, physical Market acceptance and broader product testing that depends on Simulation remain paused.
+
+
+## 2026-09-25 — Authorize 2026 current-ROS ordinary-offense Forecast lane
+Decision: Management authorizes a bounded **2026 current-rest-of-season ordinary-offense Forecast lane/rebase** for current-forward QB/RB/WR/TE intelligence.
+
+This is a whole-horizon authority decision, not a FUMBLES_LOST-only exception. The current-forward Forecast may use a governed current-ROS ensemble when qualifying same-horizon evidence is available. Do not splice ROS FUMBLES_LOST into a preseason/season baseline.
+
+Required boundaries:
+- preserve the authentic pre-opener/preseason Forecast separately for historical comparison, point-in-time analysis and any consumer whose contract explicitly requires preseason authority;
+- never relabel current ROS evidence as preseason or backdate it;
+- retain provider-agnostic canonical raw-stat Forecast architecture and exact provenance/horizon metadata;
+- require the normal material-coordinate multi-source, source-health, semantic, independence, uncertainty and stage-appropriate rights gates for the ROS ensemble;
+- no silent zero, cross-horizon substitution, stale scored-artifact reuse or Hodor/FSFFL special case;
+- current-forward consumers may migrate to the governed ROS lane only when their evidence contract accepts current ROS authority;
+- 2027+ returns to the normal governed preseason capture plus in-season current-forecast process; this 2026 authorization exists to recover a late-start private-beta current-forward baseline and must not become a permanent shortcut.
+
+Immediate objective: restore legitimate full current-forward FSFFL capability, including FUMBLES_LOST, from a complete governed same-horizon ordinary-offense ROS ensemble.
