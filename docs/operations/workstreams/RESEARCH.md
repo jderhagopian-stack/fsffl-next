@@ -1054,3 +1054,20 @@ Question: **Is another authorized Research action available now that materially 
 Answer: **No.**
 
 **MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE**
+
+### Management decision after comparative Y4+ gate
+**State: AUTHORIZED NEXT — TERMINAL/CAREER-STATE + LONG-HORIZON UNCERTAINTY RESEARCH ONLY**
+
+Management accepts the comparative closeout:
+- `two_part_state` is the Research-standard annual Y4-Y8 cardinal family across all positions;
+- no model-family breakpoint or position/horizon routing is promoted;
+- production H3 remains unchanged.
+
+Next bounded Research scope:
+1. retain H4/H6/H7/H8 as diagnostic coordinates and use **H5** as the next product-facing long-horizon cardinal lens alongside H1/H3;
+2. design/test a separate terminal/career-state representation using survival/hazard and career-state/transition evidence, explicitly avoiding fake exact-year precision;
+3. define the uncertainty/presentation contract required before any H5/Y4+ production promotion, including position/horizon decay, intervals/bands, scenario semantics, and how users should interpret disagreements between H3 and H5;
+4. test whether the terminal-state representation adds stable decision information beyond H3/H5 without double-counting survival already embedded in annual forecasts;
+5. return with a plain-language Management recommendation and mock/product semantics only if empirically supported.
+
+Do not alter production H3, do not implement H5, do not create a blended master score, and do not change Decision/Search/Team Utility authority. Stop at a new Management gate or a negative Research closeout.
