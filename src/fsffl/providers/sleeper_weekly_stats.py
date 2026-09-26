@@ -82,6 +82,37 @@ class SleeperWeeklyStatsSource:
             captured_at=captured.astimezone(UTC),
         )
 
+    def fetch_season_player(
+        self,
+        *,
+        season: int,
+        player_id: str,
+    ) -> SleeperSeasonStatLine | None:
+        """Acquire one player season aggregate without materializing all players.
+
+        The provider response is parsed once by the JSON transport, but this path
+        avoids constructing a second full-population tuple/dict in process.
+        """
+
+        if season < 2000:
+            raise ValueError("Sleeper stats season is invalid")
+        external_id = str(player_id or "").split(":")[-1].strip()
+        if not external_id:
+            raise ValueError("Sleeper stats player id is invalid")
+        captured = self._clock()
+        if captured.tzinfo is None:
+            raise ValueError("Sleeper stats clock must be timezone-aware")
+        payload = self._http_get_json(f"{self.base_url}/{season}")
+        raw = _row_for_player(payload, external_id)
+        if raw is None:
+            return None
+        return _season_line_from_raw(
+            raw,
+            season=season,
+            player_id=external_id,
+            captured_at=captured.astimezone(UTC),
+        )
+
     def fetch_season(self, *, season: int) -> tuple[SleeperSeasonStatLine, ...]:
         """Acquire provider-owned whole-season regular-season totals.
 
