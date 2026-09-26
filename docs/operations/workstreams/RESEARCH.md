@@ -724,3 +724,29 @@ Remaining external dependencies:
 If LineupExperts cannot clear rights/independence, SportsDataIO is the strongest direct licensed fallback. Fantasy Nerds remains aggregate and cannot automatically count as the second vote.
 
 **BLOCKED — RESEARCH / EXTERNAL PROVIDER RIGHTS AND LIVE CREDENTIALS**
+
+
+## Management directive — first-party FUMBLES_LOST Forecast model
+**State: ACTIVE — FIRST-PARTY FUMBLES_LOST MODEL RESEARCH**
+
+Management removes bespoke external-vendor permission from the immediate FSFFL recovery critical path.
+
+Research must build and evaluate the smallest defensible Forecast-owned model for exact player FUMBLES_LOST using governed historical football outcomes and point-in-time current inputs already available to FSFFL.
+
+Required research:
+- define the exact prediction target and target period used by current scoring/Simulation;
+- inventory governed historical FUMBLES_LOST outcomes and candidate pre-cutoff features;
+- prefer simple interpretable baselines first (position/opportunity-rate, player-history shrinkage, opportunity-conditioned count/rate models) before higher-complexity challengers;
+- use chronological/out-of-time validation only; no random leakage across future seasons;
+- compare against omission/zero, position-rate, and any retained historical projection baselines where legally/analytically permitted;
+- evaluate MAE/RMSE/calibration, rank/order usefulness where relevant, tail behavior, zero inflation, player/position coverage, and stability by season;
+- derive non-zero predictive uncertainty from out-of-time residuals and/or a governed count distribution;
+- test whether current canonical opportunity Forecast inputs (for example passing/rushing/receiving opportunity where available) improve the model without making it circular or horizon-incoherent;
+- preserve preseason/PIT truth: a current first-party model artifact may be valid only from its actual build/evaluation cutoff unless separately reconstructed historically;
+- produce current-player shadows and explicit failure/coverage behavior;
+- freeze model/features/coefficients or artifact before live-player inspection; no named-player tuning;
+- persist a production-readiness handoff if the model clears the governed accuracy/stability/coverage bar.
+
+The JerryGM + LineupExperts external path remains a fallback/benchmark only and should not block this work.
+
+Do not reopen unrelated Forecast coordinates or long-horizon Intrinsic research.
