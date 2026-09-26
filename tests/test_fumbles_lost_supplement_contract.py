@@ -272,7 +272,12 @@ def test_overlay_changes_only_fumbles_lost_and_makes_scoring_complete_when_consu
         item for item in applied.observations if item.metric == ForecastMetric.FUMBLES_LOST
     )
     assert len(supplement_rows) == 1
-    assert supplement_rows[0].source == "fsffl:current_supplement:fumbles_lost"
+    assert supplement_rows[0].source == base[0].source
+    assert supplement_rows[0].model_version == base[0].model_version
+    assert (
+        supplement_rows[0].provenance.source
+        == "fsffl:current_supplement:fumbles_lost"
+    )
     assert applied.lineage.consumed is True
     assert applied.lineage.preseason_eligible is False
     assert applied.lineage.historical_pit_eligible is False
@@ -280,7 +285,10 @@ def test_overlay_changes_only_fumbles_lost_and_makes_scoring_complete_when_consu
     after = derive_league_scoring_result(applied.observations, rules=rules)
     assert len(after.authoritative_forecasts) == 1
     assert after.partial_forecasts == ()
-    assert after.authoritative_forecasts[0].distribution.mean == pytest.approx(94.9)
+    scored = after.authoritative_forecasts[0]
+    assert scored.distribution.mean == pytest.approx(94.9)
+    assert "supplemental_mixed_vintage_current" in scored.model_version
+    assert "supplemental_mixed_vintage_current" in scored.provenance.source
 
 
 def test_league_without_fumbles_lost_rule_is_byte_for_byte_semantically_unchanged() -> None:
