@@ -338,3 +338,7 @@ Durable implementation handoff:
 
 ## Long-horizon Intrinsic product direction
 Management accepted horizon-specific Intrinsic Value as a North Star direction: the current three-year Intrinsic remains the governed production coordinate, while future Research should evaluate a longer-horizon/terminal dynasty component and separate horizon values. This is deferred product/research direction and does not displace the active FSFFL/FUMBLES_LOST reliability critical path.
+
+
+## Horizon research diagnostic scope
+Future long-horizon Intrinsic research must compare player rankings and position-level value distributions across horizons, including crossover players, positional top-end share, dispersion, age effects and uncertainty. This remains deferred behind the current reliability/FUMBLES_LOST critical path and is not active implementation.
