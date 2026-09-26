@@ -132,14 +132,29 @@ def augmented(r,h,ps):
 
 def target(r): return NFL_GAMES*r["future_fl"]/REM
 
+def calibration_scale(rows_by, year):
+    """One global multiplier learned only from pseudo-current seasons before year."""
+    pred_sum=0.0; actual_sum=0.0
+    for t in range(2022,year):
+        tr=hist(rows_by,t); ps=position_stats(tr); ph=player_stats(tr)
+        for r in rows_by[t]:
+            h=ph.get(r["pid"])
+            if tier(r,h)=="cold_start": continue
+            ro=role(r,h,ps[r["pos"]])
+            pred_sum += NFL_GAMES*ro*ps[r["pos"]]["fl_po"]
+            actual_sum += target(r)
+    return actual_sum/pred_sum if pred_sum>0 else 1.0
+
 def predictions(rows_by,year):
     tr=hist(rows_by,year); ps=position_stats(tr); ph=player_stats(tr); out=[]
+    scale=calibration_scale(rows_by,year)
     for r in rows_by[year]:
         h=ph.get(r["pid"]); ro=role(r,h,ps[r["pos"]]); t=tier(r,h)
         vals={
           "zero_omission":0.0,
           "position_game_rate":NFL_GAMES*ps[r["pos"]]["fl_pg"],
           "position_opportunity_rate":NFL_GAMES*ro*ps[r["pos"]]["fl_po"],
+          "calibrated_position_opportunity_rate":scale*NFL_GAMES*ro*ps[r["pos"]]["fl_po"],
           "player_history_shrunk":NFL_GAMES*ro*shrunk(h,ps[r["pos"]]),
           "player_history_plus_current":NFL_GAMES*ro*augmented(r,h,ps[r["pos"]]),
         }
@@ -177,7 +192,7 @@ def metrics(rr):
 def primary(rr): return [r for r in rr if r["tier"]!="cold_start"]
 
 def gate(allpred):
-    names=("position_opportunity_rate","player_history_shrunk","player_history_plus_current")
+    names=("position_opportunity_rate","calibrated_position_opportunity_rate","player_history_shrunk","player_history_plus_current")
     z=primary([r for r in allpred if r["model"]=="zero_omission"]); pg=primary([r for r in allpred if r["model"]=="position_game_rate"])
     zm,pm=metrics(z),metrics(pg); res={}
     for m in names:
@@ -213,14 +228,14 @@ def uncertainty(allpred,selected):
 def current_shadows(rows_by,selected,unc):
     tr=hist(rows_by,2026); ps=position_stats(tr); ph=player_stats(tr); cur={r["pid"]:r for r in rows_by[2026]}
     with BOARD.open(newline="",encoding="utf-8") as f: board=list(csv.DictReader(f))
-    out=[]; mapped=0; tc=defaultdict(int)
+    out=[]; mapped=0; tc=defaultdict(int); scale=calibration_scale(rows_by,2026)
     for b in board:
         if b.get("position") not in POS: continue
         gid=(b.get("historical_gsis_id") or "").strip(); p=b["position"]; r=cur.get(gid)
         if gid:mapped+=1
         if r is None:r={"season":2026,"pid":gid or "unmapped","name":"","pos":p,"early_games":0,"early_opp":0.0,"early_fl":0.0,"games":0,"opp":0.0,"fl":0.0,"future_games":0,"future_fl":0.0}
         h=ph.get(gid); t=tier(r,h) if gid else "unmapped"; tc[t]+=1; ro=role(r,h,ps[p])
-        vals={"position_opportunity_rate":NFL_GAMES*ro*ps[p]["fl_po"],"player_history_shrunk":NFL_GAMES*ro*shrunk(h,ps[p]),"player_history_plus_current":NFL_GAMES*ro*augmented(r,h,ps[p])}
+        vals={"position_opportunity_rate":NFL_GAMES*ro*ps[p]["fl_po"],"calibrated_position_opportunity_rate":scale*NFL_GAMES*ro*ps[p]["fl_po"],"player_history_shrunk":NFL_GAMES*ro*shrunk(h,ps[p]),"player_history_plus_current":NFL_GAMES*ro*augmented(r,h,ps[p])}
         pred=max(0.0,vals[selected]); sd=max(math.sqrt(pred),float(unc[p]["residual_rmse_floor"]))
         out.append({"player_id":b.get("player_id"),"historical_gsis_id":gid,"position":p,"evidence_tier":t,"weeks_observed_current":r["early_games"],"current_opportunities":round(r["early_opp"],6),"current_fumbles_lost":round(r["early_fl"],6),"history_games":h["games"] if h else 0,"history_opportunities":round(h["opp"],6) if h else 0.0,"history_fumbles_lost":round(h["fl"],6) if h else 0.0,"predicted_season_equivalent_fumbles_lost":round(pred,8),"predictive_stddev":round(sd,8),"model":selected})
     cov=mapped/len(out) if out else 0
@@ -238,12 +253,12 @@ def main():
     allpred=[r for y in OOT for r in predictions(rows_by,y)]
     gg=gate(allpred); sel=gg["selected"]
     metrics_rows=[]
-    for m in ("zero_omission","position_game_rate","position_opportunity_rate","player_history_shrunk","player_history_plus_current"):
+    for m in ("zero_omission","position_game_rate","position_opportunity_rate","calibrated_position_opportunity_rate","player_history_shrunk","player_history_plus_current"):
         rr=primary([r for r in allpred if r["model"]==m]);metrics_rows.append({"season":"COMBINED","position":"ALL","model":m,**metrics(rr)})
         for y in OOT:metrics_rows.append({"season":y,"position":"ALL","model":m,**metrics([r for r in rr if r["season"]==y])})
         for p in POS:metrics_rows.append({"season":"COMBINED","position":p,"model":m,**metrics([r for r in rr if r["pos"]==p])})
-    stress=[{"model":m,**metrics([r for r in allpred if r["model"]==m and r["tier"]=="cold_start"])} for m in ("zero_omission","position_game_rate","position_opportunity_rate","player_history_shrunk","player_history_plus_current")]
-    result={"study":"FSFFL first-party FUMBLES_LOST model","target":{"coordinate":"FUMBLES_LOST","cutoff_week":CUTOFF,"formula":"17 * exact lost fumbles in Weeks 3+ / 15","semantics":"exact lost fumbles; total fumbles forbidden"},"folds":[{"held_out":y,"training_seasons":[x for x in SEASONS if x<y]} for y in OOT],"features":{"QB":"attempts+sacks+carries","RB_WR_TE":"carries+receptions","current":"Weeks 1-2 only","history":"strictly prior seasons only","shrink_opportunities":SHRINK_OPPS,"role_prior_games":ROLE_PRIOR_GAMES},"gate":gg,"cold_start_stress":stress}
+    stress=[{"model":m,**metrics([r for r in allpred if r["model"]==m and r["tier"]=="cold_start"])} for m in ("zero_omission","position_game_rate","position_opportunity_rate","calibrated_position_opportunity_rate","player_history_shrunk","player_history_plus_current")]
+    result={"study":"FSFFL first-party FUMBLES_LOST model","target":{"coordinate":"FUMBLES_LOST","cutoff_week":CUTOFF,"formula":"17 * exact lost fumbles in Weeks 3+ / 15","semantics":"exact lost fumbles; total fumbles forbidden"},"folds":[{"held_out":y,"training_seasons":[x for x in SEASONS if x<y]} for y in OOT],"features":{"QB":"attempts+sacks+carries","RB_WR_TE":"carries+receptions","current":"Weeks 1-2 only","history":"strictly prior seasons only","shrink_opportunities":SHRINK_OPPS,"role_prior_games":ROLE_PRIOR_GAMES,"calibration":"one global multiplier learned only from prior pseudo-current seasons"},"gate":gg,"cold_start_stress":stress}
     shadows=[]; cal=[]; unc=None; coverage=None
     if sel:
         unc=uncertainty(allpred,sel)
