@@ -372,7 +372,6 @@ def _run_hosted_product_acceptance() -> None:
         _product_acceptance_state.update(
             status="pass",
             deploy_contract="post-pr264-product-acceptance-v1",
-            league_state_id=context.league_state.state_id,
             readiness_status=readiness.get("overall_status"),
             readiness_as_of=readiness.get("as_of"),
             intrinsic_status=intrinsic.get("status"),
@@ -394,7 +393,8 @@ def _run_hosted_product_acceptance() -> None:
         _product_acceptance_state.update(
             status="fail",
             deploy_contract="post-pr264-product-acceptance-v1",
-            error=f"{type(exc).__name__}: {exc}",
+            error_type=type(exc).__name__,
+            reason="Hosted product acceptance failed; detailed diagnostics are available in server logs.",
         )
         logging.getLogger("uvicorn.error").exception(
             "FSFFL HOSTED PRODUCT ACCEPTANCE FAILED"
