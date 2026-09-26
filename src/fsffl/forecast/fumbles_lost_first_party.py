@@ -16,6 +16,7 @@ from fsffl.providers.sleeper_weekly_stats import (
 )
 from fsffl.state.models import FrozenModel, LeagueState, Position, Provenance
 
+from .current_normalization import canonical_season_window
 from .fumbles_lost_first_party_priors import (
     CALIBRATION_PSEUDO_CURRENT_SEASONS,
     CALIBRATION_SCALAR_2026,
@@ -49,7 +50,7 @@ FIRST_PARTY_FUMBLES_LOST_UNCERTAINTY_VERSION = (
     "next2-fumbles-lost-uncertainty-v1:position-oot-plus-cold-start"
 )
 FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION = (
-    "current-supplemental-coordinate-v3:first-party-fumbles-lost"
+    "current-supplemental-coordinate-v4:first-party-fumbles-lost-subject-universe"
 )
 SLEEPER_CURRENT_INPUT_VERSION = (
     "sleeper-weekly-opportunity-v1:pass_att+sack+rush_att|rush_att+rec"
@@ -120,6 +121,9 @@ class FirstPartyFumblesLostSupplement(FrozenModel):
     current_input_sha256: str
     player_evidence: tuple[FirstPartyFumblesLostPlayerEvidence, ...]
     observations: tuple[ForecastObservation, ...]
+    subject_universe_player_ids: tuple[str, ...] = ()
+    provider_absent_player_ids: tuple[str, ...] = ()
+    frozen_prior_absent_player_ids: tuple[str, ...] = ()
     omitted_player_ids: tuple[str, ...] = ()
     research_current_board_sha256: str = CURRENT_BOARD_SHA256
     research_current_shadows_git_blob_sha: str = CURRENT_SHADOWS_GIT_BLOB_SHA
@@ -165,6 +169,16 @@ class FirstPartyFumblesLostSupplement(FrozenModel):
             raise ValueError("first-party supplement requires at least one observation")
         if len({row.player_id for row in self.observations}) != len(self.observations):
             raise ValueError("first-party supplement observations require unique players")
+        subject_ids = set(self.subject_universe_player_ids)
+        observation_ids = {row.player_id for row in self.observations}
+        if subject_ids and not observation_ids.issubset(subject_ids):
+            raise ValueError("first-party observations must belong to the canonical subject universe")
+        if not set(self.provider_absent_player_ids).issubset(subject_ids):
+            raise ValueError("provider-absent subjects must belong to the canonical subject universe")
+        if not set(self.frozen_prior_absent_player_ids).issubset(subject_ids):
+            raise ValueError("prior-absent subjects must belong to the canonical subject universe")
+        if not set(self.omitted_player_ids).issubset(subject_ids):
+            raise ValueError("omitted subjects must belong to the canonical subject universe")
         return self
 
     @property
@@ -310,12 +324,17 @@ def build_first_party_fumbles_lost_supplement(
     for row in all_rows:
         stats_by_player[row.player_id].append(row)
 
-    # One target shape per ordinary player/horizon/period. The live ensemble groups
-    # multiple raw metrics under identical target coordinates.
+    # The first-party coordinate is owned by Forecast, not by any one provider.
+    # Reconcile against the canonical State QB/RB/WR/TE subject universe first,
+    # then reuse a provider-derived season target shape when one exists. A subject
+    # absent from provider projections still receives the accepted current-only /
+    # cold-start / identity-light model tier when its canonical State identity is
+    # sufficient. Provider membership is never an authority prerequisite here.
     targets: dict[
         tuple[str, Position, ForecastHorizon, datetime, datetime],
-        ForecastObservation,
+        ForecastObservation | None,
     ] = {}
+    base_subject_ids: set[str] = set()
     for row in base_observations:
         if row.metric == ForecastMetric.FANTASY_POINTS:
             continue
@@ -331,8 +350,30 @@ def build_first_party_fumbles_lost_supplement(
             row.period_end,
         )
         targets.setdefault(key, row)
-    if not targets:
-        raise ValueError("first-party FUMBLES_LOST found no ordinary season Forecast targets")
+        base_subject_ids.add(row.player_id)
+
+    period_start, period_end = canonical_season_window(league_state.league.season)
+    canonical_subjects = tuple(
+        sorted(
+            (
+                player
+                for player in league_state.players
+                if player.position in _ALLOWED_POSITIONS
+            ),
+            key=lambda player: player.player_id,
+        )
+    )
+    if not canonical_subjects:
+        raise ValueError("first-party FUMBLES_LOST found no canonical offensive subjects")
+    for player in canonical_subjects:
+        key = (
+            player.player_id,
+            player.position,
+            ForecastHorizon.SEASON,
+            period_start,
+            period_end,
+        )
+        targets.setdefault(key, None)
 
     now = (clock or (lambda: datetime.now(UTC)))()
     if now.tzinfo is None:
@@ -346,32 +387,13 @@ def build_first_party_fumbles_lost_supplement(
     player_evidence: list[FirstPartyFumblesLostPlayerEvidence] = []
     observations: list[ForecastObservation] = []
     omitted: set[str] = set()
+    frozen_prior_absent: set[str] = set()
 
     for key, target in sorted(
         targets.items(),
         key=lambda item: (item[0][0], item[0][1].value),
     ):
         player_id, position, horizon, period_start, period_end = key
-        prior = PLAYER_PRIORS.get(player_id)
-        if prior is None:
-            omitted.add(player_id)
-            continue
-        (
-            prior_position,
-            historical_gsis_id,
-            identity_method,
-            accepted_tier,
-            history_games,
-            history_opportunities,
-            _accepted_current_games,
-            _accepted_current_opportunities,
-            _accepted_shadow_mean,
-            _accepted_shadow_stddev,
-        ) = prior
-        if prior_position != position.value:
-            omitted.add(player_id)
-            continue
-
         current_lines = tuple(
             sorted(stats_by_player.get(player_id, ()), key=lambda row: row.week)
         )
@@ -379,6 +401,42 @@ def build_first_party_fumbles_lost_supplement(
         current_opportunities = sum(
             _opportunities(row.stats, position) for row in current_lines
         )
+
+        prior = PLAYER_PRIORS.get(player_id)
+        if prior is None:
+            # This is not a zero or a named-player exception. The frozen v1 model
+            # already validated current-only and identity-light/cold-start tiers.
+            # A newly canonical State subject therefore starts from the frozen
+            # position role/rate and incorporates exact Week-1/2 opportunities
+            # when available.
+            frozen_prior_absent.add(player_id)
+            historical_gsis_id = None
+            history_games = 0
+            history_opportunities = 0.0
+            if current_games > 0:
+                identity_method = "canonical_sleeper_current_input"
+                accepted_tier = "current_only"
+            else:
+                identity_method = "unmapped"
+                accepted_tier = "unmapped"
+        else:
+            (
+                prior_position,
+                historical_gsis_id,
+                identity_method,
+                accepted_tier,
+                history_games,
+                history_opportunities,
+                _accepted_current_games,
+                _accepted_current_opportunities,
+                _accepted_shadow_mean,
+                _accepted_shadow_stddev,
+            ) = prior
+            if prior_position != position.value:
+                # A true position conflict is unresolved evidence, not a reason to
+                # overwrite the frozen historical identity with a guessed mapping.
+                omitted.add(player_id)
+                continue
 
         position_key = position.value
         position_rate = POSITION_LOST_FUMBLE_PER_OPPORTUNITY[position_key]
@@ -435,7 +493,11 @@ def build_first_party_fumbles_lost_supplement(
         # Scoring is evaluated for the exact canonical State cutoff. Actual model
         # acquisition/build time is retained on the supplement and is the PIT
         # authority boundary; it is deliberately not rewritten as preseason.
-        observation_as_of = min(target.as_of, league_state.as_of)
+        observation_as_of = (
+            min(target.as_of, league_state.as_of)
+            if target is not None
+            else league_state.as_of
+        )
         effective_at = min(current_input_captured_at, observation_as_of)
         observations.append(
             ForecastObservation(
@@ -472,5 +534,16 @@ def build_first_party_fumbles_lost_supplement(
         current_input_sha256=_current_input_rows_sha256(rows_by_week),
         player_evidence=tuple(player_evidence),
         observations=tuple(observations),
+        subject_universe_player_ids=tuple(
+            player.player_id for player in canonical_subjects
+        ),
+        provider_absent_player_ids=tuple(
+            sorted(
+                player.player_id
+                for player in canonical_subjects
+                if player.player_id not in base_subject_ids
+            )
+        ),
+        frozen_prior_absent_player_ids=tuple(sorted(frozen_prior_absent)),
         omitted_player_ids=tuple(sorted(omitted)),
     )
