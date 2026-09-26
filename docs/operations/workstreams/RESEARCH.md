@@ -658,3 +658,24 @@ Required:
 - return an implementation-ready handoff when a qualifying ROS ensemble is certifiable, or an exact external-dependency blocker if credentials/permission/paid access are required.
 
 This authorization does not promote JerryGM, Fantasy Nerds, LineupExperts or any provider by name. Providers remain replaceable behind canonical contracts.
+
+
+## Management correction — FUMBLES_LOST current-only supplement
+**State: ACTIVE — BOUNDED CURRENT-ONLY FUMBLES_LOST CERTIFICATION**
+
+The prior whole ordinary-offense ROS-lane authorization is superseded. Research should not rebase all ordinary offensive statistics.
+
+Research must instead determine the shortest two-independent-source path for **FUMBLES_LOST only** as a current-intelligence supplement. The source may be ROS/current evidence, but the implementation contract must explicitly separate:
+- source/evidence horizon and acquisition time;
+- target scoring period/rate used by current Forecast/Simulation;
+- preseason/PIT historical eligibility.
+
+Required Research output:
+1. identify the best two independent current sources with exact lost-fumble semantics and stage-appropriate rights;
+2. validate live health/coverage and provider independence;
+3. define a defensible normalization into the target current-scoring quantity (for example remaining-game rate or season-equivalent expectation) without pretending the source was full-season/preseason evidence;
+4. specify non-zero uncertainty;
+5. mark the coordinate ineligible for preseason comparison/historical PIT claims before acquisition;
+6. produce an implementation-ready handoff.
+
+Do not alter unrelated offensive coordinates or reopen broad ordinary-offense source selection.
