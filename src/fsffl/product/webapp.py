@@ -1014,6 +1014,13 @@ def create_app(
             sync_state=False,
         )
     )
+    application.state.start_intelligence_sync_reconciliation = (
+        lambda user_id: _start_intelligence_reconciliation(
+            user_id,
+            sync_state=True,
+        )
+    )
+    application.state.intelligence_jobs = jobs
 
     @application.post("/api/intelligence/jobs")
     def start_intelligence_job(
