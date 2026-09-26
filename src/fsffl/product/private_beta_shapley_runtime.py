@@ -30,8 +30,6 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
-from .p0_forecast_runtime import P0_FORECAST_VERSION, P0_SOURCE_SEASON
-from .p0_future_forecast_provider import build_p0_future_forecast_contract
 from .runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
 
 _SUPPORTED_POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
@@ -51,7 +49,7 @@ def _json_artifact(name: str) -> dict[str, object]:
 
 
 # The legacy activation bundle remains metadata/coverage evidence only. It is not
-# the Y2/Y3 producer after P0 promotion.
+# a Future Forecast producer.
 _FACTS = CurrentI1FactsArtifact.from_dict(_json_artifact("current_i1_facts_2026.json"))
 _REPORT = _json_artifact("private_beta_activation_build_report.json")
 if _REPORT.get("status") != "PASS" or _REPORT.get("model_changes") is not False:
@@ -127,14 +125,14 @@ def _provenance(
     fact_coverage.update(future_contract.provenance)
     return CompletedSourceFactProvenance(
         source_version=future_contract.forecast_model_version,
-        schema_version="fsffl-redeveloped-forecast-fit-v1",
+        schema_version=future_contract.contract_version,
         providers=source_ids,
         fact_family_coverage=fact_coverage,
     )
 
 def _missing_fact_families() -> tuple[str, ...]:
     # Preserve the API's explicit evidence-coverage signaling. Missing fact
-    # families are not imputed into P0 and cannot change its frozen coefficients.
+    # families are not imputed into the supplied Future Forecast contract.
     coverage = _FACTS.metadata.get("coverage_policy", {})
     if not isinstance(coverage, dict):
         return ("completed_source_coverage_metadata",)
@@ -177,9 +175,9 @@ def _cache_key(
 class PrivateBetaShapleyContractLoader:
     """Compose governed Year 1 -> versioned future Forecast -> frozen Shapley.
 
-    The current future provider is the byte-verified P0 authority, but this
-    downstream loader consumes the model-agnostic Forecast contract rather than
-    P0/D0-D1 internals. No model fitting or route selection occurs here.
+    The concrete Future Forecast provider is injected by hosted composition.
+    This downstream loader consumes only the model-neutral Forecast contract and
+    never imports model-specific production internals.
     """
 
     def __init__(
@@ -187,9 +185,9 @@ class PrivateBetaShapleyContractLoader:
         *,
         year_one_loader: YearOneAuthorityLoader | None = None,
         persistence_store: PersistenceStore | None = None,
-        future_forecast_builder: FutureForecastBuilder = build_p0_future_forecast_contract,
-        future_forecast_model_version: str = P0_FORECAST_VERSION,
-        future_missing_fact_family: str = "p0_future_forecast_coordinate",
+        future_forecast_builder: FutureForecastBuilder | None = None,
+        future_forecast_model_version: str = "future-forecast-provider:unconfigured",
+        future_missing_fact_family: str = "future_forecast_coordinate",
     ) -> None:
         self._lock = RLock()
         self._year_one_loader = year_one_loader
@@ -279,12 +277,12 @@ class PrivateBetaShapleyContractLoader:
         league_state = context.league_state
         if league_state is None:
             raise ValueError("Shapley Intrinsic requires canonical league state")
-        if league_state.league.season != P0_SOURCE_SEASON:
+        if self._future_forecast_builder is None:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
                 reason=(
-                    "The pinned private-beta P0 package targets "
-                    f"evaluation season {P0_SOURCE_SEASON}, not {league_state.league.season}."
+                    "A governed Future Forecast provider is not configured for "
+                    "the product runtime."
                 ),
                 missing_required_fact_families=(self._future_missing_fact_family,),
                 forecast_model_version=self._future_forecast_model_version,
@@ -355,10 +353,9 @@ class PrivateBetaShapleyContractLoader:
             return build_unavailable_shapley_intrinsic_contract(
                 evaluation_season=league_state.league.season,
                 reason=f"Authoritative future Forecast contract unavailable: {exc}",
-                # Preserve the established external missing-evidence classification
-                # for current P0 authority failures. The generic contract is the
-                # transport boundary; this exception still means the authoritative
-                # P0 future coordinate could not be materialized.
+                # Preserve the configured missing-evidence classification. The
+                # stable Forecast contract is the transport boundary; provider
+                # implementation details never escape this loader.
                 missing_required_fact_families=(self._future_missing_fact_family,),
                 forecast_model_version=self._future_forecast_model_version,
             )
