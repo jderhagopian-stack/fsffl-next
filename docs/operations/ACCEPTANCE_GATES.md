@@ -228,47 +228,49 @@ The external JerryGM + LineupExperts route remains fallback/benchmark only. It i
 The auxiliary single-source tier remains irrelevant because this is a Forecast-owned empirical model, not a one-provider authority exception.
 
 
-## Intrinsic comprehensive long-horizon Research gate
-**Status: MANAGEMENT GATE — COMPREHENSIVE STUDY COMPLETE / NO PRODUCTION AUTHORITY.**
+## Intrinsic cell-specific long-horizon Research gate
+**Status: MANAGEMENT GATE — ROUTING/SHRINKAGE STUDY COMPLETE / NO PRODUCTION AUTHORITY.**
 
-The comprehensive Y4-Y8 study supersedes the earlier six-family/10-feature comparative gate.
+This gate supersedes the prior all-20-cell fallback interpretation.
 
-Final Research architecture:
-- per-cell fitting: position × horizon specialist;
-- feature set: `forecast10`;
-- model: `two_part_ridge`;
-- horizons: Y4-Y8;
-- model-family routing: **not promoted**;
-- shared/hierarchical architecture: **not promoted**;
-- statistical breakpoint: **none**;
-- production H3: unchanged.
+Research conclusion:
+- general Y4-Y7 policy: **soft position × horizon shrinkage** across development-qualified candidates;
+- exact repeated-validation support: **QB Y4, WR Y4, QB Y6**;
+- remaining 13 Y4-Y7 cells: **soft shrinkage with explicit uncertainty**, not hard exact route authority;
+- Y8 QB/RB/WR/TE: **coarse/uncertain only** because only two qualifying outer origins exist;
+- incumbent `forecast10 + two_part_ridge`: comparator, not blanket authority;
+- old 75/25 architecture: comparison only; its QB Y8 failure remains valid evidence.
 
-The nested development search did select a richer 75/25 specialist/shared blend using expanded PIT football/pedigree/trajectory evidence, demonstrating that the wider information set can contain localized signal. That candidate was frozen before the untouched final holdout and then rejected by the predeclared QB-Y8 RMSE catastrophe rule.
+Rolling validation:
+- soft shrinkage RMSE **43.20** vs incumbent **45.64**;
+- tail RMSE **113.34** vs **134.77**;
+- Spearman **0.5067** vs **0.4942**;
+- 15/20 cells better than baseline composite;
+- soft shrinkage worst-cell RMSE ratio vs baseline **1.074×**, versus **1.311×** for the rejected blanket architecture.
 
-The holdout may not be reused to retune that architecture.
+Required trajectory audit:
+- target-horizon age and experience are not interchangeable with base age;
+- QB shows stable nonlinear target-age/exposure benefit through Y7;
+- RB accumulated workload adds mostly survival/relevance information;
+- WR cumulative workload does not improve conditional production;
+- TE requires nonlinear interactions and is more era-sensitive;
+- no universal age penalty, youth bonus, or workload-wear coefficient is accepted.
 
-Research uncertainty:
-- development-OOF conformal residual bands by position × horizon;
-- monotone horizon floor;
-- final holdout actual coverage 87.66% (nominal 80%) and 94.32% (nominal 90%);
-- cumulative cross-horizon covariance/scenario uncertainty remains unvalidated.
+No second untouched Y8 holdout exists. The repeated rolling evidence must not be represented as one.
 
-Before any Y4+ production promotion, Management must separately authorize a workstream that demonstrates at minimum:
-1. current PIT feature/identity coverage and versioned training provenance;
-2. position × horizon uncertainty semantics in the product;
-3. joint/cross-horizon covariance or scenario semantics for cumulative long-horizon Value;
-4. exact production H3 non-regression and authority preservation;
-5. Shapley/economic integration parity;
-6. fail-closed behavior for missing current evidence;
-7. no Market, Owner Intelligence or Team Utility leakage into universal Intrinsic;
-8. no hidden master score or fabricated precision.
-
-A terminal/career-state coordinate is not promoted by this study and requires separate Research if Management wants it.
+Before any Y4+ production authority is considered, Management must separately authorize and accept:
+1. production implementation of the chosen shrinkage/candidate contract;
+2. live PIT feature coverage and deterministic route construction;
+3. residual/model uncertainty presentation for non-exact cells;
+4. a governed coarse/deep-horizon semantic for Y8;
+5. cumulative cross-horizon covariance/scenario semantics if cumulative cardinal values are exposed;
+6. exact H3 non-regression and Shapley/economic integration parity;
+7. no Market/Owner/Team Utility leakage or hidden master score.
 
 Durable handoff:
-`artifacts/research/intrinsic_comprehensive_y4_y8_20260926/MANAGEMENT_HANDOFF.md`.
+`artifacts/research/intrinsic_cell_routing_y4_y8_20260926/MANAGEMENT_HANDOFF.md`.
 
-No Y4+ production implementation is currently authorized.
+No Y4-Y8 production implementation is authorized.
 
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
