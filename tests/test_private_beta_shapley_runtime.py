@@ -1015,3 +1015,35 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
             for item in baseline_contract.estimates[0].contributions
         ]
     )
+
+
+
+def test_promoted_vnext_intrinsic_survives_authentic_preseason_raw_without_fumbles_lost() -> None:
+    state, observation = _fixture()
+    evidence = _authority_evidence(observation)
+    evidence.raw_forecasts = tuple(
+        item
+        for item in evidence.raw_forecasts
+        if item.metric != ForecastMetric.FUMBLES_LOST
+    )
+    assert evidence.raw_forecasts
+    assert all(
+        item.metric != ForecastMetric.FUMBLES_LOST
+        for item in evidence.raw_forecasts
+    )
+
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: evidence,
+        future_forecast_builder=provide_vnext_future_forecast_contract,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
+    )(_context(state, observation))
+
+    assert contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert contract.forecast_model_version == VNEXT_FORECAST_VERSION
+    assert contract.coverage.player_count == 1
+    assert contract.coverage.year_1_forecast_players == 1
+    assert contract.coverage.rich_path_players == 1
+    assert contract.estimates[0].contributions[0].provenance.authority == (
+        "preserved_preseason_year1_forecast"
+    )
