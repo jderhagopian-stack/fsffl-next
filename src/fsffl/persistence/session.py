@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from fsffl.forecast.fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+)
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.state.models import LeagueState
 
@@ -238,9 +241,20 @@ def restore_state_bound_intelligence(
                     None,
                 )
             )
+            current_supplement_contract = (
+                getattr(
+                    candidate_forecast.runtime_result,
+                    "fumbles_lost_supplement_model_version",
+                    None,
+                )
+                == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            )
             if (
                 not requires_first_party_fumbles_lost
-                or has_first_party_fumbles_lost
+                or (
+                    has_first_party_fumbles_lost
+                    and current_supplement_contract
+                )
             ):
                 forecast = candidate_forecast
         except (TypeError, ValueError):
