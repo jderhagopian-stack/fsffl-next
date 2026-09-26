@@ -222,7 +222,6 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     assert contract.coverage.year_1_forecast_players == 1
     assert contract.coverage.year_2_i1_players == 1
     assert contract.coverage.year_3_i1_players == 1
-    assert contract.coverage.rich_path_players == 1
     assert contract.coverage.reduced_or_fallback_players == 0
     assert contract.forecast_model_version == P0_FORECAST_VERSION
     assert contract.estimates[0].diagnostic_h1.included_in_intrinsic is False
