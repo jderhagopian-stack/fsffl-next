@@ -263,3 +263,21 @@ These horizon-specific coordinates remain parts of **FSFFL Intrinsic**, not new 
 Decision/Search may use the shape of a player's Intrinsic horizon curve as governed evidence. Examples include identifying immediate-production assets versus durable dynasty assets, matching opportunities to an owner's competitive horizon, and comparing packages that shift value from present to future. Search may not turn the horizon curve into a hidden master score or fabricated acceptance probability.
 
 Implementation is not authorized by this decision. A later bounded Research program must determine validated longer-horizon targets, historical calibration, discount/terminal treatment, uncertainty, and whether a 5-year-plus or terminal formulation is empirically preferable.
+
+
+## 2026-09-25 — Horizon research must measure ranking and positional distribution effects
+Decision: the future long-horizon Intrinsic research program must evaluate not only model accuracy, but how valuation structure changes as the horizon changes.
+
+Required comparative outputs should include:
+- player rank changes across near-term, three-year and long-horizon/terminal Intrinsic;
+- position-specific value distributions at each horizon;
+- positional share of top-N and top-percentile assets by horizon;
+- crossover players whose relative value materially rises or falls as the horizon extends;
+- age/experience effects within position;
+- concentration, dispersion and tail behavior by position;
+- uncertainty growth by horizon;
+- whether the current blended Intrinsic ranking hides materially different temporal value profiles.
+
+These are analytical diagnostics, not permission to tune the model to produce a desired positional mix. Position distributions must emerge from Forecast/Value evidence and league economics, not from manual balancing.
+
+Decision/Search may later consume governed horizon-specific coordinates and rank changes as evidence, while preserving separate universal Intrinsic values and downstream Team Utility context.
