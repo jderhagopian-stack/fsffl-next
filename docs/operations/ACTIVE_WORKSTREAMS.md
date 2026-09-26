@@ -170,3 +170,9 @@ The whole ordinary-offense ROS recovery path was authorized briefly and then exp
 **State:** ACTIVE — RESEARCH ONLY / NO IMPLEMENTATION AUTHORITY
 
 Management has authorized a bounded empirical study of horizon-specific FSFFL Intrinsic Value in parallel with Forecast/Product's FSFFL production-restoration work. Research will compare the current three-year model against longer discrete and terminal/career formulations; measure rank/value changes and position-level distributions across horizons; validate uncertainty, discounting and terminal treatment chronologically; and return at a Management gate with a recommended architecture or a negative finding. Production three-year Intrinsic remains unchanged.
+
+
+## 2026-09-26 latest recovery / horizon checkpoint
+- **FSFFL restoration:** PR #258 and #259 are merged; main CI is green; #259 is live. Production reached FULL Forecast/Simulation/Value once after deploy, but a later fresh State exposed two WRs without first-party FUMBLES_LOST coverage, returning current capability to partial and withholding Simulation. Forecast/Product remains ACTIVE on that generic two-player coverage gap.
+- **Long-horizon Intrinsic Research:** ACTIVE. Historical model-selection pass is green and selected a `two_part_state` Y4/Y5 extension over Y3 carry, with improved OOT MAE/ranking signal. Current-player shadows and final architecture/Management-gate handoff are still outstanding. No implementation authority.
+- **Market physical acceptance:** remains paused until current FSFFL Simulation is stably restored.
