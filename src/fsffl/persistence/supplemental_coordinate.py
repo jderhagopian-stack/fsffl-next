@@ -9,6 +9,7 @@ from fsffl.forecast.supplemental_coordinate import (
     SUPPLEMENTAL_COORDINATE_CONTRACT_VERSION,
     SupplementalCoordinateEnsemble,
     SupplementalCoordinateEvidencePackage,
+    SupplementalCoordinateReuseAssessment,
     league_consumes_fumbles_lost,
 )
 from fsffl.state.models import FrozenModel, LeagueRules
@@ -49,9 +50,10 @@ class SupplementalCoordinateInvalidationPlan(FrozenModel):
     invalidate_artifact_kinds: tuple[str, ...]
     preserve_artifact_kinds: tuple[str, ...]
     rebuild_layers: tuple[str, ...]
-    cause_kind: Literal["supplemental_coordinate_changed"] = (
-        "supplemental_coordinate_changed"
-    )
+    cause_kind: Literal[
+        "supplemental_coordinate_changed",
+        "supplemental_coordinate_stale",
+    ] = "supplemental_coordinate_changed"
     cause_ref: str | None = None
     reason_codes: tuple[str, ...]
 
@@ -154,6 +156,7 @@ def plan_fumbles_lost_supplement_invalidation(
     *,
     previous_authority_fingerprint: str | None,
     new_authority_fingerprint: str | None,
+    reuse_assessment: SupplementalCoordinateReuseAssessment | None = None,
 ) -> SupplementalCoordinateInvalidationPlan:
     """Plan only the dependencies a certified FUMBLES_LOST change can affect."""
 
@@ -167,6 +170,30 @@ def plan_fumbles_lost_supplement_invalidation(
         ANNUAL_PRESEASON_PROJECTION_SNAPSHOT_ARTIFACT_KIND,
         VALUE_ARTIFACT_KIND,
     )
+    stale = reuse_assessment is not None and not reuse_assessment.reusable
+    if consumed and stale:
+        return SupplementalCoordinateInvalidationPlan(
+            coordinate_consumed=True,
+            authority_changed=changed,
+            invalidate_artifact_kinds=(
+                FORECAST_ARTIFACT_KIND,
+                SIMULATION_ARTIFACT_KIND,
+            ),
+            preserve_artifact_kinds=preserved,
+            rebuild_layers=(
+                "current_forecast",
+                "simulation",
+                "forecast_derived_team_intelligence",
+            ),
+            cause_kind="supplemental_coordinate_stale",
+            cause_ref=new_authority_fingerprint or previous_authority_fingerprint,
+            reason_codes=(
+                reuse_assessment.reason_codes
+                if reuse_assessment is not None
+                else ("supplemental_coordinate_stale",)
+            ),
+        )
+
     if not consumed:
         return SupplementalCoordinateInvalidationPlan(
             coordinate_consumed=False,
