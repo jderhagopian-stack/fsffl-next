@@ -958,3 +958,23 @@ Current-shadow workflow: `36241799792`.
 ### Management gate presentation requirement remains open
 
 Technical Research has reached the long-horizon architecture Management gate, but the gate is **not presentation-complete** until the previously required plain-language Management PDF is produced and made accessible to Management. Do not request an implementation decision from Management based only on the technical markdown/JSON artifacts. The PDF must summarize the evidence, player/position horizon effects, uncertainty, recommendation, non-recommendations, and exact decisions required.
+
+
+## Management continuation — comparative Y4+ model-family research
+**State: ACTIVE — COMPARATIVE LONG-HORIZON MODEL SELECTION / RESEARCH ONLY**
+
+The prior term-structure study established that post-H3 signal exists, but Management is not accepting Y5 as an assumed breakpoint or two_part_state as the final post-H3 model. Research is reopened for a bounded comparative model-selection phase covering Y4 onward, while production H3 remains unchanged.
+
+Research must evaluate Y4, Y5, Y6, Y7 and Y8 separately and cumulatively where defensible, and determine empirically whether one model family should serve all post-H3 horizons or whether different model families are justified by position and/or horizon.
+
+At minimum, compare the current two_part_state benchmark against purpose-built survival/hazard, multi-state career or role-transition, conditional-production, and other transparent/statistically defensible challengers. A flexible ML challenger may be included only with strict point-in-time chronology, leakage controls, calibration, interpretability diagnostics and complexity penalties.
+
+Do not preselect horizon breakpoints. Do not preassign model families to timeframes. Candidate definitions, model-selection criteria, and any proposed position/horizon routing rules must be frozen before current-player inspection.
+
+At each position × horizon cell, compare candidates on annual production accuracy where cardinal prediction is meaningful, rank/order signal, survival/relevance calibration, state-transition calibration where modeled, economic/Intrinsic bridge usefulness, uncertainty calibration, held-out-season stability, sparse-cell sensitivity, and complexity/robustness versus simpler baselines.
+
+Production H3 remains the governed authority. New model families may be benchmarked on Y1-Y3, but no H3 replacement is authorized. If a challenger materially outperforms H3 on the existing horizon under comparable validation, return that as a separate Management decision.
+
+Longer-horizon coordinates may ultimately be additional decision lenses rather than replacements: users may inspect different horizons according to the decision or franchise timeline. Team Utility remains downstream and cannot rewrite universal Intrinsic.
+
+Deliverables: comparative model matrix by position × horizon, empirical breakpoint/routing analysis, calibration and uncertainty diagnostics, post-selection current-player shadows, and an updated plain-language Management PDF. Return at MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE or DIRECTIVE COMPLETE — RESEARCH with insufficient evidence. No production implementation.
