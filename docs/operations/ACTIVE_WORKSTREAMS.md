@@ -206,3 +206,10 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Forecast/Product Implementation:** ACTIVE. In addition to the exact-State Hodor switch defect already open, physical iPhone acceptance now exposes a production H3 Intrinsic subject-scope regression: unrelated players outside the frozen Future-I1 standard coordinate can collapse Intrinsic globally. Fix by scoping H3 compatibility to its governed subjects while preserving per-player unavailability outside authority.
 - **Presentation:** mobile shared readiness strip must be compacted. FULL = one-line intelligence-current + Refresh; building = progress + short active phase; capability chips appear only for exceptions/details.
 - **Y4+ Intrinsic Research:** **MANAGEMENT GATE.** Comparative model-family work is complete and remains separate from the production H3 restoration corrective; do not use Y4+ research to patch H3.
+
+## 2026-09-26 current execution reconciliation
+- **Forecast/Product Implementation:** ACTIVE — PR #262 open, not merge-ready. Fix exact-compatible same-State Forecast reuse plus static-generation regressions, then green CI/focused workflows, deploy, and complete FSFFL → Hodor → FSFFL → restart acceptance. This is the app critical path.
+- **Intrinsic Research:** ACTIVE — bounded next phase only. Comparative Y4+ model-family selection is complete and accepted by Management. Research now owns terminal/career-state representation plus the uncertainty/presentation contract required before any H5/Y4+ production promotion. Production H3 remains unchanged.
+- **Market:** HOLD for core acceptance; accepted corrective remains deployed and should be physically exercised after #262 closes the switch/Intrinsic/readiness path.
+- **Performance:** ACTIVE only on Market foreground latency; await fresh authenticated post-core Market timings.
+- **Home × Franchise / broader Scoring Coverage:** deferred pending current reliability/acceptance gates.
