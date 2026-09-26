@@ -185,7 +185,7 @@ def default_live_forecast_loader(
         reference_raw_forecasts=reference_raw_forecasts,
     )
     _logger.info(
-        "FSFFL live forecast sources successful=%s failures=%s raw_groups=%s scored_players=%s partial_players=%s regular_season_players=%s simulation_blockers=%s",
+        "FSFFL live forecast sources successful=%s failures=%s raw_groups=%s scored_players=%s partial_players=%s regular_season_players=%s simulation_blockers=%s fumbles_lost_players=%s fumbles_lost_failure=%s",
         list(result.successful_source_ids),
         list(result.failed_sources),
         len(result.raw_ensemble),
@@ -193,6 +193,8 @@ def default_live_forecast_loader(
         len(result.partial_fantasy_point_forecasts),
         len(result.fantasy_regular_season_forecasts),
         list(result.simulation_authority_blockers),
+        result.fumbles_lost_supplement_player_count,
+        result.fumbles_lost_supplement_failure,
     )
     uncertainty_ready = (
         bool(result.fantasy_point_forecasts)
