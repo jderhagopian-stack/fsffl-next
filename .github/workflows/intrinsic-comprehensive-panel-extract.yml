@@ -1,0 +1,45 @@
+name: Intrinsic Comprehensive Panel Extract
+on:
+  push:
+    branches: [research/intrinsic-comprehensive-y4-y8-20260926]
+    paths:
+      - scripts/extract_intrinsic_comprehensive_panel.R
+      - .github/workflows/intrinsic-comprehensive-panel-extract.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+      - name: Restore governed inventory source bytes
+        run: |
+          mkdir -p artifacts/research/intrinsic_comprehensive_y4_y8_20260926/input
+          gh api repos/${{ github.repository }}/actions/artifacts/10913055821/zip > /tmp/inventory.zip
+          unzip -oq /tmp/inventory.zip -d artifacts/research/intrinsic_comprehensive_y4_y8_20260926/input
+      - name: Extract rich player-season panel
+        run: |
+          Rscript scripts/extract_intrinsic_comprehensive_panel.R \
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/input/player_stats_seasonal.RData \
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/RAW_PLAYER_SEASONS_RICH.csv
+          cp artifacts/research/intrinsic_comprehensive_y4_y8_20260926/input/players.csv artifacts/research/intrinsic_comprehensive_y4_y8_20260926/PLAYERS.csv
+          sha256sum artifacts/research/intrinsic_comprehensive_y4_y8_20260926/RAW_PLAYER_SEASONS_RICH.csv \
+                    artifacts/research/intrinsic_comprehensive_y4_y8_20260926/PLAYERS.csv \
+                    > artifacts/research/intrinsic_comprehensive_y4_y8_20260926/INPUT_SHA256.txt
+      - name: Upload panel
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-comprehensive-rich-panel
+          path: |
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/RAW_PLAYER_SEASONS_RICH.csv
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/PLAYERS.csv
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/INPUT_SHA256.txt
+          retention-days: 14
