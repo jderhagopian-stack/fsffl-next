@@ -282,3 +282,31 @@ Report:
 - recommended next step only if further gains are material.
 
 Stop at `DIRECTIVE COMPLETE — PERFORMANCE`, a genuine external blocker, or a Management gate for a Tier-B semantic/reproducibility change.
+
+### Confirmed current Simulation kernel anatomy
+Current production implementation in `src/fsffl/team_utility/simulation.py::simulate_regular_season` is a predominantly sequential pure-Python Monte Carlo kernel:
+
+- one outer Python loop executes `request.simulation_count` times (canonical 50,000);
+- each trial allocates fresh Python `wins` and `points_for` lists;
+- every scheduled matchup is processed serially in Python;
+- scoring draws use Python `random.Random.gauss` one draw at a time;
+- points/wins are accumulated through Python list indexing;
+- all teams are sorted into standings every trial;
+- finish/playoff counters are updated through Python loops;
+- the supported playoff bracket is then simulated serially for that trial with a second deterministic Python RNG;
+- only after all trials are complete are result models constructed.
+
+This confirms the deferred optimization target is not hypothetical: the canonical fresh 50K engine performs substantial Python interpreter/object/allocation work that may be replaceable without changing Simulation authority.
+
+Optimization experiments should explicitly test:
+1. hoisting/reusing per-trial buffers and eliminating repeated allocations;
+2. compact indexed/array representations for team/schedule state;
+3. batched or vectorized regular-season score generation/aggregation;
+4. faster standings/rank computation for the fixed small-team case;
+5. batched playoff evaluation;
+6. compiled/native execution of the same kernel where appropriate;
+7. parallel/chunked execution only under a reproducibility-safe RNG/reduction contract.
+
+For Tier A, preserve exact deterministic outputs and RNG semantics. A useful intermediate experiment is to preserve the exact Python RNG draw stream while accelerating downstream aggregation/ranking; this can identify how much time is RNG generation versus Python bookkeeping.
+
+If materially better performance requires a different but statistically equivalent RNG consumption/reduction order, treat that as Tier B and return to Management with equivalence evidence before changing production semantics.
