@@ -584,3 +584,26 @@ FSFFL is provider-agnostic. A provider-coordinate certification must distinguish
 - any commercial transition requires explicit re-audit of all non-`COMMERCIAL_ALLOWED` sources.
 
 Accordingly, references in this workstream/handoffs to "production rights" or "rights-cleared" must be interpreted against the intended deployment stage, not automatically as "commercially licensed today." The auxiliary certification framework should require rights eligibility for the intended deployment stage plus a separate commercial-status field.
+
+
+## Management directive — FUMBLES_LOST evidence recovery
+**State: ACTIVE — BOUNDED FUMBLES_LOST SOURCE / AUTHORITY RECOVERY**
+
+The State-first/Product corrective is implementation-complete and production evidence now isolates the existing-FSFFL full-capability blocker to missing governed FUMBLES_LOST Forecast evidence. The preserved two-source preseason raw Forecast contains 1,675 observations but no FUMBLES_LOST coordinate; under current material-coordinate policy this yields partial player Forecast and blocks Simulation.
+
+Management authorizes a narrow Research follow-up to determine the shortest evidence-compliant path to full FUMBLES_LOST authority without weakening the core/material rule.
+
+Required work:
+- inventory existing and candidate providers that can supply FUMBLES_LOST at the exact required horizon(s), including already-used providers before adding new ones;
+- classify each provider under `../SOURCE_GOVERNANCE.md` and `../SOURCE_RIGHTS_LEDGER.md` for actual private-beta use, keeping commercial re-review separate;
+- determine whether two genuinely independent same-horizon sources can be acquired for the current 2026 Forecast path and/or authentic pre-opener PIT baseline;
+- verify exact semantics (lost fumbles, not total fumbles), timestamp/horizon compatibility, player coverage, source health, and independence;
+- quantify source-specific historical error/stability and derive target-compatible non-zero uncertainty where evidence permits;
+- reuse existing retained evidence before searching for new providers;
+- do not silently zero FUMBLES_LOST, borrow another horizon, or use the accepted auxiliary-single-source tier because Research already classifies this coordinate as core/material;
+- if two-source authority can be established under current policy, persist an implementation-ready handoff;
+- if not, return the exact remaining external dependency or a Management gate with evidence for any proposed authority-policy change.
+
+This Research may also reconcile the existing external-source inventory so currently deployed sources and new FUMBLES_LOST candidates are governed consistently. Do not reopen unrelated K/DST or broad scoring research.
+
+Return only at a permitted `OPERATING_PROTOCOL.md` terminal state.
