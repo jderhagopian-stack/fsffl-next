@@ -223,3 +223,9 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Implementation:** ACTIVE — PR #263 merged at `4cd5715...`; post-merge CI/deploy/full FSFFL → Hodor → FSFFL → restart production acceptance is the immediate blocker to Management Market testing.
 - **Performance:** ACTIVE but downstream of that acceptance by only one gate. As soon as core acceptance passes, immediately collect fresh authenticated Market timings and continue cold/focused latency optimization; no further Management authorization is needed.
 - **Market:** accepted corrective remains deployed; physical acceptance resumes as soon as core switch/Intrinsic/readiness reliability is proven.
+
+## Queued near-term Performance phase — Simulation engine
+- **General Simulation efficiency:** QUEUED. After core #263 acceptance and the immediate Market foreground-latency pass, Performance should move directly into the deferred fresh 50,000-run Simulation kernel optimization phase.
+- Existing cache/reuse/coalescing/progressive-delivery work does not close this objective; the fresh kernel itself remains the target.
+- First exhaust exact-output-preserving software optimizations. Any non-bit-identical but mathematically equivalent kernel change requires a separate Management reproducibility/statistical-equivalence gate.
+- Do not reduce the canonical 50,000 runs merely for speed.
