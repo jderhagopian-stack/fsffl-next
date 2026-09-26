@@ -267,3 +267,9 @@ Under current Forecast authority, ROS evidence cannot be spliced into the preser
 
 ## Existing-FSFFL acceptance decision — 2026-09-25
 Management requires the existing FSFFL Dynasty league to return to legitimate full capability. The current partial state is a truthful diagnostic state, not an accepted product endpoint. The active critical path is bounded FUMBLES_LOST evidence recovery under current source-governance and authority rules. Do not resume dependent Market acceptance until FSFFL can again promote Simulation legitimately.
+
+
+## 2026 ordinary-offense ROS recovery authorization
+Management authorized a bounded 2026 current-rest-of-season ordinary-offense Forecast lane as the governed recovery path for the existing-FSFFL FUMBLES_LOST blocker. This is a whole current-forward horizon rebase, not a coordinate splice. Authentic preseason evidence remains separate and immutable.
+
+Research now owns provider certification/acquisition; Implementation may prepare provider-neutral contracts but may not promote ROS authority without qualifying multi-source evidence. Market acceptance remains paused.
