@@ -1,0 +1,124 @@
+{
+  "authority": "research_only_no_production_change",
+  "fallback_if_final_rejected": {
+    "candidate": "specialist|forecast10|two_part_ridge",
+    "type": "fixed"
+  },
+  "final_confirmation_rules": {
+    "aggregate_rmse_max_ratio_vs_fallback": 1.02,
+    "aggregate_tail_rmse_max_ratio_vs_fallback": 1.05,
+    "cell_catastrophic_rmse_ratio": 1.15,
+    "cell_catastrophic_tail_rmse_ratio": 1.2,
+    "must_win_at_least_two_of": [
+      "rmse",
+      "mae",
+      "tail_rmse",
+      "spearman"
+    ],
+    "no_candidate_redefinition_after_holdout": true
+  },
+  "final_holdout_by_horizon": {
+    "4": [
+      2020,
+      2021,
+      2022
+    ],
+    "5": [
+      2019,
+      2020,
+      2021
+    ],
+    "6": [
+      2018,
+      2019,
+      2020
+    ],
+    "7": [
+      2017,
+      2018,
+      2019
+    ],
+    "8": [
+      2016,
+      2017,
+      2018
+    ]
+  },
+  "historical_base_seasons": [
+    2005,
+    2022
+  ],
+  "horizons": [
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "inner_validation_folds": {
+    "4": [
+      2016,
+      2017,
+      2018,
+      2019
+    ],
+    "5": [
+      2015,
+      2016,
+      2017,
+      2018
+    ],
+    "6": [
+      2014,
+      2015,
+      2016,
+      2017
+    ],
+    "7": [
+      2013,
+      2014,
+      2015,
+      2016
+    ],
+    "8": [
+      2014,
+      2015
+    ]
+  },
+  "selected_architecture": {
+    "route": {
+      "QB|Y4": "specialist|football_plus|histgb_direct",
+      "QB|Y5": "specialist|football_plus|histgb_direct",
+      "QB|Y6": "specialist|football_plus|histgb_direct",
+      "QB|Y7": "specialist|football_plus|histgb_direct",
+      "QB|Y8": "specialist|full_rich|ridge_direct",
+      "RB|Y4": "specialist|pedigree_plus|two_part_ridge",
+      "RB|Y5": "specialist|forecast10|two_part_ridge",
+      "RB|Y6": "specialist|football_plus|ridge_direct",
+      "RB|Y7": "specialist|full_rich|ridge_direct",
+      "RB|Y8": "specialist|full_rich|ridge_direct",
+      "TE|Y4": "specialist|full_no_uncertainty|two_part_histgb",
+      "TE|Y5": "specialist|full_rich|state_histgb",
+      "TE|Y6": "specialist|forecast_rich|two_part_ridge",
+      "TE|Y7": "specialist|forecast_rich|two_part_ridge",
+      "TE|Y8": "specialist|full_rich|ridge_direct",
+      "WR|Y4": "specialist|football_plus|histgb_direct",
+      "WR|Y5": "specialist|forecast10|two_part_ridge",
+      "WR|Y6": "specialist|forecast10|two_part_ridge",
+      "WR|Y7": "specialist|forecast10|two_part_ridge",
+      "WR|Y8": "specialist|forecast10|two_part_ridge"
+    },
+    "shared_architecture": "global_continuous",
+    "shared_candidate": "global_continuous|football_plus|two_part_ridge",
+    "specialist_weight": 0.75,
+    "type": "hierarchical_blend"
+  },
+  "selected_development_score": -0.052773843241331816,
+  "selection_principles": {
+    "current_players_inspected": false,
+    "final_holdout_predictions_generated": false,
+    "market_owner_team_utility_inputs": false,
+    "production_h3_changed": false
+  },
+  "state": "DEVELOPMENT_SELECTION_FROZEN_BEFORE_UNTOUCHED_FINAL_HOLDOUT"
+}
