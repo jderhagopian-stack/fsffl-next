@@ -244,3 +244,10 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Performance:** **ACTIVE — IMMEDIATE CRITICAL PATH.** Resume Market cold/focused latency work now using fresh authenticated FSFFL traffic and the existing ~44.9s cold / ~31.8–47.8s focused baseline. Exhaust profiling/optimization/deploy/remeasure to terminal state.
 - **Simulation modernization:** immediately follows Market latency; Performance is already authorized to continue into convergence-count study + fresh-kernel/vectorization work + Multiverse identity preservation without another sequencing decision.
 - **Intrinsic Research:** comprehensive Y4-Y8 architecture study continues independently in parallel.
+
+## Physical regression after post-PR263 closeout — app acceptance reopened
+- **Forecast/Product Implementation:** **ACTIVE AGAIN — PRODUCT-SURFACE CORRECTIVE.** The narrower State-first/restart acceptance remains valid, but Management physical testing found hosted Intrinsic/future-forecast unavailability, incomplete Player Intelligence trajectory output, and a League Atlas presentation-module failure.
+- **Readiness presentation:** ACTIVE within the same corrective. While loading, expose the actual phase + served last-good/as-of state; once complete, collapse to the thin strip with a governed “as of” timestamp. Do not claim unqualified “Intelligence current” when supported Intrinsic or another required product capability is unavailable.
+- **Performance / Market latency:** **HOLD FOR THIS CORRECTIVE.** Do not optimize Market against a product state that Management cannot yet accept. Preserve prior Performance evidence and resume immediately after physical product acceptance.
+- **Simulation modernization:** remains queued behind Market latency.
+- **Intrinsic Y4-Y8 Research:** continues independently in parallel.
