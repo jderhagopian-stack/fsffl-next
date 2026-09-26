@@ -215,7 +215,7 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Home × Franchise / broader Scoring Coverage:** deferred pending current reliability/acceptance gates.
 
 ## Long-horizon Research scope expansion — comprehensive architecture
-- **Intrinsic Research:** ACTIVE — comprehensive Y4-Y8 architecture study. Feature discovery, target decomposition, model-family selection, and position/horizon routing are now one joint Research problem. The old `two_part_state` result is only a baseline conditional on the inherited 10-feature set. Different models by position/horizon, shared/hierarchical models, and ensembles are all eligible under nested chronological validation.
+- **Intrinsic Research:** **MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE.** The expanded feature/model/routing search is complete. A richer development-selected hierarchical route failed the untouched final-holdout QB-Y8 safety rule, so the final Research architecture preserves separate position×horizon fits of `forecast10 + two_part_ridge` across Y4-Y8. No breakpoint/router/shared architecture is promoted; production H3 remains unchanged.
 - **Production H3:** unchanged and not part of this implementation path.
 - **Forecast/Product Implementation:** remains the app critical path independently; Research expansion must not block or alter PR #262 corrective acceptance.
 
@@ -250,4 +250,4 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Readiness presentation:** ACTIVE within the same corrective. While loading, expose the actual phase + served last-good/as-of state; once complete, collapse to the thin strip with a governed “as of” timestamp. Do not claim unqualified “Intelligence current” when supported Intrinsic or another required product capability is unavailable.
 - **Performance / Market latency:** **HOLD FOR THIS CORRECTIVE.** Do not optimize Market against a product state that Management cannot yet accept. Preserve prior Performance evidence and resume immediately after physical product acceptance.
 - **Simulation modernization:** remains queued behind Market latency.
-- **Intrinsic Y4-Y8 Research:** continues independently in parallel.
+- **Intrinsic Y4-Y8 Research:** **MANAGEMENT GATE.** Comprehensive study is closed pending Management architecture/product/promotion decisions; no production authority.
