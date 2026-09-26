@@ -211,6 +211,13 @@ def install_player_intelligence_routes(
                 intrinsic.status_reason
                 or "Governed FSFFL Intrinsic contract is explicitly unavailable."
             )
+        elif value.get("raw_shapley_marginal_points") is None:
+            value["intrinsic_status"] = "unavailable"
+            value["intrinsic_contract_status"] = intrinsic.status.value
+            value["intrinsic_error"] = (
+                "This player is outside the governed H3/Future-I1 subject cohort "
+                "or lacks compatible preserved Year-1 evidence."
+            )
         else:
             value["intrinsic_status"] = "ready"
             value["intrinsic_contract_status"] = intrinsic.status.value
