@@ -363,7 +363,25 @@ class PrivateBetaShapleyContractLoader:
                 forecast_model_version=self._future_forecast_model_version,
             )
 
-        key = _cache_key(context, year_one, future_contract, source_ids)
+        h3_player_ids = set(future_contract.player_ids)
+        h3_year_one = tuple(
+            item for item in year_one if item.player_id in h3_player_ids
+        )
+        if len(h3_year_one) != len(h3_player_ids):
+            missing_year_one = sorted(
+                h3_player_ids - {item.player_id for item in h3_year_one}
+            )
+            return build_unavailable_shapley_intrinsic_contract(
+                evaluation_season=league_state.league.season,
+                reason=(
+                    "Governed H3 subjects are missing preserved Year-1 Forecast evidence: "
+                    f"{missing_year_one}"
+                ),
+                missing_required_fact_families=("preseason_year1_forecast",),
+                forecast_model_version=future_contract.forecast_model_version,
+            )
+
+        key = _cache_key(context, h3_year_one, future_contract, source_ids)
         with self._lock:
             if key == self._cached_key and self._cached_contract is not None:
                 return self._cached_contract
@@ -384,7 +402,7 @@ class PrivateBetaShapleyContractLoader:
             try:
                 phase_started = perf_counter()
                 calendar = compose_live_intrinsic_calendar_from_forecast_contract(
-                    live_year_one_forecasts=year_one,
+                    live_year_one_forecasts=h3_year_one,
                     future_contract=future_contract,
                 )
                 _logger.info(
