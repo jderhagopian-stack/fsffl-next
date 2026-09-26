@@ -636,3 +636,25 @@ No zero, single-source, cross-horizon, stale-artifact, or auxiliary-tier workaro
 
 ### Management acceptance constraint — existing FSFFL must recover full capability
 The acceptance-policy path that would simply redefine existing FSFFL partial capability as acceptable is closed. Research should pursue the shortest evidence-compliant FUMBLES_LOST path needed to restore the previously fully supported FSFFL league under the current governed model. Return an exact external blocker if evidence cannot clear it; do not recommend acceptance downgrade merely to close the incident.
+
+
+## Management authorization — 2026 ordinary-offense current-ROS lane
+**State: AUTHORIZED — SOURCE CERTIFICATION / ROS EVIDENCE ACQUISITION**
+
+Management accepts the FUMBLES_LOST handoff's second governed direction and authorizes a bounded 2026 current-ROS ordinary-offense Forecast lane for QB/RB/WR/TE.
+
+Research must now pursue the shortest complete same-horizon source path for the **whole ordinary-offense raw-stat Forecast**, not merely FUMBLES_LOST. Start with the candidate path identified in the closeout:
+1. JerryGM + Fantasy Nerds if rights/access, live payload health, exact coordinate coverage and source independence can all be proven;
+2. if Fantasy Nerds independence cannot be proven, pursue JerryGM + LineupExperts or the next direct independent provider;
+3. reuse any already-governed current ROS source only if it passes source health and the same horizon/coverage contract.
+
+Required:
+- obtain/verify stage-appropriate private-beta rights for model/ensemble use;
+- verify live API schema, player coverage, effective/capture timestamps and exact ROS horizon;
+- establish provider independence without double-voting an aggregate source;
+- build a coordinate coverage matrix for all ordinary-offense stats consumed by current supported league scoring, including FUMBLES_LOST;
+- establish source-compatible non-zero uncertainty using retained PIT evidence and any additional qualifying replay evidence;
+- preserve preseason evidence separately; do not backfill or relabel it;
+- return an implementation-ready handoff when a qualifying ROS ensemble is certifiable, or an exact external-dependency blocker if credentials/permission/paid access are required.
+
+This authorization does not promote JerryGM, Fantasy Nerds, LineupExperts or any provider by name. Providers remain replaceable behind canonical contracts.
