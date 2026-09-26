@@ -263,3 +263,7 @@ Key result:
 - if Fantasy Nerds cannot qualify as an independent vote, JerryGM + LineupExperts is the next bounded candidate, subject to exact-field and rights validation.
 
 Under current Forecast authority, ROS evidence cannot be spliced into the preserved season/preseason baseline. Management must either keep the current route fail-closed until qualifying season/PIT evidence exists or explicitly authorize a bounded ordinary-offense current-ROS lane/rebase. No single-source, zero, borrowed-horizon or stale-artifact workaround is permitted.
+
+
+## Existing-FSFFL acceptance decision — 2026-09-25
+Management requires the existing FSFFL Dynasty league to return to legitimate full capability. The current partial state is a truthful diagnostic state, not an accepted product endpoint. The active critical path is bounded FUMBLES_LOST evidence recovery under current source-governance and authority rules. Do not resume dependent Market acceptance until FSFFL can again promote Simulation legitimately.
