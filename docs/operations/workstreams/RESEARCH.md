@@ -1071,3 +1071,33 @@ Next bounded Research scope:
 5. return with a plain-language Management recommendation and mock/product semantics only if empirically supported.
 
 Do not alter production H3, do not implement H5, do not create a blended master score, and do not change Decision/Search/Team Utility authority. Stop at a new Management gate or a negative Research closeout.
+
+### Management correction — long-horizon feature discovery precedes terminal/career track
+**State: ACTIVE — LONG-HORIZON PREDICTOR DISCOVERY / RESEARCH ONLY**
+
+This section supersedes the immediately prior instruction to proceed directly into terminal/career-state + uncertainty Research.
+
+The completed six-family Y4-Y8 result is valid only conditional on the inherited 10-feature set:
+`age, experience, prior_pct, log_prior_points, log_y1, y1_pct, y2_ratio, y3_ratio, y2_delta, y3_delta`.
+
+Before any terminal/career architecture is selected, Research must determine whether predictors that were absent from that panel—or previously dismissed because they did not improve Y1-Y3—carry incremental Y4-Y8 information.
+
+Minimum candidate families:
+- draft/pedigree and age-at-entry evidence (draft year/round/pick, rookie age/season; college/conference only where defensible);
+- physical profile available point-in-time (for example height/weight; athletic testing only if historically governed);
+- position-specific football usage and efficiency from historically available seasonal evidence;
+- durability/availability and workload persistence where point-in-time evidence is governed;
+- role/team continuity, starter security, or contractual/team-investment signals only where historical PIT evidence can be reconstructed without hindsight;
+- prior career-stage, residual-history, trajectory-state, innovation and volatility signals previously tested on near-term Forecast gates.
+
+Required evaluation:
+1. build a PIT feature-availability/provenance matrix first;
+2. separate survival/relevance and conditional-production targets;
+3. test each feature family incrementally against the current 10-feature baseline while conditioning on governed Y1-Y3 Forecasts;
+4. use nested chronological selection and untouched final holdout;
+5. include ablations, missingness/era sensitivity, position × horizon diagnostics, calibration, rank/tail error, and economic bridge diagnostics;
+6. if materially richer features alter the best model family, reopen the model-family matrix fairly; do not privilege the incumbent;
+7. freeze selected features/models before current-player shadows;
+8. finish with a plain-language Management report identifying what genuinely adds long-horizon signal, what remains redundant, and what data gaps prevent a conclusion.
+
+Production H3 remains unchanged. Market/Team Utility/owner behavior are forbidden inputs. No H5/Y4+ implementation is authorized. The terminal/career-state study is held until this feature-discovery gate is resolved.
