@@ -488,3 +488,36 @@ Not authorized merely for speed:
 - paying for materially larger infrastructure before software-efficiency evidence is exhausted and Management explicitly approves cost.
 
 The objective is end-to-end faster **fresh** Simulation while preserving analytical quality, reproducibility, and authority—not just faster cache hits.
+
+## 2026-09-26 — Simulation count must be empirically justified; restore Multiverse analytics
+Management does not treat 50,000 Monte Carlo runs as a mathematically privileged constant. It remains the current canonical production setting until an empirical convergence study demonstrates a better cost/precision contract.
+
+The prior FSFFL system used smaller development runs and 50,000-run final/production confirmation; this was a conservative production convention rather than evidence of a universal 50,000-run accuracy breakpoint.
+
+Before changing the canonical run count, Performance/Simulation Research must evaluate convergence across representative league States and changed-State scenarios. At minimum compare 5k, 10k, 20k, 25k, 35k, 50k, 75k and 100k against a substantially larger offline reference run where feasible. Use multiple independent seeds and paired/common-random-number comparisons where appropriate.
+
+Evaluate:
+- expected wins and wins variance;
+- playoff, first-place and championship probabilities;
+- finish-rank distributions;
+- team ordering/rank stability;
+- changed-State/trade deltas, especially sign and action-threshold stability;
+- tail/rare-event estimates;
+- runtime, CPU and memory cost.
+
+Do not choose a count merely because aggregate probabilities look close. The governing question is whether decision-relevant outputs are stable enough that additional simulations have immaterial value. If a lower fixed count or a statistically governed adaptive stopping rule achieves the same decision precision, return it as a Management gate. No production count change is authorized yet.
+
+Separately, Management directs recovery of the original FSFFL **Multiverse / Outlier Tracker** concept as a downstream Simulation analytics product. The legacy system preserved deterministic simulation IDs and surfaced model-consistent alternative futures such as:
+- highest player week / season;
+- unexpected superstar season;
+- highest / lowest team week and season points;
+- best / worst record;
+- biggest margin;
+- best team to miss the playoffs;
+- rare champion / high-seed champion.
+
+This layer must not alter Forecast or Simulation probabilities. It should consume the same canonical simulation pass where possible and preserve enough identity/replay provenance to audit a surfaced universe.
+
+Important correction for the modern product: the single most extreme observation is sample-size dependent and should not be presented as a stable forecast. Prefer rarity/context labels, percentile or empirical-frequency context, and representative interesting universes alongside absolute extrema. These are plausible/model-consistent alternative futures, not predictions.
+
+The Multiverse layer belongs downstream of Simulation in Analytics/Presentation and may later feed Home, League Atlas, Reports, season previews and shareable league storytelling.
