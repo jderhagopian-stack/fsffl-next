@@ -3,7 +3,11 @@ from threading import Barrier
 
 import pytest
 
-from fsffl.forecast.current_runtime import NamedCurrentProjectionFetcher, build_current_live_forecasts
+from fsffl.forecast.current_runtime import (
+    LiveForecastSourceHealthFailure,
+    NamedCurrentProjectionFetcher,
+    build_current_live_forecasts,
+)
 from fsffl.forecast.fumbles_lost_first_party import (
     FIRST_PARTY_FUMBLES_LOST_SOURCE,
     FirstPartyFumblesLostEvidenceTier,
@@ -60,11 +64,22 @@ def state() -> LeagueState:
     )
 
 
-def snapshot(provider: str, yards: float, *, captured_at: datetime = NOW) -> CurrentProjectionSnapshot:
+def snapshot(
+    provider: str,
+    yards: float,
+    *,
+    captured_at: datetime = NOW,
+    effective_at: datetime | None = None,
+) -> CurrentProjectionSnapshot:
+    resolved_effective_at = effective_at or (
+        captured_at
+        if provider == "cbs"
+        else datetime(2026, 9, 4, 12, tzinfo=UTC)
+    )
     return CurrentProjectionSnapshot(
         provider=provider,
         captured_at=captured_at,
-        effective_at=(captured_at if provider == "cbs" else datetime(2026, 9, 4, 12, tzinfo=UTC)),
+        effective_at=resolved_effective_at,
         rows=(CurrentProjectionRow(provider=provider, external_id=provider, player_name="Lamar Jackson", position=Position.QB, nfl_team="BAL", stats={"pass_yd": yards, "pass_td": 30.0, "pass_int": 10.0, "rush_yd": 800.0, "rush_td": 5.0}),),
         source_version=f"{provider}-v1",
         usage_class="beta-personal-research-requires-commercial-review",
@@ -92,15 +107,71 @@ def test_current_runtime_ensembles_before_league_scoring() -> None:
     assert "next2-live-season-fp-uncertainty-v1" in result.fantasy_point_forecasts[0].model_version
 
 
-def test_runtime_cutoff_advances_past_provider_retrieval_timestamp() -> None:
-    captured_after_initial_clock = NOW + timedelta(seconds=2)
+def test_runtime_cutoff_is_canonical_state_even_when_retrieval_finishes_later() -> None:
+    captured_after_state = NOW + timedelta(seconds=2)
+    effective_before_state = NOW - timedelta(hours=1)
     fetchers = (
-        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
-        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0, captured_at=captured_after_initial_clock)),
+        NamedCurrentProjectionFetcher(
+            "fftoday",
+            lambda season: snapshot(
+                "fftoday",
+                4000.0,
+                captured_at=captured_after_state,
+                effective_at=effective_before_state,
+            ),
+        ),
+        NamedCurrentProjectionFetcher(
+            "cbs",
+            lambda season: snapshot(
+                "cbs",
+                4200.0,
+                captured_at=captured_after_state,
+                effective_at=effective_before_state,
+            ),
+        ),
     )
-    result = build_current_live_forecasts(state(), fetchers=fetchers, clock=lambda: NOW)
-    assert result.evaluation_as_of == captured_after_initial_clock
+    result = build_current_live_forecasts(
+        state(),
+        fetchers=fetchers,
+        clock=lambda: captured_after_state,
+    )
+    assert result.evaluation_as_of == NOW
     assert result.successful_source_ids == ("cbs", "fftoday")
+    assert all(row.as_of == NOW for row in result.raw_ensemble)
+    assert all(
+        row.provenance.retrieved_at == captured_after_state
+        for row in result.raw_ensemble
+    )
+
+
+def test_provider_effective_after_canonical_state_fails_closed() -> None:
+    after_state = NOW + timedelta(seconds=2)
+    fetchers = (
+        NamedCurrentProjectionFetcher(
+            "fftoday",
+            lambda season: snapshot(
+                "fftoday",
+                4000.0,
+                captured_at=after_state,
+                effective_at=NOW - timedelta(hours=1),
+            ),
+        ),
+        NamedCurrentProjectionFetcher(
+            "cbs",
+            lambda season: snapshot(
+                "cbs",
+                4200.0,
+                captured_at=after_state,
+                effective_at=after_state,
+            ),
+        ),
+    )
+    with pytest.raises(LiveForecastSourceHealthFailure):
+        build_current_live_forecasts(
+            state(),
+            fetchers=fetchers,
+            clock=lambda: after_state,
+        )
 
 
 def test_independent_provider_fetches_overlap_instead_of_running_serially() -> None:
