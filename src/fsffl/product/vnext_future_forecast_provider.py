@@ -653,3 +653,19 @@ def build_vnext_future_forecast_contract(
         contract=contract,
         scoring_multipliers=dict(scoring_multipliers),
     )
+
+
+
+def provide_vnext_future_forecast_contract(
+    *,
+    league_state: LeagueState,
+    raw_forecasts: tuple[ForecastObservation, ...],
+    league_year_one: tuple[ForecastObservation, ...],
+) -> FutureForecastContract:
+    """Stable production boundary: expose only the Forecast-owned contract."""
+
+    return build_vnext_future_forecast_contract(
+        league_state=league_state,
+        raw_forecasts=raw_forecasts,
+        league_year_one=league_year_one,
+    ).contract
