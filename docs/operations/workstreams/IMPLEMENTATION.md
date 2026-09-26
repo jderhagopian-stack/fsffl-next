@@ -727,3 +727,67 @@ Required corrective:
 This failure is independent of Intrinsic authority. The latest persisted Intrinsic contract contains 335/335 governed estimates; the PI 502/503 is a runtime memory failure in historical-stat materialization.
 
 Continue through tests, merge, exact Render deploy, hosted memory validation, and physical iPhone/iPad Player Intelligence acceptance. Do not return at green CI alone.
+
+
+## PR #267 Player Intelligence history-memory corrective — deployed / physical acceptance blocked
+**State: BLOCKED — AUTHENTICATED HOSTED HISTORY LOAD + PHYSICAL IPHONE/IPAD ACCEPTANCE REQUIRED**
+
+PR #267 (`Player Intelligence: bound historical materialization memory`) is merged at
+`d737012079345768ef5cfd19debff97e0ede1bba`.
+
+Accepted implementation head `e914dafe6a3e59ab41dfebebf3fb7177f6d1bcdd` passed:
+- full CI: **1,704 passed**;
+- PR164 focused corrective regression;
+- Live Forecast corrective trace;
+- Corrective live provider numerical trace;
+- League Atlas North Star focused validation.
+
+The corrective is intentionally limited to Player Intelligence history availability:
+- Player History no longer fans all historical seasons out concurrently;
+- the PI path no longer retains a permanent full-population season cache;
+- Sleeper season history has a player-scoped retrieval path that reduces the provider payload to the requested player before transformed materialization;
+- historical seasons are processed sequentially for one player;
+- raw player-season rows persist independently;
+- the final scored player-career history persists/reuses under provider/source-version + player + season-range + LeagueRules identity;
+- weekly fallback remains sequential/player-scoped;
+- the existing HTTP 202/loading lifecycle and duplicate-request coalescing are preserved.
+
+Exact Render deploy `dep-das4k27avr4c73909lsg` is live on the exact product-code merge
+`d737012079345768ef5cfd19debff97e0ede1bba` on the current 512 MB beta service.
+Fresh instance id: `srv-dae6k7vqj5pc73af7bt0-v5qcn`.
+
+Pre-fix failure baseline from PR #266:
+- memory limit: 536,870,900 bytes;
+- memory reached 509,108,220 bytes in Render's sampled series immediately before the restart boundary;
+- Management's physical observation recorded ~532.9 MB peak and HTTP 502/503;
+- CPU dropped to zero and the sole instance restarted.
+
+Post-#267 fresh-start observation:
+- ~51 MB at process start;
+- ~259 MB at 22:43Z;
+- ~303 MB at 22:43:30–22:44Z;
+- ~337 MB at 22:45Z;
+- ~360 MB at 22:45:30Z;
+- ~384 MB at 22:46Z;
+- no post-deploy restart observed in that interval.
+
+**Do not treat fresh-start memory as the hosted PI-history acceptance.** No authenticated
+post-deploy request to `/api/player-intelligence/{player_id}/history` has yet reached the new
+instance. The execution environment does not possess the private-beta Basic Auth/session and
+does not provide a physical iPhone/iPad browser. Therefore the remaining acceptance gate is
+external and concrete:
+
+1. open a real Player Intelligence history on physical iPhone and iPad;
+2. observe the normal 202 → ready/200 flow with no 502/503;
+3. repeat the same player open to prove persisted final-career reuse;
+4. inspect Render memory for that exact request window and prove the same instance survives,
+   memory stays safely below the 536,870,900-byte limit and materially below the prior failure
+   curve, and the reused open does not recreate the career-build spike.
+
+This incident is independent of Intrinsic authority and State-first persistence. Do not reopen
+either without new direct evidence.
+
+Durable checkpoint:
+`artifacts/implementation/player_intelligence_history_memory_20260926/IMPLEMENTATION_HANDOFF.md`
+
+**BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — PHYSICAL / AUTHENTICATED HOSTED PLAYER INTELLIGENCE HISTORY ACCEPTANCE REQUIRED**
