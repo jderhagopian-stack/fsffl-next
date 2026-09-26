@@ -5,6 +5,9 @@ from typing import Callable
 
 from fsffl.forecast.annual_preseason_snapshot import ANNUAL_PRESEASON_SNAPSHOT_MODEL_VERSION
 from fsffl.forecast.current_runtime import LiveForecastSourceHealthFailure
+from fsffl.forecast.fumbles_lost_first_party import (
+    build_first_party_fumbles_lost_supplement,
+)
 from fsffl.forecast.preseason_baseline import (
     PRESEASON_BASELINE_MODEL_VERSION,
     PreseasonForecastBaseline,
@@ -18,6 +21,7 @@ from fsffl.persistence.annual_preseason_snapshot import (
     NFL_SEASON_SCOPE_KIND,
     decode_annual_preseason_projection_snapshot,
 )
+from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.persistence.contracts import PersistenceStore
 from fsffl.persistence.runtime_cache import (
     LEAGUE_SEASON_SCOPE_KIND,
@@ -77,11 +81,34 @@ def _evidence_from_baseline(
     baseline,
     live_failure: Exception | None = None,
 ) -> LiveForecastEvidence:
-    result = build_runtime_from_preseason_baseline(league_state, baseline)
+    supplement = None
+    supplement_failure = None
+    if league_consumes_fumbles_lost(league_state.league.rules):
+        try:
+            supplement = build_first_party_fumbles_lost_supplement(
+                league_state,
+                base_observations=baseline.raw_ensemble,
+            )
+        except Exception as exc:
+            supplement_failure = f"{type(exc).__name__}: {exc}"
+            _logger.warning(
+                "FSFFL first-party FUMBLES_LOST fallback supplement unavailable league=%s state=%s error=%s",
+                league_state.league.league_id,
+                league_state.state_id,
+                supplement_failure,
+            )
+    result = build_runtime_from_preseason_baseline(
+        league_state,
+        baseline,
+        fumbles_lost_supplement=supplement,
+    )
+    updates = {}
     if isinstance(live_failure, LiveForecastSourceHealthFailure):
-        result = result.model_copy(
-            update={"source_health_events": live_failure.health_events}
-        )
+        updates["source_health_events"] = live_failure.health_events
+    if supplement_failure is not None:
+        updates["fumbles_lost_supplement_failure"] = supplement_failure
+    if updates:
+        result = result.model_copy(update=updates)
     uncertainty_ready = (
         bool(result.fantasy_point_forecasts)
         and not result.simulation_authority_blockers
