@@ -9,6 +9,7 @@ from typing import Callable
 
 from fsffl.forecast.current_runtime import LiveForecastRuntimeResult, build_current_live_forecasts
 from fsffl.forecast.models import ForecastObservation
+from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.providers.acquisition import ProviderBackedStateService
 from fsffl.providers.sleeper_live import SleeperLiveSource
 from fsffl.providers.sleeper_snapshot import SleeperSnapshotNormalizer
