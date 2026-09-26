@@ -401,3 +401,32 @@ Long-horizon Intrinsic Research has completed a green historical model-selection
 Management has clarified that partial player Forecast authority is subject/consumer scoped. The current two-WR FUMBLES_LOST miss should be treated first as a supplement-universe reconciliation defect, because both players have deterministic State identity/position and the accepted first-party model already defines degraded/cold-start handling. Implementation must repair that generic path and keep unrelated intelligence available. Simulation may remain fail-closed only if a truly unresolved player can materially enter simulated outcomes and no governed bounded treatment exists.
 
 Long-horizon Intrinsic Research must continue to a Management-ready plain-language PDF with current-player horizon curves/rank shifts, positional-distribution changes, uncertainty and explicit implementation decisions; the current three-year production Intrinsic remains unchanged.
+
+
+## Current two-player partials are unrostered
+Production State inspection confirms `sleeper:player:11630` (Roman Wilson) and `sleeper:player:6149` (Darius Slayton), the only two current partial `fum_lost` Forecast subjects, are not on any FSFFL roster. Their missing coordinate must remain visible at the player/free-agent level, but they should not block current roster-based league Simulation. The runtime currently blocks on any partial Forecast row globally; Forecast/Product is directed to replace that coarse gate with consumer-scoped dependency gating and then rerun production acceptance.
+
+
+## Long-horizon Intrinsic term-structure Research closeout — 2026-09-26
+
+Research has reached **MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE**.
+
+No production Value behavior changed.
+
+The evidence supports an explicit term structure:
+- **H1:** existing near-term Shapley contribution;
+- **H3:** current governed production Intrinsic, unchanged;
+- **H5:** separate challenger horizon supported by chronological Y4/Y5 signal;
+- **Terminal/Career:** coarse persistence/state band only; exact Y6-Y8/career cardinal value is not supported.
+
+Current 335-player post-selection shadows reproduce production H3 ranks at Spearman **0.99654**. H3→H5 median absolute movement is **7 ranks** (p90 **19**), demonstrating meaningful but bounded horizon crossovers. The longer horizon moves value away from aging non-QB cohorts and toward more durable young assets without any manual age/youth bonus.
+
+H5 remains too uncertain for false precision: position-level OOT residual floors are large relative to expected production, and QB magnitude needs a separate long-horizon repair despite improved ranking signal.
+
+Durable package:
+`artifacts/research/intrinsic_term_structure_20260926/`.
+
+Research recommendation and exact Management decisions are in:
+`RESEARCH_CLOSEOUT.md`.
+
+The active FSFFL restoration remains owned by Forecast/Product and is unaffected by this Research closeout.

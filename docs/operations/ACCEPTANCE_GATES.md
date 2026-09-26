@@ -227,6 +227,32 @@ The external JerryGM + LineupExperts route remains fallback/benchmark only. It i
 
 The auxiliary single-source tier remains irrelevant because this is a Forecast-owned empirical model, not a one-provider authority exception.
 
+
+## Intrinsic term-structure Research gate
+**Status: MANAGEMENT GATE — ARCHITECTURE CANDIDATE / NO PRODUCTION AUTHORITY.**
+
+Research evidence supports a term-structure architecture while preserving the current production H3 coordinate:
+- H1 near-term component;
+- governed H3 unchanged;
+- separate H5 challenger;
+- non-cardinal terminal/career band.
+
+Research does **not** accept exact Y6-Y8/career cardinal production value.
+
+Before any H5 production authority can be considered, a later authorized implementation/research package must at minimum clear:
+1. QB-specific Y4/Y5 magnitude calibration or an equivalent validated position-safe Forecast extension;
+2. current PIT/identity coverage and fail-closed behavior;
+3. cross-horizon covariance/scenario uncertainty sufficient for cumulative H5 Value uncertainty;
+4. exact H3 semantic/output preservation;
+5. Shapley deployment-game parity/efficiency;
+6. discount/magnitude governance not selected from market or named-player aesthetics;
+7. downstream containment so separate horizon coordinates do not become Team Utility, market price or acceptance probability.
+
+Durable Research handoff:
+`artifacts/research/intrinsic_term_structure_20260926/RESEARCH_CLOSEOUT.md`.
+
+No H5/terminal production implementation is currently authorized.
+
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
 

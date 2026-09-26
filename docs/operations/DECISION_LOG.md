@@ -326,3 +326,19 @@ For current Simulation specifically:
 - if a truly unresolved subject can materially enter simulated lineups/outcomes, preserve fail-closed truth for the affected Simulation authority until Research/Implementation has an authorized bounded treatment. Do not solve this by pretending the coordinate is zero.
 
 The current two-WR incident is presumed to be a population/reconciliation defect until disproven: both subjects have deterministic Sleeper identity and position and were already present in prior State snapshots. Implementation should repair the generic supplement-universe/reconciliation path before considering any new authority-policy exception.
+
+
+## 2026-09-26 — Unrostered player incompleteness cannot block roster-based Simulation
+Decision: current league Simulation authority must be evaluated against the subjects that actually participate in the Simulation dependency graph, not against every player in the universal Forecast universe.
+
+Production inspection of the current FSFFL State confirms the two remaining partial FUMBLES_LOST subjects, `sleeper:player:11630` (Roman Wilson) and `sleeper:player:6149` (Darius Slayton), are **not rostered by any FSFFL team**. They therefore cannot by themselves block the current roster-based league Simulation unless that Simulation explicitly models them as possible transaction/waiver entrants.
+
+Required semantics:
+- keep those player Forecast rows explicitly partial; do not fabricate or silently zero FUMBLES_LOST;
+- Player Board / Free Agent / Market consumers may expose the player-specific incompleteness where relevant;
+- current league Simulation, lineup optimization, standings/race and other roster-based consumers gate only on their actual subject dependencies;
+- bench/taxi/IR or other rostered players remain Simulation-relevant when the consumer can use them through lineup/injury/roster mechanics;
+- unrostered players become blocking only for a consumer that explicitly models acquisition/waiver/free-agent entry and therefore includes them in its dependency set;
+- readiness must report scoped capability truth rather than letting unrelated universal-player incompleteness collapse the core league product.
+
+This is a dependency-graph correction, not an authority relaxation. Missing evidence remains visible and fail-closed for the affected subject/consumer.

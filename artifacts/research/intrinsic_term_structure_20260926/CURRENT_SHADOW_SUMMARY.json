@@ -1,0 +1,41 @@
+{
+  "authority": "research_shadow_only_no_production_change",
+  "current_player_count": 335,
+  "frozen_selected_model": "two_part_state",
+  "historical_gate_reproduced": true,
+  "discount": 0.85,
+  "production_h3_comparison": {
+    "artifact_id": 566,
+    "computed_at": "2026-09-25 03:07:50.427138+00",
+    "matched_players": 335,
+    "spearman_shadow_h3_vs_production": 0.9965386923381384,
+    "mean_absolute_raw_value_gap": 21.132549896815142,
+    "mean_absolute_rank_gap": 5.629850746268657
+  },
+  "horizon_rank_correlations": {
+    "h1_vs_h3": 0.9764995595163618,
+    "h3_vs_h5": 0.9857114129949058,
+    "h3_vs_h8": 0.9671699245432378,
+    "h5_vs_h8": 0.9951569143163568
+  },
+  "rank_movement": {
+    "median_abs_h3_to_h5": 7,
+    "p90_abs_h3_to_h5": 19,
+    "max_abs_h3_to_h5": 123,
+    "share_abs_ge_10_h3_to_h5": 0.3611940298507463,
+    "share_abs_ge_20_h3_to_h5": 0.09253731343283582,
+    "median_abs_h3_to_h8": 12,
+    "p90_abs_h3_to_h8": 30,
+    "max_abs_h3_to_h8": 173,
+    "share_abs_ge_10_h3_to_h8": 0.5940298507462687,
+    "share_abs_ge_20_h3_to_h8": 0.2537313432835821
+  },
+  "current_mapping": {
+    "players_with_2025_prior_points": 293,
+    "players_without_2025_prior_points": 42
+  },
+  "terminal_interpretation": {
+    "exact_y6_y8_cardinal_value_authority": "not_recommended_from_current_evidence",
+    "reason": "Ordering persists but exact-year signal weakens and uncertainty/magnitude sensitivity grows."
+  }
+}
