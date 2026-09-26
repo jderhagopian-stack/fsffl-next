@@ -1,0 +1,66 @@
+{
+  "state": "FROZEN_BEFORE_TRAJECTORY_AUDIT_RESULTS",
+  "authority": "research_only_no_production_change",
+  "origin_source": {
+    "run_id": 36271080037,
+    "artifact_id": 10916355135,
+    "digest": "sha256:63520ddb60a8ed12724fa21e8d276c4e3e7d5587162aade92ba7afaa3796ced2"
+  },
+  "variants": [
+    "base_linear",
+    "target_poly",
+    "target_poly_exposure",
+    "target_exposure_histgb",
+    "exposure_ablation"
+  ],
+  "target_age_formula": "base age + horizon - 1",
+  "target_experience_formula": "base NFL experience + horizon - 1",
+  "cumulative_cutoff": "strictly seasons < base_season",
+  "exposure_by_position": {
+    "QB": [
+      "career_games",
+      "career_seasons",
+      "career_attempts",
+      "career_dropbacks",
+      "career_carries",
+      "career_opportunities"
+    ],
+    "RB": [
+      "career_games",
+      "career_seasons",
+      "career_carries",
+      "career_targets",
+      "career_receptions",
+      "career_touches",
+      "career_opportunities"
+    ],
+    "WR": [
+      "career_games",
+      "career_seasons",
+      "career_targets",
+      "career_receptions",
+      "career_carries",
+      "career_opportunities"
+    ],
+    "TE": [
+      "career_games",
+      "career_seasons",
+      "career_targets",
+      "career_receptions",
+      "career_carries",
+      "career_opportunities"
+    ]
+  },
+  "decomposed_targets": [
+    "survival_positive_production",
+    "conditional_production_if_active",
+    "overall_expected_production"
+  ],
+  "guards": {
+    "prior_final_holdout_artifact_consumed": false,
+    "current_named_players_consumed": false,
+    "production_h3_changed": false,
+    "manual_age_cliff": false,
+    "market_owner_team_utility_inputs": false
+  }
+}
