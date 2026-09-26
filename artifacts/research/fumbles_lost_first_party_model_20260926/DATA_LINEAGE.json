@@ -1,0 +1,54 @@
+{
+  "current_board": {
+    "path": "artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_STANDARD_COORDINATE_BOARD_335.csv",
+    "sha256": "17e6e25777105ff636715c79bd0c090f6286cba8fce53ed7e7c60b53a38f706f"
+  },
+  "model_frozen_before_current_shadows": true,
+  "nflverse_assets": [
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 633,
+      "season": 2021,
+      "sha256": "41915fb49238902ad1f129ebf0405b11a1e710454ae0fe8f7b3e4f9145875f48",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2021.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 608,
+      "season": 2022,
+      "sha256": "ad426c3fe5bf1cc30c3f137fdfe96d054e19d400879ee4413129da49fa7b54be",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2022.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 577,
+      "season": 2023,
+      "sha256": "f19cb71a5de0dce7fd09376026237c9ee9d5a93fe13815a2ea3ec2d37204cb17",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2023.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 589,
+      "season": 2024,
+      "sha256": "3ddc45a84f759aa348ce465ae001752c530575455717657cdfe1f8abfcdb4759",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2024.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 610,
+      "season": 2025,
+      "sha256": "e5e0615b3d96a3eaebfaee91e55afb4a4e7fe0caf057454177bcd7d6ad4bcfc2",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2025.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 415,
+      "season": 2026,
+      "sha256": "315cfb8d5abbd44c6a36c43e3e8ad78c96351193c8e2fe717fcff8413df43b2b",
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv"
+    }
+  ],
+  "no_future_leakage": true,
+  "no_named_player_tuning": true,
+  "no_random_split": true
+}
