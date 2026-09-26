@@ -329,3 +329,19 @@ The remaining failure is not league switching/rebuild/readiness orchestration. U
 Durable handoff: `artifacts/implementation/state_first_fumbles_authority_20260926/IMPLEMENTATION_HANDOFF.md`.
 
 Implementation waits for qualifying evidence or an explicit Management authority-policy decision. Market full physical acceptance remains paused because the current FSFFL state cannot promote Simulation.
+
+
+## Management authorization — prepare 2026 ordinary-offense ROS lane
+**State: AUTHORIZED PENDING QUALIFYING SOURCE EVIDENCE**
+
+Management authorizes the product/Forecast architecture for a 2026 current-ROS ordinary-offense lane. Implementation may prepare provider-neutral horizon/artifact contracts, replay/fingerprint safety, current-forward consumer routing, provenance/coverage diagnostics, and tests that do not fabricate provider evidence.
+
+Do not promote production ROS authority until Research supplies a qualifying same-horizon multi-source evidence package. Do not splice a ROS FUMBLES_LOST coordinate into the preserved preseason baseline.
+
+When qualifying evidence arrives, implementation should:
+- materialize one canonical current-ROS raw-stat Forecast ensemble for ordinary offensive players;
+- preserve the authentic preseason baseline as a separate PIT artifact;
+- score the ROS raw Forecast under each connected league's rules;
+- rebuild current Forecast/Simulation/derived intelligence for the exact State;
+- prove existing-league full capability and arbitrary-league non-regression;
+- continue through CI, merge, Render and production validation before Management physical testing resumes.
