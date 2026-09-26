@@ -432,9 +432,16 @@ def derive_league_scoring_result(
         effective = max(item.provenance.effective_at for _, _, item in active)
         retrieved = max(item.provenance.retrieved_at for _, _, item in active)
         scored_as_of = max(item.as_of for _, _, item in active)
-        supplemental_mixed_vintage = any(
-            item.provenance.source == SUPPLEMENTAL_COORDINATE_SOURCE
-            for _metric, _coefficient, item in active
+        supplemental_mixed_vintage = (
+            supplemental is not None
+            and ForecastMetric.FUMBLES_LOST in by_metric
+            and any(
+                metric == ForecastMetric.FUMBLES_LOST
+                for metric, _coefficient, _item in active
+            )
+        )
+        supplemental_source = (
+            supplemental.source if supplemental_mixed_vintage and supplemental is not None else None
         )
         lineage_suffix = (
             ":supplemental_mixed_vintage_current"
@@ -443,7 +450,7 @@ def derive_league_scoring_result(
         )
         provenance = Provenance(
             source=(
-                f"{source}[base={first.source};supplement={SUPPLEMENTAL_COORDINATE_SOURCE}]"
+                f"{source}[base={first.source};supplement={supplemental_source}]"
                 if supplemental_mixed_vintage
                 else f"{source}[{first.source}]"
             ),
