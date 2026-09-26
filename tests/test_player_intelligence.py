@@ -580,18 +580,19 @@ def test_historical_fantasy_points_reconcile_to_current_league_scoring() -> None
     assert row.games_played == 17
 
 
-def test_repeat_player_history_reuses_compatible_season_aggregates() -> None:
+def test_player_history_does_not_retain_cross_player_full_season_cache() -> None:
     runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
     source = _HistorySource()
-    service = PlayerHistoryService(source=source, max_workers=4, minimum_season=2020)
+    service = PlayerHistoryService(source=source, max_workers=6, minimum_season=2025)
 
     first = service.player_history(runtime, "sleeper:player:101")
-    call_count = len(source.season_calls)
+    calls_after_first = list(source.season_calls)
     second = service.player_history(runtime, "sleeper:player:102")
 
     assert first and second
-    assert call_count == 6
-    assert len(source.season_calls) == call_count
+    assert calls_after_first == [2025]
+    assert source.season_calls == [2025, 2025]
+    assert not hasattr(service, "_cache")
 
 
 class _ArtifactStore:
@@ -605,27 +606,29 @@ class _ArtifactStore:
         self.records[record.key] = record
 
 
-def test_history_season_aggregates_are_durably_reusable_across_service_instances() -> None:
+def test_final_player_history_is_durably_reusable_across_service_instances() -> None:
     runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
     store = _ArtifactStore()
     first_source = _HistorySource()
     first_service = PlayerHistoryService(
         source=first_source,
-        max_workers=2,
+        max_workers=6,
         minimum_season=2025,
         persistence_store=store,
     )
-    assert first_service.player_history(runtime, "sleeper:player:101")
+    first = first_service.player_history(runtime, "sleeper:player:101")
+    assert first
     assert first_source.season_calls == [2025]
 
     second_source = _HistorySource()
     second_service = PlayerHistoryService(
         source=second_source,
-        max_workers=2,
+        max_workers=6,
         minimum_season=2025,
         persistence_store=store,
     )
-    assert second_service.player_history(runtime, "sleeper:player:102")
+    second = second_service.player_history(runtime, "sleeper:player:101")
+    assert second == first
     assert second_source.season_calls == []
 
 
@@ -695,3 +698,83 @@ def test_sleeper_season_stats_source_preserves_provider_box_score_keys_and_gp() 
     assert rows[0].stats["fum"] == 5
     assert rows[0].stats["fum_lost"] == 2
 
+
+
+class _PlayerScopedHistorySource(_HistorySource):
+    source_version = "fixture-player-scoped-season-v1"
+
+    def __init__(self):
+        super().__init__()
+        self.player_calls: list[tuple[int, str]] = []
+        self.full_population_calls = 0
+        self.active = 0
+        self.max_active = 0
+
+    def fetch_season(self, *, season: int):
+        self.full_population_calls += 1
+        raise AssertionError("player history should not request full-population season materialization")
+
+    def fetch_season_player(self, *, season: int, player_id: str):
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        try:
+            self.player_calls.append((season, player_id))
+            stats = self._stats.get(player_id)
+            if stats is None or season < self._first_season[player_id]:
+                return None
+            return SleeperSeasonStatLine(
+                player_id=f"sleeper:player:{player_id}",
+                season=season,
+                stats=stats,
+                captured_at=NOW,
+                source_company="fixture",
+            )
+        finally:
+            self.active -= 1
+
+
+def test_player_history_uses_player_scoped_sequential_acquisition_even_when_workers_requested() -> None:
+    runtime = UserRuntimeContext(user_id="u", league_state=_state(), selected_team_id="a")
+    source = _PlayerScopedHistorySource()
+    service = PlayerHistoryService(
+        source=source,
+        max_workers=6,
+        minimum_season=2020,
+    )
+
+    rows = service.player_history(runtime, "sleeper:player:101")
+
+    assert [row.season for row in rows] == [2020, 2021, 2022, 2023, 2024, 2025]
+    assert source.full_population_calls == 0
+    assert source.player_calls == [(season, "101") for season in range(2020, 2026)]
+    assert source.max_active == 1
+    assert service._max_workers == 1
+    assert not hasattr(service, "_cache")
+
+
+def test_sleeper_player_scoped_fetch_selects_direct_mapping_without_transforming_peer_population() -> None:
+    seen = []
+
+    def getter(url):
+        seen.append(url)
+        return {
+            "bad-peer": {"season": "not-an-int", "gp": 17, "pass_yd": 9999},
+            "101": {
+                "season": 2025,
+                "gp": 17,
+                "pass_att": 550,
+                "pass_cmp": 365,
+                "pass_yd": 4300,
+                "fum_lost": 2,
+            },
+        }
+
+    source = SleeperWeeklyStatsSource(http_get_json=getter, clock=lambda: NOW)
+    row = source.fetch_season_player(season=2025, player_id="101")
+
+    assert seen == ["https://api.sleeper.app/v1/stats/nfl/regular/2025"]
+    assert row is not None
+    assert row.player_id == "sleeper:player:101"
+    assert row.stats["gp"] == 17
+    assert row.stats["pass_yd"] == 4300
+    assert row.stats["fum_lost"] == 2
