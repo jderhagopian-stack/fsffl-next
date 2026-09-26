@@ -3,12 +3,20 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from time import monotonic, sleep
 
+from fsffl.forecast.current_runtime import (
+    LiveForecastRuntimeResult,
+    LiveForecastSourceHealthEvent,
+    LiveForecastSourceProvenance,
+)
+from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
+from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION
 from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
 from fsffl.persistence.session import (
     LAST_GOOD_ARTIFACT_KIND, LAST_GOOD_MODEL_VERSION, LAST_GOOD_SCOPE_KIND,
     persist_runtime_snapshot, restore_runtime_snapshot,
 )
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
+from fsffl.product.runtime import LiveForecastEvidence
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -16,9 +24,11 @@ from fsffl.state.models import (
     LineupRequirement,
     ProviderRef,
     RosterSlot,
+    ScoringRule,
     Team,
     TeamState,
 )
+from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
 
 
 class MemoryPersistence:
@@ -439,3 +449,128 @@ def test_failed_refresh_never_restores_last_good_from_different_league() -> None
 
     assert restored is not None
     assert restored.league_state.league.league_id == "sleeper:456"
+
+
+
+def _stale_forecast_without_first_party_fumbles_lost(
+    state: LeagueState,
+) -> LiveForecastEvidence:
+    provenance = tuple(
+        LiveForecastSourceProvenance(
+            provider=provider,
+            source_version=f"{provider}-v1",
+            captured_at=state.as_of,
+            effective_at=state.as_of,
+            usage_class="projection",
+            provider_payload_sha256=(char * 64),
+            health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+        )
+        for provider, char in (("one", "a"), ("two", "b"))
+    )
+    health = tuple(
+        LiveForecastSourceHealthEvent(
+            provider=provider,
+            disposition="accepted",
+            check="revision_agnostic_scale_health",
+            reason="synthetic valid legacy cache fixture",
+            health_contract_version=CURRENT_PROJECTION_HEALTH_CONTRACT_VERSION,
+            provider_payload_sha256=(char * 64),
+        )
+        for provider, char in (("one", "a"), ("two", "b"))
+    )
+    runtime = LiveForecastRuntimeResult(
+        raw_ensemble=(),
+        fantasy_point_forecasts=(),
+        coverage=LiveEnsembleCoverage(
+            independent_source_ids=("one", "two"),
+            excluded_aggregate_source_ids=(),
+            active_source_ids=("one", "two"),
+            observation_count=0,
+            minimum_independent_sources=2,
+        ),
+        successful_source_ids=("one", "two"),
+        failed_sources=(),
+        evaluation_as_of=state.as_of,
+        source_provenance=provenance,
+        source_health_events=health,
+    )
+    assert runtime.fumbles_lost_supplement_authority_fingerprint is None
+    return LiveForecastEvidence(
+        raw_forecasts=(),
+        league_scored_forecasts=(),
+        successful_source_ids=("one", "two"),
+        failed_sources=(),
+        uncertainty_ready=False,
+        runtime_result=runtime,
+    )
+
+
+def _empty_value(state: LeagueState) -> CurrentMarketValueRuntimeResult:
+    return CurrentMarketValueRuntimeResult(
+        league_state_id=state.state_id,
+        estimates=(),
+        successful_source_ids=(),
+        failed_sources=(),
+        errors_by_source_id={},
+        roster_player_count=0,
+        valued_roster_player_count=0,
+        market_context_id="test-market",
+    )
+
+
+def test_restore_selectively_rejects_pre_supplement_fum_lost_forecast_but_keeps_value() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    consuming = state.model_copy(
+        update={
+            "league": state.league.model_copy(
+                update={
+                    "rules": state.league.rules.model_copy(
+                        update={
+                            "scoring": (
+                                ScoringRule(stat="fum_lost", points=-2.0),
+                            )
+                        }
+                    )
+                }
+            )
+        }
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=consuming,
+        selected_team_id="t2",
+        forecast_evidence=_stale_forecast_without_first_party_fumbles_lost(consuming),
+        value_evidence=_empty_value(consuming),
+    )
+
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy")
+
+    assert restored is not None
+    assert restored.league_state.state_id == consuming.state_id
+    assert restored.forecast_evidence is None
+    assert restored.simulation_analytics is None
+    assert restored.value_evidence is not None
+    assert restored.value_evidence.league_state_id == consuming.state_id
+
+
+def test_restore_keeps_same_legacy_forecast_for_non_fum_lost_league() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=_empty_value(state),
+    )
+
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy")
+
+    assert restored is not None
+    assert restored.forecast_evidence is not None
+    assert restored.forecast_evidence.model_version == forecast.model_version
+    assert restored.value_evidence is not None
