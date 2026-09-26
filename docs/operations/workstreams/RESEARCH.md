@@ -865,3 +865,20 @@ Describe, without implementing, how governed horizon coordinates could later sup
 
 ### Deliverables / stop condition
 Persist reproducible research artifacts, methodology, historical validation, comparative diagnostics, current-player shadows only after the model-selection discipline above, limitations, and a proposed contract. Return control only at `MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE` if evidence supports a candidate architecture, or `DIRECTIVE COMPLETE — RESEARCH` with a negative/insufficient-evidence finding. Do not implement production changes in this workstream.
+
+
+### Long-horizon Intrinsic research checkpoint — historical selection pass
+
+Branch `research/intrinsic-term-structure-20260926` has completed the first reproducible historical model-selection pass at head `895df9e3f439`; workflow `36220635330` is green. This is **not yet the terminal Research handoff**.
+
+Current empirical checkpoint:
+- frozen long-horizon candidate selected: `two_part_state`;
+- untouched holdout gate passed;
+- Y4 vs Y3-carry: MAE improves 10.5%, RMSE 2.7%, Spearman +0.098;
+- Y5 vs Y3-carry: MAE improves 16.8%, RMSE 1.7%, Spearman +0.088;
+- historical Shapley bridge correlates 0.862 (2021) and 0.881 (2022) with the current I1-Shapley proxy coordinate;
+- terminal predictive ordering remains measurable through Y6–Y8 but weakens with horizon (Spearman approximately 0.419, 0.386, 0.346 respectively);
+- uncertainty is defined from OOT residual RMSE by horizon/position and must use a monotone non-decreasing envelope;
+- no current named-player ranks were inspected before historical candidate selection was frozen.
+
+Generated diagnostics include Forecast/value horizon metrics, uncertainty by horizon, historical crossovers, position distributions, discount sensitivity, and Shapley bridge validation. Research must still complete the directive's post-selection work, including current-player shadows/rank movement and the final architecture recommendation/limitations, then persist a durable Management-gate handoff. No production Intrinsic change is authorized.
