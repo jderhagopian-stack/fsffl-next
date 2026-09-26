@@ -1,0 +1,70 @@
+{
+  "state": "HISTORICAL_SELECTION_FROZEN_BEFORE_NEW_CURRENT_SHADOWS",
+  "authority": "research_only_no_production_change",
+  "comparative_workflow_run": 36250669362,
+  "comparative_artifact_id": 10909006505,
+  "comparative_artifact_digest": "sha256:0befa35ef1d75eeb8cf160d141e9296cde4c83edd3df7127979afb7f2b8430ba",
+  "candidate_families": [
+    "carry_y3",
+    "direct_ridge",
+    "two_part_state",
+    "conditional_cohort",
+    "survival_hazard",
+    "career_state_transition"
+  ],
+  "final_cardinal_research_family_by_position_horizon": {
+    "QB": {
+      "4": "two_part_state",
+      "5": "two_part_state",
+      "6": "two_part_state",
+      "7": "two_part_state",
+      "8": "two_part_state"
+    },
+    "RB": {
+      "4": "two_part_state",
+      "5": "two_part_state",
+      "6": "two_part_state",
+      "7": "two_part_state",
+      "8": "two_part_state"
+    },
+    "WR": {
+      "4": "two_part_state",
+      "5": "two_part_state",
+      "6": "two_part_state",
+      "7": "two_part_state",
+      "8": "two_part_state"
+    },
+    "TE": {
+      "4": "two_part_state",
+      "5": "two_part_state",
+      "6": "two_part_state",
+      "7": "two_part_state",
+      "8": "two_part_state"
+    }
+  },
+  "empirical_breakpoint_promoted": false,
+  "rationale": {
+    "incumbent_holdout_wins": {
+      "rmse_cells": "14 of 20",
+      "survival_brier_cells": "14 of 20",
+      "spearman_cells": "8 of 20",
+      "tail_rmse_cells": "11 of 20; carry_y3 wins the other 9"
+    },
+    "direct_ridge": {
+      "mae_cells": "17 of 20",
+      "rmse_cells": "0 of 20",
+      "interpretation": "central-tendency shrinkage lowers MAE but worsens squared/tail error; unsuitable as a universal Shapley cardinal replacement"
+    },
+    "survival_hazard": {
+      "interpretation": "near-equivalent to incumbent in several cells, especially QB, but paired gains are not durable/material enough to justify a separate route; QB H8 is materially worse"
+    },
+    "career_state_transition": {
+      "interpretation": "occasionally improves RMSE but has materially worse MAE/rank in many cells; retain as terminal/state diagnostic challenger rather than cardinal annual model"
+    },
+    "development_dynamic_route": {
+      "interpretation": "not promoted; holdout paired tests show lower MAE at Y6-Y8 but significantly worse mean squared error at Y4-Y8, exposing a tail-compression tradeoff rather than broad superiority"
+    },
+    "h3": "production H3 remains unchanged; Y1-Y3 forecasts are inputs to these post-H3 challengers, so reusing them to claim H1-Y3 superiority would be leakage/non-comparable"
+  },
+  "post_selection_current_shadow_rule": "new current-player shadows must use two_part_state for the primary Y4-Y8 cardinal curve; development-route/direct/hazard curves may be shown only as non-authoritative sensitivity diagnostics"
+}
