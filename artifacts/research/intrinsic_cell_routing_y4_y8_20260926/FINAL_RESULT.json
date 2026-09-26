@@ -1,0 +1,88 @@
+{
+  "terminal_state": "MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE",
+  "authority": "research_only_no_production_change",
+  "general_policy": "soft_cell_shrinkage",
+  "rolling_validation": {
+    "run_id": 36271080037,
+    "head_sha": "be2541a496227b33c12c755f576843dc4ab5a0bb",
+    "artifact_id": 10916355135,
+    "digest": "sha256:63520ddb60a8ed12724fa21e8d276c4e3e7d5587162aade92ba7afaa3796ced2",
+    "rows": 11940,
+    "exact_supported_cells": [
+      "QB|Y4",
+      "WR|Y4",
+      "QB|Y6"
+    ],
+    "uncertain_y4_y7_cells": 13,
+    "insufficient_y8_cells": [
+      "QB|Y8",
+      "RB|Y8",
+      "WR|Y8",
+      "TE|Y8"
+    ],
+    "soft_stack": {
+      "rmse": 43.201644,
+      "mae": 20.729993,
+      "bias": 0.232824,
+      "spearman": 0.50669,
+      "tail_rmse": 113.344848,
+      "cells_better_than_baseline": 15,
+      "worst_cell_rmse_ratio_vs_baseline": 1.074431
+    },
+    "baseline": {
+      "rmse": 45.638759,
+      "mae": 19.962673,
+      "bias": -5.704967,
+      "spearman": 0.494172,
+      "tail_rmse": 134.772495
+    },
+    "rejected_blanket_75_25": {
+      "rmse": 43.481095,
+      "mae": 20.708623,
+      "bias": 0.171043,
+      "spearman": 0.503369,
+      "tail_rmse": 114.18633,
+      "cells_better_than_baseline": 14,
+      "worst_cell_rmse_ratio_vs_baseline": 1.310749
+    },
+    "no_second_untouched_y8_holdout": true,
+    "prior_holdout_used_for_selection": false
+  },
+  "age_experience_audit": {
+    "run_id": 36274823761,
+    "head_sha": "d0ea8fff51a1d809bf2a392abfdc9bd2da045dec",
+    "artifact_id": 10917390703,
+    "digest": "sha256:6920fc05926ff0dd4eb2ef955d3abba3dfbea86b98530b39869da96b265515f2",
+    "qb": {
+      "target_nonlinear_cells_better": 5,
+      "cumulative_exposure_cells_better": 3,
+      "histgb_cells_better": 5,
+      "exposure_survival_cells_better": 5,
+      "exposure_conditional_cells_better": 3
+    },
+    "rb": {
+      "target_nonlinear_cells_better": 2,
+      "cumulative_exposure_cells_better": 5,
+      "histgb_cells_better": 2,
+      "exposure_survival_cells_better": 4,
+      "exposure_conditional_cells_better": 1
+    },
+    "wr": {
+      "target_nonlinear_cells_better": 4,
+      "cumulative_exposure_cells_better": 2,
+      "histgb_cells_better": 1,
+      "exposure_survival_cells_better": 3,
+      "exposure_conditional_cells_better": 0
+    },
+    "te": {
+      "target_nonlinear_cells_better": 0,
+      "cumulative_exposure_cells_better": 2,
+      "histgb_cells_better": 4,
+      "exposure_survival_cells_better": 2,
+      "exposure_conditional_cells_better": 3
+    },
+    "principal_interpretation": "age/experience effects are primarily survival/relevance; accumulated workload is predictive role/durability evidence, not a universal causal wear penalty"
+  },
+  "production_h3_changed": false,
+  "y4_y8_implementation_authorized": false
+}
