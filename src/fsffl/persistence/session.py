@@ -318,28 +318,41 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         lifecycle is not None
         and lifecycle.payload.get("status") in {"queued", "running", "failed", "interrupted"}
     )
+    # The league snapshot table is league-scoped and intentionally tracks the
+    # latest canonical State seen for that league. Another user/session can advance
+    # that shared row without invalidating this user's exact persisted runtime.
+    # Therefore load the user-scoped last-good identity unconditionally and use it
+    # as an exact fallback when it matches the user's persisted context State.
+    candidate = store.get_latest_reusable_artifact(
+        artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+        scope_kind=LAST_GOOD_SCOPE_KIND,
+        scope_id=user_id,
+        model_version=LAST_GOOD_MODEL_VERSION,
+    )
     last_good = None
     last_good_state = None
-    if refresh_needs_last_good:
-        candidate = store.get_latest_reusable_artifact(
-            artifact_kind=LAST_GOOD_ARTIFACT_KIND,
-            scope_kind=LAST_GOOD_SCOPE_KIND,
-            scope_id=user_id,
-            model_version=LAST_GOOD_MODEL_VERSION,
-        )
-        if candidate is not None:
-            try:
-                candidate_state = LeagueState.model_validate(candidate.payload["league_state"])
-            except (KeyError, TypeError, ValueError):
-                candidate_state = None
-            if (
-                candidate_state is not None
-                and candidate_state.league.league_id == context.league_id
-            ):
-                last_good = candidate
-                last_good_state = candidate_state
+    if candidate is not None:
+        try:
+            candidate_state = LeagueState.model_validate(candidate.payload["league_state"])
+        except (KeyError, TypeError, ValueError):
+            candidate_state = None
+        if (
+            candidate_state is not None
+            and candidate_state.league.league_id == context.league_id
+        ):
+            last_good = candidate
+            last_good_state = candidate_state
 
-    if last_good is not None and last_good_state is not None:
+    last_good_matches_context = bool(
+        last_good is not None
+        and last_good_state is not None
+        and last_good_state.state_id == context.state_hash
+        and last_good.key.input_fingerprint == context.state_hash
+    )
+
+    if refresh_needs_last_good and last_good is not None and last_good_state is not None:
+        # An interrupted/failed in-flight refresh may have checkpointed a newer
+        # State-only context. Preserve the previously promoted complete bundle.
         league_state = last_good_state
         selected = last_good.payload.get("selected_team_id")
     else:
@@ -348,12 +361,21 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
             league_id=context.league_id,
             season=context.season,
         )
-        if league_record is None or league_record.state_hash != context.state_hash:
+        if (
+            league_record is not None
+            and league_record.state_hash == context.state_hash
+        ):
+            league_state = LeagueState.model_validate(league_record.payload)
+            if league_state.state_id != context.state_hash:
+                return None
+            selected = context.selected_team_id
+        elif last_good_matches_context:
+            # Shared latest league State was advanced by another isolated
+            # session, but this user's exact complete State remains durable.
+            league_state = last_good_state
+            selected = last_good.payload.get("selected_team_id")
+        else:
             return None
-        league_state = LeagueState.model_validate(league_record.payload)
-        if league_state.state_id != context.state_hash:
-            return None
-        selected = context.selected_team_id
 
     forecast, simulation, values = restore_state_bound_intelligence(
         store,
@@ -368,5 +390,7 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         forecast_evidence=forecast,
         simulation_analytics=simulation,
         value_evidence=values,
-        restored_from_last_good=(last_good is not None and last_good_state is not None),
+        restored_from_last_good=bool(
+            last_good_state is not None and league_state.state_id == last_good_state.state_id
+        ),
     )
