@@ -373,3 +373,31 @@ Decision: Management accepts the completed comparative Y4+ Research result as th
 7. **Downstream use.** Future Decision/Search/Trade surfaces may consume separate governed horizon coordinates as distinct evidence lenses once promoted, but Team Utility remains downstream and may not rewrite universal Intrinsic.
 
 This closes the comparative model-family Management gate while opening only the bounded terminal/career-state + uncertainty/presentation Research track. Production implementation of long-horizon Intrinsic remains unauthorized.
+
+## 2026-09-26 — Reopen long-horizon predictor selection before terminal/career modeling
+Management has identified an important limitation in the completed comparative Y4+ model-family study: it compared six model families over a narrow inherited predictor set rather than re-opening long-horizon feature selection.
+
+The tested annual Y4-Y8 predictors were limited to:
+`age, experience, prior_pct, log_prior_points, log_y1, y1_pct, y2_ratio, y3_ratio, y2_delta, y3_delta`.
+
+Therefore the accepted conclusion is narrower than previously stated:
+**given that frozen 10-feature information set, `two_part_state` is the most robust tested annual cardinal family.**
+It does not establish that the current feature set is sufficient or optimal for Y4-Y8.
+
+The frozen historical evidence package already contains additional static player metadata not used in the Y4+ comparison, including draft year/round/pick, height, weight, college, conference, and rookie season, plus a separate seasonal-stat evidence cache. Earlier trajectory research also tested hierarchical career-stage state, player-specific residual history, and innovation/volatility on near-term Y2/Y3 gates; failure on those near-term targets does not prove irrelevance for Y4-Y8 survival, role persistence, or conditional production.
+
+Management therefore supersedes the immediate terminal/career-state next step with a **Research-only long-horizon predictor discovery and ablation phase**.
+
+Required design:
+1. inventory all defensible point-in-time candidate features available historically, including static pedigree/physical attributes, age-at-entry/development timing, position-specific usage/efficiency, durability/availability where governed, role/team continuity where historical PIT evidence exists, and previously rejected near-term trajectory/residual/volatility states;
+2. explicitly distinguish features that predict **career survival/relevance** from features that predict **production conditional on survival**;
+3. test incremental information beyond the governed Y1-Y3 Forecast trajectory, rather than rewarding a feature for merely re-encoding current production;
+4. use nested chronological development/selection with untouched holdout evaluation; do not screen features on the final holdout or on current named players;
+5. permit position × horizon interactions only when sample size and held-out stability support them;
+6. compare feature groups through ablation/addition against the current 10-feature baseline and test at least one regularized flexible challenger capable of discovering interactions without black-box authority;
+7. control for historical coverage/missingness and era effects; a feature cannot be promoted because it works only in a recent, selectively observed subset;
+8. preserve the prohibition on Market/dynasty value, Owner Intelligence, Team Utility, future outcomes, or other downstream/economic leakage into universal Intrinsic Forecast;
+9. re-run model-family selection only if richer features materially change the information set; do not assume `two_part_state` remains optimal once the feature space changes;
+10. report negative findings as valuable evidence and preserve a simpler model when added predictors do not improve robust OOT performance.
+
+The previously accepted H1/H3/H5 product simplification remains provisional design direction only. No H5/Y4+ production promotion, terminal/career implementation, or final long-horizon architecture decision is authorized until this predictor-discovery gate closes.
