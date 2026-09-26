@@ -158,3 +158,10 @@ Research should continue from its current comparative branch state without resta
 
 ### Management next action after worker closeouts
 When Implementation reaches a valid terminal state, Management performs the next physical iPhone/Safari acceptance pass. If core switch/readiness/Intrinsic acceptance is clean, immediately exercise the already-deployed Market corrective and capture fresh authenticated cold/focused timing for Performance. Only after those gates are resolved should Home × Franchise or broader Scoring Coverage resume.
+
+### 2026-09-26 Management decision — long-horizon architecture accepted
+The comparative Y4+ gate is resolved. Management accepts `two_part_state` as the Research-standard annual Y4-Y8 family across positions, with no model-family breakpoint or routed position/horizon architecture promoted.
+
+Product-facing long-horizon direction is **H1 / governed H3 / H5**. H4/H6/H7/H8 remain governed diagnostics, not additional default top-level scores. A separate Research-only terminal/career-state representation plus a long-horizon uncertainty/presentation contract is authorized next. Production H3 remains unchanged and no H5/Y4+ implementation is authorized yet.
+
+Implementation remains the immediate critical path. PR #262 contains the intended combined switch + H3 scope + mobile-readiness corrective but is not merge-ready. Current head `9df1761335619beaa816016c5beb8f4d907346d2` has 13 full-CI failures: most are stale static-generation expectations, but one is a real same-State Forecast-evidence reuse regression. Implementation must fix that behavior, reconcile static-generation coverage, get all workflows green, deploy, and complete FSFFL → Hodor → FSFFL → restart production acceptance before Management resumes broad physical testing.
