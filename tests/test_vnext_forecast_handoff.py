@@ -244,3 +244,42 @@ def test_vnext_current_coordinate_fails_closed_for_player_outside_governed_refre
             raw_forecasts=unknown_raw,
             league_year_one=unknown_year_one,
         )
+
+
+
+def test_vnext_uses_frozen_governed_standard_y1_when_preserved_raw_lacks_fumbles_lost() -> None:
+    source, state, raw, year_one = _fixture()
+    preserved_raw = tuple(
+        item for item in raw
+        if item.metric != ForecastMetric.FUMBLES_LOST
+    )
+    assert preserved_raw
+    assert all(item.metric != ForecastMetric.FUMBLES_LOST for item in preserved_raw)
+
+    materialized = build_vnext_future_forecast_contract(
+        league_state=state,
+        raw_forecasts=preserved_raw,
+        league_year_one=year_one,
+    )
+
+    assert materialized.contract.player_ids == ("canonical-player",)
+    assert materialized.contract.forecast_model_version == VNEXT_FORECAST_VERSION
+    assert materialized.contract.provenance[
+        "future_i1_standard_year1_authority"
+    ] == "frozen_vnext_source_coordinate"
+    assert materialized.scoring_multipliers["canonical-player"] == pytest.approx(
+        float(year_one[0].distribution.mean) / float(source.standard_y1_points)
+    )
+
+
+def test_vnext_still_requires_real_governed_league_y1_for_mapped_subject() -> None:
+    _source, state, raw, _year_one = _fixture()
+    with pytest.raises(
+        ValueError,
+        match="mapped subjects lack compatible governed Year-1 evidence",
+    ):
+        build_vnext_future_forecast_contract(
+            league_state=state,
+            raw_forecasts=raw,
+            league_year_one=(),
+        )
