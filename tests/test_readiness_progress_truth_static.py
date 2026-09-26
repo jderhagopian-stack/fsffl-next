@@ -47,13 +47,13 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260926-combined-acceptance1" in index
-    assert "/static/product_shell.js?v=20260926-combined-acceptance1" in index
-    assert "/static/home_dashboard.js?v=20260926-combined-acceptance1" in index
+    assert "/static/forecast_refresh.js?v=20260926-post265-intrinsic-mobile1" in index
+    assert "/static/product_shell.js?v=20260926-post265-intrinsic-mobile1" in index
+    assert "/static/home_dashboard.js?v=20260926-post265-intrinsic-mobile1" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
-    assert "product_shell.js?v=20260926-combined-acceptance1" in index
+    assert "product_shell.js?v=20260926-post265-intrinsic-mobile1" in index
     assert "const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';" in shell
 
 
