@@ -417,7 +417,7 @@ Persist an implementation handoff and follow OPERATING_PROTOCOL.md to a permitte
 ---
 
 ## Management directive — Single-source authority for bounded auxiliary Forecast coordinates
-**State: ACTIVE — BOUNDED MATERIALITY / SOURCE-AUTHORITY STUDY**
+**State: MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION**
 
 Management authorizes a narrow Research study to determine whether FSFFL NEXT should permit **one governed production projection source** for selected low-materiality auxiliary scoring coordinates instead of applying the normal two-independent-source standard uniformly to every coordinate.
 
@@ -531,3 +531,44 @@ This study authorizes research and analysis only. It does **not**:
 If evidence supports a generalized single-source auxiliary tier, return at **MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION** with the proposed quantitative contract. If evidence does not support it, return **DIRECTIVE COMPLETE — RESEARCH** with the negative finding and retain current authority.
 
 Follow `OPERATING_PROTOCOL.md`; do not stop at an intermediate source failure while another authorized analysis can materially advance the directive.
+
+
+### Research closeout — 2026-09-25
+
+The bounded materiality/source-authority study is complete.
+
+Durable package:
+- `artifacts/research/auxiliary_single_source_authority_20260925/AUXILIARY_COORDINATE_MATERIALITY.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/SINGLE_SOURCE_QUALITY_LEDGER.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/SINGLE_VS_MULTI_SOURCE_REPLAY.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/DOWNSTREAM_SENSITIVITY.md`
+- `artifacts/research/auxiliary_single_source_authority_20260925/AUTHORITY_TIER_RECOMMENDATION.md`
+- `artifacts/research/auxiliary_single_source_authority_20260925/RESEARCH_HANDOFF.md`
+
+Research used 2023–2025 authentic nflverse outcomes, retained pre-opener 2024 provider evidence, deterministic lineup replay, and paired 50,000-run sensitivity. The 2022 startup was not used.
+
+The evidence supports a generalized certified `AUXILIARY_SINGLE_SOURCE` tier in principle but supports **zero immediate source/coordinate promotions**.
+
+Materiality-side candidates:
+- K 60+ incremental premium above an already-governed 50+ base;
+- K XP miss;
+- D/ST safety;
+- D/ST defensive two-point return.
+
+Current source-quality status:
+- 60+ lacks validated rights-cleared historical source-specific quality/stability evidence;
+- XP-miss historical singles are unstable and often worse than omission;
+- D/ST safety historical singles are no better or worse than omission;
+- defensive two-point return lacks qualifying historical projection validation.
+
+Measured core/material coordinates include FUMBLES_LOST, FG misses, common 2PT, D/ST blocked kicks, ST TD, forced fumbles/recoveries, nonlinear PA distributions, and ordinary volume/TD/reception controls.
+
+Research recommends Management accept the **certification framework only**, with zero active certifications at acceptance. Any later provider/coordinate promotion would require its own retained source-quality, rights, health, coverage, and uncertainty evidence.
+
+The quantitative proposal and failure behavior are authoritative only as a Research recommendation until Management accepts them.
+
+No production authority changed.
+
+Operating-protocol test: no further authorized Research action can materially resolve the policy decision without crossing into source-specific certification under a policy Management has not yet accepted.
+
+**MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION**
