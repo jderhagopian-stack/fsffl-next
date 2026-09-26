@@ -308,3 +308,7 @@ Historical guard:
 `authority_valid_from = max(two source acquisition times)`. The supplement is never eligible for a cutoff before that instant, cannot enter the annual/preseason baseline, cannot support a 2026 preseason comparison, and cannot be backfilled.
 
 Market acceptance remains paused until current FSFFL Simulation can be legitimately restored.
+
+
+## Long-horizon Intrinsic product direction
+Management accepted horizon-specific Intrinsic Value as a North Star direction: the current three-year Intrinsic remains the governed production coordinate, while future Research should evaluate a longer-horizon/terminal dynasty component and separate horizon values. This is deferred product/research direction and does not displace the active FSFFL/FUMBLES_LOST reliability critical path.
