@@ -978,3 +978,29 @@ Production H3 remains the governed authority. New model families may be benchmar
 Longer-horizon coordinates may ultimately be additional decision lenses rather than replacements: users may inspect different horizons according to the decision or franchise timeline. Team Utility remains downstream and cannot rewrite universal Intrinsic.
 
 Deliverables: comparative model matrix by position × horizon, empirical breakpoint/routing analysis, calibration and uncertainty diagnostics, post-selection current-player shadows, and an updated plain-language Management PDF. Return at MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE or DIRECTIVE COMPLETE — RESEARCH with insufficient evidence. No production implementation.
+
+### Comparative Y4+ execution checkpoint — current branch evidence
+**State: ACTIVE — POST-SELECTION INTERPRETATION / MANAGEMENT PDF REMAINS**
+
+Current comparative branch:
+`research/intrinsic-y4plus-model-family-20260926`.
+
+The historical six-family comparison and the current comparative-shadow workflow have both completed successfully. The historical selection is frozen before any new named-player routing changes.
+
+Current evidence:
+- no empirically defensible position/horizon breakpoint is promoted;
+- `two_part_state` remains the robust annual cardinal research family across QB/RB/WR/TE and Y4–Y8;
+- across the 20 position × horizon holdout cells, it owns the strongest overall RMSE/survival/tail profile even though `direct_ridge` often lowers MAE by shrinking the upper production tail;
+- the development-routed architecture does not establish a superior cardinal model: paired holdout testing shows its later-horizon MAE gains come with materially worse squared error;
+- `survival_hazard` remains a useful QB/persistence model-risk challenger but has not earned a separate annual-cardinal route;
+- `career_state_transition` remains more promising as a terminal/career state lens than as an annual cardinal points model;
+- production H3 remains unchanged and is not being re-litigated by this Y4+ study.
+
+Do not return merely because the current-shadow workflow is green. Continue through:
+1. comparative current-player horizon/rank effects and representative crossovers;
+2. position-distribution and age/experience interpretation under the frozen selection;
+3. uncertainty/calibration and what the challenger families teach us about terminal/career representation;
+4. a clear conclusion on whether any dynamic routing is justified (currently: no);
+5. the updated accessible **plain-language Management PDF**, including what changed relative to the earlier H5-centered study and the exact Management decisions required.
+
+Stop only at `MANAGEMENT GATE — LONG-HORIZON MODEL ARCHITECTURE` or `DIRECTIVE COMPLETE — RESEARCH` with an evidence-supported negative finding. No production implementation is authorized.
