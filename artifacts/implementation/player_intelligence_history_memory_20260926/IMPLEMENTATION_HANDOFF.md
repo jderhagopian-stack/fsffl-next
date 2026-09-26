@@ -171,3 +171,15 @@ This corrective does **not** reopen or change:
 
 Do not propose a paid Render tier as the fix unless this memory-bounded path still fails
 on the currently authorized 512 MB beta instance.
+
+
+## Additional post-deploy idle stabilization observation
+
+On the same exact product-code instance `srv-dae6k7vqj5pc73af7bt0-v5qcn`, Render memory continued:
+- ~392 MB at 22:46:30Z;
+- ~407 MB at 22:47:30Z;
+- ~406 MB at 22:48:30Z through 22:50:30Z.
+
+CPU returned to idle and the same instance remained alive. No PI history request appeared in the
+post-deploy request logs during this observation window, so these points remain idle/startup
+stabilization evidence and are not substituted for the required history-under-load pass.
