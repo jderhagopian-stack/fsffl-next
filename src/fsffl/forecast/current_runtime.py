@@ -12,7 +12,7 @@ from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource
 from fsffl.providers.nfl_fantasy_live import NFLFantasyLiveProjectionSource
 from fsffl.providers.razzball_season_live import RazzballSeasonProjectionSource
-from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.state.models import FrozenModel, LeagueState, RosterSlot
 
 from .current_normalization import current_snapshot_from_razzball, normalize_current_projection_snapshot
 from .fumbles_lost_first_party import (
@@ -107,6 +107,7 @@ class LiveForecastRuntimeResult(FrozenModel):
     fumbles_lost_supplement_authority_fingerprint: str | None = None
     fumbles_lost_supplement_player_count: int = 0
     fumbles_lost_supplement_failure: str | None = None
+    simulation_material_partial_player_ids: tuple[str, ...] = ()
     first_party_fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = Field(
         default=None,
         exclude=True,
@@ -544,6 +545,21 @@ def build_current_live_forecasts(
         if league_state.matchups and fantasy_points
         else ()
     )
+    active_simulation_player_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
+    }
+    simulation_material_partial_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in scoring.partial_forecasts
+                if item.player_id in active_simulation_player_ids
+            }
+        )
+    )
     simulation_blockers = tuple(
         sorted(
             {
@@ -554,7 +570,7 @@ def build_current_live_forecasts(
             }
             | (
                 {"partial_player_scoring_coordinates_present"}
-                if scoring.partial_forecasts
+                if simulation_material_partial_player_ids
                 else set()
             )
         )
@@ -587,5 +603,6 @@ def build_current_live_forecasts(
             else 0
         ),
         fumbles_lost_supplement_failure=fumbles_lost_failure,
+        simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )
