@@ -295,3 +295,19 @@ Authority for a first-party model is earned through preregistered target/feature
 The model must predict exact FUMBLES_LOST rather than silently map total fumbles to lost fumbles. It may use governed current Forecast opportunity coordinates and historical player/team/position evidence only when those inputs are available at the evaluation cutoff. Market, dynasty value, Owner Intelligence, and current/future outcomes may not leak into training.
 
 No production promotion is authorized until Research demonstrates a validated model materially better than omission / simple transparent baselines and hands off a frozen implementation contract.
+
+
+## 2026-09-26 — Authorize bounded long-horizon Intrinsic research now
+Decision: Management authorizes the long-horizon Intrinsic program to begin as a bounded **Research-only** workstream in parallel with the still-open FSFFL production-restoration Implementation work.
+
+This authorization does not change production Value, Forecast, Search, Decision, Market, Team Utility, or the current validated three-year Intrinsic coordinate. It does not authorize implementation.
+
+Research should determine empirically whether dynasty value is best represented by discrete horizon coordinates (for example 1-year / 3-year / 5-year), by detailed Years 1–3 plus a longer-term career/terminal component, or by another evidence-supported structure. Farther horizons must become less falsely precise; exact Y4/Y5 box-score projections are not required unless historical validation supports them.
+
+The study must use chronological point-in-time/out-of-time methods where feasible, explicit baselines against the current three-year Intrinsic architecture, governed uncertainty that expands with horizon, and no named-player tuning. Candidate long-horizon inputs may include career-state/survival probability, role persistence/transition, age/position curves, conditional production tiers, replacement surplus, and terminal value. Discounting and terminal treatment must be tested rather than chosen to manufacture a desired ranking.
+
+Required analytical outputs include horizon-specific player values/ranks, player rank deltas and crossover points, position-level value distributions, top-N/top-percentile positional share, concentration/dispersion/tails, age/experience effects, and uncertainty growth by horizon. Resulting positional mixes must emerge from evidence; Research may not manually rebalance positions.
+
+Research should also identify how separate governed horizon coordinates could later inform Trade/Market/Search and roster construction while preserving universal Intrinsic coordinates and keeping Team Utility downstream. Do not create a hidden master score or acceptance probability.
+
+Return at a Management gate with the empirical comparison, recommended horizon architecture, validation limits, and an implementation-ready contract only if the evidence supports one. Production three-year Intrinsic remains authoritative until a later explicit implementation decision.
