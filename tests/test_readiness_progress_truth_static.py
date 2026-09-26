@@ -115,12 +115,14 @@ def test_full_capability_context_wins_over_terminal_failed_job() -> None:
     assert "step:FSFFL_SHARED_READINESS_STEPS" in snapshot
 
 
-def test_mobile_refresh_control_owns_explicit_fourth_grid_column() -> None:
+def test_mobile_terminal_readiness_uses_two_column_compact_layout() -> None:
     source = _shell()
     assert "grid-template-columns:14px auto minmax(0,1fr) auto" in source
-    assert "grid-template-columns:12px auto minmax(0,1fr) auto" in source
-    assert "white-space:nowrap" in source
-    assert "min-width:max-content" in source
+    assert 'grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"status refresh" "detail detail"' in source
+    assert ".fsffl-shared-readiness-mark{display:none}" in source
+    assert "overflow-wrap:normal;word-break:normal" in source
+    assert "overflow-wrap:anywhere" not in source
+    assert "min-height:0!important" in source
 
 
 def test_failed_forecast_readiness_names_blocker_and_usable_roster() -> None:
@@ -145,16 +147,16 @@ def test_mobile_full_readiness_collapses_to_one_current_state_and_hides_redundan
     assert "fsffl-shared-readiness-refresh" in source
 
 
-def test_mobile_building_hides_full_capability_chips_but_partial_and_failed_show_exceptions() -> None:
+def test_mobile_readiness_never_renders_capability_pill_swarm_in_terminal_card() -> None:
     source = _shell()
+    assert ".fsffl-capability-summary{display:none!important}" in source
     assert (
-        ".fsffl-shared-readiness-strip:not(.partial):not(.failed):not(.complete) "
-        ".fsffl-capability-summary{display:none}"
+        ".fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-copy,"
+        ".fsffl-shared-readiness-strip.partial .fsffl-shared-readiness-copy,"
+        ".fsffl-shared-readiness-strip.failed .fsffl-shared-readiness-copy{display:none}"
     ) in source
-    assert (
-        ".fsffl-shared-readiness-strip.partial .fsffl-capability-summary,"
-        ".fsffl-shared-readiness-strip.failed .fsffl-capability-summary{display:flex}"
-    ) in source
+    assert "fsfflMobileCapabilityException(status)" in source
+    assert "'◐ Intelligence partial · '+fsfflMobileCapabilityException(status)" in source
     assert "status.step+' / '+status.total" in source
     assert "Refreshing…" in source
 
@@ -184,3 +186,17 @@ def test_readiness_as_of_is_derived_from_governed_payload_not_browser_now() -> N
     assert "context?.evidence_as_of" in helper
     assert "new Date()" not in helper
     assert "Date.now()" not in helper
+
+
+
+def test_mobile_readiness_scopes_current_capabilities_and_preserves_build_phase_detail() -> None:
+    source = _shell()
+    assert "fsfflCapabilityChip('Current Forecast','forecast')" in source
+    assert "fsfflCapabilityChip('Current Value','current_value')" in source
+    assert "['Intrinsic','intrinsic']" in source
+    assert "['Simulation','simulation']" in source
+    assert "grid-area:detail" in source
+    assert "white-space:nowrap" in source
+    # The working in-progress lifecycle remains a two-row compact treatment:
+    # numeric phase in the status row and the server phase message in detail.
+    assert "phaseLabel+(lastGoodAvailable?' · Last-good available':'')" in source
