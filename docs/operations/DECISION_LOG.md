@@ -186,3 +186,11 @@ Immediate sequencing remains: league lifecycle/readiness correctness first; gove
 Owner Intelligence, historical persistence and counterfactual State are shared capabilities to be reused across future surfaces, not one-off feature silos. Preserve point-in-time evidence now so future historical analysis/counterfactuals remain possible.
 
 Commercial differentiation should be described as the integration of Forecast, separate Value dimensions, league/owner behavior, Decision/Search, Simulation, history and counterfactuals against one governed league model—not as uniqueness of any single feature.
+
+
+## 2026-09-25 — Provider-agnostic source architecture and staged rights
+Decision: FSFFL NEXT remains provider-agnostic by architecture. External providers are replaceable evidence suppliers behind canonical FSFFL contracts; no core Forecast/Value/Simulation/Decision behavior should depend on provider identity when a canonical coordinate contract is sufficient.
+
+Source rights are evaluated separately for the actual deployment stage. Private-beta use requires that the provider's terms/license permit the specific beta acquisition/storage/derivation/display pattern, but it does **not** require that long-term commercial rights already be secured. Sources permitted for beta but not yet cleared commercially must be tagged `commercial_recheck_required` and re-audited/replaced/licensed before any commercial launch.
+
+Do not conflate analytical Forecast authority, private-beta usage eligibility, and commercial usage eligibility. Canonical policy: `docs/operations/SOURCE_GOVERNANCE.md`.
