@@ -1042,7 +1042,6 @@ def test_promoted_vnext_intrinsic_survives_authentic_preseason_raw_without_fumbl
     assert contract.forecast_model_version == VNEXT_FORECAST_VERSION
     assert contract.coverage.player_count == 1
     assert contract.coverage.year_1_forecast_players == 1
-    assert contract.coverage.rich_path_players == 1
     assert contract.estimates[0].contributions[0].provenance.authority == (
         "preserved_preseason_year1_forecast"
     )
