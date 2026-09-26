@@ -190,3 +190,9 @@ Research is complete. The evidence supports `H1 | governed H3 | H5 challenger | 
 ## 09:12 ET production checkpoint
 - **Forecast/Product:** ACTIVE, but the original FSFFL scoring/Simulation restoration is now proven FULL in production on PR #260. Remaining acceptance issue is a Hodor-switch durable checkpoint timeout during the cross-league sequence. Fix only that persistence/switch defect and rerun end-to-end acceptance.
 - **Intrinsic term-structure Research:** technical work is at Management gate, but the requested plain-language Management PDF is still outstanding and must be delivered before Management is asked to decide on implementation.
+
+
+## Intrinsic long-horizon comparative modeling — 2026-09-26
+**State:** ACTIVE — RESEARCH ONLY / NO PRODUCTION AUTHORITY CHANGE
+
+Management has reopened Intrinsic term-structure Research for empirical model-family comparison from Y4 onward. The study must not assume Y5 is the breakpoint or preassign any model to a timeframe. Different models by position and/or horizon are allowed only if chronological out-of-time evidence supports the extra complexity. Production H3 remains authoritative. The plain-language Management PDF is due at the end of this expanded study.
