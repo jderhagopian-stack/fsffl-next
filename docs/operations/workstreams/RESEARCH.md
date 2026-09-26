@@ -953,3 +953,8 @@ Historical workflow: `36220635330`.
 Current-shadow workflow: `36241799792`.
 
 **MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE**
+
+
+### Management gate presentation requirement remains open
+
+Technical Research has reached the long-horizon architecture Management gate, but the gate is **not presentation-complete** until the previously required plain-language Management PDF is produced and made accessible to Management. Do not request an implementation decision from Management based only on the technical markdown/JSON artifacts. The PDF must summarize the evidence, player/position horizon effects, uncertainty, recommendation, non-recommendations, and exact decisions required.
