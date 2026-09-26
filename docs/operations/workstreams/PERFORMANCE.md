@@ -217,3 +217,68 @@ Immediate Performance sequence:
 6. deploy and physically remeasure until latency is acceptable or a genuine cost/architecture Management gate is reached.
 
 The goal is not merely faster endpoints; it is to make the accepted Market workflow responsive enough for sustained physical product testing while preserving decision quality.
+
+## Queued next phase — general 50K Simulation engine efficiency
+**State: QUEUED — START AFTER CORE ACCEPTANCE + MARKET FOREGROUND LATENCY PASS**
+
+This is the deferred kernel work called out by PR #127. Existing exact persistence/reuse, concurrent coalescing, progressive delivery, quick-counter staging, foreground pacing, and State-only read-path protections are inputs to this phase, not substitutes for it.
+
+Do not start this phase ahead of the immediate Market cold/focused latency corrective: broad Market discovery uses zero changed-state Simulation, so kernel acceleration does not solve the current ~30–45+ second Market foreground blocker.
+
+Once the Market foreground path is acceptably responsive, immediately execute:
+
+### Stage S1 — benchmark and flame/profile the canonical engine
+Measure separately:
+- fresh league 50,000-run Simulation;
+- fresh exact changed-State/Trade 50,000-run Simulation;
+- exact repeat/durable reuse;
+- concurrent identical request coalescing;
+- persistence/post-processing.
+
+Produce a stage-time decomposition for:
+- request/input normalization;
+- RNG and player outcome draws;
+- per-simulation lineup decisions;
+- scoring;
+- schedule/matchups;
+- standings/race;
+- playoffs/championship;
+- derived analytics;
+- serialization/persistence.
+
+### Stage S2 — exact-output-preserving optimization
+Prioritize:
+- loop-invariant hoisting;
+- compact indexed/array representations instead of repeated dict/object traversal;
+- batch/vector operations that preserve current deterministic outputs;
+- memoization of exact-compatible invariant calculations;
+- preallocated buffers;
+- removal of repeated lineup/scoring work;
+- exact reuse of Forecast-derived stochastic inputs where the canonical random experiment permits it;
+- reduced serialization/object-construction overhead;
+- keeping foreground-cooperative scheduling without excessive checkpoint overhead.
+
+For every change, require deterministic golden equality against the existing canonical engine for governed fixtures plus fresh benchmark evidence.
+
+### Stage S3 — architecture alternatives only if needed
+If S2 cannot reach acceptable fresh-run latency, return to Management with measured bottlenecks and candidate alternatives such as:
+- reordered/vectorized RNG;
+- common-random-number scenario kernels;
+- incremental changed-State recomputation;
+- multiprocessing/native acceleration;
+- compiled numerical kernels.
+
+Any alternative that changes bitwise output identity or RNG sequence requires an explicit reproducibility/statistical-equivalence gate before implementation. Preserve 50,000 runs and model fidelity unless Management separately changes that contract.
+
+### Required closeout
+Report:
+- before/after fresh and changed-State latency;
+- cache-hit latency separately;
+- CPU/memory impact;
+- exact-output status;
+- foreground responsiveness under concurrent user demand;
+- infrastructure cost impact;
+- remaining dominant bottlenecks;
+- recommended next step only if further gains are material.
+
+Stop at `DIRECTIVE COMPLETE — PERFORMANCE`, a genuine external blocker, or a Management gate for a Tier-B semantic/reproducibility change.
