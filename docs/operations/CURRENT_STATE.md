@@ -510,3 +510,19 @@ The immediate critical path is now:
 3. dedicated Simulation modernization (simulation-count convergence + vectorized/faster kernel + Multiverse identity preservation).
 
 Implementation should not be poked again for the closed State-first corrective. Comprehensive long-horizon Research continues in parallel.
+
+## Physical iPhone regression — prior product acceptance was premature
+Management physical testing on the accepted FSFFL league shows the app is not product-accepted:
+- governed FSFFL Intrinsic is unavailable on player/franchise surfaces;
+- Player Intelligence future trajectory/distribution is incomplete;
+- League Atlas cannot load its presentation module;
+- the shared status still says “Intelligence current.”
+
+The earlier post-PR263 artifact remains evidence that State-first switching/restart and core Forecast/Simulation/Value persistence work, but its product-wide closeout is superseded.
+
+Immediate critical path is again Forecast/Product Implementation: fix the actual hosted product endpoints/surfaces and correct readiness semantics. Performance resumes only after this physical gate closes.
+
+Desired readiness UX:
+- **active build/refresh:** expanded informative state with current phase, what remains usable, and last-good/as-of reference;
+- **complete:** collapse to thin status strip with truthful scope + governed localized “as of” timestamp + Refresh;
+- **partial/failure:** keep exception detail visible; never use unqualified “Intelligence current.”
