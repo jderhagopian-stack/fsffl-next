@@ -366,3 +366,28 @@ The implementation must:
 - prove no unrelated ordinary-player raw-stat projection changes.
 
 No current provider is promoted by this authorization.
+
+
+## First-party FUMBLES_LOST integration directive — 2026-09-26
+**State: ACTIVE — FIRST-PARTY MODEL INTEGRATION / PRODUCTION ACCEPTANCE**
+
+Research is complete and merged through PR #256. The accepted first-party model is:
+`next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate`.
+
+Authoritative Research handoff:
+- `artifacts/research/fumbles_lost_first_party_model_20260926/PRODUCTION_READINESS_HANDOFF.md`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/MODEL_SPEC.md`
+- `artifacts/research/fumbles_lost_first_party_model_20260926/CURRENT_INPUT_ASSESSMENT.md`
+
+Implementation must now complete the recovery path through production acceptance:
+1. wire the frozen first-party model into the already-merged PR #253/#255 current-supplement seam;
+2. use exact lost-fumble semantics and the accepted Week-2/current-state opportunity inputs only;
+3. reproduce the frozen 2026 calibration scalar and non-zero uncertainty contract exactly;
+4. preserve every unrelated offense Forecast coordinate and the immutable preseason/PIT baseline;
+5. fail closed for missing/ambiguous identity or required current evidence; never substitute zero;
+6. rebuild current FSFFL Forecast/Simulation/derived intelligence for the exact current State;
+7. prove leagues not scoring `fum_lost` are regression-identical and Hodor/partial-authority behavior does not regress;
+8. run focused tests + full CI, merge the implementation PR, deploy Render, and validate production FSFFL reaches legitimate full current player-scoring authority and Simulation before returning control;
+9. persist exact production evidence and stop only at a permitted `OPERATING_PROTOCOL.md` terminal state.
+
+Do not reopen provider-permission Research, broad scoring coverage, K/DST authority, Market redesign, or long-horizon Intrinsic work in this corrective.
