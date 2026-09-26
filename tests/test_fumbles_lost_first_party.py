@@ -303,25 +303,38 @@ def test_missing_required_current_schema_fails_closed_not_zero() -> None:
 
 
 def test_identity_light_and_cold_start_never_receive_zero_uncertainty() -> None:
-    for player_id in ("sleeper:player:13269", "sleeper:player:12511"):
-        supplement = build_first_party_fumbles_lost_supplement(
-            _state(player_id, Position.QB),
-            base_observations=_base(player_id, Position.QB),
-            stats_source=FakeSleeperStats(
-                {
-                    1: (_line(player_id, 1),),
-                    2: (_line(player_id, 2),),
-                }
-            ),  # type: ignore[arg-type]
-            clock=lambda: CAPTURED,
-        )
-        evidence = supplement.player_evidence[0]
-        assert evidence.predictive_stddev >= COLD_START_STDDEV_FLOOR
-        assert evidence.predictive_stddev > 0
-        if player_id.endswith("13269"):
-            assert evidence.evidence_tier == FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT
-        else:
-            assert evidence.evidence_tier == FirstPartyFumblesLostEvidenceTier.COLD_START
+    identity_light_id = "sleeper:player:13269"
+    identity_light = build_first_party_fumbles_lost_supplement(
+        _state(identity_light_id, Position.QB),
+        base_observations=_base(identity_light_id, Position.QB),
+        stats_source=FakeSleeperStats(
+            {
+                1: (_line(identity_light_id, 1),),
+                2: (_line(identity_light_id, 2),),
+            }
+        ),  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    ).player_evidence[0]
+    assert identity_light.evidence_tier == FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT
+    assert identity_light.predictive_stddev >= COLD_START_STDDEV_FLOOR
+
+    cold_id = "sleeper:player:12511"
+    # A different player proves feed schema while the cold-start target has no
+    # current Week-1/2 row of its own.
+    cold = build_first_party_fumbles_lost_supplement(
+        _state(cold_id, Position.QB),
+        base_observations=_base(cold_id, Position.QB),
+        stats_source=FakeSleeperStats(
+            {
+                1: (_line("sleeper:player:other", 1),),
+                2: (),
+            }
+        ),  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    ).player_evidence[0]
+    assert cold.evidence_tier == FirstPartyFumblesLostEvidenceTier.COLD_START
+    assert cold.predictive_stddev >= COLD_START_STDDEV_FLOOR
+    assert cold.predictive_stddev > 0
 
 
 def test_first_party_artifact_is_current_only_and_preserves_raw_forecast() -> None:
