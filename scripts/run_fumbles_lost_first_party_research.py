@@ -1,5 +1,5 @@
 from __future__ import annotations
-import csv, hashlib, json, math, statistics, urllib.request
+import csv, hashlib, json, math, statistics, urllib.request, re, unicodedata
 from collections import defaultdict
 from pathlib import Path
 
@@ -225,19 +225,36 @@ def uncertainty(allpred,selected):
         x=[r for r in rr if r["pos"]==p]; out[p]={"n":len(x),"residual_rmse_floor":metrics(x)["rmse"] if x else overall}
     out["OVERALL"]={"n":len(rr),"residual_rmse_floor":overall}; return out
 
+def _norm_name(v):
+    s=unicodedata.normalize("NFKD",v or "")
+    s="".join(ch for ch in s if not unicodedata.combining(ch)).lower()
+    parts=re.findall(r"[a-z0-9]+",s)
+    while parts and parts[-1] in {"jr","sr","ii","iii","iv","v"}: parts.pop()
+    return "".join(parts)
+
 def current_shadows(rows_by,selected,unc):
     tr=hist(rows_by,2026); ps=position_stats(tr); ph=player_stats(tr); cur={r["pid"]:r for r in rows_by[2026]}
+    name_idx=defaultdict(list)
+    for rr in rows_by[2026]:
+        if rr["name"]: name_idx[(_norm_name(rr["name"]),rr["pos"])].append(rr["pid"])
     with BOARD.open(newline="",encoding="utf-8") as f: board=list(csv.DictReader(f))
     out=[]; mapped=0; tc=defaultdict(int); scale=calibration_scale(rows_by,2026)
     for b in board:
         if b.get("position") not in POS: continue
-        gid=(b.get("historical_gsis_id") or "").strip(); p=b["position"]; r=cur.get(gid)
+        gid=(b.get("historical_gsis_id") or "").strip(); p=b["position"]; identity_method="retained_gsis"
+        if not gid:
+            matches=name_idx.get((_norm_name(b.get("player_name") or ""),p),[])
+            if len(matches)==1:
+                gid=matches[0]; identity_method="unique_current_name_position"
+            else:
+                identity_method="unmapped"
+        r=cur.get(gid)
         if gid:mapped+=1
         if r is None:r={"season":2026,"pid":gid or "unmapped","name":"","pos":p,"early_games":0,"early_opp":0.0,"early_fl":0.0,"games":0,"opp":0.0,"fl":0.0,"future_games":0,"future_fl":0.0}
         h=ph.get(gid); t=tier(r,h) if gid else "unmapped"; tc[t]+=1; ro=role(r,h,ps[p])
         vals={"position_opportunity_rate":NFL_GAMES*ro*ps[p]["fl_po"],"calibrated_position_opportunity_rate":scale*NFL_GAMES*ro*ps[p]["fl_po"],"player_history_shrunk":NFL_GAMES*ro*shrunk(h,ps[p]),"player_history_plus_current":NFL_GAMES*ro*augmented(r,h,ps[p])}
         pred=max(0.0,vals[selected]); sd=max(math.sqrt(pred),float(unc[p]["residual_rmse_floor"]))
-        out.append({"player_id":b.get("player_id"),"historical_gsis_id":gid,"position":p,"evidence_tier":t,"weeks_observed_current":r["early_games"],"current_opportunities":round(r["early_opp"],6),"current_fumbles_lost":round(r["early_fl"],6),"history_games":h["games"] if h else 0,"history_opportunities":round(h["opp"],6) if h else 0.0,"history_fumbles_lost":round(h["fl"],6) if h else 0.0,"predicted_season_equivalent_fumbles_lost":round(pred,8),"predictive_stddev":round(sd,8),"model":selected})
+        out.append({"player_id":b.get("player_id"),"historical_gsis_id":gid,"identity_method":identity_method,"position":p,"evidence_tier":t,"weeks_observed_current":r["early_games"],"current_opportunities":round(r["early_opp"],6),"current_fumbles_lost":round(r["early_fl"],6),"history_games":h["games"] if h else 0,"history_opportunities":round(h["opp"],6) if h else 0.0,"history_fumbles_lost":round(h["fl"],6) if h else 0.0,"predicted_season_equivalent_fumbles_lost":round(pred,8),"predictive_stddev":round(sd,8),"model":selected})
     cov=mapped/len(out) if out else 0
     return out,{"board_rows":len(out),"mapped_gsis":mapped,"identity_coverage":cov,"tier_counts":dict(tc),"passes":cov>=GATES["min_current_identity_coverage"]}
 
