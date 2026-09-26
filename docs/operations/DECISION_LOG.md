@@ -532,3 +532,19 @@ From now on, acceptance is layered:
 4. **readiness truth** — the shell status may summarize only what these accepted capabilities actually justify.
 
 A lazy/derived endpoint that was not exercised cannot be inferred healthy from compatible inputs. “Intelligence current” must have explicit scope and a governed as-of timestamp; partial capabilities must remain visible rather than hidden behind a green core status.
+
+## 2026-09-26 — vNext/P0 production coupling is a charter non-conformance
+Management classifies the current vNext production dependency on P0-specific runtime/materialization code as an architectural non-conformance with the FSFFL NEXT charter.
+
+The underlying mathematical reuse is not itself prohibited. A previously validated identity map, probability layer, or other primitive may remain authoritative if evidence still supports it. The violation is allowing a promoted vNext production adapter to depend directly on a prior model's implementation boundary such that changes/fixes to that prior path do not automatically apply to the active model.
+
+Charter-correct target:
+- reusable validated primitives live behind model-neutral Forecast contracts/services;
+- vNext owns its complete subject-scoped production adapter;
+- P0 remains provenance/history/reference, not an implicit runtime owner of vNext behavior;
+- downstream Intrinsic/Value/Presentation consume the stable Forecast contract and do not know whether P0, A2, Burr, or a future challenger supplied an internal component;
+- replacing/promoting a Forecast model should not require downstream product rewrites and should not leave hidden dependencies on superseded model-specific code.
+
+The immediate corrective must therefore do more than duplicate another subject filter. Extract or introduce the smallest model-neutral reusable boundary needed to eliminate the direct P0-specific production dependency while preserving validated numerical authority.
+
+Implementation must also audit the active vNext production path for similar hidden inheritance/coupling before re-promotion. Do not broaden this into an unrelated rewrite; fix the violated abstraction boundary and add regression/architecture tests that prevent recurrence.
