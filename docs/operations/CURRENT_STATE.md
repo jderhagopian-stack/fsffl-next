@@ -381,3 +381,7 @@ The current model artifact must never masquerade as preseason/PIT evidence befor
 External JerryGM + LineupExperts permissions are no longer the immediate FSFFL recovery dependency. That path remains fallback/benchmark only.
 
 Next owner: Forecast/Product Implementation should wire the frozen first-party model through the already-merged current-supplement infrastructure, run deterministic authority regressions, rebuild current FSFFL, and promote Simulation only when current scoring is legitimately complete.
+
+
+## PR #257 live but production acceptance still open
+PR #257 is merged and live on Render (`dep-darki1g473hc73bb7aeg`), but the first post-merge main CI run failed one cross-league-switch readiness regression (1660 passed / 1 failed). Startup on the new deploy restored the existing FSFFL State with Forecast and Value present but Simulation still unavailable. The active Forecast/Product task is therefore to resolve the post-merge CI failure, rerun green, then rebuild/validate the current FSFFL State with the first-party FUMBLES_LOST supplement before Management physical testing resumes.
