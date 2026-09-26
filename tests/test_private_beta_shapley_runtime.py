@@ -148,6 +148,17 @@ def _context(state: LeagueState, observation: ForecastObservation) -> UserRuntim
         forecast_evidence=cast(Any, evidence),
     )
 
+def _legacy_p0_loader(**kwargs) -> PrivateBetaShapleyContractLoader:
+    """Legacy-reference helper; production composition must inject vNext explicitly."""
+
+    return PrivateBetaShapleyContractLoader(
+        future_forecast_builder=build_p0_future_forecast_contract,
+        future_forecast_model_version=P0_FORECAST_VERSION,
+        future_missing_fact_family="p0_future_forecast_coordinate",
+        **kwargs,
+    )
+
+
 
 def _authority_evidence(observation: ForecastObservation):
     year_one = observation.model_copy(
@@ -187,7 +198,7 @@ def test_pinned_activation_bundle_round_trips_and_has_stable_digest() -> None:
 
 def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> None:
     state, observation = _fixture()
-    loader = PrivateBetaShapleyContractLoader(
+    loader = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )
     contract = loader(_context(state, observation))
@@ -211,7 +222,7 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
 
 def test_live_forecast_change_does_not_replace_preseason_authority() -> None:
     state, observation = _fixture()
-    loader = PrivateBetaShapleyContractLoader(
+    loader = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )
     first = loader(_context(state, observation))
@@ -234,7 +245,7 @@ def test_loader_fails_closed_when_preseason_standard_coordinate_drifts() -> None
             )
         }
     )
-    loader = PrivateBetaShapleyContractLoader(
+    loader = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(changed)
     )
     contract = loader(_context(state, observation))
@@ -277,7 +288,7 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
         league_state=unknown_state,
         forecast_evidence=cast(Any, evidence),
     )
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(unknown_forecast)
     )(context)
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
@@ -288,16 +299,19 @@ def test_loader_fails_closed_when_governed_forecast_player_lacks_completed_sourc
 # This focused file intentionally triggers the lightweight activation/API diagnostic workflow.
 
 
-def test_loader_fails_closed_without_preseason_authority_loader() -> None:
+def test_loader_fails_closed_without_injected_future_forecast_provider() -> None:
     state, observation = _fixture()
-    contract = PrivateBetaShapleyContractLoader()(_context(state, observation))
+    contract = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation)
+    )(_context(state, observation))
     assert contract.status == ShapleyIntrinsicAvailability.UNAVAILABLE
-    assert "preseason_year1_forecast" in contract.coverage.missing_required_fact_families
+    assert "future_forecast_coordinate" in contract.coverage.missing_required_fact_families
+    assert "not configured" in (contract.status_reason or "")
 
 
 def test_contract_exposes_preseason_year_one_provenance() -> None:
     state, observation = _fixture()
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )(_context(state, observation))
 
@@ -457,7 +471,7 @@ def test_current_i1_facts_are_locked_to_standard_research_coordinate() -> None:
 
 def test_contract_future_i1_provenance_contains_exactly_one_player_scoring_translation() -> None:
     state, observation = _fixture()
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: _authority_evidence(observation)
     )(_context(state, observation))
     future = contract.estimates[0].contributions[1:]
@@ -490,7 +504,7 @@ def test_loader_fails_closed_when_preseason_two_source_lineage_is_missing() -> N
         independent_source_ids=("fftoday",),
         minimum_independent_sources=2,
     )
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: evidence
     )(_context(state, observation))
 
@@ -606,7 +620,7 @@ def _runtime_scoring_case(
         ),
     )
     context = UserRuntimeContext(user_id="user", league_state=state)
-    contract = PrivateBetaShapleyContractLoader(
+    contract = _legacy_p0_loader(
         year_one_loader=lambda _state: evidence
     )(context)
     return contract, scored[0]
@@ -801,13 +815,16 @@ def test_promoted_vnext_shapley_consumes_vnext_y2_y3_and_preserves_y1_authority(
 
 def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without_changing_values() -> None:
     state, observation = _fixture()
-    baseline_materialization = build_p0_future_forecast_contract(
+    baseline_materialization = build_vnext_future_forecast_contract(
         league_state=state,
         raw_forecasts=_raw_forecasts(observation),
         league_year_one=(observation,),
     )
     baseline_contract = PrivateBetaShapleyContractLoader(
-        year_one_loader=lambda _state: _authority_evidence(observation)
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        future_forecast_builder=build_vnext_future_forecast_contract,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
     )(_context(state, observation))
     assert baseline_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
 
@@ -841,7 +858,7 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
         item.model_copy(update={"player_id": unknown.player_id})
         for item in _raw_forecasts(observation)
     )
-    expanded_materialization = build_p0_future_forecast_contract(
+    expanded_materialization = build_vnext_future_forecast_contract(
         league_state=expanded_state,
         raw_forecasts=expanded_raw,
         league_year_one=(observation, unknown_year_one),
@@ -853,7 +870,7 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
     )
     assert (
         expanded_materialization.contract.provenance[
-            "future_i1_excluded_non_h3_subject_count"
+            "excluded_non_h3_subject_count"
         ]
         == 1
     )
@@ -881,7 +898,10 @@ def test_frozen_h3_subject_scope_ignores_unrelated_current_state_players_without
         ),
     )
     expanded_contract = PrivateBetaShapleyContractLoader(
-        year_one_loader=lambda _state: evidence
+        year_one_loader=lambda _state: evidence,
+        future_forecast_builder=build_vnext_future_forecast_contract,
+        future_forecast_model_version=VNEXT_FORECAST_VERSION,
+        future_missing_fact_family="vnext_future_forecast_coordinate",
     )(expanded_context)
 
     assert expanded_contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
