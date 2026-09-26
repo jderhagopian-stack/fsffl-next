@@ -434,3 +434,7 @@ The active FSFFL restoration remains owned by Forecast/Product and is unaffected
 
 ## 2026-09-26 09:12 ET — PR #260 live; FSFFL FULL, switch acceptance still open
 PR #260 is merged and live. A fresh production FSFFL State reached FULL Forecast, FULL Simulation, FULL Value and overall FULL with no material partial-player blockers; the FUMBLES_LOST supplement now covers the canonical 827-player offensive subject universe with zero omitted subjects in that accepted snapshot. The remaining production-acceptance failure is a Hodor-switch durable persistence checkpoint timeout (`hodor_switch canonical State did not durably checkpoint`). The critical path is now cross-league persistence/switch completion, not FUMBLES_LOST authority.
+
+
+## Long-horizon Intrinsic Research expanded beyond fixed breakpoints
+Management has expanded the next Intrinsic Research phase to evaluate alternative models from Y4 onward without preselecting a Y5 breakpoint or assigning model families to timeframes in advance. Research may recommend different models by position and/or horizon only if chronological validation supports that routing. The current two_part_state result is a benchmark, not final authority. Production H3 remains unchanged; longer-horizon outputs are expected to serve as additional decision/timeline lenses unless evidence later supports a separate change to H3.
