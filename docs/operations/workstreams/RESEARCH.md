@@ -587,7 +587,7 @@ Accordingly, references in this workstream/handoffs to "production rights" or "r
 
 
 ## Management directive — FUMBLES_LOST evidence recovery
-**State: ACTIVE — BOUNDED FUMBLES_LOST SOURCE / AUTHORITY RECOVERY**
+**State: MANAGEMENT GATE — FUMBLES_LOST SAME-HORIZON AUTHORITY**
 
 The State-first/Product corrective is implementation-complete and production evidence now isolates the existing-FSFFL full-capability blocker to missing governed FUMBLES_LOST Forecast evidence. The preserved two-source preseason raw Forecast contains 1,675 observations but no FUMBLES_LOST coordinate; under current material-coordinate policy this yields partial player Forecast and blocks Simulation.
 
@@ -607,3 +607,28 @@ Required work:
 This Research may also reconcile the existing external-source inventory so currently deployed sources and new FUMBLES_LOST candidates are governed consistently. Do not reopen unrelated K/DST or broad scoring research.
 
 Return only at a permitted `OPERATING_PROTOCOL.md` terminal state.
+
+
+### Research closeout — FUMBLES_LOST authority recovery — 2026-09-26
+
+**State: MANAGEMENT GATE — FUMBLES_LOST SAME-HORIZON AUTHORITY**
+
+Durable closeout:
+- `artifacts/research/fumbles_lost_authority_recovery_20260926/SOURCE_AUTHORITY_LEDGER.md`
+- `artifacts/research/fumbles_lost_authority_recovery_20260926/RESEARCH_HANDOFF.md`
+
+Research exhausted the retained 2026 pre-opener evidence, the retained 2024 exact lost-fumble panel, current provider behavior, public candidate schemas, current source-rights classifications, horizon compatibility, independence and the available non-zero historical error evidence.
+
+Result:
+- the authentic 2026 pre-opener FFToday + Razzball baseline contains no `FUMBLES_LOST`;
+- no second deployable authentic 2026 pre-opener pair was recovered;
+- current Razzball ROS fumble evidence is source-health red and may not be mixed into a season baseline;
+- JerryGM + Fantasy Nerds is the shortest **technical current-ROS** candidate pair, but JerryGM rights remain review-required and Fantasy Nerds' weighted-consensus composition prevents it from counting as an independent second vote until overlap is resolved;
+- JerryGM + LineupExperts is the next direct-source candidate, but LineupExperts requires exact lost-fumble schema proof and rights clarification;
+- the retained 2024 two-source panel establishes non-zero error/disagreement but is not sufficient to promote 2026 candidate-pair uncertainty.
+
+Under the current Forecast route, a current-ROS lost-fumble coordinate may not be spliced into the preserved season/preseason baseline. Clearing the blocker therefore requires either qualifying same-horizon season/PIT evidence or an explicit Management decision to authorize a bounded ordinary-offense current-ROS Forecast lane/rebase. The latter must be a whole evidence-horizon decision, not a FUMBLES_LOST-only exception.
+
+No zero, single-source, cross-horizon, stale-artifact, or auxiliary-tier workaround is authorized.
+
+**MANAGEMENT GATE — RESEARCH / FUMBLES_LOST SAME-HORIZON AUTHORITY**
