@@ -228,38 +228,45 @@ The external JerryGM + LineupExperts route remains fallback/benchmark only. It i
 The auxiliary single-source tier remains irrelevant because this is a Forecast-owned empirical model, not a one-provider authority exception.
 
 
-## Intrinsic long-horizon comparative Research gate
-**Status: MANAGEMENT GATE — NO MODEL-FAMILY BREAKPOINT PROMOTED / NO PRODUCTION AUTHORITY.**
+## Intrinsic comprehensive long-horizon Research gate
+**Status: MANAGEMENT GATE — COMPREHENSIVE STUDY COMPLETE / NO PRODUCTION AUTHORITY.**
 
-The expanded six-family chronological Y4-Y8 study supersedes the earlier H5-centered gate.
+The comprehensive Y4-Y8 study supersedes the earlier six-family/10-feature comparative gate.
 
-Research selection:
-- annual post-H3 Research family: `two_part_state` for QB/RB/WR/TE at Y4-Y8;
-- empirical model-family breakpoint: **none**;
-- position/horizon model router: **not accepted**;
-- survival/hazard: diagnostic/model-risk challenger only;
-- career-state transition: terminal/persistence-state challenger only;
+Final Research architecture:
+- per-cell fitting: position × horizon specialist;
+- feature set: `forecast10`;
+- model: `two_part_ridge`;
+- horizons: Y4-Y8;
+- model-family routing: **not promoted**;
+- shared/hierarchical architecture: **not promoted**;
+- statistical breakpoint: **none**;
 - production H3: unchanged.
 
-Why routing is rejected:
-- direct ridge wins MAE in 17/20 cells but RMSE/tail-RMSE in 0/20 through upper-tail compression;
-- paired dynamic-route testing lowers MAE at later horizons while significantly worsening squared error;
-- no challenger establishes stable multi-objective dominance sufficient to justify routing complexity.
+The nested development search did select a richer 75/25 specialist/shared blend using expanded PIT football/pedigree/trajectory evidence, demonstrating that the wider information set can contain localized signal. That candidate was frozen before the untouched final holdout and then rejected by the predeclared QB-Y8 RMSE catastrophe rule.
 
-Before any Y4+ cardinal production authority can be considered, a later Management-authorized package must clear:
-1. PIT chronology and current identity/feature coverage;
-2. per-position/horizon uncertainty and survival calibration;
-3. cross-year covariance/scenario uncertainty for cumulative Value;
-4. exact H3 semantic/output preservation;
-5. Shapley deployment-game parity and efficiency;
-6. cardinal-scale/discount governance independent of current-player aesthetics or market prices;
-7. fail-closed handling where annual precision is too weak;
-8. downstream containment: Market, Decision and Team Utility may consume promoted coordinates but may not manufacture or rewrite them.
+The holdout may not be reused to retune that architecture.
 
-The study does **not** establish that Y4-Y8 are equally precise merely because one family is retained. It also does **not** establish an exact terminal/career cardinal value.
+Research uncertainty:
+- development-OOF conformal residual bands by position × horizon;
+- monotone horizon floor;
+- final holdout actual coverage 87.66% (nominal 80%) and 94.32% (nominal 90%);
+- cumulative cross-horizon covariance/scenario uncertainty remains unvalidated.
+
+Before any Y4+ production promotion, Management must separately authorize a workstream that demonstrates at minimum:
+1. current PIT feature/identity coverage and versioned training provenance;
+2. position × horizon uncertainty semantics in the product;
+3. joint/cross-horizon covariance or scenario semantics for cumulative long-horizon Value;
+4. exact production H3 non-regression and authority preservation;
+5. Shapley/economic integration parity;
+6. fail-closed behavior for missing current evidence;
+7. no Market, Owner Intelligence or Team Utility leakage into universal Intrinsic;
+8. no hidden master score or fabricated precision.
+
+A terminal/career-state coordinate is not promoted by this study and requires separate Research if Management wants it.
 
 Durable handoff:
-`artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_CLOSEOUT.md`.
+`artifacts/research/intrinsic_comprehensive_y4_y8_20260926/MANAGEMENT_HANDOFF.md`.
 
 No Y4+ production implementation is currently authorized.
 
