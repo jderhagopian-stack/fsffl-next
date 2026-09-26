@@ -548,3 +548,23 @@ Charter-correct target:
 The immediate corrective must therefore do more than duplicate another subject filter. Extract or introduce the smallest model-neutral reusable boundary needed to eliminate the direct P0-specific production dependency while preserving validated numerical authority.
 
 Implementation must also audit the active vNext production path for similar hidden inheritance/coupling before re-promotion. Do not broaden this into an unrelated rewrite; fix the violated abstraction boundary and add regression/architecture tests that prevent recurrence.
+
+## 2026-09-26 — Reject all-or-nothing long-horizon fallback interpretation
+
+Management rejects the interpretation that a single position × horizon catastrophe on the sealed holdout justifies reverting the entire Y4-Y8 architecture to the incumbent `specialist|forecast10|two_part_ridge` baseline.
+
+The prior holdout result remains valid evidence:
+- the frozen richer architecture as a whole failed its predeclared confirmation rule because QB Y8 RMSE materially regressed;
+- no post-hoc repair of that exact frozen candidate may be presented as if it passed the original untouched holdout;
+- the QB Y8 failure is real and must remain visible.
+
+However, the incumbent fallback is a **baseline/comparator, not presumptive authority**. It was first, not proven globally optimal. The original comprehensive directive explicitly allowed different models/features by position and horizon when empirically justified.
+
+Research must therefore distinguish:
+1. **global architecture rejection** — the frozen 75/25 architecture did not earn blanket promotion;
+2. **cell/route evidence** — individual position × horizon cells may still support different models or feature sets;
+3. **fallback authority** — no cell inherits the incumbent merely because the global candidate failed elsewhere.
+
+The next Research design must permit position × horizon-specific routing, shrinkage/pooling, or explicit coarse/uncertain representation where evidence supports it. It must not use the already-seen final holdout to hand-pick a QB Y8 replacement. Instead, define a new general routing/selection policy using development chronology / repeated outer rolling validation / stability penalties and then evaluate that policy honestly with the remaining defensible historical evidence. If no truly untouched Y8 season remains, state that limitation explicitly and do not relabel reused evidence as untouched.
+
+Production H3 remains unchanged. No Y4-Y8 implementation is authorized.
