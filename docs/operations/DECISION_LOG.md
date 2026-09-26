@@ -401,3 +401,40 @@ Required design:
 10. report negative findings as valuable evidence and preserve a simpler model when added predictors do not improve robust OOT performance.
 
 The previously accepted H1/H3/H5 product simplification remains provisional design direction only. No H5/Y4+ production promotion, terminal/career implementation, or final long-horizon architecture decision is authorized until this predictor-discovery gate closes.
+
+## 2026-09-26 — Comprehensive long-horizon architecture search
+Management further broadens the long-horizon Research directive. The goal is no longer only feature discovery followed by reuse of an incumbent model-family comparison. The study must jointly determine the best supported **information set, target decomposition, model family, and routing architecture** by position and horizon.
+
+Nothing is preselected for Y4-Y8:
+- `two_part_state` is a benchmark, not incumbent authority for the expanded study;
+- one universal model is not preferred over position-specific or horizon-specific models;
+- position-specific and horizon-specific models are not preferred over a shared/hierarchical model;
+- H5 is not a presumed statistical breakpoint;
+- discrete annual models are not preferred over continuous-horizon, multi-task, survival/transition, or ensemble approaches;
+- a terminal/career representation remains a candidate output only if it is empirically superior/useful.
+
+The study must use **all defensible point-in-time evidence available or reconstructable under current governance**, including the previously identified metadata/stat/trajectory families and any additional football evidence discoverable in governed historical sources. It must explicitly inventory unavailable-but-plausibly-useful features as data gaps rather than silently treating them as irrelevant.
+
+Candidate architecture classes should include, where sample size and chronology permit:
+- transparent linear/regularized and nonlinear baselines;
+- two-part survival × conditional-production models;
+- discrete-time hazard / survival and accelerated-lifetime-style approaches where appropriate;
+- multi-state career/role transition models;
+- cohort and age/experience curve models;
+- tree/boosting or other regularized flexible interaction learners with interpretability diagnostics;
+- shared/hierarchical or multi-task structures that borrow strength across positions/horizons;
+- position-specific and horizon-specific specialists;
+- continuous-horizon models;
+- calibrated ensembles/stacking when they improve held-out performance without masking authority.
+
+Research must test both direct annual-point targets and decomposed targets such as:
+1. probability of remaining NFL/fantasy relevant;
+2. role/state conditional on relevance;
+3. production conditional on state/survival;
+4. uncertainty/tail outcomes.
+
+Selection must be nested chronological and avoid winner's-curse overfitting across many position × horizon candidates. The final untouched holdout may confirm or reject a frozen architecture but may not be used to iterate candidate definitions. Require minimum sample sizes, stability across folds/eras, missingness sensitivity, calibration, tail accuracy, rank/order utility, and economic bridge usefulness. Penalize unnecessary route/model complexity.
+
+If evidence supports different models for QB/RB/WR/TE, different models at Y4/Y5/Y6/Y7/Y8, or both, Research should recommend that architecture. If a pooled/shared model wins, recommend that instead. If no material gain survives holdout, preserve the simpler baseline.
+
+Production H3 remains untouched. A challenger may expose evidence relevant to H1-Y3 only as a separate, independently validated Management question. No long-horizon production implementation is authorized until this comprehensive study closes.
