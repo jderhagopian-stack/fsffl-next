@@ -310,3 +310,39 @@ Optimization experiments should explicitly test:
 For Tier A, preserve exact deterministic outputs and RNG semantics. A useful intermediate experiment is to preserve the exact Python RNG draw stream while accelerating downstream aggregation/ranking; this can identify how much time is RNG generation versus Python bookkeeping.
 
 If materially better performance requires a different but statistically equivalent RNG consumption/reduction order, treat that as Tier B and return to Management with equivalence evidence before changing production semantics.
+
+### Stage S0 — empirically validate the simulation-count contract
+Before assuming the optimized kernel must always execute exactly 50,000 trials, measure whether 50,000 is materially better than lower or higher counts for FSFFL's actual outputs. **Do not change production count during this study.**
+
+Run a convergence grid such as 5k / 10k / 20k / 25k / 35k / 50k / 75k / 100k, with a much larger offline reference where practical and multiple independent seeds.
+
+Measure convergence for:
+- expected wins;
+- playoff / first-place / championship odds;
+- full finish distributions;
+- rank ordering;
+- scenario/trade deltas and delta-sign stability;
+- rare/tail outcomes;
+- runtime and memory.
+
+Quantify marginal precision gained per additional 10k simulations and identify the smallest count that is consistently indistinguishable for decision-relevant outputs under predeclared tolerances. Also evaluate a governed adaptive stopping design, but only with sequential-confidence/error controls that avoid stopping merely because one seed happens to look stable.
+
+Do not reduce the production 50k contract without a Management gate.
+
+### Legacy vectorized Simulator recovery evidence
+The predecessor repository `jderhagopian-stack/sleeper-league-data` contains `script/run_fsffl_season_simulator_preproduction.py`, a NumPy-based vectorized 3k/50k canonical Simulator that batches player draws, weekly/team scores, matchup outcomes and playoff calculations. The current NEXT kernel is predominantly sequential Python.
+
+Treat the predecessor as implementation evidence/reference, not code to transplant blindly. Compare semantics carefully because NEXT's Forecast/Simulation contracts differ. Recover transferable execution patterns only after proving parity with current authority.
+
+### Multiverse / outlier preservation requirement
+The predecessor also contains `script/run_fsffl_multiverse_outliers.py`, which ran the deterministic simulation multiverse and retained simulation IDs for notable alternative futures.
+
+During kernel redesign, preserve the ability to identify/replay interesting individual universes without forcing a second expensive full simulation pass if possible. Consider bounded top-k / rarity trackers or replayable simulation identifiers rather than retaining every full universe indefinitely.
+
+Required classes include player, team and playoff/career-season narrative extremes, but modern presentation must distinguish:
+- absolute extrema;
+- representative tail scenarios;
+- empirical rarity/frequency;
+- expected/base-case outcomes.
+
+The outlier layer is downstream analytics only and may not influence canonical probabilities, Forecast, Value or Decision authority.
