@@ -197,3 +197,14 @@ PR #262 is merged with all configured pre-merge workflows green. Production rest
 PR #263 fixes that by restoring a user's exact last-good runtime only when its state_id and artifact input fingerprint exactly match that user's persisted context State; mismatches still fail closed. PR #263 merged to main at `4cd571529f7d97cc83083dc3b49c1fcb0eb61643`; post-merge CI/deploy/production acceptance remain the immediate gate.
 
 Once the deployed #263 build passes FSFFL → Hodor → FSFFL → restart acceptance and governed H3 Intrinsic/readiness remain healthy, **do not leave Performance idle**. Immediately resume Market physical acceptance and Performance-owned cold/focused latency measurement/optimization using the already-accepted Market semantics. No new Management architecture decision is required to start that latency work.
+
+### Near-term Performance sequence — Market latency then Simulation kernel
+After current core acceptance:
+1. resume Market physical acceptance and close the measured ~30–45+ second cold/focused Market foreground problem;
+2. immediately begin the previously deferred **general 50,000-run Simulation kernel efficiency** phase.
+
+This ordering is deliberate. Broad Market discovery performs zero changed-state Simulation, so kernel optimization cannot substitute for the immediate Market latency corrective. Once that blocker is closed, Simulation speed becomes the next Performance priority because it affects intelligence refresh, Trade Center/deep scenarios, changed-State analysis, and general product responsiveness.
+
+Earlier Performance work already added durable exact Simulation reuse, exact concurrent coalescing, progressive delivery, quick-frontier staging and foreground pacing. PR #127 explicitly deferred fresh-kernel optimization. The next phase should profile the fresh engine, then exhaust exact-output-preserving improvements such as invariant hoisting, compact array/index representations, batching/vectorization, duplicate-work removal and preallocation.
+
+If larger gains require changing RNG ordering or another implementation detail that breaks bit-for-bit equality while preserving the same statistical model, return to Management for a separate reproducibility/statistical-equivalence decision. Do not silently reduce 50,000 runs or analytical fidelity.
