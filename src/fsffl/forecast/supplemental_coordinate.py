@@ -530,11 +530,22 @@ def apply_certified_supplemental_coordinate(
         (item.player_id, item.horizon, item.period_start, item.period_end, item.metric)
         for item in base_observations
     }
-    player_targets = {
-        (item.player_id, item.position, item.horizon, item.period_start, item.period_end)
-        for item in base_observations
-        if item.metric != ForecastMetric.FANTASY_POINTS
-    }
+    player_targets: dict[
+        tuple[str, Position, ForecastHorizon, datetime, datetime],
+        ForecastObservation,
+    ] = {}
+    for base in base_observations:
+        if base.metric == ForecastMetric.FANTASY_POINTS:
+            continue
+        key = (
+            base.player_id,
+            base.position,
+            base.horizon,
+            base.period_start,
+            base.period_end,
+        )
+        player_targets.setdefault(key, base)
+
     additions: list[ForecastObservation] = []
     for item in supplement.observations:
         target_key = (
@@ -544,7 +555,8 @@ def apply_certified_supplemental_coordinate(
             item.period_start,
             item.period_end,
         )
-        if target_key not in player_targets:
+        anchor = player_targets.get(target_key)
+        if anchor is None:
             continue
         coordinate_key = (
             item.player_id,
@@ -557,7 +569,17 @@ def apply_certified_supplemental_coordinate(
             raise ValueError(
                 "certified supplement cannot overwrite existing FUMBLES_LOST evidence"
             )
-        additions.append(item)
+        additions.append(
+            item.model_copy(
+                update={
+                    # Scoring groups by the already-governed ensemble identity.
+                    # Keep that identity stable while provenance marks this one
+                    # coordinate as supplemental/mixed-vintage.
+                    "source": anchor.source,
+                    "model_version": anchor.model_version,
+                }
+            )
+        )
 
     if not additions:
         raise ValueError("league consumes FUMBLES_LOST but supplement matched no base players")
