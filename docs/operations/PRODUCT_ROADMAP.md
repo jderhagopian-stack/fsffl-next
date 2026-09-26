@@ -90,3 +90,26 @@ Purpose: preserve the richness that disappears when thousands of modeled seasons
 Product rule: clearly separate **expected outcome** from **interesting possible universe**. Extreme-of-N values are sample-size dependent, so pair them with rarity/percentile/frequency context and avoid presenting them as forecasts.
 
 Prefer deriving the Multiverse catalog from the same canonical Simulation pass with replayable simulation IDs/provenance. Potential surfaces include preseason Reports, Home, League Atlas, team pages and shareable league-story cards.
+
+## Legacy FSFFL capability harvest — preserve proven primitives, not legacy authority
+A structured review of `jderhagopian-stack/sleeper-league-data` identified several predecessor capabilities worth preserving as reference implementations or future infrastructure. Do not port legacy authority wholesale; recover concepts only under NEXT's current Data → State → Forecast → Value → Decision → Search/Optimization → Analytics/API → Presentation chain.
+
+High-value harvest targets:
+
+1. **Vectorized Simulator reference.** The predecessor NumPy-based Simulator performed 50,000 preseason universes with batched player draws, scoring, matchup outcomes and playoff evaluation. One archived 2026 snapshot records 50k in 6.286s in its environment. Use this as evidence that NEXT's sequential Python kernel has substantial software-efficiency headroom, not as an apples-to-apples hosted benchmark.
+2. **Point-in-time historical state provider.** The old system could reconstruct exact pre-transaction rosters, taxi/reserve, pick ownership and FAAB by reversing completed Sleeper transactions. Preserve the principle of historical FACT reconstruction separately from hindsight or decision models.
+3. **Historical analysis with hindsight isolation.** At-the-time trade evaluation and later realized outcomes were explicitly separate layers. Retain this boundary for future historical trade grading/backtesting.
+4. **Asset lineage graph.** The predecessor retained a 774-node / 1,434-edge player-and-pick lineage graph, including pick-to-player draft conversions and explicit "mixed inputs / attribution unknowable" labels for multi-asset trades. This is strong infrastructure for trade genealogy, pick conversion history and shareable league stories.
+5. **Player franchise history.** The predecessor retained 393 player-history records with acquisition events, reacquisitions and unique FSFFL-team counts. Preserve/migrate this historical identity for Record Book and player-history products rather than recomputing ad hoc.
+6. **Simulation snapshot archive.** The predecessor archived dated Simulator outputs with model/input/runtime provenance. NEXT should preserve time-series intelligence snapshots so users can compare preseason/current/weekly beliefs and replay how the league outlook changed.
+7. **Simulation-sensitivity gating.** The old Opportunity Engine could rerun candidate utility across multiple seeds and withhold sign-unstable trades from headline actionability rather than hiding uncertainty. Consider this after current latency work, using NEXT Decision authority and without fabricating acceptance probability.
+8. **Context-normalized Owner Intelligence.** Behavioral Intelligence research adjusted observed owner choices for roster need and league opportunity environment, used leave-one-manager-out priors, and shrank sparse samples toward neutral. Reuse methodological ideas only as descriptive Owner Intelligence; do not convert them into unsupported acceptance probabilities or Forecast inputs.
+9. **Validated position-specific matchup signal.** Old opponent-adjustment research retained small RB/TE effects after holdout but neutralized QB/WR when evidence failed. The lesson is methodological: plausible football features should be position-specific and promoted only after chronological holdout evidence.
+10. **Multiverse / media-guide / Record Book storytelling.** The predecessor turned governed analytics into league-specific stories and publications without giving Presentation new decision authority. NEXT should recover this after core reliability/performance, using current North Star interaction patterns rather than legacy report-first UX.
+
+Explicit non-goals:
+- do not restore legacy GM/Value/Trade authority;
+- do not port hand-set heuristics merely because they were once production;
+- do not let historical realized outcomes leak into point-in-time evaluation;
+- do not let owner behavior or market behavior enter universal Forecast;
+- do not prioritize Record Book/media-guide breadth ahead of current reliability, Market responsiveness and Simulation performance.
