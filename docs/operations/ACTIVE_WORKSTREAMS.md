@@ -261,3 +261,12 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Forecast/Product Implementation:** ACTIVE — deployed PR #265 improved lifecycle truth and restored League backend serving, but physical iPhone acceptance still fails on (a) vNext mapped-subject / governed Year-1 Intrinsic compatibility and (b) catastrophic mobile completed-readiness layout collapse.
 - **Performance / Market latency:** HOLD until this deployed product gate closes.
 - **Intrinsic long-horizon Research:** **MANAGEMENT GATE.** Cell-specific routing/shrinkage and age/experience/exposure corrective is complete pending Management architecture/promotion decisions.
+
+## 2026-09-26 latest Forecast / Product availability checkpoint
+- **Player Intelligence history memory corrective:** implementation **COMPLETE / DEPLOYED** at PR #267, merge `d737012079345768ef5cfd19debff97e0ede1bba`, exact Render deploy `dep-das4k27avr4c73909lsg`.
+- **Acceptance state:** **BLOCKED — AUTHENTICATED HOSTED HISTORY LOAD + PHYSICAL IPHONE/IPAD ACCEPTANCE REQUIRED.**
+- The corrective removes multi-season concurrency/full-population process retention, adds player-season + final career persistence/reuse, and preserves 202/loading/coalescing.
+- Deterministic acceptance is green at 1,704 tests plus all configured focused workflows.
+- No post-deploy authenticated PI history request has yet reached the new instance; fresh-start memory alone is not promoted as a memory-under-load pass.
+- Do not reopen Intrinsic, State-first persistence, or broader Forecast authority for this blocker absent new direct evidence.
+- Durable evidence: `artifacts/implementation/player_intelligence_history_memory_20260926/IMPLEMENTATION_HANDOFF.md`.
