@@ -208,3 +208,14 @@ This ordering is deliberate. Broad Market discovery performs zero changed-state 
 Earlier Performance work already added durable exact Simulation reuse, exact concurrent coalescing, progressive delivery, quick-frontier staging and foreground pacing. PR #127 explicitly deferred fresh-kernel optimization. The next phase should profile the fresh engine, then exhaust exact-output-preserving improvements such as invariant hoisting, compact array/index representations, batching/vectorization, duplicate-work removal and preallocation.
 
 If larger gains require changing RNG ordering or another implementation detail that breaks bit-for-bit equality while preserving the same statistical model, return to Management for a separate reproducibility/statistical-equivalence decision. Do not silently reduce 50,000 runs or analytical fidelity.
+
+### Simulation count + Multiverse recovery direction
+Management has reopened the assumption that 50,000 is necessarily the optimal production Simulation count. It remains canonical until tested, but Performance must add a convergence study comparing lower/higher counts and multiple seeds against a large offline reference, focusing on decision-relevant stability rather than tradition.
+
+The predecessor FSFFL repo contains two important assets to study:
+1. a NumPy vectorized 3k/50k season Simulator (`script/run_fsffl_season_simulator_preproduction.py`), while NEXT currently uses a predominantly sequential Python 50k kernel;
+2. a production Multiverse Outlier Tracker (`script/run_fsffl_multiverse_outliers.py`) that preserved simulation IDs and surfaced interesting player/team/playoff alternative futures.
+
+Do not blindly port either implementation. Recover compatible execution ideas and product semantics under NEXT's current authority contracts.
+
+Modern Multiverse output should preserve auditable interesting universes but contextualize absolute extremes because the maximum observed outcome becomes more extreme as simulation count rises. Use rarity/percentile/frequency context and keep this downstream of Simulation authority.
