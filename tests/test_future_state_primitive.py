@@ -111,7 +111,6 @@ def test_future_state_probability_primitive_matches_legacy_p0_probability_layer_
     )
 
     assert primitive.primitive_version == FUTURE_STATE_PRIMITIVE_VERSION
-    assert primitive.player_ids if hasattr(primitive, "player_ids") else True
     assert set(primitive.players) == set(legacy.players) == {"canonical-player"}
     for horizon in (2, 3):
         actual = primitive.players["canonical-player"].probabilities_for(horizon)
