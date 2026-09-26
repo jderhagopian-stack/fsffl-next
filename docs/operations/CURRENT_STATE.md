@@ -227,3 +227,20 @@ The next authority decision belongs to Management: accept or reject the generali
 FSFFL source architecture is provider-agnostic. Private-beta eligibility and future commercial eligibility are separate rights classes. A source may be used in beta only when its terms/license permit the actual beta use; if commercial rights are not already established, it must carry `commercial_recheck_required=true` and be re-audited/replaced/licensed before commercial launch. Commercial licensing is not itself a prerequisite for a terms-compliant beta source.
 
 Analytical authority, beta-use eligibility, and commercial-use eligibility are separate gates. Canonical policy: `SOURCE_GOVERNANCE.md`.
+
+
+## Private-beta source-rights review — 2026-09-25
+Management re-evaluated current K/DST provider candidates under the provider-agnostic staged-rights policy. Commercial licensing is no longer treated as a prerequisite for a terms-compliant private-beta source, but the intended FSFFL use must be permitted.
+
+Current operational result:
+- JerryGM: `REVIEW_REQUIRED` for Forecast-model/ensemble input because its API license allows app use but restricts training/calibrating a competing projection product;
+- LineupExperts: `REVIEW_REQUIRED`, with written clarification as the most plausible path to `PRIVATE_BETA_ALLOWED`;
+- FantasyPros: self-serve terms are not a safe Forecast-input path because of explicit non-compete language;
+- CBS and RotoWire: not deployable from public/subscription content without written permission/license;
+- Razzball: explicit consent required before model/aggregation use;
+- FFToday: no sufficiently clear automated/model-input grant located; treat as `REVIEW_REQUIRED`;
+- retained historical K/DST corpora remain research/calibration evidence unless separately re-cleared.
+
+Canonical classification: `SOURCE_RIGHTS_LEDGER.md`.
+
+This correction narrows the rights question but does not itself promote any K/DST provider or scoring coordinate.
