@@ -1,0 +1,61 @@
+name: Intrinsic Comprehensive Current Shadows
+on:
+  push:
+    branches: [research/intrinsic-comprehensive-y4-y8-20260926]
+    paths:
+      - scripts/run_intrinsic_comprehensive_current_shadows.py
+      - artifacts/research/intrinsic_comprehensive_y4_y8_20260926/FINAL_HISTORICAL_ARCHITECTURE.json
+      - artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_PRODUCTION_H3_REFERENCE.json
+      - .github/workflows/intrinsic-comprehensive-current-shadows.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  shadows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Restore governed historical inputs and frozen uncertainty
+        run: |
+          mkdir -p /tmp/panel /tmp/term /tmp/hold
+          gh api repos/${{ github.repository }}/actions/artifacts/10912862252/zip > /tmp/panel.zip
+          unzip -oq /tmp/panel.zip -d /tmp/panel
+          gh api repos/${{ github.repository }}/actions/artifacts/10899387479/zip > /tmp/term.zip
+          unzip -oq /tmp/term.zip -d /tmp/term
+          gh api repos/${{ github.repository }}/actions/artifacts/10914389074/zip > /tmp/hold.zip
+          unzip -oq /tmp/hold.zip -d /tmp/hold
+      - name: Run post-freeze current shadows
+        run: |
+          python scripts/run_intrinsic_comprehensive_current_shadows.py \
+            --final-architecture artifacts/research/intrinsic_comprehensive_y4_y8_20260926/FINAL_HISTORICAL_ARCHITECTURE.json \
+            --uncertainty /tmp/hold/EFFECTIVE_UNCERTAINTY_CONTRACT.csv \
+            --model-a-rows /tmp/term/frozen/modela/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results /tmp/term/frozen/qb/qb_career_state_deployment_results.json \
+            --raw-seasons /tmp/panel/RAW_PLAYER_SEASONS_RICH.csv \
+            --players /tmp/panel/PLAYERS.csv \
+            --residual-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/player_specific_trajectory_residual_states.csv \
+            --innovation-states /tmp/term/frozen/modela/multiyear-intrinsic-model-a/within_player_trajectory_innovation_states.csv
+      - name: Upload current shadow evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intrinsic-comprehensive-current-shadows
+          path: |
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_FINAL_ARCHITECTURE_SHADOWS.csv
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_RANK_MOVEMENT.csv
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_POSITION_DISTRIBUTIONS.csv
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_AGE_EFFECTS.csv
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_REPRESENTATIVE_CROSSOVERS.csv
+            artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_SHADOW_SUMMARY.json
+          retention-days: 14
