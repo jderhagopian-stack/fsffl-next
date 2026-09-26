@@ -345,3 +345,24 @@ When qualifying evidence arrives, implementation should:
 - rebuild current Forecast/Simulation/derived intelligence for the exact State;
 - prove existing-league full capability and arbitrary-league non-regression;
 - continue through CI, merge, Render and production validation before Management physical testing resumes.
+
+
+## Management correction — implement only bounded FUMBLES_LOST supplementation
+**State: AUTHORIZED PENDING QUALIFYING FUMBLES_LOST EVIDENCE**
+
+The whole ordinary-offense ROS rebase is superseded.
+
+Implementation should preserve the existing preseason/full-season ordinary-offense Forecast and add only a provider-neutral **current FUMBLES_LOST supplemental evidence contract** once Research supplies qualifying evidence.
+
+The implementation must:
+- keep the immutable preseason artifact unchanged;
+- retain exact source acquisition/effective time and ROS/current horizon;
+- normalize the supplemental coordinate to the scorer/Simulation's target period or rate explicitly;
+- tag current scored Forecast lineage as supplemental/mixed-vintage where consumed;
+- exclude the supplement from preseason/PIT historical comparisons;
+- require two-source material-coordinate authority and target-compatible uncertainty;
+- avoid changing leagues that do not score FUMBLES_LOST;
+- rebuild only affected current Forecast/Simulation/derived artifacts;
+- prove no unrelated ordinary-player raw-stat projection changes.
+
+No current provider is promoted by this authorization.
