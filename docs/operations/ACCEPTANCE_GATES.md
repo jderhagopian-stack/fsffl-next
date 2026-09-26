@@ -309,3 +309,19 @@ Acceptance evidence now includes:
 Production deployment is healthy with no application errors. The process currently restores the separate Hodor/new-league Performance context with derived intelligence incomplete, so no authenticated PR #240 focused/value-lens request has yet exercised the new production diagnostics.
 
 **Remaining acceptance:** repeat physical iPhone/Safari Market validation on a context with sufficient governed evidence, followed by inspection of the emitted focus/value-lens telemetry. Do not weaken Market or lifecycle authority if Hodor remains incomplete.
+
+## Layered product promotion gate
+No product workstream may collapse multiple acceptance layers into one inferred success.
+
+Required layers where applicable:
+1. **model/research authority** — governed evidence and approved model/contract;
+2. **core runtime** — correct State/Forecast/Simulation/Value identity and persistence;
+3. **derived capability** — Intrinsic/future forecast/analytics consumers successfully materialize under the exact production composition;
+4. **hosted endpoint** — real deployed API route succeeds for the target league/user/State;
+5. **rendered surface** — the production client consumes the endpoint correctly;
+6. **physical target** — required iPhone/Safari or other Management target behaves correctly;
+7. **readiness truth** — shell status matches actual supported capabilities and freshness.
+
+A passing lower layer does not promote higher layers. In particular, Forecast/Simulation/Value core readiness does not imply Intrinsic, League Atlas, Player Intelligence or Market surface readiness.
+
+Promotion to a dependent workstream requires direct evidence for every layer that dependent work assumes.
