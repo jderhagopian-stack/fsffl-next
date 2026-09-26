@@ -136,23 +136,35 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     runtime_result = getattr(evidence, "runtime_result", None) if evidence is not None else None
     blockers = tuple(getattr(runtime_result, "simulation_authority_blockers", ()) or ())
     partial_rows = tuple(getattr(runtime_result, "partial_fantasy_point_forecasts", ()) or ())
+    material_partial_player_ids = tuple(
+        getattr(runtime_result, "simulation_material_partial_player_ids", ()) or ()
+    )
     authoritative_rows = tuple(getattr(evidence, "league_scored_forecasts", ()) or ()) if evidence is not None else ()
     raw_rows = tuple(getattr(evidence, "raw_forecasts", ()) or ()) if evidence is not None else ()
 
     if evidence is None or not (raw_rows or authoritative_rows or partial_rows):
         forecast_status = "unavailable"
         forecast_reason = "Governed Forecast evidence is not loaded."
-    elif blockers or partial_rows or not authoritative_rows:
+    elif blockers or material_partial_player_ids or not authoritative_rows:
         forecast_status = "partial_provisional"
         forecast_reason = (
-            "Shared raw Forecast evidence is populated, but complete league-scored "
-            "Forecast authority is unavailable"
+            "Shared raw Forecast evidence is populated, but complete scored authority "
+            "for the current downstream consumer is unavailable"
             + (": " + ", ".join(blockers) if blockers else "")
             + "."
         )
     else:
         forecast_status = "full"
-        forecast_reason = "Governed league-scored Forecast authority is available."
+        forecast_reason = (
+            "Governed league-scored Forecast authority is available for the current "
+            "downstream consumer."
+            + (
+                f" {len(partial_rows)} non-material subject(s) retain explicit partial "
+                "coverage diagnostics."
+                if partial_rows
+                else ""
+            )
+        )
 
     if runtime.simulation_analytics is not None:
         simulation_status = "full"
@@ -197,6 +209,10 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             "raw_observation_count": len(raw_rows),
             "authoritative_scored_count": len(authoritative_rows),
             "partial_scored_count": len(partial_rows),
+            "material_partial_player_ids": list(material_partial_player_ids),
+            "non_material_partial_scored_count": max(
+                0, len(partial_rows) - len(material_partial_player_ids)
+            ),
             "simulation_blockers": list(blockers),
         },
         "simulation": {"status": simulation_status, "reason": simulation_reason},
@@ -589,6 +605,9 @@ def create_app(
             ],
             "simulation_authority_blockers": list(
                 evidence.runtime_result.simulation_authority_blockers
+            ),
+            "simulation_material_partial_player_ids": list(
+                evidence.runtime_result.simulation_material_partial_player_ids
             ),
             "partial_forecasts": [
                 {
