@@ -541,3 +541,23 @@ Required continuation:
 3. rerun full CI and all configured focused workflows to green;
 4. only then merge/deploy and execute the already-required FSFFL → Hodor → FSFFL → restart production acceptance;
 5. do not return at green CI alone; the workstream terminates only after the deployed production acceptance reaches a permitted `OPERATING_PROTOCOL.md` terminal state.
+
+## PR #263 merged — restart persistence acceptance
+**State: ACTIVE — POST-MERGE CI / DEPLOY / PRODUCTION ACCEPTANCE**
+
+PR #262 merged after all configured pre-merge workflows reached green and delivered the combined exact-State switch, governed-H3 scope, and mobile-readiness corrective.
+
+Its production restart acceptance exposed one narrower persistence defect: when an isolated acceptance user advanced the shared league-scoped latest snapshot, another user's still-valid exact persisted State could restore empty because restart required the shared latest snapshot hash to equal that user's state_hash.
+
+PR #263 — `Persistence: preserve user exact runtime across shared league advances` — fixes only that user-scoped restoration rule. It permits restoration only when the durable user last-good `state_id` and artifact input fingerprint both exactly equal that user's persisted context `state_hash`; nonmatching evidence remains fail-closed. Forecast, FUMBLES_LOST, H3 Intrinsic, K/DST, Simulation, Value and Market authority are unchanged.
+
+PR #263 merged to main at `4cd571529f7d97cc83083dc3b49c1fcb0eb61643`. Pre-merge CI, PR164 focused regression and live Forecast trace were green.
+
+Continue without returning control through:
+1. post-merge main CI;
+2. Render deployment of the exact merge;
+3. complete **FSFFL → Hodor → FSFFL → restart** production acceptance;
+4. verify exact league/user/State identity, no cross-league leakage, FSFFL FULL Forecast + Simulation + Value, governed H3 Intrinsic availability, and compact truthful mobile readiness;
+5. persist the exact acceptance evidence and finish only at a permitted `OPERATING_PROTOCOL.md` terminal state.
+
+If this passes, core reliability no longer blocks Market physical acceptance; Management/Performance should proceed immediately to Market testing and latency work.
