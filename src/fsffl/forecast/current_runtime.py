@@ -107,6 +107,10 @@ class LiveForecastRuntimeResult(FrozenModel):
     source_health_events: tuple[LiveForecastSourceHealthEvent, ...] = ()
     fumbles_lost_supplement_authority_fingerprint: str | None = None
     fumbles_lost_supplement_player_count: int = 0
+    fumbles_lost_subject_universe_player_count: int = 0
+    fumbles_lost_provider_absent_player_ids: tuple[str, ...] = ()
+    fumbles_lost_frozen_prior_absent_player_ids: tuple[str, ...] = ()
+    fumbles_lost_omitted_player_ids: tuple[str, ...] = ()
     fumbles_lost_supplement_failure: str | None = None
     fumbles_lost_supplement_model_version: str | None = None
     simulation_material_partial_player_ids: tuple[str, ...] = ()
@@ -603,6 +607,26 @@ def build_current_live_forecasts(
             len(fumbles_lost_supplement.observations)
             if fumbles_lost_supplement is not None
             else 0
+        ),
+        fumbles_lost_subject_universe_player_count=(
+            len(fumbles_lost_supplement.subject_universe_player_ids)
+            if fumbles_lost_supplement is not None
+            else 0
+        ),
+        fumbles_lost_provider_absent_player_ids=(
+            fumbles_lost_supplement.provider_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_frozen_prior_absent_player_ids=(
+            fumbles_lost_supplement.frozen_prior_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_omitted_player_ids=(
+            fumbles_lost_supplement.omitted_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
         ),
         fumbles_lost_supplement_failure=fumbles_lost_failure,
         fumbles_lost_supplement_model_version=(
