@@ -443,3 +443,20 @@ Current acceptance focus:
 7. merge/deploy and prove the current production State remains FULL Forecast + Simulation after a fresh sync/rebuild before returning control.
 
 Do not add a new heuristic, player special case, silent zero, or broad authority downgrade.
+
+
+## Management correction — Simulation gates on its actual subject dependency set
+**State: ACTIVE — CONSUMER-SCOPED READINESS CORRECTIVE / PRODUCTION ACCEPTANCE**
+
+Production inspection confirms the two current partial `fum_lost` subjects (`sleeper:player:11630`, `sleeper:player:6149`) are unrostered in the current FSFFL State. Current runtime nevertheless adds `partial_player_scoring_coordinates_present` whenever *any* partial fantasy-point forecast exists, making universal Forecast incompleteness a league-wide Simulation blocker.
+
+Correct this generically:
+1. derive the Simulation-relevant subject set from the exact current consumer dependency graph (at minimum every rostered player the Simulation/lineup engine can actually use; include other subjects only where the consumer explicitly models their entry);
+2. compute material-coordinate Simulation blockers only for partial subjects inside that dependency set;
+3. preserve partial Forecast rows and explicit omission reasons for unrostered/unrelated players;
+4. keep universal player-surface readiness separate from roster-based Simulation readiness;
+5. do not special-case the two current player IDs, do not zero missing `fum_lost`, and do not weaken authority for rostered players;
+6. add regressions proving: unrostered partial player does not block roster Simulation; rostered materially partial player does block; non-`fum_lost` leagues remain identical; switching/restart does not leak readiness;
+7. deploy and perform a fresh current-State FSFFL sync/rebuild. Acceptance requires Simulation FULL despite these two unrostered player-specific partials, with those partials still truthfully visible on player/free-agent surfaces.
+
+After this consumer-scoped readiness correction, separately continue the generic first-party supplement population reconciliation so provider membership changes do not unnecessarily omit otherwise model-eligible subjects.
