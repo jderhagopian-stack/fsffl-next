@@ -442,3 +442,9 @@ Management has expanded the next Intrinsic Research phase to evaluate alternativ
 
 ## PR #261 live — FSFFL usable, cross-league switch still not accepted
 PR #261 is merged/deployed and the current FSFFL league again reaches FULL Forecast, Simulation and Value in production. End-to-end acceptance is still open: the Hodor switch now fails because the first-party FUMBLES_LOST supplement being persisted does not match the exact canonical State being checkpointed. This is narrower than the prior timeout but still a real switching defect. Full app physical acceptance should wait; browsing/testing the already-loaded FSFFL league itself is reasonable.
+
+
+## Physical iPhone acceptance — Intrinsic unavailable and readiness strip too dense
+Current FSFFL Home can display Forecast FULL / Simulation FULL / Value FULL, but Player Intelligence Intrinsic is presently unavailable because the Future-I1 compatibility check is being applied across a broader current player universe than the frozen H3 standard coordinate owns. This is a production regression in Intrinsic subject scoping, not evidence that the governed H3 model itself is invalid. Eligible H3 players should remain available; unsupported extra players should fail only at their own subject boundary.
+
+The app-wide readiness strip is also visually overgrown on iPhone. Management wants the mobile FULL state reduced to a compact one-line “Intelligence current” presentation with Refresh, and the building state reduced to progress + active phase. FULL capability chips should not consume a second row; exception chips/details remain available when partial/unavailable.
