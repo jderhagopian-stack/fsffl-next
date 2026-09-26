@@ -244,3 +244,22 @@ Current operational result:
 Canonical classification: `SOURCE_RIGHTS_LEDGER.md`.
 
 This correction narrows the rights question but does not itself promote any K/DST provider or scoring coordinate.
+
+
+## FUMBLES_LOST authority recovery closeout — 2026-09-26
+
+Forecast Research completed the bounded FUMBLES_LOST source/authority recovery and stops at **MANAGEMENT GATE — SAME-HORIZON AUTHORITY**.
+
+Durable evidence:
+- `artifacts/research/fumbles_lost_authority_recovery_20260926/SOURCE_AUTHORITY_LEDGER.md`
+- `artifacts/research/fumbles_lost_authority_recovery_20260926/RESEARCH_HANDOFF.md`
+
+Key result:
+- artifact 63 remains the last authentic 2026 pre-opener offense Forecast and its FFToday + Razzball evidence contains no FUMBLES_LOST;
+- the retained 2024 CBS + FantasySharks panel proves exact lost-fumble projections and supplies a non-zero historical error/disagreement diagnostic, but it is the wrong season and research-only for deployment;
+- no deployable two-independent-source 2026 season/pre-opener pair was recovered;
+- current Razzball ROS fumble pages are source-health red and current code intentionally forbids the former season/ROS cross-horizon augmentation;
+- JerryGM + Fantasy Nerds is the shortest technical current-ROS candidate pair, but it is not an immediate production fix: JerryGM needs written model-input permission, Fantasy Nerds needs live paid API access and aggregate-source independence resolution, and candidate-pair uncertainty remains unpromoted;
+- if Fantasy Nerds cannot qualify as an independent vote, JerryGM + LineupExperts is the next bounded candidate, subject to exact-field and rights validation.
+
+Under current Forecast authority, ROS evidence cannot be spliced into the preserved season/preseason baseline. Management must either keep the current route fail-closed until qualifying season/PIT evidence exists or explicitly authorize a bounded ordinary-offense current-ROS lane/rebase. No single-source, zero, borrowed-horizon or stale-artifact workaround is permitted.
