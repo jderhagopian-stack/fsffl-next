@@ -251,3 +251,8 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Performance / Market latency:** **HOLD FOR THIS CORRECTIVE.** Do not optimize Market against a product state that Management cannot yet accept. Preserve prior Performance evidence and resume immediately after physical product acceptance.
 - **Simulation modernization:** remains queued behind Market latency.
 - **Intrinsic Y4-Y8 Research:** **MANAGEMENT GATE.** Comprehensive study is closed pending Management architecture/product/promotion decisions; no production authority.
+
+## Long-horizon Research reopened after all-or-nothing fallback review
+- **Intrinsic Y4-Y8 Research:** ACTIVE — cell-specific routing / validation corrective. The prior sealed holdout remains valid evidence that the frozen blanket 75/25 architecture failed QB Y8, but Management rejects automatic all-20-cell fallback to the incumbent baseline. Research must evaluate a general position × horizon routing/shrinkage policy without post-hoc use of the already-seen holdout.
+- **Production H3:** unchanged.
+- **Implementation/Product:** independent critical path; do not mix this Research corrective into the beta-restoration work.
