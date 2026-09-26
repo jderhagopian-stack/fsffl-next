@@ -482,3 +482,28 @@ PR #261 merged at `c57bc394986ce871ceca672efaacb54f1346eed0`; post-merge CI is g
 Fresh production acceptance again proves the existing FSFFL league itself reaches FULL Forecast + Simulation + Value. The cross-league sequence still fails after that success. The previous generic checkpoint timeout has narrowed to an exact-state binding failure while switching: `FSFFL persistence checkpoint failed ... first-party FUMBLES_LOST supplement does not match persisted State`, followed by `Synced Sleeper State could not be durably checkpointed`.
 
 Do not reopen completed FUMBLES_LOST model or subject-universe work. Diagnose why the supplement/state pair being checkpointed during the Hodor switch is not bound to the same canonical State generation, preserve no-stale-cross-league guarantees, and rerun FSFFL → Hodor → FSFFL + restart acceptance before asking Management for full physical testing.
+
+
+## Physical acceptance regression — Intrinsic global coverage failure + mobile readiness strip
+**State: ACTIVE — INTRINSIC SUBJECT-SCOPE CORRECTIVE + MOBILE READINESS COMPACTION**
+
+Physical iPhone/Safari acceptance on the current FSFFL league shows core Forecast/Simulation/Value at FULL, but Player Intelligence / Market Intrinsic is unavailable with: `Authoritative future Forecast contract unavailable: player-specific future-I1 scoring cannot reproduce the frozen standard coordinate for required players: [...]`.
+
+Production logs confirm the failure is globalized: the current universal/rostered scoring universe contains many subjects outside the frozen standard Future-I1 coordinate, and the future scoring bridge currently fails the whole H3 contract instead of restricting compatibility to its governed subject set.
+
+Corrective requirements:
+1. preserve the existing frozen H3/Future-I1 authority and exact governed cohort; do not broaden H3 authority merely because current State or FUMBLES_LOST supplementation now covers a larger universe;
+2. derive Future-I1 scoring compatibility over the actual H3-owned subject set;
+3. eligible governed H3 players must continue to receive Intrinsic even when unrelated current-State/free-agent players lack the frozen standard coordinate;
+4. players genuinely outside H3 authority remain explicitly unavailable at the player level, without collapsing Intrinsic for other subjects;
+5. prove persisted/current H3 values and ranks for the governed cohort are unchanged;
+6. cover Player Intelligence, Player Board/Market value lenses, rostered and all-player universes, and league switching/restart regressions;
+7. do not mix this corrective with the active Y4+ Research work.
+
+Physical acceptance also shows the shared mobile readiness strip has become too dense. On narrow/mobile layouts:
+- when core capability is FULL, collapse to a compact single-line state such as “✓ Intelligence current” plus a small Refresh action; hide redundant Forecast/Simulation/Value FULL chips;
+- while building, show step/progress + one short active-phase message + Refreshing state, not a second row of full capability chips;
+- show capability chips/details only when they communicate an exception (partial/unavailable) or via an expandable detail affordance;
+- preserve the thin progress line and truthful 1/7→7/7 lifecycle; desktop may retain richer detail if it fits cleanly.
+
+Treat the Intrinsic regression and mobile strip compaction as the next app-acceptance corrective after the currently open exact-State cross-league switch defect. Do not return full physical acceptance until all three are validated together.
