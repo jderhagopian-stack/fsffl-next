@@ -633,3 +633,33 @@ Execution priority inside the active corrective:
 6. once the beta is usable again, complete the remaining architecture audit/regression hardening before closing the directive.
 
 Acceptance must include actual authenticated hosted endpoint/render-path validation and physical iPhone/Safari evidence. A green unit suite without a usable product is not sufficient.
+
+## PR #265 physical iPhone acceptance failure — Intrinsic Year-1 compatibility + mobile readiness layout
+**State: ACTIVE — DEPLOYED PRODUCT CORRECTIVE NOT ACCEPTED**
+
+Exact deployed corrective:
+- merge `002924b21ed436cb97995eac534af629b87fba5f`
+- Render deploy `dep-das32op7lnhs73fde380`
+- post-merge CI green
+- physical iPhone/Safari exercised after deploy
+
+Physical evidence:
+1. During refresh, the new lifecycle strip behaves directionally correctly: `4 / 7 Running season outlook… · Last-good available`, Refresh disabled, and partial capability state is shown.
+2. After build completion, the shared readiness/status region catastrophically collapses on iPhone: status text and capability pills render in an extremely narrow vertical column inside a large empty card on both Home and League. This is a product-blocking responsive presentation regression.
+3. The completed state remains `Intelligence partial`; Intrinsic is unavailable even though core Simulation/Value return.
+4. Hosted logs prove the Intrinsic failure is server-side, not merely presentation:
+   `intrinsic_status=unavailable intrinsic_build=completed coordinate=forecast-vnext-a2-burr-20260922 reason=Authoritative future Forecast contract unavailable: vNext mapped subjects lack compatible governed Year-1 evidence`.
+5. Hosted logs simultaneously prove the League backend is serving successfully (`FSFFL League Atlas served ... standings=12 simulation=True`). Therefore the current League failure is presentation/layout, not the prior static-module/API-load failure.
+
+Required corrective:
+- reproduce and fix the exact vNext mapped-subject ↔ governed Year-1 compatibility failure using the deployed FSFFL State; preserve governed subject authority and do not synthesize missing evidence;
+- determine whether subject intersection/identity reconciliation is wrong or whether legitimate Year-1 evidence is actually missing, and fail only affected subjects if authority permits rather than collapsing governed Intrinsic globally;
+- add a deployed-path regression for the exact compatibility condition that failed after #265;
+- fix the mobile completed/partial readiness layout so the compact strip never creates a narrow vertical text column or giant empty container at iPhone width;
+- verify the same shared component on Home and League, plus Franchise/Market where reused;
+- preserve the working in-progress lifecycle behavior observed at 4/7;
+- reconcile any readiness overclaim: hosted capability labels must match the actual governed consumer scope and must not say Full if the relevant product consumer is degraded;
+- deploy the corrective and repeat actual iPhone/Safari acceptance.
+
+Do not reopen already-proven State-first switch/restart persistence or the charter-correct vNext/P0 boundary unless new evidence directly implicates them.
+Do not return at unit/focused CI. Terminal acceptance requires the deployed FSFFL State to show healthy governed Intrinsic plus a physically usable mobile readiness layout.
