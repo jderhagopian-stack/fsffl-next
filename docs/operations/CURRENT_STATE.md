@@ -490,3 +490,13 @@ Management review of the actual comparative code and frozen evidence found that 
 The six-family conclusion is therefore conditional: `two_part_state` is the strongest robust family **within that information set**, not proof that FSFFL has found the best long-horizon predictor set.
 
 The same frozen evidence package contains unused draft/physical/player metadata and separate seasonal-stat evidence, while several trajectory/residual/volatility signals were previously rejected on Y2/Y3 gates rather than Y4-Y8 targets. Research is now ACTIVE on a PIT long-horizon predictor-discovery/ablation phase before terminal/career modeling. Production H3 and the app critical path are unchanged.
+
+## Comprehensive long-horizon architecture study now active
+
+Management has broadened the reopened Y4+ work beyond feature ablation. Research must jointly search the available point-in-time evidence space, target decomposition, model family, and position/horizon routing architecture.
+
+The prior conclusion that `two_part_state` was the robust Y4-Y8 family is now explicitly a **baseline result conditional on the old 10-feature information set**. It is not protected in the expanded study.
+
+Different models by position, horizon, or position × horizon are fully allowed if nested chronological validation and untouched holdout evidence support them. Shared/hierarchical, continuous-horizon, and ensemble architectures are equally eligible. No Y5/H5 breakpoint is presumed.
+
+Production H3 remains unchanged and no long-horizon implementation is authorized.
