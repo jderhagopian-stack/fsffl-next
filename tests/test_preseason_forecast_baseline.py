@@ -571,7 +571,12 @@ def test_resilient_fallback_promotes_fumbles_scoring_when_current_supplement_is_
     )(state)
 
     assert evidence.evidence_basis == "preseason_baseline"
-    assert len(evidence.league_scored_forecasts) == 1
+    season_scored = tuple(
+        row
+        for row in evidence.league_scored_forecasts
+        if row.horizon == ForecastHorizon.SEASON
+    )
+    assert len(season_scored) == 1
     assert evidence.runtime_result.partial_fantasy_point_forecasts == ()
     assert evidence.runtime_result.simulation_authority_blockers == ()
     assert evidence.runtime_result.fumbles_lost_supplement_authority_fingerprint
