@@ -167,20 +167,20 @@ The whole ordinary-offense ROS recovery path was authorized briefly and then exp
 
 
 ## Intrinsic Value Research — Horizon Term Structure
-**State:** ACTIVE — RESEARCH ONLY / NO IMPLEMENTATION AUTHORITY
+**State:** **MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE**
 
-Management has authorized a bounded empirical study of horizon-specific FSFFL Intrinsic Value in parallel with Forecast/Product's FSFFL production-restoration work. Research will compare the current three-year model against longer discrete and terminal/career formulations; measure rank/value changes and position-level distributions across horizons; validate uncertainty, discounting and terminal treatment chronologically; and return at a Management gate with a recommended architecture or a negative finding. Production three-year Intrinsic remains unchanged.
+Research is complete. The evidence supports `H1 | governed H3 | H5 challenger | terminal/career band`, while rejecting an exact Y6-Y8/career cardinal extension under current evidence. Production H3 is unchanged and no implementation authority is granted. Durable handoff: `artifacts/research/intrinsic_term_structure_20260926/RESEARCH_CLOSEOUT.md`.
 
 
 ## 2026-09-26 latest recovery / horizon checkpoint
 - **FSFFL restoration:** PR #258 and #259 are merged; main CI is green; #259 is live. Production reached FULL Forecast/Simulation/Value once after deploy, but a later fresh State exposed two WRs without first-party FUMBLES_LOST coverage, returning current capability to partial and withholding Simulation. Forecast/Product remains ACTIVE on that generic two-player coverage gap.
-- **Long-horizon Intrinsic Research:** ACTIVE. Historical model-selection pass is green and selected a `two_part_state` Y4/Y5 extension over Y3 carry, with improved OOT MAE/ranking signal. Current-player shadows and final architecture/Management-gate handoff are still outstanding. No implementation authority.
+- **Long-horizon Intrinsic Research:** **MANAGEMENT GATE.** Historical selection and post-selection current shadows are complete. H5 carries useful separate horizon signal; exact terminal/career cardinal value is not supported. Production H3 remains unchanged; no implementation authority.
 - **Market physical acceptance:** remains paused until current FSFFL Simulation is stably restored.
 
 
 ## Current Management direction — localized partials + horizon report
 - **Forecast/Product:** ACTIVE. Fix the generic current-subject reconciliation gap so two provider-absent/current-State WRs do not unnecessarily hold league Simulation hostage; preserve fail-closed semantics only where an unresolved subject can materially affect the consumer.
-- **Intrinsic term-structure Research:** ACTIVE. Continue from the green historical selection pass through post-selection current-player/position diagnostics and a plain-language Management PDF at the architecture gate. No production implementation is authorized.
+- **Intrinsic term-structure Research:** **MANAGEMENT GATE.** Current-player/position diagnostics are complete and the Management architecture recommendation is persisted. Plain-language PDF is the human-readable closeout; no production implementation is authorized.
 
 
 ## Simulation readiness scope correction — 2026-09-26
