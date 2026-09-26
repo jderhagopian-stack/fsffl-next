@@ -35,7 +35,7 @@ SUPPLEMENTAL_COORDINATE_EVIDENCE_ARTIFACT_KIND = (
     "current_supplemental_coordinate_evidence"
 )
 SUPPLEMENTAL_COORDINATE_ENSEMBLE_ARTIFACT_KIND = (
-    "current_supplemental_coordinate_ensemble"
+    "current_supplemental_forecast_coordinate"
 )
 SUPPLEMENTAL_COORDINATE_SCOPE_KIND = "nfl_season_coordinate"
 
@@ -132,8 +132,8 @@ def supplemental_coordinate_ensemble_artifact(
             input_fingerprint=canonical_fingerprint(
                 ensemble.season,
                 ensemble.metric,
-                ensemble.source_horizon,
-                ensemble.target_horizon.value,
+                ensemble.evidence_horizon,
+                ensemble.target_horizon,
                 ensemble.target_period_start.isoformat(),
                 ensemble.target_period_end.isoformat(),
                 ensemble.source_ids,
@@ -145,7 +145,7 @@ def supplemental_coordinate_ensemble_artifact(
             model_version=SUPPLEMENTAL_COORDINATE_CONTRACT_VERSION,
         ),
         payload=payload,
-        computed_at=ensemble.evaluation_as_of,
+        computed_at=ensemble.authority_valid_from,
     )
 
 
