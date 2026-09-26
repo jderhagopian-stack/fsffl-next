@@ -19,9 +19,11 @@ This makes the incumbent one candidate among others. It receives no automatic au
 ## Repeated rolling-origin contract
 
 For every horizon:
-- evaluate the latest **up to five** eligible historical origins, with a minimum of three outer origins per horizon;
+- evaluate the latest **up to five** eligible historical origins;
+- require at least two outer origins to run a repeated-validation diagnostic, but require at least **three** outer origins before any exact-cardinal cell route can be supported;
 - require at least three earlier eligible origins before an outer origin can be scored;
 - when a deep horizon has fewer than five defensible outer origins, use all available qualifying origins rather than fabricate or relax chronology;
+- Y8 has only five eligible origins total (2014-2018); preserving three earlier origins leaves two outer tests (2017-2018), so Y8 cannot earn exact-cardinal routing authority in this corrective regardless of those two outcomes;
 - use at most the five most recent earlier origins for route selection;
 - for outer origin T, every fitted training row must satisfy `target_season < T`;
 - route selection for T may use only earlier evaluation origins U<T.
