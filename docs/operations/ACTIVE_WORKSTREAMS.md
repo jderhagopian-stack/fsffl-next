@@ -237,3 +237,10 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **AFTER FAST SIMULATION:** repeated-seed Decision sensitivity and context-normalized Owner Intelligence.
 - **LATER PRODUCTIZATION:** Multiverse stories, trade genealogy, Record Book, historical trade review, Alternate History, preseason media guide and other league-memory surfaces.
 - **PARALLEL:** comprehensive long-horizon Forecast/Intrinsic Research continues independently.
+
+## Post-PR263 Management reconciliation — core closed, Performance now critical path
+- **Forecast/Product Implementation:** **DIRECTIVE COMPLETE.** Post-PR263 production acceptance passed FSFFL → Hodor → FSFFL → restart, exact-State/user isolation, FSFFL FULL Forecast/Simulation/Value, governed H3 non-regression, and compact mobile readiness. Do not continue or reopen this corrective absent a new regression.
+- **Market:** physical iPhone/Safari acceptance is now unblocked on the fully governed FSFFL league. Use the already-deployed PR #240 corrective; no redesign is authorized.
+- **Performance:** **ACTIVE — IMMEDIATE CRITICAL PATH.** Resume Market cold/focused latency work now using fresh authenticated FSFFL traffic and the existing ~44.9s cold / ~31.8–47.8s focused baseline. Exhaust profiling/optimization/deploy/remeasure to terminal state.
+- **Simulation modernization:** immediately follows Market latency; Performance is already authorized to continue into convergence-count study + fresh-kernel/vectorization work + Multiverse identity preservation without another sequencing decision.
+- **Intrinsic Research:** comprehensive Y4-Y8 architecture study continues independently in parallel.
