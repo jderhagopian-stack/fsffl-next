@@ -172,8 +172,9 @@
     "minimum_inner_origins": 3,
     "chronology": "for outer origin T, all fitted training rows must have target_season < T; candidate selection may use only evaluation origins U < T",
     "outer_origins_per_horizon_max": 5,
-    "minimum_outer_origins": 3,
-    "outer_origin_rule": "use the latest up to five origins that each have at least three earlier eligible origins; require at least three outer origins per horizon"
+    "minimum_outer_origins": 2,
+    "outer_origin_rule": "use the latest up to five origins that each have at least three earlier eligible origins; require at least two outer origins to run validation, but at least three outer origins to support an exact-cardinal cell route",
+    "minimum_outer_origins_for_exact_support": 3
   },
   "selection_loss": {
     "reference": "within-cell median candidate metric on permitted inner origins; incumbent is not the reference authority",
@@ -202,7 +203,8 @@
       "repeatable_outer_policy_win_share_min": 0.6,
       "material_policy_score_margin_min": 0.01,
       "persistent_severe_instability_rule": "more than one rolling outer origin with policy RMSE > 1.20x the median RMSE across baseline/hard/soft/blanket policies for that same cell-origin",
-      "indistinguishable_policy_score_margin_abs_max": 0.01
+      "indistinguishable_policy_score_margin_abs_max": 0.01,
+      "minimum_outer_origins_for_exact_support": 3
     }
   },
   "guards": {
