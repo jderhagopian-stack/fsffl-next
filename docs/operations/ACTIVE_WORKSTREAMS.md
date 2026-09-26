@@ -185,3 +185,8 @@ Research is complete. The evidence supports `H1 | governed H3 | H5 challenger | 
 
 ## Simulation readiness scope correction — 2026-09-26
 - **Forecast/Product:** ACTIVE. Current two partial FUMBLES_LOST players are verified unrostered. Simulation must gate on roster/consumer dependencies, not every universal Forecast row. Preserve the player-level partials while restoring roster-based Simulation, then complete generic supplement-universe reconciliation and production acceptance.
+
+
+## 09:12 ET production checkpoint
+- **Forecast/Product:** ACTIVE, but the original FSFFL scoring/Simulation restoration is now proven FULL in production on PR #260. Remaining acceptance issue is a Hodor-switch durable checkpoint timeout during the cross-league sequence. Fix only that persistence/switch defect and rerun end-to-end acceptance.
+- **Intrinsic term-structure Research:** technical work is at Management gate, but the requested plain-language Management PDF is still outstanding and must be delivered before Management is asked to decide on implementation.
