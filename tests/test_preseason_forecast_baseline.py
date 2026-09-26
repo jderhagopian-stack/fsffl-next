@@ -9,6 +9,12 @@ from fsffl.forecast.annual_preseason_snapshot import (
     AnnualPreseasonProjectionSnapshot,
 )
 from fsffl.forecast.current_runtime import LiveForecastRuntimeResult
+from fsffl.forecast.fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SOURCE,
+    FirstPartyFumblesLostEvidenceTier,
+    FirstPartyFumblesLostPlayerEvidence,
+    FirstPartyFumblesLostSupplement,
+)
 from fsffl.forecast.live_ensemble import LiveEnsembleCoverage
 from fsffl.forecast.models import (
     ForecastDistribution,
@@ -393,7 +399,10 @@ def _state_scoring_fumbles_lost() -> LeagueState:
         }
     )
     return state.model_copy(
-        update={"league": state.league.model_copy(update={"rules": rules})}
+        update={
+            "league": state.league.model_copy(update={"rules": rules}),
+            "completed_through_week": 2,
+        }
     )
 
 
@@ -460,3 +469,117 @@ def test_preseason_replay_stays_full_when_fumbles_lost_is_not_scored() -> None:
     assert len(result.fantasy_point_forecasts) == 1
     assert result.partial_fantasy_point_forecasts == ()
     assert result.simulation_authority_blockers == ()
+
+
+
+def _fallback_fumbles_supplement(
+    state: LeagueState,
+    baseline,
+) -> FirstPartyFumblesLostSupplement:
+    first = baseline.raw_ensemble[0]
+    observation = ForecastObservation(
+        player_id=first.player_id,
+        position=first.position,
+        horizon=first.horizon,
+        metric=ForecastMetric.FUMBLES_LOST,
+        period_start=first.period_start,
+        period_end=first.period_end,
+        distribution=ForecastDistribution(mean=1.0, stddev=1.0),
+        source=FIRST_PARTY_FUMBLES_LOST_SOURCE,
+        model_version="next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate",
+        as_of=state.as_of,
+        provenance=Provenance(
+            source=FIRST_PARTY_FUMBLES_LOST_SOURCE,
+            retrieved_at=state.as_of + timedelta(seconds=2),
+            effective_at=state.as_of,
+            source_version="next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate",
+        ),
+    )
+    player_evidence = FirstPartyFumblesLostPlayerEvidence(
+        player_id=first.player_id,
+        position=Position.QB,
+        historical_gsis_id="00-test",
+        identity_method="retained_gsis",
+        evidence_tier=FirstPartyFumblesLostEvidenceTier.HISTORY_PLUS_CURRENT,
+        history_games=17,
+        history_opportunities=500.0,
+        current_games=2,
+        current_opportunities=70.0,
+        historical_role_opportunities_per_game=500.0 / 17.0,
+        role_opportunities_per_game=32.0,
+        position_lost_fumble_per_opportunity=0.005,
+        mean_fumbles_lost=1.0,
+        predictive_stddev=1.0,
+    )
+    return FirstPartyFumblesLostSupplement(
+        season=2026,
+        league_state_id=state.state_id,
+        completed_through_week=2,
+        current_input_captured_at=state.as_of + timedelta(seconds=2),
+        built_at=state.as_of + timedelta(seconds=2),
+        authority_valid_from=state.as_of + timedelta(seconds=2),
+        observed_schema_keys=("pass_att", "rec", "rush_att", "sack"),
+        current_input_sha256="b" * 64,
+        player_evidence=(player_evidence,),
+        observations=(observation,),
+    )
+
+
+def test_preseason_replay_consumes_current_fumbles_supplement_without_mutating_raw_baseline() -> None:
+    state = _state_scoring_fumbles_lost()
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+    original_raw = baseline.raw_ensemble
+    supplement = _fallback_fumbles_supplement(state, baseline)
+
+    result = build_runtime_from_preseason_baseline(
+        state,
+        baseline,
+        fumbles_lost_supplement=supplement,
+    )
+
+    assert result.raw_ensemble == original_raw
+    assert len(result.fantasy_point_forecasts) == 1
+    assert result.partial_fantasy_point_forecasts == ()
+    assert result.simulation_authority_blockers == ()
+    assert result.fumbles_lost_supplement_authority_fingerprint == supplement.authority_fingerprint
+    assert result.fumbles_lost_supplement_player_count == 1
+    assert result.first_party_fumbles_lost_supplement == supplement
+    assert result.evaluation_as_of == state.as_of
+    assert FIRST_PARTY_FUMBLES_LOST_SOURCE in result.fantasy_point_forecasts[0].provenance.source
+
+
+def test_resilient_fallback_promotes_fumbles_scoring_when_current_supplement_is_available(monkeypatch) -> None:
+    state = _state_scoring_fumbles_lost()
+    baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
+    record = preseason_forecast_baseline_artifact(
+        league_season_scope_id="league-1:2026",
+        baseline=baseline,
+    )
+    store = _Store(record)
+    supplement = _fallback_fumbles_supplement(state, baseline)
+    monkeypatch.setattr(
+        "fsffl.product.forecast_resilience.build_first_party_fumbles_lost_supplement",
+        lambda league_state, base_observations: supplement,
+    )
+
+    def fail(_):
+        raise ValueError("only one healthy live source")
+
+    evidence = make_resilient_forecast_loader(
+        store,
+        live_loader=fail,
+    )(state)
+
+    assert evidence.evidence_basis == "preseason_baseline"
+    season_scored = tuple(
+        row
+        for row in evidence.league_scored_forecasts
+        if row.horizon == ForecastHorizon.SEASON
+    )
+    assert len(season_scored) == 1
+    assert evidence.runtime_result.partial_fantasy_point_forecasts == ()
+    assert evidence.runtime_result.simulation_authority_blockers == ()
+    assert evidence.runtime_result.fumbles_lost_supplement_authority_fingerprint
+    assert evidence.runtime_result.fumbles_lost_supplement_player_count == 1
+    assert evidence.uncertainty_ready is True
+    assert evidence.raw_forecasts == baseline.raw_ensemble

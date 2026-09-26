@@ -261,13 +261,13 @@ def build_current_live_forecasts(
     cutoff = (clock or (lambda: datetime.now(UTC)))()
     if cutoff.tzinfo is None:
         raise ValueError("current forecast runtime clock must be timezone-aware")
-    evaluation_as_of = cutoff.astimezone(UTC)
-    if snapshots:
-        evaluation_as_of = max(
-            evaluation_as_of,
-            *(snapshot.captured_at.astimezone(UTC) for _, snapshot in snapshots),
-            *(snapshot.effective_at.astimezone(UTC) for _, snapshot in snapshots),
-        )
+    # State-first authority: the canonical LeagueState is the evaluation cutoff.
+    # Providers may be retrieved after that State was synced, but only evidence whose
+    # own effective_at is at-or-before the State cutoff can normalize. Acquisition
+    # timestamps remain truthful in provenance and are never backdated.
+    evaluation_as_of = league_state.as_of.astimezone(UTC)
+    if cutoff.astimezone(UTC) < evaluation_as_of:
+        raise ValueError("current forecast runtime clock cannot predate canonical State")
 
     snapshot_by_source = dict(snapshots)
     normalized_by_source: dict[str, tuple[ForecastObservation, ...]] = {}
