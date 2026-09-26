@@ -438,3 +438,7 @@ PR #260 is merged and live. A fresh production FSFFL State reached FULL Forecast
 
 ## Long-horizon Intrinsic Research expanded beyond fixed breakpoints
 Management has expanded the next Intrinsic Research phase to evaluate alternative models from Y4 onward without preselecting a Y5 breakpoint or assigning model families to timeframes in advance. Research may recommend different models by position and/or horizon only if chronological validation supports that routing. The current two_part_state result is a benchmark, not final authority. Production H3 remains unchanged; longer-horizon outputs are expected to serve as additional decision/timeline lenses unless evidence later supports a separate change to H3.
+
+
+## PR #261 live — FSFFL usable, cross-league switch still not accepted
+PR #261 is merged/deployed and the current FSFFL league again reaches FULL Forecast, Simulation and Value in production. End-to-end acceptance is still open: the Hodor switch now fails because the first-party FUMBLES_LOST supplement being persisted does not match the exact canonical State being checkpointed. This is narrower than the prior timeout but still a real switching defect. Full app physical acceptance should wait; browsing/testing the already-loaded FSFFL league itself is reasonable.
