@@ -277,3 +277,34 @@ Research now owns provider certification/acquisition; Implementation may prepare
 
 ## FUMBLES_LOST recovery scope correction
 Management superseded the whole ordinary-offense ROS recovery authorization. The current path is a bounded current-only FUMBLES_LOST supplement with explicit source-horizon provenance and target-period normalization. All unrelated ordinary-offense Forecast coordinates remain unchanged; the supplemental fumble evidence is excluded from preseason/PIT historical comparisons and cannot be backdated.
+
+
+## Current-only FUMBLES_LOST certification closeout — 2026-09-26
+
+The whole ordinary-offense ROS rebase remains superseded. Research changed no unrelated offensive Forecast coordinate.
+
+Forecast Research has completed the implementation contract for a bounded **current-only FUMBLES_LOST supplement** and is now:
+
+**BLOCKED — EXTERNAL PROVIDER RIGHTS / LIVE CREDENTIALS**
+
+Durable package:
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/CERTIFICATION_LEDGER.md`
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/NORMALIZATION_UNCERTAINTY_CONTRACT.md`
+- `artifacts/research/fumbles_lost_current_only_certification_20260926/IMPLEMENTATION_HANDOFF.md`
+
+Shortest technical pair:
+- **JerryGM** — exact native `fumblesLost`, current/ROS and provider-owned model; private-beta derived-Forecast permission still requires written clarification plus authenticated current API capture.
+- **LineupExperts Premium In-Season** — exact `FmblL` now proven by public Premium demo and ROS product support established; paid full-pool payload, model-input/persistence rights and endpoint ownership/independence confirmation remain external.
+
+Current-only normalization:
+- preserve raw evidence as ROS/current;
+- normalize each accepted source to a 17-game season-equivalent current pace using its current remaining-game window;
+- equal-weight the two independent source targets;
+- use a non-zero coordinate uncertainty floor of **1.13855744535 lost fumbles**, raised when live provider disagreement is larger;
+- overlay only `FUMBLES_LOST` at current scoring time;
+- do not mutate the ordinary preseason/season raw Forecast.
+
+Historical guard:
+`authority_valid_from = max(two source acquisition times)`. The supplement is never eligible for a cutoff before that instant, cannot enter the annual/preseason baseline, cannot support a 2026 preseason comparison, and cannot be backfilled.
+
+Market acceptance remains paused until current FSFFL Simulation can be legitimately restored.
