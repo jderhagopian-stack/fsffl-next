@@ -7,7 +7,14 @@ from typing import Any, cast
 
 import pytest
 
-from fsffl.forecast.future_contract import FUTURE_FORECAST_CONTRACT_VERSION
+from fsffl.forecast.future_contract import (
+    CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+    FUTURE_FORECAST_CONTRACT_VERSION,
+    ForecastUncertaintyKind,
+    FutureForecastContract,
+    FutureForecastScenario,
+    FuturePlayerHorizonForecast,
+)
 from fsffl.forecast.integrated_i1 import I1ForecastInput, I1ForecastResult, STATE_NAMES
 from fsffl.forecast.league_scoring import derive_league_fantasy_point_forecasts
 from fsffl.forecast.models import (
@@ -730,6 +737,90 @@ def _versioned_future_builder(version: str, calls: list[str]):
         return contract
 
     return builder
+
+
+def _contract_only_fixture_provider(**kwargs) -> FutureForecastContract:
+    league_year_one = tuple(kwargs["league_year_one"])
+    assert len(league_year_one) == 1
+    year_one = league_year_one[0]
+    probabilities = {
+        "out": 0.10,
+        "depth": 0.10,
+        "usable": 0.15,
+        "starter": 0.30,
+        "premium": 0.20,
+        "elite": 0.15,
+    }
+    rows = []
+    for year_index, scale in ((2, 1.0), (3, 0.9)):
+        means = {
+            "out": 0.0,
+            "depth": 40.0 * scale,
+            "usable": 90.0 * scale,
+            "starter": 160.0 * scale,
+            "premium": 230.0 * scale,
+            "elite": 300.0 * scale,
+        }
+        expectation = sum(
+            probabilities[state] * means[state]
+            for state in STATE_NAMES
+        )
+        rows.append(
+            FuturePlayerHorizonForecast(
+                player_id=year_one.player_id,
+                position=year_one.position,
+                evaluation_season=2026,
+                year_index=year_index,
+                target_season=2026 + year_index - 1,
+                central_expectation=expectation,
+                scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+                model_version="future-model-zeta-v1",
+                source="fixture:future-model-zeta",
+                uncertainty_kind=ForecastUncertaintyKind.DISCRETE_SCENARIOS,
+                scenarios=tuple(
+                    FutureForecastScenario(
+                        scenario_id=state,
+                        probability=probabilities[state],
+                        fantasy_points=means[state],
+                    )
+                    for state in STATE_NAMES
+                ),
+                evidence_path="fixture_contract_only_provider",
+            )
+        )
+    return FutureForecastContract(
+        evaluation_season=2026,
+        scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+        forecast_model_version="future-model-zeta-v1",
+        forecast_source="fixture:future-model-zeta",
+        forecasts=tuple(rows),
+        provenance={"provider_neutral_contract": True},
+    )
+
+
+def test_intrinsic_accepts_replacement_future_model_using_contract_only_boundary() -> None:
+    state, observation = _fixture()
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        future_forecast_builder=_contract_only_fixture_provider,
+        future_forecast_model_version="future-model-zeta-v1",
+        future_missing_fact_family="future_model_zeta_coordinate",
+    )
+    contract = loader(_context(state, observation))
+
+    assert contract.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert contract.forecast_model_version == "future-model-zeta-v1"
+    assert contract.coverage.player_count == 1
+    future = contract.estimates[0].contributions[1:]
+    assert len(future) == 2
+    assert all(
+        item.provenance.authority == "governed_future_forecast_contract"
+        for item in future
+    )
+    assert all(
+        item.provenance.source == "forecast_owned_future_contract"
+        for item in future
+    )
 
 
 def test_persisted_intrinsic_contract_is_forecast_version_scoped_and_reused() -> None:
