@@ -14,8 +14,6 @@ from fsffl.persistence.contracts import (
     utc_now,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
-from fsffl.product.p0_forecast_runtime import P0_FORECAST_VERSION
-from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
 from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatLine, SleeperWeeklyStatsSource
 from fsffl.state.models import LeagueRules, Player, Position
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
@@ -118,8 +116,8 @@ class PlayerFutureForecastCache:
     def __init__(
         self,
         *,
-        future_forecast_builder=build_p0_future_forecast_contract,
-        forecast_model_version: str = P0_FORECAST_VERSION,
+        future_forecast_builder=None,
+        forecast_model_version: str = "future-forecast-provider:unconfigured",
     ) -> None:
         self._lock = RLock()
         self._future_forecast_builder = future_forecast_builder
@@ -130,7 +128,11 @@ class PlayerFutureForecastCache:
     def get(self, runtime: UserRuntimeContext) -> FutureForecastContract | None:
         state = runtime.league_state
         evidence = runtime.forecast_evidence
-        if state is None or evidence is None:
+        if (
+            state is None
+            or evidence is None
+            or self._future_forecast_builder is None
+        ):
             return None
         key = (
             state.state_id,
