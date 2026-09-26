@@ -955,9 +955,9 @@ Current-shadow workflow: `36241799792`.
 **MANAGEMENT GATE — LONG-HORIZON INTRINSIC ARCHITECTURE**
 
 
-### Management gate presentation requirement remains open
+### Superseded presentation checkpoint — prior H5-centered study
 
-Technical Research has reached the long-horizon architecture Management gate, but the gate is **not presentation-complete** until the previously required plain-language Management PDF is produced and made accessible to Management. Do not request an implementation decision from Management based only on the technical markdown/JSON artifacts. The PDF must summarize the evidence, player/position horizon effects, uncertainty, recommendation, non-recommendations, and exact decisions required.
+The earlier H5-centered Management gate required a plain-language PDF before presentation closeout. That checkpoint is superseded by the reopened comparative Y4+ directive. The comparative study is now complete, and its updated plain-language Management PDF was produced after final model-family selection. The durable authority remains the repository artifacts and canonical gate below.
 
 
 ## Management continuation — comparative Y4+ model-family research
