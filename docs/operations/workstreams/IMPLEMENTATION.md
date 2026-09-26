@@ -424,3 +424,22 @@ Production evidence is mixed and therefore acceptance remains open:
 This proves the architecture can restore full capability, but current production remains non-accepted because a fresh valid State can still introduce active offensive subjects outside the first-party supplement's mapped/current population.
 
 Next corrective: explain and close the two-player supplement coverage gap generically without fabricating zero or special-casing player IDs; preserve degraded/fail-closed semantics where evidence truly cannot be established. Then rerun current-State FSFFL acceptance and cross-league/non-consumer regression. Stop only after production remains FULL on the current State or at a genuine permitted blocker/gate.
+
+
+## Management clarification — localize the two-player coverage gap
+**State: ACTIVE — GENERIC SUBJECT-UNIVERSE RECONCILIATION / PRODUCTION ACCEPTANCE**
+
+Management rejects treating one missing coordinate for two players as a system-wide failure. Preserve fail-closed semantics, but localize incomplete authority to the smallest affected subject/consumer scope.
+
+For the current FSFFL State, first-party FUMBLES_LOST generation must reconcile against the current canonical forecastable offensive subject universe and apply the accepted model tiers generically. Do not limit supplement generation to only subjects already present in a provider Forecast batch. Reuse the frozen model's deterministic identity recovery, history-only/current-only/cold-start/identity-light logic and non-zero uncertainty exactly; never substitute zero.
+
+Current acceptance focus:
+1. explain why `sleeper:player:11630` and `sleeper:player:6149` were omitted from the 330-player supplement while present in canonical State;
+2. fix the generic population/reconciliation rule, not those IDs;
+3. prove current canonical offensive subjects that satisfy the accepted model contract receive FUMBLES_LOST evidence even when provider-forecast membership changes;
+4. distinguish truly unresolved subjects from merely provider-absent subjects;
+5. make consumer readiness subject-aware: unrelated State/Forecast/Value/surfaces remain available, and Simulation blocks only when an unresolved subject can materially affect simulated outcomes under the current consumer contract;
+6. rerun current-State FSFFL, Hodor, arbitrary-league, switch/restart and non-`fum_lost` regressions;
+7. merge/deploy and prove the current production State remains FULL Forecast + Simulation after a fresh sync/rebuild before returning control.
+
+Do not add a new heuristic, player special case, silent zero, or broad authority downgrade.
