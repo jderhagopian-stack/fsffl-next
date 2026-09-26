@@ -165,3 +165,12 @@ The comparative Y4+ gate is resolved. Management accepts `two_part_state` as the
 Product-facing long-horizon direction is **H1 / governed H3 / H5**. H4/H6/H7/H8 remain governed diagnostics, not additional default top-level scores. A separate Research-only terminal/career-state representation plus a long-horizon uncertainty/presentation contract is authorized next. Production H3 remains unchanged and no H5/Y4+ implementation is authorized yet.
 
 Implementation remains the immediate critical path. PR #262 contains the intended combined switch + H3 scope + mobile-readiness corrective but is not merge-ready. Current head `9df1761335619beaa816016c5beb8f4d907346d2` has 13 full-CI failures: most are stale static-generation expectations, but one is a real same-State Forecast-evidence reuse regression. Implementation must fix that behavior, reconcile static-generation coverage, get all workflows green, deploy, and complete FSFFL → Hodor → FSFFL → restart production acceptance before Management resumes broad physical testing.
+
+### Long-horizon Research correction — feature discovery first
+Management subsequently inspected the actual Y4-Y8 research code and frozen input artifacts. The completed six-family study used only 10 predictors: age, experience, prior production percentile/points, and governed Y1-Y3 Forecast trajectory level/shape. It did not broadly reopen predictor selection.
+
+The frozen evidence already exposes additional draft/physical metadata, and earlier player-state/residual/innovation signals were rejected under near-term Y2/Y3 gates rather than tested for incremental Y4-Y8 survival/production information.
+
+Accordingly, the previous direct move into terminal/career-state Research is superseded. Research must first run a point-in-time long-horizon predictor discovery/ablation study, including position-specific usage/efficiency, pedigree/entry timing, physical profile, durability/availability, role/team continuity where reconstructable, and previously rejected near-term trajectory states. Selection must be nested chronological and prove incremental value beyond Y1-Y3 Forecasts without Market/Team Utility leakage.
+
+The `two_part_state` result remains the baseline winner conditional on the old feature set. H1/H3/H5 remains a provisional product-design simplification, not a production promotion or final long-horizon architecture.
