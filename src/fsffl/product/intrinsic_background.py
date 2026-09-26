@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from threading import RLock
+from time import monotonic, sleep
 from typing import Callable
 
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
@@ -244,6 +245,38 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 completed.forecast_coordinate,
                 elapsed,
             )
+
+    def wait_for_terminal(
+        self,
+        context: UserRuntimeContext,
+        *,
+        timeout_seconds: float | None = None,
+        poll_seconds: float = 0.05,
+    ) -> IntrinsicBuildRecord:
+        """Prepare/reuse one exact-coordinate contract and wait off-request-path.
+
+        The intelligence coordinator calls this only from its background worker.
+        Request handlers continue to use request()/current() and never block on
+        the expensive Intrinsic build.
+        """
+
+        timeout = (
+            self._hard_watchdog_seconds
+            if timeout_seconds is None
+            else max(0.1, float(timeout_seconds))
+        )
+        deadline = monotonic() + timeout
+        record = self.request(context)
+        while record.status in {
+            IntrinsicBuildStatus.QUEUED,
+            IntrinsicBuildStatus.RUNNING,
+        }:
+            if monotonic() >= deadline:
+                return record
+            sleep(max(0.01, poll_seconds))
+            # request() also applies the hard-watchdog policy to active work.
+            record = self.request(context)
+        return record
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
         key = self._key(context)
