@@ -523,3 +523,21 @@ Execution order:
 Do not reopen the completed first-party FUMBLES_LOST model, Market discovery semantics, Y4+ Intrinsic Research, K/DST policy, or broader scoring coverage unless new evidence proves the active corrective depends on one of them.
 
 Do not ask Management for another broad physical-device acceptance pass before this combined sequence reaches a permitted `OPERATING_PROTOCOL.md` terminal state.
+
+## PR #262 live branch checkpoint — CI not yet acceptable
+**State: ACTIVE — PR #262 OPEN / DO NOT MERGE**
+
+PR #262 (`implementation/combined-acceptance-20260926-r1`) now contains the intended combined corrective: exact-State FUMBLES_LOST binding, frozen-H3 subject scoping, and mobile readiness compaction. Current focused Intrinsic diagnostics and several surface validations are green, but the current head is not merge-ready.
+
+Latest CI evidence on head `9df1761335619beaa816016c5beb8f4d907346d2`:
+- full CI: **1668 passed / 13 failed**;
+- most failures are stale static-release/cache-generation assertions expecting the old `20260925-state-first1` generation and must be reconciled without weakening coverage;
+- one failure is substantive and must not be dismissed as a fixture update: `test_same_league_state_advance_never_reuses_fum_lost_supplement_from_prior_state` currently shows exact same-State restoration dropping Forecast evidence (`forecast_evidence=None`) where exact compatible evidence should be reused;
+- Home focused validation also fails a static-generation consistency assertion; PR164 focused validation currently fails the same old-generation expectation class.
+
+Required continuation:
+1. fix the exact-compatible same-State reuse regression first and prove stale/prior-State supplement evidence is still rejected;
+2. reconcile static-generation expectations consistently across all affected surfaces/tests rather than blanket-bumping unrelated semantics;
+3. rerun full CI and all configured focused workflows to green;
+4. only then merge/deploy and execute the already-required FSFFL → Hodor → FSFFL → restart production acceptance;
+5. do not return at green CI alone; the workstream terminates only after the deployed production acceptance reaches a permitted `OPERATING_PROTOCOL.md` terminal state.
