@@ -329,14 +329,17 @@ def derive_league_scoring_result(
     observations: tuple[ForecastObservation, ...],
     *,
     rules: LeagueRules,
+    supplemental_observations: tuple[ForecastObservation, ...] = (),
     source: str = "fsffl:league_scored",
     model_version: str = "next2-league-scoring-bridge-v4:subject-family-isolation",
 ) -> LeagueScoringResult:
-    """Score supported player-offense coordinates without hiding canonical Forecast.
+    """Score ordinary raw Forecast plus an optional current supplemental lane.
 
-    K/DST rules are a separate subject family and never invalidate ordinary player
-    offense here. Unsupported ordinary player rules produce an explicit partial
-    subtotal rather than an authoritative FANTASY_POINTS observation.
+    Supplemental observations remain structurally separate from the ordinary raw
+    Forecast and are joined only for the exact player/horizon/period scoring
+    coordinate. This preserves the ordinary evidence's source, model version and
+    as-of identity while allowing scored lineage to record mixed-vintage current
+    evidence when the league actually consumes it.
     """
 
     coverage = classify_scoring_coverage(rules)
@@ -347,6 +350,24 @@ def derive_league_scoring_result(
         if metric is not None and rule.points != 0:
             coefficient_by_metric[metric] = coefficient_by_metric.get(metric, 0.0) + rule.points
             rule_stats_by_metric[metric].append(rule.stat)
+
+    supplemental_by_target: dict[
+        tuple[str, Position, ForecastHorizon, datetime, datetime],
+        ForecastObservation,
+    ] = {}
+    for observation in supplemental_observations:
+        if observation.metric != ForecastMetric.FUMBLES_LOST:
+            raise ValueError("current supplemental scorer lane accepts only FUMBLES_LOST")
+        key = (
+            observation.player_id,
+            observation.position,
+            observation.horizon,
+            observation.period_start,
+            observation.period_end,
+        )
+        if key in supplemental_by_target:
+            raise ValueError("duplicate supplemental FUMBLES_LOST scoring coordinate")
+        supplemental_by_target[key] = observation
 
     grouped: dict[tuple[object, ...], list[ForecastObservation]] = defaultdict(list)
     for observation in observations:
@@ -367,7 +388,23 @@ def derive_league_scoring_result(
     authoritative: list[ForecastObservation] = []
     partial: list[PartialFantasyPointForecast] = []
     for items in grouped.values():
+        first = items[0]
+        target_key = (
+            first.player_id,
+            first.position,
+            first.horizon,
+            first.period_start,
+            first.period_end,
+        )
+        supplemental = supplemental_by_target.get(target_key)
         by_metric = {item.metric: item for item in items}
+        if supplemental is not None:
+            if ForecastMetric.FUMBLES_LOST in by_metric:
+                raise ValueError(
+                    "supplemental FUMBLES_LOST cannot replace ordinary raw Forecast evidence"
+                )
+            by_metric[ForecastMetric.FUMBLES_LOST] = supplemental
+
         missing_metrics = _missing_material_scored_metrics(
             by_metric=by_metric,
             coefficient_by_metric=coefficient_by_metric,
@@ -380,9 +417,11 @@ def derive_league_scoring_result(
         if not active:
             continue
 
-        first = items[0]
         mean = sum(coefficient * item.distribution.mean for _, coefficient, item in active)
-        variance = sum((coefficient * item.distribution.stddev) ** 2 for _, coefficient, item in active)
+        variance = sum(
+            (coefficient * item.distribution.stddev) ** 2
+            for _, coefficient, item in active
+        )
         residual_mean, residual_variance, applied_residuals = _provisional_residual(
             position=first.position,
             by_metric=by_metric,
@@ -392,6 +431,7 @@ def derive_league_scoring_result(
         variance += residual_variance
         effective = max(item.provenance.effective_at for _, _, item in active)
         retrieved = max(item.provenance.retrieved_at for _, _, item in active)
+        scored_as_of = max(item.as_of for _, _, item in active)
         supplemental_mixed_vintage = any(
             item.provenance.source == SUPPLEMENTAL_COORDINATE_SOURCE
             for _metric, _coefficient, item in active
@@ -403,7 +443,7 @@ def derive_league_scoring_result(
         )
         provenance = Provenance(
             source=(
-                f"{source}[{first.source};supplemental_mixed_vintage_current]"
+                f"{source}[base={first.source};supplement={SUPPLEMENTAL_COORDINATE_SOURCE}]"
                 if supplemental_mixed_vintage
                 else f"{source}[{first.source}]"
             ),
@@ -463,7 +503,7 @@ def derive_league_scoring_result(
                     omission_reasons=tuple(omission_reasons),
                     source=source,
                     model_version=f"{model_version}:partial_supported_subtotal{suffix}",
-                    as_of=first.as_of,
+                    as_of=scored_as_of,
                     provenance=provenance,
                 )
             )
@@ -480,7 +520,7 @@ def derive_league_scoring_result(
                 distribution=distribution,
                 source=source,
                 model_version=f"{model_version}{suffix}",
-                as_of=first.as_of,
+                as_of=scored_as_of,
                 provenance=provenance,
             )
         )
@@ -512,11 +552,11 @@ def derive_league_scoring_result(
         family_coverage=classify_forecast_rule_family_coverage(rules),
     )
 
-
 def derive_league_fantasy_point_forecasts(
     observations: tuple[ForecastObservation, ...],
     *,
     rules: LeagueRules,
+    supplemental_observations: tuple[ForecastObservation, ...] = (),
     source: str = "fsffl:league_scored",
     model_version: str = "next2-league-scoring-bridge-v4:subject-family-isolation",
 ) -> tuple[ForecastObservation, ...]:
@@ -525,6 +565,7 @@ def derive_league_fantasy_point_forecasts(
     result = derive_league_scoring_result(
         observations,
         rules=rules,
+        supplemental_observations=supplemental_observations,
         source=source,
         model_version=model_version,
     )
