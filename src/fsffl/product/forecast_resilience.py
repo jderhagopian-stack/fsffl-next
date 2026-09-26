@@ -82,9 +82,13 @@ def _evidence_from_baseline(
         result = result.model_copy(
             update={"source_health_events": live_failure.health_events}
         )
-    uncertainty_ready = bool(result.fantasy_point_forecasts) and all(
-        observation.distribution.stddev > 0
-        for observation in result.fantasy_point_forecasts
+    uncertainty_ready = (
+        bool(result.fantasy_point_forecasts)
+        and not result.simulation_authority_blockers
+        and all(
+            observation.distribution.stddev > 0
+            for observation in result.fantasy_point_forecasts
+        )
     )
     return LiveForecastEvidence(
         raw_forecasts=result.raw_ensemble,
