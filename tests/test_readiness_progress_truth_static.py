@@ -46,7 +46,7 @@ def test_readiness_repair_busts_only_repaired_mobile_assets() -> None:
     index = _index()
     shell = _shell()
     assert "/static/forecast_refresh.js?v=20260925-state-first1" in index
-    assert "/static/product_shell.js?v=20260925-state-first1" in index
+    assert "/static/product_shell.js?v=20260926-combined-acceptance1" in index
     assert "/static/home_dashboard.js?v=20260925-state-first1" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current" not in shell
@@ -128,3 +128,27 @@ def test_failed_forecast_readiness_names_blocker_and_usable_roster() -> None:
     assert "state?.intelligence?.blocked_stage" in snapshot
     assert "Forecast blocked — roster State remains usable" in snapshot
     assert "fsfflSharedReadinessPhases[failedPhase][0]" in snapshot
+
+
+
+def test_mobile_full_readiness_collapses_to_one_current_state_and_hides_redundant_chips() -> None:
+    source = _shell()
+    assert "✓ Intelligence current" in source
+    assert "fsffl-readiness-mobile-step" in source
+    assert ".fsffl-shared-readiness-strip.complete .fsffl-capability-summary{display:none}" in source
+    assert ".fsffl-shared-readiness-strip.complete .fsffl-shared-readiness-mark{display:none}" in source
+    assert "fsffl-shared-readiness-refresh" in source
+
+
+def test_mobile_building_hides_full_capability_chips_but_partial_and_failed_show_exceptions() -> None:
+    source = _shell()
+    assert (
+        ".fsffl-shared-readiness-strip:not(.partial):not(.failed):not(.complete) "
+        ".fsffl-capability-summary{display:none}"
+    ) in source
+    assert (
+        ".fsffl-shared-readiness-strip.partial .fsffl-capability-summary,"
+        ".fsffl-shared-readiness-strip.failed .fsffl-capability-summary{display:flex}"
+    ) in source
+    assert "status.step+' / '+status.total" in source
+    assert "Refreshing…" in source
