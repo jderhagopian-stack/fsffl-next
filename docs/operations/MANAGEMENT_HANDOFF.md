@@ -187,3 +187,13 @@ Research now owns a comprehensive joint search over:
 `two_part_state` is only the baseline winner under the prior 10-feature input set. H5 is not a presumed statistical breakpoint. H1/H3/H5 is at most a provisional product simplification pending the expanded evidence.
 
 Require nested chronological selection, untouched final holdout, explicit complexity/stability penalties, tail/upside accuracy, calibration, missingness/era robustness, and feature/model freeze before current-player shadows. Production H3 remains untouched and no long-horizon implementation is authorized.
+
+### Management operating preference — challenge premises
+Management should not optimize for agreement with the product owner. Treat proposed directions as hypotheses to pressure-test against evidence, architecture, opportunity cost, and the current critical path. If a proposed idea is weak, premature, redundant, overfit, or distracts from a higher-value blocker, say so explicitly and explain why. Agreement should be earned by evidence rather than assumed.
+
+### Core-to-Market transition checkpoint — PR #263
+PR #262 is merged with all configured pre-merge workflows green. Production restart acceptance then exposed a narrower persistence bug: an isolated acceptance user could advance the shared league-scoped latest snapshot, after which Jimmy's still-valid exact user-scoped last-good State failed restart restoration because restore incorrectly required equality with the newer shared snapshot.
+
+PR #263 fixes that by restoring a user's exact last-good runtime only when its state_id and artifact input fingerprint exactly match that user's persisted context State; mismatches still fail closed. PR #263 merged to main at `4cd571529f7d97cc83083dc3b49c1fcb0eb61643`; post-merge CI/deploy/production acceptance remain the immediate gate.
+
+Once the deployed #263 build passes FSFFL → Hodor → FSFFL → restart acceptance and governed H3 Intrinsic/readiness remain healthy, **do not leave Performance idle**. Immediately resume Market physical acceptance and Performance-owned cold/focused latency measurement/optimization using the already-accepted Market semantics. No new Management architecture decision is required to start that latency work.
