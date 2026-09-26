@@ -24,7 +24,7 @@ VALUE_ARTIFACT_KIND = "current_market_value"
 LEAGUE_SCOPE_KIND = "league_state"
 LEAGUE_SEASON_SCOPE_KIND = "league_season"
 
-FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v5:revision-agnostic-source-health"
+FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v6:partial-replay-contract"
 SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:resilience-driver-identity"
 VALUE_MODEL_VERSION = "next3-current-market-runtime-v7:market-total-fail-closed"
 
