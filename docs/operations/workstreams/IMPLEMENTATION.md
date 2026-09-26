@@ -507,3 +507,19 @@ Physical acceptance also shows the shared mobile readiness strip has become too 
 - preserve the thin progress line and truthful 1/7→7/7 lifecycle; desktop may retain richer detail if it fits cleanly.
 
 Treat the Intrinsic regression and mobile strip compaction as the next app-acceptance corrective after the currently open exact-State cross-league switch defect. Do not return full physical acceptance until all three are validated together.
+
+## Management execution order — current app acceptance
+**State: ACTIVE — COMPLETE SWITCH + H3 INTRINSIC + MOBILE READINESS ACCEPTANCE AS ONE PASS**
+
+The current directive is the union of the open PR #261 cross-league exact-State defect and the subsequent physical-acceptance findings. Do not treat these as three independent stop points and do not return after fixing only one.
+
+Execution order:
+1. **Exact-State switch correctness first.** Resolve why a FUMBLES_LOST supplement/state pair can be checkpointed against different canonical State generations during the Hodor switch. Preserve switch-safe State-first persistence and no-stale-cross-league guarantees.
+2. **Production H3 Intrinsic subject scope second.** Restrict frozen Future-I1/H3 compatibility to the subjects actually owned by the governed H3 contract. Preserve exact existing H3 values/ranks for that cohort. Subjects outside H3 authority remain individually unavailable; do not synthesize H3 evidence or let them collapse the whole Intrinsic surface.
+3. **Mobile readiness compaction third.** FULL on mobile should render as one compact current-intelligence state plus Refresh; building should retain the truthful thin lifecycle/progress treatment plus one short active-phase message; detailed capability chips appear only for exceptions/details.
+4. **Validate together.** Required deterministic coverage includes FSFFL, Hodor, arbitrary Sleeper identities, exact-State persistence, switch/restart, no cross-league leakage, H3 cohort/rank invariance, Player Intelligence + Market/Player Board Intrinsic consumption, roster/all-player scope, and mobile readiness states.
+5. **Merge/deploy, then production acceptance.** Rerun the entire **FSFFL → Hodor → FSFFL → restart** sequence. Acceptance requires the existing FSFFL league to remain FULL Forecast + Simulation + Value; Hodor to expose only legitimately available authority for its exact State; governed H3 Intrinsic to load for eligible subjects without global collapse; and the mobile readiness strip to remain truthful and usable.
+
+Do not reopen the completed first-party FUMBLES_LOST model, Market discovery semantics, Y4+ Intrinsic Research, K/DST policy, or broader scoring coverage unless new evidence proves the active corrective depends on one of them.
+
+Do not ask Management for another broad physical-device acceptance pass before this combined sequence reaches a permitted `OPERATING_PROTOCOL.md` terminal state.
