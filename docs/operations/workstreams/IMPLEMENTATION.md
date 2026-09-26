@@ -604,3 +604,19 @@ If core Forecast/Simulation/Value are current but an important separate capabili
 Timestamp semantics must be explicit and derived from governed evidence/served State, not browser clock guesswork. Prefer the latest compatible promoted intelligence timestamp and expose State/Forecast as-of detail through expansion.
 
 Do not return control until tests, CI, deploy, hosted endpoint validation, and physical acceptance reach a permitted OPERATING_PROTOCOL.md terminal state.
+
+### Charter corrective — remove model-specific P0 runtime ownership from vNext
+The active product corrective now includes an architecture requirement, not only a subject-scope bug fix.
+
+The current vNext production builder directly calls P0-specific materialization/identity machinery. This allowed the P0 future-contract path to receive a governed subject-scope fix while vNext silently bypassed it. That is incompatible with the charter requirement for modular, replaceable models and one authoritative home per concept.
+
+Required:
+1. identify exactly which P0-origin components are still empirically authoritative (for example identity/source mapping and/or state-probability layer);
+2. separate those components from P0-specific production orchestration behind a model-neutral Forecast primitive/contract;
+3. make vNext own its complete current production adapter and governed subject scope;
+4. preserve frozen numerical equivalence where the reused primitive remains authoritative;
+5. ensure downstream Intrinsic/Player Intelligence/Value depend only on the stable FutureForecastContract, not P0/vNext internals;
+6. audit the active vNext path for any other direct dependency on superseded model-specific orchestration;
+7. add architecture/regression tests proving a future model promotion can replace the Forecast provider without reintroducing P0-specific runtime assumptions.
+
+Do not perform a broad rewrite. The objective is the smallest clean boundary that restores the charter while fixing the live failure.
