@@ -256,3 +256,8 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Intrinsic Y4-Y8 Research:** ACTIVE — cell-specific routing / validation corrective. The prior sealed holdout remains valid evidence that the frozen blanket 75/25 architecture failed QB Y8, but Management rejects automatic all-20-cell fallback to the incumbent baseline. Research must evaluate a general position × horizon routing/shrinkage policy without post-hoc use of the already-seen holdout.
 - **Production H3:** unchanged.
 - **Implementation/Product:** independent critical path; do not mix this Research corrective into the beta-restoration work.
+
+## PR #265 physical acceptance remains open
+- **Forecast/Product Implementation:** ACTIVE — deployed PR #265 improved lifecycle truth and restored League backend serving, but physical iPhone acceptance still fails on (a) vNext mapped-subject / governed Year-1 Intrinsic compatibility and (b) catastrophic mobile completed-readiness layout collapse.
+- **Performance / Market latency:** HOLD until this deployed product gate closes.
+- **Intrinsic long-horizon Research:** continues independently.
