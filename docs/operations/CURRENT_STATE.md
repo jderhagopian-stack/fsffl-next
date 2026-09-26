@@ -500,3 +500,13 @@ The prior conclusion that `two_part_state` was the robust Y4-Y8 family is now ex
 Different models by position, horizon, or position × horizon are fully allowed if nested chronological validation and untouched holdout evidence support them. Shared/hierarchical, continuous-horizon, and ensemble architectures are equally eligible. No Y5/H5 breakpoint is presumed.
 
 Production H3 remains unchanged and no long-horizon implementation is authorized.
+
+## Post-PR263 current critical path — Market performance
+The Forecast/Product reliability corrective is complete. Exact PR #263 production acceptance passed and is durably recorded in `artifacts/implementation/state_first_post_pr263_20260926/PRODUCTION_ACCEPTANCE.md`.
+
+The immediate critical path is now:
+1. authenticated FSFFL Market physical acceptance;
+2. Performance-owned Market cold/focused latency optimization;
+3. dedicated Simulation modernization (simulation-count convergence + vectorized/faster kernel + Multiverse identity preservation).
+
+Implementation should not be poked again for the closed State-first corrective. Comprehensive long-horizon Research continues in parallel.
