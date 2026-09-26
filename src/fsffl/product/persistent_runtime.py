@@ -94,9 +94,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             user_id,
             context.league_state.league.league_id,
             context.league_state.state_id,
-            context.forecast_evidence is not None,
-            context.simulation_analytics is not None,
-            context.value_evidence is not None,
+            bool(context.forecast_evidence),
+            bool(context.simulation_analytics),
+            bool(context.value_evidence),
             durable,
             max(0.0, monotonic() - started),
         )
