@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.state.models import LeagueState
 
 from .contracts import (
@@ -224,7 +225,24 @@ def restore_state_bound_intelligence(
     )
     if forecast_record is not None:
         try:
-            forecast = decode_forecast_evidence(dict(forecast_record.payload))
+            candidate_forecast = decode_forecast_evidence(
+                dict(forecast_record.payload)
+            )
+            requires_first_party_fumbles_lost = league_consumes_fumbles_lost(
+                league_state.league.rules
+            )
+            has_first_party_fumbles_lost = bool(
+                getattr(
+                    candidate_forecast.runtime_result,
+                    "fumbles_lost_supplement_authority_fingerprint",
+                    None,
+                )
+            )
+            if (
+                not requires_first_party_fumbles_lost
+                or has_first_party_fumbles_lost
+            ):
+                forecast = candidate_forecast
         except (TypeError, ValueError):
             forecast = None
 
