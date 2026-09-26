@@ -526,3 +526,8 @@ Desired readiness UX:
 - **active build/refresh:** expanded informative state with current phase, what remains usable, and last-good/as-of reference;
 - **complete:** collapse to thin status strip with truthful scope + governed localized “as of” timestamp + Refresh;
 - **partial/failure:** keep exception detail visible; never use unqualified “Intelligence current.”
+
+## Beta availability incident — 2026-09-26
+Management classifies the current condition as a **beta-availability incident**: the user has been unable to meaningfully use/test the product for multiple days, and current production still has broken Intrinsic/future-forecast surfaces plus a League presentation-module failure.
+
+Immediate priority is a usable private beta, not additional breadth or performance work. Implementation must restore the smallest charter-correct usable path first, with real hosted + physical validation. Performance/Market optimization remains held until this gate closes. Research may continue independently because it does not consume the product critical path.
