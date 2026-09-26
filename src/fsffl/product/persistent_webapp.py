@@ -280,7 +280,7 @@ def _log_startup_runtime_readiness() -> None:
     )
     readiness = _hosted_capability_readiness(context)
     logging.getLogger("uvicorn.error").info(
-        "FSFFL startup runtime readiness user=%s league=%s state=%s forecast=%s simulation=%s value=%s core_complete=%s product_status=%s as_of=%s",
+        "FSFFL startup runtime readiness user=%s league=%s state=%s forecast=%s simulation=%s value=%s complete=%s",
         _beta_restore_user,
         league_state.league.league_id if league_state is not None else None,
         league_state.state_id if league_state is not None else None,
@@ -288,8 +288,12 @@ def _log_startup_runtime_readiness() -> None:
         context.simulation_analytics is not None,
         context.value_evidence is not None,
         core_complete,
+    )
+    logging.getLogger("uvicorn.error").info(
+        "FSFFL startup product readiness status=%s as_of=%s intrinsic=%s",
         readiness.get("overall_status"),
         readiness.get("as_of"),
+        readiness.get("intrinsic", {}).get("status"),
     )
 
 _product_acceptance_state: dict[str, object] = {
