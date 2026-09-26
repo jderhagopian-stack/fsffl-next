@@ -417,7 +417,7 @@ Persist an implementation handoff and follow OPERATING_PROTOCOL.md to a permitte
 ---
 
 ## Management directive — Single-source authority for bounded auxiliary Forecast coordinates
-**State: ACTIVE — BOUNDED MATERIALITY / SOURCE-AUTHORITY STUDY**
+**State: MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION**
 
 Management authorizes a narrow Research study to determine whether FSFFL NEXT should permit **one governed production projection source** for selected low-materiality auxiliary scoring coordinates instead of applying the normal two-independent-source standard uniformly to every coordinate.
 
@@ -531,3 +531,68 @@ This study authorizes research and analysis only. It does **not**:
 If evidence supports a generalized single-source auxiliary tier, return at **MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION** with the proposed quantitative contract. If evidence does not support it, return **DIRECTIVE COMPLETE — RESEARCH** with the negative finding and retain current authority.
 
 Follow `OPERATING_PROTOCOL.md`; do not stop at an intermediate source failure while another authorized analysis can materially advance the directive.
+
+
+### Research closeout — 2026-09-25
+
+The bounded materiality/source-authority study is complete.
+
+Durable package:
+- `artifacts/research/auxiliary_single_source_authority_20260925/AUXILIARY_COORDINATE_MATERIALITY.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/SINGLE_SOURCE_QUALITY_LEDGER.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/SINGLE_VS_MULTI_SOURCE_REPLAY.csv`
+- `artifacts/research/auxiliary_single_source_authority_20260925/DOWNSTREAM_SENSITIVITY.md`
+- `artifacts/research/auxiliary_single_source_authority_20260925/AUTHORITY_TIER_RECOMMENDATION.md`
+- `artifacts/research/auxiliary_single_source_authority_20260925/RESEARCH_HANDOFF.md`
+
+Key findings:
+- a genuinely bounded auxiliary materiality class exists;
+- the clearest example is the +1 incremental 60+ FG premium above an already-governed 50+ base;
+- low materiality does not establish source quality: 2024 XP-miss and D/ST safety forecasts were often no better than omission;
+- strong single-source accuracy does not make a material coordinate auxiliary: FG misses and D/ST turnover coordinates can be well forecast by one source while materially moving lineup/league outcomes;
+- rare six-point special-teams events fail the proposed auxiliary stress bounds despite high zero-rates;
+- 50,000-run paired sensitivity materially separates the bounded and core classes.
+
+Research recommends a generalized `AUXILIARY_SINGLE_SOURCE` certification tier **in principle**, with zero initial source/coordinate promotions.
+
+The proposed contract requires, among other gates:
+- league/scoring-profile-specific materiality;
+- p95 absolute season contribution <= 3 points;
+- p99 <= 5;
+- p95 share <= 3%;
+- max single-event incremental value <= 2;
+- max team-week delta <= 2;
+- lineup-change rate <= 2%;
+- 50k max expected-wins delta <= 0.05;
+- max playoff delta <= 0.25 percentage points;
+- max title delta <= 0.10 percentage points;
+- exact semantics;
+- explicit production rights;
+- direct governed source;
+- PIT provenance;
+- >=95% coverage;
+- multi-cohort historical validation;
+- >=10% MAE/RMSE improvement over omission;
+- no more than 10% error degradation vs historical multi-source comparator where available;
+- non-zero source-specific empirical uncertainty;
+- automatic fail-closed demotion.
+
+Current materiality candidates:
+- K 60+ incremental premium;
+- K XP miss;
+- D/ST safety;
+- D/ST defensive two-point return.
+
+No current source/coordinate pair passes the full source-quality contract:
+- 60+ lacks validated rights-cleared historical source-quality evidence;
+- XP-miss sources are unstable and often worse than omission;
+- D/ST safety sources are no better/worse than omission;
+- defensive two-point return lacks qualifying historical source validation.
+
+Production authority therefore remains unchanged.
+
+Research recommends Management **accept the generalized certification framework but activate zero coordinates at acceptance time**, with authority infrastructure implemented separately from any future provider/coordinate certification.
+
+Operating-protocol test: no further authorized Research action can materially resolve the policy decision without crossing into source-specific certification under a policy Management has not yet accepted.
+
+**MANAGEMENT GATE — SINGLE-SOURCE AUXILIARY AUTHORITY DECISION**
