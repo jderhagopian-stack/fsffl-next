@@ -131,33 +131,17 @@ class SleeperWeeklyStatsSource:
         rows = _rows(payload)
         output: list[SleeperSeasonStatLine] = []
         for raw in rows:
-            raw_season = raw.get("season")
-            if raw_season not in (None, "") and int(raw_season) != season:
-                raise ValueError("Sleeper season stats response season mismatch")
             player_id = str(raw.get("player_id") or "").strip()
             if not player_id:
                 continue
-            stats_raw = raw.get("stats") if isinstance(raw.get("stats"), Mapping) else raw
-            stats: dict[str, float] = {}
-            for key, value in stats_raw.items():
-                if key in {"player_id", "season", "week", "company"} or isinstance(value, bool):
-                    continue
-                try:
-                    numeric = float(value)
-                except (TypeError, ValueError):
-                    continue
-                stats[str(key)] = numeric
-            if not stats:
-                continue
-            output.append(
-                SleeperSeasonStatLine(
-                    player_id=f"sleeper:player:{player_id}",
-                    season=season,
-                    stats=stats,
-                    captured_at=captured.astimezone(UTC),
-                    source_company=(str(raw.get("company")) if raw.get("company") else None),
-                )
+            line = _season_line_from_raw(
+                raw,
+                season=season,
+                player_id=player_id,
+                captured_at=captured.astimezone(UTC),
             )
+            if line is not None:
+                output.append(line)
         return tuple(sorted(output, key=lambda item: item.player_id))
 
     def fetch_week(self, *, season: int, week: int) -> tuple[SleeperWeeklyStatLine, ...]:
@@ -205,6 +189,64 @@ class SleeperWeeklyStatsSource:
             )
         return tuple(sorted(output, key=lambda item: item.player_id))
 
+
+def _season_line_from_raw(
+    raw: Mapping[str, Any],
+    *,
+    season: int,
+    player_id: str,
+    captured_at: datetime,
+) -> SleeperSeasonStatLine | None:
+    raw_season = raw.get("season")
+    if raw_season not in (None, "") and int(raw_season) != season:
+        raise ValueError("Sleeper season stats response season mismatch")
+    stats_raw = raw.get("stats") if isinstance(raw.get("stats"), Mapping) else raw
+    stats: dict[str, float] = {}
+    for key, value in stats_raw.items():
+        if key in {"player_id", "season", "week", "company"} or isinstance(value, bool):
+            continue
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            continue
+        stats[str(key)] = numeric
+    if not stats:
+        return None
+    return SleeperSeasonStatLine(
+        player_id=f"sleeper:player:{player_id}",
+        season=season,
+        stats=stats,
+        captured_at=captured_at,
+        source_company=(str(raw.get("company")) if raw.get("company") else None),
+    )
+
+
+def _row_for_player(payload: Any, player_id: str) -> Mapping[str, Any] | None:
+    """Select one player from common Sleeper payload shapes without copying peers."""
+
+    if isinstance(payload, Mapping):
+        direct = payload.get(player_id)
+        if isinstance(direct, Mapping):
+            if "player_id" in direct:
+                return direct
+            return {**direct, "player_id": player_id}
+        data = payload.get("data")
+        if isinstance(data, Sequence) and not isinstance(data, (str, bytes)):
+            for item in data:
+                if (
+                    isinstance(item, Mapping)
+                    and str(item.get("player_id") or "").strip() == player_id
+                ):
+                    return item
+        return None
+    if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes)):
+        for item in payload:
+            if (
+                isinstance(item, Mapping)
+                and str(item.get("player_id") or "").strip() == player_id
+            ):
+                return item
+    return None
 
 def _rows(payload: Any) -> tuple[Mapping[str, Any], ...]:
     if isinstance(payload, Mapping):
