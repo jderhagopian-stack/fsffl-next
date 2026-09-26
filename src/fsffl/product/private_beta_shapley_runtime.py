@@ -37,7 +37,7 @@ SHAPLEY_INTRINSIC_ARTIFACT_KIND = "shapley_intrinsic_contract"
 SHAPLEY_INTRINSIC_SCOPE_KIND = "league_material"
 
 YearOneAuthorityLoader = Callable[[LeagueState], LiveForecastEvidence]
-FutureForecastBuilder = Callable[..., Any]
+FutureForecastBuilder = Callable[..., FutureForecastContract]
 _logger = logging.getLogger("fsffl.product.performance")
 
 
@@ -337,12 +337,11 @@ class PrivateBetaShapleyContractLoader:
 
         try:
             phase_started = perf_counter()
-            future_materialization = self._future_forecast_builder(
+            future_contract = self._future_forecast_builder(
                 league_state=league_state,
                 raw_forecasts=evidence.raw_forecasts,
                 league_year_one=year_one,
             )
-            future_contract = future_materialization.contract
             _logger.info(
                 "FSFFL Intrinsic phase future-contract forecast=%s players=%s elapsed=%.3fs",
                 future_contract.forecast_model_version,
