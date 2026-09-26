@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.state.models import FrozenModel, LeagueState, RosterSlot
 
 from .current_runtime import LiveForecastRuntimeResult
-from .fumbles_lost_first_party import FirstPartyFumblesLostSupplement
+from .fumbles_lost_first_party import (
+    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    FirstPartyFumblesLostSupplement,
+)
 from .league_scoring import derive_league_scoring_result
 from .live_ensemble import LiveEnsembleCoverage
 from .models import ForecastHorizon, ForecastObservation
@@ -124,6 +127,21 @@ def build_runtime_from_preseason_baseline(
         if league_state.matchups and fantasy_points
         else ()
     )
+    active_simulation_player_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
+    }
+    simulation_material_partial_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in scoring.partial_forecasts
+                if item.player_id in active_simulation_player_ids
+            }
+        )
+    )
     simulation_blockers = tuple(
         sorted(
             {
@@ -134,7 +152,7 @@ def build_runtime_from_preseason_baseline(
             }
             | (
                 {"partial_player_scoring_coordinates_present"}
-                if scoring.partial_forecasts
+                if simulation_material_partial_player_ids
                 else set()
             )
         )
@@ -167,6 +185,32 @@ def build_runtime_from_preseason_baseline(
             if fumbles_lost_supplement is not None
             else 0
         ),
+        fumbles_lost_subject_universe_player_count=(
+            len(fumbles_lost_supplement.subject_universe_player_ids)
+            if fumbles_lost_supplement is not None
+            else 0
+        ),
+        fumbles_lost_provider_absent_player_ids=(
+            fumbles_lost_supplement.provider_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_frozen_prior_absent_player_ids=(
+            fumbles_lost_supplement.frozen_prior_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_omitted_player_ids=(
+            fumbles_lost_supplement.omitted_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_supplement_model_version=(
+            FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
         model_version=PRESEASON_AUTHORITY_RUNTIME_VERSION,
     )
