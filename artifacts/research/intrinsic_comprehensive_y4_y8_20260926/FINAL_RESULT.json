@@ -1,0 +1,108 @@
+{
+  "directive": "comprehensive Y4-Y8 long-horizon Intrinsic architecture research",
+  "terminal_state": "MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE",
+  "authority": "research_only_no_production_change",
+  "production_h3": "preserved_unchanged",
+  "final_historical_architecture": {
+    "type": "position_horizon_specialist_fits",
+    "feature_set": "forecast10",
+    "model": "two_part_ridge",
+    "effective_candidate": "specialist|forecast10|two_part_ridge",
+    "position_horizon_routing": false,
+    "model_family_breakpoint": null,
+    "h5_breakpoint": false
+  },
+  "comprehensive_search_result": {
+    "development_winner": "0.75 specialist + 0.25 global_continuous|football_plus|two_part_ridge",
+    "development_score_vs_baseline": -0.052773843241331816,
+    "untouched_holdout_status": "FINAL_HOLDOUT_REJECTED_FALLBACK_PRESERVED",
+    "rejection_reason": "cell_rmse_QB_Y8",
+    "selected_holdout": {
+      "n": 8579,
+      "rmse": 43.603021147136836,
+      "mae": 19.79718674178787,
+      "bias": 0.49120809586783487,
+      "spearman": 0.4941827830454856,
+      "tail_rmse": 113.40483759271366
+    },
+    "fallback_holdout": {
+      "n": 8579,
+      "rmse": 44.18453979619444,
+      "mae": 18.755891487004533,
+      "bias": -4.993220102118329,
+      "spearman": 0.4905794083740253,
+      "tail_rmse": 130.48199184153924
+    },
+    "qb_y8_selected_rmse": 100.44058288554484,
+    "qb_y8_fallback_rmse": 77.83554505854721,
+    "qb_y8_ratio": 1.2904310906094767,
+    "frozen_catastrophe_limit": 1.15
+  },
+  "uncertainty": {
+    "method": "development OOF absolute-residual conformal bands by position/horizon with monotone horizon floor",
+    "final_holdout_coverage80": 0.876559039515095,
+    "final_holdout_coverage90": 0.9432334770952325,
+    "cumulative_cross_horizon_covariance_validated": false
+  },
+  "current_shadow": {
+    "players": 335,
+    "prior_2025_rows_resolved": 293,
+    "prior_2025_rows_missing": 42,
+    "h3_production_spearman": 0.9965386923381384,
+    "median_abs_rank_move": {
+      "H4": 4,
+      "H5": 7,
+      "H6": 10,
+      "H7": 11,
+      "H8": 12
+    },
+    "p90_abs_rank_move": {
+      "H4": 12,
+      "H5": 19,
+      "H6": 24,
+      "H7": 27,
+      "H8": 29
+    },
+    "h3_vs_h8_spearman": 0.9678801246121829,
+    "named_player_tuning": false
+  },
+  "feature_family_interpretation": {
+    "development_only": "richer football/pedigree/trajectory evidence produced localized gains and changed the development-selected architecture",
+    "final_authority": "no richer feature/model/routing architecture survived the frozen untouched-holdout gate",
+    "data_gaps": [
+      "historical contract guarantees/years remaining",
+      "historical injury event/designation detail",
+      "governed historical depth-chart labels",
+      "complete combine/athletic testing"
+    ]
+  },
+  "reproducibility": {
+    "research_branch": "research/intrinsic-comprehensive-y4-y8-20260926",
+    "branch_head_at_durable_matrix": "c57be0d69e4f543c6c7d963c69482ca7b9e99cc7",
+    "evidence_inventory": {
+      "run": 36261759681,
+      "artifact": 10913055821,
+      "digest": "sha256:abdb3db078cc003791c8149b3b5c48759d031669ec1813dc812da6217af35b27"
+    },
+    "rich_panel": {
+      "run": 36262305512,
+      "artifact": 10912862252,
+      "digest": "sha256:6dd664b632f4897f286a99794e10df29be21bf8c6cae70e526ea807470fdcb0e"
+    },
+    "development": {
+      "run": 36263509294,
+      "artifact": 10913506052,
+      "digest": "sha256:4ec805f2ea33c86b7790f7fc518f3610f60a09b500cbd454ad0978ac9284476a"
+    },
+    "final_holdout": {
+      "run": 36267110470,
+      "artifact": 10914389074,
+      "digest": "sha256:b9d9c905982f0ff9923bbdd6a8ebc7214b08811f64ea3662e7cd1d4893959de8"
+    },
+    "current_shadows": {
+      "run": 36267757579,
+      "artifact": 10913539274,
+      "digest": "sha256:ee8abf0854b5d64f110413dca6699bce764bb7cbc48264d7becd588b7646c052"
+    }
+  }
+}
