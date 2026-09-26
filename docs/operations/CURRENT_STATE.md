@@ -531,3 +531,25 @@ Desired readiness UX:
 Management classifies the current condition as a **beta-availability incident**: the user has been unable to meaningfully use/test the product for multiple days, and current production still has broken Intrinsic/future-forecast surfaces plus a League presentation-module failure.
 
 Immediate priority is a usable private beta, not additional breadth or performance work. Implementation must restore the smallest charter-correct usable path first, with real hosted + physical validation. Performance/Market optimization remains held until this gate closes. Research may continue independently because it does not consume the product critical path.
+
+
+## Comprehensive Y4-Y8 Intrinsic Research closeout — 2026-09-26
+
+Research has reached **MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE**.
+
+The expanded PIT feature/model/target/routing search produced a richer hierarchical candidate in development, but the frozen candidate failed the untouched final-holdout QB-Y8 safety rule. The governed Research fallback is therefore preserved:
+
+`specialist | forecast10 | two_part_ridge` for every position × Y4-Y8 cell.
+
+No shared/hierarchical model, model-family router or horizon breakpoint is promoted. The result is a negative selection against added complexity, not evidence that richer football features contain no signal.
+
+Production H3 remains unchanged.
+
+Final-holdout uncertainty uses development-only conformal residual bands. Overall untouched coverage was **87.66% / 94.32%** for nominal 80% / 90% bands. Cross-horizon covariance remains unvalidated.
+
+Post-freeze current shadows cover 335 players and reproduce production H3 ordering at Spearman **0.99654**. H3→H4/H5/H6/H7/H8 median rank movement is **4 / 7 / 10 / 11 / 12**, with no natural breakpoint.
+
+Durable package:
+`artifacts/research/intrinsic_comprehensive_y4_y8_20260926/`.
+
+No long-horizon production implementation is authorized by this Research closeout.
