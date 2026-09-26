@@ -400,7 +400,7 @@ Long-horizon Intrinsic Research has completed a green historical model-selection
 ## Management clarification — two-player gap should not take down unrelated intelligence
 Management has clarified that partial player Forecast authority is subject/consumer scoped. The current two-WR FUMBLES_LOST miss should be treated first as a supplement-universe reconciliation defect, because both players have deterministic State identity/position and the accepted first-party model already defines degraded/cold-start handling. Implementation must repair that generic path and keep unrelated intelligence available. Simulation may remain fail-closed only if a truly unresolved player can materially enter simulated outcomes and no governed bounded treatment exists.
 
-Long-horizon Intrinsic Research must continue to a Management-ready plain-language PDF with current-player horizon curves/rank shifts, positional-distribution changes, uncertainty and explicit implementation decisions; the current three-year production Intrinsic remains unchanged.
+The earlier long-horizon PDF requirement has been fulfilled by the completed comparative Y4+ study. Production three-year Intrinsic remains unchanged; durable Research authority is now the comparative Management-gate handoff.
 
 
 ## Current two-player partials are unrostered
