@@ -113,3 +113,61 @@ Explicit non-goals:
 - do not let historical realized outcomes leak into point-in-time evaluation;
 - do not let owner behavior or market behavior enter universal Forecast;
 - do not prioritize Record Book/media-guide breadth ahead of current reliability, Market responsiveness and Simulation performance.
+
+## Management sequencing — legacy capability harvest placement
+
+Do not launch all recovered legacy capabilities as parallel feature work. Sequence them by dependency and product leverage.
+
+### Phase 0 — current critical path
+1. Complete PR #263 post-merge deploy + FSFFL → Hodor → FSFFL → restart acceptance.
+2. Resume physical Market acceptance.
+3. Close Market cold/focused foreground latency to a usable beta threshold.
+
+Nothing from the legacy harvest may delay this phase.
+
+### Phase 1 — Simulation modernization
+Immediately after Market latency:
+1. Benchmark current NEXT fresh/changed-State Simulation.
+2. Run the governed simulation-count convergence study; keep 50k production until Management changes the contract.
+3. Recover compatible vectorization/batching ideas from the predecessor Simulator under NEXT authority.
+4. Optimize the fresh kernel.
+5. Preserve replayable universe identity / bounded Multiverse capture as part of the engine redesign so it is not bolted on later.
+6. Return at an explicit equivalence/semantics gate if further speed requires non-bit-identical RNG/reduction behavior.
+
+This is the highest-priority legacy recovery because it directly improves intelligence refresh, Trade Center, scenario analysis and future product interactivity.
+
+### Phase 2 — historical intelligence foundation
+After Simulation modernization is stable, promote reusable historical infrastructure before broad historical UI:
+1. canonical point-in-time historical State reconstruction;
+2. durable player franchise history;
+3. player/pick asset lineage graph;
+4. dated intelligence/simulation snapshot archive and replay provenance.
+
+These are Data/State/Analytics foundations, not new decision authority. Build them so future history/replay features do not reconstruct past truth ad hoc.
+
+### Phase 3 — Decision/Market uncertainty + Owner Intelligence
+Once Market and Simulation are fast enough for repeated evaluation:
+1. test repeated-seed / simulation-sensitivity confirmation under NEXT Decision authority;
+2. keep sign-unstable opportunities visible but not headline-actionable unless evidence supports promotion;
+3. revisit context-normalized Owner Intelligence using roster need, opportunity environment and shrinkage;
+4. keep Owner Intelligence descriptive/directional unless separate evidence supports stronger claims; no fabricated acceptance probability.
+
+### Phase 4 — productize the league's memory
+Only after the shared foundations above are stable:
+- Multiverse / alternative-futures cards and drill-down;
+- trade/pick genealogy;
+- player franchise-history surfaces;
+- Record Book;
+- historical trade review;
+- Alternate History / What-If;
+- preseason media guide / season publications;
+- league-story/shareable modules.
+
+Prefer integrating these into Home, Franchise, League Atlas, Player Intelligence and Reports instead of creating disconnected mini-products.
+
+### Parallel Research
+The comprehensive Y4-Y8 Forecast/Intrinsic architecture study may continue independently because it does not depend on the legacy-history productization path. It must not consume Market/Owner/lineage outcomes as Forecast inputs.
+
+### Ordering principle
+Recover **foundational primitives before presentation breadth**:
+`reliability → Market responsiveness → Simulation modernization → historical State/lineage/snapshots → Decision/Owner uncertainty intelligence → storytelling/history surfaces`.
