@@ -4,6 +4,7 @@ on:
     branches: [research/intrinsic-y4plus-model-family-20260926]
     paths:
       - artifacts/research/intrinsic_y4plus_model_family_20260926/FINAL_HISTORICAL_SELECTION.json
+      - artifacts/research/intrinsic_term_structure_20260926/CURRENT_PRODUCTION_H3_REFERENCE.json
       - scripts/run_intrinsic_y4plus_current_shadows.py
       - scripts/run_intrinsic_term_structure_current_shadows.py
       - .github/workflows/intrinsic-y4plus-current-shadows.yml
