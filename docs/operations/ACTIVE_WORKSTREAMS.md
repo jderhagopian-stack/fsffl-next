@@ -136,7 +136,7 @@ PR #242 closed the Performance-owned Hodor lifecycle defect and is merged/deploy
 
 ## Current superseding checkpoint — 2026-09-26
 - **Forecast/Product Implementation:** **MANAGEMENT GATE — FUMBLES_LOST FORECAST AUTHORITY.** State-first sync/reuse-or-rebuild/truthful-readiness is complete and deployed through PR #246/#249/#251/#252. Current FSFFL rebuild is truthfully partial because the governed raw Forecast lacks FUMBLES_LOST; Simulation is not promoted.
-- **Forecast Research — FUMBLES_LOST:** **ACTIVE — BOUNDED SOURCE / AUTHORITY RECOVERY.** Find the shortest two-source, same-horizon, stage-rights-compliant path for the core/material FUMBLES_LOST coordinate.
+- **Forecast Research — FUMBLES_LOST:** **MANAGEMENT GATE — SAME-HORIZON AUTHORITY.** Retained/current evidence is exhausted. No rights-cleared two-independent-source pair is promotable under the current season/preseason route. JerryGM + Fantasy Nerds is the shortest technical current-ROS candidate pair, but it requires an explicit ordinary-offense ROS horizon decision plus external rights/access/independence/uncertainty clearance; it may not be spliced into the preserved season baseline. See `artifacts/research/fumbles_lost_authority_recovery_20260926/RESEARCH_HANDOFF.md`.
 - **Auxiliary single-source policy:** **MANAGEMENT ACCEPTED — ZERO INITIAL CERTIFICATIONS.** FUMBLES_LOST is explicitly outside that exception.
 - **Market acceptance:** **PAUSED** for full product acceptance until current FSFFL can legitimately promote Simulation. Physical lifecycle/readiness truth may still be tested independently.
 - **Performance:** State-first/lifecycle work is closed; separate Market foreground latency remains its only open dimension.
