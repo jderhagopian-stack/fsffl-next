@@ -1101,3 +1101,59 @@ Required evaluation:
 8. finish with a plain-language Management report identifying what genuinely adds long-horizon signal, what remains redundant, and what data gaps prevent a conclusion.
 
 Production H3 remains unchanged. Market/Team Utility/owner behavior are forbidden inputs. No H5/Y4+ implementation is authorized. The terminal/career-state study is held until this feature-discovery gate is resolved.
+
+### Management expansion — comprehensive joint feature/model/horizon study
+**State: ACTIVE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE RESEARCH**
+
+This supersedes any wording that frames the next step as feature discovery only, assumes `two_part_state` remains the annual model after richer features are found, assumes one family across horizons, or treats H5 as the likely statistical breakpoint.
+
+Primary research question:
+
+> Given all defensible point-in-time information available to FSFFL, what forecasting architecture best predicts each position × horizon outcome from Y4 through Y8, and where is pooling across positions/horizons empirically superior to specialization?
+
+Required phases:
+
+1. **Evidence inventory / provenance**
+   - enumerate all historically reconstructable PIT features from governed repositories/artifacts/sources;
+   - include metadata/pedigree, age-at-entry, physical profile, position-specific stats/usage/efficiency, durability/workload, role/team continuity, contract/team-investment evidence where genuinely PIT, Y1-Y3 governed Forecast features, prior forecast residual/trajectory/innovation/volatility states, and any other defensible football evidence;
+   - record temporal coverage, missingness, source provenance, acquisition timing, and leakage risk;
+   - separately list plausible but unavailable features as data gaps.
+
+2. **Target architecture**
+   - evaluate direct annual fantasy-point prediction and decomposed survival/relevance → role/state → conditional-production structures;
+   - evaluate tail/high-end production explicitly because Intrinsic economics are sensitive to deployable upside;
+   - preserve uncertainty as a first-class target/output rather than an afterthought.
+
+3. **Model search**
+   - compare transparent baselines, regularized linear/nonlinear models, two-part models, survival/hazard, multi-state transitions, cohort models, flexible interaction learners, hierarchical/multi-task models, continuous-horizon models, and calibrated ensembles where feasible;
+   - allow separate QB/RB/WR/TE models;
+   - allow different models at Y4/Y5/Y6/Y7/Y8;
+   - allow position × horizon routing;
+   - allow one pooled/shared architecture to win;
+   - do not privilege the prior six-family set or current `two_part_state` benchmark.
+
+4. **Selection discipline**
+   - candidate features/transforms/interactions and model classes must be selected within development chronology;
+   - use nested chronological validation for feature/model/routing selection;
+   - freeze the final architecture before untouched final holdout and before current-player inspection;
+   - apply route/model complexity penalties, minimum-cell sample standards, stability tests, and shrinkage/pooling where specialist cells are sparse;
+   - test era sensitivity, missing-data sensitivity, calibration, rank/order, MAE/RMSE, high-end/tail loss, survival/state calibration, and downstream economic bridge performance;
+   - explicitly test incremental value beyond governed Y1-Y3 Forecasts.
+
+5. **Architecture decision**
+   - report the best supported model + feature set for every position × horizon cell;
+   - also report the best shared/hierarchical architecture and compare it against specialized routing;
+   - identify genuine breakpoints only if they emerge from held-out evidence;
+   - explain where different models win and whether the gains are large/stable enough to justify operational complexity;
+   - if richer features change the prior model-family result, the old `two_part_state` conclusion is superseded for Research purposes.
+
+6. **Current-player shadows only after freeze**
+   - generate current Y4-Y8 shadows after historical architecture freeze;
+   - show uncertainty, model sensitivity, rank crossovers, position distributions and representative players;
+   - no named-player tuning.
+
+Deliver a plain-language Management PDF plus machine-readable model/feature/routing matrices and reproducibility artifacts.
+
+Production H3 remains unchanged. Market, dynasty values, Owner Intelligence and Team Utility remain prohibited Forecast inputs. No H5/Y4+ implementation is authorized.
+
+Return only at `MANAGEMENT GATE — COMPREHENSIVE LONG-HORIZON ARCHITECTURE` or an evidence-supported negative `DIRECTIVE COMPLETE — RESEARCH`.
