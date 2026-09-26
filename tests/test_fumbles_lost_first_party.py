@@ -385,3 +385,87 @@ def test_builder_refuses_to_overwrite_existing_fumbles_lost_truth() -> None:
             ),  # type: ignore[arg-type]
             clock=lambda: CAPTURED,
         )
+
+
+
+def test_prior_absent_state_subject_with_current_input_uses_current_only_tier() -> None:
+    player_id = "sleeper:player:99999991"
+    assert player_id not in PLAYER_PRIORS
+    supplement = build_first_party_fumbles_lost_supplement(
+        _state(player_id, Position.WR),
+        base_observations=(),
+        stats_source=FakeSleeperStats(
+            {
+                1: (_line(player_id, 1, rec=2.0),),
+                2: (_line(player_id, 2, rec=3.0),),
+            }
+        ),  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    )
+
+    assert supplement.subject_universe_player_ids == (player_id,)
+    assert supplement.provider_absent_player_ids == (player_id,)
+    assert supplement.frozen_prior_absent_player_ids == (player_id,)
+    assert supplement.omitted_player_ids == ()
+    assert len(supplement.observations) == 1
+    evidence = supplement.player_evidence[0]
+    assert evidence.identity_method == "canonical_sleeper_current_input"
+    assert evidence.evidence_tier == FirstPartyFumblesLostEvidenceTier.CURRENT_ONLY
+    assert evidence.history_games == 0
+    assert evidence.history_opportunities == 0.0
+    assert evidence.current_games == 2
+    assert evidence.current_opportunities == pytest.approx(5.0)
+    assert evidence.mean_fumbles_lost > 0
+    assert evidence.predictive_stddev >= POSITION_RESIDUAL_STDDEV_FLOOR["WR"]
+    assert supplement.observations[0].distribution.stddev > 0
+    assert supplement.observations[0].period_start == datetime(2026, 9, 1, tzinfo=UTC)
+    assert supplement.observations[0].period_end == datetime(2027, 3, 1, tzinfo=UTC)
+
+
+def test_prior_absent_provider_target_is_not_omitted_or_silently_zeroed() -> None:
+    player_id = "sleeper:player:99999992"
+    assert player_id not in PLAYER_PRIORS
+    supplement = build_first_party_fumbles_lost_supplement(
+        _state(player_id, Position.WR),
+        base_observations=_base(player_id, Position.WR),
+        stats_source=FakeSleeperStats(
+            {
+                1: (_line(player_id, 1, rush_att=1.0, rec=4.0),),
+                2: (_line(player_id, 2, rec=2.0),),
+            }
+        ),  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    )
+
+    assert supplement.provider_absent_player_ids == ()
+    assert supplement.frozen_prior_absent_player_ids == (player_id,)
+    assert supplement.omitted_player_ids == ()
+    assert supplement.observations[0].player_id == player_id
+    assert supplement.observations[0].distribution.mean > 0
+    assert supplement.player_evidence[0].evidence_tier == FirstPartyFumblesLostEvidenceTier.CURRENT_ONLY
+
+
+def test_prior_absent_subject_without_current_row_is_identity_light_with_nonzero_uncertainty() -> None:
+    player_id = "sleeper:player:99999993"
+    assert player_id not in PLAYER_PRIORS
+    supplement = build_first_party_fumbles_lost_supplement(
+        _state(player_id, Position.TE),
+        base_observations=(),
+        stats_source=FakeSleeperStats(
+            {
+                1: (_line("sleeper:player:other", 1, rec=1.0),),
+                2: (),
+            }
+        ),  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    )
+
+    assert supplement.frozen_prior_absent_player_ids == (player_id,)
+    assert supplement.omitted_player_ids == ()
+    evidence = supplement.player_evidence[0]
+    assert evidence.identity_method == "unmapped"
+    assert evidence.evidence_tier == FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT
+    assert evidence.current_games == 0
+    assert evidence.mean_fumbles_lost > 0
+    assert evidence.predictive_stddev >= COLD_START_STDDEV_FLOOR
+    assert supplement.observations[0].distribution.stddev >= COLD_START_STDDEV_FLOOR
