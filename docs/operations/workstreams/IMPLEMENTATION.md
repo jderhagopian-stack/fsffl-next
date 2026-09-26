@@ -460,3 +460,15 @@ Correct this generically:
 7. deploy and perform a fresh current-State FSFFL sync/rebuild. Acceptance requires Simulation FULL despite these two unrostered player-specific partials, with those partials still truthfully visible on player/free-agent surfaces.
 
 After this consumer-scoped readiness correction, separately continue the generic first-party supplement population reconciliation so provider membership changes do not unnecessarily omit otherwise model-eligible subjects.
+
+
+## PR #260 production acceptance checkpoint — 2026-09-26 09:12 ET
+**State: ACTIVE — FSFFL FULL RESTORED / CROSS-LEAGUE DURABLE-CHECKPOINT FAILURE REMAINS**
+
+PR #260 merged to main at `bc16ebea6126b4b182adf9b9c5e9b3542031e54d`; post-merge main CI is green. Render deploy `dep-darruh8u01pc73dlh3l0` is live on that exact merge.
+
+Fresh production acceptance after deploy proves the original FSFFL restoration objective is now functioning on the current State: Forecast FULL, Simulation FULL, Value FULL, overall FULL; no material partial-player blockers; first-party FUMBLES_LOST v4 reconciled to a canonical subject universe of 827 players with zero omitted subjects in the accepted FSFFL snapshot.
+
+The acceptance sequence then failed at the **Hodor switch durability checkpoint**, not at FSFFL Forecast/Simulation authority. Exact production error at ~09:11 ET: `FSFFL persistence checkpoint timed out user=state-first-acceptance-20260926`, followed by `StateFirstAcceptanceError: hodor_switch canonical State did not durably checkpoint`.
+
+Next corrective is therefore narrow: diagnose/fix the Hodor switch persistence checkpoint timeout without regressing the now-restored FSFFL FULL state, then rerun the entire FSFFL → Hodor → FSFFL State-first acceptance sequence and restart preservation. Do not reopen FUMBLES_LOST model authority or subject-scoping work unless new evidence proves regression.
