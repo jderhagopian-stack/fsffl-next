@@ -22,9 +22,10 @@ from fsffl.forecast.future_state_primitive import (
     build_future_state_probability_materialization,
     frozen_future_state_source_rows,
     governed_future_state_player_ids,
+    governed_future_state_source_row,
 )
 from fsffl.forecast.integrated_i1 import STATE_NAMES
-from fsffl.forecast.models import ForecastObservation
+from fsffl.forecast.models import ForecastDistribution, ForecastObservation
 from fsffl.state.models import LeagueState, Position
 
 from ._vnext_data_qb_y2 import DATA_B64 as QB_Y2_B64
@@ -38,8 +39,7 @@ from ._vnext_data_wr_y3 import DATA_B64 as WR_Y3_B64
 from ._vnext_ratio_nodes import DATA_B64 as RATIO_NODES_B64
 from .i1_player_scoring import (
     FUTURE_I1_PLAYER_SCORING_VERSION,
-    build_future_i1_player_scoring_multipliers,
-    derive_future_i1_standard_year_one,
+    player_scoring_multipliers,
 )
 
 
@@ -450,31 +450,52 @@ def build_vnext_future_forecast_contract(
     governed_league_year_one = tuple(
         item for item in league_year_one if item.player_id in governed_ids
     )
-    standard_year_one_all = derive_future_i1_standard_year_one(
-        raw_forecasts=governed_raw,
-        rules=league_state.league.rules,
-    )
-    standard_ids = {item.player_id for item in standard_year_one_all}
-    league_ids = {item.player_id for item in governed_league_year_one}
-    eligible_ids = governed_ids & standard_ids & league_ids
+    league_by_id = {item.player_id: item for item in governed_league_year_one}
+    eligible_ids = governed_ids & set(league_by_id)
     if not eligible_ids:
         raise ValueError(
             "vNext mapped subjects lack compatible governed Year-1 evidence"
         )
 
+    # The frozen A2/vNext source cohort owns its accepted standard/non-PPR Year-1
+    # model-input coordinate. Re-deriving that standard coordinate from the
+    # immutable provider raw snapshot would incorrectly require newer scoring
+    # coordinates (notably FUMBLES_LOST) that were not part of that preserved
+    # source snapshot. Use the frozen governed source value only for subjects that
+    # ALSO have a real governed connected-league Year-1 observation. This changes
+    # neither subject authority nor the connected-league Year-1 evidence.
     standard_year_one = tuple(
-        item for item in standard_year_one_all if item.player_id in eligible_ids
-    )
-    eligible_raw = tuple(
-        item for item in governed_raw if item.player_id in eligible_ids
+        league_by_id[player_id].model_copy(
+            update={
+                "distribution": ForecastDistribution(
+                    mean=float(
+                        governed_future_state_source_row(
+                            league_state,
+                            player_id,
+                        ).standard_y1_points
+                    ),
+                    stddev=0.0,
+                ),
+                "source": "fsffl:vnext_frozen_standard_year1",
+                "model_version": FUTURE_STATE_PRIMITIVE_VERSION,
+                "provenance": league_by_id[player_id].provenance.model_copy(
+                    update={
+                        "source": "fsffl:vnext_frozen_standard_year1",
+                        "provider_ref": None,
+                        "source_version": FUTURE_STATE_PRIMITIVE_VERSION,
+                    }
+                ),
+            }
+        )
+        for player_id in sorted(eligible_ids)
     )
     eligible_league_year_one = tuple(
-        item for item in governed_league_year_one if item.player_id in eligible_ids
+        league_by_id[player_id]
+        for player_id in sorted(eligible_ids)
     )
-    scoring_multipliers = build_future_i1_player_scoring_multipliers(
-        raw_forecasts=eligible_raw,
+    scoring_multipliers = player_scoring_multipliers(
+        standard_year_one=standard_year_one,
         league_year_one=eligible_league_year_one,
-        rules=league_state.league.rules,
     )
     primitive = build_future_state_probability_materialization(
         league_state=league_state,
@@ -624,7 +645,8 @@ def build_vnext_future_forecast_contract(
         "current_season_y1_authority_changed": False,
         "runtime_clipping": False,
         "future_i1_scoring_version": FUTURE_I1_PLAYER_SCORING_VERSION,
-        "future_i1_scoring_method": "player_specific_year1_league_standard_ratio",
+        "future_i1_scoring_method": "player_specific_year1_league_frozen_standard_ratio",
+        "future_i1_standard_year1_authority": "frozen_vnext_source_coordinate",
         "future_i1_scoring_player_count": len(scoring_multipliers),
         "distribution_parameters": json.dumps(
             VNEXT_LATEST_DISTRIBUTION_PARAMETERS,

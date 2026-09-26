@@ -168,7 +168,8 @@ def test_shared_shell_replaces_legacy_status_with_compact_governed_readiness() -
     assert "fsffl-shared-readiness-host" in SHELL
     assert "display:block!important;pointer-events:auto;overflow:hidden" in SHELL
     assert "white-space:normal" in SHELL
-    assert "overflow-wrap:anywhere" in SHELL
+    assert "overflow-wrap:anywhere" not in SHELL
+    assert "overflow-wrap:normal;word-break:normal" in SHELL
 
 
 def test_shared_readiness_tracks_status_on_every_route_without_launching_model_work() -> None:
@@ -198,7 +199,7 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
 
 
 def test_shared_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    release = "20260926-combined-acceptance1"
+    release = "20260926-post265-intrinsic-mobile1"
     assert f"/static/app.js?v={release}" in INDEX
     assert f"/static/home_dashboard.js?v={release}" in INDEX
     assert f"/static/product_shell.js?v={release}" in INDEX

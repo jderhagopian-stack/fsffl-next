@@ -424,6 +424,20 @@ def _source_for_player(
     return next(iter(candidates.values()))
 
 
+def governed_future_state_source_row(
+    league_state: LeagueState,
+    player_id: str,
+) -> FutureStateSourceRow:
+    """Return the unique frozen governed source row for one current canonical subject.
+
+    This is an identity/read-only primitive. It does not broaden the frozen source
+    cohort and raises when the current subject cannot be uniquely reconciled through
+    the accepted canonical/Sleeper identity mapping.
+    """
+
+    return _source_for_player(league_state, player_id)
+
+
 def governed_future_state_player_ids(
     league_state: LeagueState,
 ) -> tuple[str, ...]:
