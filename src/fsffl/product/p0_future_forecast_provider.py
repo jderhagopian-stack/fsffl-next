@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Mapping
 
 from fsffl.forecast.future_contract import (
+    CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
     ForecastUncertaintyKind,
     FutureForecastContract,
     FutureForecastScenario,
@@ -36,7 +37,7 @@ from .p0_forecast_runtime import (
 
 
 P0_FUTURE_FORECAST_SOURCE = "fsffl:p0_redeveloped_future_forecast"
-P0_FUTURE_SCORING_COORDINATE = "connected_league_fantasy_points"
+P0_FUTURE_SCORING_COORDINATE = CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE
 
 
 @dataclass(frozen=True)
