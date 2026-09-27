@@ -68,7 +68,7 @@ def test_newer_same_league_state_supersedes_inflight_result_without_split() -> N
             context=SimpleNamespace(league_state_id=refresh_state.state_id)
         )
     )
-    with pytest.raises(ValueError, match="matching league and forecast evidence"):
+    with pytest.raises(ValueError, match="matching current league and forecast evidence"):
         store.set_simulation_analytics("u", simulation)  # type: ignore[arg-type]
     assert store.get("u").league_state == reconnect_state
 
