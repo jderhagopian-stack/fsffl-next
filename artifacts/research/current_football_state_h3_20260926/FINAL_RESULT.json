@@ -1,0 +1,159 @@
+{
+  "study": "current-football-state-h3-update",
+  "state": "MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE",
+  "authority": "research_only_no_production_change",
+  "historical_validation": {
+    "workflow_run": 36288913771,
+    "head_sha": "acf49a5a3b55b948c6836866d2eb0ab62a8184da",
+    "artifact_id": 10921183161,
+    "digest": "sha256:154ef6c7d35d5c04ac01cfbaedd47b8a654c43dd521e4251718277a10e929ea1",
+    "holdouts": [
+      2018,
+      2019,
+      2020,
+      2021
+    ],
+    "injury_episodes": 4793,
+    "noninjury_events": 7603,
+    "broad_layer_supported": false
+  },
+  "provider_capture": {
+    "workflow_run": 36288669957,
+    "head_sha": "acf3044112e279efd944afaf27a3e9cf94fcc9fc",
+    "artifact_id": 10921722146,
+    "digest": "sha256:778a47c68f3a7e6e6e2a1181dd085d8ad896e7ae8d2ab28d358b6b58b33c1329",
+    "cbs_rows": 292,
+    "razzball_rows": 330,
+    "exact_two_source_players": 54,
+    "injury_event_players": 58,
+    "reserve_event_players": 5,
+    "deployment_authority": false
+  },
+  "broad_horizon_layers": [
+    {
+      "horizon": 1,
+      "family": "organizational",
+      "supported": false,
+      "persistence_brier_improvement": -0.067820667,
+      "state_brier_improvement": -0.0037539498,
+      "point_mae_improvement": 0.0226747715
+    },
+    {
+      "horizon": 1,
+      "family": "availability_participation",
+      "supported": false,
+      "persistence_brier_improvement": -0.0029133858,
+      "state_brier_improvement": -0.0014674063,
+      "point_mae_improvement": 0.003427405
+    },
+    {
+      "horizon": 1,
+      "family": "all_event",
+      "supported": false,
+      "persistence_brier_improvement": -0.0709316406,
+      "state_brier_improvement": -0.0052268647,
+      "point_mae_improvement": 0.0260244609
+    },
+    {
+      "horizon": 2,
+      "family": "organizational",
+      "supported": false,
+      "persistence_brier_improvement": -0.1369008646,
+      "state_brier_improvement": -0.0135718797,
+      "point_mae_improvement": 0.0189342678
+    },
+    {
+      "horizon": 2,
+      "family": "availability_participation",
+      "supported": false,
+      "persistence_brier_improvement": -0.0083780993,
+      "state_brier_improvement": -0.001863253,
+      "point_mae_improvement": 0.0042637807
+    },
+    {
+      "horizon": 2,
+      "family": "all_event",
+      "supported": false,
+      "persistence_brier_improvement": -0.1464259329,
+      "state_brier_improvement": -0.0154604205,
+      "point_mae_improvement": 0.0231173169
+    },
+    {
+      "horizon": 3,
+      "family": "organizational",
+      "supported": false,
+      "persistence_brier_improvement": -0.00202518,
+      "state_brier_improvement": -0.0037454786,
+      "point_mae_improvement": -0.0067395408
+    },
+    {
+      "horizon": 3,
+      "family": "availability_participation",
+      "supported": false,
+      "persistence_brier_improvement": -0.0122090519,
+      "state_brier_improvement": -0.0047027532,
+      "point_mae_improvement": 0.0066044519
+    },
+    {
+      "horizon": 3,
+      "family": "all_event",
+      "supported": false,
+      "persistence_brier_improvement": -0.0142589575,
+      "state_brier_improvement": -0.0084658459,
+      "point_mae_improvement": -0.000090578
+    }
+  ],
+  "injury_disposition": {
+    "generic_h1_multiplier": false,
+    "generic_h2_h3_multiplier": false,
+    "supported_semantic": "separate remaining-season availability from conditional healthy production and future survival",
+    "episode_summary": {
+      "limited_questionable": {
+        "n": 2701,
+        "remaining_participation_share": 0.802263,
+        "post_return_ppg_ratio": 0.87931,
+        "post_return_opportunity_ratio": 0.954545,
+        "recurrence_share": 0.496113,
+        "y2_persist": 0.970755,
+        "y3_persist": 0.948913
+      },
+      "doubtful_out": {
+        "n": 1655,
+        "remaining_participation_share": 0.427118,
+        "post_return_ppg_ratio": 0.876803,
+        "post_return_opportunity_ratio": 0.979592,
+        "recurrence_share": 0.280363,
+        "y2_persist": 0.94702,
+        "y3_persist": 0.923375
+      },
+      "reserve_ir_pup_nfi": {
+        "n": 437,
+        "remaining_participation_share": 0.281301,
+        "post_return_ppg_ratio": 0.851852,
+        "post_return_opportunity_ratio": 0.836667,
+        "recurrence_share": 0.258581,
+        "y2_persist": 0.954819,
+        "y3_persist": 0.930328
+      }
+    },
+    "causal_interpretation": false
+  },
+  "narrow_structural_signal": {
+    "event": "release_cut",
+    "horizon": 3,
+    "n": 62,
+    "holdouts": 4,
+    "persistence_brier_improvement": 0.0261356022,
+    "state_brier_improvement": 0.0069784853,
+    "point_mae_improvement": -0.0192726401,
+    "supported_semantic": "coarse H3 attachment/survival-risk state only; no position-specific cardinal multiplier"
+  },
+  "double_count_rule": "If governed current ROS owns H1, do not apply an additional event haircut to the same H1 total.",
+  "production_h3_changed": false,
+  "recommended_followups": [
+    "Prospectively retain provider ROS snapshots and event state so provider reaction to injuries/transactions can be measured historically without double counting.",
+    "Build a dedicated chronological remaining-season availability/time-to-return model from injury episodes; keep it separate from conditional healthy production.",
+    "Revalidate release/cut as a coarse H3 attachment/survival state with more seasons/position support before any production coefficient.",
+    "Only study post-return role, recurrence, or durable injury effects as separately validated incremental targets over current provider/role baselines."
+  ]
+}
