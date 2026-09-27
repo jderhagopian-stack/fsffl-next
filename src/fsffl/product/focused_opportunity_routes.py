@@ -15,6 +15,10 @@ from .market_discovery_runtime import (
     DEFAULT_PRELIMINARY_DECISION_BUDGET,
     build_market_discovery,
 )
+from .market_progressive_enrichment import (
+    MarketDecisionEnrichmentCoordinator,
+    MarketEnrichmentStatus,
+)
 from .opportunity_posture import posture_payload
 from .opportunity_spotlights import build_trade_spotlights
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
@@ -178,6 +182,62 @@ def _focus_outcome(
     }
 
 
+def _focused_payload(
+    *,
+    base: dict[str, object],
+    runtime: UserRuntimeContext,
+    focused: list[dict[str, object]],
+    returned: list[dict[str, object]],
+    market_discovery: dict[str, object],
+    requested: OwnerStrategicPosture,
+    intent: str,
+    value: str,
+    decision_enrichment: dict[str, object],
+) -> dict[str, object]:
+    focus_outcome = _focus_outcome(focused, market_discovery)
+    posture_meta = posture_payload(runtime, requested)
+    enriched = {
+        _identity(path.get("representative_package") or {}):
+            path.get("representative_package") or {}
+        for path in market_discovery.get("candidate_paths") or []
+        if (path.get("representative_package") or {}).get(
+            "bilateral_decision_evaluated"
+        )
+    }
+    rows = [enriched.get(_identity(row), row) for row in returned]
+    discovery = dict(base.get("trade_discovery") or {})
+    discovery.update(
+        {
+            "candidate_count": len(focused),
+            "returned_count": len(rows),
+            "truncated": len(focused) > len(rows),
+            "candidates": rows,
+            "spotlights": build_trade_spotlights(rows),
+            "posture_views": {},
+            "active_posture": requested.value,
+            "focus": {
+                "posture": requested.value,
+                "effective_posture": posture_meta.get("effective_posture"),
+                "intent": intent,
+                "value": value,
+                "server_owned": True,
+                "applied_before_candidate_limit": True,
+            },
+            "focus_outcome": focus_outcome,
+        }
+    )
+    payload = dict(base)
+    payload["search_posture"] = posture_meta
+    payload["trade_discovery"] = discovery
+    payload["market_discovery"] = market_discovery
+    payload["decision_enrichment"] = decision_enrichment
+    payload["message"] = (
+        "Structural Market Search is ready. Bilateral Decision enrichment is "
+        "progressive and does not block these results."
+    )
+    return payload
+
+
 def install_focused_opportunity_routes(
     app: FastAPI,
     *,
@@ -185,8 +245,9 @@ def install_focused_opportunity_routes(
     workspace_builder: WorkspaceBuilder,
     candidate_builder: CandidateBuilder,
     require_user: Any,
+    enrichment_coordinator: MarketDecisionEnrichmentCoordinator | None = None,
 ) -> None:
-    """Expose a server-owned Market Focus endpoint without changing model authority."""
+    """Expose explicit structural Search with progressive Decision enrichment."""
 
     @app.get("/api/opportunities/focused-workspace")
     def focused_workspace(
@@ -196,9 +257,6 @@ def install_focused_opportunity_routes(
         user_id: str = Depends(require_user),
     ) -> dict[str, object]:
         runtime = runtime_store.get(user_id)
-        # Focus only needs the workspace shell/readiness/available-player context.
-        # Building the generic 80-row Market discovery here duplicates economics
-        # and family work before the submitted focused neighborhood is evaluated.
         base = workspace_builder(
             runtime,
             candidate_limit=0,
@@ -206,107 +264,185 @@ def install_focused_opportunity_routes(
         )
         if base.get("status") != "ready":
             return base
+
         league_state = runtime.league_state
         focal_team_id = runtime.selected_team_id
         if league_state is None or focal_team_id is None:
-            raise HTTPException(status_code=409, detail="Market Focus requires a loaded league and managed team")
+            raise HTTPException(
+                status_code=409,
+                detail="Market Focus requires a loaded league and managed team",
+            )
         values = runtime.value_evidence
         cardinal = {
             row.asset_id: row
             for row in (values.fsffl_cardinal_values if values is not None else ())
         }
         if not cardinal:
-            raise HTTPException(status_code=409, detail="Market Focus requires current authoritative FSFFL Cardinal Market Value")
+            raise HTTPException(
+                status_code=409,
+                detail="Market Focus requires current authoritative FSFFL Cardinal Market Value",
+            )
 
-        browser = build_trade_center_browser_view(league_state, focal_team_id=focal_team_id)
-        # Focused discovery now always constructs the submitted strategic neighborhood
-        # directly; do not touch the generic structural catalog merely to submit a lens.
-        canonical = None
+        browser = build_trade_center_browser_view(
+            league_state,
+            focal_team_id=focal_team_id,
+        )
         requested = _posture(posture)
-        focused = build_focused_trade_candidates(
+        focused = candidate_builder(
             runtime,
             browser,
             cardinal,
-            canonical_candidates=canonical,
+            canonical_candidates=None,
             requested_posture=requested,
             intent=intent,
             intent_value=value,
         )
-
         discovery = dict(base.get("trade_discovery") or {})
         limit = int(discovery.get("returned_count") or 80)
         if limit <= 0:
             limit = 80
         returned = list(focused[:limit])
+        diagnostics = dict(getattr(focused, "diagnostics", {}) or {})
+        asset_index = owned_asset_index(browser)
 
-        # Use the canonical evaluator directly so build_market_discovery can share
-        # exact Value profiles, ownership resolution, Forecast floor evidence and
-        # baseline lineups across the unchanged bounded preliminary-screen budget.
-        focused_market_discovery = build_market_discovery(
+        # Structural Search plus cheap economic family formation stays on the
+        # explicit submit path. The bilateral Decision budget is deliberately zero
+        # so this request cannot block on lineup/roster/negotiation enrichment.
+        structural_discovery = build_market_discovery(
             runtime,
             returned,
-            evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET,
+            evaluation_limit=0,
             source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
             exact_target_constraint=(value if intent == "target" and value else None),
             intent=intent,
             intent_value=value,
-            search_generation_diagnostics=dict(
-                getattr(focused, "diagnostics", {}) or {}
-            ),
-            asset_index=owned_asset_index(browser),
+            search_generation_diagnostics=diagnostics,
+            asset_index=asset_index,
         )
-        focus_outcome = _focus_outcome(focused, focused_market_discovery)
-        posture_meta = posture_payload(runtime, requested)
-        _logger.info(
-            "FSFFL Market focused outcome posture=%s effective=%s intent=%s value=%s "
-            "status=%s reason=%s candidates=%d paths=%d prelim_runs=%d simulation_calls=%d",
-            requested.value,
-            posture_meta.get("effective_posture"),
-            intent,
-            value,
-            focus_outcome["status"],
-            focus_outcome["reason_code"],
-            focus_outcome["candidate_count"],
-            focus_outcome["candidate_path_count"],
-            focus_outcome["preliminary_decision_runs"],
-            focus_outcome["changed_state_simulation_calls"],
+        request_key = "|".join((requested.value, intent, value))
+        enrichment_payload: dict[str, object] = {
+            "status": "not_started",
+            "job_id": None,
+            "progressive": True,
+            "preliminary_decision_budget": DEFAULT_PRELIMINARY_DECISION_BUDGET,
+        }
+
+        structural_payload = _focused_payload(
+            base=base,
+            runtime=runtime,
+            focused=focused,
+            returned=returned,
+            market_discovery=structural_discovery,
+            requested=requested,
+            intent=intent,
+            value=value,
+            decision_enrichment=enrichment_payload,
         )
 
-        enriched = {
-            _identity(path.get("representative_package") or {}):
-                path.get("representative_package") or {}
-            for path in focused_market_discovery.get("candidate_paths") or []
-            if (path.get("representative_package") or {}).get(
-                "bilateral_decision_evaluated"
+        if enrichment_coordinator is not None and returned:
+            captured_state_id = league_state.state_id
+            captured_team_id = focal_team_id
+            captured_rows = tuple(dict(row) for row in returned)
+            captured_diagnostics = dict(diagnostics)
+
+            def enrich() -> dict[str, object]:
+                current = runtime_store.get(user_id)
+                current_state = current.league_state
+                if (
+                    current_state is None
+                    or current_state.state_id != captured_state_id
+                    or current.selected_team_id != captured_team_id
+                ):
+                    raise ValueError("Market context changed before Decision enrichment")
+                current_browser = build_trade_center_browser_view(
+                    current_state,
+                    focal_team_id=captured_team_id,
+                )
+                enriched_discovery = build_market_discovery(
+                    current,
+                    [dict(row) for row in captured_rows],
+                    evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET,
+                    source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
+                    exact_target_constraint=(
+                        value if intent == "target" and value else None
+                    ),
+                    intent=intent,
+                    intent_value=value,
+                    search_generation_diagnostics=captured_diagnostics,
+                    asset_index=owned_asset_index(current_browser),
+                )
+                return _focused_payload(
+                    base=base,
+                    runtime=current,
+                    focused=focused,
+                    returned=[dict(row) for row in captured_rows],
+                    market_discovery=enriched_discovery,
+                    requested=requested,
+                    intent=intent,
+                    value=value,
+                    decision_enrichment={
+                        "status": MarketEnrichmentStatus.COMPLETED.value,
+                        "job_id": None,
+                        "progressive": True,
+                        "preliminary_decision_budget": DEFAULT_PRELIMINARY_DECISION_BUDGET,
+                    },
+                )
+
+            record = enrichment_coordinator.start(
+                user_id=user_id,
+                league_state_id=captured_state_id,
+                focal_team_id=captured_team_id,
+                request_key=request_key,
+                work=enrich,
             )
-        }
-        returned = [
-            enriched.get(_identity(row), row)
-            for row in returned
-        ]
-        discovery.update(
-            {
-                "candidate_count": len(focused),
-                "returned_count": len(returned),
-                "truncated": len(focused) > len(returned),
-                "candidates": returned,
-                "spotlights": build_trade_spotlights(returned),
-                "posture_views": {},
-                "active_posture": requested.value,
-                "focus": {
-                    "posture": requested.value,
-                    "effective_posture": posture_meta.get("effective_posture"),
-                    "intent": intent,
-                    "value": value,
-                    "server_owned": True,
-                    "applied_before_candidate_limit": True,
-                },
-                "focus_outcome": focus_outcome,
+            structural_payload["decision_enrichment"] = {
+                **record.public_payload(include_result=False),
+                "progressive": True,
+                "preliminary_decision_budget": DEFAULT_PRELIMINARY_DECISION_BUDGET,
             }
+
+        focus_outcome = (
+            structural_payload.get("trade_discovery", {}).get("focus_outcome", {})
+            if isinstance(structural_payload.get("trade_discovery"), dict)
+            else {}
         )
-        payload = dict(base)
-        payload["search_posture"] = posture_meta
-        payload["trade_discovery"] = discovery
-        payload["market_discovery"] = focused_market_discovery
-        payload["message"] = "Market Focus applied to the server-owned governed opportunity search."
-        return payload
+        _logger.info(
+            "FSFFL Market structural focus posture=%s intent=%s value=%s "
+            "candidates=%s paths=%s prelim_runs=%s enrichment=%s",
+            requested.value,
+            intent,
+            value,
+            focus_outcome.get("candidate_count"),
+            focus_outcome.get("candidate_path_count"),
+            focus_outcome.get("preliminary_decision_runs"),
+            (structural_payload.get("decision_enrichment") or {}).get("status"),
+        )
+        return structural_payload
+
+    @app.get("/api/opportunities/focused-enrichment/{job_id}")
+    def focused_enrichment(
+        job_id: str,
+        user_id: str = Depends(require_user),
+    ) -> dict[str, object]:
+        if enrichment_coordinator is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Progressive Market Decision enrichment is not configured",
+            )
+        record = enrichment_coordinator.get(user_id=user_id, job_id=job_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Market enrichment job not found")
+        runtime = runtime_store.get(user_id)
+        state = runtime.league_state
+        if (
+            state is None
+            or state.state_id != record.league_state_id
+            or runtime.selected_team_id != record.focal_team_id
+        ):
+            return {
+                **record.public_payload(include_result=False),
+                "status": MarketEnrichmentStatus.INTERRUPTED.value,
+                "result": None,
+                "error": "Market context changed; stale Decision enrichment was not applied.",
+            }
+        return record.public_payload(include_result=True)
