@@ -835,3 +835,27 @@ Required corrective:
 7. keep the current build running; apply this at the next implementation checkpoint rather than interrupting an in-flight refresh.
 
 The objective is to restore the prior sub-second compatible Intrinsic behavior without weakening authority.
+
+### Correct Intrinsic readiness semantics — legacy activation coverage is provenance, not availability
+Management review confirms that the current `partial_provisional` label is semantically wrong for the deployed vNext Intrinsic path.
+
+Code evidence:
+- `private_beta_shapley_runtime._FACTS` comes from the frozen `current_i1_facts_2026` activation bundle;
+- its coverage flags (`injury_practice`, `participation_snaps`, `roster_continuity`, `role_opportunity`) are copied into completed-source provenance;
+- `_missing_fact_families()` currently converts false legacy coverage flags into `missing_required_fact_families`;
+- `build_shapley_intrinsic_contract()` then marks the entire contract DEGRADED whenever any such flag is missing or any future path is not literally labeled `rich`;
+- the current vNext production Intrinsic computation itself uses governed Year-1 Forecast + FutureForecastContract + LeagueRules; the old completed-source H1 bundle is diagnostic/provenance and does not enter the Intrinsic sum;
+- the deployed contract currently has 335/335 governed estimates and complete Y1/Y2/Y3 coverage.
+
+Required correction:
+1. do not classify current Intrinsic availability as partial/degraded merely because legacy activation-bundle provenance lacks injury/practice, participation/snaps, or roster-continuity flags;
+2. do not require an evidence-path string of `rich` when the governed vNext path is explicitly authorized and complete;
+3. distinguish **availability/completeness** from **evidence/provenance richness**:
+   - availability answers whether governed Intrinsic values are validly present for the required subject scope;
+   - provenance may separately disclose that optional/legacy evidence families were not part of the frozen activation package;
+4. keep those coverage facts visible in methods/provenance diagnostics if useful, but they must not make Home/Franchise/Player Intelligence say `Intrinsic unavailable` or `partial` when the production contract is complete and authorized;
+5. preserve fail-closed behavior for genuinely required missing inputs such as Year-1 authority, FutureForecastContract coverage, scoring compatibility, missing governed subjects, or actual model/contract failure;
+6. add tests separating optional provenance gaps from true production-input gaps;
+7. update hosted readiness acceptance so a complete authorized 335-player vNext Intrinsic contract is considered available even if legacy optional coverage metadata is incomplete.
+
+This is a semantics/governance correction, not permission to fabricate or infer missing injury/snaps/roster evidence.
