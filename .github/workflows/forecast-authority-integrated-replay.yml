@@ -1,0 +1,110 @@
+name: Forecast Authority Integrated Symmetric Replay
+
+on:
+  push:
+    branches: [research/forecast-model-authority-audit-20260927]
+    paths:
+      - scripts/patch_integrated_authority_export.py
+      - scripts/run_integrated_symmetric_authority_comparison.py
+      - .github/workflows/forecast-authority-integrated-replay.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restore exact frozen integrated research tree
+        run: |
+          git fetch origin c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+          git worktree add --detach /tmp/integrated_ref c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+          git -C /tmp/integrated_ref rev-parse HEAD
+          git -C /tmp/integrated_ref rev-parse HEAD:scripts/run_integrated_multivariate_forecast.py
+      - name: Install frozen research dependencies
+        run: python -m pip install -e /tmp/integrated_ref pandas numpy scipy scikit-learn nflreadpy pyarrow
+      - name: Apply metadata-only export patch
+        run: |
+          python scripts/patch_integrated_authority_export.py \
+            --source /tmp/integrated_ref/scripts/run_integrated_multivariate_forecast.py \
+            --output /tmp/integrated_ref/scripts/run_integrated_multivariate_forecast_authority_export.py
+          diff -u /tmp/integrated_ref/scripts/run_integrated_multivariate_forecast.py /tmp/integrated_ref/scripts/run_integrated_multivariate_forecast_authority_export.py || true
+      - name: Build exact frozen PIT panels
+        working-directory: /tmp/integrated_ref
+        run: |
+          Rscript scripts/extract_career_transition_panel.R
+          Rscript scripts/extract_forecast_usage_panel.R
+      - name: Restore authoritative frozen inputs and prior result
+        working-directory: /tmp/integrated_ref
+        run: |
+          mkdir -p artifacts/integrated/frozen/model-a artifacts/integrated/frozen/qb artifacts/integrated/frozen/forecast artifacts/integrated/frozen/event artifacts/integrated/frozen/persistence /tmp/prior_integrated
+          gh api repos/${{ github.repository }}/actions/artifacts/10318004415/zip > /tmp/model-a.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10317272576/zip > /tmp/qb.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10408705946/zip > /tmp/forecast.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10416382295/zip > /tmp/event.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10419402765/zip > /tmp/persistence.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10422596781/zip > /tmp/prior-integrated.zip
+          unzip -oq /tmp/model-a.zip -d artifacts/integrated/frozen/model-a
+          unzip -oq /tmp/qb.zip -d artifacts/integrated/frozen/qb
+          unzip -oq /tmp/forecast.zip -d artifacts/integrated/frozen/forecast
+          unzip -oq /tmp/event.zip -d artifacts/integrated/frozen/event
+          unzip -oq /tmp/persistence.zip -d artifacts/integrated/frozen/persistence
+          unzip -oq /tmp/prior-integrated.zip -d /tmp/prior_integrated
+      - name: Run exact integrated replay with keyed export
+        working-directory: /tmp/integrated_ref
+        run: |
+          mkdir -p /tmp/integrated_replay
+          python scripts/run_integrated_multivariate_forecast_authority_export.py \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv \
+            --model-a-rows artifacts/integrated/frozen/model-a/multiyear-intrinsic-model-a/model_a_repair_point_in_time_rows.csv \
+            --qb-results artifacts/integrated/frozen/qb/qb_career_state_deployment_results.json \
+            --prior-forecast-json artifacts/integrated/frozen/forecast/forecast-disappearance/final/forecast_disappearance_development_results.json \
+            --prior-event-json artifacts/integrated/frozen/event/event-time/results/event_time_absence_cause_results.json \
+            --prior-persistence-json artifacts/integrated/frozen/persistence/persistence-first/results/persistence_first_forecast_calibration_results.json \
+            --output-dir /tmp/integrated_replay
+      - name: Prove aggregate replay parity
+        run: |
+          PRIOR=$(find /tmp/prior_integrated -name integrated_multivariate_forecast_results.json -print -quit)
+          test -n "$PRIOR"
+          sha256sum "$PRIOR" /tmp/integrated_replay/integrated_multivariate_forecast_results.json
+          cmp "$PRIOR" /tmp/integrated_replay/integrated_multivariate_forecast_results.json
+          mkdir -p artifacts/research/forecast_model_authority_audit_20260927/integrated
+          printf 'prior_result=%s\nreplay_result=%s\nparity=exact_byte_identity\n' \
+            "$(sha256sum "$PRIOR" | awk '{print $1}')" \
+            "$(sha256sum /tmp/integrated_replay/integrated_multivariate_forecast_results.json | awk '{print $1}')" \
+            > artifacts/research/forecast_model_authority_audit_20260927/integrated/INTEGRATED_REPLAY_PARITY.txt
+          cp /tmp/integrated_replay/integrated_multivariate_oos_rows.csv artifacts/research/forecast_model_authority_audit_20260927/integrated/INTEGRATED_KEYED_OOS_ROWS.csv
+      - name: Run symmetric B0 B1 I1 I2 comparison
+        run: |
+          python scripts/run_integrated_symmetric_authority_comparison.py \
+            --rows artifacts/research/forecast_model_authority_audit_20260927/integrated/INTEGRATED_KEYED_OOS_ROWS.csv \
+            --output-dir artifacts/research/forecast_model_authority_audit_20260927/integrated
+      - name: Persist compact integrated evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            artifacts/research/forecast_model_authority_audit_20260927/integrated/INTEGRATED_REPLAY_PARITY.txt \
+            artifacts/research/forecast_model_authority_audit_20260927/integrated/INTEGRATED_SYMMETRIC_SUMMARY.csv \
+            artifacts/research/forecast_model_authority_audit_20260927/integrated/INTEGRATED_PAIRWISE_UNCERTAINTY.csv \
+            artifacts/research/forecast_model_authority_audit_20260927/integrated/INTEGRATED_SYMMETRIC_RESULT.json
+          git commit -m "Research: persist symmetric integrated Forecast replay" || exit 0
+          git push origin HEAD:research/forecast-model-authority-audit-20260927
+      - name: Upload complete integrated evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-authority-integrated-replay
+          path: artifacts/research/forecast_model_authority_audit_20260927/integrated/
+          retention-days: 30
