@@ -1075,7 +1075,7 @@ def test_intrinsic_input_fingerprint_ignores_unrelated_league_state_changes() ->
             "as_of": state.as_of + timedelta(hours=2),
             "teams": (changed_team, state.teams[1]),
             "team_states": tuple(
-                item.model_copy(update={"faab_remaining": 17})
+                item.model_copy(update={"faab_balance": 17})
                 for item in state.team_states
             ),
         }
