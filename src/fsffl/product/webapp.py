@@ -1004,7 +1004,8 @@ def create_app(
         payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
         payload["cardinal_value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.fsffl_cardinal_values)
         payload["cardinal_value_coverage"] = runtime.value_evidence.cardinal_player_coverage if runtime.value_evidence is not None else None
-        payload["served_state"] = {
+        served_last_good = getattr(runtime, "served_intelligence", None)
+        payload["target_state"] = {
             "league_id": runtime.league_state.league.league_id,
             "league_name": runtime.league_state.league.name,
             "league_state_id": runtime.league_state.state_id,
@@ -1012,10 +1013,33 @@ def create_app(
             "selected_team_id": runtime.selected_team_id,
             "roster_usable": selected_team_state is not None,
             "roster_count": len(selected_team_state.roster) if selected_team_state is not None else 0,
-            "last_good_intelligence": bool(
-                runtime.forecast_evidence is not None
-                and runtime.simulation_analytics is not None
-                and runtime.value_evidence is not None
+        }
+        # Backward-compatible served_state remains the canonical roster State.
+        # Derived last-good intelligence is identified separately and never
+        # masquerades as the target State.
+        payload["served_state"] = {
+            **payload["target_state"],
+            "last_good_intelligence": served_last_good is not None,
+        }
+        payload["served_intelligence"] = {
+            "available": served_last_good is not None,
+            "stale": served_last_good is not None,
+            "league_state_id": (
+                served_last_good.league_state.state_id
+                if served_last_good is not None
+                else runtime.league_state.state_id
+            ),
+            "as_of": (
+                served_last_good.league_state.as_of.isoformat()
+                if served_last_good is not None
+                else runtime.league_state.as_of.isoformat()
+            ),
+            "target_state_id": runtime.league_state.state_id,
+            "message": (
+                "Last-good derived intelligence remains visible while the current "
+                "canonical State is rebuilding."
+                if served_last_good is not None
+                else "Derived intelligence is not being served from an older State."
             ),
         }
         payload["blocked_stage"] = blocked_stage
@@ -1534,17 +1558,23 @@ def create_app(
             runtime,
             state_only_while_enriching=enrichment_running,
         )
+        presentation_runtime = _presentation_runtime(runtime)
         atlas = build_league_atlas_payload(
-            runtime,
+            presentation_runtime,
             preseason_reason=(
                 "Home intentionally does not resolve or reconstruct preseason evidence."
             ),
+        )
+        freshness = _intelligence_freshness(
+            runtime,
+            using_last_good=(presentation_runtime is not runtime),
         )
         return {
             "status": "ready",
             "contract_version": "home-north-star-v1",
             "league_state_id": runtime.league_state.state_id,
             "managed_team_id": runtime.selected_team_id,
+            "intelligence_freshness": freshness,
             "team_view": team_view,
             "standings": atlas["standings"],
             "simulation": atlas["simulation"],
@@ -1589,7 +1619,23 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
 
         source_level: str
-        if runtime.simulation_analytics is not None:
+        stale_payloads = None
+        if (
+            runtime.simulation_analytics is None
+            and _served_intelligence_compatible(runtime)
+        ):
+            stale_payloads = tuple(
+                _stale_team_view_payload(runtime, team_id=team.team_id)
+                for team in sorted(league_state.teams, key=lambda item: item.team_id)
+            )
+            if all(item is not None for item in stale_payloads):
+                source_level = "stale_last_good_presentation"
+                views = ()
+            else:
+                stale_payloads = None
+        if stale_payloads is not None:
+            pass
+        elif runtime.simulation_analytics is not None:
             views = runtime.simulation_analytics.team_views
             source_level = "simulation_analytics"
         else:
@@ -1620,9 +1666,14 @@ def create_app(
         enriched = tuple(
             _attach_live_value_profiles(view, runtime.value_evidence)
             for view in views
+        ) if stale_payloads is None else ()
+        freshness = _intelligence_freshness(
+            runtime,
+            using_last_good=stale_payloads is not None,
         )
         return {
             "league_state_id": league_state.state_id,
+            "intelligence_freshness": freshness,
             "as_of": league_state.as_of.isoformat(),
             "source_level": source_level,
             "team_market_value_portfolios": (
@@ -1630,7 +1681,11 @@ def create_app(
                 if runtime.value_evidence is not None
                 else []
             ),
-            "team_views": [view.model_dump(mode="json") for view in enriched],
+            "team_views": (
+                list(stale_payloads)
+                if stale_payloads is not None
+                else [view.model_dump(mode="json") for view in enriched]
+            ),
         }
 
     @application.get("/api/league/atlas")
@@ -1711,12 +1766,17 @@ def create_app(
                         f"{type(exc).__name__}: {exc}"
                     )
 
+        presentation_runtime = _presentation_runtime(runtime)
         atlas_payload = build_league_atlas_payload(
-            runtime,
+            presentation_runtime,
             preseason_team_views=preseason_views,
             preseason_as_of=preseason_as_of,
             preseason_reason=preseason_reason,
             preseason_baseline=preseason_baseline,
+        )
+        atlas_payload["intelligence_freshness"] = _intelligence_freshness(
+            runtime,
+            using_last_good=(presentation_runtime is not runtime),
         )
         logging.getLogger("uvicorn.error").info(
             "FSFFL League Atlas served state=%s standings=%s simulation=%s preseason=%s",
