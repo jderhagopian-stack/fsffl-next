@@ -11,6 +11,7 @@ from fsffl.team_utility.utility import OwnerStrategicPosture
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 
 from .focused_opportunity_search import build_focused_trade_candidates
+from .foreground_pressure import foreground_pressure
 from .market_discovery_runtime import (
     DEFAULT_PRELIMINARY_DECISION_BUDGET,
     build_market_discovery,
@@ -373,6 +374,7 @@ def install_focused_opportunity_routes(
                     intent_value=value,
                     search_generation_diagnostics=captured_diagnostics,
                     asset_index=owned_asset_index(current_browser),
+                    cooperative_yield=foreground_pressure.cooperative_yield,
                 )
                 return _focused_payload(
                     base=base,
