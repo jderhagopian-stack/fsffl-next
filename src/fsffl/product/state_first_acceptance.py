@@ -291,6 +291,21 @@ def run_state_first_production_acceptance(
                 f"{label} provider returned {state.league.league_id}, expected {expected}"
             )
         store.set_league_state(user_id, state)
+        current = store.get(user_id)
+        if current.selected_team_id is None and state.teams:
+            roster_by_team = {
+                item.team_id: tuple(item.roster)
+                for item in state.team_states
+            }
+            selected = next(
+                (
+                    team.team_id
+                    for team in state.teams
+                    if roster_by_team.get(team.team_id)
+                ),
+                state.teams[0].team_id,
+            )
+            store.select_team(user_id, selected)
         wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
         if callable(wait_for_checkpoint) and not wait_for_checkpoint(
             user_id, timeout=30.0
