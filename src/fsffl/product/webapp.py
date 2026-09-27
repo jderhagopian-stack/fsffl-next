@@ -81,6 +81,7 @@ TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, 
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
 CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
+PresentationPayloadLoader = Callable[[str, UserRuntimeContext, str], dict[str, object] | None]
 
 
 class ConnectSleeperLeagueRequest(FrozenModel):
@@ -744,6 +745,7 @@ def create_app(
     capability_readiness_reader: CapabilityReadinessReader | None = None,
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+    presentation_payload_loader: PresentationPayloadLoader | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
@@ -764,6 +766,24 @@ def create_app(
             user_id,
             capability_reader=read_capabilities,
         )
+
+    def presentation_payload(
+        user_id: str,
+        runtime: UserRuntimeContext,
+        surface: str,
+        builder: Callable[[], dict[str, object]],
+    ) -> dict[str, object]:
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, surface)
+            if stale is not None:
+                return stale
+        return builder()
+
+    def promote_current_presentation(user_id: str) -> None:
+        promoter = getattr(application.state, "presentation_promoter", None)
+        if not callable(promoter):
+            return
+        promoter(user_id, store.get(user_id))
 
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
@@ -1197,6 +1217,7 @@ def create_app(
                     if product_capability is not None
                     else "not_configured"
                 )
+                promote_current_presentation(user_id)
                 if product_status not in {"full", "ready"}:
                     return (
                         "Canonical Sleeper State is current. Compatible governed core "
@@ -1295,6 +1316,8 @@ def create_app(
                 raise RuntimeError(
                     "Reconciled intelligence could not be durably checkpointed"
                 )
+            current = store.get(user_id)
+            promote_current_presentation(user_id)
             current = store.get(user_id)
             intrinsic_status = (
                 str(product_capability.get("status"))
@@ -1456,6 +1479,10 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, "home")
+            if stale is not None:
+                return stale
 
         current_job = jobs.current(user_id)
         enrichment_running = bool(
@@ -1504,6 +1531,10 @@ def create_app(
     @application.get("/api/my-team")
     def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, "franchise")
+            if stale is not None:
+                return stale
         current_job = jobs.current(user_id)
         enrichment_running = bool(
             current_job is not None
@@ -1525,6 +1556,14 @@ def create_app(
         league_state = runtime.league_state
         if league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(
+                user_id,
+                runtime,
+                "league_team_views",
+            )
+            if stale is not None:
+                return stale
 
         source_level: str
         stale_payloads = None
@@ -1604,6 +1643,10 @@ def create_app(
         league_state = runtime.league_state
         if league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, "league_atlas")
+            if stale is not None:
+                return stale
 
         preseason_views = None
         preseason_as_of = None
@@ -1698,6 +1741,14 @@ def create_app(
     @application.get("/api/opportunities/workspace")
     def opportunity_workspace(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(
+                user_id,
+                runtime,
+                "market_workspace",
+            )
+            if stale is not None:
+                return stale
         try:
             return build_opportunity_workspace(runtime)
         except ValueError as exc:
