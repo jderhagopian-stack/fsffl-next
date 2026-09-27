@@ -531,78 +531,11 @@ def _team_view_payload(view, value_evidence, forecast_evidence=None) -> dict[str
     }
 
 
-def _served_intelligence_compatible(runtime) -> bool:
-    served = getattr(runtime, "served_intelligence", None)
-    current = getattr(runtime, "league_state", None)
-    if served is None or current is None:
-        return False
-    if served.league_id != current.league.league_id:
-        return False
-    current_team_ids = {team.team_id for team in current.teams}
-    return bool(
-        current_team_ids
-        and current_team_ids == set(served.team_ids)
-        and served.league_state_id != current.state_id
-    )
-
-
-def _intelligence_freshness(runtime, *, using_last_good: bool) -> dict[str, object]:
-    current = runtime.league_state
-    served = getattr(runtime, "served_intelligence", None)
-    return {
-        "status": "stale_last_good" if using_last_good else "current",
-        "stale": using_last_good,
-        "target_state_id": current.state_id if current is not None else None,
-        "target_as_of": current.as_of.isoformat() if current is not None else None,
-        "served_state_id": (
-            served.league_state_id
-            if using_last_good and served is not None
-            else (current.state_id if current is not None else None)
-        ),
-        "served_as_of": (
-            served.as_of.isoformat()
-            if using_last_good and served is not None
-            else (current.as_of.isoformat() if current is not None else None)
-        ),
-        "message": (
-            "Canonical State is current. A durable last-good intelligence snapshot exists, "
-            "but heavy derived objects are not resident while replacement intelligence rebuilds."
-            if using_last_good
-            else "Derived intelligence matches the current canonical State."
-        ),
-    }
-
-
-def _stale_team_view_payload(runtime, *, team_id: str) -> dict[str, object] | None:
-    """Serve canonical roster/State while durable last-good remains out of RAM."""
-
-    if not _served_intelligence_compatible(runtime):
-        return None
-    assert runtime.league_state is not None
-    served = runtime.served_intelligence
-    assert served is not None
-
-    current_view = build_state_only_team_view(
-        runtime.league_state,
-        team_id=team_id,
-    )
-    payload = _team_view_payload(current_view, None)
-    payload["intelligence_freshness"] = _intelligence_freshness(
-        runtime,
-        using_last_good=True,
-    )
-    payload["forecast_authority"]["stale_last_good"] = True
-    payload["forecast_authority"]["target_state_id"] = runtime.league_state.state_id
-    payload["forecast_authority"]["served_state_id"] = served.league_state_id
-    payload["forecast_authority"]["presentation_mode"] = (
-        "canonical_state_loading; last-good heavy artifacts remain durable but not resident"
-    )
-    return payload
-
 def _presentation_runtime(runtime):
-    """Presentation never hydrates a second heavy last-good runtime graph."""
+    """Presentation uses current runtime unless shared persisted continuity resolves first."""
 
     return runtime
+
 
 def _managed_team_view_payload(
     runtime,
@@ -622,13 +555,6 @@ def _managed_team_view_payload(
         raise ValueError("No league is loaded")
     if runtime.selected_team_id is None:
         raise ValueError("No managed team is selected")
-    if runtime.simulation_analytics is None:
-        stale = _stale_team_view_payload(
-            runtime,
-            team_id=runtime.selected_team_id,
-        )
-        if stale is not None:
-            return stale
     if runtime.simulation_analytics is not None:
         view = next(
             item
@@ -1568,23 +1494,7 @@ def create_app(
                 return stale
 
         source_level: str
-        stale_payloads = None
-        if (
-            runtime.simulation_analytics is None
-            and _served_intelligence_compatible(runtime)
-        ):
-            stale_payloads = tuple(
-                _stale_team_view_payload(runtime, team_id=team.team_id)
-                for team in sorted(league_state.teams, key=lambda item: item.team_id)
-            )
-            if all(item is not None for item in stale_payloads):
-                source_level = "state_only_rebuilding_last_good_available"
-                views = ()
-            else:
-                stale_payloads = None
-        if stale_payloads is not None:
-            pass
-        elif runtime.simulation_analytics is not None:
+        if runtime.simulation_analytics is not None:
             views = runtime.simulation_analytics.team_views
             source_level = "simulation_analytics"
         else:
@@ -1630,11 +1540,7 @@ def create_app(
                 if runtime.value_evidence is not None
                 else []
             ),
-            "team_views": (
-                list(stale_payloads)
-                if stale_payloads is not None
-                else [view.model_dump(mode="json") for view in enriched]
-            ),
+            "team_views": [view.model_dump(mode="json") for view in enriched],
         }
 
     @application.get("/api/league/atlas")
