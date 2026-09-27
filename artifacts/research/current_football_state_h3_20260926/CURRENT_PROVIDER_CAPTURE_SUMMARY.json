@@ -1,0 +1,51 @@
+{
+  "workflow_run_id": 36288669957,
+  "head_sha": "acf3044112e279efd944afaf27a3e9cf94fcc9fc",
+  "artifact_id": 10921722146,
+  "digest": "sha256:778a47c68f3a7e6e6e2a1181dd085d8ad896e7ae8d2ab28d358b6b58b33c1329",
+  "captured_at": "2026-09-27T02:30:40.466924+00:00",
+  "sleeper_nfl_state": {
+    "season": 2026,
+    "week": 3,
+    "completed_through_week": 2,
+    "season_type": "regular"
+  },
+  "provider_rows": {
+    "cbs": 292,
+    "razzball": 330,
+    "total": 622
+  },
+  "exact_standard_score_rows": {
+    "cbs": 292,
+    "razzball": 59,
+    "total_provider_rows": 351
+  },
+  "consensus_players": 297,
+  "exact_two_source_players": 54,
+  "current_event_consensus_players": 63,
+  "event_summary": [
+    {
+      "event": "injury",
+      "n": 58,
+      "two_source_n": 8,
+      "median_ratio_vs_structural_remaining_preseason": 1.0484137111966696,
+      "median_delta_points": 4.722222222222221
+    },
+    {
+      "event": "reserve",
+      "n": 5,
+      "two_source_n": 0,
+      "median_ratio_vs_structural_remaining_preseason": 0.724251968503937,
+      "median_delta_points": -32.833333333333314
+    }
+  ],
+  "current_provider_failures": [],
+  "historical_projection_revision_rows": 0,
+  "authority": "research_only",
+  "limitations": [
+    "The remaining-preseason comparator uses the structural unknown-bye factor (18-completed_through_week)/18 and is not authoritative team-specific remaining schedule.",
+    "Only 54 players have exact two-source standard/non-PPR scoring because Razzball current exact fumble-loss coverage is narrow.",
+    "CBS and Razzball source-rights classifications are unchanged and this artifact does not promote deployment rights.",
+    "No retained historical provider-revision time series exists, so this capture cannot establish historical provider reaction causally."
+  ]
+}
