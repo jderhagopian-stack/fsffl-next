@@ -116,6 +116,15 @@ def _fantasy_ppg(points: float | None, *, games_basis: int | None = None) -> flo
 
 
 class PlayerFutureForecastCache:
+    """Bounded Future Forecast cache with same-league presentation continuity.
+
+    The current State always gets first chance to build its own governed contract.
+    While that State is reconciling, a previously built contract may remain visible
+    only when the runtime explicitly advertises a same-league served-last-good
+    identity and the connected-league scoring rules are unchanged. This is a
+    presentation-continuity policy; it does not create or alter Forecast authority.
+    """
+
     def __init__(
         self,
         *,
@@ -127,43 +136,92 @@ class PlayerFutureForecastCache:
         self._forecast_model_version = str(forecast_model_version)
         self._key: tuple[str, str, str, str] | None = None
         self._contract: FutureForecastContract | None = None
+        self._league_id: str | None = None
+        self._cached_rules_fingerprint: str | None = None
 
-    def get(self, runtime: UserRuntimeContext) -> FutureForecastContract | None:
+    @staticmethod
+    def _runtime_rules_fingerprint(runtime: UserRuntimeContext) -> str | None:
         state = runtime.league_state
-        evidence = runtime.forecast_evidence
+        if state is None:
+            return None
+        return canonical_fingerprint(state.league.rules.model_dump(mode="json"))
+
+    def _stale_last_good_locked(
+        self,
+        runtime: UserRuntimeContext,
+    ) -> FutureForecastContract | None:
+        state = runtime.league_state
+        served = runtime.served_intelligence
         if (
             state is None
-            or evidence is None
-            or self._future_forecast_builder is None
+            or served is None
+            or self._contract is None
+            or self._key is None
+            or served.league_id != state.league.league_id
+            or self._league_id != state.league.league_id
+            or self._key[0] != served.league_state_id
+            or self._cached_rules_fingerprint != self._runtime_rules_fingerprint(runtime)
+            or self._contract.evaluation_season != state.league.season
         ):
             return None
-        key = (
-            state.state_id,
-            evidence.model_version,
-            evidence.runtime_result.evaluation_as_of.isoformat(),
-            self._forecast_model_version,
-        )
+        return self._contract
+
+    def resolve(
+        self,
+        runtime: UserRuntimeContext,
+    ) -> tuple[FutureForecastContract | None, str]:
+        state = runtime.league_state
+        evidence = runtime.forecast_evidence
         with self._lock:
+            if (
+                state is None
+                or evidence is None
+                or self._future_forecast_builder is None
+            ):
+                fallback = self._stale_last_good_locked(runtime)
+                return (
+                    (fallback, "stale_last_good")
+                    if fallback is not None
+                    else (None, "unavailable")
+                )
+            key = (
+                state.state_id,
+                evidence.model_version,
+                evidence.runtime_result.evaluation_as_of.isoformat(),
+                self._forecast_model_version,
+            )
             if self._key == key and self._contract is not None:
-                return self._contract
+                return self._contract, "current"
             year_one = tuple(
                 row
                 for row in evidence.league_scored_forecasts
                 if row.metric == ForecastMetric.FANTASY_POINTS
                 and row.horizon == ForecastHorizon.SEASON
             )
-            contract = self._future_forecast_builder(
-                league_state=state,
-                raw_forecasts=evidence.raw_forecasts,
-                league_year_one=year_one,
-            )
+            try:
+                contract = self._future_forecast_builder(
+                    league_state=state,
+                    raw_forecasts=evidence.raw_forecasts,
+                    league_year_one=year_one,
+                )
+            except Exception:
+                fallback = self._stale_last_good_locked(runtime)
+                if fallback is not None:
+                    return fallback, "stale_last_good"
+                raise
             if not isinstance(contract, FutureForecastContract):
                 raise TypeError(
                     "Future Forecast provider must return FutureForecastContract"
                 )
             self._key = key
             self._contract = contract
-            return self._contract
+            self._league_id = state.league.league_id
+            self._cached_rules_fingerprint = self._runtime_rules_fingerprint(runtime)
+            return self._contract, "current"
+
+    def get(self, runtime: UserRuntimeContext) -> FutureForecastContract | None:
+        contract, _freshness = self.resolve(runtime)
+        return contract
 
 
 def _player(runtime: UserRuntimeContext, player_id: str) -> Player:
@@ -208,12 +266,19 @@ def build_player_intelligence_overview(
 
     future_rows = ()
     future_error = None
+    future_freshness = "unavailable"
     try:
-        future = future_cache.get(runtime)
+        resolver = getattr(future_cache, "resolve", None)
+        if callable(resolver):
+            future, future_freshness = resolver(runtime)
+        else:
+            future = future_cache.get(runtime)
+            future_freshness = "current" if future is not None else "unavailable"
         future_rows = future.rows_for_player(player_id) if future is not None else ()
     except Exception as exc:
         future = None
         future_error = f"{type(exc).__name__}: {exc}"
+        future_freshness = "unavailable"
 
     values = runtime.value_evidence
     market_percentile = None
@@ -344,6 +409,16 @@ def build_player_intelligence_overview(
             "status": "ready" if forecasts else "unavailable",
             "rows": forecasts,
             "future_error": future_error,
+            "future_freshness": {
+                "status": future_freshness,
+                "served_state_id": (
+                    runtime.served_intelligence.league_state_id
+                    if future_freshness == "stale_last_good"
+                    and runtime.served_intelligence is not None
+                    else None
+                ),
+                "target_state_id": state.state_id,
+            },
             "current_projected_stats": {
                 "season": state.league.season,
                 "label": "PROJECTED",
