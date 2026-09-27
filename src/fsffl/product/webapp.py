@@ -5,6 +5,7 @@ import logging
 import os
 import secrets
 from pathlib import Path
+from threading import RLock
 from typing import Callable
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -814,6 +815,8 @@ def create_app(
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
     jobs = IntelligenceJobCoordinator(max_workers=2, persistence_store=persistence_store)
+    reconciliation_lock = RLock()
+    reconciliation_league_by_user: dict[str, str] = {}
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     read_capabilities = capability_readiness_reader or _runtime_capability_readiness
 
@@ -1166,6 +1169,22 @@ def create_app(
         starting_state = runtime.league_state
         starting_league_id = starting_state.league.league_id
         starting_external_id = _sleeper_external_id(starting_state)
+        with reconciliation_lock:
+            active_job = jobs.current(user_id)
+            if (
+                active_job is not None
+                and active_job.status in {
+                    IntelligenceJobStatus.QUEUED,
+                    IntelligenceJobStatus.RUNNING,
+                }
+                and reconciliation_league_by_user.get(user_id)
+                == starting_league_id
+            ):
+                return {
+                    **_job_payload(active_job),
+                    **runtime_context_payload(user_id),
+                    "coalesced": True,
+                }
         expected_generation = [store.league_generation(user_id)]
 
         def require_active_league_identity() -> LeagueState:
@@ -1371,7 +1390,13 @@ def create_app(
             league_state_id=starting_state.state_id,
             work=work,
         )
-        return {**_job_payload(job), **runtime_context_payload(user_id)}
+        with reconciliation_lock:
+            reconciliation_league_by_user[user_id] = starting_league_id
+        return {
+            **_job_payload(job),
+            **runtime_context_payload(user_id),
+            "coalesced": False,
+        }
 
     # Hosted league switching activates State first, then calls this non-blocking
     # reconciler. Manual Refresh Intelligence uses the same worker with sync_state=True.
@@ -1406,80 +1431,12 @@ def create_app(
 
     @application.post("/api/intelligence/refresh-forecasts")
     def refresh_forecasts(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
-        runtime = store.get(user_id)
-        if runtime.league_state is None:
-            raise HTTPException(status_code=409, detail="No league is loaded")
-        try:
-            refreshed_state = state_loader(_sleeper_external_id(runtime.league_state))
-            if refreshed_state.league.league_id != runtime.league_state.league.league_id:
-                raise ValueError("Sleeper state loader returned a different league")
-            store.set_league_state(user_id, refreshed_state)
-            evidence: LiveForecastEvidence = forecast_loader(refreshed_state)
-            store.set_forecast_evidence(
-                user_id,
-                evidence,
-                refreshed_league_state=refreshed_state,
-            )
-        except Exception as exc:
-            _logger.warning(
-                "FSFFL forecast refresh failed league=%s team=%s error=%s",
-                runtime.league_state.league.league_id,
-                runtime.selected_team_id,
-                exc,
-            )
-            raise HTTPException(status_code=502, detail=f"Unable to refresh FSFFL forecasts: {exc}") from exc
+        """Compatibility route: all manual refreshes use one State-first reconciler."""
 
-        simulation_failure = None
-        value_failure = None
-        if evidence.uncertainty_ready:
-            try:
-                simulation = simulation_loader(refreshed_state, evidence)
-                store.set_simulation_analytics(user_id, simulation)
-            except Exception as exc:
-                simulation_failure = f"{type(exc).__name__}: {exc}"
-                _logger.warning(
-                    "FSFFL simulation enrichment unavailable league=%s error=%s",
-                    refreshed_state.league.league_id,
-                    exc,
-                )
-        try:
-            values = value_loader(refreshed_state)
-            store.set_value_evidence(user_id, values)
-        except Exception as exc:
-            value_failure = f"{type(exc).__name__}: {exc}"
-            _logger.warning(
-                "FSFFL Cardinal Value enrichment unavailable league=%s error=%s",
-                refreshed_state.league.league_id,
-                exc,
-            )
-
-        current = store.get(user_id)
-        simulation = current.simulation_analytics
-        values = current.value_evidence
-        return {
-            **runtime_context_payload(user_id),
-            "successful_sources": list(evidence.successful_source_ids),
-            "failed_sources": list(evidence.failed_sources),
-            "forecast_evidence_basis": evidence.evidence_basis,
-            "forecast_runtime_model_version": evidence.runtime_result.model_version,
-            "forecast_evaluation_as_of": evidence.runtime_result.evaluation_as_of.isoformat(),
-            "ensemble_groups": len(evidence.raw_forecasts),
-            "league_scored_players": len(evidence.league_scored_forecasts),
-            "partial_scored_players": len(evidence.runtime_result.partial_fantasy_point_forecasts),
-            "forecast_family_coverage": [
-                item.model_dump(mode="json")
-                for item in evidence.runtime_result.family_coverage
-            ],
-            "simulation_authority_blockers": list(
-                evidence.runtime_result.simulation_authority_blockers
-            ),
-            "uncertainty_ready": evidence.uncertainty_ready,
-            "simulation_ready": simulation is not None,
-            "simulation_count": simulation.simulation_result.simulation_count if simulation is not None else None,
-            "simulation_failure": simulation_failure,
-            "value_ready": values is not None and bool(values.estimates),
-            "value_failure": value_failure,
-        }
+        return _start_intelligence_reconciliation(
+            user_id,
+            sync_state=True,
+        )
 
     @application.get("/api/values")
     def current_values(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
