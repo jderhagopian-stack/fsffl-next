@@ -1,0 +1,77 @@
+{
+  "study": "long-term-intrinsic-consumption-contract-final",
+  "date": "2026-09-27",
+  "terminal_state": "MANAGEMENT GATE — LONG-TERM INTRINSIC CONSUMPTION CONTRACT",
+  "authority": "research_only_no_production_change",
+  "consumer": {
+    "name": "mean annual Y4-Y7 Shapley marginal lineup capacity",
+    "formula": "(phi4 + phi5 + phi6 + phi7) / 4",
+    "semantics": "equivalent annual marginal lineup capacity over the governed long-term window",
+    "arbitrary_horizon_weights": false,
+    "discount_inside_long_term_intrinsic": false,
+    "y8_cardinal": false
+  },
+  "forecast_authority": {
+    "exact_cells": [
+      "QB:Y5:blanket_75_25",
+      "WR:Y5:hard_router"
+    ],
+    "all_other_y4_y7_cells": "set_valued_supported_policy_envelope",
+    "fully_exact_player_scalar_possible": false
+  },
+  "validation": {
+    "workflow_run": 36352688339,
+    "artifact_id": 10943221137,
+    "artifact_digest": "sha256:d1c0132928631d7868549f2c9f27b9458f08ca062b86b83b8db448321bd3ef62",
+    "full_window_outer_origins": [
+      2018,
+      2019
+    ],
+    "player_origin_rows": 1129,
+    "shapley_permutations": 2048,
+    "max_efficiency_residual": 2.9103830456733704e-11,
+    "monotonic_scenario_violations": 0,
+    "combined_80_coverage": 0.8184233835252436,
+    "combined_90_coverage": 0.912311780336581
+  },
+  "current_relationship": {
+    "player_count": 335,
+    "spearman_current_vs_long_term_reference": 0.6628464818763325,
+    "median_abs_rank_delta": 45,
+    "p90_abs_rank_delta": 137.2,
+    "share_abs_rank_delta_ge20": 0.755223880597015
+  },
+  "scale": {
+    "raw": "native Shapley marginal-fantasy-point units; not additive with Current Intrinsic",
+    "display": "separate within-lens percentile/rank-calibrated 0-10000 Value Index",
+    "scale_id": "fsffl-long-term-intrinsic-index",
+    "same_visual_ruler_as_current": true,
+    "cross_lens_additivity": false
+  },
+  "uncertainty": {
+    "model_authority": "separate low/high envelope from supported Forecast policy set",
+    "within_model": "separate annual residual/conformal uncertainty",
+    "combined_outer_band": "presentation allowed with source decomposition preserved",
+    "cross_horizon_covariance_validated": false,
+    "cumulative_standard_deviation_authorized": false
+  },
+  "downstream": {
+    "market": "consume Current and Long-Term as separate lenses; no hidden blend",
+    "team_utility": "competitive-window weighting only downstream under separate governance",
+    "decision": "may expose near-term/durable package exchange; no scalar addition"
+  },
+  "limitations": {
+    "complete_full_window_origins": 2,
+    "pristine_new_final_holdout": false,
+    "current_full_authority_envelope_materialized": false,
+    "historical_career_stage_split_recovered": false
+  },
+  "guards": {
+    "new_forecast_family_search": false,
+    "forecast_refit": false,
+    "production_forecast_changed": false,
+    "production_current_intrinsic_changed": false,
+    "market_used_to_tune": false,
+    "team_utility_used_to_tune": false
+  }
+}
