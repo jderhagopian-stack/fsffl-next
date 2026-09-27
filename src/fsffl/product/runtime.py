@@ -228,6 +228,20 @@ def default_live_value_loader(league_state: LeagueState) -> CurrentMarketValueRu
 
 
 @dataclass(frozen=True)
+class ServedIntelligenceSnapshot:
+    """Presentation-only same-league last-good intelligence.
+
+    This snapshot never becomes current model authority merely because it is
+    served. Canonical current LeagueState remains on UserRuntimeContext.league_state.
+    """
+
+    league_state: LeagueState
+    forecast_evidence: LiveForecastEvidence
+    simulation_analytics: LiveSimulationAnalyticsResult | None
+    value_evidence: CurrentMarketValueRuntimeResult
+
+
+@dataclass(frozen=True)
 class UserRuntimeContext:
     user_id: str
     league_state: LeagueState | None = None
@@ -235,6 +249,7 @@ class UserRuntimeContext:
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
+    served_intelligence: ServedIntelligenceSnapshot | None = None
     intelligence_reused: bool = False
 
 
@@ -290,6 +305,45 @@ def _complete_intelligence(context: UserRuntimeContext) -> bool:
     )
 
 
+def _terminal_intelligence(
+    forecast_evidence: LiveForecastEvidence | None,
+    simulation_analytics: LiveSimulationAnalyticsResult | None,
+    value_evidence: CurrentMarketValueRuntimeResult | None,
+) -> bool:
+    """Whether current governed layers have reached a stable terminal capability state."""
+
+    return bool(
+        forecast_evidence is not None
+        and value_evidence is not None
+        and (
+            simulation_analytics is not None
+            or not forecast_evidence.uncertainty_ready
+        )
+    )
+
+
+def _served_snapshot_from_context(
+    context: UserRuntimeContext,
+) -> ServedIntelligenceSnapshot | None:
+    if (
+        context.league_state is None
+        or not _terminal_intelligence(
+            context.forecast_evidence,
+            context.simulation_analytics,
+            context.value_evidence,
+        )
+    ):
+        return None
+    assert context.forecast_evidence is not None
+    assert context.value_evidence is not None
+    return ServedIntelligenceSnapshot(
+        league_state=context.league_state,
+        forecast_evidence=context.forecast_evidence,
+        simulation_analytics=context.simulation_analytics,
+        value_evidence=context.value_evidence,
+    )
+
+
 class PrivateBetaRuntimeStore:
     """Small in-memory runtime store for the single-user/private beta.
 
@@ -315,44 +369,43 @@ class PrivateBetaRuntimeStore:
             return self._league_generations.get(user_id, 0)
 
     def set_league_state(self, user_id: str, league_state: LeagueState) -> UserRuntimeContext:
+        """Advance canonical State without evicting same-league last-good presentation.
+
+        Current Forecast/Simulation/Value fields remain exact/compatible inputs for
+        model consumers. A prior terminal same-league bundle is retained separately
+        as served_intelligence so presentation can remain usable and explicitly stale
+        while replacement intelligence is built for the new canonical State.
+        """
+
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
         with self._lock:
             current = self.get(user_id)
-            previous_league_id = (
-                current.league_state.league.league_id
-                if current.league_state is not None
-                else None
-            )
+            previous_state = current.league_state
             previous_state_id = (
-                current.league_state.state_id
-                if current.league_state is not None
+                previous_state.state_id if previous_state is not None else None
+            )
+            if previous_state_id != league_state.state_id:
+                self._league_generations[user_id] = (
+                    self._league_generations.get(user_id, 0) + 1
+                )
+
+            valid_team_ids = {team.team_id for team in league_state.teams}
+            same_league = bool(
+                previous_state is not None
+                and previous_state.league.league_id == league_state.league.league_id
+            )
+            selected = (
+                current.selected_team_id
+                if current.selected_team_id in valid_team_ids
                 else None
             )
-            incoming_league_id = league_state.league.league_id
-            if previous_state_id != league_state.state_id:
-                self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1
-            valid_team_ids = {team.team_id for team in league_state.teams}
-            selected = current.selected_team_id if current.selected_team_id in valid_team_ids else None
-            same_league = (
-                current.league_state is not None
-                and current.league_state.league.league_id == league_state.league.league_id
-            )
-            complete_bundle = (
-                current.forecast_evidence is not None
-                and current.simulation_analytics is not None
-                and current.value_evidence is not None
-                and user_id not in self._pending_intelligence
-                and _forecast_supplement_compatible(
-                    league_state,
-                    current.forecast_evidence,
-                )
-            )
+
+            # Exact same State can keep current governed intelligence in place.
             if (
                 same_league
-                and complete_bundle
-                and current.league_state is not None
-                and current.league_state.state_id == league_state.state_id
+                and previous_state is not None
+                and previous_state.state_id == league_state.state_id
             ):
                 reused = UserRuntimeContext(
                     user_id=user_id,
@@ -361,10 +414,24 @@ class PrivateBetaRuntimeStore:
                     forecast_evidence=current.forecast_evidence,
                     simulation_analytics=current.simulation_analytics,
                     value_evidence=current.value_evidence,
+                    served_intelligence=current.served_intelligence,
                     intelligence_reused=True,
                 )
                 self._contexts[user_id] = reused
                 return reused
+
+            served = None
+            if same_league:
+                served = (
+                    _served_snapshot_from_context(current)
+                    or current.served_intelligence
+                )
+                if (
+                    served is not None
+                    and served.league_state.league.league_id
+                    != league_state.league.league_id
+                ):
+                    served = None
 
             forecast_evidence = current.forecast_evidence
             forecast_cutoff_compatible = bool(
@@ -382,9 +449,9 @@ class PrivateBetaRuntimeStore:
                 pending is None
                 or pending.league_state.state_id == league_state.state_id
             )
-            forecast_reusable = (
+            forecast_reusable = bool(
                 same_league
-                and current.league_state is not None
+                and previous_state is not None
                 and forecast_evidence is not None
                 and pending_compatible
                 and forecast_cutoff_compatible
@@ -392,17 +459,30 @@ class PrivateBetaRuntimeStore:
                     league_state,
                     forecast_evidence,
                 )
-                and forecast_input_fingerprint(current.league_state)
+                and forecast_input_fingerprint(previous_state)
                 == forecast_input_fingerprint(league_state)
             )
+
             context = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
                 selected_team_id=selected if same_league else None,
                 forecast_evidence=forecast_evidence if forecast_reusable else None,
+                simulation_analytics=None,
+                value_evidence=None,
+                served_intelligence=served,
+                intelligence_reused=forecast_reusable,
             )
             self._contexts[user_id] = context
-            if not same_league:
+            # Any pending work belongs to the prior target unless it already matches
+            # the newly activated exact State.
+            if (
+                not same_league
+                or (
+                    pending is not None
+                    and pending.league_state.state_id != league_state.state_id
+                )
+            ):
                 self._pending_intelligence.pop(user_id, None)
             return context
 
@@ -462,12 +542,6 @@ class PrivateBetaRuntimeStore:
             )
             self._pending_intelligence[user_id] = pending
 
-            # A refresh must never replace a known-good completed bundle with a
-            # partial Forecast-only snapshot. Keep serving the completed bundle
-            # while the new exact-identity bundle is assembled off to the side.
-            if _complete_intelligence(current):
-                return current
-
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -475,6 +549,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=evidence,
                 simulation_analytics=None,
                 value_evidence=None,
+                served_intelligence=current.served_intelligence,
                 intelligence_reused=False,
             )
             self._contexts[user_id] = updated
@@ -530,11 +605,6 @@ class PrivateBetaRuntimeStore:
             )
             self._pending_intelligence[user_id] = staged
 
-            # Preserve an already-complete last-good bundle until Value also
-            # succeeds for this exact pending State/Forecast/Simulation identity.
-            if _complete_intelligence(current) and pending is not None:
-                return current
-
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -542,6 +612,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=forecast_evidence,
                 simulation_analytics=result,
                 value_evidence=None,
+                served_intelligence=current.served_intelligence,
                 intelligence_reused=False,
             )
             self._contexts[user_id] = updated
@@ -567,10 +638,6 @@ class PrivateBetaRuntimeStore:
             forecast_evidence = current.forecast_evidence
             simulation_analytics = current.simulation_analytics
             if pending is not None:
-                # Complete a staged refresh atomically. If Simulation never
-                # completed, a known-good bundle remains authoritative.
-                if pending.simulation_analytics is None and _complete_intelligence(current):
-                    return current
                 league_state = pending.league_state
                 forecast_evidence = pending.forecast_evidence
                 simulation_analytics = pending.simulation_analytics
@@ -580,6 +647,13 @@ class PrivateBetaRuntimeStore:
             valid_team_ids = {team.team_id for team in league_state.teams}
             if selected not in valid_team_ids:
                 selected = None
+            served = current.served_intelligence
+            if _terminal_intelligence(
+                forecast_evidence,
+                simulation_analytics,
+                result,
+            ):
+                served = None
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -587,6 +661,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=forecast_evidence,
                 simulation_analytics=simulation_analytics,
                 value_evidence=result,
+                served_intelligence=served,
                 intelligence_reused=False,
             )
             self._contexts[user_id] = updated
@@ -620,6 +695,13 @@ class PrivateBetaRuntimeStore:
             valid_team_ids = {team.team_id for team in league_state.teams}
             if selected not in valid_team_ids:
                 selected = None
+            served = current.served_intelligence
+            if _terminal_intelligence(
+                forecast_evidence,
+                simulation_analytics,
+                value_evidence,
+            ):
+                served = None
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -627,10 +709,40 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=forecast_evidence,
                 simulation_analytics=simulation_analytics,
                 value_evidence=value_evidence,
+                served_intelligence=served,
                 intelligence_reused=False,
             )
             self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
+            return updated
+
+    def set_served_intelligence(
+        self,
+        user_id: str,
+        snapshot: ServedIntelligenceSnapshot | None,
+    ) -> UserRuntimeContext:
+        """Attach presentation-only same-league last-good intelligence."""
+
+        with self._lock:
+            current = self.get(user_id)
+            if (
+                snapshot is not None
+                and current.league_state is not None
+                and snapshot.league_state.league.league_id
+                != current.league_state.league.league_id
+            ):
+                raise ValueError("served intelligence must belong to the loaded league")
+            updated = UserRuntimeContext(
+                user_id=current.user_id,
+                league_state=current.league_state,
+                selected_team_id=current.selected_team_id,
+                forecast_evidence=current.forecast_evidence,
+                simulation_analytics=current.simulation_analytics,
+                value_evidence=current.value_evidence,
+                served_intelligence=snapshot,
+                intelligence_reused=current.intelligence_reused,
+            )
+            self._contexts[user_id] = updated
             return updated
 
     def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
@@ -650,6 +762,7 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=current.forecast_evidence,
                 simulation_analytics=current.simulation_analytics,
                 value_evidence=current.value_evidence,
+                served_intelligence=current.served_intelligence,
                 intelligence_reused=current.intelligence_reused,
             )
             self._contexts[user_id] = updated
