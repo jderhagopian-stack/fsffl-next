@@ -331,3 +331,11 @@ Durable handoff:
 
 ## Joint injury-availability challenger — 2026-09-27
 - **Research Track A remains ACTIVE:** after the separate availability/time-to-return result, run a separately frozen joint injury-availability challenger now. It must compare one coherent shared architecture against the separate-model benchmarks without post-hoc tuning or production promotion.
+
+
+## 2026-09-27 10:55 ET — PR #271 physical gate remains FAILED
+- **Implementation — ACTIVE / sole product critical path:** fix changed-State continuity after automatic Sleeper refresh. Preserve usable last-good presentation through State advance using a compact/durable read model, not a second heavy graph; repair the PR #273 hosted acceptance runner/deploy path; rerun full hosted journey with memory telemetry.
+- **Resource evidence:** startup ~281 MB peak; changed-State physical path ~411 MB observed peak, below but close to the ~429 MB ceiling.
+- **Market — HOLD:** Market did not cause the reset and must not receive a page-specific workaround.
+- **Performance — HOLD:** no general latency work until availability passes.
+- **Research — remains independent/parallel under its existing non-production directives.**
