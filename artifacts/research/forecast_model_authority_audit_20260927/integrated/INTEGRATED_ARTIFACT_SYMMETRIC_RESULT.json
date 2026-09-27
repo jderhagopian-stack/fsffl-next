@@ -1,0 +1,31 @@
+{
+  "common_exact_row_comparison": true,
+  "crps_reason": "historical artifact persisted proper state scores and scalar expected points but not the full state-probability/state-mean vectors",
+  "crps_recoverable": false,
+  "historical_selected_label": "I1",
+  "historical_selection_not_authority": true,
+  "horizons": [
+    1,
+    2
+  ],
+  "player_cluster_uncertainty_recoverable": false,
+  "production_changed": false,
+  "reason": "historical OOS artifact did not persist player_id; no row-order identity inference permitted",
+  "rows_factual_resolved": 6263,
+  "rows_total": 7512,
+  "source_artifact": "10422858437",
+  "source_digest": "sha256:c80934cab0275d67281419b7fb8e49331b6c2e2679b90b930c6789da333d9600",
+  "source_head": "c12402df1b7fa0bfbb3d994bdcf791d80e103a0c",
+  "source_seasons": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "study": "integrated-artifact-symmetric-authority"
+}
