@@ -483,3 +483,35 @@ def test_hosted_intrinsic_readiness_stays_partial_for_incomplete_governed_scope(
         forecast_coordinate="forecast-vnext-a2-burr-20260922",
     )
     assert _intrinsic_readiness_from_record(record)["status"] == "partial_provisional"
+
+
+
+def test_player_history_capacity_wait_remains_retryable_over_http() -> None:
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    import fsffl.product.player_intelligence_routes as routes
+
+    class _CapacityHistory:
+        def request(self, _runtime, _player_id):
+            raise routes.PlayerHistoryCapacityError("fixture capacity wait")
+
+    app = FastAPI()
+    routes.install_player_intelligence_routes(
+        app,
+        runtime_store=cast(Any, SimpleNamespace(get=lambda _user: _context())),
+        require_user=lambda: "u",
+        intrinsic_coordinator=cast(Any, SimpleNamespace()),
+        future_cache=cast(Any, SimpleNamespace()),
+        history_coordinator=cast(Any, _CapacityHistory()),
+    )
+
+    response = TestClient(app).get(
+        "/api/player-intelligence/sleeper:player:101/history"
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "loading"
+    assert payload["build_status"] == "capacity_wait"
+    assert payload["retry_after_ms"] == 1500
+    assert payload["message"] == "fixture capacity wait"
