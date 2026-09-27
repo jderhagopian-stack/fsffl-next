@@ -993,3 +993,43 @@ Acceptance requirements now explicitly include:
 2. persisted ready Intrinsic must render as ready consistently across Franchise, Home, Market, League and Player Intelligence after restart;
 3. PI cold history may show truthful loading, but must complete without crash and subsequent reopen must reuse the persisted career-history artifact;
 4. availability/lifecycle restoration remains higher priority than pick-detail presentation cleanup.
+
+
+## PR #270 hosted beta-availability acceptance — 2026-09-27
+**State: MANAGEMENT GATE — PHYSICAL IPHONE / SAFARI AVAILABILITY ACCEPTANCE**
+
+PR #270, **Product: preserve last-good intelligence through State rebuilds**, merged at `2c63a9b05225759ba521da3e75fb65146b30fbbe` from accepted head `d6d6ccd2c41515a66a79b1ac4b009532ef109130`.
+
+Deterministic acceptance on the final head is green:
+- CI — 1,724 passed;
+- PR164 focused corrective regression;
+- Live Forecast corrective trace;
+- Home North Star focused validation;
+- Franchise North Star focused validation;
+- League Atlas North Star focused validation;
+- Private-beta Intrinsic live diagnostics.
+
+Render deploy `dep-dasa5vg473hc73fd8uo0` is LIVE on the exact PR #270 merge.
+
+Hosted production evidence after deploy:
+- startup restored FSFFL league `sleeper:1312071960615731200` with Forecast=True, Simulation=True, Value=True, complete=True;
+- startup product readiness was `full` with Intrinsic=`full`;
+- the state-first acceptance runner completed with overall **PASS**;
+- observed sequence:
+  - `fsffl_initial` — FULL Forecast / Simulation / Current Value / Intrinsic;
+  - `hodor_switch` — truthful PARTIAL state with PARTIAL_PROVISIONAL Forecast, Simulation unavailable, Value FULL, Intrinsic unavailable;
+  - `fsffl_return` — FULL Forecast / Simulation / Current Value / Intrinsic;
+  - two subsequent manual-refresh steps completed successfully;
+- no application ERROR/CRITICAL logs were observed in the post-deploy validation window.
+
+This satisfies the required nonphysical gate before another Management device pass. The availability incident is not yet promoted to DIRECTIVE COMPLETE because the required physical target layer remains unexercised after PR #270.
+
+Physical acceptance should verify:
+1. app open/reload never blanks canonical roster while derived intelligence reconciles;
+2. readiness never says `Intelligence current` while a required capability is preparing/unavailable;
+3. same-league last-good fields remain visible and explicitly stale/as-of if a new target State rebuilds;
+4. persisted Intrinsic appears consistently across Home, Franchise, League, Market and Player Intelligence;
+5. FSFFL ↔ Hodor ↔ FSFFL remains truthful on device with no cross-league masquerading;
+6. manual Refresh Intelligence remains non-disruptive and does not create an empty/false-green interval.
+
+Until this physical gate passes, Market and general Performance remain held behind beta availability.
