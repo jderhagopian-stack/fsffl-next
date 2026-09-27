@@ -136,6 +136,7 @@ _shapley_intrinsic_loader = PrivateBetaShapleyContractLoader(
 _player_future_forecast_cache = PlayerFutureForecastCache(
     future_forecast_builder=provide_vnext_future_forecast_contract,
     forecast_model_version=VNEXT_FORECAST_VERSION,
+    persistence_store=_persistence_store,
 )
 _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _shapley_intrinsic_loader,
