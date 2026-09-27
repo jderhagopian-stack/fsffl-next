@@ -307,8 +307,8 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    assert "20260927-dualstate-availability1" in source
-    assert "mobile_safari_recovery.js?v=20260927-dualstate-availability1" in source
+    assert "20260927-presentation-continuity1" in source
+    assert "mobile_safari_recovery.js?v=20260927-presentation-continuity1" in source
 
 
 def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
@@ -437,3 +437,21 @@ def test_hosted_refresh_reconciles_missing_intelligence_even_when_state_probe_is
         "runtime_store.set_league_state_if_generation(", 1
     )[1]
     assert "intelligence_reconciler(user_id)" in activated
+
+
+
+def test_market_context_guard_accepts_only_governed_stale_presentation_contract() -> None:
+    shell = open(
+        "src/fsffl/product/static/product_shell.js",
+        encoding="utf-8",
+    ).read()
+    opportunities = open(
+        "src/fsffl/product/static/opportunities.js",
+        encoding="utf-8",
+    ).read()
+
+    assert "function fsfflPresentationPayloadMatchesContext" in shell
+    assert "freshness.status==='stale_last_good'" in shell
+    assert "continuity.mode==='stale_last_good'" in shell
+    assert "continuity.target_league_state_id===context.state_id" in shell
+    assert "window.fsfflPresentationPayloadMatchesContext" in opportunities
