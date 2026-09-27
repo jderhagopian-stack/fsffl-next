@@ -82,6 +82,7 @@ SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationA
 CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
 PresentationPayloadLoader = Callable[[str, UserRuntimeContext, str], dict[str, object] | None]
+RuntimeMemoryReclaimer = Callable[[str], object]
 
 
 class ConnectSleeperLeagueRequest(FrozenModel):
@@ -703,6 +704,8 @@ def create_app(
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     presentation_payload_loader: PresentationPayloadLoader | None = None,
+    state_transition_reclaimer: RuntimeMemoryReclaimer | None = None,
+    phase_memory_reclaimer: RuntimeMemoryReclaimer | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
@@ -716,6 +719,16 @@ def create_app(
         if heavy_work_coordinator is None:
             return nullcontext()
         return heavy_work_coordinator.claim(kind=kind, key=key)
+
+    def reclaim_phase_memory(label: str) -> None:
+        if phase_memory_reclaimer is not None:
+            phase_memory_reclaimer(label)
+
+    def reclaim_state_transition(label: str) -> None:
+        if state_transition_reclaimer is not None:
+            state_transition_reclaimer(label)
+        elif phase_memory_reclaimer is not None:
+            phase_memory_reclaimer(label)
 
     def runtime_context_payload(user_id: str) -> dict[str, object]:
         return _runtime_context_payload(
@@ -1133,6 +1146,10 @@ def create_app(
                 if activated is None:
                     raise IntelligenceJobInterrupted("league_switch")
                 expected_generation[0] = store.league_generation(user_id)
+                if active_before_write.state_id != synced_state.state_id:
+                    reclaim_state_transition(
+                        f"{user_id}:{synced_state.state_id}:state_transition"
+                    )
                 wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
                 if callable(wait_for_checkpoint) and not wait_for_checkpoint(
                     user_id,
@@ -1202,13 +1219,19 @@ def create_app(
                     "forecast",
                     f"{user_id}:{working_state.state_id}:forecast",
                 ):
+                    reclaim_phase_memory(
+                        f"{user_id}:{working_state.state_id}:before_forecast"
+                    )
                     evidence = forecast_loader(working_state)
-                require_active_league_identity()
-                store.set_forecast_evidence(
-                    user_id,
-                    evidence,
-                    refreshed_league_state=working_state,
-                )
+                    require_active_league_identity()
+                    store.set_forecast_evidence(
+                        user_id,
+                        evidence,
+                        refreshed_league_state=working_state,
+                    )
+                    reclaim_phase_memory(
+                        f"{user_id}:{working_state.state_id}:after_forecast"
+                    )
             else:
                 progress(
                     IntelligenceJobPhase.BUILDING_FORECASTS,
@@ -1227,9 +1250,15 @@ def create_app(
                     "simulation",
                     f"{user_id}:{working_state.state_id}:simulation",
                 ):
+                    reclaim_phase_memory(
+                        f"{user_id}:{working_state.state_id}:before_simulation"
+                    )
                     simulation = simulation_loader(working_state, evidence)
-                require_active_league_identity()
-                store.set_simulation_analytics(user_id, simulation)
+                    require_active_league_identity()
+                    store.set_simulation_analytics(user_id, simulation)
+                    reclaim_phase_memory(
+                        f"{user_id}:{working_state.state_id}:after_simulation"
+                    )
             elif not simulation_ready:
                 _logger.warning(
                     "FSFFL simulation not promoted league=%s state=%s blockers=%s partial_players=%s",
@@ -1250,9 +1279,15 @@ def create_app(
                     "value",
                     f"{user_id}:{working_state.state_id}:value",
                 ):
+                    reclaim_phase_memory(
+                        f"{user_id}:{working_state.state_id}:before_value"
+                    )
                     values = value_loader(working_state)
-                require_active_league_identity()
-                store.set_value_evidence(user_id, values)
+                    require_active_league_identity()
+                    store.set_value_evidence(user_id, values)
+                    reclaim_phase_memory(
+                        f"{user_id}:{working_state.state_id}:after_value"
+                    )
 
             product_capability = None
             if product_capability_reconciler is not None:
@@ -1262,6 +1297,9 @@ def create_app(
                 )
                 product_capability = product_capability_reconciler(store.get(user_id))
                 require_active_league_identity()
+                reclaim_phase_memory(
+                    f"{user_id}:{working_state.state_id}:after_intrinsic"
+                )
 
             progress(
                 IntelligenceJobPhase.ATTACHING_RESULTS,
