@@ -68,6 +68,7 @@ from fsffl.value.private_beta_activation_data import (
     ACTIVATION_BUNDLE_SHA256,
     activation_artifact_text,
 )
+from fsffl.value.shapley_intrinsic import FROZEN_SHAPLEY_PERMUTATIONS
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 
 
@@ -1346,8 +1347,23 @@ def test_intrinsic_input_fingerprint_invalidates_required_dependencies() -> None
     )
     assert fingerprint(target_future=changed_future) != baseline
 
-    changed_y1_model = _authority_evidence(
-        observation.model_copy(update={"model_version": "fixture-forecast-v2"})
+    changed_y1_model = cast(
+        Any,
+        SimpleNamespace(
+            raw_forecasts=evidence.raw_forecasts,
+            league_scored_forecasts=(
+                evidence.league_scored_forecasts[0].model_copy(
+                    update={"model_version": "authority-fixture-v2"}
+                ),
+            ),
+            successful_source_ids=evidence.successful_source_ids,
+            evidence_basis=evidence.evidence_basis,
+            runtime_result=SimpleNamespace(
+                evaluation_as_of=evidence.runtime_result.evaluation_as_of,
+                model_version="authority-fixture-v2",
+                coverage=evidence.runtime_result.coverage,
+            ),
+        ),
     )
     assert fingerprint(target_evidence=changed_y1_model) != baseline
 
