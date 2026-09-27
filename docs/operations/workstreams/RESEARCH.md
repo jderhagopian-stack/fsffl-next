@@ -1510,3 +1510,19 @@ Research should manage two parallel non-production tracks:
 Existing long-horizon conclusions remain in force unless new evidence supersedes them: production H3 unchanged; exact support currently exists only for QB Y4, WR Y4 and QB Y6; other Y4–Y7 cells remain shrinkage-with-uncertainty; Y8 remains coarse/uncertain. No production promotion is authorized merely by this sequencing clarification.
 
 Research may advance both tracks independently under OPERATING_PROTOCOL.md. Persist separate checkpoints and terminal states so one track cannot hide or erase the other.
+
+## Management follow-up — test a joint injury-availability architecture now — 2026-09-27
+Management authorizes a **separately frozen follow-up challenger** that tests whether time-to-return and remaining-season availability are better modeled as one coherent injury-availability system rather than as independent models.
+
+This is a new follow-up study because the separate-model results are already known. Do not retroactively treat the joint architecture as part of the original frozen candidate set or use the prior results to tune it after scoring.
+
+Required design:
+- freeze the joint-model protocol, candidates, derivation and promotion gates before scoring;
+- use the same governed 4,793 injury episodes and PIT-only information set; no post-event role/production, Market, Owner, Team Utility, provider revision, or future roster leakage;
+- produce both (a) return-time probabilities/distribution and (b) expected remaining-season availability from one coherent shared architecture or shared latent/state process;
+- compare directly against the already-scored separate-model benchmarks: selected HistGB remaining-availability model, the rejected time-to-return challengers, and severity/status baselines;
+- preserve conditional healthy production, post-return role, recurrence/durable H2/H3, production H3, Intrinsic and provider ROS authority unchanged;
+- assess whether joint modeling improves return timing without sacrificing the already-supported remaining-availability performance, including chronological holdout stability, position safety, calibration and uncertainty;
+- if no joint candidate clears its predeclared gates, retain the supported separate availability model and leave time-to-return unpromoted.
+
+Because the original 2019–2024 holdouts have already been observed, label this as a **follow-up comparative validation**, not a pristine untouched final holdout. Use chronology-preserving rolling/nested evaluation and state that limitation explicitly. No production promotion is authorized solely from this follow-up.
