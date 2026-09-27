@@ -1555,3 +1555,70 @@ Research must compare the joint and separate architectures on equal footing usin
 - uncertainty around the observed performance differences.
 
 Do not tune either architecture to the observed comparison. Do not change production H3/Intrinsic from this reinterpretation alone.
+
+
+## Management directive — symmetric Forecast Model Authority Audit — 2026-09-27
+**Priority: NEXT RESEARCH FOUNDATION BEFORE FURTHER FORECAST MODEL PROMOTION**
+
+Management is not satisfied that the currently selected Forecast can be described as the best-supported overall architecture merely because prior bounded studies promoted it under incumbent/challenger rules.
+
+Research must perform a retrospective, symmetric Forecast Model Authority Audit. This is not permission to tune production or reopen every completed experiment indiscriminately. It is a governed comparison of serious recoverable Forecast candidates on a common point-in-time basis with no chronology-based incumbent privilege.
+
+### Stage 1 — reconstruct the actual candidate universe
+Inventory every serious Forecast family/representation with durable enough evidence for fair comparison, including where recoverable:
+- empirical/baseline controls used in prior studies;
+- persistence-first / B1;
+- integrated I1 and I2;
+- routed future-state architectures using A2/C/D and D0/D1;
+- later continuous-magnitude / M1a and prior-two consistency additions;
+- any other candidate that reached a durable validation stage and can be reconstructed without post-result tuning.
+
+For each candidate, record target semantics, horizon, feature/evidence contract, model family, hyperparameter-selection process, training window, available OOT predictions, and whether exact common-coordinate replay is possible. Do not substitute summary metrics when exact comparable predictions are required.
+
+### Stage 2 — symmetric head-to-head evaluation
+Where common PIT replay is possible, compare candidates as peers on the same rows/folds. The currently deployed/selected model receives no protected status and no challenger must clear an extra replacement margin.
+
+At minimum evaluate:
+- expected-production MAE/RMSE/bias and rank quality;
+- state/probability Brier and log loss where applicable;
+- CRPS / distribution quality where the representation supports it;
+- calibration and uncertainty;
+- high/low tail behavior;
+- position, age/career-stage, horizon and era stability;
+- survival/availability representation;
+- robustness to evidence coverage / fallback;
+- uncertainty around pairwise differences.
+
+If differences are practically/statistically indistinguishable, say so. Do not award the incumbent a scientific win by default.
+
+### Stage 3 — determine whether prior candidate breadth was sufficient
+After comparing all recoverable prior candidates, explicitly answer whether the existing studies covered a broad enough model-family space to support a "best-supported overall Forecast" claim.
+
+If not, define **before scoring** a bounded challenger slate of substantively different, evidence-appropriate model families. The slate may include nonlinear/tree-based, survival/hazard, generalized additive/trajectory, or other architectures only where justified by the data/target structure. No open-ended AutoML/model shopping.
+
+Use chronology-preserving nested/rolling evaluation. Candidate and hyperparameter selection must occur inside the historical selection process; preserve an untouched confirmation where genuinely available, otherwise state the limitation.
+
+### Stage 4 — practical Forecast authority and downstream impact
+Forecast selection must be made from Forecast evidence, not Intrinsic/Value feedback. After the best-supported Forecast set is frozen, measure downstream consequences through the Research-only Intrinsic sandbox:
+- player expected-point trajectories;
+- rankings/value deltas;
+- age/career-state curves;
+- uncertainty propagation;
+- material player/archetype reversals.
+
+This downstream stage is impact assessment, not Forecast tuning.
+
+### Interaction with current injury and Y4-Y8 work
+- Reinterpret the completed joint-vs-separate injury study under the new symmetric model-selection rule using existing OOT predictions where possible; do not tune either model.
+- Preserve the Y4-Y8 evidence and branch, but **do not promote new Y4-Y8 production authority before this foundational Forecast audit establishes the base model-selection standard**. Y4-Y8 exploratory work may continue if it does not assume the current Y1-Y3 architecture is scientifically privileged.
+- Production H3, current Intrinsic, provider authority and deployed Forecast remain unchanged during the audit.
+
+Required terminal output:
+1. candidate authority ledger;
+2. symmetric comparison matrix;
+3. uncertainty/practical-materiality analysis;
+4. explicit answer: what is best-supported by horizon/position, what is tied/uncertain, and what cannot be compared;
+5. whether a bounded new-family challenge is required;
+6. no production recommendation based on incumbent status or switching cost.
+
+Continue under OPERATING_PROTOCOL.md to a permitted terminal state.
