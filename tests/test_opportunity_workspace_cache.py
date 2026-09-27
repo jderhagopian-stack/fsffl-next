@@ -71,3 +71,24 @@ def test_compute_policy_is_part_of_cache_key() -> None:
     assert cached(runtime, candidate_limit=40, bilateral_evaluation_limit=1)["call"] == 2
     assert cached(runtime, candidate_limit=80, bilateral_evaluation_limit=0)["call"] == 3
     assert len(calls) == 3
+
+
+
+def test_workspace_cache_does_not_retain_prior_state_when_scope_advances() -> None:
+    calls = []
+
+    def builder(runtime, *, candidate_limit=80, bilateral_evaluation_limit=1):
+        calls.append(runtime.league_state.state_id)
+        return {"call": len(calls), "state": runtime.league_state.state_id}
+
+    cached = make_cached_opportunity_workspace(builder)
+    state_a = SimpleNamespace(state_id="state-a")
+    state_b = SimpleNamespace(state_id="state-b")
+    runtime_a = _runtime(state=state_a)
+    runtime_b = _runtime(state=state_b)
+
+    assert cached(runtime_a)["call"] == 1
+    assert cached(runtime_b)["call"] == 2
+    # The old State was evicted before allocating the replacement workspace.
+    assert cached(runtime_a)["call"] == 3
+    assert calls == ["state-a", "state-b", "state-a"]
