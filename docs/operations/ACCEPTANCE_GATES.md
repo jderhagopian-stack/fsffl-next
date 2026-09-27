@@ -433,3 +433,16 @@ Additional acceptance requirement is now explicit:
 - the hosted acceptance harness itself must deploy/run successfully; an update timeout cannot count as evidence.
 
 The gate remains OPEN.
+
+
+## Research model-selection gate — symmetric evidence, no incumbent privilege — 2026-09-27
+Research promotion gates must not privilege the currently used or first-studied model solely because of chronology.
+
+- Absolute adequacy/safety gates remain binding.
+- Head-to-head model comparisons must be symmetric.
+- A challenger does not need to exceed an incumbent by an arbitrary replacement margin unless that margin is tied to a predeclared practical cost/utility threshold that would apply equally in reverse.
+- If two candidates are within uncertainty or practically indistinguishable, record that explicitly; do not default the scientific conclusion to the incumbent.
+- Predictive authority should be decided by the best-supported representation of the actual target and product-relevant downstream quantities.
+- Operational switching cost, migration risk, compute, or maintainability may justify temporarily retaining an existing production model, but that is a separate implementation/product gate and must not be represented as Research superiority.
+
+Previously frozen experiments remain historically valid; this rule governs their interpretation and all future model-family comparisons.
