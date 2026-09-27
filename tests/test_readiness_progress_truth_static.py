@@ -182,7 +182,8 @@ def test_readiness_as_of_is_derived_from_governed_payload_not_browser_now() -> N
     helper = source.split("function fsfflReadinessAsOf()", 1)[1].split(
         "function fsfflSurfaceReadinessIssue", 1
     )[0]
-    assert "fsfflCapabilityReadiness()?.as_of" in helper
+    assert "const readiness=fsfflCapabilityReadiness()" in helper
+    assert "readiness?.as_of" in helper
     assert "served_last_good?.as_of" in helper
     assert "served_state?.as_of" in helper
     assert "context?.evidence_as_of" in helper
