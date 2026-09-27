@@ -1,0 +1,63 @@
+name: Injury Availability Time-to-Return Research
+on:
+  push:
+    branches: [research/current-football-state-h3-20260926]
+    paths:
+      - scripts/run_injury_availability_time_to_return.py
+      - artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_PROTOCOL.md
+      - artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_GATES.md
+      - .github/workflows/injury-availability-time-to-return.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn
+      - name: Restore frozen injury episode artifact
+        run: |
+          mkdir -p /tmp/injury_hist
+          gh api repos/${{ github.repository }}/actions/artifacts/10921183161/zip > /tmp/injury_hist.zip
+          unzip -oq /tmp/injury_hist.zip -d /tmp/injury_hist
+      - name: Build governed career panel for PIT age and NFL experience
+        run: |
+          git clone --quiet --no-checkout https://github.com/${{ github.repository }}.git /tmp/research_ref
+          cd /tmp/research_ref
+          git checkout --quiet c12402df1b7fa0bfbb3d994bdcf791d80e103a0c -- scripts/extract_career_transition_panel.R
+          Rscript scripts/extract_career_transition_panel.R
+      - name: Validate injury availability / return timing
+        run: |
+          python scripts/run_injury_availability_time_to_return.py \
+            --episodes /tmp/injury_hist/INJURY_EPISODES.csv \
+            --career-panel /tmp/research_ref/artifacts/next2-career/career_transition_panel.csv
+      - name: Upload injury availability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: injury-availability-time-to-return-research
+          path: |
+            artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_OOT_FOLD_METRICS.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_RETURN_TIMING_POOLED_METRICS.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_REMAINING_AVAILABILITY_POOLED_METRICS.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_RETURN_TIMING_POSITION_SAFETY.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_POSITION_SAFETY.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_RETURN_TIMING_OOT_PREDICTIONS.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_OOT_PREDICTIONS.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_CONFORMAL_SUMMARY.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_CONFORMAL_PREDICTIONS.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_AVAILABILITY_RESULT.json
+          retention-days: 30
