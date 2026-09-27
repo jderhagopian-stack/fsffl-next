@@ -311,3 +311,9 @@ Durable handoff:
 - **Research — MANAGEMENT GATE:** current-football-state H3 closeout remains complete; do not reopen it.
 - **Market — HOLD:** no physical Market acceptance until beta availability is stable.
 - **Performance — HOLD:** preserve the queued ~390s Simulation kernel work, but do not pull general performance work ahead of the availability incident. Memory/lifecycle work necessary to keep the beta usable remains Implementation-owned.
+
+## Runtime architecture corrective supersedes narrow PR #270 repair
+- **Implementation — ACTIVE / sole product critical path:** perform the structural runtime architecture corrective in `workstreams/IMPLEMENTATION.md`; first trace regressions from the last usable PR #235-era baseline, then enforce bounded memory ownership/concurrency, restore-first lifecycle, compact last-good serving, and unified readiness. Do not close with endpoint-specific patches.
+- **Research — MANAGEMENT GATE:** unchanged.
+- **Market — HOLD.**
+- **Performance — HOLD** except implementation-level profiling/resource techniques required by the availability corrective.
