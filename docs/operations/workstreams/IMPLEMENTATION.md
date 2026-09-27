@@ -1348,3 +1348,19 @@ Success criterion:
 - ordinary product reads remain low-single-digit where persisted evidence exists, including while heavy intelligence work runs;
 - explicit Market search provides fast structural results and progressive enrichment rather than one 60+ second synchronous response;
 - no Forecast/Simulation/Value/Intrinsic/Decision semantics change.
+
+
+## 2026-09-27 19:01 ET — repeated hosted failure confirms Market foreground architecture defect
+A fresh-instance rerun of the unchanged PR #278 build reproduced the remaining failure and removes the prior ambiguity that the ~65s Market path might have been transient.
+
+Fresh-run evidence:
+- cold PI history was fast at ~1.2s and retained Y1/Y2/Y3;
+- initial reconciliation stayed ~379 MB max observed;
+- light Market workspace builds were ~0.3s and ~2.5s;
+- under the heavier acceptance sequence, Market workspace builds again took ~63.6s and ~64.0s;
+- PI history during active reconciliation took ~40.7s;
+- post-sync RSS reached ~469.6 MB max observed (~468.7 MB current), below the ~536.9 MB hard limit but above the ~429.5 MB engineering target;
+- acceptance failed again at `after_automatic_state_sync`;
+- no new implementation PR/commit exists after the Management nonblocking-Market directive.
+
+Disposition: stop waiting on another rerun of unchanged #278. The next authorized action is to implement the already-persisted foreground execution boundary: ordinary Market reads must not synchronously run full Search/Decision; structural Search must be explicit/progressive and Decision enrichment asynchronous. Preserve #278's proven continuity gains.
