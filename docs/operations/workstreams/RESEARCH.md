@@ -1366,3 +1366,15 @@ Research must determine a governed point-in-time update layer that:
 8. produces a versioned Forecast-owned contract update so downstream Intrinsic invalidation occurs automatically from changed Forecast evidence.
 
 No direct Intrinsic injury/role penalty is authorized. The output belongs to Forecast.
+
+#### Injury shock decomposition for current-state H3 updates
+The current-state H3 update study must explicitly distinguish:
+- expected games/availability lost in the current season;
+- conditional production if active;
+- post-return role/opportunity;
+- recurrence/reinjury risk;
+- durable survival/career trajectory.
+
+Evaluate injury effects by position, age/experience, injury class/severity, and horizon where PIT evidence permits. Temporary injuries should primarily affect current-season availability; Y2/Y3 effects require empirical evidence of persistence. Avoid double counting when provider projections already incorporate missed games or role changes.
+
+The study must test whether current-season availability should be represented as a separate Forecast component so dynasty Intrinsic can reflect lost near-term utility without confusing it with permanent talent deterioration.
