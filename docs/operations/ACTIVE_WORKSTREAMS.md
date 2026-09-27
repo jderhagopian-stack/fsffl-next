@@ -270,3 +270,15 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - No post-deploy authenticated PI history request has yet reached the new instance; fresh-start memory alone is not promoted as a memory-under-load pass.
 - Do not reopen Intrinsic, State-first persistence, or broader Forecast authority for this blocker absent new direct evidence.
 - Durable evidence: `artifacts/implementation/player_intelligence_history_memory_20260926/IMPLEMENTATION_HANDOFF.md`.
+
+## 2026-09-26 — Current critical path after Intrinsic refresh diagnosis
+- **Implementation — ACTIVE / immediate beta critical path**
+  1. dependency-scoped Intrinsic compatibility/reuse so ordinary State advances do not trigger 3–4 minute cold Shapley rebuilds;
+  2. correct Intrinsic readiness semantics so complete authorized 335-player vNext Intrinsic is not labeled partial solely because legacy provenance flags are absent;
+  3. remove the redundant large Home intelligence-status card while preserving the thin readiness strip;
+  4. preserve the PR #267 Player Intelligence memory corrective and revalidate physical PI history after the next deploy.
+- **Research — ACTIVE / parallel Forecast freshness study**
+  - add a governed current-football-state update layer for H3 covering injury/return, NFL trade, cut/signing, promotion/demotion, suspension/retirement;
+  - explicitly decompose temporary availability from conditional healthy production, post-return role, recurrence risk and durable survival/career effects;
+  - do not alter production H3 until Management accepts the research result.
+- **Performance / Market latency — HOLD** until the Implementation beta-reliability gate closes.
