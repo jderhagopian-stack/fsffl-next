@@ -132,6 +132,21 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     ),
 )
 
+# Reattach an already-built semantic-compatible Intrinsic contract before the
+# first readiness/surface request. This never runs Shapley; a true cache miss is
+# left for the normal background coordinator.
+if _beta_restore_user:
+    try:
+        _restored_context = _runtime_store.get(_beta_restore_user)
+        if _restored_context.league_state is not None:
+            _shapley_intrinsic_coordinator.restore_compatible(_restored_context)
+    except Exception as exc:
+        _logger.warning(
+            "FSFFL startup Intrinsic compatible-restore unavailable user=%s error=%s",
+            _beta_restore_user,
+            exc,
+        )
+
 
 def _intrinsic_readiness_from_record(record) -> dict[str, object]:
     if record is None:
@@ -207,17 +222,31 @@ def _intrinsic_readiness_from_record(record) -> dict[str, object]:
 
 def _hosted_capability_readiness(context) -> dict[str, object]:
     payload = dict(_webapp._runtime_capability_readiness(context))
-    intrinsic = _intrinsic_readiness_from_record(
-        _shapley_intrinsic_coordinator.current(context)
-        if context.league_state is not None
-        else None
-    )
+    record = None
+    if context.league_state is not None:
+        try:
+            record = _shapley_intrinsic_coordinator.restore_compatible(context)
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL Intrinsic readiness compatible-restore failed state=%s error=%s",
+                context.league_state.state_id,
+                exc,
+            )
+        if record is None:
+            record = _shapley_intrinsic_coordinator.current(context)
+    intrinsic = _intrinsic_readiness_from_record(record)
     payload["intrinsic"] = intrinsic
     required = ("forecast", "simulation", "current_value", "intrinsic")
-    statuses = tuple(str(payload.get(key, {}).get("status", "unavailable")) for key in required)
+    statuses = tuple(
+        str(payload.get(key, {}).get("status", "unavailable"))
+        for key in required
+    )
     payload["product_required_capabilities"] = list(required)
+    core_status = str(payload.get("overall_status") or "unavailable")
     payload["overall_status"] = (
-        "full"
+        "rebuilding"
+        if core_status == "rebuilding"
+        else "full"
         if all(status == "full" for status in statuses)
         else "partial"
         if any(status not in {"unavailable", "not_configured"} for status in statuses)
