@@ -92,3 +92,18 @@ def test_workspace_cache_does_not_retain_prior_state_when_scope_advances() -> No
     # The old State was evicted before allocating the replacement workspace.
     assert cached(runtime_a)["call"] == 3
     assert calls == ["state-a", "state-b", "state-a"]
+
+
+def test_explicit_workspace_clear_releases_execution_cache() -> None:
+    calls = []
+
+    def builder(runtime, *, candidate_limit=80, bilateral_evaluation_limit=1):
+        calls.append(runtime.league_state.state_id)
+        return {"call": len(calls)}
+
+    cached = make_cached_opportunity_workspace(builder)
+    runtime = _runtime()
+    assert cached(runtime)["call"] == 1
+    assert cached(runtime)["call"] == 1
+    assert cached.clear_cache() == 1
+    assert cached(runtime)["call"] == 2
