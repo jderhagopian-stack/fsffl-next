@@ -464,3 +464,21 @@ Promotion requires:
 - deterministic tests, exact model/version provenance, replay evidence, and physical product validation before presentation acceptance.
 
 Until this gate is satisfied, production Current Intrinsic and deployed Y2/Y3 Forecast remain unchanged.
+
+
+## Long-Term Intrinsic shadow implementation gate — authorized 2026-09-27
+Status: **AUTHORIZED FOR SHADOW BUILD; NOT YET PRODUCT-AUTHORITATIVE.**
+
+Before shadow merge/deploy:
+- PR #278 runtime acceptance must complete without a new availability/latency blocker;
+- Y4-Y7 Forecast authority materialization must preserve the frozen symmetric policy map exactly;
+- full Long-Term Intrinsic consumer replay must match Research invariants;
+- Current Intrinsic must remain byte/semantic unchanged;
+- model-authority and within-model uncertainty must serialize separately;
+- Y8 must not contribute cardinally;
+- no Market/Team Utility/Decision inputs may enter the consumer;
+- current-player full authority-envelope materialization must complete;
+- resource/runtime/persistence behavior must be measured on beta constraints;
+- league-agnostic lineup derivation must be covered.
+
+Shadow acceptance does not itself authorize UI/Market promotion.
