@@ -16,6 +16,7 @@ from .runtime import UserRuntimeContext
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
 ForecastCoordinateResolver = Callable[[UserRuntimeContext], str]
+IntrinsicInputFingerprintResolver = Callable[[UserRuntimeContext], str]
 DEFAULT_INTRINSIC_RESPONSE_BUDGET_SECONDS = 30.0
 # The hard watchdog is deliberately a distinct operational guard, not a browser
 # response timeout.  Ten minutes is 20x the response budget and comfortably above
@@ -37,6 +38,7 @@ class IntrinsicBuildRecord:
     user_id: str
     league_state_id: str
     forecast_coordinate: str
+    intrinsic_input_fingerprint: str
     status: IntrinsicBuildStatus
     created_at: datetime
     updated_at: datetime
@@ -62,6 +64,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         response_budget_seconds: float = DEFAULT_INTRINSIC_RESPONSE_BUDGET_SECONDS,
         hard_watchdog_seconds: float = DEFAULT_INTRINSIC_HARD_WATCHDOG_SECONDS,
         forecast_coordinate_resolver: ForecastCoordinateResolver | None = None,
+        intrinsic_input_fingerprint_resolver: IntrinsicInputFingerprintResolver | None = None,
         timeout_seconds: float | None = None,
     ) -> None:
         # timeout_seconds is retained as a compatibility alias for older callers,
@@ -80,6 +83,11 @@ class ShapleyIntrinsicBackgroundCoordinator:
         self._forecast_coordinate_resolver = (
             forecast_coordinate_resolver or self._default_forecast_coordinate
         )
+        self._intrinsic_input_fingerprint_resolver = (
+            intrinsic_input_fingerprint_resolver
+            or getattr(loader, "intrinsic_input_fingerprint", None)
+            or self._default_intrinsic_input_fingerprint
+        )
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], IntrinsicBuildRecord] = {}
         self._executor = ThreadPoolExecutor(
@@ -91,17 +99,28 @@ class ShapleyIntrinsicBackgroundCoordinator:
         value = getattr(self._loader, "forecast_model_version", None)
         if isinstance(value, str) and value.strip():
             return value.strip()
-        # A stable fallback keeps generic/test loaders coalesced by authoritative
-        # State without pretending to know a Forecast model coordinate.
         return "forecast-coordinate:unspecified"
+
+    def _default_intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
+        if context.league_state is None:
+            raise ValueError("Shapley Intrinsic requires canonical league state")
+        # Compatibility fallback for generic/test loaders. Production injects the
+        # dependency-scoped resolver from PrivateBetaShapleyContractLoader.
+        return f"state:{context.league_state.state_id}"
 
     def _key(self, context: UserRuntimeContext) -> tuple[str, str, str]:
         if context.league_state is None:
             raise ValueError("Shapley Intrinsic requires canonical league state")
-        coordinate = str(self._forecast_coordinate_resolver(context)).strip()
-        if not coordinate:
-            raise ValueError("Shapley Intrinsic Forecast coordinate cannot be empty")
-        return context.user_id, context.league_state.state_id, coordinate
+        fingerprint = str(
+            self._intrinsic_input_fingerprint_resolver(context)
+        ).strip()
+        if not fingerprint:
+            raise ValueError("Shapley Intrinsic input fingerprint cannot be empty")
+        return (
+            context.user_id,
+            context.league_state.league.league_id,
+            fingerprint,
+        )
 
     def request(self, context: UserRuntimeContext) -> IntrinsicBuildRecord:
         key = self._key(context)
@@ -109,6 +128,15 @@ class ShapleyIntrinsicBackgroundCoordinator:
         with self._lock:
             existing = self._records.get(key)
             if existing is not None:
+                if (
+                    context.league_state is not None
+                    and existing.league_state_id != context.league_state.state_id
+                ):
+                    existing = replace(
+                        existing,
+                        league_state_id=context.league_state.state_id,
+                    )
+                    self._records[key] = existing
                 if existing.status in {
                     IntrinsicBuildStatus.QUEUED,
                     IntrinsicBuildStatus.RUNNING,
@@ -165,15 +193,21 @@ class ShapleyIntrinsicBackgroundCoordinator:
             stale = [
                 item
                 for item in self._records
-                if item[0] == context.user_id and item != key
+                if item[0] == context.user_id
+                and item[1] == context.league_state.league.league_id
+                and item != key
             ]
             for item in stale:
                 self._records.pop(item, None)
 
+            coordinate = str(self._forecast_coordinate_resolver(context)).strip()
+            if not coordinate:
+                raise ValueError("Shapley Intrinsic Forecast coordinate cannot be empty")
             record = IntrinsicBuildRecord(
                 user_id=context.user_id,
-                league_state_id=key[1],
-                forecast_coordinate=key[2],
+                league_state_id=context.league_state.state_id,
+                forecast_coordinate=coordinate,
+                intrinsic_input_fingerprint=key[2],
                 status=IntrinsicBuildStatus.QUEUED,
                 created_at=now,
                 updated_at=now,
@@ -295,6 +329,7 @@ def intrinsic_loading_payload(
         ),
         "league_state_id": record.league_state_id,
         "forecast_coordinate": record.forecast_coordinate,
+        "intrinsic_input_fingerprint": record.intrinsic_input_fingerprint,
         "build_status": record.status.value,
         "response_budget_exceeded": record.response_budget_exceeded,
         "retry_after_ms": 1500,
@@ -314,6 +349,7 @@ def intrinsic_failure_payload(
         ),
         "league_state_id": record.league_state_id,
         "forecast_coordinate": record.forecast_coordinate,
+        "intrinsic_input_fingerprint": record.intrinsic_input_fingerprint,
         "build_status": record.status.value,
         "retry_after_ms": None,
         "started_at": record.created_at.isoformat(),
