@@ -700,3 +700,10 @@ Runtime evidence shows a more serious combined-load failure: after cold wake and
 Home did successfully retain last-good derived intelligence during rebuild, so PR #270's dual-state concept is partially working. The remaining failure is whole-process lifecycle/memory/recovery integration under real cold-wake traffic, plus readiness consistency across surfaces.
 
 Implementation is ACTIVE again and owns the beta-availability incident. Market and general Performance remain held. No further Management physical testing is requested until hosted cold-wake evidence reproduces the exact combined scenario without memory-limit recycle, context loss, false-green readiness, hard 502/module failures, or recovery-rate-limit failure.
+
+## 2026-09-27 — Management accepts componentized current-football-state Forecast architecture
+Management accepted the Research architecture but **did not authorize a production Forecast/Intrinsic math change**.
+
+Accepted principle: football-state events cause Forecast reevaluation; H1 availability is distinct from conditional healthy production; governed current ROS, when authoritative, owns the integrated H1 expectation with no second event haircut; temporary injury gets no generic H2/H3 penalty; Intrinsic applies no direct event penalty.
+
+Next Research is authorized on a dedicated injury-availability/time-to-return model plus prospective governed ROS/event snapshot retention. Release/cut remains a coarse Research signal only. Production H3 remains unchanged.
