@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from time import monotonic, sleep
 
 from fastapi.testclient import TestClient
 
@@ -78,8 +79,21 @@ def test_refresh_forecasts_marks_forecast_ready_and_enriches_my_team(monkeypatch
 
     refreshed = client.post("/api/intelligence/refresh-forecasts")
     assert refreshed.status_code == 200
-    assert refreshed.json()["forecast_ready"] is True
-    assert refreshed.json()["successful_sources"] == ["cbs", "fftoday"]
+    assert refreshed.json()["status"] in {"queued", "running"}
+
+    # Compatibility route now delegates to the same State-first asynchronous
+    # reconciler as manual Refresh Intelligence. Forecast may attach before a
+    # later downstream layer fails in this focused fixture.
+    deadline = monotonic() + 2
+    context = None
+    while monotonic() < deadline:
+        context = client.get("/api/product-context").json()
+        if context["forecast_ready"]:
+            break
+        sleep(0.01)
+    assert context is not None
+    assert context["forecast_ready"] is True
+    assert context["forecast_sources"] == ["cbs", "fftoday"]
 
     team = client.get("/api/my-team").json()
     player = team["players"][0]
