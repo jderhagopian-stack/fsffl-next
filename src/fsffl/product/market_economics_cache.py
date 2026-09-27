@@ -144,5 +144,3 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
 
     cached_evaluator.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_evaluator
-
-    return cached_evaluator
