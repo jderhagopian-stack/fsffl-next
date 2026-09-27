@@ -34,12 +34,18 @@ jobs:
           git show origin/research/future-state-resolution-phase34-resume:artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/redevelopment_v1.py > /tmp/redevelopment_v1.py
           git show origin/research/future-state-resolution-phase34-resume:scripts/extract_career_transition_panel.R > /tmp/extract_career_transition_panel.R
           sha256sum /tmp/redevelopment_v1.py /tmp/extract_career_transition_panel.R
-      - name: Rebuild governed PIT career panel
-        run: Rscript /tmp/extract_career_transition_panel.R
+      - name: Restore exact governed Phase-2 PIT panel
+        run: |
+          mkdir -p /tmp/phase2
+          gh api repos/${{ github.repository }}/actions/artifacts/10486530017/zip > /tmp/phase2.zip
+          unzip -oq /tmp/phase2.zip -d /tmp/phase2
+          find /tmp/phase2 -maxdepth 5 -type f | sort
       - name: Score frozen bounded family slate
         run: |
+          PANEL=$(find /tmp/phase2 -iname '*player*season*panel*.csv' -print -quit)
+          test -n "$PANEL"
           python scripts/run_forecast_authority_new_family.py \
-            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --career-panel "$PANEL" \
             --redevelopment-code /tmp/redevelopment_v1.py \
             --output-dir artifacts/research/forecast_model_authority_audit_20260927/new_family
       - name: Persist compact scoring evidence
