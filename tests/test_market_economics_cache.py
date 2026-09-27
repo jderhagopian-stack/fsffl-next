@@ -103,3 +103,23 @@ def test_identical_concurrent_package_economics_are_single_flight() -> None:
     assert calls == 1
     assert first["receive"][0]["label"] == "Leader"
     assert second["receive"][0]["label"] == "Follower"
+
+
+
+def test_package_economics_cache_drops_prior_scope_on_state_advance() -> None:
+    calls = 0
+
+    def evaluator(runtime, row, **kwargs):
+        nonlocal calls
+        calls += 1
+        return {**row, "preliminary_economic_band": f"call-{calls}"}
+
+    cached = make_cached_candidate_economics(evaluator)
+    runtime_a = _runtime(state_id="state-a")
+    runtime_b = _runtime(state_id="state-b")
+
+    assert cached(runtime_a, _row())["preliminary_economic_band"] == "call-1"
+    assert cached(runtime_b, _row())["preliminary_economic_band"] == "call-2"
+    # The prior exact-State economic evidence is execution cache only and was evicted.
+    assert cached(runtime_a, _row())["preliminary_economic_band"] == "call-3"
+    assert calls == 3

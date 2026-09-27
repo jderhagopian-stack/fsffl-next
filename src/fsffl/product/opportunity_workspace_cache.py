@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import logging
 from collections import OrderedDict
 from threading import RLock
@@ -11,7 +12,7 @@ from .runtime import UserRuntimeContext
 
 
 _logger = logging.getLogger("uvicorn.error")
-_MAX_ENTRIES = 16
+_MAX_ENTRIES = 1
 
 WorkspaceBuilder = Callable[..., dict[str, object]]
 
@@ -127,6 +128,19 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                 )
 
             misses += 1
+            # A full workspace is large. Its cache is an execution optimization,
+            # not presentation authority, so prior exact-State workspaces must not
+            # remain resident while a replacement State is built.
+            if cache:
+                evicted = len(cache)
+                cache.clear()
+                gc.collect()
+                _logger.info(
+                    "FSFFL Market workspace cache evicted_prior_scope entries=%d state=%s team=%s",
+                    evicted,
+                    runtime.league_state.state_id,
+                    runtime.selected_team_id,
+                )
             result = builder(
                 runtime,
                 candidate_limit=candidate_limit,

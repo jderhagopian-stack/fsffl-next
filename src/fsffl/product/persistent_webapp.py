@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import logging
 import os
 from threading import Event, RLock, Thread
@@ -530,32 +531,53 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
     def call(path: str, **kwargs):
         return _presentation_route_endpoint(path)(user_id=context.user_id, **kwargs)
 
-    home = call("/api/home")
-    franchise = call("/api/my-team")
-    atlas = call("/api/league/atlas")
-    market = call("/api/opportunities/workspace")
-    lenses = call("/api/league/value-lenses", universe="all")
-    rostered_lenses = call("/api/league/value-lenses", universe="rostered")
-    payloads = {
-        "home": home,
-        "franchise": franchise,
-        "league": atlas,
-        "market": market,
-        "market_value_lenses": lenses,
-        "market_value_lenses_rostered": rostered_lenses,
-    }
-    for surface, payload in payloads.items():
+    # The browser journey hydrates primary surfaces sequentially. The acceptance
+    # harness must not manufacture a larger resident set by retaining every full
+    # response payload in one Python frame until the final assertion.
+    freshness: dict[str, object] = {}
+    continuity_modes: dict[str, object] = {}
+    metrics: dict[str, object] = {}
+
+    def inspect(surface: str, payload: object) -> None:
         if not isinstance(payload, dict) or not payload:
             raise RuntimeError(f"{label}: {surface} presentation is blank")
+        freshness[surface] = (
+            payload.get("intelligence_freshness") or {}
+        ).get("status")
+        continuity_modes[surface] = (
+            payload.get("presentation_continuity") or {}
+        ).get("mode")
+        if surface == "franchise":
+            metrics["franchise_team_id"] = payload.get("team_id")
+        elif surface == "league":
+            metrics["league_standings_count"] = len(payload.get("standings") or ())
+            metrics["league_simulation_status"] = (
+                payload.get("simulation") or {}
+            ).get("status")
+        elif surface == "market":
+            metrics["market_status"] = payload.get("status")
+        elif surface == "market_value_lenses":
+            metrics["market_player_count"] = len(payload.get("players") or ())
 
-    freshness = {
-        surface: (payload.get("intelligence_freshness") or {}).get("status")
-        for surface, payload in payloads.items()
-    }
-    continuity_modes = {
-        surface: (payload.get("presentation_continuity") or {}).get("mode")
-        for surface, payload in payloads.items()
-    }
+    for surface, path, kwargs in (
+        ("home", "/api/home", {}),
+        ("franchise", "/api/my-team", {}),
+        ("league", "/api/league/atlas", {}),
+        ("market", "/api/opportunities/workspace", {}),
+        ("market_value_lenses", "/api/league/value-lenses", {"universe": "all"}),
+        (
+            "market_value_lenses_rostered",
+            "/api/league/value-lenses",
+            {"universe": "rostered"},
+        ),
+    ):
+        payload = call(path, **kwargs)
+        inspect(surface, payload)
+        del payload
+        # This mirrors independent request lifetimes in the hosted browser path and
+        # prevents acceptance instrumentation from retaining transient payload graphs.
+        gc.collect()
+
     stale_count = sum(
         1 for value in freshness.values() if value == "stale_last_good"
     )
@@ -565,11 +587,7 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
         "state_id": state.state_id,
         "selected_team_id": context.selected_team_id,
         "canonical_roster_count": len(team_state.roster),
-        "franchise_team_id": franchise.get("team_id"),
-        "league_standings_count": len(atlas.get("standings") or ()),
-        "league_simulation_status": (atlas.get("simulation") or {}).get("status"),
-        "market_status": market.get("status"),
-        "market_player_count": len(lenses.get("players") or ()),
+        **metrics,
         "readiness_status": readiness.get("overall_status"),
         "readiness_as_of": readiness.get("as_of"),
         "presentation_freshness": freshness,

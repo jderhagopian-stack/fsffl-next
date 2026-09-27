@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import logging
 from collections import OrderedDict
 from collections.abc import Callable, Mapping
@@ -73,19 +74,33 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
     lock = RLock()
     hits = 0
     misses = 0
+    active_scope: tuple[object, ...] | None = None
 
     def cached_evaluator(
         runtime: UserRuntimeContext,
         row: dict[str, object],
         **kwargs: Any,
     ) -> dict[str, object]:
-        nonlocal hits, misses
+        nonlocal hits, misses, active_scope
         key = market_economics_cache_key(runtime, row)
         if key is None:
             return evaluator(runtime, row, **kwargs)
 
         started = monotonic()
         with lock:
+            scope = key[:4]
+            if active_scope != scope:
+                evicted = len(cache)
+                cache.clear()
+                active_scope = scope
+                if evicted:
+                    gc.collect()
+                    _logger.info(
+                        "FSFFL Market package economics cache evicted_prior_scope entries=%d state=%s team=%s",
+                        evicted,
+                        runtime.league_state.state_id if runtime.league_state is not None else None,
+                        runtime.selected_team_id,
+                    )
             evidence = cache.get(key)
             if evidence is None:
                 misses += 1
