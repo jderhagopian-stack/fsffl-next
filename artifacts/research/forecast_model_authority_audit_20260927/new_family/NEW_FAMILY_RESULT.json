@@ -1,0 +1,67 @@
+{
+  "authority": "research_only_no_production_change",
+  "common_coordinate": {
+    "H2_origins": [
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023
+    ],
+    "H2_rows": 5726,
+    "H3_origins": [
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "H3_rows": 5168,
+    "rows": 10894
+  },
+  "fitlog_rows": 19,
+  "frozen_new_families": {
+    "N1_histgb": {
+      "l2_regularization": 3.0,
+      "learning_rate": 0.05,
+      "max_iter": 180,
+      "max_leaf_nodes": 15,
+      "min_samples_leaf": 30,
+      "production": "state-conditioned HistGradientBoostingRegressor",
+      "random_state": 20260927,
+      "state": "direct six-state HistGradientBoostingClassifier"
+    },
+    "N2_spline_two_part": {
+      "C": 0.25,
+      "degree": 3,
+      "n_knots": 5,
+      "production": "state-conditioned Ridge on same spline basis",
+      "ridge_alpha": 10.0,
+      "state": "logistic persistence + ordered positive-state logistic heads on cubic spline basis"
+    }
+  },
+  "guards": {
+    "current_board_selection": false,
+    "intrinsic_changed": false,
+    "named_player_tuning": false,
+    "post_result_hyperparameter_search": false,
+    "production_forecast_changed": false,
+    "production_h3_changed": false
+  },
+  "models": [
+    "D0",
+    "D1",
+    "N1_histgb",
+    "N2_spline_two_part"
+  ],
+  "study": "forecast-model-authority-bounded-new-family"
+}
