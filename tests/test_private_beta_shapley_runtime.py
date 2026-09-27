@@ -43,6 +43,10 @@ from fsffl.product.private_beta_shapley_runtime import (
     PrivateBetaShapleyContractLoader,
     intrinsic_input_fingerprint,
 )
+from fsffl.product.intrinsic_background import (
+    IntrinsicBuildStatus,
+    ShapleyIntrinsicBackgroundCoordinator,
+)
 from fsffl.product.runtime import UserRuntimeContext
 from fsffl.product.vnext_future_forecast_provider import (
     VNEXT_FORECAST_VERSION,
@@ -1465,3 +1469,59 @@ def test_persisted_intrinsic_reuses_across_unrelated_state_advance() -> None:
     only_key = next(iter(store.records))
     assert only_key.scope_id == state.league.league_id
     assert only_key.scope_kind == "league_intrinsic_inputs"
+
+
+
+def test_restart_coordinator_restores_persisted_semantic_intrinsic_without_shapley_rebuild() -> None:
+    state, observation = _fixture()
+    store = _MemoryShapleyArtifactStore()
+    future_calls: list[str] = []
+
+    def future_builder(**kwargs):
+        future_calls.append("future")
+        return _contract_only_fixture_provider(**kwargs)
+
+    first_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        persistence_store=cast(Any, store),
+        future_forecast_builder=future_builder,
+        future_forecast_model_version="restart-semantic-v1",
+    )
+    first_context = _context(state, observation)
+    built = first_loader(first_context)
+    assert built.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert len(store.records) == 1
+
+    advanced = state.model_copy(
+        update={
+            "as_of": state.as_of + timedelta(hours=4),
+            "teams": (
+                state.teams[0].model_copy(update={"display_name": "A Restarted"}),
+                state.teams[1],
+            ),
+        }
+    )
+    restart_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        persistence_store=cast(Any, store),
+        future_forecast_builder=future_builder,
+        future_forecast_model_version="restart-semantic-v1",
+    )
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        restart_loader,
+        max_workers=1,
+        intrinsic_input_fingerprint_resolver=restart_loader.intrinsic_input_fingerprint,
+    )
+    advanced_context = _context(advanced, observation)
+
+    restored = coordinator.restore_compatible(advanced_context)
+
+    assert restored is not None
+    assert restored.status == IntrinsicBuildStatus.COMPLETED
+    assert restored.contract == built
+    assert restored.league_state_id == advanced.state_id
+    assert coordinator.current(advanced_context) == restored
+    assert len(store.records) == 1
+    # The future contract is resolved to prove semantic compatibility, but the
+    # persisted Shapley artifact is reused instead of another 2,048-permutation build.
+    assert FROZEN_SHAPLEY_PERMUTATIONS == 2048
