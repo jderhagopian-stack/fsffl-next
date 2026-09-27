@@ -755,3 +755,17 @@ Implementation remains independently authorized to finish PR #274. Runtime avail
 Management identified that the symmetric Forecast audit ledger includes A2/D0/D1 and other serious historical candidates but does not separately identify the exact deployed Y2/Y3 package `forecast-vnext-a2-burr-20260922`.
 
 Research must now include that frozen production package directly, including its A2 state probabilities, Stage-D state means and Burr XII/direct-Gamma uncertainty representation. Ancestor/component evidence is not accepted as a substitute for direct evaluation of the live package. This is an audit-completeness correction, not authorization for post-result model shopping or production change.
+
+
+## 2026-09-27 15:37 ET — Live physical usability / latency checkpoint
+Management is again using the live PR #276 beta. Functional continuity is sufficiently restored for normal testing, but responsiveness is now the dominant product defect.
+
+Live physical-session timings:
+- Home 24.200s;
+- My Team 25.595s;
+- Product Context 39.397s;
+- Market workspace 0.500s on one request, indicating latency is path/contention-specific rather than universal.
+
+A separate deterministic UI layering defect is confirmed: League Atlas `.atlas-drawer` uses z-index 1003 while `#player-intelligence-root` uses z-index 1000. Selecting a player from a position drill-down opens PI behind the drawer; closing the drawer reveals it.
+
+Management therefore moves the product critical path from “do not touch until resource gate passes” to **ordinary beta use + immediate latency/interaction corrective**. The ~429.5 MB target remains useful engineering headroom, but does not by itself block physical testing unless accompanied by real availability failure.
