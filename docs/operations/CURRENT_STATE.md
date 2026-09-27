@@ -787,3 +787,11 @@ Management accepts the symmetric Forecast Research conclusions and sets the targ
 - **No further Forecast family search is authorized** by this decision. Family breadth was found sufficient; the next Research problem is Long-Term Intrinsic consumption, not model shopping.
 
 Production Forecast/Intrinsic behavior does not change merely from this Management decision.
+
+
+## 2026-09-27 17:18 ET — Live #277 checkpoint
+PR #277 is live. The confirmed Atlas→PI overlay bug is fixed in the implementation and foreground latency is materially better in warm periods (My Team ~1.1s; Home ~2–3.5s). However, the product still degrades badly while heavy work overlaps: My Team ~26.4s, Home ~41.1s and Product Context ~43.4s were observed.
+
+Hosted acceptance remains open. One run failed the internal RSS target at ~473.4 MB max observed; a later run failed because cold PI history during initial reconciliation had no compatible Y2/Y3 future Forecast rows. Memory also approached ~510 MB on the later instance, close enough to the ~537 MB hard limit to remain a real engineering risk.
+
+Management classification: **partial success, not completion**. Continue narrow corrective work on current main; preserve #277's improvements.
