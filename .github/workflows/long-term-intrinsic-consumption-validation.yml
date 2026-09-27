@@ -1,0 +1,67 @@
+name: Long-Term Intrinsic Consumption Validation
+
+on:
+  push:
+    branches: [research/long-term-intrinsic-consumption-20260927]
+    paths:
+      - scripts/run_long_term_intrinsic_consumption_validation.py
+      - artifacts/research/long_term_intrinsic_consumption_20260927/CONSUMPTION_CONTRACT_FROZEN.md
+      - .github/workflows/long-term-intrinsic-consumption-validation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install -e . pandas numpy scipy scikit-learn
+      - name: Restore frozen long-horizon evidence
+        run: |
+          mkdir -p /tmp/rolling /tmp/current
+          gh api repos/${{ github.repository }}/actions/artifacts/10916355135/zip > /tmp/rolling.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10913539274/zip > /tmp/current.zip
+          unzip -oq /tmp/rolling.zip -d /tmp/rolling
+          unzip -oq /tmp/current.zip -d /tmp/current
+          sha256sum /tmp/rolling.zip /tmp/current.zip
+      - name: Validate frozen consumer
+        run: |
+          python scripts/run_long_term_intrinsic_consumption_validation.py \
+            --rolling /tmp/rolling/ROLLING_POLICY_PREDICTIONS.csv \
+            --authority-map artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_CELL_AUTHORITY_MAP.csv \
+            --league-rules artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json \
+            --current-shadow /tmp/current/CURRENT_FINAL_ARCHITECTURE_SHADOWS.csv \
+            --current-intrinsic artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_PRODUCTION_H3_REFERENCE.json \
+            --output-dir artifacts/research/long_term_intrinsic_consumption_20260927/validation
+      - name: Persist compact validation evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            artifacts/research/long_term_intrinsic_consumption_20260927/validation/LONG_TERM_HISTORICAL_METRICS.csv \
+            artifacts/research/long_term_intrinsic_consumption_20260927/validation/LONG_TERM_SHORTCUT_COMPARISON.csv \
+            artifacts/research/long_term_intrinsic_consumption_20260927/validation/LONG_TERM_AUTHORITY_ENVELOPE_VALIDATION.csv \
+            artifacts/research/long_term_intrinsic_consumption_20260927/validation/LONG_TERM_HISTORICAL_SCALE_KNOTS.csv \
+            artifacts/research/long_term_intrinsic_consumption_20260927/validation/CURRENT_VS_LONG_TERM_REFERENCE.csv \
+            artifacts/research/long_term_intrinsic_consumption_20260927/validation/CURRENT_LONG_TERM_ARCHETYPE_COMPARISON.csv \
+            artifacts/research/long_term_intrinsic_consumption_20260927/validation/LONG_TERM_INTRINSIC_VALIDATION_RESULT.json
+          git commit -m "Research: persist Long-Term Intrinsic consumer validation" || exit 0
+          git push origin HEAD:research/long-term-intrinsic-consumption-20260927
+      - name: Upload complete evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: long-term-intrinsic-consumption-validation
+          path: artifacts/research/long_term_intrinsic_consumption_20260927/validation/
+          retention-days: 30
