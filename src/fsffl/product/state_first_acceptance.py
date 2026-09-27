@@ -317,6 +317,29 @@ def run_state_first_production_acceptance(
         job_id = str(started.get("job_id") or "")
         if not job_id:
             raise StateFirstAcceptanceError(f"{label} did not start reconciliation")
+
+        overlap_thread = None
+        overlap_error: list[BaseException] = []
+        if label == "fsffl_initial":
+            # This is the historical failure shape: cold State reconciliation is
+            # active while browser-equivalent surface reads and PI history are
+            # requested. Reads must remain usable and heavy work must queue rather
+            # than overlap unboundedly.
+            probe_surface("cold_surfaces_during_initial_reconciliation")
+            if history_probe is not None:
+                def cold_history() -> None:
+                    try:
+                        probe_history("cold_pi_history_during_initial_reconciliation")
+                    except BaseException as exc:  # pragma: no cover - hosted propagation
+                        overlap_error.append(exc)
+
+                overlap_thread = Thread(
+                    target=cold_history,
+                    name="fsffl-acceptance-cold-history",
+                    daemon=True,
+                )
+                overlap_thread.start()
+
         terminal = _wait_for_job(
             jobs=jobs,
             user_id=user_id,
@@ -324,6 +347,17 @@ def run_state_first_production_acceptance(
             timeout_seconds=timeout_seconds,
             poll_seconds=poll_seconds,
         )
+        if overlap_thread is not None:
+            overlap_thread.join(timeout=timeout_seconds)
+            if overlap_thread.is_alive():
+                raise StateFirstAcceptanceError(
+                    f"{label} cold PI history did not finish"
+                )
+            if overlap_error:
+                raise StateFirstAcceptanceError(
+                    f"{label} cold PI history failed: "
+                    f"{type(overlap_error[0]).__name__}: {overlap_error[0]}"
+                )
         snapshot = _snapshot(store, user_id, capability_reader)
         row = {
             "label": label,
