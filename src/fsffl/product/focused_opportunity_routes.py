@@ -183,6 +183,96 @@ def _focus_outcome(
     }
 
 
+def _structural_focus_outcome(
+    focused: list[dict[str, object]],
+) -> dict[str, object]:
+    """Describe Search-owned structural results before economics/Decision enrichment."""
+
+    search_diag = dict(getattr(focused, "diagnostics", {}) or {})
+    candidates = len(focused)
+    targets_considered = int(search_diag.get("targets_considered", 0) or 0)
+    targets_admitted = int(search_diag.get("targets_admitted_pre_package", 0) or 0)
+    counterparties_considered = int(
+        search_diag.get("counterparties_considered", 0) or 0
+    )
+    counterparties_admitted = int(
+        search_diag.get("counterparties_admitted_pre_package", 0) or 0
+    )
+    packages = int(search_diag.get("raw_packages_generated_pre_dedup", 0) or 0)
+
+    if candidates:
+        code = "structural_results_ready"
+        message = (
+            f"Search returned {candidates} structural candidate package"
+            f"{'s' if candidates != 1 else ''}. Package economics, family pruning "
+            "and bilateral Decision enrichment are continuing progressively."
+        )
+    elif counterparties_considered and counterparties_admitted == 0:
+        code = "no_counterparty_admitted"
+        message = (
+            f"Search examined {counterparties_considered} counterparties, but none "
+            "satisfied the submitted owner/roster/strategic constraints before package generation."
+        )
+    elif targets_considered and targets_admitted == 0:
+        code = "no_target_admitted"
+        message = (
+            f"Search examined {targets_considered} target assets but none satisfied "
+            "the submitted intent and strategic lens before package generation."
+        )
+    elif packages == 0:
+        code = "no_package_neighborhood"
+        message = (
+            "Relevant assets were explored, but no structural package neighborhood "
+            "could be constructed from the admitted holdings."
+        )
+    else:
+        code = "no_structural_candidate"
+        message = "The submitted structural Search returned no candidate package."
+
+    return {
+        "status": "results" if candidates else "zero",
+        "reason_code": code,
+        "message": message,
+        "candidate_count": candidates,
+        "candidate_path_count": 0,
+        "opportunity_count": 0,
+        "counterparties_considered": counterparties_considered,
+        "counterparties_admitted_pre_package": counterparties_admitted,
+        "targets_considered": targets_considered,
+        "targets_admitted_pre_package": targets_admitted,
+        "send_assets_considered": int(
+            search_diag.get("send_assets_considered", 0) or 0
+        ),
+        "send_assets_admitted_for_counterparty_need": int(
+            search_diag.get("send_assets_admitted_for_counterparty_need", 0) or 0
+        ),
+        "package_rows_generated_pre_dedup": packages,
+        "packages_removed_exact_duplicate": int(
+            search_diag.get("packages_removed_exact_duplicate", 0) or 0
+        ),
+        "packages_screened_economic": 0,
+        "packages_economic_incomplete": 0,
+        "cheap_economic_screen_errors": 0,
+        "path_families_created": 0,
+        "packages_collapsed_family_neighborhood": 0,
+        "preliminary_decision_runs": 0,
+        "preliminary_decision_budget": DEFAULT_PRELIMINARY_DECISION_BUDGET,
+        "preliminary_decision_errors": 0,
+        "counterparty_dominated_count": 0,
+        "focal_dominated_count": 0,
+        "opportunities_suppressed": 0,
+        "opportunities_market_match_only": 0,
+        "opportunities_attention_ready": 0,
+        "final_for_you_count": 0,
+        "changed_state_simulation_calls": 0,
+        "admission_rejection_reasons": dict(
+            search_diag.get("admission_rejection_reasons") or {}
+        ),
+        "timing_ms": {},
+        "enrichment_pending": bool(candidates),
+    }
+
+
 def _focused_payload(
     *,
     base: dict[str, object],
@@ -194,8 +284,13 @@ def _focused_payload(
     intent: str,
     value: str,
     decision_enrichment: dict[str, object],
+    structural_only: bool = False,
 ) -> dict[str, object]:
-    focus_outcome = _focus_outcome(focused, market_discovery)
+    focus_outcome = (
+        _structural_focus_outcome(focused)
+        if structural_only
+        else _focus_outcome(focused, market_discovery)
+    )
     posture_meta = posture_payload(runtime, requested)
     enriched = {
         _identity(path.get("representative_package") or {}):
@@ -292,11 +387,12 @@ def install_focused_opportunity_routes(
         # Focused Search constructs only the submitted neighborhood. The generic
         # full-catalog builder is intentionally not called here because doing so
         # would recreate the exact foreground contention this route is meant to avoid.
+        canonical = None
         focused = build_focused_trade_candidates(
             runtime,
             browser,
             cardinal,
-            canonical_candidates=None,
+            canonical_candidates=canonical,
             requested_posture=requested,
             intent=intent,
             intent_value=value,
@@ -309,20 +405,34 @@ def install_focused_opportunity_routes(
         diagnostics = dict(getattr(focused, "diagnostics", {}) or {})
         asset_index = owned_asset_index(browser)
 
-        # Structural Search plus cheap economic family formation stays on the
-        # explicit submit path. The bilateral Decision budget is deliberately zero
-        # so this request cannot block on lineup/roster/negotiation enrichment.
-        structural_discovery = build_market_discovery(
-            runtime,
-            returned,
-            evaluation_limit=0,
-            source=OpportunitySource.EXPLICIT_TRADE_FINDER_INTENT,
-            exact_target_constraint=(value if intent == "target" and value else None),
-            intent=intent,
-            intent_value=value,
-            search_generation_diagnostics=diagnostics,
-            asset_index=asset_index,
-        )
+        # The foreground submit returns Search-owned structure only. Package
+        # economics, family construction and bilateral Decision all run in the
+        # progressive background phase because hosted evidence shows those stages
+        # collectively consume ~50s under resource contention.
+        structural_discovery = {
+            "hypotheses": [],
+            "candidate_paths": [],
+            "opportunities": [],
+            "for_you": [],
+            "diagnostics": {
+                **diagnostics,
+                "scope_label": "explicit_structural_search",
+                "structural_candidate_count": len(returned),
+                "packages_screened_economic": 0,
+                "path_families_created": 0,
+                "preliminary_decision_runs": 0,
+                "preliminary_decision_budget": DEFAULT_PRELIMINARY_DECISION_BUDGET,
+                "changed_state_simulation_calls_during_discovery": 0,
+                "enrichment_pending": bool(returned),
+            },
+            "authority": {
+                "acceptance_probability": None,
+                "recommendation_authority": False,
+                "changed_state_simulation_calls_during_discovery": 0,
+                "package_economics_attached": False,
+                "bilateral_decision_attached": False,
+            },
+        }
         request_key = "|".join((requested.value, intent, value))
         enrichment_payload: dict[str, object] = {
             "status": "not_started",
@@ -341,6 +451,7 @@ def install_focused_opportunity_routes(
             intent=intent,
             value=value,
             decision_enrichment=enrichment_payload,
+            structural_only=True,
         )
 
         if enrichment_coordinator is not None and returned:
