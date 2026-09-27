@@ -339,3 +339,10 @@ Durable handoff:
 - **Market — HOLD:** Market did not cause the reset and must not receive a page-specific workaround.
 - **Performance — HOLD:** no general latency work until availability passes.
 - **Research — remains independent/parallel under its existing non-production directives.**
+
+
+## Runtime architecture completion clarification — 2026-09-27
+- **Implementation remains ACTIVE / sole product critical path.**
+- Preserve PR #271 as the architectural foundation; complete its missing compact persisted presentation-continuity layer on current `main`.
+- Repair PR #273's acceptance-harness startup/deployment path and use that harness to validate the corrected runtime end to end.
+- No page-specific adapters or Market-specific workaround are authorized.
