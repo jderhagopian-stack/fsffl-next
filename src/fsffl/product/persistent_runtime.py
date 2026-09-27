@@ -10,7 +10,7 @@ from fsffl.persistence import PersistenceStore, persistence_store_from_env
 from fsffl.persistence.session import (
     persist_league_last_good_identity,
     persist_runtime_snapshot,
-    restore_last_good_intelligence,
+    restore_last_good_state_identity,
     restore_runtime_snapshot,
     restore_state_bound_intelligence,
 )
@@ -104,7 +104,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             bool(context.simulation_analytics),
             bool(context.value_evidence),
             (
-                context.served_intelligence.league_state.state_id
+                context.served_intelligence.league_state_id
                 if context.served_intelligence is not None
                 else None
             ),
@@ -193,17 +193,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         intelligence_reused=True,
                     )
                 if (
-                    snapshot.served_league_state is not None
-                    and snapshot.served_forecast_evidence is not None
-                    and snapshot.served_value_evidence is not None
+                    snapshot.served_league_id is not None
+                    and snapshot.served_league_state_id is not None
+                    and snapshot.served_as_of is not None
                 ):
                     super().set_served_intelligence(
                         user_id,
                         ServedIntelligenceSnapshot(
-                            league_state=snapshot.served_league_state,
-                            forecast_evidence=snapshot.served_forecast_evidence,
-                            simulation_analytics=snapshot.served_simulation_analytics,
-                            value_evidence=snapshot.served_value_evidence,
+                            league_id=snapshot.served_league_id,
+                            league_state_id=snapshot.served_league_state_id,
+                            as_of=snapshot.served_as_of,
+                            team_ids=snapshot.served_team_ids,
                         ),
                     )
                 if snapshot.selected_team_id is not None:
@@ -242,17 +242,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 )
                 if self._persistence is not None:
                     migrate_state = (
-                        snapshot.served_league_state
-                        or (
-                            snapshot.league_state
-                            if snapshot.forecast_evidence is not None
-                            and snapshot.value_evidence is not None
-                            and (
-                                snapshot.simulation_analytics is not None
-                                or not snapshot.forecast_evidence.uncertainty_ready
-                            )
-                            else None
+                        snapshot.league_state
+                        if snapshot.forecast_evidence is not None
+                        and snapshot.value_evidence is not None
+                        and (
+                            snapshot.simulation_analytics is not None
+                            or not snapshot.forecast_evidence.uncertainty_ready
                         )
+                        else None
                     )
                     if migrate_state is not None:
                         persist_league_last_good_identity(
@@ -290,46 +287,35 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             else None
         )
 
-        # Before a cross-league switch, migrate any currently served terminal
-        # presentation identity into the per-league slot so switching back can
-        # restore it even after another league becomes the legacy user pointer.
+        # Before a cross-league switch, checkpoint the current terminal identity.
+        # Existing served-last-good identities are already durable and need no heavy
+        # in-memory object graph to be rewritten.
         if (
             self._persistence is not None
             and previous_league_id is not None
             and previous_league_id != league_state.league.league_id
+            and current.league_state is not None
+            and current.forecast_evidence is not None
+            and current.value_evidence is not None
+            and (
+                current.simulation_analytics is not None
+                or not current.forecast_evidence.uncertainty_ready
+            )
         ):
-            snapshot = current.served_intelligence
-            if (
-                snapshot is None
-                and current.league_state is not None
-                and current.forecast_evidence is not None
-                and current.value_evidence is not None
-                and (
-                    current.simulation_analytics is not None
-                    or not current.forecast_evidence.uncertainty_ready
-                )
-            ):
-                snapshot = ServedIntelligenceSnapshot(
+            try:
+                persist_league_last_good_identity(
+                    self._persistence,
+                    user_id=user_id,
                     league_state=current.league_state,
-                    forecast_evidence=current.forecast_evidence,
-                    simulation_analytics=current.simulation_analytics,
-                    value_evidence=current.value_evidence,
+                    selected_team_id=current.selected_team_id,
                 )
-            if snapshot is not None:
-                try:
-                    persist_league_last_good_identity(
-                        self._persistence,
-                        user_id=user_id,
-                        league_state=snapshot.league_state,
-                        selected_team_id=current.selected_team_id,
-                    )
-                except Exception as exc:
-                    _logger.warning(
-                        "FSFFL league last-good migration failed user=%s league=%s error=%s",
-                        user_id,
-                        previous_league_id,
-                        exc,
-                    )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL league last-good migration failed user=%s league=%s error=%s",
+                    user_id,
+                    previous_league_id,
+                    exc,
+                )
 
         context = super().set_league_state(user_id, league_state)
         if previous_league_id != league_state.league.league_id:
@@ -358,24 +344,25 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         intelligence_reused=True,
                     )
                 else:
-                    last_good = restore_last_good_intelligence(
+                    last_good = restore_last_good_state_identity(
                         self._persistence,
                         user_id=user_id,
                         league_id=league_state.league.league_id,
                     )
                     if (
                         last_good is not None
-                        and last_good.league_state.state_id != league_state.state_id
-                        and last_good.forecast_evidence is not None
-                        and last_good.value_evidence is not None
+                        and last_good[0].state_id != league_state.state_id
                     ):
+                        last_good_state = last_good[0]
                         context = super().set_served_intelligence(
                             user_id,
                             ServedIntelligenceSnapshot(
-                                league_state=last_good.league_state,
-                                forecast_evidence=last_good.forecast_evidence,
-                                simulation_analytics=last_good.simulation_analytics,
-                                value_evidence=last_good.value_evidence,
+                                league_id=last_good_state.league.league_id,
+                                league_state_id=last_good_state.state_id,
+                                as_of=last_good_state.as_of,
+                                team_ids=tuple(
+                                    sorted(team.team_id for team in last_good_state.teams)
+                                ),
                             ),
                         )
             except Exception as exc:
