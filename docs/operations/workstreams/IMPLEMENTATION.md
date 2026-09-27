@@ -885,3 +885,12 @@ Implement the Management recomputation policy from DECISION_LOG:
 7. preserve frozen 2,048-permutation Shapley semantics. Do not lower the model quality to hide the latency.
 
 After this corrective, kernel-level cold-build optimization can move to Performance unless cold builds remain a practical beta blocker.
+
+### Football-state event handling — invalidate through Forecast identity, not raw status
+Implementation must preserve the authority chain when applying dependency-scoped Intrinsic reuse.
+
+- Fantasy roster ownership changes alone do not invalidate player Intrinsic.
+- NFL-context changes (injury/return, NFL trade, release/signing, promotion/demotion, suspension/retirement) must cause the Forecast layer to reevaluate when current governed evidence changes.
+- Intrinsic compatibility must depend on the resulting authoritative Forecast input/contract identity. If Forecast is unchanged, reuse Intrinsic. If Forecast changes, background-recompute Intrinsic and promote atomically.
+- Do not add direct heuristic injury/status penalties to Intrinsic.
+- Until Research promotes a governed H3 current-state update layer, preserve the frozen H3 authority and truthfully expose its as-of/provenance limitations rather than pretending those events are modeled.
