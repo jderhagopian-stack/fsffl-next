@@ -1349,3 +1349,20 @@ Question: **Is another authorized Research action available now that materially 
 Answer: **No.**
 
 **MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE**
+
+### Current-state update layer for production H3 Forecast
+**Required research — do not modify production H3 ad hoc**
+
+Management identified a production freshness gap: the frozen vNext Y2/Y3 source coordinate is not sufficient by itself to respond to material in-season football-state changes such as injury/return, NFL trade, cut/signing, role promotion/demotion, suspension, or retirement.
+
+Research must determine a governed point-in-time update layer that:
+1. starts from the frozen validated H3 baseline rather than refitting opportunistically;
+2. uses only contemporaneously available evidence;
+3. distinguishes short-term Y1 availability from durable Y2/Y3 survival/role effects;
+4. treats event types differently by position and severity rather than applying a generic penalty;
+5. tests whether current provider projection changes already capture enough of the effect before adding separate adjustments;
+6. avoids double counting when the same event is already reflected in Year-1/provider projections;
+7. quantifies decay/reversion for temporary injuries versus structural events such as release, retirement, or durable demotion;
+8. produces a versioned Forecast-owned contract update so downstream Intrinsic invalidation occurs automatically from changed Forecast evidence.
+
+No direct Intrinsic injury/role penalty is authorized. The output belongs to Forecast.
