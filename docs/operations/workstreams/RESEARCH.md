@@ -1499,3 +1499,14 @@ Authorized next Research phase:
 5. do not alter production H3, Intrinsic, or current provider authority during this phase.
 
 Research should continue under OPERATING_PROTOCOL.md to a permitted terminal state after exhausting the authorized non-production work.
+
+## Management sequencing clarification — preserve long-horizon Research — 2026-09-27
+Management explicitly retains the **Y4–Y8 long-horizon Forecast/Intrinsic research program** as a first-class Research track. The newly authorized injury-availability / ROS-snapshot work does **not** supersede, replace, or deprioritize it out of the Research roadmap.
+
+Research should manage two parallel non-production tracks:
+1. **Current-football-state / injury availability:** dedicated remaining-season availability/time-to-return modeling plus prospective governed ROS/event snapshot retention.
+2. **Long-horizon Y4–Y8:** continue from the existing Management gate and durable evidence on position × horizon routing, soft shrinkage, age/experience/exposure effects, model-family alternatives, uncertainty, and Y8 coarse handling. Do not reopen completed evidence; advance only unresolved Management questions / justified follow-up studies.
+
+Existing long-horizon conclusions remain in force unless new evidence supersedes them: production H3 unchanged; exact support currently exists only for QB Y4, WR Y4 and QB Y6; other Y4–Y7 cells remain shrinkage-with-uncertainty; Y8 remains coarse/uncertain. No production promotion is authorized merely by this sequencing clarification.
+
+Research may advance both tracks independently under OPERATING_PROTOCOL.md. Persist separate checkpoints and terminal states so one track cannot hide or erase the other.
