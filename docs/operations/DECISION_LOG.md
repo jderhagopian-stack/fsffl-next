@@ -575,3 +575,30 @@ Management determines that the frozen activation-bundle coverage flags for injur
 The current production Intrinsic path is governed by preserved Year-1 Forecast authority, the FutureForecastContract, league scoring compatibility, governed subject coverage, and the frozen Shapley/Value contract. Missing optional/legacy evidence families may be disclosed as evidence richness limitations but must not downgrade an otherwise complete authorized Intrinsic contract.
 
 Fail-closed behavior remains mandatory for genuinely required current inputs.
+
+## 2026-09-26 — Intrinsic recomputation policy is dependency-scoped
+Management establishes that FSFFL Intrinsic must be recomputed only when an **authoritative input actually consumed by the Intrinsic calculation changes**. A new canonical LeagueState ID by itself is not sufficient reason to invalidate Intrinsic.
+
+A cold Intrinsic recomputation is required when any of the following materially changes:
+- preserved governed Year-1 Forecast evidence/content or its authoritative source/model coordinate;
+- the governed FutureForecastContract content, model version, subject universe, or scoring coordinate;
+- league rules consumed by Shapley economics, including scoring, lineup/capacity structure, or team count;
+- evaluation season / season rollover;
+- Intrinsic/Shapley contract version or governed numerical parameters such as discount, permutations, seed, or other authorized model settings;
+- any other future dependency only after it is explicitly promoted as a required Intrinsic input.
+
+A cold recomputation is **not** triggered merely by:
+- roster ownership / trades / waivers;
+- standings, matchup results, points scored/against;
+- draft-pick ownership, FAAB, team labels, owner labels;
+- ordinary canonical State refresh timestamps/provenance;
+- injury/practice, participation/snaps, roster-continuity or player-status metadata unless a future authorized Intrinsic model explicitly consumes them;
+- switching away from and back to a league when a compatible persisted Intrinsic artifact already exists.
+
+Operational policy:
+- compute/persist Intrinsic proactively in the background when a true dependency changes;
+- preserve and expose the last-good Intrinsic with its governed as-of/compatibility status while a genuinely new contract is building, without claiming stale evidence is current;
+- once the new contract completes, atomically promote it;
+- routine product opens, league switches and Refresh Intelligence should hit the compatible persisted artifact and return near-immediately.
+
+This policy preserves point-in-time provenance separately from computational compatibility. Exact State identity remains authoritative for evidence history; it is not itself the Intrinsic cache key.
