@@ -891,6 +891,25 @@ def _presentation_route_endpoint(path: str):
 def _promote_presentation_for_user(user_id: str, context) -> object | None:
     if not _presentation_continuity.enabled or context.league_state is None:
         return None
+    # Prime the bounded Future Forecast cache while the exact authoritative
+    # Forecast is attached. A later same-league State reconciliation may then keep
+    # Y2/Y3 visible as explicitly stale-last-good without rebuilding Forecast on a
+    # foreground PI request.
+    if context.forecast_evidence is not None:
+        try:
+            contract, freshness = _player_future_forecast_cache.resolve(context)
+            _logger.info(
+                "FSFFL PI future continuity prime state=%s status=%s rows=%s",
+                context.league_state.state_id,
+                freshness,
+                len(contract.forecasts) if contract is not None else 0,
+            )
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL PI future continuity prime unavailable state=%s error=%s",
+                context.league_state.state_id,
+                exc,
+            )
     # Snapshot exactly the existing governed presentation contracts. Builders run
     # sequentially and each payload is persisted before the next is composed.
     specs = (
