@@ -652,3 +652,24 @@ The eventual intelligence job completed successfully, but Simulation consumed ~3
 Classification: **beta availability incident / Implementation-owned**.
 
 Management acceptance is reopened. No additional physical testing is requested until Implementation restores non-disruptive last-good serving across restart/sync/rebuild and truthful readiness.
+
+
+## Current football-state H3 Research closeout — 2026-09-27
+
+Research reached **MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE**.
+
+The broad event-rich H1-H3 paths are not promoted. Historical validation over 4,793 injury episodes and 7,603 non-injury events shows that broad organizational/availability/all-event layers either miss materiality or worsen persistence/state calibration.
+
+Narrow supported behavior:
+- football-state changes trigger Forecast reevaluation, not direct Intrinsic penalties;
+- H1 separates remaining-season availability from conditional active production;
+- authoritative current ROS, when available, owns the integrated H1 update and must not receive a second event haircut;
+- temporary injuries do not receive a generic H2/H3 penalty;
+- release/cut has a narrow coarse H3 attachment/survival signal, not a position-specific cardinal multiplier.
+
+The current provider capture is not broad deployment authority: only 54 players have exact two-source standard scoring and source rights remain uncleared.
+
+Production H3 remains unchanged.
+
+Durable handoff:
+`artifacts/research/current_football_state_h3_20260926/RESEARCH_INTERPRETATION.md`.
