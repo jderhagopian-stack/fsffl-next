@@ -371,6 +371,55 @@ def restore_state_bound_intelligence(
     return forecast, simulation, values
 
 
+def migrate_legacy_last_good_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_id: str,
+) -> bool:
+    """Copy a validated legacy user-scoped last-good record into league scope.
+
+    This is a compatibility migration only. It does not materialize Forecast,
+    Simulation, or Value into memory and therefore preserves the lightweight
+    served-identity runtime architecture.
+    """
+
+    existing = store.get_latest_reusable_artifact(
+        artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
+        scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
+        scope_id=_league_last_good_scope_id(user_id, league_id),
+        model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
+    )
+    if existing is not None:
+        return False
+
+    legacy = store.get_latest_reusable_artifact(
+        artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+        scope_kind=LAST_GOOD_SCOPE_KIND,
+        scope_id=user_id,
+        model_version=LAST_GOOD_MODEL_VERSION,
+    )
+    if legacy is None:
+        return False
+    try:
+        state = LeagueState.model_validate(legacy.payload["league_state"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    if state.league.league_id != league_id:
+        return False
+
+    selected = legacy.payload.get("selected_team_id")
+    if selected not in {team.team_id for team in state.teams}:
+        selected = None
+    persist_league_last_good_identity(
+        store,
+        user_id=user_id,
+        league_state=state,
+        selected_team_id=selected,
+    )
+    return True
+
+
 def restore_last_good_state_identity(
     store: PersistenceStore,
     *,
