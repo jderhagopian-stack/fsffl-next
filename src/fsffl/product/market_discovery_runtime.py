@@ -1450,6 +1450,7 @@ def build_market_discovery(
     search_generation_diagnostics: dict[str, object] | None = None,
     evaluator: TradeEvaluator = evaluate_candidate_path,
     asset_index: Mapping[tuple[str, str], object] | None = None,
+    cooperative_yield: Callable[[], object] | None = None,
 ) -> dict[str, object]:
     """Build governed Opportunity/Path output from raw Search rows."""
 
@@ -1473,6 +1474,8 @@ def build_market_discovery(
     economically_screened_rows: list[dict[str, object]] = []
     cheap_economic_errors = 0
     for raw_row in rows:
+        if cooperative_yield is not None:
+            cooperative_yield()
         try:
             economically_screened_rows.append(
                 evaluate_candidate_economics(
@@ -1538,6 +1541,8 @@ def build_market_discovery(
     paths: list[CandidatePath] = []
     decision_errors = 0
     for index, seed in enumerate(seeds):
+        if cooperative_yield is not None:
+            cooperative_yield()
         row = dict(seed["representative"])
         if index in selected_indices:
             try:
