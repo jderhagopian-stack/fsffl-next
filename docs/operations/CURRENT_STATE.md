@@ -741,3 +741,11 @@ Management identified a structural flaw in prior Research model-selection practi
 That policy is superseded. Research model selection is now symmetric. Absolute quality/safety gates remain, but chronology does not confer scientific authority. Differences that are practically negligible or within uncertainty must be reported as such; production switching cost is a separate Product/Implementation consideration.
 
 The joint injury-availability experiment remains frozen and historically valid, but its architectural disposition is reopened for symmetric practical-materiality interpretation. Production H3 and Intrinsic remain unchanged while that interpretation is performed.
+
+
+## 2026-09-27 — Forecast authority reopened for symmetric audit; runtime work continues independently
+Management does not currently certify the selected Forecast as the best-supported overall architecture. The original integrated I1 selection was a legitimate symmetric comparison among B0/B1/I1/I2, but later routing/calibration studies used incumbent-preserving rules that can create path dependence, and the overall candidate-family breadth was bounded.
+
+Research is now authorized to run a symmetric Forecast Model Authority Audit across all serious recoverable candidates, then determine whether a bounded new-family challenge is necessary. Production Forecast/H3/Intrinsic remain unchanged during that work.
+
+Implementation remains independently authorized to finish PR #274. Runtime availability work must preserve current model semantics and must not wait for or absorb experimental Forecast changes.
