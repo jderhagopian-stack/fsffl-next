@@ -1304,3 +1304,25 @@ Priority is now singular:
 3. only then start the Long-Term Intrinsic shadow from its already-frozen Research contract.
 
 Do not create or advance a Long-Term Intrinsic implementation branch while the runtime corrective is still active. Preserve the Research handoff unchanged for later execution.
+
+
+## 2026-09-27 18:16 ET — PR #278 hosted acceptance failed after substantial progress
+**State: ACTIVE — NARROW REMAINING RUNTIME CORRECTIVE REQUIRED**
+
+PR #278 successfully fixed the prior cold PI future-Forecast continuity failure and improved memory materially, but the full hosted journey did not pass.
+
+Confirmed improvements:
+- cold PI history during initial reconciliation completed with Forecast years [1,2,3] in ~9.5s;
+- promoted surfaces reached current/full readiness with zero stale surfaces after reconciliation;
+- no process recycle, 5xx/429, lost State, or application crash was observed;
+- resource peak improved materially versus the prior ~510 MB window.
+
+Remaining failures:
+- acceptance failed at `after_automatic_state_sync` solely on the internal resource target: current RSS 407,007,232 bytes; peak/max observed 450,359,296 bytes; budget 429,496,720; hard limit 536,870,900;
+- a Market workspace build under the acceptance sequence took ~64.9s, so heavy-work latency remains unacceptable even though light Market reads still complete in subsecond/low-single-digit time;
+- PI history during active reconciliation completed with compatible Y2/Y3 but took ~35.5s.
+
+Disposition:
+- preserve #278; it fixed a real continuity bug and reduced peak memory;
+- next work is a narrow contention/memory/Market-build corrective, not another runtime rewrite;
+- do not reopen Long-Term Intrinsic implementation until this runtime work reaches a permitted terminal state.
