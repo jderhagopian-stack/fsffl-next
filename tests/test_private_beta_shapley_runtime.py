@@ -39,7 +39,10 @@ from fsffl.product.p0_forecast_runtime import (
     frozen_p0_source_rows,
 )
 from fsffl.product.p0_future_forecast_provider import build_p0_future_forecast_contract
-from fsffl.product.private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
+from fsffl.product.private_beta_shapley_runtime import (
+    PrivateBetaShapleyContractLoader,
+    intrinsic_input_fingerprint,
+)
 from fsffl.product.runtime import UserRuntimeContext
 from fsffl.product.vnext_future_forecast_provider import (
     VNEXT_FORECAST_VERSION,
@@ -215,7 +218,7 @@ def test_loader_serves_degraded_raw_contract_and_excludes_diagnostic_h1() -> Non
     )
     contract = loader(_context(state, observation))
 
-    assert contract.status == ShapleyIntrinsicAvailability.DEGRADED
+    assert contract.status == ShapleyIntrinsicAvailability.READY
     assert contract.display_scaling_applied is False
     assert contract.diagnostic_h1_included is False
     assert contract.coverage.player_count == 1
@@ -1045,3 +1048,171 @@ def test_promoted_vnext_intrinsic_survives_authentic_preseason_raw_without_fumbl
     assert contract.estimates[0].contributions[0].provenance.authority == (
         "preserved_preseason_year1_forecast"
     )
+
+
+
+def test_intrinsic_input_fingerprint_ignores_unrelated_league_state_changes() -> None:
+    state, observation = _fixture()
+    context = _context(state, observation)
+    evidence = _authority_evidence(observation)
+    future = _contract_only_fixture_provider(
+        league_state=state,
+        raw_forecasts=evidence.raw_forecasts,
+        league_year_one=evidence.league_scored_forecasts,
+    )
+    source_ids = tuple(evidence.successful_source_ids)
+    baseline = intrinsic_input_fingerprint(
+        context,
+        evidence.league_scored_forecasts,
+        future,
+        source_ids,
+        year_one_evidence=evidence,
+    )
+
+    changed_team = state.teams[0].model_copy(update={"display_name": "Renamed Team"})
+    advanced = state.model_copy(
+        update={
+            "as_of": state.as_of + timedelta(hours=2),
+            "teams": (changed_team, state.teams[1]),
+            "team_states": tuple(
+                item.model_copy(update={"faab_remaining": 17})
+                for item in state.team_states
+            ),
+        }
+    )
+    advanced_context = _context(advanced, observation)
+    advanced_future = _contract_only_fixture_provider(
+        league_state=advanced,
+        raw_forecasts=evidence.raw_forecasts,
+        league_year_one=evidence.league_scored_forecasts,
+    )
+    assert advanced.state_id != state.state_id
+    assert intrinsic_input_fingerprint(
+        advanced_context,
+        evidence.league_scored_forecasts,
+        advanced_future,
+        source_ids,
+        year_one_evidence=evidence,
+    ) == baseline
+
+
+def test_intrinsic_input_fingerprint_invalidates_required_dependencies() -> None:
+    state, observation = _fixture()
+    evidence = _authority_evidence(observation)
+    future = _contract_only_fixture_provider(
+        league_state=state,
+        raw_forecasts=evidence.raw_forecasts,
+        league_year_one=evidence.league_scored_forecasts,
+    )
+    source_ids = tuple(evidence.successful_source_ids)
+
+    def fingerprint(
+        target_state: LeagueState = state,
+        target_evidence=evidence,
+        target_future: FutureForecastContract = future,
+    ) -> str:
+        return intrinsic_input_fingerprint(
+            _context(target_state, observation),
+            tuple(target_evidence.league_scored_forecasts),
+            target_future,
+            tuple(target_evidence.successful_source_ids),
+            year_one_evidence=target_evidence,
+        )
+
+    baseline = fingerprint()
+
+    scoring_changed = state.model_copy(
+        update={
+            "league": state.league.model_copy(
+                update={
+                    "rules": state.league.rules.model_copy(
+                        update={
+                            "scoring": state.league.rules.scoring
+                            + (ScoringRule(stat="rec", points=0.5),)
+                        }
+                    )
+                }
+            )
+        }
+    )
+    assert fingerprint(scoring_changed) != baseline
+
+    lineup_changed = state.model_copy(
+        update={
+            "league": state.league.model_copy(
+                update={
+                    "rules": state.league.rules.model_copy(
+                        update={
+                            "lineup": (
+                                LineupRequirement(slot=RosterSlot.QB, count=2),
+                            )
+                        }
+                    )
+                }
+            )
+        }
+    )
+    assert fingerprint(lineup_changed) != baseline
+
+    changed_y1 = _authority_evidence(
+        observation.model_copy(
+            update={
+                "distribution": ForecastDistribution(
+                    mean=observation.distribution.mean + 7.0,
+                    stddev=observation.distribution.stddev,
+                )
+            }
+        )
+    )
+    assert fingerprint(target_evidence=changed_y1) != baseline
+
+    changed_future = future.model_copy(
+        update={"forecast_model_version": "future-model-zeta-v2"}
+    )
+    assert fingerprint(target_future=changed_future) != baseline
+
+    next_season = state.model_copy(
+        update={
+            "league": state.league.model_copy(update={"season": 2027})
+        }
+    )
+    assert fingerprint(next_season) != baseline
+
+
+def test_persisted_intrinsic_reuses_across_unrelated_state_advance() -> None:
+    state, observation = _fixture()
+    evidence_loader = lambda _state: _authority_evidence(observation)
+    store = _MemoryShapleyArtifactStore()
+    calls: list[str] = []
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=evidence_loader,
+        persistence_store=cast(Any, store),
+        future_forecast_builder=_versioned_future_builder("forecast-v1", calls),
+        future_forecast_model_version="forecast-v1",
+    )
+    first = loader(_context(state, observation))
+    assert len(store.records) == 1
+
+    advanced = state.model_copy(
+        update={
+            "as_of": state.as_of + timedelta(hours=3),
+            "teams": (
+                state.teams[0].model_copy(update={"display_name": "A Updated"}),
+                state.teams[1],
+            ),
+        }
+    )
+    fresh_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=evidence_loader,
+        persistence_store=cast(Any, store),
+        future_forecast_builder=_versioned_future_builder("forecast-v1", calls),
+        future_forecast_model_version="forecast-v1",
+    )
+    reused = fresh_loader(_context(advanced, observation))
+
+    assert advanced.state_id != state.state_id
+    assert reused == first
+    assert len(store.records) == 1
+    only_key = next(iter(store.records))
+    assert only_key.scope_id == state.league.league_id
+    assert only_key.scope_kind == "league_intrinsic_inputs"
