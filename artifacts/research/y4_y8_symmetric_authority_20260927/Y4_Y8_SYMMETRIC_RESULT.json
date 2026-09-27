@@ -1,0 +1,63 @@
+{
+  "age_exposure_prediction_rows": 59700,
+  "age_variant_set": [
+    "base_linear",
+    "exposure_ablation",
+    "target_exposure_histgb",
+    "target_poly",
+    "target_poly_exposure"
+  ],
+  "authority": "research_only_no_production_change",
+  "cell_classification_counts": {
+    "best_supported_policy": 4,
+    "insufficient_outer_evidence_tie_or_direction": 2,
+    "insufficient_outer_evidence_tradeoff": 2,
+    "multi_objective_tradeoff": 5,
+    "practical_tie_or_uncertain": 7
+  },
+  "exact_policy_cells": [
+    {
+      "best_supported_or_tied": "blanket_75_25",
+      "horizon": 5,
+      "position": "QB"
+    },
+    {
+      "best_supported_or_tied": "hard_router",
+      "horizon": 5,
+      "position": "WR"
+    },
+    {
+      "best_supported_or_tied": "soft_stack",
+      "horizon": 7,
+      "position": "RB"
+    },
+    {
+      "best_supported_or_tied": "blanket_75_25",
+      "horizon": 7,
+      "position": "TE"
+    }
+  ],
+  "guards": {
+    "current_named_players_used": false,
+    "intrinsic_changed": false,
+    "models_refit": false,
+    "new_family_added": false,
+    "prior_soft_stack_privilege": false,
+    "production_forecast_changed": false,
+    "production_h3_changed": false
+  },
+  "policy_set": [
+    "baseline",
+    "hard_router",
+    "soft_stack",
+    "blanket_75_25"
+  ],
+  "routing_common_player_origin_rows": 11940,
+  "routing_policy_prediction_rows": 47760,
+  "study": "y4-y8-symmetric-long-horizon-authority",
+  "y8_exact_authority_cells": 0,
+  "y8_outer_origins": [
+    2017,
+    2018
+  ]
+}
