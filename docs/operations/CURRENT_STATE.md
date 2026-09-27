@@ -821,3 +821,13 @@ Management prefers to finish the existing runtime/latency/continuity work before
 The full hosted journey reached successful cold PI continuity and post-reconciliation full/current presentation, but failed the internal resource gate at `after_automatic_state_sync`: ~407.0 MB current RSS, ~450.4 MB max observed versus the ~429.5 MB engineering budget, still below the ~536.9 MB hard Render limit. No recycle/5xx/429/lost State was observed.
 
 A separate remaining performance defect is confirmed: Market workspace construction reached ~64.9s under the heavy acceptance sequence; active-reconciliation PI history was ~35.5s. Thus #278 is a real improvement but not a terminal success. Runtime remains the sole implementation priority.
+
+
+## 2026-09-27 — Management chooses final runtime direction
+The remaining runtime problem is now treated as an execution-boundary defect, not a request for another broad memory rewrite.
+
+Observed evidence shows #278 materially improved continuity and reduced memory, while full Market workspace construction can still consume ~65 seconds synchronously after State/cache invalidation. Management therefore requires a hard boundary: reading Market must never launch the full Search/Decision pipeline.
+
+The product should serve persisted/current or compatible last-good Market state immediately, run structural Search only on explicit action, progressively enrich candidates with Decision evidence, and reserve deep Simulation for explicit drill-down. PI history should follow the same persist-first/background-refresh principle.
+
+The ~429.5 MB internal target is retained as diagnostic headroom but no longer independently blocks acceptance without a real availability symptom. Hard Render memory safety remains enforced.
