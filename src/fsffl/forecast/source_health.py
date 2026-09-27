@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from statistics import median
 
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
+from fsffl.execution_cooperation import cooperative_cpu_yield
 from fsffl.state.models import LeagueRules, LineupRequirement, Position, RosterSlot, ScoringRule
 
 from .league_scoring import derive_league_fantasy_point_forecasts
@@ -131,7 +132,8 @@ def evaluate_revision_agnostic_scale_health(
         Position.TE: [],
     }
     all_ratios: list[float] = []
-    for player_id in sorted(set(candidate_by_player) & set(reference_by_player)):
+    for index, player_id in enumerate(sorted(set(candidate_by_player) & set(reference_by_player))):
+        cooperative_cpu_yield(index)
         current = candidate_by_player[player_id]
         prior = reference_by_player[player_id]
         if current.position != prior.position:
