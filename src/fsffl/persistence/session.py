@@ -47,6 +47,9 @@ CURRENT_TEAM_ANALYTICS_VIEW_VERSION = "next7-team-view-v4:position-strength-age"
 LAST_GOOD_ARTIFACT_KIND = "runtime_last_good_bundle"
 LAST_GOOD_SCOPE_KIND = "user"
 LAST_GOOD_MODEL_VERSION = "runtime-last-good-v1"
+LEAGUE_LAST_GOOD_ARTIFACT_KIND = "runtime_last_good_league_bundle"
+LEAGUE_LAST_GOOD_SCOPE_KIND = "user_league"
+LEAGUE_LAST_GOOD_MODEL_VERSION = "runtime-last-good-league-v1"
 JOB_LIFECYCLE_ARTIFACT_KIND = "intelligence_job_lifecycle"
 JOB_LIFECYCLE_MODEL_VERSION = "intelligence-job-lifecycle-v1"
 
@@ -58,6 +61,10 @@ class DurableRuntimeSnapshot:
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
+    served_league_state: LeagueState | None = None
+    served_forecast_evidence: LiveForecastEvidence | None = None
+    served_simulation_analytics: LiveSimulationAnalyticsResult | None = None
+    served_value_evidence: CurrentMarketValueRuntimeResult | None = None
     restored_from_last_good: bool = False
 
 
@@ -69,6 +76,55 @@ def _provider_external_id(league_state: LeagueState) -> tuple[str, str]:
         ref = league_state.league.provider_refs[0]
         return ref.provider, ref.external_id
     return "canonical", league_state.league.league_id
+
+
+def _terminal_bundle(
+    forecast_evidence: "LiveForecastEvidence | None",
+    simulation_analytics: "LiveSimulationAnalyticsResult | None",
+    value_evidence: "CurrentMarketValueRuntimeResult | None",
+) -> bool:
+    return bool(
+        forecast_evidence is not None
+        and value_evidence is not None
+        and (
+            simulation_analytics is not None
+            or not forecast_evidence.uncertainty_ready
+        )
+    )
+
+
+def _league_last_good_scope_id(user_id: str, league_id: str) -> str:
+    return f"{user_id}:{league_id}"
+
+
+def persist_league_last_good_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+    selected_team_id: str | None,
+) -> None:
+    """Persist only the per-league presentation identity, never runtime context."""
+
+    store.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
+                scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
+                scope_id=_league_last_good_scope_id(
+                    user_id,
+                    league_state.league.league_id,
+                ),
+                input_fingerprint=league_state.state_id,
+                model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
+            ),
+            payload={
+                "league_state": league_state.model_dump(mode="json"),
+                "selected_team_id": selected_team_id,
+            },
+            computed_at=utc_now(),
+        )
+    )
 
 
 def persist_runtime_snapshot(
@@ -189,9 +245,19 @@ def persist_runtime_snapshot(
                 recorded_at=now,
             )
 
-    # Complete bundles get an independent durable identity. Partial refresh
-    # checkpoints cannot displace this restart authority.
-    if forecast_evidence is not None and simulation_analytics is not None and value_evidence is not None:
+    # Stable governed terminal bundles get durable presentation identities.
+    # Keep the legacy user-scoped record for compatibility and also retain one
+    # league-scoped record so switching away and back cannot lose that league's
+    # last-good presentation snapshot.
+    if _terminal_bundle(
+        forecast_evidence,
+        simulation_analytics,
+        value_evidence,
+    ):
+        payload = {
+            "league_state": state_payload,
+            "selected_team_id": selected_team_id,
+        }
         store.put_artifact(
             ReusableArtifactRecord(
                 key=ArtifactKey(
@@ -201,9 +267,15 @@ def persist_runtime_snapshot(
                     input_fingerprint=league_state.state_id,
                     model_version=LAST_GOOD_MODEL_VERSION,
                 ),
-                payload={"league_state": state_payload, "selected_team_id": selected_team_id},
+                payload=payload,
                 computed_at=now,
             )
+        )
+        persist_league_last_good_identity(
+            store,
+            user_id=user_id,
+            league_state=league_state,
+            selected_team_id=selected_team_id,
         )
 
 def restore_state_bound_intelligence(
@@ -298,89 +370,154 @@ def restore_state_bound_intelligence(
     return forecast, simulation, values
 
 
-def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> DurableRuntimeSnapshot | None:
-    """Restore only an internally consistent, current-model runtime snapshot."""
+def restore_last_good_state_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_id: str,
+) -> tuple[LeagueState, str | None] | None:
+    """Restore only durable State identity; does not confer derived authority."""
 
-    context = store.get_user_runtime_context(user_id=user_id)
-    if context is None:
-        return None
-    # A queued/running refresh, a restart-interrupted refresh, or a failed refresh
-    # must not make a newer state-only checkpoint displace an independently promoted
-    # complete bundle. Cross-league switches remain authoritative: a last-good bundle
-    # is eligible only when it belongs to the same currently selected league.
-    lifecycle = store.get_latest_reusable_artifact(
-        artifact_kind=JOB_LIFECYCLE_ARTIFACT_KIND,
-        scope_kind=LAST_GOOD_SCOPE_KIND,
-        scope_id=user_id,
-        model_version=JOB_LIFECYCLE_MODEL_VERSION,
+    candidates = (
+        store.get_latest_reusable_artifact(
+            artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
+            scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
+            scope_id=_league_last_good_scope_id(user_id, league_id),
+            model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
+        ),
+        store.get_latest_reusable_artifact(
+            artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+            scope_kind=LAST_GOOD_SCOPE_KIND,
+            scope_id=user_id,
+            model_version=LAST_GOOD_MODEL_VERSION,
+        ),
     )
-    refresh_needs_last_good = (
-        lifecycle is not None
-        and lifecycle.payload.get("status") in {"queued", "running", "failed", "interrupted"}
-    )
-    # The league snapshot table is league-scoped and intentionally tracks the
-    # latest canonical State seen for that league. Another user/session can advance
-    # that shared row without invalidating this user's exact persisted runtime.
-    # Therefore load the user-scoped last-good identity unconditionally and use it
-    # as an exact fallback when it matches the user's persisted context State.
-    candidate = store.get_latest_reusable_artifact(
-        artifact_kind=LAST_GOOD_ARTIFACT_KIND,
-        scope_kind=LAST_GOOD_SCOPE_KIND,
-        scope_id=user_id,
-        model_version=LAST_GOOD_MODEL_VERSION,
-    )
-    last_good = None
-    last_good_state = None
-    if candidate is not None:
+    for candidate in candidates:
+        if candidate is None:
+            continue
         try:
-            candidate_state = LeagueState.model_validate(candidate.payload["league_state"])
+            state = LeagueState.model_validate(candidate.payload["league_state"])
         except (KeyError, TypeError, ValueError):
-            candidate_state = None
-        if (
-            candidate_state is not None
-            and candidate_state.league.league_id == context.league_id
-        ):
-            last_good = candidate
-            last_good_state = candidate_state
+            continue
+        if state.league.league_id != league_id:
+            continue
+        selected = candidate.payload.get("selected_team_id")
+        if selected not in {team.team_id for team in state.teams}:
+            selected = None
+        return state, selected
+    return None
 
-    last_good_matches_context = bool(
-        last_good is not None
-        and last_good_state is not None
-        and last_good_state.state_id == context.state_hash
-        and last_good.key.input_fingerprint == context.state_hash
+
+def restore_last_good_intelligence(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_id: str,
+) -> DurableRuntimeSnapshot | None:
+    """Restore presentation-only last-good intelligence for one selected league."""
+
+    candidate = store.get_latest_reusable_artifact(
+        artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
+        scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
+        scope_id=_league_last_good_scope_id(user_id, league_id),
+        model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
     )
-
-    if refresh_needs_last_good and last_good is not None and last_good_state is not None:
-        # An interrupted/failed in-flight refresh may have checkpointed a newer
-        # State-only context. Preserve the previously promoted complete bundle.
-        league_state = last_good_state
-        selected = last_good.payload.get("selected_team_id")
-    else:
-        league_record = store.get_league_snapshot(
-            provider=context.provider,
-            league_id=context.league_id,
-            season=context.season,
+    if candidate is None:
+        # Backward-compatible migration path for deployments that only have the
+        # historical user-scoped last-good record.
+        legacy = store.get_latest_reusable_artifact(
+            artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+            scope_kind=LAST_GOOD_SCOPE_KIND,
+            scope_id=user_id,
+            model_version=LAST_GOOD_MODEL_VERSION,
         )
-        if (
-            league_record is not None
-            and league_record.state_hash == context.state_hash
-        ):
-            league_state = LeagueState.model_validate(league_record.payload)
-            if league_state.state_id != context.state_hash:
-                return None
-            selected = context.selected_team_id
-        elif last_good_matches_context:
-            # Shared latest league State was advanced by another isolated
-            # session, but this user's exact complete State remains durable.
-            league_state = last_good_state
-            selected = last_good.payload.get("selected_team_id")
-        else:
-            return None
+        candidate = legacy
+
+    if candidate is None:
+        return None
+    try:
+        league_state = LeagueState.model_validate(candidate.payload["league_state"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if league_state.league.league_id != league_id:
+        return None
 
     forecast, simulation, values = restore_state_bound_intelligence(
         store,
         league_state=league_state,
     )
+    if not _terminal_bundle(forecast, simulation, values):
+        return None
+    selected = candidate.payload.get("selected_team_id")
+    if selected not in {team.team_id for team in league_state.teams}:
+        selected = None
+    return DurableRuntimeSnapshot(
+        league_state=league_state,
+        selected_team_id=selected,
+        forecast_evidence=forecast,
+        simulation_analytics=simulation,
+        value_evidence=values,
+        restored_from_last_good=True,
+    )
+
+
+def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> DurableRuntimeSnapshot | None:
+    """Restore canonical target State plus an optional same-league served last-good."""
+
+    context = store.get_user_runtime_context(user_id=user_id)
+    if context is None:
+        return None
+
+    # The user-scoped context owns the current canonical target State identity.
+    # Never replace it with older last-good intelligence merely because a refresh
+    # was interrupted. Last-good is restored separately below for presentation.
+    league_record = store.get_league_snapshot(
+        provider=context.provider,
+        league_id=context.league_id,
+        season=context.season,
+    )
+    league_state = None
+    selected = context.selected_team_id
+    restored_from_last_good = False
+    if (
+        league_record is not None
+        and league_record.state_hash == context.state_hash
+    ):
+        candidate_state = LeagueState.model_validate(league_record.payload)
+        if candidate_state.state_id == context.state_hash:
+            league_state = candidate_state
+
+    if league_state is None:
+        # Session-isolation fallback: a shared latest league row may have been
+        # advanced by another isolated user/session. The exact user last-good may
+        # still be the only durable copy of this user's canonical context State.
+        fallback = restore_last_good_state_identity(
+            store,
+            user_id=user_id,
+            league_id=context.league_id,
+        )
+        if fallback is None or fallback[0].state_id != context.state_hash:
+            return None
+        league_state, selected = fallback
+        restored_from_last_good = True
+
+    forecast, simulation, values = restore_state_bound_intelligence(
+        store,
+        league_state=league_state,
+    )
+
+    served = None
+    if not _terminal_bundle(forecast, simulation, values):
+        candidate = restore_last_good_intelligence(
+            store,
+            user_id=user_id,
+            league_id=league_state.league.league_id,
+        )
+        if (
+            candidate is not None
+            and candidate.league_state.state_id != league_state.state_id
+        ):
+            served = candidate
 
     if selected not in {team.team_id for team in league_state.teams}:
         selected = None
@@ -390,7 +527,16 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         forecast_evidence=forecast,
         simulation_analytics=simulation,
         value_evidence=values,
-        restored_from_last_good=bool(
-            last_good_state is not None and league_state.state_id == last_good_state.state_id
+        served_league_state=(served.league_state if served is not None else None),
+        served_forecast_evidence=(
+            served.forecast_evidence if served is not None else None
         ),
+        served_simulation_analytics=(
+            served.simulation_analytics if served is not None else None
+        ),
+        served_value_evidence=(
+            served.value_evidence if served is not None else None
+        ),
+        restored_from_last_good=restored_from_last_good,
     )
+

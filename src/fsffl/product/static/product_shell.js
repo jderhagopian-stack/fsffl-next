@@ -24,11 +24,11 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260926-post265-intrinsic-mobile1';
-const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';
+const fsfflStaticVersion='20260927-dualstate1';
+const leagueAtlasStaticVersion='20260927-dualstate1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260926-post265-intrinsic-mobile1';
-const franchiseNorthStarStaticVersion='20260926-post265-intrinsic-mobile1';
+const homeNorthStarStaticVersion='20260927-dualstate1';
+const franchiseNorthStarStaticVersion='20260927-dualstate1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
@@ -114,7 +114,8 @@ function fsfflCapabilityStatus(key){
   return String(fsfflCapabilityReadiness()?.[key]?.status||'unavailable');
 }
 function fsfflReadinessAsOf(){
-  const raw=fsfflCapabilityReadiness()?.as_of||state?.intelligence?.served_state?.as_of||state?.context?.evidence_as_of||null;
+  const readiness=fsfflCapabilityReadiness();
+  const raw=(readiness?.overall_status==='rebuilding'&&readiness?.served_last_good?.available?readiness.served_last_good.as_of:null)||readiness?.as_of||state?.intelligence?.served_intelligence?.as_of||state?.intelligence?.served_state?.as_of||state?.context?.evidence_as_of||null;
   if(!raw)return null;
   const date=new Date(raw);if(Number.isNaN(date.getTime()))return null;
   try{return new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(date)}
@@ -155,12 +156,13 @@ function fsfflSharedReadinessSnapshot(){
     fsfflSharedReadinessState.lastStep=step;
     const lifecycleComplete=step===FSFFL_SHARED_READINESS_STEPS;
     const partial=lifecycleComplete&&!capabilityFull;
-    const lastGoodAvailable=Boolean(context?.forecast_ready||context?.simulation_ready||context?.value_ready);
+    const lastGoodAvailable=Boolean(capabilities?.served_last_good?.available||context?.forecast_ready||context?.simulation_ready||context?.value_ready);
     const label=lifecycleComplete
       ?(capabilityFull?'Build complete · Current core runtime fully available · product intelligence verified':surfaceIssue?'Build complete · '+surfaceIssue:'Build complete · intelligence partially available')
       :phaseLabel+(lastGoodAvailable?' · Last-good available':'');
     return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete,partial,capabilities,asOf};
   }
+  const rebuilding=capabilities?.overall_status==='rebuilding';
   let step=1;
   if(context?.forecast_ready)step=Math.max(step,2);
   if(context?.simulation_ready)step=Math.max(step,4);
@@ -170,6 +172,8 @@ function fsfflSharedReadinessSnapshot(){
   const intrinsicStatus=fsfflCapabilityStatus('intrinsic');
   const label=capabilityFull
     ?'Current core runtime fully available · product intelligence verified'
+    :rebuilding
+      ?'State current · intelligence rebuilding · last-good intelligence remains available'
     :surfaceIssue
       ?'Core intelligence current · '+surfaceIssue
       :intrinsicStatus==='building'
@@ -182,7 +186,7 @@ function fsfflSharedReadinessSnapshot(){
             :!context?.simulation_ready?'Simulation unavailable under current authority'
             :!context?.value_ready?'Building market values…'
             :'Intelligence partially available';
-  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete:capabilityFull,partial:capabilities?.overall_status==='partial'||Boolean(surfaceIssue),capabilities,asOf};
+  return{connected:true,step,total:FSFFL_SHARED_READINESS_STEPS,label,failed:false,complete:capabilityFull,lifecycleComplete:capabilityFull,partial:capabilities?.overall_status==='partial'||rebuilding||Boolean(surfaceIssue),rebuilding,capabilities,asOf};
 }
 function fsfflCapabilityChip(label,key){
   const status=fsfflCapabilityStatus(key);
@@ -216,7 +220,7 @@ function fsfflSharedReadinessMarkup(status=fsfflSharedReadinessSnapshot()){
   const asOf=status.asOf?' · As of '+status.asOf:'';
   const mobilePrimary=status.complete
     ?'✓ Intelligence current'
-    :(status.partial?'◐ Intelligence partial · '+fsfflMobileCapabilityException(status):status.failed?'Intelligence needs attention':status.step+' / '+status.total);
+    :(status.rebuilding?'◐ State current · intelligence rebuilding':status.partial?'◐ Intelligence partial · '+fsfflMobileCapabilityException(status):status.failed?'Intelligence needs attention':status.step+' / '+status.total);
   return '<div class="fsffl-shared-readiness-strip '+(status.complete?'complete ':'')+(status.partial?'partial ':'')+(status.failed?'failed':'')+'" role="status" aria-live="polite" style="--fsffl-readiness:'+pct.toFixed(1)+'%"><span class="fsffl-shared-readiness-mark" aria-hidden="true">'+(status.complete?'✓':status.partial?'◐':'●')+'</span><strong><span class="fsffl-readiness-desktop-step">'+status.step+' / '+status.total+' build</span><span class="fsffl-readiness-mobile-step">'+fsfflSharedReadinessEscape(mobilePrimary)+'</span></strong><span class="fsffl-shared-readiness-copy">'+fsfflSharedReadinessEscape(status.label)+(status.asOf?'<span class="fsffl-readiness-asof">As of '+fsfflSharedReadinessEscape(status.asOf)+'</span>':'')+chips+'</span>'+refreshAction+'</div>';
 }
 function fsfflSharedReadinessHost(){

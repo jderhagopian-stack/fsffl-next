@@ -387,8 +387,11 @@ class PrivateBetaShapleyContractLoader:
             )
         )
 
-    def intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
-        """Resolve the dependency-scoped compatibility identity without Shapley."""
+    def _compatibility_identity(
+        self,
+        context: UserRuntimeContext,
+    ) -> tuple[str, str]:
+        """Resolve semantic compatibility fingerprint plus actual Forecast model id."""
 
         league_state = context.league_state
         if league_state is None:
@@ -407,7 +410,10 @@ class PrivateBetaShapleyContractLoader:
                 separators=(",", ":"),
                 ensure_ascii=False,
             )
-            return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+            return (
+                hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+                self._future_forecast_model_version,
+            )
 
         try:
             evidence = self._year_one_loader(league_state)
@@ -436,13 +442,14 @@ class PrivateBetaShapleyContractLoader:
                 raise ValueError(
                     "Governed H3 subjects are missing preserved Year-1 Forecast evidence"
                 )
-            return intrinsic_input_fingerprint(
+            fingerprint = intrinsic_input_fingerprint(
                 context,
                 h3_year_one,
                 future_contract,
                 source_ids,
                 year_one_evidence=evidence,
             )
+            return fingerprint, future_contract.forecast_model_version
         except Exception as exc:
             # Lifecycle coalescing must remain fail-closed without turning a
             # required-input problem into a pre-background HTTP exception.
@@ -459,7 +466,41 @@ class PrivateBetaShapleyContractLoader:
                 separators=(",", ":"),
                 ensure_ascii=False,
             )
-            return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+            return (
+                hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+                self._future_forecast_model_version,
+            )
+
+    def intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
+        """Resolve the dependency-scoped compatibility identity without Shapley."""
+
+        return self._compatibility_identity(context)[0]
+
+    def restore_compatible(
+        self,
+        context: UserRuntimeContext,
+    ) -> ShapleyIntrinsicContract | None:
+        """Restore an already-built dependency-compatible Intrinsic contract.
+
+        The future Forecast contract is resolved to identify semantic/model
+        compatibility, but the expensive Shapley calculation is never run.
+        """
+
+        if context.league_state is None:
+            return None
+        fingerprint, forecast_model_version = self._compatibility_identity(context)
+        contract = self._restore_persisted(
+            context,
+            input_fingerprint=fingerprint,
+            forecast_model_version=forecast_model_version,
+        )
+        if contract is None:
+            return None
+        with self._lock:
+            self._cached_key = fingerprint
+            self._cached_contract = contract
+        return contract
+
 
     def __call__(self, context: UserRuntimeContext) -> ShapleyIntrinsicContract:
         league_state = context.league_state

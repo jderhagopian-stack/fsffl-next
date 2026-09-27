@@ -163,7 +163,7 @@ def test_franchise_north_star_is_the_only_primary_franchise_renderer() -> None:
     assert NORTH_STAR.rfind("window.renderFsfflMyTeam=") == NORTH_STAR.rfind(
         "window.renderFsfflMyTeam=loadFranchiseNorthStar;"
     )
-    assert "franchiseNorthStarStaticVersion='20260926-post265-intrinsic-mobile1'" in SHELL
+    assert "franchiseNorthStarStaticVersion='20260927-dualstate1'" in SHELL
     assert "lazyProductScript(\'renderFsfflMyTeam\',\'/static/my_team_dashboard.js\'" in SHELL
     assert "franchiseNorthStarStaticVersion)" in SHELL
 
@@ -236,3 +236,23 @@ def test_franchise_state_only_mode_shows_complete_roster_instead_of_empty_starte
     assert "fsfflMyTeamState.franchiseTab='roster'" in loader
     assert "fsfflMyTeamState.franchiseRosterFilter='all'" in loader
     assert "no governed starter classification" in loader
+
+
+
+def test_franchise_starters_never_hide_nonempty_canonical_roster_during_rebuild() -> None:
+    roster = NORTH_STAR.split("function franchiseNSRoster(){", 1)[1].split(
+        "function franchiseNSAssets(){", 1
+    )[0]
+    assert "hasStarterAssignments=roster.some(franchiseNSProjectedStarter)" in roster
+    assert "lineupRebuilding=filter==='starters'&&!hasStarterAssignments&&roster.length>0" in roster
+    assert "hasStarterAssignments?roster.filter(franchiseNSProjectedStarter):roster" in roster
+    assert "Starter assignments are rebuilding. Showing canonical roster membership" in roster
+
+
+def test_franchise_labels_last_good_derived_intelligence_as_stale() -> None:
+    renderer = NORTH_STAR.split("function renderFranchiseNorthStar(){", 1)[1].split(
+        "async function loadFranchiseNorthStarValueLenses", 1
+    )[0]
+    assert "view.intelligence_freshness?.stale" in renderer
+    assert "State current · last-good intelligence shown" in renderer
+    assert "while replacement intelligence rebuilds" in renderer

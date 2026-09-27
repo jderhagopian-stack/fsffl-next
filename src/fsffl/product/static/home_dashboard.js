@@ -113,6 +113,8 @@ function renderFsfflHomeNorthStar(){
   const payload=homePayload(),view=homeView();if(!payload||!view){container.innerHTML=homeLoadingMarkup();return}
 
   const standing=homeStanding(),simulation=homeSimulation(),pressure=homePressurePoint(),fragility=homeFragility(),adjacent=homeAdjacentStandings(),positions=homePositionRows();
+  const freshness=payload.intelligence_freshness||{};
+  const staleBanner=freshness.stale?'<aside class="home-card" role="status"><span class="home-card-kicker">State current · last-good intelligence</span><strong>Replacement intelligence is rebuilding.</strong><small>Derived fields are from '+homeEscape(freshness.served_as_of||'the last-good snapshot')+'; roster and standings remain current.</small></aside>':'';
   const competitiveState=homeStateLabel(view.utility?.calculated_competitive_state);
   const simulationReady=payload.simulation?.status==='ready'&&simulation;
   const lens=fsfflHomeNorthStarState.positionLens;
@@ -124,6 +126,7 @@ function renderFsfflHomeNorthStar(){
   const around=adjacent.map(row=>`<span class="${row.team_id===homeManagedTeamId()?'managed':''}"><b>#${row.rank}</b><strong>${homeEscape(row.team_name)}</strong><small>${homeRecord(row)}</small></span>`).join('');
 
   container.innerHTML=`<section class="home-north-star">
+    ${staleBanner}
     <button type="button" class="home-identity" data-home-action="franchise" aria-label="Open managed franchise overview">
       <span class="home-team-mark" aria-hidden="true">${homeEscape((view.display_name||'?').slice(0,1).toUpperCase())}</span>
       <span class="home-identity-copy"><strong>${homeEscape(view.display_name)}</strong><span>${homeRecord(standing)} · #${standing?.rank??'—'} of ${homeStandings().length||'—'}</span><small>${homeEscape(competitiveState)}</small></span><b aria-hidden="true">›</b>

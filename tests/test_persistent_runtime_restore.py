@@ -16,7 +16,9 @@ from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERS
 from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
 from fsffl.persistence.session import (
     LAST_GOOD_ARTIFACT_KIND, LAST_GOOD_MODEL_VERSION, LAST_GOOD_SCOPE_KIND,
-    persist_runtime_snapshot, restore_runtime_snapshot,
+    LEAGUE_LAST_GOOD_ARTIFACT_KIND, LEAGUE_LAST_GOOD_MODEL_VERSION,
+    LEAGUE_LAST_GOOD_SCOPE_KIND,
+    persist_runtime_snapshot, restore_last_good_intelligence, restore_runtime_snapshot,
 )
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.product.runtime import LiveForecastEvidence
@@ -355,8 +357,11 @@ def test_running_refresh_restores_durable_last_good_identity() -> None:
 
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
     assert restored is not None
-    assert restored.league_state.state_id == last_good.state_id
-    assert restored.selected_team_id == "t2"
+    assert restored.league_state.state_id == partial.state_id
+    assert restored.selected_team_id == "t1"
+    # Identity-only last-good records cannot masquerade as served intelligence;
+    # the derived Forecast/Value/Simulation artifacts are required.
+    assert restored.served_league_state is None
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -415,8 +420,11 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
 
     assert restored is not None
-    assert restored.league_state.state_id == last_good.state_id
-    assert restored.selected_team_id == "t2"
+    assert restored.league_state.state_id == failed_state.state_id
+    assert restored.selected_team_id == "t1"
+    # Identity-only last-good records cannot masquerade as served intelligence;
+    # the derived Forecast/Value/Simulation artifacts are required.
+    assert restored.served_league_state is None
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -475,8 +483,11 @@ def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
     restored = restore_runtime_snapshot(persistence, user_id="jimmy")
 
     assert restored is not None
-    assert restored.league_state.state_id == last_good.state_id
-    assert restored.selected_team_id == "t2"
+    assert restored.league_state.state_id == interrupted_state.state_id
+    assert restored.selected_team_id == "t1"
+    # Identity-only last-good records cannot masquerade as served intelligence;
+    # the derived Forecast/Value/Simulation artifacts are required.
+    assert restored.served_league_state is None
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -726,3 +737,110 @@ def test_restore_rejects_prior_first_party_supplement_contract_but_preserves_val
     assert restored.forecast_evidence is None
     assert restored.simulation_analytics is None
     assert restored.value_evidence is not None
+
+
+
+def test_restart_restores_new_target_state_and_real_last_good_derived_bundle_separately() -> None:
+    persistence = MemoryPersistence()
+    last_good = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    forecast = _stale_forecast_without_first_party_fumbles_lost(last_good)
+    assert forecast.uncertainty_ready is False
+    value = _empty_value(last_good)
+
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy-dual",
+        league_state=last_good,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+    )
+    assert any(
+        row.key.artifact_kind == LEAGUE_LAST_GOOD_ARTIFACT_KIND
+        and row.key.scope_kind == LEAGUE_LAST_GOOD_SCOPE_KIND
+        and row.key.model_version == LEAGUE_LAST_GOOD_MODEL_VERSION
+        for row in persistence.artifacts
+    )
+
+    target = _league_state(as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC))
+    persist_runtime_snapshot(
+        persistence,
+        user_id="jimmy-dual",
+        league_state=target,
+        selected_team_id="t1",
+    )
+
+    restored = restore_runtime_snapshot(persistence, user_id="jimmy-dual")
+    assert restored is not None
+    assert restored.league_state.state_id == target.state_id
+    assert restored.selected_team_id == "t1"
+    assert restored.forecast_evidence is None
+    assert restored.value_evidence is None
+    assert restored.served_league_state is not None
+    assert restored.served_league_state.state_id == last_good.state_id
+    assert restored.served_forecast_evidence is not None
+    assert restored.served_value_evidence is not None
+    assert restored.served_simulation_analytics is None
+
+
+def test_per_league_last_good_survives_switch_away_and_back() -> None:
+    persistence = MemoryPersistence()
+    fsffl = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    fsffl_forecast = _stale_forecast_without_first_party_fumbles_lost(fsffl)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="switch-user",
+        league_state=fsffl,
+        selected_team_id="t2",
+        forecast_evidence=fsffl_forecast,
+        value_evidence=_empty_value(fsffl),
+    )
+
+    hodor_id = "sleeper:456"
+    hodor = fsffl.model_copy(
+        update={
+            "league": fsffl.league.model_copy(
+                update={
+                    "league_id": hodor_id,
+                    "name": "Hodor",
+                    "provider_refs": (
+                        ProviderRef(provider="sleeper", external_id="456"),
+                    ),
+                }
+            ),
+            "teams": (
+                Team(team_id="h1", league_id=hodor_id, display_name="H One"),
+                Team(team_id="h2", league_id=hodor_id, display_name="H Two"),
+            ),
+            "team_states": (
+                TeamState(team_id="h1", roster=()),
+                TeamState(team_id="h2", roster=()),
+            ),
+        }
+    )
+    hodor_forecast = _stale_forecast_without_first_party_fumbles_lost(hodor)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="switch-user",
+        league_state=hodor,
+        selected_team_id="h1",
+        forecast_evidence=hodor_forecast,
+        value_evidence=_empty_value(hodor),
+    )
+
+    restored_fsffl = restore_last_good_intelligence(
+        persistence,
+        user_id="switch-user",
+        league_id=fsffl.league.league_id,
+    )
+    restored_hodor = restore_last_good_intelligence(
+        persistence,
+        user_id="switch-user",
+        league_id=hodor_id,
+    )
+    assert restored_fsffl is not None
+    assert restored_fsffl.league_state.state_id == fsffl.state_id
+    assert restored_fsffl.value_evidence is not None
+    assert restored_hodor is not None
+    assert restored_hodor.league_state.state_id == hodor.state_id
+    assert restored_hodor.value_evidence is not None

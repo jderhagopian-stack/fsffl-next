@@ -128,6 +128,65 @@ class ShapleyIntrinsicBackgroundCoordinator:
             fingerprint,
         )
 
+    def restore_compatible(
+        self,
+        context: UserRuntimeContext,
+    ) -> IntrinsicBuildRecord | None:
+        """Seed completed lifecycle state from a durable compatible contract."""
+
+        restorer = getattr(self._loader, "restore_compatible", None)
+        if not callable(restorer):
+            return None
+        key = self._key(context)
+        with self._lock:
+            existing = self._records.get(key)
+            if (
+                existing is not None
+                and existing.status == IntrinsicBuildStatus.COMPLETED
+                and existing.contract is not None
+            ):
+                if (
+                    context.league_state is not None
+                    and existing.league_state_id != context.league_state.state_id
+                ):
+                    existing = replace(
+                        existing,
+                        league_state_id=context.league_state.state_id,
+                        updated_at=datetime.now(UTC),
+                    )
+                    self._records[key] = existing
+                return existing
+        contract = restorer(context)
+        if contract is None:
+            return None
+        if context.league_state is None:
+            return None
+        now = datetime.now(UTC)
+        record = IntrinsicBuildRecord(
+            user_id=context.user_id,
+            league_state_id=context.league_state.state_id,
+            forecast_coordinate=str(
+                self._forecast_coordinate_resolver(context)
+            ).strip(),
+            intrinsic_input_fingerprint=key[2],
+            status=IntrinsicBuildStatus.COMPLETED,
+            created_at=now,
+            updated_at=now,
+            contract=contract,
+        )
+        with self._lock:
+            self._records[key] = record
+        _logger.info(
+            "FSFFL Intrinsic restored from compatible persisted contract user=%s state=%s forecast=%s fingerprint=%s estimates=%s",
+            record.user_id,
+            record.league_state_id,
+            record.forecast_coordinate,
+            record.intrinsic_input_fingerprint,
+            len(contract.estimates),
+        )
+        return record
+
+
     def request(self, context: UserRuntimeContext) -> IntrinsicBuildRecord:
         key = self._key(context)
         now = datetime.now(UTC)

@@ -46,3 +46,12 @@ def test_league_comparison_has_mobile_first_hierarchy() -> None:
     assert ".atlas-race-list{overflow-x:auto}" in css
     assert ".atlas-pick-table{overflow-x:auto}" in css
     assert ".atlas-outlook-list{overflow-x:auto}" in css
+
+
+
+def test_league_atlas_explicitly_labels_stale_last_good_during_target_rebuild() -> None:
+    source = Path("src/fsffl/product/static/league_comparison.js").read_text(encoding="utf-8")
+    assert "intelligence_freshness||{}" in source
+    assert "State current · last-good intelligence" in source
+    assert "Replacement league intelligence is rebuilding." in source
+    assert "Current standings, roster membership and draft ownership remain canonical." in source

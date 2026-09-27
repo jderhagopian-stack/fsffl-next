@@ -372,11 +372,14 @@ function franchiseNSOverview(){
 function franchiseNSRoster(){
   const roster=myTeamRosterRows(fsfflMyTeamState.view?.players||[]);
   const filter=fsfflMyTeamState.franchiseRosterFilter;
-  const rows=filter==='starters'?roster.filter(franchiseNSProjectedStarter):filter==='bench'?roster.filter(player=>!franchiseNSProjectedStarter(player)):roster;
+  const hasStarterAssignments=roster.some(franchiseNSProjectedStarter);
+  const lineupRebuilding=filter==='starters'&&!hasStarterAssignments&&roster.length>0;
+  const rows=filter==='starters'?(hasStarterAssignments?roster.filter(franchiseNSProjectedStarter):roster):filter==='bench'?(hasStarterAssignments?roster.filter(player=>!franchiseNSProjectedStarter(player)):roster):roster;
   return '<section class="franchise-ns-view" data-franchise-view="roster">'+
     '<div class="franchise-ns-roster-head"><div><p class="eyebrow">Roster</p><h3>Lineup and depth</h3><p>PPG and projected season points use the same governed full-season Forecast on a 17-game display basis.</p></div>'+
     '<div class="franchise-ns-segment franchise-ns-roster-filter" role="group" aria-label="Roster filter"><button type="button" data-franchise-roster-filter="starters" aria-pressed="'+(filter==='starters')+'">Starters</button><button type="button" data-franchise-roster-filter="bench" aria-pressed="'+(filter==='bench')+'">Bench</button><button type="button" data-franchise-roster-filter="all" aria-pressed="'+(filter==='all')+'">All Players</button></div></div>'+
-    '<div class="franchise-ns-player-list">'+(rows.length?rows.map(franchiseNSPlayerRow).join(''):'<p class="franchise-ns-empty">No players in this roster view.</p>')+'</div>'+
+    (lineupRebuilding?'<p class="franchise-ns-warning">Starter assignments are rebuilding. Showing canonical roster membership so the roster remains usable.</p>':'')+
+    '<div class="franchise-ns-player-list">'+(rows.length?rows.map(franchiseNSPlayerRow).join(''):'<p class="franchise-ns-empty">No players are present in canonical roster State for this view.</p>')+'</div>'+
   '</section>';
 }
 function franchiseNSAssets(){
@@ -410,7 +413,7 @@ function renderFranchiseNorthStar(){
       myTeamTabButton('roster','Roster',fsfflMyTeamState.franchiseTab==='roster')+
       myTeamTabButton('assets','Assets & Picks',fsfflMyTeamState.franchiseTab==='assets')+
     '</nav>'+
-    (stateOnly?'<aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Roster State current · '+myTeamRosterRows(view.players||[]).length+' players</strong><span>Forecast / Simulation-derived fields are unavailable. The canonical roster remains usable; see readiness for the exact blocker.</span></aside>':(fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':''))+
+    (view.intelligence_freshness?.stale?'<aside class="franchise-ns-forecast-strip fallback" role="status"><strong>State current · last-good intelligence shown</strong><span>Canonical roster is current. Derived fields are from '+myTeamEsc(view.intelligence_freshness.served_as_of||"the last-good snapshot")+' while replacement intelligence rebuilds.</span></aside>':stateOnly?'<aside class="franchise-ns-forecast-strip state-only" role="status"><strong>Roster State current · '+myTeamRosterRows(view.players||[]).length+' players</strong><span>Forecast / Simulation-derived fields are unavailable. The canonical roster remains usable; see readiness for the exact blocker.</span></aside>':(fallback?'<aside class="franchise-ns-forecast-strip" role="status"><strong>Forecast fallback active</strong><span>Preserved preseason projections in use · live source-health degraded.</span></aside>':''))+
     (fsfflMyTeamState.franchiseTab==='overview'?franchiseNSOverview():fsfflMyTeamState.franchiseTab==='roster'?franchiseNSRoster():franchiseNSAssets())+
   '</div>';
   panel.querySelectorAll('[data-franchise-tab]').forEach(button=>button.addEventListener('click',()=>{fsfflMyTeamState.franchiseTab=button.dataset.franchiseTab;renderFranchiseNorthStar()}));

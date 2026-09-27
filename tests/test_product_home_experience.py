@@ -199,12 +199,12 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
 
 
 def test_shared_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    release = "20260926-post265-intrinsic-mobile1"
+    release = "20260927-dualstate-availability1"
     assert f"/static/app.js?v={release}" in INDEX
     assert f"/static/home_dashboard.js?v={release}" in INDEX
     assert f"/static/product_shell.js?v={release}" in INDEX
-    assert f"const homeNorthStarStaticVersion='{release}';" in SHELL
-    assert f"const franchiseNorthStarStaticVersion='{release}';" in SHELL
+    assert "const homeNorthStarStaticVersion='20260927-dualstate1';" in SHELL
+    assert "const franchiseNorthStarStaticVersion='20260927-dualstate1';" in SHELL
 
 
 
@@ -220,3 +220,11 @@ def test_home_removes_redundant_large_intelligence_status_card() -> None:
     assert "homeCapabilityNote" not in HOME
     assert "home-capability-note" not in HOME
     assert "fsffl-shared-readiness-strip" in SHELL
+
+
+
+def test_home_explicitly_labels_stale_last_good_during_target_rebuild() -> None:
+    assert "payload.intelligence_freshness||{}" in HOME
+    assert "State current · last-good intelligence" in HOME
+    assert "Replacement intelligence is rebuilding." in HOME
+    assert "roster and standings remain current." in HOME
