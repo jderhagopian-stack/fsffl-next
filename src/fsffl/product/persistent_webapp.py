@@ -116,7 +116,6 @@ _behavioral_coordinator = BehavioralRuntimeCoordinator(
     store_factory=default_behavioral_store,
     max_workers=1,
     heavy_work_coordinator=_heavy_work_coordinator,
-    presentation_payload_loader=_presentation_payload_loader,
 )
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
@@ -340,6 +339,7 @@ app = _webapp.create_app(
     capability_readiness_reader=_hosted_capability_readiness,
     product_capability_reconciler=_reconcile_hosted_intrinsic,
     heavy_work_coordinator=_heavy_work_coordinator,
+    presentation_payload_loader=_presentation_payload_loader,
 )
 
 def _log_startup_runtime_readiness() -> None:
