@@ -272,6 +272,38 @@ Durable handoff:
 
 No Y4-Y8 production implementation is authorized.
 
+
+## Current football-state Forecast update Research gate
+**Status: MANAGEMENT GATE — NARROW FORECAST CONTRACT SUPPORTED / NO PRODUCTION AUTHORITY.**
+
+Research does **not** accept a broad event-rich H1-H3 updater.
+
+Accepted Research conclusions:
+- football-state events trigger Forecast reevaluation;
+- H1 must separate remaining-season availability from conditional active production;
+- when a governed current ROS Forecast is authoritative, it owns H1 and no additive event haircut may be applied;
+- temporary injury does not receive a generic H2/H3 penalty;
+- provider-unavailable fallback must not manufacture a generic event multiplier;
+- release/cut may be represented only as a coarse H3 attachment/survival-risk state based on the current evidence.
+
+Current provider capture is not accepted for broad production H1:
+- exact two-source standard scoring: 54 players;
+- source deployment rights remain uncleared.
+
+Before a production current-football-state updater is promoted, Management must separately accept:
+1. an authoritative current H1 source/availability path with deployment rights and governed exact scoring;
+2. explicit separation of availability, conditional active production, role and future survival;
+3. the no-double-counting guard against provider ROS;
+4. current PIT identity/provenance and event-trigger semantics;
+5. Forecast output identity/version invalidation of dependent Intrinsic;
+6. fail-closed behavior when current evidence is unavailable/ambiguous;
+7. any release/cut H3 state as coarse unless a stronger dedicated validation supports cardinal precision.
+
+No direct Intrinsic injury/transaction/role penalty is authorized.
+
+Durable handoff:
+`artifacts/research/current_football_state_h3_20260926/RECOMMENDED_FORECAST_CONTRACT.md`.
+
 ## Product principle
 Do not make a red gate green by weakening model authority, fabricating projections, backdating evidence, or hiding unsupported assets in Presentation.
 
