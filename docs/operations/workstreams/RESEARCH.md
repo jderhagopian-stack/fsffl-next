@@ -1622,3 +1622,30 @@ Required terminal output:
 6. no production recommendation based on incumbent status or switching cost.
 
 Continue under OPERATING_PROTOCOL.md to a permitted terminal state.
+
+
+## Management completeness correction — exact deployed vNext Forecast must be audited — 2026-09-27
+The symmetric Forecast Model Authority Audit must explicitly include the **exact currently deployed future Forecast package**, not only its historical ancestors/components.
+
+Current deployed Y2/Y3 package identity:
+- model version: `forecast-vnext-a2-burr-20260922`;
+- research freeze: `research/recover-package-a2-burr-20260922@122e802f327baf2fc7989ab635a68dfdc481d63f`;
+- archive SHA-256: `76b2842349093bb0f5c2bdc60995f78256d7cf6e2e4d64be84768a082450ceb1`;
+- frozen production coordinate: 335 players / 670 Y2-Y3 rows;
+- state probabilities: frozen A2 future-state probability primitive;
+- conditional state means: frozen Stage-D A2 handoff;
+- within-state uncertainty: Burr XII M1 for QB; direct-Gamma M1 for RB/WR/TE;
+- current source coordinate: preserved governed 2026 preseason source cohort.
+
+This package is a required audit subject because it is the live Forecast contract consumed by current product/Intrinsic. Historical A2/D0/D1/component evidence may inform interpretation but may not substitute for direct evaluation of the exact deployed package.
+
+### Required action
+1. Add the exact deployed vNext package to the candidate authority ledger as a separately identified whole-Forecast candidate.
+2. Reconstruct/replay its historical PIT/OOT evidence from the frozen research package where possible without refit or post-result tuning.
+3. Compare its central expected-production performance, state/probability behavior, calibration and proper distributional quality against the already-audited serious candidates on genuinely common coordinates.
+4. Explicitly evaluate whether Burr XII/direct-Gamma uncertainty improves, worsens or is indistinguishable from alternative uncertainty representations. Do not reduce this package to central means if distributional outputs are part of its production authority.
+5. If an exact historical comparison is not recoverable for a dimension, mark that dimension uncomparable rather than assuming equivalence to A2, D1, or another ancestor.
+6. Distinguish Y1 current-provider authority from Y2/Y3 future-model authority. The audit must state what portion of the **current end-to-end production Forecast system** has been scientifically compared and what portion is source/provider authority rather than model-family selection.
+7. Because this is correction of an omitted existing production candidate—not a newly invented challenger—it does not violate the frozen no-model-shopping rule. Freeze its preexisting production identity exactly; no tuning is authorized.
+
+Do not reach final Forecast authority closeout until this exact deployed package is included or explicitly classified as uncomparable with documented reason. Production remains unchanged.
