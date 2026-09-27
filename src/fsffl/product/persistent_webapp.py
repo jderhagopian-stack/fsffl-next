@@ -127,6 +127,9 @@ _player_future_forecast_cache = PlayerFutureForecastCache(
 _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _shapley_intrinsic_loader,
     max_workers=1,
+    intrinsic_input_fingerprint_resolver=(
+        _shapley_intrinsic_loader.intrinsic_input_fingerprint
+    ),
 )
 
 
@@ -173,16 +176,26 @@ def _intrinsic_readiness_from_record(record) -> dict[str, object]:
             "forecast_model_version": contract.forecast_model_version,
             "estimate_count": len(contract.estimates),
         }
+    coverage = contract.coverage
+    complete_scope = (
+        len(contract.estimates) > 0
+        and coverage.player_count == len(contract.estimates)
+        and coverage.year_1_forecast_players == coverage.player_count
+        and coverage.year_2_i1_players == coverage.player_count
+        and coverage.year_3_i1_players == coverage.player_count
+        and not coverage.missing_required_fact_families
+    )
     status = (
         "full"
-        if contract.status == ShapleyIntrinsicAvailability.READY
+        if contract.status == ShapleyIntrinsicAvailability.READY and complete_scope
         else "partial_provisional"
     )
     return {
         "status": status,
         "reason": contract.status_reason or (
             "Governed FSFFL Intrinsic is available from preserved Year-1 evidence "
-            "and the Forecast-owned vNext Future Forecast contract."
+            "and the Forecast-owned vNext Future Forecast contract. Optional legacy "
+            "provenance coverage does not reduce availability."
         ),
         "build_status": record.status.value,
         "contract_status": contract.status.value,
