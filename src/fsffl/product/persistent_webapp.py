@@ -69,7 +69,7 @@ from .vnext_future_forecast_provider import (
 from .progressive_delivery_routes import install_progressive_delivery_routes
 from .provisional_k_dst_routes import install_provisional_k_dst_routes
 from .quick_frontier_routes import install_quick_frontier_routes
-from .resource_coordinator import HeavyWorkCoordinator
+from .resource_coordinator import HeavyWorkCoordinator, release_unused_process_memory
 from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
 from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
@@ -316,9 +316,10 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
 # Reuse only exact Decision-owned package economics across progressive Market
 # requests. Search row metadata is overlaid fresh on every hit, while State/Value
 # replacement or a different ordered package identity produces a miss.
-_market_discovery_runtime.evaluate_candidate_economics = make_cached_candidate_economics(
+_cached_candidate_economics = make_cached_candidate_economics(
     _market_discovery_runtime.evaluate_candidate_economics
 )
+_market_discovery_runtime.evaluate_candidate_economics = _cached_candidate_economics
 
 # Build the expensive structural candidate catalog once per exact authoritative
 # runtime. The normal Market workspace and subsequent Market Focus requests share
@@ -333,9 +334,38 @@ _opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity
 # authoritative runtime is unchanged. Reuse the exact server-produced workspace
 # instead of repeating Search + bounded Decision work. This wrapper is hosted-
 # composition infrastructure only; the original builder remains authoritative.
-_webapp.build_opportunity_workspace = make_cached_opportunity_workspace(
+_cached_opportunity_workspace = make_cached_opportunity_workspace(
     _webapp.build_opportunity_workspace
 )
+_webapp.build_opportunity_workspace = _cached_opportunity_workspace
+
+def _clear_hosted_execution_caches() -> dict[str, int]:
+    cleared: dict[str, int] = {}
+    for name, wrapper in (
+        ("market_economics", _cached_candidate_economics),
+        ("opportunity_search", _cached_opportunity_search),
+        ("opportunity_workspace", _cached_opportunity_workspace),
+    ):
+        clear = getattr(wrapper, "clear_cache", None)
+        if callable(clear):
+            cleared[name] = int(clear())
+    return cleared
+
+
+def _reclaim_runtime_phase_memory(label: str) -> dict[str, object]:
+    return release_unused_process_memory(label=label)
+
+
+def _reclaim_runtime_state_transition(label: str) -> dict[str, object]:
+    cleared = _clear_hosted_execution_caches()
+    result = release_unused_process_memory(label=label)
+    _logger.info(
+        "FSFFL state-transition cache reclamation label=%s cleared=%s",
+        label,
+        cleared,
+    )
+    return {**result, "cleared_execution_caches": cleared}
+
 
 def _presentation_payload_loader(user_id: str, context, surface: str):
     return _presentation_continuity.load_for_runtime(
@@ -356,6 +386,8 @@ app = _webapp.create_app(
     product_capability_reconciler=_reconcile_hosted_intrinsic,
     heavy_work_coordinator=_heavy_work_coordinator,
     presentation_payload_loader=_presentation_payload_loader,
+    state_transition_reclaimer=_reclaim_runtime_state_transition,
+    phase_memory_reclaimer=_reclaim_runtime_phase_memory,
 )
 
 def _log_startup_runtime_readiness() -> None:
