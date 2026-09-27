@@ -249,6 +249,33 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
         if any(status not in {"unavailable", "not_configured"} for status in statuses)
         else "unavailable"
     )
+    served = getattr(context, "served_intelligence", None)
+    presentation_available = bool(
+        served is not None
+        and _presentation_continuity.has_snapshot(
+            user_id=context.user_id,
+            league_id=served.league_id,
+            league_state_id=served.league_state_id,
+        )
+    )
+    served_payload = dict(payload.get("served_last_good") or {})
+    served_payload["presentation_available"] = presentation_available
+    if served_payload.get("available") and not presentation_available:
+        served_payload["label"] = (
+            "Last-good model identity exists, but a complete persisted presentation "
+            "snapshot is unavailable; stale presentation will not be claimed."
+        )
+    payload["served_last_good"] = served_payload
+    payload["presentation_continuity"] = {
+        "status": (
+            "stale_available"
+            if presentation_available
+            else "current"
+            if payload.get("overall_status") == "full"
+            else "unavailable"
+        ),
+        "contract": "runtime-presentation-continuity-v1",
+    }
     return payload
 
 
@@ -498,27 +525,57 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
     if team_state is None or not team_state.roster:
         raise RuntimeError(f"{label}: canonical managed roster is blank")
 
-    team_view = _webapp._managed_team_view_payload(
-        context,
-        state_only_while_enriching=True,
+    def call(path: str, **kwargs):
+        return _presentation_route_endpoint(path)(user_id=context.user_id, **kwargs)
+
+    home = call("/api/home")
+    franchise = call("/api/my-team")
+    atlas = call("/api/league/atlas")
+    market = call("/api/opportunities/workspace")
+    lenses = call("/api/league/value-lenses", universe="all")
+    payloads = {
+        "home": home,
+        "franchise": franchise,
+        "league": atlas,
+        "market": market,
+        "market_value_lenses": lenses,
+    }
+    for surface, payload in payloads.items():
+        if not isinstance(payload, dict) or not payload:
+            raise RuntimeError(f"{label}: {surface} presentation is blank")
+
+    freshness = {
+        surface: (payload.get("intelligence_freshness") or {}).get("status")
+        for surface, payload in payloads.items()
+    }
+    continuity_modes = {
+        surface: (payload.get("presentation_continuity") or {}).get("mode")
+        for surface, payload in payloads.items()
+    }
+    stale_count = sum(
+        1 for value in freshness.values() if value == "stale_last_good"
     )
-    atlas = _webapp.build_league_atlas_payload(
-        context,
-        preseason_reason="Runtime availability acceptance does not rebuild preseason evidence.",
-    )
-    if not atlas.get("standings"):
-        raise RuntimeError(f"{label}: League Atlas standings are blank")
     readiness = _hosted_capability_readiness(context)
     return {
         "league_id": state.league.league_id,
         "state_id": state.state_id,
         "selected_team_id": context.selected_team_id,
         "canonical_roster_count": len(team_state.roster),
-        "franchise_team_id": team_view.get("team_id"),
+        "franchise_team_id": franchise.get("team_id"),
         "league_standings_count": len(atlas.get("standings") or ()),
         "league_simulation_status": (atlas.get("simulation") or {}).get("status"),
+        "market_status": market.get("status"),
+        "market_player_count": len(lenses.get("players") or ()),
         "readiness_status": readiness.get("overall_status"),
         "readiness_as_of": readiness.get("as_of"),
+        "presentation_freshness": freshness,
+        "presentation_modes": continuity_modes,
+        "stale_surface_count": stale_count,
+        "presentation_snapshot_available": (
+            (readiness.get("served_last_good") or {}).get(
+                "presentation_available", False
+            )
+        ),
     }
 
 
