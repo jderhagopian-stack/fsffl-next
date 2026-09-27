@@ -486,3 +486,19 @@ Shadow acceptance does not itself authorize UI/Market promotion.
 
 ## Long-Term Intrinsic shadow sequencing clarification — 2026-09-27
 The shadow gate remains defined, but execution is **paused** until the active runtime corrective reaches a permitted terminal state. No Long-Term Intrinsic implementation branch, merge, deploy or product promotion should proceed before that sequencing gate is reopened by Management.
+
+
+## PR #278 hosted result — 2026-09-27 18:16 ET
+Status: **FAILED / MATERIAL PARTIAL SUCCESS.**
+
+Passes:
+- cold PI retained compatible Y1/Y2/Y3 evidence;
+- State/presentation reconciliation reached full/current;
+- no stale surfaces after promotion;
+- no process recycle, 5xx/429, or State loss in observed journey.
+
+Fails:
+- peak RSS 450,359,296 bytes exceeds the 429,496,720-byte engineering target;
+- Market workspace build reached ~64.9s under concurrent acceptance work, so foreground responsiveness is not yet accepted.
+
+Continue narrow corrective work; do not treat the internal RSS miss alone as an availability outage, but do not close the runtime gate while the combined latency/resource journey still fails.
