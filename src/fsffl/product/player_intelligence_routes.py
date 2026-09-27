@@ -311,8 +311,11 @@ def install_player_intelligence_routes(
         try:
             record = history.request(runtime, player_id)
         except PlayerHistoryCapacityError as exc:
+            # Capacity is a bounded admission wait, not a terminal availability
+            # failure. Keep the response successful so the existing browser
+            # loading/polling contract honors retry_after_ms.
             return JSONResponse(
-                status_code=503,
+                status_code=200,
                 content={
                     "status": "loading",
                     "contract_version": PLAYER_INTELLIGENCE_CONTRACT_VERSION,
