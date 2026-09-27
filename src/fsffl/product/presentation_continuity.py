@@ -251,6 +251,26 @@ class PresentationContinuityStore:
             total_payload_bytes=total_bytes,
         )
 
+    def known_snapshot_available(
+        self,
+        *,
+        user_id: str,
+        league_id: str,
+        league_state_id: str,
+        selected_team_id: str | None = None,
+    ) -> bool:
+        """Fast read hint for an exact snapshot already proven in this process.
+
+        This never replaces strict has_snapshot() integrity validation on an actual
+        presentation load. It exists so frequent product-context polling does not
+        reread and rehash seven durable surface artifacts after promotion/startup
+        has already proven the manifest once.
+        """
+
+        key = (user_id, league_id, league_state_id, selected_team_id)
+        with self._validation_lock:
+            return key in self._validated_snapshots
+
     def has_snapshot(
         self,
         *,
@@ -268,9 +288,6 @@ class PresentationContinuityStore:
             league_state_id,
             selected_team_id,
         )
-        with self._validation_lock:
-            if validation_key in self._validated_snapshots:
-                return True
         manifest = self._persistence.get_reusable_artifact(
             _manifest_key(
                 user_id=user_id,
