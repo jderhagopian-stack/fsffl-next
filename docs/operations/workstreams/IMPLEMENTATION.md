@@ -1184,3 +1184,18 @@ The next corrective must complete the architecture on current `main`:
 This is one architectural completion effort, not separate “fix #271” and “fix #273” projects. PR #273 is acceptance instrumentation layered on the #271 architecture; the corrected runtime and corrected harness must be validated together.
 
 Return only at a permitted OPERATING_PROTOCOL terminal state.
+
+
+## Management sequencing clarification — runtime corrective remains independent of Forecast authority audit — 2026-09-27
+The newly reopened Research question about best-supported Forecast model authority does **not** stop or broaden the active runtime architecture corrective.
+
+PR #274 must:
+- preserve current production Forecast/Simulation/Value/Intrinsic semantics exactly;
+- finish presentation continuity and hosted-startup repair on the PR #271 architecture;
+- resolve substantive review findings and full-suite failures rather than papering them over;
+- reach green deterministic CI;
+- merge only after the runtime corrective is internally coherent;
+- deploy and run the complete hosted #273 acceptance journey with the governed resource/readiness/continuity gates;
+- return to Management for physical iPhone/Safari acceptance only after hosted evidence passes.
+
+Do not incorporate experimental Research models into PR #274. Any later Forecast-authority change must arrive through a separate Management-approved implementation directive after Research closes.
