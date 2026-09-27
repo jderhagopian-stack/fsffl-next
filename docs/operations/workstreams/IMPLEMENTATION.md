@@ -1251,3 +1251,45 @@ Disposition:
 - do not declare latency fixed merely because warm reads improved;
 - continue with a narrow corrective focused on (a) eliminating foreground starvation while heavy work runs, (b) restoring compatible PI Y2/Y3 continuity during cold initial reconciliation, and (c) reducing transient memory pressure enough to avoid real limit risk;
 - the stale `runtime-rss-reclaim` branch has not advanced since `db7ad11c...`; reconcile useful reclamation work onto current main rather than reviving it blindly.
+
+
+## 2026-09-27 — Management authorizes Long-Term Intrinsic shadow implementation
+**Scope: BOUNDED SHADOW IMPLEMENTATION / NO DOWNSTREAM AUTHORITY YET**
+
+Management accepts the Research contract at `research/long-term-intrinsic-consumption-20260927` and authorizes implementation of the separate Long-Term Intrinsic pipeline.
+
+Authoritative Research contract:
+- value model: `long-term-intrinsic-shapley-y4-y7-v1`;
+- raw quantity: mean annual governed Y4-Y7 Shapley marginal lineup capacity, `(phi4 + phi5 + phi6 + phi7) / 4`;
+- Y8 cardinal contribution forbidden;
+- exact Forecast policy only where Research earned exact authority;
+- all other Y4-Y7 cells preserve supported policy/model sets;
+- model-authority uncertainty and within-model Forecast uncertainty remain separate;
+- separate rank-calibrated 0-10,000 scale `fsffl-long-term-intrinsic-index:long-term-y4-y7-v1`;
+- Current Intrinsic remains unchanged and separate.
+
+Implementation requirements:
+1. Add model-neutral runtime Y4-Y7 Forecast materialization for the Research-authorized exact/set-valued authority contract.
+2. Implement a new Value-owned pure consumer separate from Current Intrinsic, following the Research handoff.
+3. Persist annual policy-specific Shapley contributions, raw authority low/reference-center/high, separate uncertainty objects and exact provenance/fingerprint.
+4. Materialize the full governed current-player authority envelope (target 335-player source coordinate where compatible) and reproduce Research contract invariants.
+5. Provide a shadow artifact and controlled API boundary; do not replace Current Intrinsic or alter existing player/Market/Decision outputs.
+6. No Market, Team Utility, owner identity, trade context, manual age/youth/workload coefficient, or current market input may enter Long-Term Intrinsic.
+7. Prove league-agnostic lineup derivation on more than the current FSFFL lineup.
+8. Measure CPU/RSS/runtime cost and persistence/reuse behavior before any production presentation promotion.
+9. Do not invent a cross-horizon SD while covariance is unvalidated.
+10. Do not hide set-valued authority behind a selected scalar model; midpoint may exist only as a labeled presentation/reference center.
+
+Sequencing guard:
+- implementation may begin immediately on a separate branch;
+- do **not** merge/deploy the Long-Term Intrinsic shadow onto live main until the currently live PR #278 runtime corrective completes its hosted acceptance without a new availability/latency blocker;
+- after #278 acceptance, merge only if Long-Term Intrinsic deterministic/replay/resource gates are green.
+
+Required handoff before any product promotion:
+- exact branch/head and test identity;
+- deterministic replay against frozen Research evidence;
+- complete current-player authority-envelope output;
+- runtime resource measurements;
+- API/schema and persistence identity;
+- limitations;
+- explicit statement that Current Intrinsic/Market/Decision remain byte/semantic unchanged.
