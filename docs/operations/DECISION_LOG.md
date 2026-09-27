@@ -568,3 +568,10 @@ Research must therefore distinguish:
 The next Research design must permit position × horizon-specific routing, shrinkage/pooling, or explicit coarse/uncertain representation where evidence supports it. It must not use the already-seen final holdout to hand-pick a QB Y8 replacement. Instead, define a new general routing/selection policy using development chronology / repeated outer rolling validation / stability penalties and then evaluate that policy honestly with the remaining defensible historical evidence. If no truly untouched Y8 season remains, state that limitation explicitly and do not relabel reused evidence as untouched.
 
 Production H3 remains unchanged. No Y4-Y8 implementation is authorized.
+
+## 2026-09-26 — Legacy activation coverage does not define current Intrinsic availability
+Management determines that the frozen activation-bundle coverage flags for injury/practice, participation/snaps, roster continuity, and similar completed-source evidence are **provenance metadata**, not automatic current-production availability gates for the vNext Intrinsic contract.
+
+The current production Intrinsic path is governed by preserved Year-1 Forecast authority, the FutureForecastContract, league scoring compatibility, governed subject coverage, and the frozen Shapley/Value contract. Missing optional/legacy evidence families may be disclosed as evidence richness limitations but must not downgrade an otherwise complete authorized Intrinsic contract.
+
+Fail-closed behavior remains mandatory for genuinely required current inputs.
