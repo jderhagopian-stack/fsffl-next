@@ -1,0 +1,48 @@
+name: Forecast Authority Recover Scored Evidence
+
+on:
+  push:
+    branches: [research/forecast-model-authority-audit-20260927]
+    paths:
+      - .github/workflows/forecast-authority-recover-scored-evidence.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore already-scored audit artifacts
+        run: |
+          mkdir -p /tmp/new_family /tmp/injury
+          gh api repos/${{ github.repository }}/actions/artifacts/10936686595/zip > /tmp/new_family.zip
+          gh api repos/${{ github.repository }}/actions/artifacts/10936692320/zip > /tmp/injury.zip
+          unzip -oq /tmp/new_family.zip -d /tmp/new_family
+          unzip -oq /tmp/injury.zip -d /tmp/injury
+          mkdir -p artifacts/research/forecast_model_authority_audit_20260927/new_family
+          mkdir -p artifacts/research/forecast_model_authority_audit_20260927/injury
+          find /tmp/new_family -type f -maxdepth 6 -print
+          find /tmp/injury -type f -maxdepth 6 -print
+          cp -f $(find /tmp/new_family -name NEW_FAMILY_SYMMETRIC_SUMMARY.csv -print -quit) artifacts/research/forecast_model_authority_audit_20260927/new_family/
+          cp -f $(find /tmp/new_family -name NEW_FAMILY_ORIGIN_METRICS.csv -print -quit) artifacts/research/forecast_model_authority_audit_20260927/new_family/
+          cp -f $(find /tmp/new_family -name NEW_FAMILY_PAIRWISE_UNCERTAINTY.csv -print -quit) artifacts/research/forecast_model_authority_audit_20260927/new_family/
+          cp -f $(find /tmp/new_family -name NEW_FAMILY_RESULT.json -print -quit) artifacts/research/forecast_model_authority_audit_20260927/new_family/
+          cp -f $(find /tmp/injury -name INJURY_AVAILABILITY_SYMMETRIC_SUMMARY.csv -print -quit) artifacts/research/forecast_model_authority_audit_20260927/injury/
+          cp -f $(find /tmp/injury -name INJURY_JOINT_VS_SEPARATE_POSITION.csv -print -quit) artifacts/research/forecast_model_authority_audit_20260927/injury/
+          cp -f $(find /tmp/injury -name INJURY_RETURN_SYMMETRIC_SUMMARY.csv -print -quit) artifacts/research/forecast_model_authority_audit_20260927/injury/
+          cp -f $(find /tmp/injury -name INJURY_SYMMETRIC_RESULT.json -print -quit) artifacts/research/forecast_model_authority_audit_20260927/injury/
+      - name: Persist exact recovered evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/research/forecast_model_authority_audit_20260927/new_family artifacts/research/forecast_model_authority_audit_20260927/injury
+          git commit -m "Research: recover completed symmetric authority scoring" || true
+          git pull --rebase origin research/forecast-model-authority-audit-20260927
+          git push origin HEAD:research/forecast-model-authority-audit-20260927
