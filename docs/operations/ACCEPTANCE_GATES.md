@@ -402,3 +402,21 @@ Production promotion is **not complete** until one real authenticated PI history
 - physical iPhone and iPad Player Intelligence render/interaction succeeds.
 
 This gate is independent of Intrinsic authority and State-first persistence.
+
+## Private-beta runtime architecture / availability gate — 2026-09-27
+**Status: OPEN — STRUCTURAL CORRECTIVE REQUIRED.**
+
+Current main is not accepted despite PR #270 hosted synthetic acceptance. Physical iPhone evidence and hosted telemetry showed false-green readiness, PI/League failures, HTTP 429 recovery failure, and a memory-limit-consistent process recycle.
+
+Promotion requires the exact combined cold-wake/user-journey acceptance defined in `docs/operations/workstreams/IMPLEMENTATION.md`, including:
+- regression comparison against the last demonstrably usable PR #235-era FSFFL runtime behavior;
+- one bounded authoritative heavy working set plus lightweight/lazy last-good presentation;
+- bounded/coalesced heavy-job concurrency;
+- restore-first startup before automatic heavy refresh;
+- single cross-surface readiness truth;
+- crash-safe persisted context restoration;
+- peak RSS <= ~429 MB on the current 536,870,900-byte service limit (>=20% headroom);
+- zero process recycle, 5xx, recovery-induced 429, blank canonical roster/state, or false-green readiness through the complete journey;
+- repeat/reuse evidence proving durable artifacts reduce subsequent work.
+
+A page-specific hotfix, one green endpoint, CI-only success, or a synthetic runner that does not reproduce browser-driven overlap is insufficient for promotion.
