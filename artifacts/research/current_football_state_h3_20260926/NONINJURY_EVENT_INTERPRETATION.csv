@@ -1,0 +1,8 @@
+event_type,n,median_post_opportunity_ratio,median_post_ppg_ratio,y2_persist_share,y3_persist_share,interpretation
+promotion,2541,1.406250,1.345469,0.976534,0.955224,descriptive_observed_role_change_not_causal_multiplier
+demotion,2483,0.666667,0.661355,0.973905,0.955011,descriptive_observed_role_change_not_causal_multiplier
+reattachment_return,1584,1.000000,0.914607,0.864909,0.836862,no_precise_event_multiplier_supported
+team_change,585,0.955556,1.062007,0.824885,0.773585,heterogeneous_by_position_no_generic_trade_effect
+release_cut,384,1.000000,0.796537,0.746032,0.711111,H3_coarse_persistence_signal_only
+suspension_exempt,25,1.136404,1.090147,1.000000,0.933333,below_minimum_sample_for_fitted_update
+retired,1,,, , ,too_sparse_for_empirical_coefficient
