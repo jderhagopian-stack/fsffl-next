@@ -1293,3 +1293,14 @@ Required handoff before any product promotion:
 - API/schema and persistence identity;
 - limitations;
 - explicit statement that Current Intrinsic/Market/Decision remain byte/semantic unchanged.
+
+
+## 2026-09-27 — Management sequencing change: pause Long-Term Intrinsic shadow until runtime closes
+Management has changed sequencing. The Long-Term Intrinsic shadow implementation remains authorized in principle, but **must not begin yet**.
+
+Priority is now singular:
+1. finish the regular Implementation/runtime corrective;
+2. reach a permitted terminal state with hosted acceptance complete;
+3. only then start the Long-Term Intrinsic shadow from its already-frozen Research contract.
+
+Do not create or advance a Long-Term Intrinsic implementation branch while the runtime corrective is still active. Preserve the Research handoff unchanged for later execution.
