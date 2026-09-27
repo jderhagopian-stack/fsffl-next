@@ -285,6 +285,6 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 
 ## 2026-09-26 23:56 ET — Availability incident supersedes physical acceptance
 - **Implementation — ACTIVE, highest priority:** restore last-good serving across restart / State sync / intelligence rebuild; preserve canonical roster display; correct readiness truth; coalesce automatic refresh; then re-run hosted lifecycle acceptance.
-- **Research — continue independently:** current-football-state H3 interpretation/closeout.
+- **Research — ACTIVE / parallel:** historical current-football-state H3 validation and current-provider capture are complete; interpretation/closeout is now the only authorized Research work. Reconcile 4,793 injury episodes and 7,603 non-injury events against the frozen gates, preserve the no-double-counting rule and unchanged production H3, then persist a valid OPERATING_PROTOCOL terminal state. Detailed closeout directive is in `workstreams/RESEARCH.md`.
 - **Performance — Simulation cold-kernel latency remains queued behind availability restoration.**
 - **Market — HOLD** until the beta is again stably usable.
