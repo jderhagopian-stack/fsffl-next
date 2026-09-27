@@ -791,3 +791,23 @@ Durable checkpoint:
 `artifacts/implementation/player_intelligence_history_memory_20260926/IMPLEMENTATION_HANDOFF.md`
 
 **BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — PHYSICAL / AUTHENTICATED HOSTED PLAYER INTELLIGENCE HISTORY ACCEPTANCE REQUIRED**
+
+### Remove redundant large intelligence-status card
+Management physical iPhone acceptance decision:
+
+The large Home card beginning **“Current intelligence is partially available”** is removed from the product.
+
+Rationale:
+- the shared thin readiness strip already owns intelligence lifecycle/current/partial state;
+- the large card duplicates the same information, consumes excessive mobile vertical space, and weakens the Home information hierarchy;
+- transient build details belong in the expanded thin readiness component while work is active, not in a second persistent card.
+
+Required behavior:
+1. preserve the thin shared readiness strip at the top;
+2. while refresh/build is active, allow that strip to expand with phase, last-good/as-of, and capability detail;
+3. when complete/partial/failed, the strip alone communicates readiness truth;
+4. remove the separate large intelligence-status card from Home rather than merely hiding its text;
+5. do not leave blank spacing/container residue after removal;
+6. verify iPhone/Safari Home layout physically after the change.
+
+This is a presentation/product-hierarchy correction only. It must not change readiness semantics or model authority.
