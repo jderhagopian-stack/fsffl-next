@@ -394,3 +394,10 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 ## 2026-09-27 — Sequencing update
 - **Implementation runtime corrective — ACTIVE / sole implementation priority.**
 - **Long-Term Intrinsic shadow — AUTHORIZED BUT PAUSED.** Do not start until regular Implementation reaches a clean terminal state and Management reopens the shadow phase.
+
+
+## 2026-09-27 18:16 ET — #278 not yet accepted
+- **Implementation runtime corrective remains ACTIVE / sole implementation priority.**
+- #278 fixed cold PI continuity and restored full presentation correctly, but hosted acceptance failed the internal RSS target at ~450.4 MB peak and still exposed a ~64.9s Market workspace build under the heavy journey.
+- Continue narrowly on remaining memory residency/contention/Market-build latency. Preserve #278 architecture and semantics.
+- **Long-Term Intrinsic shadow remains PAUSED.**
