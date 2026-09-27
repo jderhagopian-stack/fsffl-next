@@ -387,8 +387,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     exc,
                 )
 
-        self._checkpoint_async(user_id, self._contexts.get(user_id, context))
-        return self._contexts.get(user_id, context)
+        context = self._contexts.get(user_id, context)
+        self._checkpoint_async(user_id, context)
+        return context
 
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
         """Reuse only artifacts bound to the currently selected exact State."""
