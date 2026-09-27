@@ -104,24 +104,6 @@ def release_unused_process_memory(*, label: str) -> dict[str, object]:
     return payload
 
 
-@dataclass(frozen=True)
-class HeavyWorkSnapshot:
-    active_kind: str | None
-    active_key: str | None
-    active_thread_id: int | None
-    waiting_count: int
-    max_waiting_observed: int
-    acquisitions: int
-    completions: int
-    acquisitions_by_kind: tuple[tuple[str, int], ...]
-    completions_by_kind: tuple[tuple[str, int], ...]
-    current_rss_bytes: int
-    peak_rss_bytes: int
-    max_rss_observed_bytes: int
-    memory_limit_bytes: int
-    memory_budget_bytes: int
-    within_memory_budget: bool
-
 class HeavyWorkCoordinator:
     """Process-wide admission gate for memory-heavy private-beta work.
 
