@@ -1128,3 +1128,41 @@ Market product work, general Performance work, Simulation kernel modernization, 
 Do not ask Management for another physical-device pass merely because unit tests, PR CI, a single endpoint, or a synthetic State-first runner passes. Return to physical acceptance only after the exact combined hosted journey above passes with resource telemetry.
 
 Stop only at `DIRECTIVE COMPLETE — IMPLEMENTATION`, a genuine `BLOCKED — IMPLEMENTATION`, or `MANAGEMENT GATE — IMPLEMENTATION` after all authorized nonphysical work is exhausted.
+
+
+## 2026-09-27 10:53–10:55 ET — PR #271 physical acceptance exposes State-advance continuity failure
+**State: ACTIVE — STRUCTURAL RUNTIME CORRECTIVE NOT ACCEPTED**
+
+Management physically exercised the live private beta on iPhone/Safari after PR #271.
+
+Observed behavior:
+- the app was initially usable on restored prior intelligence and showed `Intelligence current`;
+- no visible indication made clear that an automatic State refresh was about to reconcile;
+- shortly afterward the shell changed to **State current · intelligence rebuilding** and Home lost position pressure, Simulation, roster-strength and other derived presentation, rendering them unavailable;
+- the transition appeared to coincide with entering Market, but exact hosted evidence shows Market did **not** initiate the State reset.
+
+Hosted evidence:
+- PR #273 (acceptance-only hosted journey instrumentation) attempted deployment from 10:31 ET and **timed out at 10:50 ET**; Render fell back to the PR #271 runtime and started a fresh instance;
+- that PR #271 instance restored FSFFL successfully at 10:51 ET with Forecast/Simulation/Value complete, Intrinsic full, RSS ~278 MB and peak ~281 MB;
+- the client loaded at ~10:53:09 ET and issued `POST /api/connect/sleeper/background/refresh` at ~10:53:29 ET;
+- before the refresh advanced State, Market value lenses served State `f51e75...` with Forecast degraded but 221/245 covered and Intrinsic ready;
+- after the refresh advanced canonical State to `9d2145...`, Market value lenses reported Forecast **unavailable 0/245** while Intrinsic remained ready, and Market quick correctly reported `building_intelligence`;
+- Home/Franchise-derived presentation did not continue serving the prior usable last-good read model during that rebuild;
+- `/api/product-context` latency rose from ~6.2s initially to ~15.2s and then ~29.5s while reconciliation was active;
+- process RSS rose from ~244 MB idle to ~290 MB, ~336 MB, and **~411 MB peak observed** at 10:55 ET, then remained around ~399–405 MB. This is below the ~429 MB governed ceiling but leaves little headroom and is not yet a comfortable acceptance result;
+- no 5xx/429 or process recycle is observed in this physical window so far.
+
+Classification:
+1. **PR #273 deployment timeout is a separate deployment/acceptance-run failure** and must not be confused with the user-triggered product transition.
+2. **PR #271 still fails the required non-disruptive changed-State contract.** Automatic State reconciliation can advance canonical State while the presentation drops from usable last-good intelligence to unavailable/rebuilding.
+3. Market is the witness, not the trigger. Do not patch Market to hide this lifecycle defect.
+
+Required corrective:
+- preserve a compact, durable last-good presentation/read model across automatic State advance so Home/Franchise/League/Market remain usable while exact-State intelligence rebuilds;
+- do not restore a second full heavy Forecast/Simulation/Value graph in RAM; satisfy continuity through persisted/lightweight read-model ownership;
+- make the impending/active automatic reconciliation visible and truthful without claiming `Intelligence current` for the new State;
+- investigate why automatic refresh advanced the served presentation boundary before a compatible last-good read model was available;
+- reduce or bound the observed ~411 MB changed-State peak further if feasible; the <=~429 MB threshold remains hard, not aspirational;
+- repair the hosted acceptance runner/deployment path from PR #273 and rerun the complete cold-wake → restore → auto-sync → surfaces → PI → refresh → league switch journey before asking Management for another acceptance pass.
+
+Do not close this as a Market defect, a cosmetic readiness issue, or a successful PR #271 acceptance. Stop only under OPERATING_PROTOCOL.md at a permitted terminal state.
