@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ctypes
+import gc
+
 from contextlib import contextmanager
 from dataclasses import dataclass
 import logging
@@ -55,6 +58,69 @@ class HeavyWorkSnapshot:
     memory_budget_bytes: int
     within_memory_budget: bool
 
+
+def release_unused_process_memory(*, label: str) -> dict[str, object]:
+    """Best-effort reclaim of unreachable Python and glibc heap pages.
+
+    This is execution/resource management only. It never mutates governed model
+    results or persistence. Hosted Linux can retain freed allocator arenas in RSS;
+    malloc_trim returns those free pages before the next serialized heavy phase so
+    a replacement State does not inherit the prior phase's transient high-water set.
+    """
+
+    before = current_rss_bytes()
+    collected = gc.collect()
+    trimmed: bool | None = None
+    trim_error: str | None = None
+    try:
+        libc = ctypes.CDLL(None)
+        malloc_trim = getattr(libc, "malloc_trim", None)
+        if malloc_trim is not None:
+            malloc_trim.argtypes = [ctypes.c_size_t]
+            malloc_trim.restype = ctypes.c_int
+            trimmed = bool(malloc_trim(0))
+    except Exception as exc:  # pragma: no cover - platform-specific fallback
+        trim_error = f"{type(exc).__name__}: {exc}"
+    after = current_rss_bytes()
+    payload = {
+        "label": label,
+        "before_rss_bytes": before,
+        "after_rss_bytes": after,
+        "released_rss_bytes": max(0, before - after),
+        "gc_collected": collected,
+        "malloc_trim": trimmed,
+        "trim_error": trim_error,
+    }
+    _logger.info(
+        "FSFFL memory reclaim label=%s before=%s after=%s released=%s gc=%s malloc_trim=%s error=%s",
+        label,
+        before,
+        after,
+        payload["released_rss_bytes"],
+        collected,
+        trimmed,
+        trim_error,
+    )
+    return payload
+
+
+@dataclass(frozen=True)
+class HeavyWorkSnapshot:
+    active_kind: str | None
+    active_key: str | None
+    active_thread_id: int | None
+    waiting_count: int
+    max_waiting_observed: int
+    acquisitions: int
+    completions: int
+    acquisitions_by_kind: tuple[tuple[str, int], ...]
+    completions_by_kind: tuple[tuple[str, int], ...]
+    current_rss_bytes: int
+    peak_rss_bytes: int
+    max_rss_observed_bytes: int
+    memory_limit_bytes: int
+    memory_budget_bytes: int
+    within_memory_budget: bool
 
 class HeavyWorkCoordinator:
     """Process-wide admission gate for memory-heavy private-beta work.
