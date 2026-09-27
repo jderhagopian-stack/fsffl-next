@@ -238,8 +238,8 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     served_available = bool(
         served is not None
         and league_state is not None
-        and served.league_state.league.league_id == league_state.league.league_id
-        and served.league_state.state_id != league_state.state_id
+        and served.league_id == league_state.league.league_id
+        and served.league_state_id != league_state.state_id
     )
     overall_status = (
         "rebuilding"
@@ -295,10 +295,10 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         "served_last_good": {
             "available": served_available,
             "league_state_id": (
-                served.league_state.state_id if served_available else None
+                served.league_state_id if served_available else None
             ),
             "as_of": (
-                served.league_state.as_of.isoformat()
+                served.as_of.isoformat()
                 if served_available
                 else None
             ),
@@ -371,8 +371,8 @@ def _runtime_context_payload(
         "served_last_good": (
             {
                 "available": True,
-                "league_state_id": runtime.served_intelligence.league_state.state_id,
-                "as_of": runtime.served_intelligence.league_state.as_of.isoformat(),
+                "league_state_id": runtime.served_intelligence.league_state_id,
+                "as_of": runtime.served_intelligence.as_of.isoformat(),
                 "stale": True,
             }
             if getattr(runtime, "served_intelligence", None) is not None
@@ -533,11 +533,14 @@ def _served_intelligence_compatible(runtime) -> bool:
     current = getattr(runtime, "league_state", None)
     if served is None or current is None:
         return False
-    if served.league_state.league.league_id != current.league.league_id:
+    if served.league_id != current.league.league_id:
         return False
     current_team_ids = {team.team_id for team in current.teams}
-    served_team_ids = {team.team_id for team in served.league_state.teams}
-    return bool(current_team_ids and current_team_ids == served_team_ids)
+    return bool(
+        current_team_ids
+        and current_team_ids == set(served.team_ids)
+        and served.league_state_id != current.state_id
+    )
 
 
 def _intelligence_freshness(runtime, *, using_last_good: bool) -> dict[str, object]:
@@ -549,18 +552,18 @@ def _intelligence_freshness(runtime, *, using_last_good: bool) -> dict[str, obje
         "target_state_id": current.state_id if current is not None else None,
         "target_as_of": current.as_of.isoformat() if current is not None else None,
         "served_state_id": (
-            served.league_state.state_id
+            served.league_state_id
             if using_last_good and served is not None
             else (current.state_id if current is not None else None)
         ),
         "served_as_of": (
-            served.league_state.as_of.isoformat()
+            served.as_of.isoformat()
             if using_last_good and served is not None
             else (current.as_of.isoformat() if current is not None else None)
         ),
         "message": (
-            "Canonical State is current; derived intelligence shown below is the "
-            "last-good snapshot while replacement intelligence rebuilds."
+            "Canonical State is current. A durable last-good intelligence snapshot exists, "
+            "but heavy derived objects are not resident while replacement intelligence rebuilds."
             if using_last_good
             else "Derived intelligence matches the current canonical State."
         ),
@@ -568,7 +571,7 @@ def _intelligence_freshness(runtime, *, using_last_good: bool) -> dict[str, obje
 
 
 def _stale_team_view_payload(runtime, *, team_id: str) -> dict[str, object] | None:
-    """Overlay same-league stale derived evidence onto the canonical current roster."""
+    """Serve canonical roster/State while durable last-good remains out of RAM."""
 
     if not _served_intelligence_compatible(runtime):
         return None
@@ -580,97 +583,23 @@ def _stale_team_view_payload(runtime, *, team_id: str) -> dict[str, object] | No
         runtime.league_state,
         team_id=team_id,
     )
-    old_view = None
-    if served.simulation_analytics is not None:
-        old_view = next(
-            (
-                item
-                for item in served.simulation_analytics.team_views
-                if item.team_id == team_id
-            ),
-            None,
-        )
-    if old_view is None:
-        try:
-            old_view = build_forecast_team_view(
-                served.league_state,
-                team_id=team_id,
-                forecasts=(
-                    served.forecast_evidence.raw_forecasts
-                    + served.forecast_evidence.league_scored_forecasts
-                ),
-                forecast_model_version=served.forecast_evidence.model_version,
-            )
-        except ValueError:
-            old_view = None
-
-    current_view = _attach_live_value_profiles(
-        current_view,
-        served.value_evidence,
-    )
-    if old_view is not None:
-        old_players = {item.player_id: item for item in old_view.players}
-        merged_players = []
-        for player in current_view.players:
-            old = old_players.get(player.player_id)
-            if old is None:
-                merged_players.append(player)
-                continue
-            merged_players.append(
-                player.model_copy(
-                    update={
-                        "projected_starter": old.projected_starter,
-                        "projected_lineup_slot": old.projected_lineup_slot,
-                        "forecasts": old.forecasts,
-                        "season_fantasy_points_projection": old.season_fantasy_points_projection,
-                        "value_profile": player.value_profile or old.value_profile,
-                    }
-                )
-            )
-        current_view = current_view.model_copy(
-            update={
-                "players": tuple(merged_players),
-                "position_strengths": old_view.position_strengths,
-                "utility": old_view.utility,
-                "owner_posture": old_view.owner_posture,
-                "starter_average_age": old_view.starter_average_age,
-                "known_starter_age_count": old_view.known_starter_age_count,
-            }
-        )
-
-    payload = _team_view_payload(
-        current_view,
-        served.value_evidence,
-        served.forecast_evidence,
-    )
+    payload = _team_view_payload(current_view, None)
     payload["intelligence_freshness"] = _intelligence_freshness(
         runtime,
         using_last_good=True,
     )
     payload["forecast_authority"]["stale_last_good"] = True
     payload["forecast_authority"]["target_state_id"] = runtime.league_state.state_id
-    payload["forecast_authority"]["served_state_id"] = served.league_state.state_id
+    payload["forecast_authority"]["served_state_id"] = served.league_state_id
+    payload["forecast_authority"]["presentation_mode"] = (
+        "canonical_state_loading; last-good heavy artifacts remain durable but not resident"
+    )
     return payload
 
-
 def _presentation_runtime(runtime):
-    """Return a read-only runtime using stale derived evidence on current State."""
+    """Presentation never hydrates a second heavy last-good runtime graph."""
 
-    if not _served_intelligence_compatible(runtime):
-        return runtime
-    served = runtime.served_intelligence
-    assert served is not None
-    return UserRuntimeContext(
-        user_id=runtime.user_id,
-        league_state=runtime.league_state,
-        selected_team_id=runtime.selected_team_id,
-        forecast_evidence=served.forecast_evidence,
-        simulation_analytics=served.simulation_analytics,
-        value_evidence=served.value_evidence,
-        served_intelligence=served,
-        intelligence_reused=True,
-    )
-
+    return runtime
 
 def _managed_team_view_payload(
     runtime,
@@ -1029,12 +958,12 @@ def create_app(
             "available": served_last_good is not None,
             "stale": served_last_good is not None,
             "league_state_id": (
-                served_last_good.league_state.state_id
+                served_last_good.league_state_id
                 if served_last_good is not None
                 else runtime.league_state.state_id
             ),
             "as_of": (
-                served_last_good.league_state.as_of.isoformat()
+                served_last_good.as_of.isoformat()
                 if served_last_good is not None
                 else runtime.league_state.as_of.isoformat()
             ),
@@ -1587,7 +1516,7 @@ def create_app(
                 for team in sorted(league_state.teams, key=lambda item: item.team_id)
             )
             if all(item is not None for item in stale_payloads):
-                source_level = "stale_last_good_presentation"
+                source_level = "state_only_rebuilding_last_good_available"
                 views = ()
             else:
                 stale_payloads = None
