@@ -116,9 +116,14 @@ class ShapleyIntrinsicBackgroundCoordinator:
         ).strip()
         if not fingerprint:
             raise ValueError("Shapley Intrinsic input fingerprint cannot be empty")
+        league = getattr(context.league_state, "league", None)
+        league_id = str(
+            getattr(league, "league_id", None)
+            or getattr(context.league_state, "state_id", "unknown")
+        )
         return (
             context.user_id,
-            context.league_state.league.league_id,
+            league_id,
             fingerprint,
         )
 
@@ -194,7 +199,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 item
                 for item in self._records
                 if item[0] == context.user_id
-                and item[1] == context.league_state.league.league_id
+                and item[1] == key[1]
                 and item != key
             ]
             for item in stale:
