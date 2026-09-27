@@ -471,7 +471,9 @@ class PrivateBetaRuntimeStore:
                 simulation_analytics=None,
                 value_evidence=None,
                 served_intelligence=served,
-                intelligence_reused=forecast_reusable,
+                # Partial Forecast compatibility is reuse, but the complete
+                # intelligence bundle is not reused until exact-State layers attach.
+                intelligence_reused=False,
             )
             self._contexts[user_id] = context
             # Any pending work belongs to the prior target unless it already matches
