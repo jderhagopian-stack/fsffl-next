@@ -713,3 +713,15 @@ The newly authorized injury-availability work does not replace the Y4–Y8 progr
 
 ## 2026-09-27 — Joint injury-availability follow-up authorized
 Management authorized an immediate Research follow-up testing whether return timing and remaining-season availability can be produced more effectively by one coherent shared injury-availability architecture. This is explicitly a post-result comparative study, not part of the original frozen experiment. The supported separate remaining-availability result remains the incumbent challenger; production H3/Intrinsic remain unchanged.
+
+
+## 2026-09-27 10:55 ET — PR #271 physical changed-State continuity failure
+PR #271 improved startup/restart behavior and materially reduced memory versus the prior OOM-like incident, but physical iPhone testing exposed a remaining lifecycle defect.
+
+A failed PR #273 acceptance-instrumentation deployment timed out at ~10:50 ET and Render fell back to PR #271. The restored PR #271 instance came up correctly with FSFFL full readiness and ~281 MB startup peak RSS.
+
+During the subsequent user session, the client automatically posted a Sleeper background refresh at ~10:53:29 ET. That refresh advanced canonical State from `f51e75...` to `9d2145...`. The product then dropped derived presentation to rebuilding/unavailable instead of continuing to serve the prior usable last-good read model. Market merely exposed the State transition; it did not trigger it.
+
+Observed changed-State memory peaked around **411 MB** against the ~429 MB acceptance ceiling, with no 5xx/429 or recycle in the observed window. Availability acceptance nevertheless **fails** because non-disruptive last-good serving across automatic State advance is still not satisfied.
+
+Implementation remains the sole product critical path. Market and general Performance remain held.
