@@ -936,3 +936,44 @@ Required corrective:
 6. only after live reuse is stable should Management physically validate near-instant refresh/switch behavior.
 
 Do not lower permutations or weaken Forecast/Intrinsic authority.
+
+## 2026-09-26 23:47 ET — BETA AVAILABILITY INCIDENT: last-good presentation lost during State refresh
+**Priority: IMMEDIATE / AVAILABILITY RESTORATION**
+
+Physical iPhone/Safari acceptance after PR #269 exposed a severe lifecycle/presentation regression.
+
+Observed sequence:
+- Render restarted at ~23:46 ET after the temporary acceptance-runner environment cleanup.
+- Startup restored persisted core runtime for FSFFL with Forecast=True, Simulation=True, Value=True, complete=True.
+- Startup product readiness still reported partial because Intrinsic was not yet reattached to the in-memory coordinator.
+- Opening the app automatically issued `POST /api/connect/sleeper/background/refresh` at 23:46:58 ET and advanced the served State to `5dc6ba9f...`.
+- While the new State was reconciling, the product stopped presenting the previously usable last-good derived intelligence.
+- Physical symptoms included:
+  - thin strip saying `Intelligence current` while Forecast/Simulation-derived fields were unavailable;
+  - canonical roster banner saying `21 players` while the Starters roster rendered `No players in this roster view`;
+  - Home/Franchise/League strength and Simulation fields blank/unavailable;
+  - Intrinsic marked preparing despite a compatible persisted 335-player contract;
+  - reload showed `Restoring your league and last-good intelligence...`.
+- Manual Refresh Intelligence at 23:49:06 ET launched a full rebuild.
+- The rebuild completed successfully at 23:54:54 ET, but phase timings were:
+  - Forecast ~33.9s
+  - Simulation ~390.6s
+  - Current Value ~3.5s
+  - Intrinsic ~8.6s
+  - attach ~30.0s
+- Memory remained below the ~537 MB limit; this was not an OOM.
+- Simulation latency is real, but the primary availability failure is that last-good presentation disappeared while the target State rebuilt.
+
+Required corrective:
+1. **Separate target/building State from served last-good intelligence.** A State sync/rebuild must not evict a compatible previously complete presentation snapshot until the replacement layers are ready.
+2. The thin readiness strip must distinguish `State current / intelligence rebuilding` from `Intelligence current`; it must never report `Intelligence current` while required capabilities are unavailable.
+3. On restart, restore compatible persisted Intrinsic into readiness immediately; do not require a fresh in-memory build lifecycle merely to rediscover a valid persisted contract.
+4. Canonical roster membership must render from State independently of Forecast/Simulation. Missing derived fields may show unavailable, but a 21-player roster must never become an empty Starters/Bench/All Players view solely because Forecast/Simulation is rebuilding.
+5. Home, Franchise, League Atlas and other surfaces should continue to display last-good derived intelligence with explicit stale/as-of treatment while a newer exact State is rebuilding, unless compatibility is genuinely unsafe. Do not silently relabel last-good as current.
+6. Auto background Sleeper sync may remain, but it must be non-disruptive and coalesced. Page reload/open during an active sync/intelligence job must not spawn a second disruptive refresh or replace the target State again.
+7. If a new State has no material input changes for a derived layer, reuse via dependency-scoped compatibility rather than rebuilding solely because State ID/as-of advanced.
+8. Preserve State-first provenance and fail-closed authority. The fix is a dual-state serving lifecycle, not lying about currentness.
+9. After corrective: test cold server restart → app open → automatic stale-State sync → manual Refresh → page reload during active build → FSFFL↔Hodor↔FSFFL. At every point, canonical roster must stay visible and last-good intelligence must remain usable/truthfully labeled.
+10. Do not require Management to physically test again until hosted evidence proves the above and the app has returned to a stable usable state.
+
+Simulation's ~390s exact 50K cold latency remains a separate Performance target, but must no longer make the product unusable while rebuilding.
