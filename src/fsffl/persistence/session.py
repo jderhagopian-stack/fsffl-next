@@ -370,6 +370,44 @@ def restore_state_bound_intelligence(
     return forecast, simulation, values
 
 
+def restore_last_good_state_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_id: str,
+) -> tuple[LeagueState, str | None] | None:
+    """Restore only durable State identity; does not confer derived authority."""
+
+    candidates = (
+        store.get_latest_reusable_artifact(
+            artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
+            scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
+            scope_id=_league_last_good_scope_id(user_id, league_id),
+            model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
+        ),
+        store.get_latest_reusable_artifact(
+            artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+            scope_kind=LAST_GOOD_SCOPE_KIND,
+            scope_id=user_id,
+            model_version=LAST_GOOD_MODEL_VERSION,
+        ),
+    )
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        try:
+            state = LeagueState.model_validate(candidate.payload["league_state"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if state.league.league_id != league_id:
+            continue
+        selected = candidate.payload.get("selected_team_id")
+        if selected not in {team.team_id for team in state.teams}:
+            selected = None
+        return state, selected
+    return None
+
+
 def restore_last_good_intelligence(
     store: PersistenceStore,
     *,
@@ -453,18 +491,14 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         # Session-isolation fallback: a shared latest league row may have been
         # advanced by another isolated user/session. The exact user last-good may
         # still be the only durable copy of this user's canonical context State.
-        fallback = restore_last_good_intelligence(
+        fallback = restore_last_good_state_identity(
             store,
             user_id=user_id,
             league_id=context.league_id,
         )
-        if (
-            fallback is None
-            or fallback.league_state.state_id != context.state_hash
-        ):
+        if fallback is None or fallback[0].state_id != context.state_hash:
             return None
-        league_state = fallback.league_state
-        selected = fallback.selected_team_id
+        league_state, selected = fallback
         restored_from_last_good = True
 
     forecast, simulation, values = restore_state_bound_intelligence(
