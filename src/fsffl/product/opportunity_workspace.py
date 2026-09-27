@@ -669,7 +669,7 @@ def build_opportunity_workspace(
         "surface_readiness": _market_surface_readiness(runtime),
         "available_players": {"count": len(available_players), "players": available_players},
         "capabilities": {
-            "structural_trade_discovery": not presentation_shell_only,
+            "structural_trade_discovery": True,
             "authoritative_value_ordering": True,
             "presentation_shell_only": presentation_shell_only,
             "roster_aware_search": runtime.simulation_analytics is not None,
