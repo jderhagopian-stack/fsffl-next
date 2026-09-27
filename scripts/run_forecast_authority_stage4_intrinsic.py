@@ -54,6 +54,7 @@ def current_test(source:pd.DataFrame,h:int)->pd.DataFrame:
         "horizon":int(h),
         "career_stage":source.career_stage.astype(str),
         "age":pd.to_numeric(source.age,errors="coerce"),
+        "experience":pd.to_numeric(source.experience,errors="coerce").fillna(0).astype(int),
         "age_band":source.age_band.astype(str),
         "source_state":source.source_state.astype(str),
         "source_points":pd.to_numeric(source.y1_points,errors="coerce"),
