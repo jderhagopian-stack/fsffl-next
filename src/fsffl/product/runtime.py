@@ -229,16 +229,16 @@ def default_live_value_loader(league_state: LeagueState) -> CurrentMarketValueRu
 
 @dataclass(frozen=True)
 class ServedIntelligenceSnapshot:
-    """Presentation-only same-league last-good intelligence.
+    """Lightweight identity for a durable same-league last-good bundle.
 
-    This snapshot never becomes current model authority merely because it is
-    served. Canonical current LeagueState remains on UserRuntimeContext.league_state.
+    Heavy Forecast/Simulation/Value objects remain in persistence and are not
+    duplicated in RAM merely to preserve presentation continuity.
     """
 
-    league_state: LeagueState
-    forecast_evidence: LiveForecastEvidence
-    simulation_analytics: LiveSimulationAnalyticsResult | None
-    value_evidence: CurrentMarketValueRuntimeResult
+    league_id: str
+    league_state_id: str
+    as_of: datetime
+    team_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -255,9 +255,9 @@ class UserRuntimeContext:
 
 @dataclass(frozen=True)
 class _PendingIntelligenceSnapshot:
-    league_state: LeagueState
-    forecast_evidence: LiveForecastEvidence
-    simulation_analytics: LiveSimulationAnalyticsResult | None = None
+    """Minimal in-memory reconciliation identity; heavy data lives on current context."""
+
+    league_state_id: str
 
 
 def _forecast_supplement_compatible(
@@ -334,13 +334,11 @@ def _served_snapshot_from_context(
         )
     ):
         return None
-    assert context.forecast_evidence is not None
-    assert context.value_evidence is not None
     return ServedIntelligenceSnapshot(
-        league_state=context.league_state,
-        forecast_evidence=context.forecast_evidence,
-        simulation_analytics=context.simulation_analytics,
-        value_evidence=context.value_evidence,
+        league_id=context.league_state.league.league_id,
+        league_state_id=context.league_state.state_id,
+        as_of=context.league_state.as_of,
+        team_ids=tuple(sorted(team.team_id for team in context.league_state.teams)),
     )
 
 
@@ -428,7 +426,7 @@ class PrivateBetaRuntimeStore:
                 )
                 if (
                     served is not None
-                    and served.league_state.league.league_id
+                    and served.league_id
                     != league_state.league.league_id
                 ):
                     served = None
@@ -447,7 +445,7 @@ class PrivateBetaRuntimeStore:
             pending = self._pending_intelligence.get(user_id)
             pending_compatible = (
                 pending is None
-                or pending.league_state.state_id == league_state.state_id
+                or pending.league_state_id == league_state.state_id
             )
             forecast_reusable = bool(
                 same_league
@@ -482,7 +480,7 @@ class PrivateBetaRuntimeStore:
                 not same_league
                 or (
                     pending is not None
-                    and pending.league_state.state_id != league_state.state_id
+                    and pending.league_state_id != league_state.state_id
                 )
             ):
                 self._pending_intelligence.pop(user_id, None)
@@ -539,8 +537,7 @@ class PrivateBetaRuntimeStore:
             if selected not in valid_team_ids:
                 selected = None
             pending = _PendingIntelligenceSnapshot(
-                league_state=league_state,
-                forecast_evidence=evidence,
+                league_state_id=league_state.state_id,
             )
             self._pending_intelligence[user_id] = pending
 
@@ -557,56 +554,32 @@ class PrivateBetaRuntimeStore:
             self._contexts[user_id] = updated
             return updated
 
-    def _recover_pending_for_result(
-        self,
-        user_id: str,
-        *,
-        expected_state_id: str,
-    ) -> tuple[UserRuntimeContext, _PendingIntelligenceSnapshot | None]:
-        current = self.get(user_id)
-        pending = self._pending_intelligence.get(user_id)
-        if pending is None or pending.league_state.state_id != expected_state_id:
-            return current, None
-        if current.league_state is not None and current.league_state.league.league_id != pending.league_state.league.league_id:
-            return current, None
-        return current, pending
-
     def set_simulation_analytics(
         self,
         user_id: str,
         result: LiveSimulationAnalyticsResult,
     ) -> UserRuntimeContext:
-        """Attach NEXT-4/NEXT-7 simulation output without rewriting its authority.
-
-        If same-league session recovery re-materializes State while a background
-        refresh is running, recover the exact pending State+Forecast snapshot that
-        produced this Simulation result instead of failing on a transient reset.
-        """
+        """Attach Simulation only to the exact current State/Forecast identity."""
 
         with self._lock:
+            current = self.get(user_id)
             result_state_id = result.league_view.context.league_state_id
-            current, pending = self._recover_pending_for_result(
-                user_id,
-                expected_state_id=result_state_id,
-            )
             league_state = current.league_state
             forecast_evidence = current.forecast_evidence
-            if league_state is None or forecast_evidence is None or league_state.state_id != result_state_id:
-                if pending is None:
-                    raise ValueError("cannot attach simulation before matching league and forecast evidence")
-                league_state = pending.league_state
-                forecast_evidence = pending.forecast_evidence
+            if (
+                league_state is None
+                or forecast_evidence is None
+                or league_state.state_id != result_state_id
+            ):
+                raise ValueError(
+                    "cannot attach simulation before matching current league and forecast evidence"
+                )
             selected = current.selected_team_id
-            valid_team_ids = {team.team_id for team in league_state.teams}
-            if selected not in valid_team_ids:
+            if selected not in {team.team_id for team in league_state.teams}:
                 selected = None
-            staged = _PendingIntelligenceSnapshot(
-                league_state=league_state,
-                forecast_evidence=forecast_evidence,
-                simulation_analytics=result,
+            self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
+                league_state_id=league_state.state_id,
             )
-            self._pending_intelligence[user_id] = staged
-
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -625,34 +598,23 @@ class PrivateBetaRuntimeStore:
         user_id: str,
         result: CurrentMarketValueRuntimeResult,
     ) -> UserRuntimeContext:
-        """Attach NEXT-3 Value output only to the exact canonical state it values.
-
-        The same pending snapshot recovery used for Simulation prevents a
-        reconnect from splitting one refresh across incompatible State identities.
-        """
+        """Attach Value only to the exact current canonical State."""
 
         with self._lock:
-            current, pending = self._recover_pending_for_result(
-                user_id,
-                expected_state_id=result.league_state_id,
-            )
+            current = self.get(user_id)
             league_state = current.league_state
-            forecast_evidence = current.forecast_evidence
-            simulation_analytics = current.simulation_analytics
-            if pending is not None:
-                league_state = pending.league_state
-                forecast_evidence = pending.forecast_evidence
-                simulation_analytics = pending.simulation_analytics
-            elif league_state is None or league_state.state_id != result.league_state_id:
+            if (
+                league_state is None
+                or league_state.state_id != result.league_state_id
+            ):
                 raise ValueError("Value evidence must match current LeagueState")
             selected = current.selected_team_id
-            valid_team_ids = {team.team_id for team in league_state.teams}
-            if selected not in valid_team_ids:
+            if selected not in {team.team_id for team in league_state.teams}:
                 selected = None
             served = current.served_intelligence
             if _terminal_intelligence(
-                forecast_evidence,
-                simulation_analytics,
+                current.forecast_evidence,
+                current.simulation_analytics,
                 result,
             ):
                 served = None
@@ -660,8 +622,8 @@ class PrivateBetaRuntimeStore:
                 user_id=user_id,
                 league_state=league_state,
                 selected_team_id=selected,
-                forecast_evidence=forecast_evidence,
-                simulation_analytics=simulation_analytics,
+                forecast_evidence=current.forecast_evidence,
+                simulation_analytics=current.simulation_analytics,
                 value_evidence=result,
                 served_intelligence=served,
                 intelligence_reused=False,
