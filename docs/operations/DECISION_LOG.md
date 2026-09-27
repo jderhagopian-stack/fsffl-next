@@ -602,3 +602,17 @@ Operational policy:
 - routine product opens, league switches and Refresh Intelligence should hit the compatible persisted artifact and return near-immediately.
 
 This policy preserves point-in-time provenance separately from computational compatibility. Exact State identity remains authoritative for evidence history; it is not itself the Intrinsic cache key.
+
+## 2026-09-26 — Football-state changes propagate through Forecast before Intrinsic
+Management clarifies the dependency-scoped Intrinsic recomputation policy.
+
+A fantasy-league ownership change does not by itself change player Intrinsic. An NFL-context change can.
+
+Events such as NFL injury, return from injury, NFL trade, release/cut, signing, depth-chart promotion/demotion, role/opportunity change, suspension, or retirement status must trigger **Forecast reevaluation** when authoritative current evidence changes. Intrinsic then recomputes only if the governed Forecast inputs/contracts consumed by Intrinsic materially change.
+
+Authority sequence remains:
+`Point-in-Time State / governed football evidence → Forecast → Intrinsic/Value`.
+
+Implementation must not hard-code arbitrary injury, trade, cut, or depth-chart penalties inside Intrinsic.
+
+Current limitation: the deployed vNext Y2/Y3 contract is intentionally based on a frozen 2026 source coordinate and does not yet have a fully governed live football-state update layer for all such events. This is a Forecast freshness limitation, not permission to ignore the events. Research must determine the governed in-season update mechanism, while Implementation must make cache compatibility depend on Forecast output identity so any future authorized Forecast update automatically invalidates Intrinsic.
