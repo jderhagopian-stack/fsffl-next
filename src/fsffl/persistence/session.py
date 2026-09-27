@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from fsffl.forecast.fumbles_lost_first_party import (
@@ -61,10 +62,10 @@ class DurableRuntimeSnapshot:
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
-    served_league_state: LeagueState | None = None
-    served_forecast_evidence: LiveForecastEvidence | None = None
-    served_simulation_analytics: LiveSimulationAnalyticsResult | None = None
-    served_value_evidence: CurrentMarketValueRuntimeResult | None = None
+    served_league_id: str | None = None
+    served_league_state_id: str | None = None
+    served_as_of: datetime | None = None
+    served_team_ids: tuple[str, ...] = ()
     restored_from_last_good: bool = False
 
 
@@ -506,18 +507,15 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         league_state=league_state,
     )
 
-    served = None
+    served_state = None
     if not _terminal_bundle(forecast, simulation, values):
-        candidate = restore_last_good_intelligence(
+        candidate = restore_last_good_state_identity(
             store,
             user_id=user_id,
             league_id=league_state.league.league_id,
         )
-        if (
-            candidate is not None
-            and candidate.league_state.state_id != league_state.state_id
-        ):
-            served = candidate
+        if candidate is not None and candidate[0].state_id != league_state.state_id:
+            served_state = candidate[0]
 
     if selected not in {team.team_id for team in league_state.teams}:
         selected = None
@@ -527,15 +525,17 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         forecast_evidence=forecast,
         simulation_analytics=simulation,
         value_evidence=values,
-        served_league_state=(served.league_state if served is not None else None),
-        served_forecast_evidence=(
-            served.forecast_evidence if served is not None else None
+        served_league_id=(
+            served_state.league.league_id if served_state is not None else None
         ),
-        served_simulation_analytics=(
-            served.simulation_analytics if served is not None else None
+        served_league_state_id=(
+            served_state.state_id if served_state is not None else None
         ),
-        served_value_evidence=(
-            served.value_evidence if served is not None else None
+        served_as_of=(served_state.as_of if served_state is not None else None),
+        served_team_ids=(
+            tuple(sorted(team.team_id for team in served_state.teams))
+            if served_state is not None
+            else ()
         ),
         restored_from_last_good=restored_from_last_good,
     )
