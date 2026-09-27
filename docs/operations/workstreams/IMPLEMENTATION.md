@@ -1078,3 +1078,53 @@ For this availability corrective, do **not** use PR #267, PR #269, or the failed
 Use the last demonstrably usable FSFFL runtime behavior as the control for lifecycle/resource regressions: the PR #235-era `jimmygoodjob` path repeatedly restored Forecast/Simulation/Value complete across restart, Home/Franchise were populated and responsive, startup did not automatically launch heavy intelligence, and no startup errors were observed. Market latency remained poor, so this is a **runtime usability baseline**, not a claim that PR #235 was product-complete or a model-authority rollback target.
 
 The corrective must identify what later changes caused regression relative to that usable behavior, then preserve only later features that can coexist with equivalent-or-better availability. Do not justify current memory, restart, readiness, or request-fanout behavior by comparison with an already-broken intermediate state.
+
+## Management directive — runtime architecture corrective, not symptom patching — 2026-09-27
+**State: ACTIVE — BETA RUNTIME ARCHITECTURE / AVAILABILITY CORRECTIVE**
+
+Management supersedes any narrower interpretation of the post-PR #270 incident. The objective is not to patch the visible 502, 429, League error, readiness label, or PI memory spike independently. Implementation must restore a structurally efficient private-beta runtime that remains usable as capabilities are added.
+
+### Control baseline
+Use the last demonstrably usable FSFFL runtime behavior as the control: the PR #235-era `jimmygoodjob` path repeatedly restored Forecast/Simulation/Value complete across restart, kept Home/Franchise populated and responsive, did not automatically launch heavy intelligence on startup, and emitted no startup errors. Market latency was still poor, so PR #235 is a **runtime-usability control**, not a product-complete rollback target.
+
+First establish the regression delta from that usable control to current main. Use commit/diff tracing and, where useful, a reproducible cold-wake harness or selective historical replay to identify which later lifecycle, cache, persistence, hydration, Intrinsic, last-good, or refresh changes materially increased resident memory, concurrent work, request fanout, or restart fragility. Do not use an already-broken intermediate release as the efficiency baseline.
+
+### Required runtime architecture
+1. **One authoritative heavy working set.** At most one full State-bound Forecast/Simulation/Value working bundle may be treated as the active heavy in-memory set for a user/league. Do not retain multiple complete object graphs merely to support presentation continuity.
+2. **Lightweight last-good serving.** Preserve last-good user experience through durable artifacts and a compact presentation/read model or lazy handles. Do not require a second full raw Forecast/Simulation/Value graph to remain resident if the rendered surfaces only need summarized outputs.
+3. **Minimal pending state.** In-progress reconciliation may retain identifiers, fingerprints, job state and the bounded intermediate data actually required to finish. It must not duplicate the active or last-good bundle without measured necessity.
+4. **Bounded heavy concurrency.** Forecast enrichment, 50K Simulation, Intrinsic/Shapley construction, historical PI materialization and other memory-heavy jobs must pass through an explicit process-level resource coordinator. Coalesce identical work; serialize or otherwise bound overlapping heavy jobs on the current free-tier instance. Browser request concurrency must not imply model-build concurrency.
+5. **Restore-first startup.** Cold wake/restart must restore the persisted user/league context and immediately serve the last compatible usable view before any automatic synchronization launches heavy work. Automatic State sync may begin only after restore/initial serving is stable, and must remain non-disruptive.
+6. **Persistence over RAM residency.** Postgres/artifacts are the durable cache; RAM is a bounded execution cache. Large reusable results should be reloadable/lazy rather than permanently retained in multiple Python object graphs.
+7. **Endpoint isolation.** Opening Home, Franchise, League, Market or Player Intelligence must not independently trigger duplicate global intelligence builds. PI history remains player-scoped and bounded. Surface hydration should consume already-governed products or request one coalesced missing capability.
+8. **Single readiness authority.** Shell and all surfaces must consume one capability/readiness contract. `Intelligence current` is impossible while a required capability is rebuilding, unavailable, last-good-only, or Intrinsic-preparing.
+9. **Crash-safe recovery.** An involuntary process recycle must restore the persisted selected league/state/context and compatible last-good presentation. A restarted process returning `league=None` for a previously persisted authenticated user is unacceptable.
+10. **No semantic/model rollback.** Preserve accepted Forecast, Simulation, Value and Intrinsic authority. Simplify runtime representation/orchestration, not model meaning. Any rollback/feature gate used temporarily for beta availability is not terminal completion of this directive.
+
+### Resource and acceptance discipline
+- Instrument peak RSS and major retained-object/cache/job ownership through the exact hosted workflow. The closeout must explain the dominant memory owners before and after the corrective.
+- On the current 536,870,900-byte service limit, the full acceptance journey must retain **at least 20% memory headroom at peak** (peak RSS <= ~429 MB), unless Management explicitly changes the infrastructure/budget. Passing at 500+ MB is not acceptable even if the process happens not to restart.
+- No unbounded cache, unbounded task queue, or unbounded browser-driven polling fanout is permitted.
+- Record cold-start, warm/reuse and changed-State latency separately; optimization must not silently trade correctness for lower RSS.
+
+### Required end-to-end acceptance journey
+Automate and execute on the hosted service, from a genuine cold process where feasible:
+`cold wake → restore FSFFL → initial Home/Franchise usable → automatic State sync → navigate Home → Franchise → League → open Player Intelligence/history → reload during active reconciliation → manual Refresh Intelligence → FSFFL ↔ Hodor ↔ FSFFL → repeat PI open`.
+
+For that journey prove:
+- no process recycle;
+- peak RSS within the governed budget and materially below the failed curve;
+- no 5xx and no recovery-induced 429;
+- no blank canonical roster/state surfaces;
+- last-good presentation remains usable and clearly stale/as-of only when needed;
+- persisted Intrinsic reattaches without unnecessary Shapley recomputation;
+- no duplicate heavy job for the same dependency coordinate;
+- readiness is consistent across shell and surfaces;
+- second/repeat opens use durable reuse and have lower memory/work than the cold path.
+
+### Scope / sequencing
+Market product work, general Performance work, Simulation kernel modernization, and new feature breadth remain HOLD. Performance techniques may be used inside this corrective only when necessary to satisfy runtime availability/resource ownership. Research remains at its existing Management gates and must not be reopened.
+
+Do not ask Management for another physical-device pass merely because unit tests, PR CI, a single endpoint, or a synthetic State-first runner passes. Return to physical acceptance only after the exact combined hosted journey above passes with resource telemetry.
+
+Stop only at `DIRECTIVE COMPLETE — IMPLEMENTATION`, a genuine `BLOCKED — IMPLEMENTATION`, or `MANAGEMENT GATE — IMPLEMENTATION` after all authorized nonphysical work is exhausted.
