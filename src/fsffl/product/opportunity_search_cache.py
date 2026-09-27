@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import logging
 from collections import OrderedDict
 from threading import RLock
@@ -13,7 +14,7 @@ from .trade_center_view import TradeCenterBrowserView
 
 
 _logger = logging.getLogger("uvicorn.error")
-_MAX_ENTRIES = 16
+_MAX_ENTRIES = 1
 
 CandidateBuilder = Callable[
     [UserRuntimeContext, TradeCenterBrowserView, Mapping[str, FSFFLCardinalValueScore]],
@@ -91,6 +92,19 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
                     elapsed_ms=(monotonic() - started) * 1000.0,
                 )
             misses += 1
+            # Candidate catalogs are exact-State execution caches. Evict the prior
+            # State before allocating the new catalog so state reconciliation does
+            # not transiently own two full package universes.
+            if cache:
+                evicted = len(cache)
+                cache.clear()
+                gc.collect()
+                _logger.info(
+                    "FSFFL Market search cache evicted_prior_scope entries=%d state=%s team=%s",
+                    evicted,
+                    league_state.state_id,
+                    runtime.selected_team_id,
+                )
             result = builder(runtime, browser, cardinal)
             cache[key] = result
             cache.move_to_end(key)
