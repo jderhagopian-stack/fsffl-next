@@ -1,0 +1,121 @@
+{
+  "study": "y4-y8-symmetric-long-horizon-authority-final",
+  "date": "2026-09-27",
+  "terminal_state": "MANAGEMENT GATE — Y4-Y8 LONG-HORIZON AUTHORITY",
+  "authority": "research_only_no_production_change",
+  "starting_durable_head": "cf35f1c540fb50507c41d95314509ea9081573f6",
+  "row_evidence": {
+    "routing_common_player_origin_rows": 11940,
+    "routing_policy_prediction_rows": 47760,
+    "age_exposure_prediction_rows": 59700
+  },
+  "cell_counts": {
+    "exact_best_supported": 2,
+    "practical_tie_or_uncertain": 9,
+    "multi_objective_tradeoff": 5,
+    "y8_evidence_limited": 4
+  },
+  "exact_cells": [
+    {
+      "position": "QB",
+      "horizon": 5,
+      "policy": "blanket_75_25"
+    },
+    {
+      "position": "WR",
+      "horizon": 5,
+      "policy": "hard_router"
+    }
+  ],
+  "y8": {
+    "exact_authority_cells": 0,
+    "qualifying_outer_origins": 2,
+    "disposition": "coarse_or_uncertain_only"
+  },
+  "aggregate_policy_metrics": {
+    "baseline": {
+      "rmse": 45.63875892968151,
+      "mae": 19.962672989881185,
+      "bias": -5.704967298139879,
+      "spearman": 0.494171687042125,
+      "tail_rmse": 134.77249459824313
+    },
+    "hard_router": {
+      "rmse": 44.03133970779707,
+      "mae": 20.907570942318443,
+      "bias": 0.4384184435335362,
+      "spearman": 0.4964284771783713,
+      "tail_rmse": 113.51536026298588
+    },
+    "soft_stack": {
+      "rmse": 43.20164426006797,
+      "mae": 20.729992906748134,
+      "bias": 0.2328239655240566,
+      "spearman": 0.5066904621479473,
+      "tail_rmse": 113.34484759017688
+    },
+    "blanket_75_25": {
+      "rmse": 43.48109476246197,
+      "mae": 20.708623080323083,
+      "bias": 0.1710426420325137,
+      "spearman": 0.5033688196596101,
+      "tail_rmse": 114.18633003652536
+    }
+  },
+  "pairwise_supported_cell_counts": {
+    "mae": 18,
+    "mse": 14,
+    "tail_mse": 16,
+    "abs_bias": 5,
+    "coverage80_gap": 1,
+    "coverage90_gap": 0
+  },
+  "current_shadow_rank_impact": {
+    "H4": {
+      "spearman_vs_h3": 0.9939564368065574,
+      "median_abs_move": 4,
+      "p90_abs_move": 12,
+      "share_abs_ge_20": 0.035820895522388
+    },
+    "H5": {
+      "spearman_vs_h3": 0.985955594142206,
+      "median_abs_move": 7,
+      "p90_abs_move": 19,
+      "share_abs_ge_20": 0.0955223880597015
+    },
+    "H6": {
+      "spearman_vs_h3": 0.9766783065000064,
+      "median_abs_move": 10,
+      "p90_abs_move": 24,
+      "share_abs_ge_20": 0.1701492537313433
+    },
+    "H7": {
+      "spearman_vs_h3": 0.9711700266843712,
+      "median_abs_move": 11,
+      "p90_abs_move": 27,
+      "share_abs_ge_20": 0.2238805970149253
+    },
+    "H8": {
+      "spearman_vs_h3": 0.9678801246121828,
+      "median_abs_move": 12,
+      "p90_abs_move": 29,
+      "share_abs_ge_20": 0.2597014925373134
+    }
+  },
+  "family_breadth": "sufficient_no_additional_family_challenge",
+  "age_exposure": {
+    "universal_manual_age_curve": false,
+    "universal_youth_premium": false,
+    "universal_workload_penalty": false,
+    "universal_nonlinear_histgb_replacement": false,
+    "disposition": "component_specific_evidence_only"
+  },
+  "guards": {
+    "production_forecast_changed": false,
+    "production_h3_changed": false,
+    "intrinsic_changed": false,
+    "models_refit_after_durable_head": false,
+    "new_family_added": false,
+    "current_named_players_used_for_selection": false
+  }
+}
