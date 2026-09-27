@@ -1199,3 +1199,31 @@ PR #274 must:
 - return to Management for physical iPhone/Safari acceptance only after hosted evidence passes.
 
 Do not incorporate experimental Research models into PR #274. Any later Forecast-authority change must arrive through a separate Management-approved implementation directive after Research closes.
+
+
+## 2026-09-27 15:37 ET — Physical beta usability restored enough to expose latency; League→PI overlay defect confirmed
+**State: ACTIVE — LATENCY / INTERACTION CORRECTIVE IS NOW THE PRODUCT CRITICAL PATH**
+
+Management resumed normal iPhone/Safari use on live PR #276. The app is functionally usable enough to continue physical product testing: no observed process recycle, hard 502/429 path, lost State, or disappearance of the promoted presentation during this session. The governed ~429.5 MB resource target remains engineering headroom debt, but a narrow budget miss alone no longer blocks ordinary physical beta use. Continue the existing runtime-RSS-reclaim work without allowing that self-imposed threshold to prevent product testing unless memory growth again causes real availability failure.
+
+New physical latency evidence from the live session:
+- `GET /api/home`: **24.200s**
+- `GET /api/my-team`: **25.595s**
+- `GET /api/product-context`: **39.397s**
+- repeated Player Intelligence history requests returned `202 Accepted` while background history work was active;
+- a Market workspace request completed in **0.500s**, proving the whole product is not intrinsically slow.
+- live CPU was saturated at the free-tier ~0.15 CPU level while background work and reads overlapped.
+
+Management priority is now **usable → fast → feature breadth**. Persisted/read-only Home, Franchise, League and Player Intelligence presentation must remain responsive while Forecast, Simulation, history or other heavy background work is active. Profile and eliminate request starvation / lock or shared-work contention; do not attribute 24–39 second read latency to hosting without evidence.
+
+A separate physical interaction defect is now exactly localized:
+- League Atlas team-position drawer: `.atlas-drawer { z-index: 1003 }`
+- Player Intelligence root: `#player-intelligence-root { z-index: 1000 }`
+- therefore a player selected inside the position drawer correctly triggers Player Intelligence, but PI renders **behind** the still-open Atlas drawer and becomes visible only after the drawer is closed.
+
+Corrective requirement:
+- establish an explicit overlay-stack contract so Player Intelligence opened from any Atlas drawer renders immediately above the invoking drawer (or equivalently transition/close the drawer before opening PI without losing the intended return context);
+- cover this exact heat-map → team/position drawer → player → PI journey on mobile;
+- do not treat this as cosmetic polish; it breaks the core SEE → DRILL DEEPER interaction.
+
+Runtime memory reclamation may continue in parallel, but latency and this interaction defect are now the immediate physical-product acceptance work. Preserve current model semantics.
