@@ -8,6 +8,7 @@ from threading import RLock
 
 from fsffl.persistence import PersistenceStore, persistence_store_from_env
 from fsffl.persistence.session import (
+    migrate_legacy_last_good_identity,
     persist_league_last_good_identity,
     persist_runtime_snapshot,
     restore_last_good_state_identity,
@@ -241,6 +242,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     ),
                 )
                 if self._persistence is not None:
+                    # Upgrade compatibility: when the canonical current State is
+                    # partial but restore found an older served identity through the
+                    # legacy user-scoped record, migrate that league now before a
+                    # later league switch overwrites the legacy pointer.
+                    if snapshot.served_league_id is not None:
+                        migrate_legacy_last_good_identity(
+                            self._persistence,
+                            user_id=user_id,
+                            league_id=snapshot.served_league_id,
+                        )
+
                     migrate_state = (
                         snapshot.league_state
                         if snapshot.forecast_evidence is not None
