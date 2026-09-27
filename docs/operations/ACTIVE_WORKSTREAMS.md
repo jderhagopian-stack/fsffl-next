@@ -389,3 +389,8 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **Implementation Track A — runtime corrective:** PR #278 remains in hosted acceptance. Latest evidence fixes the prior cold PI continuity failure: cold PI now returns Forecast years [1,2,3], with initial full reconciliation around ~384 MB max observed and no application errors in the checked window.
 - **Implementation Track B — Long-Term Intrinsic shadow:** AUTHORIZED to begin on a separate branch from the frozen Research contract. Build continuous Y4-Y7 Forecast authority materialization + separate Long-Term Intrinsic Value consumer + persistence/API shadow. No Market/Team Utility/Decision authority and no Current Intrinsic change.
 - **Merge/deploy guard:** Track B must not be merged/deployed onto live main until Track A (#278) completes hosted acceptance cleanly.
+
+
+## 2026-09-27 — Sequencing update
+- **Implementation runtime corrective — ACTIVE / sole implementation priority.**
+- **Long-Term Intrinsic shadow — AUTHORIZED BUT PAUSED.** Do not start until regular Implementation reaches a clean terminal state and Management reopens the shadow phase.
