@@ -162,17 +162,32 @@ def route_authority_map(metrics:pd.DataFrame,pair:pd.DataFrame,origin:pd.DataFra
     rows=[]
     for h in HORIZONS:
         for pos in POSITIONS:
-            dominated=set()
-            evidence=[]
+            dominates={p:set() for p in POLICIES}
+            evidence={}
             for a,b in itertools.permutations(POLICIES,2):
                 gains=[oriented(pair,h,pos,a,b,m) for m in primary]
                 any_better=any(lo>0 for _g,lo,_hi in gains)
                 any_worse=any(hi<0 for _g,_lo,hi in gains)
                 if any_better and not any_worse:
-                    dominated.add(b)
-            supported=[p for p in POLICIES if p not in dominated]
-            if not supported:
-                supported=list(POLICIES)
+                    dominates[a].add(b)
+
+            universal=[p for p in POLICIES if len(dominates[p])==len(POLICIES)-1]
+            if universal:
+                supported=universal
+            else:
+                dominated_by_any={b for a in POLICIES for b in dominates[a]}
+                nondominated=[p for p in POLICIES if p not in dominated_by_any]
+                if not nondominated:
+                    supported=list(POLICIES)
+                elif len(nondominated)>1:
+                    supported=nondominated
+                else:
+                    # Pairwise statistical dominance is not necessarily transitive.
+                    # If the lone Pareto survivor does not directly dominate a peer,
+                    # keep that peer in the authority set rather than granting
+                    # authority through an elimination chain.
+                    lead=nondominated[0]
+                    supported=[lead]+[p for p in POLICIES if p!=lead and p not in dominates[lead]]
 
             tradeoff=False
             for a,b in itertools.combinations(supported,2):
@@ -186,20 +201,16 @@ def route_authority_map(metrics:pd.DataFrame,pair:pd.DataFrame,origin:pd.DataFra
 
             central=metrics[(metrics.horizon==h)&(metrics.position==pos)].set_index("policy")
             origin_n=int(central.outer_origin_count.iloc[0])
+            exact=(bool(universal) and h!=8)
             if h==8:
                 classification="insufficient_outer_evidence_tradeoff" if tradeoff else "insufficient_outer_evidence_tie_or_direction"
-                exact=False
-            elif len(supported)==1:
+            elif exact:
                 classification="best_supported_policy"
-                exact=True
             elif tradeoff:
                 classification="multi_objective_tradeoff"
-                exact=False
             else:
                 classification="practical_tie_or_uncertain"
-                exact=False
 
-            # compact evidence against baseline plus best central metrics
             winners={
                 "rmse":str(central.rmse.idxmin()),
                 "mae":str(central.mae.idxmin()),
@@ -212,6 +223,7 @@ def route_authority_map(metrics:pd.DataFrame,pair:pd.DataFrame,origin:pd.DataFra
                 "best_supported_or_tied":"|".join(supported),
                 "classification":classification,
                 "exact_cardinal_policy_authority":bool(exact),
+                "direct_universal_dominator":"|".join(universal),
                 "central_rmse_leader":winners["rmse"],
                 "central_mae_leader":winners["mae"],
                 "central_tail_leader":winners["tail_rmse"],
@@ -220,7 +232,6 @@ def route_authority_map(metrics:pd.DataFrame,pair:pd.DataFrame,origin:pd.DataFra
                 "y8_evidence_ceiling":bool(h==8),
             })
     return pd.DataFrame(rows)
-
 
 def age_metric_rows(raw:pd.DataFrame):
     rows=[]
