@@ -1477,3 +1477,25 @@ Question: **Is another authorized Research action available now that materially 
 Answer: **No.**
 
 **MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE**
+
+## Management decision — current football-state Forecast architecture — 2026-09-27
+**Decision: APPROVED ARCHITECTURE / NO PRODUCTION MATH CHANGE YET**
+
+Management accepts the Research conclusion that football-state events belong in Forecast reevaluation, not as direct Intrinsic penalties.
+
+Approved architecture:
+- separate H1 remaining-season availability from conditional healthy production;
+- when governed current ROS is authoritative, it owns the integrated H1 expectation and must not receive a second event haircut;
+- temporary injury does not receive a generic H2/H3 penalty;
+- trade/promotion/demotion trigger role/projection reevaluation rather than fixed event multipliers;
+- Intrinsic consumes Forecast outputs and does not independently inspect event flags to apply a penalty;
+- release/cut remains Research-only as a coarse H3 attachment/survival-risk signal; no production coefficient or cardinal haircut is authorized.
+
+Authorized next Research phase:
+1. build and chronologically validate a dedicated injury-availability / time-to-return model using the existing 4,793 historical injury episodes, with targets limited to participation/availability rather than healthy-production loss;
+2. define and implement a governed prospective archive for current ROS snapshots and event state so future Research can measure provider revisions around injuries, transactions and role changes without double counting;
+3. compare the injury-availability model against simple status/severity baselines and promote nothing unless it clears predeclared out-of-time gates;
+4. keep post-return role, recurrence and durable injury effects separate; do not bundle them into the availability model;
+5. do not alter production H3, Intrinsic, or current provider authority during this phase.
+
+Research should continue under OPERATING_PROTOCOL.md to a permitted terminal state after exhausting the authorized non-production work.
