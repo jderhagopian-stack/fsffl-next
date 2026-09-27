@@ -79,7 +79,7 @@ window.fsfflDisplayedProjectionValue=fsfflDisplayedProjectionValue;
 function fsfflExplorerMissingForSort(value,key){if(value==null)return true;if(typeof value==='number'){if(!Number.isFinite(value))return true;if(value===0&&['value','market_percentile','projection'].includes(key))return true}return value===''}
 function installExplorerSortSemantics(){if(typeof explorerSorted!=='function')return;explorerSorted=function(rows,sort){return[...rows].sort((a,b)=>{const av=a[sort.key],bv=b[sort.key],am=fsfflExplorerMissingForSort(av,sort.key),bm=fsfflExplorerMissingForSort(bv,sort.key);if(am&&bm)return 0;if(am)return 1;if(bm)return-1;const result=explorerCompare(av,bv);return sort.direction==='asc'?result:-result})}}
 function installProjectionPresentation(){if(typeof playerProjection==='function')playerProjection=function(player){const value=fsfflDisplayedProjectionValue(player);return value==null?'—':fmtNumber(value,1)};if(typeof explorerPlayerProjection==='function')explorerPlayerProjection=function(player){return fsfflDisplayedProjectionValue(player)};if(typeof myTeamProjection==='function')myTeamProjection=function(player){const value=fsfflDisplayedProjectionValue(player);return value==null?'—':value.toFixed(1)};document.querySelectorAll('th').forEach(th=>{const label=th.textContent.trim();if(label==='Projection'||label==='Reg-season projection')th.textContent='NFL season projection';if(label==='Projected scoring')th.textContent='Reg-season scoring'})}
-function presentDownstreamReadiness(){const context=state?.context;const coreReady=Boolean(context?.league_id&&context?.forecast_ready&&context?.simulation_ready&&context?.value_ready);if(!coreReady)return;document.querySelectorAll('.runtime-stage').forEach(node=>{const label=node.querySelector('strong')?.textContent?.trim().toLowerCase();if(label!=='trade decision'&&label!=='opportunity')return;node.classList.remove('waiting_for_input','not_configured','capability-next');node.classList.add('ready');const mark=node.querySelector('.runtime-stage-mark');if(mark)mark.textContent='✓';const detail=node.querySelector('small');if(detail)detail.textContent=label==='trade decision'?'Trade Decision is available for submitted deals using the current authoritative evidence.':'Opportunity discovery is available as a downstream consumer of current Value and Trade Decision evidence.'});const opportunityValue=document.querySelector('#opportunity-value');if(opportunityValue)opportunityValue.textContent='Ready';const opportunityNote=document.querySelector('#opportunity-note');if(opportunityNote)opportunityNote.textContent='Open Opportunities to run the current Search workspace.'}
+function presentDownstreamReadiness(){const context=state?.context;const coreReady=Boolean(context?.league_id&&context?.capability_readiness?.overall_status==='full');if(!coreReady)return;document.querySelectorAll('.runtime-stage').forEach(node=>{const label=node.querySelector('strong')?.textContent?.trim().toLowerCase();if(label!=='trade decision'&&label!=='opportunity')return;node.classList.remove('waiting_for_input','not_configured','capability-next');node.classList.add('ready');const mark=node.querySelector('.runtime-stage-mark');if(mark)mark.textContent='✓';const detail=node.querySelector('small');if(detail)detail.textContent=label==='trade decision'?'Trade Decision is available for submitted deals using the current authoritative evidence.':'Opportunity discovery is available as a downstream consumer of current Value and Trade Decision evidence.'});const opportunityValue=document.querySelector('#opportunity-value');if(opportunityValue)opportunityValue.textContent='Ready';const opportunityNote=document.querySelector('#opportunity-note');if(opportunityNote)opportunityNote.textContent='Open Opportunities to run the current Search workspace.'}
 const fsfflDeepLinkState={intent:null};
 function fsfflSetDeepLinkIntent(intent){fsfflDeepLinkState.intent=intent&&intent.route?{...intent}:null;return fsfflDeepLinkState.intent}
 function fsfflPeekDeepLinkIntent(route=null){const intent=fsfflDeepLinkState.intent;if(!intent)return null;if(route&&intent.route!==route)return null;return intent}
@@ -127,15 +127,13 @@ function fsfflSurfaceReadinessIssue(){
 function fsfflSharedReadinessSnapshot(){
   const context=state?.context||{},job=state?.intelligence?.job||null,capabilities=fsfflCapabilityReadiness();
   if(!context?.league_id)return{connected:false,step:0,total:FSFFL_SHARED_READINESS_STEPS,label:'',failed:false,complete:false,lifecycleComplete:false,partial:false,capabilities,asOf:null};
-  const serverFull=capabilities?.overall_status==='full'||(
-    !capabilities?.overall_status&&Boolean(context?.forecast_ready&&context?.simulation_ready&&context?.value_ready)
-  );
+  const serverFull=capabilities?.overall_status==='full';
   const surfaceIssue=fsfflSurfaceReadinessIssue();
   const capabilityFull=serverFull&&!surfaceIssue;
   const asOf=fsfflReadinessAsOf();
   if((job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted')&&capabilityFull){
     fsfflSharedReadinessState.lastStep=FSFFL_SHARED_READINESS_STEPS;
-    return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Last-good product intelligence retained',failed:false,complete:true,lifecycleComplete:true,partial:false,capabilities,asOf};
+    return{connected:true,step:FSFFL_SHARED_READINESS_STEPS,total:FSFFL_SHARED_READINESS_STEPS,label:'Last-good intelligence identity retained; current capability truth shown',failed:false,complete:true,lifecycleComplete:true,partial:false,capabilities,asOf};
   }
   if(job?.status==='failed'||job?.phase==='failed'||job?.status==='interrupted'||job?.phase==='interrupted'){
     const prior=Number.isFinite(fsfflSharedReadinessState.lastStep)?fsfflSharedReadinessState.lastStep:1;
@@ -156,7 +154,7 @@ function fsfflSharedReadinessSnapshot(){
     fsfflSharedReadinessState.lastStep=step;
     const lifecycleComplete=step===FSFFL_SHARED_READINESS_STEPS;
     const partial=lifecycleComplete&&!capabilityFull;
-    const lastGoodAvailable=Boolean(capabilities?.served_last_good?.available||context?.forecast_ready||context?.simulation_ready||context?.value_ready);
+    const lastGoodAvailable=Boolean(capabilities?.served_last_good?.available);
     const label=lifecycleComplete
       ?(capabilityFull?'Build complete · Current core runtime fully available · product intelligence verified':surfaceIssue?'Build complete · '+surfaceIssue:'Build complete · intelligence partially available')
       :phaseLabel+(lastGoodAvailable?' · Last-good available':'');
@@ -173,7 +171,7 @@ function fsfflSharedReadinessSnapshot(){
   const label=capabilityFull
     ?'Current core runtime fully available · product intelligence verified'
     :rebuilding
-      ?'State current · intelligence rebuilding · last-good intelligence remains available'
+      ?'State current · intelligence rebuilding · last-good identity remains durable'
     :surfaceIssue
       ?'Core intelligence current · '+surfaceIssue
       :intrinsicStatus==='building'
