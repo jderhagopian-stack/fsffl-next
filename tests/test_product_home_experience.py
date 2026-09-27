@@ -198,10 +198,11 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
         assert forbidden not in readiness
 
 
-def test_shared_readiness_assets_are_cache_busted_without_splitting_release_generation() -> None:
-    release = "20260926-intrinsic-reuse-readiness1"
+def test_shared_readiness_assets_keep_stable_release_while_home_corrective_is_cache_busted() -> None:
+    release = "20260926-post265-intrinsic-mobile1"
+    home_release = "20260926-intrinsic-reuse-readiness1"
     assert f"/static/app.js?v={release}" in INDEX
-    assert f"/static/home_dashboard.js?v={release}" in INDEX
+    assert f"/static/home_dashboard.js?v={home_release}" in INDEX
     assert f"/static/product_shell.js?v={release}" in INDEX
     assert f"const homeNorthStarStaticVersion='{release}';" in SHELL
     assert f"const franchiseNorthStarStaticVersion='{release}';" in SHELL
@@ -213,7 +214,6 @@ def test_readiness_refresh_invokes_intelligence_lifecycle_directly():
     refresh = (Path(__file__).parents[1] / 'src/fsffl/product/static/forecast_refresh.js').read_text()
     assert "window.fsfflManualIntelligenceRefresh?.()" in shell
     assert "window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh" in refresh
-
 
 
 def test_home_removes_redundant_large_intelligence_status_card() -> None:
