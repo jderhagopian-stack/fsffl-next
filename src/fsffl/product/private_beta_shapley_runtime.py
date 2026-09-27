@@ -168,6 +168,85 @@ def _intrinsic_rules_payload(league_state: LeagueState) -> dict[str, object]:
     }
 
 
+def _year_one_intrinsic_semantic_payload(
+    year_one: tuple[ForecastObservation, ...],
+) -> list[dict[str, object]]:
+    """Return only Year-1 semantics that can change frozen Intrinsic math.
+
+    Point-in-time timestamps, retrieval/effective provenance and distribution
+    spread remain on the source artifacts for audit. The current Intrinsic
+    adapter consumes only the season fantasy-point mean plus subject/position
+    identity; stable source/model identifiers are retained as authority identity.
+    """
+
+    return [
+        {
+            "player_id": item.player_id,
+            "position": item.position.value,
+            "metric": item.metric.value,
+            "horizon": item.horizon.value,
+            "mean": float(item.distribution.mean),
+            "source": item.source,
+            "model_version": item.model_version,
+        }
+        for item in sorted(
+            year_one,
+            key=lambda observation: (
+                observation.player_id,
+                observation.position.value,
+            ),
+        )
+    ]
+
+
+def _future_intrinsic_semantic_payload(
+    future_contract: FutureForecastContract,
+) -> dict[str, object]:
+    """Return the Future Forecast semantics consumed by the Shapley adapter.
+
+    Contract/Forecast model/source identities are authority inputs. Volatile
+    provenance dictionaries, evidence-path labels, retrieval/evaluation metadata,
+    and unused distribution fields are audit/presentation metadata and therefore
+    intentionally excluded from compatibility identity.
+    """
+
+    return {
+        "contract_version": future_contract.contract_version,
+        "evaluation_season": future_contract.evaluation_season,
+        "scoring_coordinate": future_contract.scoring_coordinate,
+        "forecast_model_version": future_contract.forecast_model_version,
+        "forecast_source": future_contract.forecast_source,
+        "forecasts": [
+            {
+                "player_id": row.player_id,
+                "position": row.position.value,
+                "year_index": row.year_index,
+                "target_season": row.target_season,
+                "central_expectation": float(row.central_expectation),
+                "scoring_coordinate": row.scoring_coordinate,
+                "model_version": row.model_version,
+                "source": row.source,
+                "uncertainty_kind": row.uncertainty_kind.value,
+                "scenarios": [
+                    {
+                        "scenario_id": scenario.scenario_id,
+                        "probability": float(scenario.probability),
+                        "fantasy_points": float(scenario.fantasy_points),
+                    }
+                    for scenario in sorted(
+                        row.scenarios,
+                        key=lambda item: item.scenario_id,
+                    )
+                ],
+            }
+            for row in sorted(
+                future_contract.forecasts,
+                key=lambda item: (item.player_id, item.year_index),
+            )
+        ],
+    }
+
+
 def intrinsic_input_fingerprint(
     context: UserRuntimeContext,
     year_one: tuple[ForecastObservation, ...],
@@ -176,34 +255,25 @@ def intrinsic_input_fingerprint(
     *,
     year_one_evidence: LiveForecastEvidence,
 ) -> str:
-    """Fingerprint only governed inputs actually consumed by production Intrinsic."""
+    """Fingerprint semantic/numerical inputs consumed by production Intrinsic.
+
+    PIT timestamps and provenance remain attached to Forecast/Intrinsic artifacts
+    for audit, but do not invalidate a mathematically identical Shapley contract.
+    """
 
     assert context.league_state is not None
     payload = {
         "evaluation_season": context.league_state.league.season,
         "league_rules": _intrinsic_rules_payload(context.league_state),
-        "year_one": [
-            {
-                "player_id": item.player_id,
-                "position": item.position.value,
-                "period_start": item.period_start.isoformat(),
-                "period_end": item.period_end.isoformat(),
-                "mean": item.distribution.mean,
-                "stddev": item.distribution.stddev,
-                "source": item.source,
-                "model_version": item.model_version,
-                "as_of": item.as_of.isoformat(),
-                "provenance": item.provenance.model_dump(mode="json"),
-            }
-            for item in sorted(year_one, key=lambda observation: observation.player_id)
-        ],
+        "year_one": _year_one_intrinsic_semantic_payload(year_one),
         "year_one_authority": {
             "evidence_basis": year_one_evidence.evidence_basis,
-            "source_ids": source_ids,
-            "evaluation_as_of": year_one_evidence.runtime_result.evaluation_as_of.isoformat(),
+            "source_ids": tuple(sorted(set(source_ids))),
             "runtime_model_version": year_one_evidence.runtime_result.model_version,
         },
-        "future_forecast_contract": future_contract.model_dump(mode="json"),
+        "future_forecast_contract": _future_intrinsic_semantic_payload(
+            future_contract
+        ),
         "intrinsic_contract": {
             "contract_version": SHAPLEY_INTRINSIC_CONTRACT_VERSION,
             "model_version": SHAPLEY_INTRINSIC_MODEL_VERSION,
