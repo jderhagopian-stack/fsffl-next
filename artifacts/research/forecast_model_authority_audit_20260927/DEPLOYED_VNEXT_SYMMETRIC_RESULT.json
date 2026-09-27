@@ -1,0 +1,28 @@
+{
+  "archive_sha256": "76b2842349093bb0f5c2bdc60995f78256d7cf6e2e4d64be84768a082450ceb1",
+  "authority": "research_only_no_production_change",
+  "candidate": "forecast-vnext-a2-burr-20260922",
+  "common_coordinate": {
+    "rows": 10894,
+    "h2_rows": 5726,
+    "h3_rows": 5168,
+    "h2_origins": [2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],
+    "h3_origins": [2014,2015,2016,2017,2018,2019,2020,2021,2022]
+  },
+  "exact_key_join": true,
+  "target_points_max_abs_delta": 0.0,
+  "state_probability_max_abs_delta_vs_D1": 1.3946593079849912e-05,
+  "distributional_comparability": {
+    "CRPS": "exact common-row comparable for VNEXT_A2_BURR, D1, N1, N2",
+    "deployed_quantiles": "exact q10/q50/q90/q99 available",
+    "D1_N1_N2_quantiles": "not persisted on common coordinate; direct quantile-calibration comparison uncomparable without replay"
+  },
+  "deployed_uncertainty": {
+    "QB": "Burr XII M1",
+    "RB_WR_TE": "direct-Gamma M1",
+    "dense_QB_calibration_known_failures": ["1.45x","1.50x","1.55x"]
+  },
+  "scientific_disposition": "stronger proper distribution score with central point-accuracy tradeoff; no universal authority",
+  "y1_boundary": "Y1 remains provider/source authority outside this Y2/Y3 model-family comparison",
+  "production_changed": false
+}
