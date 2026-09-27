@@ -146,8 +146,9 @@ def install_progressive_delivery_routes(
             **result,
             "delivery": {
                 "status": "quick_view_ready" if result.get("status") == "ready" else "not_ready",
-                "completeness": "search_only",
-                "decision_enrichment_pending": result.get("status") == "ready",
+                "completeness": "presentation_shell",
+                "structural_search_pending": result.get("status") == "ready",
+                "decision_enrichment_pending": False,
                 "full_simulation_pending": False,
             },
         }
