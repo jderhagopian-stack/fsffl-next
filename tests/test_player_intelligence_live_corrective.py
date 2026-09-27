@@ -424,3 +424,62 @@ def test_dependency_fingerprint_reuses_completed_intrinsic_across_state_advance(
     second = _wait_for(coordinator, context_two, IntrinsicBuildStatus.COMPLETED)
     assert second.intrinsic_input_fingerprint == "intrinsic-input-v2"
     assert calls == 2
+
+
+
+def test_hosted_intrinsic_readiness_marks_complete_authorized_335_contract_full() -> None:
+    from fsffl.product.persistent_webapp import _intrinsic_readiness_from_record
+    from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
+
+    coverage = SimpleNamespace(
+        player_count=335,
+        year_1_forecast_players=335,
+        year_2_i1_players=335,
+        year_3_i1_players=335,
+        missing_required_fact_families=(),
+    )
+    contract = SimpleNamespace(
+        status=ShapleyIntrinsicAvailability.READY,
+        estimates=tuple(range(335)),
+        coverage=coverage,
+        status_reason=None,
+        forecast_model_version="forecast-vnext-a2-burr-20260922",
+        target_years=(2026, 2027, 2028),
+    )
+    record = SimpleNamespace(
+        status=IntrinsicBuildStatus.COMPLETED,
+        contract=contract,
+        error=None,
+        forecast_coordinate="forecast-vnext-a2-burr-20260922",
+    )
+
+    readiness = _intrinsic_readiness_from_record(record)
+    assert readiness["status"] == "full"
+    assert readiness["estimate_count"] == 335
+
+
+def test_hosted_intrinsic_readiness_stays_partial_for_incomplete_governed_scope() -> None:
+    from fsffl.product.persistent_webapp import _intrinsic_readiness_from_record
+    from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
+
+    contract = SimpleNamespace(
+        status=ShapleyIntrinsicAvailability.READY,
+        estimates=tuple(range(334)),
+        coverage=SimpleNamespace(
+            player_count=335,
+            year_1_forecast_players=335,
+            year_2_i1_players=335,
+            year_3_i1_players=335,
+            missing_required_fact_families=(),
+        ),
+        status_reason=None,
+        forecast_model_version="forecast-vnext-a2-burr-20260922",
+        target_years=(2026, 2027, 2028),
+    )
+    record = SimpleNamespace(
+        status=IntrinsicBuildStatus.COMPLETED,
+        contract=contract,
+        error=None,
+        forecast_coordinate="forecast-vnext-a2-burr-20260922",
+    )
+    assert _intrinsic_readiness_from_record(record)["status"] == "partial_provisional"
