@@ -68,6 +68,7 @@ from fsffl.value.private_beta_activation_data import (
     ACTIVATION_BUNDLE_SHA256,
     activation_artifact_text,
 )
+from fsffl.value.shapley_intrinsic import FROZEN_SHAPLEY_PERMUTATIONS
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicAvailability
 
 
@@ -1096,6 +1097,181 @@ def test_intrinsic_input_fingerprint_ignores_unrelated_league_state_changes() ->
     ) == baseline
 
 
+def test_intrinsic_input_fingerprint_ignores_volatile_pit_and_non_math_metadata() -> None:
+    state, observation = _fixture()
+    evidence = _authority_evidence(observation)
+    future = _contract_only_fixture_provider(
+        league_state=state,
+        raw_forecasts=evidence.raw_forecasts,
+        league_year_one=evidence.league_scored_forecasts,
+    )
+    baseline = intrinsic_input_fingerprint(
+        _context(state, observation),
+        evidence.league_scored_forecasts,
+        future,
+        tuple(evidence.successful_source_ids),
+        year_one_evidence=evidence,
+    )
+
+    later = observation.as_of + timedelta(minutes=11)
+    volatile_provenance = observation.provenance.model_copy(
+        update={
+            "retrieved_at": later,
+            "effective_at": later,
+            "source_version": "fixture-audit-refresh-only",
+        }
+    )
+    volatile_year_one = evidence.league_scored_forecasts[0].model_copy(
+        update={
+            "period_start": evidence.league_scored_forecasts[0].period_start
+            + timedelta(minutes=11),
+            "period_end": evidence.league_scored_forecasts[0].period_end
+            + timedelta(minutes=11),
+            "as_of": later,
+            "provenance": volatile_provenance,
+            # The live calendar retains this for diagnostics, but frozen Shapley
+            # math does not consume Year-1 spread.
+            "distribution": ForecastDistribution(
+                mean=evidence.league_scored_forecasts[0].distribution.mean,
+                stddev=evidence.league_scored_forecasts[0].distribution.stddev + 9.0,
+            ),
+        }
+    )
+    volatile_evidence = cast(
+        Any,
+        SimpleNamespace(
+            raw_forecasts=tuple(
+                item.model_copy(
+                    update={
+                        "period_start": item.period_start + timedelta(minutes=11),
+                        "period_end": item.period_end + timedelta(minutes=11),
+                        "as_of": later,
+                        "provenance": volatile_provenance,
+                    }
+                )
+                for item in evidence.raw_forecasts
+            ),
+            league_scored_forecasts=(volatile_year_one,),
+            successful_source_ids=tuple(reversed(evidence.successful_source_ids)),
+            evidence_basis=evidence.evidence_basis,
+            runtime_result=SimpleNamespace(
+                evaluation_as_of=later,
+                model_version=evidence.runtime_result.model_version,
+                coverage=evidence.runtime_result.coverage,
+            ),
+        ),
+    )
+    volatile_future = future.model_copy(
+        update={
+            "provenance": {
+                **future.provenance,
+                "evaluation_as_of": later.isoformat(),
+                "retrieved_at": later.isoformat(),
+                "runtime_trace_id": "fresh-load-2",
+            },
+            "forecasts": tuple(
+                row.model_copy(
+                    update={"evidence_path": f"fresh-load-{row.year_index}"}
+                )
+                for row in future.forecasts
+            ),
+        }
+    )
+
+    refreshed = intrinsic_input_fingerprint(
+        _context(
+            state.model_copy(update={"as_of": later}),
+            volatile_year_one,
+        ),
+        volatile_evidence.league_scored_forecasts,
+        volatile_future,
+        tuple(volatile_evidence.successful_source_ids),
+        year_one_evidence=volatile_evidence,
+    )
+    assert refreshed == baseline
+
+
+def test_persisted_intrinsic_reuses_across_fresh_pit_metadata_loads() -> None:
+    state, observation = _fixture()
+    store = _MemoryShapleyArtifactStore()
+    build_calls: list[str] = []
+    evidence_calls = 0
+
+    def fresh_evidence(_state):
+        nonlocal evidence_calls
+        evidence_calls += 1
+        base = _authority_evidence(observation)
+        shifted = observation.as_of + timedelta(minutes=3 * evidence_calls)
+        provenance = observation.provenance.model_copy(
+            update={
+                "retrieved_at": shifted,
+                "effective_at": shifted,
+                "source_version": f"audit-refresh-{evidence_calls}",
+            }
+        )
+        y1 = base.league_scored_forecasts[0].model_copy(
+            update={"as_of": shifted, "provenance": provenance}
+        )
+        return cast(
+            Any,
+            SimpleNamespace(
+                raw_forecasts=tuple(
+                    item.model_copy(update={"as_of": shifted, "provenance": provenance})
+                    for item in base.raw_forecasts
+                ),
+                league_scored_forecasts=(y1,),
+                successful_source_ids=base.successful_source_ids,
+                evidence_basis=base.evidence_basis,
+                runtime_result=SimpleNamespace(
+                    evaluation_as_of=shifted,
+                    model_version=base.runtime_result.model_version,
+                    coverage=base.runtime_result.coverage,
+                ),
+            ),
+        )
+
+    def fresh_future_builder(**kwargs):
+        build_calls.append("future")
+        contract = _contract_only_fixture_provider(**kwargs)
+        return contract.model_copy(
+            update={
+                "provenance": {
+                    **contract.provenance,
+                    "build_trace": f"trace-{len(build_calls)}",
+                }
+            }
+        )
+
+    first_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=fresh_evidence,
+        persistence_store=cast(Any, store),
+        future_forecast_builder=fresh_future_builder,
+        future_forecast_model_version="future-model-zeta-v1",
+    )
+    first_context = _context(state, observation)
+    first_fingerprint = first_loader.intrinsic_input_fingerprint(first_context)
+    first = first_loader(first_context)
+    assert len(store.records) == 1
+
+    fresh_state = state.model_copy(
+        update={"as_of": state.as_of + timedelta(minutes=11)}
+    )
+    second_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=fresh_evidence,
+        persistence_store=cast(Any, store),
+        future_forecast_builder=fresh_future_builder,
+        future_forecast_model_version="future-model-zeta-v1",
+    )
+    second_context = _context(fresh_state, observation)
+    second_fingerprint = second_loader.intrinsic_input_fingerprint(second_context)
+    second = second_loader(second_context)
+
+    assert first_fingerprint == second_fingerprint
+    assert second == first
+    assert len(store.records) == 1
+    assert FROZEN_SHAPLEY_PERMUTATIONS == 2048
+
+
 def test_intrinsic_input_fingerprint_invalidates_required_dependencies() -> None:
     state, observation = _fixture()
     evidence = _authority_evidence(observation)
@@ -1170,6 +1346,79 @@ def test_intrinsic_input_fingerprint_invalidates_required_dependencies() -> None
         update={"forecast_model_version": "future-model-zeta-v2"}
     )
     assert fingerprint(target_future=changed_future) != baseline
+
+    changed_y1_model = cast(
+        Any,
+        SimpleNamespace(
+            raw_forecasts=evidence.raw_forecasts,
+            league_scored_forecasts=(
+                evidence.league_scored_forecasts[0].model_copy(
+                    update={"model_version": "authority-fixture-v2"}
+                ),
+            ),
+            successful_source_ids=evidence.successful_source_ids,
+            evidence_basis=evidence.evidence_basis,
+            runtime_result=SimpleNamespace(
+                evaluation_as_of=evidence.runtime_result.evaluation_as_of,
+                model_version="authority-fixture-v2",
+                coverage=evidence.runtime_result.coverage,
+            ),
+        ),
+    )
+    assert fingerprint(target_evidence=changed_y1_model) != baseline
+
+    first_future_row = future.forecasts[0]
+    changed_scenarios = tuple(
+        scenario.model_copy(
+            update={
+                "fantasy_points": (
+                    scenario.fantasy_points + 10.0
+                    if scenario.scenario_id == "elite"
+                    else scenario.fantasy_points
+                )
+            }
+        )
+        for scenario in first_future_row.scenarios
+    )
+    changed_expectation = sum(
+        scenario.probability * scenario.fantasy_points
+        for scenario in changed_scenarios
+    )
+    numerically_changed_future = future.model_copy(
+        update={
+            "forecasts": (
+                first_future_row.model_copy(
+                    update={
+                        "central_expectation": changed_expectation,
+                        "scenarios": changed_scenarios,
+                    }
+                ),
+            )
+            + future.forecasts[1:]
+        }
+    )
+    assert fingerprint(target_future=numerically_changed_future) != baseline
+
+    subject_observation = observation.model_copy(update={"player_id": "different-subject"})
+    subject_evidence = _authority_evidence(subject_observation)
+    subject_future = future.model_copy(
+        update={
+            "forecasts": tuple(
+                row.model_copy(update={"player_id": "different-subject"})
+                for row in future.forecasts
+            )
+        }
+    )
+    assert (
+        intrinsic_input_fingerprint(
+            _context(state, subject_observation),
+            tuple(subject_evidence.league_scored_forecasts),
+            subject_future,
+            tuple(subject_evidence.successful_source_ids),
+            year_one_evidence=subject_evidence,
+        )
+        != baseline
+    )
 
     next_season = state.model_copy(
         update={
