@@ -1622,3 +1622,40 @@ Required terminal output:
 6. no production recommendation based on incumbent status or switching cost.
 
 Continue under OPERATING_PROTOCOL.md to a permitted terminal state.
+
+
+### Research closeout — symmetric Forecast Model Authority Audit — 2026-09-27
+
+**State: DIRECTIVE COMPLETE — RESEARCH**
+
+The symmetric Forecast Model Authority Audit is complete on `research/forecast-model-authority-audit-20260927`.
+
+The audit:
+- reconstructed all serious recoverable Forecast candidates without incumbent privilege;
+- completed the bounded N1 HistGB / N2 spline family challenge after pre-score breadth failure;
+- included the exact deployed `forecast-vnext-a2-burr-20260922` package directly rather than substituting A2/D0/D1 ancestor evidence;
+- compared the deployed package on the exact 10,894-row common H2/H3 PIT/OOT coordinate;
+- reinterpreted injury joint-vs-separate evidence symmetrically;
+- completed the locked Stage-4 current 335-player Forecast-to-Intrinsic sandbox.
+
+Scientific conclusion:
+- no universal Forecast family has authority across all horizons, positions and metrics;
+- deployed vNext has supported superior aggregate CRPS versus D1/N1/N2 at H2 and H3, but trades that against weaker central-point evidence in several cells and preserves known QB shoulder-calibration failures;
+- the corrected horizon×position authority map therefore records cell/metric-specific best-supported sets and tradeoffs rather than an incumbent winner;
+- remaining-season injury availability is an exact separate/joint tie; precise return timing remains a tradeoff with no single authority;
+- family breadth is now sufficient and no additional open-ended model search is authorized by this directive.
+
+Stage 4 reproduces current production vNext H3 Intrinsic at numerical identity (335/335, Spearman 1.0) and shows the unresolved Forecast-family set is economically material: 203/335 players and all 12 adequately populated source-time archetypes cross the predeclared material-reversal rule. Current Value does not yet propagate deployed Burr/Gamma within-state uncertainty through Shapley, and cross-horizon covariance remains unvalidated.
+
+No production Forecast, H3 or Intrinsic behavior changed.
+
+Durable package:
+`artifacts/research/forecast_model_authority_audit_20260927/`
+
+Stage-4 workflow:
+- run `36338430538`;
+- artifact `10937742480`;
+- digest `sha256:52de1782ef1eb411b484d4afc51608789914ce3bfdea76576ddfe063e58641c5`.
+
+Next Research priority:
+resume the preserved Y4-Y8 long-horizon program under the same symmetric no-incumbent-privilege authority standard. Do not restart completed evidence and do not grant the previously selected soft-stack/shrinkage policy automatic authority.
