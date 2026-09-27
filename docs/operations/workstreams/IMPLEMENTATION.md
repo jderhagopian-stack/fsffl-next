@@ -977,3 +977,19 @@ Required corrective:
 10. Do not require Management to physically test again until hosted evidence proves the above and the app has returned to a stable usable state.
 
 Simulation's ~390s exact 50K cold latency remains a separate Performance target, but must no longer make the product unusable while rebuilding.
+
+### Additional physical evidence — 00:01–00:04 ET
+Additional iPhone/Safari evidence after the 23:54 intelligence rebuild completed:
+
+- At ~00:01 ET the shared readiness strip displayed **Intelligence current**, while Franchise roster cards still displayed **Intrinsic preparing**. This is false-green readiness / reattachment inconsistency.
+- The server had a persisted ready 335-player Intrinsic artifact and other server paths logged `intrinsic_status=ready intrinsic_build=completed`; therefore the product must reattach/reuse the persisted contract consistently across all surfaces after restart/reconciliation.
+- Player Intelligence for `sleeper:player:4881` returned HTTP 202 from ~00:01:22 until 00:02:02, then HTTP 200. Full PI was served successfully by ~00:02:41 with Intrinsic ready and Forecast years [1,2,3].
+- During that cold PI load, memory remained ~457–461 MB against the ~537 MB limit on the same Render instance; no restart/OOM occurred. PR #267's memory corrective therefore held in this physical pass.
+- CPU saturated the 0.15 allocation during the PI cold load. PI cold latency remains a Performance concern, but it is not the prior memory-crash regression.
+- Pick ownership detail is functionally present but exposes raw Sleeper pick identifiers (e.g. `sleeper:...:pick:2027:1:7`) as primary UI text. Treat as presentation debt after availability is restored; do not let it distract from the lifecycle incident.
+
+Acceptance requirements now explicitly include:
+1. no `Intelligence current` strip while any required capability is still preparing/unavailable;
+2. persisted ready Intrinsic must render as ready consistently across Franchise, Home, Market, League and Player Intelligence after restart;
+3. PI cold history may show truthful loading, but must complete without crash and subsequent reopen must reuse the persisted career-history artifact;
+4. availability/lifecycle restoration remains higher priority than pick-detail presentation cleanup.
