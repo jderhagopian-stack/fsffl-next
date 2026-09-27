@@ -1,0 +1,4 @@
+severity,n,median_games_to_return,mean_remaining_participation_share,median_post_return_ppg_ratio,median_post_return_opportunity_ratio,recurrence_share,y2_persist_share,y3_persist_share
+limited_questionable,2701,0,0.802263,0.879310,0.954545,0.496113,0.970755,0.948913
+doubtful_out,1655,2,0.427118,0.876803,0.979592,0.280363,0.947020,0.923375
+reserve_ir_pup_nfi,437,1,0.281301,0.851852,0.836667,0.258581,0.954819,0.930328
