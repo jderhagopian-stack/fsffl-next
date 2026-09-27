@@ -446,3 +446,21 @@ Research promotion gates must not privilege the currently used or first-studied 
 - Operational switching cost, migration risk, compute, or maintainability may justify temporarily retaining an existing production model, but that is a separate implementation/product gate and must not be represented as Research superiority.
 
 Previously frozen experiments remain historically valid; this rule governs their interpretation and all future model-family comparisons.
+
+
+## Dual-Intrinsic / long-horizon Forecast promotion gate — 2026-09-27
+Management has accepted the target architecture but **has not yet promoted Long-Term Intrinsic to production**.
+
+Promotion requires:
+- continuous governed Y4-Y7 Forecast inputs; no Y5-only shortcut;
+- exact-policy authority only where Research earned it and explicit model-authority envelopes elsewhere;
+- Y8 excluded from precise cardinal Long-Term Intrinsic while evidence remains coarse;
+- a frozen Research-defined Long-Term Intrinsic economic consumer with no arbitrary horizon weights;
+- clear separation of Current Intrinsic (Y1-Y3) and Long-Term Intrinsic (Y4-Y7);
+- within-model and between-model uncertainty represented separately;
+- no hidden Market/Team Utility or contender/rebuilder adjustment inside either intrinsic lens;
+- scale semantics proven if both lenses use 0–10,000;
+- downstream Market/Team Utility integration treated as a separate promotion layer;
+- deterministic tests, exact model/version provenance, replay evidence, and physical product validation before presentation acceptance.
+
+Until this gate is satisfied, production Current Intrinsic and deployed Y2/Y3 Forecast remain unchanged.
