@@ -1,0 +1,93 @@
+{
+  "authority": "research_only_no_production_change",
+  "authority_envelope": {
+    "central_envelope_realized_target_coverage": 0.0354295837023915,
+    "combined_80_realized_target_coverage": 0.8184233835252436,
+    "combined_90_realized_target_coverage": 0.912311780336581,
+    "median_width": 1.2633126025589605,
+    "p90_width": 9.745710798455987
+  },
+  "complete_historical_origins": [
+    2018,
+    2019
+  ],
+  "complete_historical_player_origin_rows": 1129,
+  "consumer": "mean annual horizon-specific Shapley marginal lineup capacity over Y4-Y7",
+  "current_reference": {
+    "median_abs_rank_delta": 45.0,
+    "n": 335,
+    "p90_abs_rank_delta": 137.20000000000005,
+    "share_abs_rank_delta_ge20": 0.755223880597015,
+    "spearman_current_vs_long_term": 0.6628464818763325
+  },
+  "formula": "(phi4+phi5+phi6+phi7)/4",
+  "guards": {
+    "forecast_family_search_run": false,
+    "forecast_refit": false,
+    "market_input_used": false,
+    "production_changed": false,
+    "team_utility_used": false,
+    "y8_included": false
+  },
+  "historical_policy_metrics": [
+    {
+      "bias": -10.46326858032906,
+      "coverage80": 0.804251550044287,
+      "coverage90": 0.8972542072630647,
+      "mae": 17.263089656188907,
+      "n": 1129,
+      "origin": "ALL",
+      "policy": "baseline",
+      "rmse": 42.13152703587985,
+      "scope": "pooled",
+      "spearman": 0.5613040584098304
+    },
+    {
+      "bias": -5.907045771462483,
+      "coverage80": 0.7679362267493357,
+      "coverage90": 0.8839681133746679,
+      "mae": 17.18321336320091,
+      "n": 1129,
+      "origin": "ALL",
+      "policy": "hard_router",
+      "rmse": 38.83925862259146,
+      "scope": "pooled",
+      "spearman": 0.5888754959720122
+    },
+    {
+      "bias": -6.483269034093785,
+      "coverage80": 0.7732506643046945,
+      "coverage90": 0.8848538529672276,
+      "mae": 16.931851378378617,
+      "n": 1129,
+      "origin": "ALL",
+      "policy": "soft_stack",
+      "rmse": 38.64154514943854,
+      "scope": "pooled",
+      "spearman": 0.5919327244940678
+    },
+    {
+      "bias": -6.400002111917377,
+      "coverage80": 0.7776793622674933,
+      "coverage90": 0.887511071744907,
+      "mae": 16.788336054216003,
+      "n": 1129,
+      "origin": "ALL",
+      "policy": "blanket_75_25",
+      "rmse": 38.31879540083297,
+      "scope": "pooled",
+      "spearman": 0.5973952999788348
+    }
+  ],
+  "limitations": {
+    "career_stage_historical_validation_recoverable_from_rolling_rows": false,
+    "cross_horizon_covariance_validated": false,
+    "current_shadow_is_single_prior_architecture_not_authority_envelope": true,
+    "full_y4_y7_complete_outer_origins": 2,
+    "pristine_new_final_holdout": false
+  },
+  "monotonic_scenario_violations": 0,
+  "permutations": 2048,
+  "shapley_efficiency_max_abs_residual": 2.9103830456733704e-11,
+  "study": "long-term-intrinsic-consumption-contract"
+}
