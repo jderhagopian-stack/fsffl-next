@@ -1071,3 +1071,10 @@ Required corrective:
 10. reproduce and validate on hosted cold wake before asking Management for another device pass.
 
 Do not reopen settled Forecast/Intrinsic model authority. Do not move Market or general Performance ahead of this availability corrective. Return only at `DIRECTIVE COMPLETE — IMPLEMENTATION`, a genuine `BLOCKED — IMPLEMENTATION`, or a genuine `MANAGEMENT GATE — IMPLEMENTATION`.
+
+### Management baseline correction — 2026-09-27
+For this availability corrective, do **not** use PR #267, PR #269, or the failed PR #270 physical state as the product-efficiency/usability baseline merely because they are recent.
+
+Use the last demonstrably usable FSFFL runtime behavior as the control for lifecycle/resource regressions: the PR #235-era `jimmygoodjob` path repeatedly restored Forecast/Simulation/Value complete across restart, Home/Franchise were populated and responsive, startup did not automatically launch heavy intelligence, and no startup errors were observed. Market latency remained poor, so this is a **runtime usability baseline**, not a claim that PR #235 was product-complete or a model-authority rollback target.
+
+The corrective must identify what later changes caused regression relative to that usable behavior, then preserve only later features that can coexist with equivalent-or-better availability. Do not justify current memory, restart, readiness, or request-fanout behavior by comparison with an already-broken intermediate state.
