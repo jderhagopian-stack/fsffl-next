@@ -859,3 +859,29 @@ Required correction:
 7. update hosted readiness acceptance so a complete authorized 335-player vNext Intrinsic contract is considered available even if legacy optional coverage metadata is incomplete.
 
 This is a semantics/governance correction, not permission to fabricate or infer missing injury/snaps/roster evidence.
+
+### Immediate corrective — dependency-scoped Intrinsic recomputation
+**Priority: NOW — beta availability critical path**
+
+Physical evidence showed a cold Intrinsic build of ~226.7s followed by a compatible reuse of ~0.203s. The product must stop turning ordinary State advances into cold Shapley rebuilds.
+
+Implement the Management recomputation policy from DECISION_LOG:
+1. define one authoritative `intrinsic_input_fingerprint` from only the inputs actually consumed by production Intrinsic;
+2. use that fingerprint consistently for:
+   - background-job coalescing,
+   - durable artifact lookup/reuse,
+   - invalidation,
+   - readiness compatibility;
+3. do not key recomputation on full `LeagueState.state_id` or generic `league_material_fingerprint`;
+4. preserve exact State provenance separately from compatibility identity;
+5. on a true Intrinsic-input change, launch the cold build off the user-critical path, keep last-good visibly available as stale/as-of evidence where permitted, and atomically promote the new contract when complete;
+6. prove with tests:
+   - roster trade / matchup-score / pick-ownership / timestamp-only State changes do not rebuild Intrinsic;
+   - scoring or lineup-rule change does rebuild;
+   - Year-1 Forecast evidence change does rebuild;
+   - FutureForecastContract/model/subject change does rebuild;
+   - season rollover does rebuild;
+   - switching away/back reuses a compatible persisted artifact;
+7. preserve frozen 2,048-permutation Shapley semantics. Do not lower the model quality to hide the latency.
+
+After this corrective, kernel-level cold-build optimization can move to Performance unless cold builds remain a practical beta blocker.
