@@ -264,7 +264,9 @@ function renderLeagueComparison(){
   laConsumeDeepLinkIntent();
   if(!views.length||!fsfflLeagueStructureState.atlas){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>No governed league structure is available yet.</h2><p class="lead">Load current league evidence from Home, then return here.</p>';return}
   panel.classList.add('league-structure-panel','league-atlas-north-star');
-  panel.innerHTML=laAtlasHeader()+'<main class="league-atlas-content">'+laActiveTab()+laEvidenceDetail()+'</main>'+laRoomDrawer()+laPickDrawer();
+  const freshness=fsfflLeagueStructureState.atlas?.intelligence_freshness||{};
+  const staleBanner=freshness.stale?'<aside class="league-section" role="status"><div class="league-section-heading"><div><span>State current · last-good intelligence</span><h3>Replacement league intelligence is rebuilding.</h3></div><small>Derived fields as of '+laEsc(freshness.served_as_of||'last-good snapshot')+'</small></div><p>Current standings, roster membership and draft ownership remain canonical. Simulation-derived fields below are explicitly stale until atomic promotion.</p></aside>':'';
+  panel.innerHTML=staleBanner+laAtlasHeader()+'<main class="league-atlas-content">'+laActiveTab()+laEvidenceDetail()+'</main>'+laRoomDrawer()+laPickDrawer();
   bindLeagueActions();setTimeout(laApplyDeepLinkFocus,0);
 }
 async function loadLeagueValueLenses(){
