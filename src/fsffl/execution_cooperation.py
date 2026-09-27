@@ -5,7 +5,7 @@ from time import sleep
 
 
 _DEFAULT_EVERY = 32
-_DEFAULT_SECONDS = 0.004
+_HOSTED_DEFAULT_SECONDS = 0.004
 
 
 def cooperative_cpu_yield(
@@ -24,10 +24,16 @@ def cooperative_cpu_yield(
 
     if index <= 0 or every <= 0 or index % every:
         return
-    delay = (
-        float(os.getenv("FSFFL_HEAVY_CPU_YIELD_SECONDS", str(_DEFAULT_SECONDS)))
-        if seconds is None
-        else float(seconds)
-    )
+    if seconds is None:
+        hosted_default = (
+            _HOSTED_DEFAULT_SECONDS
+            if os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID")
+            else 0.0
+        )
+        delay = float(
+            os.getenv("FSFFL_HEAVY_CPU_YIELD_SECONDS", str(hosted_default))
+        )
+    else:
+        delay = float(seconds)
     if delay > 0:
         sleep(delay)
