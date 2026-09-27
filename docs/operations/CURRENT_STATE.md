@@ -710,3 +710,6 @@ Next Research is authorized on a dedicated injury-availability/time-to-return mo
 
 ## 2026-09-27 — Long-horizon Research explicitly preserved
 The newly authorized injury-availability work does not replace the Y4–Y8 program. Management keeps both as parallel Research tracks. Existing Y4–Y8 findings remain authoritative pending further Management review/follow-up: exact support at QB Y4, WR Y4 and QB Y6; shrinkage-with-uncertainty for other Y4–Y7 cells; Y8 coarse/uncertain; production H3 unchanged.
+
+## 2026-09-27 — Joint injury-availability follow-up authorized
+Management authorized an immediate Research follow-up testing whether return timing and remaining-season availability can be produced more effectively by one coherent shared injury-availability architecture. This is explicitly a post-result comparative study, not part of the original frozen experiment. The supported separate remaining-availability result remains the incumbent challenger; production H3/Intrinsic remain unchanged.
