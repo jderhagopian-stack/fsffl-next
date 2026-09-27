@@ -1659,3 +1659,42 @@ Stage-4 workflow:
 
 Next Research priority:
 resume the preserved Y4-Y8 long-horizon program under the same symmetric no-incumbent-privilege authority standard. Do not restart completed evidence and do not grant the previously selected soft-stack/shrinkage policy automatic authority.
+
+
+## Y4-Y8 symmetric long-horizon authority closeout — 2026-09-27
+
+**State: MANAGEMENT GATE — Y4-Y8 LONG-HORIZON AUTHORITY**
+
+Research resumed from exact durable head `cf35f1c540fb50507c41d95314509ea9081573f6` and did **not** rerun the completed symmetric policy, family-breadth or age/exposure studies.
+
+Final durable package:
+- `artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_FINAL_CONCLUSION.md`
+- `artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_UNCERTAINTY_AND_DOWNSTREAM.md`
+- `artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_REPRODUCIBILITY.md`
+- `artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_FINAL_RESULT.json`
+
+Symmetric authority conclusion:
+- no universal Y4-Y8 policy earns scientific authority;
+- exact cardinal policy authority exists only for **QB Y5 → blanket 75/25** and **WR Y5 → hard router**;
+- 9/20 cells are practical ties/uncertain;
+- 5/20 are multi-objective tradeoffs;
+- all four Y8 cells remain evidence-limited because only two qualifying repeated outer origins remain;
+- prior general soft-shrinkage authority is superseded as a blanket scientific conclusion, although soft stacking retains the strongest aggregate RMSE/rank/tail profile;
+- family breadth is sufficient; no additional model-family challenge is justified;
+- age/exposure effects remain component/cell-specific and do not support a universal age cliff, youth premium, workload/wear penalty, or nonlinear replacement.
+
+Downstream impact is material enough to require explicit model-authority uncertainty if a Y4+ product lens is later authorized:
+- current 335-player shadow median H3→H4/H5/H6/H7/H8 rank move = **4 / 7 / 10 / 11 / 12**;
+- P90 = **12 / 19 / 24 / 27 / 29**;
+- share moving >=20 ranks = **3.6% / 9.6% / 17.0% / 22.4% / 26.0%**.
+
+Production H3, deployed Forecast and Intrinsic remain unchanged. No Y4+ production implementation is authorized by this Research gate.
+
+Exact symmetric execution:
+- workflow run `36339388953` — success;
+- artifact `10938860177`;
+- digest `sha256:d2c9e3a87f74c7f94fd4c6c932f3f5cda806165629f2ed22ec7d3bc9943c68af`.
+
+Research has exhausted the authorized Y4-Y8 interpretation without model shopping.
+
+**MANAGEMENT GATE — Y4-Y8 LONG-HORIZON AUTHORITY**
