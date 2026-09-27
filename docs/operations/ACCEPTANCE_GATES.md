@@ -502,3 +502,17 @@ Fails:
 - Market workspace build reached ~64.9s under concurrent acceptance work, so foreground responsiveness is not yet accepted.
 
 Continue narrow corrective work; do not treat the internal RSS miss alone as an availability outage, but do not close the runtime gate while the combined latency/resource journey still fails.
+
+
+## Foreground Market execution acceptance — 2026-09-27
+Acceptance now requires:
+- Market/Home/My Team/Product Context reads do not trigger full Search/Decision work;
+- persisted/current or compatible last-good product reads remain responsive during heavy work;
+- explicit Market search returns structural results without waiting for full bilateral enrichment;
+- Decision enrichment is progressive and does not block the initial response;
+- deep Simulation remains explicit;
+- compatible PI history/Forecast is served before background reconciliation completes;
+- no recycle, 5xx/429, or State loss in the ordinary journey;
+- hard memory-limit safety is preserved.
+
+The ~429.5 MB engineering RSS target is informative but is not, by itself, a product-availability failure.
