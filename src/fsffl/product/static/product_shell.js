@@ -76,6 +76,19 @@ function fsfflDisplayedProjectionObservation(player){const observations=player?.
 function fsfflDisplayedProjectionValue(player){const observation=fsfflDisplayedProjectionObservation(player);if(typeof observation?.distribution?.mean==='number'&&Number.isFinite(observation.distribution.mean))return observation.distribution.mean;return typeof player?.season_fantasy_points_projection==='number'&&Number.isFinite(player.season_fantasy_points_projection)?player.season_fantasy_points_projection:null}
 window.fsfflDisplayedProjectionObservation=fsfflDisplayedProjectionObservation;
 window.fsfflDisplayedProjectionValue=fsfflDisplayedProjectionValue;
+function fsfflPresentationPayloadMatchesContext(payload,context=state?.context||{}){
+  if(!payload||!context?.state_id)return false;
+  if((payload.league_state_id||null)===context.state_id)return true;
+  const freshness=payload.intelligence_freshness||{};
+  const continuity=payload.presentation_continuity||{};
+  return Boolean(
+    freshness.status==='stale_last_good'&&
+    freshness.target_state_id===context.state_id&&
+    continuity.mode==='stale_last_good'&&
+    continuity.target_league_state_id===context.state_id
+  );
+}
+window.fsfflPresentationPayloadMatchesContext=fsfflPresentationPayloadMatchesContext;
 function fsfflExplorerMissingForSort(value,key){if(value==null)return true;if(typeof value==='number'){if(!Number.isFinite(value))return true;if(value===0&&['value','market_percentile','projection'].includes(key))return true}return value===''}
 function installExplorerSortSemantics(){if(typeof explorerSorted!=='function')return;explorerSorted=function(rows,sort){return[...rows].sort((a,b)=>{const av=a[sort.key],bv=b[sort.key],am=fsfflExplorerMissingForSort(av,sort.key),bm=fsfflExplorerMissingForSort(bv,sort.key);if(am&&bm)return 0;if(am)return 1;if(bm)return-1;const result=explorerCompare(av,bv);return sort.direction==='asc'?result:-result})}}
 function installProjectionPresentation(){if(typeof playerProjection==='function')playerProjection=function(player){const value=fsfflDisplayedProjectionValue(player);return value==null?'—':fmtNumber(value,1)};if(typeof explorerPlayerProjection==='function')explorerPlayerProjection=function(player){return fsfflDisplayedProjectionValue(player)};if(typeof myTeamProjection==='function')myTeamProjection=function(player){const value=fsfflDisplayedProjectionValue(player);return value==null?'—':value.toFixed(1)};document.querySelectorAll('th').forEach(th=>{const label=th.textContent.trim();if(label==='Projection'||label==='Reg-season projection')th.textContent='NFL season projection';if(label==='Projected scoring')th.textContent='Reg-season scoring'})}
