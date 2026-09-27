@@ -683,3 +683,20 @@ All seven configured validations passed on final head `d6d6ccd2...`. Production 
 Management status is now **MANAGEMENT GATE — PHYSICAL IPHONE / SAFARI AVAILABILITY ACCEPTANCE**. This is a major improvement over the post-#269 incident, but the beta-availability incident is not fully closed until the physical target verifies roster continuity, no false-green readiness, visible stale/as-of last-good behavior during rebuild, consistent persisted Intrinsic reattachment, and non-disruptive refresh/switch behavior.
 
 Market and general Performance remain held until that device gate passes.
+
+
+## 2026-09-27 08:46 ET — PR #270 physical availability gate FAILED
+Physical iPhone/Safari testing invalidated the prior hosted-only availability promotion.
+
+Observed product failures:
+- false-green `Intelligence current` while Franchise was restoring / serving last-good and player Intrinsic was still preparing;
+- Player Intelligence HTTP 502;
+- League presentation-module failure during rebuild;
+- later Franchise HTTP 429;
+- malformed mobile last-good/stale banner rendering.
+
+Runtime evidence shows a more serious combined-load failure: after cold wake and automatic refresh, process memory rose to **534.7 MB / 536.9 MB** at 12:46 UTC, then reset to ~3.8 MB and Uvicorn restarted. No explicit OOM kill line was emitted, so the restart is classified as memory-limit-consistent / probable OOM. The new process came up with no restored user league/state context and no derived readiness.
+
+Home did successfully retain last-good derived intelligence during rebuild, so PR #270's dual-state concept is partially working. The remaining failure is whole-process lifecycle/memory/recovery integration under real cold-wake traffic, plus readiness consistency across surfaces.
+
+Implementation is ACTIVE again and owns the beta-availability incident. Market and general Performance remain held. No further Management physical testing is requested until hosted cold-wake evidence reproduces the exact combined scenario without memory-limit recycle, context loss, false-green readiness, hard 502/module failures, or recovery-rate-limit failure.
