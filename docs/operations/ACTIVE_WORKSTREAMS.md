@@ -346,3 +346,10 @@ Durable handoff:
 - Preserve PR #271 as the architectural foundation; complete its missing compact persisted presentation-continuity layer on current `main`.
 - Repair PR #273's acceptance-harness startup/deployment path and use that harness to validate the corrected runtime end to end.
 - No page-specific adapters or Market-specific workaround are authorized.
+
+
+## 2026-09-27 — Management sequencing after model-selection governance correction
+- **Implementation — ACTIVE / sole product availability critical path:** complete PR #274 runtime presentation continuity + hosted startup repair; no Forecast semantic changes.
+- **Research — ACTIVE / foundational model-authority audit:** symmetric retrospective Forecast comparison with no incumbent privilege; joint injury practical-materiality reinterpretation included; determine whether a bounded new-family challenge is needed.
+- **Y4-Y8 Research — PRESERVED:** exploratory work may continue, but no new production promotion until the foundational Forecast authority audit establishes the base model-selection standard.
+- **Market / general Performance — HOLD** behind product availability acceptance.
