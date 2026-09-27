@@ -288,7 +288,10 @@ def install_focused_opportunity_routes(
             focal_team_id=focal_team_id,
         )
         requested = _posture(posture)
-        focused = candidate_builder(
+        # Focused Search constructs only the submitted neighborhood. The generic
+        # full-catalog builder is intentionally not called here because doing so
+        # would recreate the exact foreground contention this route is meant to avoid.
+        focused = build_focused_trade_candidates(
             runtime,
             browser,
             cardinal,
