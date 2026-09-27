@@ -420,3 +420,16 @@ Promotion requires the exact combined cold-wake/user-journey acceptance defined 
 - repeat/reuse evidence proving durable artifacts reduce subsequent work.
 
 A page-specific hotfix, one green endpoint, CI-only success, or a synthetic runner that does not reproduce browser-driven overlap is insufficient for promotion.
+
+
+### 2026-09-27 physical changed-State evidence — gate remains OPEN
+PR #271 is not promoted. Physical iPhone/Safari evidence showed that automatic Sleeper State reconciliation can advance canonical State and cause previously usable derived presentation to disappear into rebuilding/unavailable rather than remain available as a clearly stale/as-of last-good read model.
+
+The same window showed ~411 MB observed peak RSS: below the <=~429 MB ceiling but too close to treat as comfortable headroom, and the product continuity requirement failed regardless.
+
+Additional acceptance requirement is now explicit:
+- after an automatic State advance, every primary surface must continue serving a compact persisted last-good presentation until the new exact-State capability is ready;
+- Market navigation must not be blamed for a State transition that was initiated by background refresh;
+- the hosted acceptance harness itself must deploy/run successfully; an update timeout cannot count as evidence.
+
+The gate remains OPEN.
