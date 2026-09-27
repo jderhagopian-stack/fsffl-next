@@ -277,13 +277,21 @@ def build_shapley_intrinsic_contract(
             )
         )
 
-    degraded = bool(missing_required_fact_families) or reduced_or_fallback_players > 0
-    status = ShapleyIntrinsicAvailability.DEGRADED if degraded else ShapleyIntrinsicAvailability.READY
+    # Availability is governed by required production inputs, not provenance
+    # richness labels. Reduced/fallback evidence-path metadata remains visible in
+    # coverage/uncertainty, but it does not downgrade an otherwise complete
+    # authorized vNext contract.
+    degraded = bool(missing_required_fact_families)
+    status = (
+        ShapleyIntrinsicAvailability.DEGRADED
+        if degraded
+        else ShapleyIntrinsicAvailability.READY
+    )
     reason = None
     if degraded:
         reason = (
-            "Authoritative Intrinsic is available through a validated reduced/fallback evidence path; "
-            "missing fact-family coverage is explicit and no provider absence is inferred as football state."
+            "Governed Intrinsic is present but one or more required production "
+            "input families are missing; the missing requirements are explicit."
         )
 
     player_count = len(payload)
