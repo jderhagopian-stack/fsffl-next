@@ -1,0 +1,66 @@
+name: Current Football-State H3 Historical Validation
+on:
+  push:
+    branches: [research/current-football-state-h3-20260926]
+    paths:
+      - scripts/run_current_football_state_h3_validation.py
+      - artifacts/research/current_football_state_h3_20260926/RESEARCH_PROTOCOL.md
+      - artifacts/research/current_football_state_h3_20260926/VALIDATION_GATES.md
+      - .github/workflows/current-football-state-h3-validation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NFLREADPY_CACHE: filesystem
+  NFLREADPY_CACHE_DURATION: '86400'
+  NFLREADPY_TIMEOUT: '180'
+  NFLREADPY_VERBOSE: 'False'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout current research branch
+        uses: actions/checkout@v4
+      - name: Checkout frozen I1 research oracle
+        uses: actions/checkout@v4
+        with:
+          ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+          path: research_ref
+      - uses: r-lib/actions/setup-r@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scikit-learn nflreadpy pyarrow
+      - name: Build governed historical panels
+        run: |
+          Rscript research_ref/scripts/extract_career_transition_panel.R
+          Rscript research_ref/scripts/extract_forecast_usage_panel.R
+      - name: Run event-state H1-H3 chronological validation
+        run: |
+          python scripts/run_current_football_state_h3_validation.py \
+            --research-root research_ref \
+            --career-panel artifacts/next2-career/career_transition_panel.csv \
+            --usage-panel artifacts/forecast-disappearance/final/forecast_usage_panel.csv
+      - name: Upload research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-football-state-h3-historical-validation
+          path: |
+            artifacts/research/current_football_state_h3_20260926/OOT_EVENT_STATE_PREDICTIONS.csv
+            artifacts/research/current_football_state_h3_20260926/OOT_FIT_DIAGNOSTICS.csv
+            artifacts/research/current_football_state_h3_20260926/OOT_PATH_METRICS.csv
+            artifacts/research/current_football_state_h3_20260926/OOT_EVENT_COHORT_METRICS.csv
+            artifacts/research/current_football_state_h3_20260926/OOT_FOLD_DELTAS.csv
+            artifacts/research/current_football_state_h3_20260926/HORIZON_EVENT_LAYER_INTERPRETATION.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_EPISODES.csv
+            artifacts/research/current_football_state_h3_20260926/INJURY_EPISODE_SUMMARY.csv
+            artifacts/research/current_football_state_h3_20260926/NONINJURY_EVENTS.csv
+            artifacts/research/current_football_state_h3_20260926/NONINJURY_EVENT_SUMMARY.csv
+            artifacts/research/current_football_state_h3_20260926/HISTORICAL_VALIDATION_RESULT.json
+          retention-days: 14
