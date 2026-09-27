@@ -68,6 +68,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         intrinsic_input_fingerprint_resolver: IntrinsicInputFingerprintResolver | None = None,
         timeout_seconds: float | None = None,
         heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+        max_records: int = 8,
     ) -> None:
         # timeout_seconds is retained as a compatibility alias for older callers,
         # but its semantics are now the response budget only.
@@ -90,7 +91,10 @@ class ShapleyIntrinsicBackgroundCoordinator:
             or getattr(loader, "intrinsic_input_fingerprint", None)
             or self._default_intrinsic_input_fingerprint
         )
+        if max_records < 2:
+            raise ValueError("Intrinsic max_records must be at least 2")
         self._heavy_work_coordinator = heavy_work_coordinator
+        self._max_records = int(max_records)
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], IntrinsicBuildRecord] = {}
         self._executor = ThreadPoolExecutor(
@@ -267,6 +271,22 @@ class ShapleyIntrinsicBackgroundCoordinator:
             ]
             for item in stale:
                 self._records.pop(item, None)
+
+            terminal = sorted(
+                (
+                    (record_key, item)
+                    for record_key, item in self._records.items()
+                    if record_key != key
+                    and item.status in {
+                        IntrinsicBuildStatus.COMPLETED,
+                        IntrinsicBuildStatus.FAILED,
+                    }
+                ),
+                key=lambda pair: pair[1].updated_at,
+            )
+            while len(self._records) >= self._max_records and terminal:
+                stale_key, _ = terminal.pop(0)
+                self._records.pop(stale_key, None)
 
             coordinate = str(self._forecast_coordinate_resolver(context)).strip()
             if not coordinate:
