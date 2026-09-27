@@ -11,6 +11,7 @@ from typing import Callable
 
 from fsffl.value.shapley_intrinsic_contract import ShapleyIntrinsicContract
 
+from .resource_coordinator import HeavyWorkCoordinator
 from .runtime import UserRuntimeContext
 
 
@@ -66,6 +67,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         forecast_coordinate_resolver: ForecastCoordinateResolver | None = None,
         intrinsic_input_fingerprint_resolver: IntrinsicInputFingerprintResolver | None = None,
         timeout_seconds: float | None = None,
+        heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     ) -> None:
         # timeout_seconds is retained as a compatibility alias for older callers,
         # but its semantics are now the response budget only.
@@ -88,6 +90,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
             or getattr(loader, "intrinsic_input_fingerprint", None)
             or self._default_intrinsic_input_fingerprint
         )
+        self._heavy_work_coordinator = heavy_work_coordinator
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], IntrinsicBuildRecord] = {}
         self._executor = ThreadPoolExecutor(
@@ -312,7 +315,17 @@ class ShapleyIntrinsicBackgroundCoordinator:
         if running is None:
             return
         try:
-            contract = self._loader(context)
+            if self._heavy_work_coordinator is None:
+                contract = self._loader(context)
+            else:
+                with self._heavy_work_coordinator.claim(
+                    kind="intrinsic",
+                    key=(
+                        f"{running.user_id}:{running.intrinsic_input_fingerprint}:"
+                        f"{running.forecast_coordinate}"
+                    ),
+                ):
+                    contract = self._loader(context)
         except Exception as exc:
             failed = self._set(
                 key,
