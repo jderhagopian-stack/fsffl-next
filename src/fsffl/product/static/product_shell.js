@@ -24,11 +24,11 @@ const fsfflProductSurfaceCopy={
   reports:['Reports','Decision intelligence, explained clearly.','Team, league and evidence reports render from the same structured authoritative outputs used throughout the product, with no parallel calculation path.']
 };
 
-const fsfflStaticVersion='20260926-intrinsic-reuse-readiness1';
+const fsfflStaticVersion='20260926-post265-intrinsic-mobile1';
 const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';
 const mobileTouchStaticVersion='20260923-mobile-safearea2';
-const homeNorthStarStaticVersion='20260926-intrinsic-reuse-readiness1';
-const franchiseNorthStarStaticVersion='20260926-intrinsic-reuse-readiness1';
+const homeNorthStarStaticVersion='20260926-post265-intrinsic-mobile1';
+const franchiseNorthStarStaticVersion='20260926-post265-intrinsic-mobile1';
 const opportunityHomeIntentStaticVersion='20260924-live-usability-hotfix1';
 let leagueComparisonScriptPromise=null;
 let myTeamScriptPromise=null;
