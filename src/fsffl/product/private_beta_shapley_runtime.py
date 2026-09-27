@@ -22,6 +22,12 @@ from fsffl.value.private_beta_activation_data import (
     ACTIVATION_WORKFLOW_RUN_ID,
     activation_artifact_text,
 )
+from fsffl.value.shapley_intrinsic import (
+    FROZEN_INTRINSIC_DISCOUNT,
+    FROZEN_SHAPLEY_PERMUTATIONS,
+    FROZEN_SHAPLEY_SEED,
+    SHAPLEY_INTRINSIC_MODEL_VERSION,
+)
 from fsffl.value.shapley_intrinsic_contract import (
     SHAPLEY_INTRINSIC_CONTRACT_VERSION,
     CompletedSourceFactProvenance,
@@ -30,11 +36,11 @@ from fsffl.value.shapley_intrinsic_contract import (
     build_unavailable_shapley_intrinsic_contract,
 )
 
-from .runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
+from .runtime import LiveForecastEvidence, UserRuntimeContext
 
 _SUPPORTED_POSITIONS = {Position.QB, Position.RB, Position.WR, Position.TE}
 SHAPLEY_INTRINSIC_ARTIFACT_KIND = "shapley_intrinsic_contract"
-SHAPLEY_INTRINSIC_SCOPE_KIND = "league_material"
+SHAPLEY_INTRINSIC_SCOPE_KIND = "league_intrinsic_inputs"
 
 YearOneAuthorityLoader = Callable[[LeagueState], LiveForecastEvidence]
 FutureForecastBuilder = Callable[..., FutureForecastContract]
@@ -130,9 +136,9 @@ def _provenance(
         fact_family_coverage=fact_coverage,
     )
 
-def _missing_fact_families() -> tuple[str, ...]:
-    # Preserve the API's explicit evidence-coverage signaling. Missing fact
-    # families are not imputed into the supplied Future Forecast contract.
+def _legacy_provenance_gaps() -> tuple[str, ...]:
+    """Optional activation-bundle coverage gaps retained for diagnostics only."""
+
     coverage = _FACTS.metadata.get("coverage_policy", {})
     if not isinstance(coverage, dict):
         return ("completed_source_coverage_metadata",)
@@ -145,28 +151,66 @@ def _missing_fact_families() -> tuple[str, ...]:
     return tuple(sorted(name for key, name in families if coverage.get(key) is not True))
 
 
-def _cache_key(
+def _intrinsic_rules_payload(league_state: LeagueState) -> dict[str, object]:
+    """Only league-rule inputs consumed by vNext scoring + Shapley economics."""
+
+    rules = league_state.league.rules
+    return {
+        "team_count": rules.team_count,
+        "lineup": [
+            {"slot": item.slot.value, "count": item.count}
+            for item in rules.lineup
+        ],
+        "scoring": [
+            {"stat": item.stat, "points": item.points}
+            for item in rules.scoring
+        ],
+    }
+
+
+def intrinsic_input_fingerprint(
     context: UserRuntimeContext,
     year_one: tuple[ForecastObservation, ...],
     future_contract: FutureForecastContract,
     source_ids: tuple[str, ...],
+    *,
+    year_one_evidence: LiveForecastEvidence,
 ) -> str:
+    """Fingerprint only governed inputs actually consumed by production Intrinsic."""
+
     assert context.league_state is not None
     payload = {
-        "league": league_material_fingerprint(context.league_state),
+        "evaluation_season": context.league_state.league.season,
+        "league_rules": _intrinsic_rules_payload(context.league_state),
         "year_one": [
             {
                 "player_id": item.player_id,
+                "position": item.position.value,
+                "period_start": item.period_start.isoformat(),
+                "period_end": item.period_end.isoformat(),
                 "mean": item.distribution.mean,
                 "stddev": item.distribution.stddev,
                 "source": item.source,
                 "model_version": item.model_version,
                 "as_of": item.as_of.isoformat(),
+                "provenance": item.provenance.model_dump(mode="json"),
             }
             for item in sorted(year_one, key=lambda observation: observation.player_id)
         ],
-        "preseason_source_ids": source_ids,
+        "year_one_authority": {
+            "evidence_basis": year_one_evidence.evidence_basis,
+            "source_ids": source_ids,
+            "evaluation_as_of": year_one_evidence.runtime_result.evaluation_as_of.isoformat(),
+            "runtime_model_version": year_one_evidence.runtime_result.model_version,
+        },
         "future_forecast_contract": future_contract.model_dump(mode="json"),
+        "intrinsic_contract": {
+            "contract_version": SHAPLEY_INTRINSIC_CONTRACT_VERSION,
+            "model_version": SHAPLEY_INTRINSIC_MODEL_VERSION,
+            "discount": FROZEN_INTRINSIC_DISCOUNT,
+            "permutations": FROZEN_SHAPLEY_PERMUTATIONS,
+            "seed": FROZEN_SHAPLEY_SEED,
+        },
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
@@ -215,7 +259,7 @@ class PrivateBetaShapleyContractLoader:
         return ArtifactKey(
             artifact_kind=SHAPLEY_INTRINSIC_ARTIFACT_KIND,
             scope_kind=SHAPLEY_INTRINSIC_SCOPE_KIND,
-            scope_id=league_material_fingerprint(context.league_state),
+            scope_id=context.league_state.league.league_id,
             input_fingerprint=input_fingerprint,
             model_version=(
                 f"{SHAPLEY_INTRINSIC_CONTRACT_VERSION}"
@@ -271,6 +315,62 @@ class PrivateBetaShapleyContractLoader:
                 payload=contract.model_dump(mode="json"),
                 computed_at=utc_now(),
             )
+        )
+
+    def intrinsic_input_fingerprint(self, context: UserRuntimeContext) -> str:
+        """Resolve the dependency-scoped compatibility identity without Shapley."""
+
+        league_state = context.league_state
+        if league_state is None:
+            raise ValueError("Shapley Intrinsic requires canonical league state")
+        if self._future_forecast_builder is None or self._year_one_loader is None:
+            unavailable = {
+                "league_id": league_state.league.league_id,
+                "season": league_state.league.season,
+                "rules": _intrinsic_rules_payload(league_state),
+                "forecast_model_version": self._future_forecast_model_version,
+                "configured": False,
+            }
+            encoded = json.dumps(
+                unavailable,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+        evidence = self._year_one_loader(league_state)
+        if evidence.evidence_basis != "preseason_baseline":
+            raise ValueError(
+                "Frozen Year-1 Intrinsic compatibility requires preseason_baseline evidence"
+            )
+        year_one = _year_one_forecasts(evidence)
+        if not year_one:
+            raise ValueError("Preserved preseason Year-1 Forecast evidence is empty")
+        source_ids = _preseason_source_ids(evidence)
+        future_contract = self._future_forecast_builder(
+            league_state=league_state,
+            raw_forecasts=evidence.raw_forecasts,
+            league_year_one=year_one,
+        )
+        if not isinstance(future_contract, FutureForecastContract):
+            raise ValueError(
+                "Future Forecast provider must return FutureForecastContract"
+            )
+        h3_player_ids = set(future_contract.player_ids)
+        h3_year_one = tuple(
+            item for item in year_one if item.player_id in h3_player_ids
+        )
+        if len(h3_year_one) != len(h3_player_ids):
+            raise ValueError(
+                "Governed H3 subjects are missing preserved Year-1 Forecast evidence"
+            )
+        return intrinsic_input_fingerprint(
+            context,
+            h3_year_one,
+            future_contract,
+            source_ids,
+            year_one_evidence=evidence,
         )
 
     def __call__(self, context: UserRuntimeContext) -> ShapleyIntrinsicContract:
@@ -381,7 +481,13 @@ class PrivateBetaShapleyContractLoader:
                 forecast_model_version=future_contract.forecast_model_version,
             )
 
-        key = _cache_key(context, h3_year_one, future_contract, source_ids)
+        key = intrinsic_input_fingerprint(
+            context,
+            h3_year_one,
+            future_contract,
+            source_ids,
+            year_one_evidence=evidence,
+        )
         with self._lock:
             if key == self._cached_key and self._cached_contract is not None:
                 return self._cached_contract
@@ -433,7 +539,9 @@ class PrivateBetaShapleyContractLoader:
             contract = build_shapley_intrinsic_contract(
                 result,
                 completed_source_provenance=_provenance(evidence, future_contract),
-                missing_required_fact_families=_missing_fact_families(),
+                # Legacy activation coverage flags remain visible in completed-source
+                # provenance but are not required inputs to the authorized vNext path.
+                missing_required_fact_families=(),
                 forecast_model_version=future_contract.forecast_model_version,
             )
             self._persist(
