@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from threading import RLock, Thread
+from threading import Event, RLock, Thread
 from time import monotonic, sleep
 
 from fastapi import Depends
@@ -40,6 +40,15 @@ from .market_economics_cache import make_cached_candidate_economics
 from .opportunity_search_cache import make_cached_opportunity_search
 from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
+from .presentation_continuity import (
+    FRANCHISE_SURFACE,
+    HOME_SURFACE,
+    LEAGUE_ATLAS_SURFACE,
+    LEAGUE_TEAM_VIEWS_SURFACE,
+    MARKET_VALUE_LENSES_ALL_SURFACE,
+    MARKET_WORKSPACE_SURFACE,
+    PresentationContinuityStore,
+)
 from .player_intelligence import (
     PlayerFutureForecastCache,
     build_player_intelligence_overview,
@@ -79,6 +88,9 @@ _runtime_store = PersistentPrivateBetaRuntimeStore(
     _persistence_store,
     state_snapshot_store=_state_snapshot_store,
 )
+_presentation_continuity = PresentationContinuityStore(_persistence_store)
+_startup_restore_complete = Event()
+_startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
 configure_scenario_cache_persistence(_persistence_store)
 
@@ -93,28 +105,18 @@ _beta_restore_user = (
     if _beta_auth_enabled
     else "local-beta-user"
 )
-if _persistence_store is not None and _beta_restore_user:
-    _runtime_store.restore_user(_beta_restore_user)
-
 # Hosted Behavioral persistence validates its migrated schema when the Postgres
 # adapter is first constructed. Build the shared adapter while the Render process is
 # starting rather than on the first user status/Market request. Validation is
 # read-only: governed migrations own schema/index/RLS creation. Failure remains
 # non-fatal here; Behavioral evidence fails closed rather than blocking the product.
-try:
-    _behavioral_store = default_behavioral_store()
-except Exception as exc:  # pragma: no cover - hosted infrastructure guard
-    _behavioral_store = None
-    _logger.warning("FSFFL Behavioral store prewarm unavailable; runtime will retry: %s", exc)
-
+# Behavioral storage stays lazy so module import/port binding never waits on a
+# database connection. The coordinator owns bounded background initialization.
 _behavioral_coordinator = BehavioralRuntimeCoordinator(
-    store_factory=(
-        (lambda: _behavioral_store)
-        if _behavioral_store is not None
-        else default_behavioral_store
-    ),
+    store_factory=default_behavioral_store,
     max_workers=1,
     heavy_work_coordinator=_heavy_work_coordinator,
+    presentation_payload_loader=_presentation_payload_loader,
 )
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
@@ -142,22 +144,6 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     ),
     heavy_work_coordinator=_heavy_work_coordinator,
 )
-
-# Reattach an already-built semantic-compatible Intrinsic contract before the
-# first readiness/surface request. This never runs Shapley; a true cache miss is
-# left for the normal background coordinator.
-if _beta_restore_user:
-    try:
-        _restored_context = _runtime_store.get(_beta_restore_user)
-        if _restored_context.league_state is not None:
-            _shapley_intrinsic_coordinator.restore_compatible(_restored_context)
-    except Exception as exc:
-        _logger.warning(
-            "FSFFL startup Intrinsic compatible-restore unavailable user=%s error=%s",
-            _beta_restore_user,
-            exc,
-        )
-
 
 def _intrinsic_readiness_from_record(record) -> dict[str, object]:
     if record is None:
@@ -308,6 +294,14 @@ _opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity
 _webapp.build_opportunity_workspace = make_cached_opportunity_workspace(
     _webapp.build_opportunity_workspace
 )
+
+def _presentation_payload_loader(user_id: str, context, surface: str):
+    return _presentation_continuity.load_for_runtime(
+        user_id=user_id,
+        runtime=context,
+        surface=surface,
+    )
+
 
 app = _webapp.create_app(
     runtime_store=_runtime_store,
@@ -663,6 +657,8 @@ def _maybe_start_state_first_production_acceptance() -> None:
     def run() -> None:
         try:
             sleep(delay_seconds)
+            if not _startup_restore_complete.wait(timeout=180.0):
+                raise RuntimeError("Hosted lightweight startup restore did not complete")
             _runtime_availability_acceptance_state["status"] = "running"
             report = run_state_first_production_acceptance(
                 store=_runtime_store,
@@ -705,10 +701,6 @@ def _maybe_start_state_first_production_acceptance() -> None:
         name="fsffl-runtime-availability-acceptance",
         daemon=True,
     ).start()
-
-
-app.router.add_event_handler("startup", _log_startup_runtime_readiness)
-app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
 
 
 @app.get("/health/product-acceptance")
@@ -788,6 +780,7 @@ install_league_value_lens_routes(
     contract_loader=_shapley_intrinsic_loader,
     require_user=_webapp.require_beta_user,
     background_coordinator=_shapley_intrinsic_coordinator,
+    presentation_payload_loader=_presentation_payload_loader,
 )
 install_player_intelligence_routes(
     app,
@@ -825,3 +818,109 @@ install_quick_frontier_routes(
 install_phase1_latency_routes(app, persistence_store=_persistence_store)
 install_latency_observability(app)
 install_foreground_pressure(app)
+
+
+def _presentation_route_endpoint(path: str):
+    for route in app.routes:
+        if getattr(route, "path", None) == path and "GET" in getattr(route, "methods", set()):
+            return route.endpoint
+    raise RuntimeError(f"presentation continuity route is unavailable: {path}")
+
+
+def _promote_presentation_for_user(user_id: str, context) -> object | None:
+    if not _presentation_continuity.enabled or context.league_state is None:
+        return None
+    # Snapshot exactly the existing governed presentation contracts. Builders run
+    # sequentially and each payload is persisted before the next is composed.
+    specs = (
+        (HOME_SURFACE, "/api/home", {}),
+        (FRANCHISE_SURFACE, "/api/my-team", {}),
+        (LEAGUE_ATLAS_SURFACE, "/api/league/atlas", {}),
+        (LEAGUE_TEAM_VIEWS_SURFACE, "/api/league/team-views", {}),
+        (MARKET_WORKSPACE_SURFACE, "/api/opportunities/workspace", {}),
+        (
+            MARKET_VALUE_LENSES_ALL_SURFACE,
+            "/api/league/value-lenses",
+            {"universe": "all"},
+        ),
+    )
+    builders = []
+    for surface, path, kwargs in specs:
+        endpoint = _presentation_route_endpoint(path)
+        builders.append(
+            (
+                surface,
+                lambda endpoint=endpoint, kwargs=kwargs: endpoint(
+                    user_id=user_id,
+                    **kwargs,
+                ),
+            )
+        )
+    return _presentation_continuity.promote(
+        user_id=user_id,
+        runtime=context,
+        builders=tuple(builders),
+    )
+
+
+app.state.presentation_promoter = _promote_presentation_for_user
+
+
+def _run_lightweight_startup_restore() -> None:
+    _startup_restore_state.clear()
+    _startup_restore_state["status"] = "running"
+    try:
+        if _beta_restore_user:
+            context = _runtime_store.restore_user(_beta_restore_user)
+            if context.league_state is not None:
+                try:
+                    _shapley_intrinsic_coordinator.restore_compatible(context)
+                except Exception as exc:
+                    _logger.warning(
+                        "FSFFL startup Intrinsic compatible-restore unavailable user=%s error=%s",
+                        _beta_restore_user,
+                        exc,
+                    )
+                context = _runtime_store.get(_beta_restore_user)
+                terminal = bool(
+                    context.forecast_evidence is not None
+                    and context.value_evidence is not None
+                    and (
+                        context.simulation_analytics is not None
+                        or not context.forecast_evidence.uncertainty_ready
+                    )
+                )
+                if terminal:
+                    try:
+                        _promote_presentation_for_user(_beta_restore_user, context)
+                    except Exception as exc:
+                        _logger.warning(
+                            "FSFFL startup presentation backfill unavailable user=%s error=%s",
+                            _beta_restore_user,
+                            exc,
+                        )
+        _startup_restore_state["status"] = "complete"
+        _log_startup_runtime_readiness()
+    except Exception as exc:
+        _startup_restore_state.update(
+            status="failed",
+            error_type=type(exc).__name__,
+            reason=str(exc),
+        )
+        logging.getLogger("uvicorn.error").exception(
+            "FSFFL lightweight startup restore failed"
+        )
+    finally:
+        _startup_restore_complete.set()
+
+
+def _start_lightweight_startup_restore() -> None:
+    Thread(
+        target=_run_lightweight_startup_restore,
+        name="fsffl-startup-restore",
+        daemon=True,
+    ).start()
+
+
+app.router.add_event_handler("startup", _start_lightweight_startup_restore)
+app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
