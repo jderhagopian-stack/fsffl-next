@@ -1326,3 +1326,25 @@ Disposition:
 - preserve #278; it fixed a real continuity bug and reduced peak memory;
 - next work is a narrow contention/memory/Market-build corrective, not another runtime rewrite;
 - do not reopen Long-Term Intrinsic implementation until this runtime work reaches a permitted terminal state.
+
+
+## 2026-09-27 — Management direction: foreground Market reads must not execute full Search/Decision
+Management authorizes a narrow architectural correction to close the remaining runtime loop.
+
+Preserve PR #278's continuity, PI Future Forecast persistence, cache reclamation and cooperative CPU-yield improvements. Do not reopen a generalized runtime rewrite.
+
+Authoritative execution boundary:
+1. Product/Market reads must return from persisted/current or compatible last-good presentation state and must **never** synchronously initiate the full Market Search/Decision pipeline.
+2. Initial Market load should expose the lightweight workspace shell, current value lenses, needs/context, player board and already-persisted opportunities.
+3. Explicit opportunity/search action may launch structural candidate generation separately from the read path.
+4. Bilateral Decision enrichment must be progressive/asynchronous and must not block the initial Market response.
+5. Deep evaluation / changed-State Simulation remains explicit drill-down authority, not automatic page-load work.
+6. State replacement may invalidate exact derived work, but compatible last-good Market presentation should remain visible while new search/enrichment is prepared.
+7. PI history follows the same product principle: serve persisted compatible evidence first; refresh/reconcile asynchronously rather than making foreground navigation wait for full historical materialization.
+8. The ~429.5 MB engineering budget remains a diagnostic target, not a standalone availability blocker. A miss does not fail product acceptance absent a real recycle, 5xx/429, State loss, or evidence of approaching the hard Render limit unsafely.
+9. The hard Render memory limit remains a real safety boundary and must still be monitored.
+
+Success criterion:
+- ordinary product reads remain low-single-digit where persisted evidence exists, including while heavy intelligence work runs;
+- explicit Market search provides fast structural results and progressive enrichment rather than one 60+ second synchronous response;
+- no Forecast/Simulation/Value/Intrinsic/Decision semantics change.
