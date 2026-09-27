@@ -317,3 +317,9 @@ Durable handoff:
 - **Research — MANAGEMENT GATE:** unchanged.
 - **Market — HOLD.**
 - **Performance — HOLD** except implementation-level profiling/resource techniques required by the availability corrective.
+
+## 2026-09-27 research sequencing after Management decision
+- **Implementation — ACTIVE / sole product critical path:** structural runtime architecture corrective remains highest priority.
+- **Research — ACTIVE in parallel, non-production:** injury availability/time-to-return model + prospective ROS/event snapshot-retention architecture. No production H3 or Intrinsic change is authorized.
+- **Market — HOLD.**
+- **Performance — HOLD** except Implementation-required resource work.
