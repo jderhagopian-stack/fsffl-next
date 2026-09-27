@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 import logging
+from threading import local
 
 from fsffl.persistence.contracts import (
     ArtifactKey,
@@ -121,6 +122,7 @@ class PresentationContinuityStore:
 
     def __init__(self, persistence_store: PersistenceStore | None) -> None:
         self._persistence = persistence_store
+        self._local = local()
 
     @property
     def enabled(self) -> bool:
@@ -145,44 +147,46 @@ class PresentationContinuityStore:
         now = utc_now()
         total_bytes = 0
         surface_hashes: list[tuple[str, str, int]] = []
-        for surface, builder in builders:
-            raw = builder()
-            payload = _json_round_trip(raw)
-            encoded = json.dumps(
-                payload,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=False,
-            ).encode("utf-8")
-            payload_hash = canonical_fingerprint(payload)
-            size = len(encoded)
-            total_bytes += size
-            self._persistence.put_artifact(
-                ReusableArtifactRecord(
-                    key=_surface_key(
-                        user_id=user_id,
-                        league_id=state.league.league_id,
-                        league_state_id=state.state_id,
-                        surface=surface,
-                    ),
-                    payload={
-                        "contract": PRESENTATION_MODEL_VERSION,
-                        "surface": surface,
-                        "league_id": state.league.league_id,
-                        "league_state_id": state.state_id,
-                        "as_of": state.as_of.isoformat(),
-                        "selected_team_id": runtime.selected_team_id,
-                        "payload_hash": payload_hash,
-                        "payload_size_bytes": size,
-                        "payload": payload,
-                    },
-                    computed_at=now,
+        self._local.promoting = True
+        try:
+            for surface, builder in builders:
+                raw = builder()
+                payload = _json_round_trip(raw)
+                encoded = json.dumps(
+                    payload,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode("utf-8")
+                payload_hash = canonical_fingerprint(payload)
+                size = len(encoded)
+                total_bytes += size
+                self._persistence.put_artifact(
+                    ReusableArtifactRecord(
+                        key=_surface_key(
+                            user_id=user_id,
+                            league_id=state.league.league_id,
+                            league_state_id=state.state_id,
+                            surface=surface,
+                        ),
+                        payload={
+                            "contract": PRESENTATION_MODEL_VERSION,
+                            "surface": surface,
+                            "league_id": state.league.league_id,
+                            "league_state_id": state.state_id,
+                            "as_of": state.as_of.isoformat(),
+                            "selected_team_id": runtime.selected_team_id,
+                            "payload_hash": payload_hash,
+                            "payload_size_bytes": size,
+                            "payload": payload,
+                        },
+                        computed_at=now,
+                    )
                 )
-            )
-            surface_hashes.append((surface, payload_hash, size))
-            # Do not retain the serialized surface after persistence. Promotion is
-            # intentionally sequential to cap transient memory.
-            del payload, encoded
+                surface_hashes.append((surface, payload_hash, size))
+                del payload, encoded
+        finally:
+            self._local.promoting = False
 
         self._persistence.put_artifact(
             ReusableArtifactRecord(
@@ -258,7 +262,11 @@ class PresentationContinuityStore:
     ) -> dict[str, object] | None:
         """Load one stale last-good payload when exact-State presentation rebuilds."""
 
-        if self._persistence is None or runtime.league_state is None:
+        if (
+            self._persistence is None
+            or runtime.league_state is None
+            or getattr(self._local, "promoting", False)
+        ):
             return None
         served = runtime.served_intelligence
         current = runtime.league_state
