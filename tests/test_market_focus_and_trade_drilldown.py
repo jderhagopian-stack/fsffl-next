@@ -9,7 +9,7 @@ STATIC = ROOT / "static"
 FOCUS_JS = STATIC / "market_focus_server.js"
 DRILLDOWN_JS = STATIC / "market_trade_drilldown.js"
 INDEX = STATIC / "index.html"
-RELEASE = "20260927-presentation-continuity1"
+RELEASE = "20260927-market-nonblocking1"
 
 
 def _read(path: Path) -> str:
@@ -232,3 +232,13 @@ def test_trade_finder_renders_explicit_submission_running_and_zero_states() -> N
     assert "focus_outcome" in source
     render = source.split("function renderNorthStar(payload)", 1)[1].split("function reset()", 1)[0]
     assert "fsfflMarketFocus?.refresh" not in render
+
+
+def test_focus_client_applies_structural_results_then_polls_progressive_decision() -> None:
+    source = _read(FOCUS_JS)
+    assert "/api/opportunities/focused-enrichment/" in source
+    assert "pollEnrichment" in source
+    assert "fsffl:market-focus-applied" in source
+    assert "fsffl:market-decision-enrichment-applied" in source
+    assert "Structural results return first" in source
+    assert "Deep Simulation remains an explicit offer drill-down" in source
