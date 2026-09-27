@@ -97,6 +97,36 @@ def _league_last_good_scope_id(user_id: str, league_id: str) -> str:
     return f"{user_id}:{league_id}"
 
 
+def persist_league_last_good_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+    selected_team_id: str | None,
+) -> None:
+    """Persist only the per-league presentation identity, never runtime context."""
+
+    store.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
+                scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
+                scope_id=_league_last_good_scope_id(
+                    user_id,
+                    league_state.league.league_id,
+                ),
+                input_fingerprint=league_state.state_id,
+                model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
+            ),
+            payload={
+                "league_state": league_state.model_dump(mode="json"),
+                "selected_team_id": selected_team_id,
+            },
+            computed_at=utc_now(),
+        )
+    )
+
+
 def persist_runtime_snapshot(
     store: PersistenceStore,
     *,
@@ -241,21 +271,11 @@ def persist_runtime_snapshot(
                 computed_at=now,
             )
         )
-        store.put_artifact(
-            ReusableArtifactRecord(
-                key=ArtifactKey(
-                    artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
-                    scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
-                    scope_id=_league_last_good_scope_id(
-                        user_id,
-                        league_state.league.league_id,
-                    ),
-                    input_fingerprint=league_state.state_id,
-                    model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
-                ),
-                payload=payload,
-                computed_at=now,
-            )
+        persist_league_last_good_identity(
+            store,
+            user_id=user_id,
+            league_state=league_state,
+            selected_team_id=selected_team_id,
         )
 
 def restore_state_bound_intelligence(
