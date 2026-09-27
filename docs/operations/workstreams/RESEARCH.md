@@ -1649,3 +1649,53 @@ This package is a required audit subject because it is the live Forecast contrac
 7. Because this is correction of an omitted existing production candidate—not a newly invented challenger—it does not violate the frozen no-model-shopping rule. Freeze its preexisting production identity exactly; no tuning is authorized.
 
 Do not reach final Forecast authority closeout until this exact deployed package is included or explicitly classified as uncomparable with documented reason. Production remains unchanged.
+
+
+## 2026-09-27 — Management accepts dual-Intrinsic / continuous long-horizon Forecast architecture
+Management accepts the symmetric Forecast Research conclusions and sets the target architecture as follows:
+
+- **Forecast is continuous by year.** Preserve governed Y1, Y2, Y3, Y4, Y5, Y6, Y7 outputs; Y8 is coarse/uncertain only. Do not present Y5 as if Y4 does not exist.
+- **Y1** remains governed current-season/provider/current-football-state authority.
+- **Y2-Y3** retain the deployed coherent vNext distributional Forecast for production continuity, while D1/N1/N2 disagreement is represented as model-authority uncertainty rather than hidden or treated as incumbent defeat.
+- **Y4-Y7** are governed long-horizon trajectory outputs. Exact single-policy authority is used only where Research earned it; unresolved cells must preserve a supported model/policy envelope.
+- **Y8** remains research/coarse context and is excluded from any precise cardinal long-term value until evidence improves.
+- **Current Intrinsic** remains a separate near-/medium-term economic lens based on governed Y1-Y3.
+- **Long-Term Intrinsic** is authorized as a separate future value lens based on the governed Y4-Y7 trajectory. It must not replace or be blended invisibly into Current Intrinsic.
+- **No arbitrary horizon weights.** Do not define Long-Term Intrinsic as an ad hoc weighted average such as 40/30/20/10. Research must establish the Value-consumption/economic contract.
+- **Uncertainty separation is mandatory:** within-model Forecast uncertainty and between-model/model-authority uncertainty remain distinct; do not collapse them into a false single SD.
+- **Market/Team Utility** may later consume Current Intrinsic and Long-Term Intrinsic separately according to competitive window. Contender/rebuilder asymmetry belongs downstream in Team Utility, not as arbitrary player-value bonuses.
+- **No further Forecast family search is authorized** by this decision. Family breadth was found sufficient; the next Research problem is Long-Term Intrinsic consumption, not model shopping.
+
+Production Forecast/Intrinsic behavior does not change merely from this Management decision.
+
+
+## Management directive — Long-Term Intrinsic consumption contract — 2026-09-27
+**Priority: NEXT RESEARCH VALUE CONTRACT; NO NEW FORECAST FAMILY SEARCH**
+
+Management accepts the continuous Y1-Y7 Forecast / dual-Intrinsic architecture.
+
+Research must now determine the scientifically and economically defensible contract for a separate **Long-Term Intrinsic** using governed Y4-Y7 Forecast trajectories while preserving Current Intrinsic as the Y1-Y3 lens.
+
+Required boundaries:
+1. Do not replace Current Intrinsic or collapse Current + Long-Term Intrinsic into one master player number.
+2. Do not skip Y4 simply because H5 has the cleanest product-facing evidence. The long-horizon Forecast is a continuous Y4-Y7 trajectory; H5 may be a headline lens, not an isolated horizon.
+3. Preserve the symmetric Y4-Y8 authority map exactly: exact cell policy only where Research earned it; unresolved cells carry model-authority envelopes; Y8 remains coarse and is excluded from precise Long-Term Intrinsic unless separately justified later.
+4. No arbitrary horizon weights, manual youth premiums, age cliffs, workload penalties, contender/rebuilder bonuses, or current Market inputs.
+5. Reuse the existing intrinsic/economic principles where valid, but explicitly determine whether long-horizon marginal value should be represented through horizon-specific Shapley/marginal lineup capacity, survival-adjusted expected production, discounted utility, or another governed economic formulation.
+6. Treat within-model uncertainty and between-model authority uncertainty as separate quantities. Cross-horizon covariance is currently unvalidated; do not manufacture a precise cumulative lifetime variance.
+7. Validate whether the resulting Long-Term Intrinsic is stable, monotonic where economically required, discriminative across career-stage archetypes, and materially different from Current Intrinsic in sensible cases without using named current players to tune the method.
+8. Quantify downstream implications for Market/Team Utility only after the Long-Term Intrinsic contract is frozen. Competitive-window weighting belongs downstream, not inside player intrinsic value.
+9. Determine the product-facing semantics and scale: whether Long-Term Intrinsic should use the same 0–10,000 ruler as Current Intrinsic, and if so how calibration preserves interpretability without implying the two values are directly additive.
+10. Produce a bounded implementation handoff only after the Research contract is frozen. No production promotion is authorized merely by reaching a Research result.
+
+Required terminal output:
+- formal Long-Term Intrinsic target/economic definition;
+- Y4-Y7 Forecast input contract and uncertainty contract;
+- historical/PIT validation plan and results where feasible;
+- comparison with Current Intrinsic at the archetype/distribution level;
+- scale/calibration recommendation;
+- downstream Market/Team Utility implications;
+- limitations, especially covariance/evidence ceilings;
+- explicit implementation/promotion contract if supported.
+
+Continue under OPERATING_PROTOCOL.md to a permitted terminal state.
