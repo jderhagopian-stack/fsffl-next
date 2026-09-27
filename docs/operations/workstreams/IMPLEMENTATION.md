@@ -1227,3 +1227,27 @@ Corrective requirement:
 - do not treat this as cosmetic polish; it breaks the core SEE → DRILL DEEPER interaction.
 
 Runtime memory reclamation may continue in parallel, but latency and this interaction defect are now the immediate physical-product acceptance work. Preserve current model semantics.
+
+
+## 2026-09-27 17:18 ET — PR #277 live: overlay fixed, foreground latency improved selectively, acceptance still fails
+**State: ACTIVE — PARTIAL IMPROVEMENT, NOT ACCEPTED**
+
+PR #277 merged as `27eaeb1b12a0af0b7da9ff0f13205fc849439c5b` and is LIVE on Render (`dep-dasnelo473hc73940pd0`).
+
+Confirmed gains:
+- the Atlas → Player Intelligence layering defect is corrected in code through an explicit overlay hierarchy;
+- warm foreground reads can now be materially faster: observed `/api/my-team` ~1.1–1.2s and `/api/home` ~2.0–3.5s on the live instance;
+- Market quick workspace requests were observed around ~1.9–5.6s rather than forcing the prior full Search/Decision presentation build.
+
+Remaining failures:
+- under concurrent heavy work, read starvation still recurs: `/api/my-team` 26.4s, `/api/home` 41.1s and `/api/product-context` 43.4s were observed on the same live build;
+- `/api/product-context` also remained slow in lighter windows (~12.9s and ~25.9s);
+- hosted acceptance failed at 16:19 ET on the self-imposed resource gate with current RSS 462,196,736 bytes and max observed 473,374,720 bytes against the 429,496,720-byte target, still below the 536,870,900-byte hard service limit;
+- a later acceptance run failed at 17:08 ET for a different continuity defect: cold PI history during initial reconciliation lacked compatible Y2/Y3 future Forecast evidence (`Player Intelligence lacks Y2/Y3: []`);
+- sampled RSS on that later instance climbed to ~510 MB before settling around ~440 MB, which is too close to the hard Render limit for comfort even without an observed recycle in this window.
+
+Disposition:
+- do not roll back #277; its overlay and fast-read changes are valuable;
+- do not declare latency fixed merely because warm reads improved;
+- continue with a narrow corrective focused on (a) eliminating foreground starvation while heavy work runs, (b) restoring compatible PI Y2/Y3 continuity during cold initial reconciliation, and (c) reducing transient memory pressure enough to avoid real limit risk;
+- the stale `runtime-rss-reclaim` branch has not advanced since `db7ad11c...`; reconcile useful reclamation work onto current main rather than reviving it blindly.
