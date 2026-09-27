@@ -7,6 +7,7 @@ from enum import StrEnum
 from math import sqrt
 from typing import Literal
 
+from fsffl.execution_cooperation import cooperative_cpu_yield
 from fsffl.state.models import FrozenModel, LeagueRules, Position, Provenance, RosterSlot
 
 from .models import ForecastDistribution, ForecastHorizon, ForecastMetric, ForecastObservation
@@ -370,7 +371,8 @@ def derive_league_scoring_result(
         supplemental_by_target[key] = observation
 
     grouped: dict[tuple[object, ...], list[ForecastObservation]] = defaultdict(list)
-    for observation in observations:
+    for observation_index, observation in enumerate(observations):
+        cooperative_cpu_yield(observation_index)
         if observation.metric == ForecastMetric.FANTASY_POINTS:
             continue
         key = (
@@ -387,7 +389,8 @@ def derive_league_scoring_result(
 
     authoritative: list[ForecastObservation] = []
     partial: list[PartialFantasyPointForecast] = []
-    for items in grouped.values():
+    for group_index, items in enumerate(grouped.values()):
+        cooperative_cpu_yield(group_index)
         first = items[0]
         target_key = (
             first.player_id,

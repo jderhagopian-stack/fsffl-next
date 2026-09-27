@@ -7,6 +7,7 @@ from typing import Callable
 
 from pydantic import Field
 
+from fsffl.execution_cooperation import cooperative_cpu_yield
 from fsffl.providers.cbs_live import CBSLiveProjectionSource
 from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource
@@ -286,7 +287,8 @@ def build_current_live_forecasts(
     }
     health_events: list[LiveForecastSourceHealthEvent] = []
 
-    for source_id, snapshot in snapshots:
+    for source_index, (source_id, snapshot) in enumerate(snapshots):
+        cooperative_cpu_yield(source_index, every=1)
         try:
             observations = normalize_current_projection_snapshot(
                 snapshot,
@@ -319,7 +321,8 @@ def build_current_live_forecasts(
             reference_raw_forecasts,
             source="fsffl:source-health:governed-reference",
         )
-        for source_id in sorted(scored_by_source):
+        for source_index, source_id in enumerate(sorted(scored_by_source)):
+            cooperative_cpu_yield(source_index, every=1)
             result = evaluate_revision_agnostic_scale_health(
                 scored_by_source[source_id],
                 reference_scored,
@@ -343,8 +346,10 @@ def build_current_live_forecasts(
     elif len(scored_by_source) >= 2:
         source_ids = sorted(scored_by_source)
         pair_results: dict[tuple[str, str], RevisionAgnosticScaleHealth] = {}
-        for source_id in source_ids:
-            for peer_id in source_ids:
+        for source_index, source_id in enumerate(source_ids):
+            cooperative_cpu_yield(source_index, every=1)
+            for peer_index, peer_id in enumerate(source_ids):
+                cooperative_cpu_yield(peer_index, every=1)
                 if source_id == peer_id:
                     continue
                 pair_results[(source_id, peer_id)] = evaluate_revision_agnostic_scale_health(

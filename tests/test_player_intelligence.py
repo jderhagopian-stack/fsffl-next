@@ -919,3 +919,146 @@ def test_future_forecast_cache_never_crosses_league_or_scoring_rules() -> None:
     contract, freshness = cache.resolve(runtime)
     assert contract is None
     assert freshness == "unavailable"
+
+
+
+class _FutureContinuityStore:
+    def __init__(self) -> None:
+        self.records = []
+
+    def put_artifact(self, record) -> None:
+        self.records.append(record)
+
+    def get_latest_reusable_artifact(
+        self,
+        *,
+        artifact_kind: str,
+        scope_kind: str,
+        scope_id: str,
+        model_version: str,
+    ):
+        rows = [
+            item
+            for item in self.records
+            if item.reusable
+            and item.key.artifact_kind == artifact_kind
+            and item.key.scope_kind == scope_kind
+            and item.key.scope_id == scope_id
+            and item.key.model_version == model_version
+        ]
+        return max(rows, key=lambda item: item.computed_at) if rows else None
+
+
+def test_future_forecast_cache_restores_same_league_last_good_after_process_restart() -> None:
+    store = _FutureContinuityStore()
+    old_state = _state()
+    y1 = _forecast_observation("sleeper:player:101", 310.0)
+    evidence = SimpleNamespace(
+        league_scored_forecasts=(y1,),
+        raw_forecasts=(),
+        model_version="fixture-current",
+        runtime_result=SimpleNamespace(evaluation_as_of=NOW),
+    )
+    first_process = PlayerFutureForecastCache(
+        future_forecast_builder=lambda **_kwargs: _continuity_future_contract(),
+        forecast_model_version="fixture-vnext",
+        persistence_store=store,  # type: ignore[arg-type]
+    )
+    current, freshness = first_process.resolve(
+        UserRuntimeContext(
+            user_id="u",
+            league_state=old_state,
+            selected_team_id="a",
+            forecast_evidence=evidence,
+        )
+    )
+    assert current is not None
+    assert freshness == "current"
+    assert store.records
+
+    new_state = old_state.model_copy(
+        update={"as_of": datetime(2026, 9, 21, 13, tzinfo=UTC)}
+    )
+    cold_runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=new_state,
+        selected_team_id="a",
+        served_intelligence=ServedIntelligenceSnapshot(
+            league_id=old_state.league.league_id,
+            league_state_id=old_state.state_id,
+            as_of=old_state.as_of,
+            team_ids=tuple(team.team_id for team in old_state.teams),
+        ),
+    )
+    second_process = PlayerFutureForecastCache(
+        future_forecast_builder=lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("cold continuity must restore rather than rebuild")
+        ),
+        forecast_model_version="fixture-vnext",
+        persistence_store=store,  # type: ignore[arg-type]
+    )
+    restored, restored_freshness = second_process.resolve(cold_runtime)
+
+    assert restored == current
+    assert restored_freshness == "stale_last_good"
+    payload = build_player_intelligence_overview(
+        cold_runtime,
+        "sleeper:player:101",
+        intrinsic=None,
+        future_cache=second_process,
+    )
+    assert [row["year_index"] for row in payload["forecast"]["rows"]] == [2, 3]
+    assert payload["forecast"]["future_freshness"]["status"] == "stale_last_good"
+
+
+def test_durable_future_forecast_continuity_still_rejects_changed_scoring_rules() -> None:
+    store = _FutureContinuityStore()
+    old_state = _state()
+    y1 = _forecast_observation("sleeper:player:101", 310.0)
+    evidence = SimpleNamespace(
+        league_scored_forecasts=(y1,),
+        raw_forecasts=(),
+        model_version="fixture-current",
+        runtime_result=SimpleNamespace(evaluation_as_of=NOW),
+    )
+    PlayerFutureForecastCache(
+        future_forecast_builder=lambda **_kwargs: _continuity_future_contract(),
+        forecast_model_version="fixture-vnext",
+        persistence_store=store,  # type: ignore[arg-type]
+    ).resolve(
+        UserRuntimeContext(
+            user_id="u",
+            league_state=old_state,
+            forecast_evidence=evidence,
+        )
+    )
+
+    changed_rules = old_state.league.rules.model_copy(
+        update={
+            "scoring": old_state.league.rules.scoring
+            + (ScoringRule(stat="bonus_pass_td", points=1.0),)
+        }
+    )
+    changed_state = old_state.model_copy(
+        update={
+            "as_of": datetime(2026, 9, 21, 13, tzinfo=UTC),
+            "league": old_state.league.model_copy(update={"rules": changed_rules}),
+        }
+    )
+    cold = UserRuntimeContext(
+        user_id="u",
+        league_state=changed_state,
+        served_intelligence=ServedIntelligenceSnapshot(
+            league_id=old_state.league.league_id,
+            league_state_id=old_state.state_id,
+            as_of=old_state.as_of,
+            team_ids=tuple(team.team_id for team in old_state.teams),
+        ),
+    )
+    contract, freshness = PlayerFutureForecastCache(
+        future_forecast_builder=None,
+        forecast_model_version="fixture-vnext",
+        persistence_store=store,  # type: ignore[arg-type]
+    ).resolve(cold)
+    assert contract is None
+    assert freshness == "unavailable"

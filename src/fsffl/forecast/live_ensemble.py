@@ -4,6 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
 
+from fsffl.execution_cooperation import cooperative_cpu_yield
 from fsffl.state.models import FrozenModel
 
 from .ensemble import equal_weight_ensemble
@@ -92,9 +93,11 @@ def build_authoritative_live_ensemble(
         active.append(batch)
 
     independent_sources_by_group: dict[tuple[object, ...], set[str]] = defaultdict(set)
-    for source_id, batch in independent_batches.items():
+    for source_index, (source_id, batch) in enumerate(independent_batches.items()):
+        cooperative_cpu_yield(source_index)
         seen_source_groups: set[tuple[object, ...]] = set()
-        for observation in batch.observations:
+        for observation_index, observation in enumerate(batch.observations):
+            cooperative_cpu_yield(observation_index)
             if observation.source != source_id:
                 raise ValueError(
                     f"observation source {observation.source!r} does not match batch {source_id!r}"
@@ -117,8 +120,10 @@ def build_authoritative_live_ensemble(
     excluded_undercovered_groups = len(independent_sources_by_group) - len(eligible_groups)
 
     observations: list[ForecastObservation] = []
-    for batch in active:
-        for observation in batch.observations:
+    for batch_index, batch in enumerate(active):
+        cooperative_cpu_yield(batch_index)
+        for observation_index, observation in enumerate(batch.observations):
+            cooperative_cpu_yield(observation_index)
             if observation.source != batch.source_id:
                 raise ValueError(
                     f"observation source {observation.source!r} does not match batch {batch.source_id!r}"

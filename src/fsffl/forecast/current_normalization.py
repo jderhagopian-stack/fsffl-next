@@ -4,6 +4,7 @@ import re
 import unicodedata
 from datetime import UTC, datetime
 
+from fsffl.execution_cooperation import cooperative_cpu_yield
 from fsffl.providers.current_projection_rows import CurrentProjectionRow, CurrentProjectionSnapshot
 from fsffl.providers.razzball_live import RazzballProjectionSnapshot
 from fsffl.state.models import LeagueState, Player, Position, Provenance, ProviderRef
@@ -72,7 +73,8 @@ def _player_indexes(players: tuple[Player, ...]) -> tuple[
 ]:
     exact: dict[tuple[str, Position, str], list[Player]] = {}
     loose: dict[tuple[str, Position], list[Player]] = {}
-    for player in players:
+    for index, player in enumerate(players):
+        cooperative_cpu_yield(index)
         name = _normalize_name(player.full_name)
         team = _normalize_team(player.nfl_team)
         exact.setdefault((name, player.position, team), []).append(player)
@@ -95,7 +97,8 @@ def current_snapshot_from_razzball(snapshot: RazzballProjectionSnapshot) -> Curr
 
     position_map = {"QB": Position.QB, "RB": Position.RB, "WR": Position.WR, "TE": Position.TE}
     rows: list[CurrentProjectionRow] = []
-    for raw in snapshot.rows:
+    for index, raw in enumerate(snapshot.rows):
+        cooperative_cpu_yield(index)
         position_text = (raw.get("Pos") or "").upper().strip()
         position = position_map.get(position_text)
         name = (raw.get("Name") or "").strip()
@@ -169,7 +172,8 @@ def normalize_projection_snapshot(
     exact_index, loose_index = _player_indexes(tuple(player_universe))
     observations: list[ForecastObservation] = []
 
-    for row in snapshot.rows:
+    for index, row in enumerate(snapshot.rows):
+        cooperative_cpu_yield(index)
         name = _normalize_name(row.player_name)
         team = _normalize_team(row.nfl_team)
         exact = exact_index.get((name, row.position, team), [])

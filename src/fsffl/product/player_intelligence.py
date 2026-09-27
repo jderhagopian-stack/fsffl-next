@@ -34,6 +34,10 @@ PLAYER_HISTORY_CAREER_ARTIFACT_VERSION = "player-history-career-v1"
 Y1_FULL_SEASON_GAME_BASIS = 17
 Y1_FULL_SEASON_GAME_BASIS_REASON = "governed full-season projection schedule basis: 17 NFL games"
 
+PLAYER_FUTURE_FORECAST_CONTINUITY_ARTIFACT_KIND = "player_future_forecast_continuity"
+PLAYER_FUTURE_FORECAST_CONTINUITY_SCOPE_KIND = "league_state_future_forecast"
+PLAYER_FUTURE_FORECAST_CONTINUITY_MODEL_VERSION = "player-future-forecast-continuity-v1"
+
 
 def _season_fantasy_observation(
     rows: tuple[ForecastObservation, ...],
@@ -131,10 +135,12 @@ class PlayerFutureForecastCache:
         *,
         future_forecast_builder=None,
         forecast_model_version: str = "future-forecast-provider:unconfigured",
+        persistence_store: PersistenceStore | None = None,
     ) -> None:
         self._lock = RLock()
         self._future_forecast_builder = future_forecast_builder
         self._forecast_model_version = str(forecast_model_version)
+        self._persistence_store = persistence_store
         self._key: tuple[str, str, str, str] | None = None
         self._contract: FutureForecastContract | None = None
         self._league_id: str | None = None
@@ -146,6 +152,104 @@ class PlayerFutureForecastCache:
         if state is None:
             return None
         return canonical_fingerprint(state.league.rules.model_dump(mode="json"))
+
+    def _continuity_model_version(self) -> str:
+        return (
+            f"{PLAYER_FUTURE_FORECAST_CONTINUITY_MODEL_VERSION}"
+            f"|forecast={self._forecast_model_version}"
+        )
+
+    def _persist_current_locked(
+        self,
+        runtime: UserRuntimeContext,
+        *,
+        key: tuple[str, str, str, str],
+        contract: FutureForecastContract,
+    ) -> None:
+        state = runtime.league_state
+        if self._persistence_store is None or state is None:
+            return
+        rules_fingerprint = self._runtime_rules_fingerprint(runtime)
+        if rules_fingerprint is None:
+            return
+        self._persistence_store.put_artifact(
+            ReusableArtifactRecord(
+                key=ArtifactKey(
+                    artifact_kind=PLAYER_FUTURE_FORECAST_CONTINUITY_ARTIFACT_KIND,
+                    scope_kind=PLAYER_FUTURE_FORECAST_CONTINUITY_SCOPE_KIND,
+                    scope_id=state.state_id,
+                    input_fingerprint=canonical_fingerprint(
+                        state.league.league_id,
+                        state.league.season,
+                        rules_fingerprint,
+                        key,
+                        contract.contract_version,
+                        contract.forecast_model_version,
+                    ),
+                    model_version=self._continuity_model_version(),
+                ),
+                payload={
+                    "league_id": state.league.league_id,
+                    "league_state_id": state.state_id,
+                    "season": state.league.season,
+                    "rules_fingerprint": rules_fingerprint,
+                    "evidence_model_version": key[1],
+                    "evaluation_as_of": key[2],
+                    "contract": contract.model_dump(mode="json"),
+                },
+                computed_at=utc_now(),
+            )
+        )
+
+    def _restore_durable_stale_locked(
+        self,
+        runtime: UserRuntimeContext,
+    ) -> FutureForecastContract | None:
+        state = runtime.league_state
+        served = runtime.served_intelligence
+        if (
+            self._persistence_store is None
+            or state is None
+            or served is None
+            or served.league_id != state.league.league_id
+        ):
+            return None
+        record = self._persistence_store.get_latest_reusable_artifact(
+            artifact_kind=PLAYER_FUTURE_FORECAST_CONTINUITY_ARTIFACT_KIND,
+            scope_kind=PLAYER_FUTURE_FORECAST_CONTINUITY_SCOPE_KIND,
+            scope_id=served.league_state_id,
+            model_version=self._continuity_model_version(),
+        )
+        if record is None:
+            return None
+        payload = record.payload
+        rules_fingerprint = self._runtime_rules_fingerprint(runtime)
+        if (
+            payload.get("league_id") != state.league.league_id
+            or payload.get("league_state_id") != served.league_state_id
+            or int(payload.get("season") or -1) != state.league.season
+            or payload.get("rules_fingerprint") != rules_fingerprint
+        ):
+            return None
+        try:
+            contract = FutureForecastContract.model_validate(payload.get("contract"))
+        except (TypeError, ValueError):
+            return None
+        if (
+            contract.evaluation_season != state.league.season
+            or contract.forecast_model_version != self._forecast_model_version
+        ):
+            return None
+        self._key = (
+            served.league_state_id,
+            str(payload.get("evidence_model_version") or "durable-stale"),
+            str(payload.get("evaluation_as_of") or ""),
+            self._forecast_model_version,
+        )
+        self._contract = contract
+        self._league_id = state.league.league_id
+        self._cached_rules_fingerprint = rules_fingerprint
+        return contract
 
     def _stale_last_good_locked(
         self,
@@ -179,7 +283,10 @@ class PlayerFutureForecastCache:
                 or evidence is None
                 or self._future_forecast_builder is None
             ):
-                fallback = self._stale_last_good_locked(runtime)
+                fallback = (
+                    self._stale_last_good_locked(runtime)
+                    or self._restore_durable_stale_locked(runtime)
+                )
                 return (
                     (fallback, "stale_last_good")
                     if fallback is not None
@@ -206,7 +313,10 @@ class PlayerFutureForecastCache:
                     league_year_one=year_one,
                 )
             except Exception:
-                fallback = self._stale_last_good_locked(runtime)
+                fallback = (
+                    self._stale_last_good_locked(runtime)
+                    or self._restore_durable_stale_locked(runtime)
+                )
                 if fallback is not None:
                     return fallback, "stale_last_good"
                 raise
@@ -218,6 +328,11 @@ class PlayerFutureForecastCache:
             self._contract = contract
             self._league_id = state.league.league_id
             self._cached_rules_fingerprint = self._runtime_rules_fingerprint(runtime)
+            self._persist_current_locked(
+                runtime,
+                key=key,
+                contract=contract,
+            )
             return self._contract, "current"
 
     def get(self, runtime: UserRuntimeContext) -> FutureForecastContract | None:

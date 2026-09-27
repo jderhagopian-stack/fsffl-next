@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from math import sqrt
 
+from fsffl.execution_cooperation import cooperative_cpu_yield
 from fsffl.state.models import Provenance
 
 from .models import ForecastDistribution, ForecastObservation
@@ -12,7 +13,8 @@ def _group_like_for_like(
     observations: tuple[ForecastObservation, ...],
 ) -> dict[tuple[object, ...], list[ForecastObservation]]:
     grouped: dict[tuple[object, ...], list[ForecastObservation]] = defaultdict(list)
-    for observation in observations:
+    for index, observation in enumerate(observations):
+        cooperative_cpu_yield(index)
         key = (
             observation.player_id,
             observation.position,
@@ -107,15 +109,17 @@ def weighted_ensemble(
         raise ValueError("weights must sum to a positive value")
 
     grouped = _group_like_for_like(observations)
-    output = [
-        _build_ensemble_observation(
-            items,
-            normalized_weights=weights,
-            source=source,
-            model_version=model_version,
+    output: list[ForecastObservation] = []
+    for index, items in enumerate(grouped.values()):
+        cooperative_cpu_yield(index)
+        output.append(
+            _build_ensemble_observation(
+                items,
+                normalized_weights=weights,
+                source=source,
+                model_version=model_version,
+            )
         )
-        for items in grouped.values()
-    ]
     return tuple(
         sorted(
             output,

@@ -132,4 +132,15 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
 
     cached_evaluator.__name__ = getattr(evaluator, "__name__", "cached_candidate_economics")
     cached_evaluator.__doc__ = getattr(evaluator, "__doc__", None)
+    def clear_cache() -> int:
+        nonlocal active_scope
+        with lock:
+            count = len(cache)
+            cache.clear()
+            active_scope = None
+        if count:
+            gc.collect()
+        return count
+
+    cached_evaluator.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_evaluator
