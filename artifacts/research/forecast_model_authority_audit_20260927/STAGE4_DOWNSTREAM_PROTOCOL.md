@@ -1,7 +1,7 @@
 # Stage 4 Forecast → Intrinsic Downstream Impact Protocol
 
 Date: 2026-09-27  
-Status: **FROZEN BEFORE CURRENT N1/N2 INTRINSIC SCORING**  
+Status: **CORRECTED AND RE-FROZEN BEFORE ANY STAGE-4 SCORING**  
 Authority: Research only. Production Forecast, H3 and Intrinsic remain unchanged.
 
 ## Purpose
@@ -14,13 +14,14 @@ This stage cannot tune Forecast. It cannot use named-player aesthetics to select
 
 Score these already-frozen whole-Forecast representations on the governed 335-player current board:
 
-- D1 — existing state-conditioned magnitude representation;
+- **VNEXT_A2_BURR** — the exact deployed `forecast-vnext-a2-burr-20260922` Y2/Y3 package: A2 probabilities + frozen Stage-D state means + Burr XII QB / direct-Gamma RB-WR-TE within-state uncertainty;
+- D1 — audited state-conditioned magnitude ancestor/comparator;
 - N1 — frozen nonlinear HistGradientBoosting state + conditional-magnitude family;
 - N2 — frozen spline two-part state + conditional-magnitude family.
 
-No fourth family may be added.
+The original three-family Stage-4 freeze was superseded by Management's audit-completeness correction **before any Stage-4 scoring occurred**. The only added candidate is the omitted already-deployed package; no new model family may be added.
 
-D1 is the current production reference, not an authority prior.
+VNEXT_A2_BURR is the production identity reference but receives no scientific privilege. D1 is not treated as production authority.
 
 ## Current fit chronology
 
@@ -87,14 +88,14 @@ For every future horizon and model:
 Because cross-horizon state/outcome covariance is not validated, do **not** publish one exact total-Intrinsic standard deviation. Instead persist:
 - zero-covariance RSS proxy;
 - perfect-positive-covariance upper envelope;
-- model-authority envelope across D1/N1/N2;
+- model-authority envelope across VNEXT_A2_BURR/D1/N1/N2;
 - explicit covariance limitation.
 
 ### 4. Material player reversal — frozen rule
-A player is a material downstream reversal if **any** of the following occurs across the three audited families:
+A player is a material downstream reversal if **any** of the following occurs across the four audited packages/families:
 - max-min rank >= 20;
 - the player crosses a top-25, top-50, top-100 or top-200 boundary;
-- max-min raw Intrinsic >= 15% of the three-family median **and** >= 25 raw Shapley points.
+- max-min raw Intrinsic >= 15% of the four-model median **and** >= 25 raw Shapley points.
 
 ### 5. Archetype reversal — frozen rule
 Archetypes are defined only from source-time facts:
@@ -104,9 +105,26 @@ Archetypes are defined only from source-time facts:
 
 An archetype with at least 10 players is material if either:
 - >=20% of its players meet the frozen material-player-reversal rule; or
-- its median max-min Intrinsic envelope is >=10% of its median three-family Intrinsic.
+- its median max-min Intrinsic envelope is >=10% of its median four-model Intrinsic.
 
 Named examples may be reported only after these mechanical cohort rules are applied.
+
+## Exact deployed-package uncertainty treatment
+
+For VNEXT_A2_BURR, preserve the frozen within-state uncertainty exactly:
+- Burr XII M1 for QB;
+- direct-Gamma M1 for RB/WR/TE;
+- mean-one ratio semantics;
+- zero clipping.
+
+Historical distributional authority is assessed directly with the package's recovered CRPS and calibration evidence.
+
+For the current Intrinsic sandbox, preserve the existing Value boundary: production Shapley consumes state probabilities and state means, not the Burr/Gamma tail family. Therefore the central Intrinsic calculation must **not** be silently changed by within-state ratio uncertainty. Persist separately:
+- the state-mixture Shapley uncertainty that Value can currently express;
+- the additional Forecast within-state uncertainty carried by VNEXT_A2_BURR;
+- the fact that cross-horizon covariance and a production Value consumer for this richer uncertainty are not validated.
+
+The audit may quantify a research-only uncertainty envelope, but it may not turn the richer tail distribution into a new central Intrinsic expectation or use Intrinsic feedback to select Forecast.
 
 ## Interpretation
 
@@ -117,7 +135,7 @@ The downstream analysis answers:
 - how much of the variation is trajectory versus lineup-capacity economics;
 - how model uncertainty compares with within-model state/outcome uncertainty.
 
-It does **not** grant production authority to D1, N1, N2, or a cell router.
+It does **not** grant production authority to VNEXT_A2_BURR, D1, N1, N2, or a cell router.
 
 ## Terminal requirement
 
