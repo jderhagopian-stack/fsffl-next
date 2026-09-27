@@ -47,15 +47,15 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_advances_one_coherent_hosted_release_generation() -> None:
     index = _index()
     shell = _shell()
-    release = "20260926-post265-intrinsic-mobile1"
+    release = "20260927-dualstate-availability1"
     assert f"/static/forecast_refresh.js?v={release}" in index
     assert f"/static/product_shell.js?v={release}" in index
     assert f"/static/home_dashboard.js?v={release}" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
-    assert f"const fsfflStaticVersion='{release}';" in shell
-    assert "const leagueAtlasStaticVersion='20260926-post264-product-acceptance1';" in shell
+    assert "const fsfflStaticVersion='20260927-dualstate1';" in shell
+    assert "const leagueAtlasStaticVersion='20260927-dualstate1';" in shell
 
 
 def test_visible_readiness_strip_exposes_manual_refresh_when_idle_even_if_complete() -> None:
@@ -183,6 +183,7 @@ def test_readiness_as_of_is_derived_from_governed_payload_not_browser_now() -> N
         "function fsfflSurfaceReadinessIssue", 1
     )[0]
     assert "fsfflCapabilityReadiness()?.as_of" in helper
+    assert "served_last_good?.as_of" in helper
     assert "served_state?.as_of" in helper
     assert "context?.evidence_as_of" in helper
     assert "new Date()" not in helper
@@ -201,3 +202,34 @@ def test_mobile_readiness_scopes_current_capabilities_and_preserves_build_phase_
     # The working in-progress lifecycle remains a two-row compact treatment:
     # numeric phase in the status row and the server phase message in detail.
     assert "phaseLabel+(lastGoodAvailable?' · Last-good available':'')" in source
+
+
+
+def test_dual_state_rebuild_never_renders_false_green_current_status() -> None:
+    source = _shell()
+    snapshot = source.split("function fsfflSharedReadinessSnapshot()", 1)[1].split(
+        "function fsfflCapabilityChip", 1
+    )[0]
+    assert "capabilities?.overall_status==='rebuilding'" in snapshot
+    assert "State current · intelligence rebuilding · last-good intelligence remains available" in snapshot
+    assert "rebuilding" in snapshot
+    assert "capabilityFull" in snapshot
+
+    markup = source.split("function fsfflSharedReadinessMarkup", 1)[1].split(
+        "function fsfflSharedReadinessHost", 1
+    )[0]
+    assert "status.rebuilding?'◐ State current · intelligence rebuilding'" in markup
+    assert "✓ Intelligence current" in markup
+
+
+def test_dual_state_release_busts_mobile_and_major_surface_cache_generation() -> None:
+    index = _index()
+    release = "20260927-dualstate-availability1"
+    for script in (
+        "session_recovery.js",
+        "mobile_safari_recovery.js",
+        "forecast_refresh.js",
+        "home_dashboard.js",
+        "product_shell.js",
+    ):
+        assert f"/static/{script}?v={release}" in index
