@@ -815,3 +815,9 @@ Runtime sequencing remains protected: PR #278 must finish hosted acceptance befo
 
 ## 2026-09-27 — Management pauses Long-Term Intrinsic implementation
 Management prefers to finish the existing runtime/latency/continuity work before opening the Long-Term Intrinsic implementation track. The Research contract remains accepted and ready, but shadow implementation is paused until regular Implementation is complete.
+
+
+## 2026-09-27 18:16 ET — #278 acceptance result
+The full hosted journey reached successful cold PI continuity and post-reconciliation full/current presentation, but failed the internal resource gate at `after_automatic_state_sync`: ~407.0 MB current RSS, ~450.4 MB max observed versus the ~429.5 MB engineering budget, still below the ~536.9 MB hard Render limit. No recycle/5xx/429/lost State was observed.
+
+A separate remaining performance defect is confirmed: Market workspace construction reached ~64.9s under the heavy acceptance sequence; active-reconciliation PI history was ~35.5s. Thus #278 is a real improvement but not a terminal success. Runtime remains the sole implementation priority.
