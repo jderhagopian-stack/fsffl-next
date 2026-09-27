@@ -88,9 +88,15 @@ def test_hosted_startup_is_restore_first_and_does_not_auto_launch_heavy_work() -
     )
 
     assert (
-        'app.router.add_event_handler("startup", _log_startup_runtime_readiness)'
+        'app.router.add_event_handler("startup", _start_lightweight_startup_restore)'
         in source
     )
+    assert "_runtime_store.restore_user(_beta_restore_user)" not in source.split(
+        "def _run_lightweight_startup_restore", 1
+    )[0]
+    assert "default_behavioral_store()" not in source.split(
+        "def _run_lightweight_startup_restore", 1
+    )[0]
     assert (
         'app.router.add_event_handler("startup", _prewarm_hosted_product_acceptance)'
         not in source
@@ -103,7 +109,7 @@ def test_hosted_startup_is_restore_first_and_does_not_auto_launch_heavy_work() -
     acceptance = source.split(
         "def _maybe_start_state_first_production_acceptance()", 1
     )[1].split(
-        'app.router.add_event_handler("startup", _log_startup_runtime_readiness)', 1
+        '@app.get("/health/product-acceptance")', 1
     )[0]
     assert "if not enabled:" in acceptance
     assert "return" in acceptance.split("if not enabled:", 1)[1].split(
@@ -111,6 +117,7 @@ def test_hosted_startup_is_restore_first_and_does_not_auto_launch_heavy_work() -
     )[0]
     assert "FSFFL_RUNTIME_ACCEPTANCE_DELAY_SECONDS" in acceptance
     assert "sleep(delay_seconds)" in acceptance
+    assert "_startup_restore_complete.wait" in acceptance
     assert "Acceptance is explicit; startup performs restore-only work." in source
     assert '@app.post("/api/runtime/product-acceptance")' in source
     assert '@app.get("/health/runtime-resources")' in source
