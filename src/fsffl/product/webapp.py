@@ -537,6 +537,37 @@ def _presentation_runtime(runtime):
     return runtime
 
 
+def _intelligence_freshness(
+    runtime,
+    *,
+    using_last_good: bool,
+) -> dict[str, object]:
+    current = runtime.league_state
+    served = getattr(runtime, "served_intelligence", None)
+    return {
+        "status": "stale_last_good" if using_last_good else "current",
+        "stale": using_last_good,
+        "target_state_id": current.state_id if current is not None else None,
+        "target_as_of": current.as_of.isoformat() if current is not None else None,
+        "served_state_id": (
+            served.league_state_id
+            if using_last_good and served is not None
+            else (current.state_id if current is not None else None)
+        ),
+        "served_as_of": (
+            served.as_of.isoformat()
+            if using_last_good and served is not None
+            else (current.as_of.isoformat() if current is not None else None)
+        ),
+        "message": (
+            "Last-good governed presentation is being served while exact-State "
+            "intelligence rebuilds."
+            if using_last_good
+            else "Derived presentation matches the current canonical State."
+        ),
+    }
+
+
 def _managed_team_view_payload(
     runtime,
     *,
