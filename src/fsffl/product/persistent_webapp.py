@@ -109,6 +109,7 @@ _behavioral_coordinator = BehavioralRuntimeCoordinator(
         else default_behavioral_store
     ),
     max_workers=1,
+    heavy_work_coordinator=_heavy_work_coordinator,
 )
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
