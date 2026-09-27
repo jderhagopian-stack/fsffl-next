@@ -1,0 +1,51 @@
+name: Current Football-State Provider Capture
+on:
+  push:
+    branches: [research/current-football-state-h3-20260926]
+    paths:
+      - scripts/run_current_football_state_provider_capture.py
+      - .github/workflows/current-football-state-provider-capture.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NFLREADPY_CACHE: filesystem
+  NFLREADPY_CACHE_DURATION: '86400'
+  NFLREADPY_TIMEOUT: '180'
+  NFLREADPY_VERBOSE: 'False'
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: c12402df1b7fa0bfbb3d994bdcf791d80e103a0c
+          path: research_ref
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy nflreadpy pyarrow
+      - name: Capture current ROS and football-state evidence
+        run: |
+          python scripts/run_current_football_state_provider_capture.py \
+            --research-root research_ref \
+            --board artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_STANDARD_COORDINATE_BOARD_335.csv
+      - name: Upload provider capture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-football-state-provider-capture
+          path: |
+            artifacts/research/current_football_state_h3_20260926/CURRENT_PROVIDER_ROWS.csv
+            artifacts/research/current_football_state_h3_20260926/CURRENT_PROVIDER_CONSENSUS.csv
+            artifacts/research/current_football_state_h3_20260926/CURRENT_EVENT_STATE_2026.csv
+            artifacts/research/current_football_state_h3_20260926/CURRENT_PROVIDER_EVENT_SUMMARY.csv
+            artifacts/research/current_football_state_h3_20260926/CURRENT_PROVIDER_FAILURES.json
+            artifacts/research/current_football_state_h3_20260926/CURRENT_PROVIDER_CAPTURE_RESULT.json
+          retention-days: 14
