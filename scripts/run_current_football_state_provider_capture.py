@@ -57,23 +57,19 @@ def score_row(row):
     return score,missing
 
 def board_indexes(board):
-    exact={}; loose={}
+    # The governed 335-player standard board intentionally carries no NFL-team
+    # coordinate. Mapping is therefore unique normalized name + position only.
+    loose={}
     for r in board.itertuples():
-        key=(norm_name(r.player_name),str(r.position),norm_team(r.team))
-        exact.setdefault(key,[]).append(r)
         loose.setdefault((norm_name(r.player_name),str(r.position)),[]).append(r)
-    return exact,loose
+    return loose
 
 def map_provider(snapshot,board):
-    exact,loose=board_indexes(board)
+    loose=board_indexes(board)
     rows=[]
     for r in snapshot.rows:
-        key=(norm_name(r.player_name),r.position.value,norm_team(r.nfl_team))
-        hits=exact.get(key,[])
-        method="exact"
-        if len(hits)!=1:
-            hits=loose.get((norm_name(r.player_name),r.position.value),[])
-            method="loose_unique"
+        hits=loose.get((norm_name(r.player_name),r.position.value),[])
+        method="name_position_unique"
         if len(hits)!=1: continue
         b=hits[0]
         score,missing=score_row(r)
@@ -82,7 +78,7 @@ def map_provider(snapshot,board):
             "effective_at":snapshot.effective_at.isoformat(),"source_version":snapshot.source_version,
             "usage_class":snapshot.usage_class,
             "player_id":str(b.player_id),"historical_gsis_id":str(b.historical_gsis_id),
-            "player_name":str(b.player_name),"position":str(b.position),"team":str(b.team),
+            "player_name":str(b.player_name),"position":str(b.position),
             "provider_team":str(r.nfl_team),"mapping_method":method,
             "ros_standard_points":score,"exact_standard_score":len(missing)==0,
             "missing_required_stats":";".join(missing),
@@ -176,7 +172,7 @@ def main():
     exact=p[p.exact_standard_score].copy() if not p.empty else pd.DataFrame()
     if not exact.empty:
         consensus=exact.pivot_table(
-            index=["player_id","historical_gsis_id","player_name","position","team","preseason_remaining_prior"],
+            index=["player_id","historical_gsis_id","player_name","position","preseason_remaining_prior"],
             columns="provider",values="ros_standard_points",aggfunc="first"
         ).reset_index()
         source_cols=[c for c in ("razzball","cbs") if c in consensus.columns]
