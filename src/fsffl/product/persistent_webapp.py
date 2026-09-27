@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from threading import RLock, Thread
+from time import monotonic, sleep
 
 from fastapi import Depends
 
@@ -43,7 +44,11 @@ from .player_intelligence import (
     PlayerFutureForecastCache,
     build_player_intelligence_overview,
 )
-from .player_intelligence_routes import install_player_intelligence_routes
+from .player_intelligence_routes import (
+    PlayerHistoryBuildStatus,
+    PlayerHistoryCapacityError,
+    install_player_intelligence_routes,
+)
 from .phase1_latency import install_phase1_latency_routes
 from .private_beta_shapley_runtime import PrivateBetaShapleyContractLoader
 from .vnext_future_forecast_provider import (
@@ -479,33 +484,187 @@ def _start_hosted_product_acceptance() -> bool:
         ).start()
         return True
 
-def _maybe_start_state_first_production_acceptance() -> None:
-    enabled = os.getenv("FSFFL_RUN_STATE_FIRST_ACCEPTANCE", "0").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
+_runtime_availability_acceptance_state: dict[str, object] = {
+    "status": "idle",
+    "contract": "runtime-availability-acceptance-v1",
+    "reason": "Acceptance mode is disabled; normal startup remains restore-only.",
+}
+
+
+def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
+    state = context.league_state
+    if state is None:
+        raise RuntimeError(f"{label}: canonical State is unavailable")
+    if context.selected_team_id is None:
+        raise RuntimeError(f"{label}: managed team is unavailable")
+    team_state = next(
+        (row for row in state.team_states if row.team_id == context.selected_team_id),
+        None,
+    )
+    if team_state is None or not team_state.roster:
+        raise RuntimeError(f"{label}: canonical managed roster is blank")
+
+    team_view = _webapp._managed_team_view_payload(
+        context,
+        state_only_while_enriching=True,
+    )
+    atlas = _webapp.build_league_atlas_payload(
+        context,
+        preseason_reason="Runtime availability acceptance does not rebuild preseason evidence.",
+    )
+    if not atlas.get("standings"):
+        raise RuntimeError(f"{label}: League Atlas standings are blank")
+    readiness = _hosted_capability_readiness(context)
+    return {
+        "league_id": state.league.league_id,
+        "state_id": state.state_id,
+        "selected_team_id": context.selected_team_id,
+        "canonical_roster_count": len(team_state.roster),
+        "franchise_team_id": team_view.get("team_id"),
+        "league_standings_count": len(atlas.get("standings") or ()),
+        "league_simulation_status": (atlas.get("simulation") or {}).get("status"),
+        "readiness_status": readiness.get("overall_status"),
+        "readiness_as_of": readiness.get("as_of"),
     }
+
+
+def _acceptance_history_probe(label: str, context) -> dict[str, object]:
+    state = context.league_state
+    if state is None:
+        raise RuntimeError(f"{label}: canonical State is unavailable")
+    intrinsic = _reconcile_hosted_intrinsic(context)
+    intrinsic_record = _shapley_intrinsic_coordinator.current(context)
+    contract = intrinsic_record.contract if intrinsic_record is not None else None
+    if intrinsic.get("status") != "full" or contract is None:
+        raise RuntimeError(
+            f"{label}: governed Intrinsic is not reusable/available: {intrinsic}"
+        )
+
+    governed_ids = {item.player_id for item in contract.estimates}
+    roster_ids: list[str] = []
+    if context.selected_team_id is not None:
+        selected_state = next(
+            (
+                row
+                for row in state.team_states
+                if row.team_id == context.selected_team_id
+            ),
+            None,
+        )
+        if selected_state is not None:
+            roster_ids = list(selected_state.roster)
+    preferred = "sleeper:player:4881"
+    player_id = (
+        preferred
+        if preferred in governed_ids
+        else next((item for item in roster_ids if item in governed_ids), None)
+        or next(iter(governed_ids), None)
+    )
+    if player_id is None:
+        raise RuntimeError(f"{label}: no governed player is available")
+
+    overview = build_player_intelligence_overview(
+        context,
+        player_id,
+        intrinsic=contract,
+        future_cache=_player_future_forecast_cache,
+    )
+    years = sorted(
+        int(item["year_index"])
+        for item in overview.get("forecast", {}).get("rows", [])
+        if item.get("year_index") is not None
+    )
+    if 2 not in years or 3 not in years:
+        raise RuntimeError(f"{label}: Player Intelligence lacks Y2/Y3: {years}")
+
+    history = getattr(app.state, "player_history_coordinator", None)
+    if history is None:
+        raise RuntimeError(f"{label}: shared PI history coordinator is unavailable")
+    deadline = monotonic() + 180.0
+    started = monotonic()
+    capacity_waits = 0
+    while monotonic() < deadline:
+        try:
+            record = history.request(context, player_id)
+        except PlayerHistoryCapacityError:
+            capacity_waits += 1
+            sleep(0.25)
+            continue
+        if record.status == PlayerHistoryBuildStatus.COMPLETED:
+            return {
+                "league_id": state.league.league_id,
+                "state_id": state.state_id,
+                "player_id": player_id,
+                "history_status": record.status.value,
+                "history_seasons": len(record.seasons),
+                "capacity_waits": capacity_waits,
+                "elapsed_seconds": round(monotonic() - started, 3),
+                "intrinsic_status": intrinsic.get("status"),
+                "intrinsic_build_status": intrinsic.get("build_status"),
+                "forecast_years": years,
+            }
+        if record.status == PlayerHistoryBuildStatus.FAILED:
+            raise RuntimeError(
+                f"{label}: PI history failed: {record.error or 'unknown error'}"
+            )
+        sleep(0.25)
+    raise RuntimeError(f"{label}: PI history timed out")
+
+
+def _runtime_acceptance_resource_reader() -> dict[str, object]:
+    return dict(_heavy_work_coordinator.snapshot().__dict__)
+
+
+def _runtime_acceptance_process_identity() -> str:
+    return f"pid:{os.getpid()}"
+
+
+def _maybe_start_state_first_production_acceptance() -> None:
+    enabled = any(
+        os.getenv(name, "0").strip().lower() in {"1", "true", "yes", "on"}
+        for name in (
+            "FSFFL_RUN_RUNTIME_AVAILABILITY_ACCEPTANCE",
+            "FSFFL_RUN_STATE_FIRST_ACCEPTANCE",
+        )
+    )
     if not enabled:
         return
     if _persistence_store is None:
+        _runtime_availability_acceptance_state.update(
+            status="fail",
+            reason="Production persistence is unavailable.",
+        )
         logging.getLogger("uvicorn.error").error(
-            "FSFFL STATE-FIRST ACCEPTANCE FAILED production persistence is unavailable"
+            "FSFFL RUNTIME AVAILABILITY ACCEPTANCE FAILED production persistence is unavailable"
         )
         return
     acceptance_user = os.getenv(
-        "FSFFL_STATE_FIRST_ACCEPTANCE_USER",
-        "state-first-production-acceptance",
+        "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_USER",
+        "runtime-availability-production-acceptance",
     ).strip()
     if not acceptance_user:
-        logging.getLogger("uvicorn.error").error(
-            "FSFFL STATE-FIRST ACCEPTANCE FAILED isolated user id is blank"
+        _runtime_availability_acceptance_state.update(
+            status="fail",
+            reason="Isolated acceptance user id is blank.",
         )
         return
+    delay_seconds = max(
+        0.0,
+        float(os.getenv("FSFFL_RUNTIME_ACCEPTANCE_DELAY_SECONDS", "5")),
+    )
+    _runtime_availability_acceptance_state.clear()
+    _runtime_availability_acceptance_state.update(
+        status="scheduled",
+        contract="runtime-availability-acceptance-v1",
+        user_id=acceptance_user,
+        delay_seconds=delay_seconds,
+    )
 
     def run() -> None:
         try:
-            run_state_first_production_acceptance(
+            sleep(delay_seconds)
+            _runtime_availability_acceptance_state["status"] = "running"
+            report = run_state_first_production_acceptance(
                 store=_runtime_store,
                 user_id=acceptance_user,
                 state_loader=default_sleeper_state_loader,
@@ -513,20 +672,43 @@ def _maybe_start_state_first_production_acceptance() -> None:
                 start_sync_reconciliation=app.state.start_intelligence_sync_reconciliation,
                 jobs=app.state.intelligence_jobs,
                 capability_reader=app.state.capability_readiness_reader,
+                surface_probe=_acceptance_surface_probe,
+                history_probe=_acceptance_history_probe,
+                resource_reader=_runtime_acceptance_resource_reader,
+                process_identity_reader=_runtime_acceptance_process_identity,
             )
-        except Exception:
+            _runtime_availability_acceptance_state.clear()
+            _runtime_availability_acceptance_state.update(
+                status="pass",
+                contract="runtime-availability-acceptance-v1",
+                report=report,
+            )
+            logging.getLogger("uvicorn.error").info(
+                "FSFFL RUNTIME AVAILABILITY ACCEPTANCE PASS peak_rss=%s budget=%s",
+                report.get("peak_rss_bytes"),
+                report.get("memory_budget_bytes"),
+            )
+        except Exception as exc:
+            _runtime_availability_acceptance_state.clear()
+            _runtime_availability_acceptance_state.update(
+                status="fail",
+                contract="runtime-availability-acceptance-v1",
+                error_type=type(exc).__name__,
+                reason=str(exc),
+            )
             logging.getLogger("uvicorn.error").exception(
-                "FSFFL STATE-FIRST ACCEPTANCE FAILED"
+                "FSFFL RUNTIME AVAILABILITY ACCEPTANCE FAILED"
             )
 
     Thread(
         target=run,
-        name="fsffl-state-first-production-acceptance",
+        name="fsffl-runtime-availability-acceptance",
         daemon=True,
     ).start()
 
 
 app.router.add_event_handler("startup", _log_startup_runtime_readiness)
+app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
 
 
 @app.get("/health/product-acceptance")
@@ -534,6 +716,13 @@ def hosted_product_acceptance_health() -> dict[str, object]:
     """Non-sensitive production proof for product-path acceptance."""
 
     return dict(_product_acceptance_state)
+
+
+@app.get("/health/runtime-availability-acceptance")
+def hosted_runtime_availability_acceptance_health() -> dict[str, object]:
+    """Non-sensitive proof for the explicit hosted combined acceptance journey."""
+
+    return dict(_runtime_availability_acceptance_state)
 
 
 @app.get("/health/runtime-resources")
