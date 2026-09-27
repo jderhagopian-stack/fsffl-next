@@ -297,3 +297,10 @@ Historical and current-provider studies are complete. No broad event-rich H1-H3 
 
 Durable handoff:
 `artifacts/research/current_football_state_h3_20260926/RECOMMENDED_FORECAST_CONTRACT.md`.
+
+
+## PR #270 availability transition — 2026-09-27
+- **Implementation:** **MANAGEMENT GATE — PHYSICAL IPHONE / SAFARI AVAILABILITY ACCEPTANCE.** PR #270 merged at `2c63a9b05225759ba521da3e75fb65146b30fbbe`; exact Render deploy `dep-dasa5vg473hc73fd8uo0` is LIVE. All seven configured validations are green, startup restores FSFFL core + Intrinsic FULL, and the hosted acceptance runner recorded PASS across FSFFL → Hodor → FSFFL plus two manual refreshes. Physical verification is now the remaining availability gate.
+- **Research:** **MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE.** Interpretation/closeout is complete; no broad event-rich updater is promoted, production H3 remains unchanged, and the narrow recommended contract is persisted.
+- **Market:** HOLD until physical beta-availability acceptance passes.
+- **Performance:** HOLD until physical beta-availability acceptance passes; ~390s cold 50K Simulation latency remains queued afterward.
