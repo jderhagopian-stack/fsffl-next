@@ -894,3 +894,45 @@ Implementation must preserve the authority chain when applying dependency-scoped
 - Intrinsic compatibility must depend on the resulting authoritative Forecast input/contract identity. If Forecast is unchanged, reuse Intrinsic. If Forecast changes, background-recompute Intrinsic and promote atomically.
 - Do not add direct heuristic injury/status penalties to Intrinsic.
 - Until Research promotes a governed H3 current-state update layer, preserve the frozen H3 authority and truthfully expose its as-of/provenance limitations rather than pretending those events are modeled.
+
+## PR #268 live acceptance failure — Intrinsic dependency fingerprint is still volatile
+**State: ACTIVE — LIVE ACCEPTANCE FAILED AFTER DEPLOY**
+
+PR #268 merged at `00017f765713f0aeb0b0913755345f74a49110a9` and Render deploy
+`dep-das711d9fdbs73c4ohmg` reached LIVE.
+
+The implementation correctly:
+- removed full LeagueState/state_id and generic league-material identity from the production Intrinsic reuse key;
+- separated legacy provenance richness from Intrinsic availability;
+- removed the large redundant Home intelligence-status card;
+- preserved 2,048 Shapley permutations and PR #267 PI history behavior.
+
+However, live persistence evidence proves the new dependency fingerprint is **not stable**:
+- 21:30 ET fingerprint `ba9f4103...`
+- 21:33 ET fingerprint `b60189a4...`
+- 21:36 ET fingerprint `60188402...`
+- 21:39 ET fingerprint `446cec3f...`
+- 21:41 ET fingerprint `02a0b016...`
+
+All five persisted contracts were `ready`, 335-player contracts for the same FSFFL league/model, yet each used a different input fingerprint within ~11 minutes.
+
+Root-cause code evidence:
+`intrinsic_input_fingerprint()` still hashes volatile observation/runtime/provenance fields including:
+- Year-1 observation `as_of`;
+- full Year-1 `provenance.model_dump()`;
+- `year_one_evidence.runtime_result.evaluation_as_of`;
+- full `FutureForecastContract.model_dump()`, whose provenance can also contain runtime/evaluation metadata.
+
+Those are provenance/as-of records, not necessarily mathematical Intrinsic inputs. Including them defeats compatibility reuse and can repeatedly trigger cold Shapley builds even when numerical/authoritative Forecast content is unchanged.
+
+Hosted product acceptance failed at 21:37 ET because Intrinsic was still building. Render memory remained below the limit (~493 MB vs 536.9 MB) and the later process shutdown was orderly; do not classify this as an OOM incident.
+
+Required corrective:
+1. fingerprint **semantic/model inputs only**—the exact values actually consumed by Intrinsic/Shapley and stable authority/version identities;
+2. exclude retrieval/evaluation timestamps and non-mathematical provenance metadata from compatibility identity while preserving them on the persisted artifact for PIT audit;
+3. prove repeated identical governed Forecast content across fresh loads produces the **same fingerprint**;
+4. prove a true numerical Forecast change, subject-set change, scoring/lineup change, season change, or model/version change produces a new fingerprint;
+5. rerun hosted acceptance and demonstrate one persisted/reused contract rather than repeated ready artifacts;
+6. only after live reuse is stable should Management physically validate near-instant refresh/switch behavior.
+
+Do not lower permutations or weaken Forecast/Intrinsic authority.
