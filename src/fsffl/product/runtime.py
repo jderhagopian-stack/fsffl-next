@@ -685,15 +685,14 @@ class PrivateBetaRuntimeStore:
         user_id: str,
         snapshot: ServedIntelligenceSnapshot | None,
     ) -> UserRuntimeContext:
-        """Attach presentation-only same-league last-good intelligence."""
+        """Attach lightweight presentation-only same-league last-good identity."""
 
         with self._lock:
             current = self.get(user_id)
             if (
                 snapshot is not None
                 and current.league_state is not None
-                and snapshot.league_state.league.league_id
-                != current.league_state.league.league_id
+                and snapshot.league_id != current.league_state.league.league_id
             ):
                 raise ValueError("served intelligence must belong to the loaded league")
             updated = UserRuntimeContext(
