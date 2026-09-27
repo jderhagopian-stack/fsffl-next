@@ -323,3 +323,8 @@ Durable handoff:
 - **Research — ACTIVE in parallel, non-production:** injury availability/time-to-return model + prospective ROS/event snapshot-retention architecture. No production H3 or Intrinsic change is authorized.
 - **Market — HOLD.**
 - **Performance — HOLD** except Implementation-required resource work.
+
+## Research portfolio clarification — 2026-09-27
+- **Research Track A — ACTIVE / non-production:** injury availability/time-to-return + prospective ROS/event snapshot retention.
+- **Research Track B — ACTIVE / non-production:** Y4–Y8 long-horizon architecture and validation remains first-class and must not be dropped. Continue from the existing cell-specific Management gate; do not restart completed work.
+- Production H3 and Intrinsic remain unchanged unless Management separately promotes a result.
