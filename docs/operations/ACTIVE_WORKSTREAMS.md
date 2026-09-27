@@ -401,3 +401,11 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - #278 fixed cold PI continuity and restored full presentation correctly, but hosted acceptance failed the internal RSS target at ~450.4 MB peak and still exposed a ~64.9s Market workspace build under the heavy journey.
 - Continue narrowly on remaining memory residency/contention/Market-build latency. Preserve #278 architecture and semantics.
 - **Long-Term Intrinsic shadow remains PAUSED.**
+
+
+## 2026-09-27 — Remaining runtime corrective narrowed to Market execution boundary
+- **Implementation — ACTIVE / sole priority:** preserve #278 and move full Market Search/Decision off foreground read requests.
+- Persisted/current Market shell must remain immediately usable; explicit structural search may start separately; bilateral Decision enrichment becomes progressive; deep Simulation remains explicit drill-down.
+- Treat the ~429.5 MB RSS target as engineering headroom, not a standalone blocker absent real availability failure. Continue hard-limit monitoring.
+- PI history should serve compatible persisted evidence first and reconcile in background.
+- **Long-Term Intrinsic remains PAUSED** until this runtime track reaches terminal acceptance.
