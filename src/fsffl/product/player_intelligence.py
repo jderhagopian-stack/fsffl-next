@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from threading import RLock
+from time import sleep
 
 from fsffl.forecast.future_contract import FutureForecastContract
 from fsffl.persistence.contracts import (
@@ -886,6 +887,10 @@ class PlayerHistoryService:
         target_id = f"sleeper:player:{external_id}"
         for week in range(1, 19):
             batch = self._source.fetch_week(season=season, week=week)
+            # The private-beta host has a very small CPU share. Historical
+            # acquisition is background-only, so yield cooperatively between
+            # provider batches to keep persisted/read-only HTTP work responsive.
+            sleep(0.002)
             row = next((item for item in batch if item.player_id == target_id), None)
             if row is None:
                 continue
@@ -1004,6 +1009,7 @@ class PlayerHistoryService:
             points = _score_stats(totals, state.league.rules)
             games = max(0, int(row.get("games_played", 0)))
             primary, more = _position_stats(player.position, totals)
+            sleep(0.01)
             output.append(
                 HistoricalPlayerSeason(
                     season=season,
