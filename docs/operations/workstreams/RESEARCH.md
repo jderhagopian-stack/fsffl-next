@@ -1526,3 +1526,32 @@ Required design:
 - if no joint candidate clears its predeclared gates, retain the supported separate availability model and leave time-to-return unpromoted.
 
 Because the original 2019–2024 holdouts have already been observed, label this as a **follow-up comparative validation**, not a pristine untouched final holdout. Use chronology-preserving rolling/nested evaluation and state that limitation explicitly. No production promotion is authorized solely from this follow-up.
+
+
+## Management research-governance correction — no incumbent privilege — 2026-09-27
+Management rejects chronology-based model privilege. A model does not earn continuing Research authority merely because it was studied or adopted first, and a later model must not pay an arbitrary "replacement tax" simply to displace an incumbent.
+
+Effective immediately, model comparison must distinguish **scientific selection** from **production migration**:
+
+1. **Symmetric scientific comparison.** Competing architectures are evaluated on the same governed evidence, targets, scoring rules, uncertainty, calibration, stability, subgroup safety, and downstream decision-relevant quantities. The earlier model is a comparator, not a privileged default.
+2. **Absolute gates remain valid.** Predeclared minimum-quality, leakage, calibration, subgroup-safety, and robustness gates may determine whether a model is fit for consideration at all.
+3. **No asymmetric improvement hurdle.** A challenger is not rejected solely because it fails to beat an incumbent by an arbitrary minimum margin. If a materiality threshold is used, it must be justified by the use case and applied symmetrically to differences among candidates.
+4. **Uncertain differences stay uncertain.** When predictive differences are within sampling/model uncertainty or practically negligible, Research should report the candidates as statistically/practically indistinguishable on that dimension rather than declaring the earlier model superior.
+5. **Use-case utility governs.** Selection should emphasize the quantities the product actually needs to estimate: expected future outcomes, uncertainty, calibration, and downstream Forecast/Value consequences. Metric differences that do not materially affect those quantities must not automatically decide architecture.
+6. **Complexity/operational cost may break a tie, but explicitly.** Simplicity, compute, maintainability, interpretability, data requirements, and deployment risk may be used as secondary criteria only when stated in advance or clearly separated from predictive authority. They do not retroactively make the incumbent scientifically better.
+7. **Production inertia is not Research evidence.** If two models are close but changing production carries migration or implementation cost, production may temporarily retain the existing model for operational reasons. That is a Product/Implementation decision, not evidence that the incumbent has superior Research authority.
+8. **Model-family studies should seek the best supported representation, not defend the current one.** New candidates may confirm, replace, combine with, or expose limitations in earlier architectures.
+
+### Joint injury-availability consequence
+The completed joint injury study remains a valid frozen experiment and its original gate result must not be rewritten. However, its disposition is reopened for **symmetric practical-materiality interpretation** because the direct-comparison gate encoded incumbent privilege.
+
+Research must compare the joint and separate architectures on equal footing using the already-produced OOT predictions where possible, including:
+- expected remaining-season availability;
+- return-horizon probabilities;
+- integrated return-time distribution quality;
+- calibration and uncertainty;
+- holdout/subgroup stability;
+- downstream expected active games / expected H1 points or equivalent Forecast-relevant quantities;
+- uncertainty around the observed performance differences.
+
+Do not tune either architecture to the observed comparison. Do not change production H3/Intrinsic from this reinterpretation alone.
