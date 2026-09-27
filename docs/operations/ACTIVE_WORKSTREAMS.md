@@ -288,3 +288,12 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
 - **Research — ACTIVE / parallel:** historical current-football-state H3 validation and current-provider capture are complete; interpretation/closeout is now the only authorized Research work. Reconcile 4,793 injury episodes and 7,603 non-injury events against the frozen gates, preserve the no-double-counting rule and unchanged production H3, then persist a valid OPERATING_PROTOCOL terminal state. Detailed closeout directive is in `workstreams/RESEARCH.md`.
 - **Performance — Simulation cold-kernel latency remains queued behind availability restoration.**
 - **Market — HOLD** until the beta is again stably usable.
+
+
+## Current football-state H3 Forecast Research
+**State:** **MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE**
+
+Historical and current-provider studies are complete. No broad event-rich H1-H3 updater is promoted. Recommended Research contract is provider/current-state aware and componentized: H1 availability is separated from healthy production, no double-counting is allowed when current ROS owns H1, temporary injuries do not receive generic H2/H3 penalties, and release/cut carries only a coarse H3 attachment/survival signal. Production H3 remains unchanged.
+
+Durable handoff:
+`artifacts/research/current_football_state_h3_20260926/RECOMMENDED_FORECAST_CONTRACT.md`.
