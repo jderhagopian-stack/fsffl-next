@@ -1378,3 +1378,25 @@ The current-state H3 update study must explicitly distinguish:
 Evaluate injury effects by position, age/experience, injury class/severity, and horizon where PIT evidence permits. Temporary injuries should primarily affect current-season availability; Y2/Y3 effects require empirical evidence of persistence. Avoid double counting when provider projections already incorporate missed games or role changes.
 
 The study must test whether current-season availability should be represented as a separate Forecast component so dynasty Intrinsic can reflect lost near-term utility without confusing it with permanent talent deterioration.
+
+
+### Management execution checkpoint — current-football-state H3 interpretation / closeout — 2026-09-27
+**State: ACTIVE — HISTORICAL VALIDATION + CURRENT PROVIDER CAPTURE COMPLETE; INTERPRETATION / DURABLE CLOSEOUT REQUIRED**
+
+The empirical execution phase has completed. Do not restart the study, reopen settled long-horizon decisions, or modify production H3 ad hoc.
+
+Research must now reconcile the completed historical evidence with the frozen `VALIDATION_GATES.md` and persist the narrowest evidence-supported Forecast policy.
+
+Required closeout:
+1. interpret the completed **4,793 injury episodes** and **7,603 non-injury events** against the predeclared promotion gates;
+2. explicitly explain why the broad organizational / availability-participation / all-event H1-H3 paths did or did not earn promotion, without converting descriptive cohort differences into causal penalties;
+3. for injuries, separately address remaining-season availability, conditional healthy production, post-return role/opportunity, recurrence/reinjury risk, and durable H2/H3 survival/career effects;
+4. preserve the no-double-counting rule: where governed current ROS already reflects the event, do not add a second H1 event haircut;
+5. separate structural events (retirement, release/cut, suspension/exempt, team transition/reattachment, durable role change) from temporary injury effects and keep sparse cohorts coarse/explanatory where evidence is insufficient;
+6. determine whether current-season availability should be its own Forecast component and whether any H2/H3 event-state update is empirically justified;
+7. preserve production H3 unless a result clears the frozen gates; no heuristic Intrinsic or Forecast penalty is authorized;
+8. persist the full interpretation, implementation-ready Forecast contract behavior only where supported, limitations/source-rights/provenance, exact execution identities, and the proper OPERATING_PROTOCOL terminal state.
+
+The 2026 provider capture remains Research-only and does not create deployment rights or broad two-source H1 authority.
+
+Before returning control, apply the OPERATING_PROTOCOL self-check: if another authorized Research action can materially advance this directive, perform it. Stop only at `DIRECTIVE COMPLETE — RESEARCH`, `BLOCKED — RESEARCH`, or `MANAGEMENT GATE — RESEARCH`.
