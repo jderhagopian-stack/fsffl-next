@@ -282,3 +282,9 @@ The reopened six-family Y4+ comparison is complete. No defensible cardinal model
   - explicitly decompose temporary availability from conditional healthy production, post-return role, recurrence risk and durable survival/career effects;
   - do not alter production H3 until Management accepts the research result.
 - **Performance / Market latency — HOLD** until the Implementation beta-reliability gate closes.
+
+## 2026-09-26 23:56 ET — Availability incident supersedes physical acceptance
+- **Implementation — ACTIVE, highest priority:** restore last-good serving across restart / State sync / intelligence rebuild; preserve canonical roster display; correct readiness truth; coalesce automatic refresh; then re-run hosted lifecycle acceptance.
+- **Research — continue independently:** current-football-state H3 interpretation/closeout.
+- **Performance — Simulation cold-kernel latency remains queued behind availability restoration.**
+- **Market — HOLD** until the beta is again stably usable.
