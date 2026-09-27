@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from contextlib import nullcontext
 import os
 import secrets
 from pathlib import Path
@@ -49,6 +50,7 @@ from .intelligence_runtime import (
     state_first_runtime_status,
 )
 from .opportunity_workspace import build_opportunity_workspace
+from .resource_coordinator import HeavyWorkCoordinator
 from .runtime import (
     LiveForecastEvidence,
     LiveForecastLoader,
@@ -741,14 +743,20 @@ def create_app(
     behavioral_coordinator: BehavioralRuntimeCoordinator | None = None,
     capability_readiness_reader: CapabilityReadinessReader | None = None,
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
+    heavy_work_coordinator: HeavyWorkCoordinator | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
-    jobs = IntelligenceJobCoordinator(max_workers=2, persistence_store=persistence_store)
+    jobs = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence_store)
     reconciliation_lock = RLock()
     reconciliation_league_by_user: dict[str, str] = {}
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     read_capabilities = capability_readiness_reader or _runtime_capability_readiness
+
+    def heavy_claim(kind: str, key: str):
+        if heavy_work_coordinator is None:
+            return nullcontext()
+        return heavy_work_coordinator.claim(kind=kind, key=key)
 
     def runtime_context_payload(user_id: str) -> dict[str, object]:
         return _runtime_context_payload(
@@ -1210,7 +1218,11 @@ def create_app(
                     IntelligenceJobPhase.BUILDING_FORECASTS,
                     "Building governed multi-source projections for the synced State.",
                 )
-                evidence = forecast_loader(working_state)
+                with heavy_claim(
+                    "forecast",
+                    f"{user_id}:{working_state.state_id}:forecast",
+                ):
+                    evidence = forecast_loader(working_state)
                 require_active_league_identity()
                 store.set_forecast_evidence(
                     user_id,
@@ -1231,7 +1243,11 @@ def create_app(
             current = store.get(user_id)
             simulation = current.simulation_analytics
             if simulation_ready and simulation is None:
-                simulation = simulation_loader(working_state, evidence)
+                with heavy_claim(
+                    "simulation",
+                    f"{user_id}:{working_state.state_id}:simulation",
+                ):
+                    simulation = simulation_loader(working_state, evidence)
                 require_active_league_identity()
                 store.set_simulation_analytics(user_id, simulation)
             elif not simulation_ready:
@@ -1250,7 +1266,11 @@ def create_app(
             current = store.get(user_id)
             values = current.value_evidence
             if values is None or values.league_state_id != working_state.state_id:
-                values = value_loader(working_state)
+                with heavy_claim(
+                    "value",
+                    f"{user_id}:{working_state.state_id}:value",
+                ):
+                    values = value_loader(working_state)
                 require_active_league_identity()
                 store.set_value_evidence(user_id, values)
 
@@ -1345,6 +1365,7 @@ def create_app(
     application.state.intelligence_jobs = jobs
     application.state.capability_readiness_reader = read_capabilities
     application.state.product_capability_reconciler = product_capability_reconciler
+    application.state.heavy_work_coordinator = heavy_work_coordinator
 
     @application.post("/api/intelligence/jobs")
     def start_intelligence_job(
