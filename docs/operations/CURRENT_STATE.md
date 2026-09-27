@@ -811,3 +811,7 @@ The shadow will compute and persist continuous Y4-Y7 Forecast authority and `LT_
 Current Intrinsic, Market, Team Utility, Decision and live player rankings remain unchanged until later explicit promotion.
 
 Runtime sequencing remains protected: PR #278 must finish hosted acceptance before the new shadow is merged/deployed. Latest #278 evidence shows the previous cold PI Y2/Y3 continuity failure corrected and initial full reconciliation within the internal resource target.
+
+
+## 2026-09-27 — Management pauses Long-Term Intrinsic implementation
+Management prefers to finish the existing runtime/latency/continuity work before opening the Long-Term Intrinsic implementation track. The Research contract remains accepted and ready, but shadow implementation is paused until regular Implementation is complete.
