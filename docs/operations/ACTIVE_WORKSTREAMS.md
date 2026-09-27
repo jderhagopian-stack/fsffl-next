@@ -353,3 +353,7 @@ Durable handoff:
 - **Research — ACTIVE / foundational model-authority audit:** symmetric retrospective Forecast comparison with no incumbent privilege; joint injury practical-materiality reinterpretation included; determine whether a bounded new-family challenge is needed.
 - **Y4-Y8 Research — PRESERVED:** exploratory work may continue, but no new production promotion until the foundational Forecast authority audit establishes the base model-selection standard.
 - **Market / general Performance — HOLD** behind product availability acceptance.
+
+
+## 2026-09-27 — Forecast audit completeness
+Research remains ACTIVE. Before closeout, it must directly include the exact deployed Y2/Y3 package `forecast-vnext-a2-burr-20260922` as an audit candidate. Historical A2/D0/D1 evidence may inform interpretation but cannot substitute for direct evaluation of the deployed package. Production remains unchanged.
