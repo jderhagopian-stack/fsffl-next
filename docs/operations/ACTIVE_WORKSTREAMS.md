@@ -409,3 +409,10 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - Treat the ~429.5 MB RSS target as engineering headroom, not a standalone blocker absent real availability failure. Continue hard-limit monitoring.
 - PI history should serve compatible persisted evidence first and reconcile in background.
 - **Long-Term Intrinsic remains PAUSED** until this runtime track reaches terminal acceptance.
+
+
+## 2026-09-27 19:01 ET — repeated #278 rerun confirms next action
+- A fresh-instance rerun reproduced ~63.6-64.0s Market builds under the heavy sequence and ~40.7s active-reconciliation PI history.
+- Cold PI/history and light Market reads remain healthy; therefore the defect is workload-path specific, not universal app slowness.
+- RSS reached ~469.6 MB but remained below the hard Render limit.
+- **Do not rerun unchanged #278 again as the next action. Implement the nonblocking Market execution boundary already authorized by Management.**
