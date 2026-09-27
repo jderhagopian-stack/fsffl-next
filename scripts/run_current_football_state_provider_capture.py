@@ -17,6 +17,7 @@ from fsffl.providers.in_season_projection_sources import (
     RazzballRestOfSeasonProjectionSource,
 )
 from fsffl.providers.sleeper_weekly_stats import SleeperWeeklyStatsSource
+from fsffl.forecast.current_normalization import current_snapshot_from_razzball
 
 OUT=Path("artifacts/research/current_football_state_h3_20260926")
 POSITIONS=("QB","RB","WR","TE")
@@ -132,7 +133,7 @@ def main():
     providers=[]
     failures=[]
     for name,fn in (
-        ("razzball",lambda:RazzballRestOfSeasonProjectionSource().fetch_latest(season=2026)),
+        ("razzball",lambda:current_snapshot_from_razzball(RazzballRestOfSeasonProjectionSource().fetch_latest(season=2026))),
         ("cbs",lambda:CBSInSeasonProjectionSource().fetch_rest_of_season(season=2026)),
     ):
         try:
