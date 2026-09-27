@@ -86,11 +86,16 @@ def _state(as_of: datetime) -> LeagueState:
     )
 
 
-def _runtime(state: LeagueState, *, served: LeagueState | None = None) -> UserRuntimeContext:
+def _runtime(
+    state: LeagueState,
+    *,
+    served: LeagueState | None = None,
+    selected_team_id: str = "a",
+) -> UserRuntimeContext:
     return UserRuntimeContext(
         user_id="jimmy",
         league_state=state,
-        selected_team_id="a",
+        selected_team_id=selected_team_id,
         served_intelligence=(
             ServedIntelligenceSnapshot(
                 league_id=served.league.league_id,
@@ -150,12 +155,12 @@ def test_manifest_last_promotion_and_stale_read_are_truthful() -> None:
     assert payload["intelligence_freshness"]["status"] == "stale_last_good"
     assert payload["intelligence_freshness"]["target_state_id"] == current.state_id
     assert payload["intelligence_freshness"]["served_state_id"] == old.state_id
-    assert payload["presentation_continuity"] == {
-        "mode": "stale_last_good",
-        "target_league_state_id": current.state_id,
-        "served_league_state_id": old.state_id,
-        "served_as_of": old.as_of.isoformat(),
-    }
+    continuity_meta = payload["presentation_continuity"]
+    assert continuity_meta["mode"] == "stale_last_good"
+    assert continuity_meta["target_league_state_id"] == current.state_id
+    assert continuity_meta["served_league_state_id"] == old.state_id
+    assert continuity_meta["served_as_of"] == old.as_of.isoformat()
+    assert continuity_meta["promotion_id"]
 
 
 def test_interrupted_promotion_never_exposes_partial_manifest() -> None:
@@ -231,4 +236,86 @@ def test_promotion_builders_cannot_recursively_read_old_stale_snapshot() -> None
         user_id="jimmy",
         league_id=current.league.league_id,
         league_state_id=current.state_id,
+    )
+
+
+
+def test_stale_snapshot_is_rejected_after_managed_team_changes() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(old, selected_team_id="a"),
+        builders=_builders("old"),
+    )
+    current = _state(old.as_of + timedelta(minutes=5))
+
+    assert continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=_runtime(current, served=old, selected_team_id="b"),
+        surface=HOME_SURFACE,
+    ) is None
+    assert not continuity.has_snapshot(
+        user_id="jimmy",
+        league_id=old.league.league_id,
+        league_state_id=old.state_id,
+        selected_team_id="b",
+    )
+
+
+def test_failed_repromotion_of_same_state_keeps_prior_generation_atomic() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(old),
+        builders=_builders("old"),
+    )
+
+    def fail():
+        raise RuntimeError("replacement failed")
+
+    with pytest.raises(RuntimeError, match="replacement failed"):
+        continuity.promote(
+            user_id="jimmy",
+            runtime=_runtime(old),
+            builders=(
+                (REQUIRED_PRESENTATION_SURFACES[0], lambda: {"surface": "new-home"}),
+                (REQUIRED_PRESENTATION_SURFACES[1], fail),
+            ),
+        )
+
+    current = _state(old.as_of + timedelta(minutes=5))
+    payload = continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=_runtime(current, served=old),
+        surface=HOME_SURFACE,
+    )
+    assert payload is not None
+    assert payload["surface"] == HOME_SURFACE
+
+
+def test_snapshot_integrity_rejects_payload_mutation() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(old),
+        builders=_builders("old"),
+    )
+    surface_record = next(
+        row
+        for row in persistence.artifacts
+        if row.key.artifact_kind == "runtime_presentation_surface"
+    )
+    surface_record.payload["payload"]["surface"] = "tampered"
+
+    assert not continuity.has_snapshot(
+        user_id="jimmy",
+        league_id=old.league.league_id,
+        league_state_id=old.state_id,
+        selected_team_id="a",
     )
