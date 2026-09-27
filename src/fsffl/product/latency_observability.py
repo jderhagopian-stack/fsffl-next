@@ -16,6 +16,7 @@ _TARGET_PATHS = frozenset(
         "/api/my-team",
         "/api/opportunities/workspace",
         "/api/opportunities/workspace/quick",
+        "/api/opportunities/focused-workspace",
         "/api/opportunities/trade",
         "/api/trade-center/browser",
         "/api/trade-center/quick",
@@ -38,7 +39,11 @@ def install_latency_observability(app: FastAPI) -> None:
     @app.middleware("http")
     async def _fsffl_latency_observer(request: Request, call_next):
         path = request.url.path
-        if path not in _TARGET_PATHS:
+        observed = (
+            path in _TARGET_PATHS
+            or path.startswith("/api/opportunities/focused-enrichment/")
+        )
+        if not observed:
             return await call_next(request)
         started = monotonic()
         try:
