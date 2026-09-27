@@ -373,3 +373,54 @@ def test_player_history_background_requests_remain_coalesced_while_memory_bounde
     assert completed is not None
     assert completed.status == PlayerHistoryBuildStatus.COMPLETED
     assert calls == 1
+
+
+def test_dependency_fingerprint_reuses_completed_intrinsic_across_state_advance() -> None:
+    calls = 0
+    fingerprint = {"value": "intrinsic-input-v1"}
+
+    def loader(_context: UserRuntimeContext):
+        nonlocal calls
+        calls += 1
+        return cast(Any, SimpleNamespace(forecast_model_version="forecast-vnext"))
+
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        loader,
+        max_workers=1,
+        response_budget_seconds=0.05,
+        hard_watchdog_seconds=1.0,
+        forecast_coordinate_resolver=lambda _context: "forecast-vnext",
+        intrinsic_input_fingerprint_resolver=lambda _context: fingerprint["value"],
+    )
+    state_one = SimpleNamespace(
+        state_id="state-one",
+        league=SimpleNamespace(league_id="sleeper:league-1"),
+    )
+    context_one = UserRuntimeContext(
+        user_id="u",
+        league_state=cast(Any, state_one),
+    )
+    coordinator.request(context_one)
+    first = _wait_for(coordinator, context_one, IntrinsicBuildStatus.COMPLETED)
+    assert calls == 1
+    assert first.intrinsic_input_fingerprint == "intrinsic-input-v1"
+
+    state_two = SimpleNamespace(
+        state_id="state-two",
+        league=SimpleNamespace(league_id="sleeper:league-1"),
+    )
+    context_two = UserRuntimeContext(
+        user_id="u",
+        league_state=cast(Any, state_two),
+    )
+    reused = coordinator.request(context_two)
+    assert reused.status == IntrinsicBuildStatus.COMPLETED
+    assert reused.league_state_id == "state-two"
+    assert reused.contract is first.contract
+    assert calls == 1
+
+    fingerprint["value"] = "intrinsic-input-v2"
+    coordinator.request(context_two)
+    second = _wait_for(coordinator, context_two, IntrinsicBuildStatus.COMPLETED)
+    assert second.intrinsic_input_fingerprint == "intrinsic-input-v2"
+    assert calls == 2
