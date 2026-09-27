@@ -97,11 +97,24 @@ def test_hosted_startup_is_restore_first_and_does_not_auto_launch_heavy_work() -
     )
     assert (
         'app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)'
-        not in source
+        in source
     )
+    assert "FSFFL_RUN_RUNTIME_AVAILABILITY_ACCEPTANCE" in source
+    acceptance = source.split(
+        "def _maybe_start_state_first_production_acceptance()", 1
+    )[1].split(
+        'app.router.add_event_handler("startup", _log_startup_runtime_readiness)', 1
+    )[0]
+    assert "if not enabled:" in acceptance
+    assert "return" in acceptance.split("if not enabled:", 1)[1].split(
+        "if _persistence_store is None:", 1
+    )[0]
+    assert "FSFFL_RUNTIME_ACCEPTANCE_DELAY_SECONDS" in acceptance
+    assert "sleep(delay_seconds)" in acceptance
     assert "Acceptance is explicit; startup performs restore-only work." in source
     assert '@app.post("/api/runtime/product-acceptance")' in source
     assert '@app.get("/health/runtime-resources")' in source
+    assert '@app.get("/health/runtime-availability-acceptance")' in source
 
 
 def test_readiness_has_one_server_capability_authority_without_legacy_boolean_fallback() -> None:
@@ -140,3 +153,27 @@ def test_hosted_core_intelligence_uses_one_background_worker_and_shared_gate() -
     assert "heavy_work_coordinator=_heavy_work_coordinator" in hosted
     assert "ShapleyIntrinsicBackgroundCoordinator(" in hosted
     assert "BehavioralRuntimeCoordinator(" in hosted
+
+
+
+def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate() -> None:
+    source = Path("src/fsffl/product/state_first_acceptance.py").read_text(
+        encoding="utf-8"
+    )
+    assert "pi_history_during_active_reconciliation" in source
+    assert "reload_during_active_reconciliation" in source
+    assert "fsffl_automatic_state_sync" in source
+    assert "hodor_home_franchise_league" in source
+    assert "pi_history_repeat_after_fsffl_return" in source
+    assert "within_memory_budget" in source
+    assert "peak_rss_bytes" in source
+    assert "process_identity_start" in source
+    assert "process_identity_end" in source
+
+
+def test_live_pi_route_and_acceptance_share_one_history_coordinator() -> None:
+    source = Path("src/fsffl/product/player_intelligence_routes.py").read_text(
+        encoding="utf-8"
+    )
+    assert "app.state.player_history_coordinator = history" in source
+    assert source.count("PlayerHistoryBackgroundCoordinator(") == 1

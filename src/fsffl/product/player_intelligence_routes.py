@@ -208,6 +208,10 @@ def install_player_intelligence_routes(
         heavy_work_coordinator=heavy_work_coordinator,
     )
 
+    # Acceptance/observability may inspect the exact same bounded coordinator
+    # used by the live route. This does not create a second history cache or worker.
+    app.state.player_history_coordinator = history
+
     @app.get("/api/player-intelligence/{player_id}")
     def player_intelligence(
         player_id: str,
