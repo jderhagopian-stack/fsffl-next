@@ -801,3 +801,13 @@ Management classification: **partial success, not completion**. Continue narrow 
 PR #278 is now live. Early startup evidence is materially healthier: full FSFFL readiness restored, Market workspace shell ~0.3s, startup RSS ~295 MB / peak ~296 MB, no active heavy job at acceptance start, and no post-deploy application errors yet. The complete cold/sync/navigation/PI/Market/refresh/switch acceptance journey is still running, so the corrective is not yet accepted.
 
 Long-Term Intrinsic Research is complete at Management gate. Supported consumer: mean annual governed Y4-Y7 Shapley marginal lineup capacity, `(phi4+phi5+phi6+phi7)/4`. Validation used 1,129 complete player-origin windows across 2018-2019 with 2,048 Shapley permutations; the continuous consumer beat Y5-only on MAE and rank correlation across all four frozen Forecast policies, had zero monotonicity violations, and preserved separate model-authority and within-model uncertainty. Current-vs-Long-Term rank correlation is only ~0.663, with median 45-rank movement and 75.5% of players moving at least 20 places, confirming the lenses are materially distinct. Production remains unchanged pending Management promotion.
+
+
+## 2026-09-27 — Management promotes Long-Term Intrinsic from Research to bounded shadow implementation
+Research has completed the Long-Term Intrinsic consumption contract and Management authorizes implementation of a non-authoritative production-grade shadow.
+
+The shadow will compute and persist continuous Y4-Y7 Forecast authority and `LT_RAW=(phi4+phi5+phi6+phi7)/4`, preserving exact-vs-set-valued Forecast policy authority and separate model/outcome uncertainty. It will use a separately versioned 0-10,000 Long-Term Intrinsic presentation ruler while retaining raw Shapley authority bounds.
+
+Current Intrinsic, Market, Team Utility, Decision and live player rankings remain unchanged until later explicit promotion.
+
+Runtime sequencing remains protected: PR #278 must finish hosted acceptance before the new shadow is merged/deployed. Latest #278 evidence shows the previous cold PI Y2/Y3 continuity failure corrected and initial full reconciliation within the internal resource target.
