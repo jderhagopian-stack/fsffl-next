@@ -30,6 +30,7 @@ FRANCHISE_SURFACE = "franchise"
 LEAGUE_ATLAS_SURFACE = "league_atlas"
 LEAGUE_TEAM_VIEWS_SURFACE = "league_team_views"
 MARKET_WORKSPACE_SURFACE = "market_workspace"
+MARKET_VALUE_LENSES_ROSTERED_SURFACE = "market_value_lenses_rostered"
 MARKET_VALUE_LENSES_ALL_SURFACE = "market_value_lenses_all"
 
 REQUIRED_PRESENTATION_SURFACES = (
@@ -38,6 +39,7 @@ REQUIRED_PRESENTATION_SURFACES = (
     LEAGUE_ATLAS_SURFACE,
     LEAGUE_TEAM_VIEWS_SURFACE,
     MARKET_WORKSPACE_SURFACE,
+    MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     MARKET_VALUE_LENSES_ALL_SURFACE,
 )
 
@@ -245,6 +247,7 @@ class PresentationContinuityStore:
         league_id: str,
         league_state_id: str,
         required_surfaces: Sequence[str] = REQUIRED_PRESENTATION_SURFACES,
+        selected_team_id: str | None = None,
     ) -> bool:
         if self._persistence is None:
             return False
@@ -260,9 +263,19 @@ class PresentationContinuityStore:
         available = set(manifest.payload.get("surfaces") or ())
         if not set(required_surfaces).issubset(available):
             return False
+        if (
+            selected_team_id is not None
+            and manifest.payload.get("selected_team_id") != selected_team_id
+        ):
+            return False
         promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
         if not promotion_id:
             return False
+        expected_hashes = {
+            str(item.get("surface")): item
+            for item in (manifest.payload.get("surface_hashes") or ())
+            if isinstance(item, Mapping)
+        }
         for surface in required_surfaces:
             record = self._persistence.get_reusable_artifact(
                 _surface_key(
@@ -275,10 +288,23 @@ class PresentationContinuityStore:
             if record is None:
                 return False
             wrapper = record.payload
+            expected = expected_hashes.get(surface)
+            raw = wrapper.get("payload")
             if (
                 wrapper.get("promotion_id") != promotion_id
                 or wrapper.get("league_state_id") != league_state_id
                 or wrapper.get("surface") != surface
+                or (
+                    selected_team_id is not None
+                    and wrapper.get("selected_team_id") != selected_team_id
+                )
+                or expected is None
+                or not isinstance(raw, Mapping)
+                or wrapper.get("payload_hash") != expected.get("payload_hash")
+                or int(wrapper.get("payload_size_bytes") or -1)
+                != int(expected.get("payload_size_bytes") or -2)
+                or canonical_fingerprint(_json_round_trip(raw))
+                != wrapper.get("payload_hash")
             ):
                 return False
         return True
@@ -310,6 +336,7 @@ class PresentationContinuityStore:
             user_id=user_id,
             league_id=served.league_id,
             league_state_id=served.league_state_id,
+            selected_team_id=runtime.selected_team_id,
         ):
             return None
         manifest = self._persistence.get_reusable_artifact(
@@ -322,7 +349,10 @@ class PresentationContinuityStore:
         if manifest is None:
             return None
         promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
-        if not promotion_id:
+        if (
+            not promotion_id
+            or manifest.payload.get("selected_team_id") != runtime.selected_team_id
+        ):
             return None
 
         record = self._persistence.get_reusable_artifact(
@@ -341,6 +371,7 @@ class PresentationContinuityStore:
             or wrapper.get("league_state_id") != served.league_state_id
             or wrapper.get("promotion_id") != promotion_id
             or wrapper.get("surface") != surface
+            or wrapper.get("selected_team_id") != runtime.selected_team_id
         ):
             return None
         raw = wrapper.get("payload")
