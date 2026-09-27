@@ -166,4 +166,14 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
 
     cached_builder.__name__ = getattr(builder, "__name__", "cached_opportunity_workspace")
     cached_builder.__doc__ = getattr(builder, "__doc__", None)
+
+    def clear_cache() -> int:
+        with lock:
+            count = len(cache)
+            cache.clear()
+        if count:
+            gc.collect()
+        return count
+
+    cached_builder.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_builder
