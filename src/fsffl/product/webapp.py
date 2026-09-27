@@ -1525,10 +1525,10 @@ def create_app(
         enriched = tuple(
             _attach_live_value_profiles(view, runtime.value_evidence)
             for view in views
-        ) if stale_payloads is None else ()
+        )
         freshness = _intelligence_freshness(
             runtime,
-            using_last_good=stale_payloads is not None,
+            using_last_good=False,
         )
         return {
             "league_state_id": league_state.state_id,
