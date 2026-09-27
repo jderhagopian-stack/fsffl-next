@@ -301,6 +301,8 @@ def injury_family(text):
 def injury_episodes(evt,ev,panel,base,pf,weekly):
     injuries=ev["injuries"]; rosters=ev["rosters"]
     by={(r.player_id,int(r.season)):r for r in panel}
+    bounds_cache={s:base.fit_state_boundaries(panel,s+1) for s in range(2012,2025)}
+    weekly_groups={(str(pid),int(season)):g.sort_values("week") for (pid,season),g in weekly.groupby(["player_id","season"])}
     limited=injuries[injuries._official_limitation].copy()
     episode_rows=[]
     for (pid,season),g in limited.groupby(["player_id","season"]):
@@ -309,8 +311,8 @@ def injury_episodes(evt,ev,panel,base,pf,weekly):
         for w in weeks:
             if prev is None or w>prev+1: starts.append(w)
             prev=w
-        wstats=weekly[(weekly.player_id==str(pid))&(weekly.season==int(season))].sort_values("week")
-        if wstats.empty: continue
+        wstats=weekly_groups.get((str(pid),int(season)))
+        if wstats is None or wstats.empty: continue
         for start in starts:
             pre=wstats[wstats.week<start].tail(3)
             if len(pre)<3: continue
@@ -339,7 +341,7 @@ def injury_episodes(evt,ev,panel,base,pf,weekly):
             denom=max(1,int(roster_future.week.nunique()) if len(roster_future) else 18-start+1)
             avail=float(future.week.nunique()/denom)
             recur=any(w>return_week for w in weeks) if return_week is not None else False
-            bounds=base.fit_state_boundaries(panel,int(season)+1)
+            bounds=bounds_cache[int(season)]
             dur={}
             for hh in (1,2):
                 t=pf.target_truth(base,by,ev["roster_year"],ev["injury_map"],str(pid),int(season),str(wstats.iloc[0].position),hh,bounds)
@@ -384,19 +386,28 @@ def episode_summary(eps):
 
 def noninjury_events(ev,weekly,panel,base,pf):
     rosters=ev["rosters"]; by={(r.player_id,int(r.season)):r for r in panel}
+    weekly_groups={(str(pid),int(season)):g.sort_values("week") for (pid,season),g in weekly.groupby(["player_id","season"])}
+    bounds_cache={s:base.fit_state_boundaries(panel,s+1) for s in range(2012,2025)}
+    durability_cache={}
     events=[]
-    def add(pid,season,pos,week,etype,source):
-        w=weekly[(weekly.player_id==pid)&(weekly.season==season)].sort_values("week")
-        pre=w[w.week<week].tail(3); post=w[w.week>=week].head(3)
-        preopp=float(pre.opportunity.mean()) if len(pre) else np.nan; postopp=float(post.opportunity.mean()) if len(post) else np.nan
-        preppg=float(pre.fantasy_points.mean()) if len(pre) else np.nan; postppg=float(post.fantasy_points.mean()) if len(post) else np.nan
-        bounds=base.fit_state_boundaries(panel,season+1); dur={}
+    def durability(pid,season,pos):
+        key=(pid,season,pos)
+        if key in durability_cache: return durability_cache[key]
+        bounds=bounds_cache[season]; dur={}
         for hh in (1,2):
             t=pf.target_truth(base,by,ev["roster_year"],ev["injury_map"],pid,season,pos,hh,bounds)
             target=by.get((pid,season+hh))
             dur[f"y{hh+1}_resolved"]=bool(t["resolved"])
             dur[f"y{hh+1}_persist"]=int(t["persist"]) if t["resolved"] else np.nan
             dur[f"y{hh+1}_points"]=float(target.points) if target is not None else (0.0 if t["resolved"] else np.nan)
+        durability_cache[key]=dur
+        return dur
+    def add(pid,season,pos,week,etype,source):
+        w=weekly_groups.get((pid,season),pd.DataFrame())
+        pre=w[w.week<week].tail(3); post=w[w.week>=week].head(3)
+        preopp=float(pre.opportunity.mean()) if len(pre) else np.nan; postopp=float(post.opportunity.mean()) if len(post) else np.nan
+        preppg=float(pre.fantasy_points.mean()) if len(pre) else np.nan; postppg=float(post.fantasy_points.mean()) if len(post) else np.nan
+        dur=durability(pid,season,pos)
         events.append({
             "player_id":pid,"season":season,"position":pos,"event_week":week,"event_type":etype,"source":source,
             "pre_opportunity":preopp,"post_opportunity":postopp,
@@ -407,7 +418,7 @@ def noninjury_events(ev,weekly,panel,base,pf):
         })
     for (pid,season),g in rosters.groupby(["player_id","season"]):
         gg=g.sort_values("week"); prior_s=None; prior_t=None; pos=""
-        ww=weekly[(weekly.player_id==str(pid))&(weekly.season==int(season))]
+        ww=weekly_groups.get((str(pid),int(season)),pd.DataFrame())
         if not ww.empty: pos=str(ww.iloc[0].position)
         if pos not in POSITIONS: continue
         seen=set()
