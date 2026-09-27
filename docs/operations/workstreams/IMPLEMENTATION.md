@@ -1166,3 +1166,21 @@ Required corrective:
 - repair the hosted acceptance runner/deployment path from PR #273 and rerun the complete cold-wake → restore → auto-sync → surfaces → PI → refresh → league switch journey before asking Management for another acceptance pass.
 
 Do not close this as a Market defect, a cosmetic readiness issue, or a successful PR #271 acceptance. Stop only under OPERATING_PROTOCOL.md at a permitted terminal state.
+
+
+## Management clarification — finish the #271 architecture, do not replace it — 2026-09-27
+Management confirms that PR #271 is the accepted architectural foundation for the beta runtime corrective. It is **not** to be treated as a disposable symptom patch and should not be rolled back in favor of another adapter layer.
+
+The next corrective must complete the architecture on current `main`:
+
+1. add a first-class **compact persisted last-good presentation/read model** that survives canonical State advance and can serve Home, Franchise, League and Market while new exact-State intelligence is rebuilding;
+2. keep that read model semantically separate from the one authoritative heavy Forecast/Simulation/Value working set so continuity does not reintroduce duplicate heavy object graphs;
+3. define an explicit lifecycle: restore last-good presentation → detect newer State → mark reconciliation active → continue serving last-good with truthful stale/as-of labeling → build exact-State intelligence through the bounded coordinator → atomically promote the new presentation/read model when ready;
+4. do not let page navigation, including Market, mutate that lifecycle or trigger its own global recovery behavior;
+5. repair the PR #273 acceptance-harness startup/deployment failure so the harness itself can come up on Render without blocking port binding;
+6. run the full #273 journey against the corrected current-main runtime and require it to prove continuity, readiness truth, no duplicate heavy work, no process recycle/5xx/429, and governed memory headroom;
+7. do not introduce page-specific fallbacks, compatibility adapters, or exceptions that bypass the shared runtime/presentation contract.
+
+This is one architectural completion effort, not separate “fix #271” and “fix #273” projects. PR #273 is acceptance instrumentation layered on the #271 architecture; the corrected runtime and corrected harness must be validated together.
+
+Return only at a permitted OPERATING_PROTOCOL terminal state.
