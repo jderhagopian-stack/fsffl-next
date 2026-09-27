@@ -733,3 +733,11 @@ Management classifies PR #271 as the correct structural runtime foundation, not 
 Implementation is directed to finish that architecture by adding a compact persisted last-good presentation/read model with an atomic promotion lifecycle, while preserving one authoritative heavy in-memory intelligence bundle and bounded heavy concurrency. PR #273 remains the acceptance harness and must be repaired so it deploys without delaying web-port binding, then used to prove the corrected lifecycle end to end.
 
 No page-specific fallback/adaptor solution is authorized.
+
+
+## 2026-09-27 — Research governance corrected: no incumbent privilege
+Management identified a structural flaw in prior Research model-selection practice: earlier models were sometimes treated as incumbents that a later model had to beat by an additional materiality margin.
+
+That policy is superseded. Research model selection is now symmetric. Absolute quality/safety gates remain, but chronology does not confer scientific authority. Differences that are practically negligible or within uncertainty must be reported as such; production switching cost is a separate Product/Implementation consideration.
+
+The joint injury-availability experiment remains frozen and historically valid, but its architectural disposition is reopened for symmetric practical-materiality interpretation. Production H3 and Intrinsic remain unchanged while that interpretation is performed.
