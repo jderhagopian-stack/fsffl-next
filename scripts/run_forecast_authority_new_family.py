@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import json
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -36,6 +37,7 @@ def load_module(path: Path, name: str):
     if spec is None or spec.loader is None:
         raise RuntimeError(path)
     m=importlib.util.module_from_spec(spec)
+    sys.modules[name]=m
     spec.loader.exec_module(m)
     return m
 
