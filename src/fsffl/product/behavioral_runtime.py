@@ -46,6 +46,8 @@ BehavioralWork = Callable[[LeagueState, str], BehavioralSyncResult]
 BehavioralStoreFactory = Callable[[], object]
 _profile_cache_lock = RLock()
 _profile_cache: dict[tuple[str, str], OwnerBehaviorProfile] = {}
+_profile_cache_state_order: list[str] = []
+_MAX_PROFILE_CACHE_STATES = 4
 _hosted_store_lock = RLock()
 _hosted_postgres_stores: dict[str, PostgresBehavioralIntelligenceStore] = {}
 
@@ -85,7 +87,17 @@ def _publish_profiles_for_state(
         if profile is not None:
             entries[(league_state.state_id, team.team_id)] = profile
     with _profile_cache_lock:
+        state_id = league_state.state_id
+        if state_id not in _profile_cache_state_order:
+            _profile_cache_state_order.append(state_id)
         _profile_cache.update(entries)
+        while len(_profile_cache_state_order) > _MAX_PROFILE_CACHE_STATES:
+            stale_state_id = _profile_cache_state_order.pop(0)
+            stale_keys = [
+                key for key in _profile_cache if key[0] == stale_state_id
+            ]
+            for key in stale_keys:
+                _profile_cache.pop(key, None)
 
 
 def default_behavioral_cache_path() -> Path:
