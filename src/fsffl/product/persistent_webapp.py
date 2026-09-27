@@ -222,16 +222,20 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
     payload = dict(_webapp._runtime_capability_readiness(context))
     record = None
     if context.league_state is not None:
-        try:
-            record = _shapley_intrinsic_coordinator.restore_compatible(context)
-        except Exception as exc:
-            _logger.warning(
-                "FSFFL Intrinsic readiness compatible-restore failed state=%s error=%s",
-                context.league_state.state_id,
-                exc,
-            )
+        # Read-only readiness must not hit durable Intrinsic storage on every
+        # product-context poll. Startup/reconciliation already restore compatible
+        # contracts. Prefer the exact in-process lifecycle record and use the
+        # durable restore only as a cold/read-recovery fallback.
+        record = _shapley_intrinsic_coordinator.current(context)
         if record is None:
-            record = _shapley_intrinsic_coordinator.current(context)
+            try:
+                record = _shapley_intrinsic_coordinator.restore_compatible(context)
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL Intrinsic readiness compatible-restore failed state=%s error=%s",
+                    context.league_state.state_id,
+                    exc,
+                )
     intrinsic = _intrinsic_readiness_from_record(record)
     payload["intrinsic"] = intrinsic
     required = ("forecast", "simulation", "current_value", "intrinsic")
@@ -935,7 +939,13 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
         (FRANCHISE_SURFACE, "/api/my-team", {}),
         (LEAGUE_ATLAS_SURFACE, "/api/league/atlas", {}),
         (LEAGUE_TEAM_VIEWS_SURFACE, "/api/league/team-views", {}),
-        (MARKET_WORKSPACE_SURFACE, "/api/opportunities/workspace", {}),
+        (
+            MARKET_WORKSPACE_SURFACE,
+            None,
+            {
+                "presentation_shell": True,
+            },
+        ),
         (
             MARKET_VALUE_LENSES_ROSTERED_SURFACE,
             "/api/league/value-lenses",
@@ -949,6 +959,18 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
     )
     builders = []
     for surface, path, kwargs in specs:
+        if surface == MARKET_WORKSPACE_SURFACE and kwargs.get("presentation_shell"):
+            builders.append(
+                (
+                    surface,
+                    lambda: _webapp.build_opportunity_workspace(
+                        context,
+                        candidate_limit=0,
+                        bilateral_evaluation_limit=0,
+                    ),
+                )
+            )
+            continue
         endpoint = _presentation_route_endpoint(path)
         builders.append(
             (
