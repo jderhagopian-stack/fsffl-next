@@ -1033,3 +1033,41 @@ Physical acceptance should verify:
 6. manual Refresh Intelligence remains non-disruptive and does not create an empty/false-green interval.
 
 Until this physical gate passes, Market and general Performance remain held behind beta availability.
+
+
+## 2026-09-27 08:44–08:46 ET — PR #270 physical acceptance FAILED
+**State: ACTIVE — BETA AVAILABILITY INCIDENT REOPENED**
+
+Management exercised the live PR #270 build on physical iPhone/Safari. The hosted nonphysical PASS did not survive the real cold-wake/user-interaction path.
+
+Physical evidence:
+- 08:44 ET Franchise initially rendered **Restoring your franchise…** while the global strip simultaneously said **Intelligence current**. This is false-green readiness.
+- 08:45 ET Franchise loaded last-good derived fields with the explicit banner **State current · last-good intelligence shown**, while the global strip still said **Intelligence current** and player cards showed **Intrinsic preparing**. Persisted Intrinsic/readiness remained inconsistent across layers.
+- Player Intelligence then failed with **HTTP 502**.
+- League rendered **Unable to load this view / Unable to load League presentation module** while the shell truthfully changed to **State current · intelligence rebuilding**.
+- Home did preserve and display last-good intelligence during rebuild, proving the dual-state presentation path works partially, but its stale/as-of banner has severe mobile text overlap/concatenation and exposes a raw ISO timestamp.
+- Franchise subsequently failed with **HTTP 429**.
+
+Exact hosted/runtime evidence for the same window:
+- the free-tier instance cold-started at ~12:43 UTC and initially restored FSFFL core runtime FULL plus product readiness FULL / Intrinsic FULL;
+- opening the app issued automatic background refresh at 12:44:00 UTC;
+- Player Intelligence history requests for `sleeper:player:4881` progressed 202 → 202 → 200 at 12:45:36 / 12:45:39 / 12:45:42 UTC, so PR #267's sequential history path itself completed;
+- memory nevertheless climbed from ~248 MB at 12:43:30 to ~344 MB at 12:44:00, ~467 MB at 12:45:00, ~494 MB at 12:45:30, and **534.7 MB at 12:46:00 against a 536.9 MB limit**;
+- memory then collapsed to ~3.8 MB by 12:46:30 and a fresh Uvicorn process started at 12:46:42;
+- the restarted process reported `league=None state=None forecast=False simulation=False value=False complete=False` and product readiness unavailable;
+- Render did not emit an explicit OOM kill line, so classify the recycle as **memory-limit-consistent / probable OOM**, not an asserted kernel OOM;
+- the physical 502/League failure coincided with that process recycle.
+
+Required corrective:
+1. treat the combined **cold wake + automatic State sync + concurrent product hydration + Player Intelligence load** as the acceptance scenario; isolated endpoint/runtime checks are insufficient;
+2. bound total process memory under that combined path on the existing free-tier instance; determine which concurrent caches/materializations/rebuilds overlap after cold wake and remove or serialize redundant memory ownership;
+3. preserve the PR #267 one-player history behavior, but do not assume it alone solves total-process memory;
+4. on process restart, restore the persisted user/league context and compatible last-good bundle immediately; `league=None` after an involuntary recycle is unacceptable;
+5. make global readiness derive from the same capability truth exposed by Franchise/Player Intelligence so `Intelligence current` cannot coexist with `Intrinsic preparing`, restoring, or last-good-only presentation;
+6. make League and Player Intelligence degrade to usable last-good/loading states rather than hard 502/module-failure screens where safely possible;
+7. audit the HTTP 429 path and polling/retry behavior after restart so client recovery cannot create a request storm or upstream/provider rate-limit loop;
+8. retain canonical roster visibility and same-league last-good intelligence throughout all recovery phases;
+9. fix the malformed mobile stale/as-of banner only after the functional lifecycle defects above are addressed, but before physical acceptance;
+10. reproduce and validate on hosted cold wake before asking Management for another device pass.
+
+Do not reopen settled Forecast/Intrinsic model authority. Do not move Market or general Performance ahead of this availability corrective. Return only at `DIRECTIVE COMPLETE — IMPLEMENTATION`, a genuine `BLOCKED — IMPLEMENTATION`, or a genuine `MANAGEMENT GATE — IMPLEMENTATION`.
