@@ -328,3 +328,6 @@ Durable handoff:
 - **Research Track A — ACTIVE / non-production:** injury availability/time-to-return + prospective ROS/event snapshot retention.
 - **Research Track B — ACTIVE / non-production:** Y4–Y8 long-horizon architecture and validation remains first-class and must not be dropped. Continue from the existing cell-specific Management gate; do not restart completed work.
 - Production H3 and Intrinsic remain unchanged unless Management separately promotes a result.
+
+## Joint injury-availability challenger — 2026-09-27
+- **Research Track A remains ACTIVE:** after the separate availability/time-to-return result, run a separately frozen joint injury-availability challenger now. It must compare one coherent shared architecture against the separate-model benchmarks without post-hoc tuning or production promotion.
