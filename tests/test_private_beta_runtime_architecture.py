@@ -184,3 +184,32 @@ def test_live_pi_route_and_acceptance_share_one_history_coordinator() -> None:
     )
     assert "app.state.player_history_coordinator = history" in source
     assert source.count("PlayerHistoryBackgroundCoordinator(") == 1
+
+
+
+def test_hosted_surface_acceptance_releases_sequential_payloads_and_bounds_market_caches() -> None:
+    hosted = Path("src/fsffl/product/persistent_webapp.py").read_text(
+        encoding="utf-8"
+    )
+    probe = hosted.split("def _acceptance_surface_probe", 1)[1].split(
+        "def _acceptance_history_probe", 1
+    )[0]
+    workspace_cache = Path(
+        "src/fsffl/product/opportunity_workspace_cache.py"
+    ).read_text(encoding="utf-8")
+    search_cache = Path(
+        "src/fsffl/product/opportunity_search_cache.py"
+    ).read_text(encoding="utf-8")
+    economics_cache = Path(
+        "src/fsffl/product/market_economics_cache.py"
+    ).read_text(encoding="utf-8")
+
+    assert "payloads = {" not in probe
+    assert "del payload" in probe
+    assert "gc.collect()" in probe
+    assert "_MAX_ENTRIES = 1" in workspace_cache
+    assert "_MAX_ENTRIES = 1" in search_cache
+    assert "cache.clear()" in workspace_cache
+    assert "cache.clear()" in search_cache
+    assert "active_scope" in economics_cache
+    assert "cache.clear()" in economics_cache
