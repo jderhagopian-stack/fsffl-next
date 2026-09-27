@@ -359,9 +359,11 @@ def test_running_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == partial.state_id
     assert restored.selected_team_id == "t1"
-    # Identity-only last-good records cannot masquerade as served intelligence;
-    # the derived Forecast/Value/Simulation artifacts are required.
-    assert restored.served_league_state is None
+    # Last-good is restored only as lightweight presentation identity; no stale
+    # Forecast/Simulation/Value graph is materialized into the runtime snapshot.
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_team_ids == ("t1", "t2")
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -422,9 +424,11 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == failed_state.state_id
     assert restored.selected_team_id == "t1"
-    # Identity-only last-good records cannot masquerade as served intelligence;
-    # the derived Forecast/Value/Simulation artifacts are required.
-    assert restored.served_league_state is None
+    # Last-good is restored only as lightweight presentation identity; no stale
+    # Forecast/Simulation/Value graph is materialized into the runtime snapshot.
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_team_ids == ("t1", "t2")
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -485,9 +489,11 @@ def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == interrupted_state.state_id
     assert restored.selected_team_id == "t1"
-    # Identity-only last-good records cannot masquerade as served intelligence;
-    # the derived Forecast/Value/Simulation artifacts are required.
-    assert restored.served_league_state is None
+    # Last-good is restored only as lightweight presentation identity; no stale
+    # Forecast/Simulation/Value graph is materialized into the runtime snapshot.
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_team_ids == ("t1", "t2")
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
