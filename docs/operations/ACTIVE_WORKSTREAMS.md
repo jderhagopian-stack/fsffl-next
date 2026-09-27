@@ -357,3 +357,10 @@ Durable handoff:
 
 ## 2026-09-27 — Forecast audit completeness
 Research remains ACTIVE. Before closeout, it must directly include the exact deployed Y2/Y3 package `forecast-vnext-a2-burr-20260922` as an audit candidate. Historical A2/D0/D1 evidence may inform interpretation but cannot substitute for direct evaluation of the deployed package. Production remains unchanged.
+
+
+## 2026-09-27 15:37 ET — Physical beta priority shift
+- **Implementation / Performance — ACTIVE, immediate product critical path:** ordinary iPhone/Safari use is functional enough to resume testing, but live read latency is unacceptable under concurrent background work (`/api/home` 24.2s, `/api/my-team` 25.6s, `/api/product-context` 39.4s). Make persisted/read-only product surfaces responsive while heavy intelligence work runs.
+- **League Atlas interaction corrective — ACTIVE within same workstream:** team-position drawer is z-index 1003 while Player Intelligence root is z-index 1000, causing PI opened from a player in the drawer to render behind it until the drawer closes. Fix the overlay-stack contract and validate heat-map → position drawer → player → PI on mobile.
+- **Runtime RSS reclaim:** continue in parallel as engineering headroom work; a narrow self-imposed budget miss alone no longer blocks ordinary beta testing absent real availability failure.
+- **Research:** remains independent; Y4-Y8 symmetric authority work continues under its existing directive.
