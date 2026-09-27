@@ -222,16 +222,20 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
     payload = dict(_webapp._runtime_capability_readiness(context))
     record = None
     if context.league_state is not None:
-        try:
-            record = _shapley_intrinsic_coordinator.restore_compatible(context)
-        except Exception as exc:
-            _logger.warning(
-                "FSFFL Intrinsic readiness compatible-restore failed state=%s error=%s",
-                context.league_state.state_id,
-                exc,
-            )
+        # Read-only readiness must not hit durable Intrinsic storage on every
+        # product-context poll. Startup/reconciliation already restore compatible
+        # contracts. Prefer the exact in-process lifecycle record and use the
+        # durable restore only as a cold/read-recovery fallback.
+        record = _shapley_intrinsic_coordinator.current(context)
         if record is None:
-            record = _shapley_intrinsic_coordinator.current(context)
+            try:
+                record = _shapley_intrinsic_coordinator.restore_compatible(context)
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL Intrinsic readiness compatible-restore failed state=%s error=%s",
+                    context.league_state.state_id,
+                    exc,
+                )
     intrinsic = _intrinsic_readiness_from_record(record)
     payload["intrinsic"] = intrinsic
     required = ("forecast", "simulation", "current_value", "intrinsic")
@@ -251,15 +255,24 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
         else "unavailable"
     )
     served = getattr(context, "served_intelligence", None)
-    presentation_available = bool(
-        served is not None
-        and _presentation_continuity.has_snapshot(
+    presentation_available = False
+    if served is not None:
+        presentation_available = _presentation_continuity.known_snapshot_available(
             user_id=context.user_id,
             league_id=served.league_id,
             league_state_id=served.league_state_id,
             selected_team_id=context.selected_team_id,
         )
-    )
+        if not presentation_available:
+            # Cold/startup validation is strict and warms the process-local hint.
+            # Repeated read-only product-context polling then avoids rereading and
+            # hashing the full seven-surface persisted snapshot.
+            presentation_available = _presentation_continuity.has_snapshot(
+                user_id=context.user_id,
+                league_id=served.league_id,
+                league_state_id=served.league_state_id,
+                selected_team_id=context.selected_team_id,
+            )
     served_payload = dict(payload.get("served_last_good") or {})
     served_payload["presentation_available"] = presentation_available
     if served_payload.get("available") and not presentation_available:
@@ -935,7 +948,13 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
         (FRANCHISE_SURFACE, "/api/my-team", {}),
         (LEAGUE_ATLAS_SURFACE, "/api/league/atlas", {}),
         (LEAGUE_TEAM_VIEWS_SURFACE, "/api/league/team-views", {}),
-        (MARKET_WORKSPACE_SURFACE, "/api/opportunities/workspace", {}),
+        (
+            MARKET_WORKSPACE_SURFACE,
+            None,
+            {
+                "presentation_shell": True,
+            },
+        ),
         (
             MARKET_VALUE_LENSES_ROSTERED_SURFACE,
             "/api/league/value-lenses",
@@ -949,6 +968,18 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
     )
     builders = []
     for surface, path, kwargs in specs:
+        if surface == MARKET_WORKSPACE_SURFACE and kwargs.get("presentation_shell"):
+            builders.append(
+                (
+                    surface,
+                    lambda: _webapp.build_opportunity_workspace(
+                        context,
+                        candidate_limit=0,
+                        bilateral_evaluation_limit=0,
+                    ),
+                )
+            )
+            continue
         endpoint = _presentation_route_endpoint(path)
         builders.append(
             (

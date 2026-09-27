@@ -319,3 +319,44 @@ def test_snapshot_integrity_rejects_payload_mutation() -> None:
         league_state_id=old.state_id,
         selected_team_id="a",
     )
+
+
+
+def test_fast_snapshot_hint_is_warmed_only_after_strict_validation() -> None:
+    persistence = MemoryPersistence()
+    state = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    continuity = PresentationContinuityStore(persistence)
+    continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(state),
+        builders=_builders("current"),
+    )
+
+    assert continuity.known_snapshot_available(
+        user_id="jimmy",
+        league_id=state.league.league_id,
+        league_state_id=state.state_id,
+        selected_team_id="a",
+    )
+
+    # A fresh process/store object has no in-memory hint until the durable
+    # manifest/surfaces pass the unchanged strict integrity validation.
+    cold = PresentationContinuityStore(persistence)
+    assert not cold.known_snapshot_available(
+        user_id="jimmy",
+        league_id=state.league.league_id,
+        league_state_id=state.state_id,
+        selected_team_id="a",
+    )
+    assert cold.has_snapshot(
+        user_id="jimmy",
+        league_id=state.league.league_id,
+        league_state_id=state.state_id,
+        selected_team_id="a",
+    )
+    assert cold.known_snapshot_available(
+        user_id="jimmy",
+        league_id=state.league.league_id,
+        league_state_id=state.state_id,
+        selected_team_id="a",
+    )

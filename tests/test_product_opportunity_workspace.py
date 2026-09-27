@@ -231,3 +231,34 @@ def test_trade_opportunity_ui_promotes_only_to_server_returned_market_test_autho
     assert "acceptance is uncalibrated" in ui.lower()
     assert "cannot become ACTIONABLE" in ui
     assert "acceptance_probability" not in ui
+
+
+
+def test_presentation_market_shell_skips_automatic_search_and_decision_work() -> None:
+    workspace = (ROOT / "src/fsffl/product/opportunity_workspace.py").read_text()
+    persistent = (ROOT / "src/fsffl/product/persistent_webapp.py").read_text()
+
+    shell = workspace.split(
+        "if presentation_shell_only:", 1
+    )[1].split("else:", 1)[0]
+    assert "build_roster_aware_trade_candidates" not in shell
+    assert "build_market_discovery" not in shell
+    assert '"search_executed": False' in shell
+    assert '"mode": "presentation_shell"' in workspace
+
+    assert "MARKET_WORKSPACE_SURFACE" in persistent
+    assert '"presentation_shell": True' in persistent
+    assert "candidate_limit=0" in persistent
+    assert "bilateral_evaluation_limit=0" in persistent
+
+
+def test_readiness_polling_prefers_in_process_intrinsic_before_durable_restore() -> None:
+    persistent = (ROOT / "src/fsffl/product/persistent_webapp.py").read_text()
+    readiness = persistent.split(
+        "def _hosted_capability_readiness", 1
+    )[1].split("def _reconcile_hosted_intrinsic", 1)[0]
+
+    current_index = readiness.index("_shapley_intrinsic_coordinator.current(context)")
+    restore_index = readiness.index("_shapley_intrinsic_coordinator.restore_compatible(context)")
+    assert current_index < restore_index
+    assert "known_snapshot_available" in readiness

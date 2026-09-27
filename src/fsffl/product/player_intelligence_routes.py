@@ -326,7 +326,7 @@ def install_player_intelligence_routes(
                     "league_state_id": runtime.league_state.state_id,
                     "player_id": player_id,
                     "build_status": "capacity_wait",
-                    "retry_after_ms": 1500,
+                    "retry_after_ms": 2500,
                     "message": str(exc),
                 },
             )
@@ -345,7 +345,7 @@ def install_player_intelligence_routes(
                     "league_state_id": record.league_state_id,
                     "player_id": player_id,
                     "build_status": record.status.value,
-                    "retry_after_ms": 1500,
+                    "retry_after_ms": 2500,
                     "message": "Historical NFL actuals are being prepared server-side.",
                 },
             )

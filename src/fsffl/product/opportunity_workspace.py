@@ -234,6 +234,10 @@ def _empty_workspace(
             "waiver_materiality": False,
             "post_transaction_simulation": False,
         },
+        "execution": {
+            "mode": "not_ready",
+            "search_executed": False,
+        },
         "authority": {
             "search_role": "candidate_generation_ordering_and_decision_enrichment",
             "recommendation_authority": False,
@@ -525,20 +529,54 @@ def build_opportunity_workspace(
             runtime=runtime,
         )
 
-    candidates = build_roster_aware_trade_candidates(runtime, browser, cardinal)
-    search_generation_diagnostics = dict(
-        getattr(candidates, "diagnostics", {}) or {}
+    presentation_shell_only = (
+        candidate_limit <= 0 and bilateral_evaluation_limit <= 0
     )
-    total_candidate_count = len(candidates)
-    returned = candidates[: max(candidate_limit, 0)]
+    if presentation_shell_only:
+        # Presentation continuity needs the current Market shell and free-agent
+        # context, not a speculative automatic Search/Decision run. Keeping this
+        # branch cheap prevents exact-State presentation promotion from spending
+        # minutes of CPU in the request-serving process. Explicit Market actions
+        # still call the unchanged governed search/evaluation paths.
+        candidates = ()
+        search_generation_diagnostics = {
+            "scope_label": "presentation_shell",
+            "search_executed": False,
+        }
+        total_candidate_count = 0
+        returned = []
+        market_discovery = {
+            "hypotheses": [],
+            "candidate_paths": [],
+            "opportunities": [],
+            "for_you": [],
+            "diagnostics": {
+                "scope_label": "presentation_shell",
+                "search_executed": False,
+                "preliminary_decision_runs": 0,
+                "changed_state_simulation_calls_during_discovery": 0,
+            },
+            "authority": {
+                "acceptance_probability": None,
+                "recommendation_authority": False,
+                "changed_state_simulation_calls_during_discovery": 0,
+            },
+        }
+    else:
+        candidates = build_roster_aware_trade_candidates(runtime, browser, cardinal)
+        search_generation_diagnostics = dict(
+            getattr(candidates, "diagnostics", {}) or {}
+        )
+        total_candidate_count = len(candidates)
+        returned = candidates[: max(candidate_limit, 0)]
 
-    market_discovery = build_market_discovery(
-        runtime,
-        returned,
-        evaluation_limit=bilateral_evaluation_limit,
-        search_generation_diagnostics=search_generation_diagnostics,
-        asset_index=owned_asset_index(browser),
-    )
+        market_discovery = build_market_discovery(
+            runtime,
+            returned,
+            evaluation_limit=bilateral_evaluation_limit,
+            search_generation_diagnostics=search_generation_diagnostics,
+            asset_index=owned_asset_index(browser),
+        )
     evaluated_rows = {}
     for path in market_discovery.get("candidate_paths") or []:
         package = path.get("representative_package") or {}
@@ -590,7 +628,12 @@ def build_opportunity_workspace(
 
     return {
         "status": "ready",
-        "message": "Current roster-aware opportunity discovery workspace is ready.",
+        "message": (
+            "Current Market workspace shell is ready. Run an explicit Market search "
+            "to generate governed trade candidates."
+            if presentation_shell_only
+            else "Current roster-aware opportunity discovery workspace is ready."
+        ),
         "retryable": False,
         "league_state_id": league_state.state_id,
         "as_of": league_state.as_of.isoformat(),
@@ -628,6 +671,7 @@ def build_opportunity_workspace(
         "capabilities": {
             "structural_trade_discovery": True,
             "authoritative_value_ordering": True,
+            "presentation_shell_only": presentation_shell_only,
             "roster_aware_search": runtime.simulation_analytics is not None,
             "owner_strategic_posture_search": True,
             "two_for_one_consolidation_search": True,
@@ -641,6 +685,10 @@ def build_opportunity_workspace(
             "behavioral_acceptance": False,
             "waiver_materiality": bool(available_players),
             "post_transaction_simulation": False,
+        },
+        "execution": {
+            "mode": "presentation_shell" if presentation_shell_only else "governed_discovery",
+            "search_executed": not presentation_shell_only,
         },
         "authority": {
             "search_role": "candidate_generation_ordering_and_decision_enrichment",

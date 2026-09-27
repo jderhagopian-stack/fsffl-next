@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import shutil
 import subprocess
 
@@ -142,8 +143,8 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?pi=20260922-player-intelligence-final-ia1&v=20260927-presentation-continuity1" in index
-    assert "player_intelligence.css?pi=20260922-player-intelligence-final-ia1&v=20260927-presentation-continuity1" in index
+    assert "player_intelligence.js?pi=20260927-atlas-overlay1&v=20260927-presentation-continuity1" in index
+    assert "player_intelligence.css?pi=20260927-atlas-overlay1&v=20260927-presentation-continuity1" in index
     assert "product_shell.js?v=20260927-presentation-continuity1" in index
 
 
@@ -348,3 +349,34 @@ def test_methods_evidence_owns_deep_projected_stat_provenance() -> None:
     assert "source_ids" in methods
     assert "evidence_basis" in methods
     assert "Raw Shapley audit" in methods
+
+
+
+def test_atlas_player_intelligence_overlay_is_above_position_drawer() -> None:
+    app_css = _text("app.css")
+    atlas_css = _text("league_atlas.css")
+    pi_css = _text("player_intelligence.css")
+    atlas_js = _text("league_comparison.js")
+    pi_js = _text("player_intelligence.js")
+
+    atlas_match = re.search(r"--fsffl-overlay-atlas-drawer:(\d+)", app_css)
+    pi_match = re.search(r"--fsffl-overlay-player-intelligence:(\d+)", app_css)
+    assert atlas_match is not None
+    assert pi_match is not None
+    assert int(pi_match.group(1)) > int(atlas_match.group(1))
+
+    assert "z-index:var(--fsffl-overlay-atlas-drawer,1003)" in atlas_css
+    assert "z-index:var(--fsffl-overlay-player-intelligence,1010)" in pi_css
+    assert "class=\"atlas-drawer\"" in atlas_js
+    assert 'data-player-intelligence-id="' in atlas_js
+    assert "document.addEventListener('click'" in pi_js
+    assert "event.stopPropagation();open(id,ctx)" in pi_js
+
+
+def test_player_history_background_work_cooperatively_yields_and_polls_less_often() -> None:
+    service = (STATIC.parent / "player_intelligence.py").read_text(encoding="utf-8")
+    routes = (STATIC.parent / "player_intelligence_routes.py").read_text(encoding="utf-8")
+
+    assert "sleep(0.002)" in service
+    assert "sleep(0.01)" in service
+    assert '"retry_after_ms": 2500' in routes
