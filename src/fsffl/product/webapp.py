@@ -232,8 +232,17 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     )
 
     statuses = (forecast_status, simulation_status, value_status)
+    served = getattr(runtime, "served_intelligence", None)
+    served_available = bool(
+        served is not None
+        and league_state is not None
+        and served.league_state.league.league_id == league_state.league.league_id
+        and served.league_state.state_id != league_state.state_id
+    )
     overall_status = (
-        "full"
+        "rebuilding"
+        if served_available
+        else "full"
         if all(item == "full" for item in statuses)
         else "partial"
         if any(item != "unavailable" for item in statuses)
@@ -268,6 +277,34 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             "reason": (
                 "FSFFL Intrinsic has independent preserved-preseason Forecast authority "
                 "and readiness; it is not inferred from current Value attachment."
+            ),
+        },
+        "target_state": {
+            "league_state_id": league_state.state_id if league_state is not None else None,
+            "as_of": served_state_as_of,
+            "status": (
+                "rebuilding"
+                if served_available
+                else "current"
+                if league_state is not None
+                else "unavailable"
+            ),
+        },
+        "served_last_good": {
+            "available": served_available,
+            "league_state_id": (
+                served.league_state.state_id if served_available else None
+            ),
+            "as_of": (
+                served.league_state.as_of.isoformat()
+                if served_available
+                else None
+            ),
+            "stale": served_available,
+            "label": (
+                "Last-good intelligence remains visible while current State rebuilds."
+                if served_available
+                else None
             ),
         },
     }
@@ -329,6 +366,16 @@ def _runtime_context_payload(
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
         "capability_readiness": capability_reader(runtime),
+        "served_last_good": (
+            {
+                "available": True,
+                "league_state_id": runtime.served_intelligence.league_state.state_id,
+                "as_of": runtime.served_intelligence.league_state.as_of.isoformat(),
+                "stale": True,
+            }
+            if getattr(runtime, "served_intelligence", None) is not None
+            else {"available": False, "league_state_id": None, "as_of": None, "stale": False}
+        ),
         "product_version": "next8-product-v1",
     }
 
@@ -479,6 +526,150 @@ def _team_view_payload(view, value_evidence, forecast_evidence=None) -> dict[str
     }
 
 
+def _served_intelligence_compatible(runtime) -> bool:
+    served = getattr(runtime, "served_intelligence", None)
+    current = getattr(runtime, "league_state", None)
+    if served is None or current is None:
+        return False
+    if served.league_state.league.league_id != current.league.league_id:
+        return False
+    current_team_ids = {team.team_id for team in current.teams}
+    served_team_ids = {team.team_id for team in served.league_state.teams}
+    return bool(current_team_ids and current_team_ids == served_team_ids)
+
+
+def _intelligence_freshness(runtime, *, using_last_good: bool) -> dict[str, object]:
+    current = runtime.league_state
+    served = getattr(runtime, "served_intelligence", None)
+    return {
+        "status": "stale_last_good" if using_last_good else "current",
+        "stale": using_last_good,
+        "target_state_id": current.state_id if current is not None else None,
+        "target_as_of": current.as_of.isoformat() if current is not None else None,
+        "served_state_id": (
+            served.league_state.state_id
+            if using_last_good and served is not None
+            else (current.state_id if current is not None else None)
+        ),
+        "served_as_of": (
+            served.league_state.as_of.isoformat()
+            if using_last_good and served is not None
+            else (current.as_of.isoformat() if current is not None else None)
+        ),
+        "message": (
+            "Canonical State is current; derived intelligence shown below is the "
+            "last-good snapshot while replacement intelligence rebuilds."
+            if using_last_good
+            else "Derived intelligence matches the current canonical State."
+        ),
+    }
+
+
+def _stale_team_view_payload(runtime, *, team_id: str) -> dict[str, object] | None:
+    """Overlay same-league stale derived evidence onto the canonical current roster."""
+
+    if not _served_intelligence_compatible(runtime):
+        return None
+    assert runtime.league_state is not None
+    served = runtime.served_intelligence
+    assert served is not None
+
+    current_view = build_state_only_team_view(
+        runtime.league_state,
+        team_id=team_id,
+    )
+    old_view = None
+    if served.simulation_analytics is not None:
+        old_view = next(
+            (
+                item
+                for item in served.simulation_analytics.team_views
+                if item.team_id == team_id
+            ),
+            None,
+        )
+    if old_view is None:
+        try:
+            old_view = build_forecast_team_view(
+                served.league_state,
+                team_id=team_id,
+                forecasts=(
+                    served.forecast_evidence.raw_forecasts
+                    + served.forecast_evidence.league_scored_forecasts
+                ),
+                forecast_model_version=served.forecast_evidence.model_version,
+            )
+        except ValueError:
+            old_view = None
+
+    current_view = _attach_live_value_profiles(
+        current_view,
+        served.value_evidence,
+    )
+    if old_view is not None:
+        old_players = {item.player_id: item for item in old_view.players}
+        merged_players = []
+        for player in current_view.players:
+            old = old_players.get(player.player_id)
+            if old is None:
+                merged_players.append(player)
+                continue
+            merged_players.append(
+                player.model_copy(
+                    update={
+                        "projected_starter": old.projected_starter,
+                        "projected_lineup_slot": old.projected_lineup_slot,
+                        "forecasts": old.forecasts,
+                        "season_fantasy_points_projection": old.season_fantasy_points_projection,
+                        "value_profile": player.value_profile or old.value_profile,
+                    }
+                )
+            )
+        current_view = current_view.model_copy(
+            update={
+                "players": tuple(merged_players),
+                "position_strengths": old_view.position_strengths,
+                "utility": old_view.utility,
+                "owner_posture": old_view.owner_posture,
+                "starter_average_age": old_view.starter_average_age,
+                "known_starter_age_count": old_view.known_starter_age_count,
+            }
+        )
+
+    payload = _team_view_payload(
+        current_view,
+        served.value_evidence,
+        served.forecast_evidence,
+    )
+    payload["intelligence_freshness"] = _intelligence_freshness(
+        runtime,
+        using_last_good=True,
+    )
+    payload["forecast_authority"]["stale_last_good"] = True
+    payload["forecast_authority"]["target_state_id"] = runtime.league_state.state_id
+    payload["forecast_authority"]["served_state_id"] = served.league_state.state_id
+    return payload
+
+
+def _presentation_runtime(runtime):
+    """Return a read-only runtime using stale derived evidence on current State."""
+
+    if not _served_intelligence_compatible(runtime):
+        return runtime
+    served = runtime.served_intelligence
+    assert served is not None
+    return UserRuntimeContext(
+        user_id=runtime.user_id,
+        league_state=runtime.league_state,
+        selected_team_id=runtime.selected_team_id,
+        forecast_evidence=served.forecast_evidence,
+        simulation_analytics=served.simulation_analytics,
+        value_evidence=served.value_evidence,
+        served_intelligence=served,
+        intelligence_reused=True,
+    )
+
+
 def _managed_team_view_payload(
     runtime,
     *,
@@ -497,19 +688,30 @@ def _managed_team_view_payload(
         raise ValueError("No league is loaded")
     if runtime.selected_team_id is None:
         raise ValueError("No managed team is selected")
+    if runtime.simulation_analytics is None:
+        stale = _stale_team_view_payload(
+            runtime,
+            team_id=runtime.selected_team_id,
+        )
+        if stale is not None:
+            return stale
     if runtime.simulation_analytics is not None:
         view = next(
             item
             for item in runtime.simulation_analytics.team_views
             if item.team_id == runtime.selected_team_id
         )
-        return _team_view_payload(view, runtime.value_evidence, runtime.forecast_evidence)
+        payload = _team_view_payload(view, runtime.value_evidence, runtime.forecast_evidence)
+        payload["intelligence_freshness"] = _intelligence_freshness(runtime, using_last_good=False)
+        return payload
     if state_only_while_enriching:
         view = build_state_only_team_view(
             runtime.league_state,
             team_id=runtime.selected_team_id,
         )
-        return _team_view_payload(view, runtime.value_evidence)
+        payload = _team_view_payload(view, runtime.value_evidence)
+        payload["intelligence_freshness"] = _intelligence_freshness(runtime, using_last_good=False)
+        return payload
     lineup_result = _forecast_lineup_result(runtime)
     if lineup_result is not None:
         view = next(
@@ -517,7 +719,9 @@ def _managed_team_view_payload(
             for item in lineup_result.team_views
             if item.team_id == runtime.selected_team_id
         )
-        return _team_view_payload(view, runtime.value_evidence)
+        payload = _team_view_payload(view, runtime.value_evidence)
+        payload["intelligence_freshness"] = _intelligence_freshness(runtime, using_last_good=False)
+        return payload
     if runtime.forecast_evidence is not None:
         evidence = runtime.forecast_evidence
         forecasts = evidence.raw_forecasts + evidence.league_scored_forecasts
@@ -527,12 +731,16 @@ def _managed_team_view_payload(
             forecasts=forecasts,
             forecast_model_version=evidence.model_version,
         )
-        return _team_view_payload(view, runtime.value_evidence)
+        payload = _team_view_payload(view, runtime.value_evidence)
+        payload["intelligence_freshness"] = _intelligence_freshness(runtime, using_last_good=False)
+        return payload
     view = build_state_only_team_view(
         runtime.league_state,
         team_id=runtime.selected_team_id,
     )
-    return _team_view_payload(view, runtime.value_evidence)
+    payload = _team_view_payload(view, runtime.value_evidence)
+    payload["intelligence_freshness"] = _intelligence_freshness(runtime, using_last_good=False)
+    return payload
 
 
 def _default_simulation_loader(
