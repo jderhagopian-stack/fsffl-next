@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: '20 23 * * *'
   workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/capture_prospective_ros_event_snapshot.py
+      - .github/workflows/prospective-ros-event-capture.yml
   push:
     branches: [main]
     paths:
@@ -41,6 +45,7 @@ jobs:
             --board artifacts/implementation/final_forecast_route_implementation_20260920/FINAL_STANDARD_COORDINATE_BOARD_335.csv \
             --output /tmp/fsffl_ros_event_capture.json
       - name: Persist through GitHub OIDC to private research archive
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
