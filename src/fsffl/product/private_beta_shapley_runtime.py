@@ -339,39 +339,57 @@ class PrivateBetaShapleyContractLoader:
             )
             return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
-        evidence = self._year_one_loader(league_state)
-        if evidence.evidence_basis != "preseason_baseline":
-            raise ValueError(
-                "Frozen Year-1 Intrinsic compatibility requires preseason_baseline evidence"
+        try:
+            evidence = self._year_one_loader(league_state)
+            if evidence.evidence_basis != "preseason_baseline":
+                raise ValueError(
+                    "Frozen Year-1 Intrinsic compatibility requires preseason_baseline evidence"
+                )
+            year_one = _year_one_forecasts(evidence)
+            if not year_one:
+                raise ValueError("Preserved preseason Year-1 Forecast evidence is empty")
+            source_ids = _preseason_source_ids(evidence)
+            future_contract = self._future_forecast_builder(
+                league_state=league_state,
+                raw_forecasts=evidence.raw_forecasts,
+                league_year_one=year_one,
             )
-        year_one = _year_one_forecasts(evidence)
-        if not year_one:
-            raise ValueError("Preserved preseason Year-1 Forecast evidence is empty")
-        source_ids = _preseason_source_ids(evidence)
-        future_contract = self._future_forecast_builder(
-            league_state=league_state,
-            raw_forecasts=evidence.raw_forecasts,
-            league_year_one=year_one,
-        )
-        if not isinstance(future_contract, FutureForecastContract):
-            raise ValueError(
-                "Future Forecast provider must return FutureForecastContract"
+            if not isinstance(future_contract, FutureForecastContract):
+                raise ValueError(
+                    "Future Forecast provider must return FutureForecastContract"
+                )
+            h3_player_ids = set(future_contract.player_ids)
+            h3_year_one = tuple(
+                item for item in year_one if item.player_id in h3_player_ids
             )
-        h3_player_ids = set(future_contract.player_ids)
-        h3_year_one = tuple(
-            item for item in year_one if item.player_id in h3_player_ids
-        )
-        if len(h3_year_one) != len(h3_player_ids):
-            raise ValueError(
-                "Governed H3 subjects are missing preserved Year-1 Forecast evidence"
+            if len(h3_year_one) != len(h3_player_ids):
+                raise ValueError(
+                    "Governed H3 subjects are missing preserved Year-1 Forecast evidence"
+                )
+            return intrinsic_input_fingerprint(
+                context,
+                h3_year_one,
+                future_contract,
+                source_ids,
+                year_one_evidence=evidence,
             )
-        return intrinsic_input_fingerprint(
-            context,
-            h3_year_one,
-            future_contract,
-            source_ids,
-            year_one_evidence=evidence,
-        )
+        except Exception as exc:
+            # Lifecycle coalescing must remain fail-closed without turning a
+            # required-input problem into a pre-background HTTP exception.
+            unavailable = {
+                "league_id": league_state.league.league_id,
+                "season": league_state.league.season,
+                "rules": _intrinsic_rules_payload(league_state),
+                "forecast_model_version": self._future_forecast_model_version,
+                "availability_error": f"{type(exc).__name__}:{exc}",
+            }
+            encoded = json.dumps(
+                unavailable,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            )
+            return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     def __call__(self, context: UserRuntimeContext) -> ShapleyIntrinsicContract:
         league_state = context.league_state
