@@ -32,3 +32,15 @@ Current provider ROS changes are research evidence only. A healthy two-source RO
 ## No production changes
 
 All thresholds govern Research interpretation only. Production H3 remains unchanged.
+
+## Promotion / demotion event detection
+
+These thresholds are frozen before outcome analysis and are used only to identify observed role-change events, not to create forecast multipliers.
+
+Require five prior/current active stat games. At each observed game:
+- prior role = mean opportunity/game over the preceding three active games;
+- recent role = mean opportunity/game over the latest two active games, including the current game;
+- promotion = recent/prior >= 1.50 and recent - prior >= 3 opportunities/game;
+- demotion = recent/prior <= 0.67 and prior - recent >= 3 opportunities/game.
+
+Opportunity is pass attempts for QB, carries + targets for RB, and targets for WR/TE.
