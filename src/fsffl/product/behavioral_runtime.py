@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -16,6 +16,8 @@ from fsffl.behavioral.service import BehavioralIntelligenceService, BehavioralSy
 from fsffl.behavioral.sleeper_history import SleeperBehaviorHistorySource
 from fsffl.behavioral.store import BehavioralIntelligenceStore
 from fsffl.state.models import LeagueState
+
+from .resource_coordinator import HeavyWorkCoordinator
 
 
 _logger = logging.getLogger("fsffl.product.behavioral")
@@ -44,6 +46,8 @@ BehavioralWork = Callable[[LeagueState, str], BehavioralSyncResult]
 BehavioralStoreFactory = Callable[[], object]
 _profile_cache_lock = RLock()
 _profile_cache: dict[tuple[str, str], OwnerBehaviorProfile] = {}
+_profile_cache_state_order: list[str] = []
+_MAX_PROFILE_CACHE_STATES = 4
 _hosted_store_lock = RLock()
 _hosted_postgres_stores: dict[str, PostgresBehavioralIntelligenceStore] = {}
 
@@ -83,7 +87,17 @@ def _publish_profiles_for_state(
         if profile is not None:
             entries[(league_state.state_id, team.team_id)] = profile
     with _profile_cache_lock:
+        state_id = league_state.state_id
+        if state_id not in _profile_cache_state_order:
+            _profile_cache_state_order.append(state_id)
         _profile_cache.update(entries)
+        while len(_profile_cache_state_order) > _MAX_PROFILE_CACHE_STATES:
+            stale_state_id = _profile_cache_state_order.pop(0)
+            stale_keys = [
+                key for key in _profile_cache if key[0] == stale_state_id
+            ]
+            for key in stale_keys:
+                _profile_cache.pop(key, None)
 
 
 def default_behavioral_cache_path() -> Path:
@@ -139,12 +153,15 @@ class BehavioralRuntimeCoordinator:
         *,
         work: BehavioralWork = default_behavioral_work,
         store_factory: BehavioralStoreFactory = default_behavioral_store,
-        max_workers: int = 2,
+        max_workers: int = 1,
+        heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     ) -> None:
         self._work = work
         self._store_factory = store_factory
+        self._heavy_work_coordinator = heavy_work_coordinator
         self._lock = RLock()
         self._records: dict[str, BehavioralRuntimeRecord] = {}
+        self._future_by_user: dict[str, Future[None]] = {}
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="fsffl-behavior")
 
     def _hydrate_durable_record(self, user_id: str) -> BehavioralRuntimeRecord | None:
@@ -261,17 +278,44 @@ class BehavioralRuntimeCoordinator:
                 result=reusable_result,
             )
             self._records[user_id] = record
-            self._executor.submit(
+            previous_future = self._future_by_user.get(user_id)
+            if previous_future is not None and not previous_future.done():
+                previous_future.cancel()
+            future = self._executor.submit(
                 self._run,
                 user_id,
                 league_state,
                 sleeper_league_external_id,
             )
+            self._future_by_user[user_id] = future
             return record
 
     def _run(self, user_id: str, league_state: LeagueState, sleeper_league_external_id: str) -> None:
         try:
-            result = self._work(league_state, sleeper_league_external_id)
+            with self._lock:
+                current = self._records.get(user_id)
+                if (
+                    current is None
+                    or current.league_state_id != league_state.state_id
+                    or current.sleeper_league_external_id != sleeper_league_external_id
+                ):
+                    return
+            if self._heavy_work_coordinator is None:
+                result = self._work(league_state, sleeper_league_external_id)
+            else:
+                with self._heavy_work_coordinator.claim(
+                    kind="behavioral",
+                    key=f"{user_id}:{league_state.state_id}:behavioral",
+                ):
+                    with self._lock:
+                        current = self._records.get(user_id)
+                        if (
+                            current is None
+                            or current.league_state_id != league_state.state_id
+                            or current.sleeper_league_external_id != sleeper_league_external_id
+                        ):
+                            return
+                    result = self._work(league_state, sleeper_league_external_id)
             self._store_factory().put_runtime_context(
                 user_id=user_id,
                 league_state_id=league_state.state_id,

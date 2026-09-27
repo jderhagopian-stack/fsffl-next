@@ -112,7 +112,7 @@ def test_full_capability_context_wins_over_terminal_failed_job() -> None:
     terminal_complete_index = snapshot.index("&&capabilityFull")
     terminal_failure_index = snapshot.index("const prior=Number.isFinite")
     assert capability_index < terminal_complete_index < terminal_failure_index
-    assert "label:'Last-good product intelligence retained'" in snapshot
+    assert "label:'Last-good intelligence identity retained; current capability truth shown'" in snapshot
     assert "step:FSFFL_SHARED_READINESS_STEPS" in snapshot
 
 
@@ -212,7 +212,7 @@ def test_dual_state_rebuild_never_renders_false_green_current_status() -> None:
         "function fsfflCapabilityChip", 1
     )[0]
     assert "capabilities?.overall_status==='rebuilding'" in snapshot
-    assert "State current · intelligence rebuilding · last-good intelligence remains available" in snapshot
+    assert "State current · intelligence rebuilding · last-good identity remains durable" in snapshot
     assert "rebuilding" in snapshot
     assert "capabilityFull" in snapshot
 

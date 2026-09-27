@@ -67,6 +67,7 @@ def test_explorer_missing_and_zero_values_sort_after_real_values() -> None:
 def test_core_ready_presentation_exposes_live_trade_and_opportunity_capabilities() -> None:
     shell = Path("src/fsffl/product/static/product_shell.js").read_text(encoding="utf-8")
     assert "presentDownstreamReadiness" in shell
-    assert "context?.forecast_ready&&context?.simulation_ready&&context?.value_ready" in shell
+    assert "context?.capability_readiness?.overall_status==='full'" in shell
+    assert "context?.forecast_ready&&context?.simulation_ready&&context?.value_ready" not in shell
     assert "Trade Decision is available for submitted deals" in shell
     assert "Opportunity discovery is available" in shell

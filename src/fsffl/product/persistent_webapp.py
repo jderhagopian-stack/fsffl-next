@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import os
-from threading import Thread
+from threading import RLock, Thread
+
+from fastapi import Depends
 
 from fsffl.persistence import (
     persistence_store_from_env,
@@ -51,6 +53,7 @@ from .vnext_future_forecast_provider import (
 from .progressive_delivery_routes import install_progressive_delivery_routes
 from .provisional_k_dst_routes import install_provisional_k_dst_routes
 from .quick_frontier_routes import install_quick_frontier_routes
+from .resource_coordinator import HeavyWorkCoordinator
 from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
 from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
@@ -71,6 +74,7 @@ _runtime_store = PersistentPrivateBetaRuntimeStore(
     _persistence_store,
     state_snapshot_store=_state_snapshot_store,
 )
+_heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
 configure_scenario_cache_persistence(_persistence_store)
 
 # Persist-first restoration is a startup concern for the single-user private beta.
@@ -104,7 +108,8 @@ _behavioral_coordinator = BehavioralRuntimeCoordinator(
         if _behavioral_store is not None
         else default_behavioral_store
     ),
-    max_workers=2,
+    max_workers=1,
+    heavy_work_coordinator=_heavy_work_coordinator,
 )
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
@@ -130,6 +135,7 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     intrinsic_input_fingerprint_resolver=(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
     ),
+    heavy_work_coordinator=_heavy_work_coordinator,
 )
 
 # Reattach an already-built semantic-compatible Intrinsic contract before the
@@ -307,6 +313,7 @@ app = _webapp.create_app(
     persistence_store=_persistence_store,
     capability_readiness_reader=_hosted_capability_readiness,
     product_capability_reconciler=_reconcile_hosted_intrinsic,
+    heavy_work_coordinator=_heavy_work_coordinator,
 )
 
 def _log_startup_runtime_readiness() -> None:
@@ -337,11 +344,22 @@ def _log_startup_runtime_readiness() -> None:
         readiness.get("as_of"),
         readiness.get("intrinsic", {}).get("status"),
     )
+    resource_state = _heavy_work_coordinator.snapshot()
+    logging.getLogger("uvicorn.error").info(
+        "FSFFL startup resource readiness rss=%s peak_rss=%s budget=%s active=%s waiting=%s",
+        resource_state.current_rss_bytes,
+        resource_state.peak_rss_bytes,
+        resource_state.memory_budget_bytes,
+        resource_state.active_kind,
+        resource_state.waiting_count,
+    )
 
 _product_acceptance_state: dict[str, object] = {
-    "status": "pending",
-    "deploy_contract": "post-pr264-product-acceptance-v1",
+    "status": "idle",
+    "deploy_contract": "runtime-architecture-acceptance-v1",
+    "reason": "Acceptance is explicit; startup performs restore-only work.",
 }
+_product_acceptance_lock = RLock()
 
 
 def _run_hosted_product_acceptance() -> None:
@@ -443,13 +461,23 @@ def _run_hosted_product_acceptance() -> None:
         )
 
 
-def _prewarm_hosted_product_acceptance() -> None:
-    Thread(
-        target=_run_hosted_product_acceptance,
-        name="fsffl-hosted-product-acceptance",
-        daemon=True,
-    ).start()
+def _start_hosted_product_acceptance() -> bool:
+    """Start hosted acceptance only after an explicit authenticated request."""
 
+    with _product_acceptance_lock:
+        if _product_acceptance_state.get("status") == "running":
+            return False
+        _product_acceptance_state.clear()
+        _product_acceptance_state.update(
+            status="running",
+            deploy_contract="runtime-architecture-acceptance-v1",
+        )
+        Thread(
+            target=_run_hosted_product_acceptance,
+            name="fsffl-hosted-product-acceptance",
+            daemon=True,
+        ).start()
+        return True
 
 def _maybe_start_state_first_production_acceptance() -> None:
     enabled = os.getenv("FSFFL_RUN_STATE_FIRST_ACCEPTANCE", "0").strip().lower() in {
@@ -499,8 +527,6 @@ def _maybe_start_state_first_production_acceptance() -> None:
 
 
 app.router.add_event_handler("startup", _log_startup_runtime_readiness)
-app.router.add_event_handler("startup", _prewarm_hosted_product_acceptance)
-app.router.add_event_handler("startup", _maybe_start_state_first_production_acceptance)
 
 
 @app.get("/health/product-acceptance")
@@ -508,6 +534,29 @@ def hosted_product_acceptance_health() -> dict[str, object]:
     """Non-sensitive production proof for product-path acceptance."""
 
     return dict(_product_acceptance_state)
+
+
+@app.get("/health/runtime-resources")
+def hosted_runtime_resources() -> dict[str, object]:
+    """Non-sensitive process resource/admission telemetry for beta acceptance."""
+
+    snapshot = _heavy_work_coordinator.snapshot()
+    return {
+        "status": "ok",
+        "contract": "runtime-resource-telemetry-v1",
+        **snapshot.__dict__,
+    }
+
+
+@app.post("/api/runtime/product-acceptance")
+def trigger_hosted_product_acceptance(
+    _user_id: str = Depends(_webapp.require_beta_user),
+) -> dict[str, object]:
+    started = _start_hosted_product_acceptance()
+    return {
+        "started": started,
+        **dict(_product_acceptance_state),
+    }
 install_annual_preseason_scheduler_route(
     app,
     persistence_store=_persistence_store,
@@ -558,6 +607,7 @@ install_player_intelligence_routes(
     intrinsic_coordinator=_shapley_intrinsic_coordinator,
     future_cache=_player_future_forecast_cache,
     persistence_store=_persistence_store,
+    heavy_work_coordinator=_heavy_work_coordinator,
 )
 install_provisional_k_dst_routes(
     app,

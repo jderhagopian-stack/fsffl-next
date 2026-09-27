@@ -359,9 +359,11 @@ def test_running_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == partial.state_id
     assert restored.selected_team_id == "t1"
-    # Identity-only last-good records cannot masquerade as served intelligence;
-    # the derived Forecast/Value/Simulation artifacts are required.
-    assert restored.served_league_state is None
+    # Last-good is restored only as lightweight presentation identity; no stale
+    # Forecast/Simulation/Value graph is materialized into the runtime snapshot.
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_team_ids == ("t1", "t2")
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -422,9 +424,11 @@ def test_failed_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == failed_state.state_id
     assert restored.selected_team_id == "t1"
-    # Identity-only last-good records cannot masquerade as served intelligence;
-    # the derived Forecast/Value/Simulation artifacts are required.
-    assert restored.served_league_state is None
+    # Last-good is restored only as lightweight presentation identity; no stale
+    # Forecast/Simulation/Value graph is materialized into the runtime snapshot.
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_team_ids == ("t1", "t2")
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -485,9 +489,11 @@ def test_interrupted_refresh_restores_durable_last_good_identity() -> None:
     assert restored is not None
     assert restored.league_state.state_id == interrupted_state.state_id
     assert restored.selected_team_id == "t1"
-    # Identity-only last-good records cannot masquerade as served intelligence;
-    # the derived Forecast/Value/Simulation artifacts are required.
-    assert restored.served_league_state is None
+    # Last-good is restored only as lightweight presentation identity; no stale
+    # Forecast/Simulation/Value graph is materialized into the runtime snapshot.
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_team_ids == ("t1", "t2")
     assert any(
         row.key.artifact_kind == LAST_GOOD_ARTIFACT_KIND
         and row.key.input_fingerprint == last_good.state_id
@@ -740,7 +746,7 @@ def test_restore_rejects_prior_first_party_supplement_contract_but_preserves_val
 
 
 
-def test_restart_restores_new_target_state_and_real_last_good_derived_bundle_separately() -> None:
+def test_restart_restores_new_target_state_and_lightweight_last_good_identity_separately() -> None:
     persistence = MemoryPersistence()
     last_good = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
     forecast = _stale_forecast_without_first_party_fumbles_lost(last_good)
@@ -776,11 +782,13 @@ def test_restart_restores_new_target_state_and_real_last_good_derived_bundle_sep
     assert restored.selected_team_id == "t1"
     assert restored.forecast_evidence is None
     assert restored.value_evidence is None
-    assert restored.served_league_state is not None
-    assert restored.served_league_state.state_id == last_good.state_id
-    assert restored.served_forecast_evidence is not None
-    assert restored.served_value_evidence is not None
-    assert restored.served_simulation_analytics is None
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_as_of == last_good.as_of
+    assert restored.served_team_ids == ("t1", "t2")
+    assert not hasattr(restored, "served_forecast_evidence")
+    assert not hasattr(restored, "served_simulation_analytics")
+    assert not hasattr(restored, "served_value_evidence")
 
 
 def test_per_league_last_good_survives_switch_away_and_back() -> None:
@@ -844,3 +852,55 @@ def test_per_league_last_good_survives_switch_away_and_back() -> None:
     assert restored_hodor is not None
     assert restored_hodor.league_state.state_id == hodor.state_id
     assert restored_hodor.value_evidence is not None
+
+
+
+def test_partial_current_restore_migrates_legacy_served_identity_into_league_scope() -> None:
+    persistence = MemoryPersistence()
+    last_good = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    forecast = _stale_forecast_without_first_party_fumbles_lost(last_good)
+    value = _empty_value(last_good)
+
+    persist_runtime_snapshot(
+        persistence,
+        user_id="legacy-migrate",
+        league_state=last_good,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+    )
+    # Simulate an upgraded deployment that has only the historical user-scoped
+    # last-good pointer, not the newer per-league identity record.
+    persistence.artifacts = [
+        row
+        for row in persistence.artifacts
+        if row.key.artifact_kind != LEAGUE_LAST_GOOD_ARTIFACT_KIND
+    ]
+
+    current = _league_state(as_of=datetime(2026, 9, 8, 12, 15, tzinfo=UTC))
+    persist_runtime_snapshot(
+        persistence,
+        user_id="legacy-migrate",
+        league_state=current,
+        selected_team_id="t1",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("legacy-migrate")
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == current.state_id
+    assert restored.served_intelligence is not None
+    assert restored.served_intelligence.league_state_id == last_good.state_id
+
+    migrated = [
+        row
+        for row in persistence.artifacts
+        if row.key.artifact_kind == LEAGUE_LAST_GOOD_ARTIFACT_KIND
+        and row.key.scope_kind == LEAGUE_LAST_GOOD_SCOPE_KIND
+        and row.key.scope_id == "legacy-migrate:sleeper:123"
+        and row.key.model_version == LEAGUE_LAST_GOOD_MODEL_VERSION
+    ]
+    assert len(migrated) == 1
+    migrated_state = LeagueState.model_validate(migrated[0].payload["league_state"])
+    assert migrated_state.state_id == last_good.state_id
+    assert migrated[0].payload["selected_team_id"] == "t2"

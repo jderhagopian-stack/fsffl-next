@@ -68,7 +68,7 @@ def test_newer_same_league_state_supersedes_inflight_result_without_split() -> N
             context=SimpleNamespace(league_state_id=refresh_state.state_id)
         )
     )
-    with pytest.raises(ValueError, match="matching league and forecast evidence"):
+    with pytest.raises(ValueError, match="matching current league and forecast evidence"):
         store.set_simulation_analytics("u", simulation)  # type: ignore[arg-type]
     assert store.get("u").league_state == reconnect_state
 
@@ -85,7 +85,7 @@ def _value_for(state: LeagueState):
     return SimpleNamespace(league_state_id=state.state_id)
 
 
-def test_completed_last_good_bundle_survives_partial_refresh_until_atomic_promotion() -> None:
+def test_last_good_identity_survives_partial_refresh_until_current_promotion() -> None:
     store = PrivateBetaRuntimeStore()
     t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
     last_good_state = _state(t0)
@@ -107,9 +107,11 @@ def test_completed_last_good_bundle_survives_partial_refresh_until_atomic_promot
     assert advanced.simulation_analytics is None
     assert advanced.value_evidence is None
     assert advanced.served_intelligence is not None
-    assert advanced.served_intelligence.league_state == last_good_state
-    assert advanced.served_intelligence.simulation_analytics is old_simulation
-    assert advanced.served_intelligence.value_evidence is old_value
+    assert advanced.served_intelligence.league_state_id == last_good_state.state_id
+    assert advanced.served_intelligence.league_id == last_good_state.league.league_id
+    assert not hasattr(advanced.served_intelligence, "forecast_evidence")
+    assert not hasattr(advanced.served_intelligence, "simulation_analytics")
+    assert not hasattr(advanced.served_intelligence, "value_evidence")
 
     new_forecast = _evidence()
     after_forecast = store.set_forecast_evidence(
@@ -135,7 +137,7 @@ def test_completed_last_good_bundle_survives_partial_refresh_until_atomic_promot
     assert promoted.served_intelligence is None
 
 
-def test_failed_partial_refresh_preserves_completed_last_good_bundle() -> None:
+def test_failed_partial_refresh_preserves_last_good_identity_without_heavy_graph() -> None:
     store = PrivateBetaRuntimeStore()
     t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
     last_good_state = _state(t0)
@@ -166,9 +168,9 @@ def test_failed_partial_refresh_preserves_completed_last_good_bundle() -> None:
     assert retained.simulation_analytics is None
     assert retained.value_evidence is not None
     assert retained.served_intelligence is not None
-    assert retained.served_intelligence.league_state == last_good_state
-    assert retained.served_intelligence.simulation_analytics is old_simulation
-    assert retained.served_intelligence.value_evidence is old_value
+    assert retained.served_intelligence.league_state_id == last_good_state.state_id
+    assert not hasattr(retained.served_intelligence, "simulation_analytics")
+    assert not hasattr(retained.served_intelligence, "value_evidence")
 
 
 def test_stable_partial_target_atomically_promotes_without_simulation() -> None:
@@ -244,8 +246,8 @@ def test_same_league_provider_state_advances_before_downstream_reconciliation() 
     # outputs may not masquerade as current.
     assert current.forecast_evidence is old_forecast
     assert current.served_intelligence is not None
-    assert current.served_intelligence.league_state == last_good_state
-    assert current.served_intelligence.simulation_analytics is old_simulation
+    assert current.served_intelligence.league_state_id == last_good_state.state_id
+    assert not hasattr(current.served_intelligence, "simulation_analytics")
 
 
 

@@ -21,6 +21,7 @@ from .player_intelligence import (
     PlayerHistoryService,
     build_player_intelligence_overview,
 )
+from .resource_coordinator import HeavyWorkCoordinator
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
 
@@ -36,6 +37,10 @@ def _validated_player_id(player_id: str) -> str:
             detail="Player Intelligence requires a valid player id",
         )
     return cleaned
+
+
+class PlayerHistoryCapacityError(RuntimeError):
+    """Bounded background history queue is busy; callers may retry later."""
 
 
 class PlayerHistoryBuildStatus(StrEnum):
@@ -64,8 +69,16 @@ class PlayerHistoryBackgroundCoordinator:
         service: PlayerHistoryService,
         *,
         max_workers: int = 1,
+        max_pending: int = 2,
+        max_records: int = 12,
+        heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     ) -> None:
+        if max_pending < 1 or max_records < max_pending:
+            raise ValueError("history queue bounds are invalid")
         self._service = service
+        self._max_pending = int(max_pending)
+        self._max_records = int(max_records)
+        self._heavy_work_coordinator = heavy_work_coordinator
         self._lock = RLock()
         self._records: dict[tuple[str, str], PlayerHistoryBuildRecord] = {}
         self._executor = ThreadPoolExecutor(
@@ -90,6 +103,33 @@ class PlayerHistoryBackgroundCoordinator:
             existing = self._records.get(key)
             if existing is not None:
                 return existing
+            active_count = sum(
+                1
+                for item in self._records.values()
+                if item.status in {
+                    PlayerHistoryBuildStatus.QUEUED,
+                    PlayerHistoryBuildStatus.RUNNING,
+                }
+            )
+            if active_count >= self._max_pending:
+                raise PlayerHistoryCapacityError(
+                    "Player history preparation is busy; retry after current work completes."
+                )
+            if len(self._records) >= self._max_records:
+                terminal = sorted(
+                    (
+                        (record_key, item)
+                        for record_key, item in self._records.items()
+                        if item.status in {
+                            PlayerHistoryBuildStatus.COMPLETED,
+                            PlayerHistoryBuildStatus.FAILED,
+                        }
+                    ),
+                    key=lambda pair: pair[1].updated_at,
+                )
+                while len(self._records) >= self._max_records and terminal:
+                    stale_key, _ = terminal.pop(0)
+                    self._records.pop(stale_key, None)
             record = PlayerHistoryBuildRecord(
                 league_state_id=key[0],
                 player_id=player_id,
@@ -108,7 +148,14 @@ class PlayerHistoryBackgroundCoordinator:
     ) -> None:
         self._update(key, status=PlayerHistoryBuildStatus.RUNNING)
         try:
-            seasons = self._service.player_history(context, key[1])
+            if self._heavy_work_coordinator is None:
+                seasons = self._service.player_history(context, key[1])
+            else:
+                with self._heavy_work_coordinator.claim(
+                    kind="player_history",
+                    key=f"{key[0]}:{key[1]}",
+                ):
+                    seasons = self._service.player_history(context, key[1])
         except Exception as exc:
             self._update(
                 key,
@@ -150,11 +197,15 @@ def install_player_intelligence_routes(
     future_cache: PlayerFutureForecastCache | None = None,
     history_coordinator: PlayerHistoryBackgroundCoordinator | None = None,
     persistence_store: PersistenceStore | None = None,
+    heavy_work_coordinator: HeavyWorkCoordinator | None = None,
 ) -> None:
     future_forecasts = future_cache or PlayerFutureForecastCache()
     history = history_coordinator or PlayerHistoryBackgroundCoordinator(
         PlayerHistoryService(persistence_store=persistence_store),
         max_workers=1,
+        max_pending=2,
+        max_records=12,
+        heavy_work_coordinator=heavy_work_coordinator,
     )
 
     @app.get("/api/player-intelligence/{player_id}")
@@ -259,6 +310,22 @@ def install_player_intelligence_routes(
             )
         try:
             record = history.request(runtime, player_id)
+        except PlayerHistoryCapacityError as exc:
+            # Capacity is a bounded admission wait, not a terminal availability
+            # failure. Keep the response successful so the existing browser
+            # loading/polling contract honors retry_after_ms.
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": "loading",
+                    "contract_version": PLAYER_INTELLIGENCE_CONTRACT_VERSION,
+                    "league_state_id": runtime.league_state.state_id,
+                    "player_id": player_id,
+                    "build_status": "capacity_wait",
+                    "retry_after_ms": 1500,
+                    "message": str(exc),
+                },
+            )
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 

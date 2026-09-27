@@ -114,9 +114,18 @@ class IntelligenceJobCoordinator:
     of inferring it from isolated microbenchmarks.
     """
 
-    def __init__(self, *, max_workers: int = 2, persistence_store: PersistenceStore | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        max_workers: int = 2,
+        persistence_store: PersistenceStore | None = None,
+        max_records: int = 32,
+    ) -> None:
+        if max_records < 4:
+            raise ValueError("max_records must be at least 4")
         self._lock = RLock()
         self._persistence = persistence_store
+        self._max_records = int(max_records)
         self._jobs: dict[str, IntelligenceJob] = {}
         self._current_by_user: dict[str, str] = {}
         self._job_started_monotonic: dict[str, float] = {}
@@ -235,6 +244,25 @@ class IntelligenceJobCoordinator:
                 and current.status in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}
             ):
                 return current
+
+            terminal = sorted(
+                (
+                    item
+                    for item in self._jobs.values()
+                    if item.status in {
+                        IntelligenceJobStatus.COMPLETED,
+                        IntelligenceJobStatus.FAILED,
+                        IntelligenceJobStatus.INTERRUPTED,
+                    }
+                    and self._current_by_user.get(item.user_id) != item.job_id
+                ),
+                key=lambda item: item.updated_at,
+            )
+            while len(self._jobs) >= self._max_records and terminal:
+                stale = terminal.pop(0)
+                self._jobs.pop(stale.job_id, None)
+                self._job_started_monotonic.pop(stale.job_id, None)
+                self._phase_started_monotonic.pop(stale.job_id, None)
 
             job = IntelligenceJob(
                 job_id=f"intelligence:{uuid4().hex}",

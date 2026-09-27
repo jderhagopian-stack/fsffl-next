@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from fsffl.forecast.fumbles_lost_first_party import (
@@ -61,10 +62,10 @@ class DurableRuntimeSnapshot:
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
-    served_league_state: LeagueState | None = None
-    served_forecast_evidence: LiveForecastEvidence | None = None
-    served_simulation_analytics: LiveSimulationAnalyticsResult | None = None
-    served_value_evidence: CurrentMarketValueRuntimeResult | None = None
+    served_league_id: str | None = None
+    served_league_state_id: str | None = None
+    served_as_of: datetime | None = None
+    served_team_ids: tuple[str, ...] = ()
     restored_from_last_good: bool = False
 
 
@@ -370,6 +371,55 @@ def restore_state_bound_intelligence(
     return forecast, simulation, values
 
 
+def migrate_legacy_last_good_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_id: str,
+) -> bool:
+    """Copy a validated legacy user-scoped last-good record into league scope.
+
+    This is a compatibility migration only. It does not materialize Forecast,
+    Simulation, or Value into memory and therefore preserves the lightweight
+    served-identity runtime architecture.
+    """
+
+    existing = store.get_latest_reusable_artifact(
+        artifact_kind=LEAGUE_LAST_GOOD_ARTIFACT_KIND,
+        scope_kind=LEAGUE_LAST_GOOD_SCOPE_KIND,
+        scope_id=_league_last_good_scope_id(user_id, league_id),
+        model_version=LEAGUE_LAST_GOOD_MODEL_VERSION,
+    )
+    if existing is not None:
+        return False
+
+    legacy = store.get_latest_reusable_artifact(
+        artifact_kind=LAST_GOOD_ARTIFACT_KIND,
+        scope_kind=LAST_GOOD_SCOPE_KIND,
+        scope_id=user_id,
+        model_version=LAST_GOOD_MODEL_VERSION,
+    )
+    if legacy is None:
+        return False
+    try:
+        state = LeagueState.model_validate(legacy.payload["league_state"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    if state.league.league_id != league_id:
+        return False
+
+    selected = legacy.payload.get("selected_team_id")
+    if selected not in {team.team_id for team in state.teams}:
+        selected = None
+    persist_league_last_good_identity(
+        store,
+        user_id=user_id,
+        league_state=state,
+        selected_team_id=selected,
+    )
+    return True
+
+
 def restore_last_good_state_identity(
     store: PersistenceStore,
     *,
@@ -506,18 +556,15 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         league_state=league_state,
     )
 
-    served = None
+    served_state = None
     if not _terminal_bundle(forecast, simulation, values):
-        candidate = restore_last_good_intelligence(
+        candidate = restore_last_good_state_identity(
             store,
             user_id=user_id,
             league_id=league_state.league.league_id,
         )
-        if (
-            candidate is not None
-            and candidate.league_state.state_id != league_state.state_id
-        ):
-            served = candidate
+        if candidate is not None and candidate[0].state_id != league_state.state_id:
+            served_state = candidate[0]
 
     if selected not in {team.team_id for team in league_state.teams}:
         selected = None
@@ -527,15 +574,17 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         forecast_evidence=forecast,
         simulation_analytics=simulation,
         value_evidence=values,
-        served_league_state=(served.league_state if served is not None else None),
-        served_forecast_evidence=(
-            served.forecast_evidence if served is not None else None
+        served_league_id=(
+            served_state.league.league_id if served_state is not None else None
         ),
-        served_simulation_analytics=(
-            served.simulation_analytics if served is not None else None
+        served_league_state_id=(
+            served_state.state_id if served_state is not None else None
         ),
-        served_value_evidence=(
-            served.value_evidence if served is not None else None
+        served_as_of=(served_state.as_of if served_state is not None else None),
+        served_team_ids=(
+            tuple(sorted(team.team_id for team in served_state.teams))
+            if served_state is not None
+            else ()
         ),
         restored_from_last_good=restored_from_last_good,
     )
