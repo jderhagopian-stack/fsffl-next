@@ -616,3 +616,23 @@ Authority sequence remains:
 Implementation must not hard-code arbitrary injury, trade, cut, or depth-chart penalties inside Intrinsic.
 
 Current limitation: the deployed vNext Y2/Y3 contract is intentionally based on a frozen 2026 source coordinate and does not yet have a fully governed live football-state update layer for all such events. This is a Forecast freshness limitation, not permission to ignore the events. Research must determine the governed in-season update mechanism, while Implementation must make cache compatibility depend on Forecast output identity so any future authorized Forecast update automatically invalidates Intrinsic.
+
+## 2026-09-26 — Injury effects split temporary availability from structural dynasty impact
+Management establishes the conceptual treatment for injuries in Forecast → Intrinsic.
+
+A temporary injury must not be interpreted as a generic reduction in player quality. Forecast should decompose:
+1. **current-season availability / games missed**;
+2. **conditional production when active**;
+3. **role/opportunity after return**;
+4. **durable survival / career-trajectory effect**, if supported by evidence.
+
+For a short-duration injury with expected full recovery:
+- current-season expected points should fall in proportion to expected missed availability;
+- conditional healthy production and Y2/Y3 trajectory should remain substantially unchanged unless evidence supports otherwise;
+- Intrinsic should therefore fall modestly through the affected current-season contribution, not collapse across all horizons.
+
+For injuries with meaningful recurrence, recovery, role-loss, or career-longevity evidence, Forecast may also revise conditional production and/or future survival/role probabilities. The size and persistence of that adjustment must be empirically governed by injury type/severity/position/age and horizon, not a hand-coded dynasty penalty.
+
+Return from injury reverses the temporary availability effect as current evidence improves; structural effects persist only to the extent supported by governed evidence.
+
+This policy belongs to Forecast. Intrinsic consumes the resulting multi-horizon Forecast and must not separately apply a second injury penalty.
