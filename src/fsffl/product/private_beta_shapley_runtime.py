@@ -461,6 +461,33 @@ class PrivateBetaShapleyContractLoader:
             )
             return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
+    def restore_compatible(
+        self,
+        context: UserRuntimeContext,
+    ) -> ShapleyIntrinsicContract | None:
+        """Restore an already-built dependency-compatible Intrinsic contract.
+
+        This resolves the accepted semantic input fingerprint but never runs the
+        expensive Shapley calculation. Point-in-time provenance remains on the
+        artifact; compatibility is the dependency-scoped identity from PR #269.
+        """
+
+        if context.league_state is None:
+            return None
+        fingerprint = self.intrinsic_input_fingerprint(context)
+        contract = self._restore_persisted(
+            context,
+            input_fingerprint=fingerprint,
+            forecast_model_version=self._future_forecast_model_version,
+        )
+        if contract is None:
+            return None
+        with self._lock:
+            self._cached_key = fingerprint
+            self._cached_contract = contract
+        return contract
+
+
     def __call__(self, context: UserRuntimeContext) -> ShapleyIntrinsicContract:
         league_state = context.league_state
         if league_state is None:
