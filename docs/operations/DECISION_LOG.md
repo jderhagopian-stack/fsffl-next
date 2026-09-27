@@ -636,3 +636,6 @@ For injuries with meaningful recurrence, recovery, role-loss, or career-longevit
 Return from injury reverses the temporary availability effect as current evidence improves; structural effects persist only to the extent supported by governed evidence.
 
 This policy belongs to Forecast. Intrinsic consumes the resulting multi-horizon Forecast and must not separately apply a second injury penalty.
+
+### Remaining-season basis for temporary injury effects
+For in-season valuation, temporary availability shocks must be applied to **remaining current-season expected utility from the evaluation date**, not retroactively to already-realized games. Already-completed production is historical evidence; it is not future asset utility. As the season progresses, the maximum current-season injury impact on dynasty Intrinsic naturally shrinks because less Y1 utility remains at risk.
