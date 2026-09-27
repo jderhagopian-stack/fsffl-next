@@ -18,6 +18,7 @@ from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
 
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
+PresentationPayloadLoader = Callable[[str, UserRuntimeContext, str], dict[str, object] | None]
 _logger = logging.getLogger("uvicorn.error")
 
 
@@ -28,6 +29,7 @@ def install_league_value_lens_routes(
     contract_loader: IntrinsicContractLoader,
     require_user,
     background_coordinator: ShapleyIntrinsicBackgroundCoordinator | None = None,
+    presentation_payload_loader: PresentationPayloadLoader | None = None,
 ) -> None:
     """Expose Atlas-ready player lenses without creating team value authority."""
 
@@ -47,6 +49,15 @@ def install_league_value_lens_routes(
                 status_code=409,
                 detail="Connect a league before requesting League value lenses",
             )
+        if presentation_payload_loader is not None:
+            surface = (
+                "market_value_lenses_all"
+                if universe == "all"
+                else "market_value_lenses_rostered"
+            )
+            stale = presentation_payload_loader(user_id, runtime, surface)
+            if stale is not None:
+                return stale
 
         intrinsic = None
         intrinsic_error = None

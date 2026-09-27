@@ -54,10 +54,10 @@ def test_concurrent_hosted_store_requests_bootstrap_once(monkeypatch) -> None:
     behavioral_runtime._hosted_postgres_stores.clear()
 
 
-def test_hosted_app_prewarms_behavioral_store_before_serving_requests() -> None:
+def test_hosted_app_keeps_behavioral_store_lazy_for_fast_port_binding() -> None:
     source = PERSISTENT_WEBAPP.read_text(encoding="utf-8")
 
-    assert "_behavioral_store = default_behavioral_store()" in source
-    assert "Behavioral store prewarm unavailable; runtime will retry" in source
-    assert "store_factory=(" in source
-    assert "if _behavioral_store is not None" in source
+    assert "_behavioral_store = default_behavioral_store()" not in source
+    assert "store_factory=default_behavioral_store" in source
+    assert "Behavioral storage stays lazy" in source
+    assert "module import/port binding never waits" in source

@@ -81,6 +81,7 @@ TradeEvaluator = Callable[[LeagueState, BilateralTradeProposal, str], dict[str, 
 SimulationLoader = Callable[[LeagueState, LiveForecastEvidence], LiveSimulationAnalyticsResult]
 CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
+PresentationPayloadLoader = Callable[[str, UserRuntimeContext, str], dict[str, object] | None]
 
 
 class ConnectSleeperLeagueRequest(FrozenModel):
@@ -530,22 +531,17 @@ def _team_view_payload(view, value_evidence, forecast_evidence=None) -> dict[str
     }
 
 
-def _served_intelligence_compatible(runtime) -> bool:
-    served = getattr(runtime, "served_intelligence", None)
-    current = getattr(runtime, "league_state", None)
-    if served is None or current is None:
-        return False
-    if served.league_id != current.league.league_id:
-        return False
-    current_team_ids = {team.team_id for team in current.teams}
-    return bool(
-        current_team_ids
-        and current_team_ids == set(served.team_ids)
-        and served.league_state_id != current.state_id
-    )
+def _presentation_runtime(runtime):
+    """Presentation uses current runtime unless shared persisted continuity resolves first."""
+
+    return runtime
 
 
-def _intelligence_freshness(runtime, *, using_last_good: bool) -> dict[str, object]:
+def _intelligence_freshness(
+    runtime,
+    *,
+    using_last_good: bool,
+) -> dict[str, object]:
     current = runtime.league_state
     served = getattr(runtime, "served_intelligence", None)
     return {
@@ -564,44 +560,13 @@ def _intelligence_freshness(runtime, *, using_last_good: bool) -> dict[str, obje
             else (current.as_of.isoformat() if current is not None else None)
         ),
         "message": (
-            "Canonical State is current. A durable last-good intelligence snapshot exists, "
-            "but heavy derived objects are not resident while replacement intelligence rebuilds."
+            "Last-good governed presentation is being served while exact-State "
+            "intelligence rebuilds."
             if using_last_good
-            else "Derived intelligence matches the current canonical State."
+            else "Derived presentation matches the current canonical State."
         ),
     }
 
-
-def _stale_team_view_payload(runtime, *, team_id: str) -> dict[str, object] | None:
-    """Serve canonical roster/State while durable last-good remains out of RAM."""
-
-    if not _served_intelligence_compatible(runtime):
-        return None
-    assert runtime.league_state is not None
-    served = runtime.served_intelligence
-    assert served is not None
-
-    current_view = build_state_only_team_view(
-        runtime.league_state,
-        team_id=team_id,
-    )
-    payload = _team_view_payload(current_view, None)
-    payload["intelligence_freshness"] = _intelligence_freshness(
-        runtime,
-        using_last_good=True,
-    )
-    payload["forecast_authority"]["stale_last_good"] = True
-    payload["forecast_authority"]["target_state_id"] = runtime.league_state.state_id
-    payload["forecast_authority"]["served_state_id"] = served.league_state_id
-    payload["forecast_authority"]["presentation_mode"] = (
-        "canonical_state_loading; last-good heavy artifacts remain durable but not resident"
-    )
-    return payload
-
-def _presentation_runtime(runtime):
-    """Presentation never hydrates a second heavy last-good runtime graph."""
-
-    return runtime
 
 def _managed_team_view_payload(
     runtime,
@@ -621,13 +586,6 @@ def _managed_team_view_payload(
         raise ValueError("No league is loaded")
     if runtime.selected_team_id is None:
         raise ValueError("No managed team is selected")
-    if runtime.simulation_analytics is None:
-        stale = _stale_team_view_payload(
-            runtime,
-            team_id=runtime.selected_team_id,
-        )
-        if stale is not None:
-            return stale
     if runtime.simulation_analytics is not None:
         view = next(
             item
@@ -744,6 +702,7 @@ def create_app(
     capability_readiness_reader: CapabilityReadinessReader | None = None,
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+    presentation_payload_loader: PresentationPayloadLoader | None = None,
 ) -> FastAPI:
     application = FastAPI(title="FSFFL NEXT Private Beta", version="next8-beta-v1", docs_url="/api/docs", redoc_url=None)
     store = runtime_store or PrivateBetaRuntimeStore()
@@ -764,6 +723,26 @@ def create_app(
             user_id,
             capability_reader=read_capabilities,
         )
+
+    def presentation_payload(
+        user_id: str,
+        runtime: UserRuntimeContext,
+        surface: str,
+        builder: Callable[[], dict[str, object]],
+    ) -> dict[str, object]:
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, surface)
+            if stale is not None:
+                return stale
+        return builder()
+
+    def promote_current_presentation(user_id: str) -> None:
+        promoter = getattr(application.state, "presentation_promoter", None)
+        if not callable(promoter):
+            return
+        result = promoter(user_id, store.get(user_id))
+        if result is not None:
+            store.set_served_intelligence(user_id, None)
 
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
@@ -1197,6 +1176,7 @@ def create_app(
                     if product_capability is not None
                     else "not_configured"
                 )
+                promote_current_presentation(user_id)
                 if product_status not in {"full", "ready"}:
                     return (
                         "Canonical Sleeper State is current. Compatible governed core "
@@ -1295,6 +1275,8 @@ def create_app(
                 raise RuntimeError(
                     "Reconciled intelligence could not be durably checkpointed"
                 )
+            current = store.get(user_id)
+            promote_current_presentation(user_id)
             current = store.get(user_id)
             intrinsic_status = (
                 str(product_capability.get("status"))
@@ -1456,6 +1438,10 @@ def create_app(
             raise HTTPException(status_code=409, detail="No league is loaded")
         if runtime.selected_team_id is None:
             raise HTTPException(status_code=409, detail="No managed team is selected")
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, "home")
+            if stale is not None:
+                return stale
 
         current_job = jobs.current(user_id)
         enrichment_running = bool(
@@ -1504,6 +1490,10 @@ def create_app(
     @application.get("/api/my-team")
     def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, "franchise")
+            if stale is not None:
+                return stale
         current_job = jobs.current(user_id)
         enrichment_running = bool(
             current_job is not None
@@ -1525,25 +1515,17 @@ def create_app(
         league_state = runtime.league_state
         if league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(
+                user_id,
+                runtime,
+                "league_team_views",
+            )
+            if stale is not None:
+                return stale
 
         source_level: str
-        stale_payloads = None
-        if (
-            runtime.simulation_analytics is None
-            and _served_intelligence_compatible(runtime)
-        ):
-            stale_payloads = tuple(
-                _stale_team_view_payload(runtime, team_id=team.team_id)
-                for team in sorted(league_state.teams, key=lambda item: item.team_id)
-            )
-            if all(item is not None for item in stale_payloads):
-                source_level = "state_only_rebuilding_last_good_available"
-                views = ()
-            else:
-                stale_payloads = None
-        if stale_payloads is not None:
-            pass
-        elif runtime.simulation_analytics is not None:
+        if runtime.simulation_analytics is not None:
             views = runtime.simulation_analytics.team_views
             source_level = "simulation_analytics"
         else:
@@ -1574,10 +1556,10 @@ def create_app(
         enriched = tuple(
             _attach_live_value_profiles(view, runtime.value_evidence)
             for view in views
-        ) if stale_payloads is None else ()
+        )
         freshness = _intelligence_freshness(
             runtime,
-            using_last_good=stale_payloads is not None,
+            using_last_good=False,
         )
         return {
             "league_state_id": league_state.state_id,
@@ -1589,11 +1571,7 @@ def create_app(
                 if runtime.value_evidence is not None
                 else []
             ),
-            "team_views": (
-                list(stale_payloads)
-                if stale_payloads is not None
-                else [view.model_dump(mode="json") for view in enriched]
-            ),
+            "team_views": [view.model_dump(mode="json") for view in enriched],
         }
 
     @application.get("/api/league/atlas")
@@ -1604,6 +1582,10 @@ def create_app(
         league_state = runtime.league_state
         if league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, "league_atlas")
+            if stale is not None:
+                return stale
 
         preseason_views = None
         preseason_as_of = None
@@ -1698,6 +1680,14 @@ def create_app(
     @application.get("/api/opportunities/workspace")
     def opportunity_workspace(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
         runtime = store.get(user_id)
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(
+                user_id,
+                runtime,
+                "market_workspace",
+            )
+            if stale is not None:
+                return stale
         try:
             return build_opportunity_workspace(runtime)
         except ValueError as exc:

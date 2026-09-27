@@ -6,7 +6,7 @@ function oppSignedPct(value,digits=1){return typeof value==='number'&&Number.isF
 function oppWords(value){return String(value||'').replaceAll('_',' ')}
 function oppPanel(){return document.querySelector('#generic-screen .panel')}
 function oppContextSnapshot(){const context=state?.context||{};return{leagueId:context.league_id||null,teamId:context.team_id||null,stateId:context.state_id||null,key:`${context.league_id||''}|${context.team_id||''}|${context.state_id||''}`}}
-function oppPayloadMatchesCapturedContext(payload,captured){return Boolean(payload&&captured&&oppContextSnapshot().key===captured.key&&(payload.focal_team_id||null)===captured.teamId&&(payload.league_state_id||null)===captured.stateId)}
+function oppPayloadMatchesCapturedContext(payload,captured){const stateMatches=typeof window.fsfflPresentationPayloadMatchesContext==='function'?window.fsfflPresentationPayloadMatchesContext(payload,{state_id:captured?.stateId}):(payload?.league_state_id||null)===captured?.stateId;return Boolean(payload&&captured&&oppContextSnapshot().key===captured.key&&(payload.focal_team_id||null)===captured.teamId&&stateMatches)}
 function oppWaiverContextIsCurrent(actionId,captured){return actionId===fsfflOpportunityState.waiverSequence&&oppContextSnapshot().key===captured.key}
 function oppTradeContextIsCurrent(actionId,captured){return actionId===fsfflOpportunityState.tradeSequence&&oppContextSnapshot().key===captured.key}
 function oppCancelRetry(){if(fsfflOpportunityState.retryTimer){clearTimeout(fsfflOpportunityState.retryTimer);fsfflOpportunityState.retryTimer=null}}

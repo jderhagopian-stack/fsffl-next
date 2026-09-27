@@ -406,7 +406,45 @@ def run_state_first_production_acceptance(
             daemon=True,
         )
         history_thread.start()
-    probe_surface("reload_during_active_reconciliation")
+
+    # Give the State-first worker a bounded opportunity to activate a newer State
+    # before probing presentation continuity. If no material State change exists,
+    # the same-State reuse path remains valid and no stale presentation is expected.
+    state_change_deadline = monotonic() + min(60.0, timeout_seconds / 4)
+    observed_state_change = False
+    while monotonic() < state_change_deadline:
+        current_state = store.get(user_id).league_state
+        current_job = jobs.current(user_id)
+        if (
+            current_state is not None
+            and current_state.state_id != before_auto.get("state_id")
+        ):
+            observed_state_change = True
+            break
+        if (
+            current_job is not None
+            and current_job.job_id == auto_job_id
+            and current_job.status in {
+                IntelligenceJobStatus.COMPLETED,
+                IntelligenceJobStatus.FAILED,
+                IntelligenceJobStatus.INTERRUPTED,
+            }
+        ):
+            break
+        sleep(poll_seconds)
+
+    active_surface = probe_surface("reload_during_active_reconciliation")
+    if observed_state_change and active_surface is not None:
+        if not active_surface.get("presentation_snapshot_available"):
+            raise StateFirstAcceptanceError(
+                "changed-State reconciliation lost persisted last-good presentation"
+            )
+        if int(active_surface.get("stale_surface_count") or 0) < 5:
+            raise StateFirstAcceptanceError(
+                "changed-State reconciliation did not keep all primary stale surfaces usable: "
+                f"{active_surface}"
+            )
+
     auto_terminal = _wait_for_job(
         jobs=jobs,
         user_id=user_id,
@@ -430,8 +468,18 @@ def run_state_first_production_acceptance(
             "before": before_auto,
             "job": auto_terminal,
             "after": after_auto,
+            "observed_state_change": observed_state_change,
+            "active_surface": active_surface,
         }
     )
+    promoted_surface = probe_surface("post_reconciliation_promoted_surfaces")
+    if promoted_surface is not None and int(
+        promoted_surface.get("stale_surface_count") or 0
+    ) != 0:
+        raise StateFirstAcceptanceError(
+            "new exact-State presentation was not atomically promoted: "
+            f"{promoted_surface}"
+        )
     sample_resources("after_automatic_state_sync")
 
     hodor = activate(HODOR_ACCEPTANCE_LEAGUE, label="hodor_switch")

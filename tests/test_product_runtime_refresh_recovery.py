@@ -134,7 +134,12 @@ def test_last_good_identity_survives_partial_refresh_until_current_promotion() -
     assert promoted.forecast_evidence is new_forecast
     assert promoted.simulation_analytics is new_simulation
     assert promoted.value_evidence is new_value
-    assert promoted.served_intelligence is None
+    # #274 keeps lightweight last-good identity until replacement presentation
+    # promotion succeeds; terminal model layers alone cannot evict continuity.
+    assert promoted.served_intelligence is not None
+    assert promoted.served_intelligence.league_state_id == last_good_state.state_id
+    cleared = store.set_served_intelligence("u", None)
+    assert cleared.served_intelligence is None
 
 
 def test_failed_partial_refresh_preserves_last_good_identity_without_heavy_graph() -> None:
@@ -195,7 +200,10 @@ def test_stable_partial_target_atomically_promotes_without_simulation() -> None:
     assert promoted.forecast_evidence is partial
     assert promoted.simulation_analytics is None
     assert promoted.value_evidence is not None
-    assert promoted.served_intelligence is None
+    assert promoted.served_intelligence is not None
+    assert promoted.served_intelligence.league_state_id == old_state.state_id
+    cleared = store.set_served_intelligence("u", None)
+    assert cleared.served_intelligence is None
 
 
 def test_cross_league_switch_invalidates_old_refresh_generation() -> None:

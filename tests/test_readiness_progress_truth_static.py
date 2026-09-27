@@ -47,7 +47,7 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_repair_advances_one_coherent_hosted_release_generation() -> None:
     index = _index()
     shell = _shell()
-    release = "20260927-dualstate-availability1"
+    release = "20260927-presentation-continuity1"
     assert f"/static/forecast_refresh.js?v={release}" in index
     assert f"/static/product_shell.js?v={release}" in index
     assert f"/static/home_dashboard.js?v={release}" in index
@@ -225,7 +225,7 @@ def test_dual_state_rebuild_never_renders_false_green_current_status() -> None:
 
 def test_dual_state_release_busts_mobile_and_major_surface_cache_generation() -> None:
     index = _index()
-    release = "20260927-dualstate-availability1"
+    release = "20260927-presentation-continuity1"
     for script in (
         "session_recovery.js",
         "mobile_safari_recovery.js",

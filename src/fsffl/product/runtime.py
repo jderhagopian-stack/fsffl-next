@@ -611,13 +611,9 @@ class PrivateBetaRuntimeStore:
             selected = current.selected_team_id
             if selected not in {team.team_id for team in league_state.teams}:
                 selected = None
+            # Presentation continuity is promoted after all product-required layers
+            # reconcile. Keep the prior served identity until that manifest succeeds.
             served = current.served_intelligence
-            if _terminal_intelligence(
-                current.forecast_evidence,
-                current.simulation_analytics,
-                result,
-            ):
-                served = None
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
@@ -659,13 +655,10 @@ class PrivateBetaRuntimeStore:
             valid_team_ids = {team.team_id for team in league_state.teams}
             if selected not in valid_team_ids:
                 selected = None
+            # Do not evict stale presentation merely because core F/S/V is terminal;
+            # hosted product reconciliation clears it after the replacement read model
+            # is durably promoted.
             served = current.served_intelligence
-            if _terminal_intelligence(
-                forecast_evidence,
-                simulation_analytics,
-                value_evidence,
-            ):
-                served = None
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=league_state,
