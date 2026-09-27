@@ -831,3 +831,9 @@ Observed evidence shows #278 materially improved continuity and reduced memory, 
 The product should serve persisted/current or compatible last-good Market state immediately, run structural Search only on explicit action, progressively enrich candidates with Decision evidence, and reserve deep Simulation for explicit drill-down. PI history should follow the same persist-first/background-refresh principle.
 
 The ~429.5 MB internal target is retained as diagnostic headroom but no longer independently blocks acceptance without a real availability symptom. Hard Render memory safety remains enforced.
+
+
+## 2026-09-27 19:01 ET — #278 repeat establishes reproducible blocker
+The second fresh-instance acceptance run of unchanged #278 again failed. Light paths were fast (Market ~0.3-2.5s; cold PI ~1.2s), but the heavy sequence reproduced ~63.6-64.0s Market workspace construction and ~40.7s PI history during active reconciliation. RSS peaked ~469.6 MB, still below the hard Render limit.
+
+This is now treated as reproducible evidence that full Market Search/Decision work must be removed from foreground reads. No further unchanged acceptance rerun is useful before that implementation occurs.
