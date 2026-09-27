@@ -629,3 +629,15 @@ Current terminal checkpoint:
 **BLOCKED — PHYSICAL / AUTHENTICATED HOSTED PLAYER INTELLIGENCE HISTORY ACCEPTANCE REQUIRED.**
 
 Do not reopen Intrinsic authority or State-first persistence for this incident without new direct evidence.
+
+## 2026-09-26 21:46 ET — PR #268 live Intrinsic reuse still not accepted
+PR #268 is merged and deployed, but live evidence shows the new Intrinsic dependency fingerprint changes across otherwise repeated governed builds because it still includes volatile as-of/provenance metadata. Five separate ready 335-player artifacts were persisted between 21:30 and 21:41 ET.
+
+Therefore:
+- readiness semantics correction and Home-card removal are implemented;
+- dependency-scoped reuse architecture is directionally correct but **live compatibility identity remains unstable**;
+- repeated cold Intrinsic work remains possible;
+- hosted acceptance is open;
+- physical acceptance should wait for the fingerprint-stability corrective.
+
+Research current-football-state/H3 update study has not yet produced a new durable checkpoint after Management's latest directive.
