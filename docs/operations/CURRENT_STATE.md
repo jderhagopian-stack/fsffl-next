@@ -725,3 +725,11 @@ During the subsequent user session, the client automatically posted a Sleeper ba
 Observed changed-State memory peaked around **411 MB** against the ~429 MB acceptance ceiling, with no 5xx/429 or recycle in the observed window. Availability acceptance nevertheless **fails** because non-disruptive last-good serving across automatic State advance is still not satisfied.
 
 Implementation remains the sole product critical path. Market and general Performance remain held.
+
+
+## 2026-09-27 — Management retains PR #271 architecture and orders completion
+Management classifies PR #271 as the correct structural runtime foundation, not an earlier bandaid. The remaining defect is an incomplete presentation-continuity layer during canonical State advance.
+
+Implementation is directed to finish that architecture by adding a compact persisted last-good presentation/read model with an atomic promotion lifecycle, while preserving one authoritative heavy in-memory intelligence bundle and bounded heavy concurrency. PR #273 remains the acceptance harness and must be repaired so it deploys without delaying web-port binding, then used to prove the corrected lifecycle end to end.
+
+No page-specific fallback/adaptor solution is authorized.
