@@ -3,7 +3,7 @@
  * State, Value, Decision and acceptance semantics remain unchanged.
  */
 (function(){
-  let requestSeq=0,queued=false,busy=false,dirty=false,error="",submitted=null,completed=null;
+  let requestSeq=0,queued=false,busy=false,dirty=false,error="",submitted=null,completed=null,enrichmentTimer=null,enrichmentJobId=null;
 
   function stateRef(){try{return typeof fsfflOpportunityState!=='undefined'?fsfflOpportunityState:null}catch(_){return null}}
   function selected(){
@@ -34,6 +34,42 @@
     window.dispatchEvent(new CustomEvent('fsffl:market-focus-state-changed',{detail:status()}));
     schedule();
   }
+  function stopEnrichment(){
+    if(enrichmentTimer){clearTimeout(enrichmentTimer);enrichmentTimer=null}
+    enrichmentJobId=null;
+  }
+  function enrichmentStatus(payload){
+    return payload?.decision_enrichment||{};
+  }
+  async function pollEnrichment(jobId,requestId,submittedKey){
+    if(!jobId||requestId!==requestSeq||!onMarket())return;
+    enrichmentJobId=jobId;
+    try{
+      const record=await api('/api/opportunities/focused-enrichment/'+encodeURIComponent(jobId));
+      if(requestId!==requestSeq||!onMarket()||enrichmentJobId!==jobId)return;
+      const status=String(record?.status||'');
+      if(status==='completed'&&record?.result){
+        const s=stateRef(),payload=record.result,context=window.state?.context||state?.context||{};
+        if(!s||keyOf(selected())!==submittedKey)return;
+        if(payload?.league_state_id&&context.state_id&&payload.league_state_id!==context.state_id)return;
+        if(payload?.focal_team_id&&context.team_id&&payload.focal_team_id!==context.team_id)return;
+        s.payload=payload;
+        if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace();
+        window.dispatchEvent(new CustomEvent('fsffl:market-decision-enrichment-applied',{detail:{job_id:jobId}}));
+        stopEnrichment();
+        return;
+      }
+      if(status==='failed'||status==='interrupted'){
+        stopEnrichment();
+        window.dispatchEvent(new CustomEvent('fsffl:market-decision-enrichment-settled',{detail:{job_id:jobId,status,error:record?.error||''}}));
+        return;
+      }
+      enrichmentTimer=setTimeout(()=>pollEnrichment(jobId,requestId,submittedKey),750);
+    }catch(_error){
+      if(requestId!==requestSeq||enrichmentJobId!==jobId)return;
+      enrichmentTimer=setTimeout(()=>pollEnrichment(jobId,requestId,submittedKey),1200);
+    }
+  }
   function setBusy(next){
     busy=Boolean(next);
     const control=document.querySelector('#opp-posture-control');if(!control)return;
@@ -45,10 +81,11 @@
   }
   function updateMethods(){
     const p=document.querySelector('#opp-posture-control .opp-posture-methods p');if(!p)return;
-    p.textContent='Market Focus is submitted explicitly. Intent and strategic lens constrain server-owned discovery before the candidate limit where governed evidence supports it. The calculated competitive state, Value coordinates, Decision truth and acceptance uncertainty do not change.';
+    p.textContent='Market Focus submits structural Search explicitly. Structural results return first; bounded bilateral Decision enrichment is progressive in the background. Deep Simulation remains an explicit offer drill-down. Value coordinates, Decision truth and acceptance uncertainty do not change.';
   }
   function markConfigured(){
     requestSeq+=1;
+    stopEnrichment();
     dirty=true;
     error="";
     if(busy)setBusy(false);
@@ -91,6 +128,10 @@
       completed={...configured,outcome:payload?.trade_discovery?.focus_outcome||null};
       if(typeof renderOpportunityWorkspace==='function')renderOpportunityWorkspace();
       window.dispatchEvent(new CustomEvent('fsffl:market-focus-applied',{detail:{...applied,outcome:completed.outcome}}));
+      const enrich=enrichmentStatus(payload);
+      if(enrich?.job_id&&['queued','running'].includes(String(enrich.status||''))){
+        void pollEnrichment(String(enrich.job_id),id,submittedKey);
+      }
     }catch(err){
       if(id!==requestSeq)return;
       error=`Unable to run this search: ${err?.message||String(err)}`;
@@ -105,6 +146,6 @@
   window.fsfflMarketFocus={submit,refresh:submit,selected,status,markConfigured};
   window.addEventListener('fsffl:market-intent-changed',markConfigured);
   window.addEventListener('fsffl:market-rendered',schedule);
-  window.addEventListener('fsffl:product-context-updated',()=>{requestSeq+=1;busy=false;dirty=false;error="";submitted=null;completed=null;notify()});
+  window.addEventListener('fsffl:product-context-updated',()=>{requestSeq+=1;stopEnrichment();busy=false;dirty=false;error="";submitted=null;completed=null;notify()});
   document.addEventListener('DOMContentLoaded',schedule);
 })();
