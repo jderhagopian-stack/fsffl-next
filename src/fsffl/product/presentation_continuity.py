@@ -85,14 +85,14 @@ def _surface_key(
     *,
     user_id: str,
     league_id: str,
-    league_state_id: str,
+    promotion_id: str,
     surface: str,
 ) -> ArtifactKey:
     return ArtifactKey(
         artifact_kind=PRESENTATION_SURFACE_ARTIFACT_KIND,
         scope_kind=PRESENTATION_SCOPE_KIND,
         scope_id=_surface_scope_id(user_id, league_id, surface),
-        input_fingerprint=league_state_id,
+        input_fingerprint=promotion_id,
         model_version=PRESENTATION_MODEL_VERSION,
     )
 
@@ -145,6 +145,11 @@ class PresentationContinuityStore:
             raise ValueError("presentation promotion surfaces must be unique")
 
         now = utc_now()
+        promotion_id = canonical_fingerprint(
+            state.state_id,
+            now.isoformat(),
+            surfaces,
+        )
         total_bytes = 0
         surface_hashes: list[tuple[str, str, int]] = []
         self._local.promoting = True
@@ -166,7 +171,7 @@ class PresentationContinuityStore:
                         key=_surface_key(
                             user_id=user_id,
                             league_id=state.league.league_id,
-                            league_state_id=state.state_id,
+                            promotion_id=promotion_id,
                             surface=surface,
                         ),
                         payload={
@@ -174,6 +179,7 @@ class PresentationContinuityStore:
                             "surface": surface,
                             "league_id": state.league.league_id,
                             "league_state_id": state.state_id,
+                            "promotion_id": promotion_id,
                             "as_of": state.as_of.isoformat(),
                             "selected_team_id": runtime.selected_team_id,
                             "payload_hash": payload_hash,
@@ -199,6 +205,7 @@ class PresentationContinuityStore:
                     "contract": PRESENTATION_MODEL_VERSION,
                     "league_id": state.league.league_id,
                     "league_state_id": state.state_id,
+                    "promotion_id": promotion_id,
                     "as_of": state.as_of.isoformat(),
                     "selected_team_id": runtime.selected_team_id,
                     "surfaces": list(surfaces),
@@ -251,7 +258,30 @@ class PresentationContinuityStore:
         if manifest is None:
             return False
         available = set(manifest.payload.get("surfaces") or ())
-        return set(required_surfaces).issubset(available)
+        if not set(required_surfaces).issubset(available):
+            return False
+        promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
+        if not promotion_id:
+            return False
+        for surface in required_surfaces:
+            record = self._persistence.get_reusable_artifact(
+                _surface_key(
+                    user_id=user_id,
+                    league_id=league_id,
+                    promotion_id=promotion_id,
+                    surface=surface,
+                )
+            )
+            if record is None:
+                return False
+            wrapper = record.payload
+            if (
+                wrapper.get("promotion_id") != promotion_id
+                or wrapper.get("league_state_id") != league_state_id
+                or wrapper.get("surface") != surface
+            ):
+                return False
+        return True
 
     def load_for_runtime(
         self,
@@ -282,12 +312,24 @@ class PresentationContinuityStore:
             league_state_id=served.league_state_id,
         ):
             return None
+        manifest = self._persistence.get_reusable_artifact(
+            _manifest_key(
+                user_id=user_id,
+                league_id=served.league_id,
+                league_state_id=served.league_state_id,
+            )
+        )
+        if manifest is None:
+            return None
+        promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
+        if not promotion_id:
+            return None
 
         record = self._persistence.get_reusable_artifact(
             _surface_key(
                 user_id=user_id,
                 league_id=served.league_id,
-                league_state_id=served.league_state_id,
+                promotion_id=promotion_id,
                 surface=surface,
             )
         )
@@ -297,6 +339,7 @@ class PresentationContinuityStore:
         if (
             wrapper.get("league_id") != served.league_id
             or wrapper.get("league_state_id") != served.league_state_id
+            or wrapper.get("promotion_id") != promotion_id
             or wrapper.get("surface") != surface
         ):
             return None
@@ -322,5 +365,6 @@ class PresentationContinuityStore:
             "target_league_state_id": current.state_id,
             "served_league_state_id": served.league_state_id,
             "served_as_of": served.as_of.isoformat(),
+            "promotion_id": promotion_id,
         }
         return payload
