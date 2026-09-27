@@ -1351,7 +1351,7 @@ Answer: **No.**
 **MANAGEMENT GATE — CELL-SPECIFIC LONG-HORIZON ARCHITECTURE**
 
 ### Current-state update layer for production H3 Forecast
-**Required research — do not modify production H3 ad hoc**
+**State: MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE**
 
 Management identified a production freshness gap: the frozen vNext Y2/Y3 source coordinate is not sufficient by itself to respond to material in-season football-state changes such as injury/return, NFL trade, cut/signing, role promotion/demotion, suspension, or retirement.
 
@@ -1400,3 +1400,80 @@ Required closeout:
 The 2026 provider capture remains Research-only and does not create deployment rights or broad two-source H1 authority.
 
 Before returning control, apply the OPERATING_PROTOCOL self-check: if another authorized Research action can materially advance this directive, perform it. Stop only at `DIRECTIVE COMPLETE — RESEARCH`, `BLOCKED — RESEARCH`, or `MANAGEMENT GATE — RESEARCH`.
+
+
+### Current football-state H3 Research closeout — 2026-09-27
+
+**State: MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE**
+
+Durable handoff:
+- `artifacts/research/current_football_state_h3_20260926/RESEARCH_INTERPRETATION.md`
+- `artifacts/research/current_football_state_h3_20260926/RECOMMENDED_FORECAST_CONTRACT.md`
+- `artifacts/research/current_football_state_h3_20260926/INJURY_DECOMPOSITION_INTERPRETATION.md`
+- `artifacts/research/current_football_state_h3_20260926/EVENT_SPECIFIC_GATE_AUDIT.csv`
+- `artifacts/research/current_football_state_h3_20260926/LIMITATIONS_AND_FOLLOWUP.md`
+- `artifacts/research/current_football_state_h3_20260926/FINAL_RESULT.json`
+- `artifacts/research/current_football_state_h3_20260926/REPRODUCIBILITY.md`
+
+Historical validation:
+- chronological holdouts: 2018–2021;
+- **4,793 injury episodes**;
+- **7,603 non-injury events**;
+- production H3 unchanged.
+
+Broad event-layer result:
+- organizational, availability/participation, and all-event paths fail the frozen promotion gates at **H1, H2 and H3**;
+- several paths improve point MAE modestly, but either miss the >=2% materiality requirement or materially worsen persistence/state calibration;
+- therefore no general event-rich Forecast updater is promoted.
+
+Injury result:
+- severity strongly stratifies remaining-season participation, supporting a separate **remaining-season availability** component;
+- descriptive post-return PPG/opportunity and recurrence differences are **not causal penalties**;
+- any-injury, non-IR injury and reserve-injury OOT layers all fail H1/H2/H3 event-family promotion;
+- no generic injury-driven H2/H3 adjustment is supported;
+- conditional healthy production and future survival remain baseline unless separately validated.
+
+Event-specific structural audit:
+- **release/cut H3** is the only predeclared event cohort to clear the frozen event-family gate:
+  - n=62 across four holdouts;
+  - persistence-Brier improvement **2.61%**;
+  - state-Brier improvement **0.70%**;
+  - point MAE worsens **1.93%**, within the 5% tolerance;
+  - persistence direction improves in all four holdouts.
+- no position subgroup reaches n>=30, so this supports only a **coarse H3 attachment/survival-risk state**, not a position-specific cardinal multiplier.
+- team change, reattachment, suspension/exempt and injury cohorts do not earn precise H2/H3 updater authority.
+- promotion/demotion remain observed current-role evidence, not separate causal multipliers.
+
+Current provider capture:
+- CBS mapped 292 rows; Razzball 330;
+- exact two-source standard scoring exists for only **54 players**;
+- current injury cohort n=58 has median ROS / structural remaining-preseason prior **1.048×**;
+- reserve cohort n=5 has median **0.724×**, with no exact two-source cases;
+- source rights remain uncleared, so this is Research evidence rather than broad current H1 authority.
+
+Double-count rule:
+- when a governed current ROS H1 is authoritative, it owns integrated current availability/role/conditional-production expectation;
+- **do not add a second event haircut to the same H1 points**;
+- event state remains provenance/explanation and may feed only separately validated H2/H3 state models.
+
+Recommended narrow Forecast contract:
+1. football-state event triggers Forecast reevaluation;
+2. H1 explicitly separates remaining-season availability from conditional active production;
+3. authoritative current ROS, when available, owns H1 without a second event penalty;
+4. without ROS authority, do not manufacture a generic injury/transaction multiplier; only separately governed direct availability/eligibility evidence may alter the availability component;
+5. no generic temporary-injury H2/H3 penalty;
+6. release/cut may carry only a coarse H3 attachment/survival-risk state pending further validation;
+7. Intrinsic consumes changed Forecast output only and never applies its own event penalty.
+
+Justified follow-up:
+- prospectively retain provider ROS revisions + event state;
+- build a separate chronological injury availability/time-to-return model;
+- separately validate post-return role;
+- revalidate release/cut H3 with more support;
+- study recurrence/durable injury only as incremental evidence over current role/provider baselines.
+
+Question: **Is another authorized Research action available now that materially advances this directive without a Management decision or new provider-revision evidence?**
+
+Answer: **No.**
+
+**MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE**
