@@ -184,7 +184,7 @@ def test_readiness_as_of_is_derived_from_governed_payload_not_browser_now() -> N
     )[0]
     assert "const readiness=fsfflCapabilityReadiness()" in helper
     assert "readiness?.as_of" in helper
-    assert "served_last_good?.as_of" in helper
+    assert "readiness.served_last_good.as_of" in helper
     assert "served_state?.as_of" in helper
     assert "context?.evidence_as_of" in helper
     assert "new Date()" not in helper
