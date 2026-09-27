@@ -46,6 +46,7 @@ from .presentation_continuity import (
     LEAGUE_ATLAS_SURFACE,
     LEAGUE_TEAM_VIEWS_SURFACE,
     MARKET_VALUE_LENSES_ALL_SURFACE,
+    MARKET_VALUE_LENSES_ROSTERED_SURFACE,
     MARKET_WORKSPACE_SURFACE,
     PresentationContinuityStore,
 )
@@ -255,6 +256,7 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
             user_id=context.user_id,
             league_id=served.league_id,
             league_state_id=served.league_state_id,
+            selected_team_id=context.selected_team_id,
         )
     )
     served_payload = dict(payload.get("served_last_good") or {})
@@ -533,12 +535,14 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
     atlas = call("/api/league/atlas")
     market = call("/api/opportunities/workspace")
     lenses = call("/api/league/value-lenses", universe="all")
+    rostered_lenses = call("/api/league/value-lenses", universe="rostered")
     payloads = {
         "home": home,
         "franchise": franchise,
         "league": atlas,
         "market": market,
         "market_value_lenses": lenses,
+        "market_value_lenses_rostered": rostered_lenses,
     }
     for surface, payload in payloads.items():
         if not isinstance(payload, dict) or not payload:
@@ -895,6 +899,11 @@ def _promote_presentation_for_user(user_id: str, context) -> object | None:
         (LEAGUE_ATLAS_SURFACE, "/api/league/atlas", {}),
         (LEAGUE_TEAM_VIEWS_SURFACE, "/api/league/team-views", {}),
         (MARKET_WORKSPACE_SURFACE, "/api/opportunities/workspace", {}),
+        (
+            MARKET_VALUE_LENSES_ROSTERED_SURFACE,
+            "/api/league/value-lenses",
+            {"universe": "rostered"},
+        ),
         (
             MARKET_VALUE_LENSES_ALL_SURFACE,
             "/api/league/value-lenses",
