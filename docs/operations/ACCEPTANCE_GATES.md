@@ -482,3 +482,7 @@ Before shadow merge/deploy:
 - league-agnostic lineup derivation must be covered.
 
 Shadow acceptance does not itself authorize UI/Market promotion.
+
+
+## Long-Term Intrinsic shadow sequencing clarification — 2026-09-27
+The shadow gate remains defined, but execution is **paused** until the active runtime corrective reaches a permitted terminal state. No Long-Term Intrinsic implementation branch, merge, deploy or product promotion should proceed before that sequencing gate is reopened by Management.
