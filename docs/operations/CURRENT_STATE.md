@@ -749,3 +749,9 @@ Management does not currently certify the selected Forecast as the best-supporte
 Research is now authorized to run a symmetric Forecast Model Authority Audit across all serious recoverable candidates, then determine whether a bounded new-family challenge is necessary. Production Forecast/H3/Intrinsic remain unchanged during that work.
 
 Implementation remains independently authorized to finish PR #274. Runtime availability work must preserve current model semantics and must not wait for or absorb experimental Forecast changes.
+
+
+## 2026-09-27 — Forecast audit completeness correction: exact deployed vNext package
+Management identified that the symmetric Forecast audit ledger includes A2/D0/D1 and other serious historical candidates but does not separately identify the exact deployed Y2/Y3 package `forecast-vnext-a2-burr-20260922`.
+
+Research must now include that frozen production package directly, including its A2 state probabilities, Stage-D state means and Burr XII/direct-Gamma uncertainty representation. Ancestor/component evidence is not accepted as a substitute for direct evaluation of the live package. This is an audit-completeness correction, not authorization for post-result model shopping or production change.
