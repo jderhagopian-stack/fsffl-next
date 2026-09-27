@@ -1,0 +1,67 @@
+name: Forecast Authority Stage 4 Intrinsic Impact
+
+on:
+  push:
+    branches: [research/forecast-model-authority-audit-20260927]
+    paths:
+      - scripts/run_forecast_authority_stage4_intrinsic.py
+      - artifacts/research/forecast_model_authority_audit_20260927/STAGE4_DOWNSTREAM_PROTOCOL.md
+      - .github/workflows/forecast-authority-stage4-intrinsic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  stage4:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research dependencies
+        run: python -m pip install -e . pandas numpy scipy scikit-learn
+      - name: Restore frozen redevelopment implementation
+        run: |
+          git fetch origin research/future-state-resolution-phase34-resume
+          git show origin/research/future-state-resolution-phase34-resume:artifacts/research/production_resolution/reproducible_forecast_redevelopment_20260919/redevelopment_v1.py > /tmp/redevelopment_v1.py
+          sha256sum /tmp/redevelopment_v1.py scripts/run_forecast_authority_new_family.py
+      - name: Restore exact governed Phase-2 PIT panel
+        run: |
+          mkdir -p /tmp/phase2
+          gh api repos/${{ github.repository }}/actions/artifacts/10486530017/zip > /tmp/phase2.zip
+          unzip -oq /tmp/phase2.zip -d /tmp/phase2
+          PANEL=$(find /tmp/phase2 -iname '*player*season*panel*.csv' -print -quit)
+          test -n "$PANEL"
+          echo "PANEL=$PANEL" >> "$GITHUB_ENV"
+      - name: Run locked Forecast-to-Intrinsic sandbox
+        run: |
+          python scripts/run_forecast_authority_stage4_intrinsic.py \
+            --source artifacts/implementation/corrected_p0_preseason_credibility_gate_20260919/RECONCILED_PRESEASON_SOURCE_335.csv \
+            --rules artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json \
+            --career-panel "$PANEL" \
+            --redevelopment-code /tmp/redevelopment_v1.py \
+            --family-code scripts/run_forecast_authority_new_family.py \
+            --production-reference artifacts/research/intrinsic_comprehensive_y4_y8_20260926/CURRENT_PRODUCTION_H3_REFERENCE.json \
+            --output-dir artifacts/research/forecast_model_authority_audit_20260927/stage4
+      - name: Persist complete Stage 4 evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/research/forecast_model_authority_audit_20260927/stage4/
+          git commit -m "Research: persist Stage 4 Forecast-to-Intrinsic impact" || exit 0
+          git pull --rebase origin research/forecast-model-authority-audit-20260927
+          git push origin HEAD:research/forecast-model-authority-audit-20260927
+      - name: Upload Stage 4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-authority-stage4-intrinsic
+          path: artifacts/research/forecast_model_authority_audit_20260927/stage4/
+          retention-days: 30
