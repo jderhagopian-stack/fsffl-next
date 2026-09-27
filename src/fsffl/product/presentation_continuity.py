@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 import logging
-from threading import local
+from threading import RLock, local
 
 from fsffl.persistence.contracts import (
     ArtifactKey,
@@ -125,6 +125,8 @@ class PresentationContinuityStore:
     def __init__(self, persistence_store: PersistenceStore | None) -> None:
         self._persistence = persistence_store
         self._local = local()
+        self._validation_lock = RLock()
+        self._validated_snapshots: set[tuple[str, str, str, str | None]] = set()
 
     @property
     def enabled(self) -> bool:
@@ -224,6 +226,15 @@ class PresentationContinuityStore:
                 computed_at=now,
             )
         )
+        with self._validation_lock:
+            self._validated_snapshots.add(
+                (
+                    user_id,
+                    state.league.league_id,
+                    state.state_id,
+                    runtime.selected_team_id,
+                )
+            )
         _logger.info(
             "FSFFL presentation continuity promoted user=%s league=%s state=%s surfaces=%s bytes=%s",
             user_id,
@@ -251,6 +262,15 @@ class PresentationContinuityStore:
     ) -> bool:
         if self._persistence is None:
             return False
+        validation_key = (
+            user_id,
+            league_id,
+            league_state_id,
+            selected_team_id,
+        )
+        with self._validation_lock:
+            if validation_key in self._validated_snapshots:
+                return True
         manifest = self._persistence.get_reusable_artifact(
             _manifest_key(
                 user_id=user_id,
@@ -307,6 +327,8 @@ class PresentationContinuityStore:
                 != wrapper.get("payload_hash")
             ):
                 return False
+        with self._validation_lock:
+            self._validated_snapshots.add(validation_key)
         return True
 
     def load_for_runtime(
