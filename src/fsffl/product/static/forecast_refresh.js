@@ -10,6 +10,9 @@ function setForecastRefreshMessage(message){
 }
 
 function refreshFailureMessage(context=state?.context){
+  if(context?.capability_readiness?.served_last_good?.available||context?.served_last_good?.available){
+    return 'Intelligence refresh unavailable. Canonical State remains current and last-good derived intelligence is still being served. Try again later.';
+  }
   if(context?.forecast_ready){
     return 'Intelligence refresh unavailable. Your current projections are still in place. Try again later.';
   }
@@ -129,7 +132,9 @@ async function settleCompletedJob(){
     reflectRefreshAction(context);
   },0);
   if(intelligencePipelineReady(context)){
-    setForecastRefreshMessage('League sync complete. Governed core intelligence is fully available.');
+    setForecastRefreshMessage('League sync complete. Governed product intelligence is fully current.');
+  }else if(context?.capability_readiness?.overall_status==='rebuilding'){
+    setForecastRefreshMessage('League State is current. Last-good intelligence remains visible while replacement capabilities rebuild.');
   }else if(context.forecast_ready&&context.simulation_ready&&!context.value_ready){
     setForecastRefreshMessage('Forecast and simulation are ready; Value finished without an authoritative estimate set. Refresh Intelligence to retry.');
   }else{
