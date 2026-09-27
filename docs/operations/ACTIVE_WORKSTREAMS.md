@@ -364,3 +364,11 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **League Atlas interaction corrective — ACTIVE within same workstream:** team-position drawer is z-index 1003 while Player Intelligence root is z-index 1000, causing PI opened from a player in the drawer to render behind it until the drawer closes. Fix the overlay-stack contract and validate heat-map → position drawer → player → PI on mobile.
 - **Runtime RSS reclaim:** continue in parallel as engineering headroom work; a narrow self-imposed budget miss alone no longer blocks ordinary beta testing absent real availability failure.
 - **Research:** remains independent; Y4-Y8 symmetric authority work continues under its existing directive.
+
+
+## 2026-09-27 — Forecast/Value next step after Management decision
+- **Research — ACTIVE:** define and validate the Long-Term Intrinsic consumption contract from the continuous governed Y4-Y7 Forecast trajectory. No additional Forecast-family search is authorized.
+- **Forecast production:** Y1 current authority and deployed coherent Y2/Y3 vNext remain unchanged for now; model-authority disagreement must be preserved as uncertainty in the next contract.
+- **Long-horizon Forecast:** Y4-Y7 continuous trajectory is the accepted target; H5 may be the clearest headline horizon but must not be shipped as a Y5-only discontinuity. Y8 remains coarse.
+- **Value:** maintain separate Current Intrinsic (Y1-Y3) and future Long-Term Intrinsic (Y4-Y7). Do not blend them into a single master value.
+- **Implementation:** no Long-Term Intrinsic production implementation until Research freezes the consumer/economic contract. Existing latency/interaction work remains independent.
