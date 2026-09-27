@@ -46,6 +46,8 @@ class HeavyWorkSnapshot:
     max_waiting_observed: int
     acquisitions: int
     completions: int
+    acquisitions_by_kind: tuple[tuple[str, int], ...]
+    completions_by_kind: tuple[tuple[str, int], ...]
     current_rss_bytes: int
     peak_rss_bytes: int
     max_rss_observed_bytes: int
@@ -98,6 +100,8 @@ class HeavyWorkCoordinator:
         self._max_waiting_observed = 0
         self._acquisitions = 0
         self._completions = 0
+        self._acquisitions_by_kind: dict[str, int] = {}
+        self._completions_by_kind: dict[str, int] = {}
         self._max_rss_observed_bytes = current_rss_bytes()
 
     @property
@@ -157,6 +161,9 @@ class HeavyWorkCoordinator:
             self._active_key = key
             self._active_thread_id = get_ident()
             self._acquisitions += 1
+            self._acquisitions_by_kind[kind] = (
+                self._acquisitions_by_kind.get(kind, 0) + 1
+            )
             before_rss = current_rss_bytes()
             self._max_rss_observed_bytes = max(
                 self._max_rss_observed_bytes,
@@ -194,6 +201,9 @@ class HeavyWorkCoordinator:
                 self._active_key = None
                 self._active_thread_id = None
                 self._completions += 1
+                self._completions_by_kind[kind] = (
+                    self._completions_by_kind.get(kind, 0) + 1
+                )
                 self._condition.notify_all()
 
     def snapshot(self) -> HeavyWorkSnapshot:
@@ -210,6 +220,8 @@ class HeavyWorkCoordinator:
                 max_waiting_observed=self._max_waiting_observed,
                 acquisitions=self._acquisitions,
                 completions=self._completions,
+                acquisitions_by_kind=tuple(sorted(self._acquisitions_by_kind.items())),
+                completions_by_kind=tuple(sorted(self._completions_by_kind.items())),
                 current_rss_bytes=current,
                 peak_rss_bytes=peak,
                 max_rss_observed_bytes=observed,
