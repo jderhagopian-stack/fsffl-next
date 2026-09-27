@@ -1,0 +1,59 @@
+name: Forecast Authority Injury Symmetric Reinterpretation
+
+on:
+  push:
+    branches: [research/forecast-model-authority-audit-20260927]
+    paths:
+      - scripts/run_injury_symmetric_authority_reinterpretation.py
+      - artifacts/research/forecast_model_authority_audit_20260927/AUDIT_PROTOCOL.md
+      - .github/workflows/forecast-authority-injury-symmetric.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  reinterpret:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install pandas numpy
+      - name: Restore exact frozen joint evidence and governed episodes
+        run: |
+          mkdir -p /tmp/joint /tmp/episodes
+          gh api repos/${{ github.repository }}/actions/artifacts/10934946877/zip > /tmp/joint.zip
+          unzip -oq /tmp/joint.zip -d /tmp/joint
+          gh api repos/${{ github.repository }}/actions/artifacts/10921183161/zip > /tmp/episodes.zip
+          unzip -oq /tmp/episodes.zip -d /tmp/episodes
+          find /tmp/joint -maxdepth 4 -type f | sort
+          find /tmp/episodes -maxdepth 4 -type f | sort
+      - name: Reinterpret joint versus separate symmetrically
+        run: |
+          EPISODES=$(find /tmp/episodes -name INJURY_EPISODES.csv -print -quit)
+          test -n "$EPISODES"
+          python scripts/run_injury_symmetric_authority_reinterpretation.py \
+            --artifact-dir /tmp/joint \
+            --episodes "$EPISODES" \
+            --output-dir artifacts/research/forecast_model_authority_audit_20260927/injury
+      - name: Persist compact symmetric evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/research/forecast_model_authority_audit_20260927/injury/
+          git commit -m "Research: persist symmetric injury authority evidence" || exit 0
+          git push origin HEAD:research/forecast-model-authority-audit-20260927
+      - name: Upload symmetric injury evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-authority-injury-symmetric
+          path: artifacts/research/forecast_model_authority_audit_20260927/injury/
+          retention-days: 30
