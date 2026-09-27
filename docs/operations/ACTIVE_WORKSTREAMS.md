@@ -304,3 +304,10 @@ Durable handoff:
 - **Research:** **MANAGEMENT GATE — CURRENT FOOTBALL-STATE H3 FORECAST UPDATE.** Interpretation/closeout is complete; no broad event-rich updater is promoted, production H3 remains unchanged, and the narrow recommended contract is persisted.
 - **Market:** HOLD until physical beta-availability acceptance passes.
 - **Performance:** HOLD until physical beta-availability acceptance passes; ~390s cold 50K Simulation latency remains queued afterward.
+
+
+## 2026-09-27 physical acceptance failure after PR #270
+- **Implementation — ACTIVE / highest priority:** PR #270's hosted acceptance is superseded by physical failure under real cold-wake traffic. Correct combined cold wake + auto-sync + product hydration + PI memory pressure, restart restoration, cross-surface readiness truth, League/PI degradation, and the observed HTTP 429 recovery path. Home last-good serving partially worked and must be preserved.
+- **Research — MANAGEMENT GATE:** current-football-state H3 closeout remains complete; do not reopen it.
+- **Market — HOLD:** no physical Market acceptance until beta availability is stable.
+- **Performance — HOLD:** preserve the queued ~390s Simulation kernel work, but do not pull general performance work ahead of the availability incident. Memory/lifecycle work necessary to keep the beta usable remains Implementation-owned.
