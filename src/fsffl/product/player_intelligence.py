@@ -137,10 +137,10 @@ class PlayerFutureForecastCache:
         self._key: tuple[str, str, str, str] | None = None
         self._contract: FutureForecastContract | None = None
         self._league_id: str | None = None
-        self._rules_fingerprint: str | None = None
+        self._cached_rules_fingerprint: str | None = None
 
     @staticmethod
-    def _rules_fingerprint(runtime: UserRuntimeContext) -> str | None:
+    def _runtime_rules_fingerprint(runtime: UserRuntimeContext) -> str | None:
         state = runtime.league_state
         if state is None:
             return None
@@ -160,7 +160,7 @@ class PlayerFutureForecastCache:
             or served.league_id != state.league.league_id
             or self._league_id != state.league.league_id
             or self._key[0] != served.league_state_id
-            or self._rules_fingerprint != self._rules_fingerprint(runtime)
+            or self._cached_rules_fingerprint != self._runtime_rules_fingerprint(runtime)
             or self._contract.evaluation_season != state.league.season
         ):
             return None
@@ -216,7 +216,7 @@ class PlayerFutureForecastCache:
             self._key = key
             self._contract = contract
             self._league_id = state.league.league_id
-            self._rules_fingerprint = self._rules_fingerprint(runtime)
+            self._cached_rules_fingerprint = self._runtime_rules_fingerprint(runtime)
             return self._contract, "current"
 
     def get(self, runtime: UserRuntimeContext) -> FutureForecastContract | None:
