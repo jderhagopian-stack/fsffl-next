@@ -6,8 +6,11 @@ from types import SimpleNamespace
 import pytest
 
 from fsffl.forecast.future_contract import (
+    CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
     ForecastUncertaintyKind,
+    FutureForecastContract,
     FutureForecastScenario,
+    FuturePlayerHorizonForecast,
 )
 from fsffl.forecast.models import (
     ForecastDistribution,
@@ -16,10 +19,11 @@ from fsffl.forecast.models import (
     ForecastObservation,
 )
 from fsffl.product.player_intelligence import (
+    PlayerFutureForecastCache,
     PlayerHistoryService,
     build_player_intelligence_overview,
 )
-from fsffl.product.runtime import UserRuntimeContext
+from fsffl.product.runtime import ServedIntelligenceSnapshot, UserRuntimeContext
 from fsffl.providers.sleeper_weekly_stats import (
     SleeperSeasonStatLine,
     SleeperWeeklyStatLine,
@@ -778,3 +782,140 @@ def test_sleeper_player_scoped_fetch_selects_direct_mapping_without_transforming
     assert row.stats["gp"] == 17
     assert row.stats["pass_yd"] == 4300
     assert row.stats["fum_lost"] == 2
+
+
+def _continuity_future_contract() -> FutureForecastContract:
+    rows = tuple(
+        FuturePlayerHorizonForecast(
+            player_id="sleeper:player:101",
+            position=Position.QB,
+            evaluation_season=2026,
+            year_index=year_index,
+            target_season=2026 + year_index - 1,
+            central_expectation=250.0 - 10.0 * (year_index - 2),
+            scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+            model_version="fixture-vnext",
+            source="fixture:vnext",
+        )
+        for year_index in (2, 3)
+    )
+    return FutureForecastContract(
+        evaluation_season=2026,
+        scoring_coordinate=CONNECTED_LEAGUE_FANTASY_POINTS_COORDINATE,
+        forecast_model_version="fixture-vnext",
+        forecast_source="fixture:vnext",
+        forecasts=rows,
+    )
+
+
+def test_future_forecast_cache_serves_same_league_last_good_during_state_reconciliation() -> None:
+    old_state = _state()
+    y1 = _forecast_observation("sleeper:player:101", 310.0)
+    evidence = SimpleNamespace(
+        league_scored_forecasts=(y1,),
+        raw_forecasts=(),
+        model_version="fixture-current",
+        runtime_result=SimpleNamespace(evaluation_as_of=NOW),
+    )
+    builds = []
+
+    def builder(**_kwargs):
+        builds.append("build")
+        return _continuity_future_contract()
+
+    cache = PlayerFutureForecastCache(
+        future_forecast_builder=builder,
+        forecast_model_version="fixture-vnext",
+    )
+    old_runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=old_state,
+        selected_team_id="a",
+        forecast_evidence=evidence,
+    )
+    current, freshness = cache.resolve(old_runtime)
+    assert current is not None
+    assert freshness == "current"
+    assert builds == ["build"]
+
+    new_state = old_state.model_copy(
+        update={"as_of": datetime(2026, 9, 21, 13, tzinfo=UTC)}
+    )
+    reconciling = UserRuntimeContext(
+        user_id="u",
+        league_state=new_state,
+        selected_team_id="a",
+        served_intelligence=ServedIntelligenceSnapshot(
+            league_id=old_state.league.league_id,
+            league_state_id=old_state.state_id,
+            as_of=old_state.as_of,
+            team_ids=tuple(team.team_id for team in old_state.teams),
+        ),
+    )
+    stale, freshness = cache.resolve(reconciling)
+    assert stale == current
+    assert freshness == "stale_last_good"
+    assert builds == ["build"]
+
+    payload = build_player_intelligence_overview(
+        reconciling,
+        "sleeper:player:101",
+        intrinsic=None,
+        future_cache=cache,
+    )
+    assert [row["year_index"] for row in payload["forecast"]["rows"]] == [2, 3]
+    assert payload["forecast"]["future_freshness"] == {
+        "status": "stale_last_good",
+        "served_state_id": old_state.state_id,
+        "target_state_id": new_state.state_id,
+    }
+
+
+def test_future_forecast_cache_never_crosses_league_or_scoring_rules() -> None:
+    old_state = _state()
+    y1 = _forecast_observation("sleeper:player:101", 310.0)
+    evidence = SimpleNamespace(
+        league_scored_forecasts=(y1,),
+        raw_forecasts=(),
+        model_version="fixture-current",
+        runtime_result=SimpleNamespace(evaluation_as_of=NOW),
+    )
+    cache = PlayerFutureForecastCache(
+        future_forecast_builder=lambda **_kwargs: _continuity_future_contract(),
+        forecast_model_version="fixture-vnext",
+    )
+    cache.resolve(
+        UserRuntimeContext(
+            user_id="u",
+            league_state=old_state,
+            selected_team_id="a",
+            forecast_evidence=evidence,
+        )
+    )
+
+    changed_rules = old_state.league.rules.model_copy(
+        update={
+            "scoring": old_state.league.rules.scoring
+            + (ScoringRule(stat="bonus_pass_td", points=1.0),)
+        }
+    )
+    changed_state = old_state.model_copy(
+        update={
+            "as_of": datetime(2026, 9, 21, 13, tzinfo=UTC),
+            "league": old_state.league.model_copy(update={"rules": changed_rules}),
+        }
+    )
+    runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=changed_state,
+        selected_team_id="a",
+        served_intelligence=ServedIntelligenceSnapshot(
+            league_id=old_state.league.league_id,
+            league_state_id=old_state.state_id,
+            as_of=old_state.as_of,
+            team_ids=tuple(team.team_id for team in old_state.teams),
+        ),
+    )
+    contract, freshness = cache.resolve(runtime)
+    assert contract is None
+    assert freshness == "unavailable"
