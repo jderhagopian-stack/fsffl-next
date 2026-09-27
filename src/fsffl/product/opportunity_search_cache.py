@@ -125,4 +125,13 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
                 elapsed_ms=(monotonic() - started) * 1000.0,
             )
 
+    def clear_cache() -> int:
+        with lock:
+            count = len(cache)
+            cache.clear()
+        if count:
+            gc.collect()
+        return count
+
+    cached_builder.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_builder
