@@ -38,18 +38,18 @@ def _state(as_of: datetime, *, league_id: str = "sleeper:123") -> LeagueState:
     )
 
 
-def _evidence() -> LiveForecastEvidence:
+def _evidence(*, uncertainty_ready: bool = True) -> LiveForecastEvidence:
     return LiveForecastEvidence(
         raw_forecasts=(),
         league_scored_forecasts=(),
         successful_source_ids=("test",),
         failed_sources=(),
-        uncertainty_ready=True,
+        uncertainty_ready=uncertainty_ready,
         runtime_result=object(),  # type: ignore[arg-type]
     )
 
 
-def test_same_league_reconnect_cannot_split_one_intelligence_refresh() -> None:
+def test_newer_same_league_state_supersedes_inflight_result_without_split() -> None:
     store = PrivateBetaRuntimeStore()
     t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
     initial = _state(t0)
@@ -60,28 +60,17 @@ def test_same_league_reconnect_cannot_split_one_intelligence_refresh() -> None:
     evidence = _evidence()
     store.set_forecast_evidence("u", evidence, refreshed_league_state=refresh_state)
 
-    # Session recovery reconnects the same league while Simulation is still running.
+    # A newer State identity supersedes the pending build. Hosted orchestration
+    # normally coalesces this case, but runtime safety still rejects an old result.
     store.set_league_state("u", reconnect_state)
-    assert store.get("u").forecast_evidence is None
-
     simulation = SimpleNamespace(
         league_view=SimpleNamespace(
             context=SimpleNamespace(league_state_id=refresh_state.state_id)
         )
     )
-    store.set_simulation_analytics("u", simulation)  # type: ignore[arg-type]
-    recovered = store.get("u")
-    assert recovered.league_state == refresh_state
-    assert recovered.forecast_evidence is evidence
-    assert recovered.simulation_analytics is simulation
-
-    value = SimpleNamespace(league_state_id=refresh_state.state_id)
-    store.set_value_evidence("u", value)  # type: ignore[arg-type]
-    completed = store.get("u")
-    assert completed.league_state == refresh_state
-    assert completed.forecast_evidence is evidence
-    assert completed.simulation_analytics is simulation
-    assert completed.value_evidence is value
+    with pytest.raises(ValueError, match="matching league and forecast evidence"):
+        store.set_simulation_analytics("u", simulation)  # type: ignore[arg-type]
+    assert store.get("u").league_state == reconnect_state
 
 
 def _simulation_for(state: LeagueState):
@@ -113,21 +102,29 @@ def test_completed_last_good_bundle_survives_partial_refresh_until_atomic_promot
         value_evidence=old_value,  # type: ignore[arg-type]
     )
 
+    advanced = store.set_league_state("u", refreshed_state)
+    assert advanced.league_state == refreshed_state
+    assert advanced.simulation_analytics is None
+    assert advanced.value_evidence is None
+    assert advanced.served_intelligence is not None
+    assert advanced.served_intelligence.league_state == last_good_state
+    assert advanced.served_intelligence.simulation_analytics is old_simulation
+    assert advanced.served_intelligence.value_evidence is old_value
+
     new_forecast = _evidence()
     after_forecast = store.set_forecast_evidence(
         "u",
         new_forecast,
         refreshed_league_state=refreshed_state,
     )
-    assert after_forecast.league_state == last_good_state
-    assert after_forecast.forecast_evidence is old_forecast
-    assert after_forecast.simulation_analytics is old_simulation
-    assert after_forecast.value_evidence is old_value
+    assert after_forecast.league_state == refreshed_state
+    assert after_forecast.served_intelligence is not None
 
     new_simulation = _simulation_for(refreshed_state)
     after_simulation = store.set_simulation_analytics("u", new_simulation)  # type: ignore[arg-type]
-    assert after_simulation.league_state == last_good_state
-    assert after_simulation.value_evidence is old_value
+    assert after_simulation.league_state == refreshed_state
+    assert after_simulation.value_evidence is None
+    assert after_simulation.served_intelligence is not None
 
     new_value = _value_for(refreshed_state)
     promoted = store.set_value_evidence("u", new_value)  # type: ignore[arg-type]
@@ -135,6 +132,7 @@ def test_completed_last_good_bundle_survives_partial_refresh_until_atomic_promot
     assert promoted.forecast_evidence is new_forecast
     assert promoted.simulation_analytics is new_simulation
     assert promoted.value_evidence is new_value
+    assert promoted.served_intelligence is None
 
 
 def test_failed_partial_refresh_preserves_completed_last_good_bundle() -> None:
@@ -154,18 +152,48 @@ def test_failed_partial_refresh_preserves_completed_last_good_bundle() -> None:
         value_evidence=old_value,  # type: ignore[arg-type]
     )
 
+    store.set_league_state("u", refreshed_state)
     store.set_forecast_evidence(
         "u",
         _evidence(),
         refreshed_league_state=refreshed_state,
     )
-    # Model a failed Simulation followed by an independently successful Value build.
+    # Value may succeed while Simulation remains missing; the new target State
+    # stays canonical but last-good remains presentation-available.
     retained = store.set_value_evidence("u", _value_for(refreshed_state))  # type: ignore[arg-type]
 
-    assert retained.league_state == last_good_state
-    assert retained.forecast_evidence is old_forecast
-    assert retained.simulation_analytics is old_simulation
-    assert retained.value_evidence is old_value
+    assert retained.league_state == refreshed_state
+    assert retained.simulation_analytics is None
+    assert retained.value_evidence is not None
+    assert retained.served_intelligence is not None
+    assert retained.served_intelligence.league_state == last_good_state
+    assert retained.served_intelligence.simulation_analytics is old_simulation
+    assert retained.served_intelligence.value_evidence is old_value
+
+
+def test_stable_partial_target_atomically_promotes_without_simulation() -> None:
+    store = PrivateBetaRuntimeStore()
+    t0 = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    old_state = _state(t0)
+    target = _state(t0 + timedelta(minutes=1))
+    store.set_league_state("u", old_state)
+    store.set_intelligence_bundle(
+        "u",
+        league_state=old_state,
+        forecast_evidence=_evidence(),
+        simulation_analytics=_simulation_for(old_state),  # type: ignore[arg-type]
+        value_evidence=_value_for(old_state),  # type: ignore[arg-type]
+    )
+    store.set_league_state("u", target)
+    partial = _evidence(uncertainty_ready=False)
+    store.set_forecast_evidence("u", partial, refreshed_league_state=target)
+    promoted = store.set_value_evidence("u", _value_for(target))  # type: ignore[arg-type]
+
+    assert promoted.league_state == target
+    assert promoted.forecast_evidence is partial
+    assert promoted.simulation_analytics is None
+    assert promoted.value_evidence is not None
+    assert promoted.served_intelligence is None
 
 
 def test_cross_league_switch_invalidates_old_refresh_generation() -> None:
@@ -215,7 +243,9 @@ def test_same_league_provider_state_advances_before_downstream_reconciliation() 
     # Compatible raw Forecast may be reused, but old exact-State downstream
     # outputs may not masquerade as current.
     assert current.forecast_evidence is old_forecast
-    assert current.intelligence_reused is False
+    assert current.served_intelligence is not None
+    assert current.served_intelligence.league_state == last_good_state
+    assert current.served_intelligence.simulation_analytics is old_simulation
 
 
 
