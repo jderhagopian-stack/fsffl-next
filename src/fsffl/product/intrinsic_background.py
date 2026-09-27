@@ -106,7 +106,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
             raise ValueError("Shapley Intrinsic requires canonical league state")
         # Compatibility fallback for generic/test loaders. Production injects the
         # dependency-scoped resolver from PrivateBetaShapleyContractLoader.
-        return f"state:{context.league_state.state_id}"
+        coordinate = str(self._forecast_coordinate_resolver(context)).strip()
+        return f"state:{context.league_state.state_id}|forecast:{coordinate}"
 
     def _key(self, context: UserRuntimeContext) -> tuple[str, str, str]:
         if context.league_state is None:
