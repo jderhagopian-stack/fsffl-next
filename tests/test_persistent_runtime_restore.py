@@ -746,7 +746,7 @@ def test_restore_rejects_prior_first_party_supplement_contract_but_preserves_val
 
 
 
-def test_restart_restores_new_target_state_and_real_last_good_derived_bundle_separately() -> None:
+def test_restart_restores_new_target_state_and_lightweight_last_good_identity_separately() -> None:
     persistence = MemoryPersistence()
     last_good = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
     forecast = _stale_forecast_without_first_party_fumbles_lost(last_good)
@@ -782,11 +782,13 @@ def test_restart_restores_new_target_state_and_real_last_good_derived_bundle_sep
     assert restored.selected_team_id == "t1"
     assert restored.forecast_evidence is None
     assert restored.value_evidence is None
-    assert restored.served_league_state is not None
-    assert restored.served_league_state.state_id == last_good.state_id
-    assert restored.served_forecast_evidence is not None
-    assert restored.served_value_evidence is not None
-    assert restored.served_simulation_analytics is None
+    assert restored.served_league_id == last_good.league.league_id
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_as_of == last_good.as_of
+    assert restored.served_team_ids == ("t1", "t2")
+    assert not hasattr(restored, "served_forecast_evidence")
+    assert not hasattr(restored, "served_simulation_analytics")
+    assert not hasattr(restored, "served_value_evidence")
 
 
 def test_per_league_last_good_survives_switch_away_and_back() -> None:
