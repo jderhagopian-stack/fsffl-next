@@ -213,3 +213,11 @@ def test_readiness_refresh_invokes_intelligence_lifecycle_directly():
     refresh = (Path(__file__).parents[1] / 'src/fsffl/product/static/forecast_refresh.js').read_text()
     assert "window.fsfflManualIntelligenceRefresh?.()" in shell
     assert "window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh" in refresh
+
+
+
+def test_home_removes_redundant_large_intelligence_status_card() -> None:
+    assert "Current intelligence is partially available" not in HOME
+    assert "homeCapabilityNote" not in HOME
+    assert "home-capability-note" not in HOME
+    assert "fsffl-shared-readiness-strip" in SHELL
