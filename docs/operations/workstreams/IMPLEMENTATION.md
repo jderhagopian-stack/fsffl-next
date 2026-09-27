@@ -811,3 +811,27 @@ Required behavior:
 6. verify iPhone/Safari Home layout physically after the change.
 
 This is a presentation/product-hierarchy correction only. It must not change readiness semantics or model authority.
+
+### Intrinsic compatibility reuse — do not invalidate on unrelated LeagueState changes
+Management physical observation: a normal league-State advance caused the readiness lifecycle to remain at **6/7 Building FSFFL Intrinsic** for minutes, even though prior user refreshes reused Intrinsic in ~0.5-1.0s.
+
+Measured evidence:
+- prior compatible user refresh: Intrinsic ~0.507s;
+- current exact-State rebuild entered `building_intrinsic` at 20:34:16 ET and remained active minutes later;
+- recent cold hosted Intrinsic builds have taken roughly 154-180s.
+
+Code-path diagnosis:
+- `ShapleyIntrinsicBackgroundCoordinator._key()` includes the full `league_state.state_id`, so every canonical State advance creates a fresh background lifecycle record;
+- the durable Shapley artifact scope uses `league_material_fingerprint(league_state)`, which is still intentionally broad and invalidates on roster ownership, team state, draft picks, matchup results, player status, etc.;
+- the actual Intrinsic cache input fingerprint already separately includes preserved Year-1 Forecast evidence, source lineage, and the complete FutureForecastContract.
+
+Required corrective:
+1. define an **Intrinsic-specific compatibility/input fingerprint** from the actual governed inputs consumed by Intrinsic/Future Forecast rather than full `LeagueState.state_id` or generic broad league-material identity;
+2. use that compatibility identity consistently for background coalescing and durable reuse;
+3. changes unrelated to Intrinsic authority (e.g. matchup scores, draft-pick ownership, team labels/FAAB, roster ownership if not mathematically consumed) must not force a cold Intrinsic rebuild;
+4. changes that truly affect Intrinsic (scoring/lineup rules, governed player identity/team mapping where consumed, preserved Year-1 evidence, FutureForecastContract/model coordinate, or other proven dependencies) must invalidate correctly;
+5. prove by tests that an unrelated State advance reuses the same Intrinsic contract quickly while a true Intrinsic-input change invalidates it;
+6. preserve exact point-in-time State provenance separately; compatibility reuse must not relabel an older State as the current State.
+7. keep the current build running; apply this at the next implementation checkpoint rather than interrupting an in-flight refresh.
+
+The objective is to restore the prior sub-second compatible Intrinsic behavior without weakening authority.
