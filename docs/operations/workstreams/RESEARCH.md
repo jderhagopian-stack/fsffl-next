@@ -1698,3 +1698,81 @@ Exact symmetric execution:
 Research has exhausted the authorized Y4-Y8 interpretation without model shopping.
 
 **MANAGEMENT GATE — Y4-Y8 LONG-HORIZON AUTHORITY**
+
+
+## Long-Term Intrinsic consumption Research closeout — 2026-09-27
+
+**State: MANAGEMENT GATE — LONG-TERM INTRINSIC CONSUMPTION CONTRACT**
+
+Management's continuous Y1-Y7 / dual-Intrinsic architecture has been executed at the Research Value-consumer layer. No Forecast family search was run and no production behavior changed.
+
+Frozen economic consumer:
+- Current Intrinsic remains separate Y1-Y3 authority.
+- Long-Term Intrinsic consumes the continuous governed Y4-Y7 path.
+- Raw Long-Term Intrinsic is **mean annual horizon-specific Shapley marginal lineup capacity**:
+  `(phi4 + phi5 + phi6 + phi7) / 4`.
+- This is a one-season-equivalent rate across the complete four-year window, not an arbitrary weighted average and not a discounted present-value blend.
+- Y8 contributes no precise cardinal Long-Term value.
+- QB Y5 `blanket_75_25` and WR Y5 `hard_router` remain the only exact long-horizon policy cells; all other Y4-Y7 cells preserve the symmetric supported-policy set.
+- Consequently current Long-Term Intrinsic authority is intrinsically set-valued; the Value layer must retain a model-authority low/high envelope rather than silently choose a policy.
+
+Historical consumer validation:
+- workflow run `36352688339` — success;
+- artifact `10943221137`;
+- digest `sha256:d1c0132928631d7868549f2c9f27b9458f08ca062b86b83b8db448321bd3ef62`;
+- Shapley permutations: 2,048;
+- complete Y4-Y7 origins: 2018 and 2019;
+- complete player-origin observations: 1,129;
+- maximum Shapley efficiency residual: **2.91e-11**;
+- monotonic scenario violations: **0**.
+
+Continuous Y4-Y7 is supported over a Y5-only shortcut:
+- all four frozen policies have lower MAE and higher rank correlation under the continuous consumer than H5-only;
+- H5-only retains a small RMSE advantage, so H5 is a useful headline but not a sufficient Value consumer;
+- H7-only is materially weaker as a terminal shortcut.
+
+Uncertainty result:
+- median central model-authority envelope width: **1.26 raw Shapley units**; p90 **9.75**;
+- central model-authority envelope alone covers realized long-term target only **3.54%**, confirming that model disagreement is not outcome uncertainty;
+- after preserving annual within-model uncertainty and model-authority uncertainty separately, the combined outer bands cover **81.84% / 91.23%** for nominal 80% / 90%.
+
+Current-vs-long relationship using the already-frozen 335-player current shadow:
+- Spearman **0.663**;
+- median absolute rank difference **45**;
+- p90 **137.2**;
+- **75.5%** differ by >=20 ranks.
+
+This supports a genuinely separate Long-Term lens rather than a hidden blend with Current Intrinsic.
+
+Scale:
+- retain raw Long-Term Shapley units and authority envelope;
+- use a separate rank-calibrated 0-10,000 presentation scale `fsffl-long-term-intrinsic-index`, consistent with current product visual grammar;
+- equal index values across lenses mean similar within-lens standing, not equal additive raw economics;
+- Current and Long-Term indexes/raw values must not be summed or averaged.
+
+Downstream:
+- Market may compare Broad/League Market, Current Intrinsic and Long-Term Intrinsic as separate coordinates;
+- Team Utility may apply competitive-window weighting only downstream under a separately governed utility contract;
+- Decision may expose near-term-versus-durable package exchange but may not add the two Intrinsic lenses.
+
+Durable package:
+`artifacts/research/long_term_intrinsic_consumption_20260927/`
+
+Key files:
+- `CONSUMPTION_CONTRACT_FROZEN.md`;
+- `RESEARCH_INTERPRETATION.md`;
+- `SCALE_AND_DOWNSTREAM_CONTRACT.md`;
+- `IMPLEMENTATION_HANDOFF.md`;
+- `LIMITATIONS_AND_REPRODUCIBILITY.md`;
+- `FINAL_RESULT.json`.
+
+Binding limitations:
+- only two complete Y4-Y7 outer origins;
+- no pristine new final holdout;
+- cross-horizon covariance remains unvalidated;
+- current 335-player shadow is not yet a full materialization of the set-valued policy envelope;
+- historical career-stage split is not present in the exact rolling artifact.
+
+Research has exhausted the authorized consumer-definition and validation work without adding a new Forecast family or arbitrary horizon weights. A bounded shadow implementation is specified, but production promotion requires a separate Management/Implementation gate.
+
+**MANAGEMENT GATE — LONG-TERM INTRINSIC CONSUMPTION CONTRACT**
