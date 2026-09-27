@@ -769,3 +769,21 @@ Live physical-session timings:
 A separate deterministic UI layering defect is confirmed: League Atlas `.atlas-drawer` uses z-index 1003 while `#player-intelligence-root` uses z-index 1000. Selecting a player from a position drill-down opens PI behind the drawer; closing the drawer reveals it.
 
 Management therefore moves the product critical path from “do not touch until resource gate passes” to **ordinary beta use + immediate latency/interaction corrective**. The ~429.5 MB target remains useful engineering headroom, but does not by itself block physical testing unless accompanied by real availability failure.
+
+
+## 2026-09-27 — Management accepts dual-Intrinsic / continuous long-horizon Forecast architecture
+Management accepts the symmetric Forecast Research conclusions and sets the target architecture as follows:
+
+- **Forecast is continuous by year.** Preserve governed Y1, Y2, Y3, Y4, Y5, Y6, Y7 outputs; Y8 is coarse/uncertain only. Do not present Y5 as if Y4 does not exist.
+- **Y1** remains governed current-season/provider/current-football-state authority.
+- **Y2-Y3** retain the deployed coherent vNext distributional Forecast for production continuity, while D1/N1/N2 disagreement is represented as model-authority uncertainty rather than hidden or treated as incumbent defeat.
+- **Y4-Y7** are governed long-horizon trajectory outputs. Exact single-policy authority is used only where Research earned it; unresolved cells must preserve a supported model/policy envelope.
+- **Y8** remains research/coarse context and is excluded from any precise cardinal long-term value until evidence improves.
+- **Current Intrinsic** remains a separate near-/medium-term economic lens based on governed Y1-Y3.
+- **Long-Term Intrinsic** is authorized as a separate future value lens based on the governed Y4-Y7 trajectory. It must not replace or be blended invisibly into Current Intrinsic.
+- **No arbitrary horizon weights.** Do not define Long-Term Intrinsic as an ad hoc weighted average such as 40/30/20/10. Research must establish the Value-consumption/economic contract.
+- **Uncertainty separation is mandatory:** within-model Forecast uncertainty and between-model/model-authority uncertainty remain distinct; do not collapse them into a false single SD.
+- **Market/Team Utility** may later consume Current Intrinsic and Long-Term Intrinsic separately according to competitive window. Contender/rebuilder asymmetry belongs downstream in Team Utility, not as arbitrary player-value bonuses.
+- **No further Forecast family search is authorized** by this decision. Family breadth was found sufficient; the next Research problem is Long-Term Intrinsic consumption, not model shopping.
+
+Production Forecast/Intrinsic behavior does not change merely from this Management decision.
