@@ -641,3 +641,14 @@ Therefore:
 - physical acceptance should wait for the fingerprint-stability corrective.
 
 Research current-football-state/H3 update study has not yet produced a new durable checkpoint after Management's latest directive.
+
+## 2026-09-26 23:56 ET — Beta availability regressed during State rebuild
+PR #269's semantic Intrinsic reuse is still directionally validated, but physical acceptance exposed a higher-priority lifecycle regression.
+
+A Render restart followed by automatic stale-State sync advanced the canonical State and caused the product to present the in-progress State without preserving last-good derived intelligence. The user's previously functional FSFFL views temporarily lost Forecast/Simulation/Value presentation and even rendered an empty roster filter despite canonical roster membership remaining present.
+
+The eventual intelligence job completed successfully, but Simulation consumed ~390.6s. Therefore the system is computationally completing but **product availability is unacceptable during reconciliation**.
+
+Classification: **beta availability incident / Implementation-owned**.
+
+Management acceptance is reopened. No additional physical testing is requested until Implementation restores non-disruptive last-good serving across restart/sync/rebuild and truthful readiness.
