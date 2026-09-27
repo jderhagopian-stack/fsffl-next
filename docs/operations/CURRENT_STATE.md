@@ -837,3 +837,11 @@ The ~429.5 MB internal target is retained as diagnostic headroom but no longer i
 The second fresh-instance acceptance run of unchanged #278 again failed. Light paths were fast (Market ~0.3-2.5s; cold PI ~1.2s), but the heavy sequence reproduced ~63.6-64.0s Market workspace construction and ~40.7s PI history during active reconciliation. RSS peaked ~469.6 MB, still below the hard Render limit.
 
 This is now treated as reproducible evidence that full Market Search/Decision work must be removed from foreground reads. No further unchanged acceptance rerun is useful before that implementation occurs.
+
+
+## 2026-09-27 — Exact remaining runtime plan identified
+Implementation has opened `implementation/nonblocking-market-20260927` and is actively moving Market bilateral Decision enrichment off the foreground request path. The branch now includes shell-only ordinary/quick workspace reads, explicit structural Search, background Decision enrichment, polling UI, and runtime coordinator wiring.
+
+A separate stale test condition is confirmed: the hosted acceptance harness still hard-fails any RSS sample above the ~429.5 MB engineering target. Management policy already downgraded that threshold to diagnostic headroom. Implementation must align the acceptance code before the next hosted terminal run so a soft-budget miss alone cannot manufacture a product failure.
+
+Remaining product acceptance still requires responsive reads under heavy work, preserved continuity, and hard-limit safety.
