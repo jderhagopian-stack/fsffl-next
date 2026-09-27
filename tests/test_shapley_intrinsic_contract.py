@@ -161,3 +161,32 @@ def test_api_route_is_versioned_and_fail_closed_without_completed_source_loader(
     assert payload["display_scaling_applied"] is False
     assert payload["diagnostic_h1_included"] is False
     assert payload["coverage"]["missing_required_fact_families"] == ["completed_source_i1_facts"]
+
+
+
+def test_reduced_future_evidence_path_is_provenance_not_availability_gate() -> None:
+    contract = build_shapley_intrinsic_contract(
+        _result(),
+        completed_source_provenance=CompletedSourceFactProvenance(
+            source_version="canonical-facts-test-v1",
+            providers=("provider-a", "provider-b"),
+            fact_family_coverage={
+                "roster_continuity": False,
+                "injury_practice": False,
+                "participation_snaps": False,
+                "role_opportunity": True,
+            },
+        ),
+        missing_required_fact_families=(),
+        forecast_model_version="forecast-vnext-fixture",
+    )
+
+    assert contract.status == ShapleyIntrinsicAvailability.READY
+    assert contract.coverage.player_count == 1
+    assert contract.coverage.reduced_or_fallback_players == 1
+    assert contract.coverage.missing_required_fact_families == ()
+    assert contract.completed_source_provenance is not None
+    assert (
+        contract.completed_source_provenance.fact_family_coverage["injury_practice"]
+        is False
+    )
