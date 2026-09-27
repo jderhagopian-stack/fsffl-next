@@ -513,5 +513,5 @@ def test_player_history_capacity_wait_remains_retryable_over_http() -> None:
     payload = response.json()
     assert payload["status"] == "loading"
     assert payload["build_status"] == "capacity_wait"
-    assert payload["retry_after_ms"] == 1500
+    assert payload["retry_after_ms"] == 2500
     assert payload["message"] == "fixture capacity wait"
