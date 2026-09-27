@@ -783,7 +783,9 @@ def create_app(
         promoter = getattr(application.state, "presentation_promoter", None)
         if not callable(promoter):
             return
-        promoter(user_id, store.get(user_id))
+        result = promoter(user_id, store.get(user_id))
+        if result is not None:
+            store.set_served_intelligence(user_id, None)
 
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
