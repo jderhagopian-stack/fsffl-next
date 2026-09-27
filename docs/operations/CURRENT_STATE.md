@@ -673,3 +673,13 @@ Production H3 remains unchanged.
 
 Durable handoff:
 `artifacts/research/current_football_state_h3_20260926/RESEARCH_INTERPRETATION.md`.
+
+
+## PR #270 live — hosted beta availability restored; physical gate next
+PR #270 merged at `2c63a9b05225759ba521da3e75fb65146b30fbbe` and Render deploy `dep-dasa5vg473hc73fd8uo0` is LIVE.
+
+All seven configured validations passed on final head `d6d6ccd2...`. Production startup restored the FSFFL league with Forecast/Simulation/Value complete and Intrinsic full. The hosted state-first acceptance sequence recorded **PASS** across FSFFL → Hodor → FSFFL plus two manual refreshes, with Hodor remaining truthfully partial and FSFFL returning to full readiness. No post-deploy application errors were observed in the validation window.
+
+Management status is now **MANAGEMENT GATE — PHYSICAL IPHONE / SAFARI AVAILABILITY ACCEPTANCE**. This is a major improvement over the post-#269 incident, but the beta-availability incident is not fully closed until the physical target verifies roster continuity, no false-green readiness, visible stale/as-of last-good behavior during rebuild, consistent persisted Intrinsic reattachment, and non-disruptive refresh/switch behavior.
+
+Market and general Performance remain held until that device gate passes.
