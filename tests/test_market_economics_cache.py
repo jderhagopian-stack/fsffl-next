@@ -123,3 +123,19 @@ def test_package_economics_cache_drops_prior_scope_on_state_advance() -> None:
     # The prior exact-State economic evidence is execution cache only and was evicted.
     assert cached(runtime_a, _row())["preliminary_economic_band"] == "call-3"
     assert calls == 3
+
+
+def test_explicit_package_economics_clear_releases_execution_cache() -> None:
+    calls = 0
+
+    def evaluator(runtime, row, **kwargs):
+        nonlocal calls
+        calls += 1
+        return {**row, "preliminary_economic_band": f"call-{calls}"}
+
+    cached = make_cached_candidate_economics(evaluator)
+    runtime = _runtime()
+    assert cached(runtime, _row())["preliminary_economic_band"] == "call-1"
+    assert cached(runtime, _row())["preliminary_economic_band"] == "call-1"
+    assert cached.clear_cache() == 1
+    assert cached(runtime, _row())["preliminary_economic_band"] == "call-2"
