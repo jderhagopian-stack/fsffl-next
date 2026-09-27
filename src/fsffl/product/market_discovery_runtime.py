@@ -220,7 +220,11 @@ def _row_dominates(left: dict[str, object], right: dict[str, object]) -> bool:
     )
 
 
-def _prune_package_neighborhood(rows: list[dict[str, object]]) -> tuple[dict[str, object], tuple[dict[str, object], ...], int]:
+def _prune_package_neighborhood(
+    rows: list[dict[str, object]],
+    *,
+    cooperative_yield: Callable[[], object] | None = None,
+) -> tuple[dict[str, object], tuple[dict[str, object], ...], int]:
     """Prune one target/counterparty neighborhood after cheap Decision economics.
 
     Search does not invent an economic score. It consumes the categorical
@@ -230,14 +234,19 @@ def _prune_package_neighborhood(rows: list[dict[str, object]]) -> tuple[dict[str
     even when they are not the single closest additive Cardinal package.
     """
 
-    survivors = [
-        row
-        for index, row in enumerate(rows)
-        if not any(
-            other_index != index and _row_dominates(other, row)
-            for other_index, other in enumerate(rows)
-        )
-    ]
+    survivors: list[dict[str, object]] = []
+    for index, row in enumerate(rows):
+        if cooperative_yield is not None:
+            cooperative_yield()
+        dominated = False
+        for other_index, other in enumerate(rows):
+            if cooperative_yield is not None and other_index % 8 == 0:
+                cooperative_yield()
+            if other_index != index and _row_dominates(other, row):
+                dominated = True
+                break
+        if not dominated:
+            survivors.append(row)
     survivors.sort(
         key=lambda row: (
             _cheap_band_rank(row),
@@ -290,9 +299,12 @@ def _build_path_seeds(
     exact_target_constraint: str | None,
     intent: str = "",
     intent_value: str = "",
+    cooperative_yield: Callable[[], object] | None = None,
 ) -> tuple[list[dict[str, object]], int]:
     grouped: OrderedDict[tuple[str, str, tuple[str, ...]], list[dict[str, object]]] = OrderedDict()
     for row in rows:
+        if cooperative_yield is not None:
+            cooperative_yield()
         opportunity_id, _, _, _, _ = _opportunity_identity(
             runtime,
             row,
@@ -311,7 +323,12 @@ def _build_path_seeds(
     seeds: list[dict[str, object]] = []
     pruned = 0
     for (opportunity_id, counterparty_team_id, receive_refs), family_rows in grouped.items():
-        representative, alternates, removed = _prune_package_neighborhood(family_rows)
+        if cooperative_yield is not None:
+            cooperative_yield()
+        representative, alternates, removed = _prune_package_neighborhood(
+            family_rows,
+            cooperative_yield=cooperative_yield,
+        )
         pruned += removed
         package_family = canonical_package_family_key(
             opportunity_id=opportunity_id,
@@ -1505,6 +1522,7 @@ def build_market_discovery(
         exact_target_constraint=exact_target_constraint,
         intent=intent,
         intent_value=intent_value,
+        cooperative_yield=cooperative_yield,
     )
     family_finished = monotonic()
     selected_indices = set(
