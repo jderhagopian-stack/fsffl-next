@@ -372,3 +372,9 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **Long-horizon Forecast:** Y4-Y7 continuous trajectory is the accepted target; H5 may be the clearest headline horizon but must not be shipped as a Y5-only discontinuity. Y8 remains coarse.
 - **Value:** maintain separate Current Intrinsic (Y1-Y3) and future Long-Term Intrinsic (Y4-Y7). Do not blend them into a single master value.
 - **Implementation:** no Long-Term Intrinsic production implementation until Research freezes the consumer/economic contract. Existing latency/interaction work remains independent.
+
+
+## 2026-09-27 17:18 ET — Implementation after PR #277
+- **Implementation remains ACTIVE.** PR #277 is live and partially successful: Atlas→PI overlay is corrected and warm Home/My Team reads improved to low-single-digit seconds in some windows.
+- **Not accepted:** heavy-work overlap still drives 26–43s foreground reads; one hosted run exceeded the internal RSS target (~473 MB max observed) and another failed because cold PI history lacked Y2/Y3 during initial reconciliation.
+- **Next corrective:** preserve #277, eliminate heavy-work read starvation, repair cold PI future-Forecast continuity, and reduce transient memory risk on current main. No broad architecture rewrite.
