@@ -1,0 +1,67 @@
+name: Y4-Y8 Symmetric Authority Audit
+
+on:
+  push:
+    branches: [research/y4-y8-symmetric-authority-20260927]
+    paths:
+      - scripts/run_y4_y8_symmetric_authority.py
+      - artifacts/research/y4_y8_symmetric_authority_20260927/PROTOCOL.md
+      - .github/workflows/y4-y8-symmetric-authority.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  symmetric:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analysis dependencies
+        run: python -m pip install pandas numpy scipy
+      - name: Restore exact prior Y4-Y8 evidence
+        run: |
+          mkdir -p /tmp/routing /tmp/age
+          gh api repos/${{ github.repository }}/actions/artifacts/10916355135/zip > /tmp/routing.zip
+          unzip -oq /tmp/routing.zip -d /tmp/routing
+          gh api repos/${{ github.repository }}/actions/artifacts/10917390703/zip > /tmp/age.zip
+          unzip -oq /tmp/age.zip -d /tmp/age
+          test "$(wc -l < /tmp/routing/ROLLING_POLICY_PREDICTIONS.csv)" -eq 47761
+          test "$(wc -l < /tmp/age/AGE_EXPERIENCE_ROLLING_PREDICTIONS.csv)" -eq 59701
+      - name: Run frozen symmetric reinterpretation
+        run: |
+          python scripts/run_y4_y8_symmetric_authority.py \
+            --routing-predictions /tmp/routing/ROLLING_POLICY_PREDICTIONS.csv \
+            --age-predictions /tmp/age/AGE_EXPERIENCE_ROLLING_PREDICTIONS.csv \
+            --output-dir artifacts/research/y4_y8_symmetric_authority_20260927
+      - name: Persist compact symmetric evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_SYMMETRIC_POLICY_SUMMARY.csv \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_PAIRWISE_UNCERTAINTY.csv \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_ORIGIN_DIRECTION.csv \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_CELL_AUTHORITY_MAP.csv \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_AGE_EXPOSURE_METRICS.csv \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_AGE_EXPOSURE_PAIRWISE.csv \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_AGE_EXPOSURE_COMPARISONS.csv \
+            artifacts/research/y4_y8_symmetric_authority_20260927/Y4_Y8_SYMMETRIC_RESULT.json
+          git commit -m "Research: persist Y4-Y8 symmetric authority evidence" || exit 0
+          git pull --rebase origin research/y4-y8-symmetric-authority-20260927
+          git push origin HEAD:research/y4-y8-symmetric-authority-20260927
+      - name: Upload complete evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: y4-y8-symmetric-authority
+          path: artifacts/research/y4_y8_symmetric_authority_20260927/
+          retention-days: 30
