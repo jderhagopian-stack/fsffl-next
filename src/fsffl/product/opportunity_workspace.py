@@ -235,8 +235,8 @@ def _empty_workspace(
             "post_transaction_simulation": False,
         },
         "execution": {
-            "mode": "presentation_shell" if presentation_shell_only else "governed_discovery",
-            "search_executed": not presentation_shell_only,
+            "mode": "not_ready",
+            "search_executed": False,
         },
         "authority": {
             "search_role": "candidate_generation_ordering_and_decision_enrichment",
@@ -685,6 +685,10 @@ def build_opportunity_workspace(
             "behavioral_acceptance": False,
             "waiver_materiality": bool(available_players),
             "post_transaction_simulation": False,
+        },
+        "execution": {
+            "mode": "presentation_shell" if presentation_shell_only else "governed_discovery",
+            "search_executed": not presentation_shell_only,
         },
         "authority": {
             "search_role": "candidate_generation_ordering_and_decision_enrichment",
