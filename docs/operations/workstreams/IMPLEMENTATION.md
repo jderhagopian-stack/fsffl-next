@@ -1493,3 +1493,14 @@ Immediate action:
 3. preserve all #284 atomic-publication and generation-ID behavior;
 4. merge the narrow corrective, deploy exact merge SHA, then run full hosted FSFFL → Hodor → FSFFL plus same-State/read-overlap/managed-team acceptance;
 5. do not broaden scope.
+
+
+## 2026-09-28 — After #285/#286/#287: runtime fix is in; make the managed-team proof real
+PR #285 merged the managed-team publication serialization/identity fix. PR #286 added hosted coverage, but post-merge review found the proof can miss the intended race because its surface probe may allow reconciliation to complete before `select_team`, and it validates copied `selected_team_id` instead of the actual returned Franchise `franchise_team_id`. Hosted follow-up then exposed a separate cold exact-State team/publication identity restore defect; PR #287 fixed that and current main is `2c0c6d0aefc0cc21913e6090b70f706c29e0b430`.
+
+Immediate action:
+1. repair the #286 acceptance interleaving so the alternate-team switch is guaranteed to occur while a working generation is still active (switch immediately after observing activity or revalidate before switching);
+2. assert the actual Franchise/team-scoped returned identity, not only context metadata;
+3. preserve #285 serialization and #287 cold-restore behavior;
+4. deploy the exact corrected merge SHA and rerun full hosted FSFFL → Hodor → FSFFL plus same-State/cross-surface/managed-team acceptance;
+5. do not broaden scope.
