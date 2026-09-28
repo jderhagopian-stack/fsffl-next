@@ -488,3 +488,45 @@ def test_shared_postgres_state_upserts_reject_older_cross_user_writes() -> None:
     assert "excluded.recorded_at >= fsffl.league_snapshot.recorded_at" in league
     assert "fsffl.team_snapshot.source_updated_at" in team
     assert "excluded.recorded_at >= fsffl.team_snapshot.recorded_at" in team
+
+
+def test_fresh_hosted_connect_defers_intelligence_until_team_identity_exists() -> None:
+    source = open(
+        "src/fsffl/product/hosted_connect.py",
+        encoding="utf-8",
+    ).read()
+    connect = source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+
+    assert "active_runtime = runtime_store.get(user_id)" in connect
+    assert "active_runtime.selected_team_id is not None" in connect
+    assert "deferred intelligence until managed-team selection" in connect
+
+
+def test_explicit_team_selection_hands_off_to_intelligence_without_silent_team_restore() -> None:
+    app = open("src/fsffl/product/static/app.js", encoding="utf-8").read()
+    refresh = open(
+        "src/fsffl/product/static/forecast_refresh.js",
+        encoding="utf-8",
+    ).read()
+    mobile = open(
+        "src/fsffl/product/static/mobile_safari_recovery.js",
+        encoding="utf-8",
+    ).read()
+
+    select = app.split("async function selectTeam(teamId)", 1)[1].split(
+        "function wireConnectButton", 1
+    )[0]
+    assert "api('/api/select-team'" in select
+    assert "applyContext()" in select
+    assert "window.fsfflEnsureIntelligenceAfterTeamSelection?.()" in select
+    assert "window.fsfflEnsureIntelligenceAfterTeamSelection=()=>{" in refresh
+    assert "fsfflSettledStateId=null" in refresh
+    assert "maybeStartIntelligenceJob({manual:false})" in refresh
+
+    interactive = mobile.split("async function interactiveConnect()", 1)[1].split(
+        "window.fsfflRestoreSession=restoreSavedSession", 1
+    )[0]
+    assert "localStorage.removeItem(TEAM_KEY)" in interactive
+    assert "restoreSelectedTeam(" not in interactive
