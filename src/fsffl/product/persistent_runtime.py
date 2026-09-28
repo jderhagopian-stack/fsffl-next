@@ -650,8 +650,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             refreshed_league_state=target_state,
         )
         reused = replace(restored, intelligence_reused=True)
-        self._contexts[user_id] = reused
-        self._checkpoint_async(user_id, reused)
+        self._store_mutation_context(user_id, reused)
+        if not self.working_generation_active(user_id):
+            self._checkpoint_async(user_id, reused)
         self._record_forecast_replay_decision(
             user_id,
             league_state=target_state,
