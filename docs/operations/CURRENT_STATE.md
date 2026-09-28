@@ -997,3 +997,19 @@ Render service `fsffl-next-private-beta` has deployed exact merge SHA `dbe7fccac
 Hosted runtime availability acceptance auto-started on the new instance. Current observed progress: acceptance_start passed within the soft memory budget; cold FSFFL surface reads completed; cold PI history completed; initial FSFFL reconciliation atomically published full Forecast/Simulation/Value/Intrinsic authority; all six checked surfaces shared one publication generation; PI history during active reconciliation completed in ~0.49s. No terminal PASS/FAIL has been emitted yet.
 
 Do not call stabilization terminal or request physical iPhone/Safari validation until the hosted acceptance journey emits terminal PASS. If it passes, physical testing is the final gate.
+
+
+## 2026-09-28 — Physical clean-reset testing proves a first-load regression
+Current beta availability is **HOLD**. The problem is no longer classified as only restore/publication continuity.
+
+Management performed a surgical server-side reset for Jimmy while preserving historical/model evidence. Physical iPhone/Safari then proved:
+- Sleeper connect POST was accepted, but the Connect League screen gave no useful acknowledgement and remained visible for >1 minute;
+- a product-context read took ~51.6s;
+- the fresh league State eventually persisted, but the user was never asked to select a team even though browser code issued team-selection calls from saved Safari local state;
+- Forecast replay selected fresh acquisition for a legitimate material player/NFL-team mapping change, but no new Forecast/Simulation/Value publication followed and no clear terminal failure was surfaced.
+
+Regression comparison found the earlier reliable contract in PR #54 (`0021aefc...`) / PR #56 (`a8527e1...`): Connect League completed once canonical Sleeper State was usable in memory and persistence continued asynchronously, with visible mobile progress. PR #261 (`c57bc39...`) later retained a 30-second State-activation durability barrier on hosted connect while solving league-switch persistence safety, recreating the blocking behavior PR #54 had removed.
+
+Controlling corrective: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`.
+
+Immediate action: restore the known-good first-load contract without rolling back #261/#291 safety. Prove a true clean-browser first run (server state + browser local state empty), restored session, league switch and restart before asking the product owner to test again. Post-stabilization foundations remain paused.
