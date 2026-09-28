@@ -1380,3 +1380,16 @@ That behavior now contradicts canonical Management policy. Correct it in this wo
 - do not weaken the Render hard-limit safety boundary.
 
 Do not let another hosted run return FAILED solely because the soft engineering target was exceeded.
+
+
+## 2026-09-27 22:23 ET — PR #279 merged; Render startup hang before hosted acceptance
+PR #279 merged successfully as `916f87e0661475d9ae5c0458c788ba356e802262`. Render build `dep-dassq1rbc2fs73a74b10` completed the package build successfully, but deployment remains `update_in_progress`.
+
+Observed new-instance evidence:
+- new instance `srv-dae6k7vqj5pc73af7bt0-qvhhw` emitted only Render's command launch line for `uvicorn fsffl.product.persistent_webapp:app ...`;
+- no subsequent Uvicorn "Started server process", application startup-complete, request, product startup, or State-first acceptance logs are present;
+- no app error/critical logs are present either;
+- Render has not marked the deploy live and hosted acceptance has not begun on #279;
+- prior ~64s Market logs belong to the old #278 instance and must not be attributed to #279.
+
+Immediate directive: stop Market feature work. Diagnose the narrow startup/import/initialization hang on the exact #279 merge SHA. Determine the last reached startup boundary before Uvicorn application startup, restore health readiness, then rerun the existing hosted acceptance on that exact deployed code. Do not expand scope or reopen Research.
