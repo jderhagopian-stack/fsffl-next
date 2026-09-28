@@ -416,3 +416,9 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - Cold PI/history and light Market reads remain healthy; therefore the defect is workload-path specific, not universal app slowness.
 - RSS reached ~469.6 MB but remained below the hard Render limit.
 - **Do not rerun unchanged #278 again as the next action. Implement the nonblocking Market execution boundary already authorized by Management.**
+
+
+## 2026-09-27 — Research parked; Implementation remains sole active priority
+- **Research — DONE / PARKED.** The Forecast authority program, Y4-Y8 symmetric study, and Long-Term Intrinsic consumption contract have reached the intended durable state. No additional Research work is required before implementation.
+- **Implementation — ACTIVE / sole product-critical path.** Finish the nonblocking Market/runtime corrective, merge/deploy it, and pass hosted acceptance.
+- After runtime acceptance, Management may reopen the already-defined Long-Term Intrinsic shadow implementation directly from the frozen Research handoff; do not send it back through another Research cycle without new evidence.
