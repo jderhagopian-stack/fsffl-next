@@ -246,6 +246,11 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         and served.league_id == league_state.league.league_id
         and served.league_state_id != league_state.state_id
     )
+    served_publication_generation_id = (
+        served.publication_generation_id
+        if served_available
+        else None
+    )
     overall_status = (
         "rebuilding"
         if served_available
@@ -308,6 +313,7 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
                 else None
             ),
             "stale": served_available,
+            "publication_generation_id": served_publication_generation_id,
             "label": (
                 "Last-good intelligence remains visible while current State rebuilds."
                 if served_available
@@ -328,6 +334,30 @@ def _runtime_context_payload(
     evidence = runtime.forecast_evidence
     simulation = runtime.simulation_analytics
     value_evidence = runtime.value_evidence
+    capability_readiness = capability_reader(runtime)
+    served = getattr(runtime, "served_intelligence", None)
+    served_status = dict(capability_readiness.get("served_last_good") or {})
+    served_available = bool(
+        served is not None
+        and league_state is not None
+        and served.league_id == league_state.league.league_id
+        and served.league_state_id != league_state.state_id
+        and served_status.get("available") is True
+    )
+    served_presentation_available = served_status.get("presentation_available")
+    served_visible = bool(
+        served_available
+        and served.publication_generation_id
+        and served_presentation_available is not False
+    )
+    visible_publication_generation_id = (
+        runtime.publication_generation_id
+        or (
+            served.publication_generation_id
+            if served_visible
+            else None
+        )
+    )
     return {
         "user_id": user_id,
         "league_id": league_state.league.league_id if league_state is not None else None,
@@ -372,12 +402,9 @@ def _runtime_context_payload(
         "value_coverage": value_evidence.coverage if value_evidence is not None else None,
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
-        "capability_readiness": capability_reader(runtime),
-        "publication_generation_id": getattr(
-            runtime,
-            "publication_generation_id",
-            None,
-        ),
+        "capability_readiness": capability_readiness,
+        "publication_generation_id": visible_publication_generation_id,
+        "target_publication_generation_id": runtime.publication_generation_id,
         "forecast_replay_decision": (
             getattr(store, "forecast_replay_decision")(user_id)
             if callable(getattr(store, "forecast_replay_decision", None))
@@ -386,12 +413,21 @@ def _runtime_context_payload(
         "served_last_good": (
             {
                 "available": True,
-                "league_state_id": runtime.served_intelligence.league_state_id,
-                "as_of": runtime.served_intelligence.as_of.isoformat(),
+                "league_state_id": served.league_state_id,
+                "as_of": served.as_of.isoformat(),
+                "publication_generation_id": (
+                    served.publication_generation_id if served_visible else None
+                ),
                 "stale": True,
             }
-            if getattr(runtime, "served_intelligence", None) is not None
-            else {"available": False, "league_state_id": None, "as_of": None, "stale": False}
+            if served_available
+            else {
+                "available": False,
+                "league_state_id": None,
+                "as_of": None,
+                "publication_generation_id": None,
+                "stale": False,
+            }
         ),
         "product_version": "next8-product-v1",
     }
@@ -732,18 +768,43 @@ def create_app(
         payload = dict(base_read_capabilities(runtime))
         working_active = store.working_generation_active(runtime.user_id)
         target_state_id = store.working_target_state_id(runtime.user_id)
-        published_generation_id = getattr(
+        target_generation_id = getattr(
             runtime,
             "publication_generation_id",
             None,
         )
+        served = getattr(runtime, "served_intelligence", None)
+        served_status = dict(payload.get("served_last_good") or {})
+        served_visible = bool(
+            target_generation_id is None
+            and served is not None
+            and runtime.league_state is not None
+            and served.league_id == runtime.league_state.league.league_id
+            and served.league_state_id != runtime.league_state.state_id
+            and served.publication_generation_id
+            and served_status.get("available") is True
+            and served_status.get("presentation_available") is not False
+        )
+        published_generation_id = (
+            target_generation_id
+            or (
+                served.publication_generation_id
+                if served_visible
+                else None
+            )
+        )
         payload["publication_generation_id"] = published_generation_id
         payload["publication"] = {
             "generation_id": published_generation_id,
+            "target_generation_id": target_generation_id,
             "league_state_id": (
-                runtime.league_state.state_id
-                if runtime.league_state is not None
-                else None
+                served.league_state_id
+                if served_visible
+                else (
+                    runtime.league_state.state_id
+                    if runtime.league_state is not None
+                    else None
+                )
             ),
             "working_generation_active": working_active,
             "target_state_id": target_state_id,
@@ -828,43 +889,47 @@ def create_app(
     def publish_working_generation(user_id: str) -> UserRuntimeContext:
         """Durably compose one working generation, then expose it in one swap."""
 
-        working = store.working_context(user_id)
-        if working.league_state is None:
-            raise RuntimeError("working intelligence generation has no LeagueState")
+        # Team/league identity changes serialize against the entire final sequence,
+        # including working-artifact checkpoint and presentation promotion. Ordinary
+        # foreground reads remain free to consume the previously published generation.
+        with store.publication_sequence(user_id):
+            working = store.working_context(user_id)
+            if working.league_state is None:
+                raise RuntimeError("working intelligence generation has no LeagueState")
 
-        checkpoint = getattr(store, "checkpoint_working_generation", None)
-        if callable(checkpoint) and not checkpoint(user_id):
-            raise RuntimeError(
-                "Working intelligence generation could not be durably checkpointed"
-            )
-
-        promoter = getattr(application.state, "presentation_promoter", None)
-        if callable(promoter):
-            with store.read_context(user_id, working):
-                result = promoter(user_id, working)
-            if result is None:
+            checkpoint = getattr(store, "checkpoint_working_generation", None)
+            if callable(checkpoint) and not checkpoint(user_id):
                 raise RuntimeError(
-                    "Published presentation generation could not be durably promoted"
+                    "Working intelligence generation could not be durably checkpointed"
                 )
-            generation_id = str(result.publication_generation_id)
-        else:
-            generation_id = (
-                f"runtime:{working.league_state.state_id}:{uuid4().hex}"
-            )
 
-        published = store.publish_working_generation(
-            user_id,
-            publication_generation_id=generation_id,
-        )
-        wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
-        if callable(wait_for_checkpoint) and not wait_for_checkpoint(
-            user_id,
-            timeout=180.0,
-        ):
-            raise RuntimeError(
-                "Published intelligence generation could not be durably checkpointed"
+            promoter = getattr(application.state, "presentation_promoter", None)
+            if callable(promoter):
+                with store.read_context(user_id, working):
+                    result = promoter(user_id, working)
+                if result is None:
+                    raise RuntimeError(
+                        "Published presentation generation could not be durably promoted"
+                    )
+                generation_id = str(result.publication_generation_id)
+            else:
+                generation_id = (
+                    f"runtime:{working.league_state.state_id}:{uuid4().hex}"
+                )
+
+            published = store.publish_working_generation(
+                user_id,
+                publication_generation_id=generation_id,
             )
-        return published
+            wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+            if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+                user_id,
+                timeout=180.0,
+            ):
+                raise RuntimeError(
+                    "Published intelligence generation could not be durably checkpointed"
+                )
+            return published
 
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
