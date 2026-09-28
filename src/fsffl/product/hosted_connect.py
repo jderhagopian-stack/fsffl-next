@@ -288,7 +288,11 @@ def install_hosted_connect_routes(
                     user_id,
                     league_external_id,
                 )
-                if intelligence_reconciler is not None:
+                restored_runtime = runtime_store.get(user_id)
+                if (
+                    intelligence_reconciler is not None
+                    and restored_runtime.selected_team_id is not None
+                ):
                     intelligence_reconciler(user_id)
                 return
             league_state = state_loader(league_external_id)
@@ -323,8 +327,19 @@ def install_hosted_connect_routes(
                 league_state=league_state,
                 sleeper_league_external_id=league_external_id,
             )
-            if intelligence_reconciler is not None:
+            active_runtime = runtime_store.get(user_id)
+            if (
+                intelligence_reconciler is not None
+                and active_runtime.selected_team_id is not None
+            ):
                 intelligence_reconciler(user_id)
+            elif intelligence_reconciler is not None:
+                _logger.info(
+                    "FSFFL Sleeper connect deferred intelligence until managed-team selection user=%s league=%s state=%s",
+                    user_id,
+                    league_external_id,
+                    league_state.state_id,
+                )
 
         return _job_payload(
             jobs.start(
