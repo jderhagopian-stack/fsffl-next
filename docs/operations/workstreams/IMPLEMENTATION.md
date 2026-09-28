@@ -1364,3 +1364,19 @@ Fresh-run evidence:
 - no new implementation PR/commit exists after the Management nonblocking-Market directive.
 
 Disposition: stop waiting on another rerun of unchanged #278. The next authorized action is to implement the already-persisted foreground execution boundary: ordinary Market reads must not synchronously run full Search/Decision; structural Search must be explicit/progressive and Decision enrichment asynchronous. Preserve #278's proven continuity gains.
+
+
+## 2026-09-27 — Management correction: align hosted acceptance code with current RSS policy
+Implementation branch `implementation/nonblocking-market-20260927` is actively implementing the correct foreground Market boundary and is materially ahead of main. Preserve that work.
+
+A second concrete blocker is now identified in the acceptance harness itself: `src/fsffl/product/state_first_acceptance.py::sample_resources()` still raises `StateFirstAcceptanceError` whenever `within_memory_budget == False`, which hard-codes the old ~429.5 MB engineering target as a terminal failure.
+
+That behavior now contradicts canonical Management policy. Correct it in this workstream:
+- retain the ~429.5 MB value as diagnostic engineering headroom;
+- record/report a soft-budget miss;
+- do **not** fail hosted product acceptance solely for exceeding that target;
+- continue to fail on a real process recycle, 5xx/429 availability failure, State/presentation loss, or actual hard-limit/safety breach;
+- continue to record peak/current RSS so memory debt remains visible;
+- do not weaken the Render hard-limit safety boundary.
+
+Do not let another hosted run return FAILED solely because the soft engineering target was exceeded.

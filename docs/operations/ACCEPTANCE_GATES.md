@@ -516,3 +516,18 @@ Acceptance now requires:
 - hard memory-limit safety is preserved.
 
 The ~429.5 MB engineering RSS target is informative but is not, by itself, a product-availability failure.
+
+
+## 2026-09-27 — RSS acceptance implementation alignment required
+The acceptance implementation must match the already-approved policy: the ~429.5 MB RSS target is diagnostic headroom, not a standalone product-availability gate.
+
+Current code still raises immediately when `within_memory_budget == False`; this is stale acceptance logic and must be corrected before the next hosted terminal judgment.
+
+A hosted run may remain acceptable above the soft target only if:
+- no process recycle/OOM;
+- no 5xx/429 availability failure caused by resource pressure;
+- no canonical State or persisted presentation loss;
+- no hard memory-limit breach or clearly unsafe approach to that boundary;
+- foreground responsiveness requirements are met.
+
+Peak/current RSS must still be persisted as engineering debt evidence.

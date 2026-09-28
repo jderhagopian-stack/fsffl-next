@@ -248,8 +248,21 @@ def run_state_first_production_acceptance(
         sample = {"label": label, **resource_reader()}
         resources.append(sample)
         if sample.get("within_memory_budget") is False:
+            sample["soft_memory_budget_exceeded"] = True
+            _logger.warning(
+                "FSFFL STATE-FIRST ACCEPTANCE soft memory headroom target exceeded resource=%s data=%s",
+                label,
+                json.dumps(sample, sort_keys=True, default=str),
+            )
+        limit = int(sample.get("memory_limit_bytes") or 0)
+        observed = max(
+            int(sample.get("current_rss_bytes") or 0),
+            int(sample.get("max_rss_observed_bytes") or 0),
+            int(sample.get("peak_rss_bytes") or 0),
+        )
+        if limit > 0 and observed >= limit:
             raise StateFirstAcceptanceError(
-                f"resource budget exceeded at {label}: {sample}"
+                f"hard memory limit reached at {label}: {sample}"
             )
         _logger.info(
             "FSFFL STATE-FIRST ACCEPTANCE resource=%s data=%s",
@@ -560,10 +573,20 @@ def run_state_first_production_acceptance(
         report["peak_rss_bytes"] = peak
         report["memory_budget_bytes"] = budget
         report["memory_headroom_bytes"] = budget - peak
-        if peak > budget:
-            raise StateFirstAcceptanceError(
-                f"hosted acceptance peak RSS {peak} exceeded budget {budget}"
-            )
+        report["soft_memory_budget_exceeded"] = peak > budget
+        hard_limits = [
+            int(row.get("memory_limit_bytes") or 0)
+            for row in resources
+            if int(row.get("memory_limit_bytes") or 0) > 0
+        ]
+        if hard_limits:
+            hard_limit = min(hard_limits)
+            report["memory_limit_bytes"] = hard_limit
+            report["hard_memory_headroom_bytes"] = hard_limit - peak
+            if peak >= hard_limit:
+                raise StateFirstAcceptanceError(
+                    f"hosted acceptance peak RSS {peak} reached hard memory limit {hard_limit}"
+                )
 
     report["status"] = "PASS"
     _logger.info(
