@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-def test_intelligence_refresh_is_league_scoped_not_team_scoped() -> None:
+def test_intelligence_refresh_requires_league_and_managed_team_identity() -> None:
     source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
     assert "!state?.context?.league_id" in source
-    assert "!state?.context?.team_id" not in source
+    assert "!state?.context?.team_id" in source
     assert "'/api/intelligence/jobs'" in source
 
 
@@ -64,4 +64,5 @@ def test_first_team_handoff_resets_stale_settlement_and_starts_current_enrichmen
         "window.addEventListener('load'", 1
     )[0]
     assert "fsfflSettledStateId=null" in handoff
-    assert "maybeStartIntelligenceJob({manual:false})" in handoff
+    assert "maintainFsfflIntelligence()" in handoff
+    assert "maybeStartIntelligenceJob({manual:false})" not in handoff
