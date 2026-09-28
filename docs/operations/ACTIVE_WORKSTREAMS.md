@@ -464,3 +464,9 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **Implementation — ACTIVE / sole priority.** PR #281 is merged but is not deployable/acceptable as-is because post-merge review found a P1 same-State replay hole: stale downstream supplement compatibility can cause early return before raw Forecast replay, forcing unnecessary live provider acquisition.
 - Fix the narrow replay branch and add deterministic regression coverage first; then merge, deploy the corrected SHA, and run hosted FSFFL → Hodor → FSFFL acceptance.
 - Preserve all existing source-health/two-source rules and PR #280 performance gains. Long-Term Intrinsic remains paused.
+
+
+## 2026-09-28 — PR #282 follow-up P1 is the sole runtime blocker
+- **Implementation — ACTIVE / sole product-critical path.** PR #282 fixed same-State raw Forecast replay but is not deployable as-is because replay can leave stale same-State Simulation durable and later restart can combine it with rebuilt Forecast.
+- Fix Forecast↔Simulation persistence compatibility (or explicitly invalidate dependent Simulation on replay), add interruption/restart regression coverage, then merge, deploy corrected SHA, and complete hosted FSFFL → Hodor → FSFFL acceptance.
+- Preserve source-health/two-source rules and all prior latency/memory gains. Long-Term Intrinsic remains paused.
