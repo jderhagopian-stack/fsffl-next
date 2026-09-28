@@ -477,3 +477,10 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **Data/Research:** begin bounded PIT capture of governed ROS raw-stat projections and contemporaneous status/actuals immediately; this must not modify production authority or interfere with runtime work.
 - **Native ROS model:** shadow Research only until comparative PIT evidence earns promotion.
 - Directive: `docs/operations/directives/20260928_IN_SEASON_ROS_FORECAST_POLICY.md`.
+
+
+## 2026-09-28 — Current live blocker moved to PI history during active reconciliation
+- **Implementation — ACTIVE / sole product-critical path.** #283 merge `047b3386e81bb843cc8b71408d05b0b81f38b792` is deployed and live.
+- Hosted acceptance fails at `pi_history_during_active_reconciliation` because PI history times out while reconciliation is active.
+- Diagnose whether this is real foreground starvation/contention versus a stale acceptance threshold; correct the narrow cause without undoing #280/#283 continuity and persistence fixes.
+- After correction, rerun the complete hosted acceptance journey. Research and Long-Term Intrinsic remain paused.
