@@ -1699,3 +1699,20 @@ Required terminal output:
 - explicit implementation/promotion contract if supported.
 
 Continue under OPERATING_PROTOCOL.md to a permitted terminal state.
+
+
+## 2026-09-27 — MANAGEMENT CLOSEOUT: Long-horizon Forecast / Long-Term Intrinsic Research is complete and parked
+Management accepts the completed Research program as sufficient for the next implementation phase.
+
+Canonical settled direction:
+- governed Forecast trajectory remains continuous through Y1-Y7, with Y8 coarse only;
+- Current Intrinsic remains the separate Y1-Y3 near/medium-term economic lens;
+- Long-Term Intrinsic remains the separate Y4-Y7 annual-equivalent league-aware Shapley lens;
+- `LT_RAW=(phi4+phi5+phi6+phi7)/4`;
+- exact-vs-set-valued Forecast authority is preserved by horizon/position;
+- model-authority uncertainty remains distinct from within-model Forecast uncertainty;
+- Y8 does not enter cardinal Long-Term Intrinsic;
+- Current and Long-Term Intrinsic are not silently blended;
+- Team Utility/Market may later consume both under a separately governed competitive-window contract.
+
+Research is now **DONE / PARKED**. Do not run additional Forecast-family searches, horizon-weight studies, age/workload heuristics, or Long-Term Intrinsic consumer studies absent genuinely new evidence or explicit Management authorization. The existing frozen Research artifacts/handoffs are the implementation authority when Management reopens the work.
