@@ -18,6 +18,7 @@ def test_served_and_pending_runtime_state_are_lightweight_identities_only() -> N
         "league_state_id",
         "as_of",
         "team_ids",
+        "publication_generation_id",
     }
     assert {item.name for item in fields(_PendingIntelligenceSnapshot)} == {
         "league_state_id",
