@@ -331,6 +331,7 @@ class ServedIntelligenceSnapshot:
     league_state_id: str
     as_of: datetime
     team_ids: tuple[str, ...]
+    publication_generation_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -443,6 +444,7 @@ def _served_snapshot_from_context(
         league_state_id=context.league_state.state_id,
         as_of=context.league_state.as_of,
         team_ids=tuple(sorted(team.team_id for team in context.league_state.teams)),
+        publication_generation_id=context.publication_generation_id,
     )
 
 
