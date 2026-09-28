@@ -1504,3 +1504,11 @@ Immediate action:
 3. preserve #285 serialization and #287 cold-restore behavior;
 4. deploy the exact corrected merge SHA and rerun full hosted FSFFL → Hodor → FSFFL plus same-State/cross-surface/managed-team acceptance;
 5. do not broaden scope.
+
+
+## 2026-09-28 — Final stabilization gates after #289 / open #288
+PR #289 merged the intended managed-team acceptance correction. Do not consider stabilization terminal yet. Post-merge review found that selection can still occur while the worker is in checkpoint/presentation promotion outside the final store lock, deleting the active working generation and causing generic FAILED publication. Coordinate selection with the **entire final publication sequence** or classify this stale-work invalidation as an intentional interruption without advancing publication authority.
+
+Open PR #288 also needs its two review P2s closed: carry a served publication generation only when the persisted publication's selected team matches the active team, and expose that served generation only when the same league/different-State/visible-snapshot predicate actually permits presentation continuity.
+
+Then merge the corrected lineage, deploy the exact SHA, and run full hosted FSFFL -> Hodor -> FSFFL plus same-State/read-overlap/cross-surface/managed-team/restart acceptance. Return for physical iPhone/Safari validation only after that passes. Do not broaden scope.
