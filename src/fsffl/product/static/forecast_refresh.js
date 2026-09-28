@@ -151,7 +151,7 @@ function settleFailedJob(payload){
 }
 
 async function manualIntelligenceRefresh(){
-  if(!state?.context?.league_id||fsfflJobStartInFlight||fsfflCurrentJobId)return;
+  if(!state?.context?.league_id||!state?.context?.team_id||fsfflJobStartInFlight||fsfflCurrentJobId)return;
   fsfflSettledStateId=null;
   fsfflJobStateId=null;
   fsfflSessionStartedJobId=null;
@@ -201,7 +201,7 @@ async function pollIntelligenceJob(){
 }
 
 async function maybeStartIntelligenceJob({manual=false}={}){
-  if(fsfflJobStartInFlight||!state?.context?.league_id)return;
+  if(fsfflJobStartInFlight||!state?.context?.league_id||!state?.context?.team_id)return;
   if(!manual&&intelligencePipelineReady(state.context)){
     reflectRefreshAction(state.context);
     return;
@@ -329,7 +329,9 @@ setInterval(maintainFsfflIntelligence,2500);
 window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh;
 window.fsfflEnsureIntelligenceAfterTeamSelection=()=>{
   fsfflSettledStateId=null;
-  return maybeStartIntelligenceJob({manual:false});
+  // Team selection owns job creation on the server. The browser immediately attaches
+  // to that current job so progress/failure are visible without racing a second POST.
+  return maintainFsfflIntelligence();
 };
 
 window.addEventListener('load',()=>{
