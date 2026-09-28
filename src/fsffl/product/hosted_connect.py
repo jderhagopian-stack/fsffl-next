@@ -396,7 +396,11 @@ def install_hosted_connect_routes(
                             league_external_id,
                             probe.week,
                         )
-                        if intelligence_reconciler is not None:
+                        current_runtime = runtime_store.get(user_id)
+                        if (
+                            intelligence_reconciler is not None
+                            and current_runtime.selected_team_id is not None
+                        ):
                             intelligence_reconciler(user_id)
                         return
                 except Exception as exc:
@@ -454,7 +458,11 @@ def install_hosted_connect_routes(
                     league_state=league_state,
                     sleeper_league_external_id=league_external_id,
                 )
-            if intelligence_reconciler is not None:
+            refreshed_runtime = runtime_store.get(user_id)
+            if (
+                intelligence_reconciler is not None
+                and refreshed_runtime.selected_team_id is not None
+            ):
                 intelligence_reconciler(user_id)
 
             if persistence_store is not None and probe is not None:
