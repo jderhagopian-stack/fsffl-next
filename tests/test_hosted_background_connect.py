@@ -96,7 +96,7 @@ def test_mobile_connect_uses_background_import_and_transport_recovery() -> None:
     assert "pageshow" not in source
 
 
-def test_mobile_connect_has_one_poll_owner_and_requires_terminal_connect_success() -> None:
+def test_mobile_connect_has_one_poll_owner_and_uses_state_before_terminal_connect() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -105,17 +105,17 @@ def test_mobile_connect_has_one_poll_owner_and_requires_terminal_connect_success
     assert "let activeConnectPromise=null" in source
     assert "let activeLeagueId=null" in source
     assert "activeConnectPromise&&activeLeagueId===leagueId" in source
-    assert "activeOperation" not in source
     assert "const existing=await recoverCurrentJob(leagueId,operation)" in source
     assert "['queued','running'].includes(existing.status)" in source
     assert "current.status==='completed'&&current.operation===operation" in source
-    assert "const recovered=await recoverCurrentJob(leagueId,operation)" in source
     perform = source.split("async function performBackgroundImport", 1)[1].split(
         "function waitForBackgroundImport", 1
     )[0]
-    assert "nextContextProbeAt" not in perform
-    assert "operation==='connect'&&Date.now()" not in perform
-    assert "job?.status==='completed'" in perform
+    assert "let nextContextProbeAt=0" in perform
+    assert "operation==='connect'&&Date.now()>=nextContextProbeAt" in perform
+    assert "const usable=await usableConnectedContext(leagueId)" in perform
+    assert "if(usable)return usable" in perform
+    assert perform.index("if(usable)return usable") < perform.index("job?.status==='completed'")
     assert "const context=await resilientApi('/api/product-context',{},3)" in perform
     assert "pollDelay=Math.min(2200" in source
     assert "League import completed without activating the requested Sleeper league." in source
@@ -265,7 +265,7 @@ def test_hosted_connect_reuses_restored_matching_league_before_provider_reload()
     assert "return" in source.split("if already_loaded:", 1)[1].split("league_state = state_loader", 1)[0]
 
 
-def test_mobile_connect_commits_saved_league_only_after_identity_match() -> None:
+def test_mobile_connect_commits_league_after_identity_and_requires_fresh_team_choice() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -275,15 +275,20 @@ def test_mobile_connect_commits_saved_league_only_after_identity_match() -> None
     )[0]
 
     previous_index = interactive.index("const previousLeagueId=localStorage.getItem(LEAGUE_KEY)")
+    feedback_index = interactive.index("button.textContent='Starting import…'")
+    canonical_index = interactive.index("canonicalBefore=await resilientApi('/api/product-context'")
     wait_index = interactive.index("await waitForBackgroundImport(normalized")
     verify_index = interactive.index("if(!contextMatchesLeague(context,normalized)||!context?.state_id)")
     save_index = interactive.index("localStorage.setItem(LEAGUE_KEY,normalized)")
-    select_index = interactive.index("const selectedContext=await restoreSelectedTeam(context,canonicalBefore)")
-    apply_index = interactive.index("applyConnectedContext(selectedContext)")
-    assert previous_index < wait_index < verify_index < save_index < select_index < apply_index
-    assert "localStorage.setItem(LEAGUE_KEY,normalized);" not in interactive[:wait_index]
+    clear_team_index = interactive.index("localStorage.removeItem(TEAM_KEY)", save_index)
+    apply_index = interactive.index("applyConnectedContext(context)")
+    assert previous_index < feedback_index < canonical_index < wait_index < verify_index < save_index < clear_team_index < apply_index
+    assert "restoreSelectedTeam(context,canonicalBefore)" not in interactive
+    assert "League is ready. Select the franchise you manage to continue." in interactive
     assert "if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY)" in interactive
     assert "else localStorage.setItem(LEAGUE_KEY,previousLeagueId)" in interactive
+    assert "if(previousTeamId===null)localStorage.removeItem(TEAM_KEY)" in interactive
+    assert "else localStorage.setItem(TEAM_KEY,previousTeamId)" in interactive
 
 
 def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write() -> None:
@@ -306,13 +311,14 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
     assert "current_job.league_external_id != league_external_id" in refresh
 
 
-def test_current_static_release_busts_pre_identity_safe_mobile_cache() -> None:
+def test_current_static_release_busts_first_load_recovery_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    assert "20260927-market-nonblocking1" in source
-    assert "mobile_safari_recovery.js?v=20260927-market-nonblocking1" in source
+    release = "20260928-first-load-recovery1"
+    assert f"mobile_safari_recovery.js?v={release}" in source
+    assert f"forecast_refresh.js?v={release}" in source
 
 
-def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> None:
+def test_hosted_connect_completes_from_in_memory_state_without_checkpoint_wait() -> None:
     source = open(
         "src/fsffl/product/hosted_connect.py",
         encoding="utf-8",
@@ -320,12 +326,13 @@ def test_hosted_connect_waits_for_serialized_persistence_before_completion() -> 
     connect = source.split(
         '@application.post("/api/connect/sleeper/background")', 1
     )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
-    set_index = connect.index("runtime_store.set_league_state(user_id, league_state)")
-    wait_index = connect.index('getattr(runtime_store, "wait_for_checkpoint", None)')
+    activate_index = connect.index('"activate_league_state_for_connect"')
     verify_index = connect.index("active_state = runtime_store.get(user_id).league_state")
     behavioral_index = connect.index("behavioral_coordinator.start")
-    assert set_index < wait_index < verify_index < behavioral_index
-    assert 'raise RuntimeError("Sleeper league activation could not be durably checkpointed")' in connect
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", behavioral_index)
+    assert activate_index < verify_index < behavioral_index < reconcile_index
+    assert "wait_for_checkpoint" not in connect
+    assert "Sleeper league activation could not be durably checkpointed" not in connect
     assert 'raise RuntimeError("Sleeper league activation lost requested identity")' in connect
 
 
@@ -349,7 +356,7 @@ def test_hosted_refresh_is_bound_to_starting_league_generation() -> None:
     assert "FSFFL Sleeper refresh superseded at activation" in refresh
 
 
-def test_manual_connect_cannot_report_same_active_league_as_switch_success() -> None:
+def test_manual_connect_acknowledges_before_context_read_and_rejects_same_active_league() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -359,11 +366,12 @@ def test_manual_connect_cannot_report_same_active_league_as_switch_success() -> 
     )[0]
 
     active_index = interactive.index("const activeBefore=")
+    feedback_index = interactive.index("button.textContent='Starting import…'")
     canonical_index = interactive.index("canonicalBefore=await resilientApi('/api/product-context'")
     same_index = interactive.index("if(contextMatchesLeague(canonicalBefore,normalized))")
-    start_index = interactive.index("interactiveConnectInFlight=true")
     wait_index = interactive.index("await waitForBackgroundImport(normalized")
-    assert active_index < canonical_index < same_index < start_index < wait_index
+    assert active_index < feedback_index < canonical_index < same_index < wait_index
+    assert "publishSyncState('checking','Starting import…')" in interactive
     assert "same_active" in interactive
     assert "Enter a different league ID to switch leagues." in interactive
     assert "'requested='+normalized+';active='" in interactive
@@ -381,7 +389,7 @@ def test_connect_request_target_is_emitted_on_visible_performance_logger() -> No
     assert "FSFFL Sleeper connect request user=%s requested=%s active=%s already_loaded=%s" in connect
 
 
-def test_cross_league_switch_maps_unique_managed_team_name_before_apply() -> None:
+def test_saved_team_restore_is_exact_session_only_and_manual_switch_stays_unselected() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -389,20 +397,23 @@ def test_cross_league_switch_maps_unique_managed_team_name_before_apply() -> Non
     helper = source.split("async function restoreSelectedTeam", 1)[1].split(
         "async function refreshStoredLeague", 1
     )[0]
+    restore = source.split("async function restoreSavedSession()", 1)[1].split(
+        "async function interactiveConnect()", 1
+    )[0]
     interactive = source.split("async function interactiveConnect()", 1)[1].split(
         "window.fsfflRestoreSession=restoreSavedSession", 1
     )[0]
 
-    assert "const previousName=selectedTeamName(previousContext)" in helper
-    assert "matches.length===1" in helper
+    assert "localStorage.getItem(TEAM_KEY)" in helper
+    assert "(context.teams||[]).some(team=>team.team_id===teamId)" in helper
     assert "resilientApi('/api/select-team'" in helper
-    assert "localStorage.setItem(TEAM_KEY,matches[0].team_id)" in helper
-    assert "const selectedContext=await restoreSelectedTeam(context,canonicalBefore)" in interactive
-    assert interactive.index("restoreSelectedTeam(context,canonicalBefore)") < interactive.index(
-        "applyConnectedContext(selectedContext)"
-    )
+    assert "previousName" not in helper
+    assert "matches.length" not in helper
+    assert "restoreSelectedTeam(context)" in restore
+    assert "restoreSelectedTeam(" not in interactive
+    assert "localStorage.removeItem(TEAM_KEY)" in interactive
+    assert "applyConnectedContext(context)" in interactive
     assert "League is ready. Select the franchise you manage to continue." in interactive
-
 
 
 def test_hosted_switch_activates_state_before_starting_intelligence_reconciliation() -> None:
@@ -414,10 +425,11 @@ def test_hosted_switch_activates_state_before_starting_intelligence_reconciliati
         '@application.post("/api/connect/sleeper/background")', 1
     )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
 
-    state_index = connect.index("runtime_store.set_league_state(user_id, league_state)")
-    checkpoint_index = connect.index('getattr(runtime_store, "wait_for_checkpoint", None)')
-    reconcile_index = connect.index("intelligence_reconciler(user_id)", state_index)
-    assert state_index < checkpoint_index < reconcile_index
+    state_index = connect.index('"activate_league_state_for_connect"')
+    verify_index = connect.index("active_state = runtime_store.get(user_id).league_state")
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", verify_index)
+    assert state_index < verify_index < reconcile_index
+    assert "wait_for_checkpoint" not in connect
     assert "intelligence_reconciler" in connect
 
 
