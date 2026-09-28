@@ -1476,3 +1476,9 @@ Immediate action:
 4. if harness-only, correct the acceptance condition without weakening real availability checks;
 5. rerun full hosted FSFFL → Hodor → FSFFL acceptance on the corrected SHA lineage;
 6. do not broaden scope or reopen completed replay work absent evidence.
+
+
+## 2026-09-28 — Superseding root-cause directive: atomic published intelligence generation
+Physical testing on live #283 shows the runtime exposes half-built same-State reconciliation to readers. Current source makes the mechanism explicit: `set_forecast_evidence()` immediately replaces the live context and clears Simulation/Value; `set_simulation_analytics()` then keeps Value absent; stale presentation continuity only serves when the served State ID differs from current State. Consequently surface availability can flicker while the global status still appears current.
+
+Stop treating `pi_history_during_active_reconciliation` as an isolated timeout. Implement `docs/operations/directives/20260928_ATOMIC_INTELLIGENCE_PUBLICATION.md`: separate working vs published intelligence generations, preserve the prior compatible published generation through same-State refresh, atomically promote the replacement only after coherent terminal checkpoint/presentation build, and bind readiness/banner semantics to the published generation. Add cross-surface generation-ID and interruption/failure regressions, then deploy and rerun full hosted acceptance. Do not broaden into model/research work.
