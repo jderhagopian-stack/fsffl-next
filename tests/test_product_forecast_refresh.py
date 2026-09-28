@@ -71,7 +71,7 @@ def _evidence() -> LiveForecastEvidence:
     )
 
 
-def test_refresh_forecasts_marks_forecast_ready_and_enriches_my_team(monkeypatch) -> None:
+def test_refresh_forecasts_does_not_publish_partial_generation_when_downstream_fails(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     client = TestClient(create_app(state_loader=lambda _: _state(), forecast_loader=lambda _: _evidence()))
     client.post("/api/connect/sleeper", json={"league_external_id": "123"})
@@ -81,23 +81,22 @@ def test_refresh_forecasts_marks_forecast_ready_and_enriches_my_team(monkeypatch
     assert refreshed.status_code == 200
     assert refreshed.json()["status"] in {"queued", "running"}
 
-    # Compatibility route now delegates to the same State-first asynchronous
-    # reconciler as manual Refresh Intelligence. Forecast may attach before a
-    # later downstream layer fails in this focused fixture.
+    # Forecast may complete inside the unpublished working generation, but a later
+    # downstream failure must not leak that half-built generation to foreground reads.
     deadline = monotonic() + 2
-    context = None
+    job = None
     while monotonic() < deadline:
-        context = client.get("/api/product-context").json()
-        if context["forecast_ready"]:
+        job = client.get("/api/intelligence/jobs/current").json()
+        if job["status"] in {"completed", "failed", "interrupted"}:
             break
         sleep(0.01)
-    assert context is not None
-    assert context["forecast_ready"] is True
-    assert context["forecast_sources"] == ["cbs", "fftoday"]
+    assert job is not None
+    assert job["status"] == "failed"
+
+    context = client.get("/api/product-context").json()
+    assert context["forecast_ready"] is False
+    assert context["forecast_sources"] == []
+    assert context["capability_readiness"]["publication"]["working_generation_active"] is False
 
     team = client.get("/api/my-team").json()
-    player = team["players"][0]
-    fantasy = next(item for item in player["forecasts"] if item["metric"] == "fantasy_points")
-    assert fantasy["source"] == "fsffl:live_league_scored"
-    assert fantasy["distribution"]["mean"] == 350.0
-    assert team["context"]["warnings"][0]["code"] == "value_simulation_not_enriched"
+    assert all(not player["forecasts"] for player in team["players"])
