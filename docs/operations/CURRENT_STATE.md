@@ -908,3 +908,12 @@ For 2026, current-season Forecast will use actual YTD production plus governed t
 
 ## 2026-09-28 — PR #283 open; address P2 exact-fingerprint lookup before merge
 PR #283 is open and mergeable at head `d9993c7d1f552821b382f97aab811304e1afd817`. Its core P1 correction is the right direction and current CI/focused validation is green. Post-review found one P2: Simulation restore checks only the newest row for a State, so an older exact-compatible Simulation can be unnecessarily discarded if a newer mismatched Forecast fingerprint exists. Address this by querying the exact expected Simulation artifact fingerprint rather than newest-only lookup. Then merge, deploy the corrected SHA, and complete hosted FSFFL → Hodor → FSFFL acceptance without another intermediate stop.
+
+
+## 2026-09-28 — #283 is deployed/live; hosted acceptance now fails at PI history overlap
+Implementation confirms exact merge SHA `047b3386e81bb843cc8b71408d05b0b81f38b792` is deployed and live. The previous deployment uncertainty is closed.
+
+Hosted acceptance now fails earlier at **PI history overlap during active reconciliation**:
+`StateFirstAcceptanceError: PI history overlap failed: RuntimeError: pi_history_during_active_reconciliation: PI history timed out`.
+
+Disposition: this is the current runtime blocker. Do not reopen Forecast replay/Hodor persistence work unless new evidence points back there. Diagnose the narrow reason PI history cannot complete within the acceptance window while reconciliation is active, preserving #278/#280 foreground-read improvements and #283 Forecast↔Simulation correctness. Determine whether the timeout reflects a real user-facing foreground starvation/contention defect or an acceptance-threshold artifact; fix the actual product path if real, or correct the harness if not. Then rerun the full hosted FSFFL → Hodor → FSFFL acceptance journey on the same corrected line.
