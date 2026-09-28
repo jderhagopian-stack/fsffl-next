@@ -802,6 +802,17 @@ def create_app(
             capability_reader=read_capabilities,
         )
 
+    def tag_publication_generation(
+        runtime: UserRuntimeContext,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        generation_id = runtime.publication_generation_id
+        if generation_id is None:
+            return payload
+        tagged = dict(payload)
+        tagged["publication_generation_id"] = generation_id
+        return tagged
+
     def presentation_payload(
         user_id: str,
         runtime: UserRuntimeContext,
@@ -812,7 +823,7 @@ def create_app(
             stale = presentation_payload_loader(user_id, runtime, surface)
             if stale is not None:
                 return stale
-        return builder()
+        return tag_publication_generation(runtime, builder())
 
     def publish_working_generation(user_id: str) -> UserRuntimeContext:
         """Durably compose one working generation, then expose it in one swap."""
@@ -1603,7 +1614,7 @@ def create_app(
             runtime,
             using_last_good=(presentation_runtime is not runtime),
         )
-        return {
+        return tag_publication_generation(runtime, {
             "status": "ready",
             "contract_version": "home-north-star-v1",
             "league_state_id": runtime.league_state.state_id,
@@ -1625,7 +1636,7 @@ def create_app(
                 "market_search_launched": False,
                 "changed_state_simulation_launched": False,
             },
-        }
+        })
 
     @application.get("/api/my-team")
     def my_team(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -1640,9 +1651,12 @@ def create_app(
             and current_job.status.value in {"queued", "running"}
         )
         try:
-            return _managed_team_view_payload(
+            return tag_publication_generation(
                 runtime,
-                state_only_while_enriching=enrichment_running,
+                _managed_team_view_payload(
+                    runtime,
+                    state_only_while_enriching=enrichment_running,
+                ),
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -1701,7 +1715,7 @@ def create_app(
             runtime,
             using_last_good=False,
         )
-        return {
+        return tag_publication_generation(runtime, {
             "league_state_id": league_state.state_id,
             "intelligence_freshness": freshness,
             "as_of": league_state.as_of.isoformat(),
@@ -1712,7 +1726,7 @@ def create_app(
                 else []
             ),
             "team_views": [view.model_dump(mode="json") for view in enriched],
-        }
+        })
 
     @application.get("/api/league/atlas")
     def league_atlas(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -1815,7 +1829,7 @@ def create_app(
             runtime.simulation_analytics is not None,
             atlas_payload.get("preseason_status"),
         )
-        return atlas_payload
+        return tag_publication_generation(runtime, atlas_payload)
 
     @application.get("/api/opportunities/workspace")
     def opportunity_workspace(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
@@ -1832,10 +1846,13 @@ def create_app(
             # Ordinary Market navigation is presentation/read authority only.
             # Full structural Search and bilateral Decision work are explicit
             # progressive actions and must never execute on this GET.
-            return build_opportunity_workspace(
+            return tag_publication_generation(
                 runtime,
-                candidate_limit=0,
-                bilateral_evaluation_limit=0,
+                build_opportunity_workspace(
+                    runtime,
+                    candidate_limit=0,
+                    bilateral_evaluation_limit=0,
+                ),
             )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
