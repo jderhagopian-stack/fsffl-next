@@ -500,3 +500,10 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - A team switch can occur after durable publication writes begin but before the in-memory finalization recheck, potentially advancing restart authority for the old team and then aborting runtime publication.
 - Fix by serializing/guarding team selection across publication commit or validating/rebasing before durable commit; add deterministic race + restart regression.
 - Keep #284 HOLD until this P2 is fixed, then deploy corrected SHA and run full hosted + physical acceptance.
+
+
+## 2026-09-28 — Runtime code corrected through #287; hosted proof needs repair
+- **Implementation — ACTIVE / sole product-critical path.** #285 fixed the managed-team publication race; #287 fixed cold exact-State restoration of team + publication generation identity.
+- Current main: `2c0c6d0aefc0cc21913e6090b70f706c29e0b430`.
+- Remaining gate is acceptance correctness: #286's managed-team hosted test may switch after reconciliation already completes and asserts copied context rather than actual Franchise surface team identity.
+- Repair that narrow acceptance interleaving/assertion, then deploy corrected SHA and rerun the full hosted atomic-publication journey. No model or product-scope expansion.
