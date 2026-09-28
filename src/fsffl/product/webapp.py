@@ -1278,22 +1278,24 @@ def create_app(
         starting_state = published.league_state
         starting_league_id = starting_state.league.league_id
         starting_external_id = _sleeper_external_id(starting_state)
+        active_job = jobs.current(user_id)
         with reconciliation_lock:
-            active_job = jobs.current(user_id)
-            if (
-                active_job is not None
-                and active_job.status in {
-                    IntelligenceJobStatus.QUEUED,
-                    IntelligenceJobStatus.RUNNING,
-                }
-                and reconciliation_league_by_user.get(user_id)
-                == starting_league_id
-            ):
-                return {
-                    **_job_payload(active_job),
-                    **runtime_context_payload(user_id),
-                    "coalesced": True,
-                }
+            same_reconciliation_league = (
+                reconciliation_league_by_user.get(user_id) == starting_league_id
+            )
+        if (
+            active_job is not None
+            and active_job.status in {
+                IntelligenceJobStatus.QUEUED,
+                IntelligenceJobStatus.RUNNING,
+            }
+            and same_reconciliation_league
+        ):
+            return {
+                **_job_payload(active_job),
+                **runtime_context_payload(user_id),
+                "coalesced": True,
+            }
         expected_generation = store.league_generation(user_id)
 
         def require_active_league_identity() -> LeagueState:
