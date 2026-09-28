@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from time import monotonic, sleep
 
@@ -927,7 +928,7 @@ def test_compatible_last_good_forecast_is_replayed_for_new_exact_state(
             "fumbles_lost_supplement_league_state_id": prior.state_id,
         }
     )
-    forecast = legacy.model_copy(update={"runtime_result": prior_runtime})
+    forecast = replace(legacy, runtime_result=prior_runtime)
     value = _empty_value(prior)
     persist_runtime_snapshot(
         persistence,
@@ -956,7 +957,7 @@ def test_compatible_last_good_forecast_is_replayed_for_new_exact_state(
                 "fumbles_lost_supplement_league_state_id": target_state.state_id,
             }
         )
-        return prior_evidence.model_copy(update={"runtime_result": replay_runtime})
+        return replace(prior_evidence, runtime_result=replay_runtime)
 
     monkeypatch.setattr(
         "fsffl.product.persistent_runtime.replay_live_forecast_evidence_for_state",
