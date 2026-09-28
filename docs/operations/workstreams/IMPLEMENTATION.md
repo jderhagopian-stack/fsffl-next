@@ -1548,3 +1548,18 @@ Full CI still fails 1/1795 at `test_same_state_checkpoint_queue_coalesces_to_lat
 PR #291 merged as `dbe7fccaceca525e0586389dcc5388764fa015a3`. Whole-class pre-merge lifecycle audit is clean: full suite 1,796 passed, deterministic single/two-user concurrency matrix and bounded stress are green, and no remaining concrete P1/P2 lifecycle defect was found on corrected head `a5efeeedfae165c197724bd4f47170c3463c18b7`.
 
 Do not reopen implementation unless hosted evidence reveals a concrete regression. Immediate action is deploy the exact merge SHA and run the required hosted FSFFL -> Hodor -> FSFFL plus same-State/changed-State/cross-surface/managed-team/restart/two-user lifecycle acceptance. Return for physical iPhone/Safari validation only after hosted success.
+
+
+## 2026-09-28 — #291 hosted acceptance externally interrupted by Render free-tier idle sleep
+Exact runtime merge SHA `dbe7fccaceca525e0586389dcc5388764fa015a3` was deployed as Render deploy `dep-datdlnugekts73adssi0` and became live at approximately 21:25:41Z. Startup restored the real beta user with full Forecast/Simulation/Value/Intrinsic authority and ~293 MB RSS.
+
+Hosted acceptance materially progressed without a runtime failure:
+- cold FSFFL reconciliation completed and atomically published one full generation across all checked surfaces;
+- active-reconciliation PI history completed in ~0.49s;
+- changed-State refresh kept readers on the prior coherent generation, then atomically promoted all checked surfaces to the replacement generation;
+- Hodor completed truthfully with partial Forecast / full Value / Simulation unavailable under the existing K/DST authority blocker, and all checked Hodor surfaces shared one publication generation;
+- peak observed acceptance RSS was ~445.5 MB, above the soft ~429.5 MB engineering target but below the ~536.9 MB hard Render limit.
+
+At 21:40:41Z the exact #291 instance shut down gracefully, exactly 15 minutes after becoming live. There was no traceback, OOM, hard-memory breach, acceptance failure, or replacement deploy. Render metrics showed ~374 MB memory immediately before shutdown. The acceptance thread itself performs internal calls and generated no inbound HTTP traffic, so the free-tier idle-sleep policy interrupted the journey before the FSFFL return / managed-team / final same-State legs could finish.
+
+This is an **operational hosted-acceptance blocker, not evidence of a #291 runtime regression**. Do not claim hosted PASS or request physical iPhone/Safari validation yet. The full acceptance must be rerun while the exact runtime lineage is kept awake by real inbound traffic (or an acceptance-only equivalent) for the duration; do not shorten or skip required lifecycle legs merely to fit the free-tier idle window. No Forecast/Simulation/Value/Intrinsic semantic work is authorized by this blocker.
