@@ -372,6 +372,11 @@ def _runtime_context_payload(
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
         "capability_readiness": capability_reader(runtime),
+        "forecast_replay_decision": (
+            getattr(store, "forecast_replay_decision")(user_id)
+            if callable(getattr(store, "forecast_replay_decision", None))
+            else None
+        ),
         "served_last_good": (
             {
                 "available": True,
@@ -982,6 +987,11 @@ def create_app(
             else None
         )
         payload["capability_readiness"] = read_capabilities(runtime)
+        payload["forecast_replay_decision"] = (
+            getattr(store, "forecast_replay_decision")(user_id)
+            if callable(getattr(store, "forecast_replay_decision", None))
+            else None
+        )
         payload["job"] = _job_payload(current_job)
         return payload
 
