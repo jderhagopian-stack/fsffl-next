@@ -83,6 +83,13 @@ def _snapshot(
         "simulation": runtime.simulation_analytics is not None,
         "value": runtime.value_evidence is not None,
         "intelligence_reused": runtime.intelligence_reused,
+        "publication_generation_id": getattr(
+            runtime,
+            "publication_generation_id",
+            None,
+        ),
+        "working_generation_active": store.working_generation_active(user_id),
+        "working_target_state_id": store.working_target_state_id(user_id),
         "forecast_evidence_basis": getattr(evidence, "evidence_basis", None),
         "forecast_runtime_model_version": getattr(runtime_result, "model_version", None),
         "fumbles_lost_supplement": {
@@ -420,19 +427,19 @@ def run_state_first_production_acceptance(
         )
         history_thread.start()
 
-    # Give the State-first worker a bounded opportunity to activate a newer State
-    # before probing presentation continuity. If no material State change exists,
-    # the same-State reuse path remains valid and no stale presentation is expected.
-    state_change_deadline = monotonic() + min(60.0, timeout_seconds / 4)
+    # Wait only for the off-side working generation to become active. The published
+    # State must *not* change while reconciliation is in progress.
+    working_deadline = monotonic() + min(30.0, timeout_seconds / 4)
+    working_seen = False
     observed_state_change = False
-    while monotonic() < state_change_deadline:
-        current_state = store.get(user_id).league_state
+    while monotonic() < working_deadline:
         current_job = jobs.current(user_id)
-        if (
-            current_state is not None
-            and current_state.state_id != before_auto.get("state_id")
-        ):
-            observed_state_change = True
+        if store.working_generation_active(user_id):
+            working_seen = True
+            observed_state_change = (
+                store.working_target_state_id(user_id)
+                != before_auto.get("state_id")
+            )
             break
         if (
             current_job is not None
@@ -444,17 +451,41 @@ def run_state_first_production_acceptance(
             }
         ):
             break
-        sleep(poll_seconds)
+        sleep(min(poll_seconds, 0.25))
 
     active_surface = probe_surface("reload_during_active_reconciliation")
-    if observed_state_change and active_surface is not None:
-        if not active_surface.get("presentation_snapshot_available"):
+    if working_seen and active_surface is not None:
+        if active_surface.get("readiness_status") != "rebuilding":
             raise StateFirstAcceptanceError(
-                "changed-State reconciliation lost persisted last-good presentation"
+                "active reconciliation did not report published-generation rebuilding: "
+                f"{active_surface}"
             )
-        if int(active_surface.get("stale_surface_count") or 0) < 5:
+        before_generation = before_auto.get("publication_generation_id")
+        active_generation = active_surface.get("publication_generation_id")
+        if before_generation and active_generation != before_generation:
             raise StateFirstAcceptanceError(
-                "changed-State reconciliation did not keep all primary stale surfaces usable: "
+                "working reconciliation leaked a new runtime generation before publish: "
+                f"before={before_generation} active={active_generation}"
+            )
+        surface_generations = {
+            str(value)
+            for value in (
+                active_surface.get("publication_generations") or {}
+            ).values()
+            if value is not None and str(value).strip()
+        }
+        if len(surface_generations) > 1:
+            raise StateFirstAcceptanceError(
+                "active reconciliation exposed mixed surface generations: "
+                f"{active_surface}"
+            )
+        if (
+            before_generation
+            and surface_generations
+            and surface_generations != {str(before_generation)}
+        ):
+            raise StateFirstAcceptanceError(
+                "active reconciliation surfaces left the prior published generation: "
                 f"{active_surface}"
             )
 
@@ -486,13 +517,20 @@ def run_state_first_production_acceptance(
         }
     )
     promoted_surface = probe_surface("post_reconciliation_promoted_surfaces")
-    if promoted_surface is not None and int(
-        promoted_surface.get("stale_surface_count") or 0
-    ) != 0:
-        raise StateFirstAcceptanceError(
-            "new exact-State presentation was not atomically promoted: "
-            f"{promoted_surface}"
-        )
+    if promoted_surface is not None:
+        if int(promoted_surface.get("stale_surface_count") or 0) != 0:
+            raise StateFirstAcceptanceError(
+                "new exact-State presentation was not atomically promoted: "
+                f"{promoted_surface}"
+            )
+        if (
+            promoted_surface.get("publication_generation_id")
+            != after_auto.get("publication_generation_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "promoted surfaces do not match the published runtime generation: "
+                f"{promoted_surface}"
+            )
     sample_resources("after_automatic_state_sync")
 
     hodor = activate(HODOR_ACCEPTANCE_LEAGUE, label="hodor_switch")
@@ -547,6 +585,81 @@ def run_state_first_production_acceptance(
             row["label"],
             json.dumps(row, sort_keys=True, default=str),
         )
+
+    # Explicit same-State publication isolation: non-sync reconciliation must keep
+    # every foreground surface on the prior generation until one terminal swap.
+    before_same_state = _snapshot(store, user_id, capability_reader)
+    same_started = start_reconciliation(user_id)
+    same_job_id = str(same_started.get("job_id") or "")
+    if not same_job_id:
+        raise StateFirstAcceptanceError(
+            "same-State publication acceptance did not start reconciliation"
+        )
+    same_deadline = monotonic() + min(30.0, timeout_seconds / 4)
+    while (
+        not store.working_generation_active(user_id)
+        and monotonic() < same_deadline
+    ):
+        current_job = jobs.current(user_id)
+        if (
+            current_job is not None
+            and current_job.job_id == same_job_id
+            and current_job.status in {
+                IntelligenceJobStatus.COMPLETED,
+                IntelligenceJobStatus.FAILED,
+                IntelligenceJobStatus.INTERRUPTED,
+            }
+        ):
+            break
+        sleep(0.1)
+    same_active = probe_surface("same_state_during_active_reconciliation")
+    if store.working_generation_active(user_id) and same_active is not None:
+        if same_active.get("readiness_status") != "rebuilding":
+            raise StateFirstAcceptanceError(
+                "same-State working generation was not reported as rebuilding"
+            )
+        if (
+            same_active.get("publication_generation_id")
+            != before_same_state.get("publication_generation_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "same-State reconciliation changed publication before terminal promotion"
+            )
+    same_terminal = _wait_for_job(
+        jobs=jobs,
+        user_id=user_id,
+        job_id=same_job_id,
+        timeout_seconds=timeout_seconds,
+        poll_seconds=poll_seconds,
+    )
+    after_same_state = _snapshot(store, user_id, capability_reader)
+    _require_full_fsffl(after_same_state)
+    if (
+        before_same_state.get("publication_generation_id")
+        and after_same_state.get("publication_generation_id")
+        == before_same_state.get("publication_generation_id")
+    ):
+        raise StateFirstAcceptanceError(
+            "same-State terminal reconciliation did not publish a new generation"
+        )
+    same_promoted = probe_surface("same_state_post_atomic_publication")
+    if (
+        same_promoted is not None
+        and same_promoted.get("publication_generation_id")
+        != after_same_state.get("publication_generation_id")
+    ):
+        raise StateFirstAcceptanceError(
+            "same-State surfaces do not match the terminal published generation"
+        )
+    steps.append(
+        {
+            "label": "fsffl_same_state_atomic_publication",
+            "before": before_same_state,
+            "active_surface": same_active,
+            "job": same_terminal,
+            "after": after_same_state,
+        }
+    )
 
     sample_resources("acceptance_end")
     process_identity_end = (

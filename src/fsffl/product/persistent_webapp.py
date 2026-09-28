@@ -275,12 +275,24 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
         else "unavailable"
     )
     served = getattr(context, "served_intelligence", None)
+    publication_id = str(
+        getattr(context, "publication_generation_id", None) or ""
+    ).strip()
     presentation_available = False
-    if served is not None:
+    presentation_league_id = None
+    presentation_state_id = None
+    if publication_id and context.league_state is not None:
+        presentation_league_id = context.league_state.league.league_id
+        presentation_state_id = context.league_state.state_id
+    elif served is not None:
+        presentation_league_id = served.league_id
+        presentation_state_id = served.league_state_id
+
+    if presentation_league_id is not None and presentation_state_id is not None:
         presentation_available = _presentation_continuity.known_snapshot_available(
             user_id=context.user_id,
-            league_id=served.league_id,
-            league_state_id=served.league_state_id,
+            league_id=presentation_league_id,
+            league_state_id=presentation_state_id,
             selected_team_id=context.selected_team_id,
         )
         if not presentation_available:
@@ -289,8 +301,8 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
             # hashing the full seven-surface persisted snapshot.
             presentation_available = _presentation_continuity.has_snapshot(
                 user_id=context.user_id,
-                league_id=served.league_id,
-                league_state_id=served.league_state_id,
+                league_id=presentation_league_id,
+                league_state_id=presentation_state_id,
                 selected_team_id=context.selected_team_id,
             )
     served_payload = dict(payload.get("served_last_good") or {})
@@ -601,6 +613,7 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
     # response payload in one Python frame until the final assertion.
     freshness: dict[str, object] = {}
     continuity_modes: dict[str, object] = {}
+    publication_generations: dict[str, object] = {}
     metrics: dict[str, object] = {}
 
     def inspect(surface: str, payload: object) -> None:
@@ -612,6 +625,9 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
         continuity_modes[surface] = (
             payload.get("presentation_continuity") or {}
         ).get("mode")
+        publication_generations[surface] = payload.get(
+            "publication_generation_id"
+        )
         if surface == "franchise":
             metrics["franchise_team_id"] = payload.get("team_id")
         elif surface == "league":
@@ -646,7 +662,23 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
     stale_count = sum(
         1 for value in freshness.values() if value == "stale_last_good"
     )
-    readiness = _hosted_capability_readiness(context)
+    generation_ids = {
+        str(value)
+        for value in publication_generations.values()
+        if value is not None and str(value).strip()
+    }
+    if len(generation_ids) > 1:
+        raise RuntimeError(
+            f"{label}: cross-surface publication generations diverged: "
+            f"{publication_generations}"
+        )
+    runtime_generation_id = getattr(context, "publication_generation_id", None)
+    if generation_ids and runtime_generation_id not in generation_ids:
+        raise RuntimeError(
+            f"{label}: surfaces do not match published runtime generation: "
+            f"runtime={runtime_generation_id} surfaces={publication_generations}"
+        )
+    readiness = app.state.capability_readiness_reader(context)
     return {
         "league_id": state.league.league_id,
         "state_id": state.state_id,
@@ -657,6 +689,8 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
         "readiness_as_of": readiness.get("as_of"),
         "presentation_freshness": freshness,
         "presentation_modes": continuity_modes,
+        "publication_generations": publication_generations,
+        "publication_generation_id": runtime_generation_id,
         "stale_surface_count": stale_count,
         "presentation_snapshot_available": (
             (readiness.get("served_last_good") or {}).get(
@@ -1079,7 +1113,15 @@ def _run_lightweight_startup_restore() -> None:
                 )
                 if terminal:
                     try:
-                        _promote_presentation_for_user(_beta_restore_user, context)
+                        promotion = _promote_presentation_for_user(
+                            _beta_restore_user,
+                            context,
+                        )
+                        if promotion is not None:
+                            _runtime_store.bind_publication_generation_id(
+                                _beta_restore_user,
+                                promotion.publication_generation_id,
+                            )
                     except Exception as exc:
                         _logger.warning(
                             "FSFFL startup presentation backfill unavailable user=%s error=%s",
