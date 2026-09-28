@@ -1512,3 +1512,7 @@ PR #289 merged the intended managed-team acceptance correction. Do not consider 
 Open PR #288 also needs its two review P2s closed: carry a served publication generation only when the persisted publication's selected team matches the active team, and expose that served generation only when the same league/different-State/visible-snapshot predicate actually permits presentation continuity.
 
 Then merge the corrected lineage, deploy the exact SHA, and run full hosted FSFFL -> Hodor -> FSFFL plus same-State/read-overlap/cross-surface/managed-team/restart acceptance. Return for physical iPhone/Safari validation only after that passes. Do not broaden scope.
+
+
+## 2026-09-28 — PR #290 CI gate: served generation lost in active changed-State restore
+Current #290 head `3ac755799e3f9d7a91e7ecf947e9d95f084ae908` has all focused checks green but full CI fails 1/1780 tests: `test_changed_state_restore_carries_only_team_matched_served_publication_generation`. Persistence restore carries the valid team-matched `served_publication_generation_id`, but `PersistentPrivateBetaRuntimeStore.restore_user()` produces an active `ServedIntelligenceSnapshot` with `publication_generation_id=None`. Repair that exact propagation path without weakening team-match / same-league / different-State / visible-snapshot guards. Full CI must turn green before merge. Then deploy exact merge SHA and complete hosted + physical acceptance. No scope expansion.
