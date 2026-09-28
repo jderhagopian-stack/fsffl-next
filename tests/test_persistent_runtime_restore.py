@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from time import monotonic, sleep
+from threading import Event, Thread
 
 from fsffl.forecast.current_runtime import (
     LiveForecastRuntimeResult,
@@ -23,6 +24,7 @@ from fsffl.forecast.source_health import CURRENT_PROJECTION_HEALTH_CONTRACT_VERS
 from fsffl.persistence.contracts import ArtifactKey, ReusableArtifactRecord
 from fsffl.persistence.session import (
     LAST_GOOD_ARTIFACT_KIND, LAST_GOOD_MODEL_VERSION, LAST_GOOD_SCOPE_KIND,
+    PUBLISHED_GENERATION_ARTIFACT_KIND,
     LEAGUE_LAST_GOOD_ARTIFACT_KIND, LEAGUE_LAST_GOOD_MODEL_VERSION,
     LEAGUE_LAST_GOOD_SCOPE_KIND,
     persist_runtime_snapshot, restore_last_good_intelligence, restore_runtime_snapshot,
@@ -1681,3 +1683,159 @@ def test_same_state_working_artifacts_never_gain_restart_authority_before_manife
     assert after_restart.forecast_evidence is not None
     assert after_restart.forecast_evidence.raw_forecasts == ()
     assert after_restart.value_evidence is not None
+
+
+class BlockingPublicationPersistence(MemoryPersistence):
+    """Pause one named generation after its manifest write for race testing."""
+
+    def __init__(self, blocked_generation_id: str) -> None:
+        super().__init__()
+        self.blocked_generation_id = blocked_generation_id
+        self.publication_entered = Event()
+        self.release_publication = Event()
+
+    def put_artifact(self, record):
+        super().put_artifact(record)
+        if (
+            record.key.artifact_kind == PUBLISHED_GENERATION_ARTIFACT_KIND
+            and record.payload.get("publication_generation_id")
+            == self.blocked_generation_id
+        ):
+            self.publication_entered.set()
+            if not self.release_publication.wait(timeout=3.0):
+                raise RuntimeError("test publication release timed out")
+
+
+def test_team_switch_before_publish_interrupts_without_advancing_old_team_restart_authority() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="team-interrupt",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("team-interrupt")
+    assert restored.selected_team_id == "t2"
+    assert restored.publication_generation_id == "generation-a"
+
+    runtime.begin_working_generation("team-interrupt", league_state=state)
+    runtime.select_team("team-interrupt", "t1")
+    assert runtime.working_generation_active("team-interrupt") is False
+
+    try:
+        runtime.publish_working_generation(
+            "team-interrupt",
+            publication_generation_id="generation-b",
+        )
+    except ValueError as exc:
+        assert "working intelligence generation" in str(exc)
+    else:
+        raise AssertionError("team switch must interrupt stale working publication")
+
+    assert runtime.wait_for_checkpoint("team-interrupt", timeout=3.0)
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("team-interrupt")
+    assert after_restart.selected_team_id == "t1"
+
+    stale_generation_b = [
+        row
+        for row in persistence.artifacts
+        if row.key.artifact_kind == PUBLISHED_GENERATION_ARTIFACT_KIND
+        and row.payload.get("publication_generation_id") == "generation-b"
+    ]
+    assert stale_generation_b == []
+
+
+def test_team_switch_during_durable_publish_serializes_then_restart_restores_new_team() -> None:
+    persistence = BlockingPublicationPersistence("generation-b")
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="team-race",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("team-race")
+    assert restored.selected_team_id == "t2"
+    assert restored.publication_generation_id == "generation-a"
+    runtime.begin_working_generation("team-race", league_state=state)
+
+    publish_errors = []
+    publish_finished = Event()
+
+    def publish() -> None:
+        try:
+            runtime.publish_working_generation(
+                "team-race",
+                publication_generation_id="generation-b",
+            )
+        except Exception as exc:  # pragma: no cover - asserted below
+            publish_errors.append(exc)
+        finally:
+            publish_finished.set()
+
+    select_errors = []
+    select_finished = Event()
+
+    def switch_team() -> None:
+        try:
+            runtime.select_team("team-race", "t1")
+        except Exception as exc:  # pragma: no cover - asserted below
+            select_errors.append(exc)
+        finally:
+            select_finished.set()
+
+    publish_thread = Thread(target=publish, name="test-publish")
+    publish_thread.start()
+    assert persistence.publication_entered.wait(timeout=2.0)
+
+    # The durable generation-B manifest exists, but the runtime publication lock is
+    # still held through pointer commit + in-memory swap. Team selection must wait.
+    select_thread = Thread(target=switch_team, name="test-select-team")
+    select_thread.start()
+    assert select_finished.wait(timeout=0.05) is False
+
+    persistence.release_publication.set()
+    publish_thread.join(timeout=3.0)
+    select_thread.join(timeout=3.0)
+    assert publish_finished.is_set()
+    assert select_finished.is_set()
+    assert publish_errors == []
+    assert select_errors == []
+
+    # The queued team switch applies after the coherent generation-B commit/swap,
+    # invalidates its team-specific presentation id, then durably checkpoints t1.
+    current = runtime.get("team-race")
+    assert current.selected_team_id == "t1"
+    assert current.publication_generation_id is None
+    assert runtime.wait_for_checkpoint("team-race", timeout=3.0)
+    assert persistence.user is not None
+    assert persistence.user.selected_team_id == "t1"
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("team-race")
+    assert after_restart.selected_team_id == "t1"
+
+    latest_manifest = persistence.get_latest_reusable_artifact(
+        artifact_kind=PUBLISHED_GENERATION_ARTIFACT_KIND,
+        scope_kind="user_league_state",
+        scope_id=f"team-race:{state.league.league_id}:{state.state_id}",
+        model_version="runtime-published-intelligence-generation-v1",
+    )
+    assert latest_manifest is not None
+    assert latest_manifest.payload["selected_team_id"] == "t1"

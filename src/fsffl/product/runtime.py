@@ -353,6 +353,17 @@ class _PendingIntelligenceSnapshot:
     league_state_id: str
 
 
+@dataclass(frozen=True)
+class _WorkingPublicationGuard:
+    """Published identity that a working generation is allowed to replace."""
+
+    league_generation: int
+    league_id: str
+    league_state_id: str
+    selected_team_id: str | None
+    publication_generation_id: str | None
+
+
 def _forecast_supplement_compatible(
     league_state: LeagueState,
     evidence: LiveForecastEvidence | None,
@@ -447,6 +458,7 @@ class PrivateBetaRuntimeStore:
         self._lock = RLock()
         self._contexts: dict[str, UserRuntimeContext] = {}
         self._working_contexts: dict[str, UserRuntimeContext] = {}
+        self._working_publication_guards: dict[str, _WorkingPublicationGuard] = {}
         self._pending_intelligence: dict[str, _PendingIntelligenceSnapshot] = {}
         self._league_generations: dict[str, int] = {}
         self._read_local = local()
@@ -563,6 +575,13 @@ class PrivateBetaRuntimeStore:
                 intelligence_reused=same_state,
             )
             self._working_contexts[user_id] = working
+            self._working_publication_guards[user_id] = _WorkingPublicationGuard(
+                league_generation=self._league_generations.get(user_id, 0),
+                league_id=published.league_state.league.league_id,
+                league_state_id=published.league_state.state_id,
+                selected_team_id=published.selected_team_id,
+                publication_generation_id=published.publication_generation_id,
+            )
             self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
                 league_state_id=target.state_id,
             )
@@ -573,6 +592,7 @@ class PrivateBetaRuntimeStore:
 
         with self._lock:
             self._working_contexts.pop(user_id, None)
+            self._working_publication_guards.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
             return self._published_context(user_id)
 
@@ -600,15 +620,25 @@ class PrivateBetaRuntimeStore:
         user_id: str,
         *,
         publication_generation_id: str,
+        durable_commit: Callable[[UserRuntimeContext], None] | None = None,
     ) -> UserRuntimeContext:
-        """Atomically replace the user-visible intelligence generation."""
+        """Commit and swap one working generation under a single identity lock.
+
+        The optional durable commit executes only after the exact published
+        league/team/generation identity that seeded the working generation has been
+        revalidated, and while the same runtime lock remains held. Team selection,
+        league activation and other publication identity changes therefore either
+        happen before this critical section (causing publication to abort) or after
+        the durable commit and in-memory swap have completed.
+        """
 
         generation_id = str(publication_generation_id or "").strip()
         if not generation_id:
             raise ValueError("publication_generation_id cannot be blank")
         with self._lock:
             working = self._working_contexts.get(user_id)
-            if working is None or working.league_state is None:
+            guard = self._working_publication_guards.get(user_id)
+            if working is None or working.league_state is None or guard is None:
                 raise ValueError("no working intelligence generation is available")
             if not _terminal_intelligence(
                 working.forecast_evidence,
@@ -617,20 +647,42 @@ class PrivateBetaRuntimeStore:
             ):
                 raise ValueError("working intelligence generation is not terminal")
             published = self._published_context(user_id)
+            if published.league_state is None:
+                raise ValueError("published league disappeared during reconciliation")
+            current_identity = (
+                self._league_generations.get(user_id, 0),
+                published.league_state.league.league_id,
+                published.league_state.state_id,
+                published.selected_team_id,
+                published.publication_generation_id,
+            )
+            expected_identity = (
+                guard.league_generation,
+                guard.league_id,
+                guard.league_state_id,
+                guard.selected_team_id,
+                guard.publication_generation_id,
+            )
+            if current_identity != expected_identity:
+                raise ValueError(
+                    "published league/team/generation identity changed during reconciliation"
+                )
             if (
-                published.league_state is not None
-                and published.league_state.league.league_id
+                published.league_state.league.league_id
                 != working.league_state.league.league_id
             ):
                 raise ValueError("published league changed during reconciliation")
             if published.selected_team_id != working.selected_team_id:
                 raise ValueError("managed team changed during reconciliation")
 
-            previous_state_id = (
-                published.league_state.state_id
-                if published.league_state is not None
-                else None
-            )
+            previous_state_id = published.league_state.state_id
+
+            # Critical ordering: validate -> durable commit -> in-memory swap while
+            # holding the same lock used by select_team/set_league_state. No managed
+            # team or publication generation can change in between these operations.
+            if durable_commit is not None:
+                durable_commit(working)
+
             promoted = replace(
                 working,
                 served_intelligence=None,
@@ -639,6 +691,7 @@ class PrivateBetaRuntimeStore:
             )
             self._contexts[user_id] = promoted
             self._working_contexts.pop(user_id, None)
+            self._working_publication_guards.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
             if previous_state_id != working.league_state.state_id:
                 self._league_generations[user_id] = (
@@ -689,6 +742,7 @@ class PrivateBetaRuntimeStore:
             # Explicit State activation (connect/switch) supersedes any unpublished
             # work targeting the previous selection.
             self._working_contexts.pop(user_id, None)
+            self._working_publication_guards.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
             previous_state = current.league_state
             previous_state_id = (
@@ -1014,12 +1068,24 @@ class PrivateBetaRuntimeStore:
         if not team_id.strip():
             raise ValueError("team_id cannot be blank")
         with self._lock:
-            current = self.get(user_id)
+            current = self._published_context(user_id)
             if current.league_state is None:
                 raise ValueError("cannot select team before a league is loaded")
             valid_team_ids = {team.team_id for team in current.league_state.teams}
             if team_id not in valid_team_ids:
                 raise ValueError("selected team does not belong to loaded league")
+            if team_id == current.selected_team_id:
+                return current
+
+            # Managed-team identity participates in reconciliation authority. A
+            # selection that wins before publication interrupts the working
+            # generation before any durable publication commit can begin.
+            self._league_generations[user_id] = (
+                self._league_generations.get(user_id, 0) + 1
+            )
+            self._working_contexts.pop(user_id, None)
+            self._working_publication_guards.pop(user_id, None)
+            self._pending_intelligence.pop(user_id, None)
             updated = UserRuntimeContext(
                 user_id=user_id,
                 league_state=current.league_state,
@@ -1041,5 +1107,6 @@ class PrivateBetaRuntimeStore:
         with self._lock:
             self._contexts.pop(user_id, None)
             self._working_contexts.pop(user_id, None)
+            self._working_publication_guards.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
             self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1
