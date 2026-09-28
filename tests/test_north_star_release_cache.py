@@ -1,7 +1,8 @@
 from pathlib import Path
 
 INDEX = Path("src/fsffl/product/static/index.html")
-RELEASE = "20260927-market-nonblocking1"
+BASE_RELEASE = "20260927-presentation-continuity1"
+MARKET_RELEASE = "20260927-market-nonblocking1"
 
 def _source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -10,8 +11,10 @@ def test_north_star_release_busts_eager_static_cache() -> None:
     source = _source(INDEX)
     for stale in ("20260910-phase3-visual2","20260911-northstar3","20260911-market-authority1","20260911-market-visual1","20260911-market-intent1","20260911-market-recovery1","20260911-opportunity-detail1","20260911-trade-center1","20260911-market-trade2","20260911-market-latency3","20260911-market-trade4","20260912-market-trade5","20260913-phase3-intrinsic2"):
         assert stale not in source
-    assert source.count(f"?v={RELEASE}") >= 10
-    for asset in ("north_star_app.js","north_star_app.css","north_star_market.js","north_star_market.css","opportunity_posture_ui.js","trade_workflow_handoff.js","market_session_recovery.js","north_star_opportunity_detail.js","north_star_opportunity_detail.css","north_star_trade_center.js","north_star_trade_center.css","market_trade_recomposition.js","market_trade_recomposition.css","market_focus_server.js","market_trade_drilldown.js","progressive_delivery.js","progressive_delivery.css"):
-        assert f"{asset}?v={RELEASE}" in source
-    assert "product_shell.js?v=20260927-market-nonblocking1" in source
-    assert "mobile_safari_recovery.js?v=20260927-market-nonblocking1" in source
+    assert source.count(f"?v={BASE_RELEASE}") >= 10
+    for asset in ("north_star_app.js","north_star_app.css","north_star_market.js","north_star_market.css","opportunity_posture_ui.js","trade_workflow_handoff.js","market_session_recovery.js","north_star_opportunity_detail.js","north_star_opportunity_detail.css","north_star_trade_center.js","north_star_trade_center.css","market_trade_recomposition.js","market_trade_recomposition.css","market_trade_drilldown.js","progressive_delivery.css"):
+        assert f"{asset}?v={BASE_RELEASE}" in source
+    assert f"market_focus_server.js?v={MARKET_RELEASE}" in source
+    assert f"progressive_delivery.js?v={MARKET_RELEASE}" in source
+    assert f"product_shell.js?v={BASE_RELEASE}" in source
+    assert f"mobile_safari_recovery.js?v={BASE_RELEASE}" in source
