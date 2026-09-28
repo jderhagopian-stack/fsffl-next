@@ -209,6 +209,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       if(contextMatchesLeague(context,leagueId)&&context.state_id){
         context=await restoreSelectedTeam(context);
         applyConnectedContext(context);
+        window.fsfflEnsureIntelligenceAfterTeamSelection?.();
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
         recordLatency('restore_ready',started,'success','durable_restore');
         void refreshStoredLeague(leagueId,context.state_id);
@@ -220,6 +221,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       context=await waitForBackgroundImport(leagueId,null,'connect');
       context=await restoreSelectedTeam(context);
       applyConnectedContext(context);
+      window.fsfflEnsureIntelligenceAfterTeamSelection?.();
       if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
       publishSyncState('current');
       recordLatency('restore_ready',started,'success','provider_fallback');
