@@ -989,3 +989,11 @@ Plain-language result: the runtime now coordinates each user's refresh/restore/p
 Verification at the merged head: focused checks green, full suite **1,796 passed**, deterministic single-user/two-user lifecycle matrix covered, bounded repeated publication stress completed, and the whole-class red-team reported no remaining concrete P1/P2 lifecycle defect.
 
 Stabilization is **not terminal yet**. No exact merged-SHA deployment/hosted acceptance evidence is recorded here yet. Next required sequence: deploy exact `dbe7fcca...` -> hosted FSFFL -> Hodor -> FSFFL plus same-State/changed-State/cross-surface/team-change/restart/two-user acceptance -> physical iPhone/Safari validation.
+
+
+## 2026-09-28 — #291 exact merge SHA is live; hosted acceptance is running
+Render service `fsffl-next-private-beta` has deployed exact merge SHA `dbe7fccaceca525e0586389dcc5388764fa015a3`; deploy `dep-datdlnugekts73adssi0` is live.
+
+Hosted runtime availability acceptance auto-started on the new instance. Current observed progress: acceptance_start passed within the soft memory budget; cold FSFFL surface reads completed; cold PI history completed; initial FSFFL reconciliation atomically published full Forecast/Simulation/Value/Intrinsic authority; all six checked surfaces shared one publication generation; PI history during active reconciliation completed in ~0.49s. No terminal PASS/FAIL has been emitted yet.
+
+Do not call stabilization terminal or request physical iPhone/Safari validation until the hosted acceptance journey emits terminal PASS. If it passes, physical testing is the final gate.
