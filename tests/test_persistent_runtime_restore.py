@@ -1181,5 +1181,90 @@ def test_raw_forecast_restore_ignores_stale_downstream_supplement_contract() -> 
     assert restored.raw_forecasts == stale.raw_forecasts
     assert restored.successful_source_ids == ("one", "two")
 
+def test_same_state_stale_supplement_replays_raw_forecast_before_provider_outage(
+    monkeypatch,
+) -> None:
+    persistence = MemoryPersistence()
+    base = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    rules = base.league.rules.model_copy(
+        update={"scoring": (ScoringRule(stat="fum_lost", points=-2.0),)}
+    )
+    state = base.model_copy(
+        update={"league": base.league.model_copy(update={"rules": rules})}
+    )
+    stale = _with_replayable_raw_forecast(
+        _stale_forecast_without_first_party_fumbles_lost(state),
+        state,
+    )
+    stale_runtime = stale.runtime_result.model_copy(
+        update={
+            "fumbles_lost_supplement_authority_fingerprint": "legacy-authority",
+            "fumbles_lost_supplement_model_version": "legacy-supplement-v0",
+            "fumbles_lost_supplement_league_state_id": state.state_id,
+        }
+    )
+    stale = replace(stale, runtime_result=stale_runtime)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="same-state-outage",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=stale,
+        value_evidence=_empty_value(state),
+    )
 
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.set_league_state("same-state-outage", state)
+
+    # Exact-State restore must reject the stale downstream supplement while the
+    # governed raw provider evidence remains independently reusable.
+    assert runtime.get("same-state-outage").forecast_evidence is None
+
+    replay_calls: list[str] = []
+
+    def replay(target_state, prior_evidence):
+        replay_calls.append(target_state.state_id)
+        replay_runtime = prior_evidence.runtime_result.model_copy(
+            update={
+                "fumbles_lost_supplement_authority_fingerprint": "current-authority",
+                "fumbles_lost_supplement_model_version": (
+                    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+                ),
+                "fumbles_lost_supplement_league_state_id": target_state.state_id,
+            }
+        )
+        return replace(prior_evidence, runtime_result=replay_runtime)
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.replay_live_forecast_evidence_for_state",
+        replay,
+    )
+
+    provider_calls: list[str] = []
+
+    def provider_outage(_state):
+        provider_calls.append("forecast")
+        raise RuntimeError("all live Forecast providers unavailable")
+
+    restored = runtime.restore_exact_state_intelligence("same-state-outage")
+    evidence = restored.forecast_evidence
+    if evidence is None:
+        evidence = provider_outage(state)
+
+    assert replay_calls == [state.state_id]
+    assert provider_calls == []
+    assert evidence is not None
+    assert evidence.raw_forecasts == stale.raw_forecasts
+    assert restored.simulation_analytics is None
+    assert restored.value_evidence is None
+    assert restored.intelligence_reused is True
+
+    decision = runtime.forecast_replay_decision("same-state-outage")
+    assert decision is not None
+    assert decision["selection"] == "raw_replay"
+    assert decision["raw_compatibility"] == "compatible"
+    assert decision["prior_state_id"] == state.state_id
+    assert decision["target_state_id"] == state.state_id
+    assert decision["fresh_acquisition_required"] is False
+    assert decision["rejection_components"] == []
 
