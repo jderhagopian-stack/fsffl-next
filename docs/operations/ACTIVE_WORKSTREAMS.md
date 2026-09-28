@@ -514,3 +514,7 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - After terminal hosted + physical acceptance, begin the post-stabilization foundation sequence in `docs/operations/directives/20260928_POST_STABILIZATION_FOUNDATION_SEQUENCE.md`.
 - First production priority after closure: in-season Actual YTD + governed third-party ROS Forecast, while preserving PIT ROS capture.
 - Then: Long-Term Intrinsic -> PIT market/history evidence -> League Market / Owner Intelligence -> Trade Decision -> Market/Search optimization -> Intelligence surface exploitation.
+
+
+## 2026-09-28 — Foundation sequence expanded: Simulation + origin-aware picks
+After runtime closure and in-season ROS Forecast, the next foundational program now includes Simulation 2.0 and origin-aware draft-pick valuation before downstream Market/Trade exploitation. Simulation owns each future pick's team-of-origin slot distribution under actual league draft-order rules; Value converts that distribution through governed pick-coordinate/draft-class evidence. Generic year/round values remain fallback priors only. Long-Term Intrinsic, PIT market evidence, League Market/Owner Intelligence, Trade Decision and Search follow downstream.
