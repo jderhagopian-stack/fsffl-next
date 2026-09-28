@@ -113,3 +113,20 @@ When a newly deployed regression prevents meaningful product testing:
 6. after usability is restored, continue deeper refactoring/auditing without re-blocking the whole beta unless the architecture change is itself required for correctness/safety.
 
 A charter cleanup may not become an excuse for a multi-day product outage. Conversely, a hotfix may not knowingly preserve the exact hidden coupling that caused the incident when a small clean boundary can remove it immediately.
+
+
+## Communication standard for Management / user-facing updates
+The product owner is **not a software engineer or computer engineer**. All worker chats and Management updates must therefore explain technical work in plain language before or alongside implementation-level detail.
+
+Required communication behavior:
+- Start with **what is happening, why it matters, and what the user needs to decide/do**.
+- Translate software terms into normal language. If a technical term is necessary, define it the first time in the same response.
+- Explain bugs as observable behavior and consequence, not only class/function/lock names.
+- Explain proposed fixes in terms of the product behavior they protect.
+- When presenting options, describe practical tradeoffs (speed, reliability, accuracy, cost, future flexibility) rather than assuming engineering background.
+- Clearly separate **confirmed facts**, **our interpretation**, **remaining uncertainty**, and **the next action**.
+- Do not hide important risk behind jargon or oversimplify away a decision the user needs to understand.
+- Technical identifiers (SHA, PR, file/function names, exceptions) should support the explanation, not replace it.
+- For status updates, prefer concise plain-English summaries with exact technical evidence available underneath when useful.
+
+The user should be able to understand the issue well enough to give informed product/management feedback without needing to understand the underlying code.
