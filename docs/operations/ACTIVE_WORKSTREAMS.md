@@ -507,3 +507,10 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - Current main: `2c0c6d0aefc0cc21913e6090b70f706c29e0b430`.
 - Remaining gate is acceptance correctness: #286's managed-team hosted test may switch after reconciliation already completes and asserts copied context rather than actual Franchise surface team identity.
 - Repair that narrow acceptance interleaving/assertion, then deploy corrected SHA and rerun the full hosted atomic-publication journey. No model or product-scope expansion.
+
+
+## 2026-09-28 — After runtime closure: foundation program queued
+- Runtime/atomic publication remains the only active product-critical path.
+- After terminal hosted + physical acceptance, begin the post-stabilization foundation sequence in `docs/operations/directives/20260928_POST_STABILIZATION_FOUNDATION_SEQUENCE.md`.
+- First production priority after closure: in-season Actual YTD + governed third-party ROS Forecast, while preserving PIT ROS capture.
+- Then: Long-Term Intrinsic -> PIT market/history evidence -> League Market / Owner Intelligence -> Trade Decision -> Market/Search optimization -> Intelligence surface exploitation.
