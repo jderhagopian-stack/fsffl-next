@@ -47,9 +47,9 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260927-market-nonblocking1&r=20260928-first-load-recovery1" in index
-    assert "/static/product_shell.js?v=20260927-market-nonblocking1" in index
-    assert "/static/home_dashboard.js?v=20260927-market-nonblocking1" in index
+    assert "/static/forecast_refresh.js?v=20260928-first-load-recovery1" in index
+    assert "/static/product_shell.js?v=20260928-first-load-recovery1" in index
+    assert "/static/home_dashboard.js?v=20260928-first-load-recovery1" in index
     assert "Build lifecycle complete" in shell
     assert "Core intelligence current · FSFFL Intrinsic unavailable" in shell
     assert "As of " in shell
@@ -225,6 +225,6 @@ def test_dual_state_rebuild_never_renders_false_green_current_status() -> None:
 def test_first_load_release_busts_only_changed_session_flow_assets() -> None:
     index = _index()
     for script in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
-        assert f"/static/{script}?v=20260927-market-nonblocking1&r=20260928-first-load-recovery1" in index
+        assert f"/static/{script}?v=20260928-first-load-recovery1" in index
     for script in ("session_recovery.js", "home_dashboard.js", "product_shell.js"):
-        assert f"/static/{script}?v=20260927-market-nonblocking1" in index
+        assert f"/static/{script}?v=20260928-first-load-recovery1" in index
