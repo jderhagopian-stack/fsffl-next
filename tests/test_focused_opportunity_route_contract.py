@@ -12,8 +12,8 @@ def test_focused_route_preserves_search_vs_decision_authority() -> None:
     route = _read(ROUTE)
     search = _read(SEARCH)
     assert "posture_payload" in route
-    assert "build_trade_spotlights(returned)" in route
-    assert "acceptance_probability" not in route
+    assert "build_trade_spotlights(rows)" in route
+    assert '"acceptance_probability": None' in route
     assert "apply_search_posture" in search
     assert "resolve_search_posture" in search
     assert "Value and Decision authority are unchanged" in search
@@ -51,7 +51,7 @@ def test_focused_route_exposes_search_exhaustion_without_weakening_budget() -> N
     ):
         assert token in route
     assert "DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
-    assert "acceptance_probability" not in route
+    assert '"acceptance_probability": None' in route
 
 
 def test_focused_route_reuses_canonical_request_local_evaluator_inputs() -> None:
