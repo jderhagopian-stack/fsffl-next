@@ -300,3 +300,11 @@ The whole-class stabilization corrective has now merged as `dbe7fccaceca525e0586
 
 ## Latest deployment status — #291
 Exact merge SHA `dbe7fccaceca525e0586389dcc5388764fa015a3` is live on Render as deploy `dep-datdlnugekts73adssi0`. Hosted acceptance is currently running on the new instance. Initial FSFFL reconciliation and cross-surface publication consistency have passed so far, including PI history during active reconciliation; no terminal PASS/FAIL is recorded yet. Physical iPhone/Safari test begins only after terminal hosted PASS.
+
+
+## Latest beta-availability incident — first-load regression
+Physical iPhone testing after a surgical server-side reset proved the basic first-load path is regressed. The user's Sleeper submission was accepted, but Connect League remained visually inert for >1 minute; product-context reached ~51.6s; server State eventually persisted; browser-local saved team identity caused silent team restoration without an explicit choice; and the subsequent legitimate fresh Forecast acquisition did not reach a coherent published intelligence generation or surface a clear terminal failure.
+
+Regression boundary is concrete: PR #54 (`0021aefc...`) / #56 (`a8527e1...`) intentionally made hosted connect usable once Sleeper State existed in memory, with persistence asynchronous and visible Safari progress. PR #261 (`c57bc39...`) later preserved a State-activation checkpoint wait while solving switch-safe durability, recreating blocking on first connect.
+
+New controlling directive: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`. Restore the old responsiveness contract while keeping #261/#291 switch, atomic-publication, restart and durability safety. Do not ask Jimmy to test again until a controlled hosted true-clean first-run explicitly clears both server runtime state and browser-local state and passes connect -> explicit team selection -> State-only usability -> visible intelligence progress -> coherent publish or explicit failure.
