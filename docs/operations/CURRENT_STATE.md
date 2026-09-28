@@ -967,3 +967,15 @@ Disposition: **do not close stabilization or accept/deploy #290 lineage as termi
 Repeated “one narrow fix remains” cycles are now treated as a process failure: local correction followed by post-merge discovery of an adjacent publication/restore lifecycle invariant. The controlling closeout protocol is now `docs/operations/directives/20260928_STABILIZATION_CLOSURE_PROTOCOL.md`.
 
 Do not immediately patch/deploy the current cross-user lock inversion in isolation. Correct it within a bounded publication/persistence/restore/identity lifecycle pass, then run a whole-class read-only red-team, deterministic single-user + two-user concurrency matrix, bounded repeated stress, full CI, and only then merge/deploy once. A bounded lifecycle/locking refactor is authorized if simpler per-user ownership and consistent lock ordering is cleaner than another local guard. No model/research semantics are reopened.
+
+
+## 2026-09-28 — PR #291 whole-class closure pass is active; one CI failure remains
+PR #291 (`Close runtime lifecycle concurrency class`) is open/mergeable at head `7bcf6121688aa49f02cd4fbd4037925ca7d8503f`. This is the first corrective operating under the Stabilization Closure Protocol rather than the prior one-defect-at-a-time loop.
+
+In plain language, the branch changes runtime coordination so one user's refresh/restore activity no longer uses the same global coordination lock as every other user. It also adds explicit two-user concurrency tests, interruption/restart coverage, repeated stress, and cleanup for idle checkpoint workers.
+
+The first pre-merge red-team found two adjacent issues before merge: (1) two users writing different versions of the same league could allow an older shared league snapshot to overwrite a newer one, and (2) one background checkpoint worker per historical user could accumulate indefinitely. The current branch contains follow-up coverage/changes for monotonic shared-State persistence and retirement of idle per-user checkpoint executors, but full CI is not yet green.
+
+Current CI result: **1 failed / 1,794 passed**. The failing test is `test_same_state_checkpoint_queue_coalesces_to_latest_context`. The new checkpoint behavior writes only the latest team selection to durable runtime context where the old test expected both an initial no-team write and the final team write. This must be reconciled as either the intended safer/coalesced behavior with the test updated accordingly, or a real durability regression. Do not merge until the contract is explicit and full CI is green.
+
+No deployment or physical acceptance should occur yet. After CI is green, the directive still requires whole-class red-team closure, bounded stress, one merge/deploy, hosted acceptance, then iPhone/Safari validation.
