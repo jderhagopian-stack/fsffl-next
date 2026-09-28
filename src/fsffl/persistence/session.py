@@ -279,6 +279,18 @@ def persist_runtime_snapshot(
             selected_team_id=selected_team_id,
         )
 
+def restore_state_bound_forecast(
+    store: PersistenceStore,
+    *,
+    league_state: LeagueState,
+) -> "LiveForecastEvidence | None":
+    """Load only current-contract Forecast evidence bound to one exact State."""
+
+    forecast = None
+    
+    return forecast
+
+
 def restore_state_bound_intelligence(
     store: PersistenceStore,
     *,
@@ -290,7 +302,10 @@ def restore_state_bound_intelligence(
 ]:
     """Load only artifacts proven compatible with this exact canonical State."""
 
-    forecast = None
+    forecast = restore_state_bound_forecast(
+        store,
+        league_state=league_state,
+    )
     simulation = None
     values = None
     forecast_record = store.get_latest_reusable_artifact(
