@@ -1463,3 +1463,16 @@ Do not broaden scope or weaken authority gates.
 
 ## 2026-09-28 — PR #283 next action: close P2 and finish deployment
 PR #283 is open/mergeable and fixes the post-#282 P1 Forecast↔Simulation restart mismatch. Before merge, address the review P2 by querying Simulation persistence with the exact expected Forecast dependency fingerprint instead of inspecting only the newest State-scoped row. Add/adjust focused coverage if needed, then merge immediately, deploy the exact merge SHA, and run the full hosted FSFFL → Hodor → FSFFL acceptance journey. Do not stop at green CI or merge while authorized deployment/acceptance work remains.
+
+
+## 2026-09-28 — Live #283 acceptance failure: PI history overlap timeout
+Exact merge SHA `047b3386e81bb843cc8b71408d05b0b81f38b792` is deployed and live. Hosted acceptance currently fails at:
+`pi_history_during_active_reconciliation: PI history timed out`.
+
+Immediate action:
+1. reproduce the PI history request while active reconciliation is running on the live/corrected line;
+2. identify whether the timeout is caused by foreground starvation/lock contention/heavy historical materialization or by an obsolete acceptance threshold;
+3. if product-path real, restore low-single-digit/persist-first PI history behavior under overlapping reconciliation without changing Forecast/Simulation/Value/Intrinsic semantics;
+4. if harness-only, correct the acceptance condition without weakening real availability checks;
+5. rerun full hosted FSFFL → Hodor → FSFFL acceptance on the corrected SHA lineage;
+6. do not broaden scope or reopen completed replay work absent evidence.
