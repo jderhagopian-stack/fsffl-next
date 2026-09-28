@@ -419,8 +419,11 @@ def test_manual_refresh_syncs_state_before_any_intelligence_loader(monkeypatch) 
     synced = initial.model_copy(
         update={"as_of": datetime(2026, 9, 6, tzinfo=UTC)}
     )
-    states = [initial, synced]
+    states = [synced]
     loader_states: list[tuple[str, str]] = []
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", initial)
+    store.select_team("local-beta-user", "a")
 
     def state_loader(_league_id: str) -> LeagueState:
         return states.pop(0)
@@ -439,18 +442,14 @@ def test_manual_refresh_syncs_state_before_any_intelligence_loader(monkeypatch) 
 
     client = TestClient(
         create_app(
+            runtime_store=store,
             state_loader=state_loader,
             forecast_loader=forecast_loader,
             simulation_loader=simulation_loader,
             value_loader=value_loader,
         )
     )
-    connected = client.post(
-        "/api/connect/sleeper",
-        json={"league_external_id": "123"},
-    )
-    assert connected.status_code == 200
-    assert connected.json()["state_id"] == initial.state_id
+    assert client.get("/api/product-context").json()["state_id"] == initial.state_id
 
     started = client.post("/api/intelligence/jobs")
     assert started.status_code == 200
@@ -526,8 +525,8 @@ def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
         )
     )
     client.post("/api/connect/sleeper", json={"league_external_id": "123"})
-    started = client.post("/api/intelligence/jobs")
-    assert started.status_code == 200
+    selected = client.post("/api/select-team", json={"team_id": "a"})
+    assert selected.status_code == 200
 
     deadline = monotonic() + 2
     current = None
@@ -697,31 +696,31 @@ def test_manual_refresh_reuses_exact_state_bundle_on_repeated_no_change_sync(mon
         calls["value"] += 1
         return _full_runtime_fixture(state)[2]
 
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", current)
+    store.select_team("local-beta-user", "123-a")
     client = TestClient(
         create_app(
+            runtime_store=store,
             state_loader=state_loader,
             forecast_loader=forecast_loader,
             simulation_loader=simulation_loader,
             value_loader=value_loader,
         )
     )
-    assert client.post(
-        "/api/connect/sleeper",
-        json={"league_external_id": "123"},
-    ).status_code == 200
 
     first = client.post("/api/intelligence/jobs")
     assert first.status_code == 200
     completed = _wait_completed(client)
     assert completed["status"] == "completed"
-    assert calls == {"state": 2, "forecast": 1, "simulation": 1, "value": 1}
+    assert calls == {"state": 1, "forecast": 1, "simulation": 1, "value": 1}
 
     second = client.post("/api/intelligence/jobs")
     assert second.status_code == 200
     reused = _wait_completed(client)
     assert reused["status"] == "completed"
     assert "reused and atomically published" in reused["message"]
-    assert calls == {"state": 3, "forecast": 1, "simulation": 1, "value": 1}
+    assert calls == {"state": 2, "forecast": 1, "simulation": 1, "value": 1}
 
 
 def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -> None:
@@ -759,7 +758,7 @@ def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -
         "/api/connect/sleeper",
         json={"league_external_id": "123"},
     ).status_code == 200
-    assert client.post("/api/intelligence/jobs").status_code == 200
+    assert client.post("/api/select-team", json={"team_id": "123-a"}).status_code == 200
     assert _wait_completed(client)["status"] == "completed"
     before = client.get("/api/product-context").json()
     assert before["league_id"] == "sleeper:123"
@@ -773,6 +772,7 @@ def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -
     switched_payload = switched.json()
     assert switched_payload["league_id"] == "sleeper:456"
     assert switched_payload["state_id"] == league_b.state_id
+    assert switched_payload["team_id"] is None
     # A tiny fixture can finish the new league's atomic generation before the
     # connect response is serialized. Either pre-publication or fully-published B
     # is valid; the prior A generation must never leak across the league boundary.
@@ -783,6 +783,8 @@ def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -
         assert switched_payload["value_ready"] is False
         assert switched_payload["publication_generation_id"] is None
 
+    selected_b = client.post("/api/select-team", json={"team_id": "456-a"})
+    assert selected_b.status_code == 200
     completed = _wait_completed(client)
     assert completed["status"] == "completed"
     after = client.get("/api/product-context").json()
@@ -993,10 +995,11 @@ def test_old_league_worker_cannot_mutate_or_abort_new_league_working_generation(
         "/api/connect/sleeper",
         json={"league_external_id": "123"},
     ).status_code == 200
-    old_started = application.state.start_intelligence_reconciliation(
-        "local-beta-user"
-    )
-    old_job_id = old_started["job_id"]
+    selected_a = client.post("/api/select-team", json={"team_id": "a"})
+    assert selected_a.status_code == 200
+    old_job = application.state.intelligence_jobs.current("local-beta-user")
+    assert old_job is not None
+    old_job_id = old_job.job_id
     assert old_forecast_started.wait(timeout=2)
 
     # Switching leagues starts a new reconciliation while the old worker is still
@@ -1006,6 +1009,13 @@ def test_old_league_worker_cannot_mutate_or_abort_new_league_working_generation(
         json={"league_external_id": "456"},
     )
     assert switched.status_code == 200
+    assert switched.json()["team_id"] is None
+    selected_b = client.post("/api/select-team", json={"team_id": "a"})
+    assert selected_b.status_code == 200
+    replacement = application.state.intelligence_jobs.current("local-beta-user")
+    assert replacement is not None
+    assert replacement.job_id != old_job_id
+    assert replacement.status.value == "queued"
 
     # The production coordinator intentionally has one intelligence worker, so B is
     # queued while A is still blocked. Let A return after the league identity has
