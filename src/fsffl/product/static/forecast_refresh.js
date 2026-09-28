@@ -327,6 +327,10 @@ async function maintainFsfflIntelligence(){
 
 setInterval(maintainFsfflIntelligence,2500);
 window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh;
+window.fsfflEnsureIntelligenceAfterTeamSelection=()=>{
+  fsfflSettledStateId=null;
+  return maybeStartIntelligenceJob({manual:false});
+};
 
 window.addEventListener('load',()=>{
   ensureIntelligenceRefreshButton();
