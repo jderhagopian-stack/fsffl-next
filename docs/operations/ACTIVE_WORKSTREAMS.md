@@ -493,3 +493,10 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - The PI-history overlap timeout is now treated as one manifestation/acceptance symptom of this publication/read-isolation problem, not as sufficient scope by itself.
 - Directive: `docs/operations/directives/20260928_ATOMIC_INTELLIGENCE_PUBLICATION.md`.
 - Research, ROS production work, and Long-Term Intrinsic remain paused until runtime stabilization closes.
+
+
+## 2026-09-28 — Work red-team leaves one P2 before deploy
+- **Implementation — ACTIVE / sole product-critical path.** Independent read-only audit of merged #284 found no new atomic-publication defect except one managed-team commit race.
+- A team switch can occur after durable publication writes begin but before the in-memory finalization recheck, potentially advancing restart authority for the old team and then aborting runtime publication.
+- Fix by serializing/guarding team selection across publication commit or validating/rebasing before durable commit; add deterministic race + restart regression.
+- Keep #284 HOLD until this P2 is fixed, then deploy corrected SHA and run full hosted + physical acceptance.
