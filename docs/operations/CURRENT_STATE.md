@@ -845,3 +845,9 @@ Implementation has opened `implementation/nonblocking-market-20260927` and is ac
 A separate stale test condition is confirmed: the hosted acceptance harness still hard-fails any RSS sample above the ~429.5 MB engineering target. Management policy already downgraded that threshold to diagnostic headroom. Implementation must align the acceptance code before the next hosted terminal run so a soft-budget miss alone cannot manufacture a product failure.
 
 Remaining product acceptance still requires responsive reads under heavy work, preserved continuity, and hard-limit safety.
+
+
+## 2026-09-27 — Management confirms Research is complete
+Research is at its intended stopping point. The long-horizon Forecast and separate Long-Term Intrinsic architecture is known and frozen well enough for the next implementation phase. No further Research decision is pending.
+
+The only active blocker to product progress is Implementation/runtime acceptance. Once that closes, the Long-Term Intrinsic shadow can proceed directly from the existing frozen Research contract rather than reopening model selection or economic-design research.
