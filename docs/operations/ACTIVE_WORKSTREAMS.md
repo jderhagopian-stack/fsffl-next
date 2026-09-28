@@ -536,3 +536,10 @@ After runtime stabilization and in-season Forecast, execute `docs/operations/dir
 - Root cause: store-global publication and restore locks can be acquired in opposite order by publication/checkpoint and another user's cold restore.
 - Fix with per-user publication sequencing or a provably consistent lock order; add deterministic concurrent regression.
 - Do not declare runtime stabilization complete until corrected SHA is merged/deployed, hosted acceptance passes, and physical Safari smoke passes.
+
+
+## 2026-09-28 — Stabilization closure protocol replaces one-fix-at-a-time loop
+- **Implementation — ACTIVE / sole product-critical path.** Current known P1 remains the cross-user publication/restore lock inversion after #290.
+- Do not handle it as another isolated patch/deploy. Close the entire publication/persistence/restore/identity concurrency class under `20260928_STABILIZATION_CLOSURE_PROTOCOL.md`.
+- Required before next production acceptance claim: whole-class red-team, deterministic single-user/two-user concurrency matrix, bounded repeated stress, full CI, then one merge/deploy/hosted acceptance sequence.
+- Bounded runtime lifecycle/lock refactor is authorized if needed. Forecast/Simulation/Value/Intrinsic semantics remain frozen.
