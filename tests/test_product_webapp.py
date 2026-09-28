@@ -943,6 +943,104 @@ def test_intelligence_job_does_not_complete_before_final_durable_checkpoint() ->
 
 
 
+def test_old_league_worker_cannot_mutate_or_abort_new_league_working_generation(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state_a = _canonical_state()
+    league_b = state_a.league.model_copy(
+        update={"league_id": "sleeper:456", "name": "Second League"}
+    )
+    state_b = state_a.model_copy(
+        update={
+            "league": league_b,
+            "teams": tuple(
+                team.model_copy(update={"league_id": league_b.league_id})
+                for team in state_a.teams
+            ),
+        }
+    )
+
+    old_forecast_started = Event()
+    release_old_forecast = Event()
+    new_forecast_started = Event()
+    release_new_forecast = Event()
+
+    def state_loader(external_id: str) -> LeagueState:
+        return state_a if external_id == "123" else state_b
+
+    def forecast_loader(current: LeagueState):
+        if current.league.league_id == state_a.league.league_id:
+            old_forecast_started.set()
+            assert release_old_forecast.wait(timeout=3)
+        else:
+            new_forecast_started.set()
+            assert release_new_forecast.wait(timeout=3)
+        return _full_runtime_fixture(current)[0]
+
+    store = PrivateBetaRuntimeStore()
+    application = create_app(
+        runtime_store=store,
+        state_loader=state_loader,
+        forecast_loader=forecast_loader,
+        simulation_loader=lambda current, _evidence: _full_runtime_fixture(current)[1],
+        value_loader=lambda current: _full_runtime_fixture(current)[2],
+    )
+    client = TestClient(application)
+
+    assert client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "123"},
+    ).status_code == 200
+    old_started = application.state.start_intelligence_reconciliation(
+        "local-beta-user"
+    )
+    old_job_id = old_started["job_id"]
+    assert old_forecast_started.wait(timeout=2)
+
+    # Switching leagues starts a new reconciliation while the old worker is still
+    # blocked in Forecast construction.
+    switched = client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "456"},
+    )
+    assert switched.status_code == 200
+    assert new_forecast_started.wait(timeout=2)
+    assert store.working_generation_active("local-beta-user")
+    assert (
+        store.working_context("local-beta-user").league_state.league.league_id
+        == state_b.league.league_id
+    )
+
+    # Let the old worker return after the new working generation already exists.
+    # It must interrupt without attaching A's evidence to B or deleting B's work.
+    release_old_forecast.set()
+    deadline = monotonic() + 2
+    old_job = application.state.intelligence_jobs.get(old_job_id)
+    while (
+        old_job is not None
+        and old_job.status.value not in {"interrupted", "failed", "completed"}
+        and monotonic() < deadline
+    ):
+        sleep(0.01)
+        old_job = application.state.intelligence_jobs.get(old_job_id)
+
+    assert old_job is not None
+    assert old_job.status.value == "interrupted"
+    assert store.working_generation_active("local-beta-user")
+    assert (
+        store.working_context("local-beta-user").league_state.league.league_id
+        == state_b.league.league_id
+    )
+
+    release_new_forecast.set()
+    terminal = _wait_completed(client)
+    assert terminal["status"] == "completed"
+    final = store.get("local-beta-user")
+    assert final.league_state is not None
+    assert final.league_state.league.league_id == state_b.league.league_id
+
+
 def test_custom_product_capability_reader_prevents_core_only_false_green(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     state = _canonical_state()
