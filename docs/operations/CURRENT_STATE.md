@@ -886,3 +886,11 @@ The primary FSFFL runtime gains on live PR #280 remain valid. However, the Hodor
 Management requires Implementation to prove why persisted Hodor raw Forecast evidence was rejected and to separate raw-Forecast compatibility from downstream State/scoring compatibility. Downstream-only changes must rebuild their own layers without unnecessarily forcing provider reacquisition. If raw Forecast evidence is genuinely incompatible, the exact rejection component must be recorded and last-good presentation must remain available where authority permits.
 
 The controlling directive is `docs/operations/directives/20260928_HODOR_FORECAST_REPLAY_CONTINUITY.md`. Source-health/two-source acquisition rules remain unchanged. Long-Term Intrinsic remains paused until FSFFL → Hodor → FSFFL hosted acceptance passes.
+
+
+## 2026-09-28 — PR #281 merged but MUST NOT deploy as-is; post-merge P1 replay defect
+PR #281 merged as `a6a85d250497c9284c602373e54b3a72ce5d68c1`, but a post-merge Codex review identified a P1 defect in the exact continuity path Management is trying to close.
+
+When an exact-State Forecast artifact is rejected only because its downstream FUMBLES_LOST supplement contract is stale, the runtime can return early before attempting raw Forecast replay. In that case it falls through to live provider acquisition and can fail during a provider outage even though valid persisted raw Forecast evidence exists.
+
+Disposition: **do not deploy/accept #281 as-is.** Implementation must repair this exact same-State stale-supplement replay path, add regression coverage, merge the correction, then deploy the corrected exact merge SHA and run the full hosted FSFFL → Hodor → FSFFL acceptance journey. No scope expansion and no provider-rule weakening.
