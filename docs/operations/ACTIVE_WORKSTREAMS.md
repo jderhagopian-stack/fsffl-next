@@ -458,3 +458,9 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - Required terminal proof is the hosted FSFFL → Hodor → FSFFL journey, including provider-outage-compatible replay, exact rejection telemetry, persistence/restart continuity, no cross-league contamination, and hard-limit safety.
 - Canonical directive: `docs/operations/directives/20260928_HODOR_FORECAST_REPLAY_CONTINUITY.md`.
 - **Research remains DONE/PARKED; Long-Term Intrinsic remains PAUSED.**
+
+
+## 2026-09-28 — Post-merge P1 blocks #281 deployment
+- **Implementation — ACTIVE / sole priority.** PR #281 is merged but is not deployable/acceptable as-is because post-merge review found a P1 same-State replay hole: stale downstream supplement compatibility can cause early return before raw Forecast replay, forcing unnecessary live provider acquisition.
+- Fix the narrow replay branch and add deterministic regression coverage first; then merge, deploy the corrected SHA, and run hosted FSFFL → Hodor → FSFFL acceptance.
+- Preserve all existing source-health/two-source rules and PR #280 performance gains. Long-Term Intrinsic remains paused.
