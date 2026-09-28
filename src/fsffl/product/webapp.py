@@ -246,6 +246,11 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         and served.league_id == league_state.league.league_id
         and served.league_state_id != league_state.state_id
     )
+    served_publication_generation_id = (
+        served.publication_generation_id
+        if served_available
+        else None
+    )
     overall_status = (
         "rebuilding"
         if served_available
@@ -308,6 +313,7 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
                 else None
             ),
             "stale": served_available,
+            "publication_generation_id": served_publication_generation_id,
             "label": (
                 "Last-good intelligence remains visible while current State rebuilds."
                 if served_available
@@ -328,6 +334,15 @@ def _runtime_context_payload(
     evidence = runtime.forecast_evidence
     simulation = runtime.simulation_analytics
     value_evidence = runtime.value_evidence
+    served = getattr(runtime, "served_intelligence", None)
+    visible_publication_generation_id = (
+        runtime.publication_generation_id
+        or (
+            served.publication_generation_id
+            if served is not None
+            else None
+        )
+    )
     return {
         "user_id": user_id,
         "league_id": league_state.league.league_id if league_state is not None else None,
@@ -373,11 +388,8 @@ def _runtime_context_payload(
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
         "capability_readiness": capability_reader(runtime),
-        "publication_generation_id": getattr(
-            runtime,
-            "publication_generation_id",
-            None,
-        ),
+        "publication_generation_id": visible_publication_generation_id,
+        "target_publication_generation_id": runtime.publication_generation_id,
         "forecast_replay_decision": (
             getattr(store, "forecast_replay_decision")(user_id)
             if callable(getattr(store, "forecast_replay_decision", None))
@@ -388,6 +400,9 @@ def _runtime_context_payload(
                 "available": True,
                 "league_state_id": runtime.served_intelligence.league_state_id,
                 "as_of": runtime.served_intelligence.as_of.isoformat(),
+                "publication_generation_id": (
+                    runtime.served_intelligence.publication_generation_id
+                ),
                 "stale": True,
             }
             if getattr(runtime, "served_intelligence", None) is not None
@@ -732,18 +747,32 @@ def create_app(
         payload = dict(base_read_capabilities(runtime))
         working_active = store.working_generation_active(runtime.user_id)
         target_state_id = store.working_target_state_id(runtime.user_id)
-        published_generation_id = getattr(
+        target_generation_id = getattr(
             runtime,
             "publication_generation_id",
             None,
         )
+        served = getattr(runtime, "served_intelligence", None)
+        published_generation_id = (
+            target_generation_id
+            or (
+                getattr(served, "publication_generation_id", None)
+                if served is not None
+                else None
+            )
+        )
         payload["publication_generation_id"] = published_generation_id
         payload["publication"] = {
             "generation_id": published_generation_id,
+            "target_generation_id": target_generation_id,
             "league_state_id": (
-                runtime.league_state.state_id
-                if runtime.league_state is not None
-                else None
+                served.league_state_id
+                if target_generation_id is None and served is not None
+                else (
+                    runtime.league_state.state_id
+                    if runtime.league_state is not None
+                    else None
+                )
             ),
             "working_generation_active": working_active,
             "target_state_id": target_state_id,
