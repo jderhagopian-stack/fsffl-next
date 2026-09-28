@@ -1429,3 +1429,19 @@ Implementation must now follow `docs/operations/directives/20260928_HODOR_FORECA
 - run and pass the real hosted FSFFL → Hodor → FSFFL journey, including persistence/restart and provider-outage replay coverage, without regressing PR #280 latency/memory or cross-league isolation.
 
 Do not return on an intermediate finding while authorized corrective actions remain. Long-Term Intrinsic stays paused until this hosted gate closes.
+
+
+## 2026-09-28 — Post-merge P1: #281 is not deployable as-is
+A Codex review posted immediately after merge found a P1 defect in `restore_exact_state_intelligence()`: when the last-good State ID equals the current State ID but exact-State Forecast restoration rejects the artifact solely because the downstream first-party FUMBLES_LOST supplement is stale, the function can return before `restore_state_bound_raw_forecast_evidence()` gets a chance to replay the valid raw provider ensemble.
+
+This reproduces the undesired path: valid persisted raw Forecast exists → stale downstream supplement causes exact restore rejection → raw replay is skipped → live providers are reacquired → outage can fail Hodor unnecessarily.
+
+Immediate action:
+1. repair the same-State branch so raw Forecast evidence can replay/re-score when only downstream supplement/state-bound material is stale;
+2. add a regression that proves same-State stale-supplement + provider outage succeeds without provider reacquisition;
+3. keep genuinely raw-material changes fail-closed;
+4. merge the narrow corrective;
+5. deploy the corrected merge SHA, not bare #281;
+6. run the full hosted FSFFL → Hodor → FSFFL acceptance journey before returning.
+
+Do not broaden scope or weaken authority gates.
