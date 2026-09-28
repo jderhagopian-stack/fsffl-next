@@ -522,3 +522,10 @@ After runtime closure and in-season ROS Forecast, the next foundational program 
 
 ## 2026-09-28 — Simulation 2.0 is a near-term foundation
 After runtime stabilization and in-season Forecast, execute `docs/operations/directives/20260928_SIMULATION_2_0_PROGRAM.md` before origin-aware pick Value. Bring forward/re-derive legacy weekly distributions, legal weekly lineups, byes, availability/bench substitution, real schedule/division/playoff rules, finish/playoff/title outputs, deterministic replay and Multiverse examples. Rebuild around compiled reusable state, vectorized/batched 50k Monte Carlo, cached lineups, common random worlds, selective scenario recomputation, persisted exact reuse and progressive non-authoritative scenario batches. Canonical 50,000-run authority remains until convergence evidence earns any change.
+
+
+## 2026-09-28 — Stabilization narrowed to final publication edges
+- **Implementation — ACTIVE / sole product-critical path.** #289 merged the deterministic managed-team acceptance correction.
+- Remaining P2 A: team selection can still invalidate a working generation during checkpoint/presentation promotion before the final publication critical section, yielding generic FAILED rather than serialized completion/interruption.
+- Remaining P2 B/C in open #288: served publication generation must be team-matched and must satisfy the same visible-snapshot validity predicate before product/readiness diagnostics expose it.
+- Fix these narrow publication/diagnostic edges, then merge/deploy and rerun full hosted acceptance. No model/research scope expansion.
