@@ -410,3 +410,58 @@ def test_one_users_slow_job_persistence_does_not_block_another_users_start() -> 
     assert not b_thread.is_alive()
     assert a_done.is_set()
     assert errors == []
+
+
+
+def test_superseded_older_job_cannot_replace_newer_durable_current_job() -> None:
+    persistence = _LifecyclePersistence()
+    coordinator = IntelligenceJobCoordinator(
+        max_workers=2,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+    old_started = Event()
+    release_old = Event()
+
+    def old_work(_progress) -> None:
+        old_started.set()
+        assert release_old.wait(timeout=2.0)
+        raise IntelligenceJobInterrupted("league_switch")
+
+    old = coordinator.start(
+        user_id="u-overlap",
+        league_state_id="state-old",
+        work=old_work,
+    )
+    assert old_started.wait(timeout=1.0)
+
+    new = coordinator.start(
+        user_id="u-overlap",
+        league_state_id="state-new",
+        work=lambda _progress: None,
+    )
+    completed = _wait_for_status(
+        coordinator,
+        user_id="u-overlap",
+        status=IntelligenceJobStatus.COMPLETED,
+    )
+    assert completed is not None
+    assert completed.job_id == new.job_id
+
+    release_old.set()
+    deadline = monotonic() + 2.0
+    while monotonic() < deadline:
+        old_row = coordinator.get(old.job_id)
+        if old_row is not None and old_row.status == IntelligenceJobStatus.INTERRUPTED:
+            break
+        sleep(0.01)
+    assert old_row is not None
+    assert old_row.status == IntelligenceJobStatus.INTERRUPTED
+
+    restarted = IntelligenceJobCoordinator(
+        max_workers=1,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+    recovered = restarted.current("u-overlap")
+    assert recovered is not None
+    assert recovered.job_id == new.job_id
+    assert recovered.status == IntelligenceJobStatus.COMPLETED
