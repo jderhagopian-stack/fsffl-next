@@ -431,6 +431,37 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self._restore_lock:
             self._restore_attempted.add(user_id)
 
+        # A cold explicit activation can reach this path before restore_user(). The
+        # durable target-State session owns the managed-team identity; recover it
+        # before evaluating any team-specific published/served generation. This is
+        # deliberately exact-State only so a stale session can never steer a newer
+        # canonical target.
+        if self._persistence is not None and context.selected_team_id is None:
+            try:
+                durable_context = self._persistence.get_user_runtime_context(
+                    user_id=user_id
+                )
+                valid_team_ids = {team.team_id for team in league_state.teams}
+                if (
+                    durable_context is not None
+                    and durable_context.league_id == league_state.league.league_id
+                    and durable_context.season == league_state.league.season
+                    and durable_context.state_hash == league_state.state_id
+                    and durable_context.selected_team_id in valid_team_ids
+                ):
+                    context = super().select_team(
+                        user_id,
+                        durable_context.selected_team_id,
+                    )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL durable managed-team restore failed user=%s league=%s state=%s error=%s",
+                    user_id,
+                    league_state.league.league_id,
+                    league_state.state_id,
+                    exc,
+                )
+
         # Reuse exact-State persisted authority first. If it is absent, restore
         # same-league last-good as presentation-only stale context.
         if self._persistence is not None:
