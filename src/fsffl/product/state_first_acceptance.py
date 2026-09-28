@@ -79,6 +79,7 @@ def _snapshot(
         "league_id": state.league.league_id if state is not None else None,
         "state_id": state.state_id if state is not None else None,
         "state_as_of": state.as_of.isoformat() if state is not None else None,
+        "selected_team_id": runtime.selected_team_id,
         "forecast": evidence is not None,
         "simulation": runtime.simulation_analytics is not None,
         "value": runtime.value_evidence is not None,
@@ -586,6 +587,137 @@ def run_state_first_production_acceptance(
             json.dumps(row, sort_keys=True, default=str),
         )
 
+    # Managed-team publication race: switch teams only after a working generation
+    # is visibly active. The guarded publication boundary may resolve this as either
+    # an interruption (team switch wins first) or a coherent old-team publish followed
+    # by the queued team switch (publication critical section wins first). Both are
+    # valid; split durable/runtime authority, FAILED state, or a lost team switch is not.
+    before_team_switch = _snapshot(store, user_id, capability_reader)
+    current_runtime = store.get(user_id)
+    current_state = current_runtime.league_state
+    if current_state is None or current_runtime.selected_team_id is None:
+        raise StateFirstAcceptanceError(
+            "managed-team acceptance requires a published FSFFL team"
+        )
+    alternate_team_id = next(
+        (
+            team_state.team_id
+            for team_state in current_state.team_states
+            if team_state.team_id != current_runtime.selected_team_id
+            and bool(team_state.roster)
+        ),
+        None,
+    )
+    if alternate_team_id is None:
+        raise StateFirstAcceptanceError(
+            "managed-team acceptance found no alternate rostered FSFFL team"
+        )
+
+    team_started = start_reconciliation(user_id)
+    team_job_id = str(team_started.get("job_id") or "")
+    if not team_job_id:
+        raise StateFirstAcceptanceError(
+            "managed-team publication acceptance did not start reconciliation"
+        )
+    team_working_deadline = monotonic() + min(30.0, timeout_seconds / 4)
+    while (
+        not store.working_generation_active(user_id)
+        and monotonic() < team_working_deadline
+    ):
+        current_job = jobs.current(user_id)
+        if (
+            current_job is not None
+            and current_job.job_id == team_job_id
+            and current_job.status in {
+                IntelligenceJobStatus.COMPLETED,
+                IntelligenceJobStatus.FAILED,
+                IntelligenceJobStatus.INTERRUPTED,
+            }
+        ):
+            break
+        sleep(0.05)
+    if not store.working_generation_active(user_id):
+        raise StateFirstAcceptanceError(
+            "managed-team acceptance never observed an active working generation"
+        )
+
+    active_team_surface = probe_surface(
+        "managed_team_during_active_reconciliation"
+    )
+    store.select_team(user_id, alternate_team_id)
+
+    team_terminal = None
+    team_deadline = monotonic() + timeout_seconds
+    while monotonic() < team_deadline:
+        current_job = jobs.current(user_id)
+        if current_job is None or current_job.job_id != team_job_id:
+            sleep(min(poll_seconds, 0.25))
+            continue
+        if current_job.status in {
+            IntelligenceJobStatus.COMPLETED,
+            IntelligenceJobStatus.INTERRUPTED,
+        }:
+            team_terminal = {
+                "job_id": current_job.job_id,
+                "status": current_job.status.value,
+                "phase": current_job.phase.value,
+                "message": current_job.message,
+                "error": current_job.error,
+                "league_state_id": current_job.league_state_id,
+            }
+            break
+        if current_job.status == IntelligenceJobStatus.FAILED:
+            raise StateFirstAcceptanceError(
+                "managed-team reconciliation failed instead of serializing/interruption: "
+                f"{current_job.error or current_job.message}"
+            )
+        sleep(min(poll_seconds, 0.25))
+    if team_terminal is None:
+        raise StateFirstAcceptanceError(
+            "managed-team reconciliation did not reach a serialized terminal state"
+        )
+
+    wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+    if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+        user_id,
+        timeout=30.0,
+    ):
+        raise StateFirstAcceptanceError(
+            "managed-team selection did not durably checkpoint"
+        )
+    after_team_switch = _snapshot(store, user_id, capability_reader)
+    if after_team_switch.get("selected_team_id") != alternate_team_id:
+        raise StateFirstAcceptanceError(
+            "managed-team selection was lost across publication boundary: "
+            f"{after_team_switch}"
+        )
+    if after_team_switch.get("working_generation_active"):
+        raise StateFirstAcceptanceError(
+            "managed-team terminal state retained an unpublished working generation"
+        )
+    team_surface = probe_surface(
+        "managed_team_after_reconciliation_interruption"
+    )
+    if (
+        team_surface is not None
+        and team_surface.get("selected_team_id") != alternate_team_id
+    ):
+        raise StateFirstAcceptanceError(
+            "managed-team surface did not follow the selected team: "
+            f"{team_surface}"
+        )
+    steps.append(
+        {
+            "label": "fsffl_managed_team_publication_interruption",
+            "before": before_team_switch,
+            "active_surface": active_team_surface,
+            "selected_team_id": alternate_team_id,
+            "job": team_terminal,
+            "after": after_team_switch,
+            "surface": team_surface,
+        }
+    )
+
     # Explicit same-State publication isolation: non-sync reconciliation must keep
     # every foreground surface on the prior generation until one terminal swap.
     before_same_state = _snapshot(store, user_id, capability_reader)
@@ -650,6 +782,17 @@ def run_state_first_production_acceptance(
     ):
         raise StateFirstAcceptanceError(
             "same-State surfaces do not match the terminal published generation"
+        )
+    if after_same_state.get("selected_team_id") != alternate_team_id:
+        raise StateFirstAcceptanceError(
+            "same-State publication did not preserve managed-team selection"
+        )
+    if (
+        same_promoted is not None
+        and same_promoted.get("selected_team_id") != alternate_team_id
+    ):
+        raise StateFirstAcceptanceError(
+            "same-State promoted surfaces do not match managed-team selection"
         )
     steps.append(
         {
