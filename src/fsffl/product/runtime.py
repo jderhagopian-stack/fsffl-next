@@ -1028,7 +1028,10 @@ class PrivateBetaRuntimeStore:
                 simulation_analytics=current.simulation_analytics,
                 value_evidence=current.value_evidence,
                 served_intelligence=current.served_intelligence,
-                publication_generation_id=current.publication_generation_id,
+                # Presentation snapshots are team-specific. A selection change
+                # invalidates the old presentation generation identity; the next
+                # presentation promotion/reconciliation will bind a new one.
+                publication_generation_id=None,
                 intelligence_reused=current.intelligence_reused,
             )
             self._contexts[user_id] = updated
