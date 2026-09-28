@@ -2107,6 +2107,9 @@ class MultiUserLifecyclePersistence(MemoryPersistence):
         self.block_checkpoint_user: str | None = None
         self.checkpoint_entered = Event()
         self.release_checkpoint = Event()
+        self.block_league_state_hash: str | None = None
+        self.league_write_entered = Event()
+        self.release_league_write = Event()
 
     def get_user_runtime_context(self, *, user_id):
         if user_id == self.block_restore_user:
@@ -2129,16 +2132,52 @@ class MultiUserLifecyclePersistence(MemoryPersistence):
             return self.leagues.get((provider, league_id, season))
 
     def put_league_snapshot(self, record):
+        if record.state_hash == self.block_league_state_hash:
+            self.league_write_entered.set()
+            if not self.release_league_write.wait(timeout=3.0):
+                raise RuntimeError("test league snapshot release timed out")
+        key = (record.provider, record.league_id, record.season)
         with self._io_lock:
-            self.leagues[(record.provider, record.league_id, record.season)] = record
+            existing = self.leagues.get(key)
+            incoming_at = record.source_updated_at or record.recorded_at
+            existing_at = (
+                (existing.source_updated_at or existing.recorded_at)
+                if existing is not None
+                else None
+            )
+            if (
+                existing is None
+                or incoming_at > existing_at
+                or (
+                    incoming_at == existing_at
+                    and record.recorded_at >= existing.recorded_at
+                )
+            ):
+                self.leagues[key] = record
 
     def get_team_snapshot(self, *, provider, league_id, team_id):
         with self._io_lock:
             return self.teams.get((provider, league_id, team_id))
 
     def put_team_snapshot(self, record):
+        key = (record.provider, record.league_id, record.team_id)
         with self._io_lock:
-            self.teams[(record.provider, record.league_id, record.team_id)] = record
+            existing = self.teams.get(key)
+            incoming_at = record.source_updated_at or record.recorded_at
+            existing_at = (
+                (existing.source_updated_at or existing.recorded_at)
+                if existing is not None
+                else None
+            )
+            if (
+                existing is None
+                or incoming_at > existing_at
+                or (
+                    incoming_at == existing_at
+                    and record.recorded_at >= existing.recorded_at
+                )
+            ):
+                self.teams[key] = record
 
     def get_reusable_artifact(self, key):
         with self._io_lock:
@@ -2686,3 +2725,71 @@ def test_stale_job_cleanup_cannot_abort_newer_working_generation() -> None:
 
     assert runtime.working_generation_active("cleanup-user") is True
     assert runtime.working_context("cleanup-user").league_state.state_id == state_b.state_id
+
+
+
+def test_delayed_older_cross_user_checkpoint_cannot_regress_shared_league_snapshot() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    old = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    )
+    new = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
+    )
+    _seed_published_user(
+        persistence,
+        user_id="snapshot-a",
+        state=old,
+        generation_id="snapshot-a-generation",
+    )
+    _seed_published_user(
+        persistence,
+        user_id="snapshot-b",
+        state=old,
+        generation_id="snapshot-b-generation",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.restore_user("snapshot-a")
+    runtime.restore_user("snapshot-b")
+
+    persistence.block_league_state_hash = old.state_id
+    runtime.set_league_state("snapshot-a", old)
+    assert persistence.league_write_entered.wait(timeout=1.0)
+
+    runtime.set_league_state("snapshot-b", new)
+    assert runtime.wait_for_checkpoint("snapshot-b", timeout=2.0)
+
+    persistence.release_league_write.set()
+    assert runtime.wait_for_checkpoint("snapshot-a", timeout=2.0)
+
+    shared = persistence.get_league_snapshot(
+        provider="sleeper",
+        league_id=old.league.league_id,
+        season=old.league.season,
+    )
+    assert shared is not None
+    assert shared.state_hash == new.state_id
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored_b = restarted.restore_user("snapshot-b")
+    assert restored_b.league_state is not None
+    assert restored_b.league_state.state_id == new.state_id
+
+
+def test_idle_checkpoint_executor_is_retired_after_latest_write() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    state = _league_state()
+    runtime.set_league_state("retire-user", state)
+    assert runtime.wait_for_checkpoint("retire-user", timeout=2.0)
+
+    deadline = monotonic() + 1.0
+    while monotonic() < deadline:
+        with runtime._checkpoint_executor_registry_lock:
+            if "retire-user" not in runtime._checkpoint_executors:
+                break
+        sleep(0.01)
+
+    with runtime._checkpoint_executor_registry_lock:
+        assert "retire-user" not in runtime._checkpoint_executors
