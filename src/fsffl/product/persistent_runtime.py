@@ -85,7 +85,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             "target_league_id": league_state.league.league_id,
             "target_state_id": league_state.state_id,
         }
-        self._forecast_replay_decisions[user_id] = payload
+        with self._lock:
+            self._forecast_replay_decisions[user_id] = payload
         if self._persistence is not None:
             try:
                 persist_forecast_replay_decision(
@@ -118,8 +119,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         current = super().get(user_id)
         if current.league_state is None:
             return None
-        cached = self._forecast_replay_decisions.get(user_id)
-        if cached is not None and cached.get("target_state_id") == current.league_state.state_id:
+        state_id = current.league_state.state_id
+        with self._lock:
+            cached = self._forecast_replay_decisions.get(user_id)
+        if cached is not None and cached.get("target_state_id") == state_id:
             return dict(cached)
         if self._persistence is None:
             return None
@@ -133,12 +136,20 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             _logger.warning(
                 "FSFFL Forecast replay decision restore failed user=%s state=%s error=%s",
                 user_id,
-                current.league_state.state_id,
+                state_id,
                 exc,
             )
             return None
+
+        # The persistence read is deliberately outside lifecycle mutation locks so
+        # ordinary diagnostics stay nonblocking. Revalidate State before exposing it;
+        # a concurrent team/league/State change must never surface a stale decision.
+        after = super().get(user_id)
+        if after.league_state is None or after.league_state.state_id != state_id:
+            return None
         if restored is not None:
-            self._forecast_replay_decisions[user_id] = restored
+            with self._lock:
+                self._forecast_replay_decisions[user_id] = restored
             return dict(restored)
         return None
 
