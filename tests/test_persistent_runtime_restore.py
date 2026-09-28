@@ -1083,6 +1083,17 @@ def test_downstream_scoring_change_replays_raw_forecast_and_rebuilds_scoring(
     assert "league_scoring" in decision["downstream_rebuild_components"]
     assert decision["fresh_acquisition_required"] is False
 
+    assert runtime.wait_for_checkpoint("scoring-user", timeout=2.0)
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored_after_restart = restarted.restore_user("scoring-user")
+    assert restored_after_restart.league_state is not None
+    assert restored_after_restart.league_state.state_id == target.state_id
+    persisted_decision = restarted.forecast_replay_decision("scoring-user")
+    assert persisted_decision is not None
+    assert persisted_decision["selection"] == "raw_replay"
+    assert persisted_decision["prior_state_id"] == prior.state_id
+    assert persisted_decision["target_state_id"] == target.state_id
+
 
 def test_raw_forecast_material_change_rejects_replay_with_component_reason(
     monkeypatch,
