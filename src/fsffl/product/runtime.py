@@ -126,6 +126,34 @@ def raw_forecast_input_fingerprint(league_state: LeagueState) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def raw_forecast_compatibility_reasons(
+    prior_state: LeagueState,
+    target_state: LeagueState,
+) -> tuple[str, ...]:
+    """Return exact raw-evidence incompatibilities; empty means replay-compatible."""
+
+    reasons: list[str] = []
+    if prior_state.schema_version != target_state.schema_version:
+        reasons.append("canonical_schema_version_changed")
+    if prior_state.league.season != target_state.league.season:
+        reasons.append("nfl_season_changed")
+
+    def player_identity(state: LeagueState) -> tuple[tuple[str, str, str, str | None], ...]:
+        return tuple(
+            (
+                player.player_id,
+                player.full_name,
+                player.position.value,
+                player.nfl_team,
+            )
+            for player in sorted(state.players, key=lambda item: item.player_id)
+        )
+
+    if player_identity(prior_state) != player_identity(target_state):
+        reasons.append("canonical_player_identity_or_nfl_team_mapping_changed")
+    return tuple(reasons)
+
+
 def forecast_input_fingerprint(league_state: LeagueState) -> str:
     """Hash only canonical State inputs consumed by the current forecast runtime.
 
