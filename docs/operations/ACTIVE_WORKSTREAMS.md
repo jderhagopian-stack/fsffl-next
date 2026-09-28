@@ -529,3 +529,10 @@ After runtime stabilization and in-season Forecast, execute `docs/operations/dir
 - Remaining P2 A: team selection can still invalidate a working generation during checkpoint/presentation promotion before the final publication critical section, yielding generic FAILED rather than serialized completion/interruption.
 - Remaining P2 B/C in open #288: served publication generation must be team-matched and must satisfy the same visible-snapshot validity predicate before product/readiness diagnostics expose it.
 - Fix these narrow publication/diagnostic edges, then merge/deploy and rerun full hosted acceptance. No model/research scope expansion.
+
+
+## 2026-09-28 — One remaining P1 after #290 merge
+- **Implementation — ACTIVE / sole product-critical path.** #290 merged and full CI is green, but post-merge review found a real cross-user deadlock risk.
+- Root cause: store-global publication and restore locks can be acquired in opposite order by publication/checkpoint and another user's cold restore.
+- Fix with per-user publication sequencing or a provably consistent lock order; add deterministic concurrent regression.
+- Do not declare runtime stabilization complete until corrected SHA is merged/deployed, hosted acceptance passes, and physical Safari smoke passes.
