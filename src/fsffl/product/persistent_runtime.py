@@ -816,15 +816,16 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         refreshed_league_state=None,
         require_working_generation: bool = False,
     ):
-        context = super().set_forecast_evidence(
-            user_id,
-            evidence,
-            refreshed_league_state=refreshed_league_state,
-            require_working_generation=require_working_generation,
-        )
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
+        with self.lifecycle_operation(user_id):
+            context = super().set_forecast_evidence(
+                user_id,
+                evidence,
+                refreshed_league_state=refreshed_league_state,
+                require_working_generation=require_working_generation,
+            )
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
 
     def set_simulation_analytics(
         self,
@@ -833,14 +834,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         *,
         require_working_generation: bool = False,
     ):
-        context = super().set_simulation_analytics(
-            user_id,
-            result,
-            require_working_generation=require_working_generation,
-        )
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
+        with self.lifecycle_operation(user_id):
+            context = super().set_simulation_analytics(
+                user_id,
+                result,
+                require_working_generation=require_working_generation,
+            )
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
 
     def set_value_evidence(
         self,
@@ -849,27 +851,28 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         *,
         require_working_generation: bool = False,
     ):
-        context = super().set_value_evidence(
-            user_id,
-            result,
-            require_working_generation=require_working_generation,
-        )
-        if (
-            context.league_state is not None
-            and context.league_state.state_id == result.league_state_id
-            and all(
-                item is not None
-                for item in (
-                    context.forecast_evidence,
-                    context.simulation_analytics,
-                    context.value_evidence,
-                )
+        with self.lifecycle_operation(user_id):
+            context = super().set_value_evidence(
+                user_id,
+                result,
+                require_working_generation=require_working_generation,
             )
-        ):
-            self._last_good_guard_users.discard(user_id)
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
+            if (
+                context.league_state is not None
+                and context.league_state.state_id == result.league_state_id
+                and all(
+                    item is not None
+                    for item in (
+                        context.forecast_evidence,
+                        context.simulation_analytics,
+                        context.value_evidence,
+                    )
+                )
+            ):
+                self._last_good_guard_users.discard(user_id)
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
 
     def set_intelligence_bundle(
         self,
@@ -881,30 +884,31 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         value_evidence,
         require_working_generation: bool = False,
     ):
-        context = super().set_intelligence_bundle(
-            user_id,
-            league_state=league_state,
-            forecast_evidence=forecast_evidence,
-            simulation_analytics=simulation_analytics,
-            value_evidence=value_evidence,
-            require_working_generation=require_working_generation,
-        )
-        if (
-            context.league_state is not None
-            and context.league_state.state_id == league_state.state_id
-            and all(
-                item is not None
-                for item in (
-                    context.forecast_evidence,
-                    context.simulation_analytics,
-                    context.value_evidence,
-                )
+        with self.lifecycle_operation(user_id):
+            context = super().set_intelligence_bundle(
+                user_id,
+                league_state=league_state,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=simulation_analytics,
+                value_evidence=value_evidence,
+                require_working_generation=require_working_generation,
             )
-        ):
-            self._last_good_guard_users.discard(user_id)
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
+            if (
+                context.league_state is not None
+                and context.league_state.state_id == league_state.state_id
+                and all(
+                    item is not None
+                    for item in (
+                        context.forecast_evidence,
+                        context.simulation_analytics,
+                        context.value_evidence,
+                    )
+                )
+            ):
+                self._last_good_guard_users.discard(user_id)
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
 
     def checkpoint_working_generation(self, user_id: str) -> bool:
         """Durably checkpoint replacement artifacts without moving publication authority."""
