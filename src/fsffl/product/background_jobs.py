@@ -345,8 +345,13 @@ class IntelligenceJobCoordinator:
                 total_elapsed_seconds=total_elapsed,
             )
             self._jobs[job_id] = updated
+            is_current = self._current_by_user.get(updated.user_id) == job_id
 
-        self._persist(updated)
+        # A superseded older job may finish after its replacement. It remains
+        # observable in-process, but must not become the durable "current job" merely
+        # because its terminal timestamp is newer than the replacement job's.
+        if is_current:
+            self._persist(updated)
         if current.status != updated.status or current.phase != updated.phase:
             _logger.info(
                 "FSFFL intelligence lifecycle transition job=%s user=%s state=%s status=%s phase=%s",
