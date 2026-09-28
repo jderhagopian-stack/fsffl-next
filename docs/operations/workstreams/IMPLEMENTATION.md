@@ -1563,3 +1563,16 @@ Hosted acceptance materially progressed without a runtime failure:
 At 21:40:41Z the exact #291 instance shut down gracefully, exactly 15 minutes after becoming live. There was no traceback, OOM, hard-memory breach, acceptance failure, or replacement deploy. Render metrics showed ~374 MB memory immediately before shutdown. The acceptance thread itself performs internal calls and generated no inbound HTTP traffic, so the free-tier idle-sleep policy interrupted the journey before the FSFFL return / managed-team / final same-State legs could finish.
 
 This is an **operational hosted-acceptance blocker, not evidence of a #291 runtime regression**. Do not claim hosted PASS or request physical iPhone/Safari validation yet. The full acceptance must be rerun while the exact runtime lineage is kept awake by real inbound traffic (or an acceptance-only equivalent) for the duration; do not shorten or skip required lifecycle legs merely to fit the free-tier idle window. No Forecast/Simulation/Value/Intrinsic semantic work is authorized by this blocker.
+
+
+## 2026-09-28 — ACTIVE: first-load regression recovery
+The runtime lifecycle concurrency work from #291 remains valuable, but physical acceptance exposed a beta-availability regression in the basic first-load path.
+
+Follow `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`.
+
+Key starting evidence:
+- PR #54/`0021aefc...` and PR #56/`a8527e1...` are the known-good connect behavior reference: league usable in memory -> Connect completes; persistence asynchronous; Safari shows immediate progress.
+- Current hosted connect still waits for `wait_for_checkpoint(..., timeout=30.0)`, preserved through PR #261/`c57bc39...`.
+- Physical clean-reset test: connect accepted at ~22:45:29Z; product-context read ~51.6s; State persisted ~22:47:52Z; no explicit team choice, but browser-local team restoration issued select-team calls; fresh Forecast acquisition then failed/stopped without a coherent new publication or clear terminal user-facing failure.
+
+Do not patch these as unrelated symptoms. Restore the complete first-load journey while preserving atomic publication, per-user lifecycle serialization, switch safety and final-generation durability. Required pre-merge proof: true clean first-run with empty server + browser state, restored session, league switch, restart, focused regressions, full CI, first-load/session/switch red-team. Deploy exact SHA and run controlled hosted clean-first-run before returning for physical iPhone/Safari.
