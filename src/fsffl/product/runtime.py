@@ -458,9 +458,10 @@ class PrivateBetaRuntimeStore:
 
     def __init__(self) -> None:
         self._lock = RLock()
-        # Serialize identity-changing league/team actions with the entire final
-        # publication sequence without blocking ordinary foreground reads.
-        self._publication_lock = RLock()
+        # Lifecycle mutation authority is per-user. A short registry lock only
+        # creates/retrieves user locks; no lifecycle work or persistence runs under it.
+        self._lifecycle_registry_lock = RLock()
+        self._lifecycle_locks: dict[str, RLock] = {}
         self._contexts: dict[str, UserRuntimeContext] = {}
         self._working_contexts: dict[str, UserRuntimeContext] = {}
         self._working_publication_guards: dict[str, _WorkingPublicationGuard] = {}
@@ -485,13 +486,28 @@ class PrivateBetaRuntimeStore:
         with self._lock:
             return self._published_context(user_id)
 
-    @contextmanager
-    def publication_sequence(self, user_id: str):
-        """Serialize the complete final publication path against identity changes."""
-
+    def _lifecycle_lock_for(self, user_id: str) -> RLock:
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
-        with self._publication_lock:
+        with self._lifecycle_registry_lock:
+            lock = self._lifecycle_locks.get(user_id)
+            if lock is None:
+                lock = RLock()
+                self._lifecycle_locks[user_id] = lock
+            return lock
+
+    @contextmanager
+    def lifecycle_operation(self, user_id: str):
+        """Serialize one user's identity/publication lifecycle without blocking peers."""
+
+        with self._lifecycle_lock_for(user_id):
+            yield
+
+    @contextmanager
+    def publication_sequence(self, user_id: str):
+        """Serialize one user's complete final publication path against identity changes."""
+
+        with self.lifecycle_operation(user_id):
             yield
 
     def working_context(self, user_id: str) -> UserRuntimeContext:
@@ -535,7 +551,7 @@ class PrivateBetaRuntimeStore:
 
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
-        with self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
             published = self._published_context(user_id)
             target = league_state or published.league_state
             if target is None:
@@ -604,7 +620,7 @@ class PrivateBetaRuntimeStore:
     def abort_working_generation(self, user_id: str) -> UserRuntimeContext:
         """Discard unpublished work and leave the published generation untouched."""
 
-        with self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
             self._working_contexts.pop(user_id, None)
             self._working_publication_guards.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
@@ -649,69 +665,78 @@ class PrivateBetaRuntimeStore:
         generation_id = str(publication_generation_id or "").strip()
         if not generation_id:
             raise ValueError("publication_generation_id cannot be blank")
-        with self._publication_lock, self._lock:
-            working = self._working_contexts.get(user_id)
-            guard = self._working_publication_guards.get(user_id)
-            if working is None or working.league_state is None or guard is None:
-                raise ValueError("no working intelligence generation is available")
-            if not _terminal_intelligence(
-                working.forecast_evidence,
-                working.simulation_analytics,
-                working.value_evidence,
-            ):
-                raise ValueError("working intelligence generation is not terminal")
-            published = self._published_context(user_id)
-            if published.league_state is None:
-                raise ValueError("published league disappeared during reconciliation")
-            current_identity = (
-                self._league_generations.get(user_id, 0),
-                published.league_state.league.league_id,
-                published.league_state.state_id,
-                published.selected_team_id,
-                published.publication_generation_id,
-            )
-            expected_identity = (
-                guard.league_generation,
-                guard.league_id,
-                guard.league_state_id,
-                guard.selected_team_id,
-                guard.publication_generation_id,
-            )
-            if current_identity != expected_identity:
-                raise ValueError(
-                    "published league/team/generation identity changed during reconciliation"
+        with self.lifecycle_operation(user_id):
+            # Snapshot and validate under the short shared map lock. Persistence is
+            # intentionally outside that lock so another user's ordinary reads and
+            # lifecycle actions remain available while this user's durable commit runs.
+            with self._lock:
+                working = self._working_contexts.get(user_id)
+                guard = self._working_publication_guards.get(user_id)
+                if working is None or working.league_state is None or guard is None:
+                    raise ValueError("no working intelligence generation is available")
+                if not _terminal_intelligence(
+                    working.forecast_evidence,
+                    working.simulation_analytics,
+                    working.value_evidence,
+                ):
+                    raise ValueError("working intelligence generation is not terminal")
+                published = self._published_context(user_id)
+                if published.league_state is None:
+                    raise ValueError("published league disappeared during reconciliation")
+                current_identity = (
+                    self._league_generations.get(user_id, 0),
+                    published.league_state.league.league_id,
+                    published.league_state.state_id,
+                    published.selected_team_id,
+                    published.publication_generation_id,
                 )
-            if (
-                published.league_state.league.league_id
-                != working.league_state.league.league_id
-            ):
-                raise ValueError("published league changed during reconciliation")
-            if published.selected_team_id != working.selected_team_id:
-                raise ValueError("managed team changed during reconciliation")
+                expected_identity = (
+                    guard.league_generation,
+                    guard.league_id,
+                    guard.league_state_id,
+                    guard.selected_team_id,
+                    guard.publication_generation_id,
+                )
+                if current_identity != expected_identity:
+                    raise ValueError(
+                        "published league/team/generation identity changed during reconciliation"
+                    )
+                if (
+                    published.league_state.league.league_id
+                    != working.league_state.league.league_id
+                ):
+                    raise ValueError("published league changed during reconciliation")
+                if published.selected_team_id != working.selected_team_id:
+                    raise ValueError("managed team changed during reconciliation")
+                previous_state_id = published.league_state.state_id
 
-            previous_state_id = published.league_state.state_id
-
-            # Critical ordering: validate -> durable commit -> in-memory swap while
-            # holding the same lock used by select_team/set_league_state. No managed
-            # team or publication generation can change in between these operations.
+            # Per-user lifecycle authority remains held across the durable commit, but
+            # the process-wide map lock does not. This is the one lifecycle lock order:
+            # user lifecycle -> short runtime map lock. Persistence never owns either.
             if durable_commit is not None:
                 durable_commit(working)
 
-            promoted = replace(
-                working,
-                served_intelligence=None,
-                publication_generation_id=generation_id,
-                intelligence_reused=False,
-            )
-            self._contexts[user_id] = promoted
-            self._working_contexts.pop(user_id, None)
-            self._working_publication_guards.pop(user_id, None)
-            self._pending_intelligence.pop(user_id, None)
-            if previous_state_id != working.league_state.state_id:
-                self._league_generations[user_id] = (
-                    self._league_generations.get(user_id, 0) + 1
+            with self._lock:
+                # Same-user identity changes cannot run while lifecycle authority is
+                # held. Revalidate the working object anyway so an unexpected caller
+                # cannot swap/abort it behind publication.
+                if self._working_contexts.get(user_id) is not working:
+                    raise ValueError("working intelligence generation changed before publish")
+                promoted = replace(
+                    working,
+                    served_intelligence=None,
+                    publication_generation_id=generation_id,
+                    intelligence_reused=False,
                 )
-            return promoted
+                self._contexts[user_id] = promoted
+                self._working_contexts.pop(user_id, None)
+                self._working_publication_guards.pop(user_id, None)
+                self._pending_intelligence.pop(user_id, None)
+                if previous_state_id != working.league_state.state_id:
+                    self._league_generations[user_id] = (
+                        self._league_generations.get(user_id, 0) + 1
+                    )
+                return promoted
 
     def bind_publication_generation_id(
         self,
@@ -723,7 +748,7 @@ class PrivateBetaRuntimeStore:
         generation_id = str(publication_generation_id or "").strip()
         if not generation_id:
             raise ValueError("publication_generation_id cannot be blank")
-        with self._publication_lock, self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
             current = self._published_context(user_id)
             if current.league_state is None:
                 raise ValueError("cannot bind publication identity without a league")
@@ -751,7 +776,7 @@ class PrivateBetaRuntimeStore:
 
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
-        with self._publication_lock, self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
             current = self._published_context(user_id)
             # Explicit State activation (connect/switch) supersedes any unpublished
             # work targeting the previous selection.
@@ -876,18 +901,19 @@ class PrivateBetaRuntimeStore:
     ) -> UserRuntimeContext | None:
         """Atomically activate State only while the caller still owns refresh authority."""
 
-        with self._publication_lock, self._lock:
-            if self._league_generations.get(user_id, 0) != expected_generation:
-                return None
-            current = self.get(user_id)
-            if (
-                expected_league_id is not None
-                and (
-                    current.league_state is None
-                    or current.league_state.league.league_id != expected_league_id
-                )
-            ):
-                return None
+        with self.lifecycle_operation(user_id):
+            with self._lock:
+                if self._league_generations.get(user_id, 0) != expected_generation:
+                    return None
+                current = self._published_context(user_id)
+                if (
+                    expected_league_id is not None
+                    and (
+                        current.league_state is None
+                        or current.league_state.league.league_id != expected_league_id
+                    )
+                ):
+                    return None
             return self.set_league_state(user_id, league_state)
 
     def set_forecast_evidence(
@@ -896,10 +922,13 @@ class PrivateBetaRuntimeStore:
         evidence: LiveForecastEvidence,
         *,
         refreshed_league_state: LeagueState | None = None,
+        require_working_generation: bool = False,
     ) -> UserRuntimeContext:
         """Attach NEXT-2 evidence, optionally advancing state past evidence cutoff."""
 
-        with self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
+            if require_working_generation and user_id not in self._working_contexts:
+                raise ValueError("working intelligence generation is no longer active")
             current = self._mutation_context(user_id)
             league_state = refreshed_league_state or current.league_state
             if league_state is None:
@@ -937,10 +966,14 @@ class PrivateBetaRuntimeStore:
         self,
         user_id: str,
         result: LiveSimulationAnalyticsResult,
+        *,
+        require_working_generation: bool = False,
     ) -> UserRuntimeContext:
         """Attach Simulation only to the exact current State/Forecast identity."""
 
-        with self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
+            if require_working_generation and user_id not in self._working_contexts:
+                raise ValueError("working intelligence generation is no longer active")
             current = self._mutation_context(user_id)
             result_state_id = result.league_view.context.league_state_id
             league_state = current.league_state
@@ -975,10 +1008,14 @@ class PrivateBetaRuntimeStore:
         self,
         user_id: str,
         result: CurrentMarketValueRuntimeResult,
+        *,
+        require_working_generation: bool = False,
     ) -> UserRuntimeContext:
         """Attach Value only to the exact current canonical State."""
 
-        with self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
+            if require_working_generation and user_id not in self._working_contexts:
+                raise ValueError("working intelligence generation is no longer active")
             current = self._mutation_context(user_id)
             league_state = current.league_state
             if (
@@ -1013,6 +1050,7 @@ class PrivateBetaRuntimeStore:
         forecast_evidence: LiveForecastEvidence,
         simulation_analytics: LiveSimulationAnalyticsResult | None,
         value_evidence: CurrentMarketValueRuntimeResult | None,
+        require_working_generation: bool = False,
     ) -> UserRuntimeContext:
         """Atomically attach one internally consistent intelligence snapshot."""
 
@@ -1024,7 +1062,9 @@ class PrivateBetaRuntimeStore:
         if value_evidence is not None and value_evidence.league_state_id != league_state.state_id:
             raise ValueError("Value evidence must match intelligence LeagueState")
 
-        with self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
+            if require_working_generation and user_id not in self._working_contexts:
+                raise ValueError("working intelligence generation is no longer active")
             current = self._mutation_context(user_id)
             if current.league_state is not None and current.league_state.league.league_id != league_state.league.league_id:
                 raise ValueError("cannot attach intelligence for a different loaded league")
@@ -1056,7 +1096,7 @@ class PrivateBetaRuntimeStore:
     ) -> UserRuntimeContext:
         """Attach lightweight presentation-only same-league last-good identity."""
 
-        with self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
             current = self.get(user_id)
             if (
                 snapshot is not None
@@ -1087,16 +1127,17 @@ class PrivateBetaRuntimeStore:
 
         if not team_id.strip():
             raise ValueError("team_id cannot be blank")
-        with self._publication_lock, self._lock:
-            working = self._working_contexts.get(user_id)
-            if working is None:
-                return None
+        with self.lifecycle_operation(user_id):
+            with self._lock:
+                working = self._working_contexts.get(user_id)
+                if working is None:
+                    return None
             return working, self.select_team(user_id, team_id)
 
     def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
         if not team_id.strip():
             raise ValueError("team_id cannot be blank")
-        with self._publication_lock, self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
             current = self._published_context(user_id)
             if current.league_state is None:
                 raise ValueError("cannot select team before a league is loaded")
@@ -1140,7 +1181,7 @@ class PrivateBetaRuntimeStore:
             return updated
 
     def clear(self, user_id: str) -> None:
-        with self._publication_lock, self._lock:
+        with self.lifecycle_operation(user_id), self._lock:
             self._contexts.pop(user_id, None)
             self._working_contexts.pop(user_id, None)
             self._working_publication_guards.pop(user_id, None)
