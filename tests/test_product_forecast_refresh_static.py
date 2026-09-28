@@ -32,3 +32,27 @@ def test_completed_or_failed_job_does_not_poll_forever_when_value_has_no_estimat
     assert "settleCompletedJob" in source
     assert "settleFailedJob" in source
     assert "Value finished without an authoritative estimate set." in source
+
+
+def test_server_started_current_state_job_surfaces_terminal_failure() -> None:
+    source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
+    maintain = source.split("async function maintainFsfflIntelligence()", 1)[1]
+
+    assert "fsfflSessionStartedJobId=payload.job_id" in maintain
+    assert "failureTargetsVisibleState" in maintain
+    assert "payload.league_state_id===state.context.state_id" in maintain
+    assert "settleFailedJob(payload)" in maintain
+    assert maintain.index("failureTargetsVisibleState") < maintain.index("settleFailedJob(payload)")
+
+
+def test_foreground_context_uses_cached_replay_diagnostics_only() -> None:
+    source = Path("src/fsffl/product/webapp.py").read_text(encoding="utf-8")
+    payload = source.split("def _runtime_context_payload", 1)[1].split("def _job_payload", 1)[0]
+    status = source.split('@application.get("/api/intelligence/status")', 1)[1].split(
+        '@application.post("/api/connect/sleeper")', 1
+    )[0]
+
+    assert "_cached_forecast_replay_decision(" in payload
+    assert "_cached_forecast_replay_decision(" in status
+    assert 'getattr(store, "forecast_replay_decision")' not in payload
+    assert 'getattr(store, "forecast_replay_decision")' not in status
