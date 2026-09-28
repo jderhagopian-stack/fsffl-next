@@ -15,6 +15,7 @@ from fsffl.persistence.session import (
     restore_forecast_replay_decision,
     restore_last_good_state_identity,
     restore_runtime_snapshot,
+    restore_published_state_bound_intelligence,
     restore_state_bound_forecast,
     restore_state_bound_intelligence,
     restore_state_bound_raw_forecast_evidence,
@@ -286,6 +287,11 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     )
                 if snapshot.selected_team_id is not None:
                     super().select_team(user_id, snapshot.selected_team_id)
+                if snapshot.publication_generation_id is not None:
+                    super().bind_publication_generation_id(
+                        user_id,
+                        snapshot.publication_generation_id,
+                    )
                 if (
                     snapshot.restored_from_last_good
                     and snapshot.forecast_evidence is not None
@@ -416,9 +422,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         # same-league last-good as presentation-only stale context.
         if self._persistence is not None:
             try:
-                forecast, simulation, values = restore_state_bound_intelligence(
-                    self._persistence,
-                    league_state=league_state,
+                forecast, simulation, values, publication_generation_id = (
+                    restore_published_state_bound_intelligence(
+                        self._persistence,
+                        user_id=user_id,
+                        league_state=league_state,
+                    )
                 )
                 if forecast is not None:
                     context = super().set_intelligence_bundle(
@@ -430,6 +439,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     )
                     self._contexts[user_id] = replace(
                         context,
+                        publication_generation_id=publication_generation_id,
                         intelligence_reused=True,
                     )
                 else:
@@ -754,7 +764,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return context
 
     def checkpoint_working_generation(self, user_id: str) -> bool:
-        """Durably checkpoint replacement artifacts without moving the user pointer."""
+        """Durably checkpoint replacement artifacts without moving publication authority."""
 
         context = self.working_context(user_id)
         if context.league_state is None:
@@ -762,6 +772,40 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         if self._persistence is None:
             return True
         try:
+            published = super().get(user_id)
+            if (
+                published.league_state is not None
+                and published.forecast_evidence is not None
+                and published.value_evidence is not None
+                and (
+                    published.simulation_analytics is not None
+                    or not published.forecast_evidence.uncertainty_ready
+                )
+            ):
+                # Upgrade/bootstrap guard: establish an exact published manifest
+                # before newer same-State working artifacts enter the reusable cache.
+                # This prevents a crash from making "latest" unpublished artifacts
+                # restart-authoritative on the first refresh after deployment.
+                generation_id = (
+                    published.publication_generation_id
+                    or f"bootstrap:{published.league_state.state_id}"
+                )
+                persist_runtime_snapshot(
+                    self._persistence,
+                    user_id=user_id,
+                    league_state=published.league_state,
+                    selected_team_id=published.selected_team_id,
+                    forecast_evidence=published.forecast_evidence,
+                    simulation_analytics=published.simulation_analytics,
+                    value_evidence=published.value_evidence,
+                    publish_context=True,
+                    publication_generation_id=generation_id,
+                )
+                if published.publication_generation_id is None:
+                    super().bind_publication_generation_id(
+                        user_id,
+                        generation_id,
+                    )
             persist_runtime_snapshot(
                 self._persistence,
                 user_id=user_id,
@@ -793,12 +837,62 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         *,
         publication_generation_id: str,
     ):
+        working = self.working_context(user_id)
+        if working.league_state is None:
+            raise ValueError("no working intelligence generation is available")
+        if self._persistence is not None:
+            # Presentation has already been promoted by the caller. Commit model
+            # artifacts + user pointer + generation manifest synchronously, with
+            # the manifest written last, before the foreground runtime swap.
+            persist_runtime_snapshot(
+                self._persistence,
+                user_id=user_id,
+                league_state=working.league_state,
+                selected_team_id=working.selected_team_id,
+                forecast_evidence=working.forecast_evidence,
+                simulation_analytics=working.simulation_analytics,
+                value_evidence=working.value_evidence,
+                publish_context=True,
+                publication_generation_id=publication_generation_id,
+            )
+            self._persist_state_history(working.league_state)
         context = super().publish_working_generation(
             user_id,
             publication_generation_id=publication_generation_id,
         )
         self._last_good_guard_users.discard(user_id)
-        self._checkpoint_async(user_id, context)
+        return context
+
+    def bind_publication_generation_id(
+        self,
+        user_id: str,
+        publication_generation_id: str,
+    ):
+        context = super().bind_publication_generation_id(
+            user_id,
+            publication_generation_id,
+        )
+        if (
+            self._persistence is not None
+            and context.league_state is not None
+            and context.forecast_evidence is not None
+            and context.value_evidence is not None
+            and (
+                context.simulation_analytics is not None
+                or not context.forecast_evidence.uncertainty_ready
+            )
+        ):
+            persist_runtime_snapshot(
+                self._persistence,
+                user_id=user_id,
+                league_state=context.league_state,
+                selected_team_id=context.selected_team_id,
+                forecast_evidence=context.forecast_evidence,
+                simulation_analytics=context.simulation_analytics,
+                value_evidence=context.value_evidence,
+                publish_context=True,
+                publication_generation_id=publication_generation_id,
+            )
         return context
 
     def select_team(self, user_id: str, team_id: str):
