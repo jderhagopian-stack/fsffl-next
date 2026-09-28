@@ -183,6 +183,7 @@ def restore_forecast_replay_decision(
 class DurableRuntimeSnapshot:
     league_state: LeagueState
     selected_team_id: str | None
+    publication_generation_id: str | None = None
     forecast_evidence: LiveForecastEvidence | None = None
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
@@ -324,6 +325,8 @@ def persist_runtime_snapshot(
         )
 
     forecast_record = None
+    simulation_record = None
+    value_record = None
     if forecast_evidence is not None:
         supplement = getattr(
             forecast_evidence.runtime_result,
@@ -364,12 +367,11 @@ def persist_runtime_snapshot(
             simulation=simulation_analytics,
         )
     if value_evidence is not None:
-        store.put_artifact(
-            value_artifact(
-                league_state_id=league_state.state_id,
-                result=value_evidence,
-            )
+        value_record = value_artifact(
+            league_state_id=league_state.state_id,
+            result=value_evidence,
         )
+        store.put_artifact(value_record)
         for estimate in value_evidence.estimates:
             store.append_market_value_snapshot(
                 asset_ref=estimate.asset_id,
