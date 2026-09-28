@@ -641,11 +641,8 @@ def restore_published_state_bound_intelligence(
                 forecast = candidate
         except (TypeError, ValueError):
             forecast = None
-    if forecast is None:
-        return None, None, None, None
-
     simulation = None
-    if simulation_fp:
+    if forecast is not None and simulation_fp:
         simulation_record = store.get_reusable_artifact(
             ArtifactKey(
                 artifact_kind=SIMULATION_ARTIFACT_KIND,
@@ -690,8 +687,6 @@ def restore_published_state_bound_intelligence(
         except (TypeError, ValueError):
             values = None
 
-    if not _terminal_bundle(forecast, simulation, values):
-        return None, None, None, None
     generation_id = str(payload.get("publication_generation_id") or "").strip()
     return forecast, simulation, values, generation_id or None
 
