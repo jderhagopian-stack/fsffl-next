@@ -58,11 +58,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         super().__init__()
         self._persistence = persistence_store if persistence_store is not None else persistence_store_from_env()
         self._state_history = state_snapshot_store
-        self._restore_lock = RLock()
         self._restore_attempted: set[str] = set()
-        self._checkpoint_executor = ThreadPoolExecutor(
+        # Persistence ordering is owned per user. Each user's checkpoints retain
+        # mutation order on a single worker while different users never queue behind
+        # one another. State-history retention is independent read-only bookkeeping.
+        self._checkpoint_executor_registry_lock = RLock()
+        self._checkpoint_executors: dict[str, ThreadPoolExecutor] = {}
+        self._state_history_executor = ThreadPoolExecutor(
             max_workers=1,
-            thread_name_prefix="fsffl-persist",
+            thread_name_prefix="fsffl-state-history",
         )
         self._checkpoint_futures: dict[str, Future[bool]] = {}
         self._checkpoint_state_ids: dict[str, str] = {}
@@ -150,10 +154,21 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         except Exception as exc:  # history retention must also fail open
             _logger.warning("FSFFL State history checkpoint failed league=%s error=%s", league_state.league.league_id, exc)
 
+    def _checkpoint_executor_for(self, user_id: str) -> ThreadPoolExecutor:
+        with self._checkpoint_executor_registry_lock:
+            executor = self._checkpoint_executors.get(user_id)
+            if executor is None:
+                executor = ThreadPoolExecutor(
+                    max_workers=1,
+                    thread_name_prefix=f"fsffl-persist-{user_id[:16]}",
+                )
+                self._checkpoint_executors[user_id] = executor
+            return executor
+
     def _checkpoint_state_history_async(self, league_state) -> None:
         if self._state_history is None:
             return
-        self._checkpoint_executor.submit(self._persist_state_history, league_state)
+        self._state_history_executor.submit(self._persist_state_history, league_state)
 
     def _persist_context(self, user_id: str, context: UserRuntimeContext) -> bool:
         if context.league_state is None:
@@ -202,13 +217,13 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             self._persistence is None and self._state_history is None
         ):
             return None
-        # One worker preserves mutation order. Within the same exact State, a newer
-        # context subsumes an older queued checkpoint (State -> Forecast -> Simulation
-        # -> Value), so cancel queued superseded work before appending the latest
-        # snapshot. A running checkpoint is never interrupted, and cross-State work is
-        # never cancelled: prior-state durability must remain intact across switches.
+        # Each user owns a single-thread checkpoint queue. Within the same exact
+        # State, a newer context subsumes an older queued checkpoint (State ->
+        # Forecast -> Simulation -> Value), so cancel queued superseded work before
+        # appending the latest snapshot. Running work and cross-State work are never
+        # interrupted; different users use different queues.
         state_id = context.league_state.state_id
-        with self._restore_lock:
+        with self.lifecycle_operation(user_id):
             previous = self._checkpoint_futures.get(user_id)
             previous_state_id = self._checkpoint_state_ids.get(user_id)
             if (
@@ -222,7 +237,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     user_id,
                     state_id,
                 )
-            future = self._checkpoint_executor.submit(
+            future = self._checkpoint_executor_for(user_id).submit(
                 self._persist_context,
                 user_id,
                 context,
@@ -234,7 +249,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     def wait_for_checkpoint(self, user_id: str, *, timeout: float = 30.0) -> bool:
         """Wait for the latest serialized checkpoint without moving persistence onto the request path."""
 
-        with self._restore_lock:
+        with self.lifecycle_operation(user_id):
             future = self._checkpoint_futures.get(user_id)
         if future is None:
             return True
@@ -251,7 +266,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         if self._persistence is None:
             return
         started = monotonic()
-        with self._restore_lock:
+        with self.lifecycle_operation(user_id):
             if user_id in self._restore_attempted:
                 return
             self._restore_attempted.add(user_id)
@@ -392,6 +407,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return current
 
     def set_league_state(self, user_id: str, league_state):
+        with self.lifecycle_operation(user_id):
+            return self._set_league_state_under_lifecycle(user_id, league_state)
+
+    def _set_league_state_under_lifecycle(self, user_id: str, league_state):
         current = super().get(user_id)
         previous_league_id = (
             current.league_state.league.league_id
@@ -432,8 +451,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         context = super().set_league_state(user_id, league_state)
         if previous_league_id != league_state.league.league_id:
             self._last_good_guard_users.discard(user_id)
-        with self._restore_lock:
-            self._restore_attempted.add(user_id)
+        self._restore_attempted.add(user_id)
 
         # A cold explicit activation can reach this path before restore_user(). The
         # durable target-State session owns the managed-team identity; recover it
@@ -566,13 +584,18 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return context
 
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
-        """Reuse exact-State authority, then replay compatible raw Forecast truth.
+        """Reuse exact-State authority, then replay compatible raw Forecast truth."""
 
-        Raw provider evidence compatibility is intentionally narrower than downstream
-        scoring/state compatibility. Scoring, supplements, fantasy-week derivation,
-        Simulation and Value rebuild independently for the target State.
-        """
+        with self.lifecycle_operation(user_id):
+            return self._restore_exact_state_intelligence_under_lifecycle(user_id)
 
+    def _restore_exact_state_intelligence_under_lifecycle(
+        self,
+        user_id: str,
+    ) -> UserRuntimeContext:
+        """Restore/replay while the caller owns this user's lifecycle identity."""
+
+        require_working_generation = self.working_generation_active(user_id)
         current = self.working_context(user_id)
         if self._persistence is None or current.league_state is None:
             return current
@@ -589,6 +612,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 forecast_evidence=forecast,
                 simulation_analytics=simulation,
                 value_evidence=values,
+                require_working_generation=require_working_generation,
             )
             reused = replace(restored, intelligence_reused=True)
             self._store_mutation_context(user_id, reused)
@@ -746,6 +770,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             user_id,
             replayed,
             refreshed_league_state=target_state,
+            require_working_generation=require_working_generation,
         )
         reused = replace(restored, intelligence_reused=True)
         self._store_mutation_context(user_id, reused)
@@ -783,24 +808,52 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         )
         return reused
 
-    def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
+    def set_forecast_evidence(
+        self,
+        user_id: str,
+        evidence,
+        *,
+        refreshed_league_state=None,
+        require_working_generation: bool = False,
+    ):
         context = super().set_forecast_evidence(
             user_id,
             evidence,
             refreshed_league_state=refreshed_league_state,
+            require_working_generation=require_working_generation,
         )
         if not self.working_generation_active(user_id):
             self._checkpoint_async(user_id, context)
         return context
 
-    def set_simulation_analytics(self, user_id: str, result):
-        context = super().set_simulation_analytics(user_id, result)
+    def set_simulation_analytics(
+        self,
+        user_id: str,
+        result,
+        *,
+        require_working_generation: bool = False,
+    ):
+        context = super().set_simulation_analytics(
+            user_id,
+            result,
+            require_working_generation=require_working_generation,
+        )
         if not self.working_generation_active(user_id):
             self._checkpoint_async(user_id, context)
         return context
 
-    def set_value_evidence(self, user_id: str, result):
-        context = super().set_value_evidence(user_id, result)
+    def set_value_evidence(
+        self,
+        user_id: str,
+        result,
+        *,
+        require_working_generation: bool = False,
+    ):
+        context = super().set_value_evidence(
+            user_id,
+            result,
+            require_working_generation=require_working_generation,
+        )
         if (
             context.league_state is not None
             and context.league_state.state_id == result.league_state_id
@@ -826,6 +879,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         forecast_evidence,
         simulation_analytics,
         value_evidence,
+        require_working_generation: bool = False,
     ):
         context = super().set_intelligence_bundle(
             user_id,
@@ -833,6 +887,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             forecast_evidence=forecast_evidence,
             simulation_analytics=simulation_analytics,
             value_evidence=value_evidence,
+            require_working_generation=require_working_generation,
         )
         if (
             context.league_state is not None
@@ -962,6 +1017,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         user_id: str,
         publication_generation_id: str,
     ):
+        with self.lifecycle_operation(user_id):
+            return self._bind_publication_generation_id_under_lifecycle(
+                user_id,
+                publication_generation_id,
+            )
+
+    def _bind_publication_generation_id_under_lifecycle(
+        self,
+        user_id: str,
+        publication_generation_id: str,
+    ):
         context = super().bind_publication_generation_id(
             user_id,
             publication_generation_id,
@@ -993,6 +1059,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return context
 
     def select_team(self, user_id: str, team_id: str):
-        context = super().select_team(user_id, team_id)
-        self._checkpoint_async(user_id, context)
-        return context
+        with self.lifecycle_operation(user_id):
+            context = super().select_team(user_id, team_id)
+            self._checkpoint_async(user_id, context)
+            return context
