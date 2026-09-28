@@ -619,11 +619,17 @@ def run_state_first_production_acceptance(
         raise StateFirstAcceptanceError(
             "managed-team publication acceptance did not start reconciliation"
         )
+    # Guarantee the switch occurs inside the working-generation window. Merely
+    # observing activity and then probing a full surface is insufficient: that probe
+    # can outlive a fast reconciliation and turn this into a false race proof.
+    #
+    # This acceptance harness intentionally uses the runtime's publication identity
+    # lock so "working active" and select_team are one serialized observation/action.
+    # If publication already won the lock and removed the working generation, the
+    # acceptance fails instead of pretending it tested the interleaving.
     team_working_deadline = monotonic() + min(30.0, timeout_seconds / 4)
-    while (
-        not store.working_generation_active(user_id)
-        and monotonic() < team_working_deadline
-    ):
+    team_interleaving: dict[str, object] | None = None
+    while monotonic() < team_working_deadline:
         current_job = jobs.current(user_id)
         if (
             current_job is not None
@@ -635,16 +641,28 @@ def run_state_first_production_acceptance(
             }
         ):
             break
-        sleep(0.05)
-    if not store.working_generation_active(user_id):
+        with store._lock:
+            if store.working_generation_active(user_id):
+                working = store.working_context(user_id)
+                team_interleaving = {
+                    "working_state_id": (
+                        working.league_state.state_id
+                        if working.league_state is not None
+                        else None
+                    ),
+                    "working_team_id": working.selected_team_id,
+                    "published_generation_id": (
+                        store.get(user_id).publication_generation_id
+                    ),
+                }
+                store.select_team(user_id, alternate_team_id)
+                break
+        sleep(0.01)
+    if team_interleaving is None:
         raise StateFirstAcceptanceError(
-            "managed-team acceptance never observed an active working generation"
+            "managed-team acceptance could not switch while a working generation "
+            "was still active"
         )
-
-    active_team_surface = probe_surface(
-        "managed_team_during_active_reconciliation"
-    )
-    store.select_team(user_id, alternate_team_id)
 
     team_terminal = None
     team_deadline = monotonic() + timeout_seconds
@@ -700,17 +718,17 @@ def run_state_first_production_acceptance(
     )
     if (
         team_surface is not None
-        and team_surface.get("selected_team_id") != alternate_team_id
+        and team_surface.get("franchise_team_id") != alternate_team_id
     ):
         raise StateFirstAcceptanceError(
-            "managed-team surface did not follow the selected team: "
+            "managed-team Franchise response did not follow the selected team: "
             f"{team_surface}"
         )
     steps.append(
         {
             "label": "fsffl_managed_team_publication_interruption",
             "before": before_team_switch,
-            "active_surface": active_team_surface,
+            "interleaving": team_interleaving,
             "selected_team_id": alternate_team_id,
             "job": team_terminal,
             "after": after_team_switch,
@@ -789,10 +807,10 @@ def run_state_first_production_acceptance(
         )
     if (
         same_promoted is not None
-        and same_promoted.get("selected_team_id") != alternate_team_id
+        and same_promoted.get("franchise_team_id") != alternate_team_id
     ):
         raise StateFirstAcceptanceError(
-            "same-State promoted surfaces do not match managed-team selection"
+            "same-State promoted Franchise response does not match managed-team selection"
         )
     steps.append(
         {
