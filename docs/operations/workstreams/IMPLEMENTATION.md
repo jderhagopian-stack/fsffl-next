@@ -1445,3 +1445,17 @@ Immediate action:
 6. run the full hosted FSFFL → Hodor → FSFFL acceptance journey before returning.
 
 Do not broaden scope or weaken authority gates.
+
+
+## 2026-09-28 — Post-merge P1 after PR #282: stale Simulation can survive Forecast replay
+PR #282 merged as `d9ac502f29e0511e0738b379ed9b5018ea43945f` and closes the same-State stale-supplement early-return defect. A post-merge review found a second P1 in the newly reachable replay path: the rebuilt Forecast may be persisted while an older same-State Simulation artifact remains valid under current restore checks. If reconciliation is interrupted before Simulation rebuild, restart can restore a mismatched Forecast + Simulation bundle and treat it as terminal reuse.
+
+Immediate action:
+1. ensure raw Forecast replay invalidates dependent Simulation, or require persisted Simulation restore to prove exact Forecast identity/fingerprint compatibility;
+2. add a deterministic same-State replay → interruption/restart regression proving stale Simulation cannot reattach;
+3. preserve Value/Simulation authority and cross-league isolation;
+4. merge the narrow correction;
+5. deploy the corrected merge SHA, not bare #282;
+6. run full hosted FSFFL → Hodor → FSFFL acceptance before returning.
+
+Do not broaden scope or weaken authority gates.
