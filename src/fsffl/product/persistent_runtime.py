@@ -545,29 +545,6 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return current
 
         prior_state, _selected = last_good
-        if prior_state.state_id == target_state.state_id:
-            self._record_forecast_replay_decision(
-                user_id,
-                league_state=target_state,
-                decision={
-                    "selection": "fresh_acquisition",
-                    "raw_compatibility": "not_evaluated",
-                    "reason": "exact_state_forecast_artifact_unavailable",
-                    "rejection_components": ["prior_forecast_artifact_unavailable"],
-                    "prior_state_id": prior_state.state_id,
-                    "downstream_rebuild_components": [
-                        "league_scoring",
-                        "fantasy_regular_season",
-                        "state_supplements",
-                        "simulation",
-                        "value",
-                    ],
-                    "fresh_acquisition_required": True,
-                    "served_last_good_available": bool(current.served_intelligence),
-                },
-            )
-            return current
-
         prior_forecast = restore_state_bound_raw_forecast_evidence(
             self._persistence,
             league_state=prior_state,
