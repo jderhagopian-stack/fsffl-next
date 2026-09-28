@@ -543,3 +543,9 @@ After runtime stabilization and in-season Forecast, execute `docs/operations/dir
 - Do not handle it as another isolated patch/deploy. Close the entire publication/persistence/restore/identity concurrency class under `20260928_STABILIZATION_CLOSURE_PROTOCOL.md`.
 - Required before next production acceptance claim: whole-class red-team, deterministic single-user/two-user concurrency matrix, bounded repeated stress, full CI, then one merge/deploy/hosted acceptance sequence.
 - Bounded runtime lifecycle/lock refactor is authorized if needed. Forecast/Simulation/Value/Intrinsic semantics remain frozen.
+
+
+## 2026-09-28 — Product-critical active workstream
+**Implementation: first-load regression recovery** is the sole product-critical workstream. Controlling directive: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`.
+
+Goal: restore the previously reliable Sleeper connect/team-selection/initial-intelligence journey while preserving #291 lifecycle safety. No Simulation 2.0, Long-Term Intrinsic, Market expansion or new Research work until hosted + physical first-load acceptance closes.
