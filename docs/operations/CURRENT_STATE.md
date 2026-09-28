@@ -851,3 +851,9 @@ Remaining product acceptance still requires responsive reads under heavy work, p
 Research is at its intended stopping point. The long-horizon Forecast and separate Long-Term Intrinsic architecture is known and frozen well enough for the next implementation phase. No further Research decision is pending.
 
 The only active blocker to product progress is Implementation/runtime acceptance. Once that closes, the Long-Term Intrinsic shadow can proceed directly from the existing frozen Research contract rather than reopening model selection or economic-design research.
+
+
+## 2026-09-27 late evening — nonblocking Market corrective reaches green PR
+PR #279 is now open, mergeable and green at head `00503a43aa657a9bf1ca93c488f38561813e206f`. The branch implements the intended nonblocking Market boundary and corrects the stale RSS acceptance rule so exceeding the ~429.5 MB engineering target alone no longer fails hosted acceptance; actual hard-limit and availability failures still do.
+
+The fix is **not deployed yet**. Production remains on #278. The only remaining sequence before physical beta testing is merge #279 -> deploy exact merge SHA -> complete hosted State-first acceptance on that deployed code.
