@@ -548,6 +548,97 @@ def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
 
 
 
+def test_provider_outage_does_not_run_live_acquisition_after_compatible_replay(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _canonical_state()
+    observation = SimpleNamespace(as_of=state.as_of)
+    runtime_result = SimpleNamespace(
+        partial_fantasy_point_forecasts=(),
+        family_coverage=(),
+        simulation_authority_blockers=("replayed_partial_authority",),
+        simulation_material_partial_player_ids=(),
+        evaluation_as_of=state.as_of,
+    )
+    replayed = SimpleNamespace(
+        raw_forecasts=(observation,),
+        league_scored_forecasts=(),
+        successful_source_ids=("provider-a", "provider-b"),
+        failed_sources=("live-provider-outage",),
+        uncertainty_ready=False,
+        runtime_result=runtime_result,
+        evidence_basis="live_full_season",
+        model_version="fixture-replayed-evidence-v1",
+    )
+    value = SimpleNamespace(
+        league_state_id=state.state_id,
+        estimates=(),
+        successful_source_ids=(),
+        coverage="unavailable",
+        fsffl_cardinal_values=(),
+        cardinal_player_coverage="unavailable",
+        pick_variant_market_values=(),
+    )
+
+    class ReplayStore(PrivateBetaRuntimeStore):
+        def restore_exact_state_intelligence(self, user_id: str):
+            current = self.get(user_id)
+            assert current.league_state is not None
+            return self.set_forecast_evidence(
+                user_id,
+                replayed,
+                refreshed_league_state=current.league_state,
+            )
+
+        def forecast_replay_decision(self, user_id: str):
+            current = self.get(user_id)
+            assert current.league_state is not None
+            return {
+                "selection": "raw_replay",
+                "raw_compatibility": "compatible",
+                "reason": "governed_raw_provider_ensemble_replayed",
+                "target_state_id": current.league_state.state_id,
+                "fresh_acquisition_required": False,
+            }
+
+    acquisition_calls: list[str] = []
+
+    def unavailable_provider_acquisition(_state):
+        acquisition_calls.append("forecast")
+        raise AssertionError(
+            "compatible replay must be attempted before live provider acquisition"
+        )
+
+    client = TestClient(
+        create_app(
+            runtime_store=ReplayStore(),
+            state_loader=lambda _league_id: state,
+            forecast_loader=unavailable_provider_acquisition,
+            simulation_loader=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("blocked replayed Simulation must not run")
+            ),
+            value_loader=lambda _state: value,
+        )
+    )
+    assert client.post(
+        "/api/connect/sleeper",
+        json={"league_external_id": "123"},
+    ).status_code == 200
+    started = client.post("/api/intelligence/jobs")
+    assert started.status_code == 200
+    current = _wait_completed(client)
+
+    assert current["status"] == "completed"
+    assert acquisition_calls == []
+    assert current["forecast_ready"] is True
+    assert current["simulation_ready"] is False
+    assert current["forecast_replay_decision"]["selection"] == "raw_replay"
+    status = client.get("/api/intelligence/status").json()
+    assert status["forecast_replay_decision"]["raw_compatibility"] == "compatible"
+    assert status["forecast_replay_decision"]["fresh_acquisition_required"] is False
+
+
 def _canonical_state_for(external_id: str, *, day: int = 5) -> LeagueState:
     as_of = datetime(2026, 9, day, tzinfo=UTC)
     league_id = f"sleeper:{external_id}"
