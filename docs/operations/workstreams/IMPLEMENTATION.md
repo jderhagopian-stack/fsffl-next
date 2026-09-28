@@ -1393,3 +1393,23 @@ Observed new-instance evidence:
 - prior ~64s Market logs belong to the old #278 instance and must not be attributed to #279.
 
 Immediate directive: stop Market feature work. Diagnose the narrow startup/import/initialization hang on the exact #279 merge SHA. Determine the last reached startup boundary before Uvicorn application startup, restore health readiness, then rerun the existing hosted acceptance on that exact deployed code. Do not expand scope or reopen Research.
+
+
+## 2026-09-28 — PR #280 isolates remaining hosted failure to Hodor Forecast source health
+PR #280 is live as merge `9db51f8190dd7a1a17d75987ddc685b7b459a8b2` and materially validates the runtime corrective on the primary FSFFL league.
+
+Observed on the exact live build before the Hodor switch:
+- cold PI history: ~0.507s with Forecast years [1,2,3];
+- active-reconciliation PI history: ~2.905s with compatible Y2/Y3;
+- Market workspace read: ~0.309s, followed by exact cache-hit ~0.000s;
+- post-automatic-sync RSS: ~370.2 MB current / ~412.5 MB max observed, within the engineering target and below the hard Render limit;
+- stale-last-good presentation continuity held during changed-State reconciliation and promoted back to current/full.
+
+The acceptance failure occurred specifically at `hodor_switch`. Hodor required fresh live Forecast acquisition and failed the existing source-health contract because only Razzball was healthy:
+- CBS: response not a full-season QB projection page;
+- FFToday: HTTP 403;
+- NFL Fantasy: response lacked projection content.
+
+Do not reopen Market/runtime architecture because of this failure. The remaining issue is Forecast-source availability / Hodor continuity. Preserve the source-health authority contract; do not reduce the independent-source requirement merely to make acceptance pass.
+
+Primary FSFFL physical beta testing may proceed as a bounded smoke test while Hodor/cross-league Forecast continuity remains open. Do not claim full runtime terminal acceptance until the league-switch path is resolved or explicitly reclassified by Management.
