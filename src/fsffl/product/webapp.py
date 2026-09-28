@@ -776,6 +776,7 @@ def create_app(
     jobs = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence_store)
     reconciliation_lock = RLock()
     reconciliation_league_by_user: dict[str, str] = {}
+    reconciliation_generation_by_user: dict[str, int] = {}
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     base_read_capabilities = capability_readiness_reader or _runtime_capability_readiness
 
@@ -1226,10 +1227,12 @@ def create_app(
             "start_intelligence_reconciliation",
             None,
         )
+        activated_runtime = store.get(user_id)
         if (
             callable(reconcile)
             and previous_league_id is not None
             and previous_league_id != league_state.league.league_id
+            and activated_runtime.selected_team_id is not None
         ):
             reconcile(user_id)
         return runtime_context_payload(user_id)
@@ -1301,6 +1304,14 @@ def create_app(
             store.select_team(user_id, request.team_id)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        # Managed-team identity is part of reconciliation/publication authority.
+        # The team-selection request owns the handoff so a browser timing gap can
+        # never leave a valid selected team without a current replacement job.
+        _start_intelligence_reconciliation(
+            user_id,
+            sync_state=False,
+        )
         return runtime_context_payload(user_id)
 
     def _start_intelligence_reconciliation(
@@ -1311,37 +1322,50 @@ def create_app(
         published = store.get(user_id)
         if published.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
+        if published.selected_team_id is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Select the managed team before starting intelligence",
+            )
         starting_state = published.league_state
         starting_league_id = starting_state.league.league_id
+        starting_team_id = published.selected_team_id
         starting_external_id = _sleeper_external_id(starting_state)
+        expected_generation = store.league_generation(user_id)
         active_job = jobs.current(user_id)
         with reconciliation_lock:
             same_reconciliation_league = (
                 reconciliation_league_by_user.get(user_id) == starting_league_id
             )
-        if (
+            same_reconciliation_generation = (
+                reconciliation_generation_by_user.get(user_id) == expected_generation
+            )
+        can_coalesce_current = bool(
             active_job is not None
             and active_job.status in {
                 IntelligenceJobStatus.QUEUED,
                 IntelligenceJobStatus.RUNNING,
             }
             and same_reconciliation_league
-        ):
+            and same_reconciliation_generation
+        )
+        if can_coalesce_current:
             return {
                 **_job_payload(active_job),
                 **runtime_context_payload(user_id),
                 "coalesced": True,
             }
-        expected_generation = store.league_generation(user_id)
 
         def require_active_league_identity() -> LeagueState:
-            active_published = store.get(user_id).league_state
+            active_context = store.get(user_id)
+            active_published = active_context.league_state
             if (
                 store.league_generation(user_id) != expected_generation
                 or active_published is None
                 or active_published.league.league_id != starting_league_id
+                or active_context.selected_team_id != starting_team_id
             ):
-                raise IntelligenceJobInterrupted("league_switch")
+                raise IntelligenceJobInterrupted("lifecycle_switch")
             active_working = store.working_context(user_id).league_state
             return active_working or active_published
 
@@ -1610,9 +1634,11 @@ def create_app(
             user_id=user_id,
             league_state_id=starting_state.state_id,
             work=work,
+            coalesce_current=can_coalesce_current,
         )
         with reconciliation_lock:
             reconciliation_league_by_user[user_id] = starting_league_id
+            reconciliation_generation_by_user[user_id] = expected_generation
         return {
             **_job_payload(job),
             **runtime_context_payload(user_id),
