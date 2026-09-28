@@ -894,3 +894,9 @@ PR #281 merged as `a6a85d250497c9284c602373e54b3a72ce5d68c1`, but a post-merge C
 When an exact-State Forecast artifact is rejected only because its downstream FUMBLES_LOST supplement contract is stale, the runtime can return early before attempting raw Forecast replay. In that case it falls through to live provider acquisition and can fail during a provider outage even though valid persisted raw Forecast evidence exists.
 
 Disposition: **do not deploy/accept #281 as-is.** Implementation must repair this exact same-State stale-supplement replay path, add regression coverage, merge the correction, then deploy the corrected exact merge SHA and run the full hosted FSFFL → Hodor → FSFFL acceptance journey. No scope expansion and no provider-rule weakening.
+
+
+## 2026-09-28 — PR #282 merged; new post-merge P1 blocks deployment
+PR #282 merged as `d9ac502f29e0511e0738b379ed9b5018ea43945f` and repairs the original same-State stale-supplement replay hole. A post-merge Codex review then identified a second P1 in that newly reachable replay path: rebuilt Forecast can be checkpointed while an older same-State Simulation artifact remains durable. If reconciliation stops before Simulation is rebuilt, restart restore can combine the new Forecast with stale Simulation because the current Simulation restore contract does not prove Forecast identity compatibility.
+
+Disposition: **do not deploy/accept #282 as-is.** Implementation must invalidate dependent Simulation on raw Forecast replay or strengthen persisted Simulation compatibility to require the exact Forecast identity/fingerprint, add a deterministic restart/interruption regression, then merge the narrow correction, deploy the corrected exact merge SHA, and run the full hosted FSFFL → Hodor → FSFFL acceptance journey. No scope expansion.
