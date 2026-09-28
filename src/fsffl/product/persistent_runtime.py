@@ -876,14 +876,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             user_id,
             publication_generation_id,
         )
+        forecast = context.forecast_evidence
+        values = context.value_evidence
+        simulation = context.simulation_analytics
         if (
             self._persistence is not None
             and context.league_state is not None
-            and context.forecast_evidence is not None
-            and context.value_evidence is not None
+            and forecast is not None
+            and values is not None
             and (
-                context.simulation_analytics is not None
-                or not context.forecast_evidence.uncertainty_ready
+                simulation is not None
+                or not forecast.uncertainty_ready
             )
         ):
             persist_runtime_snapshot(
@@ -891,9 +894,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 user_id=user_id,
                 league_state=context.league_state,
                 selected_team_id=context.selected_team_id,
-                forecast_evidence=context.forecast_evidence,
-                simulation_analytics=context.simulation_analytics,
-                value_evidence=context.value_evidence,
+                forecast_evidence=forecast,
+                simulation_analytics=simulation,
+                value_evidence=values,
                 publish_context=True,
                 publication_generation_id=publication_generation_id,
             )
