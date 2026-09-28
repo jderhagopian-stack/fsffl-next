@@ -248,6 +248,7 @@ def test_hosted_connect_persists_partial_state_off_request_path() -> None:
     assert "ThreadPoolExecutor" in source
     assert "max_workers=1" in source
     assert "self._checkpoint_executor_for(user_id).submit" in source
+    assert "_retire_checkpoint_executor" in source
     assert "context.forecast_evidence is not None" not in source
     assert "context.simulation_analytics is not None" not in source
     assert "context.value_evidence is not None" not in source
@@ -455,3 +456,23 @@ def test_market_context_guard_accepts_only_governed_stale_presentation_contract(
     assert "continuity.mode==='stale_last_good'" in shell
     assert "continuity.target_league_state_id===context.state_id" in shell
     assert "window.fsfflPresentationPayloadMatchesContext" in opportunities
+
+
+
+def test_shared_postgres_state_upserts_reject_older_cross_user_writes() -> None:
+    source = open(
+        "src/fsffl/persistence/postgres.py",
+        encoding="utf-8",
+    ).read()
+
+    league = source.split("def put_league_snapshot", 1)[1].split(
+        "def get_team_snapshot", 1
+    )[0]
+    team = source.split("def put_team_snapshot", 1)[1].split(
+        "def get_sync_cursor", 1
+    )[0]
+
+    assert "fsffl.league_snapshot.source_updated_at" in league
+    assert "excluded.recorded_at >= fsffl.league_snapshot.recorded_at" in league
+    assert "fsffl.team_snapshot.source_updated_at" in team
+    assert "excluded.recorded_at >= fsffl.team_snapshot.recorded_at" in team
