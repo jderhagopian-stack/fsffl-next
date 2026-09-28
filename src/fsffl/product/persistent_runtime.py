@@ -10,11 +10,14 @@ from fsffl.persistence import PersistenceStore, persistence_store_from_env
 from fsffl.persistence.session import (
     migrate_legacy_last_good_identity,
     persist_league_last_good_identity,
+    persist_forecast_replay_decision,
     persist_runtime_snapshot,
+    restore_forecast_replay_decision,
     restore_last_good_state_identity,
     restore_runtime_snapshot,
     restore_state_bound_forecast,
     restore_state_bound_intelligence,
+    restore_state_bound_raw_forecast_evidence,
 )
 from fsffl.state.history import StateSnapshotStore
 
@@ -22,7 +25,8 @@ from .runtime import (
     PrivateBetaRuntimeStore,
     ServedIntelligenceSnapshot,
     UserRuntimeContext,
-    forecast_input_fingerprint,
+    raw_forecast_compatibility_reasons,
+    raw_forecast_input_fingerprint,
     replay_live_forecast_evidence_for_state,
 )
 
@@ -61,6 +65,76 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self._checkpoint_futures: dict[str, Future[bool]] = {}
         self._checkpoint_state_ids: dict[str, str] = {}
         self._last_good_guard_users: set[str] = set()
+        self._forecast_replay_decisions: dict[str, dict[str, object]] = {}
+
+    def _record_forecast_replay_decision(
+        self,
+        user_id: str,
+        *,
+        league_state,
+        decision: dict[str, object],
+    ) -> None:
+        payload = {
+            **decision,
+            "target_league_id": league_state.league.league_id,
+            "target_state_id": league_state.state_id,
+        }
+        self._forecast_replay_decisions[user_id] = payload
+        if self._persistence is not None:
+            try:
+                persist_forecast_replay_decision(
+                    self._persistence,
+                    user_id=user_id,
+                    league_state=league_state,
+                    decision=payload,
+                )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL Forecast replay decision persistence failed user=%s league=%s state=%s error=%s",
+                    user_id,
+                    league_state.league.league_id,
+                    league_state.state_id,
+                    exc,
+                )
+        _logger.info(
+            "FSFFL Forecast replay decision user=%s league=%s target_state=%s selection=%s raw_compatibility=%s reason=%s rejection_components=%s prior_state=%s",
+            user_id,
+            league_state.league.league_id,
+            league_state.state_id,
+            payload.get("selection"),
+            payload.get("raw_compatibility"),
+            payload.get("reason"),
+            payload.get("rejection_components"),
+            payload.get("prior_state_id"),
+        )
+
+    def forecast_replay_decision(self, user_id: str) -> dict[str, object] | None:
+        current = super().get(user_id)
+        if current.league_state is None:
+            return None
+        cached = self._forecast_replay_decisions.get(user_id)
+        if cached is not None and cached.get("target_state_id") == current.league_state.state_id:
+            return dict(cached)
+        if self._persistence is None:
+            return None
+        try:
+            restored = restore_forecast_replay_decision(
+                self._persistence,
+                user_id=user_id,
+                league_state=current.league_state,
+            )
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL Forecast replay decision restore failed user=%s state=%s error=%s",
+                user_id,
+                current.league_state.state_id,
+                exc,
+            )
+            return None
+        if restored is not None:
+            self._forecast_replay_decisions[user_id] = restored
+            return dict(restored)
+        return None
 
     @property
     def persistence_enabled(self) -> bool:
@@ -394,105 +468,242 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return context
 
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
-        """Reuse exact-State authority, then compatible governed raw Forecast truth.
+        """Reuse exact-State authority, then replay compatible raw Forecast truth.
 
-        Exact-State Simulation and Value are the only downstream layers restored
-        directly. When exact Forecast is absent, a same-league last-good raw
-        ensemble may be replayed only if the target State has the identical
-        Forecast input fingerprint. The replay rebuilds State-bound scoring and
-        supplemental coordinates; old Simulation/Value are never rebound.
+        Raw provider evidence compatibility is intentionally narrower than downstream
+        scoring/state compatibility. Scoring, supplements, fantasy-week derivation,
+        Simulation and Value rebuild independently for the target State.
         """
 
         current = super().get(user_id)
         if self._persistence is None or current.league_state is None:
             return current
+        target_state = current.league_state
 
         forecast, simulation, values = restore_state_bound_intelligence(
             self._persistence,
-            league_state=current.league_state,
+            league_state=target_state,
         )
         if forecast is not None:
             restored = super().set_intelligence_bundle(
                 user_id,
-                league_state=current.league_state,
+                league_state=target_state,
                 forecast_evidence=forecast,
                 simulation_analytics=simulation,
                 value_evidence=values,
             )
             reused = replace(restored, intelligence_reused=True)
             self._contexts[user_id] = reused
-            _logger.info(
-                "FSFFL exact-state intelligence reuse user=%s league=%s state=%s forecast=%s simulation=%s value=%s",
+            self._record_forecast_replay_decision(
                 user_id,
-                current.league_state.league.league_id,
-                current.league_state.state_id,
-                True,
-                simulation is not None,
-                values is not None,
+                league_state=target_state,
+                decision={
+                    "selection": "exact_state_reuse",
+                    "raw_compatibility": "exact_state",
+                    "reason": "exact_state_forecast_artifact_available",
+                    "rejection_components": [],
+                    "prior_state_id": target_state.state_id,
+                    "prior_evidence_model_version": forecast.model_version,
+                    "prior_evidence_basis": forecast.evidence_basis,
+                    "prior_successful_source_ids": list(forecast.successful_source_ids),
+                    "prior_raw_observation_count": len(forecast.raw_forecasts),
+                    "raw_prior_fingerprint": raw_forecast_input_fingerprint(target_state),
+                    "raw_target_fingerprint": raw_forecast_input_fingerprint(target_state),
+                    "downstream_rebuild_components": [],
+                    "fresh_acquisition_required": False,
+                    "served_last_good_available": bool(current.served_intelligence),
+                },
             )
             return reused
 
         last_good = restore_last_good_state_identity(
             self._persistence,
             user_id=user_id,
-            league_id=current.league_state.league.league_id,
+            league_id=target_state.league.league_id,
         )
         if last_good is None:
-            return current
-        prior_state, _selected = last_good
-        if prior_state.state_id == current.league_state.state_id:
-            return current
-        if (
-            forecast_input_fingerprint(prior_state)
-            != forecast_input_fingerprint(current.league_state)
-        ):
-            _logger.info(
-                "FSFFL compatible Forecast replay rejected user=%s league=%s prior_state=%s target_state=%s reason=forecast_input_fingerprint_changed",
+            self._record_forecast_replay_decision(
                 user_id,
-                current.league_state.league.league_id,
-                prior_state.state_id,
-                current.league_state.state_id,
+                league_state=target_state,
+                decision={
+                    "selection": "fresh_acquisition",
+                    "raw_compatibility": "not_evaluated",
+                    "reason": "no_same_league_last_good_state",
+                    "rejection_components": ["prior_state_unavailable"],
+                    "prior_state_id": None,
+                    "downstream_rebuild_components": [
+                        "league_scoring",
+                        "fantasy_regular_season",
+                        "state_supplements",
+                        "simulation",
+                        "value",
+                    ],
+                    "fresh_acquisition_required": True,
+                    "served_last_good_available": bool(current.served_intelligence),
+                },
             )
             return current
 
-        prior_forecast = restore_state_bound_forecast(
+        prior_state, _selected = last_good
+        if prior_state.state_id == target_state.state_id:
+            self._record_forecast_replay_decision(
+                user_id,
+                league_state=target_state,
+                decision={
+                    "selection": "fresh_acquisition",
+                    "raw_compatibility": "not_evaluated",
+                    "reason": "exact_state_forecast_artifact_unavailable",
+                    "rejection_components": ["prior_forecast_artifact_unavailable"],
+                    "prior_state_id": prior_state.state_id,
+                    "downstream_rebuild_components": [
+                        "league_scoring",
+                        "fantasy_regular_season",
+                        "state_supplements",
+                        "simulation",
+                        "value",
+                    ],
+                    "fresh_acquisition_required": True,
+                    "served_last_good_available": bool(current.served_intelligence),
+                },
+            )
+            return current
+
+        prior_forecast = restore_state_bound_raw_forecast_evidence(
             self._persistence,
             league_state=prior_state,
         )
         if prior_forecast is None:
+            self._record_forecast_replay_decision(
+                user_id,
+                league_state=target_state,
+                decision={
+                    "selection": "fresh_acquisition",
+                    "raw_compatibility": "not_evaluated",
+                    "reason": "prior_governed_raw_forecast_artifact_unavailable",
+                    "rejection_components": ["prior_raw_forecast_artifact_unavailable"],
+                    "prior_state_id": prior_state.state_id,
+                    "downstream_rebuild_components": [
+                        "league_scoring",
+                        "fantasy_regular_season",
+                        "state_supplements",
+                        "simulation",
+                        "value",
+                    ],
+                    "fresh_acquisition_required": True,
+                    "served_last_good_available": bool(current.served_intelligence),
+                },
+            )
             return current
+
+        rejection_components = list(
+            raw_forecast_compatibility_reasons(prior_state, target_state)
+        )
+        prior_raw_fingerprint = raw_forecast_input_fingerprint(prior_state)
+        target_raw_fingerprint = raw_forecast_input_fingerprint(target_state)
+        if rejection_components or prior_raw_fingerprint != target_raw_fingerprint:
+            if not rejection_components:
+                rejection_components = ["raw_forecast_material_inputs_changed"]
+            self._record_forecast_replay_decision(
+                user_id,
+                league_state=target_state,
+                decision={
+                    "selection": "fresh_acquisition",
+                    "raw_compatibility": "incompatible",
+                    "reason": "raw_forecast_material_inputs_changed",
+                    "rejection_components": rejection_components,
+                    "prior_state_id": prior_state.state_id,
+                    "prior_evidence_model_version": prior_forecast.model_version,
+                    "prior_evidence_basis": prior_forecast.evidence_basis,
+                    "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
+                    "prior_raw_observation_count": len(prior_forecast.raw_forecasts),
+                    "raw_prior_fingerprint": prior_raw_fingerprint,
+                    "raw_target_fingerprint": target_raw_fingerprint,
+                    "downstream_rebuild_components": [
+                        "raw_provider_ensemble",
+                        "league_scoring",
+                        "fantasy_regular_season",
+                        "state_supplements",
+                        "simulation",
+                        "value",
+                    ],
+                    "fresh_acquisition_required": True,
+                    "served_last_good_available": bool(current.served_intelligence),
+                },
+            )
+            return current
+
         try:
             replayed = replay_live_forecast_evidence_for_state(
-                current.league_state,
+                target_state,
                 prior_forecast,
             )
         except Exception as exc:
-            _logger.warning(
-                "FSFFL compatible Forecast replay failed user=%s league=%s prior_state=%s target_state=%s error=%s",
+            self._record_forecast_replay_decision(
                 user_id,
-                current.league_state.league.league_id,
-                prior_state.state_id,
-                current.league_state.state_id,
-                exc,
+                league_state=target_state,
+                decision={
+                    "selection": "fresh_acquisition",
+                    "raw_compatibility": "compatible",
+                    "reason": f"downstream_replay_failed:{type(exc).__name__}",
+                    "rejection_components": ["downstream_replay_runtime_failure"],
+                    "prior_state_id": prior_state.state_id,
+                    "prior_evidence_model_version": prior_forecast.model_version,
+                    "prior_evidence_basis": prior_forecast.evidence_basis,
+                    "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
+                    "prior_raw_observation_count": len(prior_forecast.raw_forecasts),
+                    "raw_prior_fingerprint": prior_raw_fingerprint,
+                    "raw_target_fingerprint": target_raw_fingerprint,
+                    "downstream_rebuild_components": [
+                        "league_scoring",
+                        "fantasy_regular_season",
+                        "state_supplements",
+                        "simulation",
+                        "value",
+                    ],
+                    "fresh_acquisition_required": True,
+                    "served_last_good_available": bool(current.served_intelligence),
+                    "error": str(exc),
+                },
             )
             return current
 
         restored = super().set_forecast_evidence(
             user_id,
             replayed,
-            refreshed_league_state=current.league_state,
+            refreshed_league_state=target_state,
         )
         reused = replace(restored, intelligence_reused=True)
         self._contexts[user_id] = reused
         self._checkpoint_async(user_id, reused)
-        _logger.info(
-            "FSFFL compatible Forecast replay user=%s league=%s prior_state=%s target_state=%s sources=%s blockers=%s",
+        self._record_forecast_replay_decision(
             user_id,
-            current.league_state.league.league_id,
-            prior_state.state_id,
-            current.league_state.state_id,
-            list(replayed.successful_source_ids),
-            list(replayed.runtime_result.simulation_authority_blockers),
+            league_state=target_state,
+            decision={
+                "selection": "raw_replay",
+                "raw_compatibility": "compatible",
+                "reason": "governed_raw_provider_ensemble_replayed",
+                "rejection_components": [],
+                "prior_state_id": prior_state.state_id,
+                "prior_evidence_model_version": prior_forecast.model_version,
+                "prior_evidence_basis": prior_forecast.evidence_basis,
+                "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
+                "prior_raw_observation_count": len(prior_forecast.raw_forecasts),
+                "raw_prior_fingerprint": prior_raw_fingerprint,
+                "raw_target_fingerprint": target_raw_fingerprint,
+                "downstream_rebuild_components": [
+                    "league_scoring",
+                    "fantasy_regular_season",
+                    "state_supplements",
+                    "simulation",
+                    "value",
+                ],
+                "fresh_acquisition_required": False,
+                "served_last_good_available": bool(current.served_intelligence),
+                "replayed_successful_source_ids": list(replayed.successful_source_ids),
+                "simulation_authority_blockers": list(
+                    replayed.runtime_result.simulation_authority_blockers
+                ),
+            },
         )
         return reused
 
