@@ -886,13 +886,33 @@ def create_app(
                 return stale
         return tag_publication_generation(runtime, builder())
 
-    def publish_working_generation(user_id: str) -> UserRuntimeContext:
-        """Durably compose one working generation, then expose it in one swap."""
+    def publish_working_generation(
+        user_id: str,
+        *,
+        expected_generation: int | None = None,
+        expected_league_id: str | None = None,
+    ) -> UserRuntimeContext:
+        """Durably compose one owned working generation, then expose it in one swap."""
 
-        # Team/league identity changes serialize against the entire final sequence,
-        # including working-artifact checkpoint and presentation promotion. Ordinary
-        # foreground reads remain free to consume the previously published generation.
+        # Team/league identity changes serialize against the entire final sequence.
+        # Revalidate the worker's ownership *inside* that serialization boundary so
+        # an older job can never checkpoint/promote/publish a newer job's generation.
         with store.publication_sequence(user_id):
+            published_identity = store.get(user_id)
+            if (
+                expected_generation is not None
+                and store.league_generation(user_id) != expected_generation
+            ):
+                raise IntelligenceJobInterrupted("league_switch")
+            if (
+                expected_league_id is not None
+                and (
+                    published_identity.league_state is None
+                    or published_identity.league_state.league.league_id
+                    != expected_league_id
+                )
+            ):
+                raise IntelligenceJobInterrupted("league_switch")
             working = store.working_context(user_id)
             if working.league_state is None:
                 raise RuntimeError("working intelligence generation has no LeagueState")
@@ -1316,28 +1336,35 @@ def create_app(
                     "Syncing canonical Sleeper State into an unpublished working generation.",
                 )
                 synced_state = state_loader(starting_external_id)
-                active_before_write = require_active_league_identity()
-                if synced_state.league.league_id != active_before_write.league.league_id:
-                    raise IntelligenceJobInterrupted("league_switch")
-                store.begin_working_generation(
-                    user_id,
-                    league_state=synced_state,
-                )
+                with store.lifecycle_operation(user_id):
+                    active_before_write = require_active_league_identity()
+                    if (
+                        synced_state.league.league_id
+                        != active_before_write.league.league_id
+                    ):
+                        raise IntelligenceJobInterrupted("league_switch")
+                    store.begin_working_generation(
+                        user_id,
+                        league_state=synced_state,
+                    )
                 if active_before_write.state_id != synced_state.state_id:
                     reclaim_state_transition(
                         f"{user_id}:{synced_state.state_id}:state_transition"
                     )
             else:
-                store.begin_working_generation(
-                    user_id,
-                    league_state=starting_state,
-                )
+                with store.lifecycle_operation(user_id):
+                    require_active_league_identity()
+                    store.begin_working_generation(
+                        user_id,
+                        league_state=starting_state,
+                    )
 
-            working_state = require_active_league_identity()
             restore_exact = getattr(store, "restore_exact_state_intelligence", None)
-            if callable(restore_exact):
-                restore_exact(user_id)
-            context = store.working_context(user_id)
+            with store.lifecycle_operation(user_id):
+                working_state = require_active_league_identity()
+                if callable(restore_exact):
+                    restore_exact(user_id)
+                context = store.working_context(user_id)
             if context.league_state is None:
                 raise IntelligenceJobInterrupted("league_switch")
             working_state = context.league_state
@@ -1371,7 +1398,11 @@ def create_app(
                     IntelligenceJobPhase.ATTACHING_RESULTS,
                     "Atomically publishing the coherent intelligence generation.",
                 )
-                published_context = publish_working_generation(user_id)
+                published_context = publish_working_generation(
+                    user_id,
+                    expected_generation=expected_generation,
+                    expected_league_id=starting_league_id,
+                )
                 if product_status not in {"full", "ready"}:
                     return (
                         "Canonical Sleeper State is current. Compatible governed core "
@@ -1401,13 +1432,14 @@ def create_app(
                         f"{user_id}:{working_state.state_id}:before_forecast"
                     )
                     evidence = forecast_loader(working_state)
-                    require_active_league_identity()
-                    store.set_forecast_evidence(
-                        user_id,
-                        evidence,
-                        refreshed_league_state=working_state,
-                        require_working_generation=True,
-                    )
+                    with store.lifecycle_operation(user_id):
+                        require_active_league_identity()
+                        store.set_forecast_evidence(
+                            user_id,
+                            evidence,
+                            refreshed_league_state=working_state,
+                            require_working_generation=True,
+                        )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:after_forecast"
                     )
@@ -1433,12 +1465,13 @@ def create_app(
                         f"{user_id}:{working_state.state_id}:before_simulation"
                     )
                     simulation = simulation_loader(working_state, evidence)
-                    require_active_league_identity()
-                    store.set_simulation_analytics(
-                        user_id,
-                        simulation,
-                        require_working_generation=True,
-                    )
+                    with store.lifecycle_operation(user_id):
+                        require_active_league_identity()
+                        store.set_simulation_analytics(
+                            user_id,
+                            simulation,
+                            require_working_generation=True,
+                        )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:after_simulation"
                     )
@@ -1466,12 +1499,13 @@ def create_app(
                         f"{user_id}:{working_state.state_id}:before_value"
                     )
                     values = value_loader(working_state)
-                    require_active_league_identity()
-                    store.set_value_evidence(
-                        user_id,
-                        values,
-                        require_working_generation=True,
-                    )
+                    with store.lifecycle_operation(user_id):
+                        require_active_league_identity()
+                        store.set_value_evidence(
+                            user_id,
+                            values,
+                            require_working_generation=True,
+                        )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:after_value"
                     )
@@ -1493,7 +1527,11 @@ def create_app(
                 IntelligenceJobPhase.ATTACHING_RESULTS,
                 "Durably checkpointing and atomically publishing the coherent generation.",
             )
-            published_context = publish_working_generation(user_id)
+            published_context = publish_working_generation(
+                user_id,
+                expected_generation=expected_generation,
+                expected_league_id=starting_league_id,
+            )
             intrinsic_status = (
                 str(product_capability.get("status"))
                 if product_capability is not None
