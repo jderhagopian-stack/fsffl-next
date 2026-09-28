@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from dataclasses import dataclass
-from threading import RLock
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
+from threading import RLock, local
 from typing import Callable
 
 from fsffl.forecast.current_runtime import (
@@ -341,6 +342,7 @@ class UserRuntimeContext:
     simulation_analytics: LiveSimulationAnalyticsResult | None = None
     value_evidence: CurrentMarketValueRuntimeResult | None = None
     served_intelligence: ServedIntelligenceSnapshot | None = None
+    publication_generation_id: str | None = None
     intelligence_reused: bool = False
 
 
@@ -444,12 +446,205 @@ class PrivateBetaRuntimeStore:
     def __init__(self) -> None:
         self._lock = RLock()
         self._contexts: dict[str, UserRuntimeContext] = {}
+        self._working_contexts: dict[str, UserRuntimeContext] = {}
         self._pending_intelligence: dict[str, _PendingIntelligenceSnapshot] = {}
         self._league_generations: dict[str, int] = {}
+        self._read_local = local()
+
+    def _published_context(self, user_id: str) -> UserRuntimeContext:
+        return self._contexts.get(user_id, UserRuntimeContext(user_id=user_id))
 
     def get(self, user_id: str) -> UserRuntimeContext:
+        """Return only the published generation to ordinary readers.
+
+        Presentation promotion may install a thread-local read override so its own
+        builders can compose the unpublished replacement generation without exposing
+        that generation to concurrent foreground requests.
+        """
+
+        overrides = getattr(self._read_local, "contexts", None)
+        if overrides is not None and user_id in overrides:
+            return overrides[user_id]
         with self._lock:
-            return self._contexts.get(user_id, UserRuntimeContext(user_id=user_id))
+            return self._published_context(user_id)
+
+    def working_context(self, user_id: str) -> UserRuntimeContext:
+        with self._lock:
+            return self._working_contexts.get(user_id, self._published_context(user_id))
+
+    def working_generation_active(self, user_id: str) -> bool:
+        with self._lock:
+            return user_id in self._working_contexts
+
+    def working_target_state_id(self, user_id: str) -> str | None:
+        with self._lock:
+            working = self._working_contexts.get(user_id)
+            return (
+                working.league_state.state_id
+                if working is not None and working.league_state is not None
+                else None
+            )
+
+    def _mutation_context(self, user_id: str) -> UserRuntimeContext:
+        return self._working_contexts.get(user_id, self._published_context(user_id))
+
+    def _store_mutation_context(
+        self,
+        user_id: str,
+        context: UserRuntimeContext,
+    ) -> UserRuntimeContext:
+        if user_id in self._working_contexts:
+            self._working_contexts[user_id] = context
+        else:
+            self._contexts[user_id] = context
+        return context
+
+    def begin_working_generation(
+        self,
+        user_id: str,
+        *,
+        league_state: LeagueState | None = None,
+    ) -> UserRuntimeContext:
+        """Stage reconciliation from the published generation without mutating it."""
+
+        if not user_id.strip():
+            raise ValueError("user_id cannot be blank")
+        with self._lock:
+            published = self._published_context(user_id)
+            target = league_state or published.league_state
+            if target is None:
+                raise ValueError("cannot begin intelligence reconciliation before a league is loaded")
+            if (
+                published.league_state is not None
+                and published.league_state.league.league_id != target.league.league_id
+            ):
+                raise ValueError("working generation must belong to the published league")
+
+            valid_team_ids = {team.team_id for team in target.teams}
+            selected = (
+                published.selected_team_id
+                if published.selected_team_id in valid_team_ids
+                else None
+            )
+            same_state = bool(
+                published.league_state is not None
+                and published.league_state.state_id == target.state_id
+            )
+            forecast = published.forecast_evidence
+            forecast_reusable = same_state
+            if (
+                not same_state
+                and published.league_state is not None
+                and forecast is not None
+            ):
+                forecast_reusable = bool(
+                    not any(
+                        item.as_of > target.as_of
+                        for item in (
+                            forecast.raw_forecasts + forecast.league_scored_forecasts
+                        )
+                    )
+                    and _forecast_supplement_compatible(target, forecast)
+                    and forecast_input_fingerprint(published.league_state)
+                    == forecast_input_fingerprint(target)
+                )
+
+            working = UserRuntimeContext(
+                user_id=user_id,
+                league_state=target,
+                selected_team_id=selected,
+                forecast_evidence=forecast if forecast_reusable else None,
+                simulation_analytics=(
+                    published.simulation_analytics if same_state else None
+                ),
+                value_evidence=published.value_evidence if same_state else None,
+                served_intelligence=published.served_intelligence,
+                publication_generation_id=None,
+                intelligence_reused=same_state,
+            )
+            self._working_contexts[user_id] = working
+            self._pending_intelligence[user_id] = _PendingIntelligenceSnapshot(
+                league_state_id=target.state_id,
+            )
+            return working
+
+    def abort_working_generation(self, user_id: str) -> UserRuntimeContext:
+        """Discard unpublished work and leave the published generation untouched."""
+
+        with self._lock:
+            self._working_contexts.pop(user_id, None)
+            self._pending_intelligence.pop(user_id, None)
+            return self._published_context(user_id)
+
+    @contextmanager
+    def read_context(self, user_id: str, context: UserRuntimeContext):
+        """Pin reads on this thread to one explicit unpublished generation."""
+
+        prior = getattr(self._read_local, "contexts", None)
+        scoped = dict(prior or {})
+        scoped[user_id] = context
+        self._read_local.contexts = scoped
+        try:
+            yield context
+        finally:
+            if prior is None:
+                try:
+                    del self._read_local.contexts
+                except AttributeError:
+                    pass
+            else:
+                self._read_local.contexts = prior
+
+    def publish_working_generation(
+        self,
+        user_id: str,
+        *,
+        publication_generation_id: str,
+    ) -> UserRuntimeContext:
+        """Atomically replace the user-visible intelligence generation."""
+
+        generation_id = str(publication_generation_id or "").strip()
+        if not generation_id:
+            raise ValueError("publication_generation_id cannot be blank")
+        with self._lock:
+            working = self._working_contexts.get(user_id)
+            if working is None or working.league_state is None:
+                raise ValueError("no working intelligence generation is available")
+            if not _terminal_intelligence(
+                working.forecast_evidence,
+                working.simulation_analytics,
+                working.value_evidence,
+            ):
+                raise ValueError("working intelligence generation is not terminal")
+            published = self._published_context(user_id)
+            if (
+                published.league_state is not None
+                and published.league_state.league.league_id
+                != working.league_state.league.league_id
+            ):
+                raise ValueError("published league changed during reconciliation")
+            if published.selected_team_id != working.selected_team_id:
+                raise ValueError("managed team changed during reconciliation")
+
+            previous_state_id = (
+                published.league_state.state_id
+                if published.league_state is not None
+                else None
+            )
+            promoted = replace(
+                working,
+                served_intelligence=None,
+                publication_generation_id=generation_id,
+                intelligence_reused=False,
+            )
+            self._contexts[user_id] = promoted
+            self._working_contexts.pop(user_id, None)
+            self._pending_intelligence.pop(user_id, None)
+            if previous_state_id != working.league_state.state_id:
+                self._league_generations[user_id] = (
+                    self._league_generations.get(user_id, 0) + 1
+                )
+            return promoted
 
     def league_generation(self, user_id: str) -> int:
         """Return the in-process league identity generation for job invalidation."""
@@ -504,6 +699,7 @@ class PrivateBetaRuntimeStore:
                     simulation_analytics=current.simulation_analytics,
                     value_evidence=current.value_evidence,
                     served_intelligence=current.served_intelligence,
+                    publication_generation_id=current.publication_generation_id,
                     intelligence_reused=True,
                 )
                 self._contexts[user_id] = reused
@@ -611,7 +807,7 @@ class PrivateBetaRuntimeStore:
         """Attach NEXT-2 evidence, optionally advancing state past evidence cutoff."""
 
         with self._lock:
-            current = self.get(user_id)
+            current = self._mutation_context(user_id)
             league_state = refreshed_league_state or current.league_state
             if league_state is None:
                 raise ValueError("cannot attach forecasts before a league is loaded")
@@ -642,8 +838,7 @@ class PrivateBetaRuntimeStore:
                 served_intelligence=current.served_intelligence,
                 intelligence_reused=False,
             )
-            self._contexts[user_id] = updated
-            return updated
+            return self._store_mutation_context(user_id, updated)
 
     def set_simulation_analytics(
         self,
@@ -653,7 +848,7 @@ class PrivateBetaRuntimeStore:
         """Attach Simulation only to the exact current State/Forecast identity."""
 
         with self._lock:
-            current = self.get(user_id)
+            current = self._mutation_context(user_id)
             result_state_id = result.league_view.context.league_state_id
             league_state = current.league_state
             forecast_evidence = current.forecast_evidence
@@ -681,8 +876,7 @@ class PrivateBetaRuntimeStore:
                 served_intelligence=current.served_intelligence,
                 intelligence_reused=False,
             )
-            self._contexts[user_id] = updated
-            return updated
+            return self._store_mutation_context(user_id, updated)
 
     def set_value_evidence(
         self,
@@ -692,7 +886,7 @@ class PrivateBetaRuntimeStore:
         """Attach Value only to the exact current canonical State."""
 
         with self._lock:
-            current = self.get(user_id)
+            current = self._mutation_context(user_id)
             league_state = current.league_state
             if (
                 league_state is None
@@ -715,9 +909,8 @@ class PrivateBetaRuntimeStore:
                 served_intelligence=served,
                 intelligence_reused=False,
             )
-            self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
-            return updated
+            return self._store_mutation_context(user_id, updated)
 
     def set_intelligence_bundle(
         self,
@@ -739,7 +932,7 @@ class PrivateBetaRuntimeStore:
             raise ValueError("Value evidence must match intelligence LeagueState")
 
         with self._lock:
-            current = self.get(user_id)
+            current = self._mutation_context(user_id)
             if current.league_state is not None and current.league_state.league.league_id != league_state.league.league_id:
                 raise ValueError("cannot attach intelligence for a different loaded league")
             selected = current.selected_team_id
@@ -760,9 +953,8 @@ class PrivateBetaRuntimeStore:
                 served_intelligence=served,
                 intelligence_reused=False,
             )
-            self._contexts[user_id] = updated
             self._pending_intelligence.pop(user_id, None)
-            return updated
+            return self._store_mutation_context(user_id, updated)
 
     def set_served_intelligence(
         self,
@@ -787,6 +979,7 @@ class PrivateBetaRuntimeStore:
                 simulation_analytics=current.simulation_analytics,
                 value_evidence=current.value_evidence,
                 served_intelligence=snapshot,
+                publication_generation_id=current.publication_generation_id,
                 intelligence_reused=current.intelligence_reused,
             )
             self._contexts[user_id] = updated
@@ -810,6 +1003,7 @@ class PrivateBetaRuntimeStore:
                 simulation_analytics=current.simulation_analytics,
                 value_evidence=current.value_evidence,
                 served_intelligence=current.served_intelligence,
+                publication_generation_id=current.publication_generation_id,
                 intelligence_reused=current.intelligence_reused,
             )
             self._contexts[user_id] = updated
@@ -818,5 +1012,6 @@ class PrivateBetaRuntimeStore:
     def clear(self, user_id: str) -> None:
         with self._lock:
             self._contexts.pop(user_id, None)
+            self._working_contexts.pop(user_id, None)
             self._pending_intelligence.pop(user_id, None)
             self._league_generations[user_id] = self._league_generations.get(user_id, 0) + 1
