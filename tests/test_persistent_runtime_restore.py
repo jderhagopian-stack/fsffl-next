@@ -2661,3 +2661,28 @@ def test_bounded_repeated_two_user_publication_stress() -> None:
             runtime.get("stress-b").publication_generation_id
             == f"stress-b-generation-{index + 1}"
         )
+
+
+
+def test_stale_job_cleanup_cannot_abort_newer_working_generation() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state_a = _league_state_for("sleeper:cleanup-a", external_id="cleanup-a")
+    state_b = _league_state_for("sleeper:cleanup-b", external_id="cleanup-b")
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+
+    runtime.set_league_state("cleanup-user", state_a)
+    old_generation = runtime.league_generation("cleanup-user")
+    runtime.begin_working_generation("cleanup-user", league_state=state_a)
+
+    runtime.set_league_state("cleanup-user", state_b)
+    new_generation = runtime.league_generation("cleanup-user")
+    assert new_generation != old_generation
+    runtime.begin_working_generation("cleanup-user", league_state=state_b)
+
+    runtime.abort_working_generation_if_generation(
+        "cleanup-user",
+        expected_generation=old_generation,
+    )
+
+    assert runtime.working_generation_active("cleanup-user") is True
+    assert runtime.working_context("cleanup-user").league_state.state_id == state_b.state_id
