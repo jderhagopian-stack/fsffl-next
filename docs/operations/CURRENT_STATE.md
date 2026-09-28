@@ -857,3 +857,16 @@ The only active blocker to product progress is Implementation/runtime acceptance
 PR #279 is now open, mergeable and green at head `00503a43aa657a9bf1ca93c488f38561813e206f`. The branch implements the intended nonblocking Market boundary and corrects the stale RSS acceptance rule so exceeding the ~429.5 MB engineering target alone no longer fails hosted acceptance; actual hard-limit and availability failures still do.
 
 The fix is **not deployed yet**. Production remains on #278. The only remaining sequence before physical beta testing is merge #279 -> deploy exact merge SHA -> complete hosted State-first acceptance on that deployed code.
+
+
+## 2026-09-27 22:23 ET — Current blocker: #279 Render startup hang
+The nonblocking Market corrective is merged. The current blocker is now deployment startup, not Market Search latency.
+
+Exact live-deploy state:
+- merge SHA: `916f87e0661475d9ae5c0458c788ba356e802262`;
+- Render deploy: `dep-dassq1rbc2fs73a74b10`;
+- build: successful;
+- deploy: still `update_in_progress`;
+- new instance `qvhhw`: uvicorn command launched, but no server-process/application-startup/request/hosted-acceptance logs follow.
+
+Therefore #279 has not yet been validated in production. Prior #278 acceptance timings are historical evidence only. Implementation must first restore new-instance application startup, then run hosted acceptance before physical beta testing.
