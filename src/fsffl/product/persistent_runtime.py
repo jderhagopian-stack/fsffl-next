@@ -15,6 +15,7 @@ from fsffl.persistence.session import (
     restore_forecast_replay_decision,
     restore_last_good_state_identity,
     restore_runtime_snapshot,
+    restore_published_generation_identity,
     restore_published_state_bound_intelligence,
     restore_state_bound_forecast,
     restore_state_bound_intelligence,
@@ -438,6 +439,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         league_state=league_state,
                     )
                 )
+                manifest_generation_id, manifest_team_id = (
+                    restore_published_generation_identity(
+                        self._persistence,
+                        user_id=user_id,
+                        league_state=league_state,
+                    )
+                )
+                if manifest_generation_id != publication_generation_id:
+                    manifest_team_id = None
                 if forecast is not None:
                     context = super().set_intelligence_bundle(
                         user_id,
@@ -446,16 +456,30 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         simulation_analytics=simulation,
                         value_evidence=values,
                     )
+                    selected_team_id = context.selected_team_id or manifest_team_id
+                    bound_generation_id = (
+                        publication_generation_id
+                        if selected_team_id == manifest_team_id
+                        else None
+                    )
                     self._contexts[user_id] = replace(
                         context,
-                        publication_generation_id=publication_generation_id,
+                        selected_team_id=selected_team_id,
+                        publication_generation_id=bound_generation_id,
                         intelligence_reused=True,
                     )
                 elif values is not None:
                     context = super().set_value_evidence(user_id, values)
+                    selected_team_id = context.selected_team_id or manifest_team_id
+                    bound_generation_id = (
+                        publication_generation_id
+                        if selected_team_id == manifest_team_id
+                        else None
+                    )
                     self._contexts[user_id] = replace(
                         context,
-                        publication_generation_id=publication_generation_id,
+                        selected_team_id=selected_team_id,
+                        publication_generation_id=bound_generation_id,
                         intelligence_reused=True,
                     )
                 else:

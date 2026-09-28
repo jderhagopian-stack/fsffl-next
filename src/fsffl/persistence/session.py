@@ -136,6 +136,29 @@ def _published_generation_manifest(
     return record
 
 
+def restore_published_generation_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+) -> tuple[str | None, str | None]:
+    """Return the team-specific identity of the last published exact-State generation."""
+
+    manifest = _published_generation_manifest(
+        store,
+        user_id=user_id,
+        league_state=league_state,
+    )
+    if manifest is None:
+        return None, None
+    payload = manifest.payload
+    generation_id = str(payload.get("publication_generation_id") or "").strip()
+    selected_team_id = payload.get("selected_team_id")
+    if selected_team_id not in {team.team_id for team in league_state.teams}:
+        selected_team_id = None
+    return generation_id or None, selected_team_id
+
+
 def persist_forecast_replay_decision(
     store: PersistenceStore,
     *,

@@ -1839,3 +1839,38 @@ def test_team_switch_during_durable_publish_serializes_then_restart_restores_new
     )
     assert latest_manifest is not None
     assert latest_manifest.payload["selected_team_id"] == "t1"
+
+
+def test_cold_set_league_state_restores_published_team_and_generation_identity() -> None:
+    """Hosted activate() must not clear a valid exact-State publication on cold use."""
+
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="cold-published-identity",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-restored",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.set_league_state("cold-published-identity", state)
+
+    assert restored.selected_team_id == "t2"
+    assert restored.publication_generation_id == "generation-restored"
+    assert restored.forecast_evidence is not None
+    assert restored.value_evidence is not None
+
+    # This is the exact hosted acceptance branch: because the durable managed team
+    # is restored with its generation, activate() has no reason to call select_team()
+    # and invalidate the coherent presentation identity.
+    assert runtime.get("cold-published-identity").selected_team_id == "t2"
+    assert (
+        runtime.get("cold-published-identity").publication_generation_id
+        == "generation-restored"
+    )
