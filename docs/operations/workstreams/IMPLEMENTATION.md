@@ -1530,3 +1530,9 @@ Immediate action:
 6. return for physical iPhone/Safari validation only after hosted success.
 
 Do not broaden scope.
+
+
+## 2026-09-28 — Stop serial stabilization patching; close the lifecycle class
+Management no longer accepts the pattern “fix current P1 -> merge -> discover adjacent lifecycle defect.” Follow `docs/operations/directives/20260928_STABILIZATION_CLOSURE_PROTOCOL.md`.
+
+Treat the current cross-user `_publication_lock` / `_restore_lock` inversion as one symptom inside the full publication/persistence/restore/identity concurrency class. Correct the ownership/ordering cleanly (per-user publication sequencing preferred unless a global invariant requires otherwise), then run the required deterministic single-user + two-user lifecycle matrix and bounded stress. Before merge, obtain a read-only red-team of the whole lifecycle and address every concrete P1/P2 it finds. Only after whole-class proof + full CI should the corrective merge/deploy and hosted acceptance occur. Do not broaden into model semantics.
