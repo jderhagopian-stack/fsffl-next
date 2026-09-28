@@ -236,7 +236,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self._restore_lock:
             future = self._checkpoint_futures.get(user_id)
         if future is None:
-            return self._persistence is None
+            return True
         try:
             return bool(future.result(timeout=timeout))
         except FutureTimeoutError:
@@ -771,6 +771,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return False
         if self._persistence is None:
             return True
+        # Drain any older serialized checkpoint before writing working artifacts
+        # synchronously, so an earlier State-only write cannot race after publication.
+        if not self.wait_for_checkpoint(user_id, timeout=180.0):
+            return False
         try:
             published = super().get(user_id)
             if (
