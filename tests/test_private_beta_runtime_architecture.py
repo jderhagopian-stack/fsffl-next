@@ -172,6 +172,10 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "fsffl_automatic_state_sync" in source
     assert "hodor_home_franchise_league" in source
     assert "pi_history_repeat_after_fsffl_return" in source
+    assert "fsffl_managed_team_publication_interruption" in source
+    assert "managed_team_during_active_reconciliation" in source
+    assert "managed_team_after_reconciliation_interruption" in source
+    assert '"selected_team_id": runtime.selected_team_id' in source
     assert "within_memory_budget" in source
     assert "peak_rss_bytes" in source
     assert "process_identity_start" in source
