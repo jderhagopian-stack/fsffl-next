@@ -13,6 +13,7 @@ from fsffl.state.models import LeagueState
 from .contracts import (
     ArtifactKey,
     LeagueSnapshotRecord,
+    canonical_fingerprint,
     PersistenceStore,
     ReusableArtifactRecord,
     TeamSnapshotRecord,
@@ -53,6 +54,59 @@ LEAGUE_LAST_GOOD_SCOPE_KIND = "user_league"
 LEAGUE_LAST_GOOD_MODEL_VERSION = "runtime-last-good-league-v1"
 JOB_LIFECYCLE_ARTIFACT_KIND = "intelligence_job_lifecycle"
 JOB_LIFECYCLE_MODEL_VERSION = "intelligence-job-lifecycle-v1"
+FORECAST_REPLAY_DECISION_ARTIFACT_KIND = "forecast_replay_decision"
+FORECAST_REPLAY_DECISION_SCOPE_KIND = "user_league_state"
+FORECAST_REPLAY_DECISION_MODEL_VERSION = "forecast-replay-decision-v1"
+
+
+def _forecast_replay_scope_id(
+    user_id: str,
+    league_state: LeagueState,
+) -> str:
+    return f"{user_id}:{league_state.league.league_id}:{league_state.state_id}"
+
+
+def persist_forecast_replay_decision(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+    decision: dict[str, object],
+) -> None:
+    """Persist one exact-target replay decision as audit/acceptance evidence."""
+
+    payload = dict(decision)
+    payload["user_id"] = user_id
+    payload["target_league_id"] = league_state.league.league_id
+    payload["target_state_id"] = league_state.state_id
+    store.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind=FORECAST_REPLAY_DECISION_ARTIFACT_KIND,
+                scope_kind=FORECAST_REPLAY_DECISION_SCOPE_KIND,
+                scope_id=_forecast_replay_scope_id(user_id, league_state),
+                input_fingerprint=canonical_fingerprint(payload),
+                model_version=FORECAST_REPLAY_DECISION_MODEL_VERSION,
+            ),
+            payload=payload,
+            computed_at=utc_now(),
+        )
+    )
+
+
+def restore_forecast_replay_decision(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+) -> dict[str, object] | None:
+    record = store.get_latest_reusable_artifact(
+        artifact_kind=FORECAST_REPLAY_DECISION_ARTIFACT_KIND,
+        scope_kind=FORECAST_REPLAY_DECISION_SCOPE_KIND,
+        scope_id=_forecast_replay_scope_id(user_id, league_state),
+        model_version=FORECAST_REPLAY_DECISION_MODEL_VERSION,
+    )
+    return dict(record.payload) if record is not None else None
 
 
 @dataclass(frozen=True)
@@ -278,6 +332,43 @@ def persist_runtime_snapshot(
             league_state=league_state,
             selected_team_id=selected_team_id,
         )
+
+def restore_state_bound_raw_forecast_evidence(
+    store: PersistenceStore,
+    *,
+    league_state: LeagueState,
+) -> "LiveForecastEvidence | None":
+    """Load persisted Forecast evidence for raw-ensemble replay without downstream gates.
+
+    The artifact is still exact-State and current-contract. This helper intentionally
+    does not require the prior State's scoring supplement to remain current, because
+    replay rebuilds State-specific scoring/supplement layers for the target State.
+    """
+
+    forecast_record = store.get_latest_reusable_artifact(
+        artifact_kind=FORECAST_ARTIFACT_KIND,
+        scope_kind=LEAGUE_SCOPE_KIND,
+        scope_id=league_state.state_id,
+        model_version=FORECAST_MODEL_VERSION,
+    )
+    if forecast_record is None:
+        return None
+    try:
+        candidate = decode_forecast_evidence(dict(forecast_record.payload))
+    except (TypeError, ValueError):
+        return None
+    if not candidate.raw_forecasts:
+        return None
+    minimum_sources = getattr(
+        getattr(candidate, "runtime_result", None),
+        "coverage",
+        None,
+    )
+    minimum_sources = getattr(minimum_sources, "minimum_independent_sources", 2)
+    if len(set(candidate.successful_source_ids)) < int(minimum_sources):
+        return None
+    return candidate
+
 
 def restore_state_bound_forecast(
     store: PersistenceStore,
