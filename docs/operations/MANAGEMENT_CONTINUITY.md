@@ -296,3 +296,7 @@ The whole-class stabilization approach is now active in PR #291, head `7bcf61216
 
 ## Latest stabilization delta — PR #291 merged
 The whole-class stabilization corrective has now merged as `dbe7fccaceca525e0586389dcc5388764fa015a3`. The new process worked as intended: adjacent lifecycle defects were found and fixed before merge, full CI is green at 1,796 passed, deterministic single-user/two-user concurrency coverage and bounded stress are complete, and the pre-merge whole-class red-team found no remaining concrete P1/P2 lifecycle defect on the corrected head. Remaining gates are operational, not another planned code pass: deploy the exact merge SHA, complete hosted acceptance, then perform physical iPhone/Safari smoke. Do not start the post-stabilization foundation program until those two acceptance gates pass.
+
+
+## Latest deployment status — #291
+Exact merge SHA `dbe7fccaceca525e0586389dcc5388764fa015a3` is live on Render as deploy `dep-datdlnugekts73adssi0`. Hosted acceptance is currently running on the new instance. Initial FSFFL reconciliation and cross-surface publication consistency have passed so far, including PI history during active reconciliation; no terminal PASS/FAIL is recorded yet. Physical iPhone/Safari test begins only after terminal hosted PASS.
