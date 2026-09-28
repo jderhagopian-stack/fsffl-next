@@ -484,3 +484,12 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - Hosted acceptance fails at `pi_history_during_active_reconciliation` because PI history times out while reconciliation is active.
 - Diagnose whether this is real foreground starvation/contention versus a stale acceptance threshold; correct the narrow cause without undoing #280/#283 continuity and persistence fixes.
 - After correction, rerun the complete hosted acceptance journey. Research and Long-Term Intrinsic remain paused.
+
+
+## 2026-09-28 — Runtime root cause: atomic intelligence publication
+- **Implementation — ACTIVE / sole product-critical path.** Physical live testing proves same-State reconciliation leaks intermediate Forecast/Simulation/Value/Intrinsic states to users.
+- Replace incremental live publication with a working-generation -> atomic published-generation contract. Same-State refresh must preserve prior compatible published surfaces until the replacement is terminal and durably promoted.
+- Global `Intelligence current` status must reflect the published cross-surface capability generation, not only job/stage readiness.
+- The PI-history overlap timeout is now treated as one manifestation/acceptance symptom of this publication/read-isolation problem, not as sufficient scope by itself.
+- Directive: `docs/operations/directives/20260928_ATOMIC_INTELLIGENCE_PUBLICATION.md`.
+- Research, ROS production work, and Long-Term Intrinsic remain paused until runtime stabilization closes.
