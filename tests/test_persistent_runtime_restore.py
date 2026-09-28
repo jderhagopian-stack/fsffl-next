@@ -26,7 +26,7 @@ from fsffl.persistence.session import (
     LEAGUE_LAST_GOOD_ARTIFACT_KIND, LEAGUE_LAST_GOOD_MODEL_VERSION,
     LEAGUE_LAST_GOOD_SCOPE_KIND,
     persist_runtime_snapshot, restore_last_good_intelligence, restore_runtime_snapshot,
-    restore_state_bound_raw_forecast_evidence,
+    restore_state_bound_intelligence, restore_state_bound_raw_forecast_evidence,
 )
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.product.runtime import LiveForecastEvidence
@@ -1394,6 +1394,103 @@ def test_same_state_stale_supplement_replays_raw_forecast_before_provider_outage
     assert decision["target_state_id"] == state.state_id
     assert decision["fresh_acquisition_required"] is False
     assert decision["rejection_components"] == []
+
+def test_restore_finds_older_simulation_with_exact_current_forecast_dependency() -> None:
+    persistence = MemoryPersistence()
+    state = _simulation_state()
+
+    base = _with_replayable_raw_forecast(
+        _stale_forecast_without_first_party_fumbles_lost(state),
+        state,
+    )
+    current_a = replace(
+        base,
+        runtime_result=base.runtime_result.model_copy(
+            update={
+                "fumbles_lost_supplement_authority_fingerprint": "authority-a",
+                "fumbles_lost_supplement_model_version": (
+                    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+                ),
+                "fumbles_lost_supplement_league_state_id": state.state_id,
+            }
+        ),
+    )
+    current_b = replace(
+        base,
+        runtime_result=base.runtime_result.model_copy(
+            update={
+                "fumbles_lost_supplement_authority_fingerprint": "authority-b",
+                "fumbles_lost_supplement_model_version": (
+                    FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+                ),
+                "fumbles_lost_supplement_league_state_id": state.state_id,
+            }
+        ),
+    )
+    simulation_a = build_live_simulation_analytics(
+        state,
+        forecasts=_simulation_forecasts(state),
+        forecast_model_version="forecast-a",
+        simulation_count=100,
+        seed=7,
+        generated_at=state.as_of,
+    )
+    simulation_b = build_live_simulation_analytics(
+        state,
+        forecasts=_simulation_forecasts(state),
+        forecast_model_version="forecast-b",
+        simulation_count=100,
+        seed=11,
+        generated_at=state.as_of,
+    )
+
+    # Persist a compatible A pair, then a newer B pair for the same canonical
+    # State. Finally make Forecast A current again without rebuilding Simulation.
+    # Exact dependency lookup must recover older Simulation A rather than consult
+    # only the newest same-State Simulation B.
+    persist_runtime_snapshot(
+        persistence,
+        user_id="exact-simulation-dependency",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=current_a,
+        simulation_analytics=simulation_a,
+        value_evidence=_empty_value(state),
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="exact-simulation-dependency",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=current_b,
+        simulation_analytics=simulation_b,
+        value_evidence=_empty_value(state),
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="exact-simulation-dependency",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=current_a,
+        value_evidence=_empty_value(state),
+    )
+
+    restored_forecast, restored_simulation, restored_value = (
+        restore_state_bound_intelligence(
+            persistence,
+            league_state=state,
+        )
+    )
+
+    assert restored_forecast is not None
+    assert (
+        restored_forecast.runtime_result.fumbles_lost_supplement_authority_fingerprint
+        == "authority-a"
+    )
+    assert restored_simulation == simulation_a
+    assert restored_simulation != simulation_b
+    assert restored_value is not None
+
 
 def test_same_state_forecast_replay_interruption_restart_rejects_stale_simulation(
     monkeypatch,
