@@ -449,3 +449,12 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **Implementation:** do not broaden or rewrite the runtime path. Track only the cross-league/Hodor Forecast continuity issue.
 - **Physical testing:** Management may resume a bounded primary-FSFFL smoke test now; cross-league switching remains unaccepted.
 - **Research:** remains DONE / PARKED. Long-Term Intrinsic remains paused until Management decides runtime is sufficiently closed.
+
+
+## 2026-09-28 — Hodor replay continuity is the sole remaining runtime gate
+- **Implementation — ACTIVE / sole product-critical path.** Do not classify the current Hodor failure as resolved external provider downtime. Diagnose and correct why governed persisted Hodor raw Forecast evidence did not carry the league switch before fresh provider acquisition.
+- Separate raw Forecast replay compatibility from downstream State/scoring compatibility; rebuild only layers whose inputs changed.
+- Preserve PR #244/#245 truthful partial authority and PR #280 primary-FSFFL latency/memory gains. Do not weaken the two-source gate.
+- Required terminal proof is the hosted FSFFL → Hodor → FSFFL journey, including provider-outage-compatible replay, exact rejection telemetry, persistence/restart continuity, no cross-league contamination, and hard-limit safety.
+- Canonical directive: `docs/operations/directives/20260928_HODOR_FORECAST_REPLAY_CONTINUITY.md`.
+- **Research remains DONE/PARKED; Long-Term Intrinsic remains PAUSED.**
