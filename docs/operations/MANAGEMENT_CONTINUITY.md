@@ -271,3 +271,7 @@ Do not let Work and the main Implementation stream modify the same authority sur
 
 ## Latest stabilization delta — after PR #290
 PR #290 merged as `213c95014155de698b25681244024f4a0a66aa6b` and full CI is green. The changed-State served-generation restore ordering issue is addressed. A post-merge P1 remains and is now the **only known stabilization blocker**: publication serialization is store-global and can deadlock against the store-global cold-restore lock across different users because the two paths acquire those locks in opposite order. Fix with per-user publication sequencing or a consistent lock order, add deterministic two-user concurrency coverage, then merge/deploy/hosted-accept/physical-smoke. Do not start the post-stabilization foundation program before this closes.
+
+
+## Stabilization-management correction — stop calling each new defect “the last narrow fix”
+Management recognizes that the repeated one-defect-at-a-time loop has produced false finish lines. The closeout strategy is now whole-class verification under `docs/operations/directives/20260928_STABILIZATION_CLOSURE_PROTOCOL.md`. The next corrective must close publication/persistence/restore/identity concurrency as a class, including deterministic two-user races and bounded stress, with pre-merge red-team. A bounded lifecycle/lock refactor is authorized if it produces simpler per-user ownership and consistent lock ordering. Do not deploy merely because the currently known P1 is fixed locally.
