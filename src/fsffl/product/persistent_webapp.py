@@ -38,6 +38,7 @@ from .intrinsic_value_routes import install_intrinsic_value_v1_routes
 from .league_value_lens_routes import install_league_value_lens_routes
 from .latency_observability import install_latency_observability
 from .market_economics_cache import make_cached_candidate_economics
+from .market_progressive_enrichment import MarketDecisionEnrichmentCoordinator
 from .opportunity_search_cache import make_cached_opportunity_search
 from .opportunity_workspace_cache import make_cached_opportunity_workspace
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
@@ -94,6 +95,24 @@ _presentation_continuity = PresentationContinuityStore(_persistence_store)
 _startup_restore_complete = Event()
 _startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
+
+def _market_enrichment_identity_valid(
+    user_id: str,
+    league_state_id: str,
+    focal_team_id: str,
+) -> bool:
+    context = _runtime_store.get(user_id)
+    return bool(
+        context.league_state is not None
+        and context.league_state.state_id == league_state_id
+        and context.selected_team_id == focal_team_id
+    )
+
+_market_decision_enrichment = MarketDecisionEnrichmentCoordinator(
+    heavy_work_coordinator=_heavy_work_coordinator,
+    identity_validator=_market_enrichment_identity_valid,
+    max_workers=1,
+)
 configure_scenario_cache_persistence(_persistence_store)
 
 # Persist-first restoration is a startup concern for the single-user private beta.
@@ -928,6 +947,7 @@ install_focused_opportunity_routes(
     workspace_builder=_webapp.build_opportunity_workspace,
     candidate_builder=_cached_opportunity_search,
     require_user=_webapp.require_beta_user,
+    enrichment_coordinator=_market_decision_enrichment,
 )
 install_progressive_delivery_routes(
     app,

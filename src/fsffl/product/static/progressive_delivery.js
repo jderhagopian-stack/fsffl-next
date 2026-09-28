@@ -106,18 +106,7 @@
         store.payload=quick;store.behavior=behavior;store.team=team;store.loading=false;
         renderOpportunityWorkspace();
         const panel=document.querySelector('#generic-screen .panel');
-        panel?.insertAdjacentHTML('afterbegin','<div class="fsffl-market-progress"><strong>Quick view ready</strong><span>More bilateral trade evidence is loading.</span></div>');
-
-        request('/api/opportunities/workspace').then(full=>{
-          if(!contextStillCurrent()||!oppPayloadMatchesCapturedContext(full,captured))return;
-          store.payload=full;renderOpportunityWorkspace();
-          const current=document.querySelector('#generic-screen .panel');
-          current?.insertAdjacentHTML('afterbegin','<div class="fsffl-market-progress ready"><strong>Updated analysis ready</strong><span>Bounded bilateral Decision evidence has been added.</span></div>');
-        }).catch(()=>{
-          if(!contextStillCurrent())return;
-          const current=document.querySelector('#generic-screen .panel');
-          current?.insertAdjacentHTML('afterbegin','<div class="fsffl-market-progress"><strong>Quick view remains available</strong><span>Deeper bilateral evidence could not finish.</span></div>');
-        });
+        panel?.insertAdjacentHTML('afterbegin','<div class="fsffl-market-progress ready"><strong>Market ready</strong><span>Browse Value, players and free agents now. Structural trade Search runs only when you choose Find opportunities; Decision enrichment then arrives progressively.</span></div>');
       }catch(error){if(contextStillCurrent())try{oppError(error.message)}catch(_){}}finally{if(requestId===store.requestSequence)store.loading=false}
     };
     window.loadOpportunityWorkspace=progressive;window.renderFsfflOpportunities=progressive;

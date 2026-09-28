@@ -15,7 +15,7 @@ from fsffl.product import scenario_cache
 ROOT = Path(__file__).resolve().parents[1]
 PRODUCT = ROOT / "src" / "fsffl" / "product"
 STATIC = PRODUCT / "static"
-RELEASE = "20260927-presentation-continuity1"
+RELEASE = "20260927-market-nonblocking1"
 
 
 def _text(path: Path) -> str:
@@ -33,9 +33,11 @@ def test_market_quick_path_uses_same_workspace_builder_without_decision_enrichme
     routes = _text(PRODUCT / "progressive_delivery_routes.py")
     persistent = _text(PRODUCT / "persistent_webapp.py")
     assert '"/api/opportunities/workspace/quick"' in routes
-    assert "workspace_builder(runtime, bilateral_evaluation_limit=0)" in routes
-    assert '"completeness": "search_only"' in routes
-    assert '"decision_enrichment_pending"' in routes
+    assert "candidate_limit=0" in routes
+    assert "bilateral_evaluation_limit=0" in routes
+    assert '"completeness": "presentation_shell"' in routes
+    assert '"structural_search_pending"' in routes
+    assert '"decision_enrichment_pending": False' in routes
     assert "workspace_builder=_webapp.build_opportunity_workspace" in persistent
     assert "make_cached_opportunity_workspace" in persistent
 
@@ -78,18 +80,18 @@ def test_progressive_results_are_context_guarded_and_duplicate_trade_clicks_are_
     assert "if(activeTradeKey===key)return" in script
     assert "contextStillCurrent" in script
     assert "oppPayloadMatchesCapturedContext(quick,captured)" in script
-    assert "oppPayloadMatchesCapturedContext(full,captured)" in script
+    assert "request('/api/opportunities/workspace').then" not in script
     assert "resetTradeForContext" in script
 
 
-def test_market_quick_result_renders_before_full_decision_request_finishes() -> None:
+def test_market_navigation_stops_after_shell_read_until_explicit_search() -> None:
     script = _text(STATIC / "progressive_delivery.js")
     quick_await = script.index("const quick=await request('/api/opportunities/workspace/quick')")
     quick_render = script.index("renderOpportunityWorkspace();", quick_await)
-    full_request = script.index("request('/api/opportunities/workspace').then", quick_render)
-    assert quick_await < quick_render < full_request
-    assert "Quick view remains available" in script
-    assert "Updated analysis ready" in script
+    assert quick_await < quick_render
+    assert "request('/api/opportunities/workspace').then" not in script
+    assert "Market ready" in script
+    assert "Structural trade Search runs only when you choose Find opportunities" in script
 
 
 def test_progressive_assets_use_one_fresh_hosted_release_generation() -> None:

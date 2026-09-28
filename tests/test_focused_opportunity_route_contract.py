@@ -12,8 +12,8 @@ def test_focused_route_preserves_search_vs_decision_authority() -> None:
     route = _read(ROUTE)
     search = _read(SEARCH)
     assert "posture_payload" in route
-    assert "build_trade_spotlights(returned)" in route
-    assert "acceptance_probability" not in route
+    assert "build_trade_spotlights(rows)" in route
+    assert '"acceptance_probability": None' in route
     assert "apply_search_posture" in search
     assert "resolve_search_posture" in search
     assert "Value and Decision authority are unchanged" in search
@@ -25,6 +25,8 @@ def test_focused_route_spends_decision_budget_only_after_intent_admission() -> N
 
     assert "candidate_limit=0" in route
     assert "bilateral_evaluation_limit=0" in route
+    assert "structural_discovery = {" in route
+    assert '"preliminary_decision_runs": 0' in route
     assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
     assert "canonical = None" in route
     assert 'getattr(focused, "diagnostics", {})' in route
@@ -49,12 +51,12 @@ def test_focused_route_exposes_search_exhaustion_without_weakening_budget() -> N
     ):
         assert token in route
     assert "DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
-    assert "acceptance_probability" not in route
+    assert '"acceptance_probability": None' in route
 
 
 def test_focused_route_reuses_canonical_request_local_evaluator_inputs() -> None:
     route = _read(ROUTE)
-    assert "asset_index=owned_asset_index(browser)" in route
+    assert "asset_index=owned_asset_index(current_browser)" in route
     assert "def focused_evaluator" not in route
     assert "evaluate_candidate_path(" not in route
     assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
@@ -66,3 +68,17 @@ def test_focused_shell_skips_generic_market_discovery_rows_before_focus() -> Non
     base_call = route.split("base = workspace_builder(", 1)[1].split(")", 1)[0]
     assert "candidate_limit=0" in base_call
     assert "bilateral_evaluation_limit=0" in base_call
+
+
+def test_focused_route_returns_search_structure_before_background_decision() -> None:
+    route = _read(ROUTE)
+    assert '"structural_results_ready"' in route
+    assert '"package_economics_attached": False' in route
+    assert '"bilateral_decision_attached": False' in route
+    assert '"/api/opportunities/focused-enrichment/{job_id}"' in route
+    assert "enrichment_coordinator.start" in route
+    foreground = route.split("def focused_workspace", 1)[1].split("def focused_enrichment", 1)[0]
+    before_enrich = foreground.split("def enrich()", 1)[0]
+    assert "build_market_discovery(" not in before_enrich
+    background = foreground.split("def enrich()", 1)[1]
+    assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in background

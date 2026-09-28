@@ -1727,7 +1727,14 @@ def create_app(
             if stale is not None:
                 return stale
         try:
-            return build_opportunity_workspace(runtime)
+            # Ordinary Market navigation is presentation/read authority only.
+            # Full structural Search and bilateral Decision work are explicit
+            # progressive actions and must never execute on this GET.
+            return build_opportunity_workspace(
+                runtime,
+                candidate_limit=0,
+                bilateral_evaluation_limit=0,
+            )
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
