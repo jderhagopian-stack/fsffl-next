@@ -640,7 +640,17 @@ def test_explicit_team_selection_hands_off_to_intelligence_without_silent_team_r
     assert "window.fsfflEnsureIntelligenceAfterTeamSelection?.()" in select
     assert "window.fsfflEnsureIntelligenceAfterTeamSelection=()=>{" in refresh
     assert "fsfflSettledStateId=null" in refresh
-    assert "maybeStartIntelligenceJob({manual:false})" in refresh
+    assert "maintainFsfflIntelligence()" in refresh
+    assert "maybeStartIntelligenceJob({manual:false})" not in refresh.split(
+        "window.fsfflEnsureIntelligenceAfterTeamSelection=()=>{", 1
+    )[1].split("window.addEventListener('load'", 1)[0]
+
+    webapp = open("src/fsffl/product/webapp.py", encoding="utf-8").read()
+    select_route = webapp.split('@application.post("/api/select-team")', 1)[1].split(
+        "def _start_intelligence_reconciliation", 1
+    )[0]
+    assert "_start_intelligence_reconciliation(" in select_route
+    assert "sync_state=False" in select_route
 
     interactive = mobile.split("async function interactiveConnect()", 1)[1].split(
         "window.fsfflRestoreSession=restoreSavedSession", 1
