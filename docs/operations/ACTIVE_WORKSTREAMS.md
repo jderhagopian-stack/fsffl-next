@@ -470,3 +470,10 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **Implementation — ACTIVE / sole product-critical path.** PR #282 fixed same-State raw Forecast replay but is not deployable as-is because replay can leave stale same-State Simulation durable and later restart can combine it with rebuilt Forecast.
 - Fix Forecast↔Simulation persistence compatibility (or explicitly invalidate dependent Simulation on replay), add interruption/restart regression coverage, then merge, deploy corrected SHA, and complete hosted FSFFL → Hodor → FSFFL acceptance.
 - Preserve source-health/two-source rules and all prior latency/memory gains. Long-Term Intrinsic remains paused.
+
+
+## 2026-09-28 — In-season ROS sequencing
+- **Implementation:** runtime/Hodor acceptance remains the sole product-critical path. After terminal acceptance, in-season Forecast integration (Actual YTD + governed third-party ROS) is authorized as the next season-critical production feature and may precede Long-Term Intrinsic deployment.
+- **Data/Research:** begin bounded PIT capture of governed ROS raw-stat projections and contemporaneous status/actuals immediately; this must not modify production authority or interfere with runtime work.
+- **Native ROS model:** shadow Research only until comparative PIT evidence earns promotion.
+- Directive: `docs/operations/directives/20260928_IN_SEASON_ROS_FORECAST_POLICY.md`.
