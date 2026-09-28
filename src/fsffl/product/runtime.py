@@ -646,6 +646,27 @@ class PrivateBetaRuntimeStore:
                 )
             return promoted
 
+    def bind_publication_generation_id(
+        self,
+        user_id: str,
+        publication_generation_id: str,
+    ) -> UserRuntimeContext:
+        """Bind a manifest generation to an already-published restored bundle."""
+
+        generation_id = str(publication_generation_id or "").strip()
+        if not generation_id:
+            raise ValueError("publication_generation_id cannot be blank")
+        with self._lock:
+            current = self._published_context(user_id)
+            if current.league_state is None:
+                raise ValueError("cannot bind publication identity without a league")
+            updated = replace(
+                current,
+                publication_generation_id=generation_id,
+            )
+            self._contexts[user_id] = updated
+            return updated
+
     def league_generation(self, user_id: str) -> int:
         """Return the in-process league identity generation for job invalidation."""
 
@@ -664,7 +685,11 @@ class PrivateBetaRuntimeStore:
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
         with self._lock:
-            current = self.get(user_id)
+            current = self._published_context(user_id)
+            # Explicit State activation (connect/switch) supersedes any unpublished
+            # work targeting the previous selection.
+            self._working_contexts.pop(user_id, None)
+            self._pending_intelligence.pop(user_id, None)
             previous_state = current.league_state
             previous_state_id = (
                 previous_state.state_id if previous_state is not None else None
