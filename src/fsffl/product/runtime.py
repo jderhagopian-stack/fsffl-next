@@ -99,6 +99,33 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def raw_forecast_input_fingerprint(league_state: LeagueState) -> str:
+    """Hash only inputs that can invalidate governed raw provider Forecast truth.
+
+    Provider acquisition/normalization is league-agnostic. It depends on season and
+    canonical player identity/team mapping, not fantasy scoring, lineup structure,
+    fantasy matchup weeks, roster ownership, or downstream NFL-bye/scoring
+    derivations. Those downstream inputs must trigger re-scoring/rebinding rather
+    than provider reacquisition.
+    """
+
+    payload = {
+        "schema_version": league_state.schema_version,
+        "season": league_state.league.season,
+        "players": [
+            {
+                "player_id": player.player_id,
+                "full_name": player.full_name,
+                "position": player.position.value,
+                "nfl_team": player.nfl_team,
+            }
+            for player in sorted(league_state.players, key=lambda item: item.player_id)
+        ],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 def forecast_input_fingerprint(league_state: LeagueState) -> str:
     """Hash only canonical State inputs consumed by the current forecast runtime.
 
