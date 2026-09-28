@@ -288,3 +288,7 @@ Use this order when discussing technical work:
 5. **What, if anything, the user needs to decide or do.**
 
 Technical detail can follow, but should not be the primary explanation unless the user asks for it. Never assume familiarity with software-engineering concepts such as locks, race conditions, persistence, concurrency, threads, processes, caches, serialization, manifests, or dependency graphs; translate them when they matter.
+
+
+## Latest stabilization delta — PR #291
+The whole-class stabilization approach is now active in PR #291, head `7bcf6121688aa49f02cd4fbd4037925ca7d8503f`. The branch moves lifecycle coordination from one global lock to per-user coordination and adds deterministic two-user concurrency, restart/interruption and bounded stress coverage. Importantly, pre-merge review found adjacent issues **before deployment** (shared-league snapshot write ordering and idle worker accumulation), which is the behavior Management wanted from the new closure protocol. Current CI is 1 failed / 1,794 passed; the remaining failure concerns whether same-State checkpoint coalescing should durably write only the latest team context or also an initial State-only runtime pointer. Do not merge until that durability contract is explicitly resolved and CI/red-team gates are green.
