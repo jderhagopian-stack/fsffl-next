@@ -1587,3 +1587,51 @@ def test_same_state_forecast_replay_interruption_restart_rejects_stale_simulatio
     )
     assert restored_after_restart.simulation_analytics is None
 
+
+
+def test_working_generation_checkpoint_never_moves_restart_authority() -> None:
+    persistence = MemoryPersistence()
+    published_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    )
+    published_forecast = _stale_forecast_without_first_party_fumbles_lost(
+        published_state
+    )
+    published_value = _empty_value(published_state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="atomic-restart",
+        league_state=published_state,
+        selected_team_id="t2",
+        forecast_evidence=published_forecast,
+        value_evidence=published_value,
+    )
+    published_pointer = persistence.user
+    assert published_pointer is not None
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("atomic-restart")
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == published_state.state_id
+
+    target_state = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
+    )
+    runtime.begin_working_generation(
+        "atomic-restart",
+        league_state=target_state,
+    )
+    assert runtime.checkpoint_working_generation("atomic-restart")
+
+    # Durable artifacts for the replacement may exist, but the session pointer
+    # remains the prior published generation until atomic publication succeeds.
+    assert persistence.user is not None
+    assert persistence.user.state_hash == published_pointer.state_hash
+
+    restarted = PersistentPrivateBetaRuntimeStore(
+        persistence_store=persistence
+    )
+    after_restart = restarted.restore_user("atomic-restart")
+    assert after_restart.league_state is not None
+    assert after_restart.league_state.state_id == published_state.state_id
+    assert after_restart.league_state.state_id != target_state.state_id
