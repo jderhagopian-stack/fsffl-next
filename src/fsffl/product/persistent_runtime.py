@@ -13,6 +13,7 @@ from fsffl.persistence.session import (
     persist_runtime_snapshot,
     restore_last_good_state_identity,
     restore_runtime_snapshot,
+    restore_state_bound_forecast,
     restore_state_bound_intelligence,
 )
 from fsffl.state.history import StateSnapshotStore
@@ -21,6 +22,8 @@ from .runtime import (
     PrivateBetaRuntimeStore,
     ServedIntelligenceSnapshot,
     UserRuntimeContext,
+    forecast_input_fingerprint,
+    replay_live_forecast_evidence_for_state,
 )
 
 _logger = logging.getLogger("fsffl.product.persistence")
@@ -391,34 +394,105 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return context
 
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
-        """Reuse only artifacts bound to the currently selected exact State."""
+        """Reuse exact-State authority, then compatible governed raw Forecast truth.
+
+        Exact-State Simulation and Value are the only downstream layers restored
+        directly. When exact Forecast is absent, a same-league last-good raw
+        ensemble may be replayed only if the target State has the identical
+        Forecast input fingerprint. The replay rebuilds State-bound scoring and
+        supplemental coordinates; old Simulation/Value are never rebound.
+        """
 
         current = super().get(user_id)
         if self._persistence is None or current.league_state is None:
             return current
+
         forecast, simulation, values = restore_state_bound_intelligence(
             self._persistence,
             league_state=current.league_state,
         )
-        if forecast is None:
+        if forecast is not None:
+            restored = super().set_intelligence_bundle(
+                user_id,
+                league_state=current.league_state,
+                forecast_evidence=forecast,
+                simulation_analytics=simulation,
+                value_evidence=values,
+            )
+            reused = replace(restored, intelligence_reused=True)
+            self._contexts[user_id] = reused
+            _logger.info(
+                "FSFFL exact-state intelligence reuse user=%s league=%s state=%s forecast=%s simulation=%s value=%s",
+                user_id,
+                current.league_state.league.league_id,
+                current.league_state.state_id,
+                True,
+                simulation is not None,
+                values is not None,
+            )
+            return reused
+
+        last_good = restore_last_good_state_identity(
+            self._persistence,
+            user_id=user_id,
+            league_id=current.league_state.league.league_id,
+        )
+        if last_good is None:
             return current
-        restored = super().set_intelligence_bundle(
+        prior_state, _selected = last_good
+        if prior_state.state_id == current.league_state.state_id:
+            return current
+        if (
+            forecast_input_fingerprint(prior_state)
+            != forecast_input_fingerprint(current.league_state)
+        ):
+            _logger.info(
+                "FSFFL compatible Forecast replay rejected user=%s league=%s prior_state=%s target_state=%s reason=forecast_input_fingerprint_changed",
+                user_id,
+                current.league_state.league.league_id,
+                prior_state.state_id,
+                current.league_state.state_id,
+            )
+            return current
+
+        prior_forecast = restore_state_bound_forecast(
+            self._persistence,
+            league_state=prior_state,
+        )
+        if prior_forecast is None:
+            return current
+        try:
+            replayed = replay_live_forecast_evidence_for_state(
+                current.league_state,
+                prior_forecast,
+            )
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL compatible Forecast replay failed user=%s league=%s prior_state=%s target_state=%s error=%s",
+                user_id,
+                current.league_state.league.league_id,
+                prior_state.state_id,
+                current.league_state.state_id,
+                exc,
+            )
+            return current
+
+        restored = super().set_forecast_evidence(
             user_id,
-            league_state=current.league_state,
-            forecast_evidence=forecast,
-            simulation_analytics=simulation,
-            value_evidence=values,
+            replayed,
+            refreshed_league_state=current.league_state,
         )
         reused = replace(restored, intelligence_reused=True)
         self._contexts[user_id] = reused
+        self._checkpoint_async(user_id, reused)
         _logger.info(
-            "FSFFL exact-state intelligence reuse user=%s league=%s state=%s forecast=%s simulation=%s value=%s",
+            "FSFFL compatible Forecast replay user=%s league=%s prior_state=%s target_state=%s sources=%s blockers=%s",
             user_id,
             current.league_state.league.league_id,
+            prior_state.state_id,
             current.league_state.state_id,
-            forecast is not None,
-            simulation is not None,
-            values is not None,
+            list(replayed.successful_source_ids),
+            list(replayed.runtime_result.simulation_authority_blockers),
         )
         return reused
 
