@@ -122,6 +122,121 @@ def test_mobile_connect_has_one_poll_owner_and_uses_state_before_terminal_connec
     assert "if(!contextMatchesLeague(context,normalized)||!context?.state_id)" in source
 
 
+def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -> None:
+    script = textwrap.dedent(
+        r"""
+        const fs=require('fs');
+        const vm=require('vm');
+        const assert=require('assert');
+
+        const storage=new Map();
+        global.localStorage={
+          getItem(key){return storage.has(key)?storage.get(key):null},
+          setItem(key,value){storage.set(key,String(value))},
+          removeItem(key){storage.delete(key)},
+        };
+
+        const sync=[];
+        const button={disabled:false,textContent:'Connect Sleeper League'};
+        let clickHandler=null;
+        global.document={
+          visibilityState:'visible',
+          querySelector(selector){
+            if(selector==='#connect-button')return button;
+            if(selector.startsWith('script[data-fsffl-'))return {};
+            return null;
+          },
+          createElement(){throw new Error('helper script should already be present')},
+          head:{appendChild(){}},
+          addEventListener(type,handler){if(type==='click')clickHandler=handler},
+        };
+        global.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init?.detail}};
+        global.window={
+          performance:{now:()=>1},
+          prompt:()=> '123',
+          alert(message){throw new Error('unexpected alert: '+message)},
+          dispatchEvent(event){if(event.type==='fsffl:sync-state')sync.push(event.detail)},
+          addEventListener(){},
+          fsfflSyncState:{set(state,message){sync.push({state,message})}},
+        };
+        global.fetch=()=>Promise.resolve({ok:true});
+        global.state={context:null,teamView:null,valueCatalog:null,intelligence:null,route:'league'};
+        global.applyContext=()=>{};
+
+        const calls=[];
+        let productReads=0;
+        global.api=async(path,options={})=>{
+          calls.push([path,options.method||'GET']);
+          if(path==='/api/product-context'){
+            productReads+=1;
+            if(productReads===1)return {league_id:null,state_id:null,teams:[],team_id:null};
+            return {
+              league_id:'sleeper:123',
+              league_name:'Clean League',
+              state_id:'state-clean',
+              teams:[
+                {team_id:'team:a',display_name:'A'},
+                {team_id:'team:b',display_name:'B'},
+              ],
+              team_id:null,
+            };
+          }
+          if(path==='/api/connect/sleeper/background/current')return {};
+          if(path==='/api/connect/sleeper/background'&&options.method==='POST'){
+            return {status:'running',league_external_id:'123',operation:'connect'};
+          }
+          throw new Error('unexpected api '+path);
+        };
+
+        vm.runInThisContext(
+          fs.readFileSync('src/fsffl/product/static/mobile_safari_recovery.js','utf8')
+        );
+        assert(clickHandler,'connect click handler must install');
+
+        clickHandler({
+          target:{closest(selector){return selector==='#connect-button'?button:null}},
+          preventDefault(){},
+          stopImmediatePropagation(){},
+        });
+
+        setTimeout(()=>{
+          try{
+            assert.strictEqual(state.context.league_id,'sleeper:123');
+            assert.strictEqual(state.context.state_id,'state-clean');
+            assert.strictEqual(state.context.team_id,null);
+            assert.strictEqual(localStorage.getItem('fsffl:last-sleeper-league'),'123');
+            assert.strictEqual(localStorage.getItem('fsffl:last-team'),null);
+            assert.strictEqual(
+              calls.some(([path])=>path==='/api/select-team'),
+              false,
+              'fresh browser must not silently select a team'
+            );
+            assert(
+              sync.some(item=>item.state==='checking'&&item.message==='Starting import…'),
+              'tap must produce immediate visible feedback'
+            );
+            assert(
+              sync.some(item=>item.state==='current'&&String(item.message||'').includes('Select the franchise')),
+              'State-ready UI must ask for explicit team choice'
+            );
+            process.exit(0);
+          }catch(error){
+            console.error(error);
+            process.exit(1);
+          }
+        },25);
+        """
+    )
+    completed = subprocess.run(
+        ["node", "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
 def test_saved_session_restores_before_provider_refresh() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
