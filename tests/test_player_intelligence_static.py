@@ -143,9 +143,9 @@ def test_live_corrective_cleans_ppg_unavailable_reason_without_inventing_games()
 
 def test_live_corrective_busts_mobile_player_intelligence_cache() -> None:
     index = _text("index.html")
-    assert "player_intelligence.js?pi=20260927-atlas-overlay1&v=20260927-market-nonblocking1" in index
-    assert "player_intelligence.css?pi=20260927-atlas-overlay1&v=20260927-market-nonblocking1" in index
-    assert "product_shell.js?v=20260927-market-nonblocking1" in index
+    assert "player_intelligence.js?pi=20260927-atlas-overlay1&v=20260928-first-load-recovery1" in index
+    assert "player_intelligence.css?pi=20260927-atlas-overlay1&v=20260928-first-load-recovery1" in index
+    assert "product_shell.js?v=20260928-first-load-recovery1" in index
 
 
 def test_full_career_mobile_history_is_compact_and_stateful() -> None:
