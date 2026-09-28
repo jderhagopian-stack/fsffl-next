@@ -906,6 +906,8 @@ def test_intelligence_job_does_not_complete_before_final_durable_checkpoint() ->
         fsffl_cardinal_values=(),
         pick_variant_market_values=(),
         cardinal_player_coverage="unavailable",
+        successful_source_ids=(),
+        coverage="unavailable",
     )
 
     application = create_app(
