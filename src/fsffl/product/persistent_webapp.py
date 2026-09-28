@@ -672,7 +672,15 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
             f"{label}: cross-surface publication generations diverged: "
             f"{publication_generations}"
         )
-    runtime_generation_id = getattr(context, "publication_generation_id", None)
+    served = getattr(context, "served_intelligence", None)
+    runtime_generation_id = (
+        getattr(context, "publication_generation_id", None)
+        or (
+            getattr(served, "publication_generation_id", None)
+            if served is not None
+            else None
+        )
+    )
     if generation_ids and runtime_generation_id not in generation_ids:
         raise RuntimeError(
             f"{label}: surfaces do not match published runtime generation: "
