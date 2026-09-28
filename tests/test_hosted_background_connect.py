@@ -428,10 +428,11 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_first_load_recovery_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    hotfix = "20260928-first-load-recovery1"
-    base = "20260928-first-load-recovery1"
-    assert f"mobile_safari_recovery.js?v={base}&r={hotfix}" in source
-    assert f"forecast_refresh.js?v={base}&r={hotfix}" in source
+    release = "20260928-first-load-recovery1"
+    for asset in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
+        assert f"/static/{asset}?v={release}" in source
+    assert "mobile_safari_recovery.js?v=20260927-market-nonblocking1" not in source
+    assert "forecast_refresh.js?v=20260927-market-nonblocking1" not in source
 
 
 def test_hosted_connect_completes_from_in_memory_state_without_checkpoint_wait() -> None:
