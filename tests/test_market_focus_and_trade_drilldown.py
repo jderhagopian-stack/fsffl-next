@@ -41,7 +41,7 @@ def test_automatic_workspace_reuses_exact_search_catalog_but_focused_submit_buil
     assert "_opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity_search" in persistent
     assert "candidate_builder=_cached_opportunity_search" in persistent
     assert "canonical = None" in routes
-    assert "generic structural catalog" in routes
+    assert "generic full-catalog builder is intentionally not called here" in routes
 
 
 def test_opportunity_detail_adds_useful_preanalysis_context() -> None:
