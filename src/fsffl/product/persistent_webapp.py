@@ -284,7 +284,13 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
     if publication_id and context.league_state is not None:
         presentation_league_id = context.league_state.league.league_id
         presentation_state_id = context.league_state.state_id
-    elif served is not None:
+    elif (
+        served is not None
+        and context.league_state is not None
+        and served.league_id == context.league_state.league.league_id
+        and served.league_state_id != context.league_state.state_id
+        and served.publication_generation_id
+    ):
         presentation_league_id = served.league_id
         presentation_state_id = served.league_state_id
 
@@ -307,6 +313,8 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
             )
     served_payload = dict(payload.get("served_last_good") or {})
     served_payload["presentation_available"] = presentation_available
+    if not presentation_available:
+        served_payload["publication_generation_id"] = None
     if served_payload.get("available") and not presentation_available:
         served_payload["label"] = (
             "Last-good model identity exists, but a complete persisted presentation "
@@ -672,13 +680,13 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
             f"{label}: cross-surface publication generations diverged: "
             f"{publication_generations}"
         )
-    runtime_generation_id = getattr(context, "publication_generation_id", None)
+    readiness = app.state.capability_readiness_reader(context)
+    runtime_generation_id = readiness.get("publication_generation_id")
     if generation_ids and runtime_generation_id not in generation_ids:
         raise RuntimeError(
             f"{label}: surfaces do not match published runtime generation: "
             f"runtime={runtime_generation_id} surfaces={publication_generations}"
         )
-    readiness = app.state.capability_readiness_reader(context)
     return {
         "league_id": state.league.league_id,
         "state_id": state.state_id,

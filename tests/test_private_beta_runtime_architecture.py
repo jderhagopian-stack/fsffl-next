@@ -18,6 +18,7 @@ def test_served_and_pending_runtime_state_are_lightweight_identities_only() -> N
         "league_state_id",
         "as_of",
         "team_ids",
+        "publication_generation_id",
     }
     assert {item.name for item in fields(_PendingIntelligenceSnapshot)} == {
         "league_state_id",
@@ -160,6 +161,7 @@ def test_hosted_core_intelligence_uses_one_background_worker_and_shared_gate() -
     assert "heavy_work_coordinator=_heavy_work_coordinator" in hosted
     assert "ShapleyIntrinsicBackgroundCoordinator(" in hosted
     assert "BehavioralRuntimeCoordinator(" in hosted
+    assert "with store.publication_sequence(user_id):" in source
 
 
 
@@ -175,7 +177,8 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "fsffl_managed_team_publication_interruption" in source
     assert "managed_team_during_active_reconciliation" not in source
     assert "managed_team_after_reconciliation_interruption" in source
-    assert "with store._lock:" in source
+    assert "select_team_if_working_generation_active" in source
+    assert "with store._lock:" not in source
     assert "team_interleaving" in source
     assert 'team_surface.get("franchise_team_id")' in source
     assert 'same_promoted.get("franchise_team_id")' in source

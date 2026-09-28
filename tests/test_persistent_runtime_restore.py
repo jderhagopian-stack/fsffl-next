@@ -1874,3 +1874,212 @@ def test_cold_set_league_state_restores_published_team_and_generation_identity()
         runtime.get("cold-published-identity").publication_generation_id
         == "generation-restored"
     )
+
+
+def test_changed_state_restore_carries_only_team_matched_served_publication_generation() -> None:
+    persistence = MemoryPersistence()
+    last_good = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    )
+    forecast = _stale_forecast_without_first_party_fumbles_lost(last_good)
+    value = _empty_value(last_good)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="served-generation-match",
+        league_state=last_good,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="served-generation-a",
+    )
+    target = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="served-generation-match",
+        league_state=target,
+        selected_team_id="t2",
+    )
+
+    restored = restore_runtime_snapshot(
+        persistence,
+        user_id="served-generation-match",
+    )
+    assert restored is not None
+    assert restored.league_state.state_id == target.state_id
+    assert restored.publication_generation_id is None
+    assert restored.served_league_state_id == last_good.state_id
+    assert restored.served_publication_generation_id == "served-generation-a"
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    active = runtime.restore_user("served-generation-match")
+    assert active.publication_generation_id is None
+    assert active.served_intelligence is not None
+    assert (
+        active.served_intelligence.publication_generation_id
+        == "served-generation-a"
+    )
+
+    mismatch = MemoryPersistence()
+    persist_runtime_snapshot(
+        mismatch,
+        user_id="served-generation-mismatch",
+        league_state=last_good,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="served-generation-a",
+    )
+    persist_runtime_snapshot(
+        mismatch,
+        user_id="served-generation-mismatch",
+        league_state=target,
+        selected_team_id="t1",
+    )
+    mismatched = restore_runtime_snapshot(
+        mismatch,
+        user_id="served-generation-mismatch",
+    )
+    assert mismatched is not None
+    assert mismatched.served_league_state_id == last_good.state_id
+    assert mismatched.served_publication_generation_id is None
+
+
+def test_cold_changed_state_activation_restores_target_team_before_served_generation() -> None:
+    persistence = MemoryPersistence()
+    last_good = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    )
+    forecast = _stale_forecast_without_first_party_fumbles_lost(last_good)
+    value = _empty_value(last_good)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="cold-served-generation",
+        league_state=last_good,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="served-generation-a",
+    )
+    target = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="cold-served-generation",
+        league_state=target,
+        selected_team_id="t2",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    activated = runtime.set_league_state("cold-served-generation", target)
+
+    assert activated.selected_team_id == "t2"
+    assert activated.publication_generation_id is None
+    assert activated.served_intelligence is not None
+    assert activated.served_intelligence.league_state_id == last_good.state_id
+    assert (
+        activated.served_intelligence.publication_generation_id
+        == "served-generation-a"
+    )
+
+
+def test_team_selection_serializes_with_entire_publication_sequence() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="full-publication-sequence",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("full-publication-sequence")
+    assert restored.selected_team_id == "t2"
+    runtime.begin_working_generation(
+        "full-publication-sequence",
+        league_state=state,
+    )
+
+    sequence_entered = Event()
+    release_sequence = Event()
+    select_finished = Event()
+    select_errors = []
+
+    def hold_publication_sequence() -> None:
+        with runtime.publication_sequence("full-publication-sequence"):
+            sequence_entered.set()
+            if not release_sequence.wait(timeout=3.0):
+                raise RuntimeError("test publication sequence release timed out")
+
+    def switch_team() -> None:
+        try:
+            runtime.select_team("full-publication-sequence", "t1")
+        except Exception as exc:  # pragma: no cover - asserted below
+            select_errors.append(exc)
+        finally:
+            select_finished.set()
+
+    publication_thread = Thread(
+        target=hold_publication_sequence,
+        name="test-full-publication-sequence",
+    )
+    publication_thread.start()
+    assert sequence_entered.wait(timeout=2.0)
+
+    select_thread = Thread(target=switch_team, name="test-sequence-team-select")
+    select_thread.start()
+    assert select_finished.wait(timeout=0.05) is False
+
+    release_sequence.set()
+    publication_thread.join(timeout=3.0)
+    select_thread.join(timeout=3.0)
+    assert select_finished.is_set()
+    assert select_errors == []
+    assert runtime.get("full-publication-sequence").selected_team_id == "t1"
+    assert runtime.working_generation_active("full-publication-sequence") is False
+
+
+def test_conditional_team_switch_requires_active_working_generation() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="conditional-team-switch",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.restore_user("conditional-team-switch")
+
+    assert (
+        runtime.select_team_if_working_generation_active(
+            "conditional-team-switch",
+            "t1",
+        )
+        is None
+    )
+    runtime.begin_working_generation(
+        "conditional-team-switch",
+        league_state=state,
+    )
+    switched = runtime.select_team_if_working_generation_active(
+        "conditional-team-switch",
+        "t1",
+    )
+    assert switched is not None
+    working, selected = switched
+    assert working.selected_team_id == "t2"
+    assert selected.selected_team_id == "t1"
+    assert runtime.working_generation_active("conditional-team-switch") is False

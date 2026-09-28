@@ -90,6 +90,7 @@ def _runtime(
     state: LeagueState,
     *,
     served: LeagueState | None = None,
+    served_generation_id: str | None = None,
     selected_team_id: str = "a",
 ) -> UserRuntimeContext:
     return UserRuntimeContext(
@@ -102,6 +103,7 @@ def _runtime(
                 league_state_id=served.state_id,
                 as_of=served.as_of,
                 team_ids=tuple(sorted(team.team_id for team in served.teams)),
+                publication_generation_id=served_generation_id,
             )
             if served is not None
             else None
@@ -147,7 +149,11 @@ def test_manifest_last_promotion_and_stale_read_are_truthful() -> None:
     current = _state(old.as_of + timedelta(minutes=5))
     payload = continuity.load_for_runtime(
         user_id="jimmy",
-        runtime=_runtime(current, served=old),
+        runtime=_runtime(
+            current,
+            served=old,
+            served_generation_id=result.publication_generation_id,
+        ),
         surface=HOME_SURFACE,
     )
     assert payload is not None
@@ -161,6 +167,41 @@ def test_manifest_last_promotion_and_stale_read_are_truthful() -> None:
     assert continuity_meta["served_league_state_id"] == old.state_id
     assert continuity_meta["served_as_of"] == old.as_of.isoformat()
     assert continuity_meta["promotion_id"]
+
+
+def test_stale_read_is_pinned_to_served_publication_generation() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
+    promoted = continuity.promote(
+        user_id="jimmy",
+        runtime=_runtime(old),
+        builders=_builders("old"),
+    )
+    assert promoted is not None
+
+    current = _state(old.as_of + timedelta(minutes=5))
+    payload = continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=_runtime(
+            current,
+            served=old,
+            served_generation_id=promoted.publication_generation_id,
+        ),
+        surface=HOME_SURFACE,
+    )
+    assert payload is not None
+    assert payload["publication_generation_id"] == promoted.publication_generation_id
+
+    assert continuity.load_for_runtime(
+        user_id="jimmy",
+        runtime=_runtime(
+            current,
+            served=old,
+            served_generation_id="different-generation",
+        ),
+        surface=HOME_SURFACE,
+    ) is None
 
 
 def test_interrupted_promotion_never_exposes_partial_manifest() -> None:
@@ -198,13 +239,18 @@ def test_promotion_builders_cannot_recursively_read_old_stale_snapshot() -> None
     persistence = MemoryPersistence()
     continuity = PresentationContinuityStore(persistence)
     old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
-    continuity.promote(
+    promoted = continuity.promote(
         user_id="jimmy",
         runtime=_runtime(old),
         builders=_builders("old"),
     )
+    assert promoted is not None
     current = _state(old.as_of + timedelta(minutes=5))
-    rebuilding = _runtime(current, served=old)
+    rebuilding = _runtime(
+        current,
+        served=old,
+        served_generation_id=promoted.publication_generation_id,
+    )
     recursive_results = []
 
     def builder(surface: str):
@@ -244,16 +290,22 @@ def test_stale_snapshot_is_rejected_after_managed_team_changes() -> None:
     persistence = MemoryPersistence()
     continuity = PresentationContinuityStore(persistence)
     old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
-    continuity.promote(
+    promoted = continuity.promote(
         user_id="jimmy",
         runtime=_runtime(old, selected_team_id="a"),
         builders=_builders("old"),
     )
+    assert promoted is not None
     current = _state(old.as_of + timedelta(minutes=5))
 
     assert continuity.load_for_runtime(
         user_id="jimmy",
-        runtime=_runtime(current, served=old, selected_team_id="b"),
+        runtime=_runtime(
+            current,
+            served=old,
+            served_generation_id=promoted.publication_generation_id,
+            selected_team_id="b",
+        ),
         surface=HOME_SURFACE,
     ) is None
     assert not continuity.has_snapshot(
@@ -268,11 +320,12 @@ def test_failed_repromotion_of_same_state_keeps_prior_generation_atomic() -> Non
     persistence = MemoryPersistence()
     continuity = PresentationContinuityStore(persistence)
     old = _state(datetime(2026, 9, 27, 12, 0, tzinfo=UTC))
-    continuity.promote(
+    promoted = continuity.promote(
         user_id="jimmy",
         runtime=_runtime(old),
         builders=_builders("old"),
     )
+    assert promoted is not None
 
     def fail():
         raise RuntimeError("replacement failed")
@@ -290,7 +343,11 @@ def test_failed_repromotion_of_same_state_keeps_prior_generation_atomic() -> Non
     current = _state(old.as_of + timedelta(minutes=5))
     payload = continuity.load_for_runtime(
         user_id="jimmy",
-        runtime=_runtime(current, served=old),
+        runtime=_runtime(
+            current,
+            served=old,
+            served_generation_id=promoted.publication_generation_id,
+        ),
         surface=HOME_SURFACE,
     )
     assert payload is not None

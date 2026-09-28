@@ -281,6 +281,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         restored,
                         intelligence_reused=True,
                     )
+                # Restore managed-team identity before attaching a team-specific
+                # served publication generation. select_team intentionally clears any
+                # prior team-specific presentation identity, so the inverse ordering
+                # would discard the validated served generation we just restored.
+                if snapshot.selected_team_id is not None:
+                    super().select_team(user_id, snapshot.selected_team_id)
                 if (
                     snapshot.served_league_id is not None
                     and snapshot.served_league_state_id is not None
@@ -293,10 +299,11 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                             league_state_id=snapshot.served_league_state_id,
                             as_of=snapshot.served_as_of,
                             team_ids=snapshot.served_team_ids,
+                            publication_generation_id=(
+                                snapshot.served_publication_generation_id
+                            ),
                         ),
                     )
-                if snapshot.selected_team_id is not None:
-                    super().select_team(user_id, snapshot.selected_team_id)
                 if snapshot.publication_generation_id is not None:
                     super().bind_publication_generation_id(
                         user_id,
@@ -428,6 +435,37 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self._restore_lock:
             self._restore_attempted.add(user_id)
 
+        # A cold explicit activation can reach this path before restore_user(). The
+        # durable target-State session owns the managed-team identity; recover it
+        # before evaluating any team-specific published/served generation. This is
+        # deliberately exact-State only so a stale session can never steer a newer
+        # canonical target.
+        if self._persistence is not None and context.selected_team_id is None:
+            try:
+                durable_context = self._persistence.get_user_runtime_context(
+                    user_id=user_id
+                )
+                valid_team_ids = {team.team_id for team in league_state.teams}
+                if (
+                    durable_context is not None
+                    and durable_context.league_id == league_state.league.league_id
+                    and durable_context.season == league_state.league.season
+                    and durable_context.state_hash == league_state.state_id
+                    and durable_context.selected_team_id in valid_team_ids
+                ):
+                    context = super().select_team(
+                        user_id,
+                        durable_context.selected_team_id,
+                    )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL durable managed-team restore failed user=%s league=%s state=%s error=%s",
+                    user_id,
+                    league_state.league.league_id,
+                    league_state.state_id,
+                    exc,
+                )
+
         # Reuse exact-State persisted authority first. If it is absent, restore
         # same-league last-good as presentation-only stale context.
         if self._persistence is not None:
@@ -493,6 +531,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         and last_good[0].state_id != league_state.state_id
                     ):
                         last_good_state = last_good[0]
+                        served_generation_id, served_team_id = (
+                            restore_published_generation_identity(
+                                self._persistence,
+                                user_id=user_id,
+                                league_state=last_good_state,
+                            )
+                        )
+                        if served_team_id != context.selected_team_id:
+                            served_generation_id = None
                         context = super().set_served_intelligence(
                             user_id,
                             ServedIntelligenceSnapshot(
@@ -502,6 +549,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                                 team_ids=tuple(
                                     sorted(team.team_id for team in last_good_state.teams)
                                 ),
+                                publication_generation_id=served_generation_id,
                             ),
                         )
             except Exception as exc:

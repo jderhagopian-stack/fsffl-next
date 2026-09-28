@@ -331,6 +331,7 @@ class ServedIntelligenceSnapshot:
     league_state_id: str
     as_of: datetime
     team_ids: tuple[str, ...]
+    publication_generation_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -443,6 +444,7 @@ def _served_snapshot_from_context(
         league_state_id=context.league_state.state_id,
         as_of=context.league_state.as_of,
         team_ids=tuple(sorted(team.team_id for team in context.league_state.teams)),
+        publication_generation_id=context.publication_generation_id,
     )
 
 
@@ -456,6 +458,9 @@ class PrivateBetaRuntimeStore:
 
     def __init__(self) -> None:
         self._lock = RLock()
+        # Serialize identity-changing league/team actions with the entire final
+        # publication sequence without blocking ordinary foreground reads.
+        self._publication_lock = RLock()
         self._contexts: dict[str, UserRuntimeContext] = {}
         self._working_contexts: dict[str, UserRuntimeContext] = {}
         self._working_publication_guards: dict[str, _WorkingPublicationGuard] = {}
@@ -479,6 +484,15 @@ class PrivateBetaRuntimeStore:
             return overrides[user_id]
         with self._lock:
             return self._published_context(user_id)
+
+    @contextmanager
+    def publication_sequence(self, user_id: str):
+        """Serialize the complete final publication path against identity changes."""
+
+        if not user_id.strip():
+            raise ValueError("user_id cannot be blank")
+        with self._publication_lock:
+            yield
 
     def working_context(self, user_id: str) -> UserRuntimeContext:
         with self._lock:
@@ -635,7 +649,7 @@ class PrivateBetaRuntimeStore:
         generation_id = str(publication_generation_id or "").strip()
         if not generation_id:
             raise ValueError("publication_generation_id cannot be blank")
-        with self._lock:
+        with self._publication_lock, self._lock:
             working = self._working_contexts.get(user_id)
             guard = self._working_publication_guards.get(user_id)
             if working is None or working.league_state is None or guard is None:
@@ -709,7 +723,7 @@ class PrivateBetaRuntimeStore:
         generation_id = str(publication_generation_id or "").strip()
         if not generation_id:
             raise ValueError("publication_generation_id cannot be blank")
-        with self._lock:
+        with self._publication_lock, self._lock:
             current = self._published_context(user_id)
             if current.league_state is None:
                 raise ValueError("cannot bind publication identity without a league")
@@ -737,7 +751,7 @@ class PrivateBetaRuntimeStore:
 
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
-        with self._lock:
+        with self._publication_lock, self._lock:
             current = self._published_context(user_id)
             # Explicit State activation (connect/switch) supersedes any unpublished
             # work targeting the previous selection.
@@ -862,7 +876,7 @@ class PrivateBetaRuntimeStore:
     ) -> UserRuntimeContext | None:
         """Atomically activate State only while the caller still owns refresh authority."""
 
-        with self._lock:
+        with self._publication_lock, self._lock:
             if self._league_generations.get(user_id, 0) != expected_generation:
                 return None
             current = self.get(user_id)
@@ -1064,10 +1078,25 @@ class PrivateBetaRuntimeStore:
             self._contexts[user_id] = updated
             return updated
 
+    def select_team_if_working_generation_active(
+        self,
+        user_id: str,
+        team_id: str,
+    ) -> tuple[UserRuntimeContext, UserRuntimeContext] | None:
+        """Select a team only if unpublished work is still active at serialization."""
+
+        if not team_id.strip():
+            raise ValueError("team_id cannot be blank")
+        with self._publication_lock, self._lock:
+            working = self._working_contexts.get(user_id)
+            if working is None:
+                return None
+            return working, self.select_team(user_id, team_id)
+
     def select_team(self, user_id: str, team_id: str) -> UserRuntimeContext:
         if not team_id.strip():
             raise ValueError("team_id cannot be blank")
-        with self._lock:
+        with self._publication_lock, self._lock:
             current = self._published_context(user_id)
             if current.league_state is None:
                 raise ValueError("cannot select team before a league is loaded")
@@ -1093,7 +1122,14 @@ class PrivateBetaRuntimeStore:
                 forecast_evidence=current.forecast_evidence,
                 simulation_analytics=current.simulation_analytics,
                 value_evidence=current.value_evidence,
-                served_intelligence=current.served_intelligence,
+                served_intelligence=(
+                    replace(
+                        current.served_intelligence,
+                        publication_generation_id=None,
+                    )
+                    if current.served_intelligence is not None
+                    else None
+                ),
                 # Presentation snapshots are team-specific. A selection change
                 # invalidates the old presentation generation identity; the next
                 # presentation promotion/reconciliation will bind a new one.
@@ -1104,7 +1140,7 @@ class PrivateBetaRuntimeStore:
             return updated
 
     def clear(self, user_id: str) -> None:
-        with self._lock:
+        with self._publication_lock, self._lock:
             self._contexts.pop(user_id, None)
             self._working_contexts.pop(user_id, None)
             self._working_publication_guards.pop(user_id, None)
