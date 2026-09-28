@@ -1459,3 +1459,7 @@ Immediate action:
 6. run full hosted FSFFL → Hodor → FSFFL acceptance before returning.
 
 Do not broaden scope or weaken authority gates.
+
+
+## 2026-09-28 — PR #283 next action: close P2 and finish deployment
+PR #283 is open/mergeable and fixes the post-#282 P1 Forecast↔Simulation restart mismatch. Before merge, address the review P2 by querying Simulation persistence with the exact expected Forecast dependency fingerprint instead of inspecting only the newest State-scoped row. Add/adjust focused coverage if needed, then merge immediately, deploy the exact merge SHA, and run the full hosted FSFFL → Hodor → FSFFL acceptance journey. Do not stop at green CI or merge while authorized deployment/acceptance work remains.
