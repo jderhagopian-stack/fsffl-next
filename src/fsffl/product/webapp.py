@@ -7,6 +7,7 @@ import os
 import secrets
 from pathlib import Path
 from threading import RLock
+from uuid import uuid4
 from typing import Callable
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -372,6 +373,11 @@ def _runtime_context_payload(
         "cardinal_value_ready": value_evidence is not None and bool(value_evidence.fsffl_cardinal_values),
         "cardinal_value_coverage": value_evidence.cardinal_player_coverage if value_evidence is not None else None,
         "capability_readiness": capability_reader(runtime),
+        "publication_generation_id": getattr(
+            runtime,
+            "publication_generation_id",
+            None,
+        ),
         "forecast_replay_decision": (
             getattr(store, "forecast_replay_decision")(user_id)
             if callable(getattr(store, "forecast_replay_decision", None))
@@ -718,7 +724,61 @@ def create_app(
     reconciliation_lock = RLock()
     reconciliation_league_by_user: dict[str, str] = {}
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
-    read_capabilities = capability_readiness_reader or _runtime_capability_readiness
+    base_read_capabilities = capability_readiness_reader or _runtime_capability_readiness
+
+    def read_capabilities(runtime) -> dict[str, object]:
+        """Bind readiness to the immutable published generation, never working state."""
+
+        payload = dict(base_read_capabilities(runtime))
+        working_active = store.working_generation_active(runtime.user_id)
+        target_state_id = store.working_target_state_id(runtime.user_id)
+        published_generation_id = getattr(
+            runtime,
+            "publication_generation_id",
+            None,
+        )
+        payload["publication_generation_id"] = published_generation_id
+        payload["publication"] = {
+            "generation_id": published_generation_id,
+            "league_state_id": (
+                runtime.league_state.state_id
+                if runtime.league_state is not None
+                else None
+            ),
+            "working_generation_active": working_active,
+            "target_state_id": target_state_id,
+            "status": (
+                "serving_last_good_during_update"
+                if working_active
+                else "published"
+                if runtime.league_state is not None
+                else "unavailable"
+            ),
+        }
+        if working_active:
+            payload["overall_status"] = "rebuilding"
+            target = dict(payload.get("target_state") or {})
+            target["league_state_id"] = target_state_id
+            target["status"] = "rebuilding"
+            payload["target_state"] = target
+            served = dict(payload.get("served_last_good") or {})
+            served.update(
+                available=runtime.league_state is not None,
+                league_state_id=(
+                    runtime.league_state.state_id
+                    if runtime.league_state is not None
+                    else None
+                ),
+                as_of=(
+                    runtime.league_state.as_of.isoformat()
+                    if runtime.league_state is not None
+                    else None
+                ),
+                stale=True,
+                label="Updating intelligence — serving the prior published generation.",
+            )
+            payload["served_last_good"] = served
+        return payload
 
     def heavy_claim(kind: str, key: str):
         if heavy_work_coordinator is None:
@@ -754,13 +814,46 @@ def create_app(
                 return stale
         return builder()
 
-    def promote_current_presentation(user_id: str) -> None:
+    def publish_working_generation(user_id: str) -> UserRuntimeContext:
+        """Durably compose one working generation, then expose it in one swap."""
+
+        working = store.working_context(user_id)
+        if working.league_state is None:
+            raise RuntimeError("working intelligence generation has no LeagueState")
+
+        checkpoint = getattr(store, "checkpoint_working_generation", None)
+        if callable(checkpoint) and not checkpoint(user_id):
+            raise RuntimeError(
+                "Working intelligence generation could not be durably checkpointed"
+            )
+
         promoter = getattr(application.state, "presentation_promoter", None)
-        if not callable(promoter):
-            return
-        result = promoter(user_id, store.get(user_id))
-        if result is not None:
-            store.set_served_intelligence(user_id, None)
+        if callable(promoter):
+            with store.read_context(user_id, working):
+                result = promoter(user_id, working)
+            if result is None:
+                raise RuntimeError(
+                    "Published presentation generation could not be durably promoted"
+                )
+            generation_id = str(result.publication_generation_id)
+        else:
+            generation_id = (
+                f"runtime:{working.league_state.state_id}:{uuid4().hex}"
+            )
+
+        published = store.publish_working_generation(
+            user_id,
+            publication_generation_id=generation_id,
+        )
+        wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+        if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+            user_id,
+            timeout=180.0,
+        ):
+            raise RuntimeError(
+                "Published intelligence generation could not be durably checkpointed"
+            )
+        return published
 
     application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
@@ -1103,10 +1196,10 @@ def create_app(
         *,
         sync_state: bool,
     ) -> dict[str, object]:
-        runtime = store.get(user_id)
-        if runtime.league_state is None:
+        published = store.get(user_id)
+        if published.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
-        starting_state = runtime.league_state
+        starting_state = published.league_state
         starting_league_id = starting_state.league.league_id
         starting_external_id = _sleeper_external_id(starting_state)
         with reconciliation_lock:
@@ -1125,55 +1218,48 @@ def create_app(
                     **runtime_context_payload(user_id),
                     "coalesced": True,
                 }
-        expected_generation = [store.league_generation(user_id)]
+        expected_generation = store.league_generation(user_id)
 
         def require_active_league_identity() -> LeagueState:
-            active = store.get(user_id).league_state
+            active_published = store.get(user_id).league_state
             if (
-                store.league_generation(user_id) != expected_generation[0]
-                or active is None
-                or active.league.league_id != starting_league_id
+                store.league_generation(user_id) != expected_generation
+                or active_published is None
+                or active_published.league.league_id != starting_league_id
             ):
                 raise IntelligenceJobInterrupted("league_switch")
-            return active
+            active_working = store.working_context(user_id).league_state
+            return active_working or active_published
 
-        def work(progress) -> str | None:
+        def reconcile(progress) -> str | None:
             if sync_state:
                 progress(
                     IntelligenceJobPhase.REFRESHING_STATE,
-                    "Syncing canonical Sleeper State before intelligence reconciliation.",
+                    "Syncing canonical Sleeper State into an unpublished working generation.",
                 )
                 synced_state = state_loader(starting_external_id)
                 active_before_write = require_active_league_identity()
                 if synced_state.league.league_id != active_before_write.league.league_id:
                     raise IntelligenceJobInterrupted("league_switch")
-                activated = store.set_league_state_if_generation(
+                store.begin_working_generation(
                     user_id,
-                    synced_state,
-                    expected_generation=expected_generation[0],
-                    expected_league_id=starting_league_id,
+                    league_state=synced_state,
                 )
-                if activated is None:
-                    raise IntelligenceJobInterrupted("league_switch")
-                expected_generation[0] = store.league_generation(user_id)
                 if active_before_write.state_id != synced_state.state_id:
                     reclaim_state_transition(
                         f"{user_id}:{synced_state.state_id}:state_transition"
                     )
-                wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
-                if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+            else:
+                store.begin_working_generation(
                     user_id,
-                    timeout=30.0,
-                ):
-                    raise RuntimeError(
-                        "Synced Sleeper State could not be durably checkpointed"
-                    )
+                    league_state=starting_state,
+                )
 
             working_state = require_active_league_identity()
             restore_exact = getattr(store, "restore_exact_state_intelligence", None)
             if callable(restore_exact):
                 restore_exact(user_id)
-            context = store.get(user_id)
+            context = store.working_context(user_id)
             if context.league_state is None:
                 raise IntelligenceJobInterrupted("league_switch")
             working_state = context.league_state
@@ -1194,7 +1280,7 @@ def create_app(
                 if product_capability_reconciler is not None:
                     progress(
                         IntelligenceJobPhase.BUILDING_INTRINSIC,
-                        "Preparing governed FSFFL Intrinsic and future Forecast evidence.",
+                        "Preparing governed FSFFL Intrinsic inside the working generation.",
                     )
                     product_capability = product_capability_reconciler(context)
                     require_active_league_identity()
@@ -1203,27 +1289,31 @@ def create_app(
                     if product_capability is not None
                     else "not_configured"
                 )
-                promote_current_presentation(user_id)
+                progress(
+                    IntelligenceJobPhase.ATTACHING_RESULTS,
+                    "Atomically publishing the coherent intelligence generation.",
+                )
+                published_context = publish_working_generation(user_id)
                 if product_status not in {"full", "ready"}:
                     return (
                         "Canonical Sleeper State is current. Compatible governed core "
-                        "intelligence was reused for this exact State. Product intelligence "
-                        f"remains partially available: Intrinsic {product_status}."
+                        "intelligence was reused and atomically published. Product "
+                        f"intelligence remains partially available: Intrinsic {product_status}."
                     )
                 return (
-                    "Canonical Sleeper State is current. Compatible governed core "
-                    "intelligence and FSFFL Intrinsic were reused for this exact State."
-                    if simulation is not None
+                    "Canonical Sleeper State and compatible governed intelligence were "
+                    "atomically published from one coherent generation."
+                    if published_context.simulation_analytics is not None
                     else
                     "Canonical Sleeper State is current. Compatible governed Forecast, "
-                    "Value and FSFFL Intrinsic were reused; Simulation remains unavailable "
-                    "under current Forecast authority."
+                    "Value and FSFFL Intrinsic were atomically published; Simulation "
+                    "remains unavailable under current Forecast authority."
                 )
 
             if evidence is None:
                 progress(
                     IntelligenceJobPhase.BUILDING_FORECASTS,
-                    "Building governed multi-source projections for the synced State.",
+                    "Building governed multi-source projections in the working generation.",
                 )
                 with heavy_claim(
                     "forecast",
@@ -1245,15 +1335,15 @@ def create_app(
             else:
                 progress(
                     IntelligenceJobPhase.BUILDING_FORECASTS,
-                    "Reusing compatible governed Forecast evidence for the synced State.",
+                    "Reusing compatible governed Forecast evidence in the working generation.",
                 )
 
             progress(
                 IntelligenceJobPhase.RUNNING_SIMULATION,
-                "Evaluating governed NEXT-4 simulation authority for the synced State.",
+                "Evaluating governed NEXT-4 simulation authority in the working generation.",
             )
             simulation_ready = evidence.uncertainty_ready
-            current = store.get(user_id)
+            current = store.working_context(user_id)
             simulation = current.simulation_analytics
             if simulation_ready and simulation is None:
                 with heavy_claim(
@@ -1280,9 +1370,9 @@ def create_app(
 
             progress(
                 IntelligenceJobPhase.BUILDING_VALUES,
-                "Building or reusing governed NEXT-3 current market values for the synced State.",
+                "Building or reusing governed NEXT-3 current market values in the working generation.",
             )
-            current = store.get(user_id)
+            current = store.working_context(user_id)
             values = current.value_evidence
             if values is None or values.league_state_id != working_state.state_id:
                 with heavy_claim(
@@ -1300,12 +1390,13 @@ def create_app(
                     )
 
             product_capability = None
+            working_context = store.working_context(user_id)
             if product_capability_reconciler is not None:
                 progress(
                     IntelligenceJobPhase.BUILDING_INTRINSIC,
-                    "Preparing governed FSFFL Intrinsic and future Forecast evidence.",
+                    "Preparing governed FSFFL Intrinsic and future Forecast evidence against the working generation.",
                 )
-                product_capability = product_capability_reconciler(store.get(user_id))
+                product_capability = product_capability_reconciler(working_context)
                 require_active_league_identity()
                 reclaim_phase_memory(
                     f"{user_id}:{working_state.state_id}:after_intrinsic"
@@ -1313,19 +1404,9 @@ def create_app(
 
             progress(
                 IntelligenceJobPhase.ATTACHING_RESULTS,
-                "Reconciling governed intelligence with the exact current LeagueState.",
+                "Durably checkpointing and atomically publishing the coherent generation.",
             )
-            wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
-            if callable(wait_for_checkpoint) and not wait_for_checkpoint(
-                user_id,
-                timeout=180.0,
-            ):
-                raise RuntimeError(
-                    "Reconciled intelligence could not be durably checkpointed"
-                )
-            current = store.get(user_id)
-            promote_current_presentation(user_id)
-            current = store.get(user_id)
+            published_context = publish_working_generation(user_id)
             intrinsic_status = (
                 str(product_capability.get("status"))
                 if product_capability is not None
@@ -1339,8 +1420,8 @@ def create_app(
                 )
                 return (
                     "Canonical Sleeper State is current. Governed Forecast and current "
-                    "Value evidence are ready. Simulation remains unavailable under current "
-                    "Forecast authority: "
+                    "Value evidence were atomically published. Simulation remains "
+                    "unavailable under current Forecast authority: "
                     + blockers
                     + (
                         ". FSFFL Intrinsic is ready."
@@ -1348,22 +1429,33 @@ def create_app(
                         else f". FSFFL Intrinsic is {intrinsic_status}."
                     )
                 )
-            if current.simulation_analytics is None:
+            if published_context.simulation_analytics is None:
                 return (
                     "Canonical Sleeper State, governed Forecast and current Value are "
-                    "ready. Simulation did not produce an authoritative result. "
+                    "published. Simulation did not produce an authoritative result. "
                     f"FSFFL Intrinsic is {intrinsic_status}."
                 )
             if not intrinsic_ready and product_capability_reconciler is not None:
                 return (
                     "Canonical Sleeper State and governed core intelligence are "
-                    "reconciled. Product intelligence remains partially available: "
-                    f"FSFFL Intrinsic is {intrinsic_status}."
+                    "atomically published. Product intelligence remains partially "
+                    f"available: FSFFL Intrinsic is {intrinsic_status}."
                 )
             return (
                 "Canonical Sleeper State and all currently governed product intelligence "
-                "are reconciled."
+                "were atomically published."
             )
+
+        def work(progress) -> str | None:
+            try:
+                return reconcile(progress)
+            except BaseException:
+                store.abort_working_generation(user_id)
+                raise
+            finally:
+                # Successful publication removes the working generation itself.
+                if store.working_generation_active(user_id):
+                    store.abort_working_generation(user_id)
 
         job = jobs.start(
             user_id=user_id,
