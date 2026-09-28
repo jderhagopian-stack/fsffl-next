@@ -1309,13 +1309,10 @@ def create_app(
             and before.selected_team_id is None
             and selected.selected_team_id is not None
         ):
-            current_job = jobs.current(user_id)
-            if (
-                current_job is None
-                or current_job.status
-                not in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}
-            ):
-                _start_intelligence_reconciliation(user_id, sync_state=False)
+            # The reconciliation starter already distinguishes the active league.
+            # If an older league's worker is still winding down, the new State gets
+            # its own queued job behind it instead of losing the first-load handoff.
+            _start_intelligence_reconciliation(user_id, sync_state=False)
         return runtime_context_payload(user_id)
 
     def _start_intelligence_reconciliation(
