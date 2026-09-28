@@ -1404,6 +1404,7 @@ def create_app(
                         user_id,
                         evidence,
                         refreshed_league_state=working_state,
+                        require_working_generation=True,
                     )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:after_forecast"
@@ -1431,7 +1432,11 @@ def create_app(
                     )
                     simulation = simulation_loader(working_state, evidence)
                     require_active_league_identity()
-                    store.set_simulation_analytics(user_id, simulation)
+                    store.set_simulation_analytics(
+                        user_id,
+                        simulation,
+                        require_working_generation=True,
+                    )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:after_simulation"
                     )
@@ -1460,7 +1465,11 @@ def create_app(
                     )
                     values = value_loader(working_state)
                     require_active_league_identity()
-                    store.set_value_evidence(user_id, values)
+                    store.set_value_evidence(
+                        user_id,
+                        values,
+                        require_working_generation=True,
+                    )
                     reclaim_phase_memory(
                         f"{user_id}:{working_state.state_id}:after_value"
                     )
