@@ -941,3 +941,11 @@ Current main is `2c0c6d0aefc0cc21913e6090b70f706c29e0b430`. Before terminal acce
 
 ## 2026-09-28 — Post-stabilization product/model sequence accepted
 Management priority after runtime stabilization is now explicit in `docs/operations/directives/20260928_POST_STABILIZATION_FOUNDATION_SEQUENCE.md`. Do not start it until atomic-publication hosted + physical acceptance closes. Sequence: in-season Actual YTD + governed ROS Forecast first; then already-accepted Long-Term Intrinsic; PIT historical market evidence; League Market / directional Owner Intelligence; richer bilateral Trade Decision; downstream Market/Search optimization; then Intelligence surface exploitation. This ordering preserves Data -> State -> Forecast -> Value -> Decision -> Search -> Presentation authority and avoids building powerful UI/search on weak inputs.
+
+
+## 2026-09-28 — Stabilization status after #289: two narrow publication/acceptance edges remain
+PR #289 merged as `47426752e812c0ca19c1caa7a95932a37d56ea72` and corrects the #286 managed-team hosted proof so the switch occurs only while a working generation is active and the assertion checks the actual Franchise surface identity. A post-merge review found one remaining P2: the team switch can still interleave after the worker enters checkpoint/presentation-promotion but before the final in-memory publication lock, deleting the working generation and causing a generic FAILED reconciliation rather than a clean serialized completion/interruption.
+
+Separately, hosted #287 work exposed a changed-State continuity diagnostics gap now represented by open PR #288 (`Carry served generation through changed-State continuity`). Its review found two P2s: only bind a served publication generation when its team matches the active selected team, and only expose a served generation as visible when it satisfies the same validity predicate used by presentation continuity (same league, different State, actual snapshot eligibility).
+
+These are the remaining stabilization gates. They do not reopen Forecast/Simulation/Value/Intrinsic semantics. Correct #288's served-generation predicates and the #289/full-publication synchronization edge, then merge/deploy the exact corrected lineage and rerun the full hosted FSFFL -> Hodor -> FSFFL + same-State/cross-surface/managed-team/restart acceptance before physical Safari validation.
