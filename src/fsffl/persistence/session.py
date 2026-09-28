@@ -191,8 +191,14 @@ def persist_runtime_snapshot(
     forecast_evidence: LiveForecastEvidence | None = None,
     simulation_analytics: LiveSimulationAnalyticsResult | None = None,
     value_evidence: CurrentMarketValueRuntimeResult | None = None,
+    publish_context: bool = True,
 ) -> None:
-    """Checkpoint authoritative runtime outputs without changing their ownership."""
+    """Checkpoint authoritative runtime outputs without changing their ownership.
+
+    ``publish_context=False`` persists State-bound working artifacts without moving
+    the durable user-runtime pointer or last-good publication identity. This lets a
+    replacement generation become durable before its manifest-last atomic publish.
+    """
 
     provider, external_id = _provider_external_id(league_state)
     now = utc_now()
@@ -224,18 +230,19 @@ def persist_runtime_snapshot(
                 recorded_at=now,
             )
         )
-    store.put_user_runtime_context(
-        UserRuntimeContextRecord(
-            user_id=user_id,
-            provider=provider,
-            league_external_id=external_id,
-            league_id=league_state.league.league_id,
-            season=league_state.league.season,
-            selected_team_id=selected_team_id,
-            state_hash=league_state.state_id,
-            updated_at=now,
+    if publish_context:
+        store.put_user_runtime_context(
+            UserRuntimeContextRecord(
+                user_id=user_id,
+                provider=provider,
+                league_external_id=external_id,
+                league_id=league_state.league.league_id,
+                season=league_state.league.season,
+                selected_team_id=selected_team_id,
+                state_hash=league_state.state_id,
+                updated_at=now,
+            )
         )
-    )
 
     forecast_record = None
     if forecast_evidence is not None:
@@ -304,7 +311,7 @@ def persist_runtime_snapshot(
     # Keep the legacy user-scoped record for compatibility and also retain one
     # league-scoped record so switching away and back cannot lose that league's
     # last-good presentation snapshot.
-    if _terminal_bundle(
+    if publish_context and _terminal_bundle(
         forecast_evidence,
         simulation_analytics,
         value_evidence,
