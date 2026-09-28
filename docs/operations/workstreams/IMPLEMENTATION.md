@@ -1542,3 +1542,9 @@ Treat the current cross-user `_publication_lock` / `_restore_lock` inversion as 
 #291 head `7bcf6121688aa49f02cd4fbd4037925ca7d8503f` implements per-user lifecycle serialization, independent user checkpoint ordering, two-user concurrency coverage, restart/interruption cases and bounded stress. Pre-merge review surfaced shared-league snapshot ordering and idle-executor retention; current branch includes follow-up handling/coverage for both.
 
 Full CI still fails 1/1795 at `test_same_state_checkpoint_queue_coalesces_to_latest_context`: durable runtime context writes contain only final `team:b`, while the historical test expects initial `None` then `team:b`. Determine the correct durability contract rather than changing the assertion mechanically. If latest-context-only coalescing is intended and restart-safe, update the test and document the invariant; if the initial State-only pointer is required for correctness, restore it without reintroducing blocking/global serialization. Then rerun the full closure matrix, full CI and pre-merge red-team before merge/deploy.
+
+
+## 2026-09-28 — #291 merged; move to deployment + hosted acceptance
+PR #291 merged as `dbe7fccaceca525e0586389dcc5388764fa015a3`. Whole-class pre-merge lifecycle audit is clean: full suite 1,796 passed, deterministic single/two-user concurrency matrix and bounded stress are green, and no remaining concrete P1/P2 lifecycle defect was found on corrected head `a5efeeedfae165c197724bd4f47170c3463c18b7`.
+
+Do not reopen implementation unless hosted evidence reveals a concrete regression. Immediate action is deploy the exact merge SHA and run the required hosted FSFFL -> Hodor -> FSFFL plus same-State/changed-State/cross-surface/managed-team/restart/two-user lifecycle acceptance. Return for physical iPhone/Safari validation only after hosted success.
