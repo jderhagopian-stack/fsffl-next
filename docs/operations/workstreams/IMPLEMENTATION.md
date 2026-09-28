@@ -1516,3 +1516,17 @@ Then merge the corrected lineage, deploy the exact SHA, and run full hosted FSFF
 
 ## 2026-09-28 — PR #290 CI gate: served generation lost in active changed-State restore
 Current #290 head `3ac755799e3f9d7a91e7ecf947e9d95f084ae908` has all focused checks green but full CI fails 1/1780 tests: `test_changed_state_restore_carries_only_team_matched_served_publication_generation`. Persistence restore carries the valid team-matched `served_publication_generation_id`, but `PersistentPrivateBetaRuntimeStore.restore_user()` produces an active `ServedIntelligenceSnapshot` with `publication_generation_id=None`. Repair that exact propagation path without weakening team-match / same-league / different-State / visible-snapshot guards. Full CI must turn green before merge. Then deploy exact merge SHA and complete hosted + physical acceptance. No scope expansion.
+
+
+## 2026-09-28 — Post-#290 P1: cross-user publication/restore deadlock
+PR #290 merged as `213c95014155de698b25681244024f4a0a66aa6b` with full CI green. Stabilization is still blocked by one post-merge P1 verified on current main: `PrivateBetaRuntimeStore` uses a store-global `_publication_lock`, while `PersistentPrivateBetaRuntimeStore` uses a store-global `_restore_lock`. A publication sequence can hold `_publication_lock` and wait on checkpoint/restore bookkeeping guarded by `_restore_lock`; concurrently another user's cold restore can hold `_restore_lock` and call `set_league_state()`, which waits for `_publication_lock`. This creates an unbounded lock-order inversion / deadlock.
+
+Immediate action:
+1. remove the cross-user lock inversion, preferably by keying publication serialization per user or otherwise establishing one consistent lock order;
+2. preserve all atomic-publication, managed-team and served-generation semantics from #284-#290;
+3. add a deterministic two-user regression: one user in final publication/checkpoint while another cold-restores; both must complete and preserve correct publication identity;
+4. full CI green;
+5. merge corrected SHA, deploy, run full hosted FSFFL -> Hodor -> FSFFL + same-State/cross-surface/managed-team/restart acceptance;
+6. return for physical iPhone/Safari validation only after hosted success.
+
+Do not broaden scope.
