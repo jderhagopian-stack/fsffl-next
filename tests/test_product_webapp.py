@@ -330,8 +330,8 @@ def test_partial_forecast_job_completes_without_simulation_and_keeps_forecast_vi
         )
     )
     client.post("/api/connect/sleeper", json={"league_external_id": "123"})
-    started = client.post("/api/intelligence/jobs")
-    assert started.status_code == 200
+    selected = client.post("/api/select-team", json={"team_id": "a"})
+    assert selected.status_code == 200
 
     deadline = monotonic() + 2
     current = None
@@ -625,8 +625,8 @@ def test_provider_outage_does_not_run_live_acquisition_after_compatible_replay(
         "/api/connect/sleeper",
         json={"league_external_id": "123"},
     ).status_code == 200
-    started = client.post("/api/intelligence/jobs")
-    assert started.status_code == 200
+    selected = client.post("/api/select-team", json={"team_id": "a"})
+    assert selected.status_code == 200
     current = _wait_completed(client)
 
     assert current["status"] == "completed"
@@ -883,6 +883,7 @@ def test_intelligence_job_does_not_complete_before_final_durable_checkpoint() ->
     state = _canonical_state()
     store = _BlockingCheckpointRuntimeStore()
     store.set_league_state("u-durable", state)
+    store.select_team("u-durable", "a")
 
     evidence = SimpleNamespace(
         raw_forecasts=(SimpleNamespace(as_of=state.as_of),),
@@ -1105,7 +1106,8 @@ def test_product_capability_failure_phase_is_reported_separately_from_core_autho
         )
     )
     client.post("/api/connect/sleeper", json={"league_external_id": "123"})
-    client.post("/api/intelligence/jobs")
+    selected = client.post("/api/select-team", json={"team_id": "a"})
+    assert selected.status_code == 200
     terminal = _wait_completed(client)
 
     assert terminal["status"] == "failed"
