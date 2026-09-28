@@ -281,6 +281,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         restored,
                         intelligence_reused=True,
                     )
+                # Restore managed-team identity before attaching a team-specific
+                # served publication generation. select_team intentionally clears any
+                # prior team-specific presentation identity, so the inverse ordering
+                # would discard the validated served generation we just restored.
+                if snapshot.selected_team_id is not None:
+                    super().select_team(user_id, snapshot.selected_team_id)
                 if (
                     snapshot.served_league_id is not None
                     and snapshot.served_league_state_id is not None
@@ -298,8 +304,6 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                             ),
                         ),
                     )
-                if snapshot.selected_team_id is not None:
-                    super().select_team(user_id, snapshot.selected_team_id)
                 if snapshot.publication_generation_id is not None:
                     super().bind_publication_generation_id(
                         user_id,
