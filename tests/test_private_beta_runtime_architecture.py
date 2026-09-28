@@ -173,8 +173,12 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "hodor_home_franchise_league" in source
     assert "pi_history_repeat_after_fsffl_return" in source
     assert "fsffl_managed_team_publication_interruption" in source
-    assert "managed_team_during_active_reconciliation" in source
+    assert "managed_team_during_active_reconciliation" not in source
     assert "managed_team_after_reconciliation_interruption" in source
+    assert "with store._lock:" in source
+    assert "team_interleaving" in source
+    assert 'team_surface.get("franchise_team_id")' in source
+    assert 'same_promoted.get("franchise_team_id")' in source
     assert '"selected_team_id": runtime.selected_team_id' in source
     assert "within_memory_budget" in source
     assert "peak_rss_bytes" in source
