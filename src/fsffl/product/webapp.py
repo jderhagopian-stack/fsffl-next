@@ -334,7 +334,10 @@ def _cached_forecast_replay_decision(
     cache as soon as it determines exact reuse, raw replay, or fresh acquisition.
     """
 
-    reader = getattr(store, "forecast_replay_decision_cached", None)
+    cached_reader = getattr(store, "forecast_replay_decision_cached", None)
+    if callable(cached_reader):
+        return cached_reader(user_id)
+    reader = getattr(store, "forecast_replay_decision", None)
     return reader(user_id) if callable(reader) else None
 
 
