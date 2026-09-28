@@ -288,7 +288,11 @@ def install_hosted_connect_routes(
                     user_id,
                     league_external_id,
                 )
-                if intelligence_reconciler is not None:
+                restored_runtime = runtime_store.get(user_id)
+                if (
+                    intelligence_reconciler is not None
+                    and restored_runtime.selected_team_id is not None
+                ):
                     intelligence_reconciler(user_id)
                 return
             league_state = state_loader(league_external_id)
@@ -303,10 +307,12 @@ def install_hosted_connect_routes(
                     current_job.league_external_id,
                 )
                 return
-            runtime_store.set_league_state(user_id, league_state)
-            wait_for_checkpoint = getattr(runtime_store, "wait_for_checkpoint", None)
-            if callable(wait_for_checkpoint) and not wait_for_checkpoint(user_id, timeout=30.0):
-                raise RuntimeError("Sleeper league activation could not be durably checkpointed")
+            activate_state = getattr(
+                runtime_store,
+                "activate_league_state_for_connect",
+                runtime_store.set_league_state,
+            )
+            activate_state(user_id, league_state)
             active_state = runtime_store.get(user_id).league_state
             if not _matches_sleeper_league(active_state, league_external_id):
                 raise RuntimeError("Sleeper league activation lost requested identity")
@@ -321,8 +327,19 @@ def install_hosted_connect_routes(
                 league_state=league_state,
                 sleeper_league_external_id=league_external_id,
             )
-            if intelligence_reconciler is not None:
+            active_runtime = runtime_store.get(user_id)
+            if (
+                intelligence_reconciler is not None
+                and active_runtime.selected_team_id is not None
+            ):
                 intelligence_reconciler(user_id)
+            elif intelligence_reconciler is not None:
+                _logger.info(
+                    "FSFFL Sleeper connect deferred intelligence until managed-team selection user=%s league=%s state=%s",
+                    user_id,
+                    league_external_id,
+                    league_state.state_id,
+                )
 
         return _job_payload(
             jobs.start(
@@ -379,7 +396,11 @@ def install_hosted_connect_routes(
                             league_external_id,
                             probe.week,
                         )
-                        if intelligence_reconciler is not None:
+                        current_runtime = runtime_store.get(user_id)
+                        if (
+                            intelligence_reconciler is not None
+                            and current_runtime.selected_team_id is not None
+                        ):
                             intelligence_reconciler(user_id)
                         return
                 except Exception as exc:
@@ -437,7 +458,11 @@ def install_hosted_connect_routes(
                     league_state=league_state,
                     sleeper_league_external_id=league_external_id,
                 )
-            if intelligence_reconciler is not None:
+            refreshed_runtime = runtime_store.get(user_id)
+            if (
+                intelligence_reconciler is not None
+                and refreshed_runtime.selected_team_id is not None
+            ):
                 intelligence_reconciler(user_id)
 
             if persistence_store is not None and probe is not None:

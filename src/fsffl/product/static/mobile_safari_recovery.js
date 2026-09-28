@@ -100,8 +100,20 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     const deadline=Date.now()+120000;
     let consecutiveTransportFailures=0;
     let pollDelay=700;
+    let nextContextProbeAt=0;
     while(Date.now()<deadline){
       onProgress?.(job);
+
+      // Connect becomes usable as soon as canonical State is active in memory. The
+      // server may still be checkpointing that State or starting enrichment, but
+      // neither durable persistence nor intelligence publication belongs on the
+      // first-load navigation barrier.
+      if(operation==='connect'&&Date.now()>=nextContextProbeAt){
+        nextContextProbeAt=Date.now()+500;
+        const usable=await usableConnectedContext(leagueId);
+        if(usable)return usable;
+      }
+
       if(job?.status==='completed'){
         const context=await resilientApi('/api/product-context',{},3);
         if(operation!=='connect'||(contextMatchesLeague(context,leagueId)&&context?.state_id))return context;
@@ -109,9 +121,6 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       }
       if(job?.status==='failed')throw new Error(job.error||'Sleeper league import failed');
 
-      // Cross-league connect success is terminal, not optimistic. Do not accept a
-      // transient in-memory product context before the server job has completed its
-      // serialized persistence checkpoint and final identity verification.
       await sleep(document.visibilityState==='hidden'?Math.max(1500,pollDelay):pollDelay);
       pollDelay=Math.min(2200,Math.round(pollDelay*1.35));
       try{
@@ -160,25 +169,11 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     return (context?.teams||[]).find(team=>team.team_id===selectedId)?.display_name||null;
   }
 
-  async function restoreSelectedTeam(context,previousContext=null){
+  async function restoreSelectedTeam(context){
     const teamId=localStorage.getItem(TEAM_KEY);
     if(teamId&&(context.teams||[]).some(team=>team.team_id===teamId)){
       if(context.team_id===teamId)return context;
       return resilientApi('/api/select-team',{method:'POST',body:JSON.stringify({team_id:teamId})},2);
-    }
-
-    // Team ids are league-scoped. During a cross-league switch, preserve the
-    // managed franchise only when the previous selected display name maps
-    // uniquely into the requested league. This keeps Hodor/jder52 and equivalent
-    // owner-named franchises atomic without guessing when names are ambiguous.
-    const previousName=selectedTeamName(previousContext);
-    if(previousName){
-      const matches=(context.teams||[]).filter(team=>String(team.display_name||'').trim().toLowerCase()===String(previousName).trim().toLowerCase());
-      if(matches.length===1){
-        const selected=await resilientApi('/api/select-team',{method:'POST',body:JSON.stringify({team_id:matches[0].team_id})},2);
-        localStorage.setItem(TEAM_KEY,matches[0].team_id);
-        return selected;
-      }
     }
     if(teamId)localStorage.removeItem(TEAM_KEY);
     return context;
@@ -189,7 +184,7 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     try{
       const refreshed=await waitForBackgroundImport(leagueId,null,'refresh');
       if(refreshed?.state_id&&refreshed.state_id!==baselineStateId){
-        const selected=await restoreSelectedTeam(refreshed,state.context);
+        const selected=await restoreSelectedTeam(refreshed);
         applyConnectedContext(selected);
       }
       publishSyncState('current');
@@ -212,8 +207,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       // immediately before any provider acquisition begins.
       let context=await resilientApi('/api/product-context',{},3);
       if(contextMatchesLeague(context,leagueId)&&context.state_id){
-        context=await restoreSelectedTeam(context,state.context);
+        context=await restoreSelectedTeam(context);
         applyConnectedContext(context);
+        window.fsfflEnsureIntelligenceAfterTeamSelection?.();
         if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
         recordLatency('restore_ready',started,'success','durable_restore');
         void refreshStoredLeague(leagueId,context.state_id);
@@ -223,8 +219,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
       // First connection (or a missing durable snapshot) still uses the governed
       // server-owned import path and waits only until canonical league State is usable.
       context=await waitForBackgroundImport(leagueId,null,'connect');
-      context=await restoreSelectedTeam(context,state.context);
+      context=await restoreSelectedTeam(context);
       applyConnectedContext(context);
+      window.fsfflEnsureIntelligenceAfterTeamSelection?.();
       if(state.route==='trade_center'&&typeof loadTradeCenter==='function')await loadTradeCenter();
       publishSyncState('current');
       recordLatency('restore_ready',started,'success','provider_fallback');
@@ -249,37 +246,52 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     const normalized=leagueId.trim();
     const started=now();
     const previousLeagueId=localStorage.getItem(LEAGUE_KEY);
-    let canonicalBefore=state.context;
-    try{canonicalBefore=await resilientApi('/api/product-context',{},2)}catch(error){if(!isTransportError(error))throw error}
-    if(contextMatchesLeague(canonicalBefore,normalized)){
-      recordLatency('first_connect_ready',started,'failed','same_active');
-      window.alert('That Sleeper league is already active. Enter a different league ID to switch leagues.');
-      return;
-    }
+    const previousTeamId=localStorage.getItem(TEAM_KEY);
     interactiveConnectInFlight=true;
     const button=document.querySelector('#connect-button');
     const original=button?.textContent||'Connect Sleeper League';
+
+    // Acknowledgement must happen before any server read. A slow restore/context
+    // request must never make a submitted league ID look ignored on mobile Safari.
     if(button){button.disabled=true;button.textContent='Starting import…'}
+    publishSyncState('checking','Starting import…');
+
     try{
+      let canonicalBefore=state.context;
+      try{canonicalBefore=await resilientApi('/api/product-context',{},2)}catch(error){if(!isTransportError(error))throw error}
+      if(contextMatchesLeague(canonicalBefore,normalized)){
+        recordLatency('first_connect_ready',started,'failed','same_active');
+        publishSyncState('current','That Sleeper league is already active.');
+        window.alert('That Sleeper league is already active. Enter a different league ID to switch leagues.');
+        return;
+      }
+
       const context=await waitForBackgroundImport(normalized,job=>{
-        if(button)button.textContent=job?.status==='running'?'Loading league…':'Starting import…';
+        const loading=job?.status==='running';
+        if(button)button.textContent=loading?'Loading league…':'Starting import…';
+        publishSyncState('checking',loading?'Loading league…':'Starting import…');
       },'connect');
       if(!contextMatchesLeague(context,normalized)||!context?.state_id){
         throw new Error('The requested Sleeper league did not become active.');
       }
+
+      // Manual first-connect/switch is an explicit new choice, not session restore.
+      // Never silently reuse a browser-local team from another or prior session.
       localStorage.setItem(LEAGUE_KEY,normalized);
-      const selectedContext=await restoreSelectedTeam(context,canonicalBefore);
-      applyConnectedContext(selectedContext);
+      localStorage.removeItem(TEAM_KEY);
+      applyConnectedContext(context);
+      window.fsfflSharedReadiness?.refresh();
       publishSyncState(
         'current',
-        selectedContext.team_id
-          ? 'League and managed franchise are ready.'
-          : 'League is ready. Select the franchise you manage to continue.'
+        'League is ready. Select the franchise you manage to continue.'
       );
       recordLatency('first_connect_ready',started,'success','requested='+normalized+';active='+String(context.league_id||''));
     }catch(error){
       if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY);
       else localStorage.setItem(LEAGUE_KEY,previousLeagueId);
+      if(previousTeamId===null)localStorage.removeItem(TEAM_KEY);
+      else localStorage.setItem(TEAM_KEY,previousTeamId);
+      publishSyncState('stale','League connection failed. '+String(error?.message||error));
       recordLatency('first_connect_ready',started,'failed','requested='+normalized+';'+String(error?.message||error));
       window.alert(`Could not connect league: ${error.message}`);
     }finally{

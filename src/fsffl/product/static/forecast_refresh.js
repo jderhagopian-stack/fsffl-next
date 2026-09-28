@@ -151,7 +151,7 @@ function settleFailedJob(payload){
 }
 
 async function manualIntelligenceRefresh(){
-  if(!state?.context?.league_id||fsfflJobStartInFlight||fsfflCurrentJobId)return;
+  if(!state?.context?.league_id||!state?.context?.team_id||fsfflJobStartInFlight||fsfflCurrentJobId)return;
   fsfflSettledStateId=null;
   fsfflJobStateId=null;
   fsfflSessionStartedJobId=null;
@@ -201,7 +201,7 @@ async function pollIntelligenceJob(){
 }
 
 async function maybeStartIntelligenceJob({manual=false}={}){
-  if(fsfflJobStartInFlight||!state?.context?.league_id)return;
+  if(fsfflJobStartInFlight||!state?.context?.league_id||!state?.context?.team_id)return;
   if(!manual&&intelligencePipelineReady(state.context)){
     reflectRefreshAction(state.context);
     return;
@@ -265,6 +265,12 @@ async function maintainFsfflIntelligence(){
     if(payload.job_id&&(payload.status==='queued'||payload.status==='running')){
       fsfflCurrentJobId=payload.job_id;
       fsfflJobStateId=payload.league_state_id||null;
+      // Hosted Connect starts enrichment server-side. Once this browser observes
+      // that current-State job, it owns surfacing its terminal outcome just as if
+      // the browser had started the refresh itself.
+      if(!payload.league_state_id||payload.league_state_id===state.context.state_id){
+        fsfflSessionStartedJobId=payload.job_id;
+      }
       setForecastRefreshMessage(phaseMessage(payload));
       reflectRefreshAction(state.context,{running:true});
       return;
@@ -289,7 +295,10 @@ async function maintainFsfflIntelligence(){
     }
 
     if(payload.job_id&&payload.status==='failed'){
-      if(fsfflSessionStartedJobId===payload.job_id){
+      const failureTargetsVisibleState=(
+        !payload.league_state_id||payload.league_state_id===state.context.state_id
+      );
+      if(fsfflSessionStartedJobId===payload.job_id||failureTargetsVisibleState){
         settleFailedJob(payload);
         return;
       }
@@ -318,6 +327,12 @@ async function maintainFsfflIntelligence(){
 
 setInterval(maintainFsfflIntelligence,2500);
 window.fsfflManualIntelligenceRefresh=manualIntelligenceRefresh;
+window.fsfflEnsureIntelligenceAfterTeamSelection=()=>{
+  fsfflSettledStateId=null;
+  // Team selection owns job creation on the server. The browser immediately attaches
+  // to that current job so progress/failure are visible without racing a second POST.
+  return maintainFsfflIntelligence();
+};
 
 window.addEventListener('load',()=>{
   ensureIntelligenceRefreshButton();

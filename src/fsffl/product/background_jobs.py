@@ -244,7 +244,14 @@ class IntelligenceJobCoordinator:
             _logger.warning("FSFFL intelligence lifecycle restore failed user=%s error=%s", user_id, exc)
             return None
 
-    def start(self, *, user_id: str, league_state_id: str, work: JobWork) -> IntelligenceJob:
+    def start(
+        self,
+        *,
+        user_id: str,
+        league_state_id: str,
+        work: JobWork,
+        coalesce_current: bool = True,
+    ) -> IntelligenceJob:
         now = datetime.now(UTC)
         # Same-user starts serialize, but persistence restore/write never runs while
         # the process-wide job map lock is held. One user's slow durable lifecycle
@@ -252,7 +259,8 @@ class IntelligenceJobCoordinator:
         with self._user_lock_for(user_id):
             current = self.current(user_id)
             if (
-                current is not None
+                coalesce_current
+                and current is not None
                 and current.league_state_id == league_state_id
                 and current.status in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}
             ):

@@ -204,6 +204,34 @@ class BlockingPersistence(MemoryPersistence):
         super().put_user_runtime_context(record)
 
 
+def test_connect_activation_exposes_state_before_durability_and_restores_after_restart() -> None:
+    persistence = BlockingPersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    state = _state()
+
+    started = monotonic()
+    context = runtime.activate_league_state_for_connect("jimmy", state)
+    elapsed = monotonic() - started
+
+    assert elapsed < 0.08
+    assert context.league_state == state
+    assert runtime.get("jimmy").league_state == state
+    assert persistence.first_started.wait(timeout=1)
+    assert persistence.get_user_runtime_context(user_id="jimmy") is None
+
+    persistence.release_first.set()
+    assert runtime.wait_for_checkpoint("jimmy", timeout=2) is True
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.restore_user("jimmy")
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == state.state_id
+    assert restored.selected_team_id is None
+    assert restored.forecast_evidence is None
+    assert restored.simulation_analytics is None
+    assert restored.value_evidence is None
+
+
 def test_same_state_checkpoint_queue_coalesces_to_latest_context() -> None:
     persistence = BlockingPersistence()
     runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)

@@ -154,6 +154,27 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return dict(restored)
         return None
 
+    def forecast_replay_decision_cached(
+        self,
+        user_id: str,
+    ) -> dict[str, object] | None:
+        """Return only already-observed replay diagnostics without durable I/O.
+
+        Foreground product-context/status reads use this path so a fresh league State
+        cannot become unusable merely because persistence is busy. Reconciliation
+        remains responsible for restoring/recording durable replay authority.
+        """
+
+        current = super().get(user_id)
+        if current.league_state is None:
+            return None
+        state_id = current.league_state.state_id
+        with self._lock:
+            cached = self._forecast_replay_decisions.get(user_id)
+        if cached is None or cached.get("target_state_id") != state_id:
+            return None
+        return dict(cached)
+
     @property
     def persistence_enabled(self) -> bool:
         return self._persistence is not None
@@ -444,6 +465,71 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             self._restore_once(user_id)
             current = super().get(user_id)
         return current
+
+    def activate_league_state_for_connect(self, user_id: str, league_state):
+        """Expose valid canonical State immediately; defer persistence enrichment.
+
+        Hosted first-connect/switch must not wait for durable State checkpointing or
+        persisted intelligence lookup before the league becomes usable. Per-user
+        checkpoint ordering still preserves restart authority: an older published
+        league identity is queued first when needed, followed by the new State-only
+        runtime checkpoint. Final intelligence publication keeps its stricter durable
+        commit contract.
+        """
+
+        with self.lifecycle_operation(user_id):
+            current = super().get(user_id)
+            previous_league_id = (
+                current.league_state.league.league_id
+                if current.league_state is not None
+                else None
+            )
+            next_league_id = league_state.league.league_id
+
+            if (
+                self._persistence is not None
+                and previous_league_id is not None
+                and previous_league_id != next_league_id
+                and current.league_state is not None
+                and current.forecast_evidence is not None
+                and current.value_evidence is not None
+                and (
+                    current.simulation_analytics is not None
+                    or not current.forecast_evidence.uncertainty_ready
+                )
+            ):
+                previous_context = current
+
+                def persist_previous_identity() -> bool:
+                    try:
+                        persist_league_last_good_identity(
+                            self._persistence,
+                            user_id=user_id,
+                            league_state=previous_context.league_state,
+                            selected_team_id=previous_context.selected_team_id,
+                        )
+                        return True
+                    except Exception as exc:
+                        _logger.warning(
+                            "FSFFL deferred league last-good migration failed user=%s league=%s error=%s",
+                            user_id,
+                            previous_league_id,
+                            exc,
+                        )
+                        return False
+
+                # The same single-thread per-user checkpoint queue orders this before
+                # the new State checkpoint without blocking the Connect response.
+                self._checkpoint_executor_for(user_id).submit(
+                    persist_previous_identity
+                )
+
+            context = super().set_league_state(user_id, league_state)
+            if previous_league_id != next_league_id:
+                self._last_good_guard_users.discard(user_id)
+            self._restore_attempted.add(user_id)
+            self._checkpoint_async(user_id, context)
+            return context
 
     def set_league_state(self, user_id: str, league_state):
         with self.lifecycle_operation(user_id):

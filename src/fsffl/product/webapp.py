@@ -323,6 +323,24 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     }
 
 
+def _cached_forecast_replay_decision(
+    store: PrivateBetaRuntimeStore,
+    user_id: str,
+) -> dict[str, object] | None:
+    """Expose replay diagnostics only when already cached in memory.
+
+    First-load foreground reads must never acquire durable Forecast diagnostics.
+    Background reconciliation owns persisted replay restoration and will populate the
+    cache as soon as it determines exact reuse, raw replay, or fresh acquisition.
+    """
+
+    cached_reader = getattr(store, "forecast_replay_decision_cached", None)
+    if callable(cached_reader):
+        return cached_reader(user_id)
+    reader = getattr(store, "forecast_replay_decision", None)
+    return reader(user_id) if callable(reader) else None
+
+
 def _runtime_context_payload(
     store: PrivateBetaRuntimeStore,
     user_id: str,
@@ -405,10 +423,9 @@ def _runtime_context_payload(
         "capability_readiness": capability_readiness,
         "publication_generation_id": visible_publication_generation_id,
         "target_publication_generation_id": runtime.publication_generation_id,
-        "forecast_replay_decision": (
-            getattr(store, "forecast_replay_decision")(user_id)
-            if callable(getattr(store, "forecast_replay_decision", None))
-            else None
+        "forecast_replay_decision": _cached_forecast_replay_decision(
+            store,
+            user_id,
         ),
         "served_last_good": (
             {
@@ -759,6 +776,7 @@ def create_app(
     jobs = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence_store)
     reconciliation_lock = RLock()
     reconciliation_league_by_user: dict[str, str] = {}
+    reconciliation_generation_by_user: dict[str, int] = {}
     behavior_jobs = behavioral_coordinator or BehavioralRuntimeCoordinator(max_workers=2)
     base_read_capabilities = capability_readiness_reader or _runtime_capability_readiness
 
@@ -1176,10 +1194,9 @@ def create_app(
             else None
         )
         payload["capability_readiness"] = read_capabilities(runtime)
-        payload["forecast_replay_decision"] = (
-            getattr(store, "forecast_replay_decision")(user_id)
-            if callable(getattr(store, "forecast_replay_decision", None))
-            else None
+        payload["forecast_replay_decision"] = _cached_forecast_replay_decision(
+            store,
+            user_id,
         )
         payload["job"] = _job_payload(current_job)
         return payload
@@ -1210,10 +1227,12 @@ def create_app(
             "start_intelligence_reconciliation",
             None,
         )
+        activated_runtime = store.get(user_id)
         if (
             callable(reconcile)
             and previous_league_id is not None
             and previous_league_id != league_state.league.league_id
+            and activated_runtime.selected_team_id is not None
         ):
             reconcile(user_id)
         return runtime_context_payload(user_id)
@@ -1285,6 +1304,14 @@ def create_app(
             store.select_team(user_id, request.team_id)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        # Managed-team identity is part of reconciliation/publication authority.
+        # The team-selection request owns the handoff so a browser timing gap can
+        # never leave a valid selected team without a current replacement job.
+        _start_intelligence_reconciliation(
+            user_id,
+            sync_state=False,
+        )
         return runtime_context_payload(user_id)
 
     def _start_intelligence_reconciliation(
@@ -1295,37 +1322,56 @@ def create_app(
         published = store.get(user_id)
         if published.league_state is None:
             raise HTTPException(status_code=409, detail="No league is loaded")
+        if published.selected_team_id is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Select the managed team before starting intelligence",
+            )
         starting_state = published.league_state
         starting_league_id = starting_state.league.league_id
+        starting_team_id = published.selected_team_id
         starting_external_id = _sleeper_external_id(starting_state)
+        expected_generation = store.league_generation(user_id)
         active_job = jobs.current(user_id)
         with reconciliation_lock:
             same_reconciliation_league = (
                 reconciliation_league_by_user.get(user_id) == starting_league_id
             )
-        if (
+            same_reconciliation_generation = (
+                reconciliation_generation_by_user.get(user_id) == expected_generation
+            )
+        active_job_running = bool(
             active_job is not None
             and active_job.status in {
                 IntelligenceJobStatus.QUEUED,
                 IntelligenceJobStatus.RUNNING,
             }
+        )
+        can_coalesce_current = bool(
+            active_job_running
             and same_reconciliation_league
-        ):
+            and same_reconciliation_generation
+        )
+        replace_stale_current = bool(
+            active_job_running and not can_coalesce_current
+        )
+        if can_coalesce_current:
             return {
                 **_job_payload(active_job),
                 **runtime_context_payload(user_id),
                 "coalesced": True,
             }
-        expected_generation = store.league_generation(user_id)
 
         def require_active_league_identity() -> LeagueState:
-            active_published = store.get(user_id).league_state
+            active_context = store.get(user_id)
+            active_published = active_context.league_state
             if (
                 store.league_generation(user_id) != expected_generation
                 or active_published is None
                 or active_published.league.league_id != starting_league_id
+                or active_context.selected_team_id != starting_team_id
             ):
-                raise IntelligenceJobInterrupted("league_switch")
+                raise IntelligenceJobInterrupted("lifecycle_switch")
             active_working = store.working_context(user_id).league_state
             return active_working or active_published
 
@@ -1594,9 +1640,11 @@ def create_app(
             user_id=user_id,
             league_state_id=starting_state.state_id,
             work=work,
+            coalesce_current=not replace_stale_current,
         )
         with reconciliation_lock:
             reconciliation_league_by_user[user_id] = starting_league_id
+            reconciliation_generation_by_user[user_id] = expected_generation
         return {
             **_job_payload(job),
             **runtime_context_payload(user_id),
