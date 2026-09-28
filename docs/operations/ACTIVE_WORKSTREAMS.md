@@ -441,3 +441,11 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - New instance `qvhhw` launches the uvicorn command but never reaches Uvicorn/app startup logs or request handling; hosted acceptance has not started.
 - Next action is narrow startup/import/initialization diagnosis on the exact merge SHA, not further Market changes.
 - Research remains DONE/PARKED; Long-Term Intrinsic remains paused.
+
+
+## 2026-09-28 — Runtime corrective validated for primary FSFFL; Hodor source-health blocker remains
+- **Primary FSFFL runtime:** materially healthy on live PR #280. Cold PI ~0.5s, overlapping PI ~2.9s, Market read ~0.3s / cache hit ~0s, post-sync max RSS ~412.5 MB, continuity preserved.
+- **Hosted acceptance failure:** isolated to `hodor_switch`, where fresh live Forecast acquisition failed because only one independent source (Razzball) was healthy. This is not evidence that the nonblocking Market/runtime correction failed.
+- **Implementation:** do not broaden or rewrite the runtime path. Track only the cross-league/Hodor Forecast continuity issue.
+- **Physical testing:** Management may resume a bounded primary-FSFFL smoke test now; cross-league switching remains unaccepted.
+- **Research:** remains DONE / PARKED. Long-Term Intrinsic remains paused until Management decides runtime is sufficiently closed.
