@@ -57,6 +57,9 @@ JOB_LIFECYCLE_MODEL_VERSION = "intelligence-job-lifecycle-v1"
 FORECAST_REPLAY_DECISION_ARTIFACT_KIND = "forecast_replay_decision"
 FORECAST_REPLAY_DECISION_SCOPE_KIND = "user_league_state"
 FORECAST_REPLAY_DECISION_MODEL_VERSION = "forecast-replay-decision-v1"
+PUBLISHED_GENERATION_ARTIFACT_KIND = "runtime_published_intelligence_generation"
+PUBLISHED_GENERATION_SCOPE_KIND = "user_league_state"
+PUBLISHED_GENERATION_MODEL_VERSION = "runtime-published-intelligence-generation-v1"
 
 
 def _forecast_replay_scope_id(
@@ -64,6 +67,73 @@ def _forecast_replay_scope_id(
     league_state: LeagueState,
 ) -> str:
     return f"{user_id}:{league_state.league.league_id}:{league_state.state_id}"
+
+
+def _published_generation_scope_id(
+    user_id: str,
+    league_state: LeagueState,
+) -> str:
+    return f"{user_id}:{league_state.league.league_id}:{league_state.state_id}"
+
+
+def _published_generation_record(
+    *,
+    user_id: str,
+    league_state: LeagueState,
+    selected_team_id: str | None,
+    publication_generation_id: str,
+    forecast_record: ReusableArtifactRecord,
+    simulation_record: ReusableArtifactRecord | None,
+    value_record: ReusableArtifactRecord,
+    computed_at: datetime,
+) -> ReusableArtifactRecord:
+    payload = {
+        "publication_generation_id": publication_generation_id,
+        "league_id": league_state.league.league_id,
+        "league_state_id": league_state.state_id,
+        "selected_team_id": selected_team_id,
+        "forecast_input_fingerprint": forecast_record.key.input_fingerprint,
+        "simulation_input_fingerprint": (
+            simulation_record.key.input_fingerprint
+            if simulation_record is not None
+            else None
+        ),
+        "value_input_fingerprint": value_record.key.input_fingerprint,
+    }
+    return ReusableArtifactRecord(
+        key=ArtifactKey(
+            artifact_kind=PUBLISHED_GENERATION_ARTIFACT_KIND,
+            scope_kind=PUBLISHED_GENERATION_SCOPE_KIND,
+            scope_id=_published_generation_scope_id(user_id, league_state),
+            input_fingerprint=canonical_fingerprint(payload),
+            model_version=PUBLISHED_GENERATION_MODEL_VERSION,
+        ),
+        payload=payload,
+        computed_at=computed_at,
+    )
+
+
+def _published_generation_manifest(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+) -> ReusableArtifactRecord | None:
+    record = store.get_latest_reusable_artifact(
+        artifact_kind=PUBLISHED_GENERATION_ARTIFACT_KIND,
+        scope_kind=PUBLISHED_GENERATION_SCOPE_KIND,
+        scope_id=_published_generation_scope_id(user_id, league_state),
+        model_version=PUBLISHED_GENERATION_MODEL_VERSION,
+    )
+    if record is None:
+        return None
+    payload = record.payload
+    if (
+        payload.get("league_id") != league_state.league.league_id
+        or payload.get("league_state_id") != league_state.state_id
+    ):
+        return None
+    return record
 
 
 def persist_forecast_replay_decision(
@@ -192,6 +262,7 @@ def persist_runtime_snapshot(
     simulation_analytics: LiveSimulationAnalyticsResult | None = None,
     value_evidence: CurrentMarketValueRuntimeResult | None = None,
     publish_context: bool = True,
+    publication_generation_id: str | None = None,
 ) -> None:
     """Checkpoint authoritative runtime outputs without changing their ownership.
 
@@ -230,7 +301,15 @@ def persist_runtime_snapshot(
                 recorded_at=now,
             )
         )
-    if publish_context:
+    terminal_bundle = _terminal_bundle(
+        forecast_evidence,
+        simulation_analytics,
+        value_evidence,
+    )
+    # For terminal intelligence, the published-generation manifest is the durable
+    # commit point. Non-terminal State activation still advances the user pointer
+    # immediately while derived intelligence remains unavailable/last-good.
+    if publish_context and not terminal_bundle:
         store.put_user_runtime_context(
             UserRuntimeContextRecord(
                 user_id=user_id,
@@ -265,13 +344,12 @@ def persist_runtime_snapshot(
         )
         store.put_artifact(forecast_record)
     if simulation_analytics is not None and forecast_record is not None:
-        store.put_artifact(
-            simulation_artifact(
-                league_state_id=league_state.state_id,
-                forecast_fingerprint=forecast_record.key.input_fingerprint,
-                result=simulation_analytics,
-            )
+        simulation_record = simulation_artifact(
+            league_state_id=league_state.state_id,
+            forecast_fingerprint=forecast_record.key.input_fingerprint,
+            result=simulation_analytics,
         )
+        store.put_artifact(simulation_record)
         # Automatic annual League Atlas baseline capture is an orchestration
         # side-effect of persisting an already-authoritative 50,000-run runtime.
         # The helper fails closed outside a proven pre-opener coordinate.
@@ -311,11 +389,9 @@ def persist_runtime_snapshot(
     # Keep the legacy user-scoped record for compatibility and also retain one
     # league-scoped record so switching away and back cannot lose that league's
     # last-good presentation snapshot.
-    if publish_context and _terminal_bundle(
-        forecast_evidence,
-        simulation_analytics,
-        value_evidence,
-    ):
+    if publish_context and terminal_bundle:
+        if forecast_record is None or value_record is None:
+            raise ValueError("terminal publication requires Forecast and Value artifacts")
         payload = {
             "league_state": state_payload,
             "selected_team_id": selected_team_id,
@@ -338,6 +414,43 @@ def persist_runtime_snapshot(
             user_id=user_id,
             league_state=league_state,
             selected_team_id=selected_team_id,
+        )
+        store.put_user_runtime_context(
+            UserRuntimeContextRecord(
+                user_id=user_id,
+                provider=provider,
+                league_external_id=external_id,
+                league_id=league_state.league.league_id,
+                season=league_state.league.season,
+                selected_team_id=selected_team_id,
+                state_hash=league_state.state_id,
+                updated_at=now,
+            )
+        )
+        generation_id = str(publication_generation_id or "").strip() or canonical_fingerprint(
+            league_state.state_id,
+            selected_team_id,
+            forecast_record.key.input_fingerprint,
+            (
+                simulation_record.key.input_fingerprint
+                if simulation_record is not None
+                else None
+            ),
+            value_record.key.input_fingerprint,
+        )
+        # Manifest last: a restart may only consume the new artifact set after every
+        # required model output and the user runtime pointer are already durable.
+        store.put_artifact(
+            _published_generation_record(
+                user_id=user_id,
+                league_state=league_state,
+                selected_team_id=selected_team_id,
+                publication_generation_id=generation_id,
+                forecast_record=forecast_record,
+                simulation_record=simulation_record,
+                value_record=value_record,
+                computed_at=now,
+            )
         )
 
 def restore_state_bound_raw_forecast_evidence(
@@ -434,6 +547,138 @@ def restore_state_bound_forecast(
         except (TypeError, ValueError):
             forecast = None
     return forecast
+
+
+def restore_published_state_bound_intelligence(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+) -> tuple[
+    "LiveForecastEvidence | None",
+    "LiveSimulationAnalyticsResult | None",
+    "CurrentMarketValueRuntimeResult | None",
+    str | None,
+]:
+    """Restore only the exact artifact set named by the last published manifest.
+
+    Newer same-State working artifacts may coexist in the reusable cache, but they
+    have no restart authority until a manifest-last publication commit names them.
+    """
+
+    manifest = _published_generation_manifest(
+        store,
+        user_id=user_id,
+        league_state=league_state,
+    )
+    if manifest is None:
+        # Upgrade compatibility only. Once a generation manifest exists, restore
+        # never consults newest-by-State artifacts for published authority.
+        forecast, simulation, values = restore_state_bound_intelligence(
+            store,
+            league_state=league_state,
+        )
+        return forecast, simulation, values, None
+
+    payload = manifest.payload
+    forecast_fp = str(payload.get("forecast_input_fingerprint") or "").strip()
+    value_fp = str(payload.get("value_input_fingerprint") or "").strip()
+    simulation_fp = str(payload.get("simulation_input_fingerprint") or "").strip()
+    if not forecast_fp or not value_fp:
+        return None, None, None, None
+
+    forecast = None
+    forecast_record = store.get_reusable_artifact(
+        ArtifactKey(
+            artifact_kind=FORECAST_ARTIFACT_KIND,
+            scope_kind=LEAGUE_SCOPE_KIND,
+            scope_id=league_state.state_id,
+            input_fingerprint=forecast_fp,
+            model_version=FORECAST_MODEL_VERSION,
+        )
+    )
+    if forecast_record is not None:
+        try:
+            candidate = decode_forecast_evidence(dict(forecast_record.payload))
+            requires_supplement = league_consumes_fumbles_lost(
+                league_state.league.rules
+            )
+            supplement_ok = bool(
+                getattr(
+                    candidate.runtime_result,
+                    "fumbles_lost_supplement_authority_fingerprint",
+                    None,
+                )
+                and getattr(
+                    candidate.runtime_result,
+                    "fumbles_lost_supplement_model_version",
+                    None,
+                )
+                == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+                and getattr(
+                    candidate.runtime_result,
+                    "fumbles_lost_supplement_league_state_id",
+                    None,
+                )
+                == league_state.state_id
+            )
+            if not requires_supplement or supplement_ok:
+                forecast = candidate
+        except (TypeError, ValueError):
+            forecast = None
+    if forecast is None:
+        return None, None, None, None
+
+    simulation = None
+    if simulation_fp:
+        simulation_record = store.get_reusable_artifact(
+            ArtifactKey(
+                artifact_kind=SIMULATION_ARTIFACT_KIND,
+                scope_kind=LEAGUE_SCOPE_KIND,
+                scope_id=league_state.state_id,
+                input_fingerprint=simulation_fp,
+                model_version=SIMULATION_MODEL_VERSION,
+            )
+        )
+        if simulation_record is not None:
+            try:
+                candidate_simulation = decode_simulation(
+                    dict(simulation_record.payload)
+                )
+                if (
+                    candidate_simulation.league_view.context.league_state_id
+                    == league_state.state_id
+                    and all(
+                        view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
+                        for view in candidate_simulation.team_views
+                    )
+                ):
+                    simulation = candidate_simulation
+            except (TypeError, ValueError):
+                simulation = None
+
+    values = None
+    value_record = store.get_reusable_artifact(
+        ArtifactKey(
+            artifact_kind=VALUE_ARTIFACT_KIND,
+            scope_kind=LEAGUE_SCOPE_KIND,
+            scope_id=league_state.state_id,
+            input_fingerprint=value_fp,
+            model_version=VALUE_MODEL_VERSION,
+        )
+    )
+    if value_record is not None:
+        try:
+            candidate_value = decode_value_result(dict(value_record.payload))
+            if candidate_value.league_state_id == league_state.state_id:
+                values = candidate_value
+        except (TypeError, ValueError):
+            values = None
+
+    if not _terminal_bundle(forecast, simulation, values):
+        return None, None, None, None
+    generation_id = str(payload.get("publication_generation_id") or "").strip()
+    return forecast, simulation, values, generation_id or None
 
 
 def restore_state_bound_intelligence(
@@ -627,9 +872,12 @@ def restore_last_good_intelligence(
     if league_state.league.league_id != league_id:
         return None
 
-    forecast, simulation, values = restore_state_bound_intelligence(
-        store,
-        league_state=league_state,
+    forecast, simulation, values, publication_generation_id = (
+        restore_published_state_bound_intelligence(
+            store,
+            user_id=user_id,
+            league_state=league_state,
+        )
     )
     if not _terminal_bundle(forecast, simulation, values):
         return None
@@ -639,6 +887,7 @@ def restore_last_good_intelligence(
     return DurableRuntimeSnapshot(
         league_state=league_state,
         selected_team_id=selected,
+        publication_generation_id=publication_generation_id,
         forecast_evidence=forecast,
         simulation_analytics=simulation,
         value_evidence=values,
@@ -686,9 +935,12 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         league_state, selected = fallback
         restored_from_last_good = True
 
-    forecast, simulation, values = restore_state_bound_intelligence(
-        store,
-        league_state=league_state,
+    forecast, simulation, values, publication_generation_id = (
+        restore_published_state_bound_intelligence(
+            store,
+            user_id=user_id,
+            league_state=league_state,
+        )
     )
 
     served_state = None
@@ -706,6 +958,7 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
     return DurableRuntimeSnapshot(
         league_state=league_state,
         selected_team_id=selected,
+        publication_generation_id=publication_generation_id,
         forecast_evidence=forecast,
         simulation_analytics=simulation,
         value_evidence=values,
