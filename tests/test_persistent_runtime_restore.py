@@ -1635,3 +1635,50 @@ def test_working_generation_checkpoint_never_moves_restart_authority() -> None:
     assert after_restart.league_state is not None
     assert after_restart.league_state.state_id == published_state.state_id
     assert after_restart.league_state.state_id != target_state.state_id
+
+
+def test_same_state_working_artifacts_never_gain_restart_authority_before_manifest_publish() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    published_forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    published_value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="same-state-atomic-restart",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=published_forecast,
+        value_evidence=published_value,
+        publication_generation_id="published-generation-a",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("same-state-atomic-restart")
+    assert restored.publication_generation_id == "published-generation-a"
+    assert restored.forecast_evidence is not None
+    assert restored.forecast_evidence.raw_forecasts == ()
+
+    runtime.begin_working_generation(
+        "same-state-atomic-restart",
+        league_state=state,
+    )
+    working_forecast = _with_replayable_raw_forecast(published_forecast, state)
+    runtime.set_forecast_evidence(
+        "same-state-atomic-restart",
+        working_forecast,
+    )
+    runtime.set_value_evidence(
+        "same-state-atomic-restart",
+        published_value,
+    )
+    assert runtime.checkpoint_working_generation("same-state-atomic-restart")
+
+    # The reusable cache now contains a newer same-State Forecast artifact, but the
+    # published-generation manifest still names generation A. A crash/restart must
+    # therefore restore A rather than the unpublished working Forecast.
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("same-state-atomic-restart")
+    assert after_restart.publication_generation_id == "published-generation-a"
+    assert after_restart.forecast_evidence is not None
+    assert after_restart.forecast_evidence.raw_forecasts == ()
+    assert after_restart.value_evidence is not None
