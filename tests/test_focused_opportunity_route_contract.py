@@ -56,7 +56,7 @@ def test_focused_route_exposes_search_exhaustion_without_weakening_budget() -> N
 
 def test_focused_route_reuses_canonical_request_local_evaluator_inputs() -> None:
     route = _read(ROUTE)
-    assert "asset_index=owned_asset_index(browser)" in route
+    assert "asset_index=owned_asset_index(current_browser)" in route
     assert "def focused_evaluator" not in route
     assert "evaluate_candidate_path(" not in route
     assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in route
