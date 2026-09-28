@@ -271,6 +271,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         restored,
                         intelligence_reused=True,
                     )
+                elif snapshot.value_evidence is not None:
+                    restored = super().set_value_evidence(
+                        user_id,
+                        snapshot.value_evidence,
+                    )
+                    self._contexts[user_id] = replace(
+                        restored,
+                        intelligence_reused=True,
+                    )
                 if (
                     snapshot.served_league_id is not None
                     and snapshot.served_league_state_id is not None
@@ -437,6 +446,13 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         simulation_analytics=simulation,
                         value_evidence=values,
                     )
+                    self._contexts[user_id] = replace(
+                        context,
+                        publication_generation_id=publication_generation_id,
+                        intelligence_reused=True,
+                    )
+                elif values is not None:
+                    context = super().set_value_evidence(user_id, values)
                     self._contexts[user_id] = replace(
                         context,
                         publication_generation_id=publication_generation_id,
