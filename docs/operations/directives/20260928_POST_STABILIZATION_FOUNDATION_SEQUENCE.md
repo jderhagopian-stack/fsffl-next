@@ -28,30 +28,12 @@ Start/continue prospective PIT capture immediately because weekly ROS snapshots 
 
 A native FSFFL ROS model remains shadow Research until comparative PIT evidence earns promotion.
 
-## Foundation 2 — Simulation 2.0 and team-of-origin draft-pick forecasting
-Simulation must become more than a current-season playoff/championship calculator. It should own the governed outcome distributions needed by downstream Value and Team Utility.
+## Foundation 2 — Simulation 2.0
+Execute the dedicated governed program in `docs/operations/directives/20260928_SIMULATION_2_0_PROGRAM.md`.
 
-For every owned future rookie pick, preserve exact identity:
-- season;
-- round;
-- originating team;
-- current owner;
-- league-specific draft-order rules.
+Simulation 2.0 restores/re-derives the strongest legacy capabilities (weekly stochastic player outcomes, legal lineup optimization, byes, availability/bench substitution, real schedule/divisions/playoffs, full finish/playoff/title distributions, deterministic replay and Multiverse examples), upgrades current-season modeling to Actual YTD + governed ROS, adds team-of-origin future-pick slot distributions and governed counterfactual outcome deltas, and is rebuilt around vectorized/batched execution, compiled reusable state, selective recomputation, persistence and progressive scenario computation.
 
-Simulation should estimate an **origin-team pick-slot distribution**, not label a pick simply early/mid/late. Inputs may include only governed upstream evidence: current standings/state, current-season Forecast, future player Forecast, roster/depth strength, age/exposure, known future assets where appropriate, and league-specific draft-order mechanics. Do not import Market prices into the football-outcome simulation.
-
-Near-term picks may use richer team-specific evidence. Farther-future picks must widen uncertainty and regress appropriately rather than pretending today's team ranking remains precise several seasons forward.
-
-Where draft order uses different rules for playoff/non-playoff teams, Max PF, regular-season finish, playoff finish, consolation results, or other league settings, Simulation must model the actual league rule rather than generic NFL-style draft order.
-
-Simulation output for each pick should include:
-- probability by exact draft slot where feasible;
-- expected slot / percentile;
-- early/mid/late probabilities only as summaries;
-- uncertainty and horizon provenance;
-- the origin-team/state/forecast identity used.
-
-The production simulation upgrade should retain current-season 50,000-run behavior where feasible, but future-pick slot estimation may use a separate calibrated multi-season simulation contract if that is more defensible than forcing one simulator to own every horizon.
+Canonical production remains 50,000 runs until a separate convergence study earns a different authority standard.
 
 ## Foundation 3 — Origin-aware draft-pick Value
 Draft picks must no longer be valued only as generic year/round buckets.
