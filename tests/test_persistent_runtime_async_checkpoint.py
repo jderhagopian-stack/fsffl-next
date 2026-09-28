@@ -226,3 +226,12 @@ def test_same_state_checkpoint_queue_coalesces_to_latest_context() -> None:
         "team:b",
     ]
     assert persistence.get_user_runtime_context(user_id="jimmy").selected_team_id == "team:b"
+
+    # Restart authority must resolve to the newest same-State identity. The running
+    # initial State checkpoint may finish, queued intermediate team:a may be skipped,
+    # but team:b must durably land after the running write and survive a cold restore.
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.restore_user("jimmy")
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == state.state_id
+    assert restored.selected_team_id == "team:b"
