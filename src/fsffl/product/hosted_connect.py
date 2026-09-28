@@ -303,10 +303,12 @@ def install_hosted_connect_routes(
                     current_job.league_external_id,
                 )
                 return
-            runtime_store.set_league_state(user_id, league_state)
-            wait_for_checkpoint = getattr(runtime_store, "wait_for_checkpoint", None)
-            if callable(wait_for_checkpoint) and not wait_for_checkpoint(user_id, timeout=30.0):
-                raise RuntimeError("Sleeper league activation could not be durably checkpointed")
+            activate_state = getattr(
+                runtime_store,
+                "activate_league_state_for_connect",
+                runtime_store.set_league_state,
+            )
+            activate_state(user_id, league_state)
             active_state = runtime_store.get(user_id).league_state
             if not _matches_sleeper_league(active_state, league_external_id):
                 raise RuntimeError("Sleeper league activation lost requested identity")
