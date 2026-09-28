@@ -252,18 +252,15 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self.lifecycle_operation(user_id):
             previous = self._checkpoint_futures.get(user_id)
             previous_state_id = self._checkpoint_state_ids.get(user_id)
-            if (
-                previous is not None
-                and previous_state_id == state_id
-                and not previous.done()
-                and previous.cancel()
-            ):
-                _logger.info(
-                    "FSFFL persistence checkpoint coalesced user=%s state=%s",
-                    user_id,
-                    state_id,
-                )
-            future = self._checkpoint_executor_for(user_id).submit(
+            executor = self._checkpoint_executor_for(user_id)
+
+            # Publish the replacement future as the user's durability barrier before
+            # canceling a superseded queued future. Future.cancel() runs callbacks
+            # synchronously; canceling first can make that obsolete future look like
+            # the latest barrier and retire the executor while an older checkpoint is
+            # still running. That would let the replacement jump onto a new executor
+            # and overtake the running write, breaking restart ordering.
+            future = executor.submit(
                 self._persist_context,
                 user_id,
                 context,
@@ -276,6 +273,18 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     completed,
                 )
             )
+
+            if (
+                previous is not None
+                and previous_state_id == state_id
+                and not previous.done()
+                and previous.cancel()
+            ):
+                _logger.info(
+                    "FSFFL persistence checkpoint coalesced user=%s state=%s",
+                    user_id,
+                    state_id,
+                )
         return future
 
     def wait_for_checkpoint(self, user_id: str, *, timeout: float = 30.0) -> bool:
