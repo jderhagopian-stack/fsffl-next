@@ -1005,15 +1005,10 @@ def test_old_league_worker_cannot_mutate_or_abort_new_league_working_generation(
         json={"league_external_id": "456"},
     )
     assert switched.status_code == 200
-    assert new_forecast_started.wait(timeout=2)
-    assert store.working_generation_active("local-beta-user")
-    assert (
-        store.working_context("local-beta-user").league_state.league.league_id
-        == state_b.league.league_id
-    )
 
-    # Let the old worker return after the new working generation already exists.
-    # It must interrupt without attaching A's evidence to B or deleting B's work.
+    # The production coordinator intentionally has one intelligence worker, so B is
+    # queued while A is still blocked. Let A return after the league identity has
+    # changed; it must interrupt without attaching A's evidence to B.
     release_old_forecast.set()
     deadline = monotonic() + 2
     old_job = application.state.intelligence_jobs.get(old_job_id)
@@ -1027,6 +1022,11 @@ def test_old_league_worker_cannot_mutate_or_abort_new_league_working_generation(
 
     assert old_job is not None
     assert old_job.status.value == "interrupted"
+
+    # Once A has relinquished the sole worker, the already-queued B reconciliation
+    # starts and owns the new working generation. A's ownership-aware cleanup must
+    # not have changed B's published league identity.
+    assert new_forecast_started.wait(timeout=2)
     assert store.working_generation_active("local-beta-user")
     assert (
         store.working_context("local-beta-user").league_state.league.league_id
