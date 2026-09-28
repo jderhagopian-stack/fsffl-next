@@ -447,44 +447,41 @@ def restore_state_bound_intelligence(
     simulation = None
     values = None
     if forecast is not None:
-        simulation_record = store.get_latest_reusable_artifact(
-            artifact_kind=SIMULATION_ARTIFACT_KIND,
-            scope_kind=LEAGUE_SCOPE_KIND,
-            scope_id=league_state.state_id,
-            model_version=SIMULATION_MODEL_VERSION,
+        # Simulation is downstream of the exact persisted Forecast artifact,
+        # not merely of the canonical State. Query the exact dependency key so a
+        # newer mismatched Simulation row cannot hide an older compatible one.
+        current_forecast_record = forecast_artifact(
+            league_state_id=league_state.state_id,
+            evidence=forecast,
+        )
+        expected_simulation_input_fingerprint = canonical_fingerprint(
+            league_state.state_id,
+            current_forecast_record.key.input_fingerprint,
+        )
+        simulation_record = store.get_reusable_artifact(
+            ArtifactKey(
+                artifact_kind=SIMULATION_ARTIFACT_KIND,
+                scope_kind=LEAGUE_SCOPE_KIND,
+                scope_id=league_state.state_id,
+                input_fingerprint=expected_simulation_input_fingerprint,
+                model_version=SIMULATION_MODEL_VERSION,
+            )
         )
         if simulation_record is not None:
-            # Simulation is downstream of the exact persisted Forecast artifact,
-            # not merely of the canonical State. A same-State Forecast replay can
-            # replace Forecast while an older Simulation row remains durable. Reuse
-            # is authoritative only when the stored Simulation dependency fingerprint
-            # still names this exact Forecast payload.
-            current_forecast_record = forecast_artifact(
-                league_state_id=league_state.state_id,
-                evidence=forecast,
-            )
-            expected_simulation_input_fingerprint = canonical_fingerprint(
-                league_state.state_id,
-                current_forecast_record.key.input_fingerprint,
-            )
-            if (
-                simulation_record.key.input_fingerprint
-                == expected_simulation_input_fingerprint
-            ):
-                try:
-                    candidate = decode_simulation(dict(simulation_record.payload))
-                    has_current_team_views = all(
-                        view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
-                        for view in candidate.team_views
-                    )
-                    if (
-                        candidate.league_view.context.league_state_id
-                        == league_state.state_id
-                        and has_current_team_views
-                    ):
-                        simulation = candidate
-                except (TypeError, ValueError):
-                    simulation = None
+            try:
+                candidate = decode_simulation(dict(simulation_record.payload))
+                has_current_team_views = all(
+                    view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
+                    for view in candidate.team_views
+                )
+                if (
+                    candidate.league_view.context.league_state_id
+                    == league_state.state_id
+                    and has_current_team_views
+                ):
+                    simulation = candidate
+            except (TypeError, ValueError):
+                simulation = None
 
     value_record = store.get_latest_reusable_artifact(
         artifact_kind=VALUE_ARTIFACT_KIND,
