@@ -225,6 +225,6 @@ def test_dual_state_rebuild_never_renders_false_green_current_status() -> None:
 def test_first_load_release_busts_only_changed_session_flow_assets() -> None:
     index = _index()
     for script in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
-        assert f"/static/{script}?v=20260928-first-load-recovery1" in index
+        assert f"/static/{script}?v=20260927-market-nonblocking1&r=20260928-first-load-recovery1" in index
     for script in ("session_recovery.js", "home_dashboard.js", "product_shell.js"):
         assert f"/static/{script}?v=20260927-market-nonblocking1" in index
