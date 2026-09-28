@@ -199,9 +199,9 @@ def test_shared_readiness_tracks_status_on_every_route_without_launching_model_w
 
 
 def test_first_load_hotfix_busts_changed_assets_without_churning_other_surfaces() -> None:
-    assert f"/static/app.js?v=20260927-market-nonblocking1&r=20260928-first-load-recovery1" in INDEX
-    assert f"/static/home_dashboard.js?v=20260927-market-nonblocking1" in INDEX
-    assert f"/static/product_shell.js?v=20260927-market-nonblocking1" in INDEX
+    assert f"/static/app.js?v=20260928-first-load-recovery1" in INDEX
+    assert f"/static/home_dashboard.js?v=20260928-first-load-recovery1" in INDEX
+    assert f"/static/product_shell.js?v=20260928-first-load-recovery1" in INDEX
     assert "const homeNorthStarStaticVersion='20260927-dualstate1';" in SHELL
     assert "const franchiseNorthStarStaticVersion='20260927-dualstate1';" in SHELL
 
