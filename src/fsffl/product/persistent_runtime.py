@@ -293,6 +293,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                             league_state_id=snapshot.served_league_state_id,
                             as_of=snapshot.served_as_of,
                             team_ids=snapshot.served_team_ids,
+                            publication_generation_id=(
+                                snapshot.served_publication_generation_id
+                            ),
                         ),
                     )
                 if snapshot.selected_team_id is not None:
@@ -493,6 +496,13 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                         and last_good[0].state_id != league_state.state_id
                     ):
                         last_good_state = last_good[0]
+                        served_generation_id, _served_team_id = (
+                            restore_published_generation_identity(
+                                self._persistence,
+                                user_id=user_id,
+                                league_state=last_good_state,
+                            )
+                        )
                         context = super().set_served_intelligence(
                             user_id,
                             ServedIntelligenceSnapshot(
@@ -502,6 +512,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                                 team_ids=tuple(
                                     sorted(team.team_id for team in last_good_state.teams)
                                 ),
+                                publication_generation_id=served_generation_id,
                             ),
                         )
             except Exception as exc:

@@ -1874,3 +1874,48 @@ def test_cold_set_league_state_restores_published_team_and_generation_identity()
         runtime.get("cold-published-identity").publication_generation_id
         == "generation-restored"
     )
+
+
+def test_changed_state_restore_carries_last_good_publication_generation_identity() -> None:
+    persistence = MemoryPersistence()
+    last_good = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    forecast = _stale_forecast_without_first_party_fumbles_lost(last_good)
+    value = _empty_value(last_good)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="served-generation",
+        league_state=last_good,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="served-generation-a",
+    )
+    target = _league_state(as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC))
+    persist_runtime_snapshot(
+        persistence,
+        user_id="served-generation",
+        league_state=target,
+        selected_team_id="t2",
+    )
+
+    restored = restore_runtime_snapshot(
+        persistence,
+        user_id="served-generation",
+    )
+    assert restored is not None
+    assert restored.league_state.state_id == target.state_id
+    assert restored.publication_generation_id is None
+    assert restored.served_league_state_id == last_good.state_id
+    assert (
+        restored.served_publication_generation_id
+        == "served-generation-a"
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    active = runtime.restore_user("served-generation")
+    assert active.publication_generation_id is None
+    assert active.served_intelligence is not None
+    assert (
+        active.served_intelligence.publication_generation_id
+        == "served-generation-a"
+    )

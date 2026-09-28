@@ -18,6 +18,7 @@ def test_served_and_pending_runtime_state_are_lightweight_identities_only() -> N
         "league_state_id",
         "as_of",
         "team_ids",
+        "publication_generation_id",
     }
     assert {item.name for item in fields(_PendingIntelligenceSnapshot)} == {
         "league_state_id",
@@ -175,6 +176,8 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "fsffl_managed_team_publication_interruption" in source
     assert "managed_team_during_active_reconciliation" in source
     assert "managed_team_after_reconciliation_interruption" in source
+    assert "managed-team switch was not interleaved with active reconciliation" in source
+    assert 'team_surface.get("franchise_team_id") != alternate_team_id' in source
     assert '"selected_team_id": runtime.selected_team_id' in source
     assert "within_memory_budget" in source
     assert "peak_rss_bytes" in source
