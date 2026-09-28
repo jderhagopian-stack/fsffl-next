@@ -229,3 +229,41 @@ Work should not become a parallel implementation stream.
 - Persist material Management decisions to `docs/operations/` before handing worker chats new scope.
 - Prefer short continuation prompts.
 - Watch chat length; when this Management conversation becomes unwieldy, start a new Management chat using this file + canonical operations docs as the handoff rather than recreating decisions from chat history.
+
+
+## Post-stabilization use of Work for rapid execution
+After runtime stabilization closes, Management may use short, explicitly authorized Work execution bursts to accelerate bounded capabilities whose authority contracts are already settled.
+
+Work is appropriate for rapid implementation when all of the following are true:
+- upstream authority and data contracts are already frozen;
+- the capability has a narrow repo-bounded acceptance contract;
+- no new empirical coefficient/model promotion is required;
+- the change can be validated deterministically and rolled back cleanly;
+- Work owns the exact branch/PR through tests, merge/deploy only when explicitly authorized.
+
+Good near-term Work candidates:
+- PIT capture / evidence persistence plumbing;
+- Actual YTD + governed third-party ROS integration once provider contract is frozen;
+- exposing already-governed Current / Long-Term Intrinsic outputs in product surfaces;
+- exact provenance / diagnostics / publication metadata;
+- bounded historical transaction / roster-state ingestion and normalization;
+- presentation/API wiring for already-authoritative outputs;
+- deterministic acceptance harnesses and regression coverage.
+
+Use a slower Research -> directive -> implementation path for capabilities that create new authority or need empirical validation, including:
+- Simulation 2.0 distribution/correlation/calibration changes;
+- future multi-season team-strength / pick-slot forecasting;
+- origin-aware pick-value curves if calibration is incomplete;
+- League Market inference;
+- Owner Intelligence behavior models;
+- trade acceptance / decision coefficients;
+- new Search/Optimization objective functions.
+
+Preferred cadence after stabilization:
+1. Management freezes a bounded directive and acceptance criteria.
+2. Work performs a short implementation burst on current main / dedicated branch.
+3. Independent review (Work or Codex) attacks the governing invariant before merge.
+4. Merge/deploy exact SHA only when checks are green and the directive is satisfied.
+5. Physical/product smoke where the capability is user-facing.
+
+Do not let Work and the main Implementation stream modify the same authority surface concurrently. Parallelism should be by clearly separated workstream, not by overlapping code ownership.
