@@ -74,11 +74,11 @@ def test_performance_corrective_reuses_work_without_changing_market_authority() 
     hosted = (PRODUCT / "persistent_webapp.py").read_text(encoding="utf-8")
 
     assert "candidate_limit=0" in focused
-    assert "evaluation_limit=0" not in focused.split("def focused_workspace", 1)[1].split("structural_discovery =", 1)[0]
+    assert "bilateral_evaluation_limit=0" in focused.split("def focused_workspace", 1)[1].split("structural_discovery =", 1)[0]
     assert "structural_discovery = {" in focused
     assert "evaluation_limit=DEFAULT_PRELIMINARY_DECISION_BUDGET" in focused
     assert "MarketDecisionEnrichmentCoordinator" in focused
-    assert "asset_index=owned_asset_index(browser)" in focused
+    assert "asset_index=owned_asset_index(current_browser)" in focused
     assert "def focused_evaluator" not in focused
 
     assert "DEFAULT_PRELIMINARY_DECISION_BUDGET = 8" in discovery
