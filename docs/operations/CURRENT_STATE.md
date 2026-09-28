@@ -878,3 +878,11 @@ Live merge `9db51f8190dd7a1a17d75987ddc685b7b459a8b2` (PR #280) shows the runtim
 The full hosted journey still returns FAILED only because the later Hodor league-switch step cannot satisfy the governed live Forecast source-health requirement: Razzball is the sole healthy source while CBS, FFToday and NFL Fantasy are currently unusable for authoritative full-season acquisition.
 
 This is now classified as a cross-league Forecast-source availability blocker, not a reason to continue changing the primary FSFFL runtime. Bounded physical testing of the primary league may resume; do not treat Hodor/cross-league switching as accepted yet.
+
+
+## 2026-09-28 — Management reclassifies remaining Hodor failure as replay-continuity defect
+The primary FSFFL runtime gains on live PR #280 remain valid. However, the Hodor switch failure is **not accepted as merely provider-source downtime** while durable governed Hodor Forecast evidence exists.
+
+Management requires Implementation to prove why persisted Hodor raw Forecast evidence was rejected and to separate raw-Forecast compatibility from downstream State/scoring compatibility. Downstream-only changes must rebuild their own layers without unnecessarily forcing provider reacquisition. If raw Forecast evidence is genuinely incompatible, the exact rejection component must be recorded and last-good presentation must remain available where authority permits.
+
+The controlling directive is `docs/operations/directives/20260928_HODOR_FORECAST_REPLAY_CONTINUITY.md`. Source-health/two-source acquisition rules remain unchanged. Long-Term Intrinsic remains paused until FSFFL → Hodor → FSFFL hosted acceptance passes.
