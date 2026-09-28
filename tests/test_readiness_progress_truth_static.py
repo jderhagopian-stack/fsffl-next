@@ -47,7 +47,7 @@ def test_interrupted_refresh_is_terminal_and_truthful() -> None:
 def test_readiness_recovery_busts_refresh_asset_without_churning_unchanged_shell() -> None:
     index = _index()
     shell = _shell()
-    assert "/static/forecast_refresh.js?v=20260928-first-load-recovery1" in index
+    assert "/static/forecast_refresh.js?v=20260927-market-nonblocking1&r=20260928-first-load-recovery1" in index
     assert "/static/product_shell.js?v=20260927-market-nonblocking1" in index
     assert "/static/home_dashboard.js?v=20260927-market-nonblocking1" in index
     assert "Build lifecycle complete" in shell
