@@ -36,7 +36,8 @@ def test_market_quick_path_uses_same_workspace_builder_without_decision_enrichme
     assert "candidate_limit=0" in routes
     assert "bilateral_evaluation_limit=0" in routes
     assert '"completeness": "presentation_shell"' in routes
-    assert '"structural_search_pending"' in routes\n    assert '"decision_enrichment_pending": False' in routes
+    assert '"structural_search_pending"' in routes
+    assert '"decision_enrichment_pending": False' in routes
     assert "workspace_builder=_webapp.build_opportunity_workspace" in persistent
     assert "make_cached_opportunity_workspace" in persistent
 
