@@ -626,6 +626,23 @@ class PrivateBetaRuntimeStore:
             self._pending_intelligence.pop(user_id, None)
             return self._published_context(user_id)
 
+    def abort_working_generation_if_generation(
+        self,
+        user_id: str,
+        *,
+        expected_generation: int,
+    ) -> UserRuntimeContext:
+        """Discard only work still owned by the caller's lifecycle generation."""
+
+        with self.lifecycle_operation(user_id), self._lock:
+            guard = self._working_publication_guards.get(user_id)
+            if guard is None or guard.league_generation != expected_generation:
+                return self._published_context(user_id)
+            self._working_contexts.pop(user_id, None)
+            self._working_publication_guards.pop(user_id, None)
+            self._pending_intelligence.pop(user_id, None)
+            return self._published_context(user_id)
+
     @contextmanager
     def read_context(self, user_id: str, context: UserRuntimeContext):
         """Pin reads on this thread to one explicit unpublished generation."""
