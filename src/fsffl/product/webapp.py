@@ -1340,14 +1340,20 @@ def create_app(
             same_reconciliation_generation = (
                 reconciliation_generation_by_user.get(user_id) == expected_generation
             )
-        can_coalesce_current = bool(
+        active_job_running = bool(
             active_job is not None
             and active_job.status in {
                 IntelligenceJobStatus.QUEUED,
                 IntelligenceJobStatus.RUNNING,
             }
+        )
+        can_coalesce_current = bool(
+            active_job_running
             and same_reconciliation_league
             and same_reconciliation_generation
+        )
+        replace_stale_current = bool(
+            active_job_running and not can_coalesce_current
         )
         if can_coalesce_current:
             return {
@@ -1634,7 +1640,7 @@ def create_app(
             user_id=user_id,
             league_state_id=starting_state.state_id,
             work=work,
-            coalesce_current=can_coalesce_current,
+            coalesce_current=not replace_stale_current,
         )
         with reconciliation_lock:
             reconciliation_league_by_user[user_id] = starting_league_id
