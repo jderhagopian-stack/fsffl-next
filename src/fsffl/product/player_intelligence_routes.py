@@ -280,6 +280,11 @@ def install_player_intelligence_routes(
             value["intrinsic_contract_status"] = intrinsic.status.value
             value["intrinsic_status_reason"] = intrinsic.status_reason
         payload["value"] = value
+        payload["publication_generation_id"] = getattr(
+            runtime,
+            "publication_generation_id",
+            None,
+        )
         if intrinsic_record.status in {
             IntrinsicBuildStatus.QUEUED,
             IntrinsicBuildStatus.RUNNING,
@@ -324,6 +329,11 @@ def install_player_intelligence_routes(
                     "status": "loading",
                     "contract_version": PLAYER_INTELLIGENCE_CONTRACT_VERSION,
                     "league_state_id": runtime.league_state.state_id,
+                    "publication_generation_id": getattr(
+                        runtime,
+                        "publication_generation_id",
+                        None,
+                    ),
                     "player_id": player_id,
                     "build_status": "capacity_wait",
                     "retry_after_ms": 2500,
@@ -343,6 +353,11 @@ def install_player_intelligence_routes(
                     "status": "loading",
                     "contract_version": PLAYER_INTELLIGENCE_CONTRACT_VERSION,
                     "league_state_id": record.league_state_id,
+                    "publication_generation_id": getattr(
+                        runtime,
+                        "publication_generation_id",
+                        None,
+                    ),
                     "player_id": player_id,
                     "build_status": record.status.value,
                     "retry_after_ms": 2500,
@@ -356,6 +371,11 @@ def install_player_intelligence_routes(
                     "status": "unavailable",
                     "contract_version": PLAYER_INTELLIGENCE_CONTRACT_VERSION,
                     "league_state_id": record.league_state_id,
+                    "publication_generation_id": getattr(
+                        runtime,
+                        "publication_generation_id",
+                        None,
+                    ),
                     "player_id": player_id,
                     "build_status": record.status.value,
                     "retry_after_ms": None,
