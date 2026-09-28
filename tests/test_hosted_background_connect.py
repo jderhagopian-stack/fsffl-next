@@ -247,7 +247,7 @@ def test_hosted_connect_persists_partial_state_off_request_path() -> None:
     assert "self._checkpoint_async(user_id, context)" in set_state
     assert "ThreadPoolExecutor" in source
     assert "max_workers=1" in source
-    assert "self._checkpoint_executor.submit" in source
+    assert "self._checkpoint_executor_for(user_id).submit" in source
     assert "context.forecast_evidence is not None" not in source
     assert "context.simulation_analytics is not None" not in source
     assert "context.value_evidence is not None" not in source
