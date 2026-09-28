@@ -275,3 +275,16 @@ PR #290 merged as `213c95014155de698b25681244024f4a0a66aa6b` and full CI is gree
 
 ## Stabilization-management correction — stop calling each new defect “the last narrow fix”
 Management recognizes that the repeated one-defect-at-a-time loop has produced false finish lines. The closeout strategy is now whole-class verification under `docs/operations/directives/20260928_STABILIZATION_CLOSURE_PROTOCOL.md`. The next corrective must close publication/persistence/restore/identity concurrency as a class, including deterministic two-user races and bounded stress, with pre-merge red-team. A bounded lifecycle/lock refactor is authorized if it produces simpler per-user ownership and consistent lock ordering. Do not deploy merely because the currently known P1 is fixed locally.
+
+
+## User communication requirement
+The product owner is not a software/computer engineer. Every chat in this project should default to plain-language explanations that let the user understand the product consequence and make informed decisions.
+
+Use this order when discussing technical work:
+1. **What happened / what we found** in normal language.
+2. **Why it matters to the product or user experience.**
+3. **What we are doing about it.**
+4. **What remains uncertain or unproven.**
+5. **What, if anything, the user needs to decide or do.**
+
+Technical detail can follow, but should not be the primary explanation unless the user asks for it. Never assume familiarity with software-engineering concepts such as locks, race conditions, persistence, concurrency, threads, processes, caches, serialization, manifests, or dependency graphs; translate them when they matter.
