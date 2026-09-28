@@ -7,6 +7,7 @@ from fsffl.forecast.current_runtime import (
     LiveForecastSourceHealthFailure,
     NamedCurrentProjectionFetcher,
     build_current_live_forecasts,
+    replay_governed_raw_ensemble_for_state,
 )
 from fsffl.forecast.fumbles_lost_first_party import (
     FIRST_PARTY_FUMBLES_LOST_SOURCE,
@@ -634,3 +635,89 @@ def test_taxi_or_ir_partial_subject_does_not_block_simulation_consumer() -> None
     assert len(result.partial_fantasy_point_forecasts) == 1
     assert result.simulation_material_partial_player_ids == ()
     assert "partial_player_scoring_coordinates_present" not in result.simulation_authority_blockers
+
+
+
+def test_governed_raw_ensemble_replays_without_provider_reacquisition() -> None:
+    fetch_calls: list[str] = []
+
+    def fetch(provider: str, yards: float):
+        def run(season: int) -> CurrentProjectionSnapshot:
+            fetch_calls.append(provider)
+            return snapshot(provider, yards)
+        return run
+
+    original_state = state()
+    result = build_current_live_forecasts(
+        original_state,
+        fetchers=(
+            NamedCurrentProjectionFetcher("fftoday", fetch("fftoday", 4000.0)),
+            NamedCurrentProjectionFetcher("cbs", fetch("cbs", 4200.0)),
+        ),
+        clock=lambda: NOW,
+    )
+    assert sorted(fetch_calls) == ["cbs", "fftoday"]
+
+    target = original_state.model_copy(
+        update={"as_of": NOW + timedelta(minutes=10)}
+    )
+    fetch_calls.clear()
+    replayed = replay_governed_raw_ensemble_for_state(target, result)
+
+    assert fetch_calls == []
+    assert replayed.raw_ensemble == result.raw_ensemble
+    assert replayed.successful_source_ids == result.successful_source_ids
+    assert replayed.source_provenance == result.source_provenance
+    assert replayed.source_health_events == result.source_health_events
+    assert replayed.evaluation_as_of == result.evaluation_as_of
+    assert replayed.fantasy_point_forecasts[0].distribution.mean == pytest.approx(
+        result.fantasy_point_forecasts[0].distribution.mean
+    )
+
+
+def test_governed_raw_replay_rebuilds_state_bound_fumbles_lost_supplement() -> None:
+    base = state()
+    rules = base.league.rules.model_copy(
+        update={
+            "scoring": base.league.rules.scoring
+            + (ScoringRule(stat="fum_lost", points=-2.0),)
+        }
+    )
+    original_state = base.model_copy(
+        update={
+            "completed_through_week": 2,
+            "league": base.league.model_copy(update={"rules": rules}),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+    original = build_current_live_forecasts(
+        original_state,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=_fake_fumbles_lost_supplement,
+    )
+    assert (
+        original.fumbles_lost_supplement_league_state_id
+        == original_state.state_id
+    )
+
+    target = original_state.model_copy(
+        update={"as_of": NOW + timedelta(minutes=10)}
+    )
+    replayed = replay_governed_raw_ensemble_for_state(
+        target,
+        original,
+        fumbles_lost_supplement_builder=_fake_fumbles_lost_supplement,
+    )
+
+    assert replayed.raw_ensemble == original.raw_ensemble
+    assert replayed.fumbles_lost_supplement_league_state_id == target.state_id
+    assert replayed.fumbles_lost_supplement_authority_fingerprint
+    assert (
+        replayed.fumbles_lost_supplement_authority_fingerprint
+        != original.fumbles_lost_supplement_authority_fingerprint
+    )
+    assert replayed.fumbles_lost_supplement_failure is None

@@ -7,7 +7,11 @@ from dataclasses import dataclass
 from threading import RLock
 from typing import Callable
 
-from fsffl.forecast.current_runtime import LiveForecastRuntimeResult, build_current_live_forecasts
+from fsffl.forecast.current_runtime import (
+    LiveForecastRuntimeResult,
+    build_current_live_forecasts,
+    replay_governed_raw_ensemble_for_state,
+)
 from fsffl.forecast.fumbles_lost_first_party import (
     FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
 )
@@ -218,6 +222,38 @@ def default_live_forecast_loader(
         uncertainty_ready=uncertainty_ready,
         runtime_result=result,
         evidence_basis="live_full_season",
+    )
+
+
+def replay_live_forecast_evidence_for_state(
+    league_state: LeagueState,
+    evidence: LiveForecastEvidence,
+) -> LiveForecastEvidence:
+    """Re-score preserved governed raw evidence for a compatible exact State."""
+
+    result = replay_governed_raw_ensemble_for_state(
+        league_state,
+        evidence.runtime_result,
+    )
+    uncertainty_ready = (
+        bool(result.fantasy_point_forecasts)
+        and not result.simulation_authority_blockers
+        and all(
+            observation.distribution.stddev > 0
+            for observation in result.fantasy_point_forecasts
+        )
+    )
+    return LiveForecastEvidence(
+        raw_forecasts=result.raw_ensemble,
+        league_scored_forecasts=(
+            result.fantasy_point_forecasts
+            + result.fantasy_regular_season_forecasts
+        ),
+        successful_source_ids=result.successful_source_ids,
+        failed_sources=result.failed_sources,
+        uncertainty_ready=uncertainty_ready,
+        runtime_result=result,
+        evidence_basis=evidence.evidence_basis,
     )
 
 

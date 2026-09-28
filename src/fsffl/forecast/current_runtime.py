@@ -123,6 +123,162 @@ class LiveForecastRuntimeResult(FrozenModel):
     model_version: str = "next2-current-runtime-v9:first-party-fumbles-lost"
 
 
+def replay_governed_raw_ensemble_for_state(
+    league_state: LeagueState,
+    prior_result: LiveForecastRuntimeResult,
+    *,
+    fumbles_lost_supplement_builder: FumblesLostSupplementBuilder | None = None,
+) -> LiveForecastRuntimeResult:
+    """Replay governed raw Forecast truth under a compatible current State.
+
+    This path performs no provider projection acquisition. It is valid only after
+    the caller proves the old and new States share the same Forecast input
+    fingerprint. Provider provenance/source-health evidence is preserved exactly;
+    State-bound scoring and the first-party FUMBLES_LOST supplement are rebuilt for
+    the target State.
+    """
+
+    raw_ensemble = prior_result.raw_ensemble
+    if not raw_ensemble:
+        raise ValueError("governed raw Forecast replay requires a non-empty ensemble")
+    if len(set(prior_result.successful_source_ids)) < prior_result.coverage.minimum_independent_sources:
+        raise ValueError("governed raw Forecast replay lacks required independent sources")
+    if prior_result.evaluation_as_of > league_state.as_of:
+        raise ValueError("replayed Forecast evidence cannot postdate canonical State")
+    if any(item.as_of > league_state.as_of for item in raw_ensemble):
+        raise ValueError("replayed raw Forecast observation cannot postdate canonical State")
+
+    fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = None
+    fumbles_lost_failure: str | None = None
+    supplemental_observations: tuple[ForecastObservation, ...] = ()
+    if league_consumes_fumbles_lost(league_state.league.rules):
+        builder = fumbles_lost_supplement_builder
+        if builder is None:
+            builder = lambda state, observations: build_first_party_fumbles_lost_supplement(
+                state,
+                base_observations=observations,
+            )
+        try:
+            fumbles_lost_supplement = builder(league_state, raw_ensemble)
+            if fumbles_lost_supplement.league_state_id != league_state.state_id:
+                raise ValueError(
+                    "first-party FUMBLES_LOST supplement does not match canonical State"
+                )
+            supplemental_observations = fumbles_lost_supplement.observations
+        except Exception as exc:
+            # The exact material coordinate stays fail-closed. Replaying governed
+            # raw evidence must never turn a supplement failure into a silent zero.
+            fumbles_lost_failure = f"{type(exc).__name__}: {exc}"
+
+    scoring = derive_league_scoring_result(
+        raw_ensemble,
+        rules=league_state.league.rules,
+        supplemental_observations=supplemental_observations,
+        source="fsffl:live_league_scored",
+        model_version="next2-current-runtime-v9:first-party-fumbles-lost",
+    )
+    fantasy_points = (
+        apply_empirical_season_fantasy_point_uncertainty(
+            scoring.authoritative_forecasts
+        )
+        if scoring.authoritative_forecasts
+        else ()
+    )
+    fantasy_regular_season = (
+        derive_fantasy_regular_season_forecasts(league_state, fantasy_points)
+        if league_state.matchups and fantasy_points
+        else ()
+    )
+    active_simulation_player_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
+    }
+    simulation_material_partial_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in scoring.partial_forecasts
+                if item.player_id in active_simulation_player_ids
+            }
+        )
+    )
+    simulation_blockers = tuple(
+        sorted(
+            {
+                reason
+                for family in scoring.family_coverage
+                if family.blocks_full_downstream_authority
+                for reason in family.reason_codes
+            }
+            | (
+                {"partial_player_scoring_coordinates_present"}
+                if simulation_material_partial_player_ids
+                else set()
+            )
+        )
+    )
+    return LiveForecastRuntimeResult(
+        raw_ensemble=raw_ensemble,
+        fantasy_point_forecasts=fantasy_points,
+        partial_fantasy_point_forecasts=scoring.partial_forecasts,
+        league_scoring_coverage=scoring.coverage,
+        family_coverage=scoring.family_coverage,
+        simulation_authority_blockers=simulation_blockers,
+        fantasy_regular_season_forecasts=fantasy_regular_season,
+        coverage=prior_result.coverage,
+        successful_source_ids=prior_result.successful_source_ids,
+        failed_sources=prior_result.failed_sources,
+        evaluation_as_of=prior_result.evaluation_as_of,
+        source_provenance=prior_result.source_provenance,
+        source_health_events=prior_result.source_health_events,
+        fumbles_lost_supplement_authority_fingerprint=(
+            fumbles_lost_supplement.authority_fingerprint
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        fumbles_lost_supplement_player_count=(
+            len(fumbles_lost_supplement.observations)
+            if fumbles_lost_supplement is not None
+            else 0
+        ),
+        fumbles_lost_subject_universe_player_count=(
+            len(fumbles_lost_supplement.subject_universe_player_ids)
+            if fumbles_lost_supplement is not None
+            else 0
+        ),
+        fumbles_lost_provider_absent_player_ids=(
+            fumbles_lost_supplement.provider_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_frozen_prior_absent_player_ids=(
+            fumbles_lost_supplement.frozen_prior_absent_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_omitted_player_ids=(
+            fumbles_lost_supplement.omitted_player_ids
+            if fumbles_lost_supplement is not None
+            else ()
+        ),
+        fumbles_lost_supplement_failure=fumbles_lost_failure,
+        fumbles_lost_supplement_model_version=(
+            FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        fumbles_lost_supplement_league_state_id=(
+            fumbles_lost_supplement.league_state_id
+            if fumbles_lost_supplement is not None
+            else None
+        ),
+        simulation_material_partial_player_ids=simulation_material_partial_player_ids,
+        first_party_fumbles_lost_supplement=fumbles_lost_supplement,
+    )
+
+
 def default_current_projection_fetchers() -> tuple[NamedCurrentProjectionFetcher, ...]:
     razzball = RazzballSeasonProjectionSource()
     fftoday = FFTodayLiveProjectionSource()

@@ -279,20 +279,14 @@ def persist_runtime_snapshot(
             selected_team_id=selected_team_id,
         )
 
-def restore_state_bound_intelligence(
+def restore_state_bound_forecast(
     store: PersistenceStore,
     *,
     league_state: LeagueState,
-) -> tuple[
-    "LiveForecastEvidence | None",
-    "LiveSimulationAnalyticsResult | None",
-    "CurrentMarketValueRuntimeResult | None",
-]:
-    """Load only artifacts proven compatible with this exact canonical State."""
+) -> "LiveForecastEvidence | None":
+    """Load only current-contract Forecast evidence bound to one exact State."""
 
     forecast = None
-    simulation = None
-    values = None
     forecast_record = store.get_latest_reusable_artifact(
         artifact_kind=FORECAST_ARTIFACT_KIND,
         scope_kind=LEAGUE_SCOPE_KIND,
@@ -322,17 +316,45 @@ def restore_state_bound_intelligence(
                 )
                 == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
             )
+            supplement_matches_state = (
+                getattr(
+                    candidate_forecast.runtime_result,
+                    "fumbles_lost_supplement_league_state_id",
+                    None,
+                )
+                == league_state.state_id
+            )
             if (
                 not requires_first_party_fumbles_lost
                 or (
                     has_first_party_fumbles_lost
                     and current_supplement_contract
+                    and supplement_matches_state
                 )
             ):
                 forecast = candidate_forecast
         except (TypeError, ValueError):
             forecast = None
+    return forecast
 
+
+def restore_state_bound_intelligence(
+    store: PersistenceStore,
+    *,
+    league_state: LeagueState,
+) -> tuple[
+    "LiveForecastEvidence | None",
+    "LiveSimulationAnalyticsResult | None",
+    "CurrentMarketValueRuntimeResult | None",
+]:
+    """Load only artifacts proven compatible with this exact canonical State."""
+
+    forecast = restore_state_bound_forecast(
+        store,
+        league_state=league_state,
+    )
+    simulation = None
+    values = None
     if forecast is not None:
         simulation_record = store.get_latest_reusable_artifact(
             artifact_kind=SIMULATION_ARTIFACT_KIND,

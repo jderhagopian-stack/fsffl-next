@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from time import monotonic, sleep
 
@@ -904,3 +905,115 @@ def test_partial_current_restore_migrates_legacy_served_identity_into_league_sco
     migrated_state = LeagueState.model_validate(migrated[0].payload["league_state"])
     assert migrated_state.state_id == last_good.state_id
     assert migrated[0].payload["selected_team_id"] == "t2"
+
+
+
+def test_compatible_last_good_forecast_is_replayed_for_new_exact_state(
+    monkeypatch,
+) -> None:
+    persistence = MemoryPersistence()
+    base = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    consuming_rules = base.league.rules.model_copy(
+        update={"scoring": (ScoringRule(stat="fum_lost", points=-2.0),)}
+    )
+    prior = base.model_copy(
+        update={"league": base.league.model_copy(update={"rules": consuming_rules})}
+    )
+    legacy = _stale_forecast_without_first_party_fumbles_lost(prior)
+    prior_runtime = legacy.runtime_result.model_copy(
+        update={
+            "fumbles_lost_supplement_authority_fingerprint": "prior-authority",
+            "fumbles_lost_supplement_player_count": 1,
+            "fumbles_lost_supplement_model_version": FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+            "fumbles_lost_supplement_league_state_id": prior.state_id,
+        }
+    )
+    forecast = replace(legacy, runtime_result=prior_runtime)
+    value = _empty_value(prior)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="reuse-user",
+        league_state=prior,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+    )
+
+    target = prior.model_copy(
+        update={"as_of": datetime(2026, 9, 8, 12, 10, tzinfo=UTC)}
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.set_league_state("reuse-user", target)
+    # Existing direct in-memory reuse must reject the prior State-bound supplement.
+    assert runtime.get("reuse-user").forecast_evidence is None
+
+    replay_calls: list[tuple[str, str]] = []
+
+    def replay(target_state, prior_evidence):
+        replay_calls.append((target_state.state_id, prior_evidence.model_version))
+        replay_runtime = prior_evidence.runtime_result.model_copy(
+            update={
+                "fumbles_lost_supplement_authority_fingerprint": "target-authority",
+                "fumbles_lost_supplement_league_state_id": target_state.state_id,
+            }
+        )
+        return replace(prior_evidence, runtime_result=replay_runtime)
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.replay_live_forecast_evidence_for_state",
+        replay,
+    )
+    restored = runtime.restore_exact_state_intelligence("reuse-user")
+
+    assert replay_calls == [(target.state_id, forecast.model_version)]
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == target.state_id
+    assert restored.forecast_evidence is not None
+    assert (
+        restored.forecast_evidence.runtime_result.fumbles_lost_supplement_league_state_id
+        == target.state_id
+    )
+    assert restored.simulation_analytics is None
+    assert restored.value_evidence is None
+    assert restored.intelligence_reused is True
+
+def test_compatible_forecast_replay_rejects_changed_forecast_inputs(
+    monkeypatch,
+) -> None:
+    persistence = MemoryPersistence()
+    prior = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    forecast = _stale_forecast_without_first_party_fumbles_lost(prior)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="reject-user",
+        league_state=prior,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=_empty_value(prior),
+    )
+    changed_rules = prior.league.rules.model_copy(
+        update={"scoring": (ScoringRule(stat="pass_td", points=6.0),)}
+    )
+    target = prior.model_copy(
+        update={
+            "as_of": datetime(2026, 9, 8, 12, 10, tzinfo=UTC),
+            "league": prior.league.model_copy(update={"rules": changed_rules}),
+        }
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.set_league_state("reject-user", target)
+
+    def unexpected_replay(*_args, **_kwargs):
+        raise AssertionError("changed Forecast inputs must not replay prior raw evidence")
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.replay_live_forecast_evidence_for_state",
+        unexpected_replay,
+    )
+    restored = runtime.restore_exact_state_intelligence("reject-user")
+
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == target.state_id
+    assert restored.forecast_evidence is None
+    assert restored.simulation_analytics is None
+    assert restored.value_evidence is None
