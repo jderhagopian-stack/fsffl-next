@@ -904,3 +904,7 @@ Disposition: **do not deploy/accept #282 as-is.** Implementation must invalidate
 
 ## 2026-09-28 — Management accepts in-season ROS production policy
 For 2026, current-season Forecast will use actual YTD production plus governed third-party raw-stat ROS projections, with FSFFL league scoring downstream. An FSFFL-native ROS model is a shadow Research program, not a production prerequisite. PIT ROS capture should begin immediately because weekly provider snapshots are perishable. Production ROS integration waits until the active runtime/Hodor gate closes and may be sequenced ahead of Long-Term Intrinsic deployment because it is season-critical. Controlling directive: `docs/operations/directives/20260928_IN_SEASON_ROS_FORECAST_POLICY.md`.
+
+
+## 2026-09-28 — PR #283 open; address P2 exact-fingerprint lookup before merge
+PR #283 is open and mergeable at head `d9993c7d1f552821b382f97aab811304e1afd817`. Its core P1 correction is the right direction and current CI/focused validation is green. Post-review found one P2: Simulation restore checks only the newest row for a State, so an older exact-compatible Simulation can be unnecessarily discarded if a newer mismatched Forecast fingerprint exists. Address this by querying the exact expected Simulation artifact fingerprint rather than newest-only lookup. Then merge, deploy the corrected SHA, and complete hosted FSFFL → Hodor → FSFFL acceptance without another intermediate stop.
