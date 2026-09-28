@@ -1536,3 +1536,9 @@ Do not broaden scope.
 Management no longer accepts the pattern “fix current P1 -> merge -> discover adjacent lifecycle defect.” Follow `docs/operations/directives/20260928_STABILIZATION_CLOSURE_PROTOCOL.md`.
 
 Treat the current cross-user `_publication_lock` / `_restore_lock` inversion as one symptom inside the full publication/persistence/restore/identity concurrency class. Correct the ownership/ordering cleanly (per-user publication sequencing preferred unless a global invariant requires otherwise), then run the required deterministic single-user + two-user lifecycle matrix and bounded stress. Before merge, obtain a read-only red-team of the whole lifecycle and address every concrete P1/P2 it finds. Only after whole-class proof + full CI should the corrective merge/deploy and hosted acceptance occur. Do not broaden into model semantics.
+
+
+## 2026-09-28 — PR #291 status: whole-class fix in progress, one checkpoint-coalescing CI failure
+#291 head `7bcf6121688aa49f02cd4fbd4037925ca7d8503f` implements per-user lifecycle serialization, independent user checkpoint ordering, two-user concurrency coverage, restart/interruption cases and bounded stress. Pre-merge review surfaced shared-league snapshot ordering and idle-executor retention; current branch includes follow-up handling/coverage for both.
+
+Full CI still fails 1/1795 at `test_same_state_checkpoint_queue_coalesces_to_latest_context`: durable runtime context writes contain only final `team:b`, while the historical test expects initial `None` then `team:b`. Determine the correct durability contract rather than changing the assertion mechanically. If latest-context-only coalescing is intended and restart-safe, update the test and document the invariant; if the initial State-only pointer is required for correctness, restore it without reintroducing blocking/global serialization. Then rerun the full closure matrix, full CI and pre-merge red-team before merge/deploy.
