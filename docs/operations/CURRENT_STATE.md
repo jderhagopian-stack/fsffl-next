@@ -870,3 +870,11 @@ Exact live-deploy state:
 - new instance `qvhhw`: uvicorn command launched, but no server-process/application-startup/request/hosted-acceptance logs follow.
 
 Therefore #279 has not yet been validated in production. Prior #278 acceptance timings are historical evidence only. Implementation must first restore new-instance application startup, then run hosted acceptance before physical beta testing.
+
+
+## 2026-09-28 — Primary FSFFL is testable; remaining hosted failure is Hodor Forecast source health
+Live merge `9db51f8190dd7a1a17d75987ddc685b7b459a8b2` (PR #280) shows the runtime/Market corrective working on the primary FSFFL league: cold PI ~0.5s, active PI ~2.9s, Market ~0.3s / cache-hit immediate, continuity preserved, and ~412.5 MB max observed after automatic sync.
+
+The full hosted journey still returns FAILED only because the later Hodor league-switch step cannot satisfy the governed live Forecast source-health requirement: Razzball is the sole healthy source while CBS, FFToday and NFL Fantasy are currently unusable for authoritative full-season acquisition.
+
+This is now classified as a cross-league Forecast-source availability blocker, not a reason to continue changing the primary FSFFL runtime. Bounded physical testing of the primary league may resume; do not treat Hodor/cross-league switching as accepted yet.
