@@ -343,7 +343,7 @@ def test_partial_forecast_job_completes_without_simulation_and_keeps_forecast_vi
 
     assert current is not None
     assert current["status"] == "completed"
-    assert "Forecast and current Value evidence are ready" in current["message"]
+    assert "Forecast and current Value evidence were atomically published" in current["message"]
     assert "Simulation remains unavailable" in current["message"]
     assert "separate_k_dst_forecast_authority_required" in current["message"]
     assert simulation_calls == []
@@ -539,7 +539,7 @@ def test_exact_state_reuse_skips_rebuild_loaders(monkeypatch) -> None:
 
     assert current is not None
     assert current["status"] == "completed"
-    assert "reused for this exact State" in current["message"]
+    assert "compatible governed intelligence were atomically published" in current["message"]
     assert current["forecast_ready"] is True
     assert current["simulation_ready"] is True
     assert current["value_ready"] is True
@@ -720,7 +720,7 @@ def test_manual_refresh_reuses_exact_state_bundle_on_repeated_no_change_sync(mon
     assert second.status_code == 200
     reused = _wait_completed(client)
     assert reused["status"] == "completed"
-    assert "reused for this exact State" in reused["message"]
+    assert "reused and atomically published" in reused["message"]
     assert calls == {"state": 3, "forecast": 1, "simulation": 1, "value": 1}
 
 
@@ -773,8 +773,15 @@ def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -
     switched_payload = switched.json()
     assert switched_payload["league_id"] == "sleeper:456"
     assert switched_payload["state_id"] == league_b.state_id
-    assert switched_payload["simulation_ready"] is False
-    assert switched_payload["value_ready"] is False
+    # A tiny fixture can finish the new league's atomic generation before the
+    # connect response is serialized. Either pre-publication or fully-published B
+    # is valid; the prior A generation must never leak across the league boundary.
+    if switched_payload["simulation_ready"]:
+        assert switched_payload["value_ready"] is True
+        assert switched_payload["publication_generation_id"] != before["publication_generation_id"]
+    else:
+        assert switched_payload["value_ready"] is False
+        assert switched_payload["publication_generation_id"] is None
 
     completed = _wait_completed(client)
     assert completed["status"] == "completed"
@@ -1005,6 +1012,8 @@ def test_product_capability_failure_phase_is_reported_separately_from_core_autho
     assert terminal["failure_phase"] == "building_intrinsic"
     status = client.get("/api/intelligence/status").json()
     assert status["blocked_stage"] == "intrinsic"
-    # Core evidence completed before the separately owned product capability failed.
-    assert status["forecast_raw_observation_count"] == 1
-    assert status["value_ready"] is True
+    # Core evidence may complete in the working generation, but a failed required
+    # product capability must not expose that half-built generation.
+    assert status["forecast_raw_observation_count"] == 0
+    assert status["value_ready"] is False
+    assert status["capability_readiness"]["publication"]["working_generation_active"] is False
