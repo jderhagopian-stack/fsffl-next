@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from threading import Event
+from threading import Event, Thread
 from unittest.mock import patch
 from time import monotonic, sleep
 
@@ -338,3 +338,130 @@ def test_background_job_uses_work_supplied_truthful_completion_message() -> None
         "Governed Forecast and current Value evidence are ready. "
         "Simulation remains unavailable under current Forecast authority."
     )
+
+
+
+class _BlockingLifecyclePersistence(_LifecyclePersistence):
+    def __init__(self, block_user: str):
+        super().__init__()
+        self.block_user = block_user
+        self.entered = Event()
+        self.release = Event()
+        self._blocked_once = False
+
+    def put_artifact(self, record):
+        super().put_artifact(record)
+        if (
+            not self._blocked_once
+            and record.payload.get("user_id") == self.block_user
+        ):
+            self._blocked_once = True
+            self.entered.set()
+            if not self.release.wait(timeout=2.0):
+                raise RuntimeError("test lifecycle persistence release timed out")
+
+
+def test_one_users_slow_job_persistence_does_not_block_another_users_start() -> None:
+    persistence = _BlockingLifecyclePersistence("user-a")
+    coordinator = IntelligenceJobCoordinator(
+        max_workers=2,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+    errors = []
+    a_done = Event()
+    b_done = Event()
+
+    def start_a() -> None:
+        try:
+            coordinator.start(
+                user_id="user-a",
+                league_state_id="state-a",
+                work=lambda _progress: None,
+            )
+        except Exception as exc:
+            errors.append(exc)
+        finally:
+            a_done.set()
+
+    def start_b() -> None:
+        try:
+            coordinator.start(
+                user_id="user-b",
+                league_state_id="state-b",
+                work=lambda _progress: None,
+            )
+        except Exception as exc:
+            errors.append(exc)
+        finally:
+            b_done.set()
+
+    a_thread = Thread(target=start_a, name="job-start-a")
+    a_thread.start()
+    assert persistence.entered.wait(timeout=1.0)
+
+    b_thread = Thread(target=start_b, name="job-start-b")
+    b_thread.start()
+    assert b_done.wait(timeout=0.5)
+
+    persistence.release.set()
+    a_thread.join(timeout=2.0)
+    b_thread.join(timeout=2.0)
+    assert not a_thread.is_alive()
+    assert not b_thread.is_alive()
+    assert a_done.is_set()
+    assert errors == []
+
+
+
+def test_superseded_older_job_cannot_replace_newer_durable_current_job() -> None:
+    persistence = _LifecyclePersistence()
+    coordinator = IntelligenceJobCoordinator(
+        max_workers=2,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+    old_started = Event()
+    release_old = Event()
+
+    def old_work(_progress) -> None:
+        old_started.set()
+        assert release_old.wait(timeout=2.0)
+        raise IntelligenceJobInterrupted("league_switch")
+
+    old = coordinator.start(
+        user_id="u-overlap",
+        league_state_id="state-old",
+        work=old_work,
+    )
+    assert old_started.wait(timeout=1.0)
+
+    new = coordinator.start(
+        user_id="u-overlap",
+        league_state_id="state-new",
+        work=lambda _progress: None,
+    )
+    completed = _wait_for_status(
+        coordinator,
+        user_id="u-overlap",
+        status=IntelligenceJobStatus.COMPLETED,
+    )
+    assert completed is not None
+    assert completed.job_id == new.job_id
+
+    release_old.set()
+    deadline = monotonic() + 2.0
+    while monotonic() < deadline:
+        old_row = coordinator.get(old.job_id)
+        if old_row is not None and old_row.status == IntelligenceJobStatus.INTERRUPTED:
+            break
+        sleep(0.01)
+    assert old_row is not None
+    assert old_row.status == IntelligenceJobStatus.INTERRUPTED
+
+    restarted = IntelligenceJobCoordinator(
+        max_workers=1,
+        persistence_store=persistence,  # type: ignore[arg-type]
+    )
+    recovered = restarted.current("u-overlap")
+    assert recovered is not None
+    assert recovered.job_id == new.job_id
+    assert recovered.status == IntelligenceJobStatus.COMPLETED

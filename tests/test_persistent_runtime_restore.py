@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from time import monotonic, sleep
-from threading import Event, Thread
+from threading import Event, RLock, Thread
 
 from fsffl.forecast.current_runtime import (
     LiveForecastRuntimeResult,
@@ -31,6 +31,10 @@ from fsffl.persistence.session import (
     restore_state_bound_intelligence, restore_state_bound_raw_forecast_evidence,
 )
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
+from fsffl.product.presentation_continuity import (
+    PresentationContinuityStore,
+    REQUIRED_PRESENTATION_SURFACES,
+)
 from fsffl.product.runtime import LiveForecastEvidence
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.state.models import (
@@ -2083,3 +2087,709 @@ def test_conditional_team_switch_requires_active_working_generation() -> None:
     assert working.selected_team_id == "t2"
     assert selected.selected_team_id == "t1"
     assert runtime.working_generation_active("conditional-team-switch") is False
+
+
+class MultiUserLifecyclePersistence(MemoryPersistence):
+    """Thread-safe in-memory persistence with independent per-user runtime rows."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.users = {}
+        self.leagues = {}
+        self._io_lock = RLock()
+        self.block_publication_user: str | None = None
+        self.block_publication_generation: str | None = None
+        self.publication_entered = Event()
+        self.release_publication = Event()
+        self.block_restore_user: str | None = None
+        self.restore_entered = Event()
+        self.release_restore = Event()
+        self.block_checkpoint_user: str | None = None
+        self.checkpoint_entered = Event()
+        self.release_checkpoint = Event()
+        self.block_league_state_hash: str | None = None
+        self.league_write_entered = Event()
+        self.release_league_write = Event()
+
+    def get_user_runtime_context(self, *, user_id):
+        if user_id == self.block_restore_user:
+            self.restore_entered.set()
+            if not self.release_restore.wait(timeout=3.0):
+                raise RuntimeError("test restore release timed out")
+        with self._io_lock:
+            return self.users.get(user_id)
+
+    def put_user_runtime_context(self, record):
+        if record.user_id == self.block_checkpoint_user:
+            self.checkpoint_entered.set()
+            if not self.release_checkpoint.wait(timeout=3.0):
+                raise RuntimeError("test checkpoint release timed out")
+        with self._io_lock:
+            self.users[record.user_id] = record
+
+    def get_league_snapshot(self, *, provider, league_id, season):
+        with self._io_lock:
+            return self.leagues.get((provider, league_id, season))
+
+    def put_league_snapshot(self, record):
+        if record.state_hash == self.block_league_state_hash:
+            self.league_write_entered.set()
+            if not self.release_league_write.wait(timeout=3.0):
+                raise RuntimeError("test league snapshot release timed out")
+        key = (record.provider, record.league_id, record.season)
+        with self._io_lock:
+            existing = self.leagues.get(key)
+            incoming_at = record.source_updated_at or record.recorded_at
+            existing_at = (
+                (existing.source_updated_at or existing.recorded_at)
+                if existing is not None
+                else None
+            )
+            if (
+                existing is None
+                or incoming_at > existing_at
+                or (
+                    incoming_at == existing_at
+                    and record.recorded_at >= existing.recorded_at
+                )
+            ):
+                self.leagues[key] = record
+
+    def get_team_snapshot(self, *, provider, league_id, team_id):
+        with self._io_lock:
+            return self.teams.get((provider, league_id, team_id))
+
+    def put_team_snapshot(self, record):
+        key = (record.provider, record.league_id, record.team_id)
+        with self._io_lock:
+            existing = self.teams.get(key)
+            incoming_at = record.source_updated_at or record.recorded_at
+            existing_at = (
+                (existing.source_updated_at or existing.recorded_at)
+                if existing is not None
+                else None
+            )
+            if (
+                existing is None
+                or incoming_at > existing_at
+                or (
+                    incoming_at == existing_at
+                    and record.recorded_at >= existing.recorded_at
+                )
+            ):
+                self.teams[key] = record
+
+    def get_reusable_artifact(self, key):
+        with self._io_lock:
+            return next(
+                (row for row in self.artifacts if row.key == key and row.reusable),
+                None,
+            )
+
+    def get_latest_reusable_artifact(
+        self,
+        *,
+        artifact_kind,
+        scope_kind,
+        scope_id,
+        model_version,
+    ):
+        with self._io_lock:
+            rows = [
+                row
+                for row in self.artifacts
+                if row.reusable
+                and row.key.artifact_kind == artifact_kind
+                and row.key.scope_kind == scope_kind
+                and row.key.scope_id == scope_id
+                and row.key.model_version == model_version
+            ]
+            return max(rows, key=lambda row: row.computed_at) if rows else None
+
+    def put_artifact(self, record):
+        with self._io_lock:
+            self.artifacts.append(record)
+        if (
+            record.key.artifact_kind == PUBLISHED_GENERATION_ARTIFACT_KIND
+            and self.block_publication_user is not None
+            and record.key.scope_id.startswith(
+                f"{self.block_publication_user}:"
+            )
+            and record.payload.get("publication_generation_id")
+            == self.block_publication_generation
+        ):
+            self.publication_entered.set()
+            if not self.release_publication.wait(timeout=3.0):
+                raise RuntimeError("test publication release timed out")
+
+    def append_market_value_snapshot(self, **kwargs):
+        with self._io_lock:
+            self.market.append(kwargs)
+
+
+def _league_state_for(
+    league_id: str,
+    *,
+    external_id: str,
+    as_of: datetime | None = None,
+) -> LeagueState:
+    rules = LeagueRules(
+        team_count=2,
+        roster_size=1,
+        lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
+        scoring=(),
+    )
+    return LeagueState(
+        league=League(
+            league_id=league_id,
+            name=f"Test League {external_id}",
+            season=2026,
+            rules=rules,
+            provider_refs=(
+                ProviderRef(provider="sleeper", external_id=external_id),
+            ),
+        ),
+        as_of=as_of or datetime(2026, 9, 8, 12, 0, tzinfo=UTC),
+        teams=(
+            Team(team_id="t1", league_id=league_id, display_name="One"),
+            Team(team_id="t2", league_id=league_id, display_name="Two"),
+        ),
+        team_states=(
+            TeamState(team_id="t1", roster=()),
+            TeamState(team_id="t2", roster=()),
+        ),
+        players=(),
+        player_states=(),
+    )
+
+
+def _seed_published_user(
+    persistence: MultiUserLifecyclePersistence,
+    *,
+    user_id: str,
+    state: LeagueState,
+    generation_id: str,
+    selected_team_id: str = "t2",
+) -> None:
+    persist_runtime_snapshot(
+        persistence,
+        user_id=user_id,
+        league_state=state,
+        selected_team_id=selected_team_id,
+        forecast_evidence=_stale_forecast_without_first_party_fumbles_lost(state),
+        value_evidence=_empty_value(state),
+        publication_generation_id=generation_id,
+    )
+
+
+def _join_bounded(thread: Thread, *, timeout: float = 2.0) -> None:
+    thread.join(timeout=timeout)
+    assert not thread.is_alive(), f"thread {thread.name} exceeded bounded lifecycle timeout"
+
+
+def test_two_user_final_publication_does_not_block_cold_restore() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state = _league_state()
+    _seed_published_user(
+        persistence,
+        user_id="user-a",
+        state=state,
+        generation_id="a-generation-1",
+    )
+    _seed_published_user(
+        persistence,
+        user_id="user-b",
+        state=state,
+        generation_id="b-generation-1",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.restore_user("user-a")
+    runtime.begin_working_generation("user-a", league_state=state)
+
+    persistence.block_publication_user = "user-a"
+    persistence.block_publication_generation = "a-generation-2"
+    publish_errors = []
+
+    def publish_a() -> None:
+        try:
+            runtime.publish_working_generation(
+                "user-a",
+                publication_generation_id="a-generation-2",
+            )
+        except Exception as exc:
+            publish_errors.append(exc)
+
+    publish_thread = Thread(target=publish_a, name="publish-a")
+    publish_thread.start()
+    assert persistence.publication_entered.wait(timeout=1.0)
+
+    restore_result = {}
+    restore_errors = []
+
+    def restore_b() -> None:
+        try:
+            restore_result["context"] = runtime.restore_user("user-b")
+        except Exception as exc:
+            restore_errors.append(exc)
+
+    restore_thread = Thread(target=restore_b, name="restore-b")
+    restore_thread.start()
+    _join_bounded(restore_thread, timeout=1.0)
+    assert restore_errors == []
+    assert restore_result["context"].publication_generation_id == "b-generation-1"
+
+    persistence.release_publication.set()
+    _join_bounded(publish_thread)
+    assert publish_errors == []
+    assert runtime.get("user-a").publication_generation_id == "a-generation-2"
+
+
+def test_user_a_checkpoint_wait_does_not_block_user_b_state_activation() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    state = _league_state()
+
+    persistence.block_checkpoint_user = "user-a"
+    runtime.set_league_state("user-a", state)
+    assert persistence.checkpoint_entered.wait(timeout=1.0)
+
+    wait_result = {}
+
+    def wait_a() -> None:
+        wait_result["ok"] = runtime.wait_for_checkpoint("user-a", timeout=2.5)
+
+    wait_thread = Thread(target=wait_a, name="checkpoint-wait-a")
+    wait_thread.start()
+
+    activate_errors = []
+    activate_done = Event()
+
+    def activate_b() -> None:
+        try:
+            runtime.set_league_state("user-b", state)
+        except Exception as exc:
+            activate_errors.append(exc)
+        finally:
+            activate_done.set()
+
+    activate_thread = Thread(target=activate_b, name="activate-b")
+    activate_thread.start()
+    assert activate_done.wait(timeout=0.5)
+    assert activate_errors == []
+
+    persistence.release_checkpoint.set()
+    _join_bounded(wait_thread)
+    _join_bounded(activate_thread)
+    assert wait_result["ok"] is True
+
+
+def test_simultaneous_cold_restore_is_per_user_isolated() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state = _league_state()
+    _seed_published_user(
+        persistence,
+        user_id="user-a",
+        state=state,
+        generation_id="a-generation",
+    )
+    _seed_published_user(
+        persistence,
+        user_id="user-b",
+        state=state,
+        generation_id="b-generation",
+    )
+    persistence.block_restore_user = "user-a"
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+
+    a_result = {}
+    b_result = {}
+    errors = []
+
+    def restore_a() -> None:
+        try:
+            a_result["context"] = runtime.restore_user("user-a")
+        except Exception as exc:
+            errors.append(exc)
+
+    def restore_b() -> None:
+        try:
+            b_result["context"] = runtime.restore_user("user-b")
+        except Exception as exc:
+            errors.append(exc)
+
+    a_thread = Thread(target=restore_a, name="cold-restore-a")
+    a_thread.start()
+    assert persistence.restore_entered.wait(timeout=1.0)
+    b_thread = Thread(target=restore_b, name="cold-restore-b")
+    b_thread.start()
+    _join_bounded(b_thread, timeout=1.0)
+    assert b_result["context"].publication_generation_id == "b-generation"
+
+    persistence.release_restore.set()
+    _join_bounded(a_thread)
+    assert errors == []
+    assert a_result["context"].publication_generation_id == "a-generation"
+
+
+def test_simultaneous_publication_is_per_user_isolated() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state = _league_state()
+    for user_id in ("user-a", "user-b"):
+        _seed_published_user(
+            persistence,
+            user_id=user_id,
+            state=state,
+            generation_id=f"{user_id}-generation-1",
+        )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    for user_id in ("user-a", "user-b"):
+        runtime.restore_user(user_id)
+        runtime.begin_working_generation(user_id, league_state=state)
+
+    persistence.block_publication_user = "user-a"
+    persistence.block_publication_generation = "user-a-generation-2"
+    errors = []
+
+    def publish(user_id: str) -> None:
+        try:
+            runtime.publish_working_generation(
+                user_id,
+                publication_generation_id=f"{user_id}-generation-2",
+            )
+        except Exception as exc:
+            errors.append(exc)
+
+    a_thread = Thread(target=lambda: publish("user-a"), name="publish-a")
+    a_thread.start()
+    assert persistence.publication_entered.wait(timeout=1.0)
+
+    b_thread = Thread(target=lambda: publish("user-b"), name="publish-b")
+    b_thread.start()
+    _join_bounded(b_thread, timeout=1.0)
+    assert runtime.get("user-b").publication_generation_id == "user-b-generation-2"
+
+    persistence.release_publication.set()
+    _join_bounded(a_thread)
+    assert errors == []
+    assert runtime.get("user-a").publication_generation_id == "user-a-generation-2"
+
+
+def test_user_a_team_switch_does_not_wait_for_user_b_publication() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state = _league_state()
+    for user_id in ("user-a", "user-b"):
+        _seed_published_user(
+            persistence,
+            user_id=user_id,
+            state=state,
+            generation_id=f"{user_id}-generation-1",
+        )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    for user_id in ("user-a", "user-b"):
+        runtime.restore_user(user_id)
+    runtime.begin_working_generation("user-b", league_state=state)
+
+    persistence.block_publication_user = "user-b"
+    persistence.block_publication_generation = "user-b-generation-2"
+    publish_errors = []
+
+    def publish_b() -> None:
+        try:
+            runtime.publish_working_generation(
+                "user-b",
+                publication_generation_id="user-b-generation-2",
+            )
+        except Exception as exc:
+            publish_errors.append(exc)
+
+    publish_thread = Thread(target=publish_b, name="publish-b")
+    publish_thread.start()
+    assert persistence.publication_entered.wait(timeout=1.0)
+
+    select_done = Event()
+    select_errors = []
+
+    def switch_a() -> None:
+        try:
+            runtime.select_team("user-a", "t1")
+        except Exception as exc:
+            select_errors.append(exc)
+        finally:
+            select_done.set()
+
+    select_thread = Thread(target=switch_a, name="team-switch-a")
+    select_thread.start()
+    assert select_done.wait(timeout=0.5)
+    assert select_errors == []
+    assert runtime.get("user-a").selected_team_id == "t1"
+
+    persistence.release_publication.set()
+    _join_bounded(select_thread)
+    _join_bounded(publish_thread)
+    assert publish_errors == []
+
+
+def test_user_a_league_switch_does_not_wait_for_user_b_cold_restore() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state_a = _league_state_for("sleeper:a", external_id="a")
+    state_a2 = _league_state_for("sleeper:a2", external_id="a2")
+    state_b = _league_state_for("sleeper:b", external_id="b")
+    _seed_published_user(
+        persistence,
+        user_id="user-b",
+        state=state_b,
+        generation_id="b-generation",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.set_league_state("user-a", state_a)
+    assert runtime.wait_for_checkpoint("user-a", timeout=2.0)
+
+    persistence.block_restore_user = "user-b"
+    restore_errors = []
+
+    def restore_b() -> None:
+        try:
+            runtime.restore_user("user-b")
+        except Exception as exc:
+            restore_errors.append(exc)
+
+    restore_thread = Thread(target=restore_b, name="restore-b")
+    restore_thread.start()
+    assert persistence.restore_entered.wait(timeout=1.0)
+
+    switch_done = Event()
+    switch_errors = []
+
+    def switch_a() -> None:
+        try:
+            runtime.set_league_state("user-a", state_a2)
+        except Exception as exc:
+            switch_errors.append(exc)
+        finally:
+            switch_done.set()
+
+    switch_thread = Thread(target=switch_a, name="league-switch-a")
+    switch_thread.start()
+    assert switch_done.wait(timeout=0.5)
+    assert switch_errors == []
+    assert runtime.get("user-a").league_state.league.league_id == "sleeper:a2"
+
+    persistence.release_restore.set()
+    _join_bounded(switch_thread)
+    _join_bounded(restore_thread)
+    assert restore_errors == []
+
+
+def test_interrupted_worker_cannot_attach_after_identity_change() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state = _league_state()
+    _seed_published_user(
+        persistence,
+        user_id="stale-worker",
+        state=state,
+        generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    before = runtime.restore_user("stale-worker")
+    runtime.begin_working_generation("stale-worker", league_state=state)
+    runtime.select_team("stale-worker", "t1")
+
+    try:
+        runtime.set_forecast_evidence(
+            "stale-worker",
+            before.forecast_evidence,
+            refreshed_league_state=state,
+            require_working_generation=True,
+        )
+    except ValueError as exc:
+        assert "no longer active" in str(exc)
+    else:
+        raise AssertionError("stale worker mutation must fail after identity change")
+
+    current = runtime.get("stale-worker")
+    assert current.selected_team_id == "t1"
+    assert current.publication_generation_id is None
+    assert runtime.wait_for_checkpoint("stale-worker", timeout=2.0)
+
+
+def test_crash_after_presentation_build_before_durable_publication_restores_prior_generation() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state = _league_state()
+    _seed_published_user(
+        persistence,
+        user_id="presentation-crash",
+        state=state,
+        generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("presentation-crash")
+    assert restored.publication_generation_id == "generation-a"
+    runtime.begin_working_generation("presentation-crash", league_state=state)
+    working = runtime.working_context("presentation-crash")
+
+    continuity = PresentationContinuityStore(persistence)
+    promoted = continuity.promote(
+        user_id="presentation-crash",
+        runtime=working,
+        builders=tuple(
+            (
+                surface,
+                lambda surface=surface: {
+                    "surface": surface,
+                    "league_state_id": state.state_id,
+                },
+            )
+            for surface in REQUIRED_PRESENTATION_SURFACES
+        ),
+    )
+    assert promoted is not None
+    assert promoted.publication_generation_id != "generation-a"
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("presentation-crash")
+    assert after_restart.publication_generation_id == "generation-a"
+    assert after_restart.league_state.state_id == state.state_id
+
+
+def test_bounded_repeated_two_user_publication_stress() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state = _league_state()
+    for user_id in ("stress-a", "stress-b"):
+        _seed_published_user(
+            persistence,
+            user_id=user_id,
+            state=state,
+            generation_id=f"{user_id}-generation-0",
+        )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    for user_id in ("stress-a", "stress-b"):
+        runtime.restore_user(user_id)
+
+    for index in range(20):
+        for user_id in ("stress-a", "stress-b"):
+            runtime.begin_working_generation(user_id, league_state=state)
+
+        start = Event()
+        errors = []
+
+        def publish(user_id: str) -> None:
+            try:
+                if not start.wait(timeout=1.0):
+                    raise RuntimeError("stress start gate timed out")
+                runtime.publish_working_generation(
+                    user_id,
+                    publication_generation_id=f"{user_id}-generation-{index + 1}",
+                )
+            except Exception as exc:
+                errors.append(exc)
+
+        a_thread = Thread(target=lambda: publish("stress-a"), name=f"stress-a-{index}")
+        b_thread = Thread(target=lambda: publish("stress-b"), name=f"stress-b-{index}")
+        a_thread.start()
+        b_thread.start()
+        start.set()
+        _join_bounded(a_thread)
+        _join_bounded(b_thread)
+        assert errors == []
+        assert (
+            runtime.get("stress-a").publication_generation_id
+            == f"stress-a-generation-{index + 1}"
+        )
+        assert (
+            runtime.get("stress-b").publication_generation_id
+            == f"stress-b-generation-{index + 1}"
+        )
+
+
+
+def test_stale_job_cleanup_cannot_abort_newer_working_generation() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    state_a = _league_state_for("sleeper:cleanup-a", external_id="cleanup-a")
+    state_b = _league_state_for("sleeper:cleanup-b", external_id="cleanup-b")
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+
+    runtime.set_league_state("cleanup-user", state_a)
+    old_generation = runtime.league_generation("cleanup-user")
+    runtime.begin_working_generation("cleanup-user", league_state=state_a)
+
+    runtime.set_league_state("cleanup-user", state_b)
+    new_generation = runtime.league_generation("cleanup-user")
+    assert new_generation != old_generation
+    runtime.begin_working_generation("cleanup-user", league_state=state_b)
+
+    runtime.abort_working_generation_if_generation(
+        "cleanup-user",
+        expected_generation=old_generation,
+    )
+
+    assert runtime.working_generation_active("cleanup-user") is True
+    assert runtime.working_context("cleanup-user").league_state.state_id == state_b.state_id
+
+
+
+def test_delayed_older_cross_user_checkpoint_cannot_regress_shared_league_snapshot() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    old = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    )
+    new = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
+    )
+    _seed_published_user(
+        persistence,
+        user_id="snapshot-a",
+        state=old,
+        generation_id="snapshot-a-generation",
+    )
+    _seed_published_user(
+        persistence,
+        user_id="snapshot-b",
+        state=old,
+        generation_id="snapshot-b-generation",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.restore_user("snapshot-a")
+    runtime.restore_user("snapshot-b")
+
+    persistence.block_league_state_hash = old.state_id
+    runtime.set_league_state("snapshot-a", old)
+    assert persistence.league_write_entered.wait(timeout=1.0)
+
+    runtime.set_league_state("snapshot-b", new)
+    assert runtime.wait_for_checkpoint("snapshot-b", timeout=2.0)
+
+    persistence.release_league_write.set()
+    assert runtime.wait_for_checkpoint("snapshot-a", timeout=2.0)
+
+    shared = persistence.get_league_snapshot(
+        provider="sleeper",
+        league_id=old.league.league_id,
+        season=old.league.season,
+    )
+    assert shared is not None
+    assert shared.state_hash == new.state_id
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored_b = restarted.restore_user("snapshot-b")
+    assert restored_b.league_state is not None
+    assert restored_b.league_state.state_id == new.state_id
+
+
+def test_idle_checkpoint_executor_is_retired_after_latest_write() -> None:
+    persistence = MultiUserLifecyclePersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    state = _league_state()
+    runtime.set_league_state("retire-user", state)
+    assert runtime.wait_for_checkpoint("retire-user", timeout=2.0)
+
+    deadline = monotonic() + 1.0
+    while monotonic() < deadline:
+        with runtime._checkpoint_executor_registry_lock:
+            if "retire-user" not in runtime._checkpoint_executors:
+                break
+        sleep(0.01)
+
+    with runtime._checkpoint_executor_registry_lock:
+        assert "retire-user" not in runtime._checkpoint_executors

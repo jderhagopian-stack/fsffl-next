@@ -98,7 +98,15 @@ class PostgresPersistenceStore(PersistenceStore):
                      state_hash=excluded.state_hash,
                      payload=excluded.payload,
                      source_updated_at=excluded.source_updated_at,
-                     recorded_at=excluded.recorded_at""",
+                     recorded_at=excluded.recorded_at
+                   where
+                     coalesce(excluded.source_updated_at, excluded.recorded_at)
+                       > coalesce(fsffl.league_snapshot.source_updated_at, fsffl.league_snapshot.recorded_at)
+                     or (
+                       coalesce(excluded.source_updated_at, excluded.recorded_at)
+                         = coalesce(fsffl.league_snapshot.source_updated_at, fsffl.league_snapshot.recorded_at)
+                       and excluded.recorded_at >= fsffl.league_snapshot.recorded_at
+                     )""",
                 (
                     record.provider,
                     record.league_id,
@@ -132,7 +140,15 @@ class PostgresPersistenceStore(PersistenceStore):
                      state_hash=excluded.state_hash,
                      payload=excluded.payload,
                      source_updated_at=excluded.source_updated_at,
-                     recorded_at=excluded.recorded_at""",
+                     recorded_at=excluded.recorded_at
+                   where
+                     coalesce(excluded.source_updated_at, excluded.recorded_at)
+                       > coalesce(fsffl.team_snapshot.source_updated_at, fsffl.team_snapshot.recorded_at)
+                     or (
+                       coalesce(excluded.source_updated_at, excluded.recorded_at)
+                         = coalesce(fsffl.team_snapshot.source_updated_at, fsffl.team_snapshot.recorded_at)
+                       and excluded.recorded_at >= fsffl.team_snapshot.recorded_at
+                     )""",
                 (
                     record.provider,
                     record.league_id,

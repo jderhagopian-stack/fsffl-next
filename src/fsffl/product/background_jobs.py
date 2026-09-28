@@ -124,6 +124,8 @@ class IntelligenceJobCoordinator:
         if max_records < 4:
             raise ValueError("max_records must be at least 4")
         self._lock = RLock()
+        self._user_lock_registry = RLock()
+        self._user_locks: dict[str, RLock] = {}
         self._persistence = persistence_store
         self._max_records = int(max_records)
         self._jobs: dict[str, IntelligenceJob] = {}
@@ -131,6 +133,14 @@ class IntelligenceJobCoordinator:
         self._job_started_monotonic: dict[str, float] = {}
         self._phase_started_monotonic: dict[str, float] = {}
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="fsffl-intelligence")
+
+    def _user_lock_for(self, user_id: str) -> RLock:
+        with self._user_lock_registry:
+            lock = self._user_locks.get(user_id)
+            if lock is None:
+                lock = RLock()
+                self._user_locks[user_id] = lock
+            return lock
 
     def get(self, job_id: str) -> IntelligenceJob | None:
         with self._lock:
@@ -236,7 +246,10 @@ class IntelligenceJobCoordinator:
 
     def start(self, *, user_id: str, league_state_id: str, work: JobWork) -> IntelligenceJob:
         now = datetime.now(UTC)
-        with self._lock:
+        # Same-user starts serialize, but persistence restore/write never runs while
+        # the process-wide job map lock is held. One user's slow durable lifecycle
+        # record therefore cannot stall another user's refresh lifecycle.
+        with self._user_lock_for(user_id):
             current = self.current(user_id)
             if (
                 current is not None
@@ -245,37 +258,39 @@ class IntelligenceJobCoordinator:
             ):
                 return current
 
-            terminal = sorted(
-                (
-                    item
-                    for item in self._jobs.values()
-                    if item.status in {
-                        IntelligenceJobStatus.COMPLETED,
-                        IntelligenceJobStatus.FAILED,
-                        IntelligenceJobStatus.INTERRUPTED,
-                    }
-                    and self._current_by_user.get(item.user_id) != item.job_id
-                ),
-                key=lambda item: item.updated_at,
-            )
-            while len(self._jobs) >= self._max_records and terminal:
-                stale = terminal.pop(0)
-                self._jobs.pop(stale.job_id, None)
-                self._job_started_monotonic.pop(stale.job_id, None)
-                self._phase_started_monotonic.pop(stale.job_id, None)
+            with self._lock:
+                terminal = sorted(
+                    (
+                        item
+                        for item in self._jobs.values()
+                        if item.status in {
+                            IntelligenceJobStatus.COMPLETED,
+                            IntelligenceJobStatus.FAILED,
+                            IntelligenceJobStatus.INTERRUPTED,
+                        }
+                        and self._current_by_user.get(item.user_id) != item.job_id
+                    ),
+                    key=lambda item: item.updated_at,
+                )
+                while len(self._jobs) >= self._max_records and terminal:
+                    stale = terminal.pop(0)
+                    self._jobs.pop(stale.job_id, None)
+                    self._job_started_monotonic.pop(stale.job_id, None)
+                    self._phase_started_monotonic.pop(stale.job_id, None)
 
-            job = IntelligenceJob(
-                job_id=f"intelligence:{uuid4().hex}",
-                user_id=user_id,
-                league_state_id=league_state_id,
-                status=IntelligenceJobStatus.QUEUED,
-                phase=IntelligenceJobPhase.QUEUED,
-                message="Intelligence refresh queued on the server.",
-                created_at=now,
-                updated_at=now,
-            )
-            self._jobs[job.job_id] = job
-            self._current_by_user[user_id] = job.job_id
+                job = IntelligenceJob(
+                    job_id=f"intelligence:{uuid4().hex}",
+                    user_id=user_id,
+                    league_state_id=league_state_id,
+                    status=IntelligenceJobStatus.QUEUED,
+                    phase=IntelligenceJobPhase.QUEUED,
+                    message="Intelligence refresh queued on the server.",
+                    created_at=now,
+                    updated_at=now,
+                )
+                self._jobs[job.job_id] = job
+                self._current_by_user[user_id] = job.job_id
+
             self._persist(job)
             self._executor.submit(self._run, job.job_id, work)
             return job
@@ -330,17 +345,23 @@ class IntelligenceJobCoordinator:
                 total_elapsed_seconds=total_elapsed,
             )
             self._jobs[job_id] = updated
+            is_current = self._current_by_user.get(updated.user_id) == job_id
+
+        # A superseded older job may finish after its replacement. It remains
+        # observable in-process, but must not become the durable "current job" merely
+        # because its terminal timestamp is newer than the replacement job's.
+        if is_current:
             self._persist(updated)
-            if current.status != updated.status or current.phase != updated.phase:
-                _logger.info(
-                    "FSFFL intelligence lifecycle transition job=%s user=%s state=%s status=%s phase=%s",
-                    updated.job_id,
-                    updated.user_id,
-                    updated.league_state_id,
-                    updated.status.value,
-                    updated.phase.value,
-                )
-            return updated
+        if current.status != updated.status or current.phase != updated.phase:
+            _logger.info(
+                "FSFFL intelligence lifecycle transition job=%s user=%s state=%s status=%s phase=%s",
+                updated.job_id,
+                updated.user_id,
+                updated.league_state_id,
+                updated.status.value,
+                updated.phase.value,
+            )
+        return updated
 
     def _log_final_timing(self, job: IntelligenceJob) -> None:
         phase_text = " ".join(

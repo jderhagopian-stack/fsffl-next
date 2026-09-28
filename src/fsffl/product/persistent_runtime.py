@@ -58,11 +58,16 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         super().__init__()
         self._persistence = persistence_store if persistence_store is not None else persistence_store_from_env()
         self._state_history = state_snapshot_store
-        self._restore_lock = RLock()
         self._restore_attempted: set[str] = set()
-        self._checkpoint_executor = ThreadPoolExecutor(
+        # Each active user owns one ordered checkpoint worker, but idle workers are
+        # retired as soon as that user's latest queued checkpoint finishes. This
+        # preserves strict per-user write order without retaining one thread forever
+        # for every user that has ever touched the process.
+        self._checkpoint_executor_registry_lock = RLock()
+        self._checkpoint_executors: dict[str, ThreadPoolExecutor] = {}
+        self._state_history_executor = ThreadPoolExecutor(
             max_workers=1,
-            thread_name_prefix="fsffl-persist",
+            thread_name_prefix="fsffl-state-history",
         )
         self._checkpoint_futures: dict[str, Future[bool]] = {}
         self._checkpoint_state_ids: dict[str, str] = {}
@@ -81,7 +86,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             "target_league_id": league_state.league.league_id,
             "target_state_id": league_state.state_id,
         }
-        self._forecast_replay_decisions[user_id] = payload
+        with self._lock:
+            self._forecast_replay_decisions[user_id] = payload
         if self._persistence is not None:
             try:
                 persist_forecast_replay_decision(
@@ -114,8 +120,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         current = super().get(user_id)
         if current.league_state is None:
             return None
-        cached = self._forecast_replay_decisions.get(user_id)
-        if cached is not None and cached.get("target_state_id") == current.league_state.state_id:
+        state_id = current.league_state.state_id
+        with self._lock:
+            cached = self._forecast_replay_decisions.get(user_id)
+        if cached is not None and cached.get("target_state_id") == state_id:
             return dict(cached)
         if self._persistence is None:
             return None
@@ -129,12 +137,20 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             _logger.warning(
                 "FSFFL Forecast replay decision restore failed user=%s state=%s error=%s",
                 user_id,
-                current.league_state.state_id,
+                state_id,
                 exc,
             )
             return None
+
+        # The persistence read is deliberately outside lifecycle mutation locks so
+        # ordinary diagnostics stay nonblocking. Revalidate State before exposing it;
+        # a concurrent team/league/State change must never surface a stale decision.
+        after = super().get(user_id)
+        if after.league_state is None or after.league_state.state_id != state_id:
+            return None
         if restored is not None:
-            self._forecast_replay_decisions[user_id] = restored
+            with self._lock:
+                self._forecast_replay_decisions[user_id] = restored
             return dict(restored)
         return None
 
@@ -150,10 +166,35 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         except Exception as exc:  # history retention must also fail open
             _logger.warning("FSFFL State history checkpoint failed league=%s error=%s", league_state.league.league_id, exc)
 
+    def _checkpoint_executor_for(self, user_id: str) -> ThreadPoolExecutor:
+        with self._checkpoint_executor_registry_lock:
+            executor = self._checkpoint_executors.get(user_id)
+            if executor is None:
+                executor = ThreadPoolExecutor(
+                    max_workers=1,
+                    thread_name_prefix=f"fsffl-persist-{user_id[:16]}",
+                )
+                self._checkpoint_executors[user_id] = executor
+            return executor
+
+    def _retire_checkpoint_executor(
+        self,
+        user_id: str,
+        completed: Future[bool],
+    ) -> None:
+        executor = None
+        with self.lifecycle_operation(user_id):
+            if self._checkpoint_futures.get(user_id) is not completed:
+                return
+            with self._checkpoint_executor_registry_lock:
+                executor = self._checkpoint_executors.pop(user_id, None)
+        if executor is not None:
+            executor.shutdown(wait=False)
+
     def _checkpoint_state_history_async(self, league_state) -> None:
         if self._state_history is None:
             return
-        self._checkpoint_executor.submit(self._persist_state_history, league_state)
+        self._state_history_executor.submit(self._persist_state_history, league_state)
 
     def _persist_context(self, user_id: str, context: UserRuntimeContext) -> bool:
         if context.league_state is None:
@@ -202,15 +243,35 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             self._persistence is None and self._state_history is None
         ):
             return None
-        # One worker preserves mutation order. Within the same exact State, a newer
-        # context subsumes an older queued checkpoint (State -> Forecast -> Simulation
-        # -> Value), so cancel queued superseded work before appending the latest
-        # snapshot. A running checkpoint is never interrupted, and cross-State work is
-        # never cancelled: prior-state durability must remain intact across switches.
+        # Each user owns a single-thread checkpoint queue. Within the same exact
+        # State, a newer context subsumes an older queued checkpoint (State ->
+        # Forecast -> Simulation -> Value), so cancel queued superseded work before
+        # appending the latest snapshot. Running work and cross-State work are never
+        # interrupted; different users use different queues.
         state_id = context.league_state.state_id
-        with self._restore_lock:
+        with self.lifecycle_operation(user_id):
             previous = self._checkpoint_futures.get(user_id)
             previous_state_id = self._checkpoint_state_ids.get(user_id)
+            # Publish the replacement future as the user's durability barrier before
+            # canceling a superseded queued future. Future.cancel() runs callbacks
+            # synchronously; canceling first can make that obsolete future look like
+            # the latest barrier and retire the executor while an older checkpoint is
+            # still running. That would let the replacement jump onto a new executor
+            # and overtake the running write, breaking restart ordering.
+            future = self._checkpoint_executor_for(user_id).submit(
+                self._persist_context,
+                user_id,
+                context,
+            )
+            self._checkpoint_futures[user_id] = future
+            self._checkpoint_state_ids[user_id] = state_id
+            future.add_done_callback(
+                lambda completed, uid=user_id: self._retire_checkpoint_executor(
+                    uid,
+                    completed,
+                )
+            )
+
             if (
                 previous is not None
                 and previous_state_id == state_id
@@ -222,19 +283,12 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     user_id,
                     state_id,
                 )
-            future = self._checkpoint_executor.submit(
-                self._persist_context,
-                user_id,
-                context,
-            )
-            self._checkpoint_futures[user_id] = future
-            self._checkpoint_state_ids[user_id] = state_id
         return future
 
     def wait_for_checkpoint(self, user_id: str, *, timeout: float = 30.0) -> bool:
         """Wait for the latest serialized checkpoint without moving persistence onto the request path."""
 
-        with self._restore_lock:
+        with self.lifecycle_operation(user_id):
             future = self._checkpoint_futures.get(user_id)
         if future is None:
             return True
@@ -251,7 +305,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         if self._persistence is None:
             return
         started = monotonic()
-        with self._restore_lock:
+        with self.lifecycle_operation(user_id):
             if user_id in self._restore_attempted:
                 return
             self._restore_attempted.add(user_id)
@@ -392,6 +446,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return current
 
     def set_league_state(self, user_id: str, league_state):
+        with self.lifecycle_operation(user_id):
+            return self._set_league_state_under_lifecycle(user_id, league_state)
+
+    def _set_league_state_under_lifecycle(self, user_id: str, league_state):
         current = super().get(user_id)
         previous_league_id = (
             current.league_state.league.league_id
@@ -432,8 +490,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         context = super().set_league_state(user_id, league_state)
         if previous_league_id != league_state.league.league_id:
             self._last_good_guard_users.discard(user_id)
-        with self._restore_lock:
-            self._restore_attempted.add(user_id)
+        self._restore_attempted.add(user_id)
 
         # A cold explicit activation can reach this path before restore_user(). The
         # durable target-State session owns the managed-team identity; recover it
@@ -566,13 +623,18 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return context
 
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
-        """Reuse exact-State authority, then replay compatible raw Forecast truth.
+        """Reuse exact-State authority, then replay compatible raw Forecast truth."""
 
-        Raw provider evidence compatibility is intentionally narrower than downstream
-        scoring/state compatibility. Scoring, supplements, fantasy-week derivation,
-        Simulation and Value rebuild independently for the target State.
-        """
+        with self.lifecycle_operation(user_id):
+            return self._restore_exact_state_intelligence_under_lifecycle(user_id)
 
+    def _restore_exact_state_intelligence_under_lifecycle(
+        self,
+        user_id: str,
+    ) -> UserRuntimeContext:
+        """Restore/replay while the caller owns this user's lifecycle identity."""
+
+        require_working_generation = self.working_generation_active(user_id)
         current = self.working_context(user_id)
         if self._persistence is None or current.league_state is None:
             return current
@@ -589,6 +651,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 forecast_evidence=forecast,
                 simulation_analytics=simulation,
                 value_evidence=values,
+                require_working_generation=require_working_generation,
             )
             reused = replace(restored, intelligence_reused=True)
             self._store_mutation_context(user_id, reused)
@@ -746,6 +809,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             user_id,
             replayed,
             refreshed_league_state=target_state,
+            require_working_generation=require_working_generation,
         )
         reused = replace(restored, intelligence_reused=True)
         self._store_mutation_context(user_id, reused)
@@ -783,40 +847,71 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         )
         return reused
 
-    def set_forecast_evidence(self, user_id: str, evidence, *, refreshed_league_state=None):
-        context = super().set_forecast_evidence(
-            user_id,
-            evidence,
-            refreshed_league_state=refreshed_league_state,
-        )
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
-
-    def set_simulation_analytics(self, user_id: str, result):
-        context = super().set_simulation_analytics(user_id, result)
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
-
-    def set_value_evidence(self, user_id: str, result):
-        context = super().set_value_evidence(user_id, result)
-        if (
-            context.league_state is not None
-            and context.league_state.state_id == result.league_state_id
-            and all(
-                item is not None
-                for item in (
-                    context.forecast_evidence,
-                    context.simulation_analytics,
-                    context.value_evidence,
-                )
+    def set_forecast_evidence(
+        self,
+        user_id: str,
+        evidence,
+        *,
+        refreshed_league_state=None,
+        require_working_generation: bool = False,
+    ):
+        with self.lifecycle_operation(user_id):
+            context = super().set_forecast_evidence(
+                user_id,
+                evidence,
+                refreshed_league_state=refreshed_league_state,
+                require_working_generation=require_working_generation,
             )
-        ):
-            self._last_good_guard_users.discard(user_id)
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
+
+    def set_simulation_analytics(
+        self,
+        user_id: str,
+        result,
+        *,
+        require_working_generation: bool = False,
+    ):
+        with self.lifecycle_operation(user_id):
+            context = super().set_simulation_analytics(
+                user_id,
+                result,
+                require_working_generation=require_working_generation,
+            )
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
+
+    def set_value_evidence(
+        self,
+        user_id: str,
+        result,
+        *,
+        require_working_generation: bool = False,
+    ):
+        with self.lifecycle_operation(user_id):
+            context = super().set_value_evidence(
+                user_id,
+                result,
+                require_working_generation=require_working_generation,
+            )
+            if (
+                context.league_state is not None
+                and context.league_state.state_id == result.league_state_id
+                and all(
+                    item is not None
+                    for item in (
+                        context.forecast_evidence,
+                        context.simulation_analytics,
+                        context.value_evidence,
+                    )
+                )
+            ):
+                self._last_good_guard_users.discard(user_id)
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
 
     def set_intelligence_bundle(
         self,
@@ -826,30 +921,33 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         forecast_evidence,
         simulation_analytics,
         value_evidence,
+        require_working_generation: bool = False,
     ):
-        context = super().set_intelligence_bundle(
-            user_id,
-            league_state=league_state,
-            forecast_evidence=forecast_evidence,
-            simulation_analytics=simulation_analytics,
-            value_evidence=value_evidence,
-        )
-        if (
-            context.league_state is not None
-            and context.league_state.state_id == league_state.state_id
-            and all(
-                item is not None
-                for item in (
-                    context.forecast_evidence,
-                    context.simulation_analytics,
-                    context.value_evidence,
-                )
+        with self.lifecycle_operation(user_id):
+            context = super().set_intelligence_bundle(
+                user_id,
+                league_state=league_state,
+                forecast_evidence=forecast_evidence,
+                simulation_analytics=simulation_analytics,
+                value_evidence=value_evidence,
+                require_working_generation=require_working_generation,
             )
-        ):
-            self._last_good_guard_users.discard(user_id)
-        if not self.working_generation_active(user_id):
-            self._checkpoint_async(user_id, context)
-        return context
+            if (
+                context.league_state is not None
+                and context.league_state.state_id == league_state.state_id
+                and all(
+                    item is not None
+                    for item in (
+                        context.forecast_evidence,
+                        context.simulation_analytics,
+                        context.value_evidence,
+                    )
+                )
+            ):
+                self._last_good_guard_users.discard(user_id)
+            if not self.working_generation_active(user_id):
+                self._checkpoint_async(user_id, context)
+            return context
 
     def checkpoint_working_generation(self, user_id: str) -> bool:
         """Durably checkpoint replacement artifacts without moving publication authority."""
@@ -962,6 +1060,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         user_id: str,
         publication_generation_id: str,
     ):
+        with self.lifecycle_operation(user_id):
+            return self._bind_publication_generation_id_under_lifecycle(
+                user_id,
+                publication_generation_id,
+            )
+
+    def _bind_publication_generation_id_under_lifecycle(
+        self,
+        user_id: str,
+        publication_generation_id: str,
+    ):
         context = super().bind_publication_generation_id(
             user_id,
             publication_generation_id,
@@ -993,6 +1102,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         return context
 
     def select_team(self, user_id: str, team_id: str):
-        context = super().select_team(user_id, team_id)
-        self._checkpoint_async(user_id, context)
-        return context
+        with self.lifecycle_operation(user_id):
+            context = super().select_team(user_id, team_id)
+            self._checkpoint_async(user_id, context)
+            return context
