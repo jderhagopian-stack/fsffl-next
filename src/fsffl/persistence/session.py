@@ -214,6 +214,7 @@ class DurableRuntimeSnapshot:
     served_league_state_id: str | None = None
     served_as_of: datetime | None = None
     served_team_ids: tuple[str, ...] = ()
+    served_publication_generation_id: str | None = None
     restored_from_last_good: bool = False
 
 
@@ -976,7 +977,11 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         )
     )
 
+    if selected not in {team.team_id for team in league_state.teams}:
+        selected = None
+
     served_state = None
+    served_publication_generation_id = None
     if not _terminal_bundle(forecast, simulation, values):
         candidate = restore_last_good_state_identity(
             store,
@@ -985,9 +990,15 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         )
         if candidate is not None and candidate[0].state_id != league_state.state_id:
             served_state = candidate[0]
-
-    if selected not in {team.team_id for team in league_state.teams}:
-        selected = None
+            candidate_generation_id, candidate_team_id = (
+                restore_published_generation_identity(
+                    store,
+                    user_id=user_id,
+                    league_state=served_state,
+                )
+            )
+            if candidate_team_id == selected:
+                served_publication_generation_id = candidate_generation_id
     return DurableRuntimeSnapshot(
         league_state=league_state,
         selected_team_id=selected,
@@ -1007,6 +1018,7 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
             if served_state is not None
             else ()
         ),
+        served_publication_generation_id=served_publication_generation_id,
         restored_from_last_good=restored_from_last_good,
     )
 
