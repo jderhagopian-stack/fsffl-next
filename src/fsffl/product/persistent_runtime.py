@@ -857,13 +857,13 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         *,
         publication_generation_id: str,
     ):
-        working = self.working_context(user_id)
-        if working.league_state is None:
-            raise ValueError("no working intelligence generation is available")
-        if self._persistence is not None:
-            # Presentation has already been promoted by the caller. Commit model
-            # artifacts + user pointer + generation manifest synchronously, with
-            # the manifest written last, before the foreground runtime swap.
+        def durable_commit(working: UserRuntimeContext) -> None:
+            if self._persistence is None:
+                return
+            # This callback executes inside the runtime publication lock after
+            # league/team/generation identity validation and before the in-memory
+            # swap. select_team/set_league_state therefore cannot advance identity
+            # during the durable manifest+pointer commit.
             persist_runtime_snapshot(
                 self._persistence,
                 user_id=user_id,
@@ -876,9 +876,11 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 publication_generation_id=publication_generation_id,
             )
             self._persist_state_history(working.league_state)
+
         context = super().publish_working_generation(
             user_id,
             publication_generation_id=publication_generation_id,
+            durable_commit=durable_commit,
         )
         self._last_good_guard_users.discard(user_id)
         return context
