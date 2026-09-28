@@ -56,3 +56,12 @@ def test_foreground_context_uses_cached_replay_diagnostics_only() -> None:
     assert "_cached_forecast_replay_decision(" in status
     assert 'getattr(store, "forecast_replay_decision")' not in payload
     assert 'getattr(store, "forecast_replay_decision")' not in status
+
+
+def test_first_team_handoff_resets_stale_settlement_and_starts_current_enrichment() -> None:
+    source = Path("src/fsffl/product/static/forecast_refresh.js").read_text(encoding="utf-8")
+    handoff = source.split("window.fsfflEnsureIntelligenceAfterTeamSelection=()=>{", 1)[1].split(
+        "window.addEventListener('load'", 1
+    )[0]
+    assert "fsfflSettledStateId=null" in handoff
+    assert "maybeStartIntelligenceJob({manual:false})" in handoff
