@@ -1294,10 +1294,28 @@ def create_app(
 
     @application.post("/api/select-team")
     def select_team(request: SelectTeamRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        before = store.get(user_id)
         try:
-            store.select_team(user_id, request.team_id)
+            selected = store.select_team(user_id, request.team_id)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        # A truly fresh Connect intentionally publishes State before selecting a team
+        # and therefore defers enrichment. The first explicit team choice owns the
+        # replacement generation and starts that deferred work. Do not manufacture a
+        # competing job if this request did not establish the first team identity.
+        if (
+            before.league_state is not None
+            and before.selected_team_id is None
+            and selected.selected_team_id is not None
+        ):
+            current_job = jobs.current(user_id)
+            if (
+                current_job is None
+                or current_job.status
+                not in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}
+            ):
+                _start_intelligence_reconciliation(user_id, sync_state=False)
         return runtime_context_payload(user_id)
 
     def _start_intelligence_reconciliation(
