@@ -333,6 +333,43 @@ def persist_runtime_snapshot(
             selected_team_id=selected_team_id,
         )
 
+def restore_state_bound_raw_forecast_evidence(
+    store: PersistenceStore,
+    *,
+    league_state: LeagueState,
+) -> "LiveForecastEvidence | None":
+    """Load persisted Forecast evidence for raw-ensemble replay without downstream gates.
+
+    The artifact is still exact-State and current-contract. This helper intentionally
+    does not require the prior State's scoring supplement to remain current, because
+    replay rebuilds State-specific scoring/supplement layers for the target State.
+    """
+
+    forecast_record = store.get_latest_reusable_artifact(
+        artifact_kind=FORECAST_ARTIFACT_KIND,
+        scope_kind=LEAGUE_SCOPE_KIND,
+        scope_id=league_state.state_id,
+        model_version=FORECAST_MODEL_VERSION,
+    )
+    if forecast_record is None:
+        return None
+    try:
+        candidate = decode_forecast_evidence(dict(forecast_record.payload))
+    except (TypeError, ValueError):
+        return None
+    if not candidate.raw_forecasts:
+        return None
+    minimum_sources = getattr(
+        getattr(candidate, "runtime_result", None),
+        "coverage",
+        None,
+    )
+    minimum_sources = getattr(minimum_sources, "minimum_independent_sources", 2)
+    if len(set(candidate.successful_source_ids)) < int(minimum_sources):
+        return None
+    return candidate
+
+
 def restore_state_bound_forecast(
     store: PersistenceStore,
     *,
