@@ -1535,12 +1535,20 @@ def create_app(
             try:
                 return reconcile(progress)
             except BaseException:
-                store.abort_working_generation(user_id)
+                store.abort_working_generation_if_generation(
+                    user_id,
+                    expected_generation=expected_generation,
+                )
                 raise
             finally:
-                # Successful publication removes the working generation itself.
+                # Successful publication removes the working generation itself. An
+                # interrupted older job may finish after a newer lifecycle starts, so
+                # cleanup is ownership-aware and can never erase replacement work.
                 if store.working_generation_active(user_id):
-                    store.abort_working_generation(user_id)
+                    store.abort_working_generation_if_generation(
+                        user_id,
+                        expected_generation=expected_generation,
+                    )
 
         job = jobs.start(
             user_id=user_id,
