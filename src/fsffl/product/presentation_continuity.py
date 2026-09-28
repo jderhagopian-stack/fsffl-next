@@ -378,10 +378,14 @@ class PresentationContinuityStore:
             mode = "published"
         else:
             served = runtime.served_intelligence
+            served_publication_id = str(
+                getattr(served, "publication_generation_id", None) or ""
+            ).strip()
             if (
                 served is None
                 or served.league_id != current.league.league_id
                 or served.league_state_id == current.state_id
+                or not served_publication_id
             ):
                 return None
             served_league_id = served.league_id
@@ -410,6 +414,11 @@ class PresentationContinuityStore:
             not promotion_id
             or manifest.payload.get("selected_team_id") != runtime.selected_team_id
             or (publication_id and promotion_id != publication_id)
+            or (
+                not publication_id
+                and mode == "stale_last_good"
+                and promotion_id != served_publication_id
+            )
         ):
             # A newer same-State manifest may already be durable while the previous
             # runtime generation is still published. Falling back to live composition
