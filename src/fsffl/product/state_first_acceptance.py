@@ -640,10 +640,32 @@ def run_state_first_production_acceptance(
         raise StateFirstAcceptanceError(
             "managed-team acceptance never observed an active working generation"
         )
+    pre_switch_job = jobs.current(user_id)
+    if (
+        pre_switch_job is None
+        or pre_switch_job.job_id != team_job_id
+        or pre_switch_job.status
+        not in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}
+    ):
+        raise StateFirstAcceptanceError(
+            "managed-team switch was not interleaved with active reconciliation"
+        )
 
     active_team_surface = probe_surface(
         "managed_team_during_active_reconciliation"
     )
+    if (
+        active_team_surface is not None
+        and active_team_surface.get("franchise_team_id")
+        != before_team_switch.get("selected_team_id")
+    ):
+        raise StateFirstAcceptanceError(
+            "pre-switch Franchise surface did not match the published managed team: "
+            f"{active_team_surface}"
+        )
+    # select_team shares the publication identity lock. If publication owns the
+    # critical section already, this call waits and then applies; otherwise it
+    # invalidates the active working generation before durable publication.
     store.select_team(user_id, alternate_team_id)
 
     team_terminal = None
@@ -698,14 +720,17 @@ def run_state_first_production_acceptance(
     team_surface = probe_surface(
         "managed_team_after_reconciliation_interruption"
     )
-    if (
-        team_surface is not None
-        and team_surface.get("selected_team_id") != alternate_team_id
-    ):
-        raise StateFirstAcceptanceError(
-            "managed-team surface did not follow the selected team: "
-            f"{team_surface}"
-        )
+    if team_surface is not None:
+        if team_surface.get("selected_team_id") != alternate_team_id:
+            raise StateFirstAcceptanceError(
+                "managed-team runtime surface context did not follow selection: "
+                f"{team_surface}"
+            )
+        if team_surface.get("franchise_team_id") != alternate_team_id:
+            raise StateFirstAcceptanceError(
+                "managed-team Franchise payload did not follow selection: "
+                f"{team_surface}"
+            )
     steps.append(
         {
             "label": "fsffl_managed_team_publication_interruption",
