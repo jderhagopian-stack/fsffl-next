@@ -475,7 +475,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         Simulation and Value rebuild independently for the target State.
         """
 
-        current = super().get(user_id)
+        current = self.working_context(user_id)
         if self._persistence is None or current.league_state is None:
             return current
         target_state = current.league_state
@@ -493,7 +493,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 value_evidence=values,
             )
             reused = replace(restored, intelligence_reused=True)
-            self._contexts[user_id] = reused
+            self._store_mutation_context(user_id, reused)
             self._record_forecast_replay_decision(
                 user_id,
                 league_state=target_state,
@@ -690,12 +690,14 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             evidence,
             refreshed_league_state=refreshed_league_state,
         )
-        self._checkpoint_async(user_id, context)
+        if not self.working_generation_active(user_id):
+            self._checkpoint_async(user_id, context)
         return context
 
     def set_simulation_analytics(self, user_id: str, result):
         context = super().set_simulation_analytics(user_id, result)
-        self._checkpoint_async(user_id, context)
+        if not self.working_generation_active(user_id):
+            self._checkpoint_async(user_id, context)
         return context
 
     def set_value_evidence(self, user_id: str, result):
@@ -713,7 +715,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
         ):
             self._last_good_guard_users.discard(user_id)
-        self._checkpoint_async(user_id, context)
+        if not self.working_generation_active(user_id):
+            self._checkpoint_async(user_id, context)
         return context
 
     def set_intelligence_bundle(
@@ -745,6 +748,55 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
         ):
             self._last_good_guard_users.discard(user_id)
+        if not self.working_generation_active(user_id):
+            self._checkpoint_async(user_id, context)
+        return context
+
+    def checkpoint_working_generation(self, user_id: str) -> bool:
+        """Durably checkpoint replacement artifacts without moving the user pointer."""
+
+        context = self.working_context(user_id)
+        if context.league_state is None:
+            return False
+        if self._persistence is None:
+            return True
+        try:
+            persist_runtime_snapshot(
+                self._persistence,
+                user_id=user_id,
+                league_state=context.league_state,
+                selected_team_id=context.selected_team_id,
+                forecast_evidence=context.forecast_evidence,
+                simulation_analytics=context.simulation_analytics,
+                value_evidence=context.value_evidence,
+                publish_context=False,
+            )
+            self._persist_state_history(context.league_state)
+            _logger.info(
+                "FSFFL working generation artifacts checkpointed user=%s state=%s",
+                user_id,
+                context.league_state.state_id,
+            )
+            return True
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL working generation checkpoint failed user=%s error=%s",
+                user_id,
+                exc,
+            )
+            return False
+
+    def publish_working_generation(
+        self,
+        user_id: str,
+        *,
+        publication_generation_id: str,
+    ):
+        context = super().publish_working_generation(
+            user_id,
+            publication_generation_id=publication_generation_id,
+        )
+        self._last_good_guard_users.discard(user_id)
         self._checkpoint_async(user_id, context)
         return context
 
