@@ -1579,13 +1579,12 @@ def test_same_state_forecast_replay_interruption_restart_rejects_stale_simulatio
 
     assert restored_after_restart.league_state is not None
     assert restored_after_restart.league_state.state_id == state.state_id
-    assert restored_after_restart.forecast_evidence is not None
-    assert (
-        restored_after_restart.forecast_evidence.runtime_result
-        .fumbles_lost_supplement_model_version
-        == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
-    )
+    # The replayed Forecast belonged only to the interrupted working generation.
+    # Restart restores the prior published generation, whose legacy Forecast is
+    # rejected by the current supplement contract rather than promoting replay work.
+    assert restored_after_restart.forecast_evidence is None
     assert restored_after_restart.simulation_analytics is None
+    assert restored_after_restart.value_evidence is not None
 
 
 
