@@ -1482,3 +1482,14 @@ Immediate action:
 Physical testing on live #283 shows the runtime exposes half-built same-State reconciliation to readers. Current source makes the mechanism explicit: `set_forecast_evidence()` immediately replaces the live context and clears Simulation/Value; `set_simulation_analytics()` then keeps Value absent; stale presentation continuity only serves when the served State ID differs from current State. Consequently surface availability can flicker while the global status still appears current.
 
 Stop treating `pi_history_during_active_reconciliation` as an isolated timeout. Implement `docs/operations/directives/20260928_ATOMIC_INTELLIGENCE_PUBLICATION.md`: separate working vs published intelligence generations, preserve the prior compatible published generation through same-State refresh, atomically promote the replacement only after coherent terminal checkpoint/presentation build, and bind readiness/banner semantics to the published generation. Add cross-surface generation-ID and interruption/failure regressions, then deploy and rerun full hosted acceptance. Do not broaden into model/research work.
+
+
+## 2026-09-28 — Post-#284 Work red-team: one managed-team publication race remains
+Independent read-only red-team of current main `e2b7676516dbb18ff5b5763a6d0508685c99c53b` found one concrete P2. During active reconciliation, `select_team` can change the published managed team while the working generation retains the earlier team. Finalization may persist model artifacts + published-generation manifest + user pointer before the runtime publication path rechecks the selected team and raises `managed team changed during reconciliation`. A restart can then restore publication/team state that does not match the user's latest selection.
+
+Immediate action:
+1. validate team/generation identity before writing the published manifest/pointer and protect it through durable commit + in-memory publication, or serialize/rebase publication with managed-team selection;
+2. add a deterministic interleaving regression that changes team during the commit window and proves failed/cancelled publication cannot advance restart authority or lose the latest selection;
+3. preserve all #284 atomic-publication and generation-ID behavior;
+4. merge the narrow corrective, deploy exact merge SHA, then run full hosted FSFFL → Hodor → FSFFL plus same-State/read-overlap/managed-team acceptance;
+5. do not broaden scope.
