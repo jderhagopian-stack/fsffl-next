@@ -267,3 +267,7 @@ Preferred cadence after stabilization:
 5. Physical/product smoke where the capability is user-facing.
 
 Do not let Work and the main Implementation stream modify the same authority surface concurrently. Parallelism should be by clearly separated workstream, not by overlapping code ownership.
+
+
+## Latest stabilization delta — after PR #290
+PR #290 merged as `213c95014155de698b25681244024f4a0a66aa6b` and full CI is green. The changed-State served-generation restore ordering issue is addressed. A post-merge P1 remains and is now the **only known stabilization blocker**: publication serialization is store-global and can deadlock against the store-global cold-restore lock across different users because the two paths acquire those locks in opposite order. Fix with per-user publication sequencing or a consistent lock order, add deterministic two-user concurrency coverage, then merge/deploy/hosted-accept/physical-smoke. Do not start the post-stabilization foundation program before this closes.
