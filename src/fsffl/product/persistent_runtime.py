@@ -59,11 +59,13 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self._persistence = persistence_store if persistence_store is not None else persistence_store_from_env()
         self._state_history = state_snapshot_store
         self._restore_attempted: set[str] = set()
-        # Persistence ordering is owned per user. Each user's checkpoints retain
-        # mutation order on a single worker while different users never queue behind
-        # one another. State-history retention is independent read-only bookkeeping.
-        self._checkpoint_executor_registry_lock = RLock()
-        self._checkpoint_executors: dict[str, ThreadPoolExecutor] = {}
+        # Persistence concurrency is bounded process-wide while each user's future
+        # chain preserves mutation order. This avoids both cross-user serialization
+        # and one permanently retained worker thread per user.
+        self._checkpoint_executor = ThreadPoolExecutor(
+            max_workers=4,
+            thread_name_prefix="fsffl-persist",
+        )
         self._state_history_executor = ThreadPoolExecutor(
             max_workers=1,
             thread_name_prefix="fsffl-state-history",
@@ -165,17 +167,6 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         except Exception as exc:  # history retention must also fail open
             _logger.warning("FSFFL State history checkpoint failed league=%s error=%s", league_state.league.league_id, exc)
 
-    def _checkpoint_executor_for(self, user_id: str) -> ThreadPoolExecutor:
-        with self._checkpoint_executor_registry_lock:
-            executor = self._checkpoint_executors.get(user_id)
-            if executor is None:
-                executor = ThreadPoolExecutor(
-                    max_workers=1,
-                    thread_name_prefix=f"fsffl-persist-{user_id[:16]}",
-                )
-                self._checkpoint_executors[user_id] = executor
-            return executor
-
     def _checkpoint_state_history_async(self, league_state) -> None:
         if self._state_history is None:
             return
@@ -248,11 +239,19 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     user_id,
                     state_id,
                 )
-            future = self._checkpoint_executor_for(user_id).submit(
-                self._persist_context,
-                user_id,
-                context,
-            )
+            prior = previous
+
+            def persist_in_user_order() -> bool:
+                if prior is not None and not prior.cancelled():
+                    try:
+                        prior.result()
+                    except Exception:
+                        # A failed older checkpoint must not prevent a newer snapshot
+                        # from attempting to restore durability for this user.
+                        pass
+                return self._persist_context(user_id, context)
+
+            future = self._checkpoint_executor.submit(persist_in_user_order)
             self._checkpoint_futures[user_id] = future
             self._checkpoint_state_ids[user_id] = state_id
         return future
