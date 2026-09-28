@@ -979,3 +979,13 @@ The first pre-merge red-team found two adjacent issues before merge: (1) two use
 Current CI result: **1 failed / 1,794 passed**. The failing test is `test_same_state_checkpoint_queue_coalesces_to_latest_context`. The new checkpoint behavior writes only the latest team selection to durable runtime context where the old test expected both an initial no-team write and the final team write. This must be reconciled as either the intended safer/coalesced behavior with the test updated accordingly, or a real durability regression. Do not merge until the contract is explicit and full CI is green.
 
 No deployment or physical acceptance should occur yet. After CI is green, the directive still requires whole-class red-team closure, bounded stress, one merge/deploy, hosted acceptance, then iPhone/Safari validation.
+
+
+## 2026-09-28 — PR #291 merged after whole-class closure proof; deployment/hosted acceptance now next gate
+PR #291 (`Close runtime lifecycle concurrency class`) merged as `dbe7fccaceca525e0586389dcc5388764fa015a3` after the Stabilization Closure Protocol was completed on head `a5efeeedfae165c197724bd4f47170c3463c18b7`.
+
+Plain-language result: the runtime now coordinates each user's refresh/restore/publication lifecycle independently instead of making unrelated users share one global lifecycle lock. The pre-merge red-team found and corrected additional neighboring lifecycle risks before merge, including stale shared-league snapshot overwrites, idle background-worker accumulation, checkpoint ordering during cancellation/coalescing, and stale worker ownership after identity changes.
+
+Verification at the merged head: focused checks green, full suite **1,796 passed**, deterministic single-user/two-user lifecycle matrix covered, bounded repeated publication stress completed, and the whole-class red-team reported no remaining concrete P1/P2 lifecycle defect.
+
+Stabilization is **not terminal yet**. No exact merged-SHA deployment/hosted acceptance evidence is recorded here yet. Next required sequence: deploy exact `dbe7fcca...` -> hosted FSFFL -> Hodor -> FSFFL plus same-State/changed-State/cross-surface/team-change/restart/two-user acceptance -> physical iPhone/Safari validation.
