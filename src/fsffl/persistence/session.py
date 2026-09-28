@@ -353,39 +353,40 @@ def persist_runtime_snapshot(
             result=simulation_analytics,
         )
         store.put_artifact(simulation_record)
-        # Automatic annual League Atlas baseline capture is an orchestration
-        # side-effect of persisting an already-authoritative 50,000-run runtime.
-        # The helper fails closed outside a proven pre-opener coordinate.
-        from fsffl.product.league_atlas_preseason import (
-            capture_preseason_baseline_if_eligible,
-        )
+        if publish_context:
+            # Automatic annual League Atlas baseline capture is a publication
+            # side-effect only; unpublished working Simulation never advances it.
+            from fsffl.product.league_atlas_preseason import (
+                capture_preseason_baseline_if_eligible,
+            )
 
-        capture_preseason_baseline_if_eligible(
-            store,
-            state=league_state,
-            forecast=forecast_evidence,
-            simulation=simulation_analytics,
-        )
+            capture_preseason_baseline_if_eligible(
+                store,
+                state=league_state,
+                forecast=forecast_evidence,
+                simulation=simulation_analytics,
+            )
     if value_evidence is not None:
         value_record = value_artifact(
             league_state_id=league_state.state_id,
             result=value_evidence,
         )
         store.put_artifact(value_record)
-        for estimate in value_evidence.estimates:
-            store.append_market_value_snapshot(
-                asset_ref=estimate.asset_id,
-                asset_kind=estimate.asset_kind.value,
-                scale_id=estimate.scale.scale_id,
-                market_context_id=estimate.market_context_id,
-                estimate_as_of=estimate.as_of,
-                value=float(estimate.distribution.mean),
-                source_lineage={
-                    "model_version": estimate.model_version,
-                    "evidence_sources": list(estimate.evidence_sources),
-                },
-                recorded_at=now,
-            )
+        if publish_context:
+            for estimate in value_evidence.estimates:
+                store.append_market_value_snapshot(
+                    asset_ref=estimate.asset_id,
+                    asset_kind=estimate.asset_kind.value,
+                    scale_id=estimate.scale.scale_id,
+                    market_context_id=estimate.market_context_id,
+                    estimate_as_of=estimate.as_of,
+                    value=float(estimate.distribution.mean),
+                    source_lineage={
+                        "model_version": estimate.model_version,
+                        "evidence_sources": list(estimate.evidence_sources),
+                    },
+                    recorded_at=now,
+                )
 
     # Stable governed terminal bundles get durable presentation identities.
     # Keep the legacy user-scoped record for compatibility and also retain one
@@ -394,6 +395,54 @@ def persist_runtime_snapshot(
     if publish_context and terminal_bundle:
         if forecast_record is None or value_record is None:
             raise ValueError("terminal publication requires Forecast and Value artifacts")
+        generation_id = str(publication_generation_id or "").strip() or canonical_fingerprint(
+            league_state.state_id,
+            selected_team_id,
+            forecast_record.key.input_fingerprint,
+            (
+                simulation_record.key.input_fingerprint
+                if simulation_record is not None
+                else None
+            ),
+            value_record.key.input_fingerprint,
+        )
+
+        # Crash-safe publication order:
+        # 1. Every State-bound output above is already durable.
+        # 2. The generation manifest names that exact artifact set.
+        # 3. The user State pointer advances only after the manifest exists.
+        #
+        # For same-State publication the pointer is unchanged and the manifest is
+        # the atomic generation swap. For changed-State publication a crash before
+        # step 3 still restores the prior State; a crash after step 3 can resolve
+        # the complete new generation by its already-durable manifest.
+        store.put_artifact(
+            _published_generation_record(
+                user_id=user_id,
+                league_state=league_state,
+                selected_team_id=selected_team_id,
+                publication_generation_id=generation_id,
+                forecast_record=forecast_record,
+                simulation_record=simulation_record,
+                value_record=value_record,
+                computed_at=now,
+            )
+        )
+        store.put_user_runtime_context(
+            UserRuntimeContextRecord(
+                user_id=user_id,
+                provider=provider,
+                league_external_id=external_id,
+                league_id=league_state.league.league_id,
+                season=league_state.league.season,
+                selected_team_id=selected_team_id,
+                state_hash=league_state.state_id,
+                updated_at=now,
+            )
+        )
+
+        # Last-good identity follows the publication commit. It is presentation
+        # fallback metadata, not authority for choosing a model artifact generation.
         payload = {
             "league_state": state_payload,
             "selected_team_id": selected_team_id,
@@ -417,43 +466,7 @@ def persist_runtime_snapshot(
             league_state=league_state,
             selected_team_id=selected_team_id,
         )
-        store.put_user_runtime_context(
-            UserRuntimeContextRecord(
-                user_id=user_id,
-                provider=provider,
-                league_external_id=external_id,
-                league_id=league_state.league.league_id,
-                season=league_state.league.season,
-                selected_team_id=selected_team_id,
-                state_hash=league_state.state_id,
-                updated_at=now,
-            )
-        )
-        generation_id = str(publication_generation_id or "").strip() or canonical_fingerprint(
-            league_state.state_id,
-            selected_team_id,
-            forecast_record.key.input_fingerprint,
-            (
-                simulation_record.key.input_fingerprint
-                if simulation_record is not None
-                else None
-            ),
-            value_record.key.input_fingerprint,
-        )
-        # Manifest last: a restart may only consume the new artifact set after every
-        # required model output and the user runtime pointer are already durable.
-        store.put_artifact(
-            _published_generation_record(
-                user_id=user_id,
-                league_state=league_state,
-                selected_team_id=selected_team_id,
-                publication_generation_id=generation_id,
-                forecast_record=forecast_record,
-                simulation_record=simulation_record,
-                value_record=value_record,
-                computed_at=now,
-            )
-        )
+
 
 def restore_state_bound_raw_forecast_evidence(
     store: PersistenceStore,
