@@ -323,6 +323,21 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     }
 
 
+def _cached_forecast_replay_decision(
+    store: PrivateBetaRuntimeStore,
+    user_id: str,
+) -> dict[str, object] | None:
+    """Expose replay diagnostics only when already cached in memory.
+
+    First-load foreground reads must never acquire durable Forecast diagnostics.
+    Background reconciliation owns persisted replay restoration and will populate the
+    cache as soon as it determines exact reuse, raw replay, or fresh acquisition.
+    """
+
+    reader = getattr(store, "forecast_replay_decision_cached", None)
+    return reader(user_id) if callable(reader) else None
+
+
 def _runtime_context_payload(
     store: PrivateBetaRuntimeStore,
     user_id: str,
@@ -405,10 +420,9 @@ def _runtime_context_payload(
         "capability_readiness": capability_readiness,
         "publication_generation_id": visible_publication_generation_id,
         "target_publication_generation_id": runtime.publication_generation_id,
-        "forecast_replay_decision": (
-            getattr(store, "forecast_replay_decision")(user_id)
-            if callable(getattr(store, "forecast_replay_decision", None))
-            else None
+        "forecast_replay_decision": _cached_forecast_replay_decision(
+            store,
+            user_id,
         ),
         "served_last_good": (
             {
@@ -1176,10 +1190,9 @@ def create_app(
             else None
         )
         payload["capability_readiness"] = read_capabilities(runtime)
-        payload["forecast_replay_decision"] = (
-            getattr(store, "forecast_replay_decision")(user_id)
-            if callable(getattr(store, "forecast_replay_decision", None))
-            else None
+        payload["forecast_replay_decision"] = _cached_forecast_replay_decision(
+            store,
+            user_id,
         )
         payload["job"] = _job_payload(current_job)
         return payload
