@@ -422,3 +422,13 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 - **Research — DONE / PARKED.** The Forecast authority program, Y4-Y8 symmetric study, and Long-Term Intrinsic consumption contract have reached the intended durable state. No additional Research work is required before implementation.
 - **Implementation — ACTIVE / sole product-critical path.** Finish the nonblocking Market/runtime corrective, merge/deploy it, and pass hosted acceptance.
 - After runtime acceptance, Management may reopen the already-defined Long-Term Intrinsic shadow implementation directly from the frozen Research handoff; do not send it back through another Research cycle without new evidence.
+
+
+## 2026-09-27 late evening — PR #279 green and ready for merge/deploy acceptance
+- **Implementation — ACTIVE / sole product-critical path.**
+- PR #279 `Market: make foreground discovery nonblocking` is OPEN, non-draft, GitHub-mergeable, head `00503a43aa657a9bf1ca93c488f38561813e206f`.
+- All current head workflows are green, including CI plus Home, Franchise, League Atlas, live Forecast corrective trace, Intrinsic diagnostics, and focused corrective regression.
+- The stale hosted acceptance hard-failure on the ~429.5 MB soft RSS target is corrected on the PR: soft-budget misses are logged diagnostically; the hard Render limit remains terminal.
+- No #279 code is live yet. Render still serves PR #278 merge `07d61a82bb17bc75bbec317b513be8406a8a49cf`.
+- Next action: merge #279, deploy the exact merge SHA, then run the full hosted acceptance journey. Do not expand product scope before that evidence.
+- **Research remains DONE / PARKED. Long-Term Intrinsic remains paused until runtime acceptance.**
