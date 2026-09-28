@@ -518,3 +518,7 @@ Research remains ACTIVE. Before closeout, it must directly include the exact dep
 
 ## 2026-09-28 — Foundation sequence expanded: Simulation + origin-aware picks
 After runtime closure and in-season ROS Forecast, the next foundational program now includes Simulation 2.0 and origin-aware draft-pick valuation before downstream Market/Trade exploitation. Simulation owns each future pick's team-of-origin slot distribution under actual league draft-order rules; Value converts that distribution through governed pick-coordinate/draft-class evidence. Generic year/round values remain fallback priors only. Long-Term Intrinsic, PIT market evidence, League Market/Owner Intelligence, Trade Decision and Search follow downstream.
+
+
+## 2026-09-28 — Simulation 2.0 is a near-term foundation
+After runtime stabilization and in-season Forecast, execute `docs/operations/directives/20260928_SIMULATION_2_0_PROGRAM.md` before origin-aware pick Value. Bring forward/re-derive legacy weekly distributions, legal weekly lineups, byes, availability/bench substitution, real schedule/division/playoff rules, finish/playoff/title outputs, deterministic replay and Multiverse examples. Rebuild around compiled reusable state, vectorized/batched 50k Monte Carlo, cached lineups, common random worlds, selective scenario recomputation, persisted exact reuse and progressive non-authoritative scenario batches. Canonical 50,000-run authority remains until convergence evidence earns any change.
