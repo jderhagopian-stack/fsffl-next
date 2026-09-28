@@ -1413,3 +1413,19 @@ The acceptance failure occurred specifically at `hodor_switch`. Hodor required f
 Do not reopen Market/runtime architecture because of this failure. The remaining issue is Forecast-source availability / Hodor continuity. Preserve the source-health authority contract; do not reduce the independent-source requirement merely to make acceptance pass.
 
 Primary FSFFL physical beta testing may proceed as a bounded smoke test while Hodor/cross-league Forecast continuity remains open. Do not claim full runtime terminal acceptance until the league-switch path is resolved or explicitly reclassified by Management.
+
+
+## 2026-09-28 — Management directive: finish Hodor Forecast replay correctly
+The remaining `hodor_switch` failure is reclassified as a **Forecast replay / league-switch continuity defect until proven otherwise**. PR #280's primary-FSFFL improvements remain accepted evidence and must be preserved.
+
+Implementation must now follow `docs/operations/directives/20260928_HODOR_FORECAST_REPLAY_CONTINUITY.md`:
+- inspect persisted governed Hodor Forecast before live reacquisition;
+- distinguish raw Forecast evidence compatibility from downstream State/scoring compatibility;
+- emit the exact replay rejection component rather than only `fingerprint_changed`;
+- allow downstream-only changes to rebuild downstream layers without invalidating reusable raw provider evidence;
+- preserve Hodor's PR #244/#245 partial-authority behavior;
+- never weaken the two-source/source-health gate for genuinely new Forecast authority;
+- if raw Forecast is genuinely incompatible and providers are unavailable, preserve truthful last-good presentation wherever authority permits rather than blanking unrelated surfaces;
+- run and pass the real hosted FSFFL → Hodor → FSFFL journey, including persistence/restart and provider-outage replay coverage, without regressing PR #280 latency/memory or cross-league isolation.
+
+Do not return on an intermediate finding while authorized corrective actions remain. Long-Term Intrinsic stays paused until this hosted gate closes.
