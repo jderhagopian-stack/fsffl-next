@@ -623,10 +623,10 @@ def run_state_first_production_acceptance(
     # observing activity and then probing a full surface is insufficient: that probe
     # can outlive a fast reconciliation and turn this into a false race proof.
     #
-    # This acceptance harness intentionally uses the runtime's publication identity
-    # lock so "working active" and select_team are one serialized observation/action.
-    # If publication already won the lock and removed the working generation, the
-    # acceptance fails instead of pretending it tested the interleaving.
+    # The store owns the publication-sequence lock. The conditional team switch
+    # acquires that authority, verifies unpublished work is still active, and changes
+    # the managed team in the same serialized operation. If final publication already
+    # won, this cannot falsely claim an interleaving.
     team_working_deadline = monotonic() + min(30.0, timeout_seconds / 4)
     team_interleaving: dict[str, object] | None = None
     while monotonic() < team_working_deadline:
@@ -641,22 +641,25 @@ def run_state_first_production_acceptance(
             }
         ):
             break
-        with store._lock:
-            if store.working_generation_active(user_id):
-                working = store.working_context(user_id)
-                team_interleaving = {
-                    "working_state_id": (
-                        working.league_state.state_id
-                        if working.league_state is not None
-                        else None
-                    ),
-                    "working_team_id": working.selected_team_id,
-                    "published_generation_id": (
-                        store.get(user_id).publication_generation_id
-                    ),
-                }
-                store.select_team(user_id, alternate_team_id)
-                break
+        switched = store.select_team_if_working_generation_active(
+            user_id,
+            alternate_team_id,
+        )
+        if switched is not None:
+            working, selected = switched
+            team_interleaving = {
+                "working_state_id": (
+                    working.league_state.state_id
+                    if working.league_state is not None
+                    else None
+                ),
+                "working_team_id": working.selected_team_id,
+                "selected_team_id": selected.selected_team_id,
+                "published_generation_id": (
+                    store.get(user_id).publication_generation_id
+                ),
+            }
+            break
         sleep(0.01)
     if team_interleaving is None:
         raise StateFirstAcceptanceError(
