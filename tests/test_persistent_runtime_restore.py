@@ -30,14 +30,20 @@ from fsffl.persistence.session import (
 )
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.product.runtime import LiveForecastEvidence
+from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.state.models import (
     League,
+    LeagueMatchup,
     LeagueRules,
     LeagueState,
     LineupRequirement,
+    NflTeamBye,
+    Player,
+    PlayerState,
     Position,
     Provenance,
     ProviderRef,
+    RosterEntry,
     RosterSlot,
     ScoringRule,
     Team,
@@ -127,6 +133,127 @@ def _league_state(*, as_of: datetime | None = None) -> LeagueState:
         team_states=(TeamState(team_id="t1", roster=()), TeamState(team_id="t2", roster=())),
         players=(),
         player_states=(),
+    )
+
+
+def _simulation_state(*, as_of: datetime | None = None) -> LeagueState:
+    state_as_of = as_of or datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    league_id = "sleeper:sim-restart"
+    provenance = Provenance(
+        source="test",
+        retrieved_at=state_as_of,
+        effective_at=state_as_of,
+    )
+    rules = LeagueRules(
+        team_count=2,
+        roster_size=1,
+        playoff_team_count=1,
+        lineup=(LineupRequirement(slot=RosterSlot.QB, count=1),),
+        scoring=(ScoringRule(stat="fum_lost", points=-2.0),),
+    )
+    return LeagueState(
+        league=League(
+            league_id=league_id,
+            name="Simulation Restart League",
+            season=2026,
+            rules=rules,
+            provider_refs=(ProviderRef(provider="sleeper", external_id="sim-restart"),),
+        ),
+        as_of=state_as_of,
+        teams=(
+            Team(team_id="a", league_id=league_id, display_name="A"),
+            Team(team_id="b", league_id=league_id, display_name="B"),
+        ),
+        team_states=(
+            TeamState(
+                team_id="a",
+                roster=(RosterEntry(player_id="pa", slot=RosterSlot.QB),),
+            ),
+            TeamState(
+                team_id="b",
+                roster=(RosterEntry(player_id="pb", slot=RosterSlot.QB),),
+            ),
+        ),
+        players=(
+            Player(
+                player_id="pa",
+                full_name="A QB",
+                position=Position.QB,
+                nfl_team="NE",
+            ),
+            Player(
+                player_id="pb",
+                full_name="B QB",
+                position=Position.QB,
+                nfl_team="NYJ",
+            ),
+        ),
+        player_states=(
+            PlayerState(
+                player_id="pa",
+                as_of=state_as_of,
+                nfl_team="NE",
+                provenance=provenance,
+            ),
+            PlayerState(
+                player_id="pb",
+                as_of=state_as_of,
+                nfl_team="NYJ",
+                provenance=provenance,
+            ),
+        ),
+        matchups=tuple(
+            LeagueMatchup(
+                week=week,
+                team_a_id="a",
+                team_b_id="b",
+                provenance=provenance,
+            )
+            for week in range(1, 5)
+        ),
+        nfl_team_byes=(
+            NflTeamBye(
+                season=2026,
+                nfl_team="NE",
+                week=5,
+                provenance=provenance,
+            ),
+            NflTeamBye(
+                season=2026,
+                nfl_team="NYJ",
+                week=6,
+                provenance=provenance,
+            ),
+        ),
+    )
+
+
+def _simulation_forecasts(
+    state: LeagueState,
+) -> tuple[ForecastObservation, ...]:
+    provenance = Provenance(
+        source="test",
+        retrieved_at=state.as_of,
+        effective_at=state.as_of,
+    )
+    return tuple(
+        ForecastObservation(
+            player_id=player_id,
+            position=Position.QB,
+            horizon=ForecastHorizon.SEASON,
+            metric=ForecastMetric.FANTASY_POINTS,
+            period_start=state.as_of,
+            period_end=state.as_of + timedelta(days=180),
+            distribution=ForecastDistribution(mean=mean, stddev=stddev),
+            source="fsffl:live_league_scored",
+            model_version="restart-simulation-forecast-v1",
+            as_of=state.as_of,
+            provenance=provenance,
+        )
+        for player_id, mean, stddev in (
+            ("pa", 400.0, 80.0),
+            ("pb", 250.0, 60.0),
+        )
     )
 
 
@@ -1267,4 +1394,99 @@ def test_same_state_stale_supplement_replays_raw_forecast_before_provider_outage
     assert decision["target_state_id"] == state.state_id
     assert decision["fresh_acquisition_required"] is False
     assert decision["rejection_components"] == []
+
+def test_same_state_forecast_replay_interruption_restart_rejects_stale_simulation(
+    monkeypatch,
+) -> None:
+    persistence = MemoryPersistence()
+    state = _simulation_state()
+    stale = _with_replayable_raw_forecast(
+        _stale_forecast_without_first_party_fumbles_lost(state),
+        state,
+    )
+    stale_runtime = stale.runtime_result.model_copy(
+        update={
+            "fumbles_lost_supplement_authority_fingerprint": "legacy-authority",
+            "fumbles_lost_supplement_model_version": "legacy-supplement-v0",
+            "fumbles_lost_supplement_league_state_id": state.state_id,
+        }
+    )
+    stale = replace(stale, runtime_result=stale_runtime)
+    old_simulation = build_live_simulation_analytics(
+        state,
+        forecasts=_simulation_forecasts(state),
+        forecast_model_version=stale.model_version,
+        simulation_count=100,
+        seed=7,
+        generated_at=state.as_of,
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="same-state-restart",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=stale,
+        simulation_analytics=old_simulation,
+        value_evidence=_empty_value(state),
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.set_league_state("same-state-restart", state)
+    before_replay = runtime.get("same-state-restart")
+    assert before_replay.forecast_evidence is None
+    assert before_replay.simulation_analytics is None
+
+    def replay(target_state, prior_evidence):
+        return replace(
+            prior_evidence,
+            runtime_result=prior_evidence.runtime_result.model_copy(
+                update={
+                    "fumbles_lost_supplement_authority_fingerprint": (
+                        "current-authority"
+                    ),
+                    "fumbles_lost_supplement_model_version": (
+                        FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+                    ),
+                    "fumbles_lost_supplement_league_state_id": target_state.state_id,
+                }
+            ),
+        )
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.replay_live_forecast_evidence_for_state",
+        replay,
+    )
+    replayed = runtime.restore_exact_state_intelligence("same-state-restart")
+    assert replayed.forecast_evidence is not None
+    assert replayed.simulation_analytics is None
+    assert runtime.wait_for_checkpoint("same-state-restart", timeout=2.0)
+
+    # Reproduce an interruption after Forecast replay was durably checkpointed but
+    # before its dependent Simulation could be rebuilt.
+    persistence.put_artifact(
+        ReusableArtifactRecord(
+            key=ArtifactKey(
+                artifact_kind="intelligence_job_lifecycle",
+                scope_kind="user",
+                scope_id="same-state-restart",
+                input_fingerprint="same-state-replay-interrupted",
+                model_version="intelligence-job-lifecycle-v1",
+            ),
+            payload={"status": "interrupted"},
+            computed_at=datetime.now(UTC),
+        )
+    )
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored_after_restart = restarted.restore_user("same-state-restart")
+
+    assert restored_after_restart.league_state is not None
+    assert restored_after_restart.league_state.state_id == state.state_id
+    assert restored_after_restart.forecast_evidence is not None
+    assert (
+        restored_after_restart.forecast_evidence.runtime_result
+        .fumbles_lost_supplement_model_version
+        == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+    )
+    assert restored_after_restart.simulation_analytics is None
 
