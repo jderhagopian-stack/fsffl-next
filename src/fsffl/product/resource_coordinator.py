@@ -57,6 +57,7 @@ class HeavyWorkSnapshot:
     memory_limit_bytes: int
     memory_budget_bytes: int
     within_memory_budget: bool
+    recent_phase_memory: tuple[dict[str, object], ...]
 
 
 def release_unused_process_memory(*, label: str) -> dict[str, object]:
@@ -151,6 +152,7 @@ class HeavyWorkCoordinator:
         self._acquisitions_by_kind: dict[str, int] = {}
         self._completions_by_kind: dict[str, int] = {}
         self._max_rss_observed_bytes = current_rss_bytes()
+        self._recent_phase_memory: list[dict[str, object]] = []
 
     @property
     def memory_budget_bytes(self) -> int:
@@ -213,6 +215,7 @@ class HeavyWorkCoordinator:
                 self._acquisitions_by_kind.get(kind, 0) + 1
             )
             before_rss = current_rss_bytes()
+            peak_before_rss = process_peak_rss_bytes()
             self._max_rss_observed_bytes = max(
                 self._max_rss_observed_bytes,
                 before_rss,
@@ -237,6 +240,23 @@ class HeavyWorkCoordinator:
                     after_rss,
                     peak_rss,
                 )
+                self._recent_phase_memory.append(
+                    {
+                        "kind": kind,
+                        "key": key,
+                        "before_rss_bytes": before_rss,
+                        "after_rss_bytes": after_rss,
+                        "resident_delta_bytes": after_rss - before_rss,
+                        "peak_before_rss_bytes": peak_before_rss,
+                        "peak_after_rss_bytes": peak_rss,
+                        "new_peak_increment_bytes": max(
+                            0,
+                            peak_rss - peak_before_rss,
+                        ),
+                    }
+                )
+                if len(self._recent_phase_memory) > 16:
+                    del self._recent_phase_memory[:-16]
                 _logger.info(
                     "FSFFL heavy-work released kind=%s key=%s rss=%s peak_rss=%s budget=%s",
                     kind,
@@ -276,4 +296,7 @@ class HeavyWorkCoordinator:
                 memory_limit_bytes=self._memory_limit_bytes,
                 memory_budget_bytes=self._memory_budget_bytes,
                 within_memory_budget=observed <= self._memory_budget_bytes,
+                recent_phase_memory=tuple(
+                    dict(item) for item in self._recent_phase_memory
+                ),
             )
