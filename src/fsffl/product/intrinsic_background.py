@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 import logging
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -97,6 +97,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         self._max_records = int(max_records)
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], IntrinsicBuildRecord] = {}
+        self._futures: dict[tuple[str, str, str], Future[None]] = {}
         self._executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="fsffl-intrinsic",
@@ -301,7 +302,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 updated_at=now,
             )
             self._records[key] = record
-            self._executor.submit(self._run, key, context)
+            future = self._executor.submit(self._run, key, context)
+            self._futures[key] = future
             return record
 
     def _set(
@@ -361,6 +363,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
                     failed.forecast_coordinate,
                     failed.error,
                 )
+            with self._lock:
+                self._futures.pop(key, None)
             return
         completed = self._set(
             key,
@@ -377,6 +381,20 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 completed.forecast_coordinate,
                 elapsed,
             )
+        with self._lock:
+            self._futures.pop(key, None)
+
+    def clear_user(self, user_id: str) -> int:
+        """Drop user-scoped lifecycle records; durable Intrinsic remains authority."""
+
+        with self._lock:
+            keys = [key for key in self._records if key[0] == user_id]
+            for key in keys:
+                self._records.pop(key, None)
+                future = self._futures.pop(key, None)
+                if future is not None and not future.done():
+                    future.cancel()
+            return len(keys)
 
     def wait_for_terminal(
         self,
