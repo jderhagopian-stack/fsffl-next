@@ -670,3 +670,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Do not treat free-tier CPU/memory/throughput as the future production-capacity target.
 - Current acceptance is reliable normal private-beta use; once that is restored, return to capability development.
 - Future public scale should be solved primarily by added infrastructure capacity on top of the same clean authority/lifecycle structure.
+
+
+## 2026-09-29 — PR #303 exact-head P1 closure
+- **Implementation — ACTIVE / sole product-critical path.**
+- Exact head `1944aca9cdf527d0600fc5f6107240446baf060c`: CI/focused checks GREEN; fresh whole-class review found three in-scope P1s.
+- Close the boundary atomically: serialize same-user activation+cleanup+ownership revalidation; prevent/re-clear prior-published Market repopulation before replacement publication; epoch/ownership-guard Intrinsic restore attachment and analogous async result attachment.
+- Add deterministic race regressions for those three cases.
+- Then rerun full CI + closure matrix + fresh exact-head whole-class P1/P2 review.
+- If clean, merge/deploy and immediately resume the realistic free-Render hosted journey. No broader architecture work.
