@@ -51,7 +51,11 @@ from fsffl.persistence.supplemental_coordinate import (
     decode_first_party_fumbles_lost_supplement,
     first_party_fumbles_lost_supplement_artifact,
 )
-from fsffl.providers.sleeper_weekly_stats import SleeperNflState, SleeperWeeklyStatLine
+from fsffl.providers.sleeper_weekly_stats import (
+    SleeperNflState,
+    SleeperWeeklyStatLine,
+    SleeperWeeklyStatsSource,
+)
 from fsffl.state.models import (
     League,
     LeagueRules,
@@ -69,6 +73,26 @@ from fsffl.state.models import (
 CAPTURED = datetime(2026, 9, 26, 3, 0, tzinfo=UTC)
 PERIOD_START = datetime(2026, 9, 10, 0, 0, tzinfo=UTC)
 PERIOD_END = datetime(2027, 1, 5, 0, 0, tzinfo=UTC)
+
+
+def test_weekly_stats_nfl_state_uses_same_strongest_week_coordinate_as_canonical_state() -> None:
+    source = SleeperWeeklyStatsSource(
+        http_get_json=lambda _url: {
+            "season": "2026",
+            "week": 3,
+            "display_week": 4,
+            "leg": 4,
+            "season_type": "regular",
+        },
+        clock=lambda: CAPTURED,
+    )
+
+    provider_state = source.fetch_nfl_state()
+
+    assert provider_state.week == 3
+    assert provider_state.display_week == 4
+    assert provider_state.leg == 4
+    assert provider_state.completed_through_week == 3
 
 
 class FakeSleeperStats:
