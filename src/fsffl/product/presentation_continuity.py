@@ -254,6 +254,15 @@ class PresentationContinuityStore:
             total_payload_bytes=total_bytes,
         )
 
+    def clear_user_validation_hints(self, user_id: str) -> int:
+        """Drop process-local validation hints; durable presentation stays intact."""
+
+        with self._validation_lock:
+            stale = [item for item in self._validated_snapshots if item[0] == user_id]
+            for item in stale:
+                self._validated_snapshots.discard(item)
+            return len(stale)
+
     def known_snapshot_available(
         self,
         *,
