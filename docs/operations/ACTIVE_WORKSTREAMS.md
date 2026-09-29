@@ -663,3 +663,10 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Finish #303 for lifecycle/resource correctness, then prove one realistic full hosted journey without hard-memory failure and with acceptable foreground responsiveness.
 - Do not add synthetic rapid-switch or commercial-scale requirements to this gate.
 - If normal beta use still cannot fit after ownership is clean, escalate to the smallest practical beta-specific capacity/compute-staging decision instead of continuing open-ended leak hunting.
+
+
+## 2026-09-29 — Efficient beta / scalable structure rule
+- Optimize current free-Render usage aggressively where waste is avoidable.
+- Do not treat free-tier CPU/memory/throughput as the future production-capacity target.
+- Current acceptance is reliable normal private-beta use; once that is restored, return to capability development.
+- Future public scale should be solved primarily by added infrastructure capacity on top of the same clean authority/lifecycle structure.
