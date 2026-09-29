@@ -702,11 +702,21 @@ def run_state_first_production_acceptance(
             "managed-team reconciliation did not reach a serialized terminal state"
         )
 
-    wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
-    if callable(wait_for_checkpoint) and not wait_for_checkpoint(
-        user_id,
-        timeout=30.0,
-    ):
+    wait_for_managed_team = getattr(store, "wait_for_managed_team_checkpoint", None)
+    if callable(wait_for_managed_team):
+        team_durable = wait_for_managed_team(
+            user_id,
+            team_id=alternate_team_id,
+            state_id=current_state.state_id,
+            timeout=30.0,
+        )
+    else:
+        wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+        team_durable = (
+            not callable(wait_for_checkpoint)
+            or wait_for_checkpoint(user_id, timeout=30.0)
+        )
+    if not team_durable:
         raise StateFirstAcceptanceError(
             "managed-team selection did not durably checkpoint"
         )
