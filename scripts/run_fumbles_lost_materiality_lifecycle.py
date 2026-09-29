@@ -306,7 +306,7 @@ def main():
             "position_rates":"recompute cumulative exact lost-fumble/opportunity and opportunity/game rates through Y-1",
             "player_role_priors":"recompute cumulative prior player opportunity/game sufficient statistics through Y-1",
             "calibration":"for each cutoff 2..17 rerun same global train-only ratio across pseudo-current seasons 2022..Y-1; no family search",
-            "uncertainty":"carry prior frozen floor and take max with newly available chronology-preserving held-out residual RMSE by position/cutoff",
+            "uncertainty":"for each position/cutoff c, new_floor=max(prior_floor[p,c], max newly completed held-out residual RMSE[p,k] for every k<=c); preserves monotone prefix floor",
             "materiality":"carry prior fallback bound and take max with newly available all-pop position historical maximum at cutoff 0..17",
             "freeze_required_before_point_authority":True,
             "on_gate_or_source_failure":"no automatic point authority; explicit omission + materiality gate where supported; otherwise fail closed",
