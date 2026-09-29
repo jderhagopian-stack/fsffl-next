@@ -1460,3 +1460,19 @@ Implications:
 - the current ~512 MB private-beta memory gate remains valid for leak/ownership closure, but is not a permanent commercial product requirement.
 
 This does **not** broaden PR #303. Finish the current resource-boundary closure first. Before public launch, run a dedicated production-readiness/scaling review and realistic load test.
+
+
+## 2026-09-29 — Near-term private-beta usability is the controlling acceptance target
+Management clarification: public-scale architecture remains a long-term design constraint, but the **current product requirement is that Jimmy can reliably test and use FSFFL NEXT on the existing free Render deployment**.
+
+Near-term acceptance therefore prioritizes:
+- reliable cold wake / connect / league restore;
+- usable FSFFL -> Hodor -> FSFFL switching at realistic cadence;
+- responsive foreground navigation while background intelligence runs;
+- no hard-memory failure during normal private-beta use;
+- truthful readiness and continuity through restart/restored session;
+- no requirement to support synthetic rapid-switch stress or commercial traffic on the free tier.
+
+Do not distort architecture around the free tier, but do not defer private-beta usability behind future public-scale work. If the whole resource boundary is clean and a normal single-user private-beta journey still cannot fit the current free Render envelope, Management should choose the smallest practical beta-specific capacity/staging adjustment rather than continue indefinite leak hunting.
+
+Public-scale readiness remains a later gate and must not expand the current #303 scope.
