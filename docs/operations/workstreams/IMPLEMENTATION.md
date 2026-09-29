@@ -1647,3 +1647,11 @@ Required:
 9. only after terminal hosted PASS request physical Safari validation.
 
 No model-semantic scope expansion.
+
+
+## 2026-09-29 — #295 exact SHA live; acceptance in progress
+PR #295 merged as `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` after full CI (1,816 passed) and bounded P1/P2 red-team closure. The managed-team durability path is now lightweight, exact, State-gated, generation-bound, and covered through restart/fallback scenarios.
+
+Exact merge SHA is live on Render deploy `dep-dati6o5g1s2s739fv4pg`; hosted acceptance is running. Initial FSFFL publication is coherent and PI remains responsive. Peak RSS briefly reached ~517.0 MB, above the soft ~429.5 MB target but below the ~536.9 MB hard Render limit. Do not interrupt the acceptance run solely for this soft-budget breach; capture whether memory falls back and whether later legs remain below the hard limit.
+
+Next required gate remains terminal hosted clean-first-run -> rebuild -> Hodor -> FSFFL return -> refreshes -> managed-team durability -> restart/restored-session. Only then request physical Safari validation.
