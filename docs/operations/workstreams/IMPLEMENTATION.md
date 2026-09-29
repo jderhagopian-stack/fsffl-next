@@ -1670,3 +1670,27 @@ Next action:
 5. physical Safari only after terminal hosted PASS.
 
 Do not reopen Forecast/Hodor or managed-team design absent new runtime evidence.
+
+
+## 2026-09-29 — ACTIVE blocker after #295 full hosted rerun: same-State publication identity changes
+The verified keep-awake rerun on exact #295 merge `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` stayed alive through the required window and passed the prior managed-team durability blocker. Alternate team:2 was durably selected and served correctly after reconciliation interruption.
+
+The next same-State publication-isolation job then failed:
+`ValueError: published league/team/generation identity changed during reconciliation`
+surfaced as
+`StateFirstAcceptanceError: acceptance job intelligence:c754e8204ba6459d875a19655b5e9224 ended failed`.
+
+This happened after `same_state_during_active_reconciliation` showed team:2 and readiness=rebuilding, and before restart/restored-session.
+
+Continue from this exact boundary:
+1. trace the same-State reconciliation's captured league/team/publication-generation identity from start through final atomic promotion;
+2. compare it with the settled post-team-switch runtime identity and any presentation/publication mutation that occurs while the job runs;
+3. determine whether this is (a) a correct stale-job invalidation exposed by an acceptance sequencing defect, or (b) an incorrect runtime identity mutation/ownership problem;
+4. do not relax the final atomic identity guard;
+5. preserve #295 lightweight managed-team durability, #294 memory-only foreground get/explicit restore, replay compatibility, and per-user lifecycle sequencing;
+6. add deterministic coverage for: team switch completes -> durability settles -> same-State reconciliation starts -> foreground surfaces remain coherent -> terminal promotion succeeds for the new team identity; and the converse stale-job case must fail closed;
+7. prove restart restores the exact team only after that same-State terminal publication;
+8. focused regressions + full CI + bounded P1/P2 red-team;
+9. deploy exact corrected SHA and rerun hosted acceptance with verified keep-awake through restart/restored-session.
+
+No Forecast/Hodor/model-semantic scope expansion. Physical Safari remains HOLD.
