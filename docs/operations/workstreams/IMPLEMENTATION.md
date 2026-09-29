@@ -1705,3 +1705,17 @@ Exact #296 hosted acceptance failed before reaching that runtime leg because liv
 This is outside the current runtime corrective directive. Do not broaden Implementation into Forecast model/authority changes without Management authorization. Preserve the #296 runtime correction and all prior Hodor/restore/team-publication work.
 
 Current status: MANAGEMENT GATE — Forecast/current-season authority. Physical Safari remains HOLD until a governed Forecast path allows the complete hosted lifecycle to reach terminal PASS.
+
+
+## 2026-09-29 — #301 complete; next blocker is hosted hard-memory peak
+#301 final head `fdf8b4ccacd331178c5a6ef2cc2068400b0f0e6a` passed trace, all focused lanes, full CI and live diagnostics. It merged as `be5db0e35e787c97eb560bbc0e88f59669e7b6e6` and was deployed exactly as Render deploy `dep-dau1prbncjis73ae44p0`.
+
+The original hosted harness P1 is closed and live-proven: the cold PI probe now extracts `entry.player_id` from each `RosterEntry`, selected canonical roster player `sleeper:player:11565`, and completed State-only history during active enrichment.
+
+The same hosted run then passed clean first-run, explicit team selection, terminal full FSFFL publication, PI Y1-Y3/full Intrinsic upgrade, changed-State stale-while-rebuild continuity + atomic promotion, and truthful/coherent Hodor publication. It failed only when the resource sampler evaluated Hodor:
+- process lifetime peak RSS: `559,685,632` bytes;
+- configured Render hard limit: `536,870,900` bytes;
+- current RSS at failure: `461,594,624` bytes;
+- coarse Render metrics observed ~525.7 MB nearby, below the process-level instantaneous peak.
+
+Terminal state under OPERATING_PROTOCOL: **BLOCKED — hosted hard-memory gate**. The remaining FSFFL return, same-State, managed-team race, restart and restored-session legs were not run after this failure. Do not attribute this to the #301 harness fix, reopen #298 FUMBLES_LOST authority, alter PI readiness semantics, or relax #294/#295/#296 lifecycle/atomic-publication boundaries. Physical Safari remains HOLD pending Management authorization for the resource blocker.
