@@ -17,6 +17,11 @@ _MAX_ENTRIES_PER_USER = 1
 WorkspaceBuilder = Callable[..., dict[str, object]]
 
 
+def _runtime_user_id(runtime: UserRuntimeContext) -> str:
+    value = str(getattr(runtime, "user_id", "") or "").strip()
+    return value or "local-beta-user"
+
+
 def _evidence_identity(value: object | None) -> tuple[int, str | None]:
     """Identify the exact in-process evidence object without inventing new truth."""
 
@@ -42,7 +47,7 @@ def opportunity_workspace_cache_key(
     if league_state is None:
         return None
     return (
-        runtime.user_id,
+        _runtime_user_id(runtime),
         league_state.state_id,
         id(league_state),
         runtime.selected_team_id,
@@ -135,7 +140,7 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
             stale_keys = [
                 item
                 for item in cache
-                if item[0] == runtime.user_id and item != key
+                if item[0] == _runtime_user_id(runtime) and item != key
             ]
             for stale_key in stale_keys:
                 cache.pop(stale_key, None)
@@ -155,7 +160,7 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
             cache[key] = result
             cache.move_to_end(key)
             user_keys = [
-                item for item in cache if item[0] == runtime.user_id
+                item for item in cache if item[0] == _runtime_user_id(runtime)
             ]
             while len(user_keys) > _MAX_ENTRIES_PER_USER:
                 stale_key = user_keys.pop(0)
