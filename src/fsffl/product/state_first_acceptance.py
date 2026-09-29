@@ -25,7 +25,7 @@ SurfaceProbe = Callable[[str, object], dict[str, object]]
 HistoryProbe = Callable[[str, object], dict[str, object]]
 ResourceReader = Callable[[], dict[str, object]]
 ProcessIdentityReader = Callable[[], str]
-StateTransitionReclaimer = Callable[[str], object]
+StateActivator = Callable[..., object | None]
 
 
 def _wait_for_job(
@@ -227,7 +227,7 @@ def run_state_first_production_acceptance(
     history_probe: HistoryProbe | None = None,
     resource_reader: ResourceReader | None = None,
     process_identity_reader: ProcessIdentityReader | None = None,
-    state_transition_reclaimer: StateTransitionReclaimer | None = None,
+    state_activator: StateActivator | None = None,
     restore_only: bool = False,
     timeout_seconds: float = 1200.0,
     poll_seconds: float = 1.0,
@@ -310,38 +310,48 @@ def run_state_first_production_acceptance(
 
 
     def activate(external_id: str, *, label: str) -> dict[str, object]:
-        previous_state = store.get(user_id).league_state
+        prior = store.get(user_id)
         previous_league_id = (
-            previous_state.league.league_id if previous_state is not None else None
+            prior.league_state.league.league_id
+            if prior.league_state is not None
+            else None
         )
+        # Do not retain the prior full runtime/State in the acceptance frame while
+        # the replacement league performs heavy work. The resource boundary owns
+        # transition evidence; the harness retains only scalar identity summaries.
+        del prior
+
         state = state_loader(external_id)
         expected = f"sleeper:{external_id}"
         if state.league.league_id != expected:
             raise StateFirstAcceptanceError(
                 f"{label} provider returned {state.league.league_id}, expected {expected}"
             )
-        store.set_league_state(user_id, state)
-        if (
-            state_transition_reclaimer is not None
-            and previous_league_id is not None
-            and previous_league_id != state.league.league_id
-        ):
-            before = sample_resources(f"{label}_before_transition_reclaim")
-            reclaimed = state_transition_reclaimer(
-                f"{user_id}:{state.state_id}:{label}:league_switch"
+        before = sample_resources(f"{label}_pre_state_activation")
+        if state_activator is not None:
+            activated = state_activator(
+                user_id,
+                state,
+                reason=f"acceptance_{label}",
             )
-            after = sample_resources(f"{label}_after_transition_reclaim")
+            if activated is None:
+                raise StateFirstAcceptanceError(
+                    f"{label} State activation was superseded"
+                )
+        else:
+            store.set_league_state(user_id, state)
+        after = sample_resources(f"{label}_post_resource_boundary")
+        if previous_league_id is not None and previous_league_id != state.league.league_id:
             transition_row = {
                 "label": label,
                 "from_league_id": previous_league_id,
                 "to_league_id": state.league.league_id,
                 "before": before,
-                "reclaim": reclaimed if isinstance(reclaimed, dict) else str(reclaimed),
                 "after": after,
             }
             transition_rows.append(transition_row)
             _logger.info(
-                "FSFFL STATE-FIRST ACCEPTANCE transition_reclaim=%s data=%s",
+                "FSFFL STATE-FIRST ACCEPTANCE transition_boundary=%s data=%s",
                 label,
                 json.dumps(transition_row, sort_keys=True, default=str),
             )
