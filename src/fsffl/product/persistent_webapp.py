@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import gc
 import logging
 import os
@@ -429,6 +430,36 @@ app = _webapp.create_app(
     state_transition_reclaimer=_reclaim_runtime_state_transition,
     phase_memory_reclaimer=_reclaim_runtime_phase_memory,
 )
+
+_RESTORE_GATE_BYPASS_PREFIXES = (
+    "/api/connect/sleeper",
+    "/health/",
+)
+
+
+@app.middleware("http")
+async def _gate_restored_session_reads(request, call_next):
+    """Wait for explicit startup restore only when a request depends on that restore.
+
+    Fresh Connect is always allowed through. Once fresh canonical State is in memory,
+    all ordinary API reads are also allowed through even if the old restore thread is
+    still finishing, so persistence recovery can never sit in front of current State.
+    """
+
+    path = request.url.path
+    if (
+        _startup_restore_complete.is_set()
+        or not _beta_restore_user
+        or not path.startswith("/api/")
+        or any(path.startswith(prefix) for prefix in _RESTORE_GATE_BYPASS_PREFIXES)
+        or _runtime_store.get(_beta_restore_user).league_state is not None
+        or not _runtime_store.durable_restore_pending(_beta_restore_user)
+    ):
+        return await call_next(request)
+
+    await asyncio.to_thread(_startup_restore_complete.wait, 180.0)
+    return await call_next(request)
+
 
 def _log_startup_runtime_readiness() -> None:
     if not _beta_restore_user:
