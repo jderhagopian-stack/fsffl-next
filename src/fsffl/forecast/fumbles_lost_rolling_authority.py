@@ -27,6 +27,7 @@ _OBSERVED_FALLBACK_TIERS = (
     "current_only",
     "cold_start",
 )
+_ROLLING_PRIMARY_POPULATION = "tier != cold_start"
 
 
 def production_table_payload_fingerprint(payload: Mapping[str, object]) -> str:
@@ -431,6 +432,13 @@ def validate_annual_rollover_candidate(
     # Uncertainty widening alone is not predictive authority.
     try:
         adequacy_season = int(newly_completed_rolling_adequacy["heldout_season"])
+        pooled_seasons = tuple(
+            int(season)
+            for season in newly_completed_rolling_adequacy["pooled_seasons"]  # type: ignore[union-attr]
+        )
+        primary_population = str(
+            newly_completed_rolling_adequacy["primary_population"]
+        )
         adequacy_cutoffs = newly_completed_rolling_adequacy["cutoffs"]
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError(
@@ -439,6 +447,15 @@ def validate_annual_rollover_candidate(
     if adequacy_season != prior.target_season:
         raise ValueError(
             "annual FUMBLES_LOST rolling adequacy proof targets the wrong held-out season"
+        )
+    expected_pooled_seasons = tuple(range(2023, candidate.target_season))
+    if pooled_seasons != expected_pooled_seasons:
+        raise ValueError(
+            "annual FUMBLES_LOST rolling adequacy proof has the wrong pooled OOT cohort"
+        )
+    if primary_population != _ROLLING_PRIMARY_POPULATION:
+        raise ValueError(
+            "annual FUMBLES_LOST rolling adequacy proof has the wrong primary population"
         )
     if not isinstance(adequacy_cutoffs, Mapping):
         raise ValueError("annual FUMBLES_LOST rolling adequacy proof is incomplete")
@@ -456,10 +473,40 @@ def validate_annual_rollover_candidate(
             heldout_season_zero_rmse = float(row["heldout_season_zero_rmse"])
             pooled_bias = float(row["pooled_bias"])
             pooled_zero_gap = float(row["pooled_zero_gap"])
+            pooled_primary_n = int(row["pooled_primary_n"])
+            primary_n_by_season = row["primary_n_by_season"]
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(
                 "annual FUMBLES_LOST rolling adequacy proof is incomplete"
             ) from exc
+        if not isinstance(primary_n_by_season, Mapping):
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy proof population counts are incomplete"
+            )
+        normalized_counts: dict[int, int] = {}
+        try:
+            for season in expected_pooled_seasons:
+                raw_count = (
+                    primary_n_by_season.get(season)
+                    if season in primary_n_by_season
+                    else primary_n_by_season[str(season)]
+                )
+                count = int(raw_count)
+                if count <= 0:
+                    raise ValueError
+                normalized_counts[season] = count
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy proof population counts are incomplete"
+            ) from exc
+        if (
+            len(primary_n_by_season) != len(expected_pooled_seasons)
+            or pooled_primary_n <= 0
+            or pooled_primary_n != sum(normalized_counts.values())
+        ):
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy proof population counts do not match pooled cohort"
+            )
         nonnegative_metrics = (
             pooled_rolling_rmse,
             pooled_zero_rmse,
