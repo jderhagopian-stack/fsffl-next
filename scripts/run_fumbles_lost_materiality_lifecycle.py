@@ -18,7 +18,7 @@ NFL_GAMES=17.0
 Z90=1.6448536269514722
 MATERIALITY_FRACTION=0.10
 ELIGIBLE_OBSERVED_TIERS=("history_plus_current","history_only","current_only","cold_start")
-IDENTITY_LIGHT_RULE="eligible only when canonical offensive position is known and non-conflicting; uses tier-agnostic position bound"
+IDENTITY_LIGHT_RULE="eligible only when canonical offensive position is known/non-conflicting and the matching position/cutoff cold-start population is eligible; uses tier-agnostic position bound"
 DATA={
 2021:("https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2021.csv","41915fb49238902ad1f129ebf0405b11a1e710454ae0fe8f7b3e4f9145875f48"),
 2022:("https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2022.csv","ad426c3fe5bf1cc30c3f137fdfe96d054e19d400879ee4413129da49fa7b54be"),
