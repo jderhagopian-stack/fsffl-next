@@ -590,3 +590,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Two P2s still block merge: require governed annual rolling-adequacy proof before promotion, and preserve a finite/positive/non-decreasing cold-start uncertainty floor across rollover.
 - Fix only those annual validation-class defects, add deterministic regressions, rerun full CI/affected focused checks, and repeat bounded exact-head P1/P2 review.
 - Preserve #294/#295/#296 and all frozen model boundaries. No Research reopen or broader scope.
+
+
+## 2026-09-29 — #298 merged; hosted acceptance active
+- **Implementation — ACTIVE / sole product-critical path.**
+- PR #298 merged as `5d8daf7a84237baa9ad148061bc1b9bd23405eac`; all required pre-merge CI/focused checks passed and final bounded exact-head P1/P2 review is clean.
+- Do not continue annual-rollover review unless new evidence appears.
+- Deploy the merged #298 lineage and execute the full hosted lifecycle acceptance: clean-first-run / managed-team selection / FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session.
+- Preserve #294/#295/#296 runtime architecture and all frozen model boundaries.
+- Physical Safari remains HOLD until hosted terminal PASS.
