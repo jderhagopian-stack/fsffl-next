@@ -12,7 +12,7 @@ from .runtime import UserRuntimeContext
 
 
 _logger = logging.getLogger("uvicorn.error")
-_MAX_ENTRIES = 1
+_MAX_ENTRIES_PER_USER = 1
 
 WorkspaceBuilder = Callable[..., dict[str, object]]
 
@@ -154,8 +154,12 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
             )
             cache[key] = result
             cache.move_to_end(key)
-            while len(cache) > _MAX_ENTRIES:
-                cache.popitem(last=False)
+            user_keys = [
+                item for item in cache if item[0] == runtime.user_id
+            ]
+            while len(user_keys) > _MAX_ENTRIES_PER_USER:
+                stale_key = user_keys.pop(0)
+                cache.pop(stale_key, None)
             _logger.info(
                 "FSFFL Market workspace timing cache_hit=false elapsed=%.3fs hits=%d misses=%d state=%s team=%s",
                 monotonic() - started,
