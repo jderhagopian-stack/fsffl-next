@@ -12,7 +12,7 @@
   },
   "fallback_bound": {
     "formula": "max(position-wide historical maximum season-equivalent target from all completed prior seasons, previously frozen rolling primary-population bound when cutoff>=2)",
-    "identity_light": "eligible only when canonical offensive position is known and non-conflicting; uses tier-agnostic position bound",
+    "identity_light": "eligible only when canonical offensive position is known/non-conflicting and the matching position/cutoff cold-start population is eligible; uses tier-agnostic position bound",
     "minimum_empirical_coverage_gate": 0.9,
     "observed_tiers_eligible": [
       "history_plus_current",
