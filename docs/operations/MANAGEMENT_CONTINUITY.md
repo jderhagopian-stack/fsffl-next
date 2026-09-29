@@ -308,3 +308,13 @@ Physical iPhone testing after a surgical server-side reset proved the basic firs
 Regression boundary is concrete: PR #54 (`0021aefc...`) / #56 (`a8527e1...`) intentionally made hosted connect usable once Sleeper State existed in memory, with persistence asynchronous and visible Safari progress. PR #261 (`c57bc39...`) later preserved a State-activation checkpoint wait while solving switch-safe durability, recreating blocking on first connect.
 
 New controlling directive: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`. Restore the old responsiveness contract while keeping #261/#291 switch, atomic-publication, restart and durability safety. Do not ask Jimmy to test again until a controlled hosted true-clean first-run explicitly clears both server runtime state and browser-local state and passes connect -> explicit team selection -> State-only usability -> visible intelligence progress -> coherent publish or explicit failure.
+
+
+## Latest architecture-audit disposition
+Independent read-only Work audit confirms the founding analytical authority chain remains sound; the recent failures are primarily runtime/application architecture drift. One residual P1 exposure is now a formal stabilization gate: cold foreground `get()` can still invoke durable restore before fresh Connect activation, meaning persistence recovery can remain on the State critical path.
+
+Controlling corrective: `docs/operations/directives/20260929_RUNTIME_ARCHITECTURE_AUDIT_CORRECTIVE.md`.
+
+Target invariant: valid canonical State opens the league; persistence/restore are continuity mechanisms, not permission gates. Foreground `get()` should be an in-memory published read; durable restore should be explicit/outside fresh State activation and may install only if the captured runtime identity is still current. Preserve atomic publication, per-user sequencing, team identity guards and strict Forecast source-health authority.
+
+PR #293 merged as `49ce8cae4f588fefc7c879e643504ee1b015cf42` and is currently under hosted acceptance. Let that run finish; then resolve any replay-scan P2 and the cold-restore/Connect architecture gate before declaring stabilization complete or requesting another iPhone/Safari test.
