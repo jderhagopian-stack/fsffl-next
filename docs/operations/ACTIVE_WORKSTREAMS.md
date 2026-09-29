@@ -633,3 +633,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Do not create another narrow patch for only the three visible #302 findings.
 - Close the entire cross-league resource-ownership boundary: complete holder inventory, complete transition-path inventory, single shared cleanup/reclaim boundary, deterministic closure matrix, full CI, whole-class P1/P2 review, then deploy and resume hosted lifecycle.
 - Preserve the unchanged memory gate, #294/#295/#296, #298, PI readiness semantics, and all frozen model boundaries.
+
+
+## 2026-09-29 — PR #303 final closure gate
+- **Implementation — ACTIVE / sole product-critical path.**
+- Exact head `12b7d69baaeedc4952ab93fe07ba396c44b2681d`; focused workflows green; full CI is 1 failure / 1,865 passes.
+- Reconcile the remaining stale Behavioral-refresh regression to the resource-boundary invariant, rerun full CI + deterministic closure matrix, then perform a fresh exact-head whole-class P1/P2 review.
+- Do not merge until CI and that review are clean. If clean, merge/deploy and resume full hosted lifecycle acceptance immediately.
+- No further architecture broadening absent new evidence; preserve the hard-memory gate and all frozen boundaries.
