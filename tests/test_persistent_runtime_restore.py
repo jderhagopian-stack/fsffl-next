@@ -28,7 +28,8 @@ from fsffl.persistence.session import (
     LEAGUE_LAST_GOOD_ARTIFACT_KIND, LEAGUE_LAST_GOOD_MODEL_VERSION,
     LEAGUE_LAST_GOOD_SCOPE_KIND,
     persist_runtime_snapshot, restore_last_good_intelligence, restore_runtime_snapshot,
-    restore_state_bound_intelligence, restore_state_bound_raw_forecast_evidence,
+    restore_published_generation_identity, restore_state_bound_intelligence,
+    restore_state_bound_raw_forecast_evidence,
 )
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.product.presentation_continuity import (
@@ -3321,3 +3322,162 @@ def test_stale_managed_team_checkpoint_cannot_regress_newer_state_pointer() -> N
     assert restored.league_state is not None
     assert restored.league_state.state_id == newer.state_id
     assert restored.selected_team_id == "t1"
+
+
+def test_team_switch_then_same_state_publication_preserves_identity_and_restores_exact_team() -> None:
+    persistence = MemoryPersistence()
+    continuity = PresentationContinuityStore(persistence)
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    user_id = "team-same-state-publication"
+
+    persist_runtime_snapshot(
+        persistence,
+        user_id=user_id,
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="seed-generation",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user(user_id)
+    assert restored.selected_team_id == "t2"
+
+    def builders(team_id: str):
+        return tuple(
+            (
+                surface,
+                lambda surface=surface, team_id=team_id: {
+                    "surface": surface,
+                    "team_id": team_id,
+                },
+            )
+            for surface in REQUIRED_PRESENTATION_SURFACES
+        )
+
+    initial_presentation = continuity.promote(
+        user_id=user_id,
+        runtime=restored,
+        builders=builders("t2"),
+    )
+    assert initial_presentation is not None
+    runtime.bind_publication_generation_id(
+        user_id,
+        initial_presentation.publication_generation_id,
+    )
+
+    selected = runtime.select_team(user_id, "t1")
+    assert selected.selected_team_id == "t1"
+    assert selected.publication_generation_id is None
+    assert runtime.wait_for_managed_team_checkpoint(
+        user_id,
+        team_id="t1",
+        state_id=state.state_id,
+        timeout=2.0,
+    )
+
+    # Team-specific presentation from t2 must never leak while t1 is settled but
+    # its replacement generation is still being built.
+    assert continuity.load_for_runtime(
+        user_id=user_id,
+        runtime=runtime.get(user_id),
+        surface=REQUIRED_PRESENTATION_SURFACES[0],
+    ) is None
+
+    runtime.begin_working_generation(user_id, league_state=state)
+    working = runtime.working_context(user_id)
+    assert working.selected_team_id == "t1"
+    assert runtime.checkpoint_working_generation(user_id)
+
+    # Working checkpointing may persist reusable artifacts, but it cannot mutate the
+    # published identity that seeded this atomic generation.
+    assert runtime.get(user_id).publication_generation_id is None
+    durable_generation, durable_team = restore_published_generation_identity(
+        persistence,
+        user_id=user_id,
+        league_state=state,
+    )
+    assert durable_generation == initial_presentation.publication_generation_id
+    assert durable_team == "t2"
+
+    replacement_presentation = continuity.promote(
+        user_id=user_id,
+        runtime=runtime.working_context(user_id),
+        builders=builders("t1"),
+    )
+    assert replacement_presentation is not None
+    assert runtime.get(user_id).publication_generation_id is None
+
+    published = runtime.publish_working_generation(
+        user_id,
+        publication_generation_id=replacement_presentation.publication_generation_id,
+    )
+    assert published.selected_team_id == "t1"
+    assert (
+        published.publication_generation_id
+        == replacement_presentation.publication_generation_id
+    )
+
+    generation_ids = set()
+    for surface in REQUIRED_PRESENTATION_SURFACES:
+        payload = continuity.load_for_runtime(
+            user_id=user_id,
+            runtime=published,
+            surface=surface,
+        )
+        assert payload is not None
+        assert payload["team_id"] == "t1"
+        generation_ids.add(payload["publication_generation_id"])
+    assert generation_ids == {replacement_presentation.publication_generation_id}
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user(user_id)
+    assert after_restart.selected_team_id == "t1"
+    assert (
+        after_restart.publication_generation_id
+        == replacement_presentation.publication_generation_id
+    )
+
+
+def test_genuinely_stale_same_state_job_still_fails_atomic_identity_guard() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    user_id = "stale-same-state-identity"
+
+    persist_runtime_snapshot(
+        persistence,
+        user_id=user_id,
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user(user_id)
+    assert restored.publication_generation_id == "generation-a"
+
+    runtime.begin_working_generation(user_id, league_state=state)
+    # Simulate a real independent publication/backfill winning after the worker
+    # captured generation A. The stale worker must not overwrite generation B.
+    runtime.bind_publication_generation_id(user_id, "generation-b")
+
+    try:
+        runtime.publish_working_generation(
+            user_id,
+            publication_generation_id="generation-c",
+        )
+    except ValueError as exc:
+        assert (
+            "published league/team/generation identity changed during reconciliation"
+            in str(exc)
+        )
+    else:
+        raise AssertionError("stale same-State job must fail the atomic identity guard")
+
+    current = runtime.get(user_id)
+    assert current.publication_generation_id == "generation-b"
