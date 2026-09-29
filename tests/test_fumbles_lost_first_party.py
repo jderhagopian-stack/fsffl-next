@@ -9,9 +9,14 @@ from fsffl.forecast.fumbles_lost_first_party import (
     FIRST_PARTY_FUMBLES_LOST_SOURCE,
     FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
     FirstPartyFumblesLostEvidenceTier,
+    FirstPartyFumblesLostPointAuthorityUnavailable,
     FirstPartyFumblesLostPlayerEvidence,
     FirstPartyFumblesLostSupplement,
     build_first_party_fumbles_lost_supplement,
+)
+from fsffl.forecast.fumbles_lost_rolling_authority import (
+    ROLLING_FUMBLES_LOST_MODEL_VERSION,
+    frozen_fumbles_lost_production_table_2026,
 )
 from fsffl.forecast.fumbles_lost_first_party_priors import (
     CALIBRATION_SCALAR_2026,
@@ -64,8 +69,11 @@ class FakeSleeperStats:
     def __init__(self, rows_by_week, *, completed_through_week: int = 2):
         self.rows_by_week = rows_by_week
         self.completed_through_week = completed_through_week
+        self.nfl_state_calls = 0
+        self.requested_weeks = []
 
     def fetch_nfl_state(self):
+        self.nfl_state_calls += 1
         return SleeperNflState(
             season=2026,
             week=self.completed_through_week + 1,
@@ -75,6 +83,7 @@ class FakeSleeperStats:
 
     def fetch_week(self, *, season: int, week: int):
         assert season == 2026
+        self.requested_weeks.append(week)
         return self.rows_by_week.get(week, ())
 
 
@@ -169,7 +178,7 @@ def _line(player_id: str, week: int, **stats: float) -> SleeperWeeklyStatLine:
     )
 
 
-def test_frozen_model_contract_matches_accepted_research() -> None:
+def test_frozen_priors_and_rolling_contract_match_accepted_research() -> None:
     assert MODEL_VERSION == "next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate"
     assert CALIBRATION_SCALAR_2026 == 0.6158756078393594
     assert REQUIRED_COMPLETED_THROUGH_WEEK == 2
@@ -186,6 +195,12 @@ def test_frozen_model_contract_matches_accepted_research() -> None:
     }
     assert all(value > 0 for value in POSITION_RESIDUAL_STDDEV_FLOOR.values())
     assert COLD_START_STDDEV_FLOOR > 0
+    table = frozen_fumbles_lost_production_table_2026()
+    assert table.contract_version == ROLLING_FUMBLES_LOST_MODEL_VERSION
+    assert table.supported_completed_through_weeks == tuple(range(2, 18))
+    assert table.calibration_scalar(2) == CALIBRATION_SCALAR_2026
+    assert table.calibration_scalar(3) == 0.6183406074632098
+    assert table.role_prior_games == 4.0
 
 
 def test_wr_shadow_formula_reproduces_accepted_week2_output() -> None:
@@ -256,7 +271,7 @@ def test_cutoff_mismatch_fails_closed_and_total_fumbles_are_not_a_substitute() -
         },
         completed_through_week=3,
     )
-    with pytest.raises(ValueError, match="completed Week 2"):
+    with pytest.raises(ValueError, match="cutoff does not match canonical State"):
         build_first_party_fumbles_lost_supplement(
             _state(player_id, Position.WR),
             base_observations=_base(player_id, Position.WR),
@@ -469,3 +484,116 @@ def test_prior_absent_subject_without_current_row_is_identity_light_with_nonzero
     assert evidence.mean_fumbles_lost > 0
     assert evidence.predictive_stddev >= COLD_START_STDDEV_FLOOR
     assert supplement.observations[0].distribution.stddev >= COLD_START_STDDEV_FLOOR
+
+
+
+def test_week0_and_week1_are_explicit_omission_without_provider_fetch() -> None:
+    player_id = "sleeper:player:10213"
+    for cutoff in (0, 1):
+        source = FakeSleeperStats({}, completed_through_week=cutoff)
+        with pytest.raises(
+            FirstPartyFumblesLostPointAuthorityUnavailable,
+            match="explicitly omitted before completed Week 2",
+        ):
+            build_first_party_fumbles_lost_supplement(
+                _state(player_id, Position.WR, completed_through_week=cutoff),
+                base_observations=_base(player_id, Position.WR),
+                stats_source=source,  # type: ignore[arg-type]
+                clock=lambda: CAPTURED,
+            )
+        assert source.nfl_state_calls == 0
+        assert source.requested_weeks == []
+
+
+def test_week3_uses_exact_frozen_scalar_floor_and_fetches_only_weeks_1_through_3() -> None:
+    player_id = "sleeper:player:10213"
+    source = FakeSleeperStats(
+        {
+            1: (_line(player_id, 1, rec=3.0),),
+            2: (_line(player_id, 2, rec=4.0),),
+            3: (_line(player_id, 3, rush_att=1.0, rec=2.0),),
+            4: (_line(player_id, 4, rec=99.0),),
+        },
+        completed_through_week=3,
+    )
+    supplement = build_first_party_fumbles_lost_supplement(
+        _state(player_id, Position.WR, completed_through_week=3),
+        base_observations=_base(player_id, Position.WR),
+        stats_source=source,  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    )
+    table = frozen_fumbles_lost_production_table_2026()
+    assert source.requested_weeks == [1, 2, 3]
+    assert supplement.current_input_weeks == (1, 2, 3)
+    assert supplement.calibration_scalar == 0.6183406074632098
+    assert supplement.calibration_scalar == table.calibration_scalar(3)
+    assert supplement.player_evidence[0].current_games == 3
+    assert supplement.player_evidence[0].current_opportunities == pytest.approx(10.0)
+    assert supplement.player_evidence[0].predictive_stddev >= table.uncertainty_floor(
+        3, Position.WR
+    )
+    assert supplement.production_table_fingerprint == table.fingerprint
+    assert "cutoff=3" in supplement.observations[0].provenance.source_version
+
+
+def test_all_rolling_cutoff_scalars_and_uncertainty_floors_are_frozen_positive() -> None:
+    table = frozen_fumbles_lost_production_table_2026()
+    for cutoff in range(2, 18):
+        assert table.calibration_scalar(cutoff) > 0
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE):
+            assert table.uncertainty_floor(cutoff, position) > 0
+
+
+def test_cutoff_advance_changes_authority_fingerprint_and_never_reads_future_week() -> None:
+    player_id = "sleeper:player:10213"
+    source2 = FakeSleeperStats(
+        {
+            1: (_line(player_id, 1, rec=3.0),),
+            2: (_line(player_id, 2, rec=4.0),),
+            3: (_line(player_id, 3, rec=50.0),),
+        },
+        completed_through_week=2,
+    )
+    week2 = build_first_party_fumbles_lost_supplement(
+        _state(player_id, Position.WR, completed_through_week=2),
+        base_observations=_base(player_id, Position.WR),
+        stats_source=source2,  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    )
+    assert source2.requested_weeks == [1, 2]
+
+    source3 = FakeSleeperStats(
+        {
+            1: (_line(player_id, 1, rec=3.0),),
+            2: (_line(player_id, 2, rec=4.0),),
+            3: (_line(player_id, 3, rec=2.0),),
+            4: (_line(player_id, 4, rec=50.0),),
+        },
+        completed_through_week=3,
+    )
+    week3 = build_first_party_fumbles_lost_supplement(
+        _state(player_id, Position.WR, completed_through_week=3),
+        base_observations=_base(player_id, Position.WR),
+        stats_source=source3,  # type: ignore[arg-type]
+        clock=lambda: CAPTURED,
+    )
+    assert source3.requested_weeks == [1, 2, 3]
+    assert week2.authority_fingerprint != week3.authority_fingerprint
+    assert week2.current_input_sha256 != week3.current_input_sha256
+
+
+def test_week18_has_no_point_authority_and_never_fetches_provider_weeks() -> None:
+    player_id = "sleeper:player:10213"
+    source = FakeSleeperStats({}, completed_through_week=18)
+    with pytest.raises(
+        FirstPartyFumblesLostPointAuthorityUnavailable,
+        match="Week 18 has no remaining-season rolling point authority",
+    ):
+        build_first_party_fumbles_lost_supplement(
+            _state(player_id, Position.WR, completed_through_week=18),
+            base_observations=_base(player_id, Position.WR),
+            stats_source=source,  # type: ignore[arg-type]
+            clock=lambda: CAPTURED,
+        )
+    assert source.nfl_state_calls == 0
+    assert source.requested_weeks == []
