@@ -413,10 +413,12 @@ def _annual_rolling_adequacy() -> dict[str, object]:
         "heldout_season": 2026,
         "cutoffs": {
             cutoff: {
-                "rolling_rmse": 0.5,
-                "zero_rmse": 1.0,
-                "bias": 0.0,
-                "zero_gap": 0.0,
+                "pooled_rolling_rmse": 0.5,
+                "pooled_zero_rmse": 1.0,
+                "heldout_season_rmse": 0.5,
+                "heldout_season_zero_rmse": 1.0,
+                "pooled_bias": 0.0,
+                "pooled_zero_gap": 0.0,
             }
             for cutoff in range(2, 18)
         },
@@ -638,7 +640,7 @@ def test_annual_rollover_requires_governed_rolling_adequacy_proof() -> None:
         )
 
     worse_than_omission = _annual_rolling_adequacy()
-    worse_than_omission["cutoffs"][3]["rolling_rmse"] = 1.01  # type: ignore[index]
+    worse_than_omission["cutoffs"][3]["pooled_rolling_rmse"] = 1.01  # type: ignore[index]
     with pytest.raises(ValueError, match="RMSE-vs-omission gate"):
         validate_annual_rollover_candidate(
             candidate,
@@ -649,8 +651,20 @@ def test_annual_rollover_requires_governed_rolling_adequacy_proof() -> None:
             newly_completed_rolling_adequacy=worse_than_omission,
         )
 
+    unstable = _annual_rolling_adequacy()
+    unstable["cutoffs"][5]["heldout_season_rmse"] = 1.100001  # type: ignore[index]
+    with pytest.raises(ValueError, match="held-out stability gate"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=unstable,
+        )
+
     biased = _annual_rolling_adequacy()
-    biased["cutoffs"][8]["bias"] = 0.150001  # type: ignore[index]
+    biased["cutoffs"][8]["pooled_bias"] = 0.150001  # type: ignore[index]
     with pytest.raises(ValueError, match="absolute-bias gate"):
         validate_annual_rollover_candidate(
             candidate,
@@ -662,7 +676,7 @@ def test_annual_rollover_requires_governed_rolling_adequacy_proof() -> None:
         )
 
     miscalibrated = _annual_rolling_adequacy()
-    miscalibrated["cutoffs"][12]["zero_gap"] = 0.050001  # type: ignore[index]
+    miscalibrated["cutoffs"][12]["pooled_zero_gap"] = 0.050001  # type: ignore[index]
     with pytest.raises(ValueError, match="zero-calibration gate"):
         validate_annual_rollover_candidate(
             candidate,
