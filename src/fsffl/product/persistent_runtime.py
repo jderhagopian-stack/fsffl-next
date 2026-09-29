@@ -772,18 +772,42 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         *,
         target_state,
     ):
-        """Find the newest governed raw Forecast evidence for this league.
+        """Find the newest *compatible* governed raw Forecast evidence for this league.
 
-        Replay authority is league/State evidence authority, not user-session
-        authority. A clean runtime user can lose its last-good pointer while durable
-        league Forecast artifacts and canonical State history remain valid. Discovery
-        therefore tries exact-State raw evidence, the user's league last-good pointer,
-        then bounded same-league State history. Compatibility is still evaluated
-        separately before any replay is accepted.
+        Discovery is compatibility-aware while scanning. A newer raw artifact with
+        materially different season/player identity may not suppress an older governed
+        artifact that exactly matches the target raw-input fingerprint.
         """
 
         if self._persistence is None:
             return None, None, None, ["persistence_unavailable"]
+
+        target_raw_fingerprint = raw_forecast_input_fingerprint(target_state)
+        discovery_rejections: list[str] = []
+        first_incompatible = None
+
+        def consider(candidate_state, candidate_raw, source: str):
+            nonlocal first_incompatible
+            reasons = list(
+                raw_forecast_compatibility_reasons(candidate_state, target_state)
+            )
+            candidate_fingerprint = raw_forecast_input_fingerprint(candidate_state)
+            if not reasons and candidate_fingerprint == target_raw_fingerprint:
+                return candidate_state, candidate_raw, source, list(discovery_rejections)
+
+            if not reasons:
+                reasons = ["raw_forecast_material_inputs_changed"]
+            discovery_rejections.extend(
+                f"{source}:{reason}" for reason in reasons
+            )
+            if first_incompatible is None:
+                first_incompatible = (
+                    candidate_state,
+                    candidate_raw,
+                    source,
+                    list(discovery_rejections),
+                )
+            return None
 
         exact_raw = restore_state_bound_raw_forecast_evidence(
             self._persistence,
@@ -791,8 +815,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         )
         if exact_raw is not None:
             return target_state, exact_raw, "exact_state_raw", []
+        discovery_rejections.append("exact_state_raw_unavailable")
 
-        discovery_rejections: list[str] = ["exact_state_raw_unavailable"]
+        seen_state_ids: set[str] = {target_state.state_id}
         last_good = restore_last_good_state_identity(
             self._persistence,
             user_id=user_id,
@@ -800,22 +825,29 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         )
         if last_good is not None:
             prior_state, _selected = last_good
+            seen_state_ids.add(prior_state.state_id)
             prior_raw = restore_state_bound_raw_forecast_evidence(
                 self._persistence,
                 league_state=prior_state,
             )
             if prior_raw is not None:
-                return prior_state, prior_raw, "league_last_good", discovery_rejections
-            discovery_rejections.append("league_last_good_raw_forecast_unavailable")
+                accepted = consider(prior_state, prior_raw, "league_last_good")
+                if accepted is not None:
+                    return accepted
+            else:
+                discovery_rejections.append(
+                    "league_last_good_raw_forecast_unavailable"
+                )
         else:
             discovery_rejections.append("league_last_good_state_unavailable")
 
         if self._state_history is None:
             discovery_rejections.append("state_history_unavailable")
+            if first_incompatible is not None:
+                return first_incompatible
             return None, None, None, discovery_rejections
 
         cutoff = target_state.as_of
-        seen_state_ids: set[str] = set()
         for _ in range(32):
             try:
                 candidate = self._state_history.latest_at_or_before(
@@ -831,25 +863,29 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     exc,
                 )
                 discovery_rejections.append("state_history_lookup_failed")
+                if first_incompatible is not None:
+                    return first_incompatible
                 return None, None, None, discovery_rejections
-            if candidate is None or candidate.state_id in seen_state_ids:
+            if candidate is None:
                 break
-            seen_state_ids.add(candidate.state_id)
-            if candidate.state_id != target_state.state_id:
-                candidate_raw = restore_state_bound_raw_forecast_evidence(
-                    self._persistence,
-                    league_state=candidate,
-                )
-                if candidate_raw is not None:
-                    return (
-                        candidate,
-                        candidate_raw,
-                        "state_history",
-                        discovery_rejections,
-                    )
             cutoff = candidate.as_of - timedelta(microseconds=1)
+            if candidate.state_id in seen_state_ids:
+                continue
+            seen_state_ids.add(candidate.state_id)
 
-        discovery_rejections.append("state_history_raw_forecast_unavailable")
+            candidate_raw = restore_state_bound_raw_forecast_evidence(
+                self._persistence,
+                league_state=candidate,
+            )
+            if candidate_raw is None:
+                continue
+            accepted = consider(candidate, candidate_raw, "state_history")
+            if accepted is not None:
+                return accepted
+
+        discovery_rejections.append("state_history_compatible_raw_forecast_unavailable")
+        if first_incompatible is not None:
+            return first_incompatible
         return None, None, None, discovery_rejections
 
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
