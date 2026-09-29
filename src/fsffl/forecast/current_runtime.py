@@ -21,6 +21,11 @@ from .fumbles_lost_first_party import (
     FirstPartyFumblesLostSupplement,
     build_first_party_fumbles_lost_supplement,
 )
+from .fumbles_lost_materiality import (
+    FumblesLostMaterialityAssessment,
+    assess_fumbles_lost_non_material_partial,
+)
+from .fumbles_lost_rolling_authority import NON_MATERIAL_PARTIAL_AUTHORITY
 from .league_scoring import (
     ForecastRuleFamilyCoverage,
     PartialFantasyPointForecast,
@@ -28,7 +33,7 @@ from .league_scoring import (
     derive_league_scoring_result,
 )
 from .live_ensemble import LiveEnsembleCoverage, LiveForecastSourceBatch, build_authoritative_live_ensemble
-from .models import ForecastObservation
+from .models import ForecastMetric, ForecastObservation
 from .regular_season import derive_fantasy_regular_season_forecasts
 from .season_uncertainty import apply_empirical_season_fantasy_point_uncertainty
 from .supplemental_coordinate import league_consumes_fumbles_lost
@@ -115,12 +120,195 @@ class LiveForecastRuntimeResult(FrozenModel):
     fumbles_lost_supplement_failure: str | None = None
     fumbles_lost_supplement_model_version: str | None = None
     fumbles_lost_supplement_league_state_id: str | None = None
+    fumbles_lost_materiality_assessments: tuple[FumblesLostMaterialityAssessment, ...] = ()
+    fumbles_lost_non_material_partial_player_ids: tuple[str, ...] = ()
+    fumbles_lost_material_partial_player_ids: tuple[str, ...] = ()
     simulation_material_partial_player_ids: tuple[str, ...] = ()
     first_party_fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = Field(
         default=None,
         exclude=True,
     )
-    model_version: str = "next2-current-runtime-v9:first-party-fumbles-lost"
+    model_version: str = "next2-current-runtime-v10:rolling-fumbles-lost-materiality"
+
+
+def _supported_partial_as_forecast(
+    partial: PartialFantasyPointForecast,
+) -> ForecastObservation:
+    degraded_version = (
+        f"{partial.model_version}:NON_MATERIAL_PARTIAL:"
+        "fumbles_lost_explicitly_omitted"
+    )
+    provenance = partial.provenance.model_copy(
+        update={
+            "source": (
+                f"{partial.provenance.source}:NON_MATERIAL_PARTIAL:"
+                "fumbles_lost_explicitly_omitted"
+            ),
+            "source_version": degraded_version,
+        }
+    )
+    observation = ForecastObservation(
+        player_id=partial.player_id,
+        position=partial.position,
+        horizon=partial.horizon,
+        metric=ForecastMetric.FANTASY_POINTS,
+        period_start=partial.period_start,
+        period_end=partial.period_end,
+        distribution=partial.distribution,
+        source=partial.source,
+        model_version=degraded_version,
+        as_of=partial.as_of,
+        provenance=provenance,
+    )
+    return apply_empirical_season_fantasy_point_uncertainty((observation,))[0]
+
+
+def _materiality_aware_scoring(
+    league_state: LeagueState,
+    *,
+    raw_ensemble: tuple[ForecastObservation, ...],
+    supplemental_observations: tuple[ForecastObservation, ...],
+    fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None,
+    source: str,
+    model_version: str,
+) -> tuple[
+    ScoringCoverage,
+    tuple[ForecastRuleFamilyCoverage, ...],
+    tuple[PartialFantasyPointForecast, ...],
+    tuple[ForecastObservation, ...],
+    tuple[ForecastObservation, ...],
+    tuple[FumblesLostMaterialityAssessment, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+]:
+    scoring = derive_league_scoring_result(
+        raw_ensemble,
+        rules=league_state.league.rules,
+        supplemental_observations=supplemental_observations,
+        source=source,
+        model_version=model_version,
+    )
+    authoritative = (
+        apply_empirical_season_fantasy_point_uncertainty(
+            scoring.authoritative_forecasts
+        )
+        if scoring.authoritative_forecasts
+        else ()
+    )
+
+    assessments: list[FumblesLostMaterialityAssessment] = []
+    non_material_rows: list[ForecastObservation] = []
+    non_material_keys: set[tuple[object, ...]] = set()
+    for partial in scoring.partial_forecasts:
+        if "fum_lost" not in partial.omitted_rule_stats:
+            continue
+        supported = _supported_partial_as_forecast(partial)
+        assessment = assess_fumbles_lost_non_material_partial(
+            league_state,
+            partial=partial,
+            supported_fantasy_point_stddev=supported.distribution.stddev,
+            supplement=fumbles_lost_supplement,
+        )
+        assessments.append(assessment)
+        if (
+            assessment.status == NON_MATERIAL_PARTIAL_AUTHORITY
+            and set(partial.omitted_rule_stats) == {"fum_lost"}
+        ):
+            key = (
+                partial.player_id,
+                partial.horizon,
+                partial.period_start,
+                partial.period_end,
+            )
+            non_material_keys.add(key)
+            non_material_rows.append(supported)
+
+    fantasy_points = tuple(
+        sorted(
+            authoritative + tuple(non_material_rows),
+            key=lambda item: (
+                item.player_id,
+                item.horizon.value,
+                item.period_start,
+                item.source,
+            ),
+        )
+    )
+    fantasy_regular_season = (
+        derive_fantasy_regular_season_forecasts(league_state, fantasy_points)
+        if league_state.matchups and fantasy_points
+        else ()
+    )
+
+    active_simulation_player_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
+    }
+    simulation_material_partial_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in scoring.partial_forecasts
+                if item.player_id in active_simulation_player_ids
+                and (
+                    item.player_id,
+                    item.horizon,
+                    item.period_start,
+                    item.period_end,
+                )
+                not in non_material_keys
+            }
+        )
+    )
+    simulation_blockers = tuple(
+        sorted(
+            {
+                reason
+                for family in scoring.family_coverage
+                if family.blocks_full_downstream_authority
+                for reason in family.reason_codes
+            }
+            | (
+                {"partial_player_scoring_coordinates_present"}
+                if simulation_material_partial_player_ids
+                else set()
+            )
+        )
+    )
+    non_material_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in assessments
+                if item.status == NON_MATERIAL_PARTIAL_AUTHORITY
+            }
+        )
+    )
+    material_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in assessments
+                if item.status != NON_MATERIAL_PARTIAL_AUTHORITY
+            }
+        )
+    )
+    return (
+        scoring.coverage,
+        scoring.family_coverage,
+        scoring.partial_forecasts,
+        fantasy_points,
+        fantasy_regular_season,
+        tuple(assessments),
+        non_material_player_ids,
+        material_player_ids,
+        simulation_material_partial_player_ids,
+        simulation_blockers,
+    )
 
 
 def replay_governed_raw_ensemble_for_state(
@@ -170,61 +358,31 @@ def replay_governed_raw_ensemble_for_state(
             # raw evidence must never turn a supplement failure into a silent zero.
             fumbles_lost_failure = f"{type(exc).__name__}: {exc}"
 
-    scoring = derive_league_scoring_result(
-        raw_ensemble,
-        rules=league_state.league.rules,
+    (
+        scoring_coverage,
+        family_coverage,
+        partial_forecasts,
+        fantasy_points,
+        fantasy_regular_season,
+        fumbles_lost_materiality_assessments,
+        fumbles_lost_non_material_partial_player_ids,
+        fumbles_lost_material_partial_player_ids,
+        simulation_material_partial_player_ids,
+        simulation_blockers,
+    ) = _materiality_aware_scoring(
+        league_state,
+        raw_ensemble=raw_ensemble,
         supplemental_observations=supplemental_observations,
+        fumbles_lost_supplement=fumbles_lost_supplement,
         source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v9:first-party-fumbles-lost",
-    )
-    fantasy_points = (
-        apply_empirical_season_fantasy_point_uncertainty(
-            scoring.authoritative_forecasts
-        )
-        if scoring.authoritative_forecasts
-        else ()
-    )
-    fantasy_regular_season = (
-        derive_fantasy_regular_season_forecasts(league_state, fantasy_points)
-        if league_state.matchups and fantasy_points
-        else ()
-    )
-    active_simulation_player_ids = {
-        entry.player_id
-        for team_state in league_state.team_states
-        for entry in team_state.roster
-        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
-    }
-    simulation_material_partial_player_ids = tuple(
-        sorted(
-            {
-                item.player_id
-                for item in scoring.partial_forecasts
-                if item.player_id in active_simulation_player_ids
-            }
-        )
-    )
-    simulation_blockers = tuple(
-        sorted(
-            {
-                reason
-                for family in scoring.family_coverage
-                if family.blocks_full_downstream_authority
-                for reason in family.reason_codes
-            }
-            | (
-                {"partial_player_scoring_coordinates_present"}
-                if simulation_material_partial_player_ids
-                else set()
-            )
-        )
+        model_version="next2-current-runtime-v10:rolling-fumbles-lost-materiality",
     )
     return LiveForecastRuntimeResult(
         raw_ensemble=raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
-        partial_fantasy_point_forecasts=scoring.partial_forecasts,
-        league_scoring_coverage=scoring.coverage,
-        family_coverage=scoring.family_coverage,
+        partial_fantasy_point_forecasts=partial_forecasts,
+        league_scoring_coverage=scoring_coverage,
+        family_coverage=family_coverage,
         simulation_authority_blockers=simulation_blockers,
         fantasy_regular_season_forecasts=fantasy_regular_season,
         coverage=prior_result.coverage,
@@ -274,6 +432,11 @@ def replay_governed_raw_ensemble_for_state(
             if fumbles_lost_supplement is not None
             else None
         ),
+        fumbles_lost_materiality_assessments=fumbles_lost_materiality_assessments,
+        fumbles_lost_non_material_partial_player_ids=(
+            fumbles_lost_non_material_partial_player_ids
+        ),
+        fumbles_lost_material_partial_player_ids=fumbles_lost_material_partial_player_ids,
         simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )
@@ -694,61 +857,31 @@ def build_current_live_forecasts(
             # The ordinary scorer will emit explicit partial outputs for fum_lost.
             fumbles_lost_failure = f"{type(exc).__name__}: {exc}"
 
-    scoring = derive_league_scoring_result(
-        raw_ensemble,
-        rules=league_state.league.rules,
+    (
+        scoring_coverage,
+        family_coverage,
+        partial_forecasts,
+        fantasy_points,
+        fantasy_regular_season,
+        fumbles_lost_materiality_assessments,
+        fumbles_lost_non_material_partial_player_ids,
+        fumbles_lost_material_partial_player_ids,
+        simulation_material_partial_player_ids,
+        simulation_blockers,
+    ) = _materiality_aware_scoring(
+        league_state,
+        raw_ensemble=raw_ensemble,
         supplemental_observations=supplemental_observations,
+        fumbles_lost_supplement=fumbles_lost_supplement,
         source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v9:first-party-fumbles-lost",
-    )
-    fantasy_points = (
-        apply_empirical_season_fantasy_point_uncertainty(
-            scoring.authoritative_forecasts
-        )
-        if scoring.authoritative_forecasts
-        else ()
-    )
-    fantasy_regular_season = (
-        derive_fantasy_regular_season_forecasts(league_state, fantasy_points)
-        if league_state.matchups and fantasy_points
-        else ()
-    )
-    active_simulation_player_ids = {
-        entry.player_id
-        for team_state in league_state.team_states
-        for entry in team_state.roster
-        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
-    }
-    simulation_material_partial_player_ids = tuple(
-        sorted(
-            {
-                item.player_id
-                for item in scoring.partial_forecasts
-                if item.player_id in active_simulation_player_ids
-            }
-        )
-    )
-    simulation_blockers = tuple(
-        sorted(
-            {
-                reason
-                for family in scoring.family_coverage
-                if family.blocks_full_downstream_authority
-                for reason in family.reason_codes
-            }
-            | (
-                {"partial_player_scoring_coordinates_present"}
-                if simulation_material_partial_player_ids
-                else set()
-            )
-        )
+        model_version="next2-current-runtime-v10:rolling-fumbles-lost-materiality",
     )
     return LiveForecastRuntimeResult(
         raw_ensemble=raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
-        partial_fantasy_point_forecasts=scoring.partial_forecasts,
-        league_scoring_coverage=scoring.coverage,
-        family_coverage=scoring.family_coverage,
+        partial_fantasy_point_forecasts=partial_forecasts,
+        league_scoring_coverage=scoring_coverage,
+        family_coverage=family_coverage,
         simulation_authority_blockers=simulation_blockers,
         fantasy_regular_season_forecasts=fantasy_regular_season,
         coverage=coverage,
@@ -801,6 +934,11 @@ def build_current_live_forecasts(
             if fumbles_lost_supplement is not None
             else None
         ),
+        fumbles_lost_materiality_assessments=fumbles_lost_materiality_assessments,
+        fumbles_lost_non_material_partial_player_ids=(
+            fumbles_lost_non_material_partial_player_ids
+        ),
+        fumbles_lost_material_partial_player_ids=fumbles_lost_material_partial_player_ids,
         simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )
