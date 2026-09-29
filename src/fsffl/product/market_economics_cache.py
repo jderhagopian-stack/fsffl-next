@@ -26,6 +26,11 @@ _ECONOMIC_EVIDENCE_KEYS = (
 EconomicEvaluator = Callable[..., dict[str, object]]
 
 
+def _runtime_user_id(runtime: UserRuntimeContext) -> str:
+    value = str(getattr(runtime, "user_id", "") or "").strip()
+    return value or "local-beta-user"
+
+
 def _evidence_identity(value: object | None) -> tuple[int, str | None]:
     return id(value), getattr(value, "model_version", None) if value is not None else None
 
@@ -51,7 +56,7 @@ def market_economics_cache_key(
     if not counterparty or not send or not receive:
         return None
     return (
-        runtime.user_id,
+        _runtime_user_id(runtime),
         league_state.state_id,
         id(league_state),
         runtime.selected_team_id,
@@ -89,7 +94,7 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
 
         started = monotonic()
         with lock:
-            user_id = runtime.user_id
+            user_id = _runtime_user_id(runtime)
             scope = key[:5]
             if active_scope_by_user.get(user_id) != scope:
                 stale_keys = [item for item in cache if item[0] == user_id]
