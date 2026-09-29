@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import copy
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 
 from fsffl.forecast.fumbles_lost_first_party import FirstPartyFumblesLostEvidenceTier
+from fsffl.forecast.fumbles_lost_first_party_priors import (
+    PLAYER_PRIORS,
+    POSITION_LOST_FUMBLE_PER_OPPORTUNITY,
+    POSITION_OPPORTUNITY_PER_GAME,
+)
 from fsffl.forecast.fumbles_lost_materiality import (
     assess_fumbles_lost_non_material_partial,
 )
@@ -13,6 +19,7 @@ from fsffl.forecast.fumbles_lost_rolling_authority import (
     FumblesLostProductionTable,
     NON_MATERIAL_PARTIAL_AUTHORITY,
     frozen_fumbles_lost_production_table_2026,
+    production_table_payload_fingerprint,
     resolve_fumbles_lost_production_table,
     validate_annual_rollover_candidate,
 )
@@ -23,8 +30,11 @@ from fsffl.state.models import (
     LeagueRules,
     LeagueState,
     Player,
+    PlayerState,
     Position,
     Provenance,
+    RosterEntry,
+    RosterSlot,
     ScoringRule,
     Team,
     TeamState,
@@ -41,6 +51,7 @@ def _state(
     cutoff: int = 3,
     coefficient: float = -1.0,
     canonical_position: Position | None = None,
+    roster_slot: RosterSlot | None = None,
 ) -> LeagueState:
     player_position = canonical_position or position
     league = League(
@@ -57,6 +68,12 @@ def _state(
             ),
         ),
     )
+    provenance = Provenance(
+        source="test-materiality-state",
+        retrieved_at=NOW,
+        effective_at=NOW,
+    )
+    player_id = "sleeper:player:materiality"
     return LeagueState(
         league=league,
         as_of=NOW,
@@ -65,18 +82,32 @@ def _state(
             Team(team_id="b", league_id=league.league_id, display_name="B"),
         ),
         team_states=(
-            TeamState(team_id="a", roster=()),
+            TeamState(
+                team_id="a",
+                roster=(
+                    (RosterEntry(player_id=player_id, slot=roster_slot),)
+                    if roster_slot is not None
+                    else ()
+                ),
+            ),
             TeamState(team_id="b", roster=()),
         ),
         players=(
             Player(
-                player_id="sleeper:player:materiality",
+                player_id=player_id,
                 full_name="Materiality Player",
                 position=player_position,
                 nfl_team="BUF",
             ),
         ),
-        player_states=(),
+        player_states=(
+            PlayerState(
+                player_id=player_id,
+                as_of=NOW,
+                nfl_team="BUF",
+                provenance=provenance,
+            ),
+        ),
         completed_through_week=cutoff,
     )
 
@@ -193,18 +224,102 @@ def test_season_start_materiality_exists_without_point_authority(cutoff: int) ->
     )
 
 
+def test_materiality_compatibility_is_bound_to_current_simulation_scope() -> None:
+    from fsffl.forecast.fumbles_lost_materiality import (
+        fumbles_lost_runtime_authority_compatible,
+    )
+    from fsffl.forecast.fumbles_lost_first_party import (
+        FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    )
+
+    active = _state(
+        position=Position.WR,
+        cutoff=3,
+        roster_slot=RosterSlot.WR,
+    )
+    partial = _partial(Position.WR)
+    assessment = assess_fumbles_lost_non_material_partial(
+        active,
+        partial=partial,
+        supported_fantasy_point_stddev=1_000.0,
+        supplement=None,
+    )
+    assert assessment.status == NON_MATERIAL_PARTIAL_AUTHORITY
+
+    runtime_result = SimpleNamespace(
+        fumbles_lost_supplement_authority_fingerprint=None,
+        fumbles_lost_materiality_assessments=(assessment,),
+        partial_fantasy_point_forecasts=(partial,),
+        fumbles_lost_simulation_relevant_player_ids=(
+            "sleeper:player:materiality",
+        ),
+    )
+    assert fumbles_lost_runtime_authority_compatible(
+        active,
+        runtime_result,
+        expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    )
+
+    taxi = _state(
+        position=Position.WR,
+        cutoff=3,
+        roster_slot=RosterSlot.TAXI,
+    )
+    assert not fumbles_lost_runtime_authority_compatible(
+        taxi,
+        runtime_result,
+        expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    )
+
+    replayed_scope = SimpleNamespace(
+        **{
+            **runtime_result.__dict__,
+            "fumbles_lost_simulation_relevant_player_ids": (),
+        }
+    )
+    assert fumbles_lost_runtime_authority_compatible(
+        taxi,
+        replayed_scope,
+        expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    )
+
+
+def _annual_player_priors() -> dict[str, dict[str, object]]:
+    return {
+        player_id: {
+            "position": row[0],
+            "historical_gsis_id": row[1],
+            "identity_method": row[2],
+            "accepted_tier": row[3],
+            "history_games": row[4],
+            "history_opportunities": row[5],
+        }
+        for player_id, row in PLAYER_PRIORS.items()
+    }
+
+
 def _annual_candidate() -> FumblesLostProductionTable:
     prior = frozen_fumbles_lost_production_table_2026()
     payload = copy.deepcopy(dict(prior.payload))
     payload["target_season"] = 2027
+    player_priors = _annual_player_priors()
     payload["annual_freeze"] = {
         "exact_source_hashes": {"2026_weekly_exact_lost_fumbles": "a" * 64},
         "training_seasons": [2021, 2022, 2023, 2024, 2025, 2026],
-        "player_prior_sufficient_statistics_fingerprint": "b" * 64,
+        "position_lost_fumble_per_opportunity": dict(
+            POSITION_LOST_FUMBLE_PER_OPPORTUNITY
+        ),
+        "position_opportunity_per_game": dict(POSITION_OPPORTUNITY_PER_GAME),
+        "player_role_priors": player_priors,
+        "player_prior_sufficient_statistics_fingerprint": (
+            production_table_payload_fingerprint(
+                {"player_role_priors": player_priors}
+            )
+        ),
     }
     return FumblesLostProductionTable(
         payload=payload,
-        fingerprint="c" * 64,
+        fingerprint=production_table_payload_fingerprint(payload),
     )
 
 
@@ -223,13 +338,23 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
         },
     )
 
+    with pytest.raises(ValueError, match="RMSE matrix is incomplete"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse={"QB": {2: 0.0}},
+        )
+
+    complete = {
+        position.value: {cutoff: 0.0 for cutoff in range(2, 18)}
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+    }
+    complete["QB"][2] = candidate.uncertainty_floor(2, Position.QB) + 0.01
     with pytest.raises(ValueError, match="monotone prefix freeze"):
         validate_annual_rollover_candidate(
             candidate,
             prior=prior,
-            newly_completed_heldout_rmse={
-                "QB": {2: candidate.uncertainty_floor(2, Position.QB) + 0.01}
-            },
+            newly_completed_heldout_rmse=complete,
         )
 
 
