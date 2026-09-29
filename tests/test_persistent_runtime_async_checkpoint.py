@@ -248,7 +248,9 @@ def test_same_state_checkpoint_queue_coalesces_to_latest_context() -> None:
     persistence.release_first.set()
     assert runtime.wait_for_checkpoint("jimmy", timeout=2) is True
 
-    assert persistence.league_write_count == 2
+    # Team identity is a lightweight pointer write. It must queue behind the
+    # canonical State checkpoint, not rewrite the State snapshot or model artifacts.
+    assert persistence.league_write_count == 1
     assert [row.selected_team_id for row in persistence.runtime_context_writes] == [
         None,
         "team:b",
@@ -263,3 +265,41 @@ def test_same_state_checkpoint_queue_coalesces_to_latest_context() -> None:
     assert restored.league_state is not None
     assert restored.league_state.state_id == state.state_id
     assert restored.selected_team_id == "team:b"
+
+
+
+def test_managed_team_identity_waits_behind_state_checkpoint_and_restores_exact_team() -> None:
+    persistence = BlockingPersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    state = _state()
+
+    runtime.set_league_state("managed-team", state)
+    assert persistence.first_started.wait(timeout=1)
+
+    started = monotonic()
+    selected = runtime.select_team("managed-team", "team:b")
+    assert monotonic() - started < 0.08
+    assert selected.selected_team_id == "team:b"
+
+    # The identity write is ordered behind the still-running State snapshot.
+    assert persistence.get_user_runtime_context(user_id="managed-team") is None
+
+    persistence.release_first.set()
+    assert runtime.wait_for_managed_team_checkpoint(
+        "managed-team",
+        team_id="team:b",
+        state_id=state.state_id,
+        timeout=2,
+    )
+    assert persistence.league_write_count == 1
+    durable = persistence.get_user_runtime_context(user_id="managed-team")
+    assert durable is not None
+    assert durable.state_hash == state.state_id
+    assert durable.selected_team_id == "team:b"
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.restore_user("managed-team")
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == state.state_id
+    assert restored.selected_team_id == "team:b"
+    assert restored.publication_generation_id is None
