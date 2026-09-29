@@ -519,9 +519,31 @@ def test_2027_governed_table_builds_and_consumes_refreshed_role_rate_inputs() ->
     roles = dict(POSITION_OPPORTUNITY_PER_GAME)
     rates["WR"] = 0.006
     roles["WR"] = 3.25
+    for cutoff in (0, 1):
+        row = payload["season_start"]["cutoffs"][str(cutoff)]
+        row["fallback_eligibility"] = {
+            tier: {
+                position.value: (
+                    bool(row["cold_start_fallback_eligible"][position.value])
+                    if tier in {"cold_start", "identity_light"}
+                    else True
+                )
+                for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+            }
+            for tier in (
+                "history_plus_current",
+                "history_only",
+                "current_only",
+                "cold_start",
+                "identity_light",
+            )
+        }
+
     payload["annual_freeze"] = {
         "exact_source_hashes": {"2026_weekly_exact_lost_fumbles": "a" * 64},
         "training_seasons": [2021, 2022, 2023, 2024, 2025, 2026],
+        "calibration_pseudo_current_seasons": [2022, 2023, 2024, 2025, 2026],
+        "chronology_validation_passed": True,
         "position_lost_fumble_per_opportunity": rates,
         "position_opportunity_per_game": roles,
         "player_role_priors": player_priors,
@@ -540,6 +562,25 @@ def test_2027_governed_table_builds_and_consumes_refreshed_role_rate_inputs() ->
         prior=prior,
         newly_completed_heldout_rmse={
             position.value: {cutoff: 0.0 for cutoff in range(2, 18)}
+            for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+        },
+        newly_completed_materiality_event_max={
+            position.value: {cutoff: 0.0 for cutoff in range(0, 18)}
+            for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+        },
+        observed_population_coverage={
+            position.value: {
+                cutoff: {
+                    tier: 1.0
+                    for tier in (
+                        "history_plus_current",
+                        "history_only",
+                        "current_only",
+                        "cold_start",
+                    )
+                }
+                for cutoff in range(0, 18)
+            }
             for position in (Position.QB, Position.RB, Position.WR, Position.TE)
         },
     )
