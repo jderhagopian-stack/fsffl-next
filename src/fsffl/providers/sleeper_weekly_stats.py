@@ -17,12 +17,24 @@ class SleeperNflState:
     week: int
     season_type: str
     captured_at: datetime
+    display_week: int | None = None
+    leg: int | None = None
 
     @property
     def completed_through_week(self) -> int:
         if self.season_type.lower() in {"post", "postseason", "off"}:
             return 18
-        return max(0, self.week - 1)
+        # Use the same factual Sleeper NFL-state boundary rule as canonical State:
+        # during rollover windows, week/display_week/leg can advance on different
+        # clocks. The strongest same-season regular-season coordinate is the provider
+        # completion evidence; Forecast still requires exact equality to canonical
+        # State before consuming any weekly stats.
+        candidates = [
+            max(0, value - 1)
+            for value in (self.week, self.display_week, self.leg)
+            if value is not None and value >= 1
+        ]
+        return max(candidates, default=0)
 
 
 @dataclass(frozen=True)
@@ -73,13 +85,38 @@ class SleeperWeeklyStatsSource:
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("Sleeper NFL state lacks season/week identity") from exc
         season_type = str(payload.get("season_type") or "regular")
-        if not 0 <= week <= 22:
-            raise ValueError("Sleeper NFL state week is outside supported range")
+
+        optional_coordinates: dict[str, int | None] = {}
+        for key in ("display_week", "leg"):
+            raw = payload.get(key)
+            if raw in (None, ""):
+                optional_coordinates[key] = None
+                continue
+            try:
+                value = int(raw)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"Sleeper NFL state {key} is not an integer"
+                ) from exc
+            optional_coordinates[key] = value
+
+        for key, value in (
+            ("week", week),
+            ("display_week", optional_coordinates["display_week"]),
+            ("leg", optional_coordinates["leg"]),
+        ):
+            if value is not None and not 0 <= value <= 22:
+                raise ValueError(
+                    f"Sleeper NFL state {key} is outside supported range"
+                )
+
         return SleeperNflState(
             season=season,
             week=week,
             season_type=season_type,
             captured_at=captured.astimezone(UTC),
+            display_week=optional_coordinates["display_week"],
+            leg=optional_coordinates["leg"],
         )
 
     def fetch_season_player(
