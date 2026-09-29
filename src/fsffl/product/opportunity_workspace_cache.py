@@ -42,6 +42,7 @@ def opportunity_workspace_cache_key(
     if league_state is None:
         return None
     return (
+        runtime.user_id,
         league_state.state_id,
         id(league_state),
         runtime.selected_team_id,
@@ -128,16 +129,21 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                 )
 
             misses += 1
-            # A full workspace is large. Its cache is an execution optimization,
-            # not presentation authority, so prior exact-State workspaces must not
-            # remain resident while a replacement State is built.
-            if cache:
-                evicted = len(cache)
-                cache.clear()
+            # A full workspace is large. Drop only this user's prior exact
+            # State before replacement work begins; another user's cache remains
+            # outside this lifecycle boundary.
+            stale_keys = [
+                item
+                for item in cache
+                if item[0] == runtime.user_id and item != key
+            ]
+            for stale_key in stale_keys:
+                cache.pop(stale_key, None)
+            if stale_keys:
                 gc.collect()
                 _logger.info(
                     "FSFFL Market workspace cache evicted_prior_scope entries=%d state=%s team=%s",
-                    evicted,
+                    len(stale_keys),
                     runtime.league_state.state_id,
                     runtime.selected_team_id,
                 )
@@ -167,6 +173,15 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
     cached_builder.__name__ = getattr(builder, "__name__", "cached_opportunity_workspace")
     cached_builder.__doc__ = getattr(builder, "__doc__", None)
 
+    def clear_user_cache(user_id: str) -> int:
+        with lock:
+            stale_keys = [item for item in cache if item[0] == user_id]
+            for stale_key in stale_keys:
+                cache.pop(stale_key, None)
+        if stale_keys:
+            gc.collect()
+        return len(stale_keys)
+
     def clear_cache() -> int:
         with lock:
             count = len(cache)
@@ -175,5 +190,6 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
             gc.collect()
         return count
 
+    cached_builder.clear_user_cache = clear_user_cache  # type: ignore[attr-defined]
     cached_builder.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_builder
