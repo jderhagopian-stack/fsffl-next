@@ -166,6 +166,16 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     )
     authoritative_rows = tuple(getattr(evidence, "league_scored_forecasts", ()) or ()) if evidence is not None else ()
     raw_rows = tuple(getattr(evidence, "raw_forecasts", ()) or ()) if evidence is not None else ()
+    non_material_partial_id_set = set(non_material_partial_player_ids)
+    all_partial_rows_have_explicit_non_material_fumbles_authority = bool(
+        partial_rows
+        and non_material_partial_id_set
+        and all(
+            getattr(row, "player_id", None) in non_material_partial_id_set
+            and set(getattr(row, "omitted_rule_stats", ()) or ()) == {"fum_lost"}
+            for row in partial_rows
+        )
+    )
 
     if evidence is None or not (raw_rows or authoritative_rows or partial_rows):
         forecast_status = "unavailable"
@@ -178,7 +188,7 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             + (": " + ", ".join(blockers) if blockers else "")
             + "."
         )
-    elif partial_rows and not all_material_partial_player_ids:
+    elif all_partial_rows_have_explicit_non_material_fumbles_authority:
         forecast_status = "non_material_partial"
         forecast_reason = (
             "Governed downstream Forecast use is allowed under explicit "
