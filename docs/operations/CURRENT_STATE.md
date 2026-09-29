@@ -1063,3 +1063,29 @@ Disposition:
 - The architecture-audit corrective remains mandatory: remove/prove the cold durable-restore-before-fresh-Connect dependency.
 - The #293 review P2 about scanning past newer incompatible raw artifacts remains open unless explicitly corrected/proven.
 - Do not request physical Safari validation yet.
+
+
+## 2026-09-29 — #294 hosted acceptance reaches managed-team durability failure
+PR #294 merged as `a0dcb92b3aa3fc08431076b404f03a9900bdaf0c` and exact SHA is live on Render deploy `dep-dathef5g1s2s739d8ipg`.
+
+Hosted acceptance materially passed the previously failing runtime legs:
+- initial FSFFL full coherent publication;
+- responsive PI during active reconciliation (~0.506s);
+- last-good continuity during rebuild;
+- Hodor switch with coherent partial-authority publication;
+- return to FSFFL with coherent full publication;
+- repeat PI after return (~0.396s);
+- two manual refreshes completed with coherent publication;
+- keep-awake/inbound traffic successfully prevented the prior 15-minute free-tier idle shutdown;
+- memory remained within the soft engineering budget during these legs.
+
+The run then failed at ~02:04:45Z **before the restart/restored-session leg**:
+- log: `FSFFL persistence checkpoint timed out user=runtime-clean-first-load-pr292-20260928`;
+- acceptance error: `managed-team selection did not durably checkpoint`;
+- terminal: `FSFFL RUNTIME AVAILABILITY ACCEPTANCE FAILED`.
+
+This is now the active stabilization blocker. It is not a Forecast/Hodor blocker and not an idle-sleep interruption.
+
+Management interpretation: do not weaken the durability requirement or simply extend the timeout. Determine whether team-selection persistence is actually starved/queued behind unrelated checkpoint work, whether the acceptance barrier is observing the wrong generation/queue state, or whether the checkpoint contract regressed after making foreground `get()` memory-only. Preserve State-first foreground availability and the #294 restore boundary.
+
+Runtime stabilization remains HOLD. Do not request physical Safari validation.
