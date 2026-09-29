@@ -1,0 +1,130 @@
+{
+  "cutoffs": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17
+  ],
+  "disposition": "rolling_week2_through_week17_supported",
+  "failing_cutoffs": [],
+  "frozen_protocol": "artifacts/research/fumbles_lost_rolling_authority_20260929/PROTOCOL_FROZEN.md",
+  "gates": {
+    "max_abs_bias": 0.15,
+    "max_pooled_rmse_vs_zero": 1.0,
+    "max_year_rmse_vs_zero": 1.1,
+    "max_zero_gap": 0.05
+  },
+  "guards": {
+    "future_leakage": false,
+    "intrinsic_semantics_changed": false,
+    "k_dst_changed": false,
+    "named_2026_player_tuning": false,
+    "new_forecast_family_search": false,
+    "runtime_architecture_changed": false,
+    "total_fumbles_proxy": false,
+    "y2_y3_changed": false,
+    "y4_y7_changed": false
+  },
+  "lineage": [
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 633,
+      "season": 2021,
+      "sha256": "41915fb49238902ad1f129ebf0405b11a1e710454ae0fe8f7b3e4f9145875f48",
+      "teams": 32,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2021.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 608,
+      "season": 2022,
+      "sha256": "ad426c3fe5bf1cc30c3f137fdfe96d054e19d400879ee4413129da49fa7b54be",
+      "teams": 32,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2022.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 577,
+      "season": 2023,
+      "sha256": "f19cb71a5de0dce7fd09376026237c9ee9d5a93fe13815a2ea3ec2d37204cb17",
+      "teams": 32,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2023.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 589,
+      "season": 2024,
+      "sha256": "3ddc45a84f759aa348ce465ae001752c530575455717657cdfe1f8abfcdb4759",
+      "teams": 32,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2024.csv"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 610,
+      "season": 2025,
+      "sha256": "e5e0615b3d96a3eaebfaee91e55afb4a4e7fe0caf057454177bcd7d6ad4bcfc2",
+      "teams": 32,
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2025.csv"
+    }
+  ],
+  "materiality": {
+    "coordinate_bound": "max(empirical OOT p99 actual target, position reference mean + 1.645 * rolling floor)",
+    "fraction": 0.1,
+    "full_coverage_claim_forbidden": true,
+    "rule": "impact_bound_90 <= 0.10 * 1.645 * supported_fantasy_point_stddev",
+    "silent_zero_forbidden": true
+  },
+  "oot_seasons": [
+    2023,
+    2024,
+    2025
+  ],
+  "opportunity_semantics": {
+    "QB": "attempts+sacks_suffered+carries",
+    "RB_WR_TE": "carries+receptions"
+  },
+  "passing_cutoffs": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17
+  ],
+  "study": "rolling first-party exact FUMBLES_LOST authority",
+  "supported_through_cutoff": 17,
+  "target_semantics": "exact lost fumbles only",
+  "uncertainty": {
+    "cold_start_floor": 0.789918699230448,
+    "formula": "max(sqrt(mean), monotone rolling position OOT floor)",
+    "nonzero": true
+  },
+  "week2_reproduction": {
+    "bias": 0.05088409116369244,
+    "mae": 0.48684391295520824,
+    "rmse": 0.8105091976152538,
+    "zero_gap": 0.0347225013054242
+  }
+}
