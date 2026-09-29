@@ -574,3 +574,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Preserve #294/#295/#296 runtime architecture and all frozen Forecast/Intrinsic boundaries.
 - Merge/deploy only after focused regressions, full CI and bounded review are green; then resume full hosted lifecycle acceptance through restart/restored-session.
 - Physical Safari remains HOLD until hosted terminal PASS.
+
+
+## 2026-09-29 — PR #298 immediate execution
+- **Implementation — ACTIVE / sole product-critical path.**
+- Fix the annual-rollover validation-class defect so incomplete fallback eligibility fails closed with the governed validation error instead of `KeyError`.
+- Reconcile the live-provider completed-Week-2 versus canonical-State Week-3 mismatch at the authority/harness boundary; Atlas itself currently passes all focused Atlas/PI tests and should not be changed without evidence of an Atlas regression.
+- Then rerun full CI + affected focused workflows and finish the whole-contract P1/P2 review before merge.
+- Continue directly to merge/deploy/hosted lifecycle acceptance only if those gates are clean. Preserve #294/#295/#296 and all frozen model boundaries.
