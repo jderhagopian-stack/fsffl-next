@@ -614,6 +614,18 @@ def test_2027_governed_table_builds_and_consumes_refreshed_role_rate_inputs() ->
             }
             for position in (Position.QB, Position.RB, Position.WR, Position.TE)
         },
+        newly_completed_rolling_adequacy={
+            "heldout_season": 2026,
+            "cutoffs": {
+                cutoff: {
+                    "rolling_rmse": 0.5,
+                    "zero_rmse": 1.0,
+                    "bias": 0.0,
+                    "zero_gap": 0.0,
+                }
+                for cutoff in range(2, 18)
+            },
+        },
     )
 
     captured_2027 = datetime(2027, 9, 28, 3, 0, tzinfo=UTC)
