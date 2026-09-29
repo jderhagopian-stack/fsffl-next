@@ -133,7 +133,7 @@ The annual refresh is deterministic but requires a small governed freeze before 
 3. recompute cumulative position rates and opportunity/game priors;
 4. recompute player prior sufficient statistics;
 5. recompute the same global cutoff scalars for Weeks 2-17;
-6. carry prior uncertainty floors forward and widen with the newly completed held-out season when necessary;
+6. carry prior uncertainty floors forward and, for each cutoff `c`, widen with the **prefix maximum** of the newly completed held-out season's residual RMSE over every cutoff `k <= c`;
 7. carry prior materiality bounds forward and widen with the new all-population historical maximum when necessary;
 8. revalidate the population eligibility matrix;
 9. persist/fingerprint the target-season table.
@@ -183,7 +183,7 @@ If the annual freeze is missing or fails its bounded gates, no point authority i
 - target-season table cannot be reused under the wrong season;
 - source hashes/semantics are part of annual freeze identity;
 - no current/future target-season outcomes enter rates/calibration/floors;
-- new annual floor cannot be lower than prior frozen floor;
+- new annual floor at cutoff `c` equals or exceeds both the prior frozen floor at `c` and every newly completed held-out residual RMSE at cutoffs `k <= c`;
 - new materiality bound cannot be lower than prior frozen bound;
 - annual adequacy/population failures prevent automatic point promotion.
 
