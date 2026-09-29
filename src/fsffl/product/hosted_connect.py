@@ -50,6 +50,7 @@ StateLoader = Callable[[str], LeagueState]
 SyncProbeLoader = Callable[[str], SleeperSyncProbe]
 IntelligenceReconciler = Callable[[str], object]
 StateTransitionReclaimer = Callable[[str], object]
+StateActivator = Callable[..., object | None]
 
 
 class LeagueConnectCoordinator:
@@ -268,6 +269,7 @@ def install_hosted_connect_routes(
     persistence_store: PersistenceStore | None = None,
     sync_probe_loader: SyncProbeLoader | None = None,
     intelligence_reconciler: IntelligenceReconciler | None = None,
+    state_activator: StateActivator | None = None,
     state_transition_reclaimer: StateTransitionReclaimer | None = None,
     full_refresh_seconds: int = 3600,
 ) -> LeagueConnectCoordinator:
@@ -335,17 +337,25 @@ def install_hosted_connect_routes(
                     current_job.league_external_id,
                 )
                 return
-            activate_state = getattr(
-                runtime_store,
-                "activate_league_state_for_connect",
-                runtime_store.set_league_state,
-            )
-            activate_state(user_id, league_state)
+            if state_activator is not None:
+                state_activator(
+                    user_id,
+                    league_state,
+                    reason="background_connect",
+                )
+            else:
+                activate_state = getattr(
+                    runtime_store,
+                    "activate_league_state_for_connect",
+                    runtime_store.set_league_state,
+                )
+                activate_state(user_id, league_state)
             active_state = runtime_store.get(user_id).league_state
             if not _matches_sleeper_league(active_state, league_external_id):
                 raise RuntimeError("Sleeper league activation lost requested identity")
             if (
-                state_transition_reclaimer is not None
+                state_activator is None
+                and state_transition_reclaimer is not None
                 and active_league_id is not None
                 and active_league_id != league_state.league.league_id
             ):
@@ -475,12 +485,21 @@ def install_hosted_connect_routes(
                     runtime_store.league_generation(user_id),
                 )
                 return
-            activated = runtime_store.set_league_state_if_generation(
-                user_id,
-                league_state,
-                expected_generation=refresh_generation,
-                expected_league_id=runtime.league_state.league.league_id,
-            )
+            if state_activator is not None:
+                activated = state_activator(
+                    user_id,
+                    league_state,
+                    reason="background_material_refresh",
+                    expected_generation=refresh_generation,
+                    expected_league_id=runtime.league_state.league.league_id,
+                )
+            else:
+                activated = runtime_store.set_league_state_if_generation(
+                    user_id,
+                    league_state,
+                    expected_generation=refresh_generation,
+                    expected_league_id=runtime.league_state.league.league_id,
+                )
             if activated is None:
                 _performance_logger.info(
                     "FSFFL Sleeper refresh superseded at activation user=%s requested=%s",
@@ -488,7 +507,11 @@ def install_hosted_connect_routes(
                     league_external_id,
                 )
                 return
-            if changed and state_transition_reclaimer is not None:
+            if (
+                changed
+                and state_activator is None
+                and state_transition_reclaimer is not None
+            ):
                 state_transition_reclaimer(
                     f"{user_id}:{league_state.state_id}:state_refresh"
                 )
