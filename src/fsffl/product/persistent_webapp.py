@@ -945,6 +945,7 @@ def _maybe_start_state_first_production_acceptance() -> None:
                 history_probe=_acceptance_history_probe,
                 resource_reader=_runtime_acceptance_resource_reader,
                 process_identity_reader=_runtime_acceptance_process_identity,
+                state_transition_reclaimer=_reclaim_runtime_state_transition,
                 restore_only=acceptance_mode == "restore",
             )
             _runtime_availability_acceptance_state.clear()
@@ -1028,6 +1029,7 @@ install_hosted_connect_routes(
         league_external_id=league_id
     ),
     intelligence_reconciler=app.state.start_intelligence_reconciliation,
+    state_transition_reclaimer=_reclaim_runtime_state_transition,
     full_refresh_seconds=_full_refresh_seconds,
 )
 install_in_season_forecast_routes(
