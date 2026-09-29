@@ -618,10 +618,12 @@ def test_2027_governed_table_builds_and_consumes_refreshed_role_rate_inputs() ->
             "heldout_season": 2026,
             "cutoffs": {
                 cutoff: {
-                    "rolling_rmse": 0.5,
-                    "zero_rmse": 1.0,
-                    "bias": 0.0,
-                    "zero_gap": 0.0,
+                    "pooled_rolling_rmse": 0.5,
+                    "pooled_zero_rmse": 1.0,
+                    "heldout_season_rmse": 0.5,
+                    "heldout_season_zero_rmse": 1.0,
+                    "pooled_bias": 0.0,
+                    "pooled_zero_gap": 0.0,
                 }
                 for cutoff in range(2, 18)
             },
