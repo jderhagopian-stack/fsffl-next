@@ -1584,3 +1584,25 @@ Exact merge SHA `8c162c5a7bf6120ecc72566e72dd11f634a93ee9` is live. The targeted
 Acceptance then failed at Hodor switch with `LiveForecastSourceHealthFailure`: only Razzball healthy; CBS invalid full-season response, FFToday 403, NFL Fantasy missing projection content.
 
 Do not stop at this provider failure and do not weaken source-health rules. Determine why Hodor entered fresh acquisition rather than replaying compatible persisted raw Forecast evidence if such evidence exists. If replay should have been available, fix the narrow replay/restore handoff and rerun the remaining clean-first-run/restored-session/switch/restart acceptance. If fresh acquisition was legitimately required, return to Management with exact compatibility evidence showing why and what non-authority-breaking acceptance path remains. No model-semantic expansion.
+
+
+## 2026-09-29 — Architecture audit adds mandatory cold-restore/Connect gate
+The read-only runtime architecture audit confirms the analytical authority chain is sound but identifies a residual P1 availability exposure: foreground `get()` may synchronously run durable restore when no State is in memory, under the same per-user lifecycle coordination used by fresh Connect activation. This leaves persistence recovery capable of delaying fresh State activation.
+
+New controlling corrective: `docs/operations/directives/20260929_RUNTIME_ARCHITECTURE_AUDIT_CORRECTIVE.md`.
+
+Current lineage:
+- #293 merged as `49ce8cae4f588fefc7c879e643504ee1b015cf42` and is live;
+- current hosted acceptance is running; do not interrupt it absent a concrete failure;
+- #293 review raised a replay P2: discovery must continue past newer incompatible raw artifacts to find older compatible governed evidence.
+
+After the active hosted run completes, continue under the corrective directive. Required before stabilization close:
+1. reconcile #293 hosted evidence;
+2. resolve any still-open compatibility-scan P2;
+3. make foreground `get()` an in-memory read rather than a synchronous durable-restore path for fresh Connect;
+4. move restore to explicit orchestration outside fresh State activation and install only if captured identity remains current;
+5. prove deterministic cold-restore vs fresh-Connect behavior, true clean first-run, restored session, FSFFL -> Hodor -> FSFFL replay/switch, and restart;
+6. full CI + bounded P1/P2 red-team + exact-SHA hosted acceptance;
+7. only then return for physical Safari validation.
+
+Do not broaden into model semantics or foundation work.
