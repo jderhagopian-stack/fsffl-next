@@ -625,3 +625,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Add deterministic A -> B -> A coverage with completed Market enrichment and both connect paths, plus public-health telemetry privacy regression.
 - Then rerun full CI + bounded resource/lifecycle review, redeploy, and resume hosted FSFFL return / same-State / restart / restored-session acceptance under the unchanged hard memory gate.
 - Preserve #294/#295/#296, #298, PI readiness semantics, and frozen model boundaries.
+
+
+## 2026-09-29 — Resource boundary closure directive active
+- **Implementation — ACTIVE / sole product-critical path.**
+- Controlling directive: `docs/operations/directives/20260929_RESOURCE_BOUNDARY_CLOSURE.md`.
+- Do not create another narrow patch for only the three visible #302 findings.
+- Close the entire cross-league resource-ownership boundary: complete holder inventory, complete transition-path inventory, single shared cleanup/reclaim boundary, deterministic closure matrix, full CI, whole-class P1/P2 review, then deploy and resume hosted lifecycle.
+- Preserve the unchanged memory gate, #294/#295/#296, #298, PI readiness semantics, and all frozen model boundaries.
