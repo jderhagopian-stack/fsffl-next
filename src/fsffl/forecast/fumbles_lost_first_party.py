@@ -58,6 +58,7 @@ _REQUIRED_SCHEMA_KEYS = frozenset({"pass_att", "sack", "rush_att", "rec"})
 _ALLOWED_POSITIONS = frozenset({Position.QB, Position.RB, Position.WR, Position.TE})
 
 Clock = Callable[[], datetime]
+_DEFAULT_PRODUCTION_TABLE = resolve_fumbles_lost_production_table(2026)
 
 
 class FirstPartyFumblesLostPointAuthorityUnavailable(ValueError):
@@ -110,11 +111,11 @@ class FirstPartyFumblesLostSupplement(FrozenModel):
     model_version: str = ROLLING_FUMBLES_LOST_MODEL_VERSION
     supplement_model_version: str = FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
     uncertainty_model_version: str = FIRST_PARTY_FUMBLES_LOST_UNCERTAINTY_VERSION
-    production_table_contract_version: str
-    production_table_fingerprint: str
-    uncertainty_contract: str
-    current_input_weeks: tuple[int, ...]
-    calibration_scalar: float
+    production_table_contract_version: str = _DEFAULT_PRODUCTION_TABLE.contract_version
+    production_table_fingerprint: str = _DEFAULT_PRODUCTION_TABLE.fingerprint
+    uncertainty_contract: str = _DEFAULT_PRODUCTION_TABLE.uncertainty_contract
+    current_input_weeks: tuple[int, ...] = (1, 2)
+    calibration_scalar: float = _DEFAULT_PRODUCTION_TABLE.calibration_scalar(2)
     training_seasons: tuple[int, ...] = TRAINING_SEASONS
     calibration_pseudo_current_seasons: tuple[int, ...] = (
         CALIBRATION_PSEUDO_CURRENT_SEASONS
