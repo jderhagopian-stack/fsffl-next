@@ -524,6 +524,23 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
 
         return super().get(user_id)
 
+    def prepare_fresh_connect(self, user_id: str) -> None:
+        """Declare that fresh provider State supersedes any in-flight cold restore."""
+
+        with self.lifecycle_operation(user_id):
+            self._restore_attempted.add(user_id)
+
+    def durable_restore_pending(self, user_id: str) -> bool:
+        """Return whether restored-session reads still await explicit startup recovery."""
+
+        if self._persistence is None:
+            return False
+        with self.lifecycle_operation(user_id):
+            return (
+                user_id not in self._restore_attempted
+                and super().get(user_id).league_state is None
+            )
+
     def activate_league_state_for_connect(self, user_id: str, league_state):
         """Expose valid canonical State immediately; defer persistence enrichment.
 
