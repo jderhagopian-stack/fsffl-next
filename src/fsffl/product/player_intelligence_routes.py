@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -52,6 +52,7 @@ class PlayerHistoryBuildStatus(StrEnum):
 
 @dataclass(frozen=True)
 class PlayerHistoryBuildRecord:
+    user_id: str
     league_state_id: str
     player_id: str
     status: PlayerHistoryBuildStatus
@@ -80,17 +81,18 @@ class PlayerHistoryBackgroundCoordinator:
         self._max_records = int(max_records)
         self._heavy_work_coordinator = heavy_work_coordinator
         self._lock = RLock()
-        self._records: dict[tuple[str, str], PlayerHistoryBuildRecord] = {}
+        self._records: dict[tuple[str, str, str], PlayerHistoryBuildRecord] = {}
+        self._futures: dict[tuple[str, str, str], Future[None]] = {}
         self._executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="fsffl-player-history",
         )
 
     @staticmethod
-    def _key(context: UserRuntimeContext, player_id: str) -> tuple[str, str]:
+    def _key(context: UserRuntimeContext, player_id: str) -> tuple[str, str, str]:
         if context.league_state is None:
             raise ValueError("Player Intelligence history requires canonical league state")
-        return context.league_state.state_id, player_id
+        return context.user_id, context.league_state.state_id, player_id
 
     def request(
         self,
@@ -131,31 +133,33 @@ class PlayerHistoryBackgroundCoordinator:
                     stale_key, _ = terminal.pop(0)
                     self._records.pop(stale_key, None)
             record = PlayerHistoryBuildRecord(
-                league_state_id=key[0],
+                user_id=key[0],
+                league_state_id=key[1],
                 player_id=player_id,
                 status=PlayerHistoryBuildStatus.QUEUED,
                 created_at=now,
                 updated_at=now,
             )
             self._records[key] = record
-            self._executor.submit(self._run, key, context)
+            future = self._executor.submit(self._run, key, context)
+            self._futures[key] = future
             return record
 
     def _run(
         self,
-        key: tuple[str, str],
+        key: tuple[str, str, str],
         context: UserRuntimeContext,
     ) -> None:
         self._update(key, status=PlayerHistoryBuildStatus.RUNNING)
         try:
             if self._heavy_work_coordinator is None:
-                seasons = self._service.player_history(context, key[1])
+                seasons = self._service.player_history(context, key[2])
             else:
                 with self._heavy_work_coordinator.claim(
                     kind="player_history",
-                    key=f"{key[0]}:{key[1]}",
+                    key=f"{key[1]}:{key[2]}",
                 ):
-                    seasons = self._service.player_history(context, key[1])
+                    seasons = self._service.player_history(context, key[2])
         except Exception as exc:
             self._update(
                 key,
@@ -171,7 +175,7 @@ class PlayerHistoryBackgroundCoordinator:
 
     def _update(
         self,
-        key: tuple[str, str],
+        key: tuple[str, str, str],
         *,
         status: PlayerHistoryBuildStatus,
         seasons: tuple[HistoricalPlayerSeason, ...] = (),
@@ -186,6 +190,23 @@ class PlayerHistoryBackgroundCoordinator:
                 error=error,
                 updated_at=datetime.now(UTC),
             )
+            if status in {
+                PlayerHistoryBuildStatus.COMPLETED,
+                PlayerHistoryBuildStatus.FAILED,
+            }:
+                self._futures.pop(key, None)
+
+    def clear_user(self, user_id: str) -> int:
+        """Release user-scoped PI history result records; durable rows remain reusable."""
+
+        with self._lock:
+            keys = [key for key in self._records if key[0] == user_id]
+            for key in keys:
+                self._records.pop(key, None)
+                future = self._futures.pop(key, None)
+                if future is not None and not future.done():
+                    future.cancel()
+            return len(keys)
 
 
 def install_player_intelligence_routes(
