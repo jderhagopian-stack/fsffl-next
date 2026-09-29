@@ -641,3 +641,10 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Reconcile the remaining stale Behavioral-refresh regression to the resource-boundary invariant, rerun full CI + deterministic closure matrix, then perform a fresh exact-head whole-class P1/P2 review.
 - Do not merge until CI and that review are clean. If clean, merge/deploy and resume full hosted lifecycle acceptance immediately.
 - No further architecture broadening absent new evidence; preserve the hard-memory gate and all frozen boundaries.
+
+
+## 2026-09-29 — Resource test realism clarification
+- Repeated A -> B -> A is only a bounded leak-detection probe, not a product requirement for rapid league switching.
+- Hosted acceptance should prove one realistic FSFFL -> Hodor -> FSFFL journey with settle points, stable post-switch memory baseline, and prior-scope release.
+- Use at most one additional bounded repetition only if needed to distinguish monotonic retention from transient/allocator peak behavior.
+- If ownership is clean and baseline is stable but legitimate heavy compute still exceeds the unchanged memory gate, escalate to capacity/compute-staging instead of continuing leak hunting.
