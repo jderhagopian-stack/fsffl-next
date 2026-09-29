@@ -155,3 +155,11 @@ Current order:
 4. before any public launch, run a dedicated production-readiness/scaling review covering multi-instance correctness, worker/job separation, queues/backpressure, shared persistence/cache needs, provider limits, security, observability and realistic load testing.
 
 No premature microservice rewrite is authorized now. The rule is to avoid architectural choices that would make that later production scaling require rewriting the core system.
+
+
+## Practical interpretation
+The private-beta free tier is an optimization environment, not a commercial-capacity benchmark.
+
+FSFFL NEXT should minimize avoidable resource use and preserve clean ownership, reuse and asynchronous execution. Once legitimate work is efficient, future throughput demand should be met by scaling infrastructure rather than weakening analytical authority or forcing all workloads through one tiny process.
+
+A future public deployment with hundreds or thousands of users is expected to require materially more CPU, memory, bandwidth, worker capacity and supporting infrastructure than the current private-beta instance.
