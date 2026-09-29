@@ -12,7 +12,7 @@ from .runtime import UserRuntimeContext
 
 
 _logger = logging.getLogger("uvicorn.error")
-_MAX_ENTRIES = 2048
+_MAX_ENTRIES_PER_USER = 2048
 _ECONOMIC_EVIDENCE_KEYS = (
     "economics",
     "economic_net",
@@ -115,8 +115,10 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
                 }
                 cache[key] = evidence
                 cache.move_to_end(key)
-                while len(cache) > _MAX_ENTRIES:
-                    cache.popitem(last=False)
+                user_keys = [item for item in cache if item[0] == user_id]
+                while len(user_keys) > _MAX_ENTRIES_PER_USER:
+                    stale_key = user_keys.pop(0)
+                    cache.pop(stale_key, None)
                 cache_hit = False
             else:
                 hits += 1
