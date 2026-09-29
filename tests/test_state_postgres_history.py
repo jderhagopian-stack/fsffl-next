@@ -69,20 +69,39 @@ class FakeCursor:
                 self.result = {"state_hash": row["state_hash"], "payload": row["payload"]}
             return
         if normalized.startswith("select state_hash, payload from fsffl.state_snapshot_history where league_id=%s and as_of <= %s"):
-            league_id, cutoff = params
+            league_id, cutoff, *rest = params
+            limit = int(rest[0]) if rest else 1
             candidates = [
                 row
                 for row in self.database.rows.values()
                 if row["league_id"] == league_id and row["as_of"] <= cutoff
             ]
-            if candidates:
-                row = max(candidates, key=lambda item: (item["as_of"], item["recorded_at"]))
-                self.result = {"state_hash": row["state_hash"], "payload": row["payload"]}
+            candidates.sort(
+                key=lambda item: (
+                    item["as_of"],
+                    item["recorded_at"],
+                    item["state_hash"],
+                ),
+                reverse=True,
+            )
+            self.result = [
+                {"state_hash": row["state_hash"], "payload": row["payload"]}
+                for row in candidates[:limit]
+            ]
             return
         raise AssertionError(f"unexpected SQL: {normalized}")
 
     def fetchone(self):
+        if isinstance(self.result, list):
+            return self.result[0] if self.result else None
         return self.result
+
+    def fetchall(self):
+        if self.result is None:
+            return []
+        if isinstance(self.result, list):
+            return list(self.result)
+        return [self.result]
 
 
 def _state(*, as_of: datetime) -> LeagueState:
@@ -118,6 +137,26 @@ def test_postgres_state_history_survives_restart_and_respects_point_in_time_cuto
     assert restarted.latest_at_or_before("sleeper:history", NOW + timedelta(minutes=30)) == older
     assert restarted.latest_at_or_before("sleeper:history", NOW + timedelta(hours=2)) == newer
     assert restarted.latest_at_or_before("sleeper:history", NOW - timedelta(seconds=1)) is None
+
+
+def test_postgres_state_history_preserves_equal_as_of_recorded_order() -> None:
+    database = FakeDatabase()
+    store = PostgresStateSnapshotStore(
+        "postgresql://test",
+        connect_factory=database.connect,
+    )
+    first = _state(as_of=NOW)
+    second = first.model_copy(
+        update={"league": first.league.model_copy(update={"name": "Corrected"})}
+    )
+    assert first.state_id != second.state_id
+
+    store.save(first)
+    store.save(second)
+
+    recent = store.recent_at_or_before("sleeper:history", NOW, limit=2)
+    assert recent == (second, first)
+    assert store.latest_at_or_before("sleeper:history", NOW) == second
 
 
 def test_runtime_checkpoint_retains_canonical_state_history_off_request_path(monkeypatch) -> None:
