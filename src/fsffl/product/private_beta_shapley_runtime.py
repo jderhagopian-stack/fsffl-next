@@ -311,6 +311,7 @@ class PrivateBetaShapleyContractLoader:
         self._future_missing_fact_family = str(future_missing_fact_family)
         self._cached_key: str | None = None
         self._cached_contract: ShapleyIntrinsicContract | None = None
+        self._cached_user_id: str | None = None
 
     @property
     def forecast_model_version(self) -> str:
@@ -499,8 +500,20 @@ class PrivateBetaShapleyContractLoader:
         with self._lock:
             self._cached_key = fingerprint
             self._cached_contract = contract
+            self._cached_user_id = context.user_id
         return contract
 
+
+    def clear_user_cache(self, user_id: str) -> int:
+        """Release only this user's process-local contract copy."""
+
+        with self._lock:
+            if self._cached_user_id != user_id or self._cached_contract is None:
+                return 0
+            self._cached_key = None
+            self._cached_contract = None
+            self._cached_user_id = None
+            return 1
 
     def __call__(self, context: UserRuntimeContext) -> ShapleyIntrinsicContract:
         league_state = context.league_state
@@ -618,7 +631,11 @@ class PrivateBetaShapleyContractLoader:
             year_one_evidence=evidence,
         )
         with self._lock:
-            if key == self._cached_key and self._cached_contract is not None:
+            if (
+                key == self._cached_key
+                and self._cached_contract is not None
+                and self._cached_user_id == context.user_id
+            ):
                 return self._cached_contract
 
             persisted = self._restore_persisted(
@@ -629,6 +646,7 @@ class PrivateBetaShapleyContractLoader:
             if persisted is not None:
                 self._cached_key = key
                 self._cached_contract = persisted
+                self._cached_user_id = context.user_id
                 return persisted
 
             # Hold the loader lock through the expensive build. The HTTP layer runs
@@ -681,4 +699,5 @@ class PrivateBetaShapleyContractLoader:
             )
             self._cached_key = key
             self._cached_contract = contract
+            self._cached_user_id = context.user_id
             return contract
