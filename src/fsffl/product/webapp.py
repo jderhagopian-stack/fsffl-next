@@ -957,8 +957,16 @@ def create_app(
     ) -> UserRuntimeContext | None:
         previous = store.get(user_id)
         if expected_generation is None:
-            store.set_league_state(user_id, league_state)
-            activated = store.get(user_id)
+            fast_connect_activation = (
+                getattr(store, "activate_league_state_for_connect", None)
+                if reason in {"background_connect", "synchronous_connect"}
+                else None
+            )
+            if callable(fast_connect_activation):
+                activated = fast_connect_activation(user_id, league_state)
+            else:
+                store.set_league_state(user_id, league_state)
+                activated = store.get(user_id)
         else:
             conditional = getattr(store, "set_league_state_if_generation", None)
             if not callable(conditional):
@@ -1515,6 +1523,14 @@ def create_app(
                         next_state=synced_state,
                         next_team_id=starting_team_id,
                         reason="sync_reconciliation_state_change",
+                    )
+                    # The boundary releases the prior Behavioral execution record.
+                    # Rebuild/reuse it for the replacement State before any consumer
+                    # can mistake an old durable owner mapping for current execution.
+                    behavior_jobs.start(
+                        user_id=user_id,
+                        league_state=synced_state,
+                        sleeper_league_external_id=starting_external_id,
                     )
             else:
                 with store.lifecycle_operation(user_id):
