@@ -205,8 +205,17 @@ def main():
                         "expected_nonparametric_next_draw_coverage":b["expected_nonparametric_next_draw_coverage"],
                     })
 
-    # Frozen acceptance: every observed fallback tier must have >=90% pooled
-    # historical coverage at every cutoff/position where it appears.
+    # The first all-population validation exposed one unsupported cell:
+    # QB cold-start at Week 13 (8/9, 88.9%). Later QB cold-start samples are
+    # even smaller. Do not inflate the bound after seeing that result. Fail
+    # closed for the contiguous QB cold-start/identity-light suffix 13-17.
+    def tier_eligible(cutoff, pos, tier):
+        if tier=="cold_start" and pos=="QB" and cutoff>=13:
+            return False
+        return True
+
+    # Every eligible observed fallback tier must have >=90% pooled historical
+    # coverage at every cutoff/position where it appears.
     pooled=defaultdict(list)
     for row in heldout:
         if row["tier"]=="ALL":continue
@@ -216,9 +225,10 @@ def main():
         n=sum(int(x["n"]) for x in parts)
         ex=sum(int(x["exceedances"]) for x in parts)
         cov=(n-ex)/n if n else 1.0
-        rec={"cutoff":cutoff,"position":pos,"tier":t,"n":n,"exceedances":ex,"coverage":cov,"passes_90":cov>=0.90}
+        eligible=tier_eligible(cutoff,pos,t)
+        rec={"cutoff":cutoff,"position":pos,"tier":t,"n":n,"exceedances":ex,"coverage":cov,"eligible_for_fallback":eligible,"passes_90":cov>=0.90}
         pooled_rows.append(rec)
-        if cov<0.90:failures.append(rec)
+        if eligible and cov<0.90:failures.append(rec)
 
     # 2026 production/fallback bound. For Week 2..17, never narrow the
     # previously frozen P1-affected bound: take max(prior bound, all-pop
@@ -245,6 +255,8 @@ def main():
                 "score_impact_bound":score_bound,
                 "minimum_supported_fp_stddev_for_non_material":minimum_sd,
                 "eligible_observed_tiers":";".join(ELIGIBLE_OBSERVED_TIERS),
+                "cold_start_fallback_eligible":tier_eligible(cutoff,pos,"cold_start"),
+                "identity_light_fallback_eligible":tier_eligible(cutoff,pos,"cold_start"),
                 "identity_light_rule":IDENTITY_LIGHT_RULE,
             })
 
@@ -261,6 +273,7 @@ def main():
             "tier_conditioning":False,
             "observed_tiers_eligible":list(ELIGIBLE_OBSERVED_TIERS),
             "identity_light":IDENTITY_LIGHT_RULE,
+            "restriction":"QB cold-start and identity-light fail closed at cutoffs 13-17; all other observed tiers/cutoffs remain eligible subject to the runtime materiality inequality",
             "unknown_or_conflicting_position":"FAIL_CLOSED",
             "minimum_empirical_coverage_gate":0.90,
             "pooled_position_cutoff_tier_failures":failures,
