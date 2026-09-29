@@ -1,0 +1,42 @@
+name: FUMBLES_LOST Materiality Lifecycle Validation
+
+on:
+  push:
+    branches: [research/fumbles-lost-rolling-authority-20260929]
+    paths:
+      - scripts/run_fumbles_lost_materiality_lifecycle.py
+      - .github/workflows/fumbles-lost-materiality-lifecycle.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate fallback populations and lifecycle
+        run: |
+          python scripts/run_fumbles_lost_materiality_lifecycle.py \
+            --rolling-table artifacts/research/fumbles_lost_rolling_authority_20260929/ROLLING_PRODUCTION_TABLE.json \
+            --league-rules artifacts/implementation/forecast_source_coordinate_20260919/CONNECTED_LEAGUE_RULES.json \
+            --output-dir artifacts/research/fumbles_lost_rolling_authority_20260929/lifecycle_validation
+      - name: Persist compact evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/research/fumbles_lost_rolling_authority_20260929/lifecycle_validation/
+          git commit -m "Research: persist fumbles materiality lifecycle evidence" || exit 0
+          git push origin HEAD:research/fumbles-lost-rolling-authority-20260929
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fumbles-lost-materiality-lifecycle
+          path: artifacts/research/fumbles_lost_rolling_authority_20260929/lifecycle_validation/
+          retention-days: 30
