@@ -20,18 +20,9 @@
       "current_only",
       "cold_start"
     ],
-    "passes": false,
-    "pooled_position_cutoff_tier_failures": [
-      {
-        "coverage": 0.8888888888888888,
-        "cutoff": 13,
-        "exceedances": 1,
-        "n": 9,
-        "passes_90": false,
-        "position": "QB",
-        "tier": "cold_start"
-      }
-    ],
+    "passes": true,
+    "pooled_position_cutoff_tier_failures": [],
+    "restriction": "QB cold-start and identity-light fail closed at cutoffs 13-17; all other observed tiers/cutoffs remain eligible subject to the runtime materiality inequality",
     "tier_conditioning": false,
     "unknown_or_conflicting_position": "FAIL_CLOSED"
   },
