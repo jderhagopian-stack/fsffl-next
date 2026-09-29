@@ -1428,3 +1428,18 @@ Management disposition:
 - if clean, merge/deploy and immediately resume hosted FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session acceptance under the unchanged hard-memory gate.
 
 No further architecture broadening is authorized unless the exact-head review or hosted evidence exposes a new same-class defect.
+
+
+## 2026-09-29 — Clarify resource acceptance: bounded leak probe, not rapid-switch product requirement
+Management clarification: repeated FSFFL -> Hodor -> FSFFL transitions are a **diagnostic probe for retained process memory**, not an expected end-user behavior or throughput requirement.
+
+Acceptance should model realistic private-beta usage:
+- one clean FSFFL -> Hodor switch and return to FSFFL;
+- allow the process to settle between major phases;
+- verify prior-league execution state is released and the post-settle baseline returns to the same bounded range;
+- perform at most one additional bounded A -> B -> A repetition if needed to distinguish a leak/monotonic retention pattern from a one-time allocator/transient peak;
+- do not require rapid repeated toggling, concurrent same-user league thrashing, or a synthetic stress pattern that the product is not designed to support.
+
+The production concern is lifecycle correctness on an occasional league switch and process safety on a shared Render instance, not whether one user can flip leagues rapidly without pause.
+
+If the whole resource boundary is proven clean, memory returns to a stable post-settle baseline, and only legitimate heavy compute still exceeds the hard gate, stop treating that as a leak hunt and escalate as a capacity/compute-staging decision.
