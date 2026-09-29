@@ -349,6 +349,13 @@ def _annual_candidate() -> FumblesLostProductionTable:
 
     payload["annual_freeze"] = {
         "exact_source_hashes": {"2026_weekly_exact_lost_fumbles": "a" * 64},
+        "exact_source_urls": {
+            "2026_weekly_exact_lost_fumbles": "https://example.invalid/2026-exact-weekly"
+        },
+        "source_captured_at": {
+            "2026_weekly_exact_lost_fumbles": "2027-02-15T12:00:00+00:00"
+        },
+        "built_at": "2027-02-15T13:00:00+00:00",
         "training_seasons": [2021, 2022, 2023, 2024, 2025, 2026],
         "calibration_pseudo_current_seasons": [2022, 2023, 2024, 2025, 2026],
         "chronology_validation_passed": True,
