@@ -1284,3 +1284,19 @@ Management disposition:
 4. Preserve #294/#295/#296 runtime architecture and all frozen Forecast/Intrinsic/K-DST boundaries. No new Research or broader feature work is authorized.
 
 Only after full CI + bounded P1/P2 review are clean may PR #298 merge/deploy and resume the full hosted lifecycle acceptance. Physical Safari remains HOLD until hosted terminal PASS.
+
+
+## 2026-09-29 — PR #298 final review leaves two bounded P2s
+PR #298 exact head `bccb3f547d0f9d4df68c0c0faa6f258c66967346` has all current CI/focused workflows green, including full CI, League Atlas, Forecast, Home, Intrinsic, provider numerical trace and focused corrective regression.
+
+Final bounded Codex review on this exact head found two unresolved P2s inside the annual FUMBLES_LOST rollover contract:
+1. annual rollover can still promote a candidate without proving the newly completed season met the frozen rolling adequacy gates (performance vs omission / bias / calibration); the annual validator needs governed adequacy evidence and must fail closed when adequacy is not proven;
+2. a future annual candidate can reduce the top-level `cold_start_floor` below the prior governed floor (including to zero) and still pass; validate it is finite, positive, and non-decreasing versus prior authority.
+
+Management disposition:
+- these are real bounded annual-governance defects and block merge;
+- do not reopen Research or alter the accepted model family, cutoff scalars, materiality threshold, runtime architecture, or downstream semantics;
+- correct the annual validation contract, add deterministic regressions, rerun full CI + affected focused tests, then request/re-run bounded P1/P2 review on the new exact head;
+- merge/deploy only when that review has no unresolved P1/P2.
+
+Physical Safari remains HOLD until hosted terminal PASS.
