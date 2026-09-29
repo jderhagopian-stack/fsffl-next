@@ -3325,7 +3325,14 @@ def test_stale_managed_team_checkpoint_cannot_regress_newer_state_pointer() -> N
 
 
 def test_team_switch_then_same_state_publication_preserves_identity_and_restores_exact_team() -> None:
-    persistence = MemoryPersistence()
+    class UpsertMemoryPersistence(MemoryPersistence):
+        def put_artifact(self, record):
+            self.artifacts = [
+                row for row in self.artifacts if row.key != record.key
+            ]
+            self.artifacts.append(record)
+
+    persistence = UpsertMemoryPersistence()
     continuity = PresentationContinuityStore(persistence)
     state = _league_state()
     forecast = _stale_forecast_without_first_party_fumbles_lost(state)
