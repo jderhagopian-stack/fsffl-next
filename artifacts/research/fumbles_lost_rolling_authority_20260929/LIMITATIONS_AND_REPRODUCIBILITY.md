@@ -7,46 +7,134 @@ Date: 2026-09-29
 Research branch:
 `research/fumbles-lost-rolling-authority-20260929`
 
-Canonical starting main:
+Original rolling-authority start:
 `8d57883759cf2a0f0c0b1fbf4792e15e67a5a1c6`
-(`Ops: activate rolling FUMBLES_LOST research gate`)
 
-Frozen protocol commit:
+Original frozen rolling protocol:
 `5163ce90097f53b2e3d5e4ff539e9d1d48e5fcc5`
 
-Validation implementation:
-`scripts/run_fumbles_lost_rolling_authority.py`
+### Rolling Week-2→17 validation
 
 Workflow:
 - run `36525451903`;
 - conclusion: **success**;
 - artifact `11014727753`;
-- digest `sha256:eac8dffa80df5ba9adb6b279267b5c05134fefcbda71146b058fa837dec91db8`;
+- digest `sha256:eac8dffa80df5ba9adb6b279267b5c05134fefcbda71146b058fa837dec91db8`.
+
+This evidence remains authoritative and was **not reopened** by the lifecycle/P1 correction.
+
+### Population-materiality / season-start validation
+
+Implementation:
+`scripts/run_fumbles_lost_materiality_lifecycle.py`
+
+Final workflow:
+- run `36558353289`;
+- conclusion: **success**;
+- artifact `11028911683`;
+- digest `sha256:d37986d48f734b8d4a0882703bb6a90241eae0306b84c5a0083f3cd8db589768`;
 - retained through 2026-10-29.
 
-Exact governed nflverse source hashes are persisted in `ROLLING_VALIDATION_RESULT.json`.
+Exact governed source hashes are persisted in:
+- `validation/ROLLING_VALIDATION_RESULT.json`;
+- `lifecycle_validation/LIFECYCLE_VALIDATION_RESULT.json`.
 
-## Limitations
+## What the P1 correction changed
 
-1. **Only three OOT target seasons.** Rolling evaluation uses held-out 2023-2025. It is chronology-preserving but not a huge era sample.
-2. **QB calibration remains weaker.** This was already true in the accepted Week-2 model. The rolling contract does not hide or tune it away; uncertainty grows instead.
-3. **Late cutoffs are inherently noisy in season-equivalent units.** Week-17 residual floors are materially larger because a tiny remaining window is annualized.
-4. **The materiality rule requires supported fantasy-point uncertainty.** A missing/zero subtotal standard deviation fails closed.
-5. **Materiality is consumer-specific.** Passing Simulation does not automatically grant full Forecast coverage or another consumer's authority.
-6. **The empirical p99 bound is historical, not a physical maximum.** The additional mean + 1.645×floor branch prevents the bound from relying only on an empirical tail quantile.
-7. **No 2026 outcomes were used to tune this contract.** Production scalars use 2022-2025 pseudo-current evidence only.
-8. **No preseason backfill.** Rolling authority begins only from actual current-season cutoff evidence.
-9. **Week 18 is not a projection cutoff.** The model is authorized Week 2-17 only.
-10. **No K/DST consequence.** This work does not repair or reinterpret the separate Hodor K/DST authority boundary.
-11. **No runtime architecture conclusion.** #294/#295/#296 lifecycle/restore/publication work is untouched.
+It did **not** change:
+- the Week-2→17 rolling point model;
+- any calibration scalar;
+- position lost-fumble rates;
+- the four-game role prior;
+- rolling point-model uncertainty floors.
+
+It changed only the **fallback materiality bound/eligibility**.
+
+The original bound was based on the primary validation population and therefore excluded true cold starts.
+
+The corrected bound:
+- is position-wide and tier-independent;
+- uses the historical maximum season-equivalent exact-lost-fumble outcome from all completed prior player-seasons;
+- can only widen the earlier primary-population bound;
+- is validated separately across observed evidence populations.
+
+One unsupported case was found:
+- QB cold-start Week 13: 8/9 = 88.9% historical held-out coverage.
+
+Rather than inflate the bound post hoc, Research restricts:
+- QB cold-start fallback at Weeks 13-17;
+- QB identity-light fallback at Weeks 13-17.
+
+All remaining fallback-eligible observed population/cutoff cells clear the 90% coverage gate.
+
+Identity-light itself is not a directly observed historical mapping-failure population. Its eligibility therefore:
+- requires known/non-conflicting canonical position;
+- mirrors the matching cold-start eligibility;
+- uses the tier-independent position-wide bound.
+
+Unknown/conflicting position fails closed.
+
+## Season-start limitation
+
+No Week-0 or Week-1 first-party point estimate is promoted.
+
+Historical validation supports only:
+- explicit omission;
+- corrected materiality allowance when eligible and immaterial.
+
+This is deliberately less precise than inventing a preseason/Week-1 model.
+
+The contract does not retroactively create a 2026 preseason artifact.
+
+## Annual rollover limitation
+
+2027 numeric rates/scalars/floors cannot be frozen until finalized 2026 exact weekly data exist.
+
+The annual process is deterministic, but a **minimal governed freeze** remains mandatory before each target season's point authority:
+- exact source semantics/hash verification;
+- parameter/table build;
+- chronology checks;
+- bounded adequacy and materiality-population checks.
+
+A failed annual gate returns to explicit omission/materiality or fail-closed authority; it does not trigger automatic model-family search.
+
+## Other limitations
+
+1. Rolling point-model OOT evidence covers only held-out 2023-2025.
+2. QB point-model calibration remains weaker than other positions.
+3. Late cutoffs are inherently noisy in season-equivalent units.
+4. Materiality requires non-zero supported fantasy-point uncertainty; missing/zero subtotal uncertainty fails closed.
+5. Materiality is consumer-specific; Simulation permission does not make Forecast coverage complete.
+6. Historical maximum is an empirical conservative bound, not a physical mathematical maximum.
+7. Late cold-start sample sizes become small; the explicit QB Week-13→17 restriction prevents pretending otherwise.
+8. No 2026 outcomes tuned the 2026 rolling point model or materiality threshold.
+9. No K/DST authority is changed.
+10. No Intrinsic mathematics are changed.
+11. No #294/#295/#296 runtime architecture is changed.
 
 ## Persisted evidence
 
+Core:
 - `PROTOCOL_FROZEN.md`
+- `ROLLING_CONTRACT.md`
+- `UNCERTAINTY_CONTRACT.md`
+- `MATERIALITY_RULE.md`
+- `SEASON_START_LIFECYCLE.md`
+- `ANNUAL_ROLLOVER_CONTRACT.md`
 - `ROLLING_PRODUCTION_TABLE.json`
+- `IMPLEMENTATION_HANDOFF.md`
+- `FINAL_RESULT.json`
+
+Rolling validation:
 - `validation/ROLLING_VALIDATION_RESULT.json`
 - `validation/ROLLING_GATE_RESULTS.csv`
 - `validation/ROLLING_CUTOFF_METRICS.csv`
 - `validation/ROLLING_CALIBRATION_SCALARS.csv`
 - `validation/ROLLING_UNCERTAINTY.csv`
 - `validation/MATERIALITY_IMPACT_BOUNDS.csv`
+
+Lifecycle/materiality correction:
+- `lifecycle_validation/LIFECYCLE_VALIDATION_RESULT.json`
+- `lifecycle_validation/MATERIALITY_HELDOUT_BY_POPULATION.csv`
+- `lifecycle_validation/MATERIALITY_POOLED_POPULATION_GATES.csv`
+- `lifecycle_validation/FALLBACK_PRODUCTION_BOUNDS_2026.csv`
