@@ -1694,3 +1694,14 @@ Continue from this exact boundary:
 9. deploy exact corrected SHA and rerun hosted acceptance with verified keep-awake through restart/restored-session.
 
 No Forecast/Hodor/model-semantic scope expansion. Physical Safari remains HOLD.
+
+
+## 2026-09-29 — #296 runtime corrective complete; stop on Forecast authority gate
+PR #296 merged as `7d88ea87e316958e0580dd90d457fbe490bd9a0b` after focused coverage, bounded P1/P2 red-team, and full CI (1,818 passed). The settled-team -> same-State publication identity bug is corrected without weakening the final atomic stale-job guard.
+
+Exact #296 hosted acceptance failed before reaching that runtime leg because live canonical State is now beyond the frozen Week-2 first-party FUMBLES_LOST contract:
+`first-party FUMBLES_LOST v1 requires canonical completed_through_week=2`.
+
+This is outside the current runtime corrective directive. Do not broaden Implementation into Forecast model/authority changes without Management authorization. Preserve the #296 runtime correction and all prior Hodor/restore/team-publication work.
+
+Current status: MANAGEMENT GATE — Forecast/current-season authority. Physical Safari remains HOLD until a governed Forecast path allows the complete hosted lifecycle to reach terminal PASS.
