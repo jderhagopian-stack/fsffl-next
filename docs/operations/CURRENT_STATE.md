@@ -1013,3 +1013,18 @@ Regression comparison found the earlier reliable contract in PR #54 (`0021aefc..
 Controlling corrective: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`.
 
 Immediate action: restore the known-good first-load contract without rolling back #261/#291 safety. Prove a true clean-browser first run (server state + browser local state empty), restored session, league switch and restart before asking the product owner to test again. Post-stabilization foundations remain paused.
+
+
+## 2026-09-29 — #292 live; primary FSFFL path passes, full hosted acceptance stops at Hodor source-health gate
+PR #292 merged as `8c162c5a7bf6120ecc72566e72dd11f634a93ee9` and exact merge SHA is live on Render deploy `dep-datftrs9v7es738i9q80`.
+
+Hosted evidence on the #292 instance is materially positive for the targeted FSFFL regression:
+- initial FSFFL reconciliation produced one full coherent published generation across Home/Franchise/League/Market/value-lens surfaces;
+- PI history during active reconciliation completed in ~0.405s;
+- reload during active reconciliation continued serving the prior coherent generation while readiness truthfully reported rebuilding;
+- changed-State reconciliation then atomically promoted all checked surfaces to a new common generation;
+- peak observed RSS during this leg was ~386.9 MB, within the ~429.5 MB soft engineering budget.
+
+The full acceptance did **not** reach terminal PASS. At the Hodor switch it failed with `LiveForecastSourceHealthFailure`: only Razzball was healthy; CBS did not return a valid full-season QB projection page, FFToday returned HTTP 403, and NFL Fantasy returned no projection content. This is the previously known Hodor/provider-authority gate, not evidence that the #292 FSFFL first-load corrective itself failed.
+
+Disposition: runtime stabilization remains HOLD because the directive still requires clean-first-run + restored-session + league-switch + restart acceptance. Do not ask for physical iPhone/Safari acceptance yet. Implementation must continue from this exact hosted failure and determine whether Hodor should have replayed compatible persisted governed raw Forecast evidence or whether fresh acquisition was legitimately required; do not weaken the two-source authority contract merely to pass acceptance.
