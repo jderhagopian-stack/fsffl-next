@@ -352,6 +352,7 @@ def validate_annual_rollover_candidate(
         str,
         Mapping[int, Mapping[str, float]],
     ],
+    newly_completed_rolling_adequacy: Mapping[str, object],
 ) -> None:
     """Validate the frozen 2027+ minimal annual rollover invariants.
 
@@ -423,6 +424,91 @@ def validate_annual_rollover_candidate(
     if annual.get("chronology_validation_passed") is not True:
         raise ValueError(
             "annual FUMBLES_LOST freeze lacks chronology/no-future-leakage validation"
+        )
+
+    # Annual promotion must carry direct governed proof that the newly completed
+    # held-out season still satisfies the already-frozen rolling adequacy gates.
+    # Uncertainty widening alone is not predictive authority.
+    try:
+        adequacy_season = int(newly_completed_rolling_adequacy["heldout_season"])
+        adequacy_cutoffs = newly_completed_rolling_adequacy["cutoffs"]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "annual FUMBLES_LOST rolling adequacy proof is incomplete"
+        ) from exc
+    if adequacy_season != prior.target_season:
+        raise ValueError(
+            "annual FUMBLES_LOST rolling adequacy proof targets the wrong held-out season"
+        )
+    if not isinstance(adequacy_cutoffs, Mapping):
+        raise ValueError("annual FUMBLES_LOST rolling adequacy proof is incomplete")
+
+    for cutoff in _ROLLING_CUTOFFS:
+        row = adequacy_cutoffs.get(cutoff)
+        if row is None:
+            row = adequacy_cutoffs.get(str(cutoff))
+        if not isinstance(row, Mapping):
+            raise ValueError("annual FUMBLES_LOST rolling adequacy proof is incomplete")
+        try:
+            rolling_rmse = float(row["rolling_rmse"])
+            zero_rmse = float(row["zero_rmse"])
+            bias = float(row["bias"])
+            zero_gap = float(row["zero_gap"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy proof is incomplete"
+            ) from exc
+        if (
+            not math.isfinite(rolling_rmse)
+            or rolling_rmse < 0
+            or not math.isfinite(zero_rmse)
+            or zero_rmse < 0
+            or not math.isfinite(bias)
+            or not math.isfinite(zero_gap)
+        ):
+            raise ValueError("annual FUMBLES_LOST rolling adequacy proof is invalid")
+
+        # With exactly one newly completed held-out season, its cutoff cohort is
+        # both the annual pooled cohort and the per-season cohort. Preserve both
+        # frozen gates explicitly so future aggregation cannot silently weaken them.
+        if rolling_rmse > zero_rmse:
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy fails RMSE-vs-omission gate"
+            )
+        if rolling_rmse > 1.10 * zero_rmse:
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy fails held-out stability gate"
+            )
+        if abs(bias) > 0.15:
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy fails absolute-bias gate"
+            )
+        if abs(zero_gap) > 0.05:
+            raise ValueError(
+                "annual FUMBLES_LOST rolling adequacy fails zero-calibration gate"
+            )
+
+    try:
+        candidate_cold_start_floor = candidate.cold_start_floor
+        prior_cold_start_floor = prior.cold_start_floor
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "annual FUMBLES_LOST cold-start uncertainty floor is missing"
+        ) from exc
+    if (
+        not math.isfinite(candidate_cold_start_floor)
+        or candidate_cold_start_floor <= 0
+    ):
+        raise ValueError(
+            "annual FUMBLES_LOST cold-start uncertainty floor must be finite and positive"
+        )
+    if (
+        not math.isfinite(prior_cold_start_floor)
+        or prior_cold_start_floor <= 0
+        or candidate_cold_start_floor < prior_cold_start_floor
+    ):
+        raise ValueError(
+            "annual FUMBLES_LOST cold-start uncertainty floor cannot decrease"
         )
 
     position_rates = annual.get("position_lost_fumble_per_opportunity")
