@@ -555,3 +555,13 @@ Goal: restore the previously reliable Sleeper connect/team-selection/initial-int
 A separate Work review is authorized under `docs/operations/directives/20260928_RUNTIME_ARCHITECTURE_RECONCILIATION_AUDIT.md`.
 
 This is read-only and may run in parallel with Implementation. It must not modify code/docs, open PRs, deploy, or alter persistence. Its purpose is to reconcile the current runtime/application design against the founding FSFFL NEXT architecture and identify the smallest architectural simplification needed to prevent recurrence without discarding valid #261/#284-#291 safety properties.
+
+
+## 2026-09-29 — FUMBLES_LOST Research closed; Implementation resumes
+- **Implementation — ACTIVE / sole product-critical path.**
+- PR #297 Research authority is merged as `9b3e07c14583918c08fae893d5087f0ed013826c`; no bounded P1/P2 remains.
+- Implement only the frozen FUMBLES_LOST Week-0/1 omission, Week-2→17 rolling, corrected `NON_MATERIAL_PARTIAL`, Week-18 no-projection, and annual-freeze contracts from `artifacts/research/fumbles_lost_rolling_authority_20260929/IMPLEMENTATION_HANDOFF.md`.
+- Preserve Y2/Y3, Y4-Y7, K/DST, Intrinsic mathematics, and #294/#295/#296 runtime architecture.
+- After focused/full CI and bounded review, deploy on the existing runtime lineage and resume the complete hosted lifecycle acceptance through restart/restored-session.
+- **Research — DONE / PARKED** for this directive. Do not reopen without new evidence.
+- Physical Safari remains HOLD until terminal hosted PASS.
