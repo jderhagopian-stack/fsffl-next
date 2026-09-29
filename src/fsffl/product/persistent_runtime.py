@@ -847,12 +847,13 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 return first_incompatible
             return None, None, None, discovery_rejections
 
-        cutoff = target_state.as_of
-        for _ in range(32):
+        recent_reader = getattr(self._state_history, "recent_at_or_before", None)
+        if callable(recent_reader):
             try:
-                candidate = self._state_history.latest_at_or_before(
+                candidates = recent_reader(
                     target_state.league.league_id,
-                    cutoff,
+                    target_state.as_of,
+                    limit=32,
                 )
             except Exception as exc:
                 _logger.warning(
@@ -866,13 +867,36 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 if first_incompatible is not None:
                     return first_incompatible
                 return None, None, None, discovery_rejections
-            if candidate is None:
-                break
-            cutoff = candidate.as_of - timedelta(microseconds=1)
+        else:
+            candidates = []
+            cutoff = target_state.as_of
+            for _ in range(32):
+                try:
+                    candidate = self._state_history.latest_at_or_before(
+                        target_state.league.league_id,
+                        cutoff,
+                    )
+                except Exception as exc:
+                    _logger.warning(
+                        "FSFFL raw Forecast history discovery failed user=%s league=%s target_state=%s error=%s",
+                        user_id,
+                        target_state.league.league_id,
+                        target_state.state_id,
+                        exc,
+                    )
+                    discovery_rejections.append("state_history_lookup_failed")
+                    if first_incompatible is not None:
+                        return first_incompatible
+                    return None, None, None, discovery_rejections
+                if candidate is None:
+                    break
+                candidates.append(candidate)
+                cutoff = candidate.as_of - timedelta(microseconds=1)
+
+        for candidate in candidates:
             if candidate.state_id in seen_state_ids:
                 continue
             seen_state_ids.add(candidate.state_id)
-
             candidate_raw = restore_state_bound_raw_forecast_evidence(
                 self._persistence,
                 league_state=candidate,
