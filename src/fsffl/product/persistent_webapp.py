@@ -924,7 +924,10 @@ def _acceptance_history_probe(label: str, context) -> dict[str, object]:
 
 
 def _runtime_acceptance_resource_reader() -> dict[str, object]:
-    return dict(_heavy_work_coordinator.snapshot().__dict__)
+    return {
+        **dict(_heavy_work_coordinator.snapshot().__dict__),
+        "recent_resource_boundaries": _state_resource_boundary.snapshot(),
+    }
 
 
 def _runtime_acceptance_process_identity() -> str:
