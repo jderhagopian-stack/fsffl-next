@@ -137,12 +137,26 @@ def assess_fumbles_lost_non_material_partial(
     supplement: FirstPartyFumblesLostSupplement | None,
     production_table: FumblesLostProductionTable | None = None,
 ) -> FumblesLostMaterialityAssessment:
-    table = resolve_fumbles_lost_production_table(
-        league_state.league.season,
-        table=production_table,
-    )
     cutoff = league_state.completed_through_week
     coefficient = fumbles_lost_scoring_coefficient(league_state)
+    try:
+        table = resolve_fumbles_lost_production_table(
+            league_state.league.season,
+            table=production_table,
+        )
+    except ValueError as exc:
+        return FumblesLostMaterialityAssessment(
+            player_id=partial.player_id,
+            position=partial.position,
+            completed_through_week=cutoff,
+            evidence_tier=FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
+            eligible=False,
+            status="MATERIAL_PARTIAL",
+            scoring_points_per_event=coefficient,
+            supported_fantasy_point_stddev=supported_fantasy_point_stddev,
+            reason=str(exc),
+            contract_version="unavailable",
+        )
     tier, identity_eligible, tier_reason = _fallback_tier(
         league_state,
         player_id=partial.player_id,
