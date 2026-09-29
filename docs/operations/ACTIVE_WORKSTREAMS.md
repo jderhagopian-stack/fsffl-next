@@ -655,3 +655,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Current PR #303 remains narrowly focused on resource ownership/lifecycle correctness and the existing private-beta gate.
 - Do not introduce a premature microservice/distributed-systems rewrite into #303.
 - After hosted + physical beta acceptance, Management will gate a dedicated production-readiness/scaling workstream before any public launch.
+
+
+## 2026-09-29 — Free-Render usability is the immediate acceptance target
+- **Implementation — ACTIVE / sole product-critical path.**
+- Public-scale architecture is future-facing; current acceptance is reliable single-user/private-beta use on the existing free Render service.
+- Finish #303 for lifecycle/resource correctness, then prove one realistic full hosted journey without hard-memory failure and with acceptable foreground responsiveness.
+- Do not add synthetic rapid-switch or commercial-scale requirements to this gate.
+- If normal beta use still cannot fit after ownership is clean, escalate to the smallest practical beta-specific capacity/compute-staging decision instead of continuing open-ended leak hunting.
