@@ -408,6 +408,21 @@ def _annual_population_coverage() -> dict[str, dict[int, dict[str, float]]]:
     }
 
 
+def _annual_rolling_adequacy() -> dict[str, object]:
+    return {
+        "heldout_season": 2026,
+        "cutoffs": {
+            cutoff: {
+                "rolling_rmse": 0.5,
+                "zero_rmse": 1.0,
+                "bias": 0.0,
+                "zero_gap": 0.0,
+            }
+            for cutoff in range(2, 18)
+        },
+    }
+
+
 def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_floors() -> None:
     prior = frozen_fumbles_lost_production_table_2026()
     with pytest.raises(ValueError, match="annual governed freeze is unavailable"):
@@ -420,6 +435,7 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
         newly_completed_heldout_rmse=_annual_rmse(),
         newly_completed_materiality_event_max=_annual_materiality_maxima(),
         observed_population_coverage=_annual_population_coverage(),
+        newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
     )
 
     with pytest.raises(ValueError, match="RMSE matrix is incomplete"):
@@ -429,6 +445,7 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
             newly_completed_heldout_rmse={"QB": {2: 0.0}},
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
     complete = {
@@ -443,6 +460,7 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
             newly_completed_heldout_rmse=complete,
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
 
@@ -463,6 +481,7 @@ def test_annual_rollover_structural_gate_rejects_other_incomplete_cutoff_fields(
             newly_completed_heldout_rmse=_annual_rmse(),
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
     broken_bound = _annual_candidate()
@@ -482,6 +501,7 @@ def test_annual_rollover_structural_gate_rejects_other_incomplete_cutoff_fields(
             newly_completed_heldout_rmse=_annual_rmse(),
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
     mismatched_fingerprint = _annual_candidate()
@@ -496,6 +516,7 @@ def test_annual_rollover_structural_gate_rejects_other_incomplete_cutoff_fields(
             newly_completed_heldout_rmse=_annual_rmse(),
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
 
@@ -520,6 +541,7 @@ def test_annual_rollover_rejects_incomplete_fallback_matrix_and_player_priors() 
             newly_completed_heldout_rmse=complete_rmse,
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
     broken_prior = _annual_candidate()
@@ -543,6 +565,7 @@ def test_annual_rollover_rejects_incomplete_fallback_matrix_and_player_priors() 
             newly_completed_heldout_rmse=complete_rmse,
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
 
@@ -559,6 +582,7 @@ def test_annual_rollover_requires_new_materiality_maxima_and_population_coverage
             newly_completed_heldout_rmse=_annual_rmse(),
             newly_completed_materiality_event_max=incomplete_max,
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
     widened_max = _annual_materiality_maxima()
@@ -570,6 +594,7 @@ def test_annual_rollover_requires_new_materiality_maxima_and_population_coverage
             newly_completed_heldout_rmse=_annual_rmse(),
             newly_completed_materiality_event_max=widened_max,
             observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
     failing_coverage = _annual_population_coverage()
@@ -582,6 +607,115 @@ def test_annual_rollover_requires_new_materiality_maxima_and_population_coverage
             newly_completed_heldout_rmse=_annual_rmse(),
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=failing_coverage,
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
+        )
+
+
+def test_annual_rollover_requires_governed_rolling_adequacy_proof() -> None:
+    prior = frozen_fumbles_lost_production_table_2026()
+    candidate = _annual_candidate()
+
+    with pytest.raises(ValueError, match="rolling adequacy proof is incomplete"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy={},
+        )
+
+    wrong_season = _annual_rolling_adequacy()
+    wrong_season["heldout_season"] = 2025
+    with pytest.raises(ValueError, match="wrong held-out season"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=wrong_season,
+        )
+
+    worse_than_omission = _annual_rolling_adequacy()
+    worse_than_omission["cutoffs"][3]["rolling_rmse"] = 1.01  # type: ignore[index]
+    with pytest.raises(ValueError, match="RMSE-vs-omission gate"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=worse_than_omission,
+        )
+
+    biased = _annual_rolling_adequacy()
+    biased["cutoffs"][8]["bias"] = 0.150001  # type: ignore[index]
+    with pytest.raises(ValueError, match="absolute-bias gate"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=biased,
+        )
+
+    miscalibrated = _annual_rolling_adequacy()
+    miscalibrated["cutoffs"][12]["zero_gap"] = 0.050001  # type: ignore[index]
+    with pytest.raises(ValueError, match="zero-calibration gate"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=miscalibrated,
+        )
+
+
+@pytest.mark.parametrize("invalid_floor", [0.0, -0.1, float("inf"), float("nan")])
+def test_annual_rollover_rejects_nonpositive_or_nonfinite_cold_start_floor(
+    invalid_floor: float,
+) -> None:
+    prior = frozen_fumbles_lost_production_table_2026()
+    candidate = _annual_candidate()
+    payload = copy.deepcopy(dict(candidate.payload))
+    payload["cold_start_floor"] = invalid_floor
+    invalid = FumblesLostProductionTable(
+        payload=payload,
+        fingerprint=production_table_payload_fingerprint(payload),
+    )
+
+    with pytest.raises(ValueError, match="must be finite and positive"):
+        validate_annual_rollover_candidate(
+            invalid,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
+        )
+
+
+def test_annual_rollover_cannot_reduce_cold_start_uncertainty_floor() -> None:
+    prior = frozen_fumbles_lost_production_table_2026()
+    candidate = _annual_candidate()
+    payload = copy.deepcopy(dict(candidate.payload))
+    payload["cold_start_floor"] = prior.cold_start_floor - 0.01
+    reduced = FumblesLostProductionTable(
+        payload=payload,
+        fingerprint=production_table_payload_fingerprint(payload),
+    )
+
+    with pytest.raises(ValueError, match="cannot decrease"):
+        validate_annual_rollover_candidate(
+            reduced,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=_annual_rolling_adequacy(),
         )
 
 
