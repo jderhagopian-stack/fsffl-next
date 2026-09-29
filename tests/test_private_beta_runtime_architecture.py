@@ -268,8 +268,10 @@ def test_hosted_clean_first_run_history_is_state_only_until_terminal_publication
     assert "Player Intelligence lacks Y2/Y3" in history
     assert '"state_only_during_enrichment": cold_state_only' in history
     assert "state_only = context.selected_team_id is None" in surfaces
-    assert '("home", "/api/home", {})' in surfaces
+    assert '("context", "/api/product-context", {})' in surfaces
     assert '("league", "/api/league/atlas", {})' in surfaces
+    state_only_branch = surfaces.split("if state_only", 1)[0]
+    assert '("home", "/api/home", {})' not in state_only_branch
     assert "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_MODE" in orchestration
     assert 'acceptance_mode not in {"full", "restore"}' in orchestration
     assert 'restore_only=acceptance_mode == "restore"' in orchestration
