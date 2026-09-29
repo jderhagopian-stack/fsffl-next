@@ -151,15 +151,27 @@ class PlayerHistoryBackgroundCoordinator:
         context: UserRuntimeContext,
     ) -> None:
         self._update(key, status=PlayerHistoryBuildStatus.RUNNING)
+
+        def build_and_attach_owned() -> None:
+            seasons = self._service.player_history(context, key[2])
+            # Attach or discard while still inside the heavy-work claim. If a State
+            # transition cleared this key, _update returns False and the local
+            # seasons tuple becomes unreachable before replacement heavy work starts.
+            self._update(
+                key,
+                status=PlayerHistoryBuildStatus.COMPLETED,
+                seasons=seasons,
+            )
+
         try:
             if self._heavy_work_coordinator is None:
-                seasons = self._service.player_history(context, key[2])
+                build_and_attach_owned()
             else:
                 with self._heavy_work_coordinator.claim(
                     kind="player_history",
                     key=f"{key[1]}:{key[2]}",
                 ):
-                    seasons = self._service.player_history(context, key[2])
+                    build_and_attach_owned()
         except Exception as exc:
             self._update(
                 key,
@@ -167,11 +179,6 @@ class PlayerHistoryBackgroundCoordinator:
                 error=f"{type(exc).__name__}: {exc}",
             )
             return
-        self._update(
-            key,
-            status=PlayerHistoryBuildStatus.COMPLETED,
-            seasons=seasons,
-        )
 
     def _update(
         self,
