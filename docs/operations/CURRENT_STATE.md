@@ -1251,3 +1251,17 @@ Implementation is now the active path. Consume:
 from current main, preserve #294/#295/#296 runtime architecture, implement only the frozen FUMBLES_LOST lifecycle/materiality contract, and then immediately resume the full hosted lifecycle acceptance through restart/restored-session.
 
 Physical Safari remains HOLD until terminal hosted PASS.
+
+
+## 2026-09-29 — PR #298 pre-merge whole-contract review required
+PR #298 (`Implement rolling FUMBLES_LOST lifecycle authority`) is open and mergeable, but current validation is mixed: Live Forecast corrective trace, Home North Star, and Intrinsic diagnostics pass, while full CI and several focused workflows fail.
+
+Management directive:
+- do not treat the next step as individually turning failing checks green;
+- first reconcile whether each failure is a real implementation defect, a stale expectation from the Week-2-only contract, or an unrelated environmental/provider failure;
+- in parallel, perform a bounded whole-contract P1/P2 red-team of PR #298 before merge, covering Week 0/1 omission, Weeks 2-17 rolling behavior, Week 18 no-projection, annual rollover/freeze, cold-start and identity-light populations, State week advance/invalidation, restart/replay, NON_MATERIAL_PARTIAL propagation, Simulation/Intrinsic continuation, and regression boundaries around #294/#295/#296;
+- prefer one violated invariant/failure class over serial symptom patches;
+- do not broaden into new Forecast research, runtime architecture, Simulation 2.0, Long-Term Intrinsic, or Market work;
+- only after the failure class is understood and the bounded review has no unresolved P1/P2 should full CI be required green for merge/deploy.
+
+After merge/deploy, resume the complete hosted clean-first-run / FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session acceptance journey. Physical Safari remains HOLD until terminal hosted PASS.
