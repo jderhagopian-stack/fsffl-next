@@ -268,6 +268,14 @@ def install_hosted_connect_routes(
 
         runtime = runtime_store.get(user_id)
         already_loaded = _matches_sleeper_league(runtime.league_state, league_external_id)
+        if not already_loaded:
+            prepare_fresh_connect = getattr(
+                runtime_store,
+                "prepare_fresh_connect",
+                None,
+            )
+            if callable(prepare_fresh_connect):
+                prepare_fresh_connect(user_id)
         active_league_id = (
             runtime.league_state.league.league_id
             if runtime.league_state is not None

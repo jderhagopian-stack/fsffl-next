@@ -65,28 +65,41 @@ class PostgresStateSnapshotStore(StateSnapshotStore):
         if row["state_hash"] != state.state_id or stored != state:
             raise ValueError("State history identity is immutable once persisted")
 
-    def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
+    def recent_at_or_before(
+        self,
+        league_id: str,
+        as_of: datetime,
+        *,
+        limit: int = 32,
+    ) -> tuple[LeagueState, ...]:
         if as_of.tzinfo is None or as_of.utcoffset() is None:
             raise ValueError("as_of must be timezone-aware")
+        if limit < 1:
+            raise ValueError("limit must be positive")
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 """select state_hash, payload from fsffl.state_snapshot_history
                    where league_id=%s and as_of <= %s
-                   order by as_of desc, recorded_at desc
-                   limit 1""",
-                (league_id, as_of),
+                   order by as_of desc, recorded_at desc, state_hash desc
+                   limit %s""",
+                (league_id, as_of, limit),
             )
-            row = cursor.fetchone()
-        if row is None:
-            return None
-        state = LeagueState.model_validate(row["payload"])
-        if state.league.league_id != league_id:
-            raise ValueError("stored State history league identity does not match query")
-        if state.state_id != row["state_hash"]:
-            raise ValueError("stored State history hash does not match canonical payload")
-        if state.as_of > as_of:
-            raise ValueError("stored State history snapshot postdates query cutoff")
-        return state
+            rows = cursor.fetchall()
+        states: list[LeagueState] = []
+        for row in rows:
+            state = LeagueState.model_validate(row["payload"])
+            if state.league.league_id != league_id:
+                raise ValueError("stored State history league identity does not match query")
+            if state.state_id != row["state_hash"]:
+                raise ValueError("stored State history hash does not match canonical payload")
+            if state.as_of > as_of:
+                raise ValueError("stored State history snapshot postdates query cutoff")
+            states.append(state)
+        return tuple(states)
+
+    def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
+        recent = self.recent_at_or_before(league_id, as_of, limit=1)
+        return recent[0] if recent else None
 
 
 def state_snapshot_store_from_env() -> PostgresStateSnapshotStore | None:

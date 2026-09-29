@@ -323,149 +323,223 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             _logger.warning("FSFFL persistence checkpoint wait failed user=%s error=%s", user_id, exc)
             return False
 
-    def _restore_once(self, user_id: str) -> None:
-        if self._persistence is None:
-            return
-        started = monotonic()
+    def _install_restored_snapshot_if_current(
+        self,
+        user_id: str,
+        *,
+        snapshot,
+        captured_generation: int,
+    ) -> UserRuntimeContext:
+        """Install explicit durable restore only if no newer runtime identity won."""
+
         with self.lifecycle_operation(user_id):
-            if user_id in self._restore_attempted:
-                return
-            self._restore_attempted.add(user_id)
-            try:
-                snapshot = restore_runtime_snapshot(self._persistence, user_id=user_id)
-                if snapshot is None:
-                    return
-                super().set_league_state(user_id, snapshot.league_state)
-                if snapshot.forecast_evidence is not None:
-                    restored = super().set_intelligence_bundle(
-                        user_id,
-                        league_state=snapshot.league_state,
-                        forecast_evidence=snapshot.forecast_evidence,
-                        simulation_analytics=snapshot.simulation_analytics,
-                        value_evidence=snapshot.value_evidence,
-                    )
-                    self._contexts[user_id] = replace(
-                        restored,
-                        intelligence_reused=True,
-                    )
-                elif snapshot.value_evidence is not None:
-                    restored = super().set_value_evidence(
-                        user_id,
-                        snapshot.value_evidence,
-                    )
-                    self._contexts[user_id] = replace(
-                        restored,
-                        intelligence_reused=True,
-                    )
-                # Restore managed-team identity before attaching a team-specific
-                # served publication generation. select_team intentionally clears any
-                # prior team-specific presentation identity, so the inverse ordering
-                # would discard the validated served generation we just restored.
-                if snapshot.selected_team_id is not None:
-                    super().select_team(user_id, snapshot.selected_team_id)
-                if (
-                    snapshot.served_league_id is not None
-                    and snapshot.served_league_state_id is not None
-                    and snapshot.served_as_of is not None
-                ):
-                    super().set_served_intelligence(
-                        user_id,
-                        ServedIntelligenceSnapshot(
-                            league_id=snapshot.served_league_id,
-                            league_state_id=snapshot.served_league_state_id,
-                            as_of=snapshot.served_as_of,
-                            team_ids=snapshot.served_team_ids,
-                            publication_generation_id=(
-                                snapshot.served_publication_generation_id
-                            ),
-                        ),
-                    )
-                if snapshot.publication_generation_id is not None:
-                    super().bind_publication_generation_id(
-                        user_id,
-                        snapshot.publication_generation_id,
-                    )
-                if (
-                    snapshot.restored_from_last_good
-                    and snapshot.forecast_evidence is not None
-                    and snapshot.simulation_analytics is not None
-                    and snapshot.value_evidence is not None
-                ):
-                    self._last_good_guard_users.add(user_id)
-                else:
-                    self._last_good_guard_users.discard(user_id)
-                # Existing durable runtime rows may predate the point-in-time history
-                # table. Retain the exact restored canonical state asynchronously so
-                # restart recovery naturally backfills history without reingestion or
-                # placing database writes on the user-request path.
-                self._checkpoint_state_history_async(snapshot.league_state)
+            current = super().get(user_id)
+            if (
+                user_id in self._restore_attempted
+                or current.league_state is not None
+                or self.league_generation(user_id) != captured_generation
+            ):
                 _logger.info(
-                    "FSFFL durable runtime restored user=%s league=%s forecast=%s simulation=%s value=%s",
+                    "FSFFL durable runtime restore skipped stale install user=%s captured_generation=%s current_generation=%s current_league=%s",
                     user_id,
-                    snapshot.league_state.league.league_id,
-                    snapshot.forecast_evidence is not None,
-                    snapshot.simulation_analytics is not None,
-                    snapshot.value_evidence is not None,
-                )
-                _logger.info(
-                    "FSFFL persist-first restore timing user=%s elapsed=%.3fs complete_bundle=%s",
-                    user_id,
-                    max(0.0, monotonic() - started),
+                    captured_generation,
+                    self.league_generation(user_id),
                     (
-                        snapshot.forecast_evidence is not None
-                        and snapshot.simulation_analytics is not None
-                        and snapshot.value_evidence is not None
+                        current.league_state.league.league_id
+                        if current.league_state is not None
+                        else None
                     ),
                 )
-                if self._persistence is not None:
-                    # Upgrade compatibility: when the canonical current State is
-                    # partial but restore found an older served identity through the
-                    # legacy user-scoped record, migrate that league now before a
-                    # later league switch overwrites the legacy pointer.
-                    if snapshot.served_league_id is not None:
-                        migrate_legacy_last_good_identity(
-                            self._persistence,
-                            user_id=user_id,
-                            league_id=snapshot.served_league_id,
-                        )
+                return current
 
-                    migrate_state = (
-                        snapshot.league_state
-                        if snapshot.forecast_evidence is not None
-                        and snapshot.value_evidence is not None
-                        and (
-                            snapshot.simulation_analytics is not None
-                            or not snapshot.forecast_evidence.uncertainty_ready
-                        )
-                        else None
-                    )
-                    if migrate_state is not None:
-                        persist_league_last_good_identity(
-                            self._persistence,
-                            user_id=user_id,
-                            league_state=migrate_state,
-                            selected_team_id=snapshot.selected_team_id,
-                        )
-            except Exception as exc:
-                _logger.warning("FSFFL persistence restore failed user=%s error=%s", user_id, exc)
+            self._restore_attempted.add(user_id)
+            if snapshot is None:
+                return current
+
+            super().set_league_state(user_id, snapshot.league_state)
+            if snapshot.forecast_evidence is not None:
+                restored = super().set_intelligence_bundle(
+                    user_id,
+                    league_state=snapshot.league_state,
+                    forecast_evidence=snapshot.forecast_evidence,
+                    simulation_analytics=snapshot.simulation_analytics,
+                    value_evidence=snapshot.value_evidence,
+                )
+                self._contexts[user_id] = replace(
+                    restored,
+                    intelligence_reused=True,
+                )
+            elif snapshot.value_evidence is not None:
+                restored = super().set_value_evidence(
+                    user_id,
+                    snapshot.value_evidence,
+                )
+                self._contexts[user_id] = replace(
+                    restored,
+                    intelligence_reused=True,
+                )
+
+            # Restore managed-team identity before attaching a team-specific served
+            # publication generation. select_team intentionally clears any prior
+            # team-specific presentation identity, so the inverse ordering would
+            # discard the validated served generation we just restored.
+            if snapshot.selected_team_id is not None:
+                super().select_team(user_id, snapshot.selected_team_id)
+            if (
+                snapshot.served_league_id is not None
+                and snapshot.served_league_state_id is not None
+                and snapshot.served_as_of is not None
+            ):
+                super().set_served_intelligence(
+                    user_id,
+                    ServedIntelligenceSnapshot(
+                        league_id=snapshot.served_league_id,
+                        league_state_id=snapshot.served_league_state_id,
+                        as_of=snapshot.served_as_of,
+                        team_ids=snapshot.served_team_ids,
+                        publication_generation_id=(
+                            snapshot.served_publication_generation_id
+                        ),
+                    ),
+                )
+            if snapshot.publication_generation_id is not None:
+                super().bind_publication_generation_id(
+                    user_id,
+                    snapshot.publication_generation_id,
+                )
+            if (
+                snapshot.restored_from_last_good
+                and snapshot.forecast_evidence is not None
+                and snapshot.simulation_analytics is not None
+                and snapshot.value_evidence is not None
+            ):
+                self._last_good_guard_users.add(user_id)
+            else:
+                self._last_good_guard_users.discard(user_id)
+
+            installed = super().get(user_id)
+
+        # Durable restore bookkeeping is continuity-only and runs after the in-memory
+        # identity is committed. None of it is permission to use current State.
+        self._checkpoint_state_history_async(snapshot.league_state)
+        return installed
 
     def restore_user(self, user_id: str) -> UserRuntimeContext:
-        """Synchronously restore the last-good exact-compatible beta context.
+        """Explicitly restore durable continuity without gating fresh foreground reads.
 
-        Hosted startup may call this before accepting traffic so the first useful
-        request consumes persisted evidence instead of paying lazy-restore latency.
+        The persistence read occurs outside the per-user lifecycle lock. A fresh
+        Connect/team activation may therefore proceed concurrently; the loaded snapshot
+        is installed only when the captured runtime generation is still current.
         """
 
         if not user_id.strip():
             raise ValueError("user_id cannot be blank")
-        return self.get(user_id)
+        current = super().get(user_id)
+        if current.league_state is not None or self._persistence is None:
+            return current
+
+        with self.lifecycle_operation(user_id):
+            if user_id in self._restore_attempted:
+                return super().get(user_id)
+            captured_generation = self.league_generation(user_id)
+            captured = super().get(user_id)
+            if captured.league_state is not None:
+                return captured
+
+        started = monotonic()
+        try:
+            snapshot = restore_runtime_snapshot(self._persistence, user_id=user_id)
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL persistence restore failed user=%s error=%s",
+                user_id,
+                exc,
+            )
+            with self.lifecycle_operation(user_id):
+                if (
+                    self.league_generation(user_id) == captured_generation
+                    and super().get(user_id).league_state is None
+                ):
+                    self._restore_attempted.add(user_id)
+                return super().get(user_id)
+
+        installed = self._install_restored_snapshot_if_current(
+            user_id,
+            snapshot=snapshot,
+            captured_generation=captured_generation,
+        )
+        if snapshot is None or installed.league_state is None:
+            return installed
+
+        _logger.info(
+            "FSFFL durable runtime restore timing user=%s elapsed=%.3fs installed=%s complete_bundle=%s",
+            user_id,
+            max(0.0, monotonic() - started),
+            installed.league_state.state_id == snapshot.league_state.state_id,
+            (
+                snapshot.forecast_evidence is not None
+                and snapshot.simulation_analytics is not None
+                and snapshot.value_evidence is not None
+            ),
+        )
+
+        # Compatibility migrations operate only after a successful explicit install.
+        # They cannot overwrite a newer runtime identity because they mutate durable
+        # continuity pointers, not the in-memory published context.
+        if installed.league_state.state_id == snapshot.league_state.state_id:
+            try:
+                if snapshot.served_league_id is not None:
+                    migrate_legacy_last_good_identity(
+                        self._persistence,
+                        user_id=user_id,
+                        league_id=snapshot.served_league_id,
+                    )
+                migrate_state = (
+                    snapshot.league_state
+                    if snapshot.forecast_evidence is not None
+                    and snapshot.value_evidence is not None
+                    and (
+                        snapshot.simulation_analytics is not None
+                        or not snapshot.forecast_evidence.uncertainty_ready
+                    )
+                    else None
+                )
+                if migrate_state is not None:
+                    persist_league_last_good_identity(
+                        self._persistence,
+                        user_id=user_id,
+                        league_state=migrate_state,
+                        selected_team_id=snapshot.selected_team_id,
+                    )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL persistence restore migration failed user=%s error=%s",
+                    user_id,
+                    exc,
+                )
+        return installed
 
     def get(self, user_id: str) -> UserRuntimeContext:
-        current = super().get(user_id)
-        if current.league_state is None:
-            self._restore_once(user_id)
-            current = super().get(user_id)
-        return current
+        """Return only the in-memory published runtime context."""
+
+        return super().get(user_id)
+
+    def prepare_fresh_connect(self, user_id: str) -> None:
+        """Declare that fresh provider State supersedes any in-flight cold restore."""
+
+        with self.lifecycle_operation(user_id):
+            self._restore_attempted.add(user_id)
+
+    def durable_restore_pending(self, user_id: str) -> bool:
+        """Return whether restored-session reads still await explicit startup recovery."""
+
+        if self._persistence is None:
+            return False
+        with self.lifecycle_operation(user_id):
+            return (
+                user_id not in self._restore_attempted
+                and super().get(user_id).league_state is None
+            )
 
     def activate_league_state_for_connect(self, user_id: str, league_state):
         """Expose valid canonical State immediately; defer persistence enrichment.
@@ -715,18 +789,42 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         *,
         target_state,
     ):
-        """Find the newest governed raw Forecast evidence for this league.
+        """Find the newest *compatible* governed raw Forecast evidence for this league.
 
-        Replay authority is league/State evidence authority, not user-session
-        authority. A clean runtime user can lose its last-good pointer while durable
-        league Forecast artifacts and canonical State history remain valid. Discovery
-        therefore tries exact-State raw evidence, the user's league last-good pointer,
-        then bounded same-league State history. Compatibility is still evaluated
-        separately before any replay is accepted.
+        Discovery is compatibility-aware while scanning. A newer raw artifact with
+        materially different season/player identity may not suppress an older governed
+        artifact that exactly matches the target raw-input fingerprint.
         """
 
         if self._persistence is None:
             return None, None, None, ["persistence_unavailable"]
+
+        target_raw_fingerprint = raw_forecast_input_fingerprint(target_state)
+        discovery_rejections: list[str] = []
+        first_incompatible = None
+
+        def consider(candidate_state, candidate_raw, source: str):
+            nonlocal first_incompatible
+            reasons = list(
+                raw_forecast_compatibility_reasons(candidate_state, target_state)
+            )
+            candidate_fingerprint = raw_forecast_input_fingerprint(candidate_state)
+            if not reasons and candidate_fingerprint == target_raw_fingerprint:
+                return candidate_state, candidate_raw, source, list(discovery_rejections)
+
+            if not reasons:
+                reasons = ["raw_forecast_material_inputs_changed"]
+            discovery_rejections.extend(
+                f"{source}:{reason}" for reason in reasons
+            )
+            if first_incompatible is None:
+                first_incompatible = (
+                    candidate_state,
+                    candidate_raw,
+                    source,
+                    list(discovery_rejections),
+                )
+            return None
 
         exact_raw = restore_state_bound_raw_forecast_evidence(
             self._persistence,
@@ -734,8 +832,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         )
         if exact_raw is not None:
             return target_state, exact_raw, "exact_state_raw", []
+        discovery_rejections.append("exact_state_raw_unavailable")
 
-        discovery_rejections: list[str] = ["exact_state_raw_unavailable"]
+        seen_state_ids: set[str] = {target_state.state_id}
         last_good = restore_last_good_state_identity(
             self._persistence,
             user_id=user_id,
@@ -743,27 +842,35 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         )
         if last_good is not None:
             prior_state, _selected = last_good
+            seen_state_ids.add(prior_state.state_id)
             prior_raw = restore_state_bound_raw_forecast_evidence(
                 self._persistence,
                 league_state=prior_state,
             )
             if prior_raw is not None:
-                return prior_state, prior_raw, "league_last_good", discovery_rejections
-            discovery_rejections.append("league_last_good_raw_forecast_unavailable")
+                accepted = consider(prior_state, prior_raw, "league_last_good")
+                if accepted is not None:
+                    return accepted
+            else:
+                discovery_rejections.append(
+                    "league_last_good_raw_forecast_unavailable"
+                )
         else:
             discovery_rejections.append("league_last_good_state_unavailable")
 
         if self._state_history is None:
             discovery_rejections.append("state_history_unavailable")
+            if first_incompatible is not None:
+                return first_incompatible
             return None, None, None, discovery_rejections
 
-        cutoff = target_state.as_of
-        seen_state_ids: set[str] = set()
-        for _ in range(32):
+        recent_reader = getattr(self._state_history, "recent_at_or_before", None)
+        if callable(recent_reader):
             try:
-                candidate = self._state_history.latest_at_or_before(
+                candidates = recent_reader(
                     target_state.league.league_id,
-                    cutoff,
+                    target_state.as_of,
+                    limit=32,
                 )
             except Exception as exc:
                 _logger.warning(
@@ -774,25 +881,52 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     exc,
                 )
                 discovery_rejections.append("state_history_lookup_failed")
+                if first_incompatible is not None:
+                    return first_incompatible
                 return None, None, None, discovery_rejections
-            if candidate is None or candidate.state_id in seen_state_ids:
-                break
-            seen_state_ids.add(candidate.state_id)
-            if candidate.state_id != target_state.state_id:
-                candidate_raw = restore_state_bound_raw_forecast_evidence(
-                    self._persistence,
-                    league_state=candidate,
-                )
-                if candidate_raw is not None:
-                    return (
-                        candidate,
-                        candidate_raw,
-                        "state_history",
-                        discovery_rejections,
+        else:
+            candidates = []
+            cutoff = target_state.as_of
+            for _ in range(32):
+                try:
+                    candidate = self._state_history.latest_at_or_before(
+                        target_state.league.league_id,
+                        cutoff,
                     )
-            cutoff = candidate.as_of - timedelta(microseconds=1)
+                except Exception as exc:
+                    _logger.warning(
+                        "FSFFL raw Forecast history discovery failed user=%s league=%s target_state=%s error=%s",
+                        user_id,
+                        target_state.league.league_id,
+                        target_state.state_id,
+                        exc,
+                    )
+                    discovery_rejections.append("state_history_lookup_failed")
+                    if first_incompatible is not None:
+                        return first_incompatible
+                    return None, None, None, discovery_rejections
+                if candidate is None:
+                    break
+                candidates.append(candidate)
+                cutoff = candidate.as_of - timedelta(microseconds=1)
 
-        discovery_rejections.append("state_history_raw_forecast_unavailable")
+        for candidate in candidates:
+            if candidate.state_id in seen_state_ids:
+                continue
+            seen_state_ids.add(candidate.state_id)
+            candidate_raw = restore_state_bound_raw_forecast_evidence(
+                self._persistence,
+                league_state=candidate,
+            )
+            if candidate_raw is None:
+                continue
+            accepted = consider(candidate, candidate_raw, "state_history")
+            if accepted is not None:
+                return accepted
+
+        discovery_rejections.append("state_history_compatible_raw_forecast_unavailable")
+        if first_incompatible is not None:
+            return first_incompatible
         return None, None, None, discovery_rejections
 
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:

@@ -83,6 +83,55 @@ def test_process_heavy_work_coordinator_serializes_distinct_builds() -> None:
     assert final.memory_budget_bytes == int(536_870_900 * 0.8)
 
 
+def test_persistent_foreground_get_is_memory_only_and_restore_is_explicit() -> None:
+    source = Path("src/fsffl/product/persistent_runtime.py").read_text(
+        encoding="utf-8"
+    )
+
+    get_body = source.split("    def get(self, user_id: str)", 1)[1].split(
+        "    def activate_league_state_for_connect", 1
+    )[0]
+    restore_body = source.split("    def restore_user(self, user_id: str)", 1)[1].split(
+        "    def get(self, user_id: str)", 1
+    )[0]
+
+    assert "restore_runtime_snapshot" not in get_body
+    assert "_restore_once" not in get_body
+    assert "return super().get(user_id)" in get_body
+    assert "restore_runtime_snapshot" in restore_body
+    assert "captured_generation" in restore_body
+    assert "_install_restored_snapshot_if_current" in restore_body
+
+
+def test_hosted_restored_session_gate_never_blocks_fresh_connect() -> None:
+    hosted = Path("src/fsffl/product/persistent_webapp.py").read_text(
+        encoding="utf-8"
+    )
+    connect = Path("src/fsffl/product/hosted_connect.py").read_text(
+        encoding="utf-8"
+    )
+
+    gate = hosted.split('@app.middleware("http")', 1)[1].split(
+        "def _log_startup_runtime_readiness", 1
+    )[0]
+    assert '"/api/connect/sleeper"' in hosted
+    assert "_RESTORE_GATE_BYPASS_PREFIXES" in gate
+    assert "_runtime_store.get(_beta_restore_user).league_state is not None" in gate
+    assert "_runtime_store.durable_restore_pending(_beta_restore_user)" in gate
+    assert "asyncio.to_thread(_startup_restore_complete.wait" in gate
+
+    background = connect.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[0]
+    assert '"prepare_fresh_connect"' in background
+    assert "prepare_fresh_connect(user_id)" in background
+    assert background.index("prepare_fresh_connect(user_id)") < background.index(
+        "league_state = state_loader(league_external_id)"
+    )
+
+
 def test_hosted_startup_is_restore_first_and_does_not_auto_launch_heavy_work() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(
         encoding="utf-8"

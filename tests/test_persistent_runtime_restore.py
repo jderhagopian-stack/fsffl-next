@@ -409,7 +409,8 @@ def test_runtime_restore_backfills_exact_state_into_history_off_request_path() -
     )
 
     before = monotonic()
-    restored = runtime.get("jimmy")
+    assert runtime.get("jimmy").league_state is None
+    restored = runtime.restore_user("jimmy")
     assert monotonic() - before < 0.25
     assert restored.league_state == state
     assert restored.selected_team_id == "t2"
@@ -1300,6 +1301,86 @@ def test_clean_user_replays_governed_raw_forecast_from_same_league_state_history
     assert decision["prior_state_identity_source"] == "state_history"
     assert decision["fresh_acquisition_required"] is False
     assert decision["raw_prior_fingerprint"] == decision["raw_target_fingerprint"]
+
+
+def test_clean_user_replay_scans_past_newer_incompatible_raw_artifact(
+    monkeypatch,
+) -> None:
+    persistence = MemoryPersistence()
+    compatible = _league_state(
+        as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC)
+    )
+    compatible_forecast = _with_replayable_raw_forecast(
+        _stale_forecast_without_first_party_fumbles_lost(compatible),
+        compatible,
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="capture-compatible",
+        league_state=compatible,
+        selected_team_id="t2",
+        forecast_evidence=compatible_forecast,
+        value_evidence=_empty_value(compatible),
+    )
+
+    incompatible = compatible.model_copy(
+        update={
+            # Same canonical timestamp, later-recorded State: production history
+            # must still expose both candidates to compatibility-aware replay scan.
+            "as_of": compatible.as_of,
+            "league": compatible.league.model_copy(update={"season": 2027}),
+        }
+    )
+    incompatible_forecast = _with_replayable_raw_forecast(
+        _stale_forecast_without_first_party_fumbles_lost(incompatible),
+        incompatible,
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="capture-incompatible",
+        league_state=incompatible,
+        selected_team_id="t2",
+        forecast_evidence=incompatible_forecast,
+        value_evidence=_empty_value(incompatible),
+    )
+
+    target = compatible.model_copy(
+        update={"as_of": datetime(2026, 9, 8, 12, 10, tzinfo=UTC)}
+    )
+    history = InMemorySnapshotStore((compatible, incompatible, target))
+    runtime = PersistentPrivateBetaRuntimeStore(
+        persistence_store=persistence,
+        state_snapshot_store=history,
+    )
+    runtime.set_league_state("clean-runtime-user", target)
+
+    replayed_from: list[str] = []
+
+    def replay(target_state, prior_evidence):
+        replayed_from.append(prior_evidence.raw_forecasts[0].as_of.isoformat())
+        return replace(
+            prior_evidence,
+            runtime_result=prior_evidence.runtime_result.model_copy(
+                update={"evaluation_as_of": target_state.as_of}
+            ),
+        )
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.replay_live_forecast_evidence_for_state",
+        replay,
+    )
+
+    restored = runtime.restore_exact_state_intelligence("clean-runtime-user")
+
+    assert restored.forecast_evidence is not None
+    assert replayed_from == [compatible.as_of.isoformat()]
+    decision = runtime.forecast_replay_decision("clean-runtime-user")
+    assert decision is not None
+    assert decision["selection"] == "raw_replay"
+    assert decision["raw_compatibility"] == "compatible"
+    assert decision["prior_state_id"] == compatible.state_id
+    assert decision["prior_state_identity_source"] == "state_history"
+    assert decision["fresh_acquisition_required"] is False
 
 
 def test_clean_user_state_history_replay_still_rejects_raw_material_change() -> None:
@@ -2399,6 +2480,106 @@ def _seed_published_user(
 def _join_bounded(thread: Thread, *, timeout: float = 2.0) -> None:
     thread.join(timeout=timeout)
     assert not thread.is_alive(), f"thread {thread.name} exceeded bounded lifecycle timeout"
+
+
+class CapturedColdRestorePersistence(MultiUserLifecyclePersistence):
+    """Block a restore after capturing the old durable pointer."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.captured_restore_user: str | None = None
+        self.captured_restore_entered = Event()
+        self.release_captured_restore = Event()
+
+    def get_user_runtime_context(self, *, user_id):
+        if user_id == self.captured_restore_user:
+            with self._io_lock:
+                captured = self.users.get(user_id)
+            self.captured_restore_entered.set()
+            if not self.release_captured_restore.wait(timeout=3.0):
+                raise RuntimeError("test captured restore release timed out")
+            return captured
+        return super().get_user_runtime_context(user_id=user_id)
+
+
+def test_cold_restore_cannot_gate_or_overwrite_fresh_connect_activation() -> None:
+    persistence = CapturedColdRestorePersistence()
+    old_state = _league_state_for("sleeper:old", external_id="old")
+    fresh_state = _league_state_for(
+        "sleeper:fresh",
+        external_id="fresh",
+        as_of=old_state.as_of + timedelta(minutes=5),
+    )
+    _seed_published_user(
+        persistence,
+        user_id="restore-connect-race",
+        state=old_state,
+        generation_id="old-generation",
+        selected_team_id="t2",
+    )
+
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    persistence.captured_restore_user = "restore-connect-race"
+    restore_result = {}
+    restore_errors = []
+
+    def restore_old() -> None:
+        try:
+            restore_result["context"] = runtime.restore_user(
+                "restore-connect-race"
+            )
+        except Exception as exc:
+            restore_errors.append(exc)
+
+    restore_thread = Thread(target=restore_old, name="cold-restore-old")
+    restore_thread.start()
+    assert persistence.captured_restore_entered.wait(timeout=1.0)
+
+    # Foreground get is memory-only even while durable restore is blocked.
+    started = monotonic()
+    cold_read = runtime.get("restore-connect-race")
+    assert monotonic() - started < 0.1
+    assert cold_read.league_state is None
+
+    # Fresh Connect declares the old restore superseded before provider State lands.
+    runtime.prepare_fresh_connect("restore-connect-race")
+    assert runtime.durable_restore_pending("restore-connect-race") is False
+
+    # Fresh Connect activation and team choice do not wait for the blocked restore.
+    started = monotonic()
+    activated = runtime.activate_league_state_for_connect(
+        "restore-connect-race",
+        fresh_state,
+    )
+    assert monotonic() - started < 0.2
+    assert activated.league_state is not None
+    assert activated.league_state.state_id == fresh_state.state_id
+    selected = runtime.select_team("restore-connect-race", "t1")
+    assert selected.selected_team_id == "t1"
+
+    persistence.release_captured_restore.set()
+    _join_bounded(restore_thread)
+    assert restore_errors == []
+    assert restore_result["context"].league_state is not None
+    assert (
+        restore_result["context"].league_state.state_id
+        == fresh_state.state_id
+    )
+    assert restore_result["context"].selected_team_id == "t1"
+
+    current = runtime.get("restore-connect-race")
+    assert current.league_state is not None
+    assert current.league_state.state_id == fresh_state.state_id
+    assert current.selected_team_id == "t1"
+    assert current.publication_generation_id is None
+
+    assert runtime.wait_for_checkpoint("restore-connect-race", timeout=2.0)
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("restore-connect-race")
+    assert after_restart.league_state is not None
+    assert after_restart.league_state.state_id == fresh_state.state_id
+    assert after_restart.selected_team_id == "t1"
+    assert after_restart.publication_generation_id is None
 
 
 def test_two_user_final_publication_does_not_block_cold_restore() -> None:
