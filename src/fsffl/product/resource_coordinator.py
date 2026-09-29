@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import gc
+import hashlib
 
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -10,12 +11,136 @@ import os
 import resource
 from threading import Condition, RLock, get_ident
 from time import monotonic
-from typing import Iterator
+from typing import Callable, Iterator
 
 
 _logger = logging.getLogger("fsffl.product.performance")
 DEFAULT_MEMORY_LIMIT_BYTES = 536_870_900
 DEFAULT_MEMORY_HEADROOM_RATIO = 0.20
+
+
+def _diagnostic_key(value: str) -> str:
+    """Return a stable non-identifying fingerprint for retained public telemetry."""
+
+    digest = hashlib.sha256(str(value).encode("utf-8")).hexdigest()
+    return f"sha256:{digest[:16]}"
+
+
+@dataclass(frozen=True)
+class ResourceTransition:
+    """Ephemeral identity context for one State/league resource boundary."""
+
+    user_id: str
+    reason: str
+    previous_league_id: str | None
+    previous_state_id: str | None
+    previous_team_id: str | None
+    next_league_id: str | None
+    next_state_id: str | None
+    next_team_id: str | None
+
+    @property
+    def identity_fingerprint(self) -> str:
+        return _diagnostic_key(
+            "|".join(
+                str(value or "")
+                for value in (
+                    self.user_id,
+                    self.previous_league_id,
+                    self.previous_state_id,
+                    self.previous_team_id,
+                    self.next_league_id,
+                    self.next_state_id,
+                    self.next_team_id,
+                )
+            )
+        )
+
+
+ResourceClearer = Callable[[ResourceTransition], object]
+
+
+class StateResourceBoundary:
+    """Own process-local release between State scopes before new heavy work begins.
+
+    Durable State/presentation/model authority is deliberately outside this object.
+    Clearers may drop only execution caches, coordinator results, validation hints,
+    and other process-local material scoped to the transitioning user. The boundary
+    is globally serialized only for its short clear/GC critical section; model work
+    itself remains governed by HeavyWorkCoordinator.
+    """
+
+    def __init__(
+        self,
+        *,
+        clearers: tuple[tuple[str, ResourceClearer], ...] = (),
+        max_events: int = 16,
+    ) -> None:
+        if max_events < 1:
+            raise ValueError("resource-boundary max_events must be positive")
+        self._clearers = tuple(clearers)
+        self._max_events = int(max_events)
+        self._lock = RLock()
+        self._recent: list[dict[str, object]] = []
+
+    def apply(self, transition: ResourceTransition) -> dict[str, object]:
+        if transition.previous_state_id == transition.next_state_id:
+            return {
+                "status": "same_state_noop",
+                "reason": transition.reason,
+                "identity_fingerprint": transition.identity_fingerprint,
+                "cleared": {},
+            }
+
+        with self._lock:
+            before = current_rss_bytes()
+            cleared: dict[str, object] = {}
+            for name, clearer in self._clearers:
+                try:
+                    cleared[name] = clearer(transition)
+                except Exception as exc:
+                    # Resource cleanup must fail closed for the individual holder but
+                    # must not corrupt already-published canonical State. Surface the
+                    # error to the transition caller so heavy work cannot start on a
+                    # partially released boundary.
+                    raise RuntimeError(
+                        f"resource boundary clearer failed: {name}: "
+                        f"{type(exc).__name__}: {exc}"
+                    ) from exc
+            reclaimed = release_unused_process_memory(
+                label=f"resource-boundary:{transition.reason}"
+            )
+            after = current_rss_bytes()
+            event = {
+                "status": "released",
+                "reason": transition.reason,
+                "identity_fingerprint": transition.identity_fingerprint,
+                "before_rss_bytes": before,
+                "after_rss_bytes": after,
+                "released_rss_bytes": max(0, before - after),
+                "cleared": cleared,
+                "allocator": {
+                    "released_rss_bytes": reclaimed.get("released_rss_bytes", 0),
+                    "gc_collected": reclaimed.get("gc_collected", 0),
+                    "malloc_trim": reclaimed.get("malloc_trim"),
+                },
+            }
+            self._recent.append(event)
+            if len(self._recent) > self._max_events:
+                del self._recent[:-self._max_events]
+            _logger.info(
+                "FSFFL resource boundary reason=%s identity=%s before=%s after=%s cleared=%s",
+                transition.reason,
+                transition.identity_fingerprint,
+                before,
+                after,
+                cleared,
+            )
+            return dict(event)
+
+    def snapshot(self) -> tuple[dict[str, object], ...]:
+        with self._lock:
+            return tuple(dict(item) for item in self._recent)
 
 
 def current_rss_bytes() -> int:
@@ -170,6 +295,7 @@ class HeavyWorkCoordinator:
         key = str(key).strip()
         if not kind or not key:
             raise ValueError("heavy-work kind and key cannot be blank")
+        diagnostic_key = _diagnostic_key(key)
 
         deadline = (
             None
@@ -208,7 +334,7 @@ class HeavyWorkCoordinator:
                     self._waiting_count -= 1
 
             self._active_kind = kind
-            self._active_key = key
+            self._active_key = diagnostic_key
             self._active_thread_id = get_ident()
             self._acquisitions += 1
             self._acquisitions_by_kind[kind] = (
@@ -223,7 +349,7 @@ class HeavyWorkCoordinator:
             _logger.info(
                 "FSFFL heavy-work admitted kind=%s key=%s waited=%.3fs rss=%s budget=%s",
                 kind,
-                key,
+                diagnostic_key,
                 max(0.0, monotonic() - started_wait),
                 before_rss,
                 self._memory_budget_bytes,
@@ -243,7 +369,7 @@ class HeavyWorkCoordinator:
                 self._recent_phase_memory.append(
                     {
                         "kind": kind,
-                        "key": key,
+                        "key": diagnostic_key,
                         "before_rss_bytes": before_rss,
                         "after_rss_bytes": after_rss,
                         "resident_delta_bytes": after_rss - before_rss,
@@ -260,7 +386,7 @@ class HeavyWorkCoordinator:
                 _logger.info(
                     "FSFFL heavy-work released kind=%s key=%s rss=%s peak_rss=%s budget=%s",
                     kind,
-                    key,
+                    diagnostic_key,
                     after_rss,
                     peak_rss,
                     self._memory_budget_bytes,
