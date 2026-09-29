@@ -111,9 +111,11 @@ class FirstPartyFumblesLostSupplement(FrozenModel):
     model_version: str = ROLLING_FUMBLES_LOST_MODEL_VERSION
     supplement_model_version: str = FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
     uncertainty_model_version: str = FIRST_PARTY_FUMBLES_LOST_UNCERTAINTY_VERSION
+    production_table_target_season: int = _DEFAULT_PRODUCTION_TABLE.target_season
     production_table_contract_version: str = _DEFAULT_PRODUCTION_TABLE.contract_version
     production_table_fingerprint: str = _DEFAULT_PRODUCTION_TABLE.fingerprint
     uncertainty_contract: str = _DEFAULT_PRODUCTION_TABLE.uncertainty_contract
+    annual_freeze_source_hashes: tuple[tuple[str, str], ...] = ()
     current_input_weeks: tuple[int, ...] = (1, 2)
     calibration_scalar: float = _DEFAULT_PRODUCTION_TABLE.calibration_scalar(2)
     training_seasons: tuple[int, ...] = TRAINING_SEASONS
@@ -161,25 +163,50 @@ class FirstPartyFumblesLostSupplement(FrozenModel):
 
     @model_validator(mode="after")
     def validate_contract(self) -> "FirstPartyFumblesLostSupplement":
-        table = resolve_fumbles_lost_production_table(self.season)
-        if self.completed_through_week not in table.supported_completed_through_weeks:
+        if not 2 <= self.completed_through_week <= 17:
             raise ValueError(
                 "first-party FUMBLES_LOST rolling point authority requires completed Week 2-17"
             )
         if self.model_version != ROLLING_FUMBLES_LOST_MODEL_VERSION:
             raise ValueError("first-party FUMBLES_LOST rolling model version is stale")
-        if self.production_table_contract_version != table.contract_version:
-            raise ValueError("first-party FUMBLES_LOST production contract is stale")
-        if self.production_table_fingerprint != table.fingerprint:
-            raise ValueError("first-party FUMBLES_LOST production table fingerprint is stale")
-        if self.uncertainty_contract != table.uncertainty_contract:
-            raise ValueError("first-party FUMBLES_LOST uncertainty contract is stale")
+        if self.production_table_target_season != self.season:
+            raise ValueError("first-party FUMBLES_LOST production table season is stale")
+        if not self.production_table_contract_version.strip():
+            raise ValueError("first-party FUMBLES_LOST production contract is missing")
+        if (
+            len(self.production_table_fingerprint) != 64
+            or any(
+                char not in "0123456789abcdef"
+                for char in self.production_table_fingerprint.lower()
+            )
+        ):
+            raise ValueError("first-party FUMBLES_LOST production table fingerprint is invalid")
+        if not self.uncertainty_contract.strip():
+            raise ValueError("first-party FUMBLES_LOST uncertainty contract is missing")
         if self.current_input_weeks != tuple(range(1, self.completed_through_week + 1)):
             raise ValueError("first-party FUMBLES_LOST must hash exactly Weeks 1..cutoff")
         if self.metric != ForecastMetric.FUMBLES_LOST:
             raise ValueError("first-party supplement owns only exact FUMBLES_LOST")
-        if self.calibration_scalar != table.calibration_scalar(self.completed_through_week):
-            raise ValueError("first-party calibration scalar does not match frozen cutoff table")
+        if not math.isfinite(self.calibration_scalar) or self.calibration_scalar <= 0:
+            raise ValueError("first-party calibration scalar must be finite and positive")
+
+        # The embedded 2026 freeze can be re-resolved locally and therefore receives
+        # exact field-by-field validation here. Future target-season freezes are
+        # validated before construction by validate_annual_rollover_candidate(); the
+        # supplement carries their explicit season/fingerprint/source-hash identity so
+        # persistence can round-trip them without requiring an embedded future table.
+        if self.season == _DEFAULT_PRODUCTION_TABLE.target_season:
+            table = _DEFAULT_PRODUCTION_TABLE
+            if self.production_table_contract_version != table.contract_version:
+                raise ValueError("first-party FUMBLES_LOST production contract is stale")
+            if self.production_table_fingerprint != table.fingerprint:
+                raise ValueError("first-party FUMBLES_LOST production table fingerprint is stale")
+            if self.uncertainty_contract != table.uncertainty_contract:
+                raise ValueError("first-party FUMBLES_LOST uncertainty contract is stale")
+            if self.calibration_scalar != table.calibration_scalar(self.completed_through_week):
+                raise ValueError("first-party calibration scalar does not match frozen cutoff table")
+        elif not self.annual_freeze_source_hashes:
+            raise ValueError("future-season FUMBLES_LOST supplement lacks annual freeze source identity")
         if self.authority_valid_from < self.current_input_captured_at:
             raise ValueError("authority cannot predate current input acquisition")
         if self.authority_valid_from < self.built_at:
@@ -206,9 +233,11 @@ class FirstPartyFumblesLostSupplement(FrozenModel):
             "league_state_id": self.league_state_id,
             "completed_through_week": self.completed_through_week,
             "model_version": self.model_version,
+            "production_table_target_season": self.production_table_target_season,
             "production_table_contract_version": self.production_table_contract_version,
             "production_table_fingerprint": self.production_table_fingerprint,
             "uncertainty_contract": self.uncertainty_contract,
+            "annual_freeze_source_hashes": self.annual_freeze_source_hashes,
             "current_input_weeks": self.current_input_weeks,
             "calibration_scalar": self.calibration_scalar,
             "current_input_sha256": self.current_input_sha256,
@@ -280,6 +309,69 @@ def _evidence_tier(
     if current_games > 0:
         return FirstPartyFumblesLostEvidenceTier.CURRENT_ONLY
     return FirstPartyFumblesLostEvidenceTier.COLD_START
+
+
+def _annual_freeze_payload(table: FumblesLostProductionTable) -> Mapping[str, object]:
+    annual = table.payload.get("annual_freeze")
+    if not isinstance(annual, Mapping):
+        raise ValueError("future-season FUMBLES_LOST production table lacks annual freeze")
+    return annual
+
+
+def _position_model_inputs(
+    table: FumblesLostProductionTable,
+    position: Position,
+) -> tuple[float, float]:
+    if table.target_season == _DEFAULT_PRODUCTION_TABLE.target_season:
+        return (
+            float(POSITION_LOST_FUMBLE_PER_OPPORTUNITY[position.value]),
+            float(POSITION_OPPORTUNITY_PER_GAME[position.value]),
+        )
+    annual = _annual_freeze_payload(table)
+    rates = annual.get("position_lost_fumble_per_opportunity")
+    roles = annual.get("position_opportunity_per_game")
+    if not isinstance(rates, Mapping) or not isinstance(roles, Mapping):
+        raise ValueError("future-season FUMBLES_LOST position priors are unavailable")
+    try:
+        rate = float(rates[position.value])
+        role = float(roles[position.value])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("future-season FUMBLES_LOST position priors are incomplete") from exc
+    if not math.isfinite(rate) or rate <= 0 or not math.isfinite(role) or role <= 0:
+        raise ValueError("future-season FUMBLES_LOST position priors are invalid")
+    return rate, role
+
+
+def _player_prior_for_table(
+    table: FumblesLostProductionTable,
+    player_id: str,
+):
+    if table.target_season == _DEFAULT_PRODUCTION_TABLE.target_season:
+        return PLAYER_PRIORS.get(player_id)
+    annual = _annual_freeze_payload(table)
+    priors = annual.get("player_role_priors")
+    if not isinstance(priors, Mapping):
+        raise ValueError("future-season FUMBLES_LOST player role priors are unavailable")
+    row = priors.get(player_id)
+    if row is None:
+        return None
+    if not isinstance(row, Mapping):
+        raise ValueError("future-season FUMBLES_LOST player prior row is invalid")
+    try:
+        return (
+            str(row["position"]),
+            row.get("historical_gsis_id"),
+            str(row["identity_method"]),
+            str(row["accepted_tier"]),
+            int(row["history_games"]),
+            float(row["history_opportunities"]),
+            0,
+            0.0,
+            0.0,
+            0.0,
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("future-season FUMBLES_LOST player prior row is incomplete") from exc
 
 
 def build_first_party_fumbles_lost_supplement(
@@ -437,7 +529,7 @@ def build_first_party_fumbles_lost_supplement(
             _opportunities(row.stats, position) for row in current_lines
         )
 
-        prior = PLAYER_PRIORS.get(player_id)
+        prior = _player_prior_for_table(table, player_id)
         if prior is None:
             # This is not a zero or a named-player exception. The frozen v1 model
             # already validated current-only and identity-light/cold-start tiers.
@@ -473,9 +565,7 @@ def build_first_party_fumbles_lost_supplement(
                 omitted.add(player_id)
                 continue
 
-        position_key = position.value
-        position_rate = POSITION_LOST_FUMBLE_PER_OPPORTUNITY[position_key]
-        position_role = POSITION_OPPORTUNITY_PER_GAME[position_key]
+        position_rate, position_role = _position_model_inputs(table, position)
         historical_role = (
             float(history_opportunities) / int(history_games)
             if int(history_games) > 0
@@ -569,11 +659,37 @@ def build_first_party_fumbles_lost_supplement(
         season=league_state.league.season,
         league_state_id=league_state.state_id,
         completed_through_week=completed_through_week,
+        production_table_target_season=table.target_season,
         production_table_contract_version=table.contract_version,
         production_table_fingerprint=table.fingerprint,
         uncertainty_contract=table.uncertainty_contract,
+        annual_freeze_source_hashes=(
+            tuple(
+                sorted(
+                    (str(key), str(value))
+                    for key, value in _annual_freeze_payload(table)[
+                        "exact_source_hashes"
+                    ].items()
+                )
+            )
+            if table.target_season != _DEFAULT_PRODUCTION_TABLE.target_season
+            else ()
+        ),
         current_input_weeks=tuple(range(1, completed_through_week + 1)),
         calibration_scalar=table.calibration_scalar(completed_through_week),
+        training_seasons=(
+            tuple(
+                int(value)
+                for value in _annual_freeze_payload(table)["training_seasons"]
+            )
+            if table.target_season != _DEFAULT_PRODUCTION_TABLE.target_season
+            else TRAINING_SEASONS
+        ),
+        calibration_pseudo_current_seasons=(
+            tuple(range(2022, table.target_season))
+            if table.target_season != _DEFAULT_PRODUCTION_TABLE.target_season
+            else CALIBRATION_PSEUDO_CURRENT_SEASONS
+        ),
         current_input_captured_at=current_input_captured_at,
         built_at=built_at,
         authority_valid_from=authority_valid_from,
