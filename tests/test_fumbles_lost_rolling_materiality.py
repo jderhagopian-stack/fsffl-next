@@ -446,6 +446,59 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
         )
 
 
+def test_annual_rollover_structural_gate_rejects_other_incomplete_cutoff_fields() -> None:
+    prior = frozen_fumbles_lost_production_table_2026()
+
+    broken_floor = _annual_candidate()
+    payload = copy.deepcopy(dict(broken_floor.payload))
+    del payload["cutoffs"]["4"]["uncertainty_floor"]["TE"]
+    broken_floor = FumblesLostProductionTable(
+        payload=payload,
+        fingerprint=production_table_payload_fingerprint(payload),
+    )
+    with pytest.raises(ValueError, match="uncertainty floor matrix is incomplete"):
+        validate_annual_rollover_candidate(
+            broken_floor,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+        )
+
+    broken_bound = _annual_candidate()
+    payload = copy.deepcopy(dict(broken_bound.payload))
+    del payload["season_start"]["cutoffs"]["1"]["materiality_event_bound_90"]["RB"]
+    broken_bound = FumblesLostProductionTable(
+        payload=payload,
+        fingerprint=production_table_payload_fingerprint(payload),
+    )
+    with pytest.raises(
+        ValueError,
+        match="season-start materiality matrix is incomplete",
+    ):
+        validate_annual_rollover_candidate(
+            broken_bound,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+        )
+
+    mismatched_fingerprint = _annual_candidate()
+    mismatched_fingerprint = FumblesLostProductionTable(
+        payload=mismatched_fingerprint.payload,
+        fingerprint="0" * 64,
+    )
+    with pytest.raises(ValueError, match="fingerprint does not match payload"):
+        validate_annual_rollover_candidate(
+            mismatched_fingerprint,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+        )
+
+
 def test_annual_rollover_rejects_incomplete_fallback_matrix_and_player_priors() -> None:
     prior = frozen_fumbles_lost_production_table_2026()
     complete_rmse = {
