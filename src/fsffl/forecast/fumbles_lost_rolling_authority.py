@@ -17,6 +17,14 @@ ROLLING_FUMBLES_LOST_SUPPLEMENT_VERSION = (
 NON_MATERIAL_PARTIAL_AUTHORITY = "NON_MATERIAL_PARTIAL"
 _NON_MATERIAL_Z90 = 1.645
 _NON_MATERIAL_FRACTION = 0.10
+_POSITIONS = (Position.QB, Position.RB, Position.WR, Position.TE)
+_ROLLING_CUTOFFS = tuple(range(2, 18))
+
+
+def production_table_payload_fingerprint(payload: Mapping[str, object]) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
 
 # Exact machine-readable Research freeze merged in PR #297. Keeping the payload
 # embedded makes runtime authority independent of repository working-directory
@@ -111,11 +119,11 @@ class FumblesLostProductionTable:
 
     def fallback_eligible(
         self,
-        completed_through_week: int,
+        completed_through_week: int | None,
         position: Position,
         evidence_tier: str,
     ) -> bool:
-        if position not in {Position.QB, Position.RB, Position.WR, Position.TE}:
+        if position not in _POSITIONS or completed_through_week is None:
             return False
         if completed_through_week in {0, 1}:
             row = self.payload["season_start"]["cutoffs"][str(completed_through_week)]  # type: ignore[index]
@@ -220,18 +228,70 @@ def validate_annual_rollover_candidate(
     seasons = annual.get("training_seasons")
     if not isinstance(hashes, Mapping) or not hashes:
         raise ValueError("annual FUMBLES_LOST freeze requires exact source hashes")
+    for source_name, source_hash in hashes.items():
+        text = str(source_hash)
+        if (
+            not str(source_name).strip()
+            or len(text) != 64
+            or any(char not in "0123456789abcdef" for char in text.lower())
+        ):
+            raise ValueError("annual FUMBLES_LOST freeze source hash is invalid")
     if not isinstance(seasons, list) or not seasons:
         raise ValueError("annual FUMBLES_LOST freeze requires completed training seasons")
-    if max(int(season) for season in seasons) >= candidate.target_season:
+    normalized_seasons = tuple(int(season) for season in seasons)
+    if max(normalized_seasons) >= candidate.target_season:
         raise ValueError("annual FUMBLES_LOST freeze contains target/future-season outcomes")
+    if prior.target_season not in normalized_seasons:
+        raise ValueError("annual FUMBLES_LOST freeze omits the newly completed season")
 
-    for position in (Position.QB, Position.RB, Position.WR, Position.TE):
+    position_rates = annual.get("position_lost_fumble_per_opportunity")
+    position_roles = annual.get("position_opportunity_per_game")
+    player_priors = annual.get("player_role_priors")
+    prior_fingerprint = str(
+        annual.get("player_prior_sufficient_statistics_fingerprint") or ""
+    )
+    if not isinstance(position_rates, Mapping) or not isinstance(position_roles, Mapping):
+        raise ValueError("annual FUMBLES_LOST freeze requires refreshed position rates")
+    if not isinstance(player_priors, Mapping):
+        raise ValueError("annual FUMBLES_LOST freeze requires refreshed player role priors")
+    if prior_fingerprint != production_table_payload_fingerprint(
+        {"player_role_priors": player_priors}
+    ):
+        raise ValueError("annual FUMBLES_LOST player-prior fingerprint does not match payload")
+
+    for position in _POSITIONS:
+        for label, mapping in (
+            ("lost-fumble rate", position_rates),
+            ("opportunity/game prior", position_roles),
+        ):
+            try:
+                value = float(mapping[position.value])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"annual FUMBLES_LOST {label} is incomplete"
+                ) from exc
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError(f"annual FUMBLES_LOST {label} must be finite and positive")
+
+    for cutoff in _ROLLING_CUTOFFS:
+        scalar = candidate.calibration_scalar(cutoff)
+        if not math.isfinite(scalar) or scalar <= 0:
+            raise ValueError("annual FUMBLES_LOST calibration scalar must be finite and positive")
+
+    for position in _POSITIONS:
+        position_rmse = newly_completed_heldout_rmse.get(position.value)
+        if not isinstance(position_rmse, Mapping):
+            raise ValueError("annual held-out FUMBLES_LOST RMSE matrix is incomplete")
+        missing_cutoffs = [
+            cutoff for cutoff in _ROLLING_CUTOFFS if cutoff not in position_rmse
+        ]
+        if missing_cutoffs:
+            raise ValueError("annual held-out FUMBLES_LOST RMSE matrix is incomplete")
+
         prefix_rmse = 0.0
-        for cutoff in range(2, 18):
+        for cutoff in _ROLLING_CUTOFFS:
             prior_floor = prior.uncertainty_floor(cutoff, position)
-            heldout = float(
-                newly_completed_heldout_rmse.get(position.value, {}).get(cutoff, 0.0)
-            )
+            heldout = float(position_rmse[cutoff])
             if not math.isfinite(heldout) or heldout < 0:
                 raise ValueError("annual held-out FUMBLES_LOST RMSE is invalid")
             prefix_rmse = max(prefix_rmse, heldout)
@@ -240,6 +300,7 @@ def validate_annual_rollover_candidate(
                 raise ValueError(
                     "annual FUMBLES_LOST uncertainty floor violates monotone prefix freeze"
                 )
+
         for cutoff in range(0, 18):
             if (
                 candidate.materiality_event_bound(cutoff, position)
@@ -248,3 +309,19 @@ def validate_annual_rollover_candidate(
                 raise ValueError(
                     "annual FUMBLES_LOST materiality bound cannot narrow"
                 )
+
+        for cutoff in _ROLLING_CUTOFFS:
+            for tier in (
+                "history_plus_current",
+                "history_only",
+                "current_only",
+                "cold_start",
+                "identity_light",
+            ):
+                eligibility = candidate.fallback_eligible(cutoff, position, tier)
+                if not isinstance(eligibility, bool):
+                    raise ValueError("annual FUMBLES_LOST fallback eligibility is invalid")
+
+    expected_fingerprint = production_table_payload_fingerprint(candidate.payload)
+    if candidate.fingerprint != expected_fingerprint:
+        raise ValueError("annual FUMBLES_LOST production table fingerprint does not match payload")
