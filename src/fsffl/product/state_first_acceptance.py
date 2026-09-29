@@ -226,6 +226,7 @@ def run_state_first_production_acceptance(
     history_probe: HistoryProbe | None = None,
     resource_reader: ResourceReader | None = None,
     process_identity_reader: ProcessIdentityReader | None = None,
+    restore_only: bool = False,
     timeout_seconds: float = 1200.0,
     poll_seconds: float = 1.0,
 ) -> dict[str, object]:
@@ -479,6 +480,87 @@ def run_state_first_production_acceptance(
             json.dumps(row, sort_keys=True, default=str),
         )
         return snapshot
+
+    if restore_only:
+        sample_resources("restored_session_start")
+        restored = store.restore_user(user_id)
+        restored_snapshot = _snapshot(store, user_id, capability_reader)
+        _require_full_fsffl(restored_snapshot)
+        if restored_snapshot.get("selected_team_id") is None:
+            raise StateFirstAcceptanceError(
+                "restart restore did not recover managed-team identity"
+            )
+        if not restored_snapshot.get("publication_generation_id"):
+            raise StateFirstAcceptanceError(
+                "restart restore did not recover published generation identity"
+            )
+        restored_surface = probe_surface("restored_session_surfaces")
+        if (
+            restored_surface is not None
+            and restored_surface.get("franchise_team_id")
+            != restored_snapshot.get("selected_team_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "restored-session Franchise identity diverged from durable runtime: "
+                f"{restored_surface}"
+            )
+        if (
+            restored_surface is not None
+            and restored_surface.get("publication_generation_id")
+            != restored_snapshot.get("publication_generation_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "restored-session surfaces diverged from durable publication generation: "
+                f"{restored_surface}"
+            )
+        restored_history = probe_history("restored_session_pi_history")
+        row = {
+            "label": "fsffl_restart_restored_session",
+            "snapshot": restored_snapshot,
+            "surface": restored_surface,
+            "history": restored_history,
+        }
+        steps.append(row)
+        sample_resources("restored_session_end")
+        process_identity_end = (
+            process_identity_reader() if process_identity_reader is not None else None
+        )
+        report["process_identity_end"] = process_identity_end
+        if (
+            process_identity_start is not None
+            and process_identity_end is not None
+            and process_identity_start != process_identity_end
+        ):
+            raise StateFirstAcceptanceError(
+                "hosted process identity changed during restored-session acceptance: "
+                f"{process_identity_start} -> {process_identity_end}"
+            )
+        if resources:
+            peak = max(
+                int(item.get("max_rss_observed_bytes") or 0)
+                for item in resources
+            )
+            report["peak_rss_bytes"] = peak
+            hard_limits = [
+                int(item.get("memory_limit_bytes") or 0)
+                for item in resources
+                if int(item.get("memory_limit_bytes") or 0) > 0
+            ]
+            if hard_limits:
+                hard_limit = min(hard_limits)
+                report["memory_limit_bytes"] = hard_limit
+                report["hard_memory_headroom_bytes"] = hard_limit - peak
+                if peak >= hard_limit:
+                    raise StateFirstAcceptanceError(
+                        "restored-session acceptance reached hard memory limit"
+                    )
+        report["status"] = "PASS"
+        report["mode"] = "restore"
+        _logger.info(
+            "FSFFL STATE-FIRST ACCEPTANCE RESULT %s",
+            json.dumps(report, sort_keys=True, default=str),
+        )
+        return report
 
     sample_resources("acceptance_start")
     fsffl_initial = activate(FSFFL_ACCEPTANCE_LEAGUE, label="fsffl_initial")
