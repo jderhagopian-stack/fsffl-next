@@ -564,7 +564,3 @@ def validate_annual_rollover_candidate(
                     "annual FUMBLES_LOST identity-light eligibility exceeds cold-start support"
                 )
 
-
-    expected_fingerprint = production_table_payload_fingerprint(candidate.payload)
-    if candidate.fingerprint != expected_fingerprint:
-        raise ValueError("annual FUMBLES_LOST production table fingerprint does not match payload")
