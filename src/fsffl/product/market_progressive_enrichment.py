@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from threading import RLock
@@ -75,6 +75,7 @@ class MarketDecisionEnrichmentCoordinator:
         self._lock = RLock()
         self._records: dict[str, MarketEnrichmentRecord] = {}
         self._active_by_scope: dict[tuple[str, str, str, str], str] = {}
+        self._future_by_job: dict[str, Future[None]] = {}
 
     def start(
         self,
@@ -109,7 +110,8 @@ class MarketDecisionEnrichmentCoordinator:
             )
             self._records[job_id] = record
             self._active_by_scope[scope] = job_id
-            self._executor.submit(self._run, record, work)
+            future = self._executor.submit(self._run, record, work)
+            self._future_by_job[job_id] = future
             return record
 
     def _set(self, job_id: str, **changes) -> MarketEnrichmentRecord | None:
@@ -188,6 +190,8 @@ class MarketDecisionEnrichmentCoordinator:
                 error=f"{type(exc).__name__}: {exc}",
             )
         finally:
+            with self._lock:
+                self._future_by_job.pop(record.job_id, None)
             release_unused_process_memory(label="market-decision-enrichment")
 
     def get(
@@ -219,4 +223,7 @@ class MarketDecisionEnrichmentCoordinator:
                 )
                 if self._active_by_scope.get(scope) == job_id:
                     self._active_by_scope.pop(scope, None)
+                future = self._future_by_job.pop(job_id, None)
+                if future is not None and not future.done():
+                    future.cancel()
             return len(ids)
