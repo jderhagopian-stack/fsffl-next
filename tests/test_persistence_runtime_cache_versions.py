@@ -11,7 +11,7 @@ from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
 
 
 def test_durable_cache_versions_match_authoritative_runtime_models() -> None:
-    assert FORECAST_MODEL_VERSION == "next8-live-forecast-evidence-v6:partial-replay-contract"
+    assert FORECAST_MODEL_VERSION == "next8-live-forecast-evidence-v7:rolling-fumbles-lost-materiality"
     assert LiveForecastEvidence.__dataclass_fields__["model_version"].default == FORECAST_MODEL_VERSION
     assert (
         LiveSimulationAnalyticsResult.model_fields["model_version"].default

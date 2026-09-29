@@ -56,9 +56,9 @@ def main() -> None:
         raise RuntimeError("real live State is missing matchup completion authority")
     if payload["last_completed_week"] != state.completed_through_week:
         raise RuntimeError("Atlas last-completed-week diverges from canonical State")
-    if state.completed_through_week != 2:
+    if not 0 <= state.completed_through_week <= 18:
         raise RuntimeError(
-            f"live provider evidence proves Week 2 complete; canonical boundary is {state.completed_through_week}"
+            f"canonical completed-week boundary is invalid: {state.completed_through_week}"
         )
     missing_max_pf = [
         row["team_id"] for row in payload["standings"]
@@ -164,7 +164,7 @@ def main() -> None:
         "authority": payload["authority"],
         "notes": [
             "This CI sanity uses the real 12-team Sleeper State and exercises the production Atlas composition builder.",
-            "All 12 standings rows carry canonical provider-backed Max PF and the completed-week boundary is Week 2.",
+            f"All 12 standings rows carry canonical provider-backed Max PF and the governed completed-week boundary is Week {state.completed_through_week}.",
             "It intentionally does not recompute the 50,000-run Simulation or Shapley Intrinsic in CI.",
             "Persisted production evidence for Simulation, position strength, resilience, Market and A2+Burr-backed Intrinsic is recorded separately in the implementation checkpoint.",
             "Authenticated hosted iPhone/Safari latency remains a management acceptance item after exact-SHA deployment.",

@@ -148,8 +148,34 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     material_partial_player_ids = tuple(
         getattr(runtime_result, "simulation_material_partial_player_ids", ()) or ()
     )
+    non_material_partial_player_ids = tuple(
+        getattr(
+            runtime_result,
+            "fumbles_lost_non_material_partial_player_ids",
+            (),
+        )
+        or ()
+    )
+    all_material_partial_player_ids = tuple(
+        getattr(
+            runtime_result,
+            "fumbles_lost_material_partial_player_ids",
+            (),
+        )
+        or ()
+    )
     authoritative_rows = tuple(getattr(evidence, "league_scored_forecasts", ()) or ()) if evidence is not None else ()
     raw_rows = tuple(getattr(evidence, "raw_forecasts", ()) or ()) if evidence is not None else ()
+    non_material_partial_id_set = set(non_material_partial_player_ids)
+    all_partial_rows_have_explicit_non_material_fumbles_authority = bool(
+        partial_rows
+        and non_material_partial_id_set
+        and all(
+            getattr(row, "player_id", None) in non_material_partial_id_set
+            and set(getattr(row, "omitted_rule_stats", ()) or ()) == {"fum_lost"}
+            for row in partial_rows
+        )
+    )
 
     if evidence is None or not (raw_rows or authoritative_rows or partial_rows):
         forecast_status = "unavailable"
@@ -162,17 +188,26 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             + (": " + ", ".join(blockers) if blockers else "")
             + "."
         )
+    elif all_partial_rows_have_explicit_non_material_fumbles_authority:
+        forecast_status = "non_material_partial"
+        forecast_reason = (
+            "Governed downstream Forecast use is allowed under explicit "
+            "NON_MATERIAL_PARTIAL authority. FUMBLES_LOST remains omitted/degraded "
+            f"for {len(non_material_partial_player_ids)} subject(s); scoring coverage "
+            "is not FULL."
+        )
+    elif partial_rows:
+        forecast_status = "partial_nonblocking"
+        forecast_reason = (
+            "Forecast scoring coverage remains partial for non-consumed subjects. "
+            "The current downstream consumer is not blocked, but coverage is not FULL "
+            "and no specialized omission authority is inferred for those subjects."
+        )
     else:
         forecast_status = "full"
         forecast_reason = (
-            "Governed league-scored Forecast authority is available for the current "
-            "downstream consumer."
-            + (
-                f" {len(partial_rows)} non-material subject(s) retain explicit partial "
-                "coverage diagnostics."
-                if partial_rows
-                else ""
-            )
+            "Governed league-scored Forecast authority is fully covered for the "
+            "current downstream consumer."
         )
 
     if runtime.simulation_analytics is not None:
@@ -251,11 +286,16 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         if served_available
         else None
     )
+    core_consumer_usable = (
+        forecast_status in {"full", "non_material_partial", "partial_nonblocking"}
+        and simulation_status == "full"
+        and value_status == "full"
+    )
     overall_status = (
         "rebuilding"
         if served_available
         else "full"
-        if all(item == "full" for item in statuses)
+        if core_consumer_usable
         else "partial"
         if any(item != "unavailable" for item in statuses)
         else "unavailable"
@@ -269,9 +309,14 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             "authoritative_scored_count": len(authoritative_rows),
             "partial_scored_count": len(partial_rows),
             "material_partial_player_ids": list(material_partial_player_ids),
-            "non_material_partial_scored_count": max(
-                0, len(partial_rows) - len(material_partial_player_ids)
+            "non_material_partial_scored_count": len(
+                non_material_partial_player_ids
             ),
+            "non_material_partial_player_ids": list(
+                non_material_partial_player_ids
+            ),
+            "scoring_coverage_full": not bool(partial_rows),
+            "consumer_usable": forecast_status in {"full", "non_material_partial", "partial_nonblocking"},
             "simulation_blockers": list(blockers),
         },
         "simulation": {"status": simulation_status, "reason": simulation_reason},

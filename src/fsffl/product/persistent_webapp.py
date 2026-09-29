@@ -266,11 +266,15 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
     )
     payload["product_required_capabilities"] = list(required)
     core_status = str(payload.get("overall_status") or "unavailable")
+    product_usable = (
+        statuses[0] in {"full", "non_material_partial", "partial_nonblocking"}
+        and all(status == "full" for status in statuses[1:])
+    )
     payload["overall_status"] = (
         "rebuilding"
         if core_status == "rebuilding"
         else "full"
-        if all(status == "full" for status in statuses)
+        if product_usable
         else "partial"
         if any(status not in {"unavailable", "not_configured"} for status in statuses)
         else "unavailable"

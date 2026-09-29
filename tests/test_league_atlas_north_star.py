@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -403,3 +404,14 @@ def test_legacy_state_with_trailing_zero_schedule_rows_fails_closed() -> None:
     assert standings["a"]["games"] == 2
     assert standings["a"]["ties"] == 1
 
+
+
+def test_real_league_sanity_consumes_canonical_completed_week_without_hardcoding() -> None:
+    source = Path("scripts/run_league_atlas_north_star_sanity.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'payload["last_completed_week"] != state.completed_through_week' in source
+    assert 'state.completed_through_week != 2' not in source
+    assert "live provider evidence proves Week 2 complete" not in source
+    assert "governed completed-week boundary is Week {state.completed_through_week}" in source

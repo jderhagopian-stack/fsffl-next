@@ -16,6 +16,9 @@ from fsffl.forecast.current_runtime import (
 from fsffl.forecast.fumbles_lost_first_party import (
     FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
 )
+from fsffl.forecast.fumbles_lost_materiality import (
+    fumbles_lost_runtime_authority_compatible,
+)
 from fsffl.forecast.models import ForecastObservation
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.providers.acquisition import ProviderBackedStateService
@@ -214,7 +217,7 @@ class LiveForecastEvidence:
     uncertainty_ready: bool
     runtime_result: LiveForecastRuntimeResult
     evidence_basis: str = "live_full_season"
-    model_version: str = "next8-live-forecast-evidence-v6:partial-replay-contract"
+    model_version: str = "next8-live-forecast-evidence-v7:rolling-fumbles-lost-materiality"
 
 
 LiveForecastLoader = Callable[[LeagueState], LiveForecastEvidence]
@@ -373,31 +376,10 @@ def _forecast_supplement_compatible(
         return False
     if not league_consumes_fumbles_lost(league_state.league.rules):
         return True
-    runtime = evidence.runtime_result
-    return (
-        bool(
-            getattr(
-                runtime,
-                "fumbles_lost_supplement_authority_fingerprint",
-                None,
-            )
-        )
-        and (
-            getattr(
-                runtime,
-                "fumbles_lost_supplement_model_version",
-                None,
-            )
-            == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
-        )
-        and (
-            getattr(
-                runtime,
-                "fumbles_lost_supplement_league_state_id",
-                None,
-            )
-            == league_state.state_id
-        )
+    return fumbles_lost_runtime_authority_compatible(
+        league_state,
+        evidence.runtime_result,
+        expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
     )
 
 

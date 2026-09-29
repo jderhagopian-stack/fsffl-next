@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING
 from fsffl.forecast.fumbles_lost_first_party import (
     FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
 )
+from fsffl.forecast.fumbles_lost_materiality import (
+    fumbles_lost_runtime_authority_compatible,
+)
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.state.models import LeagueState
 
@@ -605,35 +608,14 @@ def restore_state_bound_forecast(
             requires_first_party_fumbles_lost = league_consumes_fumbles_lost(
                 league_state.league.rules
             )
-            has_first_party_fumbles_lost = bool(
-                getattr(
-                    candidate_forecast.runtime_result,
-                    "fumbles_lost_supplement_authority_fingerprint",
-                    None,
-                )
-            )
-            current_supplement_contract = (
-                getattr(
-                    candidate_forecast.runtime_result,
-                    "fumbles_lost_supplement_model_version",
-                    None,
-                )
-                == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
-            )
-            supplement_matches_state = (
-                getattr(
-                    candidate_forecast.runtime_result,
-                    "fumbles_lost_supplement_league_state_id",
-                    None,
-                )
-                == league_state.state_id
-            )
             if (
                 not requires_first_party_fumbles_lost
-                or (
-                    has_first_party_fumbles_lost
-                    and current_supplement_contract
-                    and supplement_matches_state
+                or fumbles_lost_runtime_authority_compatible(
+                    league_state,
+                    candidate_forecast.runtime_result,
+                    expected_supplement_version=(
+                        FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+                    ),
                 )
             ):
                 forecast = candidate_forecast
@@ -696,24 +678,10 @@ def restore_published_state_bound_intelligence(
             requires_supplement = league_consumes_fumbles_lost(
                 league_state.league.rules
             )
-            supplement_ok = bool(
-                getattr(
-                    candidate.runtime_result,
-                    "fumbles_lost_supplement_authority_fingerprint",
-                    None,
-                )
-                and getattr(
-                    candidate.runtime_result,
-                    "fumbles_lost_supplement_model_version",
-                    None,
-                )
-                == FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
-                and getattr(
-                    candidate.runtime_result,
-                    "fumbles_lost_supplement_league_state_id",
-                    None,
-                )
-                == league_state.state_id
+            supplement_ok = fumbles_lost_runtime_authority_compatible(
+                league_state,
+                candidate.runtime_result,
+                expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
             )
             if not requires_supplement or supplement_ok:
                 forecast = candidate
