@@ -1265,3 +1265,22 @@ Management directive:
 - only after the failure class is understood and the bounded review has no unresolved P1/P2 should full CI be required green for merge/deploy.
 
 After merge/deploy, resume the complete hosted clean-first-run / FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session acceptance journey. Physical Safari remains HOLD until terminal hosted PASS.
+
+
+## 2026-09-29 — PR #298 narrowed to two root-cause gates
+Latest PR #298 head `1a52e019f77093fc9e109cdd8bccb8472aa40e22` has materially narrowed validation:
+- Live Forecast corrective trace: PASS.
+- Corrective live-provider numerical trace: PASS.
+- Home North Star: PASS.
+- Private-beta Intrinsic diagnostics: PASS.
+- Focused corrective regression: PASS.
+- Full CI: 1 failure / 1,842 passes.
+- League Atlas focused tests: 56/56 pass, but the real-league sanity harness fails before composition because live provider evidence proves completed Week 2 while canonical State boundary is Week 3.
+
+Management disposition:
+1. **CI failure is a real narrow contract defect.** The annual-rollover validator must reject an incomplete fallback-eligibility matrix through its governed fail-closed validation path; it must not leak a raw `KeyError`. Fix the validation boundary/class, add/retain deterministic regression coverage, and do not weaken the annual completeness gate.
+2. **League Atlas is not currently evidenced as a product regression.** Its focused Atlas/PI tests pass. Reconcile the Week-2 provider-evidence versus Week-3 canonical-State mismatch at the authority/harness boundary. Do not change Atlas presentation logic merely to make the workflow green, and do not weaken the canonical completed-week rule.
+3. After both root causes are reconciled, rerun full CI and affected focused workflows, then complete the bounded whole-contract P1/P2 review on the new head. Do not stop after the two visible failures if the review identifies adjacent same-class defects.
+4. Preserve #294/#295/#296 runtime architecture and all frozen Forecast/Intrinsic/K-DST boundaries. No new Research or broader feature work is authorized.
+
+Only after full CI + bounded P1/P2 review are clean may PR #298 merge/deploy and resume the full hosted lifecycle acceptance. Physical Safari remains HOLD until hosted terminal PASS.
