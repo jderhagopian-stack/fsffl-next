@@ -1188,3 +1188,37 @@ Research is reopened **only for this bounded question**:
 - determine a generalizable downstream materiality rule so unavailable FUMBLES_LOST can remain explicit partial authority without automatically blocking all Simulation/Intrinsic when its plausible scoring impact is immaterial.
 
 Runtime architecture #294/#295/#296 remains frozen. After Research returns a supported contract, Implementation may apply it and immediately resume full hosted lifecycle acceptance.
+
+
+## 2026-09-29 — Rolling FUMBLES_LOST Research complete; Implementation authorized
+Bounded Research under `docs/operations/directives/20260929_FUMBLES_LOST_ROLLING_AUTHORITY.md` is complete on durable head `5091c833330621466aa5c80648eab78b0780d903` (branch `research/fumbles-lost-rolling-authority-20260929`).
+
+Accepted result:
+- one rolling first-party exact FUMBLES_LOST contract is supported from completed Week 2 through Week 17;
+- all 16 tested cutoffs passed the pre-frozen rolling gates;
+- no cutoff router or second model is required;
+- Week 2 reproduces v1 exactly;
+- current Week-3 scalar is `0.6183406074632098`;
+- historical position rates, 4-game role prior, exact lost-fumble semantics and non-zero uncertainty remain;
+- later cutoffs use frozen cutoff-specific scalar and monotone cutoff/position uncertainty floors;
+- a general `NON_MATERIAL_PARTIAL` downstream authority state is supported when the frozen conservative 90% score-impact bound is <= 10% of the consumer's governed 90% fantasy-point uncertainty half-width;
+- omission remains explicit: no zero FUMBLES_LOST observation is fabricated and scoring coverage is not relabeled FULL.
+
+Implementation is now authorized to apply the bounded handoff from
+`artifacts/research/fumbles_lost_rolling_authority_20260929/IMPLEMENTATION_HANDOFF.md`
+on top of the existing #296 runtime lineage. Do not reopen #294/#295/#296 runtime architecture or broader Forecast families.
+
+After implementation, immediately resume full hosted lifecycle acceptance through restart/restored-session. Physical Safari remains HOLD until terminal hosted PASS.
+
+
+## 2026-09-29 — PR #297 review finds bounded materiality P1; rolling model remains supported
+PR #297 (`Merge rolling FUMBLES_LOST research handoff`) is open and mergeable; CI is green. Automated review found one concrete P1 in the separate NON_MATERIAL_PARTIAL fallback: the frozen materiality impact bound was derived from the primary rolling validation population, which excludes true cold-start cases, while the implementation handoff would allow that position-wide bound for unavailable coordinates including cold-start/identity-light subjects.
+
+Management disposition:
+- the rolling Week-2..17 FUMBLES_LOST model authority itself remains supported and is not reopened;
+- do not merge/implement the NON_MATERIAL_PARTIAL fallback as currently written;
+- Research must make the smallest correction: either validate a conservative impact bound over all applicable unavailable-player cases including cold-start/identity-light, or explicitly restrict NON_MATERIAL_PARTIAL eligibility to the population for which the bound is supported;
+- no broad Forecast/model-family work is authorized;
+- Implementation branch `implementation/fumbles-lost-rolling-authority-20260929` currently has no code delta from main and should not implement the fallback until this P1 is closed.
+
+Runtime #294/#295/#296 remains frozen. Physical Safari remains HOLD.
