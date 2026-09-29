@@ -195,7 +195,7 @@ def test_independent_provider_fetches_overlap_instead_of_running_serially() -> N
         clock=lambda: NOW,
     )
     assert result.successful_source_ids == ("cbs", "fftoday")
-    assert result.model_version == "next2-current-runtime-v9:first-party-fumbles-lost"
+    assert result.model_version == "next2-current-runtime-v10:rolling-fumbles-lost-materiality"
     assert {event.provider for event in result.source_health_events} == {"cbs", "fftoday"}
     assert all(event.disposition == "accepted" for event in result.source_health_events)
 
@@ -464,6 +464,61 @@ def _fake_fumbles_lost_supplement(
     )
 
 
+def test_missing_canonical_cutoff_fails_materiality_closed_without_crashing_or_zero() -> None:
+    base = state()
+    fum_state = base.model_copy(
+        update={
+            "completed_through_week": None,
+            "league": base.league.model_copy(
+                update={
+                    "rules": base.league.rules.model_copy(
+                        update={
+                            "scoring": base.league.rules.scoring
+                            + (ScoringRule(stat="fum_lost", points=-1.0),)
+                        }
+                    )
+                }
+            ),
+            "team_states": (
+                TeamState(
+                    team_id="a",
+                    roster=(RosterEntry(player_id="p1", slot=RosterSlot.QB),),
+                ),
+                TeamState(team_id="b", roster=()),
+            ),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher(
+            "fftoday",
+            lambda season: snapshot("fftoday", 4000.0),
+        ),
+        NamedCurrentProjectionFetcher(
+            "cbs",
+            lambda season: snapshot("cbs", 4200.0),
+        ),
+    )
+
+    result = build_current_live_forecasts(
+        fum_state,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+    )
+
+    assert result.fumbles_lost_supplement_authority_fingerprint is None
+    assert result.fumbles_lost_supplement_failure is not None
+    assert result.fantasy_point_forecasts == ()
+    assert len(result.partial_fantasy_point_forecasts) == 1
+    assert result.partial_fantasy_point_forecasts[0].omitted_rule_stats == ("fum_lost",)
+    assert result.fumbles_lost_material_partial_player_ids == ("p1",)
+    assert result.fumbles_lost_simulation_relevant_player_ids == ("p1",)
+    assert result.simulation_material_partial_player_ids == ("p1",)
+    assert "partial_player_scoring_coordinates_present" in result.simulation_authority_blockers
+    assert not any(
+        row.metric == ForecastMetric.FUMBLES_LOST for row in result.raw_ensemble
+    )
+
+
 def test_fumbles_lost_supplement_promotes_material_player_scoring_to_full() -> None:
     base = state()
     state_with_cutoff = base.model_copy(
@@ -494,11 +549,20 @@ def test_fumbles_lost_supplement_promotes_material_player_scoring_to_full() -> N
             ValueError("no supplement")
         ),
     )
-    assert without.fantasy_point_forecasts == ()
+    # The missing coordinate remains explicit in partial diagnostics. The supported
+    # subtotal may still be consumed under the frozen NON_MATERIAL_PARTIAL rule; it
+    # is never relabeled as full scoring coverage or given a fake fum_lost row.
+    assert len(without.fantasy_point_forecasts) == 1
+    assert "NON_MATERIAL_PARTIAL" in without.fantasy_point_forecasts[0].model_version
     assert len(without.partial_fantasy_point_forecasts) == 1
     assert without.partial_fantasy_point_forecasts[0].omitted_rule_stats == ("fum_lost",)
+    assert without.fumbles_lost_non_material_partial_player_ids == ("p1",)
+    assert not any(
+        row.metric == ForecastMetric.FUMBLES_LOST for row in without.raw_ensemble
+    )
     # p1 is not rostered in this fixture, so its unresolved coordinate cannot
     # affect the Simulation consumer and must not create a league-wide blocker.
+    assert without.fumbles_lost_simulation_relevant_player_ids == ()
     assert without.simulation_material_partial_player_ids == ()
     assert "partial_player_scoring_coordinates_present" not in without.simulation_authority_blockers
 
