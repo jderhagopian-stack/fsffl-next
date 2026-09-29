@@ -1606,3 +1606,20 @@ After the active hosted run completes, continue under the corrective directive. 
 7. only then return for physical Safari validation.
 
 Do not broaden into model semantics or foundation work.
+
+
+## 2026-09-29 — Continue after #293 hosted partial success + idle cutoff
+#293 exact merge SHA `49ce8cae4f588fefc7c879e643504ee1b015cf42` is live. Hosted acceptance now passes the prior Hodor hard stop: Hodor publishes coherent partial Forecast/full Value with Simulation correctly withheld for K/DST, then the journey returns to FSFFL with a coherent full generation. Repeat PI history is ~0.306s and peak RSS ~405 MB.
+
+The instance then shut down gracefully at the 15-minute Render free-tier idle boundary before the remaining restart/final legs could complete. No terminal acceptance PASS was emitted.
+
+Next action is not another Hodor redesign. Continue under `docs/operations/directives/20260929_RUNTIME_ARCHITECTURE_AUDIT_CORRECTIVE.md`:
+1. verify/close the #293 replay-scan P2 (continue past newer incompatible raw artifacts to older compatible governed evidence);
+2. remove/prove the cold durable-restore-before-fresh-Connect dependency so foreground `get()` does not synchronously gate fresh State activation;
+3. add deterministic cold-restore vs fresh-Connect coverage;
+4. rerun full CI + bounded P1/P2 red-team;
+5. deploy exact corrected SHA;
+6. rerun hosted acceptance with a permitted keep-awake/inbound-traffic mechanism so the free-tier idle policy cannot truncate the required clean-first-run/restored-session/FSFFL -> Hodor -> FSFFL/restart journey;
+7. return for physical Safari only after terminal hosted PASS.
+
+Do not broaden scope or weaken Forecast authority.
