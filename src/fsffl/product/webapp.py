@@ -156,6 +156,14 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         )
         or ()
     )
+    all_material_partial_player_ids = tuple(
+        getattr(
+            runtime_result,
+            "fumbles_lost_material_partial_player_ids",
+            (),
+        )
+        or ()
+    )
     authoritative_rows = tuple(getattr(evidence, "league_scored_forecasts", ()) or ()) if evidence is not None else ()
     raw_rows = tuple(getattr(evidence, "raw_forecasts", ()) or ()) if evidence is not None else ()
 
@@ -170,13 +178,20 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             + (": " + ", ".join(blockers) if blockers else "")
             + "."
         )
-    elif partial_rows:
+    elif partial_rows and not all_material_partial_player_ids:
         forecast_status = "non_material_partial"
         forecast_reason = (
             "Governed downstream Forecast use is allowed under explicit "
             "NON_MATERIAL_PARTIAL authority. FUMBLES_LOST remains omitted/degraded "
             f"for {len(non_material_partial_player_ids)} subject(s); scoring coverage "
             "is not FULL."
+        )
+    elif partial_rows:
+        forecast_status = "partial_nonblocking"
+        forecast_reason = (
+            "Forecast scoring coverage remains partial for non-consumed subjects. "
+            "The current downstream consumer is not blocked, but coverage is not FULL "
+            "and no NON_MATERIAL_PARTIAL label is applied to failing subjects."
         )
     else:
         forecast_status = "full"
@@ -262,7 +277,7 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         else None
     )
     core_consumer_usable = (
-        forecast_status in {"full", "non_material_partial"}
+        forecast_status in {"full", "non_material_partial", "partial_nonblocking"}
         and simulation_status == "full"
         and value_status == "full"
     )
