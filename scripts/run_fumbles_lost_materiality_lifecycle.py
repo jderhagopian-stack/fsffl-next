@@ -264,6 +264,20 @@ def main():
     early=[r for r in pooled_rows if r["cutoff"] in (0,1)]
     early_fail=[r for r in early if not r["passes_90"]]
 
+    # These are governed acceptance gates, not report-only diagnostics.
+    # A workflow that writes passes=false but exits 0 would be an unsafe false
+    # success for the Implementation handoff.
+    if failures:
+        raise RuntimeError(
+            "eligible FUMBLES_LOST fallback population failed 90% coverage gate: "
+            + json.dumps(failures, sort_keys=True)
+        )
+    if early_fail:
+        raise RuntimeError(
+            "FUMBLES_LOST Week-0/1 lifecycle population gate failed: "
+            + json.dumps(early_fail, sort_keys=True)
+        )
+
     result={
         "study":"FUMBLES_LOST materiality population + season-start lifecycle",
         "rolling_model_reopened":False,
