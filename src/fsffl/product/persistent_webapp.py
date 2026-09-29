@@ -639,14 +639,15 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
     state = context.league_state
     if state is None:
         raise RuntimeError(f"{label}: canonical State is unavailable")
-    if context.selected_team_id is None:
-        raise RuntimeError(f"{label}: managed team is unavailable")
-    team_state = next(
-        (row for row in state.team_states if row.team_id == context.selected_team_id),
-        None,
-    )
-    if team_state is None or not team_state.roster:
-        raise RuntimeError(f"{label}: canonical managed roster is blank")
+    state_only = context.selected_team_id is None
+    team_state = None
+    if not state_only:
+        team_state = next(
+            (row for row in state.team_states if row.team_id == context.selected_team_id),
+            None,
+        )
+        if team_state is None or not team_state.roster:
+            raise RuntimeError(f"{label}: canonical managed roster is blank")
 
     def call(path: str, **kwargs):
         return _presentation_route_endpoint(path)(user_id=context.user_id, **kwargs)
@@ -683,18 +684,26 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
         elif surface == "market_value_lenses":
             metrics["market_player_count"] = len(payload.get("players") or ())
 
-    for surface, path, kwargs in (
-        ("home", "/api/home", {}),
-        ("franchise", "/api/my-team", {}),
-        ("league", "/api/league/atlas", {}),
-        ("market", "/api/opportunities/workspace", {}),
-        ("market_value_lenses", "/api/league/value-lenses", {"universe": "all"}),
+    surface_requests = (
         (
-            "market_value_lenses_rostered",
-            "/api/league/value-lenses",
-            {"universe": "rostered"},
-        ),
-    ):
+            ("home", "/api/home", {}),
+            ("league", "/api/league/atlas", {}),
+        )
+        if state_only
+        else (
+            ("home", "/api/home", {}),
+            ("franchise", "/api/my-team", {}),
+            ("league", "/api/league/atlas", {}),
+            ("market", "/api/opportunities/workspace", {}),
+            ("market_value_lenses", "/api/league/value-lenses", {"universe": "all"}),
+            (
+                "market_value_lenses_rostered",
+                "/api/league/value-lenses",
+                {"universe": "rostered"},
+            ),
+        )
+    )
+    for surface, path, kwargs in surface_requests:
         payload = call(path, **kwargs)
         inspect(surface, payload)
         del payload
@@ -726,7 +735,10 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
         "league_id": state.league.league_id,
         "state_id": state.state_id,
         "selected_team_id": context.selected_team_id,
-        "canonical_roster_count": len(team_state.roster),
+        "state_only": state_only,
+        "canonical_roster_count": (
+            len(team_state.roster) if team_state is not None else None
+        ),
         **metrics,
         "readiness_status": readiness.get("overall_status"),
         "readiness_as_of": readiness.get("as_of"),
@@ -747,15 +759,8 @@ def _acceptance_history_probe(label: str, context) -> dict[str, object]:
     state = context.league_state
     if state is None:
         raise RuntimeError(f"{label}: canonical State is unavailable")
-    intrinsic = _reconcile_hosted_intrinsic(context)
-    intrinsic_record = _shapley_intrinsic_coordinator.current(context)
-    contract = intrinsic_record.contract if intrinsic_record is not None else None
-    if intrinsic.get("status") != "full" or contract is None:
-        raise RuntimeError(
-            f"{label}: governed Intrinsic is not reusable/available: {intrinsic}"
-        )
 
-    governed_ids = {item.player_id for item in contract.estimates}
+    cold_state_only = label == "cold_pi_history_during_initial_reconciliation"
     roster_ids: list[str] = []
     if context.selected_team_id is not None:
         selected_state = next(
@@ -768,29 +773,56 @@ def _acceptance_history_probe(label: str, context) -> dict[str, object]:
         )
         if selected_state is not None:
             roster_ids = list(selected_state.roster)
-    preferred = "sleeper:player:4881"
-    player_id = (
-        preferred
-        if preferred in governed_ids
-        else next((item for item in roster_ids if item in governed_ids), None)
-        or next(iter(governed_ids), None)
-    )
-    if player_id is None:
-        raise RuntimeError(f"{label}: no governed player is available")
 
-    overview = build_player_intelligence_overview(
-        context,
-        player_id,
-        intrinsic=contract,
-        future_cache=_player_future_forecast_cache,
-    )
-    years = sorted(
-        int(item["year_index"])
-        for item in overview.get("forecast", {}).get("rows", [])
-        if item.get("year_index") is not None
-    )
-    if 2 not in years or 3 not in years:
-        raise RuntimeError(f"{label}: Player Intelligence lacks Y2/Y3: {years}")
+    intrinsic: dict[str, object] = {
+        "status": "building",
+        "build_status": "not_required_for_state_only_history",
+    }
+    contract = None
+    years: list[int] = []
+
+    if cold_state_only:
+        preferred = "sleeper:player:4881"
+        player_id = (
+            preferred
+            if preferred in roster_ids
+            else (roster_ids[0] if roster_ids else None)
+        )
+        if player_id is None:
+            raise RuntimeError(f"{label}: no canonical roster player is available")
+    else:
+        intrinsic = _reconcile_hosted_intrinsic(context)
+        intrinsic_record = _shapley_intrinsic_coordinator.current(context)
+        contract = intrinsic_record.contract if intrinsic_record is not None else None
+        if intrinsic.get("status") != "full" or contract is None:
+            raise RuntimeError(
+                f"{label}: governed Intrinsic is not reusable/available: {intrinsic}"
+            )
+
+        governed_ids = {item.player_id for item in contract.estimates}
+        preferred = "sleeper:player:4881"
+        player_id = (
+            preferred
+            if preferred in governed_ids
+            else next((item for item in roster_ids if item in governed_ids), None)
+            or next(iter(governed_ids), None)
+        )
+        if player_id is None:
+            raise RuntimeError(f"{label}: no governed player is available")
+
+        overview = build_player_intelligence_overview(
+            context,
+            player_id,
+            intrinsic=contract,
+            future_cache=_player_future_forecast_cache,
+        )
+        years = sorted(
+            int(item["year_index"])
+            for item in overview.get("forecast", {}).get("rows", [])
+            if item.get("year_index") is not None
+        )
+        if 2 not in years or 3 not in years:
+            raise RuntimeError(f"{label}: Player Intelligence lacks Y2/Y3: {years}")
 
     history = getattr(app.state, "player_history_coordinator", None)
     if history is None:
@@ -817,6 +849,7 @@ def _acceptance_history_probe(label: str, context) -> dict[str, object]:
                 "intrinsic_status": intrinsic.get("status"),
                 "intrinsic_build_status": intrinsic.get("build_status"),
                 "forecast_years": years,
+                "state_only_during_enrichment": cold_state_only,
             }
         if record.status == PlayerHistoryBuildStatus.FAILED:
             raise RuntimeError(
