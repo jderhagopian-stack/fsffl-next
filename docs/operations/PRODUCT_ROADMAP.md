@@ -171,3 +171,11 @@ The comprehensive Y4-Y8 Forecast/Intrinsic architecture study may continue indep
 ### Ordering principle
 Recover **foundational primitives before presentation breadth**:
 `reliability → Market responsiveness → Simulation modernization → historical State/lineage/snapshots → Decision/Owner uncertainty intelligence → storytelling/history surfaces`.
+
+
+## Public launch readiness gate
+Before any public launch or material open-beta traffic, execute a dedicated production-readiness/scaling review under `docs/operations/directives/20260929_PUBLIC_SCALE_ARCHITECTURE_PRINCIPLE.md`.
+
+The target is not to make commercial workloads fit the current free Render footprint. The target is to prove that higher traffic can be absorbed primarily by adding web/worker/cache/database capacity rather than rewriting the governed application architecture.
+
+The review must cover at minimum horizontal web scaling, durable/idempotent background jobs, multi-instance lifecycle coordination, workload separation, bounded cache ownership, queueing/backpressure/fairness, provider-rate-limit behavior, tenant isolation/security, observability, realistic burst/load testing, and cost/capacity modeling.
