@@ -515,7 +515,14 @@ def install_hosted_connect_routes(
                 state_transition_reclaimer(
                     f"{user_id}:{league_state.state_id}:state_refresh"
                 )
-            if changed:
+            state_identity_changed = (
+                previous_state is None
+                or previous_state.state_id != league_state.state_id
+            )
+            if state_identity_changed:
+                # The shared boundary releases the prior user-scoped Behavioral
+                # record whenever canonical State identity advances, including a
+                # timestamp-only snapshot whose material fingerprint is unchanged.
                 behavioral_coordinator.start(
                     user_id=user_id,
                     league_state=league_state,
