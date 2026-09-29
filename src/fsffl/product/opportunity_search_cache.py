@@ -66,6 +66,7 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
         if league_state is None:
             return builder(runtime, browser, cardinal)
         key = (
+            runtime.user_id,
             league_state.state_id,
             id(league_state),
             runtime.selected_team_id,
@@ -92,16 +93,21 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
                     elapsed_ms=(monotonic() - started) * 1000.0,
                 )
             misses += 1
-            # Candidate catalogs are exact-State execution caches. Evict the prior
-            # State before allocating the new catalog so state reconciliation does
-            # not transiently own two full package universes.
-            if cache:
-                evicted = len(cache)
-                cache.clear()
+            # Candidate catalogs are exact-State execution caches. Evict only
+            # this user's prior scope before allocating the new catalog; another
+            # user's live Market workspace is outside this transition boundary.
+            stale_keys = [
+                item
+                for item in cache
+                if item[0] == runtime.user_id and item != key
+            ]
+            for stale_key in stale_keys:
+                cache.pop(stale_key, None)
+            if stale_keys:
                 gc.collect()
                 _logger.info(
                     "FSFFL Market search cache evicted_prior_scope entries=%d state=%s team=%s",
-                    evicted,
+                    len(stale_keys),
                     league_state.state_id,
                     runtime.selected_team_id,
                 )
@@ -125,6 +131,15 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
                 elapsed_ms=(monotonic() - started) * 1000.0,
             )
 
+    def clear_user_cache(user_id: str) -> int:
+        with lock:
+            stale_keys = [item for item in cache if item[0] == user_id]
+            for stale_key in stale_keys:
+                cache.pop(stale_key, None)
+        if stale_keys:
+            gc.collect()
+        return len(stale_keys)
+
     def clear_cache() -> int:
         with lock:
             count = len(cache)
@@ -133,5 +148,6 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
             gc.collect()
         return count
 
+    cached_builder.clear_user_cache = clear_user_cache  # type: ignore[attr-defined]
     cached_builder.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_builder
