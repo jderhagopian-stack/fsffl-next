@@ -409,8 +409,11 @@ def _annual_population_coverage() -> dict[str, dict[int, dict[str, float]]]:
 
 
 def _annual_rolling_adequacy() -> dict[str, object]:
+    pooled_seasons = [2023, 2024, 2025, 2026]
     return {
         "heldout_season": 2026,
+        "pooled_seasons": pooled_seasons,
+        "primary_population": "tier != cold_start",
         "cutoffs": {
             cutoff: {
                 "pooled_rolling_rmse": 0.5,
@@ -419,6 +422,10 @@ def _annual_rolling_adequacy() -> dict[str, object]:
                 "heldout_season_zero_rmse": 1.0,
                 "pooled_bias": 0.0,
                 "pooled_zero_gap": 0.0,
+                "primary_n_by_season": {
+                    season: 100 for season in pooled_seasons
+                },
+                "pooled_primary_n": 100 * len(pooled_seasons),
             }
             for cutoff in range(2, 18)
         },
@@ -637,6 +644,42 @@ def test_annual_rollover_requires_governed_rolling_adequacy_proof() -> None:
             newly_completed_materiality_event_max=_annual_materiality_maxima(),
             observed_population_coverage=_annual_population_coverage(),
             newly_completed_rolling_adequacy=wrong_season,
+        )
+
+    stale_pooled_cohort = _annual_rolling_adequacy()
+    stale_pooled_cohort["pooled_seasons"] = [2023, 2024, 2025]
+    with pytest.raises(ValueError, match="wrong pooled OOT cohort"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=stale_pooled_cohort,
+        )
+
+    wrong_population = _annual_rolling_adequacy()
+    wrong_population["primary_population"] = "all_rows"
+    with pytest.raises(ValueError, match="wrong primary population"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=wrong_population,
+        )
+
+    mismatched_counts = _annual_rolling_adequacy()
+    mismatched_counts["cutoffs"][4]["pooled_primary_n"] = 399  # type: ignore[index]
+    with pytest.raises(ValueError, match="population counts do not match pooled cohort"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+            newly_completed_rolling_adequacy=mismatched_counts,
         )
 
     worse_than_omission = _annual_rolling_adequacy()
