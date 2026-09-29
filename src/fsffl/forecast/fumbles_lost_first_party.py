@@ -205,8 +205,37 @@ class FirstPartyFumblesLostSupplement(FrozenModel):
                 raise ValueError("first-party FUMBLES_LOST uncertainty contract is stale")
             if self.calibration_scalar != table.calibration_scalar(self.completed_through_week):
                 raise ValueError("first-party calibration scalar does not match frozen cutoff table")
-        elif not self.annual_freeze_source_hashes:
-            raise ValueError("future-season FUMBLES_LOST supplement lacks annual freeze source identity")
+        else:
+            if not self.annual_freeze_source_hashes:
+                raise ValueError(
+                    "future-season FUMBLES_LOST supplement lacks annual freeze source identity"
+                )
+            for source_name, source_hash in self.annual_freeze_source_hashes:
+                if (
+                    not source_name.strip()
+                    or len(source_hash) != 64
+                    or any(
+                        char not in "0123456789abcdef"
+                        for char in source_hash.lower()
+                    )
+                ):
+                    raise ValueError(
+                        "future-season FUMBLES_LOST supplement source identity is invalid"
+                    )
+            if (
+                not self.training_seasons
+                or max(self.training_seasons) >= self.season
+                or self.season - 1 not in self.training_seasons
+            ):
+                raise ValueError(
+                    "future-season FUMBLES_LOST supplement training chronology is invalid"
+                )
+            if self.calibration_pseudo_current_seasons != tuple(
+                range(2022, self.season)
+            ):
+                raise ValueError(
+                    "future-season FUMBLES_LOST supplement calibration chronology is invalid"
+                )
         if self.authority_valid_from < self.current_input_captured_at:
             raise ValueError("authority cannot predate current input acquisition")
         if self.authority_valid_from < self.built_at:
