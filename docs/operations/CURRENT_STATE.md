@@ -1443,3 +1443,20 @@ Acceptance should model realistic private-beta usage:
 The production concern is lifecycle correctness on an occasional league switch and process safety on a shared Render instance, not whether one user can flip leagues rapidly without pause.
 
 If the whole resource boundary is proven clean, memory returns to a stable post-settle baseline, and only legitimate heavy compute still exceeds the hard gate, stop treating that as a leak hunt and escalate as a capacity/compute-staging decision.
+
+
+## 2026-09-29 — Public-scale architecture target clarified
+Management has made `docs/operations/directives/20260929_PUBLIC_SCALE_ARCHITECTURE_PRINCIPLE.md` authoritative.
+
+FSFFL NEXT must be designed so a future public launch is primarily a **capacity and operations scaling problem**, not a rewrite of application authority/lifecycle plumbing. The current small/free Render instance is a useful stress constraint, not the architectural target.
+
+Implications:
+- foreground web/API must remain horizontally scalable and not own authoritative user/model state only in process memory;
+- heavy Forecast/Simulation/Intrinsic/Market work must be separable from request latency and schedulable through durable/idempotent jobs;
+- any lifecycle correctness that eventually spans multiple web/worker instances must have distributed/durable coordination rather than depend on one-process locks or sticky sessions;
+- caches remain bounded accelerators with explicit ownership/identity/lifetime and must not grow with all historical users/leagues;
+- workload classes must be independently scalable with backpressure/fairness;
+- security/tenant isolation and non-identifying diagnostics are required;
+- the current ~512 MB private-beta memory gate remains valid for leak/ownership closure, but is not a permanent commercial product requirement.
+
+This does **not** broaden PR #303. Finish the current resource-boundary closure first. Before public launch, run a dedicated production-readiness/scaling review and realistic load test.
