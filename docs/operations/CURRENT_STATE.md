@@ -1343,3 +1343,21 @@ Management disposition:
 - if the corrected harness then exposes a real hosted product contradiction, reopen only that affected layer.
 
 Physical Safari remains HOLD until terminal hosted PASS.
+
+
+## 2026-09-29 — #301 harness P1 fixed; hosted acceptance now blocked by hard memory gate
+PR #301 merged as exact SHA `be5db0e35e787c97eb560bbc0e88f59669e7b6e6` after all CI/focused/live-diagnostics checks passed. The only code change in the final corrective was the hosted cold-PI acceptance harness: `TeamState.roster` now contributes `RosterEntry.player_id` strings before canonical-player filtering, with deterministic regression coverage.
+
+Exact merge SHA is live on Render deploy `dep-dau1prbncjis73ae44p0`. The corrected hosted journey proved:
+- true clean FSFFL State-only first load with no managed team selected;
+- explicit managed-team selection and visible rebuilding State;
+- cold PI history on a canonical rostered player completed successfully (~17.99s) while enrichment was active;
+- initial FSFFL Forecast/Simulation/Value/Intrinsic terminal publication was coherent and PI upgraded to Y1-Y3/full Intrinsic;
+- active changed-State reconciliation served the prior coherent generation and atomically promoted all checked surfaces to one new generation;
+- Hodor completed truthfully with partial Forecast/full Value, Simulation withheld for `separate_k_dst_forecast_authority_required`, and coherent published surfaces.
+
+The run then stopped at the existing hard resource gate before FSFFL return / same-State / restart / restored-session:
+`StateFirstAcceptanceError: hard memory limit reached at hodor_switch`.
+Acceptance process telemetry recorded lifetime peak RSS `559,685,632` bytes versus configured hard limit `536,870,900` bytes; current RSS at the gate was `461,594,624` bytes. Render's 30-second metric series observed a nearby peak of ~525.7 MB, so the acceptance process peak was briefer than the external sampling interval.
+
+This is a new hosted resource blocker, not the #301 roster-filter defect and not evidence against #298 FUMBLES_LOST, PI readiness semantics, or #294/#295/#296 lifecycle authority. Do not weaken the hard-memory gate or frozen model boundaries to continue the journey. Physical Safari remains HOLD.
