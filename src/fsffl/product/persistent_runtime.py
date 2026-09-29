@@ -319,6 +319,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self,
         user_id: str,
         context: UserRuntimeContext,
+        expected_generation: int,
     ) -> bool:
         if context.league_state is None:
             return False
@@ -326,12 +327,31 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return True
         started = monotonic()
         try:
-            persist_runtime_identity(
-                self._persistence,
-                user_id=user_id,
-                league_state=context.league_state,
-                selected_team_id=context.selected_team_id,
-            )
+            # Serialize the tiny pointer upsert with same-user lifecycle identity.
+            # Reads remain memory-only and cross-user work remains independent. The
+            # generation check prevents an older queued team write from regressing a
+            # newer State/team publication after heavy checkpoint activity.
+            with self.lifecycle_operation(user_id):
+                current = super().get(user_id)
+                if (
+                    self.league_generation(user_id) != expected_generation
+                    or current.league_state is None
+                    or current.league_state.state_id != context.league_state.state_id
+                    or current.selected_team_id != context.selected_team_id
+                ):
+                    _logger.info(
+                        "FSFFL managed-team checkpoint skipped stale identity user=%s expected_generation=%s current_generation=%s",
+                        user_id,
+                        expected_generation,
+                        self.league_generation(user_id),
+                    )
+                    return False
+                persist_runtime_identity(
+                    self._persistence,
+                    user_id=user_id,
+                    league_state=context.league_state,
+                    selected_team_id=context.selected_team_id,
+                )
         except Exception as exc:
             _logger.warning(
                 "FSFFL managed-team checkpoint failed user=%s team=%s error=%s",
@@ -362,6 +382,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         state_id = context.league_state.state_id
         team_id = context.selected_team_id
         with self.lifecycle_operation(user_id):
+            expected_generation = self.league_generation(user_id)
             previous = self._checkpoint_futures.get(user_id)
             previous_state_id = self._checkpoint_state_ids.get(user_id)
             previous_kind = self._checkpoint_kinds.get(user_id)
@@ -374,6 +395,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 self._persist_managed_team_identity,
                 user_id,
                 context,
+                expected_generation,
             )
             self._checkpoint_futures[user_id] = future
             self._checkpoint_state_ids[user_id] = state_id
