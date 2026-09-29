@@ -51,6 +51,7 @@ def market_economics_cache_key(
     if not counterparty or not send or not receive:
         return None
     return (
+        runtime.user_id,
         league_state.state_id,
         id(league_state),
         runtime.selected_team_id,
@@ -74,30 +75,32 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
     lock = RLock()
     hits = 0
     misses = 0
-    active_scope: tuple[object, ...] | None = None
+    active_scope_by_user: dict[str, tuple[object, ...]] = {}
 
     def cached_evaluator(
         runtime: UserRuntimeContext,
         row: dict[str, object],
         **kwargs: Any,
     ) -> dict[str, object]:
-        nonlocal hits, misses, active_scope
+        nonlocal hits, misses
         key = market_economics_cache_key(runtime, row)
         if key is None:
             return evaluator(runtime, row, **kwargs)
 
         started = monotonic()
         with lock:
-            scope = key[:4]
-            if active_scope != scope:
-                evicted = len(cache)
-                cache.clear()
-                active_scope = scope
-                if evicted:
+            user_id = runtime.user_id
+            scope = key[:5]
+            if active_scope_by_user.get(user_id) != scope:
+                stale_keys = [item for item in cache if item[0] == user_id]
+                for stale_key in stale_keys:
+                    cache.pop(stale_key, None)
+                active_scope_by_user[user_id] = scope
+                if stale_keys:
                     gc.collect()
                     _logger.info(
                         "FSFFL Market package economics cache evicted_prior_scope entries=%d state=%s team=%s",
-                        evicted,
+                        len(stale_keys),
                         runtime.league_state.state_id if runtime.league_state is not None else None,
                         runtime.selected_team_id,
                     )
@@ -132,15 +135,25 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
 
     cached_evaluator.__name__ = getattr(evaluator, "__name__", "cached_candidate_economics")
     cached_evaluator.__doc__ = getattr(evaluator, "__doc__", None)
+    def clear_user_cache(user_id: str) -> int:
+        with lock:
+            stale_keys = [item for item in cache if item[0] == user_id]
+            for stale_key in stale_keys:
+                cache.pop(stale_key, None)
+            active_scope_by_user.pop(user_id, None)
+        if stale_keys:
+            gc.collect()
+        return len(stale_keys)
+
     def clear_cache() -> int:
-        nonlocal active_scope
         with lock:
             count = len(cache)
             cache.clear()
-            active_scope = None
+            active_scope_by_user.clear()
         if count:
             gc.collect()
         return count
 
+    cached_evaluator.clear_user_cache = clear_user_cache  # type: ignore[attr-defined]
     cached_evaluator.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_evaluator
