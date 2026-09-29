@@ -12,6 +12,14 @@ class StateSnapshotStore(Protocol):
 
     def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None: ...
 
+    def recent_at_or_before(
+        self,
+        league_id: str,
+        as_of: datetime,
+        *,
+        limit: int = 32,
+    ) -> tuple[LeagueState, ...]: ...
+
 
 class StateMaterializer(Protocol):
     def materialize(self, league_id: str, as_of: datetime) -> LeagueState: ...
@@ -35,16 +43,28 @@ class InMemorySnapshotStore:
             for existing in self._states
             if not (
                 existing.league.league_id == state.league.league_id
-                and existing.as_of == state.as_of
+                and existing.state_id == state.state_id
             )
         ]
         self._states.append(state)
-        self._states.sort(key=lambda item: (item.league.league_id, item.as_of))
 
-    def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
-        candidates = [
-            state
-            for state in self._states
+    def recent_at_or_before(
+        self,
+        league_id: str,
+        as_of: datetime,
+        *,
+        limit: int = 32,
+    ) -> tuple[LeagueState, ...]:
+        if limit < 1:
+            raise ValueError("limit must be positive")
+        indexed = [
+            (index, state)
+            for index, state in enumerate(self._states)
             if state.league.league_id == league_id and state.as_of <= as_of
         ]
-        return max(candidates, key=lambda item: item.as_of) if candidates else None
+        indexed.sort(key=lambda item: (item[1].as_of, item[0]), reverse=True)
+        return tuple(state for _index, state in indexed[:limit])
+
+    def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
+        recent = self.recent_at_or_before(league_id, as_of, limit=1)
+        return recent[0] if recent else None
