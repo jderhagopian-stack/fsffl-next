@@ -1361,3 +1361,18 @@ The run then stopped at the existing hard resource gate before FSFFL return / sa
 Acceptance process telemetry recorded lifetime peak RSS `559,685,632` bytes versus configured hard limit `536,870,900` bytes; current RSS at the gate was `461,594,624` bytes. Render's 30-second metric series observed a nearby peak of ~525.7 MB, so the acceptance process peak was briefer than the external sampling interval.
 
 This is a new hosted resource blocker, not the #301 roster-filter defect and not evidence against #298 FUMBLES_LOST, PI readiness semantics, or #294/#295/#296 lifecycle authority. Do not weaken the hard-memory gate or frozen model boundaries to continue the journey. Physical Safari remains HOLD.
+
+
+## 2026-09-29 — Hosted hard-memory blocker: root-cause isolation required
+The current hosted blocker after #301 is the hard-memory gate at `hodor_switch`: acceptance-process lifetime peak RSS reached `559,685,632` bytes against hard limit `536,870,900`, while RSS at the gate had fallen to `461,594,624`; Render's coarser 30-second metric observed a nearby ~525.7 MB peak.
+
+Management directive:
+- do **not** raise/disable the memory limit, restart around the gate, or weaken the acceptance criterion simply to continue;
+- first determine which class owns the peak: hosted product/runtime state retention, a bounded transient allocation during league switch/reconciliation, Python allocator high-water behavior, or acceptance-harness/process accumulation;
+- instrument the exact clean FSFFL -> Hodor path with phase-bound RSS/peak measurements and object/state lifecycle evidence sufficient to show what remains live after each phase;
+- specifically verify whether old league/runtime generations, Forecast/Simulation/Value/Intrinsic artifacts, provider payloads/history, or acceptance-only structures remain retained after publication/switch;
+- repeat the critical switch enough to distinguish a one-time transient peak from monotonic accumulation/leak;
+- compare acceptance-process telemetry with Render service memory so a harness-local peak is not misclassified as a production-runtime defect, and vice versa;
+- prefer the smallest charter-correct fix at the owning layer; preserve #294/#295/#296, #298 FUMBLES_LOST authority, PI readiness semantics, and all frozen model boundaries.
+
+After the owning memory class is corrected and deterministic/resource regressions pass, redeploy and resume the same hosted journey from clean-first-run through FSFFL return, same-State, restart and restored-session. Physical Safari remains HOLD until terminal hosted PASS.
