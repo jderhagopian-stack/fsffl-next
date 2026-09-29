@@ -45,6 +45,10 @@ from fsffl.product.forecast_resilience import (
     make_resilient_forecast_loader,
 )
 from fsffl.product.runtime import LiveForecastEvidence
+from fsffl.providers.sleeper_weekly_stats import (
+    SleeperNflState,
+    SleeperWeeklyStatLine,
+)
 from fsffl.state.models import (
     League,
     LeagueMatchup,
@@ -432,7 +436,40 @@ def test_preseason_replay_emits_partial_instead_of_silently_dropping_fum_lost_pl
     assert result.model_version == PRESEASON_AUTHORITY_RUNTIME_VERSION
 
 
-def test_resilient_preseason_fallback_uses_current_fumbles_supplement_without_mutating_baseline() -> None:
+def test_resilient_preseason_fallback_uses_current_fumbles_supplement_without_mutating_baseline(
+    monkeypatch,
+) -> None:
+    class FrozenWeekTwoSleeperSource:
+        def fetch_nfl_state(self):
+            return SleeperNflState(
+                season=2026,
+                week=3,
+                season_type="regular",
+                captured_at=NOW,
+            )
+
+        def fetch_week(self, *, season: int, week: int):
+            assert season == 2026
+            assert week in {1, 2}
+            return (
+                SleeperWeeklyStatLine(
+                    player_id="p1",
+                    season=season,
+                    week=week,
+                    stats={
+                        "pass_att": 30.0,
+                        "sack": 2.0,
+                        "rush_att": 4.0,
+                        "rec": 0.0,
+                    },
+                    captured_at=NOW,
+                ),
+            )
+
+    monkeypatch.setattr(
+        "fsffl.forecast.fumbles_lost_first_party.SleeperWeeklyStatsSource",
+        FrozenWeekTwoSleeperSource,
+    )
     state = _state_scoring_fumbles_lost()
     baseline = baseline_from_runtime(state, _raw_qb_runtime(), source_artifact_id="94")
     record = preseason_forecast_baseline_artifact(

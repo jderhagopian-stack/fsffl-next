@@ -1428,29 +1428,61 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     or not published.forecast_evidence.uncertainty_ready
                 )
             ):
-                # Upgrade/bootstrap guard: establish an exact published manifest
-                # before newer same-State working artifacts enter the reusable cache.
-                # This prevents a crash from making "latest" unpublished artifacts
-                # restart-authoritative on the first refresh after deployment.
+                # Upgrade/bootstrap guard: establish exact restart authority before
+                # newer same-State working artifacts enter the reusable cache.
+                #
+                # Critical invariant: checkpointing a working generation must never
+                # mutate the in-memory published league/team/generation identity that
+                # seeded its atomic publication guard. A managed-team switch
+                # intentionally clears publication_generation_id until team-specific
+                # presentation is rebuilt. Rebinding a bootstrap generation here
+                # would make this same reconciliation invalidate itself at final swap.
+                durable_generation_id, durable_team_id = (
+                    restore_published_generation_identity(
+                        self._persistence,
+                        user_id=user_id,
+                        league_state=published.league_state,
+                    )
+                )
+                team_specific_generation_valid = bool(
+                    durable_generation_id
+                    and durable_team_id == published.selected_team_id
+                )
+                team_specific_generation_stale = bool(
+                    published.publication_generation_id is None
+                    and durable_generation_id
+                    and durable_team_id != published.selected_team_id
+                )
                 generation_id = (
                     published.publication_generation_id
-                    or f"bootstrap:{published.league_state.state_id}"
+                    or (
+                        durable_generation_id
+                        if team_specific_generation_valid
+                        else f"bootstrap:{published.league_state.state_id}"
+                    )
                 )
-                persist_runtime_snapshot(
-                    self._persistence,
-                    user_id=user_id,
-                    league_state=published.league_state,
-                    selected_team_id=published.selected_team_id,
-                    forecast_evidence=published.forecast_evidence,
-                    simulation_analytics=published.simulation_analytics,
-                    value_evidence=published.value_evidence,
-                    publish_context=True,
-                    publication_generation_id=generation_id,
-                )
-                if published.publication_generation_id is None:
-                    super().bind_publication_generation_id(
+                if not team_specific_generation_stale:
+                    persist_runtime_snapshot(
+                        self._persistence,
+                        user_id=user_id,
+                        league_state=published.league_state,
+                        selected_team_id=published.selected_team_id,
+                        forecast_evidence=published.forecast_evidence,
+                        simulation_analytics=published.simulation_analytics,
+                        value_evidence=published.value_evidence,
+                        publish_context=True,
+                        publication_generation_id=generation_id,
+                    )
+                else:
+                    _logger.info(
+                        "FSFFL working checkpoint preserves prior team publication "
+                        "user=%s state=%s selected_team=%s durable_team=%s "
+                        "durable_generation=%s",
                         user_id,
-                        generation_id,
+                        published.league_state.state_id,
+                        published.selected_team_id,
+                        durable_team_id,
+                        durable_generation_id,
                     )
             persist_runtime_snapshot(
                 self._persistence,
