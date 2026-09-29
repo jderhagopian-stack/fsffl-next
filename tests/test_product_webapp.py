@@ -808,6 +808,7 @@ def test_capability_readiness_does_not_globalize_non_material_partial_subject() 
     partial = SimpleNamespace(player_id="free-agent-partial")
     runtime_result = SimpleNamespace(
         partial_fantasy_point_forecasts=(partial,),
+        fumbles_lost_non_material_partial_player_ids=("free-agent-partial",),
         simulation_material_partial_player_ids=(),
         simulation_authority_blockers=(),
     )
@@ -828,11 +829,16 @@ def test_capability_readiness_does_not_globalize_non_material_partial_subject() 
 
     readiness = _runtime_capability_readiness(runtime)
 
-    assert readiness["forecast"]["status"] == "full"
+    assert readiness["forecast"]["status"] == "non_material_partial"
     assert readiness["forecast"]["partial_scored_count"] == 1
     assert readiness["forecast"]["material_partial_player_ids"] == []
     assert readiness["forecast"]["non_material_partial_scored_count"] == 1
-    assert "non-material subject" in readiness["forecast"]["reason"]
+    assert readiness["forecast"]["non_material_partial_player_ids"] == [
+        "free-agent-partial"
+    ]
+    assert readiness["forecast"]["scoring_coverage_full"] is False
+    assert readiness["forecast"]["consumer_usable"] is True
+    assert "NON_MATERIAL_PARTIAL" in readiness["forecast"]["reason"]
     assert readiness["simulation"]["status"] == "full"
     assert readiness["overall_status"] == "full"
 
