@@ -782,14 +782,20 @@ def _acceptance_history_probe(label: str, context) -> dict[str, object]:
     years: list[int] = []
 
     if cold_state_only:
+        canonical_player_ids = {item.player_id for item in state.players}
+        canonical_roster_ids = [
+            item for item in roster_ids if item in canonical_player_ids
+        ]
         preferred = "sleeper:player:4881"
         player_id = (
             preferred
-            if preferred in roster_ids
-            else (roster_ids[0] if roster_ids else None)
+            if preferred in canonical_roster_ids
+            else (canonical_roster_ids[0] if canonical_roster_ids else None)
         )
         if player_id is None:
-            raise RuntimeError(f"{label}: no canonical roster player is available")
+            raise RuntimeError(
+                f"{label}: no rostered player is present in canonical player State"
+            )
     else:
         intrinsic = _reconcile_hosted_intrinsic(context)
         intrinsic_record = _shapley_intrinsic_coordinator.current(context)
