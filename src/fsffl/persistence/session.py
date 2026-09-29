@@ -277,6 +277,60 @@ def persist_league_last_good_identity(
     )
 
 
+def persist_runtime_identity(
+    store: PersistenceStore,
+    *,
+    user_id: str,
+    league_state: LeagueState,
+    selected_team_id: str | None,
+) -> None:
+    """Advance only the durable current-State / managed-team pointer.
+
+    This is intentionally lighter than persist_runtime_snapshot. Callers use it only
+    after canonical State durability is ordered ahead on the same per-user checkpoint
+    queue. A managed-team change must not republish Forecast / Simulation / Value
+    artifacts or manufacture a new team-specific publication generation before
+    reconciliation coherently promotes one.
+    """
+
+    provider, external_id = _provider_external_id(league_state)
+    durable_state = store.get_league_snapshot(
+        provider=provider,
+        league_id=league_state.league.league_id,
+        season=league_state.league.season,
+    )
+    state_is_durable = bool(
+        durable_state is not None
+        and durable_state.state_hash == league_state.state_id
+    )
+    if not state_is_durable:
+        fallback = restore_last_good_state_identity(
+            store,
+            user_id=user_id,
+            league_id=league_state.league.league_id,
+        )
+        state_is_durable = bool(
+            fallback is not None
+            and fallback[0].state_id == league_state.state_id
+        )
+    if not state_is_durable:
+        raise RuntimeError(
+            "managed-team pointer cannot advance before exact State durability"
+        )
+
+    store.put_user_runtime_context(
+        UserRuntimeContextRecord(
+            user_id=user_id,
+            provider=provider,
+            league_external_id=external_id,
+            league_id=league_state.league.league_id,
+            season=league_state.league.season,
+            selected_team_id=selected_team_id,
+            state_hash=league_state.state_id,
+            updated_at=utc_now(),
+        )
+    )
+
 def persist_runtime_snapshot(
     store: PersistenceStore,
     *,
@@ -966,7 +1020,10 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         )
         if fallback is None or fallback[0].state_id != context.state_hash:
             return None
-        league_state, selected = fallback
+        league_state = fallback[0]
+        # The user runtime row is the current managed-team authority. Last-good is
+        # only a State payload fallback when the shared league snapshot has advanced;
+        # its older team identity must not overwrite a newer lightweight team pointer.
         restored_from_last_good = True
 
     forecast, simulation, values, publication_generation_id = (
@@ -979,6 +1036,23 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
 
     if selected not in {team.team_id for team in league_state.teams}:
         selected = None
+
+    # Forecast/Simulation/Value are league-wide exact-State authority, but the
+    # publication generation is team-specific. A lightweight managed-team pointer
+    # may legitimately be newer than the last presentation manifest.
+    manifest_generation_id, manifest_team_id = restore_published_generation_identity(
+        store,
+        user_id=user_id,
+        league_state=league_state,
+    )
+    if (
+        publication_generation_id is not None
+        and (
+            manifest_generation_id != publication_generation_id
+            or manifest_team_id != selected
+        )
+    ):
+        publication_generation_id = None
 
     served_state = None
     served_publication_generation_id = None

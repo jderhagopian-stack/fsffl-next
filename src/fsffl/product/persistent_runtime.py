@@ -12,6 +12,7 @@ from fsffl.persistence.session import (
     migrate_legacy_last_good_identity,
     persist_league_last_good_identity,
     persist_forecast_replay_decision,
+    persist_runtime_identity,
     persist_runtime_snapshot,
     restore_forecast_replay_decision,
     restore_last_good_state_identity,
@@ -72,6 +73,10 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         )
         self._checkpoint_futures: dict[str, Future[bool]] = {}
         self._checkpoint_state_ids: dict[str, str] = {}
+        self._checkpoint_kinds: dict[str, str] = {}
+        self._managed_team_checkpoint_futures: dict[
+            str, tuple[str, str, Future[bool]]
+        ] = {}
         self._last_good_guard_users: set[str] = set()
         self._forecast_replay_decisions: dict[str, dict[str, object]] = {}
 
@@ -274,6 +279,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self.lifecycle_operation(user_id):
             previous = self._checkpoint_futures.get(user_id)
             previous_state_id = self._checkpoint_state_ids.get(user_id)
+            previous_kind = self._checkpoint_kinds.get(user_id)
             # Publish the replacement future as the user's durability barrier before
             # canceling a superseded queued future. Future.cancel() runs callbacks
             # synchronously; canceling first can make that obsolete future look like
@@ -287,6 +293,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
             self._checkpoint_futures[user_id] = future
             self._checkpoint_state_ids[user_id] = state_id
+            self._checkpoint_kinds[user_id] = "snapshot"
             future.add_done_callback(
                 lambda completed, uid=user_id: self._retire_checkpoint_executor(
                     uid,
@@ -296,6 +303,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
 
             if (
                 previous is not None
+                and previous_kind != "managed_team_identity"
                 and previous_state_id == state_id
                 and not previous.done()
                 and previous.cancel()
@@ -307,6 +315,167 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 )
         return future
 
+    def _persist_managed_team_identity(
+        self,
+        user_id: str,
+        context: UserRuntimeContext,
+        expected_generation: int,
+    ) -> bool:
+        if context.league_state is None:
+            return False
+        if self._persistence is None:
+            return True
+        started = monotonic()
+        try:
+            # Serialize the tiny pointer upsert with same-user lifecycle identity.
+            # Reads remain memory-only and cross-user work remains independent. The
+            # generation check prevents an older queued team write from regressing a
+            # newer State/team publication after heavy checkpoint activity.
+            with self.lifecycle_operation(user_id):
+                current = super().get(user_id)
+                if (
+                    self.league_generation(user_id) != expected_generation
+                    or current.league_state is None
+                    or current.league_state.state_id != context.league_state.state_id
+                    or current.selected_team_id != context.selected_team_id
+                ):
+                    _logger.info(
+                        "FSFFL managed-team checkpoint skipped stale identity user=%s expected_generation=%s current_generation=%s",
+                        user_id,
+                        expected_generation,
+                        self.league_generation(user_id),
+                    )
+                    return False
+                persist_runtime_identity(
+                    self._persistence,
+                    user_id=user_id,
+                    league_state=context.league_state,
+                    selected_team_id=context.selected_team_id,
+                )
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL managed-team checkpoint failed user=%s team=%s error=%s",
+                user_id,
+                context.selected_team_id,
+                exc,
+            )
+            return False
+        _logger.info(
+            "FSFFL managed-team checkpoint completed user=%s league=%s state=%s team=%s elapsed=%.3fs",
+            user_id,
+            context.league_state.league.league_id,
+            context.league_state.state_id,
+            context.selected_team_id,
+            max(0.0, monotonic() - started),
+        )
+        return True
+
+    def _checkpoint_managed_team_async(
+        self,
+        user_id: str,
+        context: UserRuntimeContext,
+    ) -> Future[bool] | None:
+        if context.league_state is None or context.selected_team_id is None:
+            return None
+        if self._persistence is None:
+            return None
+        state_id = context.league_state.state_id
+        team_id = context.selected_team_id
+        with self.lifecycle_operation(user_id):
+            expected_generation = self.league_generation(user_id)
+            previous = self._checkpoint_futures.get(user_id)
+            previous_state_id = self._checkpoint_state_ids.get(user_id)
+            previous_kind = self._checkpoint_kinds.get(user_id)
+
+            # Identity-only work shares the same per-user executor as State/artifact
+            # checkpoints. It therefore cannot overtake an older canonical-State
+            # write, but it also does not replay large model artifacts merely to
+            # persist a managed-team choice.
+            future = self._checkpoint_executor_for(user_id).submit(
+                self._persist_managed_team_identity,
+                user_id,
+                context,
+                expected_generation,
+            )
+            self._checkpoint_futures[user_id] = future
+            self._checkpoint_state_ids[user_id] = state_id
+            self._checkpoint_kinds[user_id] = "managed_team_identity"
+            self._managed_team_checkpoint_futures[user_id] = (
+                state_id,
+                team_id,
+                future,
+            )
+            future.add_done_callback(
+                lambda completed, uid=user_id: self._retire_checkpoint_executor(
+                    uid,
+                    completed,
+                )
+            )
+
+            # Rapid A -> B team choices may coalesce, but never cancel the older
+            # State/artifact checkpoint that makes the referenced State restorable.
+            if (
+                previous is not None
+                and previous_kind == "managed_team_identity"
+                and previous_state_id == state_id
+                and not previous.done()
+                and previous.cancel()
+            ):
+                _logger.info(
+                    "FSFFL managed-team checkpoint coalesced user=%s state=%s team=%s",
+                    user_id,
+                    state_id,
+                    team_id,
+                )
+        return future
+
+    def wait_for_managed_team_checkpoint(
+        self,
+        user_id: str,
+        *,
+        team_id: str,
+        state_id: str | None = None,
+        timeout: float = 30.0,
+    ) -> bool:
+        """Wait for and verify the exact managed-team durability barrier."""
+
+        if self._persistence is None:
+            return True
+        with self.lifecycle_operation(user_id):
+            target = self._managed_team_checkpoint_futures.get(user_id)
+        if target is None:
+            return False
+        target_state_id, target_team_id, future = target
+        if target_team_id != team_id or (
+            state_id is not None and target_state_id != state_id
+        ):
+            return False
+        try:
+            if not bool(future.result(timeout=timeout)):
+                return False
+        except FutureTimeoutError:
+            _logger.warning(
+                "FSFFL managed-team checkpoint timed out user=%s state=%s team=%s",
+                user_id,
+                target_state_id,
+                target_team_id,
+            )
+            return False
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL managed-team checkpoint wait failed user=%s team=%s error=%s",
+                user_id,
+                target_team_id,
+                exc,
+            )
+            return False
+
+        durable = self._persistence.get_user_runtime_context(user_id=user_id)
+        return bool(
+            durable is not None
+            and durable.state_hash == target_state_id
+            and durable.selected_team_id == target_team_id
+        )
     def wait_for_checkpoint(self, user_id: str, *, timeout: float = 30.0) -> bool:
         """Wait for the latest serialized checkpoint without moving persistence onto the request path."""
 
@@ -1391,5 +1560,5 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
     def select_team(self, user_id: str, team_id: str):
         with self.lifecycle_operation(user_id):
             context = super().select_team(user_id, team_id)
-            self._checkpoint_async(user_id, context)
+            self._checkpoint_managed_team_async(user_id, context)
             return context
