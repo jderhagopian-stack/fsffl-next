@@ -686,7 +686,7 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
 
     surface_requests = (
         (
-            ("home", "/api/home", {}),
+            ("context", "/api/product-context", {}),
             ("league", "/api/league/atlas", {}),
         )
         if state_only
