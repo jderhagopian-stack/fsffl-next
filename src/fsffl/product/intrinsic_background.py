@@ -27,6 +27,10 @@ DEFAULT_INTRINSIC_HARD_WATCHDOG_SECONDS = 600.0
 _logger = logging.getLogger("fsffl.product.performance")
 
 
+class IntrinsicBuildSuperseded(RuntimeError):
+    """An older State's Intrinsic waiter lost lifecycle ownership."""
+
+
 class IntrinsicBuildStatus(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
@@ -98,6 +102,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], IntrinsicBuildRecord] = {}
         self._futures: dict[tuple[str, str, str], Future[None]] = {}
+        self._user_epochs: dict[str, int] = {}
         self._executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="fsffl-intrinsic",
@@ -195,10 +200,20 @@ class ShapleyIntrinsicBackgroundCoordinator:
         return record
 
 
-    def request(self, context: UserRuntimeContext) -> IntrinsicBuildRecord:
+    def request(
+        self,
+        context: UserRuntimeContext,
+        *,
+        expected_epoch: int | None = None,
+    ) -> IntrinsicBuildRecord:
         key = self._key(context)
         now = datetime.now(UTC)
         with self._lock:
+            current_epoch = self._user_epochs.get(context.user_id, 0)
+            if expected_epoch is not None and current_epoch != expected_epoch:
+                raise IntrinsicBuildSuperseded(
+                    "Intrinsic lifecycle was superseded by a State transition"
+                )
             existing = self._records.get(key)
             if existing is not None:
                 if (
@@ -385,9 +400,10 @@ class ShapleyIntrinsicBackgroundCoordinator:
             self._futures.pop(key, None)
 
     def clear_user(self, user_id: str) -> int:
-        """Drop user-scoped lifecycle records; durable Intrinsic remains authority."""
+        """Invalidate old waiters and drop user-scoped process lifecycle records."""
 
         with self._lock:
+            self._user_epochs[user_id] = self._user_epochs.get(user_id, 0) + 1
             keys = [key for key in self._records if key[0] == user_id]
             for key in keys:
                 self._records.pop(key, None)
@@ -416,7 +432,9 @@ class ShapleyIntrinsicBackgroundCoordinator:
             else max(0.1, float(timeout_seconds))
         )
         deadline = monotonic() + timeout
-        record = self.request(context)
+        with self._lock:
+            expected_epoch = self._user_epochs.get(context.user_id, 0)
+        record = self.request(context, expected_epoch=expected_epoch)
         while record.status in {
             IntrinsicBuildStatus.QUEUED,
             IntrinsicBuildStatus.RUNNING,
@@ -424,8 +442,9 @@ class ShapleyIntrinsicBackgroundCoordinator:
             if monotonic() >= deadline:
                 return record
             sleep(max(0.01, poll_seconds))
-            # request() also applies the hard-watchdog policy to active work.
-            record = self.request(context)
+            # request() applies both hard-watchdog policy and lifecycle epoch
+            # validation, so a cleared older waiter cannot recreate its work.
+            record = self.request(context, expected_epoch=expected_epoch)
         return record
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:
