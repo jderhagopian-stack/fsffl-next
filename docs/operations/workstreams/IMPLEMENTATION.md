@@ -1576,3 +1576,11 @@ Key starting evidence:
 - Physical clean-reset test: connect accepted at ~22:45:29Z; product-context read ~51.6s; State persisted ~22:47:52Z; no explicit team choice, but browser-local team restoration issued select-team calls; fresh Forecast acquisition then failed/stopped without a coherent new publication or clear terminal user-facing failure.
 
 Do not patch these as unrelated symptoms. Restore the complete first-load journey while preserving atomic publication, per-user lifecycle serialization, switch safety and final-generation durability. Required pre-merge proof: true clean first-run with empty server + browser state, restored session, league switch, restart, focused regressions, full CI, first-load/session/switch red-team. Deploy exact SHA and run controlled hosted clean-first-run before returning for physical iPhone/Safari.
+
+
+## 2026-09-29 — #292 deployed; continue from Hodor acceptance failure
+Exact merge SHA `8c162c5a7bf6120ecc72566e72dd11f634a93ee9` is live. The targeted primary-FSFFL path is behaving materially better in hosted acceptance: coherent initial publication, ~0.405s PI overlap, last-good continuity during rebuild, coherent changed-State promotion, and peak RSS ~386.9 MB.
+
+Acceptance then failed at Hodor switch with `LiveForecastSourceHealthFailure`: only Razzball healthy; CBS invalid full-season response, FFToday 403, NFL Fantasy missing projection content.
+
+Do not stop at this provider failure and do not weaken source-health rules. Determine why Hodor entered fresh acquisition rather than replaying compatible persisted raw Forecast evidence if such evidence exists. If replay should have been available, fix the narrow replay/restore handoff and rerun the remaining clean-first-run/restored-session/switch/restart acceptance. If fresh acquisition was legitimately required, return to Management with exact compatibility evidence showing why and what non-authority-breaking acceptance path remains. No model-semantic expansion.
