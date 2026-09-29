@@ -1449,7 +1449,8 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     and durable_team_id == published.selected_team_id
                 )
                 team_specific_generation_stale = bool(
-                    durable_generation_id
+                    published.publication_generation_id is None
+                    and durable_generation_id
                     and durable_team_id != published.selected_team_id
                 )
                 generation_id = (
