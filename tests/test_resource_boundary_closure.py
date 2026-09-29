@@ -23,7 +23,11 @@ from fsffl.product.resource_coordinator import (
     ResourceTransition,
     StateResourceBoundary,
 )
-from fsffl.product.runtime import PrivateBetaRuntimeStore, UserRuntimeContext
+from fsffl.product.runtime import (
+    PrivateBetaRuntimeStore,
+    UserRuntimeContext,
+    league_material_fingerprint,
+)
 from fsffl.product.webapp import create_app
 from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
@@ -362,6 +366,59 @@ def test_material_same_league_refresh_runs_boundary_before_new_behavioral_work(
     assert events[0] == ("boundary", "background_material_refresh")
     assert events[1][0] == "behavior"
     assert store.get("local-beta-user").league_state.state_id == state_a2.state_id
+
+
+def test_timestamp_only_same_league_refresh_restarts_behavior_after_boundary(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state_a = _state("a", minute=0)
+    state_a_timestamp_only = _state("a", minute=1)
+    assert state_a.state_id != state_a_timestamp_only.state_id
+    assert (
+        league_material_fingerprint(state_a)
+        == league_material_fingerprint(state_a_timestamp_only)
+    )
+
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", state_a)
+    events: list[tuple[str, str]] = []
+
+    def boundary(transition: ResourceTransition):
+        events.append(("boundary", str(transition.next_state_id)))
+        return {"status": "released"}
+
+    behavior = SimpleNamespace(
+        start=lambda **kwargs: events.append(
+            ("behavior", kwargs["league_state"].state_id)
+        )
+    )
+    app = create_app(
+        runtime_store=store,
+        state_loader=lambda _external_id: state_a_timestamp_only,
+        behavioral_coordinator=behavior,
+        state_resource_boundary=boundary,
+    )
+    coordinator = install_hosted_connect_routes(
+        app,
+        runtime_store=store,
+        state_loader=lambda _external_id: state_a_timestamp_only,
+        behavioral_coordinator=behavior,
+        intelligence_reconciler=None,
+        state_activator=app.state.activate_state_with_resource_boundary,
+    )
+    response = TestClient(app).post(
+        "/api/connect/sleeper/background/refresh",
+        json={"league_external_id": "a"},
+    )
+    assert response.status_code == 200
+    _wait_connect(coordinator)
+
+    assert events == [
+        ("boundary", state_a_timestamp_only.state_id),
+        ("behavior", state_a_timestamp_only.state_id),
+    ]
+    assert store.get("local-beta-user").league_state.state_id == state_a_timestamp_only.state_id
 
 
 def test_hosted_composition_registers_complete_user_execution_boundary() -> None:
