@@ -123,6 +123,7 @@ class LiveForecastRuntimeResult(FrozenModel):
     fumbles_lost_materiality_assessments: tuple[FumblesLostMaterialityAssessment, ...] = ()
     fumbles_lost_non_material_partial_player_ids: tuple[str, ...] = ()
     fumbles_lost_material_partial_player_ids: tuple[str, ...] = ()
+    fumbles_lost_simulation_relevant_player_ids: tuple[str, ...] = ()
     simulation_material_partial_player_ids: tuple[str, ...] = ()
     first_party_fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = Field(
         default=None,
@@ -178,6 +179,7 @@ def _materiality_aware_scoring(
     tuple[ForecastObservation, ...],
     tuple[ForecastObservation, ...],
     tuple[FumblesLostMaterialityAssessment, ...],
+    tuple[str, ...],
     tuple[str, ...],
     tuple[str, ...],
     tuple[str, ...],
@@ -248,6 +250,16 @@ def _materiality_aware_scoring(
         for entry in team_state.roster
         if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
     }
+    fumbles_lost_simulation_relevant_player_ids = tuple(
+        sorted(
+            {
+                item.player_id
+                for item in scoring.partial_forecasts
+                if item.player_id in active_simulation_player_ids
+                and "fum_lost" in item.omitted_rule_stats
+            }
+        )
+    )
     simulation_material_partial_player_ids = tuple(
         sorted(
             {
@@ -306,6 +318,7 @@ def _materiality_aware_scoring(
         tuple(assessments),
         non_material_player_ids,
         material_player_ids,
+        fumbles_lost_simulation_relevant_player_ids,
         simulation_material_partial_player_ids,
         simulation_blockers,
     )
@@ -367,6 +380,7 @@ def replay_governed_raw_ensemble_for_state(
         fumbles_lost_materiality_assessments,
         fumbles_lost_non_material_partial_player_ids,
         fumbles_lost_material_partial_player_ids,
+        fumbles_lost_simulation_relevant_player_ids,
         simulation_material_partial_player_ids,
         simulation_blockers,
     ) = _materiality_aware_scoring(
@@ -437,6 +451,9 @@ def replay_governed_raw_ensemble_for_state(
             fumbles_lost_non_material_partial_player_ids
         ),
         fumbles_lost_material_partial_player_ids=fumbles_lost_material_partial_player_ids,
+        fumbles_lost_simulation_relevant_player_ids=(
+            fumbles_lost_simulation_relevant_player_ids
+        ),
         simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )
@@ -866,6 +883,7 @@ def build_current_live_forecasts(
         fumbles_lost_materiality_assessments,
         fumbles_lost_non_material_partial_player_ids,
         fumbles_lost_material_partial_player_ids,
+        fumbles_lost_simulation_relevant_player_ids,
         simulation_material_partial_player_ids,
         simulation_blockers,
     ) = _materiality_aware_scoring(
@@ -939,6 +957,9 @@ def build_current_live_forecasts(
             fumbles_lost_non_material_partial_player_ids
         ),
         fumbles_lost_material_partial_player_ids=fumbles_lost_material_partial_player_ids,
+        fumbles_lost_simulation_relevant_player_ids=(
+            fumbles_lost_simulation_relevant_player_ids
+        ),
         simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )
