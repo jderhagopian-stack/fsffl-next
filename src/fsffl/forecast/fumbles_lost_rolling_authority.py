@@ -450,40 +450,47 @@ def validate_annual_rollover_candidate(
         if not isinstance(row, Mapping):
             raise ValueError("annual FUMBLES_LOST rolling adequacy proof is incomplete")
         try:
-            rolling_rmse = float(row["rolling_rmse"])
-            zero_rmse = float(row["zero_rmse"])
-            bias = float(row["bias"])
-            zero_gap = float(row["zero_gap"])
+            pooled_rolling_rmse = float(row["pooled_rolling_rmse"])
+            pooled_zero_rmse = float(row["pooled_zero_rmse"])
+            heldout_season_rmse = float(row["heldout_season_rmse"])
+            heldout_season_zero_rmse = float(row["heldout_season_zero_rmse"])
+            pooled_bias = float(row["pooled_bias"])
+            pooled_zero_gap = float(row["pooled_zero_gap"])
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(
                 "annual FUMBLES_LOST rolling adequacy proof is incomplete"
             ) from exc
+        nonnegative_metrics = (
+            pooled_rolling_rmse,
+            pooled_zero_rmse,
+            heldout_season_rmse,
+            heldout_season_zero_rmse,
+        )
         if (
-            not math.isfinite(rolling_rmse)
-            or rolling_rmse < 0
-            or not math.isfinite(zero_rmse)
-            or zero_rmse < 0
-            or not math.isfinite(bias)
-            or not math.isfinite(zero_gap)
+            any(not math.isfinite(value) or value < 0 for value in nonnegative_metrics)
+            or not math.isfinite(pooled_bias)
+            or not math.isfinite(pooled_zero_gap)
         ):
             raise ValueError("annual FUMBLES_LOST rolling adequacy proof is invalid")
 
-        # With exactly one newly completed held-out season, its cutoff cohort is
-        # both the annual pooled cohort and the per-season cohort. Preserve both
-        # frozen gates explicitly so future aggregation cannot silently weaken them.
-        if rolling_rmse > zero_rmse:
+        # Preserve the frozen Research gates exactly:
+        # - pooled rolling RMSE <= pooled omission RMSE;
+        # - the newly completed held-out season remains within the 1.10 stability rule;
+        # - pooled absolute bias <= 0.15;
+        # - pooled zero-calibration gap <= 0.05.
+        if pooled_rolling_rmse > pooled_zero_rmse:
             raise ValueError(
                 "annual FUMBLES_LOST rolling adequacy fails RMSE-vs-omission gate"
             )
-        if rolling_rmse > 1.10 * zero_rmse:
+        if heldout_season_rmse > 1.10 * heldout_season_zero_rmse:
             raise ValueError(
                 "annual FUMBLES_LOST rolling adequacy fails held-out stability gate"
             )
-        if abs(bias) > 0.15:
+        if abs(pooled_bias) > 0.15:
             raise ValueError(
                 "annual FUMBLES_LOST rolling adequacy fails absolute-bias gate"
             )
-        if abs(zero_gap) > 0.05:
+        if abs(pooled_zero_gap) > 0.05:
             raise ValueError(
                 "annual FUMBLES_LOST rolling adequacy fails zero-calibration gate"
             )
