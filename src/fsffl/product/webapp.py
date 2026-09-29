@@ -201,7 +201,7 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         forecast_reason = (
             "Forecast scoring coverage remains partial for non-consumed subjects. "
             "The current downstream consumer is not blocked, but coverage is not FULL "
-            "and no NON_MATERIAL_PARTIAL label is applied to failing subjects."
+            "and no specialized omission authority is inferred for those subjects."
         )
     else:
         forecast_status = "full"
