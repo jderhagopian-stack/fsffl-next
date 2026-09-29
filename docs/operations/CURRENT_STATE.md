@@ -1173,3 +1173,18 @@ Management disposition:
 - runtime stabilization remains unclosed because hosted end-to-end acceptance still cannot reach restart/restored-session;
 - the active blocker is now a Forecast/current-season authority issue: determine the governed way to advance the first-party FUMBLES_LOST supplemental coordinate beyond its frozen Week-2 contract without weakening partial-authority rules or fabricating coverage;
 - physical Safari remains HOLD.
+
+
+## 2026-09-29 — Management authorizes bounded rolling FUMBLES_LOST corrective
+Management accepts that the Week-2-only freeze is disproportionate for a sparse, low-impact scoring coordinate and is now the active blocker preventing hosted runtime acceptance from reaching restart/restored-session.
+
+New controlling directive:
+`docs/operations/directives/20260929_FUMBLES_LOST_ROLLING_AUTHORITY.md`.
+
+Research is reopened **only for this bounded question**:
+- validate whether the accepted first-party opportunity-rate model can roll forward with canonical completed-week current opportunity evidence;
+- preserve exact lost-fumble semantics and non-zero uncertainty;
+- no broad Forecast model-family search or named-player tuning;
+- determine a generalizable downstream materiality rule so unavailable FUMBLES_LOST can remain explicit partial authority without automatically blocking all Simulation/Intrinsic when its plausible scoring impact is immaterial.
+
+Runtime architecture #294/#295/#296 remains frozen. After Research returns a supported contract, Implementation may apply it and immediately resume full hosted lifecycle acceptance.
