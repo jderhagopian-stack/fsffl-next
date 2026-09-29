@@ -71,7 +71,12 @@ from .vnext_future_forecast_provider import (
 from .progressive_delivery_routes import install_progressive_delivery_routes
 from .provisional_k_dst_routes import install_provisional_k_dst_routes
 from .quick_frontier_routes import install_quick_frontier_routes
-from .resource_coordinator import HeavyWorkCoordinator, release_unused_process_memory
+from .resource_coordinator import (
+    HeavyWorkCoordinator,
+    ResourceTransition,
+    StateResourceBoundary,
+    release_unused_process_memory,
+)
 from .runtime import default_sleeper_state_loader
 from .scenario_cache import configure_scenario_cache_persistence
 from .shapley_intrinsic_routes import install_shapley_intrinsic_routes
@@ -384,32 +389,83 @@ _cached_opportunity_workspace = make_cached_opportunity_workspace(
 )
 _webapp.build_opportunity_workspace = _cached_opportunity_workspace
 
-def _clear_hosted_execution_caches() -> dict[str, int]:
+def _clear_hosted_execution_caches(
+    transition: ResourceTransition,
+) -> dict[str, int]:
     cleared: dict[str, int] = {}
     for name, wrapper in (
         ("market_economics", _cached_candidate_economics),
         ("opportunity_search", _cached_opportunity_search),
         ("opportunity_workspace", _cached_opportunity_workspace),
     ):
-        clear = getattr(wrapper, "clear_cache", None)
+        clear = getattr(wrapper, "clear_user_cache", None)
         if callable(clear):
-            cleared[name] = int(clear())
+            cleared[name] = int(clear(transition.user_id))
     return cleared
+
+
+def _clear_market_enrichment(transition: ResourceTransition) -> int:
+    return _market_decision_enrichment.clear_user(transition.user_id)
+
+
+def _clear_behavioral_execution(transition: ResourceTransition) -> int:
+    return _behavioral_coordinator.clear_user(transition.user_id)
+
+
+def _clear_intrinsic_execution(transition: ResourceTransition) -> dict[str, int]:
+    return {
+        "coordinator": _shapley_intrinsic_coordinator.clear_user(
+            transition.user_id
+        ),
+        "loader_cache": _shapley_intrinsic_loader.clear_user_cache(
+            transition.user_id
+        ),
+    }
+
+
+def _clear_player_future_execution(transition: ResourceTransition) -> int:
+    return _player_future_forecast_cache.clear_user_cache(transition.user_id)
+
+
+def _clear_player_history_execution(transition: ResourceTransition) -> int:
+    history = getattr(globals().get("app"), "state", None)
+    coordinator = (
+        getattr(history, "player_history_coordinator", None)
+        if history is not None
+        else None
+    )
+    clear = getattr(coordinator, "clear_user", None)
+    return int(clear(transition.user_id)) if callable(clear) else 0
+
+
+def _clear_presentation_validation_hints(transition: ResourceTransition) -> int:
+    return _presentation_continuity.clear_user_validation_hints(
+        transition.user_id
+    )
+
+
+_state_resource_boundary = StateResourceBoundary(
+    clearers=(
+        ("market_wrappers", _clear_hosted_execution_caches),
+        ("market_enrichment", _clear_market_enrichment),
+        ("behavioral", _clear_behavioral_execution),
+        ("intrinsic", _clear_intrinsic_execution),
+        ("player_future", _clear_player_future_execution),
+        ("player_history", _clear_player_history_execution),
+        ("presentation_validation", _clear_presentation_validation_hints),
+    ),
+    max_events=16,
+)
+
+
+def _apply_runtime_resource_boundary(
+    transition: ResourceTransition,
+) -> dict[str, object]:
+    return _state_resource_boundary.apply(transition)
 
 
 def _reclaim_runtime_phase_memory(label: str) -> dict[str, object]:
     return release_unused_process_memory(label=label)
-
-
-def _reclaim_runtime_state_transition(label: str) -> dict[str, object]:
-    cleared = _clear_hosted_execution_caches()
-    result = release_unused_process_memory(label=label)
-    _logger.info(
-        "FSFFL state-transition cache reclamation label=%s cleared=%s",
-        label,
-        cleared,
-    )
-    return {**result, "cleared_execution_caches": cleared}
 
 
 def _presentation_payload_loader(user_id: str, context, surface: str):
@@ -431,7 +487,7 @@ app = _webapp.create_app(
     product_capability_reconciler=_reconcile_hosted_intrinsic,
     heavy_work_coordinator=_heavy_work_coordinator,
     presentation_payload_loader=_presentation_payload_loader,
-    state_transition_reclaimer=_reclaim_runtime_state_transition,
+    state_resource_boundary=_apply_runtime_resource_boundary,
     phase_memory_reclaimer=_reclaim_runtime_phase_memory,
 )
 
@@ -945,7 +1001,7 @@ def _maybe_start_state_first_production_acceptance() -> None:
                 history_probe=_acceptance_history_probe,
                 resource_reader=_runtime_acceptance_resource_reader,
                 process_identity_reader=_runtime_acceptance_process_identity,
-                state_transition_reclaimer=_reclaim_runtime_state_transition,
+                state_activator=app.state.activate_state_with_resource_boundary,
                 restore_only=acceptance_mode == "restore",
             )
             _runtime_availability_acceptance_state.clear()
@@ -1001,8 +1057,9 @@ def hosted_runtime_resources() -> dict[str, object]:
     snapshot = _heavy_work_coordinator.snapshot()
     return {
         "status": "ok",
-        "contract": "runtime-resource-telemetry-v1",
+        "contract": "runtime-resource-telemetry-v2:bounded-redacted-boundaries",
         **snapshot.__dict__,
+        "recent_resource_boundaries": _state_resource_boundary.snapshot(),
     }
 
 
@@ -1029,7 +1086,7 @@ install_hosted_connect_routes(
         league_external_id=league_id
     ),
     intelligence_reconciler=app.state.start_intelligence_reconciliation,
-    state_transition_reclaimer=_reclaim_runtime_state_transition,
+    state_activator=app.state.activate_state_with_resource_boundary,
     full_refresh_seconds=_full_refresh_seconds,
 )
 install_in_season_forecast_routes(
