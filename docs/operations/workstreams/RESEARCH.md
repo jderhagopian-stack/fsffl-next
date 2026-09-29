@@ -1716,3 +1716,18 @@ Canonical settled direction:
 - Team Utility/Market may later consume both under a separately governed competitive-window contract.
 
 Research is now **DONE / PARKED**. Do not run additional Forecast-family searches, horizon-weight studies, age/workload heuristics, or Long-Term Intrinsic consumer studies absent genuinely new evidence or explicit Management authorization. The existing frozen Research artifacts/handoffs are the implementation authority when Management reopens the work.
+
+
+## 2026-09-29 — REOPENED, bounded: rolling FUMBLES_LOST current-season authority
+Research is reopened only under `docs/operations/directives/20260929_FUMBLES_LOST_ROLLING_AUTHORITY.md`.
+
+Do not reopen the broader Forecast-family program.
+
+Task:
+- take the accepted first-party exact FUMBLES_LOST opportunity-rate model as the starting authority;
+- freeze and test a rolling completed-week formulation using all canonical current-season opportunity evidence available through each cutoff;
+- validate later cutoffs historically/PIT where feasible;
+- preserve no-leakage, no named-player tuning, exact lost-fumble semantics, and non-zero uncertainty;
+- determine the smallest defensible rolling contract for the rest of the 2026 season;
+- separately define a generalizable materiality/impact gate so a sparse unavailable FUMBLES_LOST coordinate does not automatically block whole-product Simulation/Intrinsic when its plausible scoring consequence is immaterial;
+- persist the implementation handoff and stop at DIRECTIVE COMPLETE — RESEARCH or a genuine MANAGEMENT GATE.
