@@ -996,7 +996,10 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         )
         if fallback is None or fallback[0].state_id != context.state_hash:
             return None
-        league_state, selected = fallback
+        league_state = fallback[0]
+        # The user runtime row is the current managed-team authority. Last-good is
+        # only a State payload fallback when the shared league snapshot has advanced;
+        # its older team identity must not overwrite a newer lightweight team pointer.
         restored_from_last_good = True
 
     forecast, simulation, values, publication_generation_id = (
