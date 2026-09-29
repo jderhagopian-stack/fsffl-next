@@ -182,7 +182,9 @@ class PlayerHistoryBackgroundCoordinator:
         error: str | None = None,
     ) -> None:
         with self._lock:
-            current = self._records[key]
+            current = self._records.get(key)
+            if current is None:
+                return
             self._records[key] = replace(
                 current,
                 status=status,
