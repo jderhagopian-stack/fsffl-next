@@ -1,0 +1,87 @@
+{
+  "annual_rollover": {
+    "calibration": "for each cutoff 2..17 rerun same global train-only ratio across pseudo-current seasons 2022..Y-1; no family search",
+    "freeze_required_before_point_authority": true,
+    "materiality": "carry prior fallback bound and take max with newly available all-pop position historical maximum at cutoff 0..17",
+    "mode": "deterministic annual refresh plus minimal governed freeze",
+    "on_gate_or_source_failure": "no automatic point authority; explicit omission + materiality gate where supported; otherwise fail closed",
+    "player_role_priors": "recompute cumulative prior player opportunity/game sufficient statistics through Y-1",
+    "position_rates": "recompute cumulative exact lost-fumble/opportunity and opportunity/game rates through Y-1",
+    "target_year_Y_inputs": "completed governed exact weekly seasons through Y-1 only",
+    "uncertainty": "carry prior frozen floor and take max with newly available chronology-preserving held-out residual RMSE by position/cutoff"
+  },
+  "fallback_bound": {
+    "formula": "max(position-wide historical maximum season-equivalent target from all completed prior seasons, previously frozen rolling primary-population bound when cutoff>=2)",
+    "identity_light": "eligible only when canonical offensive position is known and non-conflicting; uses tier-agnostic position bound",
+    "minimum_empirical_coverage_gate": 0.9,
+    "observed_tiers_eligible": [
+      "history_plus_current",
+      "history_only",
+      "current_only",
+      "cold_start"
+    ],
+    "passes": false,
+    "pooled_position_cutoff_tier_failures": [
+      {
+        "coverage": 0.8888888888888888,
+        "cutoff": 13,
+        "exceedances": 1,
+        "n": 9,
+        "passes_90": false,
+        "position": "QB",
+        "tier": "cold_start"
+      }
+    ],
+    "tier_conditioning": false,
+    "unknown_or_conflicting_position": "FAIL_CLOSED"
+  },
+  "guards": {
+    "broader_forecast_search": false,
+    "full_coverage_claim": false,
+    "future_leakage": false,
+    "named_player_tuning": false,
+    "silent_zero": false
+  },
+  "lineage": [
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 633,
+      "season": 2021,
+      "sha256": "41915fb49238902ad1f129ebf0405b11a1e710454ae0fe8f7b3e4f9145875f48"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 608,
+      "season": 2022,
+      "sha256": "ad426c3fe5bf1cc30c3f137fdfe96d054e19d400879ee4413129da49fa7b54be"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 577,
+      "season": 2023,
+      "sha256": "f19cb71a5de0dce7fd09376026237c9ee9d5a93fe13815a2ea3ec2d37204cb17"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 589,
+      "season": 2024,
+      "sha256": "3ddc45a84f759aa348ce465ae001752c530575455717657cdfe1f8abfcdb4759"
+    },
+    {
+      "exact_semantics": "sack_fumbles_lost+rushing_fumbles_lost+receiving_fumbles_lost",
+      "player_rows": 610,
+      "season": 2025,
+      "sha256": "e5e0615b3d96a3eaebfaee91e55afb4a4e7fe0caf057454177bcd7d6ad4bcfc2"
+    }
+  ],
+  "rolling_model_reopened": false,
+  "season_start": {
+    "early_population_failures": [],
+    "passes": true,
+    "week0": "no first-party point estimate; explicit omission; NON_MATERIAL_PARTIAL only if frozen bound test passes",
+    "week1": "no first-party point estimate; explicit omission; NON_MATERIAL_PARTIAL only if frozen bound test passes",
+    "week2_transition": "enter already-supported Week-2 rolling model; if unavailable, use corrected fallback gate"
+  },
+  "study": "FUMBLES_LOST materiality population + season-start lifecycle",
+  "week2_to_17_table_changed": false
+}
