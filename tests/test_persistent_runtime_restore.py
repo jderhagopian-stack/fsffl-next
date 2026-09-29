@@ -2018,17 +2018,24 @@ def test_team_switch_during_durable_publish_serializes_then_restart_restores_new
     assert select_errors == []
 
     # The queued team switch applies after the coherent generation-B commit/swap,
-    # invalidates its team-specific presentation id, then durably checkpoints t1.
+    # invalidates its team-specific presentation id, then durably checkpoints only
+    # the managed-team pointer. It must not manufacture a new presentation manifest.
     current = runtime.get("team-race")
     assert current.selected_team_id == "t1"
     assert current.publication_generation_id is None
-    assert runtime.wait_for_checkpoint("team-race", timeout=3.0)
+    assert runtime.wait_for_managed_team_checkpoint(
+        "team-race",
+        team_id="t1",
+        state_id=state.state_id,
+        timeout=3.0,
+    )
     assert persistence.user is not None
     assert persistence.user.selected_team_id == "t1"
 
     restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
     after_restart = restarted.restore_user("team-race")
     assert after_restart.selected_team_id == "t1"
+    assert after_restart.publication_generation_id is None
 
     latest_manifest = persistence.get_latest_reusable_artifact(
         artifact_kind=PUBLISHED_GENERATION_ARTIFACT_KIND,
@@ -2037,7 +2044,8 @@ def test_team_switch_during_durable_publish_serializes_then_restart_restores_new
         model_version="runtime-published-intelligence-generation-v1",
     )
     assert latest_manifest is not None
-    assert latest_manifest.payload["selected_team_id"] == "t1"
+    assert latest_manifest.payload["publication_generation_id"] == "generation-b"
+    assert latest_manifest.payload["selected_team_id"] == "t2"
 
 
 def test_cold_set_league_state_restores_published_team_and_generation_identity() -> None:
