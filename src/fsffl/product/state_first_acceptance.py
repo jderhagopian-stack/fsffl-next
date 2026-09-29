@@ -226,6 +226,7 @@ def run_state_first_production_acceptance(
     history_probe: HistoryProbe | None = None,
     resource_reader: ResourceReader | None = None,
     process_identity_reader: ProcessIdentityReader | None = None,
+    restore_only: bool = False,
     timeout_seconds: float = 1200.0,
     poll_seconds: float = 1.0,
 ) -> dict[str, object]:
@@ -313,6 +314,44 @@ def run_state_first_production_acceptance(
             )
         store.set_league_state(user_id, state)
         current = store.get(user_id)
+
+        # A true clean first run exposes canonical State before any managed-team
+        # identity or intelligence exists. This is the original first-load contract:
+        # league-wide State surfaces are usable immediately, then team choice owns
+        # the enrichment handoff.
+        if label == "fsffl_initial":
+            clean_snapshot = _snapshot(store, user_id, capability_reader)
+            if clean_snapshot.get("selected_team_id") is not None:
+                raise StateFirstAcceptanceError(
+                    "clean first-run acceptance unexpectedly restored a managed team: "
+                    f"{clean_snapshot}"
+                )
+            if any(
+                bool(clean_snapshot.get(key))
+                for key in ("forecast", "simulation", "value")
+            ):
+                raise StateFirstAcceptanceError(
+                    "clean first-run acceptance unexpectedly restored intelligence: "
+                    f"{clean_snapshot}"
+                )
+            clean_surface = probe_surface("clean_state_before_team_selection")
+            if clean_surface is not None and not clean_surface.get("state_only"):
+                raise StateFirstAcceptanceError(
+                    "clean first-run surface probe was not State-only: "
+                    f"{clean_surface}"
+                )
+            clean_row = {
+                "label": "fsffl_clean_state_before_team_selection",
+                "snapshot": clean_snapshot,
+                "surface": clean_surface,
+            }
+            steps.append(clean_row)
+            _logger.info(
+                "FSFFL STATE-FIRST ACCEPTANCE step=%s data=%s",
+                clean_row["label"],
+                json.dumps(clean_row, sort_keys=True, default=str),
+            )
+
         if current.selected_team_id is None and state.teams:
             roster_by_team = {
                 item.team_id: tuple(item.roster)
@@ -327,13 +366,45 @@ def run_state_first_production_acceptance(
                 state.teams[0].team_id,
             )
             store.select_team(user_id, selected)
-        wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
-        if callable(wait_for_checkpoint) and not wait_for_checkpoint(
-            user_id, timeout=30.0
-        ):
+            current = store.get(user_id)
+
+        if current.selected_team_id is None:
             raise StateFirstAcceptanceError(
-                f"{label} canonical State did not durably checkpoint"
+                f"{label} did not establish an explicit managed-team identity"
             )
+
+        wait_for_managed_team = getattr(store, "wait_for_managed_team_checkpoint", None)
+        if callable(wait_for_managed_team):
+            team_durable = wait_for_managed_team(
+                user_id,
+                team_id=current.selected_team_id,
+                state_id=state.state_id,
+                timeout=30.0,
+            )
+        else:
+            wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+            team_durable = (
+                not callable(wait_for_checkpoint)
+                or wait_for_checkpoint(user_id, timeout=30.0)
+            )
+        if not team_durable:
+            raise StateFirstAcceptanceError(
+                f"{label} managed-team State did not durably checkpoint"
+            )
+
+        if label == "fsffl_initial":
+            selected_row = {
+                "label": "fsffl_initial_managed_team_selected",
+                "selected_team_id": current.selected_team_id,
+                "snapshot": _snapshot(store, user_id, capability_reader),
+            }
+            steps.append(selected_row)
+            _logger.info(
+                "FSFFL STATE-FIRST ACCEPTANCE step=%s data=%s",
+                selected_row["label"],
+                json.dumps(selected_row, sort_keys=True, default=str),
+            )
+
         started = start_reconciliation(user_id)
         job_id = str(started.get("job_id") or "")
         if not job_id:
@@ -346,7 +417,15 @@ def run_state_first_production_acceptance(
             # active while browser-equivalent surface reads and PI history are
             # requested. Reads must remain usable and heavy work must queue rather
             # than overlap unboundedly.
-            probe_surface("cold_surfaces_during_initial_reconciliation")
+            cold_surface = probe_surface("cold_surfaces_during_initial_reconciliation")
+            if (
+                cold_surface is not None
+                and cold_surface.get("readiness_status") != "rebuilding"
+            ):
+                raise StateFirstAcceptanceError(
+                    "clean first-run did not expose visible intelligence progress: "
+                    f"{cold_surface}"
+                )
             if history_probe is not None:
                 def cold_history() -> None:
                     try:
@@ -380,6 +459,10 @@ def run_state_first_production_acceptance(
                     f"{type(overlap_error[0]).__name__}: {overlap_error[0]}"
                 )
         snapshot = _snapshot(store, user_id, capability_reader)
+        if label == "fsffl_initial":
+            # Terminal first-load publication must upgrade the previously State-only
+            # PI surface to governed future intelligence, including Y2/Y3.
+            probe_history("pi_history_after_initial_publication")
         replay_reader = getattr(store, "forecast_replay_decision_cached", None)
         row = {
             "label": label,
@@ -397,6 +480,87 @@ def run_state_first_production_acceptance(
             json.dumps(row, sort_keys=True, default=str),
         )
         return snapshot
+
+    if restore_only:
+        sample_resources("restored_session_start")
+        restored = store.restore_user(user_id)
+        restored_snapshot = _snapshot(store, user_id, capability_reader)
+        _require_full_fsffl(restored_snapshot)
+        if restored_snapshot.get("selected_team_id") is None:
+            raise StateFirstAcceptanceError(
+                "restart restore did not recover managed-team identity"
+            )
+        if not restored_snapshot.get("publication_generation_id"):
+            raise StateFirstAcceptanceError(
+                "restart restore did not recover published generation identity"
+            )
+        restored_surface = probe_surface("restored_session_surfaces")
+        if (
+            restored_surface is not None
+            and restored_surface.get("franchise_team_id")
+            != restored_snapshot.get("selected_team_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "restored-session Franchise identity diverged from durable runtime: "
+                f"{restored_surface}"
+            )
+        if (
+            restored_surface is not None
+            and restored_surface.get("publication_generation_id")
+            != restored_snapshot.get("publication_generation_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "restored-session surfaces diverged from durable publication generation: "
+                f"{restored_surface}"
+            )
+        restored_history = probe_history("restored_session_pi_history")
+        row = {
+            "label": "fsffl_restart_restored_session",
+            "snapshot": restored_snapshot,
+            "surface": restored_surface,
+            "history": restored_history,
+        }
+        steps.append(row)
+        sample_resources("restored_session_end")
+        process_identity_end = (
+            process_identity_reader() if process_identity_reader is not None else None
+        )
+        report["process_identity_end"] = process_identity_end
+        if (
+            process_identity_start is not None
+            and process_identity_end is not None
+            and process_identity_start != process_identity_end
+        ):
+            raise StateFirstAcceptanceError(
+                "hosted process identity changed during restored-session acceptance: "
+                f"{process_identity_start} -> {process_identity_end}"
+            )
+        if resources:
+            peak = max(
+                int(item.get("max_rss_observed_bytes") or 0)
+                for item in resources
+            )
+            report["peak_rss_bytes"] = peak
+            hard_limits = [
+                int(item.get("memory_limit_bytes") or 0)
+                for item in resources
+                if int(item.get("memory_limit_bytes") or 0) > 0
+            ]
+            if hard_limits:
+                hard_limit = min(hard_limits)
+                report["memory_limit_bytes"] = hard_limit
+                report["hard_memory_headroom_bytes"] = hard_limit - peak
+                if peak >= hard_limit:
+                    raise StateFirstAcceptanceError(
+                        "restored-session acceptance reached hard memory limit"
+                    )
+        report["status"] = "PASS"
+        report["mode"] = "restore"
+        _logger.info(
+            "FSFFL STATE-FIRST ACCEPTANCE RESULT %s",
+            json.dumps(report, sort_keys=True, default=str),
+        )
+        return report
 
     sample_resources("acceptance_start")
     fsffl_initial = activate(FSFFL_ACCEPTANCE_LEAGUE, label="fsffl_initial")
