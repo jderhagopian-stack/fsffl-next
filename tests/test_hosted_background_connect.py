@@ -684,7 +684,7 @@ def test_repeated_cross_league_connect_reclaims_before_next_heavy_handoff(
                 name=f"League {external_id}",
                 season=2026,
                 rules=LeagueRules(
-                    team_count=1,
+                    team_count=2,
                     roster_size=1,
                     lineup=(),
                     scoring=(),
@@ -695,12 +695,21 @@ def test_repeated_cross_league_connect_reclaims_before_next_heavy_handoff(
                 Team(
                     team_id=f"{league_id}:team:1",
                     league_id=league_id,
-                    display_name=f"Team {external_id}",
+                    display_name=f"Team {external_id} A",
+                ),
+                Team(
+                    team_id=f"{league_id}:team:2",
+                    league_id=league_id,
+                    display_name=f"Team {external_id} B",
                 ),
             ),
             team_states=(
                 TeamState(
                     team_id=f"{league_id}:team:1",
+                    roster=(),
+                ),
+                TeamState(
+                    team_id=f"{league_id}:team:2",
                     roster=(),
                 ),
             ),
