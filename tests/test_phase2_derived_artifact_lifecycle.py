@@ -301,7 +301,9 @@ def test_roster_only_change_preserves_forecast_but_invalidates_downstream_across
     )
 
     runtime = PersistentPrivateBetaRuntimeStore(persistence)
-    restored = runtime.get("jimmy")
+    # Foreground reads are memory-only; restart continuity is explicit orchestration.
+    assert runtime.get("jimmy").league_state is None
+    restored = runtime.restore_user("jimmy")
     assert restored.forecast_evidence == forecast
     assert restored.simulation_analytics == simulation
     assert restored.value_evidence == values
