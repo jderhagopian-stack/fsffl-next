@@ -171,7 +171,8 @@ def test_unchanged_restored_league_uses_probe_without_full_loader() -> None:
     )
 
     restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
-    restored = restarted.get("local-beta-user")
+    assert restarted.get("local-beta-user").league_state is None
+    restored = restarted.restore_user("local-beta-user")
     assert restored.league_state == state
     assert restored.selected_team_id == "team:a"
 
