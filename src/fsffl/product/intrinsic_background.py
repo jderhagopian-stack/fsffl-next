@@ -351,22 +351,30 @@ class ShapleyIntrinsicBackgroundCoordinator:
         running = self._set(key, status=IntrinsicBuildStatus.RUNNING)
         if running is None:
             return
-        completed: IntrinsicBuildRecord | None = None
+        completion_summary: tuple[str, str, str, float] | None = None
 
-        def build_and_attach_owned() -> IntrinsicBuildRecord | None:
+        def build_and_attach_owned() -> tuple[str, str, str, float] | None:
             contract = self._loader(context)
             # If clear_user invalidated this lifecycle while the loader was active,
             # _set returns None. The old contract is then released before the heavy
             # claim opens for replacement work.
-            return self._set(
+            attached = self._set(
                 key,
                 status=IntrinsicBuildStatus.COMPLETED,
                 contract=contract,
             )
+            if attached is None:
+                return None
+            return (
+                attached.user_id,
+                attached.league_state_id,
+                attached.forecast_coordinate,
+                (attached.updated_at - attached.created_at).total_seconds(),
+            )
 
         try:
             if self._heavy_work_coordinator is None:
-                completed = build_and_attach_owned()
+                completion_summary = build_and_attach_owned()
             else:
                 with self._heavy_work_coordinator.claim(
                     kind="intrinsic",
@@ -375,7 +383,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
                         f"{running.forecast_coordinate}"
                     ),
                 ):
-                    completed = build_and_attach_owned()
+                    completion_summary = build_and_attach_owned()
         except Exception as exc:
             failed = self._set(
                 key,
@@ -394,14 +402,16 @@ class ShapleyIntrinsicBackgroundCoordinator:
             with self._lock:
                 self._futures.pop(key, None)
             return
-        if completed is not None:
-            elapsed = (completed.updated_at - completed.created_at).total_seconds()
+        if completion_summary is not None:
+            completed_user, completed_state, completed_forecast, elapsed = (
+                completion_summary
+            )
             _logger.info(
                 "FSFFL Intrinsic background build completed user=%s state=%s "
                 "forecast=%s elapsed=%.3fs",
-                completed.user_id,
-                completed.league_state_id,
-                completed.forecast_coordinate,
+                completed_user,
+                completed_state,
+                completed_forecast,
                 elapsed,
             )
         with self._lock:
