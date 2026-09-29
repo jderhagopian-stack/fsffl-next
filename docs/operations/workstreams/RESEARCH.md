@@ -1794,9 +1794,9 @@ Identity-light is eligible elsewhere only with known/non-conflicting canonical o
 After this restriction, all fallback-eligible observed population/cutoff cells meet the >=90% empirical coverage gate.
 
 Corrected materiality/lifecycle validation:
-- workflow run `36559515793` — success;
-- artifact `11029492983`;
-- digest `sha256:8429fd24bd4ac4102d6c0e050313dd19c7a226b5ba7a8423b5bd5b2e440c7875`.
+- workflow run `36559750023` — success;
+- artifact `11029278633`;
+- digest `sha256:a8f8fc078adde10f7b04b23be873dc77125b195b09542ddf8098f079ae7bc2ae`.
 
 ### Season-start lifecycle
 
