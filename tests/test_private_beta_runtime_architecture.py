@@ -218,6 +218,12 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     source = Path("src/fsffl/product/state_first_acceptance.py").read_text(
         encoding="utf-8"
     )
+    assert "fsffl_clean_state_before_team_selection" in source
+    assert "clean_state_before_team_selection" in source
+    assert "fsffl_initial_managed_team_selected" in source
+    assert "pi_history_after_initial_publication" in source
+    assert "fsffl_restart_restored_session" in source
+    assert "restore_only" in source
     assert "pi_history_during_active_reconciliation" in source
     assert "reload_during_active_reconciliation" in source
     assert "fsffl_automatic_state_sync" in source
@@ -237,6 +243,36 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "peak_rss_bytes" in source
     assert "process_identity_start" in source
     assert "process_identity_end" in source
+
+
+
+
+
+def test_hosted_clean_first_run_history_is_state_only_until_terminal_publication() -> None:
+    hosted = Path("src/fsffl/product/persistent_webapp.py").read_text(
+        encoding="utf-8"
+    )
+    history = hosted.split("def _acceptance_history_probe", 1)[1].split(
+        "def _runtime_acceptance_resource_reader", 1
+    )[0]
+    surfaces = hosted.split("def _acceptance_surface_probe", 1)[1].split(
+        "def _acceptance_history_probe", 1
+    )[0]
+    orchestration = hosted.split(
+        "def _maybe_start_state_first_production_acceptance()", 1
+    )[1].split('@app.get("/health/product-acceptance")', 1)[0]
+
+    assert 'label == "cold_pi_history_during_initial_reconciliation"' in history
+    cold_branch = history.split("if cold_state_only:", 1)[1].split("else:", 1)[0]
+    assert "build_player_intelligence_overview" not in cold_branch
+    assert "Player Intelligence lacks Y2/Y3" in history
+    assert '"state_only_during_enrichment": cold_state_only' in history
+    assert "state_only = context.selected_team_id is None" in surfaces
+    assert '("home", "/api/home", {})' in surfaces
+    assert '("league", "/api/league/atlas", {})' in surfaces
+    assert "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_MODE" in orchestration
+    assert 'acceptance_mode not in {"full", "restore"}' in orchestration
+    assert 'restore_only=acceptance_mode == "restore"' in orchestration
 
 
 def test_live_pi_route_and_acceptance_share_one_history_coordinator() -> None:
