@@ -137,9 +137,7 @@ def _partial(position: Position) -> PartialFantasyPointForecast:
 
 def test_materiality_uses_corrected_all_population_bound_and_passes_at_exact_inequality() -> None:
     table = frozen_fumbles_lost_production_table_2026()
-    threshold = table.payload["cutoffs"]["3"][  # type: ignore[index]
-        "minimum_supported_fp_stddev_for_non_material_fsffl"
-    ]["WR"]
+    threshold = table.materiality_event_bound(3, Position.WR) / (0.10 * 1.645)
     assessment = assess_fumbles_lost_non_material_partial(
         _state(position=Position.WR, cutoff=3),
         partial=_partial(Position.WR),
@@ -156,11 +154,7 @@ def test_materiality_uses_corrected_all_population_bound_and_passes_at_exact_ine
 
 def test_materiality_fails_immediately_below_frozen_uncertainty_threshold() -> None:
     table = frozen_fumbles_lost_production_table_2026()
-    threshold = float(
-        table.payload["cutoffs"]["3"][  # type: ignore[index]
-            "minimum_supported_fp_stddev_for_non_material_fsffl"
-        ]["WR"]
-    )
+    threshold = table.materiality_event_bound(3, Position.WR) / (0.10 * 1.645)
     assessment = assess_fumbles_lost_non_material_partial(
         _state(position=Position.WR, cutoff=3),
         partial=_partial(Position.WR),
@@ -333,9 +327,31 @@ def _annual_candidate() -> FumblesLostProductionTable:
     payload = copy.deepcopy(dict(prior.payload))
     payload["target_season"] = 2027
     player_priors = _annual_player_priors()
+    for cutoff in (0, 1):
+        row = payload["season_start"]["cutoffs"][str(cutoff)]
+        row["fallback_eligibility"] = {
+            tier: {
+                position.value: (
+                    bool(row["cold_start_fallback_eligible"][position.value])
+                    if tier in {"cold_start", "identity_light"}
+                    else True
+                )
+                for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+            }
+            for tier in (
+                "history_plus_current",
+                "history_only",
+                "current_only",
+                "cold_start",
+                "identity_light",
+            )
+        }
+
     payload["annual_freeze"] = {
         "exact_source_hashes": {"2026_weekly_exact_lost_fumbles": "a" * 64},
         "training_seasons": [2021, 2022, 2023, 2024, 2025, 2026],
+        "calibration_pseudo_current_seasons": [2022, 2023, 2024, 2025, 2026],
+        "chronology_validation_passed": True,
         "position_lost_fumble_per_opportunity": dict(
             POSITION_LOST_FUMBLE_PER_OPPORTUNITY
         ),
@@ -353,6 +369,38 @@ def _annual_candidate() -> FumblesLostProductionTable:
     )
 
 
+def _annual_rmse() -> dict[str, dict[int, float]]:
+    return {
+        position.value: {cutoff: 0.0 for cutoff in range(2, 18)}
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+    }
+
+
+def _annual_materiality_maxima() -> dict[str, dict[int, float]]:
+    return {
+        position.value: {cutoff: 0.0 for cutoff in range(0, 18)}
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+    }
+
+
+def _annual_population_coverage() -> dict[str, dict[int, dict[str, float]]]:
+    return {
+        position.value: {
+            cutoff: {
+                tier: 1.0
+                for tier in (
+                    "history_plus_current",
+                    "history_only",
+                    "current_only",
+                    "cold_start",
+                )
+            }
+            for cutoff in range(0, 18)
+        }
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+    }
+
+
 def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_floors() -> None:
     prior = frozen_fumbles_lost_production_table_2026()
     with pytest.raises(ValueError, match="annual governed freeze is unavailable"):
@@ -362,10 +410,9 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
     validate_annual_rollover_candidate(
         candidate,
         prior=prior,
-        newly_completed_heldout_rmse={
-            position.value: {cutoff: 0.0 for cutoff in range(2, 18)}
-            for position in (Position.QB, Position.RB, Position.WR, Position.TE)
-        },
+        newly_completed_heldout_rmse=_annual_rmse(),
+        newly_completed_materiality_event_max=_annual_materiality_maxima(),
+        observed_population_coverage=_annual_population_coverage(),
     )
 
     with pytest.raises(ValueError, match="RMSE matrix is incomplete"):
@@ -373,6 +420,8 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
             candidate,
             prior=prior,
             newly_completed_heldout_rmse={"QB": {2: 0.0}},
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
         )
 
     complete = {
@@ -385,6 +434,8 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
             candidate,
             prior=prior,
             newly_completed_heldout_rmse=complete,
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
         )
 
 
@@ -407,6 +458,8 @@ def test_annual_rollover_rejects_incomplete_fallback_matrix_and_player_priors() 
             broken_matrix,
             prior=prior,
             newly_completed_heldout_rmse=complete_rmse,
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
         )
 
     broken_prior = _annual_candidate()
@@ -428,6 +481,47 @@ def test_annual_rollover_rejects_incomplete_fallback_matrix_and_player_priors() 
             broken_prior,
             prior=prior,
             newly_completed_heldout_rmse=complete_rmse,
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=_annual_population_coverage(),
+        )
+
+
+def test_annual_rollover_requires_new_materiality_maxima_and_population_coverage() -> None:
+    prior = frozen_fumbles_lost_production_table_2026()
+    candidate = _annual_candidate()
+
+    incomplete_max = _annual_materiality_maxima()
+    del incomplete_max["WR"][3]
+    with pytest.raises(ValueError, match="materiality maximum matrix is incomplete"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=incomplete_max,
+            observed_population_coverage=_annual_population_coverage(),
+        )
+
+    widened_max = _annual_materiality_maxima()
+    widened_max["WR"][3] = candidate.materiality_event_bound(3, Position.WR) + 1.0
+    with pytest.raises(ValueError, match="omits newly completed maximum"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=widened_max,
+            observed_population_coverage=_annual_population_coverage(),
+        )
+
+    failing_coverage = _annual_population_coverage()
+    failing_coverage["WR"][3]["cold_start"] = 0.89
+    assert candidate.fallback_eligible(3, Position.WR, "cold_start")
+    with pytest.raises(ValueError, match="misses 90% coverage gate"):
+        validate_annual_rollover_candidate(
+            candidate,
+            prior=prior,
+            newly_completed_heldout_rmse=_annual_rmse(),
+            newly_completed_materiality_event_max=_annual_materiality_maxima(),
+            observed_population_coverage=failing_coverage,
         )
 
 
