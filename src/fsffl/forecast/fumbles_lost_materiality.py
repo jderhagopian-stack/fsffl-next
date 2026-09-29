@@ -265,3 +265,82 @@ def assess_fumbles_lost_non_material_partial(
         ),
         contract_version=contract_version,
     )
+
+
+
+def fumbles_lost_runtime_authority_compatible(
+    league_state: LeagueState,
+    runtime_result: object,
+    *,
+    expected_supplement_version: str,
+) -> bool:
+    """Validate exact-State FUMBLES_LOST authority without inventing a point row.
+
+    A current rolling point supplement is reusable when it is bound to this exact
+    State. If point authority was unavailable, the alternative valid authority is a
+    State/cutoff-bound NON_MATERIAL_PARTIAL decision for every Simulation-relevant
+    partial subject. Material/ineligible active subjects fail closed.
+    """
+
+    supplement_fingerprint = getattr(
+        runtime_result,
+        "fumbles_lost_supplement_authority_fingerprint",
+        None,
+    )
+    if supplement_fingerprint:
+        return bool(
+            getattr(
+                runtime_result,
+                "fumbles_lost_supplement_model_version",
+                None,
+            )
+            == expected_supplement_version
+            and getattr(
+                runtime_result,
+                "fumbles_lost_supplement_league_state_id",
+                None,
+            )
+            == league_state.state_id
+        )
+
+    try:
+        table = resolve_fumbles_lost_production_table(league_state.league.season)
+    except ValueError:
+        return False
+    assessments = tuple(
+        getattr(runtime_result, "fumbles_lost_materiality_assessments", ()) or ()
+    )
+    if not assessments:
+        return False
+    expected_contract = str(
+        table.payload["materiality_contract"]["contract_version"]  # type: ignore[index]
+    )
+    active_player_ids = {
+        entry.player_id
+        for team_state in league_state.team_states
+        for entry in team_state.roster
+        if entry.slot.value not in {"TAXI", "IR"}
+    }
+    partial_rows = tuple(
+        getattr(runtime_result, "partial_fantasy_point_forecasts", ()) or ()
+    )
+    active_fumbles_partial_ids = {
+        row.player_id
+        for row in partial_rows
+        if row.player_id in active_player_ids
+        and "fum_lost" in row.omitted_rule_stats
+    }
+    assessment_by_player = {
+        row.player_id: row
+        for row in assessments
+        if row.completed_through_week == league_state.completed_through_week
+        and row.contract_version == expected_contract
+    }
+    if not active_fumbles_partial_ids:
+        return False
+    return all(
+        player_id in assessment_by_player
+        and assessment_by_player[player_id].status
+        == NON_MATERIAL_PARTIAL_AUTHORITY
+        for player_id in active_fumbles_partial_ids
+    )
