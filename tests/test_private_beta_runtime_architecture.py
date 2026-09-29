@@ -264,6 +264,8 @@ def test_hosted_clean_first_run_history_is_state_only_until_terminal_publication
 
     assert 'label == "cold_pi_history_during_initial_reconciliation"' in history
     cold_branch = history.split("if cold_state_only:", 1)[1].split("else:", 1)[0]
+    assert "canonical_player_ids" in cold_branch
+    assert "canonical_roster_ids" in cold_branch
     assert "build_player_intelligence_overview" not in cold_branch
     assert "Player Intelligence lacks Y2/Y3" in history
     assert '"state_only_during_enrichment": cold_state_only' in history
