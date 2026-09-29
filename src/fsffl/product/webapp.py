@@ -148,6 +148,14 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
     material_partial_player_ids = tuple(
         getattr(runtime_result, "simulation_material_partial_player_ids", ()) or ()
     )
+    non_material_partial_player_ids = tuple(
+        getattr(
+            runtime_result,
+            "fumbles_lost_non_material_partial_player_ids",
+            (),
+        )
+        or ()
+    )
     authoritative_rows = tuple(getattr(evidence, "league_scored_forecasts", ()) or ()) if evidence is not None else ()
     raw_rows = tuple(getattr(evidence, "raw_forecasts", ()) or ()) if evidence is not None else ()
 
@@ -162,17 +170,19 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             + (": " + ", ".join(blockers) if blockers else "")
             + "."
         )
+    elif partial_rows:
+        forecast_status = "non_material_partial"
+        forecast_reason = (
+            "Governed downstream Forecast use is allowed under explicit "
+            "NON_MATERIAL_PARTIAL authority. FUMBLES_LOST remains omitted/degraded "
+            f"for {len(non_material_partial_player_ids)} subject(s); scoring coverage "
+            "is not FULL."
+        )
     else:
         forecast_status = "full"
         forecast_reason = (
-            "Governed league-scored Forecast authority is available for the current "
-            "downstream consumer."
-            + (
-                f" {len(partial_rows)} non-material subject(s) retain explicit partial "
-                "coverage diagnostics."
-                if partial_rows
-                else ""
-            )
+            "Governed league-scored Forecast authority is fully covered for the "
+            "current downstream consumer."
         )
 
     if runtime.simulation_analytics is not None:
@@ -251,11 +261,16 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
         if served_available
         else None
     )
+    core_consumer_usable = (
+        forecast_status in {"full", "non_material_partial"}
+        and simulation_status == "full"
+        and value_status == "full"
+    )
     overall_status = (
         "rebuilding"
         if served_available
         else "full"
-        if all(item == "full" for item in statuses)
+        if core_consumer_usable
         else "partial"
         if any(item != "unavailable" for item in statuses)
         else "unavailable"
@@ -269,9 +284,14 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
             "authoritative_scored_count": len(authoritative_rows),
             "partial_scored_count": len(partial_rows),
             "material_partial_player_ids": list(material_partial_player_ids),
-            "non_material_partial_scored_count": max(
-                0, len(partial_rows) - len(material_partial_player_ids)
+            "non_material_partial_scored_count": len(
+                non_material_partial_player_ids
             ),
+            "non_material_partial_player_ids": list(
+                non_material_partial_player_ids
+            ),
+            "scoring_coverage_full": not bool(partial_rows),
+            "consumer_usable": forecast_status in {"full", "non_material_partial"},
             "simulation_blockers": list(blockers),
         },
         "simulation": {"status": simulation_status, "reason": simulation_reason},
