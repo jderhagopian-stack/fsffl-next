@@ -1731,3 +1731,69 @@ Task:
 - determine the smallest defensible rolling contract for the rest of the 2026 season;
 - separately define a generalizable materiality/impact gate so a sparse unavailable FUMBLES_LOST coordinate does not automatically block whole-product Simulation/Intrinsic when its plausible scoring consequence is immaterial;
 - persist the implementation handoff and stop at DIRECTIVE COMPLETE — RESEARCH or a genuine MANAGEMENT GATE.
+
+
+## 2026-09-29 — Rolling FUMBLES_LOST authority closeout
+
+**State: DIRECTIVE COMPLETE — RESEARCH**
+
+Controlling directive:
+`docs/operations/directives/20260929_FUMBLES_LOST_ROLLING_AUTHORITY.md`.
+
+Research preserved the already accepted first-party exact lost-fumble opportunity-rate model and froze the rolling formulation before later-cutoff scoring. No broader Forecast family search was run.
+
+Final result:
+- one cutoff-parameterized model is supported from canonical completed Week **2 through Week 17**;
+- every tested cutoff 2..17 passes the frozen rolling adequacy gates on chronology-preserving 2023-2025 OOT evidence;
+- Week 2 reproduces the accepted model exactly;
+- no early/mid/late cutoff router is required;
+- exact lost-fumble semantics, frozen position rates, four-pseudo-game role prior and non-zero uncertainty remain intact;
+- no 2026 named-player outcome tuning or future leakage occurred.
+
+Pooled rolling evidence:
+- maximum absolute bias across cutoffs: **0.08791**;
+- maximum zero-calibration gap: **0.03575**;
+- RMSE improvement versus omission remains positive at every cutoff, ranging **1.73% to 22.93%**;
+- current Week-3 production calibration scalar from historical pseudo-current evidence: **0.6183406074632098**.
+
+Uncertainty:
+- `stddev = max(sqrt(mean), monotone cutoff/position OOT floor)`;
+- cold/identity-light retains the accepted cold-start floor;
+- uncertainty grows late in season rather than claiming false precision.
+
+Separate downstream materiality authority is supported:
+- status: `NON_MATERIAL_PARTIAL`;
+- generic gate: `impact_bound_90 <= 0.10 * 1.645 * supported_fantasy_point_stddev`;
+- omission remains explicit;
+- no zero FUMBLES_LOST observation is synthesized;
+- scoring coverage remains partial/degraded;
+- any relevant subject failing the bound still blocks the consumer.
+
+For FSFFL's -1 lost-fumble rule at Week 3, the conservative 90% score-impact bounds are:
+- QB **7.286 FP**;
+- RB **3.643**;
+- WR **1.931**;
+- TE **2.429**.
+
+Corresponding minimum supported fantasy-point standard deviations for non-material classification are:
+- QB **44.29**;
+- RB **22.15**;
+- WR **11.74**;
+- TE **14.76**.
+
+Execution:
+- workflow run `36525451903` — success;
+- artifact `11014727753`;
+- digest `sha256:eac8dffa80df5ba9adb6b279267b5c05134fefcbda71146b058fa837dec91db8`.
+
+Durable Research package:
+`artifacts/research/fumbles_lost_rolling_authority_20260929/`.
+
+Bounded Implementation handoff:
+`artifacts/research/fumbles_lost_rolling_authority_20260929/IMPLEMENTATION_HANDOFF.md`.
+
+Production Forecast/Simulation/Intrinsic code was not changed. Y2/Y3, Y4-Y7, K/DST, Current Intrinsic semantics, and #294/#295/#296 runtime architecture remain untouched.
+
+Implementation may now apply the rolling supplement/materiality contract on the existing #296 lineage and resume the blocked full hosted lifecycle acceptance.
+
+**DIRECTIVE COMPLETE — RESEARCH**
