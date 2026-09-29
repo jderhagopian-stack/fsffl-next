@@ -325,7 +325,14 @@ class BehavioralRuntimeCoordinator:
             )
         except Exception as exc:
             with self._lock:
-                current = self._records.get(user_id, BehavioralRuntimeRecord(user_id=user_id))
+                current = self._records.get(user_id)
+                if (
+                    current is None
+                    or current.league_state_id != league_state.state_id
+                    or current.sleeper_league_external_id
+                    != sleeper_league_external_id
+                ):
+                    return
                 self._records[user_id] = replace(
                     current,
                     status=(
@@ -349,3 +356,13 @@ class BehavioralRuntimeCoordinator:
                 error=None,
             )
         _publish_profiles_for_state(league_state, result)
+
+    def clear_user(self, user_id: str) -> int:
+        """Drop user-scoped execution results without touching durable history."""
+
+        with self._lock:
+            removed = 1 if self._records.pop(user_id, None) is not None else 0
+            future = self._future_by_user.pop(user_id, None)
+            if future is not None and not future.done():
+                future.cancel()
+        return removed
