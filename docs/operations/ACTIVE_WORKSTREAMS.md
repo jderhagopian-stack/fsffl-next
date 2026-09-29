@@ -582,3 +582,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Reconcile the live-provider completed-Week-2 versus canonical-State Week-3 mismatch at the authority/harness boundary; Atlas itself currently passes all focused Atlas/PI tests and should not be changed without evidence of an Atlas regression.
 - Then rerun full CI + affected focused workflows and finish the whole-contract P1/P2 review before merge.
 - Continue directly to merge/deploy/hosted lifecycle acceptance only if those gates are clean. Preserve #294/#295/#296 and all frozen model boundaries.
+
+
+## 2026-09-29 — PR #298 final bounded review gates
+- **Implementation — ACTIVE / sole product-critical path.**
+- All current CI/focused workflows are green on `bccb3f547d0f9d4df68c0c0faa6f258c66967346`.
+- Two P2s still block merge: require governed annual rolling-adequacy proof before promotion, and preserve a finite/positive/non-decreasing cold-start uncertainty floor across rollover.
+- Fix only those annual validation-class defects, add deterministic regressions, rerun full CI/affected focused checks, and repeat bounded exact-head P1/P2 review.
+- Preserve #294/#295/#296 and all frozen model boundaries. No Research reopen or broader scope.
