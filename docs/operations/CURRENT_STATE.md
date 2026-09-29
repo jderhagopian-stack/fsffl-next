@@ -1107,3 +1107,17 @@ Pre-merge proof on head `b9927e7b089d0e7d8a8d431cf2fe4bc7039e6183`:
 Hosted acceptance has started on exact merge SHA. Initial FSFFL publication is coherent and PI overlap is responsive (~0.687s). One resource warning is active: peak observed RSS in the initial leg reached ~517.0 MB, below the ~536.9 MB hard Render limit but above the ~429.5 MB soft engineering budget. Continue the run; do not stop merely on the soft warning, but treat sustained/recurring hard-limit proximity as a stabilization concern.
 
 Physical Safari remains HOLD until terminal hosted acceptance.
+
+
+## 2026-09-29 — #295 hosted run interrupted by idle sleep; keep-awake not actually active
+Exact #295 merge SHA `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` was live and materially healthy through initial FSFFL, Hodor, and return to FSFFL. The run did not reach the managed-team/restart leg.
+
+At ~02:49:47Z the Render instance shut down gracefully, almost exactly 15 minutes after going live at ~02:34:47Z. No acceptance failure traceback or OOM preceded shutdown. Verification of inbound traffic shows only one `GET /` request at startup (401); there was no recurring keep-awake traffic during the run. Therefore the prior assumption that the keep-awake mechanism had been proven was incorrect.
+
+Disposition:
+- do not classify this as a #295 runtime failure;
+- do not modify the #295 managed-team durability logic based on this interrupted run;
+- physical Safari remains HOLD because restart/restored-session is still unproven;
+- next hosted run must use a verified recurring inbound request that Render counts as activity for the entire acceptance duration, and the traffic itself must be visible in logs before relying on it.
+
+Resource watch: this run also came close to the hard Render memory ceiling. Render metrics briefly reached ~532.1 MB against ~536.9 MB hard limit, while acceptance's own peak accounting reported ~520.2 MB. The process did not OOM and later memory fell, but this is not comfortable headroom. Capture memory through the next complete run and treat any sustained/recurring hard-limit proximity as a stabilization blocker rather than dismissing it as a soft-budget-only warning.
