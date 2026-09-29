@@ -303,3 +303,23 @@ def test_managed_team_identity_waits_behind_state_checkpoint_and_restores_exact_
     assert restored.league_state.state_id == state.state_id
     assert restored.selected_team_id == "team:b"
     assert restored.publication_generation_id is None
+
+
+
+def test_managed_team_pointer_fails_closed_when_exact_state_checkpoint_failed() -> None:
+    persistence = WriteFailingPersistence()
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    state = _state()
+
+    runtime.set_league_state("failed-state-team", state)
+    assert persistence.write_attempted.wait(timeout=1.0)
+
+    selected = runtime.select_team("failed-state-team", "team:a")
+    assert selected.selected_team_id == "team:a"
+    assert runtime.wait_for_managed_team_checkpoint(
+        "failed-state-team",
+        team_id="team:a",
+        state_id=state.state_id,
+        timeout=2.0,
+    ) is False
+    assert persistence.get_user_runtime_context(user_id="failed-state-team") is None
