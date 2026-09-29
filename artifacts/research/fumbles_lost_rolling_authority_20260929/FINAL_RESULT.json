@@ -113,7 +113,7 @@
     "rates": "recompute cumulative exact position lost-fumble/opportunity and opportunity/game rates through prior completed season",
     "player_role_priors": "recompute cumulative player prior opportunity/game sufficient statistics",
     "calibration": "same global train-only cutoff ratio over pseudo-current seasons through prior completed season",
-    "uncertainty": "carry prior floor and widen with newly completed chronology-preserving held-out residual RMSE",
+    "uncertainty": "for each position/cutoff c, new_floor=max(prior_floor[p,c], max newly completed held-out residual RMSE[p,k] for every k<=c); preserves monotone prefix floor",
     "materiality": "carry prior bound and widen with newly completed all-population position historical maximum",
     "target_season_freeze_required_before_point_authority": true,
     "annual_gate_failure": "no automatic point authority; explicit omission/materiality if supported, otherwise fail closed"
