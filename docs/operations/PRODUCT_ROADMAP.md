@@ -179,3 +179,7 @@ Before any public launch or material open-beta traffic, execute a dedicated prod
 The target is not to make commercial workloads fit the current free Render footprint. The target is to prove that higher traffic can be absorbed primarily by adding web/worker/cache/database capacity rather than rewriting the governed application architecture.
 
 The review must cover at minimum horizontal web scaling, durable/idempotent background jobs, multi-instance lifecycle coordination, workload separation, bounded cache ownership, queueing/backpressure/fairness, provider-rate-limit behavior, tenant isolation/security, observability, realistic burst/load testing, and cost/capacity modeling.
+
+
+### Immediate beta constraint
+Before public-scale work begins, FSFFL NEXT must first be reliably usable on the current free Render private-beta footprint for normal single-user testing. Public-scale readiness must not delay that acceptance gate.
