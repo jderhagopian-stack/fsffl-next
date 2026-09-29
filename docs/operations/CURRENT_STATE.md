@@ -1089,3 +1089,21 @@ This is now the active stabilization blocker. It is not a Forecast/Hodor blocker
 Management interpretation: do not weaken the durability requirement or simply extend the timeout. Determine whether team-selection persistence is actually starved/queued behind unrelated checkpoint work, whether the acceptance barrier is observing the wrong generation/queue state, or whether the checkpoint contract regressed after making foreground `get()` memory-only. Preserve State-first foreground availability and the #294 restore boundary.
 
 Runtime stabilization remains HOLD. Do not request physical Safari validation.
+
+
+## 2026-09-29 — #295 merged/live; hosted acceptance running
+PR #295 (`Make managed-team checkpoint lightweight and exact`) merged as `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab`. Exact merge SHA is live on Render deploy `dep-dati6o5g1s2s739fv4pg`.
+
+Pre-merge proof on head `b9927e7b089d0e7d8a8d431cf2fe4bc7039e6183`:
+- root cause of #294 managed-team durability timeout confirmed as wrong persistence path: team-only identity change was misclassified as terminal intelligence publication;
+- corrected to lightweight ordered user/State/team pointer persistence with exact durability barrier;
+- team pointer now depends on exact State durability and is generation-bound;
+- team-only checkpoint does not republish Forecast/Simulation/Value, Market artifacts, last-good publication, or presentation manifest;
+- restart/fallback preserves the latest durable managed-team identity;
+- deterministic coverage added for queue ordering, failed State persistence, heavy checkpoint pressure, coalescing, stale identity work, publication-vs-team serialization, and exact-team restart;
+- bounded P1/P2 red-team reported no unresolved findings;
+- full suite green: 1,816 passed.
+
+Hosted acceptance has started on exact merge SHA. Initial FSFFL publication is coherent and PI overlap is responsive (~0.687s). One resource warning is active: peak observed RSS in the initial leg reached ~517.0 MB, below the ~536.9 MB hard Render limit but above the ~429.5 MB soft engineering budget. Continue the run; do not stop merely on the soft warning, but treat sustained/recurring hard-limit proximity as a stabilization concern.
+
+Physical Safari remains HOLD until terminal hosted acceptance.
