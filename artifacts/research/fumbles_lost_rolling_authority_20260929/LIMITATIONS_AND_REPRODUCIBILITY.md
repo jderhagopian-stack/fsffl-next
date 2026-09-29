@@ -29,10 +29,10 @@ Implementation:
 `scripts/run_fumbles_lost_materiality_lifecycle.py`
 
 Final workflow:
-- run `36559515793`;
+- run `36559750023`;
 - conclusion: **success**;
-- artifact `11029492983`;
-- digest `sha256:8429fd24bd4ac4102d6c0e050313dd19c7a226b5ba7a8423b5bd5b2e440c7875`;
+- artifact `11029278633`;
+- digest `sha256:a8f8fc078adde10f7b04b23be873dc77125b195b09542ddf8098f079ae7bc2ae`;
 - retained through 2026-10-29.
 
 Exact governed source hashes are persisted in:
