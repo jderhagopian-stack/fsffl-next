@@ -1055,7 +1055,7 @@
     "position_rates": "recompute from completed governed exact weekly seasons through target_year-1",
     "player_role_priors": "recompute cumulative prior opportunity/game sufficient statistics through target_year-1",
     "calibration": "same global train-only ratio by cutoff 2-17 over pseudo-current seasons 2022..target_year-1",
-    "uncertainty": "carry prior frozen floor; take max with newly available chronology-preserving held-out residual RMSE by position/cutoff",
+    "uncertainty": "for each position/cutoff c: max(prior_floor[p,c], prefix max of newly completed held-out residual RMSE[p,k] for all k<=c); floors remain monotone across cutoff",
     "materiality": "carry prior bound; take max with newly available all-population position historical maximum at cutoffs 0-17",
     "failure_behavior": "no point authority; explicit omission plus materiality gate if eligible, otherwise fail closed"
   }
