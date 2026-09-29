@@ -1489,3 +1489,23 @@ Management clarification:
 The standard is: **efficient on constrained beta infrastructure, structurally ready to scale with added capacity later.**
 
 For #303 specifically, success means normal private-beta usage fits reliably on free Render after the resource-ownership class is closed. If that is true, return immediately to capability/product development. If normal use still cannot fit despite clean ownership and bounded resource behavior, escalate to the smallest practical staging/capacity decision rather than continuing indefinite micro-optimization.
+
+
+## 2026-09-29 — PR #303 exact-head whole-class review found three in-scope P1s
+PR #303 exact head `1944aca9cdf527d0600fc5f6107240446baf060c` now has full CI and all focused workflows green. The requested fresh whole-class P1/P2 review then found three concrete P1s, all within the authorized resource-boundary class:
+
+1. **Published-scope repopulation during working generation.** Manual/sync refresh keeps the prior published State readable while replacement Forecast/Simulation/Value builds. Foreground Market requests can therefore repopulate prior-State caches/enrichment after the boundary has already cleared them, and final publication does not currently re-close that scope.
+2. **Activation/cleanup race for the same user.** State mutation is serialized, but the following resource cleanup is outside the same per-user lifecycle sequence. An older transition can resume after a newer transition became canonical and clear/restart the newer transition's work.
+3. **Concurrent Intrinsic restore can reattach stale state after cleanup.** `restore_compatible` loads outside the coordinator lock and can publish an old record/cache after the boundary epoch has advanced because restore attachment is not epoch/ownership guarded.
+
+Management disposition:
+- these are not new architecture scope; they are proof that the resource boundary is not yet atomic/closed;
+- preserve the whole-boundary design and fix this class at the ownership boundary rather than adding route-specific patches;
+- activation + cleanup + ownership revalidation must behave as one per-user lifecycle sequence;
+- any foreground path allowed to use the prior published generation during replacement build must either be prevented from repopulating released execution state or must be invalidated/cleared again before replacement publication;
+- every asynchronous restore/result attachment path, including Intrinsic restore, must validate current epoch/State ownership before writing coordinator/cache state;
+- add deterministic races covering B-vs-C overlapping transitions, foreground prior-generation Market activity during replacement build, and stale Intrinsic restore attachment;
+- rerun full CI + closure matrix + fresh exact-head whole-class P1/P2 review;
+- do not merge until clean. If clean, merge/deploy and immediately run the realistic free-Render hosted journey under the unchanged hard-memory gate.
+
+No broader architecture expansion is authorized.
