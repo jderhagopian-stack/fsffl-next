@@ -63,9 +63,9 @@
     "unknown_or_conflicting_position": "FAIL_CLOSED",
     "silent_zero": false,
     "full_coverage_claim": false,
-    "lifecycle_workflow_run": 36559515793,
-    "lifecycle_artifact_id": 11029492983,
-    "lifecycle_artifact_digest": "sha256:8429fd24bd4ac4102d6c0e050313dd19c7a226b5ba7a8423b5bd5b2e440c7875"
+    "lifecycle_workflow_run": 36559750023,
+    "lifecycle_artifact_id": 11029278633,
+    "lifecycle_artifact_digest": "sha256:a8f8fc078adde10f7b04b23be873dc77125b195b09542ddf8098f079ae7bc2ae"
   },
   "current_cutoff3": {
     "calibration_scalar": 0.6183406074632098,
