@@ -1392,3 +1392,17 @@ Management disposition:
 - Fix the P1 and both P2s as one bounded completion pass, with deterministic A -> B -> A coverage that includes completed Market enrichment, both supported connect paths, and public telemetry redaction.
 - Rerun full CI/focused resource-lifecycle review, redeploy, and resume the full hosted FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session journey under the unchanged hard memory gate.
 - Preserve #294/#295/#296, #298, PI readiness semantics, and all frozen model boundaries. Physical Safari remains HOLD until hosted terminal PASS.
+
+
+## 2026-09-29 — Resource work is now whole-boundary closure, not serial patching
+Post-merge #302 findings demonstrate that fixing only the currently visible cache/path comments is insufficient. Management has issued `docs/operations/directives/20260929_RESOURCE_BOUNDARY_CLOSURE.md`.
+
+This directive supersedes narrow cache-by-cache correction for the current blocker. Before another resource corrective may merge, Implementation must:
+- inventory every materially sized process-local mutable holder that can survive league/State transitions and classify its lifecycle;
+- inventory every supported State/league activation path;
+- route those paths through one lifecycle-owned resource-boundary primitive (or prove equivalent behavior);
+- prove A -> B -> A with completed focused Market enrichment, both connect paths, same-league material refresh, no cross-user eviction, preserved durable publication/restart authority, non-identifying bounded telemetry, and no monotonic retained-object growth;
+- keep the hard memory gate unchanged;
+- pass full CI plus a whole-class P1/P2 review before merge.
+
+The goal is to close the resource-ownership class, not individually green the current P1/P2 comments. Physical Safari remains HOLD until hosted terminal PASS.
