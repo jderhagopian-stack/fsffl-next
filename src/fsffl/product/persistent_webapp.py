@@ -900,11 +900,22 @@ def _maybe_start_state_first_production_acceptance() -> None:
         0.0,
         float(os.getenv("FSFFL_RUNTIME_ACCEPTANCE_DELAY_SECONDS", "5")),
     )
+    acceptance_mode = os.getenv(
+        "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_MODE",
+        "full",
+    ).strip().lower()
+    if acceptance_mode not in {"full", "restore"}:
+        _runtime_availability_acceptance_state.update(
+            status="fail",
+            reason=f"Unsupported runtime acceptance mode: {acceptance_mode}",
+        )
+        return
     _runtime_availability_acceptance_state.clear()
     _runtime_availability_acceptance_state.update(
         status="scheduled",
         contract="runtime-availability-acceptance-v1",
         user_id=acceptance_user,
+        mode=acceptance_mode,
         delay_seconds=delay_seconds,
     )
 
@@ -926,11 +937,13 @@ def _maybe_start_state_first_production_acceptance() -> None:
                 history_probe=_acceptance_history_probe,
                 resource_reader=_runtime_acceptance_resource_reader,
                 process_identity_reader=_runtime_acceptance_process_identity,
+                restore_only=acceptance_mode == "restore",
             )
             _runtime_availability_acceptance_state.clear()
             _runtime_availability_acceptance_state.update(
                 status="pass",
                 contract="runtime-availability-acceptance-v1",
+                mode=acceptance_mode,
                 report=report,
             )
             logging.getLogger("uvicorn.error").info(
@@ -943,6 +956,7 @@ def _maybe_start_state_first_production_acceptance() -> None:
             _runtime_availability_acceptance_state.update(
                 status="fail",
                 contract="runtime-availability-acceptance-v1",
+                mode=acceptance_mode,
                 error_type=type(exc).__name__,
                 reason=str(exc),
             )
