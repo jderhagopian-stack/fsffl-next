@@ -648,3 +648,10 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Hosted acceptance should prove one realistic FSFFL -> Hodor -> FSFFL journey with settle points, stable post-switch memory baseline, and prior-scope release.
 - Use at most one additional bounded repetition only if needed to distinguish monotonic retention from transient/allocator peak behavior.
 - If ownership is clean and baseline is stable but legitimate heavy compute still exceeds the unchanged memory gate, escalate to capacity/compute-staging instead of continuing leak hunting.
+
+
+## 2026-09-29 — Public-scale principle recorded; no #303 scope expansion
+- Public-scale architecture directive is now authoritative: the current free/small Render footprint is a stress constraint, not the design target.
+- Current PR #303 remains narrowly focused on resource ownership/lifecycle correctness and the existing private-beta gate.
+- Do not introduce a premature microservice/distributed-systems rewrite into #303.
+- After hosted + physical beta acceptance, Management will gate a dedicated production-readiness/scaling workstream before any public launch.
