@@ -616,6 +616,8 @@ def test_2027_governed_table_builds_and_consumes_refreshed_role_rate_inputs() ->
         },
         newly_completed_rolling_adequacy={
             "heldout_season": 2026,
+            "pooled_seasons": [2023, 2024, 2025, 2026],
+            "primary_population": "tier != cold_start",
             "cutoffs": {
                 cutoff: {
                     "pooled_rolling_rmse": 0.5,
@@ -624,6 +626,10 @@ def test_2027_governed_table_builds_and_consumes_refreshed_role_rate_inputs() ->
                     "heldout_season_zero_rmse": 1.0,
                     "pooled_bias": 0.0,
                     "pooled_zero_gap": 0.0,
+                    "primary_n_by_season": {
+                        season: 100 for season in [2023, 2024, 2025, 2026]
+                    },
+                    "pooled_primary_n": 400,
                 }
                 for cutoff in range(2, 18)
             },
