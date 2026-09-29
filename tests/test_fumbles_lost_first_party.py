@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from collections import Counter
 from datetime import UTC, datetime
 
@@ -15,14 +16,19 @@ from fsffl.forecast.fumbles_lost_first_party import (
     build_first_party_fumbles_lost_supplement,
 )
 from fsffl.forecast.fumbles_lost_rolling_authority import (
+    FumblesLostProductionTable,
     ROLLING_FUMBLES_LOST_MODEL_VERSION,
     frozen_fumbles_lost_production_table_2026,
+    production_table_payload_fingerprint,
+    validate_annual_rollover_candidate,
 )
 from fsffl.forecast.fumbles_lost_first_party_priors import (
     CALIBRATION_SCALAR_2026,
     COLD_START_STDDEV_FLOOR,
     MODEL_VERSION,
     PLAYER_PRIORS,
+    POSITION_LOST_FUMBLE_PER_OPPORTUNITY,
+    POSITION_OPPORTUNITY_PER_GAME,
     POSITION_RESIDUAL_STDDEV_FLOOR,
     REQUIRED_COMPLETED_THROUGH_WEEK,
     TRAINING_SEASONS,
@@ -485,6 +491,139 @@ def test_prior_absent_subject_without_current_row_is_identity_light_with_nonzero
     assert evidence.predictive_stddev >= COLD_START_STDDEV_FLOOR
     assert supplement.observations[0].distribution.stddev >= COLD_START_STDDEV_FLOOR
 
+
+
+def test_2027_governed_table_builds_and_consumes_refreshed_role_rate_inputs() -> None:
+    prior = frozen_fumbles_lost_production_table_2026()
+    payload = copy.deepcopy(dict(prior.payload))
+    payload["target_season"] = 2027
+
+    player_priors = {
+        player_id: {
+            "position": row[0],
+            "historical_gsis_id": row[1],
+            "identity_method": row[2],
+            "accepted_tier": row[3],
+            "history_games": row[4],
+            "history_opportunities": row[5],
+        }
+        for player_id, row in PLAYER_PRIORS.items()
+    }
+    player_id = "sleeper:player:10213"
+    player_priors[player_id] = {
+        **player_priors[player_id],
+        "history_games": 10,
+        "history_opportunities": 100.0,
+    }
+    rates = dict(POSITION_LOST_FUMBLE_PER_OPPORTUNITY)
+    roles = dict(POSITION_OPPORTUNITY_PER_GAME)
+    rates["WR"] = 0.006
+    roles["WR"] = 3.25
+    payload["annual_freeze"] = {
+        "exact_source_hashes": {"2026_weekly_exact_lost_fumbles": "a" * 64},
+        "training_seasons": [2021, 2022, 2023, 2024, 2025, 2026],
+        "position_lost_fumble_per_opportunity": rates,
+        "position_opportunity_per_game": roles,
+        "player_role_priors": player_priors,
+        "player_prior_sufficient_statistics_fingerprint": (
+            production_table_payload_fingerprint(
+                {"player_role_priors": player_priors}
+            )
+        ),
+    }
+    candidate = FumblesLostProductionTable(
+        payload=payload,
+        fingerprint=production_table_payload_fingerprint(payload),
+    )
+    validate_annual_rollover_candidate(
+        candidate,
+        prior=prior,
+        newly_completed_heldout_rmse={
+            position.value: {cutoff: 0.0 for cutoff in range(2, 18)}
+            for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+        },
+    )
+
+    captured_2027 = datetime(2027, 9, 28, 3, 0, tzinfo=UTC)
+    base_state = _state(
+        player_id,
+        Position.WR,
+        completed_through_week=3,
+    )
+    state_2027 = base_state.model_copy(
+        update={
+            "as_of": captured_2027,
+            "league": base_state.league.model_copy(update={"season": 2027}),
+            "player_states": (
+                base_state.player_states[0].model_copy(
+                    update={"as_of": captured_2027}
+                ),
+            ),
+        }
+    )
+
+    class FutureStats:
+        requested_weeks: list[int]
+
+        def __init__(self) -> None:
+            self.requested_weeks = []
+
+        def fetch_nfl_state(self):
+            return SleeperNflState(
+                season=2027,
+                week=4,
+                season_type="regular",
+                captured_at=captured_2027,
+            )
+
+        def fetch_week(self, *, season: int, week: int):
+            assert season == 2027
+            self.requested_weeks.append(week)
+            return (
+                SleeperWeeklyStatLine(
+                    player_id=player_id,
+                    season=2027,
+                    week=week,
+                    stats={
+                        "pass_att": 0.0,
+                        "sack": 0.0,
+                        "rush_att": 0.0,
+                        "rec": 2.0,
+                    },
+                    captured_at=captured_2027,
+                ),
+            )
+
+    source = FutureStats()
+    supplement = build_first_party_fumbles_lost_supplement(
+        state_2027,
+        base_observations=(),
+        stats_source=source,  # type: ignore[arg-type]
+        clock=lambda: captured_2027,
+        production_table=candidate,
+    )
+
+    # Historical role = 100 / 10 = 10. Current = 6 opportunities / 3 games.
+    expected_role = (6.0 + 4.0 * 10.0) / (3.0 + 4.0)
+    expected_mean = (
+        candidate.calibration_scalar(3)
+        * candidate.target_games
+        * expected_role
+        * rates["WR"]
+    )
+    assert source.requested_weeks == [1, 2, 3]
+    assert supplement.production_table_target_season == 2027
+    assert supplement.production_table_fingerprint == candidate.fingerprint
+    assert supplement.annual_freeze_source_hashes == (
+        ("2026_weekly_exact_lost_fumbles", "a" * 64),
+    )
+    assert supplement.training_seasons[-1] == 2026
+    assert supplement.player_evidence[0].historical_role_opportunities_per_game == pytest.approx(10.0)
+    assert supplement.player_evidence[0].position_lost_fumble_per_opportunity == pytest.approx(0.006)
+    assert supplement.observations[0].distribution.mean == pytest.approx(expected_mean)
+    assert supplement.observations[0].distribution.stddev > 0
+    record = first_party_fumbles_lost_supplement_artifact(supplement)
+    assert decode_first_party_fumbles_lost_supplement(dict(record.payload)) == supplement
 
 
 def test_week0_and_week1_are_explicit_omission_without_provider_fetch() -> None:
