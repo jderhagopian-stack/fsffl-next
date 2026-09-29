@@ -52,12 +52,15 @@ No new family/router search is allowed.
 
 ### 5. Uncertainty
 
-For each position/cutoff:
-- carry forward the previously frozen production floor;
-- evaluate the newly completed season `Y-1` as an additional chronology-preserving held-out season;
-- set the new floor to the maximum of the prior floor and the new eligible residual RMSE.
+For each position and cutoff `c`:
+- carry forward the previously frozen production floor at `c`;
+- evaluate the newly completed season `Y-1` as an additional chronology-preserving held-out season at every cutoff;
+- compute the **prefix maximum** of the new held-out residual RMSE through `c`;
+- set:
 
-Thus annual rollover cannot silently narrow empirical uncertainty.
+`new_floor[p,c] = max(prior_floor[p,c], max(new_heldout_RMSE[p,k] for k <= c))`.
+
+This preserves the already-frozen monotone cutoff invariant: a later, sparser remaining-season target may never receive a lower empirical floor merely because its same-cutoff RMSE happened to fall after an earlier spike.
 
 Cold-start/identity-light retain the separate cold-start safety floor as applicable.
 
