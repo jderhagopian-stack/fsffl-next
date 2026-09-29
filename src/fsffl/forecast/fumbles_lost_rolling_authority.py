@@ -156,10 +156,14 @@ class FumblesLostProductionTable:
             }
         if 2 <= completed_through_week <= 17:
             row = self.rolling_cutoff(completed_through_week)
-            eligibility = row["fallback_eligibility"]  # type: ignore[index]
-            if evidence_tier not in eligibility:
+            eligibility = row.get("fallback_eligibility")
+            if not isinstance(eligibility, Mapping):
                 return False
-            return bool(eligibility[evidence_tier][position.value])
+            tier_row = eligibility.get(evidence_tier)
+            if not isinstance(tier_row, Mapping):
+                return False
+            value = tier_row.get(position.value)
+            return value if isinstance(value, bool) else False
         return False
 
 
@@ -354,6 +358,25 @@ def validate_annual_rollover_candidate(
                 ) from exc
             if not math.isfinite(value) or value <= 0:
                 raise ValueError(f"annual FUMBLES_LOST {label} must be finite and positive")
+
+    for cutoff in _ROLLING_CUTOFFS:
+        row = candidate.rolling_cutoff(cutoff)
+        eligibility = row.get("fallback_eligibility")
+        if not isinstance(eligibility, Mapping):
+            raise ValueError(
+                "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+            )
+        for tier in (*_OBSERVED_FALLBACK_TIERS, "identity_light"):
+            tier_row = eligibility.get(tier)
+            if not isinstance(tier_row, Mapping):
+                raise ValueError(
+                    "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+                )
+            for position in _POSITIONS:
+                if not isinstance(tier_row.get(position.value), bool):
+                    raise ValueError(
+                        "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+                    )
 
     for cutoff in _ROLLING_CUTOFFS:
         scalar = candidate.calibration_scalar(cutoff)
