@@ -565,3 +565,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - After focused/full CI and bounded review, deploy on the existing runtime lineage and resume the complete hosted lifecycle acceptance through restart/restored-session.
 - **Research — DONE / PARKED** for this directive. Do not reopen without new evidence.
 - Physical Safari remains HOLD until terminal hosted PASS.
+
+
+## 2026-09-29 — PR #298 validation strategy
+- **Implementation — ACTIVE / sole product-critical path.**
+- PR #298 has the bounded FUMBLES_LOST implementation written, but validation is mixed and it is not merge-ready.
+- Reconcile current failures by root cause, then run a bounded whole-contract P1/P2 red-team across the complete FUMBLES_LOST lifecycle and adjacent authority/restart/invalidation behavior. Do not patch tests one-by-one without first identifying the governing failure class.
+- Preserve #294/#295/#296 runtime architecture and all frozen Forecast/Intrinsic boundaries.
+- Merge/deploy only after focused regressions, full CI and bounded review are green; then resume full hosted lifecycle acceptance through restart/restored-session.
+- Physical Safari remains HOLD until hosted terminal PASS.
