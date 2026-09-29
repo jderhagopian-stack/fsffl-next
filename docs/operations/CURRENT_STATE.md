@@ -1121,3 +1121,27 @@ Disposition:
 - next hosted run must use a verified recurring inbound request that Render counts as activity for the entire acceptance duration, and the traffic itself must be visible in logs before relying on it.
 
 Resource watch: this run also came close to the hard Render memory ceiling. Render metrics briefly reached ~532.1 MB against ~536.9 MB hard limit, while acceptance's own peak accounting reported ~520.2 MB. The process did not OOM and later memory fell, but this is not comfortable headroom. Capture memory through the next complete run and treat any sustained/recurring hard-limit proximity as a stabilization blocker rather than dismissing it as a soft-budget-only warning.
+
+
+## 2026-09-29 — #295 complete hosted rerun: managed-team durability passes; same-State reconciliation identity failure
+A verified external keep-awake workflow held the exact #295 deployment `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` awake for the full hosted acceptance window. Recurring inbound requests were visible every ~2 minutes. The temporary workflow was removed after the run.
+
+This run materially proves #295 fixed the prior blocker:
+- managed-team selection reached alternate team `sleeper:1312071960615731200:team:2`;
+- exact managed-team durability barrier passed (the earlier line-710 durability failure did not recur);
+- Franchise followed team:2 after reconciliation interruption;
+- Hodor / return-to-FSFFL / repeated refresh and prior continuity legs completed before this point;
+- no Render idle cutoff occurred;
+- Render memory stayed materially healthier in this run, topping out around ~420.6 MB in the observed 30-second metrics window, below the ~429.5 MB soft budget and far below the hard ~536.9 MB limit.
+
+New terminal failure at ~03:29:33Z:
+`StateFirstAcceptanceError: acceptance job intelligence:c754e8204ba6459d875a19655b5e9224 ended failed: ValueError: published league/team/generation identity changed during reconciliation`.
+
+Failure occurred in the explicit same-State publication-isolation leg after the managed-team switch, before restart/restored-session. The acceptance had already observed `same_state_during_active_reconciliation` with selected team:2 and readiness=rebuilding.
+
+Disposition:
+- #295's managed-team durability corrective is materially validated; do not reopen its lightweight checkpoint design absent contradictory evidence.
+- Active blocker is now the interaction between same-State reconciliation and the changed managed-team/publication identity after the team switch.
+- Determine whether the reconciliation correctly failed because its captured publication identity became stale (and the acceptance sequencing is wrong), or whether runtime incorrectly mutates/compares publication identity during a same-State rebuild that should be able to proceed after a settled team switch.
+- Do not weaken atomic-publication identity guards merely to make the test pass.
+- Restart/restored-session remains unproven; physical Safari remains HOLD.
