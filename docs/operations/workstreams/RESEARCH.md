@@ -1762,3 +1762,73 @@ Required bounded follow-up:
 7. update the durable Research artifacts/handoff and PR #297 until no P1/P2 remains.
 
 Do not broaden into general Forecast research. Return immediately to Implementation once this bounded lifecycle authority is frozen.
+
+
+## 2026-09-29 — FINAL FUMBLES_LOST lifecycle Research closeout
+
+**State: DIRECTIVE COMPLETE — RESEARCH**
+
+The bounded follow-up required by PR #297 and the season-start lifecycle addendum is complete.
+
+The accepted Week-2→17 rolling point model is unchanged and was not reopened.
+
+### PR #297 P1 — resolved by population-bounded fallback authority
+
+The original NON_MATERIAL_PARTIAL bound excluded true cold starts. Research reran only the materiality/lifecycle validation using a position-wide historical-maximum bound across all completed prior player-seasons.
+
+Observed fallback populations validated separately:
+- history + current;
+- history only;
+- current only;
+- cold start.
+
+One unsupported cell was exposed:
+- QB cold-start, completed Week 13: 8/9 = 88.9% coverage.
+
+Research did not inflate the bound after seeing that result. The frozen authority instead fails closed for:
+- QB cold-start at Weeks 13-17;
+- QB identity-light at Weeks 13-17.
+
+Identity-light is eligible elsewhere only with known/non-conflicting canonical offensive position and matching cold-start eligibility. Unknown/conflicting position fails closed.
+
+After this restriction, all fallback-eligible observed population/cutoff cells meet the >=90% empirical coverage gate.
+
+Corrected materiality/lifecycle validation:
+- workflow run `36559750023` — success;
+- artifact `11029278633`;
+- digest `sha256:a8f8fc078adde10f7b04b23be873dc77125b195b09542ddf8098f079ae7bc2ae`.
+
+### Season-start lifecycle
+
+- completed Week 0 / preseason: **no point estimate**; explicit omission + corrected materiality only;
+- completed Week 1: **no point estimate**; explicit omission + corrected materiality only;
+- completed Week 2: transition into the already-supported rolling point model;
+- Weeks 3-17: unchanged rolling model;
+- Week 18: no fabricated remaining-season point estimate.
+
+No-zero substitution and partial/degraded diagnostics remain mandatory.
+
+### 2027+ annual rollover
+
+No recurring broad Forecast study is required.
+
+Each target season requires a deterministic refresh plus minimal governed freeze:
+- finalized exact prior-season weekly evidence;
+- cumulative position rate/role-prior refresh;
+- same global cutoff calibration procedure;
+- uncertainty floors can widen but not silently narrow;
+- materiality bounds can widen but not silently narrow;
+- fallback population eligibility is revalidated;
+- exact source hashes/semantics and target-season table are frozen before point authority.
+
+If the annual gate fails, no automatic point authority is promoted; use explicit omission/materiality where valid, otherwise fail closed.
+
+Durable authority:
+`artifacts/research/fumbles_lost_rolling_authority_20260929/`
+
+Implementation handoff:
+`artifacts/research/fumbles_lost_rolling_authority_20260929/IMPLEMENTATION_HANDOFF.md`
+
+No Y2/Y3, Y4-Y7, K/DST, Intrinsic-math, or #294/#295/#296 runtime-architecture changes were made.
+
+**DIRECTIVE COMPLETE — RESEARCH**
