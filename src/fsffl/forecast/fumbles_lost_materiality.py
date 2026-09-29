@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Mapping
+
 from fsffl.state.models import FrozenModel, LeagueState, Position, RosterSlot
 
 from .fumbles_lost_first_party import (
@@ -49,6 +51,7 @@ def _fallback_tier(
     player_id: str,
     position: Position,
     supplement: FirstPartyFumblesLostSupplement | None,
+    production_table: FumblesLostProductionTable,
 ) -> tuple[FirstPartyFumblesLostEvidenceTier, bool, str]:
     canonical = next(
         (player for player in league_state.players if player.player_id == player_id),
@@ -79,25 +82,53 @@ def _fallback_tier(
                 "point-model subject was omitted for conflicting evidence",
             )
 
-    prior = PLAYER_PRIORS.get(player_id)
-    if prior is None:
-        return (
-            FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
-            True,
-            "canonical position known but historical identity is unavailable",
-        )
-    (
-        prior_position,
-        _historical_gsis_id,
-        identity_method,
-        accepted_tier,
-        history_games,
-        _history_opportunities,
-        _accepted_current_games,
-        _accepted_current_opportunities,
-        _accepted_shadow_mean,
-        _accepted_shadow_stddev,
-    ) = prior
+    if production_table.target_season == 2026:
+        prior = PLAYER_PRIORS.get(player_id)
+        if prior is None:
+            return (
+                FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
+                True,
+                "canonical position known but historical identity is unavailable",
+            )
+        (
+            prior_position,
+            _historical_gsis_id,
+            identity_method,
+            accepted_tier,
+            history_games,
+            _history_opportunities,
+            _accepted_current_games,
+            _accepted_current_opportunities,
+            _accepted_shadow_mean,
+            _accepted_shadow_stddev,
+        ) = prior
+    else:
+        annual = production_table.payload.get("annual_freeze")
+        priors = annual.get("player_role_priors") if isinstance(annual, Mapping) else None
+        row = priors.get(player_id) if isinstance(priors, Mapping) else None
+        if row is None:
+            return (
+                FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
+                True,
+                "canonical position known but annual historical identity is unavailable",
+            )
+        if not isinstance(row, Mapping):
+            return (
+                FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
+                False,
+                "annual historical identity row is invalid",
+            )
+        try:
+            prior_position = str(row["position"])
+            identity_method = str(row["identity_method"])
+            accepted_tier = str(row["accepted_tier"])
+            history_games = int(row["history_games"])
+        except (KeyError, TypeError, ValueError):
+            return (
+                FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
+                False,
+                "annual historical identity row is incomplete",
+            )
     if str(prior_position) != position.value:
         return (
             FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
@@ -175,6 +206,7 @@ def assess_fumbles_lost_non_material_partial(
         player_id=partial.player_id,
         position=partial.position,
         supplement=supplement,
+        production_table=table,
     )
     contract_version = str(table.payload["materiality_contract"]["contract_version"])  # type: ignore[index]
 
