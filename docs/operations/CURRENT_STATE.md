@@ -1300,3 +1300,26 @@ Management disposition:
 - merge/deploy only when that review has no unresolved P1/P2.
 
 Physical Safari remains HOLD until hosted terminal PASS.
+
+
+## 2026-09-29 — PR #298 merged; hosted lifecycle acceptance is now the active gate
+PR #298 (`Implement rolling FUMBLES_LOST lifecycle authority`) merged as `5d8daf7a84237baa9ad148061bc1b9bd23405eac` from final head `d7a4ac76c7269d8dc4dd29632ca3703035d6b227`.
+
+Pre-merge acceptance is complete:
+- full CI: PASS;
+- League Atlas focused validation: PASS;
+- Live Forecast corrective trace: PASS;
+- Home North Star focused validation: PASS;
+- Private-beta Intrinsic live diagnostics: PASS;
+- corrective live-provider numerical trace: PASS;
+- focused corrective regression: PASS;
+- final bounded exact-head P1/P2 review: CLEAN with no unresolved P1/P2 in the Management-authorized annual-rollover scope.
+
+The final annual-governance corrections preserve the frozen Research contract: rolling adequacy proof is bound to the exact expanded governed OOT cohort and primary population/counts, the pooled/per-season thresholds remain unchanged, and `cold_start_floor` is finite, positive, and non-decreasing.
+
+Management promotion status:
+- FUMBLES_LOST implementation is accepted through the merged-code/pre-merge-validation layer.
+- Product/runtime acceptance is **not yet complete**. Merge is not a terminal state.
+- Implementation must now deploy the merged #298 lineage and run the complete hosted lifecycle acceptance: clean first run, managed-team selection, FSFFL -> Hodor -> FSFFL switch, same-State behavior, restart, and restored-session continuity, while preserving #294/#295/#296 runtime invariants.
+- Any hosted contradiction reopens only the affected runtime/consumer layer; do not reopen frozen FUMBLES_LOST Research/model authority without new model evidence.
+- Physical Safari remains HOLD until terminal hosted PASS.
