@@ -1623,3 +1623,27 @@ Next action is not another Hodor redesign. Continue under `docs/operations/direc
 7. return for physical Safari only after terminal hosted PASS.
 
 Do not broaden scope or weaken Forecast authority.
+
+
+## 2026-09-29 — ACTIVE blocker after #294: managed-team durable checkpoint timeout
+Exact #294 merge SHA `a0dcb92b3aa3fc08431076b404f03a9900bdaf0c` is live. Hosted acceptance passes the prior critical legs: FSFFL initial publication, rebuild continuity, Hodor, FSFFL return, fast PI, and two manual refreshes. The keep-awake mechanism also prevents Render's prior 15-minute idle cutoff.
+
+The run fails before restart with:
+`FSFFL persistence checkpoint timed out user=runtime-clean-first-load-pr292-20260928`
+and
+`StateFirstAcceptanceError: managed-team selection did not durably checkpoint`.
+
+Continue from this exact failure. Do not rerun or redesign successful Hodor/Forecast work.
+
+Required:
+1. trace the managed-team selection checkpoint from in-memory team change through checkpoint queue/coalescing to durable runtime context;
+2. determine whether this is real durability starvation, queue/coalescing ownership, wrong barrier/generation observation, or an acceptance-harness defect;
+3. do not fix by merely increasing the timeout or putting persistence back on the foreground Connect/read path;
+4. preserve #294's memory-only foreground `get()`, explicit restore, late-restore identity guard, replay compatibility scan, atomic publication, and per-user lifecycle safety;
+5. add deterministic coverage proving team selection durably checkpoints under concurrent/recent heavy reconciliation/checkpoint activity;
+6. prove restart restores that exact team identity;
+7. focused regressions + full CI + bounded P1/P2 red-team;
+8. exact-SHA deploy and resume hosted acceptance from clean-first-run through restart/restored-session;
+9. only after terminal hosted PASS request physical Safari validation.
+
+No model-semantic scope expansion.
