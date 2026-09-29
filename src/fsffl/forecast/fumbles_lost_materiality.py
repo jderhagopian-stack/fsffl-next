@@ -22,7 +22,7 @@ _ALLOWED_POSITIONS = frozenset({Position.QB, Position.RB, Position.WR, Position.
 class FumblesLostMaterialityAssessment(FrozenModel):
     player_id: str
     position: Position
-    completed_through_week: int
+    completed_through_week: int | None
     evidence_tier: FirstPartyFumblesLostEvidenceTier
     eligible: bool
     status: str
@@ -139,6 +139,19 @@ def assess_fumbles_lost_non_material_partial(
 ) -> FumblesLostMaterialityAssessment:
     cutoff = league_state.completed_through_week
     coefficient = fumbles_lost_scoring_coefficient(league_state)
+    if cutoff is None:
+        return FumblesLostMaterialityAssessment(
+            player_id=partial.player_id,
+            position=partial.position,
+            completed_through_week=None,
+            evidence_tier=FirstPartyFumblesLostEvidenceTier.IDENTITY_LIGHT,
+            eligible=False,
+            status="MATERIAL_PARTIAL",
+            scoring_points_per_event=coefficient,
+            supported_fantasy_point_stddev=supported_fantasy_point_stddev,
+            reason="canonical completed-through week is unavailable",
+            contract_version="unavailable",
+        )
     try:
         table = resolve_fumbles_lost_production_table(
             league_state.league.season,
@@ -334,6 +347,20 @@ def fumbles_lost_runtime_authority_compatible(
     active_fumbles_partial_ids = fumbles_partial_ids.intersection(
         active_player_ids
     )
+    stored_scope_ids = set(
+        getattr(
+            runtime_result,
+            "fumbles_lost_simulation_relevant_player_ids",
+            (),
+        )
+        or ()
+    )
+    # Materiality authority is consumer-scope specific. Reusing evidence across a
+    # roster/Taxi/IR change is valid only after replay has recomputed the exact active
+    # FUMBLES_LOST partial population for the target State.
+    if stored_scope_ids != active_fumbles_partial_ids:
+        return False
+
     assessment_by_player = {
         row.player_id: row
         for row in assessments
@@ -341,8 +368,6 @@ def fumbles_lost_runtime_authority_compatible(
         and row.contract_version == expected_contract
     }
     if not active_fumbles_partial_ids:
-        # Existing consumer scoping: an explicit partial on only Taxi/IR/unconsumed
-        # subjects does not invalidate Simulation/Intrinsic authority.
         return True
     return all(
         player_id in assessment_by_player
