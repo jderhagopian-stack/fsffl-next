@@ -1376,3 +1376,19 @@ Management directive:
 - prefer the smallest charter-correct fix at the owning layer; preserve #294/#295/#296, #298 FUMBLES_LOST authority, PI readiness semantics, and all frozen model boundaries.
 
 After the owning memory class is corrected and deterministic/resource regressions pass, redeploy and resume the same hosted journey from clean-first-run through FSFFL return, same-State, restart and restored-session. Physical Safari remains HOLD until terminal hosted PASS.
+
+
+## 2026-09-29 — PR #302 merged, but post-merge review reopens the resource-corrective layer
+PR #302 (`Reclaim prior execution caches before cross-league heavy work`) merged as `2d8460d95431c97e884744a948b8600cdf3b8a77`. Its bounded pre-merge evidence correctly localized the hard-memory blocker to execution-only Market/Search/Decision retention plus allocator high-water behavior at the State-transition boundary, not to cross-league retention of the canonical Forecast/Simulation/Value/Intrinsic bundle and not to #298 FUMBLES_LOST authority.
+
+However, a post-merge exact-head review surfaced contradictory evidence that reopens only the resource-corrective layer:
+1. **P1 — incomplete Market reclamation.** The transition reclaimer clears wrapper caches but does not clear `MarketDecisionEnrichmentCoordinator._records`; completed focused-Market result payloads can therefore survive A -> B and overlap B's heavy work.
+2. **P2 — incomplete route coverage.** Reclamation is wired into the background-connect path but not the still-valid synchronous `POST /api/connect/sleeper` cross-league activation path, leaving a supported route able to bypass the memory boundary.
+3. **P2 — telemetry privacy.** Retained phase telemetry stores heavy-work keys verbatim and the unauthenticated runtime-resource health surface can expose those retained identifiers. Redact/hash/omit identity-bearing keys from retained public telemetry.
+
+Management disposition:
+- PR #302 is **not promoted as resource-complete** despite merge; the newer review reopens that layer.
+- Preserve its valid diagnosis, phase telemetry, hard gate, and State-transition reclaim architecture; do not roll back the entire corrective.
+- Fix the P1 and both P2s as one bounded completion pass, with deterministic A -> B -> A coverage that includes completed Market enrichment, both supported connect paths, and public telemetry redaction.
+- Rerun full CI/focused resource-lifecycle review, redeploy, and resume the full hosted FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session journey under the unchanged hard memory gate.
+- Preserve #294/#295/#296, #298, PI readiness semantics, and all frozen model boundaries. Physical Safari remains HOLD until hosted terminal PASS.
