@@ -1325,7 +1325,9 @@ def test_clean_user_replay_scans_past_newer_incompatible_raw_artifact(
 
     incompatible = compatible.model_copy(
         update={
-            "as_of": datetime(2026, 9, 8, 12, 5, tzinfo=UTC),
+            # Same canonical timestamp, later-recorded State: production history
+            # must still expose both candidates to compatibility-aware replay scan.
+            "as_of": compatible.as_of,
             "league": compatible.league.model_copy(update={"season": 2027}),
         }
     )
@@ -2538,6 +2540,10 @@ def test_cold_restore_cannot_gate_or_overwrite_fresh_connect_activation() -> Non
     cold_read = runtime.get("restore-connect-race")
     assert monotonic() - started < 0.1
     assert cold_read.league_state is None
+
+    # Fresh Connect declares the old restore superseded before provider State lands.
+    runtime.prepare_fresh_connect("restore-connect-race")
+    assert runtime.durable_restore_pending("restore-connect-race") is False
 
     # Fresh Connect activation and team choice do not wait for the blocked restore.
     started = monotonic()
