@@ -2,11 +2,22 @@ from __future__ import annotations
 
 import subprocess
 import textwrap
+from datetime import UTC, datetime
 from threading import Event
 from time import monotonic, sleep
+from types import SimpleNamespace
 
-from fsffl.product.hosted_connect import LeagueConnectCoordinator, LeagueConnectStatus
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from fsffl.product.hosted_connect import (
+    LeagueConnectCoordinator,
+    LeagueConnectStatus,
+    install_hosted_connect_routes,
+)
 from fsffl.product.persistent_webapp import app
+from fsffl.product.runtime import PrivateBetaRuntimeStore
+from fsffl.state.models import League, LeagueRules, LeagueState, Team, TeamState
 
 
 def test_background_connect_returns_without_waiting_for_provider_work() -> None:
@@ -657,3 +668,116 @@ def test_explicit_team_selection_hands_off_to_intelligence_without_silent_team_r
     )[0]
     assert "localStorage.removeItem(TEAM_KEY)" in interactive
     assert "restoreSelectedTeam(" not in interactive
+
+
+
+def test_repeated_cross_league_connect_reclaims_before_next_heavy_handoff(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+
+    def state(external_id: str) -> LeagueState:
+        league_id = f"sleeper:{external_id}"
+        return LeagueState(
+            league=League(
+                league_id=league_id,
+                name=f"League {external_id}",
+                season=2026,
+                rules=LeagueRules(
+                    team_count=1,
+                    roster_size=1,
+                    lineup=(),
+                    scoring=(),
+                ),
+            ),
+            as_of=datetime(2026, 9, 29, tzinfo=UTC),
+            teams=(
+                Team(
+                    team_id=f"{league_id}:team:1",
+                    league_id=league_id,
+                    display_name=f"Team {external_id}",
+                ),
+            ),
+            team_states=(
+                TeamState(
+                    team_id=f"{league_id}:team:1",
+                    roster=(),
+                ),
+            ),
+            players=(),
+            player_states=(),
+        )
+
+    states = {external_id: state(external_id) for external_id in ("a", "b")}
+    store = PrivateBetaRuntimeStore()
+    events: list[tuple[str, str]] = []
+
+    class Behavioral:
+        def start(self, *, league_state, **_kwargs):
+            events.append(("behavior", league_state.league.league_id))
+
+    def reclaim(label: str):
+        active = store.get("local-beta-user").league_state
+        events.append(
+            (
+                "reclaim",
+                f"{active.league.league_id if active is not None else 'none'}:{label}",
+            )
+        )
+        return {"label": label, "cleared_execution_caches": {"workspace": 1}}
+
+    application = FastAPI()
+    coordinator = install_hosted_connect_routes(
+        application,
+        runtime_store=store,
+        state_loader=lambda external_id: states[external_id],
+        behavioral_coordinator=Behavioral(),  # type: ignore[arg-type]
+        intelligence_reconciler=lambda _user_id: events.append(("intelligence", "start")),
+        state_transition_reclaimer=reclaim,
+    )
+    client = TestClient(application)
+
+    def connect(external_id: str) -> None:
+        response = client.post(
+            "/api/connect/sleeper/background",
+            json={"league_external_id": external_id},
+        )
+        assert response.status_code == 200
+        deadline = monotonic() + 2.0
+        while monotonic() < deadline:
+            current = coordinator.current("local-beta-user")
+            if current is not None and current.status in {
+                LeagueConnectStatus.COMPLETED,
+                LeagueConnectStatus.FAILED,
+            }:
+                assert current.status == LeagueConnectStatus.COMPLETED, current.error
+                return
+            sleep(0.01)
+        raise AssertionError("background connect did not finish")
+
+    connect("a")
+    events.clear()
+    connect("b")
+    connect("a")
+
+    reclaims = [event for event in events if event[0] == "reclaim"]
+    assert len(reclaims) == 2
+    assert reclaims[0][1].startswith("sleeper:b:")
+    assert reclaims[1][1].startswith("sleeper:a:")
+
+    # For each switch the old execution cache is reclaimed after new State activation
+    # and before any new league behavioral/heavy handoff begins.
+    first_reclaim = events.index(reclaims[0])
+    first_behavior = next(
+        index
+        for index, event in enumerate(events)
+        if event == ("behavior", "sleeper:b")
+    )
+    second_reclaim = events.index(reclaims[1])
+    second_behavior = next(
+        index
+        for index, event in enumerate(events)
+        if event == ("behavior", "sleeper:a")
+    )
+    assert first_reclaim < first_behavior
+    assert second_reclaim < second_behavior
