@@ -1145,3 +1145,31 @@ Disposition:
 - Determine whether the reconciliation correctly failed because its captured publication identity became stale (and the acceptance sequencing is wrong), or whether runtime incorrectly mutates/compares publication identity during a same-State rebuild that should be able to proceed after a settled team switch.
 - Do not weaken atomic-publication identity guards merely to make the test pass.
 - Restart/restored-session remains unproven; physical Safari remains HOLD.
+
+
+## 2026-09-29 — #296 merged/live; runtime corrective complete, hosted acceptance now blocked by live Forecast authority
+PR #296 (`Preserve settled team identity through same-State publication`) merged as `7d88ea87e316958e0580dd90d457fbe490bd9a0b` and is live on Render deploy `dep-datjmqvavr4c73dqp1kg`.
+
+#296 root cause and corrective are complete:
+- after a settled managed-team switch, working-generation checkpointing could self-mutate the in-memory publication identity by binding a bootstrap generation;
+- the final atomic guard then correctly rejected the job as if it had gone stale;
+- #296 preserves the seed publication identity through the working phase and keeps the atomic stale-job guard unchanged;
+- deterministic coverage proves settled team switch -> same-State rebuild -> coherent terminal publication -> exact team/generation restart, while a genuinely stale worker still fails closed;
+- bounded P1/P2 red-team found no unresolved issue in this path;
+- full suite green: 1,818 passed.
+
+The exact #296 hosted acceptance did **not** reach the prior same-State runtime blocker. It failed earlier on the initial FSFFL cold-PI/Forecast path because the live canonical season has moved beyond the currently authorized Week-2-only first-party FUMBLES_LOST contract. Logs repeatedly report:
+`first-party FUMBLES_LOST v1 requires canonical completed_through_week=2`.
+
+Consequences in the live run:
+- current Forecast contains material partial scoring coordinates;
+- Simulation is correctly withheld rather than pretending full authority;
+- governed Intrinsic is unavailable because preserved preseason Year-1 Forecast evidence is empty for this path;
+- acceptance terminates before the runtime lifecycle legs can be re-proven.
+
+Management disposition:
+- do not classify this as a #296 runtime failure;
+- do not reopen #294/#295/#296 restore/team/publication architecture absent new contradictory evidence;
+- runtime stabilization remains unclosed because hosted end-to-end acceptance still cannot reach restart/restored-session;
+- the active blocker is now a Forecast/current-season authority issue: determine the governed way to advance the first-party FUMBLES_LOST supplemental coordinate beyond its frozen Week-2 contract without weakening partial-authority rules or fabricating coverage;
+- physical Safari remains HOLD.
