@@ -114,7 +114,8 @@ def test_hosted_restored_session_gate_never_blocks_fresh_connect() -> None:
     gate = hosted.split('@app.middleware("http")', 1)[1].split(
         "def _log_startup_runtime_readiness", 1
     )[0]
-    assert '"/api/connect/sleeper"' in gate
+    assert '"/api/connect/sleeper"' in hosted
+    assert "_RESTORE_GATE_BYPASS_PREFIXES" in gate
     assert "_runtime_store.get(_beta_restore_user).league_state is not None" in gate
     assert "_runtime_store.durable_restore_pending(_beta_restore_user)" in gate
     assert "asyncio.to_thread(_startup_restore_complete.wait" in gate
