@@ -409,7 +409,8 @@ def test_runtime_restore_backfills_exact_state_into_history_off_request_path() -
     )
 
     before = monotonic()
-    restored = runtime.get("jimmy")
+    assert runtime.get("jimmy").league_state is None
+    restored = runtime.restore_user("jimmy")
     assert monotonic() - before < 0.25
     assert restored.league_state == state
     assert restored.selected_team_id == "t2"
