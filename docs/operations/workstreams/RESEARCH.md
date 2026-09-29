@@ -1731,3 +1731,17 @@ Task:
 - determine the smallest defensible rolling contract for the rest of the 2026 season;
 - separately define a generalizable materiality/impact gate so a sparse unavailable FUMBLES_LOST coordinate does not automatically block whole-product Simulation/Intrinsic when its plausible scoring consequence is immaterial;
 - persist the implementation handoff and stop at DIRECTIVE COMPLETE — RESEARCH or a genuine MANAGEMENT GATE.
+
+
+## 2026-09-29 — Narrow post-closeout correction required: materiality fallback population
+PR #297 review identified one P1 in the otherwise-complete rolling FUMBLES_LOST package. The rolling Week-2..17 Forecast contract is not reopened.
+
+Correct only the NON_MATERIAL_PARTIAL materiality authority:
+- current impact bounds were derived from the primary validation population, which excludes true cold starts;
+- the handoff currently permits those bounds for unavailable FUMBLES_LOST coordinates, including cold-start/identity-light cases;
+- before Implementation may use the fallback, either derive/freeze a conservative bound that covers every eligible unavailable-player population (including cold-start/identity-light uncertainty) or restrict eligibility to the population actually validated;
+- preserve explicit omission, no zero substitution, degraded coverage, and fail-closed behavior;
+- update the frozen handoff/table/materiality artifacts and respond to the PR #297 P1;
+- do not rerun or alter the rolling model, scalar table, position rates, role prior, Y2/Y3/Y4-Y7, K/DST, Intrinsic math, or runtime architecture.
+
+Return to DIRECTIVE COMPLETE — RESEARCH immediately after this bounded P1 is resolved and validation artifacts are durable.
