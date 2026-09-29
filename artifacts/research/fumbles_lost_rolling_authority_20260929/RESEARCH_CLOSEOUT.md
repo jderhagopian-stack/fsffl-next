@@ -42,9 +42,9 @@ Research did not increase the bound post hoc. It restricted the unsupported late
 After that restriction, every fallback-eligible observed population/cutoff clears the 90% gate.
 
 Final lifecycle/materiality validation:
-- run `36559515793`;
-- artifact `11029492983`;
-- digest `sha256:8429fd24bd4ac4102d6c0e050313dd19c7a226b5ba7a8423b5bd5b2e440c7875`.
+- run `36559750023`;
+- artifact `11029278633`;
+- digest `sha256:a8f8fc078adde10f7b04b23be873dc77125b195b09542ddf8098f079ae7bc2ae`.
 
 ## Season-start authority
 
