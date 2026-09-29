@@ -51,7 +51,7 @@ from .intelligence_runtime import (
     state_first_runtime_status,
 )
 from .opportunity_workspace import build_opportunity_workspace
-from .resource_coordinator import HeavyWorkCoordinator
+from .resource_coordinator import HeavyWorkCoordinator, ResourceTransition
 from .runtime import (
     LiveForecastEvidence,
     LiveForecastLoader,
@@ -84,6 +84,7 @@ CapabilityReadinessReader = Callable[[object], dict[str, object]]
 ProductCapabilityReconciler = Callable[[object], dict[str, object]]
 PresentationPayloadLoader = Callable[[str, UserRuntimeContext, str], dict[str, object] | None]
 RuntimeMemoryReclaimer = Callable[[str], object]
+StateResourceBoundaryHandler = Callable[[ResourceTransition], object]
 
 
 class ConnectSleeperLeagueRequest(FrozenModel):
@@ -813,6 +814,7 @@ def create_app(
     product_capability_reconciler: ProductCapabilityReconciler | None = None,
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
     presentation_payload_loader: PresentationPayloadLoader | None = None,
+    state_resource_boundary: StateResourceBoundaryHandler | None = None,
     state_transition_reclaimer: RuntimeMemoryReclaimer | None = None,
     phase_memory_reclaimer: RuntimeMemoryReclaimer | None = None,
 ) -> FastAPI:
@@ -913,11 +915,73 @@ def create_app(
         if phase_memory_reclaimer is not None:
             phase_memory_reclaimer(label)
 
-    def reclaim_state_transition(label: str) -> None:
+    def apply_state_resource_boundary(
+        user_id: str,
+        *,
+        previous: UserRuntimeContext,
+        next_state: LeagueState,
+        next_team_id: str | None,
+        reason: str,
+    ) -> object | None:
+        previous_state = previous.league_state
+        if previous_state is None or previous_state.state_id == next_state.state_id:
+            return None
+        transition = ResourceTransition(
+            user_id=user_id,
+            reason=reason,
+            previous_league_id=previous_state.league.league_id,
+            previous_state_id=previous_state.state_id,
+            previous_team_id=previous.selected_team_id,
+            next_league_id=next_state.league.league_id,
+            next_state_id=next_state.state_id,
+            next_team_id=next_team_id,
+        )
+        if state_resource_boundary is not None:
+            return state_resource_boundary(transition)
+        # Compatibility fallback for generic/test composition. Hosted production
+        # wires the single governed StateResourceBoundary.
+        label = f"{reason}:{next_state.state_id}"
         if state_transition_reclaimer is not None:
-            state_transition_reclaimer(label)
-        elif phase_memory_reclaimer is not None:
-            phase_memory_reclaimer(label)
+            return state_transition_reclaimer(label)
+        if phase_memory_reclaimer is not None:
+            return phase_memory_reclaimer(label)
+        return None
+
+    def activate_state_with_resource_boundary(
+        user_id: str,
+        league_state: LeagueState,
+        *,
+        reason: str,
+        expected_generation: int | None = None,
+        expected_league_id: str | None = None,
+    ) -> UserRuntimeContext | None:
+        previous = store.get(user_id)
+        if expected_generation is None:
+            store.set_league_state(user_id, league_state)
+            activated = store.get(user_id)
+        else:
+            conditional = getattr(store, "set_league_state_if_generation", None)
+            if not callable(conditional):
+                raise RuntimeError(
+                    "conditional State activation requires generation-aware runtime store"
+                )
+            result = conditional(
+                user_id,
+                league_state,
+                expected_generation=expected_generation,
+                expected_league_id=expected_league_id,
+            )
+            if result is None:
+                return None
+            activated = store.get(user_id)
+        apply_state_resource_boundary(
+            user_id,
+            previous=previous,
+            next_state=league_state,
+            next_team_id=activated.selected_team_id,
+            reason=reason,
+        )
+        return activated
 
     def runtime_context_payload(user_id: str) -> dict[str, object]:
         return _runtime_context_payload(
@@ -1261,7 +1325,13 @@ def create_app(
             league_state = state_loader(league_external_id)
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Unable to load Sleeper league: {exc}") from exc
-        store.set_league_state(user_id, league_state)
+        activated = activate_state_with_resource_boundary(
+            user_id,
+            league_state,
+            reason="synchronous_connect",
+        )
+        if activated is None:
+            raise HTTPException(status_code=409, detail="Sleeper league activation was superseded")
         behavior_jobs.start(
             user_id=user_id,
             league_state=league_state,
@@ -1439,8 +1509,12 @@ def create_app(
                         league_state=synced_state,
                     )
                 if active_before_write.state_id != synced_state.state_id:
-                    reclaim_state_transition(
-                        f"{user_id}:{synced_state.state_id}:state_transition"
+                    apply_state_resource_boundary(
+                        user_id,
+                        previous=published,
+                        next_state=synced_state,
+                        next_team_id=starting_team_id,
+                        reason="sync_reconciliation_state_change",
                     )
             else:
                 with store.lifecycle_operation(user_id):
@@ -1698,6 +1772,10 @@ def create_app(
 
     # Hosted league switching activates State first, then calls this non-blocking
     # reconciler. Manual Refresh Intelligence uses the same worker with sync_state=True.
+    application.state.activate_state_with_resource_boundary = (
+        activate_state_with_resource_boundary
+    )
+    application.state.apply_state_resource_boundary = apply_state_resource_boundary
     application.state.start_intelligence_reconciliation = (
         lambda user_id: _start_intelligence_reconciliation(
             user_id,
