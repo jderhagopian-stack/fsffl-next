@@ -300,22 +300,36 @@ def fumbles_lost_runtime_authority_compatible(
         "fumbles_lost_supplement_authority_fingerprint",
         None,
     )
-    if supplement_fingerprint:
-        return bool(
-            getattr(
-                runtime_result,
-                "fumbles_lost_supplement_model_version",
-                None,
-            )
-            == expected_supplement_version
-            and getattr(
-                runtime_result,
-                "fumbles_lost_supplement_league_state_id",
-                None,
-            )
-            == league_state.state_id
+    supplement_valid = bool(
+        supplement_fingerprint
+        and getattr(
+            runtime_result,
+            "fumbles_lost_supplement_model_version",
+            None,
         )
+        == expected_supplement_version
+        and getattr(
+            runtime_result,
+            "fumbles_lost_supplement_league_state_id",
+            None,
+        )
+        == league_state.state_id
+    )
 
+    partial_rows = tuple(
+        getattr(runtime_result, "partial_fantasy_point_forecasts", ()) or ()
+    )
+    fumbles_partial_ids = {
+        row.player_id
+        for row in partial_rows
+        if "fum_lost" in row.omitted_rule_stats
+    }
+    if not fumbles_partial_ids:
+        return supplement_valid
+
+    # A supplement can legitimately omit subjects with unresolved evidence. Its
+    # existence therefore does not imply complete scoring authority. Any residual
+    # fum_lost partial must pass the same State/cutoff/scope materiality contract.
     try:
         table = resolve_fumbles_lost_production_table(league_state.league.season)
     except ValueError:
@@ -334,16 +348,6 @@ def fumbles_lost_runtime_authority_compatible(
         for entry in team_state.roster
         if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
     }
-    partial_rows = tuple(
-        getattr(runtime_result, "partial_fantasy_point_forecasts", ()) or ()
-    )
-    fumbles_partial_ids = {
-        row.player_id
-        for row in partial_rows
-        if "fum_lost" in row.omitted_rule_stats
-    }
-    if not fumbles_partial_ids:
-        return False
     active_fumbles_partial_ids = fumbles_partial_ids.intersection(
         active_player_ids
     )
