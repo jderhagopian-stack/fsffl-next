@@ -279,6 +279,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         with self.lifecycle_operation(user_id):
             previous = self._checkpoint_futures.get(user_id)
             previous_state_id = self._checkpoint_state_ids.get(user_id)
+            previous_kind = self._checkpoint_kinds.get(user_id)
             # Publish the replacement future as the user's durability barrier before
             # canceling a superseded queued future. Future.cancel() runs callbacks
             # synchronously; canceling first can make that obsolete future look like
@@ -302,6 +303,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
 
             if (
                 previous is not None
+                and previous_kind != "managed_team_identity"
                 and previous_state_id == state_id
                 and not previous.done()
                 and previous.cancel()
