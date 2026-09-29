@@ -294,6 +294,30 @@ def persist_runtime_identity(
     """
 
     provider, external_id = _provider_external_id(league_state)
+    durable_state = store.get_league_snapshot(
+        provider=provider,
+        league_id=league_state.league.league_id,
+        season=league_state.league.season,
+    )
+    state_is_durable = bool(
+        durable_state is not None
+        and durable_state.state_hash == league_state.state_id
+    )
+    if not state_is_durable:
+        fallback = restore_last_good_state_identity(
+            store,
+            user_id=user_id,
+            league_id=league_state.league.league_id,
+        )
+        state_is_durable = bool(
+            fallback is not None
+            and fallback[0].state_id == league_state.state_id
+        )
+    if not state_is_durable:
+        raise RuntimeError(
+            "managed-team pointer cannot advance before exact State durability"
+        )
+
     store.put_user_runtime_context(
         UserRuntimeContextRecord(
             user_id=user_id,
