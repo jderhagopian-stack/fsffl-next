@@ -1,0 +1,24 @@
+name: Temporary FSFFL acceptance keep-awake
+
+on:
+  push:
+    branches:
+      - ops/acceptance-keepawake-20260929
+
+permissions:
+  contents: read
+
+jobs:
+  keep-awake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Keep exact hosted acceptance instance awake
+        shell: bash
+        run: |
+          set -u
+          for i in $(seq 1 20); do
+            code="$(curl -sS -o /dev/null --max-time 20 -w '%{http_code}' 'https://fsffl-next-private-beta.onrender.com/' || true)"
+            echo "$(date -u +%FT%TZ) ping=$i status=$code"
+            sleep 120
+          done
