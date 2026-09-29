@@ -3227,3 +3227,97 @@ def test_managed_team_checkpoint_queues_behind_heavy_runtime_checkpoint_and_wins
     after_restart = restarted.restore_user("team-after-heavy")
     assert after_restart.selected_team_id == "t1"
     assert after_restart.publication_generation_id is None
+
+
+
+def test_state_fallback_restore_keeps_newer_managed_team_pointer() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="fallback-team-pointer",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.restore_user("fallback-team-pointer")
+    runtime.select_team("fallback-team-pointer", "t1")
+    assert runtime.wait_for_managed_team_checkpoint(
+        "fallback-team-pointer",
+        team_id="t1",
+        state_id=state.state_id,
+        timeout=2.0,
+    )
+
+    # Simulate a shared league_snapshot row advancing independently. The user's exact
+    # State is still available from last-good, but its old team field is not authority
+    # over the newer user_runtime_context team pointer.
+    newer = _league_state(
+        as_of=state.as_of + timedelta(minutes=10)
+    )
+    assert persistence.league is not None
+    persistence.league = replace(
+        persistence.league,
+        state_hash=newer.state_id,
+        payload=newer.model_dump(mode="json"),
+        recorded_at=newer.as_of,
+        source_updated_at=newer.as_of,
+    )
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.restore_user("fallback-team-pointer")
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == state.state_id
+    assert restored.selected_team_id == "t1"
+    assert restored.publication_generation_id is None
+
+
+def test_stale_managed_team_checkpoint_cannot_regress_newer_state_pointer() -> None:
+    persistence = BlockingHeavyRuntimeCheckpointPersistence()
+    state = _league_state()
+    newer = _league_state(as_of=state.as_of + timedelta(minutes=10))
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="stale-team-pointer",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.restore_user("stale-team-pointer")
+
+    persistence.block_next_artifact = True
+    runtime.set_intelligence_bundle(
+        "stale-team-pointer",
+        league_state=state,
+        forecast_evidence=forecast,
+        simulation_analytics=None,
+        value_evidence=value,
+    )
+    assert persistence.artifact_entered.wait(timeout=1.0)
+
+    runtime.select_team("stale-team-pointer", "t1")
+    runtime.set_league_state("stale-team-pointer", newer)
+
+    persistence.release_artifact.set()
+    assert runtime.wait_for_checkpoint("stale-team-pointer", timeout=3.0)
+
+    durable = persistence.get_user_runtime_context(user_id="stale-team-pointer")
+    assert durable is not None
+    assert durable.state_hash == newer.state_id
+    assert durable.selected_team_id == "t1"
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = restarted.restore_user("stale-team-pointer")
+    assert restored.league_state is not None
+    assert restored.league_state.state_id == newer.state_id
+    assert restored.selected_team_id == "t1"
