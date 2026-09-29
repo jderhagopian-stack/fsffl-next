@@ -616,3 +616,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Add phase-level memory/lifecycle evidence around clean FSFFL -> Hodor, verify release of prior league/runtime/artifact state, and repeat the switch to distinguish transient peak from accumulating leak.
 - Fix only the owning layer, add deterministic/resource regression, redeploy, and resume FSFFL return / same-State / restart / restored-session acceptance.
 - Preserve #294/#295/#296, #298, PI readiness semantics, and frozen model boundaries.
+
+
+## 2026-09-29 — #302 post-merge corrective completion
+- **Implementation — ACTIVE / sole product-critical path.**
+- Preserve #302's valid root-cause diagnosis and State-transition reclaim boundary, but do not treat it as accepted yet.
+- Close three post-merge findings in one bounded pass: clear `MarketDecisionEnrichmentCoordinator` user records at the same transition boundary; apply reclaim to the supported synchronous Sleeper connect path as well as background connect; redact/hash/omit identity-bearing keys from retained public phase telemetry.
+- Add deterministic A -> B -> A coverage with completed Market enrichment and both connect paths, plus public-health telemetry privacy regression.
+- Then rerun full CI + bounded resource/lifecycle review, redeploy, and resume hosted FSFFL return / same-State / restart / restored-session acceptance under the unchanged hard memory gate.
+- Preserve #294/#295/#296, #298, PI readiness semantics, and frozen model boundaries.
