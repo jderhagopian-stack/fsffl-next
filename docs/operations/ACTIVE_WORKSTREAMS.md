@@ -599,3 +599,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Deploy the merged #298 lineage and execute the full hosted lifecycle acceptance: clean-first-run / managed-team selection / FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session.
 - Preserve #294/#295/#296 runtime architecture and all frozen model boundaries.
 - Physical Safari remains HOLD until hosted terminal PASS.
+
+
+## 2026-09-29 — Hosted acceptance blocked only by PR #301 harness P1
+- **Implementation — ACTIVE / sole product-critical path.**
+- #299 and #300 are merged hosted-acceptance harness corrections; no product/model/runtime authority changed.
+- PR #301 is open with all ordinary CI/focused workflows green, but bounded review found a P1 in the acceptance probe: `TeamState.roster` entries are objects and must be filtered by their `player_id`, not compared directly to canonical id strings.
+- Correct that harness bug, regress it deterministically, rerun affected checks, then continue the full hosted lifecycle acceptance immediately.
+- Preserve #294/#295/#296, #298 FUMBLES_LOST authority, PI readiness semantics, and all frozen model boundaries.
