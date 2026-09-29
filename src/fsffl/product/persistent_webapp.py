@@ -32,6 +32,7 @@ from .hosted_connect import install_hosted_connect_routes
 from .in_season_forecast_routes import install_in_season_forecast_routes
 from .intrinsic_background import (
     IntrinsicBuildStatus,
+    IntrinsicBuildSuperseded,
     ShapleyIntrinsicBackgroundCoordinator,
 )
 from .intrinsic_market_discovery_routes import install_intrinsic_market_discovery_routes
@@ -350,7 +351,10 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
             "status": "unavailable",
             "reason": "Canonical LeagueState is unavailable.",
         }
-    record = _shapley_intrinsic_coordinator.wait_for_terminal(context)
+    try:
+        record = _shapley_intrinsic_coordinator.wait_for_terminal(context)
+    except IntrinsicBuildSuperseded as exc:
+        raise _webapp.IntelligenceJobInterrupted("lifecycle_switch") from exc
     readiness = _intrinsic_readiness_from_record(record)
     _logger.info(
         "FSFFL hosted Intrinsic reconciliation state=%s status=%s build=%s forecast=%s estimates=%s",
