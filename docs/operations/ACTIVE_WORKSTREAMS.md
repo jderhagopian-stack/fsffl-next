@@ -607,3 +607,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - PR #301 is open with all ordinary CI/focused workflows green, but bounded review found a P1 in the acceptance probe: `TeamState.roster` entries are objects and must be filtered by their `player_id`, not compared directly to canonical id strings.
 - Correct that harness bug, regress it deterministically, rerun affected checks, then continue the full hosted lifecycle acceptance immediately.
 - Preserve #294/#295/#296, #298 FUMBLES_LOST authority, PI readiness semantics, and all frozen model boundaries.
+
+
+## 2026-09-29 — Hosted hard-memory blocker root-cause phase
+- **Implementation — ACTIVE / sole product-critical path.**
+- #301 is merged and the hosted journey now reaches coherent FSFFL and Hodor publication before stopping on the hard-memory gate.
+- Do not loosen the ~512 MB gate. Isolate whether the observed peak is production runtime retention, a bounded transient switch allocation, allocator high-water, or acceptance-harness accumulation.
+- Add phase-level memory/lifecycle evidence around clean FSFFL -> Hodor, verify release of prior league/runtime/artifact state, and repeat the switch to distinguish transient peak from accumulating leak.
+- Fix only the owning layer, add deterministic/resource regression, redeploy, and resume FSFFL return / same-State / restart / restored-session acceptance.
+- Preserve #294/#295/#296, #298, PI readiness semantics, and frozen model boundaries.
