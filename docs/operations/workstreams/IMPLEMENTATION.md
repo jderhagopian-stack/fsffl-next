@@ -1655,3 +1655,18 @@ PR #295 merged as `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` after full CI (1,81
 Exact merge SHA is live on Render deploy `dep-dati6o5g1s2s739fv4pg`; hosted acceptance is running. Initial FSFFL publication is coherent and PI remains responsive. Peak RSS briefly reached ~517.0 MB, above the soft ~429.5 MB target but below the ~536.9 MB hard Render limit. Do not interrupt the acceptance run solely for this soft-budget breach; capture whether memory falls back and whether later legs remain below the hard limit.
 
 Next required gate remains terminal hosted clean-first-run -> rebuild -> Hodor -> FSFFL return -> refreshes -> managed-team durability -> restart/restored-session. Only then request physical Safari validation.
+
+
+## 2026-09-29 — #295 code not yet disproven; hosted acceptance truncated by unverified keep-awake
+The #295 exact SHA `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` reached Hodor and returned to FSFFL coherently, then the Render instance shut down at the free-tier ~15-minute idle boundary before the managed-team/restart leg.
+
+Important correction: the assumed keep-awake was not active/effective. Logs show only one inbound `GET /` at startup and no recurring inbound traffic. Do not alter runtime durability logic because of this interrupted acceptance.
+
+Next action:
+1. establish a permitted recurring inbound request that is actually accepted/counts as activity;
+2. verify in logs that it repeats before relying on it;
+3. rerun exact #295 hosted acceptance through managed-team durability, restart, and restored session;
+4. capture memory throughout. This run briefly reached ~532.1 MB by Render metrics versus ~536.9 MB hard limit, though it later receded. If next complete run again approaches the hard ceiling, treat memory as an active stabilization blocker;
+5. physical Safari only after terminal hosted PASS.
+
+Do not reopen Forecast/Hodor or managed-team design absent new runtime evidence.
