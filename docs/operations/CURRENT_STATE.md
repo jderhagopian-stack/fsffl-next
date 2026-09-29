@@ -1323,3 +1323,23 @@ Management promotion status:
 - Implementation must now deploy the merged #298 lineage and run the complete hosted lifecycle acceptance: clean first run, managed-team selection, FSFFL -> Hodor -> FSFFL switch, same-State behavior, restart, and restored-session continuity, while preserving #294/#295/#296 runtime invariants.
 - Any hosted contradiction reopens only the affected runtime/consumer layer; do not reopen frozen FUMBLES_LOST Research/model authority without new model evidence.
 - Physical Safari remains HOLD until terminal hosted PASS.
+
+
+## 2026-09-29 — Hosted acceptance progressed through #299/#300; PR #301 harness P1 is current blocker
+Hosted acceptance on the merged #298 lineage has materially progressed:
+- PR #299 merged to restore the State-first clean-load acceptance contract and explicit post-restart restore coverage without changing Forecast/Simulation/Value/Intrinsic semantics;
+- PR #300 merged to make the clean State-only probe match real pre-team browser behavior (product context + league-wide State/Atlas before managed-team selection), again without product/model/runtime authority changes;
+- PR #301 (`Choose canonical roster player for cold PI acceptance`) is open and all ordinary CI/focused workflows are green.
+
+Current blocker is a **P1 in the hosted acceptance harness**, not evidence of a product/runtime defect:
+- the cold PI probe compares `RosterEntry` objects from `TeamState.roster` directly against canonical player-id strings;
+- therefore its canonical roster filter is always empty and the probe aborts before exercising PI history;
+- extract each roster entry's `player_id` before filtering/selecting the probe subject.
+
+Management disposition:
+- fix only this harness identity/type mismatch and add deterministic regression coverage;
+- do not alter PI readiness semantics, FUMBLES_LOST authority, #294/#295/#296 runtime architecture, or any frozen model boundary merely to satisfy the probe;
+- rerun CI/affected hosted-acceptance checks, then immediately resume the full hosted clean-first-run / managed-team selection / FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session journey;
+- if the corrected harness then exposes a real hosted product contradiction, reopen only that affected layer.
+
+Physical Safari remains HOLD until terminal hosted PASS.
