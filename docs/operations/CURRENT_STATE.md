@@ -1042,3 +1042,24 @@ Current implementation has already advanced:
 - #293 addresses Hodor raw Forecast replay discovery after clean runtime reset.
 
 Do not interrupt the active #293 hosted run absent a concrete failure. After it returns, Implementation must address any still-open replay compatibility-scan defect and remove/prove the cold-restore-before-fresh-Connect dependency before stabilization can close. Preserve strict source-health rules, atomic publication and #291/#292 safety.
+
+
+## 2026-09-29 — #293 hosted acceptance: Hodor recovered; run again cut off by 15-minute idle sleep
+Exact #293 merge SHA `49ce8cae4f588fefc7c879e643504ee1b015cf42` deployed live as Render deploy `dep-datgi3egekts73ao3tsg`.
+
+Hosted acceptance materially advanced beyond the prior #292 failure:
+- Hodor completed instead of failing on live provider source health;
+- Hodor published one coherent partial-authority generation with Forecast available, Value available, Simulation correctly unavailable under the separate K/DST Forecast-authority blocker;
+- all checked Hodor surfaces shared the same publication generation;
+- acceptance then returned successfully to FSFFL and published one coherent full generation across checked surfaces;
+- repeat PI history after FSFFL return completed in ~0.306s;
+- peak observed RSS was ~405.0 MB, within the ~429.5 MB soft engineering budget.
+
+The run still did **not** emit terminal PASS. The instance shut down gracefully at ~00:57:13Z, exactly 15 minutes after the #293 instance became live (~00:42:13Z), with no acceptance traceback or OOM. This matches the known Render free-tier idle-sleep behavior and interrupted the remaining restart/final acceptance legs.
+
+Disposition:
+- #293 materially resolves the previous Hodor hard stop.
+- Runtime stabilization remains HOLD because terminal clean-first-run/restored-session/switch/restart proof is incomplete.
+- The architecture-audit corrective remains mandatory: remove/prove the cold durable-restore-before-fresh-Connect dependency.
+- The #293 review P2 about scanning past newer incompatible raw artifacts remains open unless explicitly corrected/proven.
+- Do not request physical Safari validation yet.
