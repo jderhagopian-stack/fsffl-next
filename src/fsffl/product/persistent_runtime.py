@@ -850,40 +850,16 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
             return reused
 
-        last_good = restore_last_good_state_identity(
-            self._persistence,
-            user_id=user_id,
-            league_id=target_state.league.league_id,
+        (
+            prior_state,
+            prior_forecast,
+            prior_state_identity_source,
+            discovery_rejections,
+        ) = self._discover_prior_raw_forecast(
+            user_id,
+            target_state=target_state,
         )
-        if last_good is None:
-            self._record_forecast_replay_decision(
-                user_id,
-                league_state=target_state,
-                decision={
-                    "selection": "fresh_acquisition",
-                    "raw_compatibility": "not_evaluated",
-                    "reason": "no_same_league_last_good_state",
-                    "rejection_components": ["prior_state_unavailable"],
-                    "prior_state_id": None,
-                    "downstream_rebuild_components": [
-                        "league_scoring",
-                        "fantasy_regular_season",
-                        "state_supplements",
-                        "simulation",
-                        "value",
-                    ],
-                    "fresh_acquisition_required": True,
-                    "served_last_good_available": bool(current.served_intelligence),
-                },
-            )
-            return current
-
-        prior_state, _selected = last_good
-        prior_forecast = restore_state_bound_raw_forecast_evidence(
-            self._persistence,
-            league_state=prior_state,
-        )
-        if prior_forecast is None:
+        if prior_state is None or prior_forecast is None:
             self._record_forecast_replay_decision(
                 user_id,
                 league_state=target_state,
@@ -891,8 +867,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     "selection": "fresh_acquisition",
                     "raw_compatibility": "not_evaluated",
                     "reason": "prior_governed_raw_forecast_artifact_unavailable",
-                    "rejection_components": ["prior_raw_forecast_artifact_unavailable"],
-                    "prior_state_id": prior_state.state_id,
+                    "rejection_components": discovery_rejections,
+                    "prior_state_id": None,
+                    "prior_state_identity_source": None,
                     "downstream_rebuild_components": [
                         "league_scoring",
                         "fantasy_regular_season",
@@ -923,6 +900,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     "reason": "raw_forecast_material_inputs_changed",
                     "rejection_components": rejection_components,
                     "prior_state_id": prior_state.state_id,
+                    "prior_state_identity_source": prior_state_identity_source,
                     "prior_evidence_model_version": prior_forecast.model_version,
                     "prior_evidence_basis": prior_forecast.evidence_basis,
                     "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
@@ -958,6 +936,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     "reason": f"downstream_replay_failed:{type(exc).__name__}",
                     "rejection_components": ["downstream_replay_runtime_failure"],
                     "prior_state_id": prior_state.state_id,
+                    "prior_state_identity_source": prior_state_identity_source,
                     "prior_evidence_model_version": prior_forecast.model_version,
                     "prior_evidence_basis": prior_forecast.evidence_basis,
                     "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
@@ -997,6 +976,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 "reason": "governed_raw_provider_ensemble_replayed",
                 "rejection_components": [],
                 "prior_state_id": prior_state.state_id,
+                "prior_state_identity_source": prior_state_identity_source,
                 "prior_evidence_model_version": prior_forecast.model_version,
                 "prior_evidence_basis": prior_forecast.evidence_basis,
                 "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
