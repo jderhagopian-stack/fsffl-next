@@ -1,11 +1,11 @@
 {
-  "study": "rolling-fumbles-lost-authority",
+  "study": "rolling-fumbles-lost-authority-lifecycle-final",
   "date": "2026-09-29",
   "terminal_state": "DIRECTIVE COMPLETE — RESEARCH",
-  "authority": "research contract for bounded implementation; production unchanged",
-  "model": {
-    "base": "next2-fumbles-lost-first-party-v1:calibrated-position-opportunity-rate",
-    "proposed_rolling_version": "next2-fumbles-lost-first-party-v2:rolling-completed-week",
+  "authority": "bounded research contract for implementation; production unchanged",
+  "rolling_model": {
+    "status": "UNCHANGED_FROM_ACCEPTED_WEEK2_TO_17",
+    "proposed_version": "next2-fumbles-lost-first-party-v2:rolling-completed-week",
     "supported_completed_weeks": [
       2,
       3,
@@ -29,7 +29,7 @@
     "new_family_search": false,
     "cutoff_regimes_required": false
   },
-  "validation": {
+  "rolling_validation": {
     "oot_seasons": [
       2023,
       2024,
@@ -47,39 +47,82 @@
     "artifact_id": 11014727753,
     "artifact_digest": "sha256:eac8dffa80df5ba9adb6b279267b5c05134fefcbda71146b058fa837dec91db8"
   },
+  "materiality_correction": {
+    "contract_version": "fumbles-lost-non-material-partial-v2:all-population-maximum",
+    "rule": "impact_bound_90 <= 0.10 * 1.645 * supported_fantasy_point_stddev",
+    "bound_basis": "max(position-wide historical maximum season-equivalent exact lost-fumble target from completed prior seasons, legacy primary-population bound)",
+    "population_validation_passes_after_restriction": true,
+    "observed_tiers": [
+      "history_plus_current",
+      "history_only",
+      "current_only",
+      "cold_start"
+    ],
+    "late_qb_restriction": "QB cold-start and identity-light fail closed at cutoffs 13-17",
+    "identity_light": "eligible only with known/non-conflicting canonical offensive position and matching cold-start eligibility",
+    "unknown_or_conflicting_position": "FAIL_CLOSED",
+    "silent_zero": false,
+    "full_coverage_claim": false,
+    "lifecycle_workflow_run": 36558353289,
+    "lifecycle_artifact_id": 11028911683,
+    "lifecycle_artifact_digest": "sha256:d37986d48f734b8d4a0882703bb6a90241eae0306b84c5a0083f3cd8db589768"
+  },
   "current_cutoff3": {
     "calibration_scalar": 0.6183406074632098,
-    "uncertainty_floors": {
+    "point_model_uncertainty_floors": {
       "QB": 1.7808254003128128,
       "RB": 0.7375205714435535,
       "WR": 0.4424922528480551,
       "TE": 0.4613691857966682
-    }
-  },
-  "materiality": {
-    "status": "SUPPORTED",
-    "status_label": "NON_MATERIAL_PARTIAL",
-    "rule": "impact_bound_90 <= 0.10 * 1.645 * supported_fantasy_point_stddev",
-    "silent_zero": false,
-    "full_coverage_claim": false,
-    "fsffl_week3_score_impact_bounds": {
-      "QB": 7.285714285714286,
-      "RB": 3.642857142857143,
-      "WR": 1.9307142857143242,
+    },
+    "corrected_fsffl_materiality_event_bounds": {
+      "QB": 10.928571428571429,
+      "RB": 4.857142857142857,
+      "WR": 3.642857142857143,
       "TE": 2.4285714285714284
     },
-    "fsffl_week3_min_supported_fp_stddev": {
-      "QB": 44.293997753571745,
-      "RB": 22.146998876785872,
-      "WR": 11.737909404696747,
+    "corrected_fsffl_min_supported_fp_stddev": {
+      "QB": 66.44099663035762,
+      "RB": 29.529331835714494,
+      "WR": 22.146998876785872,
       "TE": 14.764665917857247
     }
+  },
+  "season_start": {
+    "week0": "explicit omission; no first-party point estimate; materiality-only if eligible and immaterial",
+    "week1": "explicit omission; no first-party point estimate; materiality-only if eligible and immaterial",
+    "week2": "transition to already-accepted rolling point model",
+    "week18": "no new remaining-season rolling point estimate",
+    "week0_event_bounds_2026": {
+      "QB": 9,
+      "RB": 4,
+      "WR": 3,
+      "TE": 3
+    },
+    "week1_event_bounds_2026": {
+      "QB": 9.5625,
+      "RB": 4.25,
+      "WR": 3.1875,
+      "TE": 3.1875
+    },
+    "early_population_validation_passes": true
+  },
+  "annual_rollover": {
+    "mode": "deterministic annual refresh plus minimal governed freeze",
+    "broad_research_required_each_year": false,
+    "rates": "recompute cumulative exact position lost-fumble/opportunity and opportunity/game rates through prior completed season",
+    "player_role_priors": "recompute cumulative player prior opportunity/game sufficient statistics",
+    "calibration": "same global train-only cutoff ratio over pseudo-current seasons through prior completed season",
+    "uncertainty": "carry prior floor and widen with newly completed chronology-preserving held-out residual RMSE",
+    "materiality": "carry prior bound and widen with newly completed all-population position historical maximum",
+    "target_season_freeze_required_before_point_authority": true,
+    "annual_gate_failure": "no automatic point authority; explicit omission/materiality if supported, otherwise fail closed"
   },
   "guards": {
     "y2_y3_changed": false,
     "y4_y7_changed": false,
     "k_dst_changed": false,
-    "intrinsic_semantics_changed": false,
+    "intrinsic_math_changed": false,
     "runtime_architecture_294_295_296_changed": false,
     "named_player_tuning": false,
     "future_leakage": false,
