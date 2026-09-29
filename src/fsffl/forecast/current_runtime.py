@@ -25,7 +25,10 @@ from .fumbles_lost_materiality import (
     FumblesLostMaterialityAssessment,
     assess_fumbles_lost_non_material_partial,
 )
-from .fumbles_lost_rolling_authority import NON_MATERIAL_PARTIAL_AUTHORITY
+from .fumbles_lost_rolling_authority import (
+    FumblesLostProductionTable,
+    NON_MATERIAL_PARTIAL_AUTHORITY,
+)
 from .league_scoring import (
     ForecastRuleFamilyCoverage,
     PartialFantasyPointForecast,
@@ -170,6 +173,7 @@ def _materiality_aware_scoring(
     raw_ensemble: tuple[ForecastObservation, ...],
     supplemental_observations: tuple[ForecastObservation, ...],
     fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None,
+    fumbles_lost_production_table: FumblesLostProductionTable | None = None,
     source: str,
     model_version: str,
 ) -> tuple[
@@ -212,6 +216,7 @@ def _materiality_aware_scoring(
             partial=partial,
             supported_fantasy_point_stddev=supported.distribution.stddev,
             supplement=fumbles_lost_supplement,
+            production_table=fumbles_lost_production_table,
         )
         assessments.append(assessment)
         if (
@@ -329,6 +334,7 @@ def replay_governed_raw_ensemble_for_state(
     prior_result: LiveForecastRuntimeResult,
     *,
     fumbles_lost_supplement_builder: FumblesLostSupplementBuilder | None = None,
+    fumbles_lost_production_table: FumblesLostProductionTable | None = None,
 ) -> LiveForecastRuntimeResult:
     """Replay governed raw Forecast truth under a compatible current State.
 
@@ -358,6 +364,7 @@ def replay_governed_raw_ensemble_for_state(
             builder = lambda state, observations: build_first_party_fumbles_lost_supplement(
                 state,
                 base_observations=observations,
+                production_table=fumbles_lost_production_table,
             )
         try:
             fumbles_lost_supplement = builder(league_state, raw_ensemble)
@@ -388,6 +395,7 @@ def replay_governed_raw_ensemble_for_state(
         raw_ensemble=raw_ensemble,
         supplemental_observations=supplemental_observations,
         fumbles_lost_supplement=fumbles_lost_supplement,
+        fumbles_lost_production_table=fumbles_lost_production_table,
         source="fsffl:live_league_scored",
         model_version="next2-current-runtime-v10:rolling-fumbles-lost-materiality",
     )
@@ -583,6 +591,7 @@ def build_current_live_forecasts(
     reference_raw_forecasts: tuple[ForecastObservation, ...] | None = None,
     reference_id: str = "preserved_preseason_multi_source_raw_ensemble",
     fumbles_lost_supplement_builder: FumblesLostSupplementBuilder | None = None,
+    fumbles_lost_production_table: FumblesLostProductionTable | None = None,
 ) -> LiveForecastRuntimeResult:
     """Build current authoritative FSFFL forecasts from independent live evidence.
 
@@ -861,6 +870,7 @@ def build_current_live_forecasts(
             builder = lambda state, observations: build_first_party_fumbles_lost_supplement(
                 state,
                 base_observations=observations,
+                production_table=fumbles_lost_production_table,
             )
         try:
             fumbles_lost_supplement = builder(league_state, raw_ensemble)
@@ -891,6 +901,7 @@ def build_current_live_forecasts(
         raw_ensemble=raw_ensemble,
         supplemental_observations=supplemental_observations,
         fumbles_lost_supplement=fumbles_lost_supplement,
+        fumbles_lost_production_table=fumbles_lost_production_table,
         source="fsffl:live_league_scored",
         model_version="next2-current-runtime-v10:rolling-fumbles-lost-materiality",
     )
