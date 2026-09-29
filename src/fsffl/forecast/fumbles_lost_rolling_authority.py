@@ -259,6 +259,30 @@ def validate_annual_rollover_candidate(
     ):
         raise ValueError("annual FUMBLES_LOST player-prior fingerprint does not match payload")
 
+    for player_id, row in player_priors.items():
+        if not str(player_id).strip() or not isinstance(row, Mapping):
+            raise ValueError("annual FUMBLES_LOST player role prior is invalid")
+        try:
+            position = Position(str(row["position"]))
+            history_games = int(row["history_games"])
+            history_opportunities = float(row["history_opportunities"])
+            identity_method = str(row["identity_method"]).strip()
+            accepted_tier = str(row["accepted_tier"]).strip()
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "annual FUMBLES_LOST player role prior is incomplete"
+            ) from exc
+        if position not in _POSITIONS:
+            raise ValueError("annual FUMBLES_LOST player role prior position is invalid")
+        if (
+            history_games < 0
+            or not math.isfinite(history_opportunities)
+            or history_opportunities < 0
+            or not identity_method
+            or not accepted_tier
+        ):
+            raise ValueError("annual FUMBLES_LOST player role prior is invalid")
+
     for position in _POSITIONS:
         for label, mapping in (
             ("lost-fumble rate", position_rates),
@@ -311,6 +335,10 @@ def validate_annual_rollover_candidate(
                 )
 
         for cutoff in _ROLLING_CUTOFFS:
+            row = candidate.rolling_cutoff(cutoff)
+            eligibility = row.get("fallback_eligibility")
+            if not isinstance(eligibility, Mapping):
+                raise ValueError("annual FUMBLES_LOST fallback eligibility matrix is incomplete")
             for tier in (
                 "history_plus_current",
                 "history_only",
@@ -318,9 +346,41 @@ def validate_annual_rollover_candidate(
                 "cold_start",
                 "identity_light",
             ):
-                eligibility = candidate.fallback_eligible(cutoff, position, tier)
-                if not isinstance(eligibility, bool):
-                    raise ValueError("annual FUMBLES_LOST fallback eligibility is invalid")
+                tier_row = eligibility.get(tier)
+                if not isinstance(tier_row, Mapping):
+                    raise ValueError(
+                        "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+                    )
+                for required_position in _POSITIONS:
+                    if not isinstance(tier_row.get(required_position.value), bool):
+                        raise ValueError(
+                            "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+                        )
+
+        season_start = candidate.payload.get("season_start")
+        if not isinstance(season_start, Mapping):
+            raise ValueError("annual FUMBLES_LOST season-start authority is missing")
+        season_start_cutoffs = season_start.get("cutoffs")
+        if not isinstance(season_start_cutoffs, Mapping):
+            raise ValueError("annual FUMBLES_LOST season-start authority is missing")
+        for cutoff in (0, 1):
+            row = season_start_cutoffs.get(str(cutoff))
+            if not isinstance(row, Mapping):
+                raise ValueError("annual FUMBLES_LOST season-start authority is incomplete")
+            for key in (
+                "cold_start_fallback_eligible",
+                "identity_light_fallback_eligible",
+            ):
+                eligibility = row.get(key)
+                if not isinstance(eligibility, Mapping):
+                    raise ValueError(
+                        "annual FUMBLES_LOST season-start eligibility is incomplete"
+                    )
+                for required_position in _POSITIONS:
+                    if not isinstance(eligibility.get(required_position.value), bool):
+                        raise ValueError(
+                            "annual FUMBLES_LOST season-start eligibility is incomplete"
+                        )
 
     expected_fingerprint = production_table_payload_fingerprint(candidate.payload)
     if candidate.fingerprint != expected_fingerprint:
