@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from dataclasses import replace
 from time import monotonic
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeoutError
@@ -708,6 +709,92 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
         self._checkpoint_async(user_id, context)
         return context
 
+    def _discover_prior_raw_forecast(
+        self,
+        user_id: str,
+        *,
+        target_state,
+    ):
+        """Find the newest governed raw Forecast evidence for this league.
+
+        Replay authority is league/State evidence authority, not user-session
+        authority. A clean runtime user can lose its last-good pointer while durable
+        league Forecast artifacts and canonical State history remain valid. Discovery
+        therefore tries exact-State raw evidence, the user's league last-good pointer,
+        then bounded same-league State history. Compatibility is still evaluated
+        separately before any replay is accepted.
+        """
+
+        if self._persistence is None:
+            return None, None, None, ["persistence_unavailable"]
+
+        exact_raw = restore_state_bound_raw_forecast_evidence(
+            self._persistence,
+            league_state=target_state,
+        )
+        if exact_raw is not None:
+            return target_state, exact_raw, "exact_state_raw", []
+
+        discovery_rejections: list[str] = ["exact_state_raw_unavailable"]
+        last_good = restore_last_good_state_identity(
+            self._persistence,
+            user_id=user_id,
+            league_id=target_state.league.league_id,
+        )
+        if last_good is not None:
+            prior_state, _selected = last_good
+            prior_raw = restore_state_bound_raw_forecast_evidence(
+                self._persistence,
+                league_state=prior_state,
+            )
+            if prior_raw is not None:
+                return prior_state, prior_raw, "league_last_good", discovery_rejections
+            discovery_rejections.append("league_last_good_raw_forecast_unavailable")
+        else:
+            discovery_rejections.append("league_last_good_state_unavailable")
+
+        if self._state_history is None:
+            discovery_rejections.append("state_history_unavailable")
+            return None, None, None, discovery_rejections
+
+        cutoff = target_state.as_of
+        seen_state_ids: set[str] = set()
+        for _ in range(32):
+            try:
+                candidate = self._state_history.latest_at_or_before(
+                    target_state.league.league_id,
+                    cutoff,
+                )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL raw Forecast history discovery failed user=%s league=%s target_state=%s error=%s",
+                    user_id,
+                    target_state.league.league_id,
+                    target_state.state_id,
+                    exc,
+                )
+                discovery_rejections.append("state_history_lookup_failed")
+                return None, None, None, discovery_rejections
+            if candidate is None or candidate.state_id in seen_state_ids:
+                break
+            seen_state_ids.add(candidate.state_id)
+            if candidate.state_id != target_state.state_id:
+                candidate_raw = restore_state_bound_raw_forecast_evidence(
+                    self._persistence,
+                    league_state=candidate,
+                )
+                if candidate_raw is not None:
+                    return (
+                        candidate,
+                        candidate_raw,
+                        "state_history",
+                        discovery_rejections,
+                    )
+            cutoff = candidate.as_of - timedelta(microseconds=1)
+
+        discovery_rejections.append("state_history_raw_forecast_unavailable")
+        return None, None, None, discovery_rejections
+
     def restore_exact_state_intelligence(self, user_id: str) -> UserRuntimeContext:
         """Reuse exact-State authority, then replay compatible raw Forecast truth."""
 
@@ -763,40 +850,16 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
             return reused
 
-        last_good = restore_last_good_state_identity(
-            self._persistence,
-            user_id=user_id,
-            league_id=target_state.league.league_id,
+        (
+            prior_state,
+            prior_forecast,
+            prior_state_identity_source,
+            discovery_rejections,
+        ) = self._discover_prior_raw_forecast(
+            user_id,
+            target_state=target_state,
         )
-        if last_good is None:
-            self._record_forecast_replay_decision(
-                user_id,
-                league_state=target_state,
-                decision={
-                    "selection": "fresh_acquisition",
-                    "raw_compatibility": "not_evaluated",
-                    "reason": "no_same_league_last_good_state",
-                    "rejection_components": ["prior_state_unavailable"],
-                    "prior_state_id": None,
-                    "downstream_rebuild_components": [
-                        "league_scoring",
-                        "fantasy_regular_season",
-                        "state_supplements",
-                        "simulation",
-                        "value",
-                    ],
-                    "fresh_acquisition_required": True,
-                    "served_last_good_available": bool(current.served_intelligence),
-                },
-            )
-            return current
-
-        prior_state, _selected = last_good
-        prior_forecast = restore_state_bound_raw_forecast_evidence(
-            self._persistence,
-            league_state=prior_state,
-        )
-        if prior_forecast is None:
+        if prior_state is None or prior_forecast is None:
             self._record_forecast_replay_decision(
                 user_id,
                 league_state=target_state,
@@ -804,8 +867,9 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     "selection": "fresh_acquisition",
                     "raw_compatibility": "not_evaluated",
                     "reason": "prior_governed_raw_forecast_artifact_unavailable",
-                    "rejection_components": ["prior_raw_forecast_artifact_unavailable"],
-                    "prior_state_id": prior_state.state_id,
+                    "rejection_components": discovery_rejections,
+                    "prior_state_id": None,
+                    "prior_state_identity_source": None,
                     "downstream_rebuild_components": [
                         "league_scoring",
                         "fantasy_regular_season",
@@ -836,6 +900,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     "reason": "raw_forecast_material_inputs_changed",
                     "rejection_components": rejection_components,
                     "prior_state_id": prior_state.state_id,
+                    "prior_state_identity_source": prior_state_identity_source,
                     "prior_evidence_model_version": prior_forecast.model_version,
                     "prior_evidence_basis": prior_forecast.evidence_basis,
                     "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
@@ -871,6 +936,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     "reason": f"downstream_replay_failed:{type(exc).__name__}",
                     "rejection_components": ["downstream_replay_runtime_failure"],
                     "prior_state_id": prior_state.state_id,
+                    "prior_state_identity_source": prior_state_identity_source,
                     "prior_evidence_model_version": prior_forecast.model_version,
                     "prior_evidence_basis": prior_forecast.evidence_basis,
                     "prior_successful_source_ids": list(prior_forecast.successful_source_ids),
@@ -910,6 +976,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 "reason": "governed_raw_provider_ensemble_replayed",
                 "rejection_components": [],
                 "prior_state_id": prior_state.state_id,
+                "prior_state_identity_source": prior_state_identity_source,
                 "prior_evidence_model_version": prior_forecast.model_version,
                 "prior_evidence_basis": prior_forecast.evidence_basis,
                 "prior_successful_source_ids": list(prior_forecast.successful_source_ids),

@@ -37,6 +37,7 @@ from fsffl.product.presentation_continuity import (
 )
 from fsffl.product.runtime import LiveForecastEvidence
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
+from fsffl.state.history import InMemorySnapshotStore
 from fsffl.state.models import (
     League,
     LeagueMatchup,
@@ -1226,6 +1227,119 @@ def test_downstream_scoring_change_replays_raw_forecast_and_rebuilds_scoring(
     assert persisted_decision["selection"] == "raw_replay"
     assert persisted_decision["prior_state_id"] == prior.state_id
     assert persisted_decision["target_state_id"] == target.state_id
+
+
+def test_clean_user_replays_governed_raw_forecast_from_same_league_state_history(
+    monkeypatch,
+) -> None:
+    persistence = MemoryPersistence()
+    prior = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    forecast = _with_replayable_raw_forecast(
+        _stale_forecast_without_first_party_fumbles_lost(prior),
+        prior,
+    )
+    # The durable Forecast belongs to the league/State, but the current runtime user
+    # is intentionally clean and has no user-scoped last-good pointer.
+    persist_runtime_snapshot(
+        persistence,
+        user_id="historical-capture-user",
+        league_state=prior,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=_empty_value(prior),
+    )
+    target = prior.model_copy(
+        update={"as_of": datetime(2026, 9, 8, 12, 10, tzinfo=UTC)}
+    )
+    history = InMemorySnapshotStore((prior, target))
+    runtime = PersistentPrivateBetaRuntimeStore(
+        persistence_store=persistence,
+        state_snapshot_store=history,
+    )
+    runtime.set_league_state("clean-runtime-user", target)
+
+    replay_calls: list[str] = []
+
+    def replay(target_state, prior_evidence):
+        replay_calls.append(target_state.state_id)
+        return replace(
+            prior_evidence,
+            runtime_result=prior_evidence.runtime_result.model_copy(
+                update={"evaluation_as_of": target_state.as_of}
+            ),
+        )
+
+    monkeypatch.setattr(
+        "fsffl.product.persistent_runtime.replay_live_forecast_evidence_for_state",
+        replay,
+    )
+    provider_calls: list[str] = []
+
+    def provider_outage(_state):
+        provider_calls.append("forecast")
+        raise RuntimeError("live providers unavailable")
+
+    restored = runtime.restore_exact_state_intelligence("clean-runtime-user")
+    evidence = restored.forecast_evidence
+    if evidence is None:
+        evidence = provider_outage(target)
+
+    assert replay_calls == [target.state_id]
+    assert provider_calls == []
+    assert evidence is not None
+    assert evidence.raw_forecasts == forecast.raw_forecasts
+    assert restored.simulation_analytics is None
+    assert restored.value_evidence is None
+
+    decision = runtime.forecast_replay_decision("clean-runtime-user")
+    assert decision is not None
+    assert decision["selection"] == "raw_replay"
+    assert decision["raw_compatibility"] == "compatible"
+    assert decision["prior_state_id"] == prior.state_id
+    assert decision["target_state_id"] == target.state_id
+    assert decision["prior_state_identity_source"] == "state_history"
+    assert decision["fresh_acquisition_required"] is False
+    assert decision["raw_prior_fingerprint"] == decision["raw_target_fingerprint"]
+
+
+def test_clean_user_state_history_replay_still_rejects_raw_material_change() -> None:
+    persistence = MemoryPersistence()
+    prior = _league_state(as_of=datetime(2026, 9, 8, 12, 0, tzinfo=UTC))
+    forecast = _with_replayable_raw_forecast(
+        _stale_forecast_without_first_party_fumbles_lost(prior),
+        prior,
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="historical-capture-user",
+        league_state=prior,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=_empty_value(prior),
+    )
+    target = prior.model_copy(
+        update={
+            "as_of": datetime(2026, 9, 8, 12, 10, tzinfo=UTC),
+            "league": prior.league.model_copy(update={"season": 2027}),
+        }
+    )
+    history = InMemorySnapshotStore((prior, target))
+    runtime = PersistentPrivateBetaRuntimeStore(
+        persistence_store=persistence,
+        state_snapshot_store=history,
+    )
+    runtime.set_league_state("clean-runtime-user", target)
+
+    restored = runtime.restore_exact_state_intelligence("clean-runtime-user")
+
+    assert restored.forecast_evidence is None
+    decision = runtime.forecast_replay_decision("clean-runtime-user")
+    assert decision is not None
+    assert decision["selection"] == "fresh_acquisition"
+    assert decision["raw_compatibility"] == "incompatible"
+    assert decision["prior_state_identity_source"] == "state_history"
+    assert decision["rejection_components"] == ["nfl_season_changed"]
+    assert decision["fresh_acquisition_required"] is True
 
 
 def test_raw_forecast_material_change_rejects_replay_with_component_reason(
