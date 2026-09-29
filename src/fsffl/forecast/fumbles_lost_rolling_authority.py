@@ -224,6 +224,124 @@ def non_material_partial_passes(
     return impact <= allowance, impact, allowance
 
 
+def _validate_annual_candidate_table_shape(
+    candidate: FumblesLostProductionTable,
+) -> None:
+    """Fail closed on malformed governed-freeze structure before semantic checks."""
+
+    if candidate.fingerprint != production_table_payload_fingerprint(candidate.payload):
+        raise ValueError("annual FUMBLES_LOST production-table fingerprint does not match payload")
+
+    try:
+        supported = candidate.supported_completed_through_weeks
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "annual FUMBLES_LOST supported cutoff set is incomplete"
+        ) from exc
+    if supported != _ROLLING_CUTOFFS:
+        raise ValueError("annual FUMBLES_LOST supported cutoff set is incomplete")
+
+    cutoffs = candidate.payload.get("cutoffs")
+    if not isinstance(cutoffs, Mapping):
+        raise ValueError("annual FUMBLES_LOST rolling cutoff table is incomplete")
+
+    for cutoff in _ROLLING_CUTOFFS:
+        row = cutoffs.get(str(cutoff))
+        if not isinstance(row, Mapping):
+            raise ValueError("annual FUMBLES_LOST rolling cutoff table is incomplete")
+
+        try:
+            scalar = float(row["calibration_scalar"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "annual FUMBLES_LOST calibration scalar matrix is incomplete"
+            ) from exc
+        if not math.isfinite(scalar) or scalar <= 0:
+            raise ValueError(
+                "annual FUMBLES_LOST calibration scalar must be finite and positive"
+            )
+
+        for field, label, require_positive in (
+            ("uncertainty_floor", "uncertainty floor", True),
+            ("materiality_event_bound_90", "materiality bound", False),
+        ):
+            matrix = row.get(field)
+            if not isinstance(matrix, Mapping):
+                raise ValueError(f"annual FUMBLES_LOST {label} matrix is incomplete")
+            for position in _POSITIONS:
+                try:
+                    value = float(matrix[position.value])
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"annual FUMBLES_LOST {label} matrix is incomplete"
+                    ) from exc
+                if not math.isfinite(value) or (
+                    value <= 0 if require_positive else value < 0
+                ):
+                    raise ValueError(f"annual FUMBLES_LOST {label} is invalid")
+
+        eligibility = row.get("fallback_eligibility")
+        if not isinstance(eligibility, Mapping):
+            raise ValueError(
+                "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+            )
+        for tier in (*_OBSERVED_FALLBACK_TIERS, "identity_light"):
+            tier_row = eligibility.get(tier)
+            if not isinstance(tier_row, Mapping):
+                raise ValueError(
+                    "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+                )
+            for position in _POSITIONS:
+                if not isinstance(tier_row.get(position.value), bool):
+                    raise ValueError(
+                        "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
+                    )
+
+    season_start = candidate.payload.get("season_start")
+    if not isinstance(season_start, Mapping):
+        raise ValueError("annual FUMBLES_LOST season-start authority is missing")
+    season_start_cutoffs = season_start.get("cutoffs")
+    if not isinstance(season_start_cutoffs, Mapping):
+        raise ValueError("annual FUMBLES_LOST season-start authority is missing")
+    for cutoff in (0, 1):
+        row = season_start_cutoffs.get(str(cutoff))
+        if not isinstance(row, Mapping):
+            raise ValueError("annual FUMBLES_LOST season-start authority is incomplete")
+        bounds = row.get("materiality_event_bound_90")
+        if not isinstance(bounds, Mapping):
+            raise ValueError(
+                "annual FUMBLES_LOST season-start materiality matrix is incomplete"
+            )
+        for position in _POSITIONS:
+            try:
+                bound = float(bounds[position.value])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    "annual FUMBLES_LOST season-start materiality matrix is incomplete"
+                ) from exc
+            if not math.isfinite(bound) or bound < 0:
+                raise ValueError(
+                    "annual FUMBLES_LOST season-start materiality bound is invalid"
+                )
+
+        eligibility = row.get("fallback_eligibility")
+        if not isinstance(eligibility, Mapping):
+            raise ValueError(
+                "annual FUMBLES_LOST season-start eligibility matrix is incomplete"
+            )
+        for tier in (*_OBSERVED_FALLBACK_TIERS, "identity_light"):
+            tier_row = eligibility.get(tier)
+            if not isinstance(tier_row, Mapping):
+                raise ValueError(
+                    "annual FUMBLES_LOST season-start eligibility matrix is incomplete"
+                )
+            for position in _POSITIONS:
+                if not isinstance(tier_row.get(position.value), bool):
+                    raise ValueError(
+                        "annual FUMBLES_LOST season-start eligibility matrix is incomplete"
+                    )
+
+
 def validate_annual_rollover_candidate(
     candidate: FumblesLostProductionTable,
     *,
@@ -243,6 +361,7 @@ def validate_annual_rollover_candidate(
 
     if candidate.target_season != prior.target_season + 1:
         raise ValueError("annual FUMBLES_LOST freeze must advance exactly one target season")
+    _validate_annual_candidate_table_shape(candidate)
     resolve_fumbles_lost_production_table(candidate.target_season, table=candidate)
     annual = candidate.payload.get("annual_freeze")
     if not isinstance(annual, Mapping):
@@ -360,25 +479,6 @@ def validate_annual_rollover_candidate(
                 raise ValueError(f"annual FUMBLES_LOST {label} must be finite and positive")
 
     for cutoff in _ROLLING_CUTOFFS:
-        row = candidate.rolling_cutoff(cutoff)
-        eligibility = row.get("fallback_eligibility")
-        if not isinstance(eligibility, Mapping):
-            raise ValueError(
-                "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
-            )
-        for tier in (*_OBSERVED_FALLBACK_TIERS, "identity_light"):
-            tier_row = eligibility.get(tier)
-            if not isinstance(tier_row, Mapping):
-                raise ValueError(
-                    "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
-                )
-            for position in _POSITIONS:
-                if not isinstance(tier_row.get(position.value), bool):
-                    raise ValueError(
-                        "annual FUMBLES_LOST fallback eligibility matrix is incomplete"
-                    )
-
-    for cutoff in _ROLLING_CUTOFFS:
         scalar = candidate.calibration_scalar(cutoff)
         if not math.isfinite(scalar) or scalar <= 0:
             raise ValueError("annual FUMBLES_LOST calibration scalar must be finite and positive")
@@ -464,34 +564,6 @@ def validate_annual_rollover_candidate(
                     "annual FUMBLES_LOST identity-light eligibility exceeds cold-start support"
                 )
 
-        # Future season-start freezes need the same explicit population matrix as
-        # rolling cutoffs; the embedded 2026 table remains a legacy frozen input.
-        season_start = candidate.payload.get("season_start")
-        if not isinstance(season_start, Mapping):
-            raise ValueError("annual FUMBLES_LOST season-start authority is missing")
-        season_start_cutoffs = season_start.get("cutoffs")
-        if not isinstance(season_start_cutoffs, Mapping):
-            raise ValueError("annual FUMBLES_LOST season-start authority is missing")
-        for cutoff in (0, 1):
-            row = season_start_cutoffs.get(str(cutoff))
-            if not isinstance(row, Mapping):
-                raise ValueError("annual FUMBLES_LOST season-start authority is incomplete")
-            eligibility = row.get("fallback_eligibility")
-            if not isinstance(eligibility, Mapping):
-                raise ValueError(
-                    "annual FUMBLES_LOST season-start eligibility matrix is incomplete"
-                )
-            for tier in (*_OBSERVED_FALLBACK_TIERS, "identity_light"):
-                tier_row = eligibility.get(tier)
-                if not isinstance(tier_row, Mapping):
-                    raise ValueError(
-                        "annual FUMBLES_LOST season-start eligibility matrix is incomplete"
-                    )
-                for required_position in _POSITIONS:
-                    if not isinstance(tier_row.get(required_position.value), bool):
-                        raise ValueError(
-                            "annual FUMBLES_LOST season-start eligibility matrix is incomplete"
-                        )
 
     expected_fingerprint = production_table_payload_fingerprint(candidate.payload)
     if candidate.fingerprint != expected_fingerprint:
