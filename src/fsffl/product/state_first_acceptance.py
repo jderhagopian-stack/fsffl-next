@@ -25,6 +25,7 @@ SurfaceProbe = Callable[[str, object], dict[str, object]]
 HistoryProbe = Callable[[str, object], dict[str, object]]
 ResourceReader = Callable[[], dict[str, object]]
 ProcessIdentityReader = Callable[[], str]
+StateTransitionReclaimer = Callable[[str], object]
 
 
 def _wait_for_job(
@@ -226,6 +227,7 @@ def run_state_first_production_acceptance(
     history_probe: HistoryProbe | None = None,
     resource_reader: ResourceReader | None = None,
     process_identity_reader: ProcessIdentityReader | None = None,
+    state_transition_reclaimer: StateTransitionReclaimer | None = None,
     restore_only: bool = False,
     timeout_seconds: float = 1200.0,
     poll_seconds: float = 1.0,
@@ -241,11 +243,13 @@ def run_state_first_production_acceptance(
         "resources": [],
         "surface_probes": [],
         "history_probes": [],
+        "state_transition_reclaims": [],
     }
     steps: list[dict[str, object]] = report["steps"]  # type: ignore[assignment]
     resources: list[dict[str, object]] = report["resources"]  # type: ignore[assignment]
     surface_rows: list[dict[str, object]] = report["surface_probes"]  # type: ignore[assignment]
     history_rows: list[dict[str, object]] = report["history_probes"]  # type: ignore[assignment]
+    transition_rows: list[dict[str, object]] = report["state_transition_reclaims"]  # type: ignore[assignment]
     process_identity_start = (
         process_identity_reader() if process_identity_reader is not None else None
     )
@@ -306,6 +310,10 @@ def run_state_first_production_acceptance(
 
 
     def activate(external_id: str, *, label: str) -> dict[str, object]:
+        previous_state = store.get(user_id).league_state
+        previous_league_id = (
+            previous_state.league.league_id if previous_state is not None else None
+        )
         state = state_loader(external_id)
         expected = f"sleeper:{external_id}"
         if state.league.league_id != expected:
@@ -313,6 +321,30 @@ def run_state_first_production_acceptance(
                 f"{label} provider returned {state.league.league_id}, expected {expected}"
             )
         store.set_league_state(user_id, state)
+        if (
+            state_transition_reclaimer is not None
+            and previous_league_id is not None
+            and previous_league_id != state.league.league_id
+        ):
+            before = sample_resources(f"{label}_before_transition_reclaim")
+            reclaimed = state_transition_reclaimer(
+                f"{user_id}:{state.state_id}:{label}:league_switch"
+            )
+            after = sample_resources(f"{label}_after_transition_reclaim")
+            transition_row = {
+                "label": label,
+                "from_league_id": previous_league_id,
+                "to_league_id": state.league.league_id,
+                "before": before,
+                "reclaim": reclaimed if isinstance(reclaimed, dict) else str(reclaimed),
+                "after": after,
+            }
+            transition_rows.append(transition_row)
+            _logger.info(
+                "FSFFL STATE-FIRST ACCEPTANCE transition_reclaim=%s data=%s",
+                label,
+                json.dumps(transition_row, sort_keys=True, default=str),
+            )
         current = store.get(user_id)
 
         # A true clean first run exposes canonical State before any managed-team

@@ -49,6 +49,7 @@ ConnectWork = Callable[[], None]
 StateLoader = Callable[[str], LeagueState]
 SyncProbeLoader = Callable[[str], SleeperSyncProbe]
 IntelligenceReconciler = Callable[[str], object]
+StateTransitionReclaimer = Callable[[str], object]
 
 
 class LeagueConnectCoordinator:
@@ -249,6 +250,7 @@ def install_hosted_connect_routes(
     persistence_store: PersistenceStore | None = None,
     sync_probe_loader: SyncProbeLoader | None = None,
     intelligence_reconciler: IntelligenceReconciler | None = None,
+    state_transition_reclaimer: StateTransitionReclaimer | None = None,
     full_refresh_seconds: int = 3600,
 ) -> LeagueConnectCoordinator:
     """Attach hosted-only background connect and refresh routes to the beta app."""
@@ -324,6 +326,14 @@ def install_hosted_connect_routes(
             active_state = runtime_store.get(user_id).league_state
             if not _matches_sleeper_league(active_state, league_external_id):
                 raise RuntimeError("Sleeper league activation lost requested identity")
+            if (
+                state_transition_reclaimer is not None
+                and active_league_id is not None
+                and active_league_id != league_state.league.league_id
+            ):
+                state_transition_reclaimer(
+                    f"{user_id}:{league_state.state_id}:league_switch"
+                )
             _logger.info(
                 "FSFFL Sleeper connect activated user=%s league=%s state=%s",
                 user_id,
@@ -460,6 +470,10 @@ def install_hosted_connect_routes(
                     league_external_id,
                 )
                 return
+            if changed and state_transition_reclaimer is not None:
+                state_transition_reclaimer(
+                    f"{user_id}:{league_state.state_id}:state_refresh"
+                )
             if changed:
                 behavioral_coordinator.start(
                     user_id=user_id,

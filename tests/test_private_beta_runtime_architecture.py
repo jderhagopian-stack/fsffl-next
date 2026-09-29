@@ -5,6 +5,7 @@ from pathlib import Path
 from threading import Event, Lock, Thread
 from time import monotonic, sleep
 
+import fsffl.product.resource_coordinator as resource_coordinator_module
 from fsffl.product.resource_coordinator import HeavyWorkCoordinator
 from fsffl.product.runtime import (
     ServedIntelligenceSnapshot,
@@ -316,3 +317,90 @@ def test_hosted_surface_acceptance_releases_sequential_payloads_and_bounds_marke
     assert "cache.clear()" in search_cache
     assert "active_scope" in economics_cache
     assert "cache.clear()" in economics_cache
+
+
+
+def test_heavy_work_snapshot_records_bounded_phase_memory_evidence(monkeypatch) -> None:
+    rss_values = iter((100, 120, 130, 125))
+    peak_values = iter((150, 220, 220))
+    monkeypatch.setattr(
+        resource_coordinator_module,
+        "current_rss_bytes",
+        lambda: next(rss_values),
+    )
+    monkeypatch.setattr(
+        resource_coordinator_module,
+        "process_peak_rss_bytes",
+        lambda: next(peak_values),
+    )
+
+    coordinator = HeavyWorkCoordinator(
+        max_waiters=1,
+        memory_limit_bytes=1_000,
+        headroom_ratio=0.20,
+    )
+    with coordinator.claim(kind="forecast", key="u:s1:forecast"):
+        pass
+
+    snapshot = coordinator.snapshot()
+    assert snapshot.peak_rss_bytes == 220
+    assert len(snapshot.recent_phase_memory) == 1
+    event = snapshot.recent_phase_memory[0]
+    assert event["kind"] == "forecast"
+    assert event["key"] == "u:s1:forecast"
+    assert event["before_rss_bytes"] == 120
+    assert event["after_rss_bytes"] == 130
+    assert event["resident_delta_bytes"] == 10
+    assert event["peak_before_rss_bytes"] == 150
+    assert event["peak_after_rss_bytes"] == 220
+    assert event["new_peak_increment_bytes"] == 70
+
+
+def test_cross_league_hosted_switch_reclaims_execution_caches_before_intelligence() -> None:
+    connect_source = Path("src/fsffl/product/hosted_connect.py").read_text(
+        encoding="utf-8"
+    )
+    hosted_source = Path("src/fsffl/product/persistent_webapp.py").read_text(
+        encoding="utf-8"
+    )
+    acceptance_source = Path("src/fsffl/product/state_first_acceptance.py").read_text(
+        encoding="utf-8"
+    )
+
+    connect = connect_source.split(
+        '@application.post("/api/connect/sleeper/background")', 1
+    )[1].split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[0]
+    activate_index = connect.index("activate_state(user_id, league_state)")
+    reclaim_index = connect.index("state_transition_reclaimer(", activate_index)
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", reclaim_index)
+    assert activate_index < reclaim_index < reconcile_index
+    assert "active_league_id != league_state.league.league_id" in connect
+
+    refresh = connect_source.split(
+        '@application.post("/api/connect/sleeper/background/refresh")', 1
+    )[1].split(
+        '@application.get("/api/connect/sleeper/background/current")', 1
+    )[0]
+    activate_refresh_index = refresh.index(
+        "runtime_store.set_league_state_if_generation("
+    )
+    reclaim_refresh_index = refresh.index(
+        "state_transition_reclaimer(",
+        activate_refresh_index,
+    )
+    reconcile_refresh_index = refresh.index(
+        "intelligence_reconciler(user_id)",
+        reclaim_refresh_index,
+    )
+    assert activate_refresh_index < reclaim_refresh_index < reconcile_refresh_index
+    assert "if changed and state_transition_reclaimer is not None:" in refresh
+
+    assert (
+        "state_transition_reclaimer=_reclaim_runtime_state_transition"
+        in hosted_source
+    )
+    assert '"state_transition_reclaims": []' in acceptance_source
+    assert 'sample_resources(f"{label}_before_transition_reclaim")' in acceptance_source
+    assert 'sample_resources(f"{label}_after_transition_reclaim")' in acceptance_source
