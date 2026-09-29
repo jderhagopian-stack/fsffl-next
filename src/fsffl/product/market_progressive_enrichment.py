@@ -146,20 +146,10 @@ class MarketDecisionEnrichmentCoordinator:
             f"{record.user_id}:{record.league_state_id}:"
             f"{record.focal_team_id}:{record.request_key}"
         )
-        try:
+        def build_and_attach_owned() -> None:
             foreground_pressure.cooperative_yield()
-            if self._heavy is None:
-                result = work()
-            else:
-                with self._heavy.claim(
-                    kind="market_decision_enrichment",
-                    key=key,
-                    timeout_seconds=300.0,
-                ):
-                    foreground_pressure.cooperative_yield()
-                    result = work()
-                    foreground_pressure.cooperative_yield()
-
+            result = work()
+            foreground_pressure.cooperative_yield()
             if not self._identity_validator(
                 record.user_id,
                 record.league_state_id,
@@ -173,7 +163,9 @@ class MarketDecisionEnrichmentCoordinator:
                     error="market context changed while Decision enrichment was running",
                 )
                 return
-
+            # Attach (or discard, if clear_user already removed the record) before
+            # releasing the heavy-work claim. A replacement heavy phase can never
+            # overlap a stale full enrichment result still held by this worker.
             self._set(
                 record.job_id,
                 status=MarketEnrichmentStatus.COMPLETED,
@@ -181,6 +173,17 @@ class MarketDecisionEnrichmentCoordinator:
                 result=result,
                 error=None,
             )
+
+        try:
+            if self._heavy is None:
+                build_and_attach_owned()
+            else:
+                with self._heavy.claim(
+                    kind="market_decision_enrichment",
+                    key=key,
+                    timeout_seconds=300.0,
+                ):
+                    build_and_attach_owned()
         except Exception as exc:
             self._set(
                 record.job_id,
