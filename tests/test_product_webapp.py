@@ -805,7 +805,10 @@ def test_cross_league_switch_never_serves_old_league_intelligence(monkeypatch) -
 
 
 def test_capability_readiness_does_not_globalize_non_material_partial_subject() -> None:
-    partial = SimpleNamespace(player_id="free-agent-partial")
+    partial = SimpleNamespace(
+        player_id="free-agent-partial",
+        omitted_rule_stats=("fum_lost",),
+    )
     runtime_result = SimpleNamespace(
         partial_fantasy_point_forecasts=(partial,),
         fumbles_lost_non_material_partial_player_ids=("free-agent-partial",),
@@ -840,6 +843,41 @@ def test_capability_readiness_does_not_globalize_non_material_partial_subject() 
     assert readiness["forecast"]["consumer_usable"] is True
     assert "NON_MATERIAL_PARTIAL" in readiness["forecast"]["reason"]
     assert readiness["simulation"]["status"] == "full"
+    assert readiness["overall_status"] == "full"
+
+
+def test_capability_readiness_does_not_mislabel_other_nonblocking_partial_as_fumbles_authority() -> None:
+    partial = SimpleNamespace(
+        player_id="free-agent-partial",
+        omitted_rule_stats=("mystery_bonus",),
+    )
+    runtime_result = SimpleNamespace(
+        partial_fantasy_point_forecasts=(partial,),
+        fumbles_lost_non_material_partial_player_ids=(),
+        fumbles_lost_material_partial_player_ids=(),
+        simulation_material_partial_player_ids=(),
+        simulation_authority_blockers=(),
+    )
+    evidence = SimpleNamespace(
+        raw_forecasts=(object(),),
+        league_scored_forecasts=(object(),),
+        runtime_result=runtime_result,
+    )
+    runtime = SimpleNamespace(
+        forecast_evidence=evidence,
+        simulation_analytics=SimpleNamespace(),
+        value_evidence=SimpleNamespace(
+            estimates=(object(),),
+            fsffl_cardinal_values=(),
+            pick_variant_market_values=(),
+        ),
+    )
+
+    readiness = _runtime_capability_readiness(runtime)
+
+    assert readiness["forecast"]["status"] == "partial_nonblocking"
+    assert readiness["forecast"]["consumer_usable"] is True
+    assert "NON_MATERIAL_PARTIAL" not in readiness["forecast"]["reason"]
     assert readiness["overall_status"] == "full"
 
 
