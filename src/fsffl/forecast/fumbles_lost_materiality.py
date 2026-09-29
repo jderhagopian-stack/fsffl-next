@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fsffl.state.models import FrozenModel, LeagueState, Position
+from fsffl.state.models import FrozenModel, LeagueState, Position, RosterSlot
 
 from .fumbles_lost_first_party import (
     FirstPartyFumblesLostEvidenceTier,
@@ -319,17 +319,21 @@ def fumbles_lost_runtime_authority_compatible(
         entry.player_id
         for team_state in league_state.team_states
         for entry in team_state.roster
-        if entry.slot.value not in {"TAXI", "IR"}
+        if entry.slot not in {RosterSlot.TAXI, RosterSlot.IR}
     }
     partial_rows = tuple(
         getattr(runtime_result, "partial_fantasy_point_forecasts", ()) or ()
     )
-    active_fumbles_partial_ids = {
+    fumbles_partial_ids = {
         row.player_id
         for row in partial_rows
-        if row.player_id in active_player_ids
-        and "fum_lost" in row.omitted_rule_stats
+        if "fum_lost" in row.omitted_rule_stats
     }
+    if not fumbles_partial_ids:
+        return False
+    active_fumbles_partial_ids = fumbles_partial_ids.intersection(
+        active_player_ids
+    )
     assessment_by_player = {
         row.player_id: row
         for row in assessments
@@ -337,7 +341,9 @@ def fumbles_lost_runtime_authority_compatible(
         and row.contract_version == expected_contract
     }
     if not active_fumbles_partial_ids:
-        return False
+        # Existing consumer scoping: an explicit partial on only Taxi/IR/unconsumed
+        # subjects does not invalidate Simulation/Intrinsic authority.
+        return True
     return all(
         player_id in assessment_by_player
         and assessment_by_player[player_id].status
