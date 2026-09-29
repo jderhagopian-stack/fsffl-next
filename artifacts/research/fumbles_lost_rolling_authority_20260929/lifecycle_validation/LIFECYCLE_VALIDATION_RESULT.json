@@ -8,7 +8,7 @@
     "player_role_priors": "recompute cumulative prior player opportunity/game sufficient statistics through Y-1",
     "position_rates": "recompute cumulative exact lost-fumble/opportunity and opportunity/game rates through Y-1",
     "target_year_Y_inputs": "completed governed exact weekly seasons through Y-1 only",
-    "uncertainty": "carry prior frozen floor and take max with newly available chronology-preserving held-out residual RMSE by position/cutoff"
+    "uncertainty": "for each position/cutoff c, new_floor=max(prior_floor[p,c], max newly completed held-out residual RMSE[p,k] for every k<=c); preserves monotone prefix floor"
   },
   "fallback_bound": {
     "formula": "max(position-wide historical maximum season-equivalent target from all completed prior seasons, previously frozen rolling primary-population bound when cutoff>=2)",
