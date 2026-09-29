@@ -549,3 +549,9 @@ After runtime stabilization and in-season Forecast, execute `docs/operations/dir
 **Implementation: first-load regression recovery** is the sole product-critical workstream. Controlling directive: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`.
 
 Goal: restore the previously reliable Sleeper connect/team-selection/initial-intelligence journey while preserving #291 lifecycle safety. No Simulation 2.0, Long-Term Intrinsic, Market expansion or new Research work until hosted + physical first-load acceptance closes.
+
+
+## 2026-09-28 — Parallel read-only architecture audit
+A separate Work review is authorized under `docs/operations/directives/20260928_RUNTIME_ARCHITECTURE_RECONCILIATION_AUDIT.md`.
+
+This is read-only and may run in parallel with Implementation. It must not modify code/docs, open PRs, deploy, or alter persistence. Its purpose is to reconcile the current runtime/application design against the founding FSFFL NEXT architecture and identify the smallest architectural simplification needed to prevent recurrence without discarding valid #261/#284-#291 safety properties.
