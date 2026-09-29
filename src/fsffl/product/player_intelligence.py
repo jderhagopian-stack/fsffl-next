@@ -145,6 +145,7 @@ class PlayerFutureForecastCache:
         self._contract: FutureForecastContract | None = None
         self._league_id: str | None = None
         self._cached_rules_fingerprint: str | None = None
+        self._cached_user_id: str | None = None
 
     @staticmethod
     def _runtime_rules_fingerprint(runtime: UserRuntimeContext) -> str | None:
@@ -249,6 +250,7 @@ class PlayerFutureForecastCache:
         self._contract = contract
         self._league_id = state.league.league_id
         self._cached_rules_fingerprint = rules_fingerprint
+        self._cached_user_id = runtime.user_id
         return contract
 
     def _stale_last_good_locked(
@@ -262,6 +264,7 @@ class PlayerFutureForecastCache:
             or served is None
             or self._contract is None
             or self._key is None
+            or self._cached_user_id != runtime.user_id
             or served.league_id != state.league.league_id
             or self._league_id != state.league.league_id
             or self._key[0] != served.league_state_id
@@ -298,7 +301,11 @@ class PlayerFutureForecastCache:
                 evidence.runtime_result.evaluation_as_of.isoformat(),
                 self._forecast_model_version,
             )
-            if self._key == key and self._contract is not None:
+            if (
+                self._key == key
+                and self._contract is not None
+                and self._cached_user_id == runtime.user_id
+            ):
                 return self._contract, "current"
             year_one = tuple(
                 row
@@ -328,12 +335,26 @@ class PlayerFutureForecastCache:
             self._contract = contract
             self._league_id = state.league.league_id
             self._cached_rules_fingerprint = self._runtime_rules_fingerprint(runtime)
+            self._cached_user_id = runtime.user_id
             self._persist_current_locked(
                 runtime,
                 key=key,
                 contract=contract,
             )
             return self._contract, "current"
+
+    def clear_user_cache(self, user_id: str) -> int:
+        """Release only this user's process-local future Forecast contract copy."""
+
+        with self._lock:
+            if self._cached_user_id != user_id or self._contract is None:
+                return 0
+            self._key = None
+            self._contract = None
+            self._league_id = None
+            self._cached_rules_fingerprint = None
+            self._cached_user_id = None
+            return 1
 
     def get(self, runtime: UserRuntimeContext) -> FutureForecastContract | None:
         contract, _freshness = self.resolve(runtime)
