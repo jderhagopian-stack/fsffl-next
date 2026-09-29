@@ -55,8 +55,11 @@ StateTransitionReclaimer = Callable[[str], object]
 class LeagueConnectCoordinator:
     """Run hosted Sleeper imports independently of a browser request lifetime."""
 
-    def __init__(self, *, max_workers: int = 2) -> None:
+    def __init__(self, *, max_workers: int = 2, max_records: int = 32) -> None:
+        if max_records < 4:
+            raise ValueError("connect max_records must be at least 4")
         self._lock = RLock()
+        self._max_records = int(max_records)
         self._jobs: dict[str, LeagueConnectJob] = {}
         self._current_by_user: dict[str, str] = {}
         self._executor = ThreadPoolExecutor(
@@ -80,6 +83,21 @@ class LeagueConnectCoordinator:
         now = datetime.now(UTC)
         with self._lock:
             current = self.current(user_id)
+            terminal = sorted(
+                (
+                    item
+                    for item in self._jobs.values()
+                    if item.status in {
+                        LeagueConnectStatus.COMPLETED,
+                        LeagueConnectStatus.FAILED,
+                    }
+                    and self._current_by_user.get(item.user_id) != item.job_id
+                ),
+                key=lambda item: item.updated_at,
+            )
+            while len(self._jobs) >= self._max_records and terminal:
+                stale = terminal.pop(0)
+                self._jobs.pop(stale.job_id, None)
             if (
                 current is not None
                 and current.league_external_id == league_external_id
