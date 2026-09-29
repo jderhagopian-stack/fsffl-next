@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Mapping
 
 from fsffl.state.models import Position
@@ -243,9 +244,17 @@ def validate_annual_rollover_candidate(
     if not isinstance(annual, Mapping):
         raise ValueError("annual FUMBLES_LOST freeze identity/source hashes are missing")
     hashes = annual.get("exact_source_hashes")
+    urls = annual.get("exact_source_urls")
+    captures = annual.get("source_captured_at")
+    built_at = annual.get("built_at")
     seasons = annual.get("training_seasons")
     if not isinstance(hashes, Mapping) or not hashes:
         raise ValueError("annual FUMBLES_LOST freeze requires exact source hashes")
+    if not isinstance(urls, Mapping) or set(urls) != set(hashes):
+        raise ValueError("annual FUMBLES_LOST freeze requires exact source URLs")
+    if not isinstance(captures, Mapping) or set(captures) != set(hashes):
+        raise ValueError("annual FUMBLES_LOST freeze requires source capture timestamps")
+    parsed_captures: list[datetime] = []
     for source_name, source_hash in hashes.items():
         text = str(source_hash)
         if (
@@ -254,6 +263,27 @@ def validate_annual_rollover_candidate(
             or any(char not in "0123456789abcdef" for char in text.lower())
         ):
             raise ValueError("annual FUMBLES_LOST freeze source hash is invalid")
+        if not str(urls[source_name]).strip():
+            raise ValueError("annual FUMBLES_LOST freeze source URL is invalid")
+        try:
+            captured = datetime.fromisoformat(str(captures[source_name]))
+        except ValueError as exc:
+            raise ValueError(
+                "annual FUMBLES_LOST freeze source capture timestamp is invalid"
+            ) from exc
+        if captured.tzinfo is None:
+            raise ValueError(
+                "annual FUMBLES_LOST freeze source capture timestamp must be timezone-aware"
+            )
+        parsed_captures.append(captured)
+    try:
+        built = datetime.fromisoformat(str(built_at))
+    except ValueError as exc:
+        raise ValueError("annual FUMBLES_LOST freeze build timestamp is invalid") from exc
+    if built.tzinfo is None:
+        raise ValueError("annual FUMBLES_LOST freeze build timestamp must be timezone-aware")
+    if parsed_captures and built < max(parsed_captures):
+        raise ValueError("annual FUMBLES_LOST freeze cannot predate source capture")
     if not isinstance(seasons, list) or not seasons:
         raise ValueError("annual FUMBLES_LOST freeze requires completed training seasons")
     normalized_seasons = tuple(int(season) for season in seasons)
