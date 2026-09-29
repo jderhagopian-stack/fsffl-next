@@ -3096,3 +3096,134 @@ def test_idle_checkpoint_executor_is_retired_after_latest_write() -> None:
 
     with runtime._checkpoint_executor_registry_lock:
         assert "retire-user" not in runtime._checkpoint_executors
+
+
+
+class BlockingHeavyRuntimeCheckpointPersistence(MemoryPersistence):
+    def __init__(self) -> None:
+        super().__init__()
+        self.block_next_artifact = False
+        self.artifact_entered = Event()
+        self.release_artifact = Event()
+
+    def put_artifact(self, record):
+        if self.block_next_artifact:
+            self.block_next_artifact = False
+            self.artifact_entered.set()
+            if not self.release_artifact.wait(timeout=3.0):
+                raise RuntimeError("test heavy checkpoint release timed out")
+        super().put_artifact(record)
+
+
+def test_managed_team_checkpoint_does_not_republish_terminal_intelligence() -> None:
+    persistence = MemoryPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="team-pointer-only",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    restored = runtime.restore_user("team-pointer-only")
+    assert restored.publication_generation_id == "generation-a"
+
+    artifacts_before = len(persistence.artifacts)
+    market_before = len(persistence.market)
+    selected = runtime.select_team("team-pointer-only", "t1")
+    assert selected.selected_team_id == "t1"
+    assert selected.publication_generation_id is None
+    assert runtime.wait_for_managed_team_checkpoint(
+        "team-pointer-only",
+        team_id="t1",
+        state_id=state.state_id,
+        timeout=2.0,
+    )
+
+    assert len(persistence.artifacts) == artifacts_before
+    assert len(persistence.market) == market_before
+    latest_manifest = persistence.get_latest_reusable_artifact(
+        artifact_kind=PUBLISHED_GENERATION_ARTIFACT_KIND,
+        scope_kind="user_league_state",
+        scope_id=f"team-pointer-only:{state.league.league_id}:{state.state_id}",
+        model_version="runtime-published-intelligence-generation-v1",
+    )
+    assert latest_manifest is not None
+    assert latest_manifest.payload["publication_generation_id"] == "generation-a"
+    assert latest_manifest.payload["selected_team_id"] == "t2"
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("team-pointer-only")
+    assert after_restart.selected_team_id == "t1"
+    assert after_restart.forecast_evidence is not None
+    assert after_restart.value_evidence is not None
+    assert after_restart.publication_generation_id is None
+
+
+def test_managed_team_checkpoint_queues_behind_heavy_runtime_checkpoint_and_wins_restart() -> None:
+    persistence = BlockingHeavyRuntimeCheckpointPersistence()
+    state = _league_state()
+    forecast = _stale_forecast_without_first_party_fumbles_lost(state)
+    value = _empty_value(state)
+    persist_runtime_snapshot(
+        persistence,
+        user_id="team-after-heavy",
+        league_state=state,
+        selected_team_id="t2",
+        forecast_evidence=forecast,
+        value_evidence=value,
+        publication_generation_id="generation-a",
+    )
+    runtime = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    runtime.restore_user("team-after-heavy")
+
+    # Simulate recent heavy runtime/checkpoint activity occupying this user's ordered
+    # persistence worker. Team selection must remain foreground-fast, queue behind it,
+    # and become the final durable pointer once the older work drains.
+    persistence.block_next_artifact = True
+    runtime.set_intelligence_bundle(
+        "team-after-heavy",
+        league_state=state,
+        forecast_evidence=forecast,
+        simulation_analytics=None,
+        value_evidence=value,
+    )
+    assert persistence.artifact_entered.wait(timeout=1.0)
+
+    started = monotonic()
+    selected = runtime.select_team("team-after-heavy", "t1")
+    assert monotonic() - started < 0.1
+    assert selected.selected_team_id == "t1"
+
+    wait_done = Event()
+    wait_result = {}
+
+    def wait_team() -> None:
+        wait_result["ok"] = runtime.wait_for_managed_team_checkpoint(
+            "team-after-heavy",
+            team_id="t1",
+            state_id=state.state_id,
+            timeout=2.5,
+        )
+        wait_done.set()
+
+    waiter = Thread(target=wait_team, name="managed-team-durability-wait")
+    waiter.start()
+    assert wait_done.wait(timeout=0.05) is False
+
+    persistence.release_artifact.set()
+    waiter.join(timeout=3.0)
+    assert not waiter.is_alive()
+    assert wait_result["ok"] is True
+    assert persistence.user is not None
+    assert persistence.user.selected_team_id == "t1"
+
+    restarted = PersistentPrivateBetaRuntimeStore(persistence_store=persistence)
+    after_restart = restarted.restore_user("team-after-heavy")
+    assert after_restart.selected_team_id == "t1"
+    assert after_restart.publication_generation_id is None
