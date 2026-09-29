@@ -772,7 +772,9 @@ def _acceptance_history_probe(label: str, context) -> dict[str, object]:
             None,
         )
         if selected_state is not None:
-            roster_ids = list(selected_state.roster)
+            roster_ids = [
+                entry.player_id for entry in selected_state.roster
+            ]
 
     intrinsic: dict[str, object] = {
         "status": "building",
