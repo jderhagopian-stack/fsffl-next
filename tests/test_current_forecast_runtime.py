@@ -560,7 +560,7 @@ def test_unresolved_fumbles_lost_blocks_simulation_only_for_active_roster_subjec
                     "rules": base.league.rules.model_copy(
                         update={
                             "scoring": base.league.rules.scoring
-                            + (ScoringRule(stat="fum_lost", points=-2.0),)
+                            + (ScoringRule(stat="fum_lost", points=-10.0),)
                         }
                     )
                 }
@@ -721,3 +721,147 @@ def test_governed_raw_replay_rebuilds_state_bound_fumbles_lost_supplement() -> N
         != original.fumbles_lost_supplement_authority_fingerprint
     )
     assert replayed.fumbles_lost_supplement_failure is None
+
+
+
+def test_non_material_fumbles_lost_keeps_partial_diagnostics_but_allows_active_simulation_subject() -> None:
+    base = state()
+    active_state = base.model_copy(
+        update={
+            "completed_through_week": 3,
+            "league": base.league.model_copy(
+                update={
+                    "rules": base.league.rules.model_copy(
+                        update={
+                            "scoring": base.league.rules.scoring
+                            + (ScoringRule(stat="fum_lost", points=-1.0),)
+                        }
+                    )
+                }
+            ),
+            "team_states": (
+                TeamState(
+                    team_id="a",
+                    roster=(RosterEntry(player_id="p1", slot=RosterSlot.BENCH),),
+                ),
+                TeamState(team_id="b", roster=()),
+            ),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+    result = build_current_live_forecasts(
+        active_state,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=lambda _state, _raw: (_ for _ in ()).throw(
+            ValueError("point coordinate intentionally unavailable")
+        ),
+    )
+
+    assert len(result.partial_fantasy_point_forecasts) == 1
+    partial = result.partial_fantasy_point_forecasts[0]
+    assert partial.omitted_rule_stats == ("fum_lost",)
+    assert result.fumbles_lost_non_material_partial_player_ids == ("p1",)
+    assert result.fumbles_lost_material_partial_player_ids == ()
+    assert result.simulation_material_partial_player_ids == ()
+    assert "partial_player_scoring_coordinates_present" not in result.simulation_authority_blockers
+    assert len(result.fantasy_point_forecasts) == 1
+    degraded = result.fantasy_point_forecasts[0]
+    assert "NON_MATERIAL_PARTIAL" in degraded.model_version
+    assert "fumbles_lost_explicitly_omitted" in degraded.model_version
+    assert all(
+        row.metric != ForecastMetric.FUMBLES_LOST
+        for row in result.raw_ensemble
+    )
+    assert result.fumbles_lost_supplement_player_count == 0
+    assert result.fumbles_lost_supplement_failure is not None
+
+
+def test_material_fumbles_lost_for_one_active_subject_preserves_simulation_blocker() -> None:
+    base = state()
+    active_state = base.model_copy(
+        update={
+            "completed_through_week": 3,
+            "league": base.league.model_copy(
+                update={
+                    "rules": base.league.rules.model_copy(
+                        update={
+                            "scoring": base.league.rules.scoring
+                            + (ScoringRule(stat="fum_lost", points=-10.0),)
+                        }
+                    )
+                }
+            ),
+            "team_states": (
+                TeamState(
+                    team_id="a",
+                    roster=(RosterEntry(player_id="p1", slot=RosterSlot.BENCH),),
+                ),
+                TeamState(team_id="b", roster=()),
+            ),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+    result = build_current_live_forecasts(
+        active_state,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=lambda _state, _raw: (_ for _ in ()).throw(
+            ValueError("point coordinate unavailable")
+        ),
+    )
+
+    assert result.fumbles_lost_non_material_partial_player_ids == ()
+    assert result.fumbles_lost_material_partial_player_ids == ("p1",)
+    assert result.simulation_material_partial_player_ids == ("p1",)
+    assert "partial_player_scoring_coordinates_present" in result.simulation_authority_blockers
+    assert result.fantasy_point_forecasts == ()
+
+
+def test_late_qb_identity_light_fumbles_lost_fails_closed_for_active_subject() -> None:
+    base = state()
+    active_state = base.model_copy(
+        update={
+            "completed_through_week": 13,
+            "league": base.league.model_copy(
+                update={
+                    "rules": base.league.rules.model_copy(
+                        update={
+                            "scoring": base.league.rules.scoring
+                            + (ScoringRule(stat="fum_lost", points=-0.01),)
+                        }
+                    )
+                }
+            ),
+            "team_states": (
+                TeamState(
+                    team_id="a",
+                    roster=(RosterEntry(player_id="p1", slot=RosterSlot.BENCH),),
+                ),
+                TeamState(team_id="b", roster=()),
+            ),
+        }
+    )
+    fetchers = (
+        NamedCurrentProjectionFetcher("fftoday", lambda season: snapshot("fftoday", 4000.0)),
+        NamedCurrentProjectionFetcher("cbs", lambda season: snapshot("cbs", 4200.0)),
+    )
+    result = build_current_live_forecasts(
+        active_state,
+        fetchers=fetchers,
+        clock=lambda: NOW,
+        fumbles_lost_supplement_builder=lambda _state, _raw: (_ for _ in ()).throw(
+            ValueError("late point coordinate unavailable")
+        ),
+    )
+    assessment = result.fumbles_lost_materiality_assessments[0]
+    assert assessment.evidence_tier.value == "identity_light"
+    assert assessment.eligible is False
+    assert result.simulation_material_partial_player_ids == ("p1",)
+    assert "partial_player_scoring_coordinates_present" in result.simulation_authority_blockers
