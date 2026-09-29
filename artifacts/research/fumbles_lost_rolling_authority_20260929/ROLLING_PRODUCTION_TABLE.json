@@ -30,9 +30,15 @@
   "uncertainty_contract": "max(sqrt(mean), rolling_position_floor); cold/identity-light also max accepted cold-start floor",
   "cold_start_floor": 0.789918699230448,
   "materiality_contract": {
+    "contract_version": "fumbles-lost-non-material-partial-v2:all-population-maximum",
     "status_when_passed": "NON_MATERIAL_PARTIAL",
     "formula": "abs(scoring_points_per_event)*event_bound_90 <= 0.10*1.645*supported_fantasy_point_stddev",
     "fraction": 0.1,
+    "bound_basis": "max(position-wide historical maximum season-equivalent target from all completed prior seasons, legacy primary-population bound)",
+    "observed_population_validation": "history_plus_current;history_only;current_only;cold_start",
+    "identity_light_rule": "eligible only when canonical offensive position is known/non-conflicting and matching cold-start position/cutoff eligibility is true",
+    "late_qb_restriction": "QB cold-start and identity-light fail closed at completed weeks 13-17",
+    "unknown_or_conflicting_position": "FAIL_CLOSED",
     "silent_zero_forbidden": true,
     "full_authority_claim_forbidden": true
   },
@@ -46,16 +52,54 @@
         "TE": 0.4524060195836409
       },
       "materiality_event_bound_90": {
+        "QB": 10.2,
+        "RB": 4.533333333333333,
+        "WR": 3.4,
+        "TE": 3.4
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 62.01159685500044,
+        "RB": 27.56070971333353,
+        "WR": 20.670532285000146,
+        "TE": 20.670532285000146
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 6.663999999999994,
         "RB": 3.4,
         "WR": 2.2666666666666666,
         "TE": 2.2666666666666666
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 40.514243278600254,
-        "RB": 20.670532285000146,
-        "WR": 13.780354856666765,
-        "TE": 13.780354856666765
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "3": {
@@ -67,16 +111,54 @@
         "TE": 0.4613691857966682
       },
       "materiality_event_bound_90": {
+        "QB": 10.928571428571429,
+        "RB": 4.857142857142857,
+        "WR": 3.642857142857143,
+        "TE": 2.4285714285714284
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 66.44099663035762,
+        "RB": 29.529331835714494,
+        "WR": 22.146998876785872,
+        "TE": 14.764665917857247
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 7.285714285714286,
         "RB": 3.642857142857143,
         "WR": 1.9307142857143242,
         "TE": 2.4285714285714284
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 44.293997753571745,
-        "RB": 22.146998876785872,
-        "WR": 11.737909404696747,
-        "TE": 14.764665917857247
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "4": {
@@ -88,16 +170,54 @@
         "TE": 0.4864330640772961
       },
       "materiality_event_bound_90": {
+        "QB": 7.846153846153846,
+        "RB": 5.230769230769231,
+        "WR": 3.923076923076923,
+        "TE": 2.6153846153846154
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 47.70122835000034,
+        "RB": 31.800818900000227,
+        "WR": 23.85061417500017,
+        "TE": 15.900409450000113
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 7.623846153846133,
         "RB": 3.923076923076923,
         "WR": 1.3076923076923077,
         "TE": 2.6153846153846154
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 46.3496935467502,
-        "RB": 23.85061417500017,
-        "WR": 7.950204725000057,
-        "TE": 15.900409450000113
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "5": {
@@ -109,16 +229,54 @@
         "TE": 0.49174439761965577
       },
       "materiality_event_bound_90": {
+        "QB": 8.412371134020619,
+        "RB": 5.608247422680412,
+        "WR": 4.25,
+        "TE": 2.8333333333333335
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 51.14358503505191,
+        "RB": 34.09572335670127,
+        "WR": 25.838165356250183,
+        "TE": 17.22544357083346
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 7.010309278350515,
         "RB": 2.804123711340206,
         "WR": 1.402061855670103,
         "TE": 2.804123711340206
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 42.61965419587659,
-        "RB": 17.047861678350635,
-        "WR": 8.523930839175318,
-        "TE": 17.047861678350635
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "6": {
@@ -130,16 +288,54 @@
         "TE": 0.5027178677659695
       },
       "materiality_event_bound_90": {
+        "QB": 9.11731843575419,
+        "RB": 6.078212290502793,
+        "WR": 4.584269662921348,
+        "TE": 3.056179775280899
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 55.429360317318825,
+        "RB": 36.95290687821255,
+        "WR": 27.87038060898896,
+        "TE": 18.580253739325975
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 7.589323401613904,
         "RB": 3.039106145251397,
         "WR": 1.5195530726256983,
         "TE": 2.1506741154562623
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 46.1398101159904,
-        "RB": 18.47645343910628,
-        "WR": 9.238226719553138,
-        "TE": 13.075170217074355
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "7": {
@@ -151,16 +347,54 @@
         "TE": 0.5339032761584541
       },
       "materiality_event_bound_90": {
+        "QB": 9.831325301204819,
+        "RB": 6.554216867469879,
+        "WR": 4.975609756097561,
+        "TE": 3.317073170731707
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 59.770213836145004,
+        "RB": 39.84680922409667,
+        "WR": 30.24955944146363,
+        "TE": 20.166372960975753
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 6.62489874353289,
         "RB": 3.3118462675535847,
         "WR": 1.6585365853658536,
         "TE": 2.289779606229775
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 40.27652451854515,
-        "RB": 20.134595646006943,
-        "WR": 10.083186480487877,
-        "TE": 13.92087155179632
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "8": {
@@ -172,16 +406,54 @@
         "TE": 0.5460810664632603
       },
       "materiality_event_bound_90": {
+        "QB": 9.12751677852349,
+        "RB": 5.476510067114094,
+        "WR": 5.476510067114094,
+        "TE": 3.651006711409396
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 55.491361838926565,
+        "RB": 33.294817103355946,
+        "WR": 33.294817103355946,
+        "TE": 22.19654473557063
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 7.253333333333333,
         "RB": 3.651006711409396,
         "WR": 1.825503355704698,
         "TE": 1.825503355704698
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 44.09713554133365,
-        "RB": 22.19654473557063,
-        "WR": 11.098272367785315,
-        "TE": 11.098272367785315
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "9": {
@@ -193,16 +465,54 @@
         "TE": 0.5564889287468825
       },
       "materiality_event_bound_90": {
+        "QB": 10,
+        "RB": 6,
+        "WR": 4,
+        "TE": 4.059701492537314
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 60.795683191176906,
+        "RB": 36.47740991470614,
+        "WR": 24.318273276470762,
+        "TE": 24.681232579104655
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 8,
         "RB": 4.059701492537314,
         "WR": 2.029850746268657,
         "TE": 2.029850746268657
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 48.636546552941525,
-        "RB": 24.681232579104655,
-        "WR": 12.340616289552328,
-        "TE": 12.340616289552328
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "10": {
@@ -214,16 +524,54 @@
         "TE": 0.5893832260536446
       },
       "materiality_event_bound_90": {
+        "QB": 9.066666666666666,
+        "RB": 6.688524590163935,
+        "WR": 4.459016393442623,
+        "TE": 4.459016393442623
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 55.12141942666706,
+        "RB": 40.663342200000294,
+        "WR": 27.108894800000193,
+        "TE": 27.108894800000193
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 8.918032786885245,
         "RB": 4.533333333333333,
         "WR": 2.2666666666666666,
         "TE": 2.2666666666666666
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 54.21778960000039,
-        "RB": 27.56070971333353,
-        "WR": 13.780354856666765,
-        "TE": 13.780354856666765
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "11": {
@@ -235,16 +583,54 @@
         "TE": 0.5893832260536446
       },
       "materiality_event_bound_90": {
+        "QB": 10.264150943396226,
+        "RB": 7.555555555555555,
+        "WR": 5.08411214953271,
+        "TE": 5.08411214953271
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 62.40160689811365,
+        "RB": 45.93451618888922,
+        "WR": 30.909207155140408,
+        "TE": 30.909207155140408
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 7.69811320754717,
         "RB": 5.132075471698113,
         "WR": 2.5660377358490565,
         "TE": 2.5660377358490565
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 46.80120517358524,
-        "RB": 31.200803449056824,
-        "WR": 15.600401724528412,
-        "TE": 15.600401724528412
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "12": {
@@ -256,16 +642,54 @@
         "TE": 0.597147544516167
       },
       "materiality_event_bound_90": {
+        "QB": 11.826086956521738,
+        "RB": 8.869565217391305,
+        "WR": 5.913043478260869,
+        "TE": 5.913043478260869
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 71.8975036000005,
+        "RB": 53.923127700000386,
+        "WR": 35.94875180000025,
+        "TE": 35.94875180000025
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 8.869565217391305,
         "RB": 5.849462365591398,
         "WR": 2.9565217391304346,
         "TE": 2.924731182795699
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 53.923127700000386,
-        "RB": 35.56220608172069,
-        "WR": 17.974375900000126,
-        "TE": 17.781103040860344
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "13": {
@@ -277,16 +701,54 @@
         "TE": 0.6747042850777093
       },
       "materiality_event_bound_90": {
+        "QB": 13.772151898734178,
+        "RB": 10.597402597402597,
+        "WR": 7.064935064935065,
+        "TE": 3.5324675324675323
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 83.72873836962086,
+        "RB": 64.42763309610436,
+        "WR": 42.951755397402906,
+        "TE": 21.475877698701453
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 10.329113924050633,
         "RB": 6.886075949367088,
         "WR": 3.5324675324675323,
         "TE": 3.5324675324675323
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 62.79655377721564,
-        "RB": 41.86436918481042,
-        "WR": 21.475877698701453,
-        "TE": 21.475877698701453
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "14": {
@@ -298,16 +760,54 @@
         "TE": 0.7943030804858575
       },
       "materiality_event_bound_90": {
+        "QB": 12.75,
+        "RB": 8.5,
+        "WR": 8.5,
+        "TE": 4.25
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 77.51449606875056,
+        "RB": 51.676330712500366,
+        "WR": 51.676330712500366,
+        "TE": 25.838165356250183
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 11.347499999999947,
         "RB": 6.800000000000097,
         "WR": 4.25,
         "TE": 4.25
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 68.98790150118766,
-        "RB": 41.34106457000088,
-        "WR": 25.838165356250183,
-        "TE": 25.838165356250183
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "15": {
@@ -319,16 +819,54 @@
         "TE": 1.0234310741611572
       },
       "materiality_event_bound_90": {
+        "QB": 17,
+        "RB": 11.333333333333334,
+        "WR": 11.333333333333334,
+        "TE": 5.666666666666667
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 103.35266142500073,
+        "RB": 68.90177428333384,
+        "WR": 68.90177428333384,
+        "TE": 34.45088714166692
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 9.406666666666647,
         "RB": 5.666666666666667,
         "WR": 5.666666666666667,
         "TE": 5.666666666666667
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 57.188472655166954,
-        "RB": 34.45088714166692,
-        "WR": 34.45088714166692,
-        "TE": 34.45088714166692
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "16": {
@@ -340,16 +878,54 @@
         "TE": 1.2139596137589443
       },
       "materiality_event_bound_90": {
+        "QB": 25.5,
+        "RB": 17,
+        "WR": 17,
+        "TE": 8.5
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 155.02899213750112,
+        "RB": 103.35266142500073,
+        "WR": 103.35266142500073,
+        "TE": 51.676330712500366
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 8.5,
         "RB": 8.5,
         "WR": 8.5,
         "TE": 8.5
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 51.676330712500366,
-        "RB": 51.676330712500366,
-        "WR": 51.676330712500366,
-        "TE": 51.676330712500366
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     },
     "17": {
@@ -361,17 +937,126 @@
         "TE": 1.4895569667821091
       },
       "materiality_event_bound_90": {
+        "QB": 34,
+        "RB": 34,
+        "WR": 17,
+        "TE": 17
+      },
+      "minimum_supported_fp_stddev_for_non_material_fsffl": {
+        "QB": 206.70532285000147,
+        "RB": 206.70532285000147,
+        "WR": 103.35266142500073,
+        "TE": 103.35266142500073
+      },
+      "legacy_primary_population_materiality_event_bound_90": {
         "QB": 17,
         "RB": 17,
         "WR": 2.5032220614172163,
         "TE": 2.575381693296983
       },
-      "minimum_supported_fp_stddev_for_non_material_fsffl": {
-        "QB": 103.35266142500073,
-        "RB": 103.35266142500073,
-        "WR": 15.218509540308586,
-        "TE": 15.65720895220401
+      "fallback_eligibility": {
+        "history_plus_current": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "history_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "current_only": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "cold_start": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light": {
+          "QB": false,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
       }
     }
+  },
+  "season_start": {
+    "point_estimate_authority": {
+      "0": "OMIT_EXPLICITLY",
+      "1": "OMIT_EXPLICITLY",
+      "2": "TRANSITION_TO_ROLLING_MODEL"
+    },
+    "cutoffs": {
+      "0": {
+        "materiality_event_bound_90": {
+          "QB": 9,
+          "RB": 4,
+          "WR": 3,
+          "TE": 3
+        },
+        "minimum_supported_fp_stddev_for_non_material_fsffl": {
+          "QB": 54.716114872059215,
+          "RB": 24.318273276470762,
+          "WR": 18.23870495735307,
+          "TE": 18.23870495735307
+        },
+        "cold_start_fallback_eligible": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light_fallback_eligible": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
+      },
+      "1": {
+        "materiality_event_bound_90": {
+          "QB": 9.5625,
+          "RB": 4.25,
+          "WR": 3.1875,
+          "TE": 3.1875
+        },
+        "minimum_supported_fp_stddev_for_non_material_fsffl": {
+          "QB": 58.13587205156291,
+          "RB": 25.838165356250183,
+          "WR": 19.37862401718764,
+          "TE": 19.37862401718764
+        },
+        "cold_start_fallback_eligible": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        },
+        "identity_light_fallback_eligible": {
+          "QB": true,
+          "RB": true,
+          "WR": true,
+          "TE": true
+        }
+      }
+    }
+  },
+  "annual_rollover": {
+    "mode": "deterministic annual refresh plus minimal governed freeze",
+    "required_before_season_point_authority": true,
+    "position_rates": "recompute from completed governed exact weekly seasons through target_year-1",
+    "player_role_priors": "recompute cumulative prior opportunity/game sufficient statistics through target_year-1",
+    "calibration": "same global train-only ratio by cutoff 2-17 over pseudo-current seasons 2022..target_year-1",
+    "uncertainty": "carry prior frozen floor; take max with newly available chronology-preserving held-out residual RMSE by position/cutoff",
+    "materiality": "carry prior bound; take max with newly available all-population position historical maximum at cutoffs 0-17",
+    "failure_behavior": "no point authority; explicit omission plus materiality gate if eligible, otherwise fail closed"
   }
 }
