@@ -271,6 +271,36 @@ def test_materiality_compatibility_is_bound_to_current_simulation_scope() -> Non
         expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
     )
 
+    supplement_with_residual_partial = SimpleNamespace(
+        **{
+            **runtime_result.__dict__,
+            "fumbles_lost_supplement_authority_fingerprint": "a" * 64,
+            "fumbles_lost_supplement_model_version": (
+                FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION
+            ),
+            "fumbles_lost_supplement_league_state_id": active.state_id,
+        }
+    )
+    assert fumbles_lost_runtime_authority_compatible(
+        active,
+        supplement_with_residual_partial,
+        expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    )
+    material = assessment.model_copy(
+        update={"status": "MATERIAL_PARTIAL", "eligible": False}
+    )
+    supplement_with_material_residual = SimpleNamespace(
+        **{
+            **supplement_with_residual_partial.__dict__,
+            "fumbles_lost_materiality_assessments": (material,),
+        }
+    )
+    assert not fumbles_lost_runtime_authority_compatible(
+        active,
+        supplement_with_material_residual,
+        expected_supplement_version=FIRST_PARTY_FUMBLES_LOST_SUPPLEMENT_VERSION,
+    )
+
     replayed_scope = SimpleNamespace(
         **{
             **runtime_result.__dict__,
@@ -355,6 +385,49 @@ def test_annual_rollover_requires_explicit_target_season_freeze_and_monotone_flo
             candidate,
             prior=prior,
             newly_completed_heldout_rmse=complete,
+        )
+
+
+def test_annual_rollover_rejects_incomplete_fallback_matrix_and_player_priors() -> None:
+    prior = frozen_fumbles_lost_production_table_2026()
+    complete_rmse = {
+        position.value: {cutoff: 0.0 for cutoff in range(2, 18)}
+        for position in (Position.QB, Position.RB, Position.WR, Position.TE)
+    }
+
+    broken_matrix = _annual_candidate()
+    payload = copy.deepcopy(dict(broken_matrix.payload))
+    del payload["cutoffs"]["3"]["fallback_eligibility"]["cold_start"]["WR"]
+    broken_matrix = FumblesLostProductionTable(
+        payload=payload,
+        fingerprint=production_table_payload_fingerprint(payload),
+    )
+    with pytest.raises(ValueError, match="eligibility matrix is incomplete"):
+        validate_annual_rollover_candidate(
+            broken_matrix,
+            prior=prior,
+            newly_completed_heldout_rmse=complete_rmse,
+        )
+
+    broken_prior = _annual_candidate()
+    payload = copy.deepcopy(dict(broken_prior.payload))
+    player_priors = payload["annual_freeze"]["player_role_priors"]
+    first_id = next(iter(player_priors))
+    player_priors[first_id] = {"position": "WR"}
+    payload["annual_freeze"]["player_prior_sufficient_statistics_fingerprint"] = (
+        production_table_payload_fingerprint(
+            {"player_role_priors": player_priors}
+        )
+    )
+    broken_prior = FumblesLostProductionTable(
+        payload=payload,
+        fingerprint=production_table_payload_fingerprint(payload),
+    )
+    with pytest.raises(ValueError, match="player role prior is incomplete"):
+        validate_annual_rollover_candidate(
+            broken_prior,
+            prior=prior,
+            newly_completed_heldout_rmse=complete_rmse,
         )
 
 
