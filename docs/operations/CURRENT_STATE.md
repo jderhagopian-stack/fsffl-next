@@ -1028,3 +1028,17 @@ Hosted evidence on the #292 instance is materially positive for the targeted FSF
 The full acceptance did **not** reach terminal PASS. At the Hodor switch it failed with `LiveForecastSourceHealthFailure`: only Razzball was healthy; CBS did not return a valid full-season QB projection page, FFToday returned HTTP 403, and NFL Fantasy returned no projection content. This is the previously known Hodor/provider-authority gate, not evidence that the #292 FSFFL first-load corrective itself failed.
 
 Disposition: runtime stabilization remains HOLD because the directive still requires clean-first-run + restored-session + league-switch + restart acceptance. Do not ask for physical iPhone/Safari acceptance yet. Implementation must continue from this exact hosted failure and determine whether Hodor should have replayed compatible persisted governed raw Forecast evidence or whether fresh acquisition was legitimately required; do not weaken the two-source authority contract merely to pass acceptance.
+
+
+## 2026-09-29 — Runtime architecture audit corrective added to stabilization gate
+Independent read-only Work audit found that the founding analytical architecture remains sound but confirmed one residual runtime/application P1 exposure: cold foreground `get()` can still trigger durable restore under the same per-user lifecycle coordination used by fresh Connect activation, allowing persistence recovery to sit in front of State usability.
+
+Management adopts this as a required stabilization gate under `docs/operations/directives/20260929_RUNTIME_ARCHITECTURE_AUDIT_CORRECTIVE.md`.
+
+Current implementation has already advanced:
+- PR #293 merged as `49ce8cae4f588fefc7c879e643504ee1b015cf42`;
+- exact #293 lineage is live on Render;
+- hosted acceptance is currently running;
+- #293 addresses Hodor raw Forecast replay discovery after clean runtime reset.
+
+Do not interrupt the active #293 hosted run absent a concrete failure. After it returns, Implementation must address any still-open replay compatibility-scan defect and remove/prove the cold-restore-before-fresh-Connect dependency before stabilization can close. Preserve strict source-health rules, atomic publication and #291/#292 safety.
