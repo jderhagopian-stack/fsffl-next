@@ -1745,3 +1745,20 @@ Correct only the NON_MATERIAL_PARTIAL materiality authority:
 - do not rerun or alter the rolling model, scalar table, position rates, role prior, Y2/Y3/Y4-Y7, K/DST, Intrinsic math, or runtime architecture.
 
 Return to DIRECTIVE COMPLETE — RESEARCH immediately after this bounded P1 is resolved and validation artifacts are durable.
+
+
+## 2026-09-29 — Continue now: close P1 plus preseason/Week-1/annual-rollover lifecycle
+Work is not complete until the PR #297 materiality P1 and the FUMBLES_LOST season-start lifecycle are both resolved.
+
+Preserve the accepted Week-2..17 rolling model unchanged.
+
+Required bounded follow-up:
+1. correct the NON_MATERIAL_PARTIAL bound so it covers every eligible unavailable-player population, including cold-start/identity-light, or restrict eligibility exactly to supported populations;
+2. define preseason/completed-week-0 handling;
+3. define completed-week-1 handling and the transition to the validated Week-2 rolling model;
+4. define a repeatable 2027+ annual rollover rule for the model's prior-season rates/calibration/floors, or state the minimal annual governed freeze required;
+5. prefer explicit omission + validated non-material authority over inventing an unvalidated early-season point estimate;
+6. preserve no-zero substitution, partial/degraded diagnostics, fail-closed material cases, and the existing Week-2..17 table;
+7. update the durable Research artifacts/handoff and PR #297 until no P1/P2 remains.
+
+Do not broaden into general Forecast research. Return immediately to Implementation once this bounded lifecycle authority is frozen.
