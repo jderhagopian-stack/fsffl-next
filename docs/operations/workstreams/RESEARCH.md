@@ -1733,67 +1733,102 @@ Task:
 - persist the implementation handoff and stop at DIRECTIVE COMPLETE — RESEARCH or a genuine MANAGEMENT GATE.
 
 
-## 2026-09-29 — Rolling FUMBLES_LOST authority closeout
+## 2026-09-29 — Narrow post-closeout correction required: materiality fallback population
+PR #297 review identified one P1 in the otherwise-complete rolling FUMBLES_LOST package. The rolling Week-2..17 Forecast contract is not reopened.
+
+Correct only the NON_MATERIAL_PARTIAL materiality authority:
+- current impact bounds were derived from the primary validation population, which excludes true cold starts;
+- the handoff currently permits those bounds for unavailable FUMBLES_LOST coordinates, including cold-start/identity-light cases;
+- before Implementation may use the fallback, either derive/freeze a conservative bound that covers every eligible unavailable-player population (including cold-start/identity-light uncertainty) or restrict eligibility to the population actually validated;
+- preserve explicit omission, no zero substitution, degraded coverage, and fail-closed behavior;
+- update the frozen handoff/table/materiality artifacts and respond to the PR #297 P1;
+- do not rerun or alter the rolling model, scalar table, position rates, role prior, Y2/Y3/Y4-Y7, K/DST, Intrinsic math, or runtime architecture.
+
+Return to DIRECTIVE COMPLETE — RESEARCH immediately after this bounded P1 is resolved and validation artifacts are durable.
+
+
+## 2026-09-29 — Continue now: close P1 plus preseason/Week-1/annual-rollover lifecycle
+Work is not complete until the PR #297 materiality P1 and the FUMBLES_LOST season-start lifecycle are both resolved.
+
+Preserve the accepted Week-2..17 rolling model unchanged.
+
+Required bounded follow-up:
+1. correct the NON_MATERIAL_PARTIAL bound so it covers every eligible unavailable-player population, including cold-start/identity-light, or restrict eligibility exactly to supported populations;
+2. define preseason/completed-week-0 handling;
+3. define completed-week-1 handling and the transition to the validated Week-2 rolling model;
+4. define a repeatable 2027+ annual rollover rule for the model's prior-season rates/calibration/floors, or state the minimal annual governed freeze required;
+5. prefer explicit omission + validated non-material authority over inventing an unvalidated early-season point estimate;
+6. preserve no-zero substitution, partial/degraded diagnostics, fail-closed material cases, and the existing Week-2..17 table;
+7. update the durable Research artifacts/handoff and PR #297 until no P1/P2 remains.
+
+Do not broaden into general Forecast research. Return immediately to Implementation once this bounded lifecycle authority is frozen.
+
+
+## 2026-09-29 — FINAL FUMBLES_LOST lifecycle Research closeout
 
 **State: DIRECTIVE COMPLETE — RESEARCH**
 
-Controlling directive:
-`docs/operations/directives/20260929_FUMBLES_LOST_ROLLING_AUTHORITY.md`.
+The bounded follow-up required by PR #297 and the season-start lifecycle addendum is complete.
 
-Research preserved the already accepted first-party exact lost-fumble opportunity-rate model and froze the rolling formulation before later-cutoff scoring. No broader Forecast family search was run.
+The accepted Week-2→17 rolling point model is unchanged and was not reopened.
 
-Final result:
-- one cutoff-parameterized model is supported from canonical completed Week **2 through Week 17**;
-- every tested cutoff 2..17 passes the frozen rolling adequacy gates on chronology-preserving 2023-2025 OOT evidence;
-- Week 2 reproduces the accepted model exactly;
-- no early/mid/late cutoff router is required;
-- exact lost-fumble semantics, frozen position rates, four-pseudo-game role prior and non-zero uncertainty remain intact;
-- no 2026 named-player outcome tuning or future leakage occurred.
+### PR #297 P1 — resolved by population-bounded fallback authority
 
-Pooled rolling evidence:
-- maximum absolute bias across cutoffs: **0.08791**;
-- maximum zero-calibration gap: **0.03575**;
-- RMSE improvement versus omission remains positive at every cutoff, ranging **1.73% to 22.93%**;
-- current Week-3 production calibration scalar from historical pseudo-current evidence: **0.6183406074632098**.
+The original NON_MATERIAL_PARTIAL bound excluded true cold starts. Research reran only the materiality/lifecycle validation using a position-wide historical-maximum bound across all completed prior player-seasons.
 
-Uncertainty:
-- `stddev = max(sqrt(mean), monotone cutoff/position OOT floor)`;
-- cold/identity-light retains the accepted cold-start floor;
-- uncertainty grows late in season rather than claiming false precision.
+Observed fallback populations validated separately:
+- history + current;
+- history only;
+- current only;
+- cold start.
 
-Separate downstream materiality authority is supported:
-- status: `NON_MATERIAL_PARTIAL`;
-- generic gate: `impact_bound_90 <= 0.10 * 1.645 * supported_fantasy_point_stddev`;
-- omission remains explicit;
-- no zero FUMBLES_LOST observation is synthesized;
-- scoring coverage remains partial/degraded;
-- any relevant subject failing the bound still blocks the consumer.
+One unsupported cell was exposed:
+- QB cold-start, completed Week 13: 8/9 = 88.9% coverage.
 
-For FSFFL's -1 lost-fumble rule at Week 3, the conservative 90% score-impact bounds are:
-- QB **7.286 FP**;
-- RB **3.643**;
-- WR **1.931**;
-- TE **2.429**.
+Research did not inflate the bound after seeing that result. The frozen authority instead fails closed for:
+- QB cold-start at Weeks 13-17;
+- QB identity-light at Weeks 13-17.
 
-Corresponding minimum supported fantasy-point standard deviations for non-material classification are:
-- QB **44.29**;
-- RB **22.15**;
-- WR **11.74**;
-- TE **14.76**.
+Identity-light is eligible elsewhere only with known/non-conflicting canonical offensive position and matching cold-start eligibility. Unknown/conflicting position fails closed.
 
-Execution:
-- workflow run `36525451903` — success;
-- artifact `11014727753`;
-- digest `sha256:eac8dffa80df5ba9adb6b279267b5c05134fefcbda71146b058fa837dec91db8`.
+After this restriction, all fallback-eligible observed population/cutoff cells meet the >=90% empirical coverage gate.
 
-Durable Research package:
-`artifacts/research/fumbles_lost_rolling_authority_20260929/`.
+Corrected materiality/lifecycle validation:
+- workflow run `36558353289` — success;
+- artifact `11028911683`;
+- digest `sha256:d37986d48f734b8d4a0882703bb6a90241eae0306b84c5a0083f3cd8db589768`.
 
-Bounded Implementation handoff:
-`artifacts/research/fumbles_lost_rolling_authority_20260929/IMPLEMENTATION_HANDOFF.md`.
+### Season-start lifecycle
 
-Production Forecast/Simulation/Intrinsic code was not changed. Y2/Y3, Y4-Y7, K/DST, Current Intrinsic semantics, and #294/#295/#296 runtime architecture remain untouched.
+- completed Week 0 / preseason: **no point estimate**; explicit omission + corrected materiality only;
+- completed Week 1: **no point estimate**; explicit omission + corrected materiality only;
+- completed Week 2: transition into the already-supported rolling point model;
+- Weeks 3-17: unchanged rolling model;
+- Week 18: no fabricated remaining-season point estimate.
 
-Implementation may now apply the rolling supplement/materiality contract on the existing #296 lineage and resume the blocked full hosted lifecycle acceptance.
+No-zero substitution and partial/degraded diagnostics remain mandatory.
+
+### 2027+ annual rollover
+
+No recurring broad Forecast study is required.
+
+Each target season requires a deterministic refresh plus minimal governed freeze:
+- finalized exact prior-season weekly evidence;
+- cumulative position rate/role-prior refresh;
+- same global cutoff calibration procedure;
+- uncertainty floors can widen but not silently narrow;
+- materiality bounds can widen but not silently narrow;
+- fallback population eligibility is revalidated;
+- exact source hashes/semantics and target-season table are frozen before point authority.
+
+If the annual gate fails, no automatic point authority is promoted; use explicit omission/materiality where valid, otherwise fail closed.
+
+Durable authority:
+`artifacts/research/fumbles_lost_rolling_authority_20260929/`
+
+Implementation handoff:
+`artifacts/research/fumbles_lost_rolling_authority_20260929/IMPLEMENTATION_HANDOFF.md`
+
+No Y2/Y3, Y4-Y7, K/DST, Intrinsic-math, or #294/#295/#296 runtime-architecture changes were made.
 
 **DIRECTIVE COMPLETE — RESEARCH**
