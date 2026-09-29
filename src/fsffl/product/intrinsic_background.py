@@ -351,9 +351,22 @@ class ShapleyIntrinsicBackgroundCoordinator:
         running = self._set(key, status=IntrinsicBuildStatus.RUNNING)
         if running is None:
             return
+        completed: IntrinsicBuildRecord | None = None
+
+        def build_and_attach_owned() -> IntrinsicBuildRecord | None:
+            contract = self._loader(context)
+            # If clear_user invalidated this lifecycle while the loader was active,
+            # _set returns None. The old contract is then released before the heavy
+            # claim opens for replacement work.
+            return self._set(
+                key,
+                status=IntrinsicBuildStatus.COMPLETED,
+                contract=contract,
+            )
+
         try:
             if self._heavy_work_coordinator is None:
-                contract = self._loader(context)
+                completed = build_and_attach_owned()
             else:
                 with self._heavy_work_coordinator.claim(
                     kind="intrinsic",
@@ -362,7 +375,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
                         f"{running.forecast_coordinate}"
                     ),
                 ):
-                    contract = self._loader(context)
+                    completed = build_and_attach_owned()
         except Exception as exc:
             failed = self._set(
                 key,
@@ -381,11 +394,6 @@ class ShapleyIntrinsicBackgroundCoordinator:
             with self._lock:
                 self._futures.pop(key, None)
             return
-        completed = self._set(
-            key,
-            status=IntrinsicBuildStatus.COMPLETED,
-            contract=contract,
-        )
         if completed is not None:
             elapsed = (completed.updated_at - completed.created_at).total_seconds()
             _logger.info(
