@@ -306,7 +306,7 @@ def _runtime_capability_readiness(runtime) -> dict[str, object]:
                 non_material_partial_player_ids
             ),
             "scoring_coverage_full": not bool(partial_rows),
-            "consumer_usable": forecast_status in {"full", "non_material_partial"},
+            "consumer_usable": forecast_status in {"full", "non_material_partial", "partial_nonblocking"},
             "simulation_blockers": list(blockers),
         },
         "simulation": {"status": simulation_status, "reason": simulation_reason},
