@@ -227,6 +227,7 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "managed_team_during_active_reconciliation" not in source
     assert "managed_team_after_reconciliation_interruption" in source
     assert "select_team_if_working_generation_active" in source
+    assert "wait_for_managed_team_checkpoint" in source
     assert "with store._lock:" not in source
     assert "team_interleaving" in source
     assert 'team_surface.get("franchise_team_id")' in source
