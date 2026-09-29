@@ -83,6 +83,26 @@ def test_process_heavy_work_coordinator_serializes_distinct_builds() -> None:
     assert final.memory_budget_bytes == int(536_870_900 * 0.8)
 
 
+def test_persistent_foreground_get_is_memory_only_and_restore_is_explicit() -> None:
+    source = Path("src/fsffl/product/persistent_runtime.py").read_text(
+        encoding="utf-8"
+    )
+
+    get_body = source.split("    def get(self, user_id: str)", 1)[1].split(
+        "    def activate_league_state_for_connect", 1
+    )[0]
+    restore_body = source.split("    def restore_user(self, user_id: str)", 1)[1].split(
+        "    def get(self, user_id: str)", 1
+    )[0]
+
+    assert "restore_runtime_snapshot" not in get_body
+    assert "_restore_once" not in get_body
+    assert "return super().get(user_id)" in get_body
+    assert "restore_runtime_snapshot" in restore_body
+    assert "captured_generation" in restore_body
+    assert "_install_restored_snapshot_if_current" in restore_body
+
+
 def test_hosted_startup_is_restore_first_and_does_not_auto_launch_heavy_work() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(
         encoding="utf-8"
