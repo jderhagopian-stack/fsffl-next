@@ -1406,3 +1406,25 @@ This directive supersedes narrow cache-by-cache correction for the current block
 - pass full CI plus a whole-class P1/P2 review before merge.
 
 The goal is to close the resource-ownership class, not individually green the current P1/P2 comments. Physical Safari remains HOLD until hosted terminal PASS.
+
+
+## 2026-09-29 — PR #303 current gate: reconcile final stale CI expectation, then exact-head whole-class review
+PR #303 (`Close cross-league process resource ownership boundary`) is open/mergeable at exact head `12b7d69baaeedc4952ab93fe07ba396c44b2681d`.
+
+Current evidence:
+- whole-boundary holder/path inventory and shared `StateResourceBoundary` implementation are present;
+- background + synchronous Connect, explicit switch, same-league refresh/reconciliation and hosted acceptance are routed through the governed boundary;
+- prior review P1/P2 findings around stale Intrinsic waiters, timestamp-only Behavioral restart, and preserving nonblocking Connect activation have subsequent corrective commits on the branch;
+- all current focused workflows are green;
+- full CI is 1 failure / 1,865 passes.
+
+The remaining CI failure is `test_hosted_refresh_only_rebuilds_behavior_when_material_state_changed`, which still statically requires an `if changed:` guard. Under the resource-boundary contract, a replacement `state_id` can cause Behavioral execution state to be released even when the material fingerprint is unchanged; in that case Behavioral must be restarted so the new active State is not left without profiles. Treat this as a stale expectation unless behavior-level evidence proves otherwise.
+
+Management disposition:
+- update the regression to assert the new invariant rather than mechanically preserving `if changed:`;
+- rerun full CI and the deterministic closure matrix;
+- run a fresh **exact-head whole-class P1/P2 review** after CI is green;
+- do not merge until that exact-head review has no unresolved P1/P2;
+- if clean, merge/deploy and immediately resume hosted FSFFL -> Hodor -> FSFFL / same-State / restart / restored-session acceptance under the unchanged hard-memory gate.
+
+No further architecture broadening is authorized unless the exact-head review or hosted evidence exposes a new same-class defect.
