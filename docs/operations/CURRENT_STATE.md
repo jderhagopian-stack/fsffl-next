@@ -1476,3 +1476,16 @@ Near-term acceptance therefore prioritizes:
 Do not distort architecture around the free tier, but do not defer private-beta usability behind future public-scale work. If the whole resource boundary is clean and a normal single-user private-beta journey still cannot fit the current free Render envelope, Management should choose the smallest practical beta-specific capacity/staging adjustment rather than continue indefinite leak hunting.
 
 Public-scale readiness remains a later gate and must not expand the current #303 scope.
+
+
+## 2026-09-29 — Operating principle: efficient beta now, scalable structure later
+Management clarification:
+- the immediate objective is to restore a reliable, usable private-beta app on the current free Render footprint so product capability development can continue;
+- the current infrastructure has intentionally severe CPU, memory and throughput constraints and cannot be treated as a realistic hundreds/thousands-user production target;
+- Implementation should aggressively remove avoidable waste: stale retention, duplicate work, blocking foreground requests, unnecessary recomputation, oversized caches, poor reuse, and bad lifecycle ownership;
+- Implementation should **not** spend open-ended time trying to make legitimate commercial-scale workloads fit an intrinsically undersized free instance;
+- future public scale should primarily require more horsepower and wider pipes (web capacity, worker capacity, memory/CPU, queues/cache/storage), not a rewrite of model authority or lifecycle structure.
+
+The standard is: **efficient on constrained beta infrastructure, structurally ready to scale with added capacity later.**
+
+For #303 specifically, success means normal private-beta usage fits reliably on free Render after the resource-ownership class is closed. If that is true, return immediately to capability/product development. If normal use still cannot fit despite clean ownership and bounded resource behavior, escalate to the smallest practical staging/capacity decision rather than continuing indefinite micro-optimization.
