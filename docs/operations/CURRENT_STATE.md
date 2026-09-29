@@ -1222,3 +1222,32 @@ Management disposition:
 - Implementation branch `implementation/fumbles-lost-rolling-authority-20260929` currently has no code delta from main and should not implement the fallback until this P1 is closed.
 
 Runtime #294/#295/#296 remains frozen. Physical Safari remains HOLD.
+
+
+## 2026-09-29 — PR #297 merged; FUMBLES_LOST Research lifecycle frozen and Implementation unblocked
+PR #297 (`Merge rolling FUMBLES_LOST research handoff`) merged as `9b3e07c14583918c08fae893d5087f0ed013826c`.
+
+The bounded Research follow-up is terminal: **DIRECTIVE COMPLETE — RESEARCH**.
+
+Final authority:
+- the accepted Week-2→17 first-party exact `FUMBLES_LOST` rolling point model is unchanged;
+- PR #297's materiality P1 is closed with corrected all-population historical fallback bounds plus explicit population eligibility;
+- fallback is fail-closed for QB cold-start and QB identity-light at completed Weeks 13-17;
+- identity-light elsewhere requires a known/non-conflicting canonical offensive position and matching cold-start eligibility;
+- completed Week 0 and Week 1 have **no first-party point estimate**: preserve explicit `fum_lost` omission and permit downstream continuation only through validated `NON_MATERIAL_PARTIAL` authority;
+- completed Week 2 transitions into the accepted rolling model; Weeks 3-17 continue it; Week 18 fabricates no remaining-season point estimate;
+- 2027+ uses the deterministic annual refresh plus minimal governed target-season freeze in `ANNUAL_ROLLOVER_CONTRACT.md`;
+- annual uncertainty rollover preserves the monotone prefix-floor rule: cutoff `c` includes every newly observed held-out RMSE spike at `k <= c`;
+- no zero substitution and no FULL/COMPLETE scoring claim is allowed for omitted `FUMBLES_LOST`.
+
+Final validation:
+- rolling Week-2→17: run `36525451903`, artifact `11014727753`, digest `sha256:eac8dffa80df5ba9adb6b279267b5c05134fefcbda71146b058fa837dec91db8`;
+- gate-enforced materiality/lifecycle: run `36559750023`, artifact `11029278633`, digest `sha256:a8f8fc078adde10f7b04b23be873dc77125b195b09542ddf8098f079ae7bc2ae`;
+- final PR head CI passed;
+- bounded Codex review has no unresolved P1/P2.
+
+Implementation is now the active path. Consume:
+`artifacts/research/fumbles_lost_rolling_authority_20260929/IMPLEMENTATION_HANDOFF.md`
+from current main, preserve #294/#295/#296 runtime architecture, implement only the frozen FUMBLES_LOST lifecycle/materiality contract, and then immediately resume the full hosted lifecycle acceptance through restart/restored-session.
+
+Physical Safari remains HOLD until terminal hosted PASS.
