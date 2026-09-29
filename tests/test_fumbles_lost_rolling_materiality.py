@@ -651,6 +651,17 @@ def test_annual_rollover_requires_governed_rolling_adequacy_proof() -> None:
             newly_completed_rolling_adequacy=worse_than_omission,
         )
 
+    within_stability = _annual_rolling_adequacy()
+    within_stability["cutoffs"][5]["heldout_season_rmse"] = 1.05  # type: ignore[index]
+    validate_annual_rollover_candidate(
+        candidate,
+        prior=prior,
+        newly_completed_heldout_rmse=_annual_rmse(),
+        newly_completed_materiality_event_max=_annual_materiality_maxima(),
+        observed_population_coverage=_annual_population_coverage(),
+        newly_completed_rolling_adequacy=within_stability,
+    )
+
     unstable = _annual_rolling_adequacy()
     unstable["cutoffs"][5]["heldout_season_rmse"] = 1.100001  # type: ignore[index]
     with pytest.raises(ValueError, match="held-out stability gate"):
