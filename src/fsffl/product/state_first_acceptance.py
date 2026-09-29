@@ -380,11 +380,15 @@ def run_state_first_production_acceptance(
                     f"{type(overlap_error[0]).__name__}: {overlap_error[0]}"
                 )
         snapshot = _snapshot(store, user_id, capability_reader)
+        replay_reader = getattr(store, "forecast_replay_decision_cached", None)
         row = {
             "label": label,
             "provider_state_id": state.state_id,
             "job": terminal,
             "snapshot": snapshot,
+            "forecast_replay_decision": (
+                replay_reader(user_id) if callable(replay_reader) else None
+            ),
         }
         steps.append(row)
         _logger.info(
