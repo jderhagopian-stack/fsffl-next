@@ -127,7 +127,9 @@ class PresentationContinuityStore:
         self._persistence = persistence_store
         self._local = local()
         self._validation_lock = RLock()
-        self._validated_snapshots: set[tuple[str, str, str, str | None]] = set()
+        self._validated_snapshots: dict[
+            tuple[str, str, str, str | None], str
+        ] = {}
 
     @property
     def enabled(self) -> bool:
@@ -200,6 +202,24 @@ class PresentationContinuityStore:
         finally:
             self._local.promoting = False
 
+        manifest_payload = {
+            "contract": PRESENTATION_MODEL_VERSION,
+            "league_id": state.league.league_id,
+            "league_state_id": state.state_id,
+            "promotion_id": promotion_id,
+            "as_of": state.as_of.isoformat(),
+            "selected_team_id": runtime.selected_team_id,
+            "surfaces": list(surfaces),
+            "surface_hashes": [
+                {
+                    "surface": surface,
+                    "payload_hash": payload_hash,
+                    "payload_size_bytes": size,
+                }
+                for surface, payload_hash, size in surface_hashes
+            ],
+            "total_payload_bytes": total_bytes,
+        }
         self._persistence.put_artifact(
             ReusableArtifactRecord(
                 key=_manifest_key(
@@ -207,36 +227,17 @@ class PresentationContinuityStore:
                     league_id=state.league.league_id,
                     league_state_id=state.state_id,
                 ),
-                payload={
-                    "contract": PRESENTATION_MODEL_VERSION,
-                    "league_id": state.league.league_id,
-                    "league_state_id": state.state_id,
-                    "promotion_id": promotion_id,
-                    "as_of": state.as_of.isoformat(),
-                    "selected_team_id": runtime.selected_team_id,
-                    "surfaces": list(surfaces),
-                    "surface_hashes": [
-                        {
-                            "surface": surface,
-                            "payload_hash": payload_hash,
-                            "payload_size_bytes": size,
-                        }
-                        for surface, payload_hash, size in surface_hashes
-                    ],
-                    "total_payload_bytes": total_bytes,
-                },
+                payload=manifest_payload,
                 computed_at=now,
             )
         )
-        with self._validation_lock:
-            self._validated_snapshots.add(
-                (
-                    user_id,
-                    state.league.league_id,
-                    state.state_id,
-                    runtime.selected_team_id,
-                )
-            )
+        self._remember_validated_snapshot(
+            user_id=user_id,
+            league_id=state.league.league_id,
+            league_state_id=state.state_id,
+            selected_team_id=runtime.selected_team_id,
+            manifest_payload=manifest_payload,
+        )
         _logger.info(
             "FSFFL presentation continuity promoted user=%s league=%s state=%s surfaces=%s bytes=%s",
             user_id,
@@ -260,8 +261,35 @@ class PresentationContinuityStore:
         with self._validation_lock:
             stale = [item for item in self._validated_snapshots if item[0] == user_id]
             for item in stale:
-                self._validated_snapshots.discard(item)
+                self._validated_snapshots.pop(item, None)
             return len(stale)
+
+    @staticmethod
+    def _snapshot_key(
+        user_id: str,
+        league_id: str,
+        league_state_id: str,
+        selected_team_id: str | None,
+    ) -> tuple[str, str, str, str | None]:
+        return user_id, league_id, league_state_id, selected_team_id
+
+    def _remember_validated_snapshot(
+        self,
+        *,
+        user_id: str,
+        league_id: str,
+        league_state_id: str,
+        selected_team_id: str | None,
+        manifest_payload: Mapping[str, object],
+    ) -> None:
+        key = self._snapshot_key(
+            user_id,
+            league_id,
+            league_state_id,
+            selected_team_id,
+        )
+        with self._validation_lock:
+            self._validated_snapshots[key] = canonical_fingerprint(manifest_payload)
 
     def known_snapshot_available(
         self,
@@ -271,15 +299,20 @@ class PresentationContinuityStore:
         league_state_id: str,
         selected_team_id: str | None = None,
     ) -> bool:
-        """Fast read hint for an exact snapshot already proven in this process.
+        """Fast read hint for a manifest validated or written in this process.
 
-        This never replaces strict has_snapshot() integrity validation on an actual
-        presentation load. It exists so frequent product-context polling does not
-        reread and rehash seven durable surface artifacts after promotion/startup
-        has already proven the manifest once.
+        A cold manifest still gets a strict all-surface integrity check. Once that
+        check succeeds (or this process has just completed the manifest-last write),
+        each read still hashes its requested surface against the known manifest but
+        does not reread and rehash the other six payloads.
         """
 
-        key = (user_id, league_id, league_state_id, selected_team_id)
+        key = self._snapshot_key(
+            user_id,
+            league_id,
+            league_state_id,
+            selected_team_id,
+        )
         with self._validation_lock:
             return key in self._validated_snapshots
 
@@ -294,7 +327,7 @@ class PresentationContinuityStore:
     ) -> bool:
         if self._persistence is None:
             return False
-        validation_key = (
+        validation_key = self._snapshot_key(
             user_id,
             league_id,
             league_state_id,
@@ -356,8 +389,13 @@ class PresentationContinuityStore:
                 != wrapper.get("payload_hash")
             ):
                 return False
-        with self._validation_lock:
-            self._validated_snapshots.add(validation_key)
+        self._remember_validated_snapshot(
+            user_id=user_id,
+            league_id=league_id,
+            league_state_id=league_state_id,
+            selected_team_id=selected_team_id,
+            manifest_payload=manifest.payload,
+        )
         return True
 
     def load_for_runtime(
@@ -402,13 +440,6 @@ class PresentationContinuityStore:
             served_as_of = served.as_of
             mode = "stale_last_good"
 
-        if not self.has_snapshot(
-            user_id=user_id,
-            league_id=served_league_id,
-            league_state_id=served_state_id,
-            selected_team_id=runtime.selected_team_id,
-        ):
-            return None
         manifest = self._persistence.get_reusable_artifact(
             _manifest_key(
                 user_id=user_id,
@@ -418,6 +449,33 @@ class PresentationContinuityStore:
         )
         if manifest is None:
             return None
+        known_key = self._snapshot_key(
+            user_id,
+            served_league_id,
+            served_state_id,
+            runtime.selected_team_id,
+        )
+        with self._validation_lock:
+            known_manifest_fingerprint = self._validated_snapshots.get(known_key)
+        manifest_fingerprint = canonical_fingerprint(manifest.payload)
+        if known_manifest_fingerprint != manifest_fingerprint:
+            if not self.has_snapshot(
+                user_id=user_id,
+                league_id=served_league_id,
+                league_state_id=served_state_id,
+                selected_team_id=runtime.selected_team_id,
+            ):
+                return None
+            # Strict cold validation may have re-read a replacement manifest.
+            manifest = self._persistence.get_reusable_artifact(
+                _manifest_key(
+                    user_id=user_id,
+                    league_id=served_league_id,
+                    league_state_id=served_state_id,
+                )
+            )
+            if manifest is None:
+                return None
         promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
         if (
             not promotion_id
@@ -455,7 +513,24 @@ class PresentationContinuityStore:
         ):
             return None
         raw = wrapper.get("payload")
+        expected = next(
+            (
+                item
+                for item in (manifest.payload.get("surface_hashes") or ())
+                if isinstance(item, Mapping) and item.get("surface") == surface
+            ),
+            None,
+        )
         if not isinstance(raw, Mapping):
+            return None
+        if (
+            expected is None
+            or wrapper.get("payload_hash") != expected.get("payload_hash")
+            or int(wrapper.get("payload_size_bytes") or -1)
+            != int(expected.get("payload_size_bytes") or -2)
+            or canonical_fingerprint(_json_round_trip(raw))
+            != expected.get("payload_hash")
+        ):
             return None
         payload = _json_round_trip(raw)
         payload["publication_generation_id"] = promotion_id

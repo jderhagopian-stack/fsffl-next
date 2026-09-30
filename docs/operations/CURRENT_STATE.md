@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 42815)
+Total output lines: 1813
+
 # FSFFL NEXT — Current State
 
 Updated: 2026-09-25
@@ -695,439 +698,7 @@ Observed product failures:
 - later Franchise HTTP 429;
 - malformed mobile last-good/stale banner rendering.
 
-Runtime evidence shows a more serious combined-load failure: after cold wake and automatic refresh, process memory rose to **534.7 MB / 536.9 MB** at 12:46 UTC, then reset to ~3.8 MB and Uvicorn restarted. No explicit OOM kill line was emitted, so the restart is classified as memory-limit-consistent / probable OOM. The new process came up with no restored user league/state context and no derived readiness.
-
-Home did successfully retain last-good derived intelligence during rebuild, so PR #270's dual-state concept is partially working. The remaining failure is whole-process lifecycle/memory/recovery integration under real cold-wake traffic, plus readiness consistency across surfaces.
-
-Implementation is ACTIVE again and owns the beta-availability incident. Market and general Performance remain held. No further Management physical testing is requested until hosted cold-wake evidence reproduces the exact combined scenario without memory-limit recycle, context loss, false-green readiness, hard 502/module failures, or recovery-rate-limit failure.
-
-## 2026-09-27 — Management accepts componentized current-football-state Forecast architecture
-Management accepted the Research architecture but **did not authorize a production Forecast/Intrinsic math change**.
-
-Accepted principle: football-state events cause Forecast reevaluation; H1 availability is distinct from conditional healthy production; governed current ROS, when authoritative, owns the integrated H1 expectation with no second event haircut; temporary injury gets no generic H2/H3 penalty; Intrinsic applies no direct event penalty.
-
-Next Research is authorized on a dedicated injury-availability/time-to-return model plus prospective governed ROS/event snapshot retention. Release/cut remains a coarse Research signal only. Production H3 remains unchanged.
-
-## 2026-09-27 — Long-horizon Research explicitly preserved
-The newly authorized injury-availability work does not replace the Y4–Y8 program. Management keeps both as parallel Research tracks. Existing Y4–Y8 findings remain authoritative pending further Management review/follow-up: exact support at QB Y4, WR Y4 and QB Y6; shrinkage-with-uncertainty for other Y4–Y7 cells; Y8 coarse/uncertain; production H3 unchanged.
-
-## 2026-09-27 — Joint injury-availability follow-up authorized
-Management authorized an immediate Research follow-up testing whether return timing and remaining-season availability can be produced more effectively by one coherent shared injury-availability architecture. This is explicitly a post-result comparative study, not part of the original frozen experiment. The supported separate remaining-availability result remains the incumbent challenger; production H3/Intrinsic remain unchanged.
-
-
-## 2026-09-27 10:55 ET — PR #271 physical changed-State continuity failure
-PR #271 improved startup/restart behavior and materially reduced memory versus the prior OOM-like incident, but physical iPhone testing exposed a remaining lifecycle defect.
-
-A failed PR #273 acceptance-instrumentation deployment timed out at ~10:50 ET and Render fell back to PR #271. The restored PR #271 instance came up correctly with FSFFL full readiness and ~281 MB startup peak RSS.
-
-During the subsequent user session, the client automatically posted a Sleeper background refresh at ~10:53:29 ET. That refresh advanced canonical State from `f51e75...` to `9d2145...`. The product then dropped derived presentation to rebuilding/unavailable instead of continuing to serve the prior usable last-good read model. Market merely exposed the State transition; it did not trigger it.
-
-Observed changed-State memory peaked around **411 MB** against the ~429 MB acceptance ceiling, with no 5xx/429 or recycle in the observed window. Availability acceptance nevertheless **fails** because non-disruptive last-good serving across automatic State advance is still not satisfied.
-
-Implementation remains the sole product critical path. Market and general Performance remain held.
-
-
-## 2026-09-27 — Management retains PR #271 architecture and orders completion
-Management classifies PR #271 as the correct structural runtime foundation, not an earlier bandaid. The remaining defect is an incomplete presentation-continuity layer during canonical State advance.
-
-Implementation is directed to finish that architecture by adding a compact persisted last-good presentation/read model with an atomic promotion lifecycle, while preserving one authoritative heavy in-memory intelligence bundle and bounded heavy concurrency. PR #273 remains the acceptance harness and must be repaired so it deploys without delaying web-port binding, then used to prove the corrected lifecycle end to end.
-
-No page-specific fallback/adaptor solution is authorized.
-
-
-## 2026-09-27 — Research governance corrected: no incumbent privilege
-Management identified a structural flaw in prior Research model-selection practice: earlier models were sometimes treated as incumbents that a later model had to beat by an additional materiality margin.
-
-That policy is superseded. Research model selection is now symmetric. Absolute quality/safety gates remain, but chronology does not confer scientific authority. Differences that are practically negligible or within uncertainty must be reported as such; production switching cost is a separate Product/Implementation consideration.
-
-The joint injury-availability experiment remains frozen and historically valid, but its architectural disposition is reopened for symmetric practical-materiality interpretation. Production H3 and Intrinsic remain unchanged while that interpretation is performed.
-
-
-## 2026-09-27 — Forecast authority reopened for symmetric audit; runtime work continues independently
-Management does not currently certify the selected Forecast as the best-supported overall architecture. The original integrated I1 selection was a legitimate symmetric comparison among B0/B1/I1/I2, but later routing/calibration studies used incumbent-preserving rules that can create path dependence, and the overall candidate-family breadth was bounded.
-
-Research is now authorized to run a symmetric Forecast Model Authority Audit across all serious recoverable candidates, then determine whether a bounded new-family challenge is necessary. Production Forecast/H3/Intrinsic remain unchanged during that work.
-
-Implementation remains independently authorized to finish PR #274. Runtime availability work must preserve current model semantics and must not wait for or absorb experimental Forecast changes.
-
-
-## 2026-09-27 — Forecast audit completeness correction: exact deployed vNext package
-Management identified that the symmetric Forecast audit ledger includes A2/D0/D1 and other serious historical candidates but does not separately identify the exact deployed Y2/Y3 package `forecast-vnext-a2-burr-20260922`.
-
-Research must now include that frozen production package directly, including its A2 state probabilities, Stage-D state means and Burr XII/direct-Gamma uncertainty representation. Ancestor/component evidence is not accepted as a substitute for direct evaluation of the live package. This is an audit-completeness correction, not authorization for post-result model shopping or production change.
-
-
-## 2026-09-27 15:37 ET — Live physical usability / latency checkpoint
-Management is again using the live PR #276 beta. Functional continuity is sufficiently restored for normal testing, but responsiveness is now the dominant product defect.
-
-Live physical-session timings:
-- Home 24.200s;
-- My Team 25.595s;
-- Product Context 39.397s;
-- Market workspace 0.500s on one request, indicating latency is path/contention-specific rather than universal.
-
-A separate deterministic UI layering defect is confirmed: League Atlas `.atlas-drawer` uses z-index 1003 while `#player-intelligence-root` uses z-index 1000. Selecting a player from a position drill-down opens PI behind the drawer; closing the drawer reveals it.
-
-Management therefore moves the product critical path from “do not touch until resource gate passes” to **ordinary beta use + immediate latency/interaction corrective**. The ~429.5 MB target remains useful engineering headroom, but does not by itself block physical testing unless accompanied by real availability failure.
-
-
-## 2026-09-27 — Management accepts dual-Intrinsic / continuous long-horizon Forecast architecture
-Management accepts the symmetric Forecast Research conclusions and sets the target architecture as follows:
-
-- **Forecast is continuous by year.** Preserve governed Y1, Y2, Y3, Y4, Y5, Y6, Y7 outputs; Y8 is coarse/uncertain only. Do not present Y5 as if Y4 does not exist.
-- **Y1** remains governed current-season/provider/current-football-state authority.
-- **Y2-Y3** retain the deployed coherent vNext distributional Forecast for production continuity, while D1/N1/N2 disagreement is represented as model-authority uncertainty rather than hidden or treated as incumbent defeat.
-- **Y4-Y7** are governed long-horizon trajectory outputs. Exact single-policy authority is used only where Research earned it; unresolved cells must preserve a supported model/policy envelope.
-- **Y8** remains research/coarse context and is excluded from any precise cardinal long-term value until evidence improves.
-- **Current Intrinsic** remains a separate near-/medium-term economic lens based on governed Y1-Y3.
-- **Long-Term Intrinsic** is authorized as a separate future value lens based on the governed Y4-Y7 trajectory. It must not replace or be blended invisibly into Current Intrinsic.
-- **No arbitrary horizon weights.** Do not define Long-Term Intrinsic as an ad hoc weighted average such as 40/30/20/10. Research must establish the Value-consumption/economic contract.
-- **Uncertainty separation is mandatory:** within-model Forecast uncertainty and between-model/model-authority uncertainty remain distinct; do not collapse them into a false single SD.
-- **Market/Team Utility** may later consume Current Intrinsic and Long-Term Intrinsic separately according to competitive window. Contender/rebuilder asymmetry belongs downstream in Team Utility, not as arbitrary player-value bonuses.
-- **No further Forecast family search is authorized** by this decision. Family breadth was found sufficient; the next Research problem is Long-Term Intrinsic consumption, not model shopping.
-
-Production Forecast/Intrinsic behavior does not change merely from this Management decision.
-
-
-## 2026-09-27 17:18 ET — Live #277 checkpoint
-PR #277 is live. The confirmed Atlas→PI overlay bug is fixed in the implementation and foreground latency is materially better in warm periods (My Team ~1.1s; Home ~2–3.5s). However, the product still degrades badly while heavy work overlaps: My Team ~26.4s, Home ~41.1s and Product Context ~43.4s were observed.
-
-Hosted acceptance remains open. One run failed the internal RSS target at ~473.4 MB max observed; a later run failed because cold PI history during initial reconciliation had no compatible Y2/Y3 future Forecast rows. Memory also approached ~510 MB on the later instance, close enough to the ~537 MB hard limit to remain a real engineering risk.
-
-Management classification: **partial success, not completion**. Continue narrow corrective work on current main; preserve #277's improvements.
-
-
-## 2026-09-27 18:02 ET — Implementation #278 / Long-Term Intrinsic checkpoint
-PR #278 is now live. Early startup evidence is materially healthier: full FSFFL readiness restored, Market workspace shell ~0.3s, startup RSS ~295 MB / peak ~296 MB, no active heavy job at acceptance start, and no post-deploy application errors yet. The complete cold/sync/navigation/PI/Market/refresh/switch acceptance journey is still running, so the corrective is not yet accepted.
-
-Long-Term Intrinsic Research is complete at Management gate. Supported consumer: mean annual governed Y4-Y7 Shapley marginal lineup capacity, `(phi4+phi5+phi6+phi7)/4`. Validation used 1,129 complete player-origin windows across 2018-2019 with 2,048 Shapley permutations; the continuous consumer beat Y5-only on MAE and rank correlation across all four frozen Forecast policies, had zero monotonicity violations, and preserved separate model-authority and within-model uncertainty. Current-vs-Long-Term rank correlation is only ~0.663, with median 45-rank movement and 75.5% of players moving at least 20 places, confirming the lenses are materially distinct. Production remains unchanged pending Management promotion.
-
-
-## 2026-09-27 — Management promotes Long-Term Intrinsic from Research to bounded shadow implementation
-Research has completed the Long-Term Intrinsic consumption contract and Management authorizes implementation of a non-authoritative production-grade shadow.
-
-The shadow will compute and persist continuous Y4-Y7 Forecast authority and `LT_RAW=(phi4+phi5+phi6+phi7)/4`, preserving exact-vs-set-valued Forecast policy authority and separate model/outcome uncertainty. It will use a separately versioned 0-10,000 Long-Term Intrinsic presentation ruler while retaining raw Shapley authority bounds.
-
-Current Intrinsic, Market, Team Utility, Decision and live player rankings remain unchanged until later explicit promotion.
-
-Runtime sequencing remains protected: PR #278 must finish hosted acceptance before the new shadow is merged/deployed. Latest #278 evidence shows the previous cold PI Y2/Y3 continuity failure corrected and initial full reconciliation within the internal resource target.
-
-
-## 2026-09-27 — Management pauses Long-Term Intrinsic implementation
-Management prefers to finish the existing runtime/latency/continuity work before opening the Long-Term Intrinsic implementation track. The Research contract remains accepted and ready, but shadow implementation is paused until regular Implementation is complete.
-
-
-## 2026-09-27 18:16 ET — #278 acceptance result
-The full hosted journey reached successful cold PI continuity and post-reconciliation full/current presentation, but failed the internal resource gate at `after_automatic_state_sync`: ~407.0 MB current RSS, ~450.4 MB max observed versus the ~429.5 MB engineering budget, still below the ~536.9 MB hard Render limit. No recycle/5xx/429/lost State was observed.
-
-A separate remaining performance defect is confirmed: Market workspace construction reached ~64.9s under the heavy acceptance sequence; active-reconciliation PI history was ~35.5s. Thus #278 is a real improvement but not a terminal success. Runtime remains the sole implementation priority.
-
-
-## 2026-09-27 — Management chooses final runtime direction
-The remaining runtime problem is now treated as an execution-boundary defect, not a request for another broad memory rewrite.
-
-Observed evidence shows #278 materially improved continuity and reduced memory, while full Market workspace construction can still consume ~65 seconds synchronously after State/cache invalidation. Management therefore requires a hard boundary: reading Market must never launch the full Search/Decision pipeline.
-
-The product should serve persisted/current or compatible last-good Market state immediately, run structural Search only on explicit action, progressively enrich candidates with Decision evidence, and reserve deep Simulation for explicit drill-down. PI history should follow the same persist-first/background-refresh principle.
-
-The ~429.5 MB internal target is retained as diagnostic headroom but no longer independently blocks acceptance without a real availability symptom. Hard Render memory safety remains enforced.
-
-
-## 2026-09-27 19:01 ET — #278 repeat establishes reproducible blocker
-The second fresh-instance acceptance run of unchanged #278 again failed. Light paths were fast (Market ~0.3-2.5s; cold PI ~1.2s), but the heavy sequence reproduced ~63.6-64.0s Market workspace construction and ~40.7s PI history during active reconciliation. RSS peaked ~469.6 MB, still below the hard Render limit.
-
-This is now treated as reproducible evidence that full Market Search/Decision work must be removed from foreground reads. No further unchanged acceptance rerun is useful before that implementation occurs.
-
-
-## 2026-09-27 — Exact remaining runtime plan identified
-Implementation has opened `implementation/nonblocking-market-20260927` and is actively moving Market bilateral Decision enrichment off the foreground request path. The branch now includes shell-only ordinary/quick workspace reads, explicit structural Search, background Decision enrichment, polling UI, and runtime coordinator wiring.
-
-A separate stale test condition is confirmed: the hosted acceptance harness still hard-fails any RSS sample above the ~429.5 MB engineering target. Management policy already downgraded that threshold to diagnostic headroom. Implementation must align the acceptance code before the next hosted terminal run so a soft-budget miss alone cannot manufacture a product failure.
-
-Remaining product acceptance still requires responsive reads under heavy work, preserved continuity, and hard-limit safety.
-
-
-## 2026-09-27 — Management confirms Research is complete
-Research is at its intended stopping point. The long-horizon Forecast and separate Long-Term Intrinsic architecture is known and frozen well enough for the next implementation phase. No further Research decision is pending.
-
-The only active blocker to product progress is Implementation/runtime acceptance. Once that closes, the Long-Term Intrinsic shadow can proceed directly from the existing frozen Research contract rather than reopening model selection or economic-design research.
-
-
-## 2026-09-27 late evening — nonblocking Market corrective reaches green PR
-PR #279 is now open, mergeable and green at head `00503a43aa657a9bf1ca93c488f38561813e206f`. The branch implements the intended nonblocking Market boundary and corrects the stale RSS acceptance rule so exceeding the ~429.5 MB engineering target alone no longer fails hosted acceptance; actual hard-limit and availability failures still do.
-
-The fix is **not deployed yet**. Production remains on #278. The only remaining sequence before physical beta testing is merge #279 -> deploy exact merge SHA -> complete hosted State-first acceptance on that deployed code.
-
-
-## 2026-09-27 22:23 ET — Current blocker: #279 Render startup hang
-The nonblocking Market corrective is merged. The current blocker is now deployment startup, not Market Search latency.
-
-Exact live-deploy state:
-- merge SHA: `916f87e0661475d9ae5c0458c788ba356e802262`;
-- Render deploy: `dep-dassq1rbc2fs73a74b10`;
-- build: successful;
-- deploy: still `update_in_progress`;
-- new instance `qvhhw`: uvicorn command launched, but no server-process/application-startup/request/hosted-acceptance logs follow.
-
-Therefore #279 has not yet been validated in production. Prior #278 acceptance timings are historical evidence only. Implementation must first restore new-instance application startup, then run hosted acceptance before physical beta testing.
-
-
-## 2026-09-28 — Primary FSFFL is testable; remaining hosted failure is Hodor Forecast source health
-Live merge `9db51f8190dd7a1a17d75987ddc685b7b459a8b2` (PR #280) shows the runtime/Market corrective working on the primary FSFFL league: cold PI ~0.5s, active PI ~2.9s, Market ~0.3s / cache-hit immediate, continuity preserved, and ~412.5 MB max observed after automatic sync.
-
-The full hosted journey still returns FAILED only because the later Hodor league-switch step cannot satisfy the governed live Forecast source-health requirement: Razzball is the sole healthy source while CBS, FFToday and NFL Fantasy are currently unusable for authoritative full-season acquisition.
-
-This is now classified as a cross-league Forecast-source availability blocker, not a reason to continue changing the primary FSFFL runtime. Bounded physical testing of the primary league may resume; do not treat Hodor/cross-league switching as accepted yet.
-
-
-## 2026-09-28 — Management reclassifies remaining Hodor failure as replay-continuity defect
-The primary FSFFL runtime gains on live PR #280 remain valid. However, the Hodor switch failure is **not accepted as merely provider-source downtime** while durable governed Hodor Forecast evidence exists.
-
-Management requires Implementation to prove why persisted Hodor raw Forecast evidence was rejected and to separate raw-Forecast compatibility from downstream State/scoring compatibility. Downstream-only changes must rebuild their own layers without unnecessarily forcing provider reacquisition. If raw Forecast evidence is genuinely incompatible, the exact rejection component must be recorded and last-good presentation must remain available where authority permits.
-
-The controlling directive is `docs/operations/directives/20260928_HODOR_FORECAST_REPLAY_CONTINUITY.md`. Source-health/two-source acquisition rules remain unchanged. Long-Term Intrinsic remains paused until FSFFL → Hodor → FSFFL hosted acceptance passes.
-
-
-## 2026-09-28 — PR #281 merged but MUST NOT deploy as-is; post-merge P1 replay defect
-PR #281 merged as `a6a85d250497c9284c602373e54b3a72ce5d68c1`, but a post-merge Codex review identified a P1 defect in the exact continuity path Management is trying to close.
-
-When an exact-State Forecast artifact is rejected only because its downstream FUMBLES_LOST supplement contract is stale, the runtime can return early before attempting raw Forecast replay. In that case it falls through to live provider acquisition and can fail during a provider outage even though valid persisted raw Forecast evidence exists.
-
-Disposition: **do not deploy/accept #281 as-is.** Implementation must repair this exact same-State stale-supplement replay path, add regression coverage, merge the correction, then deploy the corrected exact merge SHA and run the full hosted FSFFL → Hodor → FSFFL acceptance journey. No scope expansion and no provider-rule weakening.
-
-
-## 2026-09-28 — PR #282 merged; new post-merge P1 blocks deployment
-PR #282 merged as `d9ac502f29e0511e0738b379ed9b5018ea43945f` and repairs the original same-State stale-supplement replay hole. A post-merge Codex review then identified a second P1 in that newly reachable replay path: rebuilt Forecast can be checkpointed while an older same-State Simulation artifact remains durable. If reconciliation stops before Simulation is rebuilt, restart restore can combine the new Forecast with stale Simulation because the current Simulation restore contract does not prove Forecast identity compatibility.
-
-Disposition: **do not deploy/accept #282 as-is.** Implementation must invalidate dependent Simulation on raw Forecast replay or strengthen persisted Simulation compatibility to require the exact Forecast identity/fingerprint, add a deterministic restart/interruption regression, then merge the narrow correction, deploy the corrected exact merge SHA, and run the full hosted FSFFL → Hodor → FSFFL acceptance journey. No scope expansion.
-
-
-## 2026-09-28 — Management accepts in-season ROS production policy
-For 2026, current-season Forecast will use actual YTD production plus governed third-party raw-stat ROS projections, with FSFFL league scoring downstream. An FSFFL-native ROS model is a shadow Research program, not a production prerequisite. PIT ROS capture should begin immediately because weekly provider snapshots are perishable. Production ROS integration waits until the active runtime/Hodor gate closes and may be sequenced ahead of Long-Term Intrinsic deployment because it is season-critical. Controlling directive: `docs/operations/directives/20260928_IN_SEASON_ROS_FORECAST_POLICY.md`.
-
-
-## 2026-09-28 — PR #283 open; address P2 exact-fingerprint lookup before merge
-PR #283 is open and mergeable at head `d9993c7d1f552821b382f97aab811304e1afd817`. Its core P1 correction is the right direction and current CI/focused validation is green. Post-review found one P2: Simulation restore checks only the newest row for a State, so an older exact-compatible Simulation can be unnecessarily discarded if a newer mismatched Forecast fingerprint exists. Address this by querying the exact expected Simulation artifact fingerprint rather than newest-only lookup. Then merge, deploy the corrected SHA, and complete hosted FSFFL → Hodor → FSFFL acceptance without another intermediate stop.
-
-
-## 2026-09-28 — #283 is deployed/live; hosted acceptance now fails at PI history overlap
-Implementation confirms exact merge SHA `047b3386e81bb843cc8b71408d05b0b81f38b792` is deployed and live. The previous deployment uncertainty is closed.
-
-Hosted acceptance now fails earlier at **PI history overlap during active reconciliation**:
-`StateFirstAcceptanceError: PI history overlap failed: RuntimeError: pi_history_during_active_reconciliation: PI history timed out`.
-
-Disposition: this is the current runtime blocker. Do not reopen Forecast replay/Hodor persistence work unless new evidence points back there. Diagnose the narrow reason PI history cannot complete within the acceptance window while reconciliation is active, preserving #278/#280 foreground-read improvements and #283 Forecast↔Simulation correctness. Determine whether the timeout reflects a real user-facing foreground starvation/contention defect or an acceptance-threshold artifact; fix the actual product path if real, or correct the harness if not. Then rerun the full hosted FSFFL → Hodor → FSFFL acceptance journey on the same corrected line.
-
-
-## 2026-09-28 — Physical testing exposes root cause: live runtime publishes half-reconciled intelligence
-Live PR #283 is deployed, but iPhone/Safari testing shows a deeper consistency defect than the current PI-history timeout: the product can report `Intelligence current` while Franchise/Atlas/Value Map independently move among Broad Market available/unavailable, Intrinsic unavailable/preparing/ready, and Simulation unavailable. Source inspection confirms reconciliation mutates the live runtime incrementally: attaching Forecast immediately clears Simulation and Value; attaching Simulation still leaves Value cleared. Same-State presentation continuity does not protect this path because stale presentation currently requires a different served State ID.
-
-Management therefore supersedes symptom-only timeout handling with the root-cause **Atomic Intelligence Publication Contract** in `docs/operations/directives/20260928_ATOMIC_INTELLIGENCE_PUBLICATION.md`. Build reconciliation off to the side, keep the prior published generation visible, and atomically promote one coherent terminal generation. Global status must derive from the published capability/surface generation and must not claim current while rendered surfaces contradict it. Preserve #280 performance and #283 dependency correctness. Runtime remains the sole product-critical workstream.
-
-
-## 2026-09-28 — Independent Work red-team validates atomic publication; one P2 remains
-A read-only Work audit fetched current main `e2b7676516dbb18ff5b5763a6d0508685c99c53b` and independently validated the core atomic-publication paths: no additional defect was found in same-State refresh isolation, interruption/crash behavior, restart authority, cross-surface generation consistency, status/banner truth, or working-artifact isolation. It found one concrete P2 at final publication commit: managed-team selection can change after durable publication writes begin but before the in-memory publication recheck, allowing durable pointer/manifest advancement for the old working team followed by runtime publication failure.
-
-Disposition: **HOLD deployment/acceptance until this managed-team commit race is fixed and covered.** Validate team/generation identity before durable manifest/pointer commit and protect that identity through the commit/in-memory swap, or otherwise serialize/rebase publication against team selection. Add deterministic interleaving/restart coverage. Then deploy the corrected exact SHA and run hosted FSFFL → Hodor → FSFFL plus same-State/cross-surface/managed-team acceptance.
-
-
-## 2026-09-28 — Managed-team race fixed; acceptance proof still needs one correction
-PR #285 merged as `e061941d439f180a85ea86331727bda9f7dff58d` and implements the Work-requested serialization/identity guard for managed-team publication. PR #286 merged as `09b5f36091266685259a274fb9abbaf502937979` to exercise the managed-team case in hosted acceptance. PR #287 then merged as `2c0c6d0aefc0cc21913e6090b70f706c29e0b430` after hosted work exposed a cold exact-State restore defect where the correct published F/S/V and presentation could restore but the managed-team/publication generation identity was dropped; #287 restores that identity with regression coverage.
-
-However, post-merge review of #286 found two acceptance-harness defects that prevent Management from treating its hosted managed-team proof as sufficient yet: (1) the surface probe can take long enough that reconciliation may complete before the alternate-team switch, so the test may not actually interleave team selection with an active working generation; and (2) the assertion checks copied context `selected_team_id` rather than the actual returned Franchise `franchise_team_id`. These are proof defects, not evidence that #285/#287 runtime behavior is wrong.
-
-Current main is `2c0c6d0aefc0cc21913e6090b70f706c29e0b430`. Before terminal acceptance, correct the #286 managed-team acceptance so it switches immediately after proving an active working generation (or revalidates activity), and assert the actual Franchise/team-scoped surface identity. Then deploy the exact corrected SHA and rerun hosted FSFFL → Hodor → FSFFL plus same-State/cross-surface/managed-team acceptance. Do not broaden scope.
-
-
-## 2026-09-28 — Post-stabilization product/model sequence accepted
-Management priority after runtime stabilization is now explicit in `docs/operations/directives/20260928_POST_STABILIZATION_FOUNDATION_SEQUENCE.md`. Do not start it until atomic-publication hosted + physical acceptance closes. Sequence: in-season Actual YTD + governed ROS Forecast first; then already-accepted Long-Term Intrinsic; PIT historical market evidence; League Market / directional Owner Intelligence; richer bilateral Trade Decision; downstream Market/Search optimization; then Intelligence surface exploitation. This ordering preserves Data -> State -> Forecast -> Value -> Decision -> Search -> Presentation authority and avoids building powerful UI/search on weak inputs.
-
-
-## 2026-09-28 — Stabilization status after #289: two narrow publication/acceptance edges remain
-PR #289 merged as `47426752e812c0ca19c1caa7a95932a37d56ea72` and corrects the #286 managed-team hosted proof so the switch occurs only while a working generation is active and the assertion checks the actual Franchise surface identity. A post-merge review found one remaining P2: the team switch can still interleave after the worker enters checkpoint/presentation-promotion but before the final in-memory publication lock, deleting the working generation and causing a generic FAILED reconciliation rather than a clean serialized completion/interruption.
-
-Separately, hosted #287 work exposed a changed-State continuity diagnostics gap now represented by open PR #288 (`Carry served generation through changed-State continuity`). Its review found two P2s: only bind a served publication generation when its team matches the active selected team, and only expose a served generation as visible when it satisfies the same validity predicate used by presentation continuity (same league, different State, actual snapshot eligibility).
-
-These are the remaining stabilization gates. They do not reopen Forecast/Simulation/Value/Intrinsic semantics. Correct #288's served-generation predicates and the #289/full-publication synchronization edge, then merge/deploy the exact corrected lineage and rerun the full hosted FSFFL -> Hodor -> FSFFL + same-State/cross-surface/managed-team/restart acceptance before physical Safari validation.
-
-
-## 2026-09-28 — PR #290 open; focused checks green, full CI exposes one changed-State restore defect
-PR #290 (`Close final atomic-publication acceptance edges`) is open/mergeable at head `3ac755799e3f9d7a91e7ecf947e9d95f084ae908`. Focused validation suites are green, but full CI is not: 1 of 1,780 tests fails. `restore_runtime_snapshot()` correctly returns the team-matched served publication generation for changed-State continuity, but `PersistentPrivateBetaRuntimeStore.restore_user()` drops it when building the active `ServedIntelligenceSnapshot`, leaving `publication_generation_id=None`. Fix that exact propagation mismatch while preserving #290's team-match/visibility predicates and full publication-sequence serialization. Do not merge/deploy until full CI is green. Then execute hosted acceptance and physical iPhone/Safari validation.
-
-Management continuity is now compactly persisted at `docs/operations/MANAGEMENT_CONTINUITY.md`, including the accepted post-stabilization sequence and Simulation 2.0 program.
-
-
-## 2026-09-28 — PR #290 merged/green, but post-merge P1 blocks stabilization close
-PR #290 merged as `213c95014155de698b25681244024f4a0a66aa6b`. The final PR head `2a7a1eb6a8f763910ba68645b8c12166ab5b8a85` made full CI green and addressed the changed-State served-generation restore ordering defect. However, post-merge review identified a concrete P1 on current main: `PrivateBetaRuntimeStore._publication_lock` is store-global while `PersistentPrivateBetaRuntimeStore._restore_lock` is also store-global, and publication vs cold-restore paths can acquire them in opposite order across different users. Publication can hold `_publication_lock` and wait through checkpoint/restore work for `_restore_lock`, while another user's cold restore holds `_restore_lock` and calls into `set_league_state()`, which waits for `_publication_lock`. Neither acquisition has a timeout, so both requests can deadlock permanently.
-
-Disposition: **do not close stabilization or accept/deploy #290 lineage as terminal until this P1 is fixed.** Preferred correction is per-user publication sequencing or a single consistent lock order that preserves atomic publication without cross-user deadlock. Add a deterministic concurrent cold-restore vs publication regression. Then full CI -> merge corrected SHA -> hosted acceptance -> physical iPhone/Safari validation. No model/research scope expansion.
-
-
-## 2026-09-28 — Management changes stabilization closeout from serial patching to whole-class verification
-Repeated “one narrow fix remains” cycles are now treated as a process failure: local correction followed by post-merge discovery of an adjacent publication/restore lifecycle invariant. The controlling closeout protocol is now `docs/operations/directives/20260928_STABILIZATION_CLOSURE_PROTOCOL.md`.
-
-Do not immediately patch/deploy the current cross-user lock inversion in isolation. Correct it within a bounded publication/persistence/restore/identity lifecycle pass, then run a whole-class read-only red-team, deterministic single-user + two-user concurrency matrix, bounded repeated stress, full CI, and only then merge/deploy once. A bounded lifecycle/locking refactor is authorized if simpler per-user ownership and consistent lock ordering is cleaner than another local guard. No model/research semantics are reopened.
-
-
-## 2026-09-28 — PR #291 whole-class closure pass is active; one CI failure remains
-PR #291 (`Close runtime lifecycle concurrency class`) is open/mergeable at head `7bcf6121688aa49f02cd4fbd4037925ca7d8503f`. This is the first corrective operating under the Stabilization Closure Protocol rather than the prior one-defect-at-a-time loop.
-
-In plain language, the branch changes runtime coordination so one user's refresh/restore activity no longer uses the same global coordination lock as every other user. It also adds explicit two-user concurrency tests, interruption/restart coverage, repeated stress, and cleanup for idle checkpoint workers.
-
-The first pre-merge red-team found two adjacent issues before merge: (1) two users writing different versions of the same league could allow an older shared league snapshot to overwrite a newer one, and (2) one background checkpoint worker per historical user could accumulate indefinitely. The current branch contains follow-up coverage/changes for monotonic shared-State persistence and retirement of idle per-user checkpoint executors, but full CI is not yet green.
-
-Current CI result: **1 failed / 1,794 passed**. The failing test is `test_same_state_checkpoint_queue_coalesces_to_latest_context`. The new checkpoint behavior writes only the latest team selection to durable runtime context where the old test expected both an initial no-team write and the final team write. This must be reconciled as either the intended safer/coalesced behavior with the test updated accordingly, or a real durability regression. Do not merge until the contract is explicit and full CI is green.
-
-No deployment or physical acceptance should occur yet. After CI is green, the directive still requires whole-class red-team closure, bounded stress, one merge/deploy, hosted acceptance, then iPhone/Safari validation.
-
-
-## 2026-09-28 — PR #291 merged after whole-class closure proof; deployment/hosted acceptance now next gate
-PR #291 (`Close runtime lifecycle concurrency class`) merged as `dbe7fccaceca525e0586389dcc5388764fa015a3` after the Stabilization Closure Protocol was completed on head `a5efeeedfae165c197724bd4f47170c3463c18b7`.
-
-Plain-language result: the runtime now coordinates each user's refresh/restore/publication lifecycle independently instead of making unrelated users share one global lifecycle lock. The pre-merge red-team found and corrected additional neighboring lifecycle risks before merge, including stale shared-league snapshot overwrites, idle background-worker accumulation, checkpoint ordering during cancellation/coalescing, and stale worker ownership after identity changes.
-
-Verification at the merged head: focused checks green, full suite **1,796 passed**, deterministic single-user/two-user lifecycle matrix covered, bounded repeated publication stress completed, and the whole-class red-team reported no remaining concrete P1/P2 lifecycle defect.
-
-Stabilization is **not terminal yet**. No exact merged-SHA deployment/hosted acceptance evidence is recorded here yet. Next required sequence: deploy exact `dbe7fcca...` -> hosted FSFFL -> Hodor -> FSFFL plus same-State/changed-State/cross-surface/team-change/restart/two-user acceptance -> physical iPhone/Safari validation.
-
-
-## 2026-09-28 — #291 exact merge SHA is live; hosted acceptance is running
-Render service `fsffl-next-private-beta` has deployed exact merge SHA `dbe7fccaceca525e0586389dcc5388764fa015a3`; deploy `dep-datdlnugekts73adssi0` is live.
-
-Hosted runtime availability acceptance auto-started on the new instance. Current observed progress: acceptance_start passed within the soft memory budget; cold FSFFL surface reads completed; cold PI history completed; initial FSFFL reconciliation atomically published full Forecast/Simulation/Value/Intrinsic authority; all six checked surfaces shared one publication generation; PI history during active reconciliation completed in ~0.49s. No terminal PASS/FAIL has been emitted yet.
-
-Do not call stabilization terminal or request physical iPhone/Safari validation until the hosted acceptance journey emits terminal PASS. If it passes, physical testing is the final gate.
-
-
-## 2026-09-28 — Physical clean-reset testing proves a first-load regression
-Current beta availability is **HOLD**. The problem is no longer classified as only restore/publication continuity.
-
-Management performed a surgical server-side reset for Jimmy while preserving historical/model evidence. Physical iPhone/Safari then proved:
-- Sleeper connect POST was accepted, but the Connect League screen gave no useful acknowledgement and remained visible for >1 minute;
-- a product-context read took ~51.6s;
-- the fresh league State eventually persisted, but the user was never asked to select a team even though browser code issued team-selection calls from saved Safari local state;
-- Forecast replay selected fresh acquisition for a legitimate material player/NFL-team mapping change, but no new Forecast/Simulation/Value publication followed and no clear terminal failure was surfaced.
-
-Regression comparison found the earlier reliable contract in PR #54 (`0021aefc...`) / PR #56 (`a8527e1...`): Connect League completed once canonical Sleeper State was usable in memory and persistence continued asynchronously, with visible mobile progress. PR #261 (`c57bc39...`) later retained a 30-second State-activation durability barrier on hosted connect while solving league-switch persistence safety, recreating the blocking behavior PR #54 had removed.
-
-Controlling corrective: `docs/operations/directives/20260928_FIRST_LOAD_REGRESSION_RECOVERY.md`.
-
-Immediate action: restore the known-good first-load contract without rolling back #261/#291 safety. Prove a true clean-browser first run (server state + browser local state empty), restored session, league switch and restart before asking the product owner to test again. Post-stabilization foundations remain paused.
-
-
-## 2026-09-29 — #292 live; primary FSFFL path passes, full hosted acceptance stops at Hodor source-health gate
-PR #292 merged as `8c162c5a7bf6120ecc72566e72dd11f634a93ee9` and exact merge SHA is live on Render deploy `dep-datftrs9v7es738i9q80`.
-
-Hosted evidence on the #292 instance is materially positive for the targeted FSFFL regression:
-- initial FSFFL reconciliation produced one full coherent published generation across Home/Franchise/League/Market/value-lens surfaces;
-- PI history during active reconciliation completed in ~0.405s;
-- reload during active reconciliation continued serving the prior coherent generation while readiness truthfully reported rebuilding;
-- changed-State reconciliation then atomically promoted all checked surfaces to a new common generation;
-- peak observed RSS during this leg was ~386.9 MB, within the ~429.5 MB soft engineering budget.
-
-The full acceptance did **not** reach terminal PASS. At the Hodor switch it failed with `LiveForecastSourceHealthFailure`: only Razzball was healthy; CBS did not return a valid full-season QB projection page, FFToday returned HTTP 403, and NFL Fantasy returned no projection content. This is the previously known Hodor/provider-authority gate, not evidence that the #292 FSFFL first-load corrective itself failed.
-
-Disposition: runtime stabilization remains HOLD because the directive still requires clean-first-run + restored-session + league-switch + restart acceptance. Do not ask for physical iPhone/Safari acceptance yet. Implementation must continue from this exact hosted failure and determine whether Hodor should have replayed compatible persisted governed raw Forecast evidence or whether fresh acquisition was legitimately required; do not weaken the two-source authority contract merely to pass acceptance.
-
-
-## 2026-09-29 — Runtime architecture audit corrective added to stabilization gate
-Independent read-only Work audit found that the founding analytical architecture remains sound but confirmed one residual runtime/application P1 exposure: cold foreground `get()` can still trigger durable restore under the same per-user lifecycle coordination used by fresh Connect activation, allowing persistence recovery to sit in front of State usability.
-
-Management adopts this as a required stabilization gate under `docs/operations/directives/20260929_RUNTIME_ARCHITECTURE_AUDIT_CORRECTIVE.md`.
-
-Current implementation has already advanced:
-- PR #293 merged as `49ce8cae4f588fefc7c879e643504ee1b015cf42`;
-- exact #293 lineage is live on Render;
-- hosted acceptance is currently running;
-- #293 addresses Hodor raw Forecast replay discovery after clean runtime reset.
-
-Do not interrupt the active #293 hosted run absent a concrete failure. After it returns, Implementation must address any still-open replay compatibility-scan defect and remove/prove the cold-restore-before-fresh-Connect dependency before stabilization can close. Preserve strict source-health rules, atomic publication and #291/#292 safety.
-
-
-## 2026-09-29 — #293 hosted acceptance: Hodor recovered; run again cut off by 15-minute idle sleep
-Exact #293 merge SHA `49ce8cae4f588fefc7c879e643504ee1b015cf42` deployed live as Render deploy `dep-datgi3egekts73ao3tsg`.
-
-Hosted acceptance materially advanced beyond the prior #292 failure:
-- Hodor completed instead of failing on live provider source health;
-- Hodor published one coherent partial-authority generation with Forecast available, Value available, Simulation correctly unavailable under the separate K/DST Forecast-authority blocker;
-- all checked Hodor surfaces shared the same publication generation;
-- acceptance then returned successfully to FSFFL and published one coherent full generation across checked surfaces;
-- repeat PI history after FSFFL return completed in ~0.306s;
-- peak observed RSS was ~405.0 MB, within the ~429.5 MB soft engineering budget.
-
-The run still did **not** emit terminal PASS. The instance shut down gracefully at ~00:57:13Z, exactly 15 minutes after the #293 instance became live (~00:42:13Z), with no acceptance traceback or OOM. This matches the known Render free-tier idle-sleep behavior and interrupted the remaining restart/final acceptance legs.
-
-Disposition:
-- #293 materially resolves the previous Hodor hard stop.
-- Runtime stabilization remains HOLD because terminal clean-first-run/restored-session/switch/restart proof is incomplete.
-- The architecture-audit corrective remains mandatory: remove/prove the cold durable-restore-before-fresh-Connect dependency.
-- The #293 review P2 about scanning past newer incompatible raw artifacts remains open unless explicitly corrected/proven.
-- Do not request physical Safari validation yet.
-
-
-## 2026-09-29 — #294 hosted acceptance reaches managed-team durability failure
-PR #294 merged as `a0dcb92b3aa3fc08431076b404f03a9900bdaf0c` and exact SHA is live on Render deploy `dep-dathef5g1s2s739d8ipg`.
-
-Hosted acceptance materially passed the previously failing runtime legs:
-- initial FSFFL full coherent publication;
-- responsive PI during active reconciliation (~0.506s);
-- last-good continuity during rebuild;
-- Hodor switch with coherent partial-authority publication;
-- return to FSFFL with coherent full publication;
-- repeat PI after return (~0.396s);
-- two manual refreshes completed with coherent publication;
-- keep-awake/inbound traffic successfully prevented the prior 15-minute free-tier idle shutdown;
-- memory remained within the soft engineering budget during these legs.
-
-The run then failed at ~02:04:45Z **before the restart/restored-session leg**:
-- log: `FSFFL persistence checkpoint timed out user=runtime-clean-first-load-pr292-20260928`;
-- acceptance error: `managed-team selection did not durably checkpoint`;
-- terminal: `FSFFL RUNTIME AVAILABILITY ACCEPTANCE FAILED`.
-
-This is now the active stabilization blocker. It is not a Forecast/Hodor blocker and not an idle-sleep interruption.
-
-Management interpretation: do not weaken the durability requirement or simply extend the timeout. Determine whether team-selection persistence is actually starved/queued behind unrelated checkpoint work, whether the acceptance barrier is observing the wrong generation/queue state, or whether the checkpoint contract regressed after making foreground `get()` memory-only. Preserve State-first foreground availability and the #294 restore boundary.
-
-Runtime stabilization remains HOLD. Do not request physical Safari validation.
-
-
-## 2026-09-29 — #295 merged/live; hosted acceptance running
-PR #295 (`Make managed-team checkpoint lightweight and exact`) merged as `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab`. Exact merge SHA is live on Render deploy `dep-dati6o5g1s2s739fv4pg`.
-
-Pre-merge proof on head `b9927e7b089d0e7d8a8d431cf2fe4bc7039e6183`:
-- root cause of #294 managed-team durability timeout confirmed as wrong persistence path: team-only identity change was misclassified as terminal intelligence publication;
-- corrected to lightweight ordered user/State/team pointer persistence with exact durability barrier;
-- team pointer now depends on exact State durability and is generation-bound;
-- team-only checkpoint does not republish Forecast/Simulation/Value, Market artifacts, last-good publication, or presentation manifest;
-- restart/fallback preserves the latest durable managed-team identity;
-- deterministic coverage added for queue ordering, failed State persistence, heavy checkpoint pressure, coalescing, stale identity work, publication-vs-team serialization, and exact-team restart;
-- bounded P1/P2 red-team reported no unresolved findings;
-- full suite green: 1,816 passed.
-
-Hosted acceptance has started on exact merge SHA. Initial FSFFL publication is coherent and PI overlap is responsive (~0.687s). One resource warning is active: peak observed RSS in the initial leg reached ~517.0 MB, below the ~536.9 MB hard Render limit but above the ~429.5 MB soft engineering budget. Continue the run; do not stop merely on the soft warning, but treat sustained/recurring hard-limit proximity as a stabilization concern.
-
-Physical Safari remains HOLD until terminal hosted acceptance.
-
-
-## 2026-09-29 — #295 hosted run interrupted by idle sleep; keep-awake not actually active
-Exact #295 merge SHA `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` was live and materially healthy through initial FSFFL, Hodor, and return to FSFFL. The run did not reach the managed-team/restart leg.
-
-At ~02:49:47Z the Render instance shut down gracefully, almost exactly 15 minutes after going live at ~02:34:47Z. No acceptance failure traceback or OOM preceded shutdown. Verification of inbound traffic shows only one `GET /` request at startup (401); there was no recurring keep-awake traffic during the run. Therefore the prior assumption that the keep-awake mechanism had been proven was incorrect.
-
-Disposition:
-- do not classify this as a #295 runtime failure;
-- do not modify the #295 managed-team durability logic based on this interrupted run;
-- physical Safari remains HOLD because restart/restored-session is still unproven;
-- next hosted run must use a verified recurring inbound request that Render counts as activity for the entire acceptance duration, and the traffic itself must be visible in logs before relying on it.
-
-Resource watch: this run also came close to the hard Render memory ceiling. Render metrics briefly reached ~532.1 MB against ~536.9 MB hard limit, while acceptance's own peak accounting reported ~520.2 MB. The process did not OOM and later memory fell, but this is not comfortable headroom. Capture memory through the next complete run and treat any sustained/recurring hard-limit proximity as a stabilization blocker rather than dismissing it as a soft-budget-only warning.
-
-
-## 2026-09-29 — #295 complete hosted rerun: managed-team durability passes; same-State reconciliation identity failure
-A verified external keep-awake workflow held the exact #295 deployment `9fb755d4de0e81adaa0d34ea2fb04159b711c3ab` awake for the full hosted acceptance window. Recurring inbound requests were visible every ~2 minutes. The temporary workflow was removed after the run.
-
-This run materially proves #295 fixed the prior blocker:
-- managed-team selection reached alternate team `sleeper:1312071960615731200:team:2`;
+Runtime evidence shows a more serious combined-load failure: after cold wake and automatic refresh, process memory rose to **534.7 MB / 536.9 MB** at 12:46 UTC, then reset to ~3.8 MB and Uvicorn restarted. No explicit OOM kill line was emitted, …12815 tokens truncated…tion reached alternate team `sleeper:1312071960615731200:team:2`;
 - exact managed-team durability barrier passed (the earlier line-710 durability failure did not recur);
 - Franchise followed team:2 after reconciliation interruption;
 - Hodor / return-to-FSFFL / repeated refresh and prior continuity legs completed before this point;
@@ -1772,3 +1343,42 @@ A later physical Safari screenshot sharpened the propagation contradiction: the 
 This is stronger evidence than a merely slow optional lens. At the same time, Player Intelligence had already displayed both Broad Market and FSFFL Intrinsic for Dak Prescott, so the required investigation is now exact-generation/surface authority propagation: determine whether League Value Map is reading a different publication generation, losing compatible Intrinsic/Market attachment, serving a stale cached readiness result, or failing to re-request/re-render after the governed evidence becomes available.
 
 Product acceptance target remains bounded: restore one coherent usable session across Home, Franchise, League Atlas, Player Intelligence and Market-facing value consumers, then return to capability development. Do not require perfection of every optional surface or reopen model semantics.
+
+
+## 2026-09-30 — Cross-surface propagation corrective
+
+Physical Safari's 11:27–11:33Z contradictions were correlated to Render logs and
+the exact runtime State/publication. PI, Atlas, and published presentation
+surfaces all used State
+`810f710608a9d2b1422f3abf2c65f0d413bb65a2537f5db332f140ac3b8299e8`; the
+generation itself was shared. The defect was the value-lens payload frozen into
+that generation as `loading` during presentation promotion: the route's
+`working_generation_active` staging predicate ignored that its read context
+already had selected-team and Forecast evidence plus completed Intrinsic.
+Subsequent requests hit the persisted stale payload, so Franchise/Atlas did not
+converge even though PI could read the completed Intrinsic record.
+
+The corrective removes only that predicate. First-load requests still stage
+when team/Forecast inputs are absent; when evidence is ready, Market and
+Intrinsic rows materialize into the promoted publication. A regression now
+promotes all seven surfaces under an active working generation and confirms
+both lenses are actually usable from the published route on the same generation.
+
+Published presentation reads also avoid re-hashing all seven artifacts on every
+poll: the process retains the validated manifest fingerprint, validates the
+requested surface on each request, and performs full artifact validation on
+cold restore or manifest change. Tampered requested artifacts still fail
+validation. Server-Timing was added to status, Atlas, team-view, and value-lens
+endpoints.
+
+The physical run's #308 phase RSS telemetry shows 381 MB at Intrinsic
+reconciliation and 387 MB at publication, with 524.7 MB peak and no restart;
+coarse Render memory stayed near 410 MB. Hard-limit headroom remains narrow.
+Measured foreground latency was dominated by active 50K Simulation: about 173
+seconds of build time overlapped Home/My Team requests of 12–22s and product-
+context requests of 29–33s; after Simulation completion those reads fell to
+roughly 2.5–6s. Forecast fallback remains truthful and was not changed.
+
+Focused tests pass and full suite passes: **1,888 passed**. Current work is
+deployment and one realistic hosted acceptance of cross-surface convergence;
+after that, return to Management for physical Safari confirmation.

@@ -76,7 +76,6 @@ def install_league_value_lens_routes(
                 runtime.publication_generation_id is None
                 and (
                     runtime.selected_team_id is None
-                    or runtime_store.working_generation_active(user_id)
                     or runtime.forecast_evidence is None
                 )
             )

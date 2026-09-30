@@ -12,6 +12,17 @@ def test_hosted_entrypoint_emits_existing_performance_timing_logs() -> None:
     assert "total_elapsed_seconds" in coordinator
 
 
+def test_value_consumers_emit_server_timing_for_propagation_acceptance() -> None:
+    latency = Path("src/fsffl/product/latency_observability.py").read_text(encoding="utf-8")
+    for path in (
+        '"/api/intelligence/status"',
+        '"/api/league/atlas"',
+        '"/api/league/team-views"',
+        '"/api/league/value-lenses"',
+    ):
+        assert path in latency
+
+
 def test_hosted_entrypoint_logs_post_restore_runtime_readiness() -> None:
     source = Path("src/fsffl/product/persistent_webapp.py").read_text(encoding="utf-8")
 
