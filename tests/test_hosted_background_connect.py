@@ -480,14 +480,14 @@ def test_mobile_connect_commits_league_after_identity_and_requires_fresh_team_ch
 
     previous_index = interactive.index("const previousLeagueId=localStorage.getItem(LEAGUE_KEY)")
     feedback_index = interactive.index("button.textContent='Starting import…'")
-    visible_same_index = interactive.index("if(activeBefore===normalized)")
     wait_index = interactive.index("await waitForBackgroundImport(normalized")
     verify_index = interactive.index("if(!contextMatchesLeague(context,normalized)||!context?.state_id)")
     save_index = interactive.index("localStorage.setItem(LEAGUE_KEY,normalized)")
     clear_team_index = interactive.index("localStorage.removeItem(TEAM_KEY)", save_index)
     apply_index = interactive.index("applyConnectedContext(context)")
-    assert previous_index < feedback_index < visible_same_index < wait_index < verify_index < save_index < clear_team_index < apply_index
+    assert previous_index < feedback_index < wait_index < verify_index < save_index < clear_team_index < apply_index
     assert "canonicalBefore" not in interactive
+    assert "if(activeBefore===normalized)" not in interactive
     assert "restoreSelectedTeam(" not in interactive
     assert "League is ready. Select the franchise you manage to continue." in interactive
     assert "if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY)" in interactive
