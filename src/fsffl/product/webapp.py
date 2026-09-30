@@ -1346,31 +1346,43 @@ def create_app(
             league_state = state_loader(league_external_id)
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Unable to load Sleeper league: {exc}") from exc
-        activated = activate_state_with_resource_boundary(
-            user_id,
-            league_state,
-            reason="synchronous_connect",
-        )
-        if activated is None:
-            raise HTTPException(status_code=409, detail="Sleeper league activation was superseded")
-        behavior_jobs.start(
-            user_id=user_id,
-            league_state=league_state,
-            sleeper_league_external_id=league_external_id,
-        )
-        reconcile = getattr(
-            application.state,
-            "start_intelligence_reconciliation",
-            None,
-        )
-        activated_runtime = store.get(user_id)
-        if (
-            callable(reconcile)
-            and previous_league_id is not None
-            and previous_league_id != league_state.league.league_id
-            and activated_runtime.selected_team_id is not None
-        ):
-            reconcile(user_id)
+        with store.lifecycle_operation(user_id):
+            activated = activate_state_with_resource_boundary(
+                user_id,
+                league_state,
+                reason="synchronous_connect",
+            )
+            if activated is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Sleeper league activation was superseded",
+                )
+            activated_runtime = store.get(user_id)
+            if (
+                activated_runtime.league_state is None
+                or activated_runtime.league_state.state_id != league_state.state_id
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Sleeper league ownership changed after activation",
+                )
+            behavior_jobs.start(
+                user_id=user_id,
+                league_state=league_state,
+                sleeper_league_external_id=league_external_id,
+            )
+            reconcile = getattr(
+                application.state,
+                "start_intelligence_reconciliation",
+                None,
+            )
+            if (
+                callable(reconcile)
+                and previous_league_id is not None
+                and previous_league_id != league_state.league.league_id
+                and activated_runtime.selected_team_id is not None
+            ):
+                reconcile(user_id)
         return runtime_context_payload(user_id)
 
     @application.get("/api/behavioral/status")
