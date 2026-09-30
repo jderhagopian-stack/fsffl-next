@@ -225,6 +225,12 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "pi_history_after_initial_publication" in source
     assert "fsffl_restart_restored_session" in source
     assert "restore_only" in source
+    assert "restart restore did not recover durable core intelligence" in source
+    assert 'probe_surface("restored_session_surfaces")' in source
+    assert 'probe_history("restored_session_pi_history")' in source
+    assert "_require_full_fsffl(settled_snapshot)" in source
+    assert 'probe_surface("restored_session_settled_surfaces")' in source
+    assert "product rehydration changed durable publication" in source
     assert "pi_history_during_active_reconciliation" in source
     assert "reload_during_active_reconciliation" in source
     assert "fsffl_automatic_state_sync" in source
