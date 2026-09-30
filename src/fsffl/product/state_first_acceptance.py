@@ -528,7 +528,28 @@ def run_state_first_production_acceptance(
         sample_resources("restored_session_start")
         restored = store.restore_user(user_id)
         restored_snapshot = _snapshot(store, user_id, capability_reader)
-        _require_full_fsffl(restored_snapshot)
+
+        # Restart authority is staged by design: the exact durable runtime generation
+        # restores State + managed-team + Forecast/Simulation/Value immediately,
+        # while Intrinsic/PI product capability can rehydrate on first product use.
+        # Validate the durable core before asking any product-capability probe to run.
+        if restored_snapshot.get("league_id") != f"sleeper:{FSFFL_ACCEPTANCE_LEAGUE}":
+            raise StateFirstAcceptanceError(
+                "restart restore did not recover the FSFFL league identity: "
+                f"{restored_snapshot}"
+            )
+        if not all(
+            restored_snapshot.get(key)
+            for key in ("forecast", "simulation", "value")
+        ):
+            raise StateFirstAcceptanceError(
+                "restart restore did not recover durable core intelligence: "
+                f"{restored_snapshot}"
+            )
+        if restored_snapshot.get("working_generation_active"):
+            raise StateFirstAcceptanceError(
+                "restart restore exposed an unpublished working generation"
+            )
         if restored_snapshot.get("selected_team_id") is None:
             raise StateFirstAcceptanceError(
                 "restart restore did not recover managed-team identity"
@@ -537,6 +558,7 @@ def run_state_first_production_acceptance(
             raise StateFirstAcceptanceError(
                 "restart restore did not recover published generation identity"
             )
+
         restored_surface = probe_surface("restored_session_surfaces")
         if (
             restored_surface is not None
@@ -556,12 +578,38 @@ def run_state_first_production_acceptance(
                 "restored-session surfaces diverged from durable publication generation: "
                 f"{restored_surface}"
             )
+
+        # First governed PI use is the normal product path that rehydrates Intrinsic.
+        # After that bounded staged restore settles, the full product contract must
+        # again be satisfied without changing the durable publication generation.
         restored_history = probe_history("restored_session_pi_history")
+        settled_snapshot = _snapshot(store, user_id, capability_reader)
+        _require_full_fsffl(settled_snapshot)
+        if (
+            settled_snapshot.get("publication_generation_id")
+            != restored_snapshot.get("publication_generation_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "restored-session product rehydration changed durable publication "
+                "generation identity"
+            )
+        settled_surface = probe_surface("restored_session_settled_surfaces")
+        if (
+            settled_surface is not None
+            and settled_surface.get("publication_generation_id")
+            != restored_snapshot.get("publication_generation_id")
+        ):
+            raise StateFirstAcceptanceError(
+                "settled restored-session surfaces diverged from durable publication "
+                "generation"
+            )
         row = {
             "label": "fsffl_restart_restored_session",
             "snapshot": restored_snapshot,
             "surface": restored_surface,
             "history": restored_history,
+            "settled_snapshot": settled_snapshot,
+            "settled_surface": settled_surface,
         }
         steps.append(row)
         sample_resources("restored_session_end")
