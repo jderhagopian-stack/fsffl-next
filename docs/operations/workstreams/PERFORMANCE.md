@@ -355,3 +355,12 @@ The experimental versioned NumPy/PCG64 path is on draft PR #311, reconciled to c
 The original 100 × 50,000 statistical study remains unchanged: probability and rank-TV margins passed; expected-wins ±0.001 remains inconclusive. Management does not require a massive extension solely for that margin.
 
 Hosted validation has **not** run. The secure Render email/password authentication request returned `declined`; no service settings were modified and private-beta remains on main/#310. Resume only after a fresh explicit user authorization for secure Render sign-in. Then perform reversible batch-500 validation, capture resource/latency/readiness/restart evidence, restore main/#310, and return to Management. Do not merge or adopt the experimental path.
+
+
+### PR #311 hosted batch-500 resource gate — 2026-09-30
+
+The reversible experimental deploy completed the real first-load State → Forecast → 50k Simulation → Value → Intrinsic build, Market/value-lens work, foreground reads during refresh, and atomic full publication. It nevertheless **failed hosted resource acceptance**: process high-water RSS was 576,552,960 bytes vs the fixed 536,870,900-byte hard limit. The 30-second Render metric peaked at 530,784,260 bytes, leaving ~6.1 MB sampled headroom; CPU sat at its 0.15-core cap through the heavy build. Full job-start→publication time was ~256.7s. Forecast-complete→Simulation-complete markers span ~59.0s, but exact Simulation start was not logged. The present telemetry does not localize the short-lived allocation peak to Gaussian draws or another individual phase.
+
+The batch-500 acceleration's isolated speedup is not enough to justify production adoption on free Render because the actual refresh exceeded the enforced process high-water gate. Full hosted evidence and caveats are in `docs/operations/evidence/simulation_rng_hosted_validation_20260930.md`. Main/#310 was restored exactly; service/deploy is `fsffl-next-private-beta` / `dep-daunc2nlk1mc73di9b1g` / `3671ba0e6ff29ab750b71b8aaa467be0f56e55a9`.
+
+Next executable action before another adoption run: instrument the short-lived memory peak at finer granularity across Forecast, Simulation input/RNG/aggregation, Value, Intrinsic, persistence/publication and concurrent foreground work; reduce the owning transient allocation without changing 50,000 trials or modeled outputs. Then repeat hosted batch-500 acceptance with actual parallel Home/My Team/Product Context reads and restart restore. Management adoption remains withheld.
