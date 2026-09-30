@@ -760,6 +760,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
   report lifecycle RSS boundaries, resume interrupted exact-State builds, and
   add deterministic Safari-like concurrent-read/value-lens regression.
 - Keep hard Render memory limit and all Forecast/Simulation/Value semantics
-  unchanged. Full CI, exact-head review, deploy, realistic live fresh-build
-  telemetry and physical Safari acceptance remain required. Current status:
-  **BLOCKED — runtime acceptance**.
+  unchanged. PR #308 merged as `dbbab4a67a8366de9e90fad094236e1f779ebda5`;
+  full CI and triggered focused/live lanes passed (the external Atlas authority
+  audit passed on retry after a connection reset). Render deploy
+  `dep-dau9kng93c1s73datfl0` is live and application startup completed cleanly.
+- **Current status: READY FOR PHYSICAL IPHONE/SAFARI ACCEPTANCE.** The next real
+  fresh build must include concurrent foreground reads and Market/value-lens
+  polling so the new RSS boundary logs capture per-phase memory and usability.
+  The old incident has no object-level allocation profile, and no fresh build
+  has run on the corrective deploy yet.
