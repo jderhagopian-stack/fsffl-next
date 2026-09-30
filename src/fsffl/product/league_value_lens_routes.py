@@ -68,7 +68,10 @@ def install_league_value_lens_routes(
         intrinsic_error = None
         intrinsic_record = None
         if background_coordinator is not None:
-            record = background_coordinator.current(runtime)
+            # Decide staging entirely from cheap runtime identity before touching the
+            # Intrinsic coordinator. current(runtime) resolves the production input
+            # fingerprint and may materialize future-Forecast inputs, so even a
+            # nominal lookup belongs after the first-load gate.
             first_load_staging = bool(
                 runtime.publication_generation_id is None
                 and (
@@ -81,7 +84,7 @@ def install_league_value_lens_routes(
                 state = runtime.league_state
                 player_universe = "all_players" if universe == "all" else "rostered_players"
                 payload = {
-                    "status": "building",
+                    "status": "loading",
                     "contract_version": LEAGUE_VALUE_LENS_CONTRACT_VERSION,
                     "league_state_id": state.state_id,
                     "broad_market": {
@@ -108,9 +111,7 @@ def install_league_value_lens_routes(
                             "intelligence enrichment."
                         ),
                         "retry_after_ms": 1500,
-                        "build_status": (
-                            record.status.value if record is not None else "staged"
-                        ),
+                        "build_status": "staged",
                     },
                     "value_presentation": {
                         "status": "building",
@@ -172,25 +173,13 @@ def install_league_value_lens_routes(
                         "retry_after_ms": 1500,
                     },
                     "intrinsic_execution": {
-                        "status": (
-                            record.status.value if record is not None else "staged"
-                        ),
+                        "status": "staged",
                         "league_state_id": state.state_id,
-                        "forecast_coordinate": (
-                            record.forecast_coordinate if record is not None else None
-                        ),
-                        "response_budget_exceeded": (
-                            record.response_budget_exceeded
-                            if record is not None
-                            else False
-                        ),
-                        "started_at": (
-                            record.created_at.isoformat() if record is not None else None
-                        ),
-                        "updated_at": (
-                            record.updated_at.isoformat() if record is not None else None
-                        ),
-                        "error": record.error if record is not None else None,
+                        "forecast_coordinate": None,
+                        "response_budget_exceeded": False,
+                        "started_at": None,
+                        "updated_at": None,
+                        "error": None,
                     },
                 }
                 _logger.info(
@@ -199,6 +188,7 @@ def install_league_value_lens_routes(
                     state.state_id,
                 )
                 return payload
+            record = background_coordinator.current(runtime)
             if record is None:
                 record = background_coordinator.request(runtime)
             intrinsic_record = record
