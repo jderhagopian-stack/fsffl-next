@@ -24,6 +24,7 @@ _ECONOMIC_EVIDENCE_KEYS = (
 )
 
 EconomicEvaluator = Callable[..., dict[str, object]]
+RetentionValidator = Callable[[UserRuntimeContext], bool]
 
 
 def _runtime_user_id(runtime: UserRuntimeContext) -> str:
@@ -67,7 +68,11 @@ def market_economics_cache_key(
     )
 
 
-def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEvaluator:
+def make_cached_candidate_economics(
+    evaluator: EconomicEvaluator,
+    *,
+    retention_validator: RetentionValidator | None = None,
+) -> EconomicEvaluator:
     """Reuse exact Decision economic evidence for an identical package.
 
     Search-owned row metadata is never cached. A hit overlays only the governed
@@ -90,6 +95,11 @@ def make_cached_candidate_economics(evaluator: EconomicEvaluator) -> EconomicEva
         nonlocal hits, misses
         key = market_economics_cache_key(runtime, row)
         if key is None:
+            return evaluator(runtime, row, **kwargs)
+        if retention_validator is not None and not retention_validator(runtime):
+            # Prior published State may remain readable during replacement work, but
+            # its execution result may not reacquire retained process ownership after
+            # the resource boundary released that scope.
             return evaluator(runtime, row, **kwargs)
 
         started = monotonic()
