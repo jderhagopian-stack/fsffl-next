@@ -219,6 +219,28 @@ class ShapleyIntrinsicBackgroundCoordinator:
         return record
 
 
+    def restore_compatible_staged(
+        self,
+        context: UserRuntimeContext,
+    ) -> IntrinsicBuildRecord | None:
+        """Restore durable Intrinsic only inside the process heavy-work lane.
+
+        Foreground first-load/readiness calls must not deserialize a persisted
+        Intrinsic contract while fresh Forecast acquisition is preparing. The
+        background reconciliation/startup restore paths call this method instead,
+        preserving exact reuse while staging its transient memory footprint.
+        """
+
+        if self._heavy_work_coordinator is None:
+            return self.restore_compatible(context)
+        if context.league_state is None:
+            return None
+        with self._heavy_work_coordinator.claim(
+            kind="intrinsic_restore",
+            key=f"{context.user_id}:{context.league_state.state_id}",
+        ):
+            return self.restore_compatible(context)
+
     def request(
         self,
         context: UserRuntimeContext,

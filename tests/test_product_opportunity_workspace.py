@@ -252,13 +252,17 @@ def test_presentation_market_shell_skips_automatic_search_and_decision_work() ->
     assert "bilateral_evaluation_limit=0" in persistent
 
 
-def test_readiness_polling_prefers_in_process_intrinsic_before_durable_restore() -> None:
+def test_readiness_polling_is_memory_only_and_intrinsic_restore_is_staged() -> None:
     persistent = (ROOT / "src/fsffl/product/persistent_webapp.py").read_text()
     readiness = persistent.split(
         "def _hosted_capability_readiness", 1
     )[1].split("def _reconcile_hosted_intrinsic", 1)[0]
+    reconcile = persistent.split(
+        "def _reconcile_hosted_intrinsic", 1
+    )[1].split("# Reuse only exact Decision-owned package economics", 1)[0]
 
-    current_index = readiness.index("_shapley_intrinsic_coordinator.current(context)")
-    restore_index = readiness.index("_shapley_intrinsic_coordinator.restore_compatible(context)")
-    assert current_index < restore_index
+    assert "_shapley_intrinsic_coordinator.current(context)" in readiness
+    assert "_shapley_intrinsic_coordinator.restore_compatible(context)" not in readiness
+    assert "_shapley_intrinsic_coordinator.restore_compatible_staged(context)" not in readiness
+    assert "_shapley_intrinsic_coordinator.restore_compatible_staged" in reconcile
     assert "known_snapshot_available" in readiness

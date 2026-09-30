@@ -13,7 +13,12 @@ from .intrinsic_background import (
     intrinsic_failure_payload,
     intrinsic_loading_payload,
 )
-from .league_value_lenses import build_league_value_lenses
+from .league_value_lenses import (
+    BROAD_MARKET_SCALE_ID,
+    INTRINSIC_PRESENTATION_COORDINATE,
+    LEAGUE_VALUE_LENS_CONTRACT_VERSION,
+    build_league_value_lenses,
+)
 from .runtime import PrivateBetaRuntimeStore, UserRuntimeContext
 
 
@@ -63,7 +68,129 @@ def install_league_value_lens_routes(
         intrinsic_error = None
         intrinsic_record = None
         if background_coordinator is not None:
-            record = background_coordinator.request(runtime)
+            # Decide staging entirely from cheap runtime identity before touching the
+            # Intrinsic coordinator. current(runtime) resolves the production input
+            # fingerprint and may materialize future-Forecast inputs, so even a
+            # nominal lookup belongs after the first-load gate.
+            first_load_staging = bool(
+                runtime.publication_generation_id is None
+                and (
+                    runtime.selected_team_id is None
+                    or runtime_store.working_generation_active(user_id)
+                    or runtime.forecast_evidence is None
+                )
+            )
+            if first_load_staging:
+                state = runtime.league_state
+                player_universe = "all_players" if universe == "all" else "rostered_players"
+                payload = {
+                    "status": "loading",
+                    "contract_version": LEAGUE_VALUE_LENS_CONTRACT_VERSION,
+                    "league_state_id": state.state_id,
+                    "broad_market": {
+                        "status": "building",
+                        "scale_id": BROAD_MARKET_SCALE_ID,
+                        "player_count": 0,
+                        "universe": player_universe,
+                        "team_total_authority": False,
+                        "reason": (
+                            "First-load value-lens materialization is staged until "
+                            "the current core intelligence generation publishes."
+                        ),
+                    },
+                    "fsffl_intrinsic": {
+                        "authority_family": "canonical_shapley_intrinsic",
+                        "status": "building",
+                        "contract_version": None,
+                        "quantity_semantics": None,
+                        "display_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
+                        "player_count": 0,
+                        "team_total_authority": False,
+                        "reason": (
+                            "Governed FSFFL Intrinsic is staged behind current core "
+                            "intelligence enrichment."
+                        ),
+                        "retry_after_ms": 1500,
+                        "build_status": "staged",
+                    },
+                    "value_presentation": {
+                        "status": "building",
+                        "reason": "Value presentation is staged behind current core enrichment.",
+                        "presentation_only": True,
+                    },
+                    "players": [],
+                    "all_player_forecast": {
+                        "status": "building",
+                        "horizon": "season",
+                        "metric": "fantasy_points",
+                        "covered_players": 0,
+                        "requested_players": 0,
+                        "evidence_basis": None,
+                        "reason": "Current governed Forecast enrichment is still running.",
+                    },
+                    "player_universe": player_universe,
+                    "teams": [
+                        {
+                            "team_id": team.team_id,
+                            "team_name": team.display_name,
+                            "rostered_player_count": 0,
+                            "broad_market_covered_players": 0,
+                            "intrinsic_covered_players": 0,
+                            "comparable_players": 0,
+                            "player_ids": [],
+                        }
+                        for team in sorted(state.teams, key=lambda item: item.team_id)
+                    ],
+                    "authority": {
+                        "canonical_fsffl_intrinsic_authority": "shapley_intrinsic",
+                        "broad_market_and_intrinsic_are_distinct_lenses": True,
+                        "comparison_coordinate": INTRINSIC_PRESENTATION_COORDINATE,
+                        "shared_value_index_presentation_only": False,
+                        "raw_value_subtraction_used": False,
+                        "display_value_index_subtraction_allowed": False,
+                        "team_value_total_created": False,
+                        "team_value_rank_created": False,
+                        "league_market_value_available": False,
+                        "team_utility_included": False,
+                        "fsffl_cardinal_value_included": False,
+                        "recommendation_authority": False,
+                        "acceptance_probability": None,
+                    },
+                    "surface_readiness": {
+                        "surface": "player_board",
+                        "status": "building_optional",
+                        "required_dependencies": ["canonical_state", "broad_market_value"],
+                        "optional_dependencies": [
+                            "fsffl_intrinsic_all_player",
+                            "all_player_season_forecast",
+                        ],
+                        "blockers": [],
+                        "missing_optional": [
+                            "fsffl_intrinsic_all_player",
+                            "all_player_season_forecast_partial",
+                        ],
+                        "league_state_id": state.state_id,
+                        "retry_after_ms": 1500,
+                    },
+                    "intrinsic_execution": {
+                        "status": "staged",
+                        "league_state_id": state.state_id,
+                        "forecast_coordinate": None,
+                        "response_budget_exceeded": False,
+                        "started_at": None,
+                        "updated_at": None,
+                        "error": None,
+                    },
+                }
+                _logger.info(
+                    "FSFFL Market value lenses staged first-load materialization universe=%s state=%s",
+                    universe,
+                    state.state_id,
+                )
+                return payload
+            record = background_coordinator.current(runtime)
+            if record is None:
+                record = background_coordinator.request(runtime)
             intrinsic_record = record
             if record.status in {
                 IntrinsicBuildStatus.QUEUED,

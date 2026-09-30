@@ -276,20 +276,11 @@ def _hosted_capability_readiness(context) -> dict[str, object]:
     payload = dict(_webapp._runtime_capability_readiness(context))
     record = None
     if context.league_state is not None:
-        # Read-only readiness must not hit durable Intrinsic storage on every
-        # product-context poll. Startup/reconciliation already restore compatible
-        # contracts. Prefer the exact in-process lifecycle record and use the
-        # durable restore only as a cold/read-recovery fallback.
+        # Foreground readiness is memory-only. Durable Intrinsic reuse is staged by
+        # startup/background reconciliation through the process heavy-work lane so
+        # first-load reads cannot overlap contract deserialization with fresh core
+        # enrichment. A completed in-process record remains immediately visible.
         record = _shapley_intrinsic_coordinator.current(context)
-        if record is None:
-            try:
-                record = _shapley_intrinsic_coordinator.restore_compatible(context)
-            except Exception as exc:
-                _logger.warning(
-                    "FSFFL Intrinsic readiness compatible-restore failed state=%s error=%s",
-                    context.league_state.state_id,
-                    exc,
-                )
     intrinsic = _intrinsic_readiness_from_record(record)
     payload["intrinsic"] = intrinsic
     required = ("forecast", "simulation", "current_value", "intrinsic")
@@ -379,7 +370,29 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
             "reason": "Canonical LeagueState is unavailable.",
         }
     try:
-        record = _shapley_intrinsic_coordinator.wait_for_terminal(context)
+        record = _shapley_intrinsic_coordinator.current(context)
+        if record is None:
+            try:
+                record = _shapley_intrinsic_coordinator.restore_compatible_staged(
+                    context
+                )
+            except IntrinsicBuildSuperseded:
+                raise
+            except Exception as exc:
+                # Durable reuse is an optimization. If its staged lookup/gate fails,
+                # fall through to the normal background build lifecycle so already
+                # completed core Forecast/Simulation/Value work is not discarded.
+                _logger.warning(
+                    "FSFFL staged Intrinsic restore unavailable state=%s error=%s",
+                    context.league_state.state_id,
+                    exc,
+                )
+                record = None
+        if record is None or record.status in {
+            IntrinsicBuildStatus.QUEUED,
+            IntrinsicBuildStatus.RUNNING,
+        }:
+            record = _shapley_intrinsic_coordinator.wait_for_terminal(context)
     except IntrinsicBuildSuperseded as exc:
         raise _webapp.IntelligenceJobInterrupted("lifecycle_switch") from exc
     readiness = _intrinsic_readiness_from_record(record)
@@ -1289,7 +1302,7 @@ def _run_lightweight_startup_restore() -> None:
             context = _runtime_store.restore_user(_beta_restore_user)
             if context.league_state is not None:
                 try:
-                    _shapley_intrinsic_coordinator.restore_compatible(context)
+                    _shapley_intrinsic_coordinator.restore_compatible_staged(context)
                 except Exception as exc:
                     _logger.warning(
                         "FSFFL startup Intrinsic compatible-restore unavailable user=%s error=%s",
