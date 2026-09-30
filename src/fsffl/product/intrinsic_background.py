@@ -152,6 +152,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
             return None
         key = self._key(context)
         with self._lock:
+            expected_epoch = self._user_epochs.get(context.user_id, 0)
             existing = self._records.get(key)
             if (
                 existing is not None
@@ -188,6 +189,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
             contract=contract,
         )
         with self._lock:
+            if self._user_epochs.get(context.user_id, 0) != expected_epoch:
+                return None
             self._records[key] = record
         _logger.info(
             "FSFFL Intrinsic restored from compatible persisted contract user=%s state=%s forecast=%s fingerprint=%s estimates=%s",
