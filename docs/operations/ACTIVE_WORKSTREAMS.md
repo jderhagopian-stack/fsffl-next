@@ -688,3 +688,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Merge #303 now, deploy the exact merged lineage, and run the realistic free-Render FSFFL -> Hodor -> FSFFL / settle / restart / restored-session journey under the unchanged memory gate.
 - No rapid-switch stress and no new architecture work unless hosted evidence exposes a concrete defect.
 - If hosted normal-use passes, move immediately to physical Safari acceptance and then back to capability development.
+
+
+## 2026-09-29 — Bounded free-Render first-load staging corrective
+- **Implementation — ACTIVE / sole product-critical path.**
+- #303 is merged/live and its resource-ownership class is accepted.
+- Hosted normal-use reached coherent FSFFL publication, then failed only because lifetime peak RSS hit 544,358,400 bytes versus 536,870,900-byte gate; current RSS had already fallen to ~342.7 MB and no monotonic retention was observed.
+- Perform one bounded beta-specific staging pass: use existing phase telemetry to prevent avoidable overlap among memory-intensive first-load phases while preserving all model outputs/semantics and foreground responsiveness.
+- No leak hunt, no model-fidelity reduction, no architecture broadening, no rapid-switch stress.
+- After CI/focused validation, deploy and rerun the realistic hosted lifecycle journey. If still over gate with clean bounded ownership, return to Management for capacity decision rather than further micro-optimization.
