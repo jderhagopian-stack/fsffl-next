@@ -1764,3 +1764,11 @@ Immediate next work:
 5. make readiness wording truthful: no global `Intelligence current` claim while required visible surfaces are still legitimately preparing, unless the UI explicitly distinguishes core intelligence from optional/independently loading lenses;
 6. measure and reduce the remaining normal physical load latency at the owning stage only;
 7. preserve the #308 lifecycle corrective and model semantics absent contradictory evidence.
+
+
+### Additional physical evidence — 07:33 ET
+A later physical Safari screenshot sharpened the propagation contradiction: the global banner still reported `Intelligence current` while League Atlas -> Value Map had transitioned from loading to the terminal message `Unavailable from the current runtime. Other Atlas surfaces remain independently usable.`
+
+This is stronger evidence than a merely slow optional lens. At the same time, Player Intelligence had already displayed both Broad Market and FSFFL Intrinsic for Dak Prescott, so the required investigation is now exact-generation/surface authority propagation: determine whether League Value Map is reading a different publication generation, losing compatible Intrinsic/Market attachment, serving a stale cached readiness result, or failing to re-request/re-render after the governed evidence becomes available.
+
+Product acceptance target remains bounded: restore one coherent usable session across Home, Franchise, League Atlas, Player Intelligence and Market-facing value consumers, then return to capability development. Do not require perfection of every optional surface or reopen model semantics.
