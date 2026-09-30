@@ -796,3 +796,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Trace the promotion/eligibility/dominance/diversity layer that removes all discovered opportunities. Preserve accepted economic/bilateral screens and zero broad Simulation.
 - Fix the smallest concrete defect or make a legitimate zero-result explainable to the user.
 - After one physical Market pass, proceed to Simulation modernization.
+
+
+## 2026-09-30 — Simulation modernization authorized
+- **Simulation modernization — ACTIVE / primary capability workstream.**
+- Runtime stabilization is no longer the primary program after materially usable post-#310 physical Safari validation.
+- Market For You zero-result evidence is preserved but held: do not tune current selection merely to force cards while major future Market inputs are still pending. Interrupt only for a proven mechanical defect that makes defensible opportunities impossible to surface.
+- First tranche: profile current fresh/changed-State 50k Simulation, recover compatible vectorization/batching ideas from the predecessor as reference, implement exact-output-preserving kernel efficiency, preserve replay identity/Multiverse capture, and run the convergence study without changing the 50k production contract.
+- Work/Implementation may modify code, tests and governed operations docs; open PR(s), run focused/full validation, and deploy only after exact-head review is clean.
+- Return to Management before any non-bit-identical RNG/reduction change, model-fidelity change, or Simulation authority change.
