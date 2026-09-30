@@ -1893,3 +1893,22 @@ Additional physical timing interpretation is now frozen for the next optimizatio
 Management interpretation: ~173s is an end-to-end Simulation-phase wall-clock observation, **not proof of 173s of Monte Carlo draws**. The next post-RNG re-profile must split queue/admission wait, static/lineup/weekly input preparation, RNG, matchup/standings/playoffs, aggregation, Team Utility/Analytics, memory reclaim, and persistence/publication. Continue optimization even as Simulation capabilities expand; the intended Simulation 2.0 architecture remains compiled/vectorized/reusable rather than adding new minute-long Python loops.
 
 Continuity requirement: before a Work session ends with authorized work remaining, commit the exact branch/PR/head, evidence, unresolved findings, tests/CI, Management gates, and next executable action into canonical `docs/operations/`, then hand off as `TURN COMPLETE — CONTINUATION REQUIRED`.
+
+
+## 2026-09-30 — PR #311 cleared to practical-product validation
+Management has responded to the PR #311 adoption gate. Do not spend the next tranche trying to brute-force the original ±0.001 expected-wins statistical margin with thousands of additional root seeds.
+
+Preserve the existing study result as **inconclusive at ±0.001**, not passed. The observed worst point difference (+0.002395 wins) is practically tiny, while probability/rank-distribution checks passed and expected-wins ordering had zero inversions. The controlling remaining risks are whether the changed RNG alters downstream product decisions and whether the faster engine is safe/useful on constrained Render.
+
+Next executable sequence:
+1. reconcile PR #311 with current main and preserve canonical operations history;
+2. run representative changed-State Team Utility / Decision / Search / Optimization / Analytics comparison, explicitly inspecting any near-threshold flips;
+3. keep 50k, model semantics, replay/versioning, and the Python legacy replay path unchanged;
+4. run exact-head CI + fresh review;
+5. if clean, perform a controlled reversible private-beta Render validation of the experimental branch (not a main merge/adoption), preferring batch 500;
+6. measure full Simulation wall time, total refresh time, heavy-work queue wait, peak RSS/headroom, foreground response latency, publication/readiness, and restart safety;
+7. return to Management for the final production-adoption decision.
+
+A bounded additional statistical confirmation is allowed only when justified to diagnose directional drift or another concrete risk. Do not relabel the original ±0.001 study as passing and do not widen that margin post hoc.
+
+PR #311 remains experimental until the final Management adoption decision.
