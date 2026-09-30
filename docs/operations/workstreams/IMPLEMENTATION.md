@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 42278)
-Total output lines: 1825
-
 # FSFFL NEXT — Forecast / Product Implementation
 
 Updated: 2026-09-25
@@ -620,7 +617,552 @@ Required:
 4. preserve frozen numerical equivalence where the reused primitive remains authoritative;
 5. ensure downstream Intrinsic/Player Intelligence/Value depend only on the stable FutureForecastContract, not P0/vNext internals;
 6. audit the active vNext path for any other direct dependency on superseded model-specific orchestration;
-7. add architecture/regression tests proving a future model promotion can replace the …12278 tokens truncated…ble; the <=~429 MB threshold remains hard, not aspirational;
+7. add architecture/regression tests proving a future model promotion can replace the Forecast provider without reintroducing P0-specific runtime assumptions.
+
+Do not perform a broad rewrite. The objective is the smallest clean boundary that restores the charter while fixing the live failure.
+
+### Immediate priority — restore a usable beta before broader architecture cleanup
+Management considers the current multi-day inability to meaningfully test the private beta a beta-availability incident.
+
+Execution priority inside the active corrective:
+1. restore the affected hosted surfaces to a usable, truthful state as fast as possible;
+2. use the **smallest charter-correct** vNext/Forecast boundary change needed to remove the live P0 orchestration coupling and repair governed H3 subject scope;
+3. fix the League static-module load failure and readiness truth in the same deploy;
+4. do not broaden this into a large Forecast rewrite before the beta is usable;
+5. if the active branch cannot restore usability quickly, evaluate whether a known-good deploy or capability-level feature gate can safely restore unaffected product testing while the deeper corrective continues;
+6. once the beta is usable again, complete the remaining architecture audit/regression hardening before closing the directive.
+
+Acceptance must include actual authenticated hosted endpoint/render-path validation and physical iPhone/Safari evidence. A green unit suite without a usable product is not sufficient.
+
+## PR #265 physical iPhone acceptance failure — Intrinsic Year-1 compatibility + mobile readiness layout
+**State: ACTIVE — DEPLOYED PRODUCT CORRECTIVE NOT ACCEPTED**
+
+Exact deployed corrective:
+- merge `002924b21ed436cb97995eac534af629b87fba5f`
+- Render deploy `dep-das32op7lnhs73fde380`
+- post-merge CI green
+- physical iPhone/Safari exercised after deploy
+
+Physical evidence:
+1. During refresh, the new lifecycle strip behaves directionally correctly: `4 / 7 Running season outlook… · Last-good available`, Refresh disabled, and partial capability state is shown.
+2. After build completion, the shared readiness/status region catastrophically collapses on iPhone: status text and capability pills render in an extremely narrow vertical column inside a large empty card on both Home and League. This is a product-blocking responsive presentation regression.
+3. The completed state remains `Intelligence partial`; Intrinsic is unavailable even though core Simulation/Value return.
+4. Hosted logs prove the Intrinsic failure is server-side, not merely presentation:
+   `intrinsic_status=unavailable intrinsic_build=completed coordinate=forecast-vnext-a2-burr-20260922 reason=Authoritative future Forecast contract unavailable: vNext mapped subjects lack compatible governed Year-1 evidence`.
+5. Hosted logs simultaneously prove the League backend is serving successfully (`FSFFL League Atlas served ... standings=12 simulation=True`). Therefore the current League failure is presentation/layout, not the prior static-module/API-load failure.
+
+Required corrective:
+- reproduce and fix the exact vNext mapped-subject ↔ governed Year-1 compatibility failure using the deployed FSFFL State; preserve governed subject authority and do not synthesize missing evidence;
+- determine whether subject intersection/identity reconciliation is wrong or whether legitimate Year-1 evidence is actually missing, and fail only affected subjects if authority permits rather than collapsing governed Intrinsic globally;
+- add a deployed-path regression for the exact compatibility condition that failed after #265;
+- fix the mobile completed/partial readiness layout so the compact strip never creates a narrow vertical text column or giant empty container at iPhone width;
+- verify the same shared component on Home and League, plus Franchise/Market where reused;
+- preserve the working in-progress lifecycle behavior observed at 4/7;
+- reconcile any readiness overclaim: hosted capability labels must match the actual governed consumer scope and must not say Full if the relevant product consumer is degraded;
+- deploy the corrective and repeat actual iPhone/Safari acceptance.
+
+Do not reopen already-proven State-first switch/restart persistence or the charter-correct vNext/P0 boundary unless new evidence directly implicates them.
+Do not return at unit/focused CI. Terminal acceptance requires the deployed FSFFL State to show healthy governed Intrinsic plus a physically usable mobile readiness layout.
+
+## PR #266 live hosted acceptance failure — Intrinsic reduced/fallback availability
+**State: ACTIVE — HOSTED ACCEPTANCE FAILED AFTER DEPLOY**
+
+Exact corrective:
+- PR #266 merged to `fa3c1a5fc559d7ab3cb11ae6a0675e419481de9d`;
+- post-merge CI green;
+- Render deploy `dep-das3lh0jo6nc73a2tif0` is live.
+
+The corrective targeted the post-#265 vNext Year-1 compatibility failure and catastrophic mobile terminal-readiness layout.
+
+Fresh hosted acceptance after deploy failed at 2026-09-26 21:40Z:
+- startup product readiness was partial with Intrinsic unavailable before reconciliation;
+- hosted product acceptance then failed because governed Intrinsic was not **fully** available;
+- exact runtime reason: `Authoritative Intrinsic is available through a validated reduced/fallback evidence path; missing fact-family coverage is explicit and no provider absence is inferred as football state.`
+
+Interpretation:
+- this is progress from the #265 hard incompatibility failure; the runtime now has an authoritative reduced/fallback Intrinsic path rather than the prior mapped-subject/Year-1 incompatibility collapse;
+- however, product acceptance is still open because the deployed build has not demonstrated the required governed Intrinsic completeness for the accepted FSFFL product scope;
+- the mobile layout corrective is deployed but still requires physical iPhone/Safari confirmation.
+
+Required continuation:
+1. determine exactly which Intrinsic fact families/subjects remain reduced or missing and whether that partial state is expected governed authority or a remediable production gap;
+2. do not weaken the acceptance gate merely to make the probe green;
+3. if full governed Intrinsic is legitimately available from existing authoritative evidence, repair the remaining composition/reconciliation path;
+4. if only partial Intrinsic is defensible for some subjects, localize that partiality to the affected subjects/surfaces and ensure product readiness truthfully represents it rather than collapsing the whole capability;
+5. rerun hosted product acceptance on the same deployed FSFFL State;
+6. physically validate the #266 mobile completed/partial readiness layout on iPhone/Safari before terminal acceptance.
+
+Do not reopen completed State-first persistence or the vNext/P0 boundary absent direct evidence.
+
+## Physical Player Intelligence failure — history materialization exhausts beta memory
+**State: ACTIVE — BETA AVAILABILITY / MEMORY CORRECTIVE**
+
+Physical iPhone/iPad Safari evidence at ~18:21 ET after PR #266:
+- Player Intelligence modal returned **HTTP 503** on iPhone and **HTTP 502** on iPad.
+- Other ordinary product APIs were healthy immediately beforehand.
+
+Hosted evidence:
+- Player Intelligence history for the selected player repeatedly returned `202 Accepted` while the background history build ran.
+- Render memory rose from ~473 MB to **532.9 MB** against a **536.9 MB** service limit.
+- At 22:22Z CPU dropped to zero, memory reset to ~96 MB, and Uvicorn/application startup ran again at 22:22:34Z.
+- The 502/503 therefore coincides with a single-instance restart at the memory ceiling.
+- After restart memory rose back to ~380 MB within ~90 seconds.
+
+Code-path diagnosis:
+- `PlayerHistoryBackgroundCoordinator` correctly coalesces requests for one State/player and uses one outer worker, so browser polling itself is not spawning duplicate player jobs.
+- However `PlayerHistoryService.player_history()` requests every detailed historical season concurrently (up to six workers).
+- Each `_season()` materializes a dictionary for the **entire provider player population**, persists it, stores it permanently in the in-process season cache, and `player_history()` also holds each full season again in `by_season` while only one player's rows are ultimately needed.
+- This whole-season × multi-season in-memory materialization is incompatible with the current 512 MB private-beta instance.
+
+Required corrective:
+1. make one-player Player Intelligence history memory-bounded; do **not** materialize/retain full-population multi-season maps merely to return one player's history;
+2. prefer persisted player-season / player-career retrieval or stream/project the requested player from season evidence before retaining it;
+3. if the existing season artifact must remain, process seasons sequentially or with strictly bounded concurrency and release each full-season structure immediately after extracting the requested player;
+4. do not retain full-season provider maps indefinitely in process; use durable persistence as the cache and keep only bounded/player-specific in-memory results;
+5. persist/reuse the final player-history result so repeated PI opens do not rebuild career history;
+6. preserve the existing `202 loading` UX and request coalescing, but a background task must never be able to OOM/restart the only web instance;
+7. add memory/shape regression coverage proving one player request does not load all historical seasons/populations concurrently or retain them after completion;
+8. validate on the current free-tier 512 MB Render instance before considering a paid-plan workaround.
+
+This failure is independent of Intrinsic authority. The latest persisted Intrinsic contract contains 335/335 governed estimates; the PI 502/503 is a runtime memory failure in historical-stat materialization.
+
+Continue through tests, merge, exact Render deploy, hosted memory validation, and physical iPhone/iPad Player Intelligence acceptance. Do not return at green CI alone.
+
+
+## PR #267 Player Intelligence history-memory corrective — deployed / physical acceptance blocked
+**State: BLOCKED — AUTHENTICATED HOSTED HISTORY LOAD + PHYSICAL IPHONE/IPAD ACCEPTANCE REQUIRED**
+
+PR #267 (`Player Intelligence: bound historical materialization memory`) is merged at
+`d737012079345768ef5cfd19debff97e0ede1bba`.
+
+Accepted implementation head `e914dafe6a3e59ab41dfebebf3fb7177f6d1bcdd` passed:
+- full CI: **1,704 passed**;
+- PR164 focused corrective regression;
+- Live Forecast corrective trace;
+- Corrective live provider numerical trace;
+- League Atlas North Star focused validation.
+
+The corrective is intentionally limited to Player Intelligence history availability:
+- Player History no longer fans all historical seasons out concurrently;
+- the PI path no longer retains a permanent full-population season cache;
+- Sleeper season history has a player-scoped retrieval path that reduces the provider payload to the requested player before transformed materialization;
+- historical seasons are processed sequentially for one player;
+- raw player-season rows persist independently;
+- the final scored player-career history persists/reuses under provider/source-version + player + season-range + LeagueRules identity;
+- weekly fallback remains sequential/player-scoped;
+- the existing HTTP 202/loading lifecycle and duplicate-request coalescing are preserved.
+
+Exact Render deploy `dep-das4k27avr4c73909lsg` is live on the exact product-code merge
+`d737012079345768ef5cfd19debff97e0ede1bba` on the current 512 MB beta service.
+Fresh instance id: `srv-dae6k7vqj5pc73af7bt0-v5qcn`.
+
+Pre-fix failure baseline from PR #266:
+- memory limit: 536,870,900 bytes;
+- memory reached 509,108,220 bytes in Render's sampled series immediately before the restart boundary;
+- Management's physical observation recorded ~532.9 MB peak and HTTP 502/503;
+- CPU dropped to zero and the sole instance restarted.
+
+Post-#267 fresh-start observation:
+- ~51 MB at process start;
+- ~259 MB at 22:43Z;
+- ~303 MB at 22:43:30–22:44Z;
+- ~337 MB at 22:45Z;
+- ~360 MB at 22:45:30Z;
+- ~384 MB at 22:46Z;
+- no post-deploy restart observed in that interval.
+
+**Do not treat fresh-start memory as the hosted PI-history acceptance.** No authenticated
+post-deploy request to `/api/player-intelligence/{player_id}/history` has yet reached the new
+instance. The execution environment does not possess the private-beta Basic Auth/session and
+does not provide a physical iPhone/iPad browser. Therefore the remaining acceptance gate is
+external and concrete:
+
+1. open a real Player Intelligence history on physical iPhone and iPad;
+2. observe the normal 202 → ready/200 flow with no 502/503;
+3. repeat the same player open to prove persisted final-career reuse;
+4. inspect Render memory for that exact request window and prove the same instance survives,
+   memory stays safely below the 536,870,900-byte limit and materially below the prior failure
+   curve, and the reused open does not recreate the career-build spike.
+
+This incident is independent of Intrinsic authority and State-first persistence. Do not reopen
+either without new direct evidence.
+
+Durable checkpoint:
+`artifacts/implementation/player_intelligence_history_memory_20260926/IMPLEMENTATION_HANDOFF.md`
+
+**BLOCKED — FORECAST / PRODUCT IMPLEMENTATION — PHYSICAL / AUTHENTICATED HOSTED PLAYER INTELLIGENCE HISTORY ACCEPTANCE REQUIRED**
+
+### Remove redundant large intelligence-status card
+Management physical iPhone acceptance decision:
+
+The large Home card beginning **“Current intelligence is partially available”** is removed from the product.
+
+Rationale:
+- the shared thin readiness strip already owns intelligence lifecycle/current/partial state;
+- the large card duplicates the same information, consumes excessive mobile vertical space, and weakens the Home information hierarchy;
+- transient build details belong in the expanded thin readiness component while work is active, not in a second persistent card.
+
+Required behavior:
+1. preserve the thin shared readiness strip at the top;
+2. while refresh/build is active, allow that strip to expand with phase, last-good/as-of, and capability detail;
+3. when complete/partial/failed, the strip alone communicates readiness truth;
+4. remove the separate large intelligence-status card from Home rather than merely hiding its text;
+5. do not leave blank spacing/container residue after removal;
+6. verify iPhone/Safari Home layout physically after the change.
+
+This is a presentation/product-hierarchy correction only. It must not change readiness semantics or model authority.
+
+### Intrinsic compatibility reuse — do not invalidate on unrelated LeagueState changes
+Management physical observation: a normal league-State advance caused the readiness lifecycle to remain at **6/7 Building FSFFL Intrinsic** for minutes, even though prior user refreshes reused Intrinsic in ~0.5-1.0s.
+
+Measured evidence:
+- prior compatible user refresh: Intrinsic ~0.507s;
+- current exact-State rebuild entered `building_intrinsic` at 20:34:16 ET and remained active minutes later;
+- recent cold hosted Intrinsic builds have taken roughly 154-180s.
+
+Code-path diagnosis:
+- `ShapleyIntrinsicBackgroundCoordinator._key()` includes the full `league_state.state_id`, so every canonical State advance creates a fresh background lifecycle record;
+- the durable Shapley artifact scope uses `league_material_fingerprint(league_state)`, which is still intentionally broad and invalidates on roster ownership, team state, draft picks, matchup results, player status, etc.;
+- the actual Intrinsic cache input fingerprint already separately includes preserved Year-1 Forecast evidence, source lineage, and the complete FutureForecastContract.
+
+Required corrective:
+1. define an **Intrinsic-specific compatibility/input fingerprint** from the actual governed inputs consumed by Intrinsic/Future Forecast rather than full `LeagueState.state_id` or generic broad league-material identity;
+2. use that compatibility identity consistently for background coalescing and durable reuse;
+3. changes unrelated to Intrinsic authority (e.g. matchup scores, draft-pick ownership, team labels/FAAB, roster ownership if not mathematically consumed) must not force a cold Intrinsic rebuild;
+4. changes that truly affect Intrinsic (scoring/lineup rules, governed player identity/team mapping where consumed, preserved Year-1 evidence, FutureForecastContract/model coordinate, or other proven dependencies) must invalidate correctly;
+5. prove by tests that an unrelated State advance reuses the same Intrinsic contract quickly while a true Intrinsic-input change invalidates it;
+6. preserve exact point-in-time State provenance separately; compatibility reuse must not relabel an older State as the current State.
+7. keep the current build running; apply this at the next implementation checkpoint rather than interrupting an in-flight refresh.
+
+The objective is to restore the prior sub-second compatible Intrinsic behavior without weakening authority.
+
+### Correct Intrinsic readiness semantics — legacy activation coverage is provenance, not availability
+Management review confirms that the current `partial_provisional` label is semantically wrong for the deployed vNext Intrinsic path.
+
+Code evidence:
+- `private_beta_shapley_runtime._FACTS` comes from the frozen `current_i1_facts_2026` activation bundle;
+- its coverage flags (`injury_practice`, `participation_snaps`, `roster_continuity`, `role_opportunity`) are copied into completed-source provenance;
+- `_missing_fact_families()` currently converts false legacy coverage flags into `missing_required_fact_families`;
+- `build_shapley_intrinsic_contract()` then marks the entire contract DEGRADED whenever any such flag is missing or any future path is not literally labeled `rich`;
+- the current vNext production Intrinsic computation itself uses governed Year-1 Forecast + FutureForecastContract + LeagueRules; the old completed-source H1 bundle is diagnostic/provenance and does not enter the Intrinsic sum;
+- the deployed contract currently has 335/335 governed estimates and complete Y1/Y2/Y3 coverage.
+
+Required correction:
+1. do not classify current Intrinsic availability as partial/degraded merely because legacy activation-bundle provenance lacks injury/practice, participation/snaps, or roster-continuity flags;
+2. do not require an evidence-path string of `rich` when the governed vNext path is explicitly authorized and complete;
+3. distinguish **availability/completeness** from **evidence/provenance richness**:
+   - availability answers whether governed Intrinsic values are validly present for the required subject scope;
+   - provenance may separately disclose that optional/legacy evidence families were not part of the frozen activation package;
+4. keep those coverage facts visible in methods/provenance diagnostics if useful, but they must not make Home/Franchise/Player Intelligence say `Intrinsic unavailable` or `partial` when the production contract is complete and authorized;
+5. preserve fail-closed behavior for genuinely required missing inputs such as Year-1 authority, FutureForecastContract coverage, scoring compatibility, missing governed subjects, or actual model/contract failure;
+6. add tests separating optional provenance gaps from true production-input gaps;
+7. update hosted readiness acceptance so a complete authorized 335-player vNext Intrinsic contract is considered available even if legacy optional coverage metadata is incomplete.
+
+This is a semantics/governance correction, not permission to fabricate or infer missing injury/snaps/roster evidence.
+
+### Immediate corrective — dependency-scoped Intrinsic recomputation
+**Priority: NOW — beta availability critical path**
+
+Physical evidence showed a cold Intrinsic build of ~226.7s followed by a compatible reuse of ~0.203s. The product must stop turning ordinary State advances into cold Shapley rebuilds.
+
+Implement the Management recomputation policy from DECISION_LOG:
+1. define one authoritative `intrinsic_input_fingerprint` from only the inputs actually consumed by production Intrinsic;
+2. use that fingerprint consistently for:
+   - background-job coalescing,
+   - durable artifact lookup/reuse,
+   - invalidation,
+   - readiness compatibility;
+3. do not key recomputation on full `LeagueState.state_id` or generic `league_material_fingerprint`;
+4. preserve exact State provenance separately from compatibility identity;
+5. on a true Intrinsic-input change, launch the cold build off the user-critical path, keep last-good visibly available as stale/as-of evidence where permitted, and atomically promote the new contract when complete;
+6. prove with tests:
+   - roster trade / matchup-score / pick-ownership / timestamp-only State changes do not rebuild Intrinsic;
+   - scoring or lineup-rule change does rebuild;
+   - Year-1 Forecast evidence change does rebuild;
+   - FutureForecastContract/model/subject change does rebuild;
+   - season rollover does rebuild;
+   - switching away/back reuses a compatible persisted artifact;
+7. preserve frozen 2,048-permutation Shapley semantics. Do not lower the model quality to hide the latency.
+
+After this corrective, kernel-level cold-build optimization can move to Performance unless cold builds remain a practical beta blocker.
+
+### Football-state event handling — invalidate through Forecast identity, not raw status
+Implementation must preserve the authority chain when applying dependency-scoped Intrinsic reuse.
+
+- Fantasy roster ownership changes alone do not invalidate player Intrinsic.
+- NFL-context changes (injury/return, NFL trade, release/signing, promotion/demotion, suspension/retirement) must cause the Forecast layer to reevaluate when current governed evidence changes.
+- Intrinsic compatibility must depend on the resulting authoritative Forecast input/contract identity. If Forecast is unchanged, reuse Intrinsic. If Forecast changes, background-recompute Intrinsic and promote atomically.
+- Do not add direct heuristic injury/status penalties to Intrinsic.
+- Until Research promotes a governed H3 current-state update layer, preserve the frozen H3 authority and truthfully expose its as-of/provenance limitations rather than pretending those events are modeled.
+
+## PR #268 live acceptance failure — Intrinsic dependency fingerprint is still volatile
+**State: ACTIVE — LIVE ACCEPTANCE FAILED AFTER DEPLOY**
+
+PR #268 merged at `00017f765713f0aeb0b0913755345f74a49110a9` and Render deploy
+`dep-das711d9fdbs73c4ohmg` reached LIVE.
+
+The implementation correctly:
+- removed full LeagueState/state_id and generic league-material identity from the production Intrinsic reuse key;
+- separated legacy provenance richness from Intrinsic availability;
+- removed the large redundant Home intelligence-status card;
+- preserved 2,048 Shapley permutations and PR #267 PI history behavior.
+
+However, live persistence evidence proves the new dependency fingerprint is **not stable**:
+- 21:30 ET fingerprint `ba9f4103...`
+- 21:33 ET fingerprint `b60189a4...`
+- 21:36 ET fingerprint `60188402...`
+- 21:39 ET fingerprint `446cec3f...`
+- 21:41 ET fingerprint `02a0b016...`
+
+All five persisted contracts were `ready`, 335-player contracts for the same FSFFL league/model, yet each used a different input fingerprint within ~11 minutes.
+
+Root-cause code evidence:
+`intrinsic_input_fingerprint()` still hashes volatile observation/runtime/provenance fields including:
+- Year-1 observation `as_of`;
+- full Year-1 `provenance.model_dump()`;
+- `year_one_evidence.runtime_result.evaluation_as_of`;
+- full `FutureForecastContract.model_dump()`, whose provenance can also contain runtime/evaluation metadata.
+
+Those are provenance/as-of records, not necessarily mathematical Intrinsic inputs. Including them defeats compatibility reuse and can repeatedly trigger cold Shapley builds even when numerical/authoritative Forecast content is unchanged.
+
+Hosted product acceptance failed at 21:37 ET because Intrinsic was still building. Render memory remained below the limit (~493 MB vs 536.9 MB) and the later process shutdown was orderly; do not classify this as an OOM incident.
+
+Required corrective:
+1. fingerprint **semantic/model inputs only**—the exact values actually consumed by Intrinsic/Shapley and stable authority/version identities;
+2. exclude retrieval/evaluation timestamps and non-mathematical provenance metadata from compatibility identity while preserving them on the persisted artifact for PIT audit;
+3. prove repeated identical governed Forecast content across fresh loads produces the **same fingerprint**;
+4. prove a true numerical Forecast change, subject-set change, scoring/lineup change, season change, or model/version change produces a new fingerprint;
+5. rerun hosted acceptance and demonstrate one persisted/reused contract rather than repeated ready artifacts;
+6. only after live reuse is stable should Management physically validate near-instant refresh/switch behavior.
+
+Do not lower permutations or weaken Forecast/Intrinsic authority.
+
+## 2026-09-26 23:47 ET — BETA AVAILABILITY INCIDENT: last-good presentation lost during State refresh
+**Priority: IMMEDIATE / AVAILABILITY RESTORATION**
+
+Physical iPhone/Safari acceptance after PR #269 exposed a severe lifecycle/presentation regression.
+
+Observed sequence:
+- Render restarted at ~23:46 ET after the temporary acceptance-runner environment cleanup.
+- Startup restored persisted core runtime for FSFFL with Forecast=True, Simulation=True, Value=True, complete=True.
+- Startup product readiness still reported partial because Intrinsic was not yet reattached to the in-memory coordinator.
+- Opening the app automatically issued `POST /api/connect/sleeper/background/refresh` at 23:46:58 ET and advanced the served State to `5dc6ba9f...`.
+- While the new State was reconciling, the product stopped presenting the previously usable last-good derived intelligence.
+- Physical symptoms included:
+  - thin strip saying `Intelligence current` while Forecast/Simulation-derived fields were unavailable;
+  - canonical roster banner saying `21 players` while the Starters roster rendered `No players in this roster view`;
+  - Home/Franchise/League strength and Simulation fields blank/unavailable;
+  - Intrinsic marked preparing despite a compatible persisted 335-player contract;
+  - reload showed `Restoring your league and last-good intelligence...`.
+- Manual Refresh Intelligence at 23:49:06 ET launched a full rebuild.
+- The rebuild completed successfully at 23:54:54 ET, but phase timings were:
+  - Forecast ~33.9s
+  - Simulation ~390.6s
+  - Current Value ~3.5s
+  - Intrinsic ~8.6s
+  - attach ~30.0s
+- Memory remained below the ~537 MB limit; this was not an OOM.
+- Simulation latency is real, but the primary availability failure is that last-good presentation disappeared while the target State rebuilt.
+
+Required corrective:
+1. **Separate target/building State from served last-good intelligence.** A State sync/rebuild must not evict a compatible previously complete presentation snapshot until the replacement layers are ready.
+2. The thin readiness strip must distinguish `State current / intelligence rebuilding` from `Intelligence current`; it must never report `Intelligence current` while required capabilities are unavailable.
+3. On restart, restore compatible persisted Intrinsic into readiness immediately; do not require a fresh in-memory build lifecycle merely to rediscover a valid persisted contract.
+4. Canonical roster membership must render from State independently of Forecast/Simulation. Missing derived fields may show unavailable, but a 21-player roster must never become an empty Starters/Bench/All Players view solely because Forecast/Simulation is rebuilding.
+5. Home, Franchise, League Atlas and other surfaces should continue to display last-good derived intelligence with explicit stale/as-of treatment while a newer exact State is rebuilding, unless compatibility is genuinely unsafe. Do not silently relabel last-good as current.
+6. Auto background Sleeper sync may remain, but it must be non-disruptive and coalesced. Page reload/open during an active sync/intelligence job must not spawn a second disruptive refresh or replace the target State again.
+7. If a new State has no material input changes for a derived layer, reuse via dependency-scoped compatibility rather than rebuilding solely because State ID/as-of advanced.
+8. Preserve State-first provenance and fail-closed authority. The fix is a dual-state serving lifecycle, not lying about currentness.
+9. After corrective: test cold server restart → app open → automatic stale-State sync → manual Refresh → page reload during active build → FSFFL↔Hodor↔FSFFL. At every point, canonical roster must stay visible and last-good intelligence must remain usable/truthfully labeled.
+10. Do not require Management to physically test again until hosted evidence proves the above and the app has returned to a stable usable state.
+
+Simulation's ~390s exact 50K cold latency remains a separate Performance target, but must no longer make the product unusable while rebuilding.
+
+### Additional physical evidence — 00:01–00:04 ET
+Additional iPhone/Safari evidence after the 23:54 intelligence rebuild completed:
+
+- At ~00:01 ET the shared readiness strip displayed **Intelligence current**, while Franchise roster cards still displayed **Intrinsic preparing**. This is false-green readiness / reattachment inconsistency.
+- The server had a persisted ready 335-player Intrinsic artifact and other server paths logged `intrinsic_status=ready intrinsic_build=completed`; therefore the product must reattach/reuse the persisted contract consistently across all surfaces after restart/reconciliation.
+- Player Intelligence for `sleeper:player:4881` returned HTTP 202 from ~00:01:22 until 00:02:02, then HTTP 200. Full PI was served successfully by ~00:02:41 with Intrinsic ready and Forecast years [1,2,3].
+- During that cold PI load, memory remained ~457–461 MB against the ~537 MB limit on the same Render instance; no restart/OOM occurred. PR #267's memory corrective therefore held in this physical pass.
+- CPU saturated the 0.15 allocation during the PI cold load. PI cold latency remains a Performance concern, but it is not the prior memory-crash regression.
+- Pick ownership detail is functionally present but exposes raw Sleeper pick identifiers (e.g. `sleeper:...:pick:2027:1:7`) as primary UI text. Treat as presentation debt after availability is restored; do not let it distract from the lifecycle incident.
+
+Acceptance requirements now explicitly include:
+1. no `Intelligence current` strip while any required capability is still preparing/unavailable;
+2. persisted ready Intrinsic must render as ready consistently across Franchise, Home, Market, League and Player Intelligence after restart;
+3. PI cold history may show truthful loading, but must complete without crash and subsequent reopen must reuse the persisted career-history artifact;
+4. availability/lifecycle restoration remains higher priority than pick-detail presentation cleanup.
+
+
+## PR #270 hosted beta-availability acceptance — 2026-09-27
+**State: MANAGEMENT GATE — PHYSICAL IPHONE / SAFARI AVAILABILITY ACCEPTANCE**
+
+PR #270, **Product: preserve last-good intelligence through State rebuilds**, merged at `2c63a9b05225759ba521da3e75fb65146b30fbbe` from accepted head `d6d6ccd2c41515a66a79b1ac4b009532ef109130`.
+
+Deterministic acceptance on the final head is green:
+- CI — 1,724 passed;
+- PR164 focused corrective regression;
+- Live Forecast corrective trace;
+- Home North Star focused validation;
+- Franchise North Star focused validation;
+- League Atlas North Star focused validation;
+- Private-beta Intrinsic live diagnostics.
+
+Render deploy `dep-dasa5vg473hc73fd8uo0` is LIVE on the exact PR #270 merge.
+
+Hosted production evidence after deploy:
+- startup restored FSFFL league `sleeper:1312071960615731200` with Forecast=True, Simulation=True, Value=True, complete=True;
+- startup product readiness was `full` with Intrinsic=`full`;
+- the state-first acceptance runner completed with overall **PASS**;
+- observed sequence:
+  - `fsffl_initial` — FULL Forecast / Simulation / Current Value / Intrinsic;
+  - `hodor_switch` — truthful PARTIAL state with PARTIAL_PROVISIONAL Forecast, Simulation unavailable, Value FULL, Intrinsic unavailable;
+  - `fsffl_return` — FULL Forecast / Simulation / Current Value / Intrinsic;
+  - two subsequent manual-refresh steps completed successfully;
+- no application ERROR/CRITICAL logs were observed in the post-deploy validation window.
+
+This satisfies the required nonphysical gate before another Management device pass. The availability incident is not yet promoted to DIRECTIVE COMPLETE because the required physical target layer remains unexercised after PR #270.
+
+Physical acceptance should verify:
+1. app open/reload never blanks canonical roster while derived intelligence reconciles;
+2. readiness never says `Intelligence current` while a required capability is preparing/unavailable;
+3. same-league last-good fields remain visible and explicitly stale/as-of if a new target State rebuilds;
+4. persisted Intrinsic appears consistently across Home, Franchise, League, Market and Player Intelligence;
+5. FSFFL ↔ Hodor ↔ FSFFL remains truthful on device with no cross-league masquerading;
+6. manual Refresh Intelligence remains non-disruptive and does not create an empty/false-green interval.
+
+Until this physical gate passes, Market and general Performance remain held behind beta availability.
+
+
+## 2026-09-27 08:44–08:46 ET — PR #270 physical acceptance FAILED
+**State: ACTIVE — BETA AVAILABILITY INCIDENT REOPENED**
+
+Management exercised the live PR #270 build on physical iPhone/Safari. The hosted nonphysical PASS did not survive the real cold-wake/user-interaction path.
+
+Physical evidence:
+- 08:44 ET Franchise initially rendered **Restoring your franchise…** while the global strip simultaneously said **Intelligence current**. This is false-green readiness.
+- 08:45 ET Franchise loaded last-good derived fields with the explicit banner **State current · last-good intelligence shown**, while the global strip still said **Intelligence current** and player cards showed **Intrinsic preparing**. Persisted Intrinsic/readiness remained inconsistent across layers.
+- Player Intelligence then failed with **HTTP 502**.
+- League rendered **Unable to load this view / Unable to load League presentation module** while the shell truthfully changed to **State current · intelligence rebuilding**.
+- Home did preserve and display last-good intelligence during rebuild, proving the dual-state presentation path works partially, but its stale/as-of banner has severe mobile text overlap/concatenation and exposes a raw ISO timestamp.
+- Franchise subsequently failed with **HTTP 429**.
+
+Exact hosted/runtime evidence for the same window:
+- the free-tier instance cold-started at ~12:43 UTC and initially restored FSFFL core runtime FULL plus product readiness FULL / Intrinsic FULL;
+- opening the app issued automatic background refresh at 12:44:00 UTC;
+- Player Intelligence history requests for `sleeper:player:4881` progressed 202 → 202 → 200 at 12:45:36 / 12:45:39 / 12:45:42 UTC, so PR #267's sequential history path itself completed;
+- memory nevertheless climbed from ~248 MB at 12:43:30 to ~344 MB at 12:44:00, ~467 MB at 12:45:00, ~494 MB at 12:45:30, and **534.7 MB at 12:46:00 against a 536.9 MB limit**;
+- memory then collapsed to ~3.8 MB by 12:46:30 and a fresh Uvicorn process started at 12:46:42;
+- the restarted process reported `league=None state=None forecast=False simulation=False value=False complete=False` and product readiness unavailable;
+- Render did not emit an explicit OOM kill line, so classify the recycle as **memory-limit-consistent / probable OOM**, not an asserted kernel OOM;
+- the physical 502/League failure coincided with that process recycle.
+
+Required corrective:
+1. treat the combined **cold wake + automatic State sync + concurrent product hydration + Player Intelligence load** as the acceptance scenario; isolated endpoint/runtime checks are insufficient;
+2. bound total process memory under that combined path on the existing free-tier instance; determine which concurrent caches/materializations/rebuilds overlap after cold wake and remove or serialize redundant memory ownership;
+3. preserve the PR #267 one-player history behavior, but do not assume it alone solves total-process memory;
+4. on process restart, restore the persisted user/league context and compatible last-good bundle immediately; `league=None` after an involuntary recycle is unacceptable;
+5. make global readiness derive from the same capability truth exposed by Franchise/Player Intelligence so `Intelligence current` cannot coexist with `Intrinsic preparing`, restoring, or last-good-only presentation;
+6. make League and Player Intelligence degrade to usable last-good/loading states rather than hard 502/module-failure screens where safely possible;
+7. audit the HTTP 429 path and polling/retry behavior after restart so client recovery cannot create a request storm or upstream/provider rate-limit loop;
+8. retain canonical roster visibility and same-league last-good intelligence throughout all recovery phases;
+9. fix the malformed mobile stale/as-of banner only after the functional lifecycle defects above are addressed, but before physical acceptance;
+10. reproduce and validate on hosted cold wake before asking Management for another device pass.
+
+Do not reopen settled Forecast/Intrinsic model authority. Do not move Market or general Performance ahead of this availability corrective. Return only at `DIRECTIVE COMPLETE — IMPLEMENTATION`, a genuine `BLOCKED — IMPLEMENTATION`, or a genuine `MANAGEMENT GATE — IMPLEMENTATION`.
+
+### Management baseline correction — 2026-09-27
+For this availability corrective, do **not** use PR #267, PR #269, or the failed PR #270 physical state as the product-efficiency/usability baseline merely because they are recent.
+
+Use the last demonstrably usable FSFFL runtime behavior as the control for lifecycle/resource regressions: the PR #235-era `jimmygoodjob` path repeatedly restored Forecast/Simulation/Value complete across restart, Home/Franchise were populated and responsive, startup did not automatically launch heavy intelligence, and no startup errors were observed. Market latency remained poor, so this is a **runtime usability baseline**, not a claim that PR #235 was product-complete or a model-authority rollback target.
+
+The corrective must identify what later changes caused regression relative to that usable behavior, then preserve only later features that can coexist with equivalent-or-better availability. Do not justify current memory, restart, readiness, or request-fanout behavior by comparison with an already-broken intermediate state.
+
+## Management directive — runtime architecture corrective, not symptom patching — 2026-09-27
+**State: ACTIVE — BETA RUNTIME ARCHITECTURE / AVAILABILITY CORRECTIVE**
+
+Management supersedes any narrower interpretation of the post-PR #270 incident. The objective is not to patch the visible 502, 429, League error, readiness label, or PI memory spike independently. Implementation must restore a structurally efficient private-beta runtime that remains usable as capabilities are added.
+
+### Control baseline
+Use the last demonstrably usable FSFFL runtime behavior as the control: the PR #235-era `jimmygoodjob` path repeatedly restored Forecast/Simulation/Value complete across restart, kept Home/Franchise populated and responsive, did not automatically launch heavy intelligence on startup, and emitted no startup errors. Market latency was still poor, so PR #235 is a **runtime-usability control**, not a product-complete rollback target.
+
+First establish the regression delta from that usable control to current main. Use commit/diff tracing and, where useful, a reproducible cold-wake harness or selective historical replay to identify which later lifecycle, cache, persistence, hydration, Intrinsic, last-good, or refresh changes materially increased resident memory, concurrent work, request fanout, or restart fragility. Do not use an already-broken intermediate release as the efficiency baseline.
+
+### Required runtime architecture
+1. **One authoritative heavy working set.** At most one full State-bound Forecast/Simulation/Value working bundle may be treated as the active heavy in-memory set for a user/league. Do not retain multiple complete object graphs merely to support presentation continuity.
+2. **Lightweight last-good serving.** Preserve last-good user experience through durable artifacts and a compact presentation/read model or lazy handles. Do not require a second full raw Forecast/Simulation/Value graph to remain resident if the rendered surfaces only need summarized outputs.
+3. **Minimal pending state.** In-progress reconciliation may retain identifiers, fingerprints, job state and the bounded intermediate data actually required to finish. It must not duplicate the active or last-good bundle without measured necessity.
+4. **Bounded heavy concurrency.** Forecast enrichment, 50K Simulation, Intrinsic/Shapley construction, historical PI materialization and other memory-heavy jobs must pass through an explicit process-level resource coordinator. Coalesce identical work; serialize or otherwise bound overlapping heavy jobs on the current free-tier instance. Browser request concurrency must not imply model-build concurrency.
+5. **Restore-first startup.** Cold wake/restart must restore the persisted user/league context and immediately serve the last compatible usable view before any automatic synchronization launches heavy work. Automatic State sync may begin only after restore/initial serving is stable, and must remain non-disruptive.
+6. **Persistence over RAM residency.** Postgres/artifacts are the durable cache; RAM is a bounded execution cache. Large reusable results should be reloadable/lazy rather than permanently retained in multiple Python object graphs.
+7. **Endpoint isolation.** Opening Home, Franchise, League, Market or Player Intelligence must not independently trigger duplicate global intelligence builds. PI history remains player-scoped and bounded. Surface hydration should consume already-governed products or request one coalesced missing capability.
+8. **Single readiness authority.** Shell and all surfaces must consume one capability/readiness contract. `Intelligence current` is impossible while a required capability is rebuilding, unavailable, last-good-only, or Intrinsic-preparing.
+9. **Crash-safe recovery.** An involuntary process recycle must restore the persisted selected league/state/context and compatible last-good presentation. A restarted process returning `league=None` for a previously persisted authenticated user is unacceptable.
+10. **No semantic/model rollback.** Preserve accepted Forecast, Simulation, Value and Intrinsic authority. Simplify runtime representation/orchestration, not model meaning. Any rollback/feature gate used temporarily for beta availability is not terminal completion of this directive.
+
+### Resource and acceptance discipline
+- Instrument peak RSS and major retained-object/cache/job ownership through the exact hosted workflow. The closeout must explain the dominant memory owners before and after the corrective.
+- On the current 536,870,900-byte service limit, the full acceptance journey must retain **at least 20% memory headroom at peak** (peak RSS <= ~429 MB), unless Management explicitly changes the infrastructure/budget. Passing at 500+ MB is not acceptable even if the process happens not to restart.
+- No unbounded cache, unbounded task queue, or unbounded browser-driven polling fanout is permitted.
+- Record cold-start, warm/reuse and changed-State latency separately; optimization must not silently trade correctness for lower RSS.
+
+### Required end-to-end acceptance journey
+Automate and execute on the hosted service, from a genuine cold process where feasible:
+`cold wake → restore FSFFL → initial Home/Franchise usable → automatic State sync → navigate Home → Franchise → League → open Player Intelligence/history → reload during active reconciliation → manual Refresh Intelligence → FSFFL ↔ Hodor ↔ FSFFL → repeat PI open`.
+
+For that journey prove:
+- no process recycle;
+- peak RSS within the governed budget and materially below the failed curve;
+- no 5xx and no recovery-induced 429;
+- no blank canonical roster/state surfaces;
+- last-good presentation remains usable and clearly stale/as-of only when needed;
+- persisted Intrinsic reattaches without unnecessary Shapley recomputation;
+- no duplicate heavy job for the same dependency coordinate;
+- readiness is consistent across shell and surfaces;
+- second/repeat opens use durable reuse and have lower memory/work than the cold path.
+
+### Scope / sequencing
+Market product work, general Performance work, Simulation kernel modernization, and new feature breadth remain HOLD. Performance techniques may be used inside this corrective only when necessary to satisfy runtime availability/resource ownership. Research remains at its existing Management gates and must not be reopened.
+
+Do not ask Management for another physical-device pass merely because unit tests, PR CI, a single endpoint, or a synthetic State-first runner passes. Return to physical acceptance only after the exact combined hosted journey above passes with resource telemetry.
+
+Stop only at `DIRECTIVE COMPLETE — IMPLEMENTATION`, a genuine `BLOCKED — IMPLEMENTATION`, or `MANAGEMENT GATE — IMPLEMENTATION` after all authorized nonphysical work is exhausted.
+
+
+## 2026-09-27 10:53–10:55 ET — PR #271 physical acceptance exposes State-advance continuity failure
+**State: ACTIVE — STRUCTURAL RUNTIME CORRECTIVE NOT ACCEPTED**
+
+Management physically exercised the live private beta on iPhone/Safari after PR #271.
+
+Observed behavior:
+- the app was initially usable on restored prior intelligence and showed `Intelligence current`;
+- no visible indication made clear that an automatic State refresh was about to reconcile;
+- shortly afterward the shell changed to **State current · intelligence rebuilding** and Home lost position pressure, Simulation, roster-strength and other derived presentation, rendering them unavailable;
+- the transition appeared to coincide with entering Market, but exact hosted evidence shows Market did **not** initiate the State reset.
+
+Hosted evidence:
+- PR #273 (acceptance-only hosted journey instrumentation) attempted deployment from 10:31 ET and **timed out at 10:50 ET**; Render fell back to the PR #271 runtime and started a fresh instance;
+- that PR #271 instance restored FSFFL successfully at 10:51 ET with Forecast/Simulation/Value complete, Intrinsic full, RSS ~278 MB and peak ~281 MB;
+- the client loaded at ~10:53:09 ET and issued `POST /api/connect/sleeper/background/refresh` at ~10:53:29 ET;
+- before the refresh advanced State, Market value lenses served State `f51e75...` with Forecast degraded but 221/245 covered and Intrinsic ready;
+- after the refresh advanced canonical State to `9d2145...`, Market value lenses reported Forecast **unavailable 0/245** while Intrinsic remained ready, and Market quick correctly reported `building_intelligence`;
+- Home/Franchise-derived presentation did not continue serving the prior usable last-good read model during that rebuild;
+- `/api/product-context` latency rose from ~6.2s initially to ~15.2s and then ~29.5s while reconciliation was active;
+- process RSS rose from ~244 MB idle to ~290 MB, ~336 MB, and **~411 MB peak observed** at 10:55 ET, then remained around ~399–405 MB. This is below the ~429 MB governed ceiling but leaves little headroom and is not yet a comfortable acceptance result;
+- no 5xx/429 or process recycle is observed in this physical window so far.
+
+Classification:
+1. **PR #273 deployment timeout is a separate deployment/acceptance-run failure** and must not be confused with the user-triggered product transition.
+2. **PR #271 still fails the required non-disruptive changed-State contract.** Automatic State reconciliation can advance canonical State while the presentation drops from usable last-good intelligence to unavailable/rebuilding.
+3. Market is the witness, not the trigger. Do not patch Market to hide this lifecycle defect.
+
+Required corrective:
+- preserve a compact, durable last-good presentation/read model across automatic State advance so Home/Franchise/League/Market remain usable while exact-State intelligence rebuilds;
+- do not restore a second full heavy Forecast/Simulation/Value graph in RAM; satisfy continuity through persisted/lightweight read-model ownership;
+- make the impending/active automatic reconciliation visible and truthful without claiming `Intelligence current` for the new State;
+- investigate why automatic refresh advanced the served presentation boundary before a compatible last-good read model was available;
+- reduce or bound the observed ~411 MB changed-State peak further if feasible; the <=~429 MB threshold remains hard, not aspirational;
 - repair the hosted acceptance runner/deployment path from PR #273 and rerun the complete cold-wake → restore → auto-sync → surfaces → PI → refresh → league switch journey before asking Management for another acceptance pass.
 
 Do not close this as a Market defect, a cosmetic readiness issue, or a successful PR #271 acceptance. Stop only under OPERATING_PROTOCOL.md at a permitted terminal state.
