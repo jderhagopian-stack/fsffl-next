@@ -75,8 +75,6 @@ def make_cached_opportunity_search(
         league_state = runtime.league_state
         if league_state is None:
             return builder(runtime, browser, cardinal)
-        if retention_validator is not None and not retention_validator(runtime):
-            return builder(runtime, browser, cardinal)
         key = (
             _runtime_user_id(runtime),
             league_state.state_id,
@@ -87,6 +85,8 @@ def make_cached_opportunity_search(
         )
         started = monotonic()
         with lock:
+            if retention_validator is not None and not retention_validator(runtime):
+                return builder(runtime, browser, cardinal)
             cached = cache.get(key)
             if cached is not None:
                 cache.move_to_end(key)
