@@ -983,7 +983,7 @@ def test_first_load_value_lenses_do_not_start_intrinsic_or_materialize_player_ro
     response = client.get("/api/league/value-lenses?universe=all")
     assert response.status_code == 200
     payload = response.json()
-    assert payload["status"] == "building"
+    assert payload["status"] == "loading"
     assert payload["league_state_id"] == state.state_id
     assert payload["players"] == []
     assert payload["intrinsic_execution"]["status"] == "staged"
