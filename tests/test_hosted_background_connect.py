@@ -194,7 +194,13 @@ def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -
         };
         global.fetch=()=>Promise.resolve({ok:true});
         global.state={
-          context:{league_id:null,state_id:null,teams:[],team_id:null},
+          context:{
+            league_id:'sleeper:123',
+            league_name:'Clean League',
+            state_id:'state-known-but-not-rendered',
+            teams:[],
+            team_id:null,
+          },
           teamView:null,valueCatalog:null,intelligence:null,route:'league',
         };
         global.applyContext=()=>{
@@ -219,7 +225,8 @@ def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -
           }
           teamSelect.disabled=!context?.league_id;
         };
-        applyContext();
+        // Intentionally do not apply the already-known context. This reproduces
+        // a Safari shell whose JS identity is current while the visible controls are stale.
 
         const calls=[];
         let backgroundPosted=false;
@@ -576,7 +583,7 @@ def test_hosted_refresh_is_bound_to_starting_league_generation() -> None:
     assert "FSFFL Sleeper refresh superseded at activation" in refresh
 
 
-def test_manual_connect_submits_before_context_recognition_and_only_rejects_visible_duplicate() -> None:
+def test_manual_connect_always_runs_idempotent_background_handoff() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -587,14 +594,13 @@ def test_manual_connect_submits_before_context_recognition_and_only_rejects_visi
 
     active_index = interactive.index("const activeBefore=")
     feedback_index = interactive.index("button.textContent='Starting import…'")
-    same_index = interactive.index("if(activeBefore===normalized)")
     wait_index = interactive.index("await waitForBackgroundImport(normalized")
-    assert active_index < feedback_index < same_index < wait_index
+    assert active_index < feedback_index < wait_index
     assert "publishSyncState('checking','Starting import…')" in interactive
     assert "canonicalBefore" not in interactive
-    assert "same_visible_active" in interactive
+    assert "if(activeBefore===normalized)" not in interactive
+    assert "same_visible_active" not in interactive
     assert "contextMatchesLeague(canonicalBefore,normalized)" not in interactive
-    assert "Enter a different league ID to switch leagues." in interactive
     assert "'requested='+normalized+';active='" in interactive
 
 
