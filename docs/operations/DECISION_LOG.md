@@ -655,3 +655,28 @@ Required boundaries:
 - any systematic downstream Decision/Search/Optimization behavior change, material tail undercoverage, replay instability, or unacceptable Render memory/foreground regression blocks adoption.
 
 After the experimental study, return to Management with measured runtime/resource benefit and full equivalence evidence for a separate production-adoption decision.
+
+
+## 2026-09-30 — Simulation RNG practical-materiality gate: proceed to downstream + hosted validation
+Management reviewed PR #311's completed 100-root-seed × 50,000-trial experiment and explicitly **does not require a large brute-force extension solely to force proof of the original ±0.001 expected-wins margin** before continuing the adoption evaluation.
+
+The original statistical result remains exactly what it was and must not be relabeled:
+- expected-wins equivalence at ±0.001 was **not established**;
+- the worst observed point difference was +0.002395 wins;
+- its simultaneous interval was [-0.002201, +0.006991];
+- all 12 intervals included zero;
+- playoff/first-place/championship probability margins passed;
+- rank-distribution TV margins passed;
+- expected-wins team order had zero pairwise inversions.
+
+Management interpretation: the observed expected-wins effect size is practically negligible in isolation, while the unresolved questions with potential product consequence are **downstream decision behavior and constrained hosted execution**. The ±0.001 result remains part of the evidence package, but it is no longer the sole controlling gate.
+
+Authorized next work on PR #311:
+1. Preserve 50,000 trials, all Simulation/Forecast/Value/Decision semantics, explicit RNG/replay versioning, and the legacy Python replay path.
+2. Do **not** launch a thousands-of-seeds study merely to satisfy ±0.001. A bounded confirmatory statistical run is permitted only if Work first documents why it is useful for detecting directional drift or another concrete risk; it must not be used to retroactively redefine the original study as a pass.
+3. Run the missing changed-State downstream validation across representative scenarios, including clear cases and near-boundary cases. Compare Team Utility, Value/Analytics consumers, Decision direction/sign, Search/Optimization candidate sets/order, and any user-visible recommendation/frontier consequences. Any systematic or materially consequential change outside documented Monte Carlo/tie uncertainty blocks adoption.
+4. After local/downstream validation is clean and exact-head CI/review are green, Management authorizes a **controlled, reversible hosted validation deployment** of the experimental branch to the private-beta Render service for measurement only. This is not production adoption and does not authorize merge to main. Measure the full 50k Simulation phase, total refresh, heavy-work wait, peak RSS/headroom, foreground Home/My Team/Product Context responsiveness, publication/readiness, and restart behavior. Prefer batch 500 unless new evidence supports another bounded batch.
+5. If hosted/downstream validation passes, return to Management for the separate final production-adoption decision. If it fails, restore the prior production deployment and report the concrete blocker.
+6. Before final validation, reconcile/rebase PR #311 with current main without truncating or replacing canonical operations histories.
+
+After this RNG candidate decision, re-profile the full hosted Simulation path before ordering the next optimization tranche. The broader Simulation modernization remains active regardless of whether this RNG candidate is ultimately adopted.
