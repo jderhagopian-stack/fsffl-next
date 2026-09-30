@@ -23,17 +23,17 @@ It does not change Forecast, Simulation, Value, Intrinsic, K/DST, FUMBLES_LOST, 
 | Persistent checkpoint queues/futures and managed-team checkpoint barrier | 1 | Ordered durability / restart authority | Preserve. Per-user queues retire when idle. |
 | Durable Postgres artifacts, State history, published presentation manifest/surfaces | 1 | Restart/replay/publication authority | Preserve. Resource cleanup never deletes or mutates them. |
 | `PresentationContinuityStore._validated_snapshots` | 3 | Process-local validation hints | Clear transitioning user's hints; durable presentation artifacts remain intact. |
-| Market economics wrapper cache | 3 | Up to thousands of package economics payloads | Keyed by user; clear only transitioning user's entries. |
-| Opportunity Search catalog cache | 3 | Full structural candidate catalog | Keyed by user; clear only transitioning user's entries. |
-| Opportunity workspace cache | 3 | Full Search/Decision workspace payload | Keyed by user; clear only transitioning user's entries. |
-| `MarketDecisionEnrichmentCoordinator._records/_active_by_scope` | 3/4 | Completed enrichment result payloads and queued/running job handles | Clear transitioning user's records; cancel queued work; running work cannot reattach after identity invalidation. |
+| Market economics wrapper cache | 3 | Up to thousands of package economics payloads | Keyed by user; clear only transitioning user's entries. A prior published/stale runtime may still answer its in-flight request but cannot reacquire retained cache ownership after the boundary. |
+| Opportunity Search catalog cache | 3 | Full structural candidate catalog | Keyed by user; clear only transitioning user's entries. Retention is allowed only for the active execution-State scope. |
+| Opportunity workspace cache | 3 | Full Search/Decision workspace payload | Keyed by user; clear only transitioning user's entries. Retention is allowed only for the active execution-State scope. |
+| `MarketDecisionEnrichmentCoordinator._records/_active_by_scope` | 3/4 | Completed enrichment result payloads and queued/running job handles | Clear transitioning user's records; cancel queued work; stale scopes are rejected before retained admission and revalidated inside heavy-work ownership before execution/attachment. |
 | `BehavioralRuntimeCoordinator._records/_future_by_user` | 3/4 | User's current Behavioral result and worker | Clear transitioning user's record/future; stale completion/failure cannot recreate it. Durable Behavioral history remains reusable. |
 | Behavioral `_profile_cache` | 2 | Immutable OwnerBehaviorProfile rows for exact State/team | Bounded to four States; preserve as shared exact-State read cache. |
 | Hosted Behavioral Postgres adapter cache | 2 | Database adapter/schema validation object | Process infrastructure, not league payload; preserve. |
-| `ShapleyIntrinsicBackgroundCoordinator._records/_futures` | 3/4 | User-scoped Intrinsic lifecycle and contract object | Clear transitioning user's records/futures; durable contract remains authority. |
-| `PrivateBetaShapleyContractLoader._cached_contract` | 3 | One process-local Intrinsic contract | Explicit user owner; clear only owner on transition. |
-| `PlayerFutureForecastCache` | 3 | One process-local Future Forecast contract | Explicit user owner; clear only owner on transition. Durable continuity artifact remains available. |
-| `PlayerHistoryBackgroundCoordinator._records/_futures` | 3/4 | Completed per-player career history rows and pending work | Key includes user; clear user's records/futures; durable player-season/career artifacts remain reusable. |
+| `ShapleyIntrinsicBackgroundCoordinator._records/_futures` | 3/4 | User-scoped Intrinsic lifecycle and contract object | Clear transitioning user's records/futures; epoch + active execution-State ownership guard both durable restore and new request admission, so stale contexts cannot recreate released records. Durable contract remains authority. |
+| `PrivateBetaShapleyContractLoader._cached_contract` | 3 | One process-local Intrinsic contract | Explicit user owner; clear increments a user cache epoch so an in-flight durable restore cannot repopulate after release. |
+| `PlayerFutureForecastCache` | 3 | One process-local Future Forecast contract | Explicit user owner; clear only owner on transition. Stale/prior execution scopes may compute a response but cannot reacquire process-retained cache ownership. Durable continuity artifact remains available for owned scopes. |
+| `PlayerHistoryBackgroundCoordinator._records/_futures` | 3/4 | Completed per-player career history rows and pending work | Key includes user; clear user's records/futures; stale contexts are rejected at admission and cleared workers revalidate before heavy history acquisition. Durable player-season/career artifacts remain reusable. |
 | Simulation scenario cache `_cache/_inflight` | 2/4 | Exact immutable 50K Simulation results, keyed by exact State/Forecast/loader; optional durable backing | Preserve completed exact results as shared bounded reusable authority-neutral execution cache. Inflight work is temporary and exact-key coalesced; HeavyWorkCoordinator bounds overlap. |
 | Forecast/provider payloads in Sleeper loaders | 4 | Per-call provider JSON and local thread-pool results | No process-global payload cache; become unreachable after call/reconciliation phase. |
 | Intelligence reconciliation closure/local evidence | 4 | State/evidence while job runs | Generation/team guards prevent stale attachment; HeavyWorkCoordinator bounds heavy overlap. No completed full-result store beyond published runtime. |
@@ -65,7 +65,9 @@ No unclassified material process-local holder remains in the current hosted comp
 
 For every supported replacement transition:
 
-`load/validate candidate State -> publish/activate valid canonical State -> release prior user execution scope -> GC/malloc_trim -> start new Behavioral/Forecast/Simulation/Value/Intrinsic/PI/Market work`.
+`load/validate candidate State -> acquire same-user lifecycle authority -> publish/activate valid canonical State -> release prior user execution scope -> revalidate ownership -> GC/malloc_trim -> start new Behavioral/Forecast/Simulation/Value/Intrinsic/PI/Market work -> release lifecycle authority`.
+
+Any request that captured the prior runtime before that sequence may finish its response only under its existing authority; it cannot recreate process-retained execution ownership after the boundary.
 
 For manual sync reconciliation, current published presentation remains visible while the new working State is staged; the resource release occurs after the replacement State has been validated/staged and before replacement heavy model work.
 
