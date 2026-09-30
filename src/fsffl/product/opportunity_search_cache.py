@@ -16,6 +16,7 @@ from .trade_center_view import TradeCenterBrowserView
 _logger = logging.getLogger("uvicorn.error")
 _MAX_ENTRIES_PER_USER = 1
 
+RetentionValidator = Callable[[UserRuntimeContext], bool]
 CandidateBuilder = Callable[
     [UserRuntimeContext, TradeCenterBrowserView, Mapping[str, FSFFLCardinalValueScore]],
     list[dict[str, object]],
@@ -48,7 +49,11 @@ def _annotate_cache(result: list[dict[str, object]], *, cache_hit: bool, elapsed
         return result
 
 
-def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilder:
+def make_cached_opportunity_search(
+    builder: CandidateBuilder,
+    *,
+    retention_validator: RetentionValidator | None = None,
+) -> CandidateBuilder:
     """Reuse the exact full structural candidate catalog for one authoritative runtime.
 
     The cache changes only execution. Search still owns candidate generation and ordering;
@@ -69,6 +74,8 @@ def make_cached_opportunity_search(builder: CandidateBuilder) -> CandidateBuilde
         nonlocal hits, misses
         league_state = runtime.league_state
         if league_state is None:
+            return builder(runtime, browser, cardinal)
+        if retention_validator is not None and not retention_validator(runtime):
             return builder(runtime, browser, cardinal)
         key = (
             _runtime_user_id(runtime),
