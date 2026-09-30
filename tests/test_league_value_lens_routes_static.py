@@ -57,3 +57,28 @@ def test_market_value_lens_route_exposes_intrinsic_coordinate_and_build_state() 
     ):
         assert token in routes
     assert '"all_player_forecast"' not in routes or "forecast_status" in routes
+
+
+def test_hosted_readiness_does_not_restore_intrinsic_from_foreground_reads() -> None:
+    webapp = (PRODUCT / "persistent_webapp.py").read_text(encoding="utf-8")
+    readiness = webapp.split("def _hosted_capability_readiness", 1)[1].split(
+        "def _reconcile_hosted_intrinsic", 1
+    )[0]
+    reconcile = webapp.split("def _reconcile_hosted_intrinsic", 1)[1].split(
+        "# Reuse only exact Decision-owned package economics", 1
+    )[0]
+
+    assert "_shapley_intrinsic_coordinator.current(context)" in readiness
+    assert "restore_compatible(" not in readiness
+    assert "restore_compatible_staged(context)" in reconcile
+    assert "wait_for_terminal(context)" in reconcile
+
+
+def test_first_load_value_lens_path_has_explicit_staged_contract() -> None:
+    routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
+    assert "first_load_staging = bool(" in routes
+    assert 'runtime.publication_generation_id is None' in routes
+    assert 'runtime_store.working_generation_active(user_id)' in routes
+    assert '"status": "staged"' in routes
+    assert '"players": []' in routes
+    assert "background_coordinator.current(runtime)" in routes
