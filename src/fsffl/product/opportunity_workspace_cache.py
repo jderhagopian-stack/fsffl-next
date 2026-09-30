@@ -117,20 +117,20 @@ def make_cached_opportunity_workspace(
                 candidate_limit=candidate_limit,
                 bilateral_evaluation_limit=bilateral_evaluation_limit,
             )
-        if retention_validator is not None and not retention_validator(runtime):
-            result = builder(
-                runtime,
-                candidate_limit=candidate_limit,
-                bilateral_evaluation_limit=bilateral_evaluation_limit,
-            )
-            return _execution_payload(
-                result,
-                cache_hit=False,
-                elapsed_ms=0.0,
-            )
 
         started = monotonic()
         with lock:
+            if retention_validator is not None and not retention_validator(runtime):
+                result = builder(
+                    runtime,
+                    candidate_limit=candidate_limit,
+                    bilateral_evaluation_limit=bilateral_evaluation_limit,
+                )
+                return _execution_payload(
+                    result,
+                    cache_hit=False,
+                    elapsed_ms=(monotonic() - started) * 1000.0,
+                )
             cached = cache.get(key)
             if cached is not None:
                 cache.move_to_end(key)
