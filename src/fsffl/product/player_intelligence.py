@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from threading import RLock
 from time import sleep
+from typing import Callable
 
 from fsffl.forecast.future_contract import FutureForecastContract
 from fsffl.persistence.contracts import (
@@ -136,11 +137,13 @@ class PlayerFutureForecastCache:
         future_forecast_builder=None,
         forecast_model_version: str = "future-forecast-provider:unconfigured",
         persistence_store: PersistenceStore | None = None,
+        retention_validator: Callable[[UserRuntimeContext], bool] | None = None,
     ) -> None:
         self._lock = RLock()
         self._future_forecast_builder = future_forecast_builder
         self._forecast_model_version = str(forecast_model_version)
         self._persistence_store = persistence_store
+        self._retention_validator = retention_validator
         self._key: tuple[str, str, str, str] | None = None
         self._contract: FutureForecastContract | None = None
         self._league_id: str | None = None
@@ -281,14 +284,23 @@ class PlayerFutureForecastCache:
         state = runtime.league_state
         evidence = runtime.forecast_evidence
         with self._lock:
+            retain = (
+                True
+                if self._retention_validator is None
+                else bool(self._retention_validator(runtime))
+            )
             if (
                 state is None
                 or evidence is None
                 or self._future_forecast_builder is None
             ):
                 fallback = (
-                    self._stale_last_good_locked(runtime)
-                    or self._restore_durable_stale_locked(runtime)
+                    (
+                        self._stale_last_good_locked(runtime)
+                        or self._restore_durable_stale_locked(runtime)
+                    )
+                    if retain
+                    else None
                 )
                 return (
                     (fallback, "stale_last_good")
@@ -302,7 +314,8 @@ class PlayerFutureForecastCache:
                 self._forecast_model_version,
             )
             if (
-                self._key == key
+                retain
+                and self._key == key
                 and self._contract is not None
                 and self._cached_user_id == runtime.user_id
             ):
@@ -331,6 +344,8 @@ class PlayerFutureForecastCache:
                 raise TypeError(
                     "Future Forecast provider must return FutureForecastContract"
                 )
+            if not retain:
+                return contract, "current"
             self._key = key
             self._contract = contract
             self._league_id = state.league.league_id
