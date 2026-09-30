@@ -1656,3 +1656,27 @@ This completes the realistic free-Render hosted lifecycle gate for the accepted 
 **Release status: READY FOR PHYSICAL IPHONE/SAFARI VALIDATION.**
 
 Next action is product-owner physical Safari smoke/testing. Do not reopen stabilization architecture absent contradictory evidence from that physical test.
+
+
+## 2026-09-29 — Physical iPhone/Safari acceptance contradiction: league Connect path fails
+Immediately after hosted lifecycle acceptance PASS on #306, physical iPhone/Safari validation produced a blocking contradiction: **the league will not connect**.
+
+Scope interpretation:
+- hosted #306 remains valid evidence for server-side State/resource/publication/restore behavior;
+- this physical failure reopens **only the browser-to-hosted Connect path / first physical interaction layer**;
+- do not reopen Forecast/Simulation/Value/Intrinsic semantics, resource-boundary architecture, or the completed hosted restore proof absent new contradictory evidence.
+
+Important acceptance gap:
+- the hosted harness exercises server routes/lifecycle directly and did not prove the actual iPhone JavaScript Connect interaction;
+- the production page has a browser-owned manual Connect flow in `mobile_safari_recovery.js` that intercepts the base `app.js` Connect handler and drives `/api/connect/sleeper/background` plus polling/context handoff;
+- physical acceptance must prove that exact path.
+
+Immediate corrective:
+1. reproduce the physical/manual Connect flow against the live #306 deployment;
+2. determine whether the tap/prompt submits a background request, whether the server accepts/starts it, and whether polling/context handoff reaches the requested league;
+3. inspect Safari/browser asset freshness and the two-handler interception path, plus server logs for the submitted connect job;
+4. fix the smallest concrete browser/connect defect only;
+5. add a deterministic browser-path regression that covers the manual Connect control through background job -> canonical State -> visible league/team selector;
+6. deploy and return immediately to physical Safari retest.
+
+Do not substitute another server-only acceptance run for this gate. Physical Connect is now the controlling blocker.
