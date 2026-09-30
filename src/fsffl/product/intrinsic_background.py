@@ -18,6 +18,7 @@ from .runtime import UserRuntimeContext
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
 ForecastCoordinateResolver = Callable[[UserRuntimeContext], str]
 IntrinsicInputFingerprintResolver = Callable[[UserRuntimeContext], str]
+IntrinsicOwnershipValidator = Callable[[UserRuntimeContext], bool]
 DEFAULT_INTRINSIC_RESPONSE_BUDGET_SECONDS = 30.0
 # The hard watchdog is deliberately a distinct operational guard, not a browser
 # response timeout.  Ten minutes is 20x the response budget and comfortably above
@@ -72,6 +73,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         intrinsic_input_fingerprint_resolver: IntrinsicInputFingerprintResolver | None = None,
         timeout_seconds: float | None = None,
         heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+        ownership_validator: IntrinsicOwnershipValidator | None = None,
         max_records: int = 8,
     ) -> None:
         # timeout_seconds is retained as a compatibility alias for older callers,
@@ -98,6 +100,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         if max_records < 2:
             raise ValueError("Intrinsic max_records must be at least 2")
         self._heavy_work_coordinator = heavy_work_coordinator
+        self._ownership_validator = ownership_validator
         self._max_records = int(max_records)
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], IntrinsicBuildRecord] = {}
@@ -150,11 +153,21 @@ class ShapleyIntrinsicBackgroundCoordinator:
         restorer = getattr(self._loader, "restore_compatible", None)
         if not callable(restorer):
             return None
+        if (
+            self._ownership_validator is not None
+            and not self._ownership_validator(context)
+        ):
+            return None
         with self._lock:
             expected_epoch = self._user_epochs.get(context.user_id, 0)
         key = self._key(context)
         with self._lock:
             if self._user_epochs.get(context.user_id, 0) != expected_epoch:
+                return None
+            if (
+                self._ownership_validator is not None
+                and not self._ownership_validator(context)
+            ):
                 return None
             existing = self._records.get(key)
             if (
@@ -212,6 +225,13 @@ class ShapleyIntrinsicBackgroundCoordinator:
         *,
         expected_epoch: int | None = None,
     ) -> IntrinsicBuildRecord:
+        if (
+            self._ownership_validator is not None
+            and not self._ownership_validator(context)
+        ):
+            raise IntrinsicBuildSuperseded(
+                "Intrinsic context no longer owns the active execution State"
+            )
         with self._lock:
             request_epoch = (
                 self._user_epochs.get(context.user_id, 0)
@@ -225,6 +245,13 @@ class ShapleyIntrinsicBackgroundCoordinator:
             if current_epoch != request_epoch:
                 raise IntrinsicBuildSuperseded(
                     "Intrinsic lifecycle was superseded by a State transition"
+                )
+            if (
+                self._ownership_validator is not None
+                and not self._ownership_validator(context)
+            ):
+                raise IntrinsicBuildSuperseded(
+                    "Intrinsic context no longer owns the active execution State"
                 )
             existing = self._records.get(key)
             if existing is not None:
