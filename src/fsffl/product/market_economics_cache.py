@@ -96,14 +96,14 @@ def make_cached_candidate_economics(
         key = market_economics_cache_key(runtime, row)
         if key is None:
             return evaluator(runtime, row, **kwargs)
-        if retention_validator is not None and not retention_validator(runtime):
-            # Prior published State may remain readable during replacement work, but
-            # its execution result may not reacquire retained process ownership after
-            # the resource boundary released that scope.
-            return evaluator(runtime, row, **kwargs)
 
         started = monotonic()
         with lock:
+            if retention_validator is not None and not retention_validator(runtime):
+                # Prior published State may remain readable during replacement work,
+                # but its execution result may not reacquire retained process
+                # ownership after the resource boundary released that scope.
+                return evaluator(runtime, row, **kwargs)
             user_id = _runtime_user_id(runtime)
             scope = key[:5]
             if active_scope_by_user.get(user_id) != scope:
