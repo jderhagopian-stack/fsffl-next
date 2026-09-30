@@ -1567,6 +1567,13 @@ def create_app(
                         league_state=synced_state,
                     )
                     if active_before_write.state_id != synced_state.state_id:
+                        checkpointed_job = jobs.update_current_league_state_id(
+                            user_id=user_id,
+                            expected_state_id=active_before_write.state_id,
+                            league_state_id=synced_state.state_id,
+                        )
+                        if checkpointed_job is None:
+                            raise IntelligenceJobInterrupted("refresh_job_replaced")
                         apply_state_resource_boundary(
                             user_id,
                             previous=published,

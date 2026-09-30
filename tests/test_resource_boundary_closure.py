@@ -1005,6 +1005,7 @@ def test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layer
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     original = _state("a", minute=0)
     refreshed = _state("a", minute=1)
+    state_to_load = [refreshed]
     store = PrivateBetaRuntimeStore()
     store.set_league_state("local-beta-user", original)
     store.select_team("local-beta-user", original.teams[0].team_id)
@@ -1020,7 +1021,7 @@ def test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layer
         state_loads += 1
         state_sync_entered.set()
         assert release_state_sync.wait(timeout=3.0)
-        return refreshed
+        return state_to_load[0]
 
     observation = SimpleNamespace(as_of=refreshed.as_of, player_id="fixture-player")
     forecast_evidence = SimpleNamespace(
@@ -1204,6 +1205,24 @@ def test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layer
     assert recovered_readiness["forecast"]["consumer_usable"] is True
     assert intrinsic_reconciled_state_ids == [refreshed.state_id, after_restart.state_id]
     assert state_loads == 1
+
+    # A direct refresh owns its own State sync. Once that sync reaches a different
+    # State, persist the new job identity before downstream phases so a restart can
+    # match the durable job to the State it was building.
+    manually_synced = _state("a", minute=3)
+    state_to_load[0] = manually_synced
+    manual_refresh = client.post("/api/intelligence/jobs")
+    assert manual_refresh.status_code == 200
+    deadline = __import__("time").monotonic() + 3.0
+    while __import__("time").monotonic() < deadline:
+        manual_job = app.state.intelligence_jobs.current("local-beta-user")
+        if manual_job is not None and manual_job.status == IntelligenceJobStatus.COMPLETED:
+            break
+        sleep(0.01)
+    assert manual_job is not None
+    assert manual_job.status == IntelligenceJobStatus.COMPLETED, manual_job
+    assert manual_job.league_state_id == manually_synced.state_id
+    assert state_loads == 2
     resource = app.state.heavy_work_coordinator.snapshot()
     assert resource.memory_limit_bytes == DEFAULT_MEMORY_LIMIT_BYTES
     assert max(resource.current_rss_bytes, resource.peak_rss_bytes) < DEFAULT_MEMORY_LIMIT_BYTES

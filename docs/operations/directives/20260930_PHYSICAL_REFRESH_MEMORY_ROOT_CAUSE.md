@@ -70,12 +70,15 @@ does not reopen football model semantics or Forecast authority.
 4. When the browser polls a restart-interrupted job and exact canonical State
    survived, automatically rebuild missing exact-State core layers without
    re-fetching State. Preserve exact-State authority and atomic publication.
-   Correct the interruption copy so it no longer asserts that stale
-   last-good intelligence is active.
+   Checkpoint the job's State ID when direct State sync advances, so recovery
+   can compare the durable job with the State actually being built. Correct the
+   interruption copy so it no longer asserts that stale last-good intelligence
+   is active.
 5. Deterministically exercise automatic refresh + manual tap + concurrent
    product/status reads + automatic value-lens polls; assert a single State load
    and terminal usable Forecast, Simulation, current Value and Intrinsic. Also
-   exercise restart recovery without a second State sync.
+   exercise restart recovery without a second State sync and prove direct State
+   sync checkpoints its new identity before downstream work.
 
 ## Acceptance and limits
 

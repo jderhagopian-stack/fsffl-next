@@ -753,7 +753,8 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Restart converted in-progress work to `INTERRUPTED/server_restart`; missing
   exact-State layers were not automatically rebuilt, permitting persistent
   2/7 readiness. Browser polling now resumes that work from durable exact State
-  with atomic publication.
+  with atomic publication; direct State sync checkpoints the job's new State ID
+  so recovery can verify the intended State.
 - Corrective implementation: coalesce manual refresh into active automatic
   Sleeper refresh, serialize State materialization in the heavy-work lane,
   report lifecycle RSS boundaries, resume interrupted exact-State builds, and

@@ -1767,8 +1767,9 @@ prior #307 instruction not to reopen runtime architecture.
 Current implementation coalesces a manual intelligence tap into an active
 same-user/same-league Hosted Connect refresh, runs persistent-app State loads
 through HeavyWorkCoordinator, emits RSS/active-claim telemetry at every
-reconciliation boundary, and resumes missing exact-State layers after a
-server-restart interruption. It includes deterministic coverage for concurrent
+reconciliation boundary, checkpoints the job State ID when direct State sync
+advances, and resumes missing exact-State layers after a server-restart
+interruption. It includes deterministic coverage for concurrent
 product/status reads, repeated staged value-lens requests, one State-load owner,
 terminal usable core capabilities and restart recovery.
 
