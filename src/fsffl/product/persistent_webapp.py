@@ -103,16 +103,28 @@ _startup_restore_complete = Event()
 _startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
 
-def _market_execution_retention_valid(context) -> bool:
-    """Allow process retention only for the user's current execution State scope."""
+def _execution_state_scope_owned(context) -> bool:
+    """Return whether this context owns the user's current process execution scope."""
 
     state = context.league_state
     if state is None:
         return False
-    if not _runtime_store.working_generation_active(context.user_id):
-        return True
-    target_state_id = _runtime_store.working_target_state_id(context.user_id)
-    return target_state_id is None or target_state_id == state.state_id
+    if _runtime_store.working_generation_active(context.user_id):
+        return _runtime_store.working_target_state_id(context.user_id) == state.state_id
+    current = _runtime_store.get(context.user_id)
+    return bool(
+        current.league_state is not None
+        and current.league_state.state_id == state.state_id
+    )
+
+
+def _market_execution_retention_valid(context) -> bool:
+    """Market retention additionally requires the current managed-team identity."""
+
+    if not _execution_state_scope_owned(context):
+        return False
+    current = _runtime_store.get(context.user_id)
+    return current.selected_team_id == context.selected_team_id
 
 
 def _market_enrichment_identity_valid(
@@ -157,6 +169,7 @@ _behavioral_coordinator = BehavioralRuntimeCoordinator(
     store_factory=default_behavioral_store,
     max_workers=1,
     heavy_work_coordinator=_heavy_work_coordinator,
+    ownership_validator=_execution_state_scope_owned,
 )
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
@@ -176,6 +189,7 @@ _player_future_forecast_cache = PlayerFutureForecastCache(
     future_forecast_builder=provide_vnext_future_forecast_contract,
     forecast_model_version=VNEXT_FORECAST_VERSION,
     persistence_store=_persistence_store,
+    retention_validator=_execution_state_scope_owned,
 )
 _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
     _shapley_intrinsic_loader,
