@@ -24,6 +24,10 @@ from fsffl.product.market_progressive_enrichment import (
 )
 from fsffl.product.opportunity_search_cache import make_cached_opportunity_search
 from fsffl.product.opportunity_workspace_cache import make_cached_opportunity_workspace
+from fsffl.product.player_intelligence_routes import (
+    PlayerHistoryBackgroundCoordinator,
+    PlayerHistoryBuildStatus,
+)
 from fsffl.product.resource_coordinator import (
     DEFAULT_MEMORY_LIMIT_BYTES,
     HeavyWorkCoordinator,
@@ -461,6 +465,59 @@ def test_market_enrichment_rejects_released_prior_state_without_retaining_record
     assert work_calls == 0
     assert coordinator.get(user_id="user-a", job_id=record.job_id) is None
     assert coordinator.clear_user("user-a") == 0
+
+
+
+def test_cleared_player_history_worker_stops_before_heavy_service_call() -> None:
+    state_a = _state("a")
+    context = _runtime("user-a", state_a)
+    running = Event()
+    release = Event()
+    service_calls = 0
+
+    class Service:
+        def player_history(self, _context, _player_id):
+            nonlocal service_calls
+            service_calls += 1
+            return ()
+
+    class PausedCoordinator(PlayerHistoryBackgroundCoordinator):
+        def _update(self, key, *, status, seasons=(), error=None):
+            updated = super()._update(
+                key,
+                status=status,
+                seasons=seasons,
+                error=error,
+            )
+            if status == PlayerHistoryBuildStatus.RUNNING and updated:
+                running.set()
+                assert release.wait(timeout=2.0)
+            return updated
+
+    coordinator = PausedCoordinator(
+        Service(),
+        max_workers=1,
+        max_pending=1,
+        max_records=2,
+        heavy_work_coordinator=None,
+    )
+    record = coordinator.request(context, "player:1")
+    assert running.wait(timeout=1.0)
+
+    assert coordinator.clear_user("user-a") == 1
+    release.set()
+
+    deadline = __import__("time").monotonic() + 2.0
+    while __import__("time").monotonic() < deadline:
+        if coordinator._futures.get(
+            (context.user_id, state_a.state_id, "player:1")
+        ) is None:
+            break
+        sleep(0.01)
+
+    assert service_calls == 0
+    assert coordinator.clear_user("user-a") == 0
+    assert record.user_id == "user-a"
 
 
 def test_synchronous_connect_runs_boundary_before_behavioral_work(monkeypatch) -> None:
