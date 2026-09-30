@@ -1912,3 +1912,16 @@ Next executable sequence:
 A bounded additional statistical confirmation is allowed only when justified to diagnose directional drift or another concrete risk. Do not relabel the original ±0.001 study as passing and do not widen that margin post hoc.
 
 PR #311 remains experimental until the final Management adoption decision.
+
+
+## 2026-09-30 — PR #311 downstream validation and hosted-step handoff
+
+PR #311 has been reconciled directly onto current main and remains open/draft on `work/simulation-modernization` at exact head `b26fe97c67dded54da1bee92a756f451e99ac09d` (parent `3671ba0e6ff29ab750b71b8aaa467be0f56e55a9`). The branch retains 50,000 trials, model semantics, explicit RNG/replay identity, and the legacy Python path. The expected-wins result at ±0.001 remains **inconclusive**.
+
+Changed-State regression coverage now includes clear and symmetric near-boundary swapped-roster outcomes at 50k under both RNG protocols; real Team Utility and bilateral Decision direction/sign; exact lineup/position-strength/resilience analytics; and non-empty scoped Search candidate identity/order for both before/after States with the same Cardinal Value inputs. Results match in these fixtures. The detailed bounded evidence and limitations are in `docs/operations/evidence/simulation_rng_changed_state_validation_20260930.md`.
+
+Exact-head GitHub CI #4060 and focused runs #953, #736, #698, and #999 succeeded. Full local test suite: 1,897 passed, one Starlette deprecation warning. Fresh whole-PR review was requested by PR comment 5917929258; an exact-head review response was still pending at handoff. An older P1 review comment references `d2e0f270b8` and alleges truncated `CURRENT_STATE.md`/`ACTIVE_WORKSTREAMS.md`. Reconciled PR head is parented on current main and contains those full current-main files (1,914 and 817 lines respectively); no truncation marker is present.
+
+**Hosted validation blocker:** the authorized reversible Render validation could not start. The secure email/password browser-auth request returned `declined`; the prior GitHub provider route was also abandoned, and a Google identity-provider navigation was explicitly denied by browser policy. No secret was exposed to the agent, and no Render service setting, branch, environment variable, or deployment was changed. The service remains configured to `main` and running #310. A fresh explicit user authorization for a new secure Render email/password sign-in request is required before continuing dashboard operations.
+
+Next executable step after that authorization: configure a reversible experimental deployment of the exact PR #311 branch/head with batch 500, measure full Simulation/refresh time, heavy-work wait, peak RSS/headroom, concurrent Home/My Team/Product Context latency, publication/readiness and restart restoration, then restore main/#310. Return complete evidence to Management. No merge or production adoption is authorized.

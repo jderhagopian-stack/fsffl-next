@@ -348,6 +348,10 @@ Required classes include player, team and playoff/career-season narrative extrem
 The outlier layer is downstream analytics only and may not influence canonical probabilities, Forecast, Value or Decision authority.
 
 
-## Batched Gaussian experiment — Management gate (2026-09-30)
+## Batched Gaussian experiment — practical-product validation handoff (2026-09-30)
 
-The experimental versioned NumPy/PCG64 path is on draft PR #311 at code/test head `aa54aa2ec99b5fafb0411fa66eac05980d122a38`. Exact-head CI #4056 (run `36754666403`) passed, as did PR164 #952 and Live Forecast #998. The predeclared 100 × 50,000 study measured 2.097× median isolated kernel speedup. Team probability and rank-TV margins passed; expected-wins ±0.001 did not establish equivalence. Full-runtime changed-State Decision/Search/Optimization behavior and hosted full-refresh/concurrent-navigation RSS remain untested. Management decision: authorize a predeclared, powered independent-root extension or stop the experiment. Production remains on the legacy Python RNG; PR remains draft and must not merge/deploy.
+The experimental versioned NumPy/PCG64 path is on draft PR #311, reconciled to current main at exact head `b26fe97c67dded54da1bee92a756f451e99ac09d`. Full local tests (1,897) and exact-head CI #4060 plus focused workflows #953/#736/#698/#999 passed. Changed-State 50k regressions cover Team Utility/Decision clear and near-boundary direction, lineup and position-strength Analytics, and non-empty Search candidate identities/order; the fixture findings are recorded at `docs/operations/evidence/simulation_rng_changed_state_validation_20260930.md`.
+
+The original 100 × 50,000 statistical study remains unchanged: probability and rank-TV margins passed; expected-wins ±0.001 remains inconclusive. Management does not require a massive extension solely for that margin.
+
+Hosted validation has **not** run. The secure Render email/password authentication request returned `declined`; no service settings were modified and private-beta remains on main/#310. Resume only after a fresh explicit user authorization for secure Render sign-in. Then perform reversible batch-500 validation, capture resource/latency/readiness/restart evidence, restore main/#310, and return to Management. Do not merge or adopt the experimental path.
