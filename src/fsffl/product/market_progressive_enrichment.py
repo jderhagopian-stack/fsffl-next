@@ -148,6 +148,19 @@ class MarketDecisionEnrichmentCoordinator:
         )
         def build_and_attach_owned() -> None:
             foreground_pressure.cooperative_yield()
+            if not self._identity_validator(
+                record.user_id,
+                record.league_state_id,
+                record.focal_team_id,
+            ):
+                self._set(
+                    record.job_id,
+                    status=MarketEnrichmentStatus.INTERRUPTED,
+                    completed_at_monotonic=monotonic(),
+                    result=None,
+                    error="market context changed before Decision enrichment work began",
+                )
+                return
             result = work()
             foreground_pressure.cooperative_yield()
             if not self._identity_validator(
