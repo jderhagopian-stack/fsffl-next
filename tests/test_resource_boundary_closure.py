@@ -8,6 +8,7 @@ from threading import Event, Thread
 from time import sleep
 import weakref
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from fsffl.product import resource_coordinator as resource_module
@@ -17,6 +18,7 @@ from fsffl.product.hosted_connect import (
     install_hosted_connect_routes,
 )
 from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
+from fsffl.product.league_value_lens_routes import install_league_value_lens_routes
 from fsffl.product.market_economics_cache import make_cached_candidate_economics
 from fsffl.product.market_progressive_enrichment import (
     MarketDecisionEnrichmentCoordinator,
@@ -885,3 +887,105 @@ def test_hard_memory_gate_is_unchanged() -> None:
     )
     assert "if limit > 0 and observed >= limit:" in acceptance
     assert "hard memory limit reached" in acceptance
+
+
+def test_intrinsic_compatible_restore_waits_for_existing_heavy_phase() -> None:
+    state = _state("a")
+    context = _runtime("user-a", state)
+    gate = HeavyWorkCoordinator(max_waiters=2)
+    forecast_entered = Event()
+    release_forecast = Event()
+    restore_called = Event()
+    restore_finished = Event()
+    contract = SimpleNamespace(estimates=())
+
+    class Loader:
+        forecast_model_version = "fixture-v1"
+
+        def restore_compatible(self, _context):
+            restore_called.set()
+            return contract
+
+        def intrinsic_input_fingerprint(self, _context):
+            return "fixture-input"
+
+        def __call__(self, _context):
+            raise AssertionError("staged compatible restore should avoid rebuild")
+
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        Loader(),
+        max_workers=1,
+        heavy_work_coordinator=gate,
+    )
+
+    def hold_forecast() -> None:
+        with gate.claim(kind="forecast", key="forecast:first-load"):
+            forecast_entered.set()
+            assert release_forecast.wait(timeout=2.0)
+
+    def restore_intrinsic() -> None:
+        coordinator.restore_compatible_staged(context)
+        restore_finished.set()
+
+    forecast_thread = Thread(target=hold_forecast)
+    restore_thread = Thread(target=restore_intrinsic)
+    forecast_thread.start()
+    assert forecast_entered.wait(timeout=1.0)
+    restore_thread.start()
+    sleep(0.05)
+
+    assert restore_called.is_set() is False
+    assert restore_finished.is_set() is False
+    assert gate.snapshot().waiting_count == 1
+
+    release_forecast.set()
+    forecast_thread.join(timeout=2.0)
+    restore_thread.join(timeout=2.0)
+    assert not forecast_thread.is_alive()
+    assert not restore_thread.is_alive()
+    assert restore_called.is_set()
+    restored = coordinator.current(context)
+    assert restored is not None
+    assert restored.contract is contract
+
+
+def test_first_load_value_lenses_do_not_start_intrinsic_or_materialize_player_rows() -> None:
+    state = _state("a")
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("user-a", state)
+    store.select_team("user-a", state.teams[0].team_id)
+    store.begin_working_generation("user-a", league_state=state)
+
+    class Coordinator:
+        def __init__(self) -> None:
+            self.request_calls = 0
+
+        def current(self, _runtime):
+            return None
+
+        def request(self, _runtime):
+            self.request_calls += 1
+            raise AssertionError("first-load foreground read must not start Intrinsic")
+
+    coordinator = Coordinator()
+    app = FastAPI()
+    install_league_value_lens_routes(
+        app,
+        runtime_store=store,
+        contract_loader=lambda _runtime: (_ for _ in ()).throw(
+            AssertionError("first-load foreground read must not load Intrinsic")
+        ),
+        require_user=lambda: "user-a",
+        background_coordinator=coordinator,  # type: ignore[arg-type]
+    )
+    client = TestClient(app)
+
+    response = client.get("/api/league/value-lenses?universe=all")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "building"
+    assert payload["league_state_id"] == state.state_id
+    assert payload["players"] == []
+    assert payload["intrinsic_execution"]["status"] == "staged"
+    assert payload["surface_readiness"]["status"] == "building_optional"
+    assert coordinator.request_calls == 0
