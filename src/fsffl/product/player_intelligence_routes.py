@@ -150,9 +150,13 @@ class PlayerHistoryBackgroundCoordinator:
         key: tuple[str, str, str],
         context: UserRuntimeContext,
     ) -> None:
-        self._update(key, status=PlayerHistoryBuildStatus.RUNNING)
+        if not self._update(key, status=PlayerHistoryBuildStatus.RUNNING):
+            return
 
         def build_and_attach_owned() -> None:
+            with self._lock:
+                if key not in self._records:
+                    return
             seasons = self._service.player_history(context, key[2])
             # Attach or discard while still inside the heavy-work claim. If a State
             # transition cleared this key, _update returns False and the local
@@ -187,11 +191,11 @@ class PlayerHistoryBackgroundCoordinator:
         status: PlayerHistoryBuildStatus,
         seasons: tuple[HistoricalPlayerSeason, ...] = (),
         error: str | None = None,
-    ) -> None:
+    ) -> bool:
         with self._lock:
             current = self._records.get(key)
             if current is None:
-                return
+                return False
             self._records[key] = replace(
                 current,
                 status=status,
@@ -204,6 +208,7 @@ class PlayerHistoryBackgroundCoordinator:
                 PlayerHistoryBuildStatus.FAILED,
             }:
                 self._futures.pop(key, None)
+            return True
 
     def clear_user(self, user_id: str) -> int:
         """Release user-scoped PI history result records; durable rows remain reusable."""
