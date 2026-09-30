@@ -497,6 +497,75 @@ def test_synchronous_connect_runs_boundary_before_behavioral_work(monkeypatch) -
     ]
 
 
+
+def test_overlapping_synchronous_connects_cannot_restart_older_behavior_after_newer_state(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state_a = _state("a")
+    state_b = _state("b")
+    state_c = _state("c")
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", state_a)
+    b_boundary_entered = Event()
+    release_b_boundary = Event()
+    events: list[tuple[str, str]] = []
+
+    def boundary(transition: ResourceTransition):
+        events.append(("boundary", str(transition.next_league_id)))
+        if transition.next_league_id == state_b.league.league_id:
+            b_boundary_entered.set()
+            assert release_b_boundary.wait(timeout=2.0)
+        return {"status": "released"}
+
+    behavior = SimpleNamespace(
+        start=lambda **kwargs: events.append(
+            ("behavior", kwargs["league_state"].league.league_id)
+        )
+    )
+    app = create_app(
+        runtime_store=store,
+        state_loader=lambda external_id: {
+            "b": state_b,
+            "c": state_c,
+        }[external_id],
+        behavioral_coordinator=behavior,
+        state_resource_boundary=boundary,
+    )
+    client = TestClient(app)
+    responses: dict[str, object] = {}
+
+    def connect(external_id: str) -> None:
+        responses[external_id] = client.post(
+            "/api/connect/sleeper",
+            json={"league_external_id": external_id},
+        )
+
+    b_thread = Thread(target=lambda: connect("b"))
+    c_thread = Thread(target=lambda: connect("c"))
+    b_thread.start()
+    assert b_boundary_entered.wait(timeout=1.0)
+
+    c_thread.start()
+    sleep(0.05)
+    assert c_thread.is_alive()
+
+    release_b_boundary.set()
+    b_thread.join(timeout=2.0)
+    c_thread.join(timeout=2.0)
+    assert not b_thread.is_alive()
+    assert not c_thread.is_alive()
+    assert responses["b"].status_code == 200
+    assert responses["c"].status_code == 200
+    assert store.get("local-beta-user").league_state.state_id == state_c.state_id
+    assert events == [
+        ("boundary", "sleeper:b"),
+        ("behavior", "sleeper:b"),
+        ("boundary", "sleeper:c"),
+        ("behavior", "sleeper:c"),
+    ]
+
+
 def test_background_connect_runs_same_boundary_before_behavioral_work(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     state_a = _state("a")
