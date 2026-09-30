@@ -697,3 +697,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Perform one bounded beta-specific staging pass: use existing phase telemetry to prevent avoidable overlap among memory-intensive first-load phases while preserving all model outputs/semantics and foreground responsiveness.
 - No leak hunt, no model-fidelity reduction, no architecture broadening, no rapid-switch stress.
 - After CI/focused validation, deploy and rerun the realistic hosted lifecycle journey. If still over gate with clean bounded ownership, return to Management for capacity decision rather than further micro-optimization.
+
+
+## 2026-09-29 — #304 merged; hosted acceptance pending
+- **Implementation — ACTIVE / sole product-critical path.**
+- PR #304 merged as `6a531d3d27fa2d63c459b1888e162b5086a36a38`; CI/focused/live validation is green.
+- No durable post-merge hosted result is recorded yet.
+- Deploy exact #304 lineage and run the realistic free-Render lifecycle journey now. Record peak/current memory and foreground usability.
+- If PASS, move directly to Safari. If still over gate with clean ownership/staging, stop and return to Management for capacity decision.
