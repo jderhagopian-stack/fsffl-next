@@ -1780,9 +1780,15 @@ fresh build. Value-lens requests were staged/lightweight; no incident evidence
 shows foreground capability reads reconstructing expensive model layers. #306
 was a warm durable restore and did not profile the cold refresh journey.
 
-Exit gates: run full CI and fresh exact-head review, merge/deploy, capture a
-realistic fresh-build's stage RSS plus foreground responsiveness on Render,
-verify usable Forecast/Simulation/Value and downstream capabilities, then
-repeat physical iPhone/Safari acceptance. Do not change model semantics or the
-hard Render limit. Until the live fresh-build and physical retest pass, status
-is **BLOCKED — runtime acceptance**.
+PR #308 merged as `dbbab4a67a8366de9e90fad094236e1f779ebda5`; exact-head CI and
+triggered focused/live lanes passed. The external Atlas authority audit passed
+on retry after a connection reset. Render deploy
+`dep-dau9kng93c1s73datfl0` is live, with clean application startup.
+
+**Status: READY FOR PHYSICAL IPHONE/SAFARI ACCEPTANCE.** In that session, run
+the realistic fresh build with concurrent foreground reads and Market/value-
+lens polling. Confirm usable Forecast/Simulation/Value and downstream
+capabilities, review the new per-phase RSS/active-claim logs, and then complete
+the physical Safari retest. No fresh build has run on the corrective deploy,
+so its phase-level memory profile remains to be collected. Keep the hard Render
+limit and model semantics unchanged.

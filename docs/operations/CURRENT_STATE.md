@@ -1699,3 +1699,32 @@ PR #307 (`Fix physical Safari Connect handoff`) passed full CI plus Home, Franch
 No Forecast, Simulation, Value, Intrinsic, resource-boundary or hosted-restore semantics were reopened.
 
 **Controlling gate: deploy current main and perform the physical iPhone/Safari Connect retest.** Do not substitute another server-only acceptance run. If the physical Connect path now renders the requested league and team selector, close this corrective and return to capability development.
+
+
+## 2026-09-30 — PR #308 refresh lifecycle corrective deployed; physical acceptance next
+The physical refresh/memory contradiction reopened runtime lifecycle scope. PR
+#308 merged as `dbbab4a67a8366de9e90fad094236e1f779ebda5`; exact-head CI passed
+(1,885 tests), and all triggered focused/live lanes passed. The external Atlas
+provider authority audit passed on retry after one transient connection reset.
+
+Render deploy `dep-dau9kng93c1s73datfl0` is live on
+`fsffl-next-private-beta`; Uvicorn application startup completed cleanly at
+`2026-09-30T05:14:27Z`. Corrective code coalesces manual intelligence refresh
+into an active automatic Sleeper refresh, admits State materialization through
+the heavy-work lane, persists a new State ID when direct State sync advances,
+and resumes missing exact-State layers after process restart. Reconciliation
+now records RSS/current peak and active/waiting heavy-work state at the build
+boundaries. The unchanged hard-memory limit and all model semantics remain in
+force.
+
+Deterministic regression covers the automatic refresh + manual tap + concurrent
+foreground/status reads + staged Market/value-lens polling journey, completion
+with usable Forecast/Simulation/current Value and downstream readiness, job
+State-ID checkpointing, and restart rebuild without a second State sync.
+
+**Status: READY FOR PHYSICAL IPHONE/SAFARI ACCEPTANCE.** Run the realistic fresh
+refresh with the normal concurrent browser reads and value-lens polling. Verify
+all required capabilities and inspect per-phase RSS logs. The 04:11 incident's
+coarse telemetry cannot attribute the exact allocation delta to individual
+objects, and no fresh build has yet exercised the new instrumentation. Keep the
+physical Safari acceptance as the controlling gate.
