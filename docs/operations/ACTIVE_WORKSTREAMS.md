@@ -823,3 +823,13 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Immediate Work ownership: instrument and identify the transient peak owner(s); apply only narrow ownership/lifetime/reclaim/duplicate-work corrections that preserve all Forecast/Simulation/Value semantics and 50,000 trials.
 - Then rerun the reversible batch-500 hosted journey with true concurrent Home/My Team/Product Context reads, readiness/publication, restart restore, and exact RSS evidence; restore main afterward.
 - If the peak cannot be brought safely under the unchanged limit without broader architecture or fidelity changes, stop at Management for a capacity decision.
+
+
+## 2026-09-30 — Active next step: attribute peak, advance Simulation 2.0 only where causal
+- PR #311 remains the active Simulation modernization branch.
+- First action is memory attribution, not speculative micro-optimization.
+- Explicitly test whether the hosted high-water peak is caused by Forecast → Simulation duplicated representations/lifetimes that the planned Simulation 2.0 compiled-state / compact-array / reusable-buffer / invariant-reuse architecture would eliminate.
+- If yes, implement the smallest reusable 2.0 primitive now and measure it.
+- If no, fix the independently proven Forecast/player-history owner narrowly.
+- Do not rewrite the whole engine or reduce 50k/model fidelity.
+- Then exact-head CI/review → reversible batch-500 Render rerun → concurrent foreground/readiness/restart/RSS evidence → rollback → Management gate if still over limit.
