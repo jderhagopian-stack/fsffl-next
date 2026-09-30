@@ -705,3 +705,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - No durable post-merge hosted result is recorded yet.
 - Deploy exact #304 lineage and run the realistic free-Render lifecycle journey now. Record peak/current memory and foreground usability.
 - If PASS, move directly to Safari. If still over gate with clean ownership/staging, stop and return to Management for capacity decision.
+
+
+## 2026-09-29 — Realistic journey cleared; final restore rerun pending
+- **Implementation — ACTIVE / sole product-critical path.**
+- #305 merged as `d126ef3b952d2f49e3a95ac484194ac5ccf59dd5`; realistic FSFFL -> Hodor -> FSFFL journey advanced through the unchanged hard-memory gate to the restart step.
+- Exact restart restored FSFFL State, managed team, publication generation, Forecast, Simulation and Value correctly.
+- The remaining failure was harness-only: restore mode required Intrinsic before the normal staged PI/product path rehydrated it.
+- #306 merged as `c5e6e23596a0fd2489f82c309ffdc241a5e06e80` to align that restore assertion with actual staged product behavior; no runtime/model/product-route change.
+- Final action: deploy exact #306 lineage and rerun staged restore acceptance. If PASS, move immediately to physical Safari. No broader corrective work unless new runtime evidence appears.
