@@ -20,6 +20,7 @@ from typing import Iterator
 
 _logger = logging.getLogger("uvicorn.error")
 _ENV_KEY = "FSFFL_MEMORY_ATTRIBUTION"
+_GRAPH_ENV_KEY = "FSFFL_MEMORY_OBJECT_GRAPH"
 _PROC_STATUS = "/proc/self/status"
 _PROC_STATM = "/proc/self/statm"
 _PAGE_SIZE = os.sysconf("SC_PAGE_SIZE")
@@ -46,6 +47,11 @@ def process_peak_rss_bytes() -> int:
 
 def enabled() -> bool:
     return os.getenv(_ENV_KEY, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def graph_enabled() -> bool:
+    """Enable the bounded object walk separately from low-cost RSS sampling."""
+    return os.getenv(_GRAPH_ENV_KEY, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 @contextmanager
@@ -141,7 +147,7 @@ def object_graph_size(root: object, *, max_nodes: int = 20_000) -> tuple[int, in
 def log_object_graph(label: str, **roots: object) -> None:
     """Log bounded unique object-graph sizes for explicitly selected roots."""
 
-    if not enabled():
+    if not graph_enabled():
         return
     for name, root in roots.items():
         size, nodes, truncated = object_graph_size(root)
