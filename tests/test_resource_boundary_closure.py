@@ -27,6 +27,7 @@ from fsffl.product.opportunity_workspace_cache import make_cached_opportunity_wo
 from fsffl.product.player_intelligence_routes import (
     PlayerHistoryBackgroundCoordinator,
     PlayerHistoryBuildStatus,
+    PlayerHistoryCapacityError,
 )
 from fsffl.product.resource_coordinator import (
     DEFAULT_MEMORY_LIMIT_BYTES,
@@ -558,6 +559,36 @@ def test_cleared_player_history_worker_stops_before_heavy_service_call() -> None
     assert service_calls == 0
     assert coordinator.clear_user("user-a") == 0
     assert record.user_id == "user-a"
+
+
+
+def test_stale_player_history_context_cannot_reacquire_execution_after_boundary() -> None:
+    context = _runtime("user-a", _state("a"))
+    service_calls = 0
+
+    class Service:
+        def player_history(self, _context, _player_id):
+            nonlocal service_calls
+            service_calls += 1
+            return ()
+
+    coordinator = PlayerHistoryBackgroundCoordinator(
+        Service(),
+        max_workers=1,
+        max_pending=1,
+        max_records=2,
+        ownership_validator=lambda _context: False,
+    )
+
+    try:
+        coordinator.request(context, "player:1")
+    except PlayerHistoryCapacityError as exc:
+        assert "context changed" in str(exc)
+    else:
+        raise AssertionError("stale Player History context must be rejected")
+
+    assert service_calls == 0
+    assert coordinator.clear_user("user-a") == 0
 
 
 def test_synchronous_connect_runs_boundary_before_behavioral_work(monkeypatch) -> None:
