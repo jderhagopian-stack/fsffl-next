@@ -1509,3 +1509,33 @@ Management disposition:
 - do not merge until clean. If clean, merge/deploy and immediately run the realistic free-Render hosted journey under the unchanged hard-memory gate.
 
 No broader architecture expansion is authorized.
+
+
+## 2026-09-29 — PR #303 exact-head resource-boundary closure is clean; merge/deploy gate is next
+PR #303 exact head `38d77fc7ce700dba9c0a5866ffc20c0a0ac6272b` has now cleared the full pre-merge resource-boundary gate:
+- full suite GREEN: 1,874 passed;
+- all focused/closure lanes GREEN;
+- live diagnostics GREEN;
+- hard memory gate unchanged at 536,870,900 bytes;
+- fresh exact-head whole-class P1/P2 review found **no remaining concrete P1/P2 resource-boundary lifecycle defect**.
+
+The clean review explicitly covers:
+- same-user activation/cleanup/handoff serialization;
+- prior-published Market reacquisition after cleanup;
+- Intrinsic restore/request epoch ownership;
+- PI History and PI Future Forecast async ownership analogues;
+- overlapping B->C transitions and synchronous connects;
+- stale Market, Intrinsic, PI History and PI Future cache/result reacquisition;
+- unchanged hard-memory gate.
+
+Management promotion status:
+- **pre-merge resource-boundary implementation/validation layer: ACCEPTED**;
+- product/runtime usability is **not yet accepted** until hosted deployment and realistic free-Render acceptance complete.
+
+Immediate next step:
+1. merge PR #303;
+2. deploy exact merged lineage;
+3. run the realistic free-Render journey only: clean/restore FSFFL -> settle -> Hodor -> settle -> FSFFL -> settle -> restart -> restored session, with normal foreground navigation/readiness checks;
+4. do not add rapid-switch stress or commercial-load requirements;
+5. if the journey passes the unchanged memory gate and foreground usability is acceptable, return to physical Safari acceptance and capability development;
+6. if ownership remains clean but legitimate normal beta work still exceeds the free-tier envelope, escalate to the smallest practical beta staging/capacity decision rather than reopening indefinite leak hunting.
