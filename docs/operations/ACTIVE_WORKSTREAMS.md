@@ -714,3 +714,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - The remaining failure was harness-only: restore mode required Intrinsic before the normal staged PI/product path rehydrated it.
 - #306 merged as `c5e6e23596a0fd2489f82c309ffdc241a5e06e80` to align that restore assertion with actual staged product behavior; no runtime/model/product-route change.
 - Final action: deploy exact #306 lineage and rerun staged restore acceptance. If PASS, move immediately to physical Safari. No broader corrective work unless new runtime evidence appears.
+
+
+## 2026-09-29 — Physical Safari Connect blocker
+- **Implementation — ACTIVE / sole product-critical path.**
+- Hosted lifecycle acceptance through #306 remains accepted, but physical iPhone/Safari validation fails at the first user action: the league will not connect.
+- Reopen only the browser/manual Connect path. Reproduce the live UI flow, trace tap/prompt -> `/api/connect/sleeper/background` -> job polling -> product-context handoff, and inspect Safari asset freshness/interception behavior.
+- Fix the smallest concrete defect, add a deterministic browser-path regression, deploy, and return directly to physical Safari retest.
+- Do not reopen model/resource architecture or replace this with another server-only acceptance run.
