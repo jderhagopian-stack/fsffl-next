@@ -1719,3 +1719,26 @@ The same hosted run then passed clean first-run, explicit team selection, termin
 - coarse Render metrics observed ~525.7 MB nearby, below the process-level instantaneous peak.
 
 Terminal state under OPERATING_PROTOCOL: **BLOCKED — hosted hard-memory gate**. The remaining FSFFL return, same-State, managed-team race, restart and restored-session legs were not run after this failure. Do not attribute this to the #301 harness fix, reopen #298 FUMBLES_LOST authority, alter PI readiness semantics, or relax #294/#295/#296 lifecycle/atomic-publication boundaries. Physical Safari remains HOLD pending Management authorization for the resource blocker.
+
+
+## 2026-09-29 — Hosted lifecycle acceptance PASS after #306; release to physical Safari
+Final staged restore acceptance completed on exact #306 merge `c5e6e23596a0fd2489f82c309ffdc241a5e06e80`, Render deploy `dep-dau72mlg1s2s73bnbjqg`.
+
+Result: **PASS**.
+
+The restore-mode run proved the final remaining lifecycle gate:
+- exact durable FSFFL State restored: `7dbcbf4e355094eda76eafd24bb36294100a34841f3a94f0126ba32ad1d533f6`;
+- managed team restored exactly: `sleeper:1312071960615731200:team:1`;
+- publication generation restored exactly and remained unchanged throughout staged rehydration: `88cf14c2269a66c64714c0999474434fbc3cf765edc57d9a4d577aec85bf5a12`;
+- Forecast, Simulation and current Value restored immediately from durable authority;
+- initial restored surfaces were coherent/current on that same generation while readiness was truthfully partial only because Intrinsic had not yet been rehydrated;
+- governed PI history completed, staged Intrinsic restore completed, Intrinsic became full, and product readiness became full without changing publication generation;
+- Home, Franchise, League, Market and both Market Value Lens surfaces all remained current/published on the same generation before and after Intrinsic rehydration;
+- restore-mode peak RSS was `308,518,912` bytes against the unchanged hard limit `536,870,900`, leaving `228,351,988` bytes of hard-limit headroom;
+- terminal log: `FSFFL RUNTIME AVAILABILITY ACCEPTANCE PASS`.
+
+This completes the realistic free-Render hosted lifecycle gate for the accepted #303-#306 stabilization lineage. No runtime/model corrective is indicated by the final restore run.
+
+**Release status: READY FOR PHYSICAL IPHONE/SAFARI VALIDATION.**
+
+Next action is product-owner physical Safari smoke/testing. Do not reopen stabilization architecture absent contradictory evidence from that physical test.
