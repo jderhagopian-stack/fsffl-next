@@ -1865,3 +1865,9 @@ Authorized first tranche:
 8. return to Management before any optimization requiring non-bit-identical RNG/reduction semantics or model-fidelity tradeoff.
 
 Acceptance for this tranche is measured speed/resource improvement with unchanged governed outputs, deterministic/replay coverage, full CI, and realistic hosted/physical validation. Do not reopen broad runtime architecture or Market tuning while this program is active absent contradictory evidence.
+
+
+## 2026-09-30 — Management unblocks batched Gaussian experiment
+PR #311 established that scalar Gaussian generation is the dominant local Simulation kernel cost (~59.7% of isolated runtime) while the exact-preserving optimization tranche yields only ~3.4% improvement. Management therefore approves the **experimental** versioned NumPy/PCG64 batched-normal path and its predeclared equivalence study, while explicitly withholding production adoption.
+
+Work may now continue on the experimental branch, implement replay/version identity, run the ≥100-seed × 50k equivalence/resource study, and report results. Production remains on the current Python RNG path until a second Management approval.
