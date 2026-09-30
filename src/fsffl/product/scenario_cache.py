@@ -81,7 +81,8 @@ def _loader_identity(loader: SimulationLoader) -> str:
 
     module = getattr(loader, "__module__", type(loader).__module__)
     qualname = getattr(loader, "__qualname__", type(loader).__qualname__)
-    return f"{module}:{qualname}:{id(loader)}"
+    explicit = getattr(loader, "__fsffl_cache_identity__", None)
+    return f"{module}:{qualname}:{explicit or ''}:{id(loader)}"
 
 
 def _durable_loader_identity(loader: SimulationLoader) -> str:
@@ -139,12 +140,15 @@ def _durable_key(
     simulation_loader: SimulationLoader,
 ) -> ArtifactKey:
     durable_fingerprint = _durable_forecast_fingerprint(evidence, simulation_loader)
+    model_version = getattr(simulation_loader, "__fsffl_simulation_model_version__", None)
+    if model_version is None:
+        model_version = SIMULATION_MODEL_VERSION
     return ArtifactKey(
         artifact_kind=SIMULATION_ARTIFACT_KIND,
         scope_kind=LEAGUE_SCOPE_KIND,
         scope_id=league_state.state_id,
         input_fingerprint=canonical_fingerprint(league_state.state_id, durable_fingerprint),
-        model_version=SIMULATION_MODEL_VERSION,
+        model_version=str(model_version),
     )
 
 

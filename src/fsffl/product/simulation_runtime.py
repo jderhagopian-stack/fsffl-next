@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Callable
+import os
+from typing import Callable, Literal
 
 from fsffl.analytics.league import LeagueAnalyticsView, build_league_analytics_view
 from fsffl.analytics.models import (
@@ -31,6 +32,46 @@ from fsffl.team_utility import (
     optimize_team_lineup,
     simulate_regular_season,
 )
+from fsffl.team_utility.simulation import (
+    NUMPY_PCG64_BATCHED_GAUSS_V1,
+    PYTHON_RANDOM_GAUSS_V1,
+)
+
+LIVE_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:resilience-driver-identity"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:numpy-pcg64-batched-gauss-v1"
+
+
+def configured_simulation_rng() -> tuple[str, int | None]:
+    """Resolve an explicit deployment RNG protocol; production defaults to legacy."""
+
+    protocol = os.environ.get("FSFFL_SIMULATION_RNG_PROTOCOL", PYTHON_RANDOM_GAUSS_V1).strip()
+    if protocol == PYTHON_RANDOM_GAUSS_V1:
+        raw_batch_size = os.environ.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "").strip()
+        if raw_batch_size:
+            raise ValueError("FSFFL_SIMULATION_RNG_BATCH_SIZE requires the NumPy protocol")
+        return protocol, None
+    if protocol == NUMPY_PCG64_BATCHED_GAUSS_V1:
+        raw_batch_size = os.environ.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "500").strip()
+        try:
+            batch_size = int(raw_batch_size)
+        except ValueError as exc:
+            raise ValueError("FSFFL_SIMULATION_RNG_BATCH_SIZE must be an integer") from exc
+        if not 1 <= batch_size <= 50_000:
+            raise ValueError("FSFFL_SIMULATION_RNG_BATCH_SIZE must be between 1 and 50000")
+        return protocol, batch_size
+    raise ValueError(f"unsupported FSFFL_SIMULATION_RNG_PROTOCOL: {protocol}")
+
+
+def configured_simulation_model_version() -> str:
+    return simulation_model_version_for_rng_protocol(configured_simulation_rng()[0])
+
+
+def simulation_model_version_for_rng_protocol(rng_protocol: str) -> str:
+    if rng_protocol == PYTHON_RANDOM_GAUSS_V1:
+        return LIVE_SIMULATION_MODEL_VERSION
+    if rng_protocol == NUMPY_PCG64_BATCHED_GAUSS_V1:
+        return EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION
+    raise ValueError(f"unsupported Simulation RNG protocol: {rng_protocol}")
 
 
 class LiveSimulationAnalyticsResult(FrozenModel):
@@ -40,7 +81,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
     scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic
-    model_version: str = "next8-live-simulation-analytics-v8:resilience-driver-identity"
+    model_version: str = LIVE_SIMULATION_MODEL_VERSION
 
 
 def build_live_simulation_analytics(
@@ -50,6 +91,10 @@ def build_live_simulation_analytics(
     forecast_model_version: str,
     simulation_count: int = 50_000,
     seed: int = 20260905,
+    rng_protocol: Literal[
+        "python-random-gauss-v1", "numpy-pcg64-batched-gauss-v1"
+    ] = PYTHON_RANDOM_GAUSS_V1,
+    rng_batch_size: int | None = None,
     generated_at: datetime | None = None,
     cooperative_yield: Callable[[], object] | None = None,
 ) -> LiveSimulationAnalyticsResult:
@@ -145,6 +190,8 @@ def build_live_simulation_analytics(
         simulation_count=simulation_count,
         seed=seed,
         model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
+        rng_protocol=rng_protocol,
+        rng_batch_size=rng_batch_size,
     )
     simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
     scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
@@ -312,4 +359,5 @@ def build_live_simulation_analytics(
         team_views=views,
         simulation_result=simulation,
         scoring_dispersion_diagnostic=scoring_dispersion_diagnostic,
+        model_version=simulation_model_version_for_rng_protocol(rng_protocol),
     )

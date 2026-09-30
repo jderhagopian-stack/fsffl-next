@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from math import sqrt
 from random import Random
+import sys
 from time import perf_counter
 
 from fsffl.team_utility.simulation import (
@@ -116,9 +117,16 @@ def _reference(request: RegularSeasonSimulationInput):
     return tuple(outcomes)
 
 
-def main() -> None:
-    request = _request()
+def _regular_outcome_signature(rows):
+    """Project production outcomes onto fields covered by the independent reference."""
+    return tuple(
+        (row.team_id, row.expected_wins, row.wins_stddev,
+         row.playoff_probability, row.first_place_probability)
+        for row in rows
+    )
 
+
+def _measure(label, request) -> None:
     start = perf_counter()
     reference = _reference(request)
     reference_seconds = perf_counter() - start
@@ -127,18 +135,30 @@ def main() -> None:
     optimized = simulate_regular_season(request)
     optimized_seconds = perf_counter() - start
 
-    if reference != optimized.outcomes:
-        raise SystemExit("optimized simulator output differs from reference implementation")
+    if _regular_outcome_signature(reference) != _regular_outcome_signature(optimized.outcomes):
+        raise SystemExit(f"{label}: regular-season output differs from reference implementation")
 
     speedup = reference_seconds / optimized_seconds
     reduction = 1.0 - (optimized_seconds / reference_seconds)
+    print(f"case={label}")
+    print(f"python_version={sys.version.split()[0]}")
     print(f"simulation_count={request.simulation_count}")
-    print(f"teams=12 weeks=14 games={len(request.schedule)}")
+    print(f"teams=12 weeks=14 games={len(request.schedule)} seed={request.seed}")
     print(f"reference_seconds={reference_seconds:.6f}")
     print(f"optimized_seconds={optimized_seconds:.6f}")
     print(f"speedup={speedup:.3f}x")
     print(f"runtime_reduction={reduction:.1%}")
-    print("outputs_exactly_equal=true")
+    print("regular_season_outputs_exactly_equal=true")
+
+
+def main() -> None:
+    request = _request()
+    changed_scoring = tuple(
+        item.model_copy(update={"mean_points": item.mean_points + 0.125})
+        for item in request.weekly_scoring
+    )
+    _measure("fresh", request)
+    _measure("changed_scoring", request.model_copy(update={"weekly_scoring": changed_scoring}))
 
 
 if __name__ == "__main__":

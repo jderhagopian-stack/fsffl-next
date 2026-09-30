@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "FSFFL NEXT dynasty decision-intelligence platform"
 requires-python = ">=3.11"
 dependencies = [
+  "numpy>=2.3,<3",
   "pydantic>=2.8,<3",
   "scikit-learn>=1.5,<2",
 ]

@@ -8,7 +8,15 @@ from fsffl.forecast.models import (
     ForecastMetric,
     ForecastObservation,
 )
-from fsffl.product.simulation_runtime import build_live_simulation_analytics
+from fsffl.product.simulation_runtime import (
+    build_live_simulation_analytics,
+    configured_simulation_rng,
+)
+from fsffl.product.runtime import LiveForecastEvidence, UserRuntimeContext
+from fsffl.product.opportunity_search import build_scoped_trade_candidates
+from fsffl.product.trade_center_view import build_trade_center_browser_view
+from fsffl.persistence.runtime_cache import decode_simulation, simulation_artifact
+from fsffl.persistence.contracts import canonical_fingerprint
 from fsffl.state.models import (
     League,
     LeagueMatchup,
@@ -25,6 +33,17 @@ from fsffl.state.models import (
     Team,
     TeamState,
 )
+from fsffl.team_utility.simulation import NUMPY_PCG64_BATCHED_GAUSS_V1
+from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
+from fsffl.value.models import ValueAssetKind
+from fsffl.team_utility import compare_team_utility_vectors
+from fsffl.trade_decision import (
+    BilateralTradeProposal,
+    TradeLeg,
+    classify_bilateral_trade_decision,
+    evaluate_bilateral_trade_deltas,
+)
+from fsffl.state.models import PlayerAsset
 
 
 AS_OF = datetime(2026, 9, 5, 22, tzinfo=UTC)
@@ -141,3 +160,330 @@ def test_default_hosted_simulation_loader_resolves_foreground_pressure_callback(
     callback = build.call_args.kwargs["cooperative_yield"]
     assert callback.__self__ is webapp.foreground_pressure
     assert callback.__func__ is webapp.foreground_pressure.cooperative_yield.__func__
+
+
+def test_experimental_rng_keeps_player_forecasts_and_persists_distinct_identity() -> None:
+    state = _state()
+    forecasts = _forecasts()
+    legacy = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=2_000,
+        seed=717,
+        generated_at=AS_OF,
+    )
+    experimental = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=2_000,
+        seed=717,
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=250,
+        generated_at=AS_OF,
+    )
+
+    def player_projection(result):
+        return tuple(
+            (team.team_id, player.player_id, player.forecasts, player.season_fantasy_points_projection)
+            for team in result.team_views
+            for player in team.players
+        )
+
+    assert player_projection(legacy) == player_projection(experimental)
+    assert legacy.model_version != experimental.model_version
+    assert experimental.model_version.endswith("numpy-pcg64-batched-gauss-v1")
+    legacy_artifact = simulation_artifact(
+        league_state_id=state.state_id,
+        forecast_fingerprint="forecast-fixture",
+        result=legacy,
+    )
+    experimental_artifact = simulation_artifact(
+        league_state_id=state.state_id,
+        forecast_fingerprint="forecast-fixture",
+        result=experimental,
+    )
+    assert legacy_artifact.key.model_version != experimental_artifact.key.model_version
+    assert legacy_artifact.key.input_fingerprint == canonical_fingerprint(
+        state.state_id, "forecast-fixture"
+    )
+    assert legacy_artifact.key.input_fingerprint != experimental_artifact.key.input_fingerprint
+    assert decode_simulation(experimental_artifact.payload) == experimental
+
+
+def test_experimental_50k_runtime_preserves_forecast_and_search_inputs() -> None:
+    state = _state()
+    forecasts = _forecasts()
+    legacy = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=50_000,
+        seed=20261001,
+        generated_at=AS_OF,
+    )
+    experimental = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=50_000,
+        seed=20261001,
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+        generated_at=AS_OF,
+    )
+    replay = build_live_simulation_analytics(
+        state,
+        forecasts=forecasts,
+        forecast_model_version="next2-test",
+        simulation_count=50_000,
+        seed=20261001,
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+        generated_at=AS_OF,
+    )
+
+    assert experimental.simulation_result.simulation_count == 50_000
+    assert experimental.simulation_result == replay.simulation_result
+    assert tuple(
+        (team.team_id, player.player_id, player.forecasts, player.season_fantasy_points_projection)
+        for team in legacy.team_views
+        for player in team.players
+    ) == tuple(
+        (team.team_id, player.player_id, player.forecasts, player.season_fantasy_points_projection)
+        for team in experimental.team_views
+        for player in team.players
+    )
+    # Search consumes these already-published Team Utility rows; RNG choice must not
+    # change the Forecast-derived position strengths or roster-fragility inputs.
+    assert tuple(
+        (team.team_id, team.position_strengths, team.utility.roster_resilience)
+        for team in legacy.team_views
+    ) == tuple(
+        (team.team_id, team.position_strengths, team.utility.roster_resilience)
+        for team in experimental.team_views
+    )
+    assert tuple(
+        (row.team_id, row.expected_wins > 2.0, row.playoff_probability > 0.5)
+        for row in legacy.league_view.teams
+    ) == tuple(
+        (row.team_id, row.expected_wins > 2.0, row.playoff_probability > 0.5)
+        for row in experimental.league_view.teams
+    )
+
+
+def test_hosted_rng_protocol_configuration_is_explicit_and_fail_closed(monkeypatch) -> None:
+    from fsffl.team_utility.simulation import (
+        NUMPY_PCG64_BATCHED_GAUSS_V1,
+        PYTHON_RANDOM_GAUSS_V1,
+    )
+
+    monkeypatch.delenv("FSFFL_SIMULATION_RNG_PROTOCOL", raising=False)
+    monkeypatch.delenv("FSFFL_SIMULATION_RNG_BATCH_SIZE", raising=False)
+    assert configured_simulation_rng() == (PYTHON_RANDOM_GAUSS_V1, None)
+
+    monkeypatch.setenv("FSFFL_SIMULATION_RNG_PROTOCOL", NUMPY_PCG64_BATCHED_GAUSS_V1)
+    assert configured_simulation_rng() == (NUMPY_PCG64_BATCHED_GAUSS_V1, 500)
+    monkeypatch.setenv("FSFFL_SIMULATION_RNG_BATCH_SIZE", "750")
+    assert configured_simulation_rng() == (NUMPY_PCG64_BATCHED_GAUSS_V1, 750)
+
+    monkeypatch.setenv("FSFFL_SIMULATION_RNG_BATCH_SIZE", "50001")
+    try:
+        configured_simulation_rng()
+    except ValueError as exc:
+        assert "between 1 and 50000" in str(exc)
+    else:
+        raise AssertionError("out-of-range RNG batches must fail closed")
+
+    monkeypatch.setenv("FSFFL_SIMULATION_RNG_PROTOCOL", "unversioned-rng")
+    try:
+        configured_simulation_rng()
+    except ValueError as exc:
+        assert "unsupported FSFFL_SIMULATION_RNG_PROTOCOL" in str(exc)
+    else:
+        raise AssertionError("unknown RNG protocols must fail closed")
+
+
+def test_changed_state_utility_decision_and_lineup_replay_across_rng_versions() -> None:
+    from fsffl.team_utility.simulation import PYTHON_RANDOM_GAUSS_V1
+
+    def swapped_state(state):
+        return state.model_copy(
+            update={
+                "team_states": (
+                    TeamState(team_id="a", roster=(RosterEntry(player_id="pb", slot=RosterSlot.QB),)),
+                    TeamState(team_id="b", roster=(RosterEntry(player_id="pa", slot=RosterSlot.QB),)),
+                )
+            }
+        )
+
+    def forecasts(*, near_boundary: bool):
+        if not near_boundary:
+            return _forecasts()
+        return tuple(
+            item.model_copy(
+                update={"distribution": ForecastDistribution(mean=325.0, stddev=80.0)}
+            )
+            for item in _forecasts()
+        )
+
+    state = _state()
+    changed_state = swapped_state(state)
+    assert state.state_id != changed_state.state_id
+    proposal = BilateralTradeProposal(
+        proposal_id="rng-changed-state",
+        as_of=AS_OF,
+        side_a=TradeLeg(team_id="a", sends=(PlayerAsset(player_id="pa"),)),
+        side_b=TradeLeg(team_id="b", sends=(PlayerAsset(player_id="pb"),)),
+    )
+    for near_boundary in (False, True):
+        forecast_rows = forecasts(near_boundary=near_boundary)
+        outputs = {}
+        for protocol in (PYTHON_RANDOM_GAUSS_V1, NUMPY_PCG64_BATCHED_GAUSS_V1):
+            outputs[protocol] = tuple(
+                build_live_simulation_analytics(
+                    scenario_state,
+                    forecasts=forecast_rows,
+                    forecast_model_version="next2-test",
+                    simulation_count=50_000,
+                    seed=20261002,
+                    rng_protocol=protocol,
+                    rng_batch_size=500 if protocol == NUMPY_PCG64_BATCHED_GAUSS_V1 else None,
+                    generated_at=AS_OF,
+                )
+                for scenario_state in (state, changed_state)
+            )
+
+        legacy_before, legacy_after = outputs[PYTHON_RANDOM_GAUSS_V1]
+        numpy_before, numpy_after = outputs[NUMPY_PCG64_BATCHED_GAUSS_V1]
+        assert legacy_after.simulation_result.simulation_count == 50_000
+        assert numpy_after.simulation_result.simulation_count == 50_000
+
+        # Search consumes the published positional context, and this scenario's
+        # Forecast/State lineups, unchanged exactly across RNG protocols.
+        assert tuple(
+            (team.team_id, team.position_strengths, team.utility.roster_resilience)
+            for team in legacy_after.team_views
+        ) == tuple(
+            (team.team_id, team.position_strengths, team.utility.roster_resilience)
+            for team in numpy_after.team_views
+        )
+        assert tuple(
+            tuple((row.player_id, row.slot) for row in team.optimized_lineup.assignments)
+            for team in legacy_after.team_views
+        ) == tuple(
+            tuple((row.player_id, row.slot) for row in team.optimized_lineup.assignments)
+            for team in numpy_after.team_views
+        )
+
+        legacy_evaluation = evaluate_bilateral_trade_deltas(
+            proposal,
+            before_a=legacy_before.team_views[0].utility,
+            after_a=legacy_after.team_views[0].utility,
+            before_b=legacy_before.team_views[1].utility,
+            after_b=legacy_after.team_views[1].utility,
+        )
+        numpy_evaluation = evaluate_bilateral_trade_deltas(
+            proposal,
+            before_a=numpy_before.team_views[0].utility,
+            after_a=numpy_after.team_views[0].utility,
+            before_b=numpy_before.team_views[1].utility,
+            after_b=numpy_after.team_views[1].utility,
+        )
+        legacy_decision = classify_bilateral_trade_decision(legacy_evaluation)
+        numpy_decision = classify_bilateral_trade_decision(numpy_evaluation)
+        if not near_boundary:
+            assert legacy_decision.side_a.expected_wins == numpy_decision.side_a.expected_wins
+            assert legacy_decision.side_b.expected_wins == numpy_decision.side_b.expected_wins
+            assert legacy_decision.shape == numpy_decision.shape
+
+        # The test intentionally reports both signed effects for boundary cases;
+        # it does not force a tie/noise result into an equivalence assertion.
+        for before, after in ((legacy_before, legacy_after), (numpy_before, numpy_after)):
+            for team_id in ("a", "b"):
+                delta = compare_team_utility_vectors(
+                    next(row.utility for row in before.team_views if row.team_id == team_id),
+                    next(row.utility for row in after.team_views if row.team_id == team_id),
+                )
+                assert delta.competitive is not None
+
+
+def test_changed_state_search_candidates_and_order_match_across_rng_versions() -> None:
+    from fsffl.team_utility.simulation import PYTHON_RANDOM_GAUSS_V1
+
+    original = _state()
+    rules = original.league.rules.model_copy(
+        update={"lineup": (LineupRequirement(slot=RosterSlot.WR, count=1),)}
+    )
+    league = original.league.model_copy(update={"rules": rules})
+    state = original.model_copy(
+        update={
+            "league": league,
+            "team_states": tuple(
+                TeamState(
+                    team_id=row.team_id,
+                    roster=(RosterEntry(player_id=row.roster[0].player_id, slot=RosterSlot.WR),),
+                )
+                for row in original.team_states
+            ),
+            "players": tuple(row.model_copy(update={"position": Position.WR}) for row in original.players),
+        }
+    )
+    forecast_rows = tuple(row.model_copy(update={"position": Position.WR}) for row in _forecasts())
+    evidence = LiveForecastEvidence(
+        raw_forecasts=forecast_rows,
+        league_scored_forecasts=forecast_rows,
+        successful_source_ids=("source-a", "source-b"),
+        failed_sources=(),
+        uncertainty_ready=True,
+        runtime_result=None,
+    )
+    cardinal = {
+        player_id: FSFFLCardinalValueScore(
+            asset_id=player_id,
+            asset_kind=ValueAssetKind.PLAYER,
+            score=value,
+            as_of=AS_OF,
+            market_context_id="changed-state-rng-test",
+        )
+        for player_id, value in (("pa", 1000.0), ("pb", 900.0))
+    }
+
+    for scenario_state in (state, state.model_copy(update={
+        "team_states": (
+            TeamState(team_id="a", roster=(RosterEntry(player_id="pb", slot=RosterSlot.WR),)),
+            TeamState(team_id="b", roster=(RosterEntry(player_id="pa", slot=RosterSlot.WR),)),
+        )
+    })):
+        observed = {}
+        for protocol in (PYTHON_RANDOM_GAUSS_V1, NUMPY_PCG64_BATCHED_GAUSS_V1):
+            simulation = build_live_simulation_analytics(
+                scenario_state,
+                forecasts=forecast_rows,
+                forecast_model_version="next2-search-test",
+                simulation_count=50_000,
+                seed=20261003,
+                rng_protocol=protocol,
+                rng_batch_size=500 if protocol == NUMPY_PCG64_BATCHED_GAUSS_V1 else None,
+                generated_at=AS_OF,
+            )
+            runtime = UserRuntimeContext(
+                user_id="rng-validation",
+                league_state=scenario_state,
+                selected_team_id="a",
+                forecast_evidence=evidence,
+                simulation_analytics=simulation,
+            )
+            browser = build_trade_center_browser_view(scenario_state, focal_team_id="a")
+            candidates = build_scoped_trade_candidates(runtime, browser, cardinal)
+            assert candidates, "fixture must exercise a non-empty Search candidate set"
+            observed[protocol] = tuple(
+                (
+                    row["counterparty_team_id"],
+                    tuple(item["asset_ref"] for item in row["send"]),
+                    tuple(item["asset_ref"] for item in row["receive"]),
+                )
+                for row in candidates
+            )
+        assert observed[PYTHON_RANDOM_GAUSS_V1] == observed[NUMPY_PCG64_BATCHED_GAUSS_V1]

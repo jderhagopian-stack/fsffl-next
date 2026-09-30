@@ -67,7 +67,11 @@ from .runtime import (
     default_live_value_loader,
     default_sleeper_state_loader,
 )
-from .simulation_runtime import LiveSimulationAnalyticsResult, build_live_simulation_analytics
+from .simulation_runtime import (
+    LiveSimulationAnalyticsResult,
+    build_live_simulation_analytics,
+    configured_simulation_rng,
+)
 from .team_page import build_forecast_team_view, build_state_only_team_view
 from .trade_analysis_runtime import build_private_beta_trade_analysis
 from .trade_center import TradeDraft, TradeDraftSide, submit_trade_draft
@@ -754,11 +758,14 @@ def _default_simulation_loader(
     league_state: LeagueState,
     evidence: LiveForecastEvidence,
 ) -> LiveSimulationAnalyticsResult:
+    rng_protocol, rng_batch_size = configured_simulation_rng()
     return build_live_simulation_analytics(
         league_state,
         forecasts=evidence.league_scored_forecasts,
         forecast_model_version=evidence.model_version,
         simulation_count=50_000,
+        rng_protocol=rng_protocol,
+        rng_batch_size=rng_batch_size,
         cooperative_yield=foreground_pressure.cooperative_yield,
     )
 
