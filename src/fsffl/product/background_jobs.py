@@ -161,7 +161,12 @@ class IntelligenceJobCoordinator:
                 status=IntelligenceJobStatus.INTERRUPTED,
                 phase=IntelligenceJobPhase.INTERRUPTED,
                 failure_phase=interrupted_phase,
-                message="Intelligence refresh was interrupted by a server restart. Last-good intelligence remains active; start a new refresh when ready.",
+                message=(
+                    "Intelligence refresh was interrupted by a server restart. "
+                    "The browser will resume rebuilding any layers missing from the "
+                    "restored State; prior intelligence is served only when it still "
+                    "matches that exact State."
+                ),
                 updated_at=datetime.now(UTC),
                 error="server_restart",
             )
@@ -170,6 +175,41 @@ class IntelligenceJobCoordinator:
             self._jobs[restored.job_id] = restored
             self._current_by_user[user_id] = restored.job_id
         return restored
+
+    def update_current_league_state_id(
+        self,
+        *,
+        user_id: str,
+        expected_state_id: str,
+        league_state_id: str,
+    ) -> IntelligenceJob | None:
+        """Checkpoint the canonical identity reached by a running State sync."""
+
+        with self._user_lock_for(user_id):
+            with self._lock:
+                job_id = self._current_by_user.get(user_id)
+                current = self._jobs.get(job_id) if job_id is not None else None
+                if (
+                    current is None
+                    or current.league_state_id != expected_state_id
+                    or current.status
+                    not in {IntelligenceJobStatus.QUEUED, IntelligenceJobStatus.RUNNING}
+                ):
+                    return None
+                updated = replace(
+                    current,
+                    league_state_id=league_state_id,
+                    updated_at=datetime.now(UTC),
+                )
+                self._jobs[job_id] = updated
+            self._persist(updated)
+            _logger.info(
+                "FSFFL intelligence lifecycle State checkpoint job=%s user=%s state=%s",
+                updated.job_id,
+                updated.user_id,
+                updated.league_state_id,
+            )
+            return updated
 
     def _persist(self, job: IntelligenceJob) -> None:
         if self._persistence is None:

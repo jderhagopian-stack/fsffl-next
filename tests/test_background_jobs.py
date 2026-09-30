@@ -212,6 +212,34 @@ def test_restart_reconciles_durable_running_job_as_interrupted() -> None:
     release.set()
 
 
+def test_state_sync_checkpoints_new_identity_for_restart_recovery() -> None:
+    persistence = _LifecyclePersistence()
+    first = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence)  # type: ignore[arg-type]
+    release = Event()
+    started = Event()
+
+    def work(_progress) -> None:
+        started.set()
+        release.wait(timeout=2)
+
+    first.start(user_id="u-state-checkpoint", league_state_id="state-before-sync", work=work)
+    assert started.wait(timeout=2)
+    checkpointed = first.update_current_league_state_id(
+        user_id="u-state-checkpoint",
+        expected_state_id="state-before-sync",
+        league_state_id="state-after-sync",
+    )
+    assert checkpointed is not None
+    assert checkpointed.league_state_id == "state-after-sync"
+
+    restarted = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence)  # type: ignore[arg-type]
+    recovered = restarted.current("u-state-checkpoint")
+    assert recovered is not None
+    assert recovered.status == IntelligenceJobStatus.INTERRUPTED
+    assert recovered.league_state_id == "state-after-sync"
+    release.set()
+
+
 def test_completed_job_survives_coordinator_restart_without_recomputation() -> None:
     persistence = _LifecyclePersistence()
     first = IntelligenceJobCoordinator(max_workers=1, persistence_store=persistence)  # type: ignore[arg-type]

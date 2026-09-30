@@ -278,6 +278,10 @@ def install_hosted_connect_routes(
     if full_refresh_seconds < 1:
         raise ValueError("full_refresh_seconds must be positive")
     jobs = coordinator or LeagueConnectCoordinator(max_workers=2)
+    # The intelligence refresh route shares this coordinator at request time so a
+    # browser's automatic Sleeper revalidation and explicit Refresh Intelligence
+    # tap cannot launch two concurrent State materializations for one user.
+    application.state.hosted_connect_jobs = jobs
 
     @application.post("/api/connect/sleeper/background")
     def start_background_connect(

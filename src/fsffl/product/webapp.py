@@ -51,7 +51,12 @@ from .intelligence_runtime import (
     state_first_runtime_status,
 )
 from .opportunity_workspace import build_opportunity_workspace
-from .resource_coordinator import HeavyWorkCoordinator, ResourceTransition
+from .resource_coordinator import (
+    HeavyWorkCoordinator,
+    ResourceTransition,
+    current_rss_bytes,
+    process_peak_rss_bytes,
+)
 from .runtime import (
     LiveForecastEvidence,
     LiveForecastLoader,
@@ -915,6 +920,24 @@ def create_app(
         if phase_memory_reclaimer is not None:
             phase_memory_reclaimer(label)
 
+    def log_reconciliation_memory(user_id: str, phase: str) -> None:
+        """Record RSS at lifecycle boundaries in the hosted application log."""
+
+        snapshot = (
+            heavy_work_coordinator.snapshot()
+            if heavy_work_coordinator is not None
+            else None
+        )
+        logging.getLogger("uvicorn.error").info(
+            "FSFFL intelligence memory phase=%s current_rss=%s peak_rss=%s active=%s waiting=%s budget=%s",
+            phase,
+            snapshot.current_rss_bytes if snapshot is not None else current_rss_bytes(),
+            snapshot.peak_rss_bytes if snapshot is not None else process_peak_rss_bytes(),
+            snapshot.active_kind if snapshot is not None else None,
+            snapshot.waiting_count if snapshot is not None else None,
+            snapshot.memory_budget_bytes if snapshot is not None else None,
+        )
+
     def apply_state_resource_boundary(
         user_id: str,
         *,
@@ -1524,12 +1547,14 @@ def create_app(
             return active_working or active_published
 
         def reconcile(progress) -> str | None:
+            log_reconciliation_memory(user_id, "job_start")
             if sync_state:
                 progress(
                     IntelligenceJobPhase.REFRESHING_STATE,
                     "Syncing canonical Sleeper State into an unpublished working generation.",
                 )
                 synced_state = state_loader(starting_external_id)
+                log_reconciliation_memory(user_id, "state_sync_complete")
                 with store.lifecycle_operation(user_id):
                     active_before_write = require_active_league_identity()
                     if (
@@ -1542,6 +1567,13 @@ def create_app(
                         league_state=synced_state,
                     )
                     if active_before_write.state_id != synced_state.state_id:
+                        checkpointed_job = jobs.update_current_league_state_id(
+                            user_id=user_id,
+                            expected_state_id=active_before_write.state_id,
+                            league_state_id=synced_state.state_id,
+                        )
+                        if checkpointed_job is None:
+                            raise IntelligenceJobInterrupted("refresh_job_replaced")
                         apply_state_resource_boundary(
                             user_id,
                             previous=published,
@@ -1640,6 +1672,7 @@ def create_app(
                         f"{user_id}:{working_state.state_id}:before_forecast"
                     )
                     evidence = forecast_loader(working_state)
+                    log_reconciliation_memory(user_id, "forecast_build_complete")
                     with store.lifecycle_operation(user_id):
                         require_active_league_identity()
                         store.set_forecast_evidence(
@@ -1673,6 +1706,7 @@ def create_app(
                         f"{user_id}:{working_state.state_id}:before_simulation"
                     )
                     simulation = simulation_loader(working_state, evidence)
+                    log_reconciliation_memory(user_id, "simulation_build_complete")
                     with store.lifecycle_operation(user_id):
                         require_active_league_identity()
                         store.set_simulation_analytics(
@@ -1707,6 +1741,7 @@ def create_app(
                         f"{user_id}:{working_state.state_id}:before_value"
                     )
                     values = value_loader(working_state)
+                    log_reconciliation_memory(user_id, "value_build_complete")
                     with store.lifecycle_operation(user_id):
                         require_active_league_identity()
                         store.set_value_evidence(
@@ -1726,6 +1761,7 @@ def create_app(
                     "Preparing governed FSFFL Intrinsic and future Forecast evidence against the working generation.",
                 )
                 product_capability = product_capability_reconciler(working_context)
+                log_reconciliation_memory(user_id, "intrinsic_reconcile_complete")
                 require_active_league_identity()
                 reclaim_phase_memory(
                     f"{user_id}:{working_state.state_id}:after_intrinsic"
@@ -1740,6 +1776,7 @@ def create_app(
                 expected_generation=expected_generation,
                 expected_league_id=starting_league_id,
             )
+            log_reconciliation_memory(user_id, "publication_complete")
             intrinsic_status = (
                 str(product_capability.get("status"))
                 if product_capability is not None
@@ -1783,6 +1820,7 @@ def create_app(
             try:
                 return reconcile(progress)
             except BaseException:
+                log_reconciliation_memory(user_id, "job_aborted")
                 store.abort_working_generation_if_generation(
                     user_id,
                     expected_generation=expected_generation,
@@ -1836,10 +1874,84 @@ def create_app(
     application.state.product_capability_reconciler = product_capability_reconciler
     application.state.heavy_work_coordinator = heavy_work_coordinator
 
+    def active_hosted_refresh_payload(user_id: str) -> dict[str, object] | None:
+        """Expose an already-running browser State refresh as the active job.
+
+        The hosted connect coordinator owns its State loader and, after activation,
+        hands off to the same intelligence reconciler. Returning that lifecycle here
+        prevents an explicit Refresh Intelligence tap from starting a second State
+        loader while Safari is still polling the automatic refresh.
+        """
+
+        connect_jobs = getattr(application.state, "hosted_connect_jobs", None)
+        current = connect_jobs.current(user_id) if connect_jobs is not None else None
+        status = getattr(getattr(current, "status", None), "value", None)
+        if (
+            current is None
+            or getattr(current, "operation", None) != "refresh"
+            or status not in {"queued", "running"}
+        ):
+            return None
+        runtime = store.get(user_id)
+        state = runtime.league_state
+        if (
+            state is None
+            or _sleeper_external_id(state)
+            != str(getattr(current, "league_external_id", ""))
+        ):
+            return None
+        return {
+            "job_id": str(current.job_id),
+            "status": str(status),
+            "phase": IntelligenceJobPhase.REFRESHING_STATE.value,
+            "message": str(current.message),
+            "error": None,
+            "failure_phase": None,
+            "league_state_id": state.state_id,
+            "state_id": state.state_id,
+            "created_at": current.created_at.isoformat(),
+            "updated_at": current.updated_at.isoformat(),
+            "coalesced": True,
+            "state_sync_owner": "hosted_connect_refresh",
+        }
+
+    def resume_restart_interrupted_job(user_id: str) -> dict[str, object] | None:
+        """Resume a lost in-memory build when durable State survived restart."""
+
+        current_job = jobs.current(user_id)
+        runtime = store.get(user_id)
+        state = runtime.league_state
+        if (
+            current_job is None
+            or current_job.status != IntelligenceJobStatus.INTERRUPTED
+            or current_job.error != "server_restart"
+            or state is None
+            or runtime.selected_team_id is None
+            or current_job.league_state_id != state.state_id
+            or (
+                runtime.forecast_evidence is not None
+                and runtime.value_evidence is not None
+                and (
+                    runtime.simulation_analytics is not None
+                    or not runtime.forecast_evidence.uncertainty_ready
+                )
+            )
+        ):
+            return None
+        resumed = _start_intelligence_reconciliation(user_id, sync_state=False)
+        return {**resumed, "resumed_after_restart": True}
+
     @application.post("/api/intelligence/jobs")
     def start_intelligence_job(
         user_id: str = Depends(require_beta_user),
     ) -> dict[str, object]:
+        refresh = active_hosted_refresh_payload(user_id)
+        if refresh is not None:
+            logging.getLogger("uvicorn.error").info(
+                "FSFFL intelligence refresh joined active State sync job=%s",
+                refresh["job_id"],
+            )
+            return {**runtime_context_payload(user_id), **refresh}
         return _start_intelligence_reconciliation(
             user_id,
             sync_state=True,
@@ -1847,6 +1959,12 @@ def create_app(
 
     @application.get("/api/intelligence/jobs/current")
     def current_intelligence_job(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        refresh = active_hosted_refresh_payload(user_id)
+        if refresh is not None:
+            return {**runtime_context_payload(user_id), **refresh}
+        resumed = resume_restart_interrupted_job(user_id)
+        if resumed is not None:
+            return {**runtime_context_payload(user_id), **resumed}
         return {**_job_payload(jobs.current(user_id)), **runtime_context_payload(user_id)}
 
     @application.post("/api/intelligence/refresh-forecasts")

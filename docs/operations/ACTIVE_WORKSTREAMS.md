@@ -729,3 +729,37 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - The completed startup acceptance harness has been disabled on Render so the free instance is not competing with server-only acceptance work during physical testing.
 - Deploy current main, then run the physical iPhone/Safari Connect path through visible league/team selection. That physical result controls closure.
 - Do not reopen Forecast, Simulation, Value, Intrinsic, resource-boundary architecture, or #306 hosted restore acceptance absent new contradictory evidence.
+
+
+## 2026-09-30 — Physical Safari exposed refresh lifecycle and restart-recovery defect
+- **Implementation — ACTIVE / sole product-critical path.** New directive:
+  `docs/operations/directives/20260930_PHYSICAL_REFRESH_MEMORY_ROOT_CAUSE.md`.
+- Physical Safari submitted `/api/intelligence/jobs` at about 04:11:47Z while
+  automatic Sleeper background refresh was still being polled. Render RSS rose
+  from 344–349 MB to 522.4 MB / 536.9 MB, CPU saturated and the process
+  restarted. Canonical State survived; Forecast, Simulation and Value did not;
+  runtime reported `forecast=False simulation=False value=False complete=False`.
+- Confirmed code defect: Hosted Connect and manual Intelligence had separate
+  State-load owners during the automatic-refresh handoff window; production
+  State load also bypassed HeavyWorkCoordinator. Its claims serialized declared
+  model phases and reported RSS, but did not reserve phase memory or constrain
+  one active phase. Exact object-level attribution cannot be recovered from
+  coarse incident telemetry; boundary RSS instrumentation is added.
+- Market value-lens first-load remained staged and lightweight; foreground
+  product-context/home latency is consistent with CPU starvation, with no
+  evidence of expensive reconstruction. PR #306 measured warm durable restore
+  (~308.5 MB), not a cold State sync plus live Forecast/Simulation/Value build
+  with concurrent browser reads. #307 fixed Connect presentation only.
+- Restart converted in-progress work to `INTERRUPTED/server_restart`; missing
+  exact-State layers were not automatically rebuilt, permitting persistent
+  2/7 readiness. Browser polling now resumes that work from durable exact State
+  with atomic publication; direct State sync checkpoints the job's new State ID
+  so recovery can verify the intended State.
+- Corrective implementation: coalesce manual refresh into active automatic
+  Sleeper refresh, serialize State materialization in the heavy-work lane,
+  report lifecycle RSS boundaries, resume interrupted exact-State builds, and
+  add deterministic Safari-like concurrent-read/value-lens regression.
+- Keep hard Render memory limit and all Forecast/Simulation/Value semantics
+  unchanged. Full CI, exact-head review, deploy, realistic live fresh-build
+  telemetry and physical Safari acceptance remain required. Current status:
+  **BLOCKED — runtime acceptance**.

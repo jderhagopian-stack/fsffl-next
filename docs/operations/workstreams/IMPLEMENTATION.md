@@ -1752,3 +1752,37 @@ The live trace also showed the already-completed state-first acceptance harness 
 Static assets use coherent release token `20260929-physical-connect1` to force Safari freshness.
 
 Next gate is only the physical iPhone/Safari Connect retest through visible league/team selection. No server-only substitute and no model/resource architecture reopening.
+
+
+## 2026-09-30 — Physical refresh lifecycle corrective (active)
+
+Directive: `docs/operations/directives/20260930_PHYSICAL_REFRESH_MEMORY_ROOT_CAUSE.md`.
+
+The physical Safari request at 04:11:47Z overlapped in time with automatic
+Sleeper background-refresh polling. Render RSS peaked at 522.4 MB / 536.9 MB;
+CPU saturated and the process restarted. State survived but current-State
+Forecast, Simulation and Value were missing. This evidence supersedes the
+prior #307 instruction not to reopen runtime architecture.
+
+Current implementation coalesces a manual intelligence tap into an active
+same-user/same-league Hosted Connect refresh, runs persistent-app State loads
+through HeavyWorkCoordinator, emits RSS/active-claim telemetry at every
+reconciliation boundary, checkpoints the job State ID when direct State sync
+advances, and resumes missing exact-State layers after a server-restart
+interruption. It includes deterministic coverage for concurrent
+product/status reads, repeated staged value-lens requests, one State-load owner,
+terminal usable core capabilities and restart recovery.
+
+Known evidence limit: the old deploy emitted only coarse RSS samples, so its
+specific 173–178 MB growth cannot be assigned to individual Python objects or a
+single builder. Boundary instrumentation is in place to profile the next live
+fresh build. Value-lens requests were staged/lightweight; no incident evidence
+shows foreground capability reads reconstructing expensive model layers. #306
+was a warm durable restore and did not profile the cold refresh journey.
+
+Exit gates: run full CI and fresh exact-head review, merge/deploy, capture a
+realistic fresh-build's stage RSS plus foreground responsiveness on Render,
+verify usable Forecast/Simulation/Value and downstream capabilities, then
+repeat physical iPhone/Safari acceptance. Do not change model semantics or the
+hard Render limit. Until the live fresh-build and physical retest pass, status
+is **BLOCKED — runtime acceptance**.
