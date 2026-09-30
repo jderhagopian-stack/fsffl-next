@@ -461,11 +461,27 @@ def test_hosted_connect_completes_from_in_memory_state_without_checkpoint_wait()
     connect = source.split(
         '@application.post("/api/connect/sleeper/background")', 1
     )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
+
+    lifecycle_index = connect.index("with runtime_store.lifecycle_operation(user_id):")
     activate_index = connect.index('"activate_league_state_for_connect"')
-    verify_index = connect.index("active_state = runtime_store.get(user_id).league_state")
+    active_runtime_index = connect.index("active_runtime = runtime_store.get(user_id)")
+    state_verify_index = connect.index("active_state.state_id != league_state.state_id")
     behavioral_index = connect.index("behavioral_coordinator.start")
-    reconcile_index = connect.index("intelligence_reconciler(user_id)", behavioral_index)
-    assert activate_index < verify_index < behavioral_index < reconcile_index
+    ownership_verify_index = connect.index(
+        "active_runtime.league_state.state_id != league_state.state_id",
+        behavioral_index,
+    )
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", ownership_verify_index)
+
+    assert (
+        lifecycle_index
+        < activate_index
+        < active_runtime_index
+        < state_verify_index
+        < behavioral_index
+        < ownership_verify_index
+        < reconcile_index
+    )
     assert "wait_for_checkpoint" not in connect
     assert "Sleeper league activation could not be durably checkpointed" not in connect
     assert 'raise RuntimeError("Sleeper league activation lost requested identity")' in connect
@@ -560,10 +576,13 @@ def test_hosted_switch_activates_state_before_starting_intelligence_reconciliati
         '@application.post("/api/connect/sleeper/background")', 1
     )[1].split('@application.post("/api/connect/sleeper/background/refresh")', 1)[0]
 
+    lifecycle_index = connect.index("with runtime_store.lifecycle_operation(user_id):")
     state_index = connect.index('"activate_league_state_for_connect"')
-    verify_index = connect.index("active_state = runtime_store.get(user_id).league_state")
-    reconcile_index = connect.index("intelligence_reconciler(user_id)", verify_index)
-    assert state_index < verify_index < reconcile_index
+    verify_index = connect.index("active_state.state_id != league_state.state_id")
+    behavior_index = connect.index("behavioral_coordinator.start")
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", behavior_index)
+
+    assert lifecycle_index < state_index < verify_index < behavior_index < reconcile_index
     assert "wait_for_checkpoint" not in connect
     assert "intelligence_reconciler" in connect
 
