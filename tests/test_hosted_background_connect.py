@@ -509,13 +509,14 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
     assert "current_job.league_external_id != league_external_id" in refresh
 
 
-def test_current_static_release_busts_first_load_recovery_cache() -> None:
+def test_physical_connect_busts_mobile_recovery_cache_without_churning_shell() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    release = "20260929-physical-connect1"
-    for asset in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
-        assert f"/static/{asset}?v={release}" in source
-    assert "mobile_safari_recovery.js?v=20260927-market-nonblocking1" not in source
-    assert "forecast_refresh.js?v=20260927-market-nonblocking1" not in source
+    shell_release = "20260928-first-load-recovery1"
+    connect_release = "20260929-physical-connect1"
+    assert f"/static/mobile_safari_recovery.js?v={connect_release}" in source
+    for asset in ("app.js", "forecast_refresh.js"):
+        assert f"/static/{asset}?v={shell_release}" in source
+    assert f"/static/mobile_safari_recovery.js?v={shell_release}" not in source
 
 
 def test_hosted_connect_completes_from_in_memory_state_without_checkpoint_wait() -> None:
