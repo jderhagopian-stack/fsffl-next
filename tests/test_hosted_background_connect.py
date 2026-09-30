@@ -147,19 +147,41 @@ def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -
           removeItem(key){storage.delete(key)},
         };
 
+        function selectNode(){
+          const node={children:[],disabled:true};
+          Object.defineProperty(node,'innerHTML',{
+            get(){return ''},
+            set(_value){node.children=[]},
+          });
+          node.appendChild=child=>node.children.push(child);
+          return node;
+        }
+
         const sync=[];
         const button={disabled:false,textContent:'Connect Sleeper League'};
+        const leagueSelect=selectNode();
+        const teamSelect=selectNode();
         let clickHandler=null;
         global.document={
           visibilityState:'visible',
           querySelector(selector){
             if(selector==='#connect-button')return button;
+            if(selector==='#league-select')return leagueSelect;
+            if(selector==='#team-select')return teamSelect;
             if(selector.startsWith('script[data-fsffl-'))return {};
             return null;
           },
-          createElement(){throw new Error('helper script should already be present')},
+          createElement(tag){
+            if(tag==='option')return {value:'',textContent:''};
+            throw new Error('unexpected element '+tag);
+          },
           head:{appendChild(){}},
-          addEventListener(type,handler){if(type==='click')clickHandler=handler},
+          addEventListener(type,handler,options){
+            if(type==='click'){
+              clickHandler=handler;
+              assert.strictEqual(options,true,'manual Connect must own capture phase');
+            }
+          },
         };
         global.CustomEvent=class{constructor(type,init){this.type=type;this.detail=init?.detail}};
         global.window={
@@ -171,16 +193,45 @@ def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -
           fsfflSyncState:{set(state,message){sync.push({state,message})}},
         };
         global.fetch=()=>Promise.resolve({ok:true});
-        global.state={context:null,teamView:null,valueCatalog:null,intelligence:null,route:'league'};
-        global.applyContext=()=>{};
+        global.state={
+          context:{league_id:null,state_id:null,teams:[],team_id:null},
+          teamView:null,valueCatalog:null,intelligence:null,route:'league',
+        };
+        global.applyContext=()=>{
+          const context=state.context;
+          leagueSelect.innerHTML='';
+          const leagueOption=document.createElement('option');
+          leagueOption.value=context?.league_id||'';
+          leagueOption.textContent=context?.league_id
+            ?(context.league_name||context.league_id)
+            :'Connect league';
+          leagueSelect.appendChild(leagueOption);
+          teamSelect.innerHTML='';
+          const empty=document.createElement('option');
+          empty.value='';
+          empty.textContent='Select team';
+          teamSelect.appendChild(empty);
+          for(const team of context?.teams||[]){
+            const option=document.createElement('option');
+            option.value=team.team_id;
+            option.textContent=team.display_name;
+            teamSelect.appendChild(option);
+          }
+          teamSelect.disabled=!context?.league_id;
+        };
+        applyContext();
 
         const calls=[];
-        let productReads=0;
+        let backgroundPosted=false;
         global.api=async(path,options={})=>{
           calls.push([path,options.method||'GET']);
+          if(path==='/api/connect/sleeper/background/current')return {};
+          if(path==='/api/connect/sleeper/background'&&options.method==='POST'){
+            backgroundPosted=true;
+            return {status:'running',league_external_id:'123',operation:'connect'};
+          }
           if(path==='/api/product-context'){
-            productReads+=1;
-            if(productReads===1)return {league_id:null,state_id:null,teams:[],team_id:null};
+            assert(backgroundPosted,'visible context must be recognized after background submission');
             return {
               league_id:'sleeper:123',
               league_name:'Clean League',
@@ -192,10 +243,6 @@ def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -
               team_id:null,
             };
           }
-          if(path==='/api/connect/sleeper/background/current')return {};
-          if(path==='/api/connect/sleeper/background'&&options.method==='POST'){
-            return {status:'running',league_external_id:'123',operation:'connect'};
-          }
           throw new Error('unexpected api '+path);
         };
 
@@ -204,23 +251,41 @@ def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -
         );
         assert(clickHandler,'connect click handler must install');
 
+        let prevented=false;
+        let stopped=false;
         clickHandler({
           target:{closest(selector){return selector==='#connect-button'?button:null}},
-          preventDefault(){},
-          stopImmediatePropagation(){},
+          preventDefault(){prevented=true},
+          stopImmediatePropagation(){stopped=true},
         });
 
         setTimeout(()=>{
           try{
+            assert.strictEqual(prevented,true);
+            assert.strictEqual(stopped,true);
+            const postIndex=calls.findIndex(([path,method])=>
+              path==='/api/connect/sleeper/background'&&method==='POST'
+            );
+            const contextIndex=calls.findIndex(([path])=>path==='/api/product-context');
+            assert(postIndex>=0,'physical tap must submit the background Connect request');
+            assert(contextIndex>postIndex,'manual Connect must not context-preflight before submission');
+            assert.strictEqual(
+              calls.some(([path])=>path==='/api/connect/sleeper'),
+              false,
+              'capture-phase mobile handler must suppress the synchronous base Connect route'
+            );
             assert.strictEqual(state.context.league_id,'sleeper:123');
             assert.strictEqual(state.context.state_id,'state-clean');
             assert.strictEqual(state.context.team_id,null);
             assert.strictEqual(localStorage.getItem('fsffl:last-sleeper-league'),'123');
             assert.strictEqual(localStorage.getItem('fsffl:last-team'),null);
-            assert.strictEqual(
-              calls.some(([path])=>path==='/api/select-team'),
-              false,
-              'fresh browser must not silently select a team'
+            assert.strictEqual(leagueSelect.children[0].value,'sleeper:123');
+            assert.strictEqual(leagueSelect.children[0].textContent,'Clean League');
+            assert.strictEqual(teamSelect.disabled,false);
+            assert.deepStrictEqual(
+              teamSelect.children.map(item=>item.textContent),
+              ['Select team','A','B'],
+              'canonical State must become visible in the team-selection UI'
             );
             assert(
               sync.some(item=>item.state==='checking'&&item.message==='Starting import…'),
@@ -246,7 +311,6 @@ def test_true_clean_browser_connect_uses_state_without_silent_team_selection() -
         timeout=5,
     )
     assert completed.returncode == 0, completed.stderr
-
 
 def test_saved_session_restores_before_provider_refresh() -> None:
     source = open(
@@ -409,14 +473,15 @@ def test_mobile_connect_commits_league_after_identity_and_requires_fresh_team_ch
 
     previous_index = interactive.index("const previousLeagueId=localStorage.getItem(LEAGUE_KEY)")
     feedback_index = interactive.index("button.textContent='Starting import…'")
-    canonical_index = interactive.index("canonicalBefore=await resilientApi('/api/product-context'")
+    visible_same_index = interactive.index("if(activeBefore===normalized)")
     wait_index = interactive.index("await waitForBackgroundImport(normalized")
     verify_index = interactive.index("if(!contextMatchesLeague(context,normalized)||!context?.state_id)")
     save_index = interactive.index("localStorage.setItem(LEAGUE_KEY,normalized)")
     clear_team_index = interactive.index("localStorage.removeItem(TEAM_KEY)", save_index)
     apply_index = interactive.index("applyConnectedContext(context)")
-    assert previous_index < feedback_index < canonical_index < wait_index < verify_index < save_index < clear_team_index < apply_index
-    assert "restoreSelectedTeam(context,canonicalBefore)" not in interactive
+    assert previous_index < feedback_index < visible_same_index < wait_index < verify_index < save_index < clear_team_index < apply_index
+    assert "canonicalBefore" not in interactive
+    assert "restoreSelectedTeam(" not in interactive
     assert "League is ready. Select the franchise you manage to continue." in interactive
     assert "if(previousLeagueId===null)localStorage.removeItem(LEAGUE_KEY)" in interactive
     assert "else localStorage.setItem(LEAGUE_KEY,previousLeagueId)" in interactive
@@ -446,7 +511,7 @@ def test_hosted_connect_validates_requested_identity_and_blocks_superseded_write
 
 def test_current_static_release_busts_first_load_recovery_cache() -> None:
     source = open("src/fsffl/product/static/index.html", encoding="utf-8").read()
-    release = "20260928-first-load-recovery1"
+    release = "20260929-physical-connect1"
     for asset in ("app.js", "mobile_safari_recovery.js", "forecast_refresh.js"):
         assert f"/static/{asset}?v={release}" in source
     assert "mobile_safari_recovery.js?v=20260927-market-nonblocking1" not in source
@@ -507,7 +572,7 @@ def test_hosted_refresh_is_bound_to_starting_league_generation() -> None:
     assert "FSFFL Sleeper refresh superseded at activation" in refresh
 
 
-def test_manual_connect_acknowledges_before_context_read_and_rejects_same_active_league() -> None:
+def test_manual_connect_submits_before_context_recognition_and_only_rejects_visible_duplicate() -> None:
     source = open(
         "src/fsffl/product/static/mobile_safari_recovery.js",
         encoding="utf-8",
@@ -518,12 +583,13 @@ def test_manual_connect_acknowledges_before_context_read_and_rejects_same_active
 
     active_index = interactive.index("const activeBefore=")
     feedback_index = interactive.index("button.textContent='Starting import…'")
-    canonical_index = interactive.index("canonicalBefore=await resilientApi('/api/product-context'")
-    same_index = interactive.index("if(contextMatchesLeague(canonicalBefore,normalized))")
+    same_index = interactive.index("if(activeBefore===normalized)")
     wait_index = interactive.index("await waitForBackgroundImport(normalized")
-    assert active_index < feedback_index < canonical_index < same_index < wait_index
+    assert active_index < feedback_index < same_index < wait_index
     assert "publishSyncState('checking','Starting import…')" in interactive
-    assert "same_active" in interactive
+    assert "canonicalBefore" not in interactive
+    assert "same_visible_active" in interactive
+    assert "contextMatchesLeague(canonicalBefore,normalized)" not in interactive
     assert "Enter a different league ID to switch leagues." in interactive
     assert "'requested='+normalized+';active='" in interactive
 
