@@ -435,6 +435,46 @@ def test_intrinsic_restore_drops_result_when_boundary_epoch_advances() -> None:
 
 
 
+
+def test_stale_intrinsic_context_cannot_reacquire_execution_after_boundary() -> None:
+    state_a = _state("a")
+    context = _runtime("user-a", state_a)
+    loader_calls = 0
+    owned = {"state_id": "replacement-state"}
+
+    class Loader:
+        forecast_model_version = "fixture-v1"
+
+        def intrinsic_input_fingerprint(self, _context):
+            nonlocal loader_calls
+            loader_calls += 1
+            return "fixture-input"
+
+        def __call__(self, _context):
+            raise AssertionError("stale Intrinsic loader must not run")
+
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        Loader(),
+        max_workers=1,
+        ownership_validator=lambda candidate: (
+            candidate.league_state is not None
+            and candidate.league_state.state_id == owned["state_id"]
+        ),
+    )
+
+    from fsffl.product.intrinsic_background import IntrinsicBuildSuperseded
+
+    try:
+        coordinator.request(context)
+    except IntrinsicBuildSuperseded:
+        pass
+    else:
+        raise AssertionError("stale Intrinsic context must be rejected")
+
+    assert loader_calls == 0
+    assert coordinator.current(context) is None
+
+
 def test_market_enrichment_rejects_released_prior_state_without_retaining_record() -> None:
     valid = {"allowed": False}
     work_calls = 0
