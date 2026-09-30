@@ -1728,3 +1728,39 @@ all required capabilities and inspect per-phase RSS logs. The 04:11 incident's
 coarse telemetry cannot attribute the exact allocation delta to individual
 objects, and no fresh build has yet exercised the new instrumentation. Keep the
 physical Safari acceptance as the controlling gate.
+
+
+## 2026-09-30 — Physical Safari post-#308: core build survives, cross-surface readiness/value propagation remains inconsistent
+Product-owner physical iPhone/Safari validation on the deployed #308 corrective materially improved versus the prior restart/2-of-7 incident.
+
+Observed positive evidence:
+- the league and managed team remained connected and navigable;
+- Home reached `Intelligence current` and displayed a completed 50,000-run Simulation with projected wins/playoff/championship outputs;
+- Franchise roster displayed governed season projections and Broad Market percentiles;
+- Player Intelligence for Dak Prescott displayed both Broad Market and FSFFL Intrinsic values;
+- no user-visible process restart / persistent 2-of-7 failure occurred during this run.
+
+The physical run is therefore evidence that the catastrophic lifecycle/restart failure addressed by #308 is materially improved. It is **not yet a clean product acceptance**.
+
+Observed remaining contradictions:
+- load time remained significant;
+- Franchise Roster continued to show `Intrinsic preparing` after Player Intelligence was already displaying an Intrinsic value;
+- Franchise Assets & Picks likewise reported `FSFFL Intrinsic is preparing` / selected-lens evidence unavailable;
+- League -> Value Map remained in loading/preparing state while Player Intelligence already had Market + Intrinsic values;
+- League team-position detail showed missing Market/Intrinsic percentiles for players whose Player Intelligence had those values;
+- the global `Intelligence current` banner was visible while some dependent surfaces still reported preparing/loading, so readiness/presentation truth is not propagating coherently;
+- `Forecast fallback active` was displayed, with preserved preseason projections and degraded live source health. Treat this as explicit Forecast source-health state, not as proof of another lifecycle failure.
+
+Management classification:
+- **#308 fatal lifecycle/restart class: provisional physical success, pending phase-RSS review**;
+- **new controlling product blocker: cross-surface publication/readiness propagation + cold/fresh-build latency**;
+- do not reopen Forecast/Simulation/Value/Intrinsic math or the broad resource-boundary architecture unless new phase telemetry proves another heavy-work failure.
+
+Immediate next work:
+1. correlate the physical run timestamps with #308 per-phase RSS/heavy-work telemetry;
+2. verify whether one exact publication generation contained the available Intrinsic/Market evidence seen by Player Intelligence;
+3. trace why Franchise, Atlas position detail, and League Value Map retained loading/missing state after that evidence existed;
+4. distinguish server response/caching staleness from client polling/subscription/re-render staleness;
+5. make readiness wording truthful: no global `Intelligence current` claim while required visible surfaces are still legitimately preparing, unless the UI explicitly distinguishes core intelligence from optional/independently loading lenses;
+6. measure and reduce the remaining normal physical load latency at the owning stage only;
+7. preserve the #308 lifecycle corrective and model semantics absent contradictory evidence.
