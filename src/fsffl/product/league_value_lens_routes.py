@@ -70,8 +70,7 @@ def install_league_value_lens_routes(
         if background_coordinator is not None:
             record = background_coordinator.current(runtime)
             first_load_staging = bool(
-                record is None
-                and runtime.publication_generation_id is None
+                runtime.publication_generation_id is None
                 and (
                     runtime.selected_team_id is None
                     or runtime_store.working_generation_active(user_id)
@@ -109,7 +108,9 @@ def install_league_value_lens_routes(
                             "intelligence enrichment."
                         ),
                         "retry_after_ms": 1500,
-                        "build_status": "staged",
+                        "build_status": (
+                            record.status.value if record is not None else "staged"
+                        ),
                     },
                     "value_presentation": {
                         "status": "building",
@@ -171,13 +172,25 @@ def install_league_value_lens_routes(
                         "retry_after_ms": 1500,
                     },
                     "intrinsic_execution": {
-                        "status": "staged",
+                        "status": (
+                            record.status.value if record is not None else "staged"
+                        ),
                         "league_state_id": state.state_id,
-                        "forecast_coordinate": None,
-                        "response_budget_exceeded": False,
-                        "started_at": None,
-                        "updated_at": None,
-                        "error": None,
+                        "forecast_coordinate": (
+                            record.forecast_coordinate if record is not None else None
+                        ),
+                        "response_budget_exceeded": (
+                            record.response_budget_exceeded
+                            if record is not None
+                            else False
+                        ),
+                        "started_at": (
+                            record.created_at.isoformat() if record is not None else None
+                        ),
+                        "updated_at": (
+                            record.updated_at.isoformat() if record is not None else None
+                        ),
+                        "error": record.error if record is not None else None,
                     },
                 }
                 _logger.info(
