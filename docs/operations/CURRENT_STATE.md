@@ -1560,3 +1560,31 @@ The unchanged hard-memory gate nevertheless failed at `fsffl_initial`:
 Acceptance terminated by design with `StateFirstAcceptanceError: hard memory limit reached at fsffl_initial`. It therefore did **not** proceed to Hodor -> FSFFL return -> same-State -> restart/restored-session on this run.
 
 This is now a **beta capacity/staging blocker**, not evidence that the accepted #303 resource-ownership closure regressed. Per the controlling management guidance, do not reopen indefinite leak hunting or broaden architecture: ownership is clean and memory returns to a bounded post-settle level, but legitimate normal first-load work transiently exceeds the free-tier hard envelope. Physical Safari remains HOLD. Management must choose the smallest practical beta-specific capacity/staging adjustment before the remaining hosted journey can be accepted.
+
+
+## 2026-09-29 — Management decision: one bounded free-Render first-load staging corrective
+The #303 hosted result activates the previously defined stopping rule: resource ownership is clean and post-heavy memory returns to a bounded baseline, but normal FSFFL first-load transiently exceeded the unchanged free-Render hard gate by ~7.1 MiB.
+
+Management therefore authorizes exactly one bounded **beta-specific first-load staging corrective** before any broader capacity decision.
+
+Goal:
+- keep the same governed Forecast/Simulation/Value/Intrinsic outputs and lifecycle semantics;
+- reduce only the transient first-load peak by preventing avoidable overlap among memory-intensive initialization/enrichment phases on the free-tier runtime;
+- use the existing HeavyWork/resource telemetry to identify the overlapping phase(s);
+- prefer ordering/serialization/release of no-longer-needed temporary execution payloads over model simplification or architectural expansion;
+- preserve responsive foreground reads and truthful readiness while staged work proceeds.
+
+Do not:
+- reopen #303 leak/resource-ownership debugging absent contradictory evidence;
+- weaken the hard-memory gate;
+- reduce Simulation/Forecast/Intrinsic fidelity;
+- broaden into public-scale architecture or microservices;
+- optimize synthetic rapid-switch behavior.
+
+Acceptance:
+1. deterministic tests for the staging/order change;
+2. full CI/focused checks green;
+3. deploy;
+4. rerun the same realistic free-Render FSFFL -> settle -> Hodor -> settle -> FSFFL -> settle -> restart/restored-session journey;
+5. if it passes, move immediately to physical Safari acceptance and capability development;
+6. if ownership remains clean and this bounded staging pass still cannot keep normal beta use within the gate, stop micro-optimization and return to Management for a capacity decision.
