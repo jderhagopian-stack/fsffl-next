@@ -103,6 +103,18 @@ _startup_restore_complete = Event()
 _startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
 
+def _market_execution_retention_valid(context) -> bool:
+    """Allow process retention only for the user's current execution State scope."""
+
+    state = context.league_state
+    if state is None:
+        return False
+    if not _runtime_store.working_generation_active(context.user_id):
+        return True
+    target_state_id = _runtime_store.working_target_state_id(context.user_id)
+    return target_state_id is None or target_state_id == state.state_id
+
+
 def _market_enrichment_identity_valid(
     user_id: str,
     league_state_id: str,
@@ -113,6 +125,7 @@ def _market_enrichment_identity_valid(
         context.league_state is not None
         and context.league_state.state_id == league_state_id
         and context.selected_team_id == focal_team_id
+        and _market_execution_retention_valid(context)
     )
 
 _market_decision_enrichment = MarketDecisionEnrichmentCoordinator(
@@ -371,7 +384,8 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
 # requests. Search row metadata is overlaid fresh on every hit, while State/Value
 # replacement or a different ordered package identity produces a miss.
 _cached_candidate_economics = make_cached_candidate_economics(
-    _market_discovery_runtime.evaluate_candidate_economics
+    _market_discovery_runtime.evaluate_candidate_economics,
+    retention_validator=_market_execution_retention_valid,
 )
 _market_discovery_runtime.evaluate_candidate_economics = _cached_candidate_economics
 
@@ -380,7 +394,8 @@ _market_discovery_runtime.evaluate_candidate_economics = _cached_candidate_econo
 # that exact catalog; focus changes Search selection/order without rebuilding the
 # same package universe or changing Value/Decision authority.
 _cached_opportunity_search = make_cached_opportunity_search(
-    _opportunity_workspace.build_roster_aware_trade_candidates
+    _opportunity_workspace.build_roster_aware_trade_candidates,
+    retention_validator=_market_execution_retention_valid,
 )
 _opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity_search
 
@@ -389,7 +404,8 @@ _opportunity_workspace.build_roster_aware_trade_candidates = _cached_opportunity
 # instead of repeating Search + bounded Decision work. This wrapper is hosted-
 # composition infrastructure only; the original builder remains authoritative.
 _cached_opportunity_workspace = make_cached_opportunity_workspace(
-    _webapp.build_opportunity_workspace
+    _webapp.build_opportunity_workspace,
+    retention_validator=_market_execution_retention_valid,
 )
 _webapp.build_opportunity_workspace = _cached_opportunity_workspace
 
