@@ -1836,3 +1836,32 @@ Immediate next work:
 5. fix the smallest selection/promotion defect and validate one realistic physical Market journey that surfaces credible, distinct opportunities when available.
 
 Do not loosen economic/bilateral quality merely to force cards. If all candidates are legitimately filtered, the UI must explain why and focused target/shop searches must still return the surviving opportunity paths where supported.
+
+
+## 2026-09-30 — Management transition: capability development resumes with Simulation modernization
+Post-#310 physical Safari testing is sufficiently usable to end the prolonged runtime-stabilization phase as the primary workstream.
+
+Market note:
+- live discovery is functioning and can produce internal opportunities, but current For You selection can collapse to zero;
+- this is **not** a blocker to the next capability phase because several planned inputs will materially change future opportunity generation/evaluation (current-season Forecast inputs, origin-aware pick value, Long-Term Intrinsic, Decision/Team Utility, Owner/Behavioral intelligence, and Simulation sensitivity);
+- preserve the live zero-result evidence and exclusion diagnostics, but do not tune today's Market frontier merely to force cards;
+- only an outright mechanical/plumbing defect that prevents any defensible opportunity from ever surfacing should interrupt the next phase.
+
+**ACTIVE PROGRAM: Simulation modernization.**
+
+Purpose:
+- reduce the measured fresh 50,000-run Simulation bottleneck (~173s in the physical run);
+- preserve governed Simulation semantics and 50,000 canonical runs until convergence evidence authorizes a contract change;
+- improve refresh latency and unlock faster Trade Center, scenario analysis, Market deep evaluation, and later Multiverse/what-if capability.
+
+Authorized first tranche:
+1. benchmark/profile current NEXT fresh and changed-State Simulation end-to-end;
+2. identify dominant CPU/allocation/serialization stages;
+3. compare current kernel with compatible vectorization/batching ideas from the predecessor `sleeper-league-data` simulator as reference only;
+4. implement exact-output-preserving software improvements first;
+5. pursue reusable compiled state, vectorized/batched draws and matchup/playoff evaluation, cached legal lineups where authority permits, common-random-world/replay identity, and selective scenario recomputation where compatible;
+6. run a governed simulation-count convergence study, but keep 50k production until Management explicitly changes the contract;
+7. preserve replayable universe identity / bounded Multiverse capture as part of the redesign;
+8. return to Management before any optimization requiring non-bit-identical RNG/reduction semantics or model-fidelity tradeoff.
+
+Acceptance for this tranche is measured speed/resource improvement with unchanged governed outputs, deterministic/replay coverage, full CI, and realistic hosted/physical validation. Do not reopen broad runtime architecture or Market tuning while this program is active absent contradictory evidence.
