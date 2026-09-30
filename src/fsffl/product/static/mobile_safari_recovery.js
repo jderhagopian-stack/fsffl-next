@@ -257,17 +257,9 @@ window.fsfflMobileSafariRecoveryDisabled=true;
     publishSyncState('checking','Starting import…');
 
     try{
-      // Only reject the duplicate when this browser is already visibly attached to
-      // the requested league. Do not use a server-side context preflight here:
-      // canonical State can be active while Safari is still showing the disconnected
-      // shell, and that stale browser must be allowed to run the idempotent
-      // background Connect handoff and apply the visible context.
-      if(activeBefore===normalized){
-        recordLatency('first_connect_ready',started,'failed','same_visible_active');
-        publishSyncState('current','That Sleeper league is already active.');
-        window.alert('That Sleeper league is already active. Enter a different league ID to switch leagues.');
-        return;
-      }
+      // Manual Connect always owns the idempotent background handoff. Even when
+      // this browser already knows the requested league identity, re-applying
+      // canonical context is the recovery path for a visually stale Safari shell.
 
       const context=await waitForBackgroundImport(normalized,job=>{
         const loading=job?.status==='running';
