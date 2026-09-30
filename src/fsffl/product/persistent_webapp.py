@@ -372,7 +372,22 @@ def _reconcile_hosted_intrinsic(context) -> dict[str, object]:
     try:
         record = _shapley_intrinsic_coordinator.current(context)
         if record is None:
-            record = _shapley_intrinsic_coordinator.restore_compatible_staged(context)
+            try:
+                record = _shapley_intrinsic_coordinator.restore_compatible_staged(
+                    context
+                )
+            except IntrinsicBuildSuperseded:
+                raise
+            except Exception as exc:
+                # Durable reuse is an optimization. If its staged lookup/gate fails,
+                # fall through to the normal background build lifecycle so already
+                # completed core Forecast/Simulation/Value work is not discarded.
+                _logger.warning(
+                    "FSFFL staged Intrinsic restore unavailable state=%s error=%s",
+                    context.league_state.state_id,
+                    exc,
+                )
+                record = None
         if record is None or record.status in {
             IntrinsicBuildStatus.QUEUED,
             IntrinsicBuildStatus.RUNNING,
