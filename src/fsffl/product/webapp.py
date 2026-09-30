@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 26691)
-Total output lines: 2444
-
 from __future__ import annotations
 
 import hashlib
@@ -1000,7 +997,583 @@ def create_app(
                     activated = store.get(user_id)
             else:
                 conditional = getattr(store, "set_league_state_if_generation", None)
-              …6691 tokens truncated…)
+                if not callable(conditional):
+                    raise RuntimeError(
+                        "conditional State activation requires generation-aware runtime store"
+                    )
+                result = conditional(
+                    user_id,
+                    league_state,
+                    expected_generation=expected_generation,
+                    expected_league_id=expected_league_id,
+                )
+                if result is None:
+                    return None
+                activated = store.get(user_id)
+
+            apply_state_resource_boundary(
+                user_id,
+                previous=previous,
+                next_state=league_state,
+                next_team_id=activated.selected_team_id,
+                reason=reason,
+            )
+            current = store.get(user_id)
+            if (
+                current.league_state is None
+                or current.league_state.state_id != league_state.state_id
+                or current.selected_team_id != activated.selected_team_id
+            ):
+                return None
+            return current
+
+    def runtime_context_payload(user_id: str) -> dict[str, object]:
+        return _runtime_context_payload(
+            store,
+            user_id,
+            capability_reader=read_capabilities,
+        )
+
+    def tag_publication_generation(
+        runtime: UserRuntimeContext,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        generation_id = runtime.publication_generation_id
+        if generation_id is None:
+            return payload
+        tagged = dict(payload)
+        tagged["publication_generation_id"] = generation_id
+        return tagged
+
+    def presentation_payload(
+        user_id: str,
+        runtime: UserRuntimeContext,
+        surface: str,
+        builder: Callable[[], dict[str, object]],
+    ) -> dict[str, object]:
+        if presentation_payload_loader is not None:
+            stale = presentation_payload_loader(user_id, runtime, surface)
+            if stale is not None:
+                return stale
+        return tag_publication_generation(runtime, builder())
+
+    def publish_working_generation(
+        user_id: str,
+        *,
+        expected_generation: int | None = None,
+        expected_league_id: str | None = None,
+    ) -> UserRuntimeContext:
+        """Durably compose one owned working generation, then expose it in one swap."""
+
+        # Team/league identity changes serialize against the entire final sequence.
+        # Revalidate the worker's ownership *inside* that serialization boundary so
+        # an older job can never checkpoint/promote/publish a newer job's generation.
+        with store.publication_sequence(user_id):
+            published_identity = store.get(user_id)
+            if (
+                expected_generation is not None
+                and store.league_generation(user_id) != expected_generation
+            ):
+                raise IntelligenceJobInterrupted("league_switch")
+            if (
+                expected_league_id is not None
+                and (
+                    published_identity.league_state is None
+                    or published_identity.league_state.league.league_id
+                    != expected_league_id
+                )
+            ):
+                raise IntelligenceJobInterrupted("league_switch")
+            working = store.working_context(user_id)
+            if working.league_state is None:
+                raise RuntimeError("working intelligence generation has no LeagueState")
+
+            checkpoint = getattr(store, "checkpoint_working_generation", None)
+            if callable(checkpoint) and not checkpoint(user_id):
+                raise RuntimeError(
+                    "Working intelligence generation could not be durably checkpointed"
+                )
+
+            promoter = getattr(application.state, "presentation_promoter", None)
+            if callable(promoter):
+                with store.read_context(user_id, working):
+                    result = promoter(user_id, working)
+                if result is None:
+                    raise RuntimeError(
+                        "Published presentation generation could not be durably promoted"
+                    )
+                generation_id = str(result.publication_generation_id)
+            else:
+                generation_id = (
+                    f"runtime:{working.league_state.state_id}:{uuid4().hex}"
+                )
+
+            published = store.publish_working_generation(
+                user_id,
+                publication_generation_id=generation_id,
+            )
+            wait_for_checkpoint = getattr(store, "wait_for_checkpoint", None)
+            if callable(wait_for_checkpoint) and not wait_for_checkpoint(
+                user_id,
+                timeout=180.0,
+            ):
+                raise RuntimeError(
+                    "Published intelligence generation could not be durably checkpointed"
+                )
+            return published
+
+    application.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+    @application.get("/health")
+    def health() -> dict[str, str]:
+        return {"status": "ok", "product": "fsffl-next", "version": "next8-beta-v1"}
+
+    @application.get("/")
+    def index(_: str = Depends(require_beta_user)) -> FileResponse:
+        return FileResponse(_STATIC_DIR / "index.html")
+
+    @application.get("/api/product-context")
+    def product_context(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime_payload = runtime_context_payload(user_id)
+        if runtime_payload["league_id"] is not None:
+            return runtime_payload
+        view = league_view_provider() if league_view_provider is not None else None
+        if view is None:
+            return runtime_payload
+        return {**runtime_payload, "league_id": view.context.league_id, "state_id": view.context.league_state_id, "evidence_as_of": view.context.as_of.isoformat()}
+
+    @application.get("/api/forecast/current/coverage")
+    def current_forecast_coverage(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        """Expose shared Forecast population separately from downstream authority."""
+
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        evidence = runtime.forecast_evidence
+        if evidence is None:
+            raise HTTPException(status_code=409, detail="Current Forecast evidence is not loaded")
+        player_names = {
+            player.player_id: player.full_name
+            for player in runtime.league_state.players
+        }
+        return {
+            "league_id": runtime.league_state.league.league_id,
+            "league_state_id": runtime.league_state.state_id,
+            "evidence_basis": evidence.evidence_basis,
+            "successful_sources": list(evidence.successful_source_ids),
+            "failed_sources": list(evidence.failed_sources),
+            "raw_observation_count": len(evidence.raw_forecasts),
+            "authoritative_scored_count": len(evidence.league_scored_forecasts),
+            "partial_scored_count": len(
+                evidence.runtime_result.partial_fantasy_point_forecasts
+            ),
+            "family_coverage": [
+                item.model_dump(mode="json")
+                for item in evidence.runtime_result.family_coverage
+            ],
+            "simulation_authority_blockers": list(
+                evidence.runtime_result.simulation_authority_blockers
+            ),
+            "simulation_material_partial_player_ids": list(
+                evidence.runtime_result.simulation_material_partial_player_ids
+            ),
+            "partial_forecasts": [
+                {
+                    **item.model_dump(mode="json"),
+                    "display_name": player_names.get(item.player_id, item.player_id),
+                }
+                for item in evidence.runtime_result.partial_fantasy_point_forecasts
+            ],
+        }
+
+    @application.get("/api/intelligence/status")
+    def intelligence_status(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        evidence = runtime.forecast_evidence
+        message = None
+        if evidence is not None:
+            if evidence.evidence_basis == "preseason_baseline":
+                message = (
+                    "Governed preserved preseason Forecast authority is in use after "
+                    "the live full-season refresh failed or was quarantined; preserved "
+                    "sources: " + ", ".join(evidence.successful_source_ids) + "."
+                )
+            else:
+                message = (
+                    "Authoritative NEXT-2 ensemble loaded from independent sources: "
+                    + ", ".join(evidence.successful_source_ids) + "."
+                )
+        forecast_ready = bool(
+            evidence is not None
+            and (
+                evidence.raw_forecasts
+                or evidence.league_scored_forecasts
+                or evidence.runtime_result.partial_fantasy_point_forecasts
+            )
+        )
+        if evidence is not None and evidence.runtime_result.simulation_authority_blockers:
+            message = (
+                "Canonical shared Forecast evidence is populated. Full downstream "
+                "Simulation authority remains blocked by: "
+                + ", ".join(evidence.runtime_result.simulation_authority_blockers)
+                + "."
+            )
+        payload = state_first_runtime_status(
+            runtime.league_state,
+            forecast_ready=forecast_ready,
+            forecast_message=message,
+        ).model_dump(mode="json")
+        payload["forecast_evidence_basis"] = evidence.evidence_basis if evidence is not None else None
+        payload["forecast_failed_sources"] = list(evidence.failed_sources) if evidence is not None else []
+        payload["forecast_raw_observation_count"] = len(evidence.raw_forecasts) if evidence is not None else 0
+        payload["forecast_scored_player_count"] = len(evidence.league_scored_forecasts) if evidence is not None else 0
+        payload["forecast_partial_player_count"] = (
+            len(evidence.runtime_result.partial_fantasy_point_forecasts)
+            if evidence is not None
+            else 0
+        )
+        payload["forecast_family_coverage"] = (
+            [
+                item.model_dump(mode="json")
+                for item in evidence.runtime_result.family_coverage
+            ]
+            if evidence is not None
+            else []
+        )
+        payload["forecast_simulation_blockers"] = (
+            list(evidence.runtime_result.simulation_authority_blockers)
+            if evidence is not None
+            else []
+        )
+        value_ready = runtime.value_evidence is not None and bool(runtime.value_evidence.estimates)
+        for stage in payload["stages"]:
+            if stage["stage"] == "value" and value_ready:
+                stage["readiness"] = "ready"
+                stage["message"] = "Governed NEXT-3 current market values are attached from authoritative market evidence."
+            if runtime.simulation_analytics is not None:
+                if stage["stage"] == "team_utility":
+                    stage["readiness"] = "ready"
+                    stage["message"] = "NEXT-4 50,000-run competitive simulation is attached from calibrated forecast evidence."
+                elif stage["stage"] == "analytics":
+                    stage["readiness"] = "ready"
+                    stage["message"] = "NEXT-7 includes projected scoring, expected wins and playoff/first-place probabilities."
+        behavior = behavior_jobs.current(user_id)
+        payload["behavioral_intelligence"] = {
+            "status": behavior.status.value,
+            "profile_count": behavior.result.profile_count if behavior.result is not None else 0,
+            "event_count": behavior.result.total_event_count if behavior.result is not None else 0,
+            "reused_historical_seasons": len(behavior.result.reused_historical_league_ids) if behavior.result is not None else 0,
+            "error": behavior.error,
+        }
+        selected_team_state = next(
+            (
+                row
+                for row in runtime.league_state.team_states
+                if row.team_id == runtime.selected_team_id
+            ),
+            None,
+        )
+        current_job = jobs.current(user_id)
+        failure_stage_by_phase = {
+            IntelligenceJobPhase.BUILDING_FORECASTS: "forecast",
+            IntelligenceJobPhase.REFRESHING_STATE: "state_refresh",
+            IntelligenceJobPhase.RUNNING_SIMULATION: "simulation",
+            IntelligenceJobPhase.BUILDING_VALUES: "value",
+            IntelligenceJobPhase.BUILDING_INTRINSIC: "intrinsic",
+            IntelligenceJobPhase.ATTACHING_RESULTS: "promotion",
+        }
+        blocked_stage = (
+            failure_stage_by_phase.get(current_job.failure_phase)
+            if current_job is not None
+            and current_job.status in {IntelligenceJobStatus.FAILED, IntelligenceJobStatus.INTERRUPTED}
+            else None
+        )
+        if blocked_stage == "forecast":
+            for stage in payload["stages"]:
+                if stage["stage"] == "forecast":
+                    stage["readiness"] = "blocked"
+                    stage["message"] = (
+                        "Current Forecast authority is blocked by governed source-health / "
+                        "scoring-coverage requirements. Canonical roster State remains usable."
+                    )
+        payload["value_ready"] = value_ready
+        payload["value_coverage"] = runtime.value_evidence.coverage if runtime.value_evidence is not None else None
+        payload["cardinal_value_ready"] = runtime.value_evidence is not None and bool(runtime.value_evidence.fsffl_cardinal_values)
+        payload["cardinal_value_coverage"] = runtime.value_evidence.cardinal_player_coverage if runtime.value_evidence is not None else None
+        served_last_good = getattr(runtime, "served_intelligence", None)
+        payload["target_state"] = {
+            "league_id": runtime.league_state.league.league_id,
+            "league_name": runtime.league_state.league.name,
+            "league_state_id": runtime.league_state.state_id,
+            "as_of": runtime.league_state.as_of.isoformat(),
+            "selected_team_id": runtime.selected_team_id,
+            "roster_usable": selected_team_state is not None,
+            "roster_count": len(selected_team_state.roster) if selected_team_state is not None else 0,
+        }
+        # Backward-compatible served_state remains the canonical roster State.
+        # Derived last-good intelligence is identified separately and never
+        # masquerades as the target State.
+        payload["served_state"] = {
+            **payload["target_state"],
+            "last_good_intelligence": served_last_good is not None,
+        }
+        payload["served_intelligence"] = {
+            "available": served_last_good is not None,
+            "stale": served_last_good is not None,
+            "league_state_id": (
+                served_last_good.league_state_id
+                if served_last_good is not None
+                else runtime.league_state.state_id
+            ),
+            "as_of": (
+                served_last_good.as_of.isoformat()
+                if served_last_good is not None
+                else runtime.league_state.as_of.isoformat()
+            ),
+            "target_state_id": runtime.league_state.state_id,
+            "message": (
+                "Last-good derived intelligence remains visible while the current "
+                "canonical State is rebuilding."
+                if served_last_good is not None
+                else "Derived intelligence is not being served from an older State."
+            ),
+        }
+        payload["blocked_stage"] = blocked_stage
+        payload["blocking_error"] = (
+            current_job.error
+            if blocked_stage is not None and current_job is not None
+            else None
+        )
+        payload["capability_readiness"] = read_capabilities(runtime)
+        payload["forecast_replay_decision"] = _cached_forecast_replay_decision(
+            store,
+            user_id,
+        )
+        payload["job"] = _job_payload(current_job)
+        return payload
+
+    @application.post("/api/connect/sleeper")
+    def connect_sleeper(request: ConnectSleeperLeagueRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        previous_runtime = store.get(user_id)
+        previous_league_id = (
+            previous_runtime.league_state.league.league_id
+            if previous_runtime.league_state is not None
+            else None
+        )
+        league_external_id = request.league_external_id.strip()
+        if not league_external_id:
+            raise HTTPException(status_code=422, detail="Sleeper league id cannot be blank")
+        try:
+            league_state = state_loader(league_external_id)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Unable to load Sleeper league: {exc}") from exc
+        with store.lifecycle_operation(user_id):
+            activated = activate_state_with_resource_boundary(
+                user_id,
+                league_state,
+                reason="synchronous_connect",
+            )
+            if activated is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Sleeper league activation was superseded",
+                )
+            activated_runtime = store.get(user_id)
+            if (
+                activated_runtime.league_state is None
+                or activated_runtime.league_state.state_id != league_state.state_id
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Sleeper league ownership changed after activation",
+                )
+            behavior_jobs.start(
+                user_id=user_id,
+                league_state=league_state,
+                sleeper_league_external_id=league_external_id,
+            )
+            reconcile = getattr(
+                application.state,
+                "start_intelligence_reconciliation",
+                None,
+            )
+            if (
+                callable(reconcile)
+                and previous_league_id is not None
+                and previous_league_id != league_state.league.league_id
+                and activated_runtime.selected_team_id is not None
+            ):
+                reconcile(user_id)
+        return runtime_context_payload(user_id)
+
+    @application.get("/api/behavioral/status")
+    def behavioral_status(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        record = behavior_jobs.current(user_id)
+        result = record.result
+        return {
+            "status": record.status.value,
+            "league_state_id": record.league_state_id,
+            "started_at": record.started_at.isoformat() if record.started_at is not None else None,
+            "updated_at": record.updated_at.isoformat() if record.updated_at is not None else None,
+            "league_family_id": result.league_family_id if result is not None else None,
+            "profile_count": result.profile_count if result is not None else 0,
+            "event_count": result.total_event_count if result is not None else 0,
+            "new_event_count": result.inserted_event_count if result is not None else 0,
+            "reused_historical_league_ids": list(result.reused_historical_league_ids) if result is not None else [],
+            "scanned_league_ids": list(result.scanned_league_ids) if result is not None else [],
+            "error": record.error,
+            "cache": "sqlite_configurable_path",
+            "hosted_durability": "requires durable deployment storage",
+        }
+
+    @application.get("/api/behavioral/profiles")
+    def behavioral_profiles(user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        runtime = store.get(user_id)
+        if runtime.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        record = behavior_jobs.current(user_id)
+        if record.status == BehavioralRuntimeStatus.FAILED:
+            raise HTTPException(status_code=502, detail=record.error or "Behavioral Intelligence build failed")
+        if record.result is None:
+            return {"status": record.status.value, "profiles": []}
+
+        roster_to_team = {}
+        for team in runtime.league_state.teams:
+            sleeper_ref = next((ref for ref in team.provider_refs if ref.provider == "sleeper"), None)
+            if sleeper_ref is None:
+                continue
+            try:
+                roster_to_team[int(sleeper_ref.external_id)] = team
+            except ValueError:
+                continue
+        owner_to_team = {
+            owner_id: roster_to_team[roster_id]
+            for roster_id, owner_id in record.result.current_owner_by_roster
+            if roster_id in roster_to_team
+        }
+        return {
+            "status": record.status.value,
+            "league_family_id": record.result.league_family_id,
+            "profiles": [
+                {
+                    **profile.model_dump(mode="json"),
+                    "current_team_id": owner_to_team[profile.owner_id].team_id if profile.owner_id in owner_to_team else None,
+                    "current_team_name": owner_to_team[profile.owner_id].display_name if profile.owner_id in owner_to_team else None,
+                }
+                for profile in record.result.profiles
+            ],
+        }
+
+    @application.post("/api/select-team")
+    def select_team(request: SelectTeamRequest, user_id: str = Depends(require_beta_user)) -> dict[str, object]:
+        try:
+            store.select_team(user_id, request.team_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        # Managed-team identity is part of reconciliation/publication authority.
+        # The team-selection request owns the handoff so a browser timing gap can
+        # never leave a valid selected team without a current replacement job.
+        _start_intelligence_reconciliation(
+            user_id,
+            sync_state=False,
+        )
+        return runtime_context_payload(user_id)
+
+    def _start_intelligence_reconciliation(
+        user_id: str,
+        *,
+        sync_state: bool,
+    ) -> dict[str, object]:
+        published = store.get(user_id)
+        if published.league_state is None:
+            raise HTTPException(status_code=409, detail="No league is loaded")
+        if published.selected_team_id is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Select the managed team before starting intelligence",
+            )
+        starting_state = published.league_state
+        starting_league_id = starting_state.league.league_id
+        starting_team_id = published.selected_team_id
+        starting_external_id = _sleeper_external_id(starting_state)
+        expected_generation = store.league_generation(user_id)
+        active_job = jobs.current(user_id)
+        with reconciliation_lock:
+            same_reconciliation_league = (
+                reconciliation_league_by_user.get(user_id) == starting_league_id
+            )
+            same_reconciliation_generation = (
+                reconciliation_generation_by_user.get(user_id) == expected_generation
+            )
+        active_job_running = bool(
+            active_job is not None
+            and active_job.status in {
+                IntelligenceJobStatus.QUEUED,
+                IntelligenceJobStatus.RUNNING,
+            }
+        )
+        can_coalesce_current = bool(
+            active_job_running
+            and same_reconciliation_league
+            and same_reconciliation_generation
+        )
+        replace_stale_current = bool(
+            active_job_running and not can_coalesce_current
+        )
+        if can_coalesce_current:
+            return {
+                **_job_payload(active_job),
+                **runtime_context_payload(user_id),
+                "coalesced": True,
+            }
+
+        def require_active_league_identity() -> LeagueState:
+            active_context = store.get(user_id)
+            active_published = active_context.league_state
+            if (
+                store.league_generation(user_id) != expected_generation
+                or active_published is None
+                or active_published.league.league_id != starting_league_id
+                or active_context.selected_team_id != starting_team_id
+            ):
+                raise IntelligenceJobInterrupted("lifecycle_switch")
+            active_working = store.working_context(user_id).league_state
+            return active_working or active_published
+
+        def reconcile(progress) -> str | None:
+            log_reconciliation_memory(user_id, "job_start")
+            if sync_state:
+                progress(
+                    IntelligenceJobPhase.REFRESHING_STATE,
+                    "Syncing canonical Sleeper State into an unpublished working generation.",
+                )
+                synced_state = state_loader(starting_external_id)
+                log_reconciliation_memory(user_id, "state_sync_complete")
+                with store.lifecycle_operation(user_id):
+                    active_before_write = require_active_league_identity()
+                    if (
+                        synced_state.league.league_id
+                        != active_before_write.league.league_id
+                    ):
+                        raise IntelligenceJobInterrupted("league_switch")
+                    store.begin_working_generation(
+                        user_id,
+                        league_state=synced_state,
+                    )
+                    if active_before_write.state_id != synced_state.state_id:
+                        apply_state_resource_boundary(
+                            user_id,
+                            previous=published,
+                            next_state=synced_state,
+                            next_team_id=starting_team_id,
+                            reason="sync_reconciliation_state_change",
+                        )
                         # Cleanup and replacement execution ownership remain inside
                         # the same lifecycle sequence. A newer transition cannot land
                         # between clear/revalidation and this Behavioral handoff.

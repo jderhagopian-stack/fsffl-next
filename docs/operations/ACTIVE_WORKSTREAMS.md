@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 20415)
-Total output lines: 764
-
 # FSFFL NEXT — Active Workstreams
 
 Updated: 2026-09-25
@@ -339,7 +336,27 @@ Durable handoff:
 ## 2026-09-27 10:55 ET — PR #271 physical gate remains FAILED
 - **Implementation — ACTIVE / sole product critical path:** fix changed-State continuity after automatic Sleeper refresh. Preserve usable last-good presentation through State advance using a compact/durable read model, not a second heavy graph; repair the PR #273 hosted acceptance runner/deploy path; rerun full hosted journey with memory telemetry.
 - **Resource evidence:** startup ~281 MB peak; changed-State physical path ~411 MB observed peak, below but close to the ~429 MB ceiling.
-- **Market — HOLD:** Market did not cause the reset and must not receive a page…415 tokens truncated…an audit candidate. Historical A2/D0/D1 evidence may inform interpretation but cannot substitute for direct evaluation of the deployed package. Production remains unchanged.
+- **Market — HOLD:** Market did not cause the reset and must not receive a page-specific workaround.
+- **Performance — HOLD:** no general latency work until availability passes.
+- **Research — remains independent/parallel under its existing non-production directives.**
+
+
+## Runtime architecture completion clarification — 2026-09-27
+- **Implementation remains ACTIVE / sole product critical path.**
+- Preserve PR #271 as the architectural foundation; complete its missing compact persisted presentation-continuity layer on current `main`.
+- Repair PR #273's acceptance-harness startup/deployment path and use that harness to validate the corrected runtime end to end.
+- No page-specific adapters or Market-specific workaround are authorized.
+
+
+## 2026-09-27 — Management sequencing after model-selection governance correction
+- **Implementation — ACTIVE / sole product availability critical path:** complete PR #274 runtime presentation continuity + hosted startup repair; no Forecast semantic changes.
+- **Research — ACTIVE / foundational model-authority audit:** symmetric retrospective Forecast comparison with no incumbent privilege; joint injury practical-materiality reinterpretation included; determine whether a bounded new-family challenge is needed.
+- **Y4-Y8 Research — PRESERVED:** exploratory work may continue, but no new production promotion until the foundational Forecast authority audit establishes the base model-selection standard.
+- **Market / general Performance — HOLD** behind product availability acceptance.
+
+
+## 2026-09-27 — Forecast audit completeness
+Research remains ACTIVE. Before closeout, it must directly include the exact deployed Y2/Y3 package `forecast-vnext-a2-burr-20260922` as an audit candidate. Historical A2/D0/D1 evidence may inform interpretation but cannot substitute for direct evaluation of the deployed package. Production remains unchanged.
 
 
 ## 2026-09-27 15:37 ET — Physical beta priority shift
