@@ -12,6 +12,8 @@ from fsffl.forecast.fumbles_lost_materiality import (
 )
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.state.models import LeagueState
+from fsffl.team_utility.simulation import PYTHON_RANDOM_GAUSS_V1
+from fsffl.product.simulation_runtime import simulation_model_version_for_rng_protocol
 
 from .contracts import (
     ArtifactKey,
@@ -99,6 +101,11 @@ def _published_generation_record(
         "forecast_input_fingerprint": forecast_record.key.input_fingerprint,
         "simulation_input_fingerprint": (
             simulation_record.key.input_fingerprint
+            if simulation_record is not None
+            else None
+        ),
+        "simulation_model_version": (
+            simulation_record.key.model_version
             if simulation_record is not None
             else None
         ),
@@ -660,6 +667,13 @@ def restore_published_state_bound_intelligence(
     forecast_fp = str(payload.get("forecast_input_fingerprint") or "").strip()
     value_fp = str(payload.get("value_input_fingerprint") or "").strip()
     simulation_fp = str(payload.get("simulation_input_fingerprint") or "").strip()
+    # Before the versioned-RNG experiment, all published Simulation records used
+    # the legacy artifact model version. Keep that legacy manifest upgrade path;
+    # new manifests always name the exact protocol/runtime artifact identity.
+    simulation_model_version = (
+        str(payload.get("simulation_model_version") or "").strip()
+        or simulation_model_version_for_rng_protocol(PYTHON_RANDOM_GAUSS_V1)
+    )
     if not forecast_fp or not value_fp:
         return None, None, None, None
 
@@ -696,7 +710,7 @@ def restore_published_state_bound_intelligence(
                 scope_kind=LEAGUE_SCOPE_KIND,
                 scope_id=league_state.state_id,
                 input_fingerprint=simulation_fp,
-                model_version=SIMULATION_MODEL_VERSION,
+                model_version=simulation_model_version,
             )
         )
         if simulation_record is not None:

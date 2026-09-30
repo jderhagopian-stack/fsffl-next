@@ -1754,6 +1754,12 @@ def test_numpy_snapshot_restore_uses_exact_artifact_and_current_rng_identity(mon
     )
     assert restored[1] == simulation
     assert restored[3] == "numpy-generation-v1-b500"
+    numpy_manifests = [
+        row for row in persistence.artifacts
+        if row.key.artifact_kind == session_module.PUBLISHED_GENERATION_ARTIFACT_KIND
+    ]
+    assert len(numpy_manifests) == 1
+    assert numpy_manifests[0].payload["simulation_model_version"] == numpy_model_version
 
     # With no publication manifest, exact-State restoration finds the experimental
     # composite artifact and still checks its Forecast dependency key.
@@ -1779,6 +1785,51 @@ def test_numpy_snapshot_restore_uses_exact_artifact_and_current_rng_identity(mon
     stale_fallback = restore_state_bound_intelligence(persistence, league_state=state)
     assert stale_published[1] is None
     assert stale_fallback[1] is None
+
+    # Publish a newer legacy generation for the same State + Forecast. Its
+    # fingerprint intentionally matches the older NumPy artifact, so the manifest
+    # must name the legacy model version and never select the older NumPy result.
+    persistence.artifacts.extend(numpy_manifests)
+    monkeypatch.setattr(
+        simulation_runtime,
+        "_CONFIGURED_SIMULATION_RNG",
+        ("python-random-gauss-v1", None),
+    )
+    legacy_model_version = simulation_runtime.configured_simulation_model_version()
+    monkeypatch.setattr(persistence_runtime_cache, "SIMULATION_MODEL_VERSION", legacy_model_version)
+    monkeypatch.setattr(session_module, "SIMULATION_MODEL_VERSION", legacy_model_version)
+    legacy_simulation = build_live_simulation_analytics(
+        state,
+        forecasts=forecast.league_scored_forecasts,
+        forecast_model_version=forecast.model_version,
+        simulation_count=50_000,
+        seed=20260905,
+        generated_at=state.as_of,
+    )
+    persist_runtime_snapshot(
+        persistence,
+        user_id="numpy-snapshot-restore",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=forecast,
+        simulation_analytics=legacy_simulation,
+        value_evidence=_empty_value(state),
+        publication_generation_id="legacy-generation-after-rollback",
+    )
+    monkeypatch.setattr(
+        simulation_runtime,
+        "_CONFIGURED_SIMULATION_RNG",
+        (NUMPY_PCG64_BATCHED_GAUSS_V1, 500),
+    )
+    monkeypatch.setattr(persistence_runtime_cache, "SIMULATION_MODEL_VERSION", numpy_model_version)
+    monkeypatch.setattr(session_module, "SIMULATION_MODEL_VERSION", numpy_model_version)
+    after_rollback = restore_published_state_bound_intelligence(
+        persistence,
+        user_id="numpy-snapshot-restore",
+        league_state=state,
+    )
+    assert after_rollback[3] == "legacy-generation-after-rollback"
+    assert after_rollback[1] is None
 
 
 def test_same_state_forecast_replay_interruption_restart_rejects_stale_simulation(
