@@ -680,3 +680,25 @@ Authorized next work on PR #311:
 6. Before final validation, reconcile/rebase PR #311 with current main without truncating or replacing canonical operations histories.
 
 After this RNG candidate decision, re-profile the full hosted Simulation path before ordering the next optimization tranche. The broader Simulation modernization remains active regardless of whether this RNG candidate is ultimately adopted.
+
+
+## 2026-09-30 — PR #311 hosted resource gate: adoption withheld, bounded memory attribution authorized
+Management reviewed the controlled private-beta Render validation of PR #311.
+
+Result:
+- the NumPy/PCG64 batch-500 candidate completed Forecast, Simulation, Value, Intrinsic and atomic publication at 50,000 trials;
+- downstream changed-State validation and replay/persistence evidence remain acceptable;
+- the original expected-wins ±0.001 study remains **inconclusive** and is not relabeled;
+- hosted end-to-end publication took about 256.7s;
+- the Forecast-complete → Simulation-complete phase boundary was about 59.0s;
+- process high-water RSS reached 576,552,960 bytes against the unchanged 536,870,900-byte hard limit;
+- no unexpected restart/OOM occurred, but the resource gate failed;
+- available telemetry does **not** isolate the transient peak to the NumPy kernel, player history, Forecast, or another single owner.
+
+Management decision:
+1. Production adoption remains withheld. Do not merge PR #311 to main yet.
+2. Authorize one **bounded memory-peak attribution and correction pass** on the same branch/workstream. The goal is to identify the short-lived allocation owner(s) responsible for the ~39.7 MB hard-limit overage and remove avoidable overlap/retention without changing Forecast/Simulation/Value semantics, 50,000 trials, modeled distributions, or accepted lifecycle authority.
+3. Prefer instrumentation, lifetime/ownership fixes, staged release/reclaim, bounded batch/object reuse, and duplicate-work elimination before any capacity or model-fidelity change.
+4. Do not broadly reopen runtime architecture. If the peak cannot be safely reduced under the existing free-tier hard limit with a narrow correction, stop and return to Management for a capacity decision rather than layering on more complexity.
+5. After a narrow correction, rerun the same controlled batch-500 hosted journey with true concurrent Home/My Team/Product Context reads, full readiness/publication, restart restoration, exact RSS/high-water evidence, and rollback to main afterward.
+6. A later separate Management decision controls production adoption.
