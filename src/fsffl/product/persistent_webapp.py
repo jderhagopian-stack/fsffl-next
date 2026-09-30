@@ -806,8 +806,11 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
             ),
         )
     )
+    surface_latency_seconds: dict[str, float] = {}
     for surface, path, kwargs in surface_requests:
+        started = monotonic()
         payload = call(path, **kwargs)
+        surface_latency_seconds[surface] = round(monotonic() - started, 3)
         inspect(surface, payload)
         del payload
         # This mirrors independent request lifetimes in the hosted browser path and
@@ -854,6 +857,16 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
             (readiness.get("served_last_good") or {}).get(
                 "presentation_available", False
             )
+        ),
+        "surface_latency_seconds": surface_latency_seconds,
+        "max_surface_latency_seconds": (
+            max(surface_latency_seconds.values())
+            if surface_latency_seconds
+            else 0.0
+        ),
+        "total_surface_latency_seconds": round(
+            sum(surface_latency_seconds.values()),
+            3,
         ),
     }
 
@@ -1018,7 +1031,7 @@ def _maybe_start_state_first_production_acceptance() -> None:
         "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_MODE",
         "full",
     ).strip().lower()
-    if acceptance_mode not in {"full", "restore"}:
+    if acceptance_mode not in {"full", "journey", "restore"}:
         _runtime_availability_acceptance_state.update(
             status="fail",
             reason=f"Unsupported runtime acceptance mode: {acceptance_mode}",
@@ -1053,6 +1066,7 @@ def _maybe_start_state_first_production_acceptance() -> None:
                 process_identity_reader=_runtime_acceptance_process_identity,
                 state_activator=app.state.activate_state_with_resource_boundary,
                 restore_only=acceptance_mode == "restore",
+                journey_only=acceptance_mode == "journey",
             )
             _runtime_availability_acceptance_state.clear()
             _runtime_availability_acceptance_state.update(
