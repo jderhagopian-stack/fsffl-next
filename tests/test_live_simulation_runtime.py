@@ -41,6 +41,7 @@ from fsffl.value.models import ValueAssetKind
 from fsffl.team_utility import compare_team_utility_vectors
 from fsffl.trade_decision import (
     BilateralTradeProposal,
+    Direction,
     TradeLeg,
     classify_bilateral_trade_decision,
     evaluate_bilateral_trade_deltas,
@@ -210,7 +211,11 @@ def test_experimental_rng_keeps_player_forecasts_and_persists_distinct_identity(
     assert legacy_artifact.key.input_fingerprint == canonical_fingerprint(
         state.state_id, "forecast-fixture"
     )
-    assert legacy_artifact.key.input_fingerprint != experimental_artifact.key.input_fingerprint
+    # The exact State + Forecast dependency remains directly addressable; the
+    # experimental protocol/runtime/batch identity lives in model_version.
+    assert legacy_artifact.key.input_fingerprint == experimental_artifact.key.input_fingerprint
+    assert ";batch=250;count=2000;seed=717;runtime=python-" in experimental_artifact.key.model_version
+    assert ";numpy-" in experimental_artifact.key.model_version
     assert decode_simulation(experimental_artifact.payload) == experimental
 
 
@@ -461,10 +466,18 @@ def test_changed_state_utility_decision_and_lineup_replay_across_rng_versions() 
         )
         legacy_decision = classify_bilateral_trade_decision(legacy_evaluation)
         numpy_decision = classify_bilateral_trade_decision(numpy_evaluation)
-        if not near_boundary:
-            assert legacy_decision.side_a.expected_wins == numpy_decision.side_a.expected_wins
-            assert legacy_decision.side_b.expected_wins == numpy_decision.side_b.expected_wins
-            assert legacy_decision.shape == numpy_decision.shape
+        assert legacy_decision == numpy_decision
+        expected_direction = Direction.UNCHANGED if near_boundary else Direction.WORSENS
+        expected_counterparty_direction = (
+            Direction.UNCHANGED if near_boundary else Direction.IMPROVES
+        )
+        for result in (legacy_decision, numpy_decision):
+            assert result.side_a.expected_wins == expected_direction
+            assert result.side_a.playoff_probability == expected_direction
+            assert result.side_a.first_place_probability == expected_direction
+            assert result.side_b.expected_wins == expected_counterparty_direction
+            assert result.side_b.playoff_probability == expected_counterparty_direction
+            assert result.side_b.first_place_probability == expected_counterparty_direction
 
         # The test intentionally reports both signed effects for boundary cases;
         # it does not force a tie/noise result into an equivalence assertion.

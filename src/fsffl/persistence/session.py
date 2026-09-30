@@ -39,6 +39,7 @@ from .runtime_cache import (
     decode_value_result,
     forecast_artifact,
     simulation_artifact,
+    simulation_matches_configured_rng,
     value_artifact,
 )
 
@@ -706,6 +707,15 @@ def restore_published_state_bound_intelligence(
                 if (
                     candidate_simulation.league_view.context.league_state_id
                     == league_state.state_id
+                    and simulation_matches_configured_rng(
+                        candidate_simulation.simulation_result
+                    )
+                    and simulation_artifact(
+                        league_state_id=league_state.state_id,
+                        forecast_fingerprint=forecast_record.key.input_fingerprint,
+                        result=candidate_simulation,
+                    ).key
+                    == simulation_record.key
                     and all(
                         view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
                         for view in candidate_simulation.team_views
@@ -785,6 +795,15 @@ def restore_state_bound_intelligence(
                 if (
                     candidate.league_view.context.league_state_id
                     == league_state.state_id
+                    and simulation_matches_configured_rng(
+                        candidate.simulation_result
+                    )
+                    and simulation_artifact(
+                        league_state_id=league_state.state_id,
+                        forecast_fingerprint=current_forecast_record.key.input_fingerprint,
+                        result=candidate,
+                    ).key
+                    == simulation_record.key
                     and has_current_team_views
                 ):
                     simulation = candidate
@@ -1063,4 +1082,3 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         served_publication_generation_id=served_publication_generation_id,
         restored_from_last_good=restored_from_last_good,
     )
-

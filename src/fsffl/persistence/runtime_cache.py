@@ -15,6 +15,8 @@ from fsffl.product.runtime import LiveForecastEvidence
 from fsffl.product.simulation_runtime import (
     configured_simulation_model_version,
     LiveSimulationAnalyticsResult,
+    simulation_matches_configured_rng,
+    simulation_artifact_model_version,
     simulation_model_version_for_rng_protocol,
 )
 from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
@@ -176,26 +178,11 @@ def simulation_artifact(
     result: LiveSimulationAnalyticsResult,
 ) -> ReusableArtifactRecord:
     payload = encode_simulation(result)
-    simulation = result.simulation_result
-    model_version = simulation_model_version_for_rng_protocol(simulation.rng_protocol)
-    if simulation.rng_protocol == "python-random-gauss-v1":
-        # Keep the established production cache identity for legacy artifacts.
-        input_fingerprint = canonical_fingerprint(league_state_id, forecast_fingerprint)
-    else:
-        input_fingerprint = canonical_fingerprint(
-            league_state_id,
-            forecast_fingerprint,
-            simulation.simulation_input_fingerprint,
-            simulation.simulation_count,
-            simulation.seed,
-            simulation.rng_protocol,
-            simulation.rng_runtime_version,
-            simulation.rng_bit_generator,
-            simulation.rng_batch_size,
-            simulation.rng_draw_dtype,
-            simulation.rng_draw_layout,
-            simulation.rng_seed_derivation,
-        )
+    # Model version carries the explicit protocol/runtime/batch replay identity for
+    # experimental outputs, leaving the dependency fingerprint directly queryable
+    # from State + exact Forecast as it is for legacy restore.
+    model_version = simulation_artifact_model_version(result.simulation_result)
+    input_fingerprint = canonical_fingerprint(league_state_id, forecast_fingerprint)
     return ReusableArtifactRecord(
         key=ArtifactKey(
             artifact_kind=SIMULATION_ARTIFACT_KIND,

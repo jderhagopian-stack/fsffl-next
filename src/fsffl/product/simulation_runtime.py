@@ -72,7 +72,69 @@ def configured_simulation_rng() -> tuple[str, int | None]:
 
 
 def configured_simulation_model_version() -> str:
-    return simulation_model_version_for_rng_protocol(configured_simulation_rng()[0])
+    protocol, _ = configured_simulation_rng()
+    model_version = simulation_model_version_for_rng_protocol(protocol)
+    if protocol == PYTHON_RANDOM_GAUSS_V1:
+        return model_version
+    return f"{model_version}:{configured_simulation_cache_identity()}"
+
+
+def simulation_artifact_model_version(result: object) -> str:
+    protocol = getattr(result, "rng_protocol", None)
+    model_version = simulation_model_version_for_rng_protocol(protocol)
+    if protocol == PYTHON_RANDOM_GAUSS_V1:
+        return model_version
+    runtime = str(getattr(result, "rng_runtime_version", ""))
+    numpy_runtime, separator, python_runtime = runtime.partition(";")
+    if not separator or not numpy_runtime.startswith("numpy-") or not python_runtime.startswith("python-"):
+        return f"{model_version}:invalid-runtime-identity"
+    identity = (
+        f"{protocol};batch={getattr(result, 'rng_batch_size', None)};"
+        f"count={getattr(result, 'simulation_count', None)};seed={getattr(result, 'seed', None)};"
+        f"runtime={python_runtime};{numpy_runtime}"
+    )
+    return f"{model_version}:{identity}"
+
+
+def simulation_matches_configured_rng(result: object) -> bool:
+    """Reject durable Simulation created for another process RNG/runtime config."""
+
+    protocol, batch_size = configured_simulation_rng()
+    if getattr(result, "rng_protocol", None) != protocol:
+        return False
+
+    if protocol == PYTHON_RANDOM_GAUSS_V1:
+        if getattr(result, "rng_batch_size", None) is not None:
+            return False
+        runtime_version = f"python-{platform.python_version()}"
+        bit_generator = "python-random-mt19937"
+        draw_layout = "trial-major;compiled-schedule-major;home-away-v1"
+        seed_derivation = "python-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
+    else:
+        if (
+            getattr(result, "simulation_count", None) != 50_000
+            or getattr(result, "seed", None) != 20260905
+            or getattr(result, "rng_batch_size", None) != batch_size
+        ):
+            return False
+        runtime_version = (
+            f"numpy-{importlib.metadata.version('numpy')};python-{platform.python_version()}"
+        )
+        bit_generator = "PCG64"
+        draw_layout = "batch-major;trial-major;compiled-schedule-major;home-away-v1"
+        seed_derivation = "pcg64-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
+
+    # Pre-protocol legacy artifacts did not record a replay identity. Continue to
+    # accept those only on the legacy path; experimental results must be explicit.
+    if protocol == PYTHON_RANDOM_GAUSS_V1 and getattr(result, "rng_runtime_version", None) == "legacy-unrecorded":
+        return True
+    return bool(
+        getattr(result, "rng_runtime_version", None) == runtime_version
+        and getattr(result, "rng_bit_generator", None) == bit_generator
+        and getattr(result, "rng_draw_dtype", None) == "float64"
+        and getattr(result, "rng_draw_layout", None) == draw_layout
+        and getattr(result, "rng_seed_derivation", None) == seed_derivation
+    )
 
 
 def configured_simulation_cache_identity() -> str:

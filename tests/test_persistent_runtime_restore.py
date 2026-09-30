@@ -30,13 +30,17 @@ from fsffl.persistence.session import (
     persist_runtime_snapshot, restore_last_good_intelligence, restore_runtime_snapshot,
     restore_published_generation_identity, restore_state_bound_intelligence,
     restore_state_bound_raw_forecast_evidence,
+    restore_published_state_bound_intelligence,
 )
+from fsffl.persistence import runtime_cache as persistence_runtime_cache
+from fsffl.persistence import session as session_module
 from fsffl.product.persistent_runtime import PersistentPrivateBetaRuntimeStore
 from fsffl.product.presentation_continuity import (
     PresentationContinuityStore,
     REQUIRED_PRESENTATION_SURFACES,
 )
 from fsffl.product.runtime import LiveForecastEvidence
+from fsffl.product import simulation_runtime
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.state.history import InMemorySnapshotStore
 from fsffl.state.models import (
@@ -1692,6 +1696,89 @@ def test_restore_finds_older_simulation_with_exact_current_forecast_dependency()
     assert restored_simulation == simulation_a
     assert restored_simulation != simulation_b
     assert restored_value is not None
+
+
+def test_numpy_snapshot_restore_uses_exact_artifact_and_current_rng_identity(monkeypatch) -> None:
+    from fsffl.team_utility.simulation import NUMPY_PCG64_BATCHED_GAUSS_V1
+
+    state = _simulation_state()
+    # This synthetic Forecast contract does not require the separate fumbles-lost
+    # supplement; the Forecast attached to the simulation input is the same one
+    # persisted below and therefore tests the exact dependency key.
+    state = state.model_copy(
+        update={
+            "league": state.league.model_copy(
+                update={"rules": state.league.rules.model_copy(update={"scoring": ()})}
+            )
+        }
+    )
+    forecast_rows = _simulation_forecasts(state)
+    forecast = replace(
+        _stale_forecast_without_first_party_fumbles_lost(state),
+        league_scored_forecasts=forecast_rows,
+    )
+    monkeypatch.setattr(
+        simulation_runtime,
+        "_CONFIGURED_SIMULATION_RNG",
+        (NUMPY_PCG64_BATCHED_GAUSS_V1, 500),
+    )
+    numpy_model_version = simulation_runtime.configured_simulation_model_version()
+    monkeypatch.setattr(persistence_runtime_cache, "SIMULATION_MODEL_VERSION", numpy_model_version)
+    monkeypatch.setattr(session_module, "SIMULATION_MODEL_VERSION", numpy_model_version)
+    simulation = build_live_simulation_analytics(
+        state,
+        forecasts=forecast.league_scored_forecasts,
+        forecast_model_version=forecast.model_version,
+        simulation_count=50_000,
+        seed=20260905,
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+        generated_at=state.as_of,
+    )
+    persistence = MemoryPersistence()
+    persist_runtime_snapshot(
+        persistence,
+        user_id="numpy-snapshot-restore",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=forecast,
+        simulation_analytics=simulation,
+        value_evidence=_empty_value(state),
+        publication_generation_id="numpy-generation-v1-b500",
+    )
+
+    restored = restore_published_state_bound_intelligence(
+        persistence,
+        user_id="numpy-snapshot-restore",
+        league_state=state,
+    )
+    assert restored[1] == simulation
+    assert restored[3] == "numpy-generation-v1-b500"
+
+    # With no publication manifest, exact-State restoration finds the experimental
+    # composite artifact and still checks its Forecast dependency key.
+    persistence.artifacts = [
+        row for row in persistence.artifacts
+        if row.key.artifact_kind != session_module.PUBLISHED_GENERATION_ARTIFACT_KIND
+    ]
+    fallback = restore_state_bound_intelligence(persistence, league_state=state)
+    assert fallback[1] == simulation
+
+    # The same protocol with a different batch is a different replay identity; a
+    # restart must fail closed rather than attach the old simulation to this process.
+    monkeypatch.setattr(
+        simulation_runtime,
+        "_CONFIGURED_SIMULATION_RNG",
+        (NUMPY_PCG64_BATCHED_GAUSS_V1, 1_000),
+    )
+    stale_published = restore_published_state_bound_intelligence(
+        persistence,
+        user_id="numpy-snapshot-restore",
+        league_state=state,
+    )
+    stale_fallback = restore_state_bound_intelligence(persistence, league_state=state)
+    assert stale_published[1] is None
+    assert stale_fallback[1] is None
 
 
 def test_same_state_forecast_replay_interruption_restart_rejects_stale_simulation(
