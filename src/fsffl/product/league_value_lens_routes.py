@@ -63,7 +63,83 @@ def install_league_value_lens_routes(
         intrinsic_error = None
         intrinsic_record = None
         if background_coordinator is not None:
-            record = background_coordinator.request(runtime)
+            record = background_coordinator.current(runtime)
+            first_load_staging = bool(
+                record is None
+                and runtime.publication_generation_id is None
+                and (
+                    runtime.selected_team_id is None
+                    or runtime_store.working_generation_active(user_id)
+                    or runtime.forecast_evidence is None
+                )
+            )
+            if first_load_staging:
+                payload = build_league_value_lenses(
+                    runtime,
+                    None,
+                    intrinsic_error=(
+                        "Governed FSFFL Intrinsic is staged behind current core "
+                        "intelligence enrichment. Broad Market remains independently usable."
+                    ),
+                    include_unrostered=universe == "all",
+                )
+                payload["status"] = (
+                    "degraded"
+                    if payload.get("broad_market", {}).get("status") == "ready"
+                    else "building"
+                )
+                payload["fsffl_intrinsic"] = {
+                    **dict(payload.get("fsffl_intrinsic") or {}),
+                    "status": "building",
+                    "reason": (
+                        "Governed FSFFL Intrinsic is staged behind current core "
+                        "intelligence enrichment."
+                    ),
+                    "retry_after_ms": 1500,
+                    "build_status": "staged",
+                }
+                forecast_status = str(
+                    (payload.get("all_player_forecast") or {}).get("status")
+                    or "unavailable"
+                )
+                payload["surface_readiness"] = {
+                    "surface": "player_board",
+                    "status": "building_optional",
+                    "required_dependencies": ["canonical_state", "broad_market_value"],
+                    "optional_dependencies": [
+                        "fsffl_intrinsic_all_player",
+                        "all_player_season_forecast",
+                    ],
+                    "blockers": [],
+                    "missing_optional": [
+                        "fsffl_intrinsic_all_player",
+                        *(
+                            []
+                            if forecast_status == "ready"
+                            else ["all_player_season_forecast_partial"]
+                        ),
+                    ],
+                    "league_state_id": runtime.league_state.state_id,
+                    "retry_after_ms": 1500,
+                }
+                payload["intrinsic_execution"] = {
+                    "status": "staged",
+                    "league_state_id": runtime.league_state.state_id,
+                    "forecast_coordinate": None,
+                    "response_budget_exceeded": False,
+                    "started_at": None,
+                    "updated_at": None,
+                    "error": None,
+                }
+                _logger.info(
+                    "FSFFL Market value lenses staged first-load Intrinsic universe=%s state=%s forecast_status=%s",
+                    universe,
+                    runtime.league_state.state_id,
+                    forecast_status,
+                )
+                return payload
+            if record is None:
+                record = background_coordinator.request(runtime)
             intrinsic_record = record
             if record.status in {
                 IntrinsicBuildStatus.QUEUED,
