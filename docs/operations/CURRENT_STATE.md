@@ -1912,3 +1912,11 @@ Next executable sequence:
 A bounded additional statistical confirmation is allowed only when justified to diagnose directional drift or another concrete risk. Do not relabel the original ±0.001 study as passing and do not widen that margin post hoc.
 
 PR #311 remains experimental until the final Management adoption decision.
+
+
+## 2026-09-30 — PR #311 hosted validation failed resource gate; bounded corrective authorized
+Controlled Render validation of PR #311 is complete. The experimental batch-500 NumPy path reached full Forecast / Simulation / Current Value / Intrinsic readiness and atomically published at 50,000 trials. The measured Forecast-complete → Simulation-complete interval was about 59.0 seconds, while total refresh-to-publication was about 256.7 seconds.
+
+The run failed the unchanged hard-memory gate: process high-water RSS reached 576,552,960 bytes versus the 536,870,900-byte limit. Current RSS later fell to ~403.8 MB and there was no unexpected OOM/restart. Existing phase telemetry does not identify the transient peak's precise owner and does not support blaming the NumPy Simulation kernel specifically.
+
+Management has **withheld adoption** and authorized one bounded memory attribution/correction pass. Keep PR #311 open/draft, preserve 50,000 trials, all model semantics, replay/version identity and the legacy Python replay path. Identify the short-lived allocation owner(s), remove avoidable overlap/retention or duplicate work without broad architecture changes, then rerun the same controlled batch-500 hosted journey with true concurrent foreground reads, full readiness/publication, restart restore, exact high-water evidence, and rollback to main. If the hard limit still cannot be met with a narrow fix, return to Management for a capacity decision instead of continued micro-optimization.
