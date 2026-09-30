@@ -955,41 +955,54 @@ def create_app(
         expected_generation: int | None = None,
         expected_league_id: str | None = None,
     ) -> UserRuntimeContext | None:
-        previous = store.get(user_id)
-        if expected_generation is None:
-            fast_connect_activation = (
-                getattr(store, "activate_league_state_for_connect", None)
-                if reason in {"background_connect", "synchronous_connect"}
-                else None
-            )
-            if callable(fast_connect_activation):
-                activated = fast_connect_activation(user_id, league_state)
-            else:
-                store.set_league_state(user_id, league_state)
-                activated = store.get(user_id)
-        else:
-            conditional = getattr(store, "set_league_state_if_generation", None)
-            if not callable(conditional):
-                raise RuntimeError(
-                    "conditional State activation requires generation-aware runtime store"
+        # State authority and process-resource ownership are one same-user lifecycle
+        # sequence. A later B->C transition cannot become canonical between B's
+        # activation and B's cleanup/revalidation, then have the older B transition
+        # resume and evict C-owned execution state.
+        with store.lifecycle_operation(user_id):
+            previous = store.get(user_id)
+            if expected_generation is None:
+                fast_connect_activation = (
+                    getattr(store, "activate_league_state_for_connect", None)
+                    if reason in {"background_connect", "synchronous_connect"}
+                    else None
                 )
-            result = conditional(
+                if callable(fast_connect_activation):
+                    activated = fast_connect_activation(user_id, league_state)
+                else:
+                    store.set_league_state(user_id, league_state)
+                    activated = store.get(user_id)
+            else:
+                conditional = getattr(store, "set_league_state_if_generation", None)
+                if not callable(conditional):
+                    raise RuntimeError(
+                        "conditional State activation requires generation-aware runtime store"
+                    )
+                result = conditional(
+                    user_id,
+                    league_state,
+                    expected_generation=expected_generation,
+                    expected_league_id=expected_league_id,
+                )
+                if result is None:
+                    return None
+                activated = store.get(user_id)
+
+            apply_state_resource_boundary(
                 user_id,
-                league_state,
-                expected_generation=expected_generation,
-                expected_league_id=expected_league_id,
+                previous=previous,
+                next_state=league_state,
+                next_team_id=activated.selected_team_id,
+                reason=reason,
             )
-            if result is None:
+            current = store.get(user_id)
+            if (
+                current.league_state is None
+                or current.league_state.state_id != league_state.state_id
+                or current.selected_team_id != activated.selected_team_id
+            ):
                 return None
-            activated = store.get(user_id)
-        apply_state_resource_boundary(
-            user_id,
-            previous=previous,
-            next_state=league_state,
-            next_team_id=activated.selected_team_id,
-            reason=reason,
-        )
-        return activated
+            return current
 
     def runtime_context_payload(user_id: str) -> dict[str, object]:
         return _runtime_context_payload(
@@ -1516,22 +1529,24 @@ def create_app(
                         user_id,
                         league_state=synced_state,
                     )
-                if active_before_write.state_id != synced_state.state_id:
-                    apply_state_resource_boundary(
-                        user_id,
-                        previous=published,
-                        next_state=synced_state,
-                        next_team_id=starting_team_id,
-                        reason="sync_reconciliation_state_change",
-                    )
-                    # The boundary releases the prior Behavioral execution record.
-                    # Rebuild/reuse it for the replacement State before any consumer
-                    # can mistake an old durable owner mapping for current execution.
-                    behavior_jobs.start(
-                        user_id=user_id,
-                        league_state=synced_state,
-                        sleeper_league_external_id=starting_external_id,
-                    )
+                    if active_before_write.state_id != synced_state.state_id:
+                        apply_state_resource_boundary(
+                            user_id,
+                            previous=published,
+                            next_state=synced_state,
+                            next_team_id=starting_team_id,
+                            reason="sync_reconciliation_state_change",
+                        )
+                        # Cleanup and replacement execution ownership remain inside
+                        # the same lifecycle sequence. A newer transition cannot land
+                        # between clear/revalidation and this Behavioral handoff.
+                        require_active_league_identity()
+                        behavior_jobs.start(
+                            user_id=user_id,
+                            league_state=synced_state,
+                            sleeper_league_external_id=starting_external_id,
+                        )
+                        require_active_league_identity()
             else:
                 with store.lifecycle_operation(user_id):
                     require_active_league_identity()
