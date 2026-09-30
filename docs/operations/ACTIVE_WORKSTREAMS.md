@@ -787,3 +787,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - #308 phase telemetry showed RSS 381 MB at Intrinsic reconciliation complete and 387 MB at publication complete; peak 524.7 MB, no restart, Render coarse memory stable near 410 MB. Free-tier headroom remains narrow.
 - While 50K Simulation was active (~173s), concurrent Home/My Team calls took ~12–22s and product context ~29–33s; after it completed they fell to ~2.5–6s. Active Simulation owns the measured foreground delay. This corrective does not change simulation or resource-boundary architecture.
 - Added Server-Timing to status, Atlas, team views, and value-lens endpoints. Focused regressions and full suite pass (1,888 tests). Deployment and hosted acceptance remain before physical Safari confirmation.
+
+
+## 2026-09-30 — Market For You zero-result blocker
+- **Implementation / Work — ACTIVE, bounded Market acceptance gate.**
+- Physical core app is materially usable after #310.
+- Live Market discovery is functioning: automatic discovery produced 2 opportunities and a focused target produced 1, but both ended with `for_you=0`.
+- Trace the promotion/eligibility/dominance/diversity layer that removes all discovered opportunities. Preserve accepted economic/bilateral screens and zero broad Simulation.
+- Fix the smallest concrete defect or make a legitimate zero-result explainable to the user.
+- After one physical Market pass, proceed to Simulation modernization.
