@@ -1811,3 +1811,28 @@ roughly 2.5–6s. Forecast fallback remains truthful and was not changed.
 Focused tests pass and full suite passes: **1,888 passed**. Current work is
 deployment and one realistic hosted acceptance of cross-surface convergence;
 after that, return to Management for physical Safari confirmation.
+
+
+## 2026-09-30 — Physical Market acceptance: discovery works, For You collapses to zero
+Post-#310 physical Safari testing shows the core product is materially usable, but Market does not surface opportunities to the user.
+
+Live Render evidence from the physical Market session:
+- quick workspace returned `status=ready candidates=0`;
+- broad focused workspace generated substantial structural candidate pools (for example `candidates=279`) but initially `paths=0` while enrichment ran;
+- completed automatic discovery then produced `opportunities=2` with `for_you=0`;
+- a focused target search produced `opportunities=1` with `for_you=0`;
+- zero broad changed-state Simulation calls were made, consistent with the accepted discovery architecture.
+
+Management classification:
+- Market discovery/candidate generation is not dead;
+- the immediate product defect is downstream opportunity promotion/selection: viable discovered opportunities are being eliminated before the user-facing For You frontier;
+- this is the remaining product acceptance gate before Simulation modernization.
+
+Immediate next work:
+1. trace Opportunity -> eligibility/dominance/clustering/diversity -> For You selection on the live physical State;
+2. identify the exact exclusion reason for each discovered opportunity;
+3. verify the zero-result contract is intentional only when no defensible opportunity survives, not because of an over-strict or stale gate;
+4. preserve the accepted maximum-four, no-duplicate-target, cheap-pre-Simulation architecture;
+5. fix the smallest selection/promotion defect and validate one realistic physical Market journey that surfaces credible, distinct opportunities when available.
+
+Do not loosen economic/bilateral quality merely to force cards. If all candidates are legitimately filtered, the UI must explain why and focused target/shop searches must still return the surviving opportunity paths where supported.
