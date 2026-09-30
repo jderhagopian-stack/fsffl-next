@@ -1539,3 +1539,24 @@ Immediate next step:
 4. do not add rapid-switch stress or commercial-load requirements;
 5. if the journey passes the unchanged memory gate and foreground usability is acceptable, return to physical Safari acceptance and capability development;
 6. if ownership remains clean but legitimate normal beta work still exceeds the free-tier envelope, escalate to the smallest practical beta staging/capacity decision rather than reopening indefinite leak hunting.
+
+
+## 2026-09-29 — #303 merged/live; normal-use hosted acceptance blocked by hard-memory peak
+PR #303 merged as `7292782e631a28a4bcd12007c794fb12e26194aa` and was deployed exactly as Render deploy `dep-dau5q4psrm7s73atb0j0`.
+
+The hosted run proved the intended clean-start and first publication behavior before the resource gate stopped it:
+- clean FSFFL State became visible with no selected team and no Forecast/Simulation/Value publication;
+- managed team `sleeper:1312071960615731200:team:1` was then selected while State remained usable;
+- foreground Home/Franchise/League remained usable during active enrichment and Market truthfully reported `building_intelligence`;
+- terminal FSFFL publication completed coherently with full Forecast, Simulation, current Value and Intrinsic, one publication generation, and PI history available;
+- resident memory settled back to ~343 MB after the heavy phase; Render coarse metrics likewise fell to ~303 MB after a transient spike, so no monotonic retained-resource pattern was observed in this leg.
+
+The unchanged hard-memory gate nevertheless failed at `fsffl_initial`:
+- process lifetime peak RSS: **544,358,400 bytes**;
+- hard Render limit used by acceptance: **536,870,900 bytes**;
+- overage: **7,487,500 bytes (~7.1 MiB)**;
+- current RSS at failure: **342,740,992 bytes**.
+
+Acceptance terminated by design with `StateFirstAcceptanceError: hard memory limit reached at fsffl_initial`. It therefore did **not** proceed to Hodor -> FSFFL return -> same-State -> restart/restored-session on this run.
+
+This is now a **beta capacity/staging blocker**, not evidence that the accepted #303 resource-ownership closure regressed. Per the controlling management guidance, do not reopen indefinite leak hunting or broaden architecture: ownership is clean and memory returns to a bounded post-settle level, but legitimate normal first-load work transiently exceeds the free-tier hard envelope. Physical Safari remains HOLD. Management must choose the smallest practical beta-specific capacity/staging adjustment before the remaining hosted journey can be accepted.
