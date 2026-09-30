@@ -278,8 +278,29 @@ def test_hosted_clean_first_run_history_is_state_only_until_terminal_publication
     state_only_branch = surfaces.split("if state_only", 1)[0]
     assert '("home", "/api/home", {})' not in state_only_branch
     assert "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_MODE" in orchestration
-    assert 'acceptance_mode not in {"full", "restore"}' in orchestration
+    assert 'acceptance_mode not in {"full", "journey", "restore"}' in orchestration
     assert 'restore_only=acceptance_mode == "restore"' in orchestration
+    assert 'journey_only=acceptance_mode == "journey"' in orchestration
+
+
+def test_realistic_hosted_journey_skips_synthetic_overlap_stress() -> None:
+    source = Path("src/fsffl/product/state_first_acceptance.py").read_text(
+        encoding="utf-8"
+    )
+    journey = source.split("if journey_only:", 1)[1].split(
+        "# Reproduce the availability incident shape", 1
+    )[0]
+
+    assert 'activate(HODOR_ACCEPTANCE_LEAGUE, label="hodor_switch")' in journey
+    assert 'activate(FSFFL_ACCEPTANCE_LEAGUE, label="fsffl_return")' in journey
+    assert 'sample_resources("hodor_switch")' in journey
+    assert 'sample_resources("fsffl_return")' in journey
+    assert 'report["mode"] = "journey"' in journey
+    assert "start_sync_reconciliation" not in journey
+    assert "select_team_if_working_generation_active" not in journey
+    assert "same_state_during_active_reconciliation" not in journey
+    assert "pi_history_during_active_reconciliation" not in journey
+    assert "realistic hosted acceptance peak RSS" in journey
 
 
 def test_live_pi_route_and_acceptance_share_one_history_coordinator() -> None:
@@ -311,6 +332,9 @@ def test_hosted_surface_acceptance_releases_sequential_payloads_and_bounds_marke
     assert "payloads = {" not in probe
     assert "del payload" in probe
     assert "gc.collect()" in probe
+    assert "surface_latency_seconds" in probe
+    assert "max_surface_latency_seconds" in probe
+    assert "total_surface_latency_seconds" in probe
     assert "_MAX_ENTRIES_PER_USER = 1" in workspace_cache
     assert "_MAX_ENTRIES_PER_USER = 1" in search_cache
     assert "def clear_user_cache(user_id: str)" in workspace_cache

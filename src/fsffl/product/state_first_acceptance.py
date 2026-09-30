@@ -229,6 +229,7 @@ def run_state_first_production_acceptance(
     process_identity_reader: ProcessIdentityReader | None = None,
     state_activator: StateActivator | None = None,
     restore_only: bool = False,
+    journey_only: bool = False,
     timeout_seconds: float = 1200.0,
     poll_seconds: float = 1.0,
 ) -> dict[str, object]:
@@ -609,6 +610,75 @@ def run_state_first_production_acceptance(
     _require_full_fsffl(fsffl_initial)
     sample_resources("fsffl_initial")
     probe_surface("initial_home_franchise_league")
+
+    if journey_only:
+        # Management's normal private-beta acceptance is intentionally narrower than
+        # the historical full stress harness: settle FSFFL, switch and settle Hodor,
+        # return and settle FSFFL. Publication-race and active-overlap proofs remain
+        # covered by deterministic CI and are not repeated in this capacity gate.
+        hodor = activate(HODOR_ACCEPTANCE_LEAGUE, label="hodor_switch")
+        _require_truthful_hodor(hodor)
+        probe_surface("hodor_home_franchise_league")
+        sample_resources("hodor_switch")
+
+        fsffl_return = activate(FSFFL_ACCEPTANCE_LEAGUE, label="fsffl_return")
+        _require_full_fsffl(fsffl_return)
+        probe_surface("fsffl_return_home_franchise_league")
+        sample_resources("fsffl_return")
+        sample_resources("acceptance_end")
+
+        process_identity_end = (
+            process_identity_reader() if process_identity_reader is not None else None
+        )
+        report["process_identity_end"] = process_identity_end
+        if (
+            process_identity_start is not None
+            and process_identity_end is not None
+            and process_identity_start != process_identity_end
+        ):
+            raise StateFirstAcceptanceError(
+                "hosted process identity changed during realistic journey: "
+                f"{process_identity_start} -> {process_identity_end}"
+            )
+
+        if resources:
+            peak = max(
+                int(row.get("max_rss_observed_bytes") or 0)
+                for row in resources
+            )
+            current = int(resources[-1].get("current_rss_bytes") or 0)
+            report["peak_rss_bytes"] = peak
+            report["current_rss_bytes"] = current
+            budget = min(
+                int(row.get("memory_budget_bytes") or 0)
+                for row in resources
+                if int(row.get("memory_budget_bytes") or 0) > 0
+            )
+            report["memory_budget_bytes"] = budget
+            report["memory_headroom_bytes"] = budget - peak
+            report["soft_memory_budget_exceeded"] = peak > budget
+            hard_limits = [
+                int(row.get("memory_limit_bytes") or 0)
+                for row in resources
+                if int(row.get("memory_limit_bytes") or 0) > 0
+            ]
+            if hard_limits:
+                hard_limit = min(hard_limits)
+                report["memory_limit_bytes"] = hard_limit
+                report["hard_memory_headroom_bytes"] = hard_limit - peak
+                if peak >= hard_limit:
+                    raise StateFirstAcceptanceError(
+                        "realistic hosted acceptance peak RSS "
+                        f"{peak} reached hard memory limit {hard_limit}"
+                    )
+
+        report["status"] = "PASS"
+        report["mode"] = "journey"
+        _logger.info(
+            "FSFFL STATE-FIRST ACCEPTANCE RESULT %s",
+            json.dumps(report, sort_keys=True, default=str),
+        )
+        return report
 
     # Reproduce the availability incident shape: while a real State-first sync is
     # active, issue presentation reads and PI/history work. Heavy model work must
