@@ -769,3 +769,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
   polling so the new RSS boundary logs capture per-phase memory and usability.
   The old incident has no object-level allocation profile, and no fresh build
   has run on the corrective deploy yet.
+
+
+## 2026-09-30 — Physical #308 follow-up: propagation/latency blocker
+- **Implementation — ACTIVE / sole product-critical path.**
+- Physical iPhone/Safari no longer reproduced the catastrophic restart/2-of-7 failure: Home reached current with 50,000-run Simulation, Franchise showed projections/Broad Market, and PI showed Market + Intrinsic.
+- Acceptance is still NOT clean because value/readiness state propagated inconsistently: Franchise and Assets & Picks still showed Intrinsic preparing, League Value Map kept loading, and position detail omitted Market/Intrinsic percentiles after PI already had those values.
+- Load time was still significant.
+- Correlate the run with #308 phase RSS telemetry first. Then fix the narrow publication/readiness/presentation propagation or polling/cache owner and measured latency bottleneck.
+- Preserve #308 lifecycle/restart changes and model semantics unless telemetry directly contradicts them.
