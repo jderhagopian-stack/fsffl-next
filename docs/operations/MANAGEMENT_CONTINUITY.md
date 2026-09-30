@@ -318,3 +318,22 @@ Controlling corrective: `docs/operations/directives/20260929_RUNTIME_ARCHITECTUR
 Target invariant: valid canonical State opens the league; persistence/restore are continuity mechanisms, not permission gates. Foreground `get()` should be an in-memory published read; durable restore should be explicit/outside fresh State activation and may install only if the captured runtime identity is still current. Preserve atomic publication, per-user sequencing, team identity guards and strict Forecast source-health authority.
 
 PR #293 merged as `49ce8cae4f588fefc7c879e643504ee1b015cf42` and is currently under hosted acceptance. Let that run finish; then resolve any replay-scan P2 and the cold-restore/Connect architecture gate before declaring stabilization complete or requesting another iPhone/Safari test.
+
+
+## 2026-09-30 — Active Simulation Work continuity checkpoint
+Management has explicitly authorized the experimental, versioned NumPy/PCG64 batched-Gaussian Simulation path at the unchanged 50,000-trial count, subject to the separate production-adoption gate already recorded in `DECISION_LOG.md`.
+
+Repo-visible Work state at this checkpoint:
+- active PR: **#311 — [DRAFT] Study versioned batched Simulation RNG**;
+- branch: `work/simulation-modernization`;
+- repo-visible head: `6ef3fe9266c228b786a1cf5ab6ac915b057109e0`;
+- production remains on the Python `Random.gauss` protocol / deployed #310 generation;
+- the experimental RNG must not merge or deploy until Management reviews equivalence, replay, resource, downstream-behavior, CI/review, and hosted evidence.
+
+Important continuity rule: GitHub silence alone does **not** prove that a Work session is stalled, because long benchmarks/equivalence studies can run before a commit is pushed. A successor Management chat must first reconcile the live PR/branch, current CI/reviews, canonical operations docs, and Render before deciding whether Work needs a poke. Do not reuse a stale continuation prompt blindly.
+
+The current performance investigation also established a critical distinction for future profiling: the physical ~173.2s interval was measured from intelligence `job_start` at 11:22:57.729Z to `simulation_build_complete` at 11:25:50.938Z. Forecast was not rebuilt inside that interval on the observed run, and the heavy-work coordinator reported `active=behavioral` at job start. Render CPU was repeatedly at or near the 0.15 CPU service limit during the interval. Therefore ~173s must not be described as raw Monte Carlo draw time. It can include heavy-lane wait plus Simulation preparation, the 50k kernel, Team Utility/Analytics assembly, and contention from foreground work.
+
+After the batched-RNG production decision, re-profile the **full hosted Simulation call** before choosing the next optimization. Required decomposition should separately measure at least: heavy-lane wait; lineup/static-state compilation; bye-aware weekly scoring/input construction; RNG; matchup/scoring; standings; playoffs; aggregation; Team Utility/Analytics; memory reclaim; persistence/publication. Continue the broader Simulation modernization by measured bottleneck order rather than assuming the Gaussian kernel is the whole ~173s problem.
+
+If Work nears its session/context limit while authorized work remains, it must commit an exact handoff into `docs/operations/` with branch/PR/head, completed evidence, unresolved findings, current test/CI state, any Management gate, and the next executable action, then terminate as `TURN COMPLETE — CONTINUATION REQUIRED`. Normal Implementation should resume from that repo state rather than reconstructing from chat history.
