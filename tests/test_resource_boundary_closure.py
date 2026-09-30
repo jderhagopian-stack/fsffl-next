@@ -18,6 +18,10 @@ from fsffl.product.hosted_connect import (
 )
 from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
 from fsffl.product.market_economics_cache import make_cached_candidate_economics
+from fsffl.product.market_progressive_enrichment import (
+    MarketDecisionEnrichmentCoordinator,
+    MarketEnrichmentStatus,
+)
 from fsffl.product.opportunity_search_cache import make_cached_opportunity_search
 from fsffl.product.opportunity_workspace_cache import make_cached_opportunity_workspace
 from fsffl.product.resource_coordinator import (
@@ -426,6 +430,39 @@ def test_intrinsic_restore_drops_result_when_boundary_epoch_advances() -> None:
     assert coordinator.current(context) is None
 
 
+
+def test_market_enrichment_rejects_released_prior_state_without_retaining_record() -> None:
+    valid = {"allowed": False}
+    work_calls = 0
+
+    def identity_validator(_user_id: str, _state_id: str, _team_id: str) -> bool:
+        return valid["allowed"]
+
+    def work():
+        nonlocal work_calls
+        work_calls += 1
+        return {"heavy": bytearray(64 * 1024)}
+
+    coordinator = MarketDecisionEnrichmentCoordinator(
+        heavy_work_coordinator=None,
+        identity_validator=identity_validator,
+        max_workers=1,
+    )
+    record = coordinator.start(
+        user_id="user-a",
+        league_state_id="state-a",
+        focal_team_id="team-a",
+        request_key="prior-market",
+        work=work,
+    )
+
+    assert record.status == MarketEnrichmentStatus.INTERRUPTED
+    assert record.result is None
+    assert work_calls == 0
+    assert coordinator.get(user_id="user-a", job_id=record.job_id) is None
+    assert coordinator.clear_user("user-a") == 0
+
+
 def test_synchronous_connect_runs_boundary_before_behavioral_work(monkeypatch) -> None:
     monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
     state_a = _state("a")
@@ -617,6 +654,8 @@ def test_hosted_composition_registers_complete_user_execution_boundary() -> None
     assert "StateResourceBoundary(" in source
     assert "state_resource_boundary=_apply_runtime_resource_boundary" in source
     assert "state_activator=app.state.activate_state_with_resource_boundary" in source
+    assert "retention_validator=_market_execution_retention_valid" in source
+    assert "and _market_execution_retention_valid(context)" in source
 
 
 def test_all_supported_transition_paths_use_shared_resource_boundary() -> None:
