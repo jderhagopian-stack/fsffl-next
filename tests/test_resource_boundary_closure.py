@@ -4,6 +4,8 @@ import gc
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
+from threading import Event, Thread
+from time import sleep
 import weakref
 
 from fastapi.testclient import TestClient
@@ -14,6 +16,7 @@ from fsffl.product.hosted_connect import (
     LeagueConnectStatus,
     install_hosted_connect_routes,
 )
+from fsffl.product.intrinsic_background import ShapleyIntrinsicBackgroundCoordinator
 from fsffl.product.market_economics_cache import make_cached_candidate_economics
 from fsffl.product.opportunity_search_cache import make_cached_opportunity_search
 from fsffl.product.opportunity_workspace_cache import make_cached_opportunity_workspace
@@ -245,6 +248,182 @@ def test_market_execution_caches_clear_only_transitioning_user() -> None:
     workspace(runtime_b)
     workspace(runtime_a)
     assert workspace_calls == {"user-a": 2, "user-b": 1}
+
+
+
+def test_prior_published_market_activity_cannot_repopulate_released_execution_scope() -> None:
+    state_a = _state("a")
+    runtime_a = _runtime("user-a", state_a)
+    retention_allowed = {"user-a": True}
+
+    def retain(runtime) -> bool:
+        return retention_allowed.get(runtime.user_id, True)
+
+    economics_calls = 0
+
+    def evaluator(runtime, row, **_kwargs):
+        nonlocal economics_calls
+        economics_calls += 1
+        return {**row, "economics": {"net": economics_calls}}
+
+    economics = make_cached_candidate_economics(
+        evaluator,
+        retention_validator=retain,
+    )
+    row = {
+        "counterparty_team_id": "other",
+        "send": ({"asset_ref": "player:1"},),
+        "receive": ({"asset_ref": "player:2"},),
+    }
+    economics(runtime_a, row)
+    assert economics.clear_user_cache("user-a") == 1  # type: ignore[attr-defined]
+    retention_allowed["user-a"] = False
+    economics(runtime_a, row)
+    economics(runtime_a, row)
+    assert economics_calls == 3
+    assert economics.clear_user_cache("user-a") == 0  # type: ignore[attr-defined]
+
+    search_calls = 0
+
+    def search_builder(runtime, _browser, _cardinal):
+        nonlocal search_calls
+        search_calls += 1
+        return [{"call": search_calls}]
+
+    search = make_cached_opportunity_search(
+        search_builder,
+        retention_validator=retain,
+    )
+    retention_allowed["user-a"] = True
+    search(runtime_a, object(), {})
+    assert search.clear_user_cache("user-a") == 1  # type: ignore[attr-defined]
+    retention_allowed["user-a"] = False
+    search(runtime_a, object(), {})
+    search(runtime_a, object(), {})
+    assert search_calls == 3
+    assert search.clear_user_cache("user-a") == 0  # type: ignore[attr-defined]
+
+    workspace_calls = 0
+
+    def workspace_builder(runtime, **_kwargs):
+        nonlocal workspace_calls
+        workspace_calls += 1
+        return {"call": workspace_calls}
+
+    workspace = make_cached_opportunity_workspace(
+        workspace_builder,
+        retention_validator=retain,
+    )
+    retention_allowed["user-a"] = True
+    workspace(runtime_a)
+    assert workspace.clear_user_cache("user-a") == 1  # type: ignore[attr-defined]
+    retention_allowed["user-a"] = False
+    workspace(runtime_a)
+    workspace(runtime_a)
+    assert workspace_calls == 3
+    assert workspace.clear_user_cache("user-a") == 0  # type: ignore[attr-defined]
+
+
+def test_overlapping_b_then_c_activation_serializes_cleanup_with_state_ownership() -> None:
+    state_a = _state("a")
+    state_b = _state("b")
+    state_c = _state("c")
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("user-a", state_a)
+    b_boundary_entered = Event()
+    release_b_boundary = Event()
+    events: list[tuple[str, str]] = []
+
+    def boundary(transition: ResourceTransition):
+        events.append(("boundary", str(transition.next_league_id)))
+        if transition.next_league_id == state_b.league.league_id:
+            b_boundary_entered.set()
+            assert release_b_boundary.wait(timeout=2.0)
+        return {"status": "released"}
+
+    app = create_app(
+        runtime_store=store,
+        state_loader=lambda external_id: {
+            "b": state_b,
+            "c": state_c,
+        }[external_id],
+        state_resource_boundary=boundary,
+    )
+    errors: list[Exception] = []
+
+    def activate(state: LeagueState, label: str) -> None:
+        try:
+            result = app.state.activate_state_with_resource_boundary(
+                "user-a",
+                state,
+                reason=label,
+            )
+            assert result is not None
+            events.append(("done", result.league_state.league.league_id))
+        except Exception as exc:  # pragma: no cover - asserted below
+            errors.append(exc)
+
+    b_thread = Thread(target=lambda: activate(state_b, "b-transition"))
+    c_thread = Thread(target=lambda: activate(state_c, "c-transition"))
+    b_thread.start()
+    assert b_boundary_entered.wait(timeout=1.0)
+
+    c_thread.start()
+    sleep(0.05)
+    assert c_thread.is_alive()
+    assert store.get("user-a").league_state.state_id == state_b.state_id
+
+    release_b_boundary.set()
+    b_thread.join(timeout=2.0)
+    c_thread.join(timeout=2.0)
+    assert not b_thread.is_alive()
+    assert not c_thread.is_alive()
+    assert errors == []
+    assert store.get("user-a").league_state.state_id == state_c.state_id
+    assert events == [
+        ("boundary", "sleeper:b"),
+        ("done", "sleeper:b"),
+        ("boundary", "sleeper:c"),
+        ("done", "sleeper:c"),
+    ]
+
+
+def test_intrinsic_restore_drops_result_when_boundary_epoch_advances() -> None:
+    state_a = _state("a")
+    context = _runtime("user-a", state_a)
+    restore_entered = Event()
+    release_restore = Event()
+    contract = SimpleNamespace(estimates=())
+
+    class BlockingLoader:
+        forecast_model_version = "fixture-v1"
+
+        def restore_compatible(self, _context):
+            restore_entered.set()
+            assert release_restore.wait(timeout=2.0)
+            return contract
+
+    coordinator = ShapleyIntrinsicBackgroundCoordinator(
+        BlockingLoader(),
+        max_workers=1,
+        forecast_coordinate_resolver=lambda _context: "fixture-v1",
+        intrinsic_input_fingerprint_resolver=lambda _context: "fixture-input",
+    )
+    result: dict[str, object] = {}
+
+    def restore() -> None:
+        result["record"] = coordinator.restore_compatible(context)
+
+    thread = Thread(target=restore)
+    thread.start()
+    assert restore_entered.wait(timeout=1.0)
+    coordinator.clear_user("user-a")
+    release_restore.set()
+    thread.join(timeout=2.0)
+
+    assert not thread.is_alive()
+    assert result["record"] is None
+    assert coordinator.current(context) is None
 
 
 def test_synchronous_connect_runs_boundary_before_behavioral_work(monkeypatch) -> None:
