@@ -169,7 +169,6 @@ _behavioral_coordinator = BehavioralRuntimeCoordinator(
     store_factory=default_behavioral_store,
     max_workers=1,
     heavy_work_coordinator=_heavy_work_coordinator,
-    ownership_validator=_execution_state_scope_owned,
 )
 _sleeper_probe_source = SleeperLiveSource()
 _full_refresh_seconds = max(
@@ -198,6 +197,7 @@ _shapley_intrinsic_coordinator = ShapleyIntrinsicBackgroundCoordinator(
         _shapley_intrinsic_loader.intrinsic_input_fingerprint
     ),
     heavy_work_coordinator=_heavy_work_coordinator,
+    ownership_validator=_execution_state_scope_owned,
 )
 
 def _intrinsic_readiness_from_record(record) -> dict[str, object]:
