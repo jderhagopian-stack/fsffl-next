@@ -815,3 +815,11 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Hosted validation must measure full Simulation and refresh wall time, heavy-work wait, RSS/headroom, concurrent foreground responsiveness, publication/readiness, and restart behavior. Batch 500 is the current preferred experimental default.
 - No merge to main / production adoption until Management receives that evidence and makes the final adoption decision.
 - After the RNG decision, re-profile the entire hosted Simulation path and continue modernization by measured bottleneck order.
+
+
+## 2026-09-30 — Simulation modernization: bounded hosted memory corrective
+- **Simulation modernization — ACTIVE / primary workstream.**
+- PR #311 hosted correctness/downstream behavior is sufficiently encouraging to continue evaluation, but production adoption is withheld because the controlled Render run peaked at 576,552,960 bytes versus the 536,870,900-byte hard limit.
+- Immediate Work ownership: instrument and identify the transient peak owner(s); apply only narrow ownership/lifetime/reclaim/duplicate-work corrections that preserve all Forecast/Simulation/Value semantics and 50,000 trials.
+- Then rerun the reversible batch-500 hosted journey with true concurrent Home/My Team/Product Context reads, readiness/publication, restart restore, and exact RSS evidence; restore main afterward.
+- If the peak cannot be brought safely under the unchanged limit without broader architecture or fidelity changes, stop at Management for a capacity decision.
