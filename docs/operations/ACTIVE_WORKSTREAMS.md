@@ -833,3 +833,13 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - If no, fix the independently proven Forecast/player-history owner narrowly.
 - Do not rewrite the whole engine or reduce 50k/model fidelity.
 - Then exact-head CI/review → reversible batch-500 Render rerun → concurrent foreground/readiness/restart/RSS evidence → rollback → Management gate if still over limit.
+
+
+## 2026-09-30 — PR #311 memory owner isolated; bounded PIT history correction
+- **Simulation modernization — ACTIVE / primary capability workstream; PR #311 experimental only.**
+- Hosted high-water attribution is now localized: `forecast.raw_replay_history_discovery` grew process max RSS by 231,202,816 bytes in 83.494s on `dr292`. The phase loaded historical PIT State payloads; Simulation's 50k kernel and prep phases did not raise the earlier 361,902,080-byte process high-water.
+- Root cause is the Postgres State-history `recent_at_or_before()` path materializing/decoding up to 32 full JSONB State snapshots and retaining them in a tuple although replay evaluates candidates sequentially. This is independent of Simulation 2.0 representations.
+- A narrow fix adds ordered State-ID selection and one-payload-at-a-time validation/iteration; replay discovery consumes the iterator and releases each candidate. It preserves all ordering/PIT/identity/compatibility/fallback semantics. Added deterministic lazy-payload regression.
+- Focused persistence/replay: 61 passed. Full suite before last local cleanup: 1,902 passed; rerun full suite on exact pushed PR head. No fresh CI/review or corrective hosted run yet.
+- Render has rolled back to current main `878a2a32d5826ff990eed76c4985ae9e8f39bba3`; profiler/acceptance disable-flag deploy `dep-dauouj49v7es73adle10` must be confirmed live.
+- **Next executable action:** apply four source/test files onto PR #311 remote head `4408848e970c21093e54804d0cb40f7abb49fd3b`; push to `work/simulation-modernization`; exact-head CI and fresh review; reversible batch-500 hosted journey with genuinely concurrent Home/My Team/Product Context reads, complete 50k readiness/publication and restart restore, exact RSS/high-water evidence; restore main afterward. If the fixed 536,870,900-byte limit still fails, stop at Management gate for capacity.

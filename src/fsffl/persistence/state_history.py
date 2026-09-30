@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterator
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -72,30 +73,54 @@ class PostgresStateSnapshotStore(StateSnapshotStore):
         *,
         limit: int = 32,
     ) -> tuple[LeagueState, ...]:
+        return tuple(
+            self.iter_recent_at_or_before(league_id, as_of, limit=limit)
+        )
+
+    def iter_recent_at_or_before(
+        self,
+        league_id: str,
+        as_of: datetime,
+        *,
+        limit: int = 32,
+    ) -> Iterator[LeagueState]:
+        """Yield PIT snapshots one at a time instead of decoding the whole history.
+
+        Raw Forecast compatibility discovery can inspect several historical States.
+        Selecting every JSONB payload in one result retained all decoded player and
+        player-week object graphs until the scan completed, even though callers only
+        need one candidate at a time.
+        """
         if as_of.tzinfo is None or as_of.utcoffset() is None:
             raise ValueError("as_of must be timezone-aware")
         if limit < 1:
             raise ValueError("limit must be positive")
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
-                """select state_hash, payload from fsffl.state_snapshot_history
+                """select state_hash from fsffl.state_snapshot_history
                    where league_id=%s and as_of <= %s
                    order by as_of desc, recorded_at desc, state_hash desc
                    limit %s""",
                 (league_id, as_of, limit),
             )
-            rows = cursor.fetchall()
-        states: list[LeagueState] = []
-        for row in rows:
-            state = LeagueState.model_validate(row["payload"])
-            if state.league.league_id != league_id:
-                raise ValueError("stored State history league identity does not match query")
-            if state.state_id != row["state_hash"]:
-                raise ValueError("stored State history hash does not match canonical payload")
-            if state.as_of > as_of:
-                raise ValueError("stored State history snapshot postdates query cutoff")
-            states.append(state)
-        return tuple(states)
+            state_hashes = tuple(row["state_hash"] for row in cursor.fetchall())
+            for state_hash in state_hashes:
+                cursor.execute(
+                    """select state_hash, payload from fsffl.state_snapshot_history
+                       where league_id=%s and state_hash=%s""",
+                    (league_id, state_hash),
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    continue
+                state = LeagueState.model_validate(row["payload"])
+                if state.league.league_id != league_id:
+                    raise ValueError("stored State history league identity does not match query")
+                if state.state_id != row["state_hash"]:
+                    raise ValueError("stored State history hash does not match canonical payload")
+                if state.as_of > as_of:
+                    raise ValueError("stored State history snapshot postdates query cutoff")
+                yield state
 
     def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
         recent = self.recent_at_or_before(league_id, as_of, limit=1)

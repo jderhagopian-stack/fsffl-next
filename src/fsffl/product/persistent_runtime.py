@@ -1034,8 +1034,30 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 return first_incompatible
             return None, None, None, discovery_rejections
 
+        recent_iterator = getattr(
+            self._state_history, "iter_recent_at_or_before", None
+        )
         recent_reader = getattr(self._state_history, "recent_at_or_before", None)
-        if callable(recent_reader):
+        if callable(recent_iterator):
+            try:
+                candidates = recent_iterator(
+                    target_state.league.league_id,
+                    target_state.as_of,
+                    limit=32,
+                )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL raw Forecast history discovery failed user=%s league=%s target_state=%s error=%s",
+                    user_id,
+                    target_state.league.league_id,
+                    target_state.state_id,
+                    exc,
+                )
+                discovery_rejections.append("state_history_lookup_failed")
+                if first_incompatible is not None:
+                    return first_incompatible
+                return None, None, None, discovery_rejections
+        elif callable(recent_reader):
             try:
                 candidates = recent_reader(
                     target_state.league.league_id,
@@ -1080,19 +1102,38 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 candidates.append(candidate)
                 cutoff = candidate.as_of - timedelta(microseconds=1)
 
-        for candidate in candidates:
-            if candidate.state_id in seen_state_ids:
-                continue
-            seen_state_ids.add(candidate.state_id)
-            candidate_raw = restore_state_bound_raw_forecast_evidence(
-                self._persistence,
-                league_state=candidate,
+        try:
+            for candidate in candidates:
+                if candidate.state_id in seen_state_ids:
+                    del candidate
+                    continue
+                seen_state_ids.add(candidate.state_id)
+                candidate_raw = restore_state_bound_raw_forecast_evidence(
+                    self._persistence,
+                    league_state=candidate,
+                )
+                if candidate_raw is None:
+                    del candidate
+                    continue
+                accepted = consider(candidate, candidate_raw, "state_history")
+                if accepted is not None:
+                    return accepted
+                # Incompatible fallback is retained deliberately by consider().
+                # Release the scan-local decoded State before requesting the next
+                # historical payload.
+                del candidate
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL raw Forecast history discovery failed user=%s league=%s target_state=%s error=%s",
+                user_id,
+                target_state.league.league_id,
+                target_state.state_id,
+                exc,
             )
-            if candidate_raw is None:
-                continue
-            accepted = consider(candidate, candidate_raw, "state_history")
-            if accepted is not None:
-                return accepted
+            discovery_rejections.append("state_history_lookup_failed")
+            if first_incompatible is not None:
+                return first_incompatible
+            return None, None, None, discovery_rejections
 
         discovery_rejections.append("state_history_compatible_raw_forecast_unavailable")
         if first_incompatible is not None:
