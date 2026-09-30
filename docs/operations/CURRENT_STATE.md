@@ -1588,3 +1588,22 @@ Acceptance:
 4. rerun the same realistic free-Render FSFFL -> settle -> Hodor -> settle -> FSFFL -> settle -> restart/restored-session journey;
 5. if it passes, move immediately to physical Safari acceptance and capability development;
 6. if ownership remains clean and this bounded staging pass still cannot keep normal beta use within the gate, stop micro-optimization and return to Management for a capacity decision.
+
+
+## 2026-09-29 — PR #304 merged; hosted free-Render acceptance result still pending
+PR #304 (`Stage first-load heavy enrichment under free-Render memory gate`) merged as `6a531d3d27fa2d63c459b1888e162b5086a36a38`.
+
+The bounded beta-specific corrective preserves model outputs/fidelity and changes only first-load staging:
+- foreground readiness remains memory-only and no longer triggers durable Intrinsic restore;
+- compatible Intrinsic restore is staged through HeavyWork/background reconciliation;
+- first unpublished value-lens reads return lightweight pollable loading truth instead of materializing all-player derived rows;
+- staged restore failures are contained without discarding completed core Forecast/Simulation/Value work.
+
+All configured CI/focused/live validation on the PR head is green. No hosted acceptance result has yet been durably recorded after the merge, and there is no evidence yet that the realistic free-Render journey has completed.
+
+Immediate next action:
+- deploy the exact #304 merge lineage if not already live;
+- run the realistic FSFFL -> settle -> Hodor -> settle -> FSFFL -> settle -> restart/restored-session acceptance under the unchanged hard-memory gate;
+- record exact peak/current RSS and foreground responsiveness;
+- if it passes, advance immediately to physical Safari;
+- if it still fails with clean bounded ownership/staging, return to Management for the previously defined capacity decision rather than continuing micro-optimization.
