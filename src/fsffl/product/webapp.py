@@ -70,6 +70,8 @@ from .runtime import (
 from .simulation_runtime import (
     LiveSimulationAnalyticsResult,
     build_live_simulation_analytics,
+    configured_simulation_cache_identity,
+    configured_simulation_model_version,
     configured_simulation_rng,
 )
 from .team_page import build_forecast_team_view, build_state_only_team_view
@@ -768,6 +770,10 @@ def _default_simulation_loader(
         rng_batch_size=rng_batch_size,
         cooperative_yield=foreground_pressure.cooperative_yield,
     )
+
+
+_default_simulation_loader.__fsffl_cache_identity__ = configured_simulation_cache_identity()
+_default_simulation_loader.__fsffl_simulation_model_version__ = configured_simulation_model_version()
 
 
 def _proposal_from_request(runtime, request: AnalyzeTradeRequest, *, draft_prefix: str) -> BilateralTradeProposal:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import importlib.metadata
 import os
+import platform
 from typing import Callable, Literal
 
 from fsffl.analytics.league import LeagueAnalyticsView, build_league_analytics_view
@@ -41,17 +43,15 @@ LIVE_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:resilience-d
 EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:numpy-pcg64-batched-gauss-v1"
 
 
-def configured_simulation_rng() -> tuple[str, int | None]:
-    """Resolve an explicit deployment RNG protocol; production defaults to legacy."""
-
-    protocol = os.environ.get("FSFFL_SIMULATION_RNG_PROTOCOL", PYTHON_RANDOM_GAUSS_V1).strip()
+def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
+    protocol = environment.get("FSFFL_SIMULATION_RNG_PROTOCOL", PYTHON_RANDOM_GAUSS_V1).strip()
     if protocol == PYTHON_RANDOM_GAUSS_V1:
-        raw_batch_size = os.environ.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "").strip()
+        raw_batch_size = environment.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "").strip()
         if raw_batch_size:
             raise ValueError("FSFFL_SIMULATION_RNG_BATCH_SIZE requires the NumPy protocol")
         return protocol, None
     if protocol == NUMPY_PCG64_BATCHED_GAUSS_V1:
-        raw_batch_size = os.environ.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "500").strip()
+        raw_batch_size = environment.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "500").strip()
         try:
             batch_size = int(raw_batch_size)
         except ValueError as exc:
@@ -62,8 +62,28 @@ def configured_simulation_rng() -> tuple[str, int | None]:
     raise ValueError(f"unsupported FSFFL_SIMULATION_RNG_PROTOCOL: {protocol}")
 
 
+_CONFIGURED_SIMULATION_RNG = _simulation_rng_from_environment(dict(os.environ))
+
+
+def configured_simulation_rng() -> tuple[str, int | None]:
+    """Return the process-start RNG protocol; deployment changes require a restart."""
+
+    return _CONFIGURED_SIMULATION_RNG
+
+
 def configured_simulation_model_version() -> str:
     return simulation_model_version_for_rng_protocol(configured_simulation_rng()[0])
+
+
+def configured_simulation_cache_identity() -> str:
+    protocol, batch_size = configured_simulation_rng()
+    runtime = f"python-{platform.python_version()}"
+    if protocol == NUMPY_PCG64_BATCHED_GAUSS_V1:
+        runtime += f";numpy-{importlib.metadata.version('numpy')}"
+    return (
+        f"{protocol};batch={batch_size};count=50000;seed=20260905;"
+        f"runtime={runtime}"
+    )
 
 
 def simulation_model_version_for_rng_protocol(rng_protocol: str) -> str:

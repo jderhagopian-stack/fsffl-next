@@ -11,10 +11,12 @@ from fsffl.forecast.models import (
 from fsffl.product.simulation_runtime import (
     build_live_simulation_analytics,
     configured_simulation_rng,
+    _simulation_rng_from_environment,
 )
 from fsffl.product.runtime import LiveForecastEvidence, UserRuntimeContext
 from fsffl.product.opportunity_search import build_scoped_trade_candidates
 from fsffl.product.trade_center_view import build_trade_center_browser_view
+from fsffl.product import scenario_cache
 from fsffl.persistence.runtime_cache import decode_simulation, simulation_artifact
 from fsffl.persistence.contracts import canonical_fingerprint
 from fsffl.state.models import (
@@ -273,36 +275,102 @@ def test_experimental_50k_runtime_preserves_forecast_and_search_inputs() -> None
     )
 
 
-def test_hosted_rng_protocol_configuration_is_explicit_and_fail_closed(monkeypatch) -> None:
+def test_hosted_rng_protocol_configuration_is_explicit_and_fail_closed() -> None:
     from fsffl.team_utility.simulation import (
         NUMPY_PCG64_BATCHED_GAUSS_V1,
         PYTHON_RANDOM_GAUSS_V1,
     )
 
-    monkeypatch.delenv("FSFFL_SIMULATION_RNG_PROTOCOL", raising=False)
-    monkeypatch.delenv("FSFFL_SIMULATION_RNG_BATCH_SIZE", raising=False)
-    assert configured_simulation_rng() == (PYTHON_RANDOM_GAUSS_V1, None)
+    assert _simulation_rng_from_environment({}) == (PYTHON_RANDOM_GAUSS_V1, None)
+    assert _simulation_rng_from_environment({
+        "FSFFL_SIMULATION_RNG_PROTOCOL": NUMPY_PCG64_BATCHED_GAUSS_V1
+    }) == (NUMPY_PCG64_BATCHED_GAUSS_V1, 500)
+    assert _simulation_rng_from_environment({
+        "FSFFL_SIMULATION_RNG_PROTOCOL": NUMPY_PCG64_BATCHED_GAUSS_V1,
+        "FSFFL_SIMULATION_RNG_BATCH_SIZE": "750",
+    }) == (NUMPY_PCG64_BATCHED_GAUSS_V1, 750)
 
-    monkeypatch.setenv("FSFFL_SIMULATION_RNG_PROTOCOL", NUMPY_PCG64_BATCHED_GAUSS_V1)
-    assert configured_simulation_rng() == (NUMPY_PCG64_BATCHED_GAUSS_V1, 500)
-    monkeypatch.setenv("FSFFL_SIMULATION_RNG_BATCH_SIZE", "750")
-    assert configured_simulation_rng() == (NUMPY_PCG64_BATCHED_GAUSS_V1, 750)
-
-    monkeypatch.setenv("FSFFL_SIMULATION_RNG_BATCH_SIZE", "50001")
     try:
-        configured_simulation_rng()
+        _simulation_rng_from_environment({
+            "FSFFL_SIMULATION_RNG_PROTOCOL": NUMPY_PCG64_BATCHED_GAUSS_V1,
+            "FSFFL_SIMULATION_RNG_BATCH_SIZE": "50001",
+        })
     except ValueError as exc:
         assert "between 1 and 50000" in str(exc)
     else:
         raise AssertionError("out-of-range RNG batches must fail closed")
 
-    monkeypatch.setenv("FSFFL_SIMULATION_RNG_PROTOCOL", "unversioned-rng")
     try:
-        configured_simulation_rng()
+        _simulation_rng_from_environment({"FSFFL_SIMULATION_RNG_PROTOCOL": "unversioned-rng"})
     except ValueError as exc:
         assert "unsupported FSFFL_SIMULATION_RNG_PROTOCOL" in str(exc)
     else:
         raise AssertionError("unknown RNG protocols must fail closed")
+
+
+def test_experimental_durable_scenario_artifact_round_trips_under_reader_key() -> None:
+    from fsffl.product.simulation_runtime import simulation_model_version_for_rng_protocol
+
+    class Store:
+        def __init__(self):
+            self.rows = {}
+
+        def get_reusable_artifact(self, key):
+            return self.rows.get(key)
+
+        def put_artifact(self, record):
+            self.rows[record.key] = record
+
+    evidence_rows = _forecasts()
+    evidence = LiveForecastEvidence(
+        raw_forecasts=evidence_rows,
+        league_scored_forecasts=evidence_rows,
+        successful_source_ids=("source-a", "source-b"),
+        failed_sources=(),
+        uncertainty_ready=True,
+        runtime_result=None,
+    )
+    calls = 0
+
+    def experimental_loader(state, forecast_evidence):
+        nonlocal calls
+        calls += 1
+        return build_live_simulation_analytics(
+            state,
+            forecasts=forecast_evidence.league_scored_forecasts,
+            forecast_model_version=forecast_evidence.model_version,
+            simulation_count=2_000,
+            seed=20261004,
+            rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+            rng_batch_size=500,
+            generated_at=AS_OF,
+        )
+
+    experimental_loader.__fsffl_cache_identity__ = "numpy-pcg64-batch-500-test-runtime"
+    experimental_loader.__fsffl_simulation_model_version__ = simulation_model_version_for_rng_protocol(
+        NUMPY_PCG64_BATCHED_GAUSS_V1
+    )
+    store = Store()
+    scenario_cache.clear_scenario_cache()
+    scenario_cache.configure_scenario_cache_persistence(store)
+    try:
+        first, cache_hit = scenario_cache.run_cached_scenario_simulation(
+            _state(), evidence, simulation_loader=experimental_loader
+        )
+        assert not cache_hit
+        assert first.simulation_result.rng_protocol == NUMPY_PCG64_BATCHED_GAUSS_V1
+        assert len(store.rows) == 1
+
+        scenario_cache.clear_scenario_cache()
+        restored, durable_hit = scenario_cache.run_cached_scenario_simulation(
+            _state(), evidence, simulation_loader=experimental_loader
+        )
+        assert durable_hit
+        assert restored == first
+        assert calls == 1
+    finally:
+        scenario_cache.configure_scenario_cache_persistence(None)
+        scenario_cache.clear_scenario_cache()
 
 
 def test_changed_state_utility_decision_and_lineup_replay_across_rng_versions() -> None:
