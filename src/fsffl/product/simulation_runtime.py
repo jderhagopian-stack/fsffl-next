@@ -19,6 +19,7 @@ from fsffl.forecast import (
     attach_provisional_position_floor_forecasts,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
+from fsffl.memory_attribution import log_object_graph, sample_rss_phase
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
     LeagueScoringDispersionDiagnostic,
@@ -205,12 +206,13 @@ def build_live_simulation_analytics(
         raise ValueError("generated_at must be timezone-aware")
     generated = max(generated, league_state.as_of)
 
-    effective_forecasts = attach_provisional_position_floor_forecasts(
-        league_state,
-        forecasts,
-        as_of=league_state.as_of,
-        horizon=ForecastHorizon.SEASON,
-    )
+    with sample_rss_phase("simulation.forecast_attachment"):
+        effective_forecasts = attach_provisional_position_floor_forecasts(
+            league_state,
+            forecasts,
+            as_of=league_state.as_of,
+            horizon=ForecastHorizon.SEASON,
+        )
     fallback_ids = {
         item.player_id
         for item in effective_forecasts
@@ -224,21 +226,22 @@ def build_live_simulation_analytics(
     ordered_teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
     lineups = {}
     incomplete_team_names: list[str] = []
-    for team in ordered_teams:
-        lineup = optimize_team_lineup(
-            league_state,
-            effective_forecasts,
-            team_id=team.team_id,
-            as_of=league_state.as_of,
-            horizon=ForecastHorizon.SEASON,
-            allow_unfilled_slots=True,
-        )
-        lineups[team.team_id] = lineup
-        if lineup.unfilled_slots:
-            slots = ", ".join(
-                f"{item.slot.value}{item.slot_index}" for item in lineup.unfilled_slots
+    with sample_rss_phase("simulation.lineup_compilation"):
+        for team in ordered_teams:
+            lineup = optimize_team_lineup(
+                league_state,
+                effective_forecasts,
+                team_id=team.team_id,
+                as_of=league_state.as_of,
+                horizon=ForecastHorizon.SEASON,
+                allow_unfilled_slots=True,
             )
-            incomplete_team_names.append(f"{team.display_name} ({slots})")
+            lineups[team.team_id] = lineup
+            if lineup.unfilled_slots:
+                slots = ", ".join(
+                    f"{item.slot.value}{item.slot_index}" for item in lineup.unfilled_slots
+                )
+                incomplete_team_names.append(f"{team.display_name} ({slots})")
 
     position_strength_rows = build_league_relative_position_strengths(
         tuple(lineups[team.team_id] for team in ordered_teams)
@@ -250,14 +253,15 @@ def build_live_simulation_analytics(
         for team in ordered_teams
     }
 
-    weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
-        league_state,
-        effective_forecasts,
-        team_ids=tuple(team.team_id for team in ordered_teams),
-        weeks=fantasy_weeks,
-        as_of=league_state.as_of,
-        baseline_lineups=lineups,
-    )
+    with sample_rss_phase("simulation.weekly_scoring_panel"):
+        weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
+            league_state,
+            effective_forecasts,
+            team_ids=tuple(team.team_id for team in ordered_teams),
+            weeks=fantasy_weeks,
+            as_of=league_state.as_of,
+            baseline_lineups=lineups,
+        )
     team_names = {team.team_id: team.display_name for team in ordered_teams}
     bye_week_unfilled = [
         f"{team_names[row.team_id]} W{row.week}"
@@ -275,7 +279,17 @@ def build_live_simulation_analytics(
         rng_protocol=rng_protocol,
         rng_batch_size=rng_batch_size,
     )
-    simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
+    log_object_graph(
+        "simulation.forecast_boundary",
+        raw_forecasts=forecasts,
+        effective_forecasts=effective_forecasts,
+        lineups=lineups,
+        weekly_scoring=weekly_scoring,
+        request=request,
+        all_inputs=(forecasts, effective_forecasts, lineups, weekly_scoring, request),
+    )
+    with sample_rss_phase("simulation.kernel_and_result_aggregation"):
+        simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
     scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
         weekly_scoring,
         simulation,

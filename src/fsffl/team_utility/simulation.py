@@ -11,6 +11,7 @@ from typing import Annotated, Callable, Literal
 from pydantic import Field, model_validator
 
 from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.memory_attribution import log_object_graph
 
 PYTHON_RANDOM_GAUSS_V1 = "python-random-gauss-v1"
 NUMPY_PCG64_BATCHED_GAUSS_V1 = "numpy-pcg64-batched-gauss-v1"
@@ -358,6 +359,16 @@ def simulate_regular_season(
             away_dist.mean_points, away_dist.stddev_points,
         ))
 
+    log_object_graph(
+        "simulation.compiled_numeric_state",
+        request=request,
+        team_ids=team_ids,
+        team_index=team_index,
+        playoff_scoring=playoff_scoring,
+        compiled_schedule=compiled_schedule,
+        all_compiled=(request, team_ids, team_index, playoff_scoring, compiled_schedule),
+    )
+
     rng = Random(request.seed)
     gauss = rng.gauss
     playoff_rng = Random(request.seed ^ 0x5F3759DF)
@@ -395,6 +406,8 @@ def simulate_regular_season(
             if score_batch is None or score_batch_offset >= len(score_batch):
                 score_batch = next(score_batches)
                 score_batch_offset = 0
+                if score_batch_offset == 0:
+                    log_object_graph("simulation.first_numpy_batch", score_batch=score_batch)
             trial_scores = score_batch[score_batch_offset]
             score_batch_offset += 1
         else:

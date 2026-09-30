@@ -816,3 +816,20 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - No merge to main / production adoption until Management receives that evidence and makes the final adoption decision.
 - After the RNG decision, re-profile the entire hosted Simulation path and continue modernization by measured bottleneck order.
 - **Current handoff:** PR #311 is open/draft at validation head `689f6c979aca7b0f06cae003a8c1f6ede3aed7a8`, based on current main `3671ba0e6ff29ab750b71b8aaa467be0f56e55a9`; code head `4b87e80ac1ce0881938a3dbe21b229898032e824` has the four bounded restore/cache/Decision corrections. Changed-State fixtures and original study remain unchanged (expected-wins ±0.001 inconclusive). Controlled Render batch-500 validation completed all governed capabilities and publication, but **failed the resource gate** at 576,552,960-byte process high-water RSS against the 536,870,900-byte limit. End-to-end refresh/publication was ~256.7s; measured details and limitations: `docs/operations/evidence/simulation_rng_hosted_validation_20260930.md`. Private beta has been restored to main/#310 at deploy `dep-daunc2nlk1mc73di9b1g` / SHA `3671ba0e6ff29ab750b71b8aaa467be0f56e55a9`; no merge or adoption. Next: Management reviews this failed resource result; before a repeat, identify/bound the transient memory peak under the unchanged limit.
+
+## 2026-09-30 — Simulation modernization: bounded hosted memory corrective
+- **Simulation modernization — ACTIVE / primary workstream.**
+- PR #311 hosted correctness/downstream behavior is sufficiently encouraging to continue evaluation, but production adoption is withheld because the controlled Render run peaked at 576,552,960 bytes versus the 536,870,900-byte hard limit.
+- Immediate Work ownership: instrument and identify the transient peak owner(s); apply only narrow ownership/lifetime/reclaim/duplicate-work corrections that preserve all Forecast/Simulation/Value semantics and 50,000 trials.
+- Then rerun the reversible batch-500 hosted journey with true concurrent Home/My Team/Product Context reads, readiness/publication, restart restore, and exact RSS evidence; restore main afterward.
+- If the peak cannot be brought safely under the unchanged limit without broader architecture or fidelity changes, stop at Management for a capacity decision.
+
+
+## 2026-09-30 — Active next step: attribute peak, advance Simulation 2.0 only where causal
+- PR #311 remains the active Simulation modernization branch.
+- First action is memory attribution, not speculative micro-optimization.
+- Explicitly test whether the hosted high-water peak is caused by Forecast → Simulation duplicated representations/lifetimes that the planned Simulation 2.0 compiled-state / compact-array / reusable-buffer / invariant-reuse architecture would eliminate.
+- If yes, implement the smallest reusable 2.0 primitive now and measure it.
+- If no, fix the independently proven Forecast/player-history owner narrowly.
+- Do not rewrite the whole engine or reduce 50k/model fidelity.
+- Then exact-head CI/review → reversible batch-500 Render rerun → concurrent foreground/readiness/restart/RSS evidence → rollback → Management gate if still over limit.

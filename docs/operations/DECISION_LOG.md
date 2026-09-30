@@ -680,3 +680,46 @@ Authorized next work on PR #311:
 6. Before final validation, reconcile/rebase PR #311 with current main without truncating or replacing canonical operations histories.
 
 After this RNG candidate decision, re-profile the full hosted Simulation path before ordering the next optimization tranche. The broader Simulation modernization remains active regardless of whether this RNG candidate is ultimately adopted.
+
+
+## 2026-09-30 — PR #311 hosted resource gate: adoption withheld, bounded memory attribution authorized
+Management reviewed the controlled private-beta Render validation of PR #311.
+
+Result:
+- the NumPy/PCG64 batch-500 candidate completed Forecast, Simulation, Value, Intrinsic and atomic publication at 50,000 trials;
+- downstream changed-State validation and replay/persistence evidence remain acceptable;
+- the original expected-wins ±0.001 study remains **inconclusive** and is not relabeled;
+- hosted end-to-end publication took about 256.7s;
+- the Forecast-complete → Simulation-complete phase boundary was about 59.0s;
+- process high-water RSS reached 576,552,960 bytes against the unchanged 536,870,900-byte hard limit;
+- no unexpected restart/OOM occurred, but the resource gate failed;
+- available telemetry does **not** isolate the transient peak to the NumPy kernel, player history, Forecast, or another single owner.
+
+Management decision:
+1. Production adoption remains withheld. Do not merge PR #311 to main yet.
+2. Authorize one **bounded memory-peak attribution and correction pass** on the same branch/workstream. The goal is to identify the short-lived allocation owner(s) responsible for the ~39.7 MB hard-limit overage and remove avoidable overlap/retention without changing Forecast/Simulation/Value semantics, 50,000 trials, modeled distributions, or accepted lifecycle authority.
+3. Prefer instrumentation, lifetime/ownership fixes, staged release/reclaim, bounded batch/object reuse, and duplicate-work elimination before any capacity or model-fidelity change.
+4. Do not broadly reopen runtime architecture. If the peak cannot be safely reduced under the existing free-tier hard limit with a narrow correction, stop and return to Management for a capacity decision rather than layering on more complexity.
+5. After a narrow correction, rerun the same controlled batch-500 hosted journey with true concurrent Home/My Team/Product Context reads, full readiness/publication, restart restoration, exact RSS/high-water evidence, and rollback to main afterward.
+6. A later separate Management decision controls production adoption.
+
+
+## 2026-09-30 — PR #311 memory corrective should advance Simulation 2.0 where attribution supports it
+Management refines the bounded memory-corrective directive for PR #311.
+
+Do **not** treat the 576.6 MB hosted high-water mark as a request for an isolated 40 MB micro-patch. First determine whether the transient peak is caused by a representation/lifetime boundary that the already-authorized Simulation 2.0 roadmap is intended to replace: duplicated Forecast-derived stochastic inputs, parallel Python-object and compact representations, repeated lineup/scoring structures, oversized temporary arrays, serialization/object-model duplication, or delayed release across the Forecast → compiled Simulation state boundary.
+
+If attribution supports that class, implement the smallest production-worthy Simulation 2.0 primitive now rather than creating parallel technical debt. Preferred roadmap-aligned mechanisms include:
+- one reusable compiled/indexed Simulation state built from governed Forecast evidence;
+- compact numeric/indexed representations instead of repeated dict/Pydantic traversal inside the engine;
+- explicit release/reclaim of superseded Forecast-to-Simulation intermediates once the compiled state owns the needed inputs;
+- bounded/preallocated/reused batch buffers;
+- invariant lineup/scoring structures constructed once and reused;
+- elimination of duplicate stochastic/input materialization;
+- reduced repeated serialization/object construction where authority does not require it.
+
+This remains a bounded tranche, not authorization to rewrite the entire engine. Preserve 50,000 trials, Forecast/Simulation/Value authority, modeled distributions, replay/version identity, legacy Python replay, downstream contracts, and current product semantics.
+
+If instrumentation proves the peak is independent of Simulation 2.0 (for example a Forecast- or player-history-only allocation with no cross-boundary duplication), fix that owner narrowly instead.
+
+After the smallest evidence-backed correction, rerun exact-head CI/review and the reversible batch-500 hosted journey with true concurrent foreground reads, full readiness/publication, restart restore, exact high-water evidence, and rollback to main. If the unchanged free-tier hard limit still cannot be met without broad architecture/fidelity changes, return to Management for a capacity decision.

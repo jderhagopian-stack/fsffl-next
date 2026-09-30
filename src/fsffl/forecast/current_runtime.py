@@ -13,6 +13,7 @@ from fsffl.providers.current_projection_rows import CurrentProjectionSnapshot
 from fsffl.providers.fftoday_live import FFTodayLiveProjectionSource
 from fsffl.providers.nfl_fantasy_live import NFLFantasyLiveProjectionSource
 from fsffl.providers.razzball_season_live import RazzballSeasonProjectionSource
+from fsffl.memory_attribution import log_object_graph, sample_rss_phase
 from fsffl.state.models import FrozenModel, LeagueState, RosterSlot
 
 from .current_normalization import current_snapshot_from_razzball, normalize_current_projection_snapshot
@@ -607,10 +608,12 @@ def build_current_live_forecasts(
     if len({item.source_id for item in active_fetchers}) != len(active_fetchers):
         raise ValueError("current projection fetcher ids must be unique")
 
-    snapshots, failed = _fetch_current_snapshots(
-        active_fetchers,
-        season=league_state.league.season,
-    )
+    with sample_rss_phase("forecast.provider_acquisition"):
+        snapshots, failed = _fetch_current_snapshots(
+            active_fetchers,
+            season=league_state.league.season,
+        )
+    log_object_graph("forecast.provider_snapshots", snapshots=snapshots)
 
     cutoff = (clock or (lambda: datetime.now(UTC)))()
     if cutoff.tzinfo is None:
@@ -635,18 +638,19 @@ def build_current_live_forecasts(
     for source_index, (source_id, snapshot) in enumerate(snapshots):
         cooperative_cpu_yield(source_index, every=1)
         try:
-            observations = normalize_current_projection_snapshot(
-                snapshot,
-                league_state=league_state,
-                season=league_state.league.season,
-                evaluation_as_of=evaluation_as_of,
-            )
-            if not observations:
-                raise ValueError("provider produced no canonical player observations")
-            scored = build_source_health_fantasy_point_forecasts(
-                observations,
-                source=f"fsffl:source-health:{source_id}",
-            )
+            with sample_rss_phase(f"forecast.normalize_and_score.{source_id}"):
+                observations = normalize_current_projection_snapshot(
+                    snapshot,
+                    league_state=league_state,
+                    season=league_state.league.season,
+                    evaluation_as_of=evaluation_as_of,
+                )
+                if not observations:
+                    raise ValueError("provider produced no canonical player observations")
+                scored = build_source_health_fantasy_point_forecasts(
+                    observations,
+                    source=f"fsffl:source-health:{source_id}",
+                )
             if not scored:
                 raise ValueError(
                     "provider produced no complete season fantasy-point observations "
@@ -856,10 +860,19 @@ def build_current_live_forecasts(
             health_events=tuple(health_events),
         )
 
-    raw_ensemble, coverage = build_authoritative_live_ensemble(
-        tuple(batches),
-        minimum_independent_sources=minimum_independent_sources,
+    log_object_graph(
+        "forecast.pre_ensemble_materializations",
+        snapshots=snapshots,
+        normalized=normalized_by_source,
+        source_scored=scored_by_source,
+        batches=batches,
+        all_sources=(snapshots, normalized_by_source, scored_by_source, batches),
     )
+    with sample_rss_phase("forecast.ensemble_materialization"):
+        raw_ensemble, coverage = build_authoritative_live_ensemble(
+            tuple(batches),
+            minimum_independent_sources=minimum_independent_sources,
+        )
 
     fumbles_lost_supplement: FirstPartyFumblesLostSupplement | None = None
     fumbles_lost_failure: str | None = None
@@ -884,28 +897,29 @@ def build_current_live_forecasts(
             # The ordinary scorer will emit explicit partial outputs for fum_lost.
             fumbles_lost_failure = f"{type(exc).__name__}: {exc}"
 
-    (
-        scoring_coverage,
-        family_coverage,
-        partial_forecasts,
-        fantasy_points,
-        fantasy_regular_season,
-        fumbles_lost_materiality_assessments,
-        fumbles_lost_non_material_partial_player_ids,
-        fumbles_lost_material_partial_player_ids,
-        fumbles_lost_simulation_relevant_player_ids,
-        simulation_material_partial_player_ids,
-        simulation_blockers,
-    ) = _materiality_aware_scoring(
-        league_state,
-        raw_ensemble=raw_ensemble,
-        supplemental_observations=supplemental_observations,
-        fumbles_lost_supplement=fumbles_lost_supplement,
-        fumbles_lost_production_table=fumbles_lost_production_table,
-        source="fsffl:live_league_scored",
-        model_version="next2-current-runtime-v10:rolling-fumbles-lost-materiality",
-    )
-    return LiveForecastRuntimeResult(
+    with sample_rss_phase("forecast.league_scoring_and_materiality"):
+        (
+            scoring_coverage,
+            family_coverage,
+            partial_forecasts,
+            fantasy_points,
+            fantasy_regular_season,
+            fumbles_lost_materiality_assessments,
+            fumbles_lost_non_material_partial_player_ids,
+            fumbles_lost_material_partial_player_ids,
+            fumbles_lost_simulation_relevant_player_ids,
+            simulation_material_partial_player_ids,
+            simulation_blockers,
+        ) = _materiality_aware_scoring(
+            league_state,
+            raw_ensemble=raw_ensemble,
+            supplemental_observations=supplemental_observations,
+            fumbles_lost_supplement=fumbles_lost_supplement,
+            fumbles_lost_production_table=fumbles_lost_production_table,
+            source="fsffl:live_league_scored",
+            model_version="next2-current-runtime-v10:rolling-fumbles-lost-materiality",
+        )
+    result = LiveForecastRuntimeResult(
         raw_ensemble=raw_ensemble,
         fantasy_point_forecasts=fantasy_points,
         partial_fantasy_point_forecasts=partial_forecasts,
@@ -974,3 +988,13 @@ def build_current_live_forecasts(
         simulation_material_partial_player_ids=simulation_material_partial_player_ids,
         first_party_fumbles_lost_supplement=fumbles_lost_supplement,
     )
+    log_object_graph(
+        "forecast.completed_materializations",
+        result=result,
+        provider_snapshots=snapshots,
+        normalized=normalized_by_source,
+        source_scored=scored_by_source,
+        batches=batches,
+        all_live_objects=(result, snapshots, normalized_by_source, scored_by_source, batches),
+    )
+    return result

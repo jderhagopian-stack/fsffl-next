@@ -1954,3 +1954,20 @@ The temporary experiment configuration was removed and the private beta restored
 Changed-State downstream fixture results and the original statistical study are unchanged: expected-wins ±0.001 stays **inconclusive**, with no enlarged study or relabeling. This run is a **failed hosted resource gate**, not a production adoption pass. PR #311 remains open/draft and no merge/adoption is authorized. Full timing, resource, foreground, publication, and exact deployment evidence: `docs/operations/evidence/simulation_rng_hosted_validation_20260930.md`.
 
 **Management gate — Simulation RNG adoption.** Before any repeat hosted adoption study, identify and bound the short-lived memory peak under the existing free-Render limit, then rerun batch-500 with true concurrent Home/My Team/Product Context reads, full readiness/publication, and restart restore. Preserve the production trial count and all modeled semantics.
+
+## 2026-09-30 — PR #311 hosted validation failed resource gate; bounded corrective authorized
+Controlled Render validation of PR #311 is complete. The experimental batch-500 NumPy path reached full Forecast / Simulation / Current Value / Intrinsic readiness and atomically published at 50,000 trials. The measured Forecast-complete → Simulation-complete interval was about 59.0 seconds, while total refresh-to-publication was about 256.7 seconds.
+
+The run failed the unchanged hard-memory gate: process high-water RSS reached 576,552,960 bytes versus the 536,870,900-byte limit. Current RSS later fell to ~403.8 MB and there was no unexpected OOM/restart. Existing phase telemetry does not identify the transient peak's precise owner and does not support blaming the NumPy Simulation kernel specifically.
+
+Management has **withheld adoption** and authorized one bounded memory attribution/correction pass. Keep PR #311 open/draft, preserve 50,000 trials, all model semantics, replay/version identity and the legacy Python replay path. Identify the short-lived allocation owner(s), remove avoidable overlap/retention or duplicate work without broad architecture changes, then rerun the same controlled batch-500 hosted journey with true concurrent foreground reads, full readiness/publication, restart restore, exact high-water evidence, and rollback to main. If the hard limit still cannot be met with a narrow fix, return to Management for a capacity decision instead of continued micro-optimization.
+
+
+## 2026-09-30 — Memory gate reframed as a bounded Simulation 2.0 architecture opportunity
+Management has refined the active PR #311 corrective. Work must first attribute the 576.6 MB transient high-water peak and ask whether it comes from the Forecast → Simulation representation/lifetime boundary that planned Simulation 2.0 work is already designed to improve.
+
+Do not optimize for an arbitrary “save 40 MB” target with disposable patches. If attribution shows duplicated/long-lived Forecast-derived inputs, repeated Python object graphs, repeated lineup/scoring state, temporary batch materialization, or serialization/object duplication across the Simulation boundary, implement the smallest reusable Simulation 2.0 primitive that removes that waste: compiled/indexed state, bounded reusable buffers, invariant reuse, duplicate-materialization removal, or explicit release of superseded intermediates.
+
+If attribution instead proves a Forecast/player-history-only owner unrelated to Simulation 2.0, correct that owner narrowly.
+
+Then rerun full CI/review and the controlled batch-500 Render journey with true concurrent foreground reads, full publication/readiness, restart restore, exact RSS/high-water evidence, and rollback. Preserve 50k, semantics, replay/versioning, and legacy Python replay throughout.
