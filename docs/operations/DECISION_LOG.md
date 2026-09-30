@@ -639,3 +639,19 @@ This policy belongs to Forecast. Intrinsic consumes the resulting multi-horizon 
 
 ### Remaining-season basis for temporary injury effects
 For in-season valuation, temporary availability shocks must be applied to **remaining current-season expected utility from the evaluation date**, not retroactively to already-realized games. Already-completed production is historical evidence; it is not future asset utility. As the season progresses, the maximum current-season injury impact on dynasty Intrinsic naturally shrinks because less Y1 utility remains at risk.
+
+
+## 2026-09-30 — Simulation batched-Gaussian experimental gate APPROVED
+Management approves an **experimental, versioned non-bit-identical RNG branch and equivalence study** for batched NumPy/PCG64 normal draws at the unchanged 50,000-trial production count.
+
+This approval does **not** authorize production adoption, merge to main, or deployment of the changed RNG protocol.
+
+Required boundaries:
+- preserve the existing Normal(mean, stddev) model semantics, zero floor, independence assumptions, weekly scoring inputs, standings/playoff rules, output fields, and Simulation authority;
+- add explicit engine/RNG protocol identity and deterministic replay provenance so old Python-RNG artifacts cannot be confused with the new protocol;
+- retain the current Python Random.gauss replay path for existing manifests;
+- keep 50,000 canonical production trials;
+- pre-register and execute the proposed equivalence study across at least 100 independent root seeds × 50,000 trials per engine, using the proposed margins as the initial acceptance contract: ±0.002 absolute for ordinary per-team probabilities, ±0.001 expected wins, and ±0.005 rank-distribution total-variation distance, plus the stated tail/downstream/resource checks;
+- any systematic downstream Decision/Search/Optimization behavior change, material tail undercoverage, replay instability, or unacceptable Render memory/foreground regression blocks adoption.
+
+After the experimental study, return to Management with measured runtime/resource benefit and full equivalence evidence for a separate production-adoption decision.
