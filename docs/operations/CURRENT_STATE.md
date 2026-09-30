@@ -1607,3 +1607,29 @@ Immediate next action:
 - record exact peak/current RSS and foreground responsiveness;
 - if it passes, advance immediately to physical Safari;
 - if it still fails with clean bounded ownership/staging, return to Management for the previously defined capacity decision rather than continuing micro-optimization.
+
+
+## 2026-09-29 — Realistic free-Render journey reached restart; final restore acceptance pending
+Post-#304 hosted acceptance advanced materially.
+
+PR #305 (`Align hosted acceptance to realistic free-Render journey`) merged as `d126ef3b952d2f49e3a95ac484194ac5ccf59dd5`. It is acceptance-harness only: product/runtime/model behavior is unchanged. The realistic `journey` mode exercises settled FSFFL -> settled Hodor -> settled FSFFL return under the unchanged hard-memory gate, without the older synthetic overlap/race probes.
+
+The subsequent restart/restore execution proves that the realistic journey cleared far enough to reach the restart gate. On restart, the exact durable FSFFL State, managed team, publication generation, Forecast, Simulation and Value were restored correctly. The remaining restore-mode failure was an acceptance-harness expectation that Intrinsic already be attached before normal product rehydration.
+
+PR #306 (`Align restore acceptance with staged product rehydration`) merged as `c5e6e23596a0fd2489f82c309ffdc241a5e06e80`. It is also acceptance-harness only. It now:
+- validates exact durable core restore first;
+- probes coherent restored surfaces on that same generation;
+- exercises governed PI history, which rehydrates Intrinsic on normal product use;
+- then requires full product readiness and re-probes surfaces;
+- requires publication generation identity to remain unchanged throughout.
+
+Management interpretation:
+- the normal free-Render journey is no longer being stopped by the prior first-load hard-memory blocker;
+- the remaining gate is the final post-#306 restore rerun, not another runtime architecture corrective;
+- no new product/runtime/model defect is currently evidenced.
+
+Immediate next action:
+- deploy exact #306 merge lineage if not already live;
+- rerun only the final staged restore acceptance;
+- if that passes, promote hosted lifecycle acceptance and move immediately to physical Safari testing;
+- do not reopen memory/resource architecture absent contradictory runtime evidence.
