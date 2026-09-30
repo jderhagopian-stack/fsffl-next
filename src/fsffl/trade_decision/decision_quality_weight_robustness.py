@@ -100,6 +100,9 @@ def _extreme_weights(
     if remaining > 1e-9:
         raise ValueError("weight-family bounds could not construct a complete weight vector")
     score = sum(scores[component_id] * weight for component_id, weight in weights.items())
+    # Bounded inputs can accumulate a few ulps above 100 when the valid
+    # normalized weights are summed in floating-point order.
+    score = min(100.0, max(0.0, score))
     return DecisionQualityWeightWitness(weights=weights, score=score)
 
 

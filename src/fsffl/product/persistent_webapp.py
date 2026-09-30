@@ -103,6 +103,24 @@ _startup_restore_complete = Event()
 _startup_restore_state: dict[str, object] = {"status": "idle"}
 _heavy_work_coordinator = HeavyWorkCoordinator(max_waiters=6)
 
+
+def _load_sleeper_state_under_heavy_claim(league_external_id: str):
+    """Serialize large canonical State materialization with every other build."""
+
+    with _heavy_work_coordinator.claim(
+        kind="state_sync",
+        key=f"sleeper:{league_external_id}",
+        timeout_seconds=300.0,
+    ):
+        release_unused_process_memory(label="before-sleeper-state-sync")
+        state = default_sleeper_state_loader(league_external_id)
+        logging.getLogger("uvicorn.error").info(
+            "FSFFL intelligence memory phase=state_materialization_complete current_rss=%s",
+            _heavy_work_coordinator.snapshot().current_rss_bytes,
+        )
+        release_unused_process_memory(label="after-sleeper-state-sync")
+        return state
+
 def _execution_state_scope_owned(context) -> bool:
     """Return whether this context owns the user's current process execution scope."""
 
@@ -526,6 +544,7 @@ def _presentation_payload_loader(user_id: str, context, surface: str):
 app = _webapp.create_app(
     runtime_store=_runtime_store,
     behavioral_coordinator=_behavioral_coordinator,
+    state_loader=_load_sleeper_state_under_heavy_claim,
     forecast_loader=_forecast_loader,
     preseason_forecast_loader=_preseason_forecast_loader,
     state_snapshot_store=_state_snapshot_store,
@@ -1143,7 +1162,7 @@ install_annual_preseason_scheduler_route(
 install_hosted_connect_routes(
     app,
     runtime_store=_runtime_store,
-    state_loader=default_sleeper_state_loader,
+    state_loader=_load_sleeper_state_under_heavy_claim,
     behavioral_coordinator=_behavioral_coordinator,
     persistence_store=_persistence_store,
     sync_probe_loader=lambda league_id: _sleeper_probe_source.fetch_sync_probe(

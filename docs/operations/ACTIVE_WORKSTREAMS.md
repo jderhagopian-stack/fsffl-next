@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 20415)
+Total output lines: 764
+
 # FSFFL NEXT — Active Workstreams
 
 Updated: 2026-09-25
@@ -336,27 +339,7 @@ Durable handoff:
 ## 2026-09-27 10:55 ET — PR #271 physical gate remains FAILED
 - **Implementation — ACTIVE / sole product critical path:** fix changed-State continuity after automatic Sleeper refresh. Preserve usable last-good presentation through State advance using a compact/durable read model, not a second heavy graph; repair the PR #273 hosted acceptance runner/deploy path; rerun full hosted journey with memory telemetry.
 - **Resource evidence:** startup ~281 MB peak; changed-State physical path ~411 MB observed peak, below but close to the ~429 MB ceiling.
-- **Market — HOLD:** Market did not cause the reset and must not receive a page-specific workaround.
-- **Performance — HOLD:** no general latency work until availability passes.
-- **Research — remains independent/parallel under its existing non-production directives.**
-
-
-## Runtime architecture completion clarification — 2026-09-27
-- **Implementation remains ACTIVE / sole product critical path.**
-- Preserve PR #271 as the architectural foundation; complete its missing compact persisted presentation-continuity layer on current `main`.
-- Repair PR #273's acceptance-harness startup/deployment path and use that harness to validate the corrected runtime end to end.
-- No page-specific adapters or Market-specific workaround are authorized.
-
-
-## 2026-09-27 — Management sequencing after model-selection governance correction
-- **Implementation — ACTIVE / sole product availability critical path:** complete PR #274 runtime presentation continuity + hosted startup repair; no Forecast semantic changes.
-- **Research — ACTIVE / foundational model-authority audit:** symmetric retrospective Forecast comparison with no incumbent privilege; joint injury practical-materiality reinterpretation included; determine whether a bounded new-family challenge is needed.
-- **Y4-Y8 Research — PRESERVED:** exploratory work may continue, but no new production promotion until the foundational Forecast authority audit establishes the base model-selection standard.
-- **Market / general Performance — HOLD** behind product availability acceptance.
-
-
-## 2026-09-27 — Forecast audit completeness
-Research remains ACTIVE. Before closeout, it must directly include the exact deployed Y2/Y3 package `forecast-vnext-a2-burr-20260922` as an audit candidate. Historical A2/D0/D1 evidence may inform interpretation but cannot substitute for direct evaluation of the deployed package. Production remains unchanged.
+- **Market — HOLD:** Market did not cause the reset and must not receive a page…415 tokens truncated…an audit candidate. Historical A2/D0/D1 evidence may inform interpretation but cannot substitute for direct evaluation of the deployed package. Production remains unchanged.
 
 
 ## 2026-09-27 15:37 ET — Physical beta priority shift
@@ -729,3 +712,36 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - The completed startup acceptance harness has been disabled on Render so the free instance is not competing with server-only acceptance work during physical testing.
 - Deploy current main, then run the physical iPhone/Safari Connect path through visible league/team selection. That physical result controls closure.
 - Do not reopen Forecast, Simulation, Value, Intrinsic, resource-boundary architecture, or #306 hosted restore acceptance absent new contradictory evidence.
+
+
+## 2026-09-30 — Physical Safari exposed refresh lifecycle and restart-recovery defect
+- **Implementation — ACTIVE / sole product-critical path.** New directive:
+  `docs/operations/directives/20260930_PHYSICAL_REFRESH_MEMORY_ROOT_CAUSE.md`.
+- Physical Safari submitted `/api/intelligence/jobs` at about 04:11:47Z while
+  automatic Sleeper background refresh was still being polled. Render RSS rose
+  from 344–349 MB to 522.4 MB / 536.9 MB, CPU saturated and the process
+  restarted. Canonical State survived; Forecast, Simulation and Value did not;
+  runtime reported `forecast=False simulation=False value=False complete=False`.
+- Confirmed code defect: Hosted Connect and manual Intelligence had separate
+  State-load owners during the automatic-refresh handoff window; production
+  State load also bypassed HeavyWorkCoordinator. Its claims serialized declared
+  model phases and reported RSS, but did not reserve phase memory or constrain
+  one active phase. Exact object-level attribution cannot be recovered from
+  coarse incident telemetry; boundary RSS instrumentation is added.
+- Market value-lens first-load remained staged and lightweight; foreground
+  product-context/home latency is consistent with CPU starvation, with no
+  evidence of expensive reconstruction. PR #306 measured warm durable restore
+  (~308.5 MB), not a cold State sync plus live Forecast/Simulation/Value build
+  with concurrent browser reads. #307 fixed Connect presentation only.
+- Restart converted in-progress work to `INTERRUPTED/server_restart`; missing
+  exact-State layers were not automatically rebuilt, permitting persistent
+  2/7 readiness. Browser polling now resumes that work from durable exact State
+  with atomic publication.
+- Corrective implementation: coalesce manual refresh into active automatic
+  Sleeper refresh, serialize State materialization in the heavy-work lane,
+  report lifecycle RSS boundaries, resume interrupted exact-State builds, and
+  add deterministic Safari-like concurrent-read/value-lens regression.
+- Keep hard Render memory limit and all Forecast/Simulation/Value semantics
+  unchanged. Full CI, exact-head review, deploy, realistic live fresh-build
+  telemetry and physical Safari acceptance remain required. Current status:
+  **BLOCKED — runtime acceptance**.

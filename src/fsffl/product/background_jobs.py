@@ -161,7 +161,12 @@ class IntelligenceJobCoordinator:
                 status=IntelligenceJobStatus.INTERRUPTED,
                 phase=IntelligenceJobPhase.INTERRUPTED,
                 failure_phase=interrupted_phase,
-                message="Intelligence refresh was interrupted by a server restart. Last-good intelligence remains active; start a new refresh when ready.",
+                message=(
+                    "Intelligence refresh was interrupted by a server restart. "
+                    "The browser will resume rebuilding any layers missing from the "
+                    "restored State; prior intelligence is served only when it still "
+                    "matches that exact State."
+                ),
                 updated_at=datetime.now(UTC),
                 error="server_restart",
             )
