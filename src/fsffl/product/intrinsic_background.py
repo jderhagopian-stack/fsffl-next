@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 import logging
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -18,6 +18,7 @@ from .runtime import UserRuntimeContext
 IntrinsicContractLoader = Callable[[UserRuntimeContext], ShapleyIntrinsicContract]
 ForecastCoordinateResolver = Callable[[UserRuntimeContext], str]
 IntrinsicInputFingerprintResolver = Callable[[UserRuntimeContext], str]
+IntrinsicOwnershipValidator = Callable[[UserRuntimeContext], bool]
 DEFAULT_INTRINSIC_RESPONSE_BUDGET_SECONDS = 30.0
 # The hard watchdog is deliberately a distinct operational guard, not a browser
 # response timeout.  Ten minutes is 20x the response budget and comfortably above
@@ -25,6 +26,10 @@ DEFAULT_INTRINSIC_RESPONSE_BUDGET_SECONDS = 30.0
 # wedged worker.
 DEFAULT_INTRINSIC_HARD_WATCHDOG_SECONDS = 600.0
 _logger = logging.getLogger("fsffl.product.performance")
+
+
+class IntrinsicBuildSuperseded(RuntimeError):
+    """An older State's Intrinsic waiter lost lifecycle ownership."""
 
 
 class IntrinsicBuildStatus(StrEnum):
@@ -68,6 +73,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
         intrinsic_input_fingerprint_resolver: IntrinsicInputFingerprintResolver | None = None,
         timeout_seconds: float | None = None,
         heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+        ownership_validator: IntrinsicOwnershipValidator | None = None,
         max_records: int = 8,
     ) -> None:
         # timeout_seconds is retained as a compatibility alias for older callers,
@@ -94,9 +100,12 @@ class ShapleyIntrinsicBackgroundCoordinator:
         if max_records < 2:
             raise ValueError("Intrinsic max_records must be at least 2")
         self._heavy_work_coordinator = heavy_work_coordinator
+        self._ownership_validator = ownership_validator
         self._max_records = int(max_records)
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], IntrinsicBuildRecord] = {}
+        self._futures: dict[tuple[str, str, str], Future[None]] = {}
+        self._user_epochs: dict[str, int] = {}
         self._executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="fsffl-intrinsic",
@@ -144,8 +153,22 @@ class ShapleyIntrinsicBackgroundCoordinator:
         restorer = getattr(self._loader, "restore_compatible", None)
         if not callable(restorer):
             return None
+        if (
+            self._ownership_validator is not None
+            and not self._ownership_validator(context)
+        ):
+            return None
+        with self._lock:
+            expected_epoch = self._user_epochs.get(context.user_id, 0)
         key = self._key(context)
         with self._lock:
+            if self._user_epochs.get(context.user_id, 0) != expected_epoch:
+                return None
+            if (
+                self._ownership_validator is not None
+                and not self._ownership_validator(context)
+            ):
+                return None
             existing = self._records.get(key)
             if (
                 existing is not None
@@ -182,6 +205,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
             contract=contract,
         )
         with self._lock:
+            if self._user_epochs.get(context.user_id, 0) != expected_epoch:
+                return None
             self._records[key] = record
         _logger.info(
             "FSFFL Intrinsic restored from compatible persisted contract user=%s state=%s forecast=%s fingerprint=%s estimates=%s",
@@ -194,10 +219,40 @@ class ShapleyIntrinsicBackgroundCoordinator:
         return record
 
 
-    def request(self, context: UserRuntimeContext) -> IntrinsicBuildRecord:
+    def request(
+        self,
+        context: UserRuntimeContext,
+        *,
+        expected_epoch: int | None = None,
+    ) -> IntrinsicBuildRecord:
+        if (
+            self._ownership_validator is not None
+            and not self._ownership_validator(context)
+        ):
+            raise IntrinsicBuildSuperseded(
+                "Intrinsic context no longer owns the active execution State"
+            )
+        with self._lock:
+            request_epoch = (
+                self._user_epochs.get(context.user_id, 0)
+                if expected_epoch is None
+                else expected_epoch
+            )
         key = self._key(context)
         now = datetime.now(UTC)
         with self._lock:
+            current_epoch = self._user_epochs.get(context.user_id, 0)
+            if current_epoch != request_epoch:
+                raise IntrinsicBuildSuperseded(
+                    "Intrinsic lifecycle was superseded by a State transition"
+                )
+            if (
+                self._ownership_validator is not None
+                and not self._ownership_validator(context)
+            ):
+                raise IntrinsicBuildSuperseded(
+                    "Intrinsic context no longer owns the active execution State"
+                )
             existing = self._records.get(key)
             if existing is not None:
                 if (
@@ -301,7 +356,8 @@ class ShapleyIntrinsicBackgroundCoordinator:
                 updated_at=now,
             )
             self._records[key] = record
-            self._executor.submit(self._run, key, context)
+            future = self._executor.submit(self._run, key, context)
+            self._futures[key] = future
             return record
 
     def _set(
@@ -334,9 +390,30 @@ class ShapleyIntrinsicBackgroundCoordinator:
         running = self._set(key, status=IntrinsicBuildStatus.RUNNING)
         if running is None:
             return
+        completion_summary: tuple[str, str, str, float] | None = None
+
+        def build_and_attach_owned() -> tuple[str, str, str, float] | None:
+            contract = self._loader(context)
+            # If clear_user invalidated this lifecycle while the loader was active,
+            # _set returns None. The old contract is then released before the heavy
+            # claim opens for replacement work.
+            attached = self._set(
+                key,
+                status=IntrinsicBuildStatus.COMPLETED,
+                contract=contract,
+            )
+            if attached is None:
+                return None
+            return (
+                attached.user_id,
+                attached.league_state_id,
+                attached.forecast_coordinate,
+                (attached.updated_at - attached.created_at).total_seconds(),
+            )
+
         try:
             if self._heavy_work_coordinator is None:
-                contract = self._loader(context)
+                completion_summary = build_and_attach_owned()
             else:
                 with self._heavy_work_coordinator.claim(
                     kind="intrinsic",
@@ -345,7 +422,7 @@ class ShapleyIntrinsicBackgroundCoordinator:
                         f"{running.forecast_coordinate}"
                     ),
                 ):
-                    contract = self._loader(context)
+                    completion_summary = build_and_attach_owned()
         except Exception as exc:
             failed = self._set(
                 key,
@@ -361,22 +438,36 @@ class ShapleyIntrinsicBackgroundCoordinator:
                     failed.forecast_coordinate,
                     failed.error,
                 )
+            with self._lock:
+                self._futures.pop(key, None)
             return
-        completed = self._set(
-            key,
-            status=IntrinsicBuildStatus.COMPLETED,
-            contract=contract,
-        )
-        if completed is not None:
-            elapsed = (completed.updated_at - completed.created_at).total_seconds()
+        if completion_summary is not None:
+            completed_user, completed_state, completed_forecast, elapsed = (
+                completion_summary
+            )
             _logger.info(
                 "FSFFL Intrinsic background build completed user=%s state=%s "
                 "forecast=%s elapsed=%.3fs",
-                completed.user_id,
-                completed.league_state_id,
-                completed.forecast_coordinate,
+                completed_user,
+                completed_state,
+                completed_forecast,
                 elapsed,
             )
+        with self._lock:
+            self._futures.pop(key, None)
+
+    def clear_user(self, user_id: str) -> int:
+        """Invalidate old waiters and drop user-scoped process lifecycle records."""
+
+        with self._lock:
+            self._user_epochs[user_id] = self._user_epochs.get(user_id, 0) + 1
+            keys = [key for key in self._records if key[0] == user_id]
+            for key in keys:
+                self._records.pop(key, None)
+                future = self._futures.pop(key, None)
+                if future is not None and not future.done():
+                    future.cancel()
+            return len(keys)
 
     def wait_for_terminal(
         self,
@@ -398,7 +489,9 @@ class ShapleyIntrinsicBackgroundCoordinator:
             else max(0.1, float(timeout_seconds))
         )
         deadline = monotonic() + timeout
-        record = self.request(context)
+        with self._lock:
+            expected_epoch = self._user_epochs.get(context.user_id, 0)
+        record = self.request(context, expected_epoch=expected_epoch)
         while record.status in {
             IntrinsicBuildStatus.QUEUED,
             IntrinsicBuildStatus.RUNNING,
@@ -406,8 +499,9 @@ class ShapleyIntrinsicBackgroundCoordinator:
             if monotonic() >= deadline:
                 return record
             sleep(max(0.01, poll_seconds))
-            # request() also applies the hard-watchdog policy to active work.
-            record = self.request(context)
+            # request() applies both hard-watchdog policy and lifecycle epoch
+            # validation, so a cleared older waiter cannot recreate its work.
+            record = self.request(context, expected_epoch=expected_epoch)
         return record
 
     def current(self, context: UserRuntimeContext) -> IntrinsicBuildRecord | None:

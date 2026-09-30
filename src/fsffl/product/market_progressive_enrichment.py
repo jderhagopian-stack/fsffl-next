@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from threading import RLock
@@ -75,6 +75,7 @@ class MarketDecisionEnrichmentCoordinator:
         self._lock = RLock()
         self._records: dict[str, MarketEnrichmentRecord] = {}
         self._active_by_scope: dict[tuple[str, str, str, str], str] = {}
+        self._future_by_job: dict[str, Future[None]] = {}
 
     def start(
         self,
@@ -87,6 +88,23 @@ class MarketDecisionEnrichmentCoordinator:
     ) -> MarketEnrichmentRecord:
         scope = (user_id, league_state_id, focal_team_id, request_key)
         with self._lock:
+            if not self._identity_validator(
+                user_id,
+                league_state_id,
+                focal_team_id,
+            ):
+                now = monotonic()
+                return MarketEnrichmentRecord(
+                    job_id=uuid4().hex,
+                    user_id=user_id,
+                    league_state_id=league_state_id,
+                    focal_team_id=focal_team_id,
+                    request_key=request_key,
+                    status=MarketEnrichmentStatus.INTERRUPTED,
+                    created_at_monotonic=now,
+                    completed_at_monotonic=now,
+                    error="market context is no longer eligible for retained Decision enrichment",
+                )
             existing_id = self._active_by_scope.get(scope)
             if existing_id is not None:
                 existing = self._records.get(existing_id)
@@ -109,7 +127,8 @@ class MarketDecisionEnrichmentCoordinator:
             )
             self._records[job_id] = record
             self._active_by_scope[scope] = job_id
-            self._executor.submit(self._run, record, work)
+            future = self._executor.submit(self._run, record, work)
+            self._future_by_job[job_id] = future
             return record
 
     def _set(self, job_id: str, **changes) -> MarketEnrichmentRecord | None:
@@ -144,20 +163,23 @@ class MarketDecisionEnrichmentCoordinator:
             f"{record.user_id}:{record.league_state_id}:"
             f"{record.focal_team_id}:{record.request_key}"
         )
-        try:
+        def build_and_attach_owned() -> None:
             foreground_pressure.cooperative_yield()
-            if self._heavy is None:
-                result = work()
-            else:
-                with self._heavy.claim(
-                    kind="market_decision_enrichment",
-                    key=key,
-                    timeout_seconds=300.0,
-                ):
-                    foreground_pressure.cooperative_yield()
-                    result = work()
-                    foreground_pressure.cooperative_yield()
-
+            if not self._identity_validator(
+                record.user_id,
+                record.league_state_id,
+                record.focal_team_id,
+            ):
+                self._set(
+                    record.job_id,
+                    status=MarketEnrichmentStatus.INTERRUPTED,
+                    completed_at_monotonic=monotonic(),
+                    result=None,
+                    error="market context changed before Decision enrichment work began",
+                )
+                return
+            result = work()
+            foreground_pressure.cooperative_yield()
             if not self._identity_validator(
                 record.user_id,
                 record.league_state_id,
@@ -171,7 +193,9 @@ class MarketDecisionEnrichmentCoordinator:
                     error="market context changed while Decision enrichment was running",
                 )
                 return
-
+            # Attach (or discard, if clear_user already removed the record) before
+            # releasing the heavy-work claim. A replacement heavy phase can never
+            # overlap a stale full enrichment result still held by this worker.
             self._set(
                 record.job_id,
                 status=MarketEnrichmentStatus.COMPLETED,
@@ -179,6 +203,17 @@ class MarketDecisionEnrichmentCoordinator:
                 result=result,
                 error=None,
             )
+
+        try:
+            if self._heavy is None:
+                build_and_attach_owned()
+            else:
+                with self._heavy.claim(
+                    kind="market_decision_enrichment",
+                    key=key,
+                    timeout_seconds=300.0,
+                ):
+                    build_and_attach_owned()
         except Exception as exc:
             self._set(
                 record.job_id,
@@ -188,6 +223,8 @@ class MarketDecisionEnrichmentCoordinator:
                 error=f"{type(exc).__name__}: {exc}",
             )
         finally:
+            with self._lock:
+                self._future_by_job.pop(record.job_id, None)
             release_unused_process_memory(label="market-decision-enrichment")
 
     def get(
@@ -219,4 +256,7 @@ class MarketDecisionEnrichmentCoordinator:
                 )
                 if self._active_by_scope.get(scope) == job_id:
                     self._active_by_scope.pop(scope, None)
+                future = self._future_by_job.pop(job_id, None)
+                if future is not None and not future.done():
+                    future.cancel()
             return len(ids)

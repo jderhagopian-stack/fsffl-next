@@ -871,6 +871,48 @@ def test_future_forecast_cache_serves_same_league_last_good_during_state_reconci
     }
 
 
+
+def test_future_forecast_cache_does_not_retain_released_stale_runtime() -> None:
+    state = _state()
+    y1 = _forecast_observation("sleeper:player:101", 310.0)
+    evidence = SimpleNamespace(
+        league_scored_forecasts=(y1,),
+        raw_forecasts=(),
+        model_version="fixture-current",
+        runtime_result=SimpleNamespace(evaluation_as_of=NOW),
+    )
+    allowed = {"retain": True}
+    builds = []
+
+    def builder(**_kwargs):
+        builds.append("build")
+        return _continuity_future_contract()
+
+    runtime = UserRuntimeContext(
+        user_id="u",
+        league_state=state,
+        selected_team_id="a",
+        forecast_evidence=evidence,
+    )
+    cache = PlayerFutureForecastCache(
+        future_forecast_builder=builder,
+        forecast_model_version="fixture-vnext",
+        retention_validator=lambda _runtime: allowed["retain"],
+    )
+
+    first, freshness = cache.resolve(runtime)
+    assert first is not None
+    assert freshness == "current"
+    assert cache.clear_user_cache("u") == 1
+
+    allowed["retain"] = False
+    second, freshness = cache.resolve(runtime)
+    assert second is not None
+    assert freshness == "current"
+    assert builds == ["build", "build"]
+    assert cache.clear_user_cache("u") == 0
+
+
 def test_future_forecast_cache_never_crosses_league_or_scoring_rules() -> None:
     old_state = _state()
     y1 = _forecast_observation("sleeper:player:101", 310.0)

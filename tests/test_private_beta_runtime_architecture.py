@@ -311,12 +311,12 @@ def test_hosted_surface_acceptance_releases_sequential_payloads_and_bounds_marke
     assert "payloads = {" not in probe
     assert "del payload" in probe
     assert "gc.collect()" in probe
-    assert "_MAX_ENTRIES = 1" in workspace_cache
-    assert "_MAX_ENTRIES = 1" in search_cache
-    assert "cache.clear()" in workspace_cache
-    assert "cache.clear()" in search_cache
-    assert "active_scope" in economics_cache
-    assert "cache.clear()" in economics_cache
+    assert "_MAX_ENTRIES_PER_USER = 1" in workspace_cache
+    assert "_MAX_ENTRIES_PER_USER = 1" in search_cache
+    assert "def clear_user_cache(user_id: str)" in workspace_cache
+    assert "def clear_user_cache(user_id: str)" in search_cache
+    assert "active_scope_by_user" in economics_cache
+    assert "def clear_user_cache(user_id: str)" in economics_cache
 
 
 
@@ -347,7 +347,9 @@ def test_heavy_work_snapshot_records_bounded_phase_memory_evidence(monkeypatch) 
     assert len(snapshot.recent_phase_memory) == 1
     event = snapshot.recent_phase_memory[0]
     assert event["kind"] == "forecast"
-    assert event["key"] == "u:s1:forecast"
+    assert str(event["key"]).startswith("sha256:")
+    assert event["key"] != "u:s1:forecast"
+    assert "u:s1:forecast" not in str(snapshot.__dict__)
     assert event["before_rss_bytes"] == 120
     assert event["after_rss_bytes"] == 130
     assert event["resident_delta_bytes"] == 10
@@ -372,35 +374,38 @@ def test_cross_league_hosted_switch_reclaims_execution_caches_before_intelligenc
     )[1].split(
         '@application.post("/api/connect/sleeper/background/refresh")', 1
     )[0]
-    activate_index = connect.index("activate_state(user_id, league_state)")
-    reclaim_index = connect.index("state_transition_reclaimer(", activate_index)
-    reconcile_index = connect.index("intelligence_reconciler(user_id)", reclaim_index)
-    assert activate_index < reclaim_index < reconcile_index
-    assert "active_league_id != league_state.league.league_id" in connect
+    activate_index = connect.index("state_activator(")
+    behavior_index = connect.index("behavioral_coordinator.start(", activate_index)
+    reconcile_index = connect.index("intelligence_reconciler(user_id)", behavior_index)
+    assert activate_index < behavior_index < reconcile_index
+    assert 'reason="background_connect"' in connect
 
     refresh = connect_source.split(
         '@application.post("/api/connect/sleeper/background/refresh")', 1
     )[1].split(
         '@application.get("/api/connect/sleeper/background/current")', 1
     )[0]
-    activate_refresh_index = refresh.index(
-        "runtime_store.set_league_state_if_generation("
-    )
-    reclaim_refresh_index = refresh.index(
-        "state_transition_reclaimer(",
+    activate_refresh_index = refresh.index("state_activator(")
+    behavior_refresh_index = refresh.index(
+        "behavioral_coordinator.start(",
         activate_refresh_index,
     )
     reconcile_refresh_index = refresh.index(
         "intelligence_reconciler(user_id)",
-        reclaim_refresh_index,
+        behavior_refresh_index,
     )
-    assert activate_refresh_index < reclaim_refresh_index < reconcile_refresh_index
-    assert "if changed and state_transition_reclaimer is not None:" in refresh
+    assert activate_refresh_index < behavior_refresh_index < reconcile_refresh_index
+    assert 'reason="background_material_refresh"' in refresh
 
     assert (
-        "state_transition_reclaimer=_reclaim_runtime_state_transition"
+        "state_resource_boundary=_apply_runtime_resource_boundary"
+        in hosted_source
+    )
+    assert (
+        "state_activator=app.state.activate_state_with_resource_boundary"
         in hosted_source
     )
     assert '"state_transition_reclaims": []' in acceptance_source
-    assert 'sample_resources(f"{label}_before_transition_reclaim")' in acceptance_source
-    assert 'sample_resources(f"{label}_after_transition_reclaim")' in acceptance_source
+    assert 'sample_resources(f"{label}_pre_state_activation")' in acceptance_source
+    assert 'sample_resources(f"{label}_post_resource_boundary")' in acceptance_source
+

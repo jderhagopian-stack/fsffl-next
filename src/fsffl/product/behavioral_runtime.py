@@ -291,41 +291,60 @@ class BehavioralRuntimeCoordinator:
             return record
 
     def _run(self, user_id: str, league_state: LeagueState, sleeper_league_external_id: str) -> None:
-        try:
+        def owns_current_record() -> bool:
+            current = self._records.get(user_id)
+            return bool(
+                current is not None
+                and current.league_state_id == league_state.state_id
+                and current.sleeper_league_external_id
+                == sleeper_league_external_id
+            )
+
+        def build_owned() -> None:
             with self._lock:
-                current = self._records.get(user_id)
-                if (
-                    current is None
-                    or current.league_state_id != league_state.state_id
-                    or current.sleeper_league_external_id != sleeper_league_external_id
-                ):
+                if not owns_current_record():
                     return
+            result = self._work(league_state, sleeper_league_external_id)
+
+            # Revalidate and publish the result while holding the same coordinator
+            # lock used by clear_user(). A transition therefore either waits for
+            # this old result to finish attaching and then clears it, or clears first
+            # and makes this worker discard its result before the heavy gate opens
+            # for replacement work.
+            with self._lock:
+                if not owns_current_record():
+                    return
+                self._store_factory().put_runtime_context(
+                    user_id=user_id,
+                    league_state_id=league_state.state_id,
+                    sleeper_league_external_id=sleeper_league_external_id,
+                    league_family_id=result.league_family_id,
+                    current_owner_by_roster=result.current_owner_by_roster,
+                )
+                current = self._records[user_id]
+                self._records[user_id] = replace(
+                    current,
+                    status=BehavioralRuntimeStatus.READY,
+                    updated_at=datetime.now(UTC),
+                    result=result,
+                    error=None,
+                )
+            _publish_profiles_for_state(league_state, result)
+
+        try:
             if self._heavy_work_coordinator is None:
-                result = self._work(league_state, sleeper_league_external_id)
+                build_owned()
             else:
                 with self._heavy_work_coordinator.claim(
                     kind="behavioral",
                     key=f"{user_id}:{league_state.state_id}:behavioral",
                 ):
-                    with self._lock:
-                        current = self._records.get(user_id)
-                        if (
-                            current is None
-                            or current.league_state_id != league_state.state_id
-                            or current.sleeper_league_external_id != sleeper_league_external_id
-                        ):
-                            return
-                    result = self._work(league_state, sleeper_league_external_id)
-            self._store_factory().put_runtime_context(
-                user_id=user_id,
-                league_state_id=league_state.state_id,
-                sleeper_league_external_id=sleeper_league_external_id,
-                league_family_id=result.league_family_id,
-                current_owner_by_roster=result.current_owner_by_roster,
-            )
+                    build_owned()
         except Exception as exc:
             with self._lock:
-                current = self._records.get(user_id, BehavioralRuntimeRecord(user_id=user_id))
+                if not owns_current_record():
+                    return
+                current = self._records[user_id]
                 self._records[user_id] = replace(
                     current,
                     status=(
@@ -336,16 +355,13 @@ class BehavioralRuntimeCoordinator:
                     updated_at=datetime.now(UTC),
                     error=f"{type(exc).__name__}: {exc}",
                 )
-            return
+
+    def clear_user(self, user_id: str) -> int:
+        """Drop user-scoped execution results without touching durable history."""
+
         with self._lock:
-            current = self._records.get(user_id, BehavioralRuntimeRecord(user_id=user_id))
-            if current.league_state_id != league_state.state_id:
-                return
-            self._records[user_id] = replace(
-                current,
-                status=BehavioralRuntimeStatus.READY,
-                updated_at=datetime.now(UTC),
-                result=result,
-                error=None,
-            )
-        _publish_profiles_for_state(league_state, result)
+            removed = 1 if self._records.pop(user_id, None) is not None else 0
+            future = self._future_by_user.pop(user_id, None)
+            if future is not None and not future.done():
+                future.cancel()
+        return removed

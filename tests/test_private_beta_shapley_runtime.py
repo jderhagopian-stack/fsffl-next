@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from threading import Event, Thread
 from typing import Any, cast
 
 import pytest
@@ -1525,3 +1526,58 @@ def test_restart_coordinator_restores_persisted_semantic_intrinsic_without_shapl
     # The future contract is resolved to prove semantic compatibility, but the
     # persisted Shapley artifact is reused instead of another 2,048-permutation build.
     assert FROZEN_SHAPLEY_PERMUTATIONS == 2048
+
+
+
+def test_intrinsic_loader_drops_stale_durable_restore_after_cache_epoch_advance() -> None:
+    state, observation = _fixture()
+    seed_store = _MemoryShapleyArtifactStore()
+    seed_loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        persistence_store=cast(Any, seed_store),
+        future_forecast_builder=_contract_only_fixture_provider,
+        future_forecast_model_version="future-model-zeta-v1",
+    )
+    context = _context(state, observation)
+    built = seed_loader(context)
+    assert built.status != ShapleyIntrinsicAvailability.UNAVAILABLE
+    assert len(seed_store.records) == 1
+
+    entered = Event()
+    release = Event()
+
+    class BlockingStore(_MemoryShapleyArtifactStore):
+        def __init__(self, records):
+            super().__init__()
+            self.records = dict(records)
+
+        def get_reusable_artifact(self, key):
+            entered.set()
+            assert release.wait(timeout=2.0)
+            return self.records.get(key)
+
+    blocking_store = BlockingStore(seed_store.records)
+    loader = PrivateBetaShapleyContractLoader(
+        year_one_loader=lambda _state: _authority_evidence(observation),
+        persistence_store=cast(Any, blocking_store),
+        future_forecast_builder=_contract_only_fixture_provider,
+        future_forecast_model_version="future-model-zeta-v1",
+    )
+    result: dict[str, object] = {}
+
+    def restore() -> None:
+        result["contract"] = loader.restore_compatible(context)
+
+    thread = Thread(target=restore)
+    thread.start()
+    assert entered.wait(timeout=1.0)
+
+    # The resource boundary advances cache ownership while the durable read is
+    # in-flight. The old restore may finish reading but must not repopulate cache.
+    assert loader.clear_user_cache(context.user_id) == 0
+    release.set()
+    thread.join(timeout=2.0)
+
+    assert not thread.is_alive()
+    assert result["contract"] is None
+    assert loader.clear_user_cache(context.user_id) == 0

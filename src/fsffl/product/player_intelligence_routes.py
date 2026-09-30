@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -52,6 +53,7 @@ class PlayerHistoryBuildStatus(StrEnum):
 
 @dataclass(frozen=True)
 class PlayerHistoryBuildRecord:
+    user_id: str
     league_state_id: str
     player_id: str
     status: PlayerHistoryBuildStatus
@@ -72,6 +74,7 @@ class PlayerHistoryBackgroundCoordinator:
         max_pending: int = 2,
         max_records: int = 12,
         heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+        ownership_validator: Callable[[UserRuntimeContext], bool] | None = None,
     ) -> None:
         if max_pending < 1 or max_records < max_pending:
             raise ValueError("history queue bounds are invalid")
@@ -79,27 +82,43 @@ class PlayerHistoryBackgroundCoordinator:
         self._max_pending = int(max_pending)
         self._max_records = int(max_records)
         self._heavy_work_coordinator = heavy_work_coordinator
+        self._ownership_validator = ownership_validator
         self._lock = RLock()
-        self._records: dict[tuple[str, str], PlayerHistoryBuildRecord] = {}
+        self._records: dict[tuple[str, str, str], PlayerHistoryBuildRecord] = {}
+        self._futures: dict[tuple[str, str, str], Future[None]] = {}
         self._executor = ThreadPoolExecutor(
             max_workers=max_workers,
             thread_name_prefix="fsffl-player-history",
         )
 
     @staticmethod
-    def _key(context: UserRuntimeContext, player_id: str) -> tuple[str, str]:
+    def _key(context: UserRuntimeContext, player_id: str) -> tuple[str, str, str]:
         if context.league_state is None:
             raise ValueError("Player Intelligence history requires canonical league state")
-        return context.league_state.state_id, player_id
+        return context.user_id, context.league_state.state_id, player_id
 
     def request(
         self,
         context: UserRuntimeContext,
         player_id: str,
     ) -> PlayerHistoryBuildRecord:
+        if (
+            self._ownership_validator is not None
+            and not self._ownership_validator(context)
+        ):
+            raise PlayerHistoryCapacityError(
+                "Player history context changed; retry against the current State."
+            )
         key = self._key(context, player_id)
         now = datetime.now(UTC)
         with self._lock:
+            if (
+                self._ownership_validator is not None
+                and not self._ownership_validator(context)
+            ):
+                raise PlayerHistoryCapacityError(
+                    "Player history context changed; retry against the current State."
+                )
             existing = self._records.get(key)
             if existing is not None:
                 return existing
@@ -131,31 +150,49 @@ class PlayerHistoryBackgroundCoordinator:
                     stale_key, _ = terminal.pop(0)
                     self._records.pop(stale_key, None)
             record = PlayerHistoryBuildRecord(
-                league_state_id=key[0],
+                user_id=key[0],
+                league_state_id=key[1],
                 player_id=player_id,
                 status=PlayerHistoryBuildStatus.QUEUED,
                 created_at=now,
                 updated_at=now,
             )
             self._records[key] = record
-            self._executor.submit(self._run, key, context)
+            future = self._executor.submit(self._run, key, context)
+            self._futures[key] = future
             return record
 
     def _run(
         self,
-        key: tuple[str, str],
+        key: tuple[str, str, str],
         context: UserRuntimeContext,
     ) -> None:
-        self._update(key, status=PlayerHistoryBuildStatus.RUNNING)
+        if not self._update(key, status=PlayerHistoryBuildStatus.RUNNING):
+            return
+
+        def build_and_attach_owned() -> None:
+            with self._lock:
+                if key not in self._records:
+                    return
+            seasons = self._service.player_history(context, key[2])
+            # Attach or discard while still inside the heavy-work claim. If a State
+            # transition cleared this key, _update returns False and the local
+            # seasons tuple becomes unreachable before replacement heavy work starts.
+            self._update(
+                key,
+                status=PlayerHistoryBuildStatus.COMPLETED,
+                seasons=seasons,
+            )
+
         try:
             if self._heavy_work_coordinator is None:
-                seasons = self._service.player_history(context, key[1])
+                build_and_attach_owned()
             else:
                 with self._heavy_work_coordinator.claim(
                     kind="player_history",
-                    key=f"{key[0]}:{key[1]}",
+                    key=f"{key[1]}:{key[2]}",
                 ):
-                    seasons = self._service.player_history(context, key[1])
+                    build_and_attach_owned()
         except Exception as exc:
             self._update(
                 key,
@@ -163,22 +200,19 @@ class PlayerHistoryBackgroundCoordinator:
                 error=f"{type(exc).__name__}: {exc}",
             )
             return
-        self._update(
-            key,
-            status=PlayerHistoryBuildStatus.COMPLETED,
-            seasons=seasons,
-        )
 
     def _update(
         self,
-        key: tuple[str, str],
+        key: tuple[str, str, str],
         *,
         status: PlayerHistoryBuildStatus,
         seasons: tuple[HistoricalPlayerSeason, ...] = (),
         error: str | None = None,
-    ) -> None:
+    ) -> bool:
         with self._lock:
-            current = self._records[key]
+            current = self._records.get(key)
+            if current is None:
+                return False
             self._records[key] = replace(
                 current,
                 status=status,
@@ -186,6 +220,24 @@ class PlayerHistoryBackgroundCoordinator:
                 error=error,
                 updated_at=datetime.now(UTC),
             )
+            if status in {
+                PlayerHistoryBuildStatus.COMPLETED,
+                PlayerHistoryBuildStatus.FAILED,
+            }:
+                self._futures.pop(key, None)
+            return True
+
+    def clear_user(self, user_id: str) -> int:
+        """Release user-scoped PI history result records; durable rows remain reusable."""
+
+        with self._lock:
+            keys = [key for key in self._records if key[0] == user_id]
+            for key in keys:
+                self._records.pop(key, None)
+                future = self._futures.pop(key, None)
+                if future is not None and not future.done():
+                    future.cancel()
+            return len(keys)
 
 
 def install_player_intelligence_routes(
@@ -200,12 +252,26 @@ def install_player_intelligence_routes(
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
 ) -> None:
     future_forecasts = future_cache or PlayerFutureForecastCache()
+
+    def history_context_owned(context: UserRuntimeContext) -> bool:
+        state = context.league_state
+        if state is None:
+            return False
+        if runtime_store.working_generation_active(context.user_id):
+            return runtime_store.working_target_state_id(context.user_id) == state.state_id
+        current = runtime_store.get(context.user_id)
+        return bool(
+            current.league_state is not None
+            and current.league_state.state_id == state.state_id
+        )
+
     history = history_coordinator or PlayerHistoryBackgroundCoordinator(
         PlayerHistoryService(persistence_store=persistence_store),
         max_workers=1,
         max_pending=2,
         max_records=12,
         heavy_work_coordinator=heavy_work_coordinator,
+        ownership_validator=history_context_owned,
     )
 
     # Acceptance/observability may inspect the exact same bounded coordinator

@@ -12,9 +12,15 @@ from .runtime import UserRuntimeContext
 
 
 _logger = logging.getLogger("uvicorn.error")
-_MAX_ENTRIES = 1
+_MAX_ENTRIES_PER_USER = 1
 
 WorkspaceBuilder = Callable[..., dict[str, object]]
+RetentionValidator = Callable[[UserRuntimeContext], bool]
+
+
+def _runtime_user_id(runtime: UserRuntimeContext) -> str:
+    value = str(getattr(runtime, "user_id", "") or "").strip()
+    return value or "local-beta-user"
 
 
 def _evidence_identity(value: object | None) -> tuple[int, str | None]:
@@ -42,6 +48,7 @@ def opportunity_workspace_cache_key(
     if league_state is None:
         return None
     return (
+        _runtime_user_id(runtime),
         league_state.state_id,
         id(league_state),
         runtime.selected_team_id,
@@ -69,7 +76,11 @@ def _execution_payload(
     }
 
 
-def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBuilder:
+def make_cached_opportunity_workspace(
+    builder: WorkspaceBuilder,
+    *,
+    retention_validator: RetentionValidator | None = None,
+) -> WorkspaceBuilder:
     """Reuse an exact Market workspace instead of rebuilding identical Search/Decision.
 
     The wrapped builder remains the sole source of Search and Decision truth. A hit
@@ -109,6 +120,17 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
 
         started = monotonic()
         with lock:
+            if retention_validator is not None and not retention_validator(runtime):
+                result = builder(
+                    runtime,
+                    candidate_limit=candidate_limit,
+                    bilateral_evaluation_limit=bilateral_evaluation_limit,
+                )
+                return _execution_payload(
+                    result,
+                    cache_hit=False,
+                    elapsed_ms=(monotonic() - started) * 1000.0,
+                )
             cached = cache.get(key)
             if cached is not None:
                 cache.move_to_end(key)
@@ -128,16 +150,21 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                 )
 
             misses += 1
-            # A full workspace is large. Its cache is an execution optimization,
-            # not presentation authority, so prior exact-State workspaces must not
-            # remain resident while a replacement State is built.
-            if cache:
-                evicted = len(cache)
-                cache.clear()
+            # A full workspace is large. Drop only this user's prior exact
+            # State before replacement work begins; another user's cache remains
+            # outside this lifecycle boundary.
+            stale_keys = [
+                item
+                for item in cache
+                if item[0] == _runtime_user_id(runtime) and item != key
+            ]
+            for stale_key in stale_keys:
+                cache.pop(stale_key, None)
+            if stale_keys:
                 gc.collect()
                 _logger.info(
                     "FSFFL Market workspace cache evicted_prior_scope entries=%d state=%s team=%s",
-                    evicted,
+                    len(stale_keys),
                     runtime.league_state.state_id,
                     runtime.selected_team_id,
                 )
@@ -148,8 +175,12 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
             )
             cache[key] = result
             cache.move_to_end(key)
-            while len(cache) > _MAX_ENTRIES:
-                cache.popitem(last=False)
+            user_keys = [
+                item for item in cache if item[0] == _runtime_user_id(runtime)
+            ]
+            while len(user_keys) > _MAX_ENTRIES_PER_USER:
+                stale_key = user_keys.pop(0)
+                cache.pop(stale_key, None)
             _logger.info(
                 "FSFFL Market workspace timing cache_hit=false elapsed=%.3fs hits=%d misses=%d state=%s team=%s",
                 monotonic() - started,
@@ -167,6 +198,15 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
     cached_builder.__name__ = getattr(builder, "__name__", "cached_opportunity_workspace")
     cached_builder.__doc__ = getattr(builder, "__doc__", None)
 
+    def clear_user_cache(user_id: str) -> int:
+        with lock:
+            stale_keys = [item for item in cache if item[0] == user_id]
+            for stale_key in stale_keys:
+                cache.pop(stale_key, None)
+        if stale_keys:
+            gc.collect()
+        return len(stale_keys)
+
     def clear_cache() -> int:
         with lock:
             count = len(cache)
@@ -175,5 +215,6 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
             gc.collect()
         return count
 
+    cached_builder.clear_user_cache = clear_user_cache  # type: ignore[attr-defined]
     cached_builder.clear_cache = clear_cache  # type: ignore[attr-defined]
     return cached_builder

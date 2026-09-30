@@ -50,13 +50,17 @@ StateLoader = Callable[[str], LeagueState]
 SyncProbeLoader = Callable[[str], SleeperSyncProbe]
 IntelligenceReconciler = Callable[[str], object]
 StateTransitionReclaimer = Callable[[str], object]
+StateActivator = Callable[..., object | None]
 
 
 class LeagueConnectCoordinator:
     """Run hosted Sleeper imports independently of a browser request lifetime."""
 
-    def __init__(self, *, max_workers: int = 2) -> None:
+    def __init__(self, *, max_workers: int = 2, max_records: int = 32) -> None:
+        if max_records < 4:
+            raise ValueError("connect max_records must be at least 4")
         self._lock = RLock()
+        self._max_records = int(max_records)
         self._jobs: dict[str, LeagueConnectJob] = {}
         self._current_by_user: dict[str, str] = {}
         self._executor = ThreadPoolExecutor(
@@ -80,6 +84,21 @@ class LeagueConnectCoordinator:
         now = datetime.now(UTC)
         with self._lock:
             current = self.current(user_id)
+            terminal = sorted(
+                (
+                    item
+                    for item in self._jobs.values()
+                    if item.status in {
+                        LeagueConnectStatus.COMPLETED,
+                        LeagueConnectStatus.FAILED,
+                    }
+                    and self._current_by_user.get(item.user_id) != item.job_id
+                ),
+                key=lambda item: item.updated_at,
+            )
+            while len(self._jobs) >= self._max_records and terminal:
+                stale = terminal.pop(0)
+                self._jobs.pop(stale.job_id, None)
             if (
                 current is not None
                 and current.league_external_id == league_external_id
@@ -250,6 +269,7 @@ def install_hosted_connect_routes(
     persistence_store: PersistenceStore | None = None,
     sync_probe_loader: SyncProbeLoader | None = None,
     intelligence_reconciler: IntelligenceReconciler | None = None,
+    state_activator: StateActivator | None = None,
     state_transition_reclaimer: StateTransitionReclaimer | None = None,
     full_refresh_seconds: int = 3600,
 ) -> LeagueConnectCoordinator:
@@ -317,47 +337,71 @@ def install_hosted_connect_routes(
                     current_job.league_external_id,
                 )
                 return
-            activate_state = getattr(
-                runtime_store,
-                "activate_league_state_for_connect",
-                runtime_store.set_league_state,
-            )
-            activate_state(user_id, league_state)
-            active_state = runtime_store.get(user_id).league_state
-            if not _matches_sleeper_league(active_state, league_external_id):
-                raise RuntimeError("Sleeper league activation lost requested identity")
-            if (
-                state_transition_reclaimer is not None
-                and active_league_id is not None
-                and active_league_id != league_state.league.league_id
-            ):
-                state_transition_reclaimer(
-                    f"{user_id}:{league_state.state_id}:league_switch"
-                )
-            _logger.info(
-                "FSFFL Sleeper connect activated user=%s league=%s state=%s",
-                user_id,
-                league_external_id,
-                league_state.state_id,
-            )
-            behavioral_coordinator.start(
-                user_id=user_id,
-                league_state=league_state,
-                sleeper_league_external_id=league_external_id,
-            )
-            active_runtime = runtime_store.get(user_id)
-            if (
-                intelligence_reconciler is not None
-                and active_runtime.selected_team_id is not None
-            ):
-                intelligence_reconciler(user_id)
-            elif intelligence_reconciler is not None:
+            with runtime_store.lifecycle_operation(user_id):
+                if state_activator is not None:
+                    activated = state_activator(
+                        user_id,
+                        league_state,
+                        reason="background_connect",
+                    )
+                else:
+                    activate_state = getattr(
+                        runtime_store,
+                        "activate_league_state_for_connect",
+                        runtime_store.set_league_state,
+                    )
+                    activate_state(user_id, league_state)
+                    activated = runtime_store.get(user_id)
+                active_runtime = runtime_store.get(user_id)
+                active_state = active_runtime.league_state
+                if (
+                    activated is None
+                    or not _matches_sleeper_league(active_state, league_external_id)
+                    or active_state is None
+                    or active_state.state_id != league_state.state_id
+                ):
+                    raise RuntimeError("Sleeper league activation lost requested identity")
+                if (
+                    state_activator is None
+                    and state_transition_reclaimer is not None
+                    and active_league_id is not None
+                    and active_league_id != league_state.league.league_id
+                ):
+                    state_transition_reclaimer(
+                        f"{user_id}:{league_state.state_id}:league_switch"
+                    )
                 _logger.info(
-                    "FSFFL Sleeper connect deferred intelligence until managed-team selection user=%s league=%s state=%s",
+                    "FSFFL Sleeper connect activated user=%s league=%s state=%s",
                     user_id,
                     league_external_id,
                     league_state.state_id,
                 )
+                behavioral_coordinator.start(
+                    user_id=user_id,
+                    league_state=league_state,
+                    sleeper_league_external_id=league_external_id,
+                )
+                # Revalidate under the same lifecycle ownership before handing off
+                # any new heavy work. A newer transition cannot become canonical
+                # between cleanup and these replacement execution starts.
+                active_runtime = runtime_store.get(user_id)
+                if (
+                    active_runtime.league_state is None
+                    or active_runtime.league_state.state_id != league_state.state_id
+                ):
+                    raise RuntimeError("Sleeper league ownership changed after activation")
+                if (
+                    intelligence_reconciler is not None
+                    and active_runtime.selected_team_id is not None
+                ):
+                    intelligence_reconciler(user_id)
+                elif intelligence_reconciler is not None:
+                    _logger.info(
+                        "FSFFL Sleeper connect deferred intelligence until managed-team selection user=%s league=%s state=%s",
+                        user_id,
+                        league_external_id,
+                        league_state.state_id,
+                    )
 
         return _job_payload(
             jobs.start(
@@ -457,35 +501,66 @@ def install_hosted_connect_routes(
                     runtime_store.league_generation(user_id),
                 )
                 return
-            activated = runtime_store.set_league_state_if_generation(
-                user_id,
-                league_state,
-                expected_generation=refresh_generation,
-                expected_league_id=runtime.league_state.league.league_id,
-            )
-            if activated is None:
-                _performance_logger.info(
-                    "FSFFL Sleeper refresh superseded at activation user=%s requested=%s",
-                    user_id,
-                    league_external_id,
+            with runtime_store.lifecycle_operation(user_id):
+                if state_activator is not None:
+                    activated = state_activator(
+                        user_id,
+                        league_state,
+                        reason="background_material_refresh",
+                        expected_generation=refresh_generation,
+                        expected_league_id=runtime.league_state.league.league_id,
+                    )
+                else:
+                    activated = runtime_store.set_league_state_if_generation(
+                        user_id,
+                        league_state,
+                        expected_generation=refresh_generation,
+                        expected_league_id=runtime.league_state.league.league_id,
+                    )
+                if activated is None:
+                    _performance_logger.info(
+                        "FSFFL Sleeper refresh superseded at activation user=%s requested=%s",
+                        user_id,
+                        league_external_id,
+                    )
+                    return
+                if (
+                    changed
+                    and state_activator is None
+                    and state_transition_reclaimer is not None
+                ):
+                    state_transition_reclaimer(
+                        f"{user_id}:{league_state.state_id}:state_refresh"
+                    )
+                state_identity_changed = (
+                    previous_state is None
+                    or previous_state.state_id != league_state.state_id
                 )
-                return
-            if changed and state_transition_reclaimer is not None:
-                state_transition_reclaimer(
-                    f"{user_id}:{league_state.state_id}:state_refresh"
-                )
-            if changed:
-                behavioral_coordinator.start(
-                    user_id=user_id,
-                    league_state=league_state,
-                    sleeper_league_external_id=league_external_id,
-                )
-            refreshed_runtime = runtime_store.get(user_id)
-            if (
-                intelligence_reconciler is not None
-                and refreshed_runtime.selected_team_id is not None
-            ):
-                intelligence_reconciler(user_id)
+                if state_identity_changed:
+                    # The resource boundary released the old record for every State
+                    # identity advance, including timestamp-only replacements. Restart
+                    # under the same lifecycle ownership that performed the cleanup.
+                    behavioral_coordinator.start(
+                        user_id=user_id,
+                        league_state=league_state,
+                        sleeper_league_external_id=league_external_id,
+                    )
+                refreshed_runtime = runtime_store.get(user_id)
+                if (
+                    refreshed_runtime.league_state is None
+                    or refreshed_runtime.league_state.state_id != league_state.state_id
+                ):
+                    _performance_logger.info(
+                        "FSFFL Sleeper refresh superseded after boundary user=%s requested=%s",
+                        user_id,
+                        league_external_id,
+                    )
+                    return
+                if (
+                    intelligence_reconciler is not None
+                    and refreshed_runtime.selected_team_id is not None
+                ):
+                    intelligence_reconciler(user_id)
 
             if persistence_store is not None and probe is not None:
                 try:
