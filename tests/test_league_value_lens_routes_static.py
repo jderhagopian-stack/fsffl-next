@@ -76,9 +76,28 @@ def test_hosted_readiness_does_not_restore_intrinsic_from_foreground_reads() -> 
 
 def test_first_load_value_lens_path_has_explicit_staged_contract() -> None:
     routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
-    assert "first_load_staging = bool(" in routes
-    assert 'runtime.publication_generation_id is None' in routes
-    assert 'runtime_store.working_generation_active(user_id)' in routes
-    assert '"status": "staged"' in routes
-    assert '"players": []' in routes
-    assert "background_coordinator.current(runtime)" in routes
+    branch = routes.split("if background_coordinator is not None:", 1)[1]
+    staging_index = branch.index("first_load_staging = bool(")
+    staged_return_index = branch.index("return payload")
+    current_index = branch.index("background_coordinator.current(runtime)")
+
+    assert staging_index < staged_return_index < current_index
+    assert 'runtime.publication_generation_id is None' in branch
+    assert 'runtime_store.working_generation_active(user_id)' in branch
+    assert '"status": "loading"' in branch[:staged_return_index]
+    assert '"status": "staged"' in branch[:staged_return_index]
+    assert '"players": []' in branch[:staged_return_index]
+
+
+def test_staged_intrinsic_restore_failure_falls_back_to_background_lifecycle() -> None:
+    webapp = (PRODUCT / "persistent_webapp.py").read_text(encoding="utf-8")
+    reconcile = webapp.split("def _reconcile_hosted_intrinsic", 1)[1].split(
+        "# Reuse only exact Decision-owned package economics", 1
+    )[0]
+
+    staged_index = reconcile.index("restore_compatible_staged")
+    warning_index = reconcile.index("FSFFL staged Intrinsic restore unavailable")
+    fallback_index = reconcile.index("wait_for_terminal(context)")
+    assert staged_index < warning_index < fallback_index
+    assert "except IntrinsicBuildSuperseded:" in reconcile
+    assert "except Exception as exc:" in reconcile
