@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -73,6 +74,7 @@ class PlayerHistoryBackgroundCoordinator:
         max_pending: int = 2,
         max_records: int = 12,
         heavy_work_coordinator: HeavyWorkCoordinator | None = None,
+        ownership_validator: Callable[[UserRuntimeContext], bool] | None = None,
     ) -> None:
         if max_pending < 1 or max_records < max_pending:
             raise ValueError("history queue bounds are invalid")
@@ -80,6 +82,7 @@ class PlayerHistoryBackgroundCoordinator:
         self._max_pending = int(max_pending)
         self._max_records = int(max_records)
         self._heavy_work_coordinator = heavy_work_coordinator
+        self._ownership_validator = ownership_validator
         self._lock = RLock()
         self._records: dict[tuple[str, str, str], PlayerHistoryBuildRecord] = {}
         self._futures: dict[tuple[str, str, str], Future[None]] = {}
@@ -99,9 +102,23 @@ class PlayerHistoryBackgroundCoordinator:
         context: UserRuntimeContext,
         player_id: str,
     ) -> PlayerHistoryBuildRecord:
+        if (
+            self._ownership_validator is not None
+            and not self._ownership_validator(context)
+        ):
+            raise PlayerHistoryCapacityError(
+                "Player history context changed; retry against the current State."
+            )
         key = self._key(context, player_id)
         now = datetime.now(UTC)
         with self._lock:
+            if (
+                self._ownership_validator is not None
+                and not self._ownership_validator(context)
+            ):
+                raise PlayerHistoryCapacityError(
+                    "Player history context changed; retry against the current State."
+                )
             existing = self._records.get(key)
             if existing is not None:
                 return existing
@@ -235,12 +252,26 @@ def install_player_intelligence_routes(
     heavy_work_coordinator: HeavyWorkCoordinator | None = None,
 ) -> None:
     future_forecasts = future_cache or PlayerFutureForecastCache()
+
+    def history_context_owned(context: UserRuntimeContext) -> bool:
+        state = context.league_state
+        if state is None:
+            return False
+        if runtime_store.working_generation_active(context.user_id):
+            return runtime_store.working_target_state_id(context.user_id) == state.state_id
+        current = runtime_store.get(context.user_id)
+        return bool(
+            current.league_state is not None
+            and current.league_state.state_id == state.state_id
+        )
+
     history = history_coordinator or PlayerHistoryBackgroundCoordinator(
         PlayerHistoryService(persistence_store=persistence_store),
         max_workers=1,
         max_pending=2,
         max_records=12,
         heavy_work_coordinator=heavy_work_coordinator,
+        ownership_validator=history_context_owned,
     )
 
     # Acceptance/observability may inspect the exact same bounded coordinator
