@@ -1680,3 +1680,22 @@ Immediate corrective:
 6. deploy and return immediately to physical Safari retest.
 
 Do not substitute another server-only acceptance run for this gate. Physical Connect is now the controlling blocker.
+## 2026-09-29 — PR #307 merged; physical Safari Connect corrective ready for live retest
+Physical iPhone/Safari evidence narrowed the blocker to the browser Connect handoff rather than Sleeper import or canonical State activation.
+
+Observed live path on the #306 deployment:
+- Safari loaded the hosted page and `mobile_safari_recovery.js`;
+- the browser used `/api/connect/sleeper/background` and polled `/api/connect/sleeper/background/current`;
+- the requested FSFFL State ultimately activated and persisted canonically;
+- one foreground `/api/product-context` read stalled for ~18.9 seconds during the handoff;
+- the already-accepted state-first runtime acceptance harness was still auto-running on the same free Render process during that physical attempt, creating avoidable foreground contention.
+
+Two bounded corrections were made:
+1. manual Safari Connect no longer performs a server-context preflight or rejects a same-league explicit Connect. It always owns the idempotent background handoff and re-applies canonical context, so a browser whose JS identity is current but whose visible selectors are stale can self-heal;
+2. the completed startup acceptance harness was disabled in Render (`FSFFL_RUN_RUNTIME_AVAILABILITY_ACCEPTANCE=0`, `FSFFL_RUN_STATE_FIRST_ACCEPTANCE=0`). A clean restart confirmed no acceptance workload starts automatically.
+
+PR #307 (`Fix physical Safari Connect handoff`) passed full CI plus Home, Franchise, focused corrective and live Forecast lanes, and merged as `326a79ce8dfcd37d1e5f30d3dd0f11762e3de71a`. The hosted static release generation advanced coherently to `20260929-physical-connect1` so Safari cannot retain the prior Connect module.
+
+No Forecast, Simulation, Value, Intrinsic, resource-boundary or hosted-restore semantics were reopened.
+
+**Controlling gate: deploy current main and perform the physical iPhone/Safari Connect retest.** Do not substitute another server-only acceptance run. If the physical Connect path now renders the requested league and team selector, close this corrective and return to capability development.

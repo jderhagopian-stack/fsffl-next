@@ -1742,3 +1742,13 @@ This completes the realistic free-Render hosted lifecycle gate for the accepted 
 **Release status: READY FOR PHYSICAL IPHONE/SAFARI VALIDATION.**
 
 Next action is product-owner physical Safari smoke/testing. Do not reopen stabilization architecture absent contradictory evidence from that physical test.
+## 2026-09-29 — #307 browser Connect corrective merged; physical retest next
+PR #307 merged as `326a79ce8dfcd37d1e5f30d3dd0f11762e3de71a` after full CI and all triggered focused/live lanes passed.
+
+The live physical trace proved that the browser reached the background Connect route and polling while canonical FSFFL State eventually activated. The remaining browser defect was the manual preflight/same-league rejection path: canonical State could already be active while Safari still needed the context re-applied to visible selectors. Manual Connect now always runs the idempotent background handoff and applies the resulting canonical context.
+
+The live trace also showed the already-completed state-first acceptance harness auto-running during the physical attempt. Its Render startup flags are now disabled; a clean restart confirmed no automatic acceptance workload.
+
+Static assets use coherent release token `20260929-physical-connect1` to force Safari freshness.
+
+Next gate is only the physical iPhone/Safari Connect retest through visible league/team selection. No server-only substitute and no model/resource architecture reopening.

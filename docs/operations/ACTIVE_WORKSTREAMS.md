@@ -722,3 +722,10 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Reopen only the browser/manual Connect path. Reproduce the live UI flow, trace tap/prompt -> `/api/connect/sleeper/background` -> job polling -> product-context handoff, and inspect Safari asset freshness/interception behavior.
 - Fix the smallest concrete defect, add a deterministic browser-path regression, deploy, and return directly to physical Safari retest.
 - Do not reopen model/resource architecture or replace this with another server-only acceptance run.
+## 2026-09-29 — #307 merged; physical Safari retest is the sole remaining gate
+- **Implementation — ACTIVE / sole product-critical path.**
+- PR #307 merged as `326a79ce8dfcd37d1e5f30d3dd0f11762e3de71a` with exact-head full CI and focused lanes green.
+- Manual Connect is now self-healing: an explicit tap always uses the idempotent background handoff and re-applies canonical context instead of rejecting a same-league server/browser identity.
+- The completed startup acceptance harness has been disabled on Render so the free instance is not competing with server-only acceptance work during physical testing.
+- Deploy current main, then run the physical iPhone/Safari Connect path through visible league/team selection. That physical result controls closure.
+- Do not reopen Forecast, Simulation, Value, Intrinsic, resource-boundary architecture, or #306 hosted restore acceptance absent new contradictory evidence.
