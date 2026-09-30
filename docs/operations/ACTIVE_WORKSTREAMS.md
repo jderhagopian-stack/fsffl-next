@@ -805,3 +805,13 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - First tranche: profile current fresh/changed-State 50k Simulation, recover compatible vectorization/batching ideas from the predecessor as reference, implement exact-output-preserving kernel efficiency, preserve replay identity/Multiverse capture, and run the convergence study without changing the 50k production contract.
 - Work/Implementation may modify code, tests and governed operations docs; open PR(s), run focused/full validation, and deploy only after exact-head review is clean.
 - Return to Management before any non-bit-identical RNG/reduction change, model-fidelity change, or Simulation authority change.
+
+
+## 2026-09-30 — Simulation RNG candidate moves to downstream/hosted validation
+- **Simulation modernization — ACTIVE / primary capability workstream.**
+- PR #311 has completed its initial 100-seed equivalence study and reached the Management gate.
+- Management does **not** require a massive additional seed study solely to prove ±0.001 expected-wins equivalence. Preserve the original result as inconclusive; do not widen the margin or call it a pass.
+- Immediate Work ownership: reconcile with current main; validate changed-State downstream Team Utility/Decision/Search/Optimization/Analytics behavior; exact-head CI/review; then controlled reversible private-beta Render measurement if clean.
+- Hosted validation must measure full Simulation and refresh wall time, heavy-work wait, RSS/headroom, concurrent foreground responsiveness, publication/readiness, and restart behavior. Batch 500 is the current preferred experimental default.
+- No merge to main / production adoption until Management receives that evidence and makes the final adoption decision.
+- After the RNG decision, re-profile the entire hosted Simulation path and continue modernization by measured bottleneck order.
