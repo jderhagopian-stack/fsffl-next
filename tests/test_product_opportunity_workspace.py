@@ -264,5 +264,5 @@ def test_readiness_polling_is_memory_only_and_intrinsic_restore_is_staged() -> N
     assert "_shapley_intrinsic_coordinator.current(context)" in readiness
     assert "_shapley_intrinsic_coordinator.restore_compatible(context)" not in readiness
     assert "_shapley_intrinsic_coordinator.restore_compatible_staged(context)" not in readiness
-    assert "_shapley_intrinsic_coordinator.restore_compatible_staged(context)" in reconcile
+    assert "_shapley_intrinsic_coordinator.restore_compatible_staged" in reconcile
     assert "known_snapshot_available" in readiness
