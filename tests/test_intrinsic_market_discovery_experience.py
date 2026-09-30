@@ -10,7 +10,7 @@ import pytest
 
 STATIC = Path(__file__).resolve().parents[1] / "src" / "fsffl" / "product" / "static"
 INDEX = STATIC / "index.html"
-RELEASE = "20260928-first-load-recovery1"
+RELEASE = "20260929-physical-connect1"
 
 
 def _text(name: str) -> str:
