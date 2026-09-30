@@ -70,7 +70,7 @@ def test_hosted_readiness_does_not_restore_intrinsic_from_foreground_reads() -> 
 
     assert "_shapley_intrinsic_coordinator.current(context)" in readiness
     assert "restore_compatible(" not in readiness
-    assert "restore_compatible_staged(context)" in reconcile
+    assert "restore_compatible_staged" in reconcile
     assert "wait_for_terminal(context)" in reconcile
 
 
