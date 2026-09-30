@@ -150,9 +150,12 @@ class ShapleyIntrinsicBackgroundCoordinator:
         restorer = getattr(self._loader, "restore_compatible", None)
         if not callable(restorer):
             return None
-        key = self._key(context)
         with self._lock:
             expected_epoch = self._user_epochs.get(context.user_id, 0)
+        key = self._key(context)
+        with self._lock:
+            if self._user_epochs.get(context.user_id, 0) != expected_epoch:
+                return None
             existing = self._records.get(key)
             if (
                 existing is not None
@@ -209,11 +212,17 @@ class ShapleyIntrinsicBackgroundCoordinator:
         *,
         expected_epoch: int | None = None,
     ) -> IntrinsicBuildRecord:
+        with self._lock:
+            request_epoch = (
+                self._user_epochs.get(context.user_id, 0)
+                if expected_epoch is None
+                else expected_epoch
+            )
         key = self._key(context)
         now = datetime.now(UTC)
         with self._lock:
             current_epoch = self._user_epochs.get(context.user_id, 0)
-            if expected_epoch is not None and current_epoch != expected_epoch:
+            if current_epoch != request_epoch:
                 raise IntrinsicBuildSuperseded(
                     "Intrinsic lifecycle was superseded by a State transition"
                 )
