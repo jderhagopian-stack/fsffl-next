@@ -1792,3 +1792,34 @@ capabilities, review the new per-phase RSS/active-claim logs, and then complete
 the physical Safari retest. No fresh build has run on the corrective deploy,
 so its phase-level memory profile remains to be collected. Keep the hard Render
 limit and model semantics unchanged.
+
+
+## 2026-09-30 — #308 physical propagation/readiness follow-up
+
+The 11:27–11:33Z physical run is same-State/same-publication. PI, Atlas, and
+Franchise evidence logs resolve to State
+`810f710608a9d2b1422f3abf2c65f0d413bb65a2537f5db332f140ac3b8299e8`. PI's
+Broad Market/Intrinsic response read completed evidence, but the exact
+publication contained staged `loading` value-lens responses. Root cause was a
+promotion-time route predicate: `working_generation_active` staged even when
+the promotion context already had team and Forecast and the coordinator had
+completed Intrinsic. The persisted exact-generation cache then kept serving
+that stale payload, leading repeated polling to end at unavailable.
+
+Implementation removes that predicate while retaining the prerequisites for
+staging when team or Forecast is missing. The lifecycle regression builds a
+working context, marks it active, completes Intrinsic, promotes the seven
+surfaces, and asserts ready Market and Intrinsic rows from the published route.
+Additional coverage verifies the same publication generation and per-surface
+integrity. The presentation read cache stores a validated manifest fingerprint
+and rechecks the requested artifact, avoiding a seven-artifact disk/hash scan
+for every polling request while preserving cold/changed-manifest full checks.
+
+The #308 process did not restart. Phase telemetry was 381 MB at Intrinsic
+reconciliation, 387 MB at publication, 524.7 MB lifetime peak; Render coarse
+memory held near 410 MB. Latency correlated with active 50K Simulation (~173s):
+Home/My Team 12–22s and product context 29–33s while active, then 2.5–6s after
+completion. No simulation or resource-boundary change is made. Endpoint timing
+now records status, Atlas, team-view, and value-lens stages for hosted
+verification. Full suite: 1,888 passed. Deployment and hosted acceptance are
+pending.

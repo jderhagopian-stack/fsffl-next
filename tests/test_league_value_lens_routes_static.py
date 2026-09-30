@@ -74,7 +74,7 @@ def test_hosted_readiness_does_not_restore_intrinsic_from_foreground_reads() -> 
     assert "wait_for_terminal(context)" in reconcile
 
 
-def test_first_load_value_lens_path_has_explicit_staged_contract() -> None:
+def test_first_load_stages_only_until_core_forecast_or_team_is_missing() -> None:
     routes = (PRODUCT / "league_value_lens_routes.py").read_text(encoding="utf-8")
     branch = routes.split("if background_coordinator is not None:", 1)[1]
     staging_index = branch.index("first_load_staging = bool(")
@@ -83,7 +83,8 @@ def test_first_load_value_lens_path_has_explicit_staged_contract() -> None:
 
     assert staging_index < staged_return_index < current_index
     assert 'runtime.publication_generation_id is None' in branch
-    assert 'runtime_store.working_generation_active(user_id)' in branch
+    assert 'runtime.forecast_evidence is None' in branch
+    assert 'runtime_store.working_generation_active(user_id)' not in branch
     assert '"status": "loading"' in branch[:staged_return_index]
     assert '"status": "staged"' in branch[:staged_return_index]
     assert '"players": []' in branch[:staged_return_index]

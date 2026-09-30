@@ -1772,3 +1772,42 @@ A later physical Safari screenshot sharpened the propagation contradiction: the 
 This is stronger evidence than a merely slow optional lens. At the same time, Player Intelligence had already displayed both Broad Market and FSFFL Intrinsic for Dak Prescott, so the required investigation is now exact-generation/surface authority propagation: determine whether League Value Map is reading a different publication generation, losing compatible Intrinsic/Market attachment, serving a stale cached readiness result, or failing to re-request/re-render after the governed evidence becomes available.
 
 Product acceptance target remains bounded: restore one coherent usable session across Home, Franchise, League Atlas, Player Intelligence and Market-facing value consumers, then return to capability development. Do not require perfection of every optional surface or reopen model semantics.
+
+
+## 2026-09-30 — Cross-surface propagation corrective
+
+Physical Safari's 11:27–11:33Z contradictions were correlated to Render logs and
+the exact runtime State/publication. PI, Atlas, and published presentation
+surfaces all used State
+`810f710608a9d2b1422f3abf2c65f0d413bb65a2537f5db332f140ac3b8299e8`; the
+generation itself was shared. The defect was the value-lens payload frozen into
+that generation as `loading` during presentation promotion: the route's
+`working_generation_active` staging predicate ignored that its read context
+already had selected-team and Forecast evidence plus completed Intrinsic.
+Subsequent requests hit the persisted stale payload, so Franchise/Atlas did not
+converge even though PI could read the completed Intrinsic record.
+
+The corrective removes only that predicate. First-load requests still stage
+when team/Forecast inputs are absent; when evidence is ready, Market and
+Intrinsic rows materialize into the promoted publication. A regression now
+promotes all seven surfaces under an active working generation and confirms
+both lenses are actually usable from the published route on the same generation.
+
+Published presentation reads also avoid re-hashing all seven artifacts on every
+poll: the process retains the validated manifest fingerprint, validates the
+requested surface on each request, and performs full artifact validation on
+cold restore or manifest change. Tampered requested artifacts still fail
+validation. Server-Timing was added to status, Atlas, team-view, and value-lens
+endpoints.
+
+The physical run's #308 phase RSS telemetry shows 381 MB at Intrinsic
+reconciliation and 387 MB at publication, with 524.7 MB peak and no restart;
+coarse Render memory stayed near 410 MB. Hard-limit headroom remains narrow.
+Measured foreground latency was dominated by active 50K Simulation: about 173
+seconds of build time overlapped Home/My Team requests of 12–22s and product-
+context requests of 29–33s; after Simulation completion those reads fell to
+roughly 2.5–6s. Forecast fallback remains truthful and was not changed.
+
+Focused tests pass and full suite passes: **1,888 passed**. Current work is
+deployment and one realistic hosted acceptance of cross-surface convergence;
+after that, return to Management for physical Safari confirmation.

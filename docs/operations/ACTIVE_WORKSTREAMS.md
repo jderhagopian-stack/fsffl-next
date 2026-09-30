@@ -778,3 +778,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Load time was still significant.
 - Correlate the run with #308 phase RSS telemetry first. Then fix the narrow publication/readiness/presentation propagation or polling/cache owner and measured latency bottleneck.
 - Preserve #308 lifecycle/restart changes and model semantics unless telemetry directly contradicts them.
+
+## 2026-09-30 — Cross-surface propagation corrective
+- Live 11:27–11:33Z evidence binds PI, Atlas, and the published surfaces to the same State `810f710608a9d2b1422f3abf2c65f0d413bb65a2537f5db332f140ac3b8299e8` and one publication generation. The inconsistency was stale payload content inside that generation, not a generation mismatch.
+- During presentation promotion, the value-lens route treated any active working generation as a reason to stage `loading`, even when the promoted read context already had selected team, Forecast, and completed Intrinsic evidence. Promotion persisted that staged payload; GETs then served it from the exact-generation cache and clients eventually reported unavailable.
+- Fix removes the active-generation staging condition. Staging remains while required team/Forecast inputs are absent. Added an end-to-end promotion regression asserting ready Broad Market and Intrinsic rows survive publication and resolve through the published route.
+- Repeated published-surface reads now validate the manifest fingerprint once per runtime cache and verify the requested artifact on each read, instead of hashing all seven surfaces per poll. Full validation remains on cold/changed-manifest restore.
+- #308 phase telemetry showed RSS 381 MB at Intrinsic reconciliation complete and 387 MB at publication complete; peak 524.7 MB, no restart, Render coarse memory stable near 410 MB. Free-tier headroom remains narrow.
+- While 50K Simulation was active (~173s), concurrent Home/My Team calls took ~12–22s and product context ~29–33s; after it completed they fell to ~2.5–6s. Active Simulation owns the measured foreground delay. This corrective does not change simulation or resource-boundary architecture.
+- Added Server-Timing to status, Atlas, team views, and value-lens endpoints. Focused regressions and full suite pass (1,888 tests). Deployment and hosted acceptance remain before physical Safari confirmation.
