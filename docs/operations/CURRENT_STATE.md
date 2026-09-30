@@ -1871,3 +1871,25 @@ Acceptance for this tranche is measured speed/resource improvement with unchange
 PR #311 established that scalar Gaussian generation is the dominant local Simulation kernel cost (~59.7% of isolated runtime) while the exact-preserving optimization tranche yields only ~3.4% improvement. Management therefore approves the **experimental** versioned NumPy/PCG64 batched-normal path and its predeclared equivalence study, while explicitly withholding production adoption.
 
 Work may now continue on the experimental branch, implement replay/version identity, run the ≥100-seed × 50k equivalence/resource study, and report results. Production remains on the current Python RNG path until a second Management approval.
+
+
+## 2026-09-30 — Management continuity checkpoint for active Simulation Work
+The active capability program remains **Simulation modernization**. The experimental batched-Gaussian gate is approved for study only; production adoption is still withheld.
+
+Repo-visible Work state:
+- PR **#311** is open/draft on `work/simulation-modernization`;
+- current repo-visible head is `6ef3fe9266c228b786a1cf5ab6ac915b057109e0`;
+- production remains on the legacy Python RNG protocol / deployed #310 generation;
+- successor chats must reconcile live PR/CI/review/docs/Render state before deciding whether Work is still executing or needs a poke.
+
+Additional physical timing interpretation is now frozen for the next optimization pass:
+- observed intelligence `job_start`: **2026-09-30T11:22:57.729Z**;
+- observed `simulation_build_complete`: **2026-09-30T11:25:50.938Z**;
+- interval: about **173.2s**;
+- no Forecast-build completion occurred inside that interval on the observed run, so Forecast appears reused;
+- at job start the shared heavy-work coordinator reported **`active=behavioral`**;
+- Render CPU was repeatedly at or near its **0.15 CPU** limit while the build and foreground reads overlapped.
+
+Management interpretation: ~173s is an end-to-end Simulation-phase wall-clock observation, **not proof of 173s of Monte Carlo draws**. The next post-RNG re-profile must split queue/admission wait, static/lineup/weekly input preparation, RNG, matchup/standings/playoffs, aggregation, Team Utility/Analytics, memory reclaim, and persistence/publication. Continue optimization even as Simulation capabilities expand; the intended Simulation 2.0 architecture remains compiled/vectorized/reusable rather than adding new minute-long Python loops.
+
+Continuity requirement: before a Work session ends with authorized work remaining, commit the exact branch/PR/head, evidence, unresolved findings, tests/CI, Management gates, and next executable action into canonical `docs/operations/`, then hand off as `TURN COMPLETE — CONTINUATION REQUIRED`.
