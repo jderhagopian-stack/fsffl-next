@@ -15,6 +15,7 @@ _logger = logging.getLogger("uvicorn.error")
 _MAX_ENTRIES_PER_USER = 1
 
 WorkspaceBuilder = Callable[..., dict[str, object]]
+RetentionValidator = Callable[[UserRuntimeContext], bool]
 
 
 def _runtime_user_id(runtime: UserRuntimeContext) -> str:
@@ -75,7 +76,11 @@ def _execution_payload(
     }
 
 
-def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBuilder:
+def make_cached_opportunity_workspace(
+    builder: WorkspaceBuilder,
+    *,
+    retention_validator: RetentionValidator | None = None,
+) -> WorkspaceBuilder:
     """Reuse an exact Market workspace instead of rebuilding identical Search/Decision.
 
     The wrapped builder remains the sole source of Search and Decision truth. A hit
@@ -111,6 +116,17 @@ def make_cached_opportunity_workspace(builder: WorkspaceBuilder) -> WorkspaceBui
                 runtime,
                 candidate_limit=candidate_limit,
                 bilateral_evaluation_limit=bilateral_evaluation_limit,
+            )
+        if retention_validator is not None and not retention_validator(runtime):
+            result = builder(
+                runtime,
+                candidate_limit=candidate_limit,
+                bilateral_evaluation_limit=bilateral_evaluation_limit,
+            )
+            return _execution_payload(
+                result,
+                cache_hit=False,
+                elapsed_ms=0.0,
             )
 
         started = monotonic()
