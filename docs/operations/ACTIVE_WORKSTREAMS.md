@@ -679,3 +679,12 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - Add deterministic race regressions for those three cases.
 - Then rerun full CI + closure matrix + fresh exact-head whole-class P1/P2 review.
 - If clean, merge/deploy and immediately resume the realistic free-Render hosted journey. No broader architecture work.
+
+
+## 2026-09-29 — PR #303 clean; merge/deploy/hosted acceptance next
+- **Implementation — ACTIVE / sole product-critical path.**
+- Exact head `38d77fc7ce700dba9c0a5866ffc20c0a0ac6272b`: 1,874 tests GREEN, all focused/closure/live lanes GREEN, fresh exact-head whole-class P1/P2 review CLEAN.
+- Pre-merge resource-boundary layer is accepted.
+- Merge #303 now, deploy the exact merged lineage, and run the realistic free-Render FSFFL -> Hodor -> FSFFL / settle / restart / restored-session journey under the unchanged memory gate.
+- No rapid-switch stress and no new architecture work unless hosted evidence exposes a concrete defect.
+- If hosted normal-use passes, move immediately to physical Safari acceptance and then back to capability development.
