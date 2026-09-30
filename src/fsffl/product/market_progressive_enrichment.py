@@ -88,6 +88,23 @@ class MarketDecisionEnrichmentCoordinator:
     ) -> MarketEnrichmentRecord:
         scope = (user_id, league_state_id, focal_team_id, request_key)
         with self._lock:
+            if not self._identity_validator(
+                user_id,
+                league_state_id,
+                focal_team_id,
+            ):
+                now = monotonic()
+                return MarketEnrichmentRecord(
+                    job_id=uuid4().hex,
+                    user_id=user_id,
+                    league_state_id=league_state_id,
+                    focal_team_id=focal_team_id,
+                    request_key=request_key,
+                    status=MarketEnrichmentStatus.INTERRUPTED,
+                    created_at_monotonic=now,
+                    completed_at_monotonic=now,
+                    error="market context is no longer eligible for retained Decision enrichment",
+                )
             existing_id = self._active_by_scope.get(scope)
             if existing_id is not None:
                 existing = self._records.get(existing_id)
