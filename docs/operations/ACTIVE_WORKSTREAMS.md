@@ -936,3 +936,5 @@ PR #320 must emit the ordinary `championship_probability` if either an exact pro
 - Use focused restart/changed-State continuity regressions and one physical acceptance. Do not reopen model math or broad platform acceptance. Then continue directly to the week-by-week Simulation 2.0 engine.
 
 - Follow-up: the replacement did eventually converge cleanly (Intrinsic complete ~20:03:27Z; replacement Atlas served ~20:03:45Z; publication complete ~20:04:37Z; product current again by ~20:06). This narrows the blocker further: not stuck recovery, but **temporary mixed-generation degradation across surfaces while recovery is legitimately in progress**. Fix continuity/pinning, not model math or recovery speed.
+
+- Management UI requirement: remove the large Franchise/League last-good/rebuilding hero cards. When published last-good intelligence is usable, recovery status must be compact/non-blocking (thin status strip or small inline annotation) and normal product content must remain primary. Do not make a usable surface look unavailable merely because replacement intelligence is building.
