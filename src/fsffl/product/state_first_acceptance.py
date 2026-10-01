@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from threading import Thread
-from time import monotonic, sleep
+from time import monotonic, process_time, sleep
 from typing import Callable
 
 from fsffl.persistence.runtime_cache import FORECAST_MODEL_VERSION
@@ -623,7 +623,18 @@ def run_state_first_production_acceptance(
         # transition evidence; the harness retains only scalar identity summaries.
         del prior
 
+        state_load_started = monotonic()
+        state_load_cpu_started = process_time()
         state = state_loader(external_id)
+        _logger.info(
+            "FSFFL STATE-FIRST ACCEPTANCE phase=state_acquisition label=%s league=%s "
+            "state=%s wall=%.3fs cpu=%.3fs",
+            label,
+            state.league.league_id,
+            state.state_id,
+            monotonic() - state_load_started,
+            process_time() - state_load_cpu_started,
+        )
         expected = f"sleeper:{external_id}"
         if state.league.league_id != expected:
             raise StateFirstAcceptanceError(

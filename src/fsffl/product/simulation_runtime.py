@@ -278,15 +278,16 @@ def build_live_simulation_analytics(
         and not lineups[row.team_id].unfilled_slots
     ]
 
-    request = build_regular_season_simulation_input(
-        league_state,
-        weekly_scoring=weekly_scoring,
-        simulation_count=simulation_count,
-        seed=seed,
-        model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
-        rng_protocol=rng_protocol,
-        rng_batch_size=rng_batch_size,
-    )
+    with sample_rss_phase("simulation.input_and_schedule_materialization"):
+        request = build_regular_season_simulation_input(
+            league_state,
+            weekly_scoring=weekly_scoring,
+            simulation_count=simulation_count,
+            seed=seed,
+            model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
+            rng_protocol=rng_protocol,
+            rng_batch_size=rng_batch_size,
+        )
     log_object_graph(
         "simulation.forecast_boundary",
         raw_forecasts=forecasts,
@@ -298,17 +299,18 @@ def build_live_simulation_analytics(
     )
     with sample_rss_phase("simulation.kernel_and_result_aggregation"):
         simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
-    scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
-        weekly_scoring,
-        simulation,
-        baseline_lineups=lineups,
-        fallback_player_ids=fallback_ids,
-    )
-    outcomes = {item.team_id: item for item in simulation.outcomes}
-    competitive_state_policy = derive_league_relative_competitive_state_policy(
-        simulation.outcomes,
-        as_of=league_state.as_of,
-    )
+    with sample_rss_phase("simulation.post_kernel_analytics_aggregation"):
+        scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
+            weekly_scoring,
+            simulation,
+            baseline_lineups=lineups,
+            fallback_player_ids=fallback_ids,
+        )
+        outcomes = {item.team_id: item for item in simulation.outcomes}
+        competitive_state_policy = derive_league_relative_competitive_state_policy(
+            simulation.outcomes,
+            as_of=league_state.as_of,
+        )
 
     warnings: list[AnalyticsWarning] = [
         AnalyticsWarning(

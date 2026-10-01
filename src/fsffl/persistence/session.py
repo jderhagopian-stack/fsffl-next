@@ -12,6 +12,7 @@ from fsffl.forecast.fumbles_lost_materiality import (
 )
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.state.models import LeagueState
+from fsffl.memory_attribution import sample_rss_phase
 from fsffl.team_utility.simulation import PYTHON_RANDOM_GAUSS_V1
 from fsffl.product.simulation_runtime import (
     configured_simulation_rng,
@@ -364,36 +365,37 @@ def persist_runtime_snapshot(
     replacement generation become durable before its manifest-last atomic publish.
     """
 
-    provider, external_id = _provider_external_id(league_state)
-    now = utc_now()
-    state_payload = league_state.model_dump(mode="json")
-    store.put_league_snapshot(
-        LeagueSnapshotRecord(
-            provider=provider,
-            league_id=league_state.league.league_id,
-            season=league_state.league.season,
-            state_hash=league_state.state_id,
-            payload=state_payload,
-            source_updated_at=league_state.as_of,
-            recorded_at=now,
-        )
-    )
-    team_states = {row.team_id: row for row in league_state.team_states}
-    for team in league_state.teams:
-        store.put_team_snapshot(
-            TeamSnapshotRecord(
+    with sample_rss_phase("persistence.state_and_team_snapshots"):
+        provider, external_id = _provider_external_id(league_state)
+        now = utc_now()
+        state_payload = league_state.model_dump(mode="json")
+        store.put_league_snapshot(
+            LeagueSnapshotRecord(
                 provider=provider,
                 league_id=league_state.league.league_id,
-                team_id=team.team_id,
+                season=league_state.league.season,
                 state_hash=league_state.state_id,
-                payload={
-                    "team": team.model_dump(mode="json"),
-                    "team_state": team_states[team.team_id].model_dump(mode="json"),
-                },
+                payload=state_payload,
                 source_updated_at=league_state.as_of,
                 recorded_at=now,
             )
         )
+        team_states = {row.team_id: row for row in league_state.team_states}
+        for team in league_state.teams:
+            store.put_team_snapshot(
+                TeamSnapshotRecord(
+                    provider=provider,
+                    league_id=league_state.league.league_id,
+                    team_id=team.team_id,
+                    state_hash=league_state.state_id,
+                    payload={
+                        "team": team.model_dump(mode="json"),
+                        "team_state": team_states[team.team_id].model_dump(mode="json"),
+                    },
+                    source_updated_at=league_state.as_of,
+                    recorded_at=now,
+                )
+            )
     terminal_bundle = _terminal_bundle(
         forecast_evidence,
         simulation_analytics,
@@ -419,7 +421,8 @@ def persist_runtime_snapshot(
     forecast_record = None
     simulation_record = None
     value_record = None
-    if forecast_evidence is not None:
+    with sample_rss_phase("persistence.derived_artifact_encode_and_write"):
+      if forecast_evidence is not None:
         supplement = getattr(
             forecast_evidence.runtime_result,
             "first_party_fumbles_lost_supplement",
@@ -438,7 +441,7 @@ def persist_runtime_snapshot(
             evidence=forecast_evidence,
         )
         store.put_artifact(forecast_record)
-    if simulation_analytics is not None and forecast_record is not None:
+      if simulation_analytics is not None and forecast_record is not None:
         simulation_record = simulation_artifact(
             league_state_id=league_state.state_id,
             forecast_fingerprint=forecast_record.key.input_fingerprint,
@@ -458,7 +461,7 @@ def persist_runtime_snapshot(
                 forecast=forecast_evidence,
                 simulation=simulation_analytics,
             )
-    if value_evidence is not None:
+      if value_evidence is not None:
         value_record = value_artifact(
             league_state_id=league_state.state_id,
             result=value_evidence,
@@ -484,7 +487,8 @@ def persist_runtime_snapshot(
     # Keep the legacy user-scoped record for compatibility and also retain one
     # league-scoped record so switching away and back cannot lose that league's
     # last-good presentation snapshot.
-    if publish_context and terminal_bundle:
+    with sample_rss_phase("persistence.atomic_manifest_and_pointer"):
+      if publish_context and terminal_bundle:
         if forecast_record is None or value_record is None:
             raise ValueError("terminal publication requires Forecast and Value artifacts")
         generation_id = str(publication_generation_id or "").strip() or canonical_fingerprint(
