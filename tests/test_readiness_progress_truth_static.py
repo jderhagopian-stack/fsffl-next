@@ -201,7 +201,8 @@ def test_mobile_readiness_scopes_current_capabilities_and_preserves_build_phase_
     assert "white-space:nowrap" in source
     # The working in-progress lifecycle remains a two-row compact treatment:
     # numeric phase in the status row and the server phase message in detail.
-    assert "phaseLabel+(lastGoodAvailable?' · Last-good available':'')" in source
+    assert "phaseLabel+(capabilityFull?' · Current intelligence remains available':lastGoodAvailable?' · Last-good available':'')" in source
+    assert "updateHasFullPublished" in source
 
 
 

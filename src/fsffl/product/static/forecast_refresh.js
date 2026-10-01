@@ -53,7 +53,8 @@ function phaseMessage(payload){
 }
 
 function intelligencePipelineReady(context){
-  return context?.capability_readiness?.overall_status==='full';
+  const readiness=context?.capability_readiness;
+  return readiness?.overall_status==='full'&&!readiness?.publication?.working_generation_active;
 }
 
 function ensureIntelligenceRefreshButton(){

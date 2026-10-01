@@ -64,6 +64,7 @@ from .runtime import (
     PrivateBetaRuntimeStore,
     UserRuntimeContext,
     default_live_forecast_loader,
+    league_material_fingerprint,
     default_live_value_loader,
     default_sleeper_state_loader,
 )
@@ -893,6 +894,8 @@ def create_app(
             "target_state_id": target_state_id,
             "status": (
                 "serving_last_good_during_update"
+                if working_active and served_visible
+                else "serving_published_during_update"
                 if working_active
                 else "published"
                 if runtime.league_state is not None
@@ -900,28 +903,45 @@ def create_app(
             ),
         }
         if working_active:
-            payload["overall_status"] = "rebuilding"
             target = dict(payload.get("target_state") or {})
             target["league_state_id"] = target_state_id
             target["status"] = "rebuilding"
             payload["target_state"] = target
-            served = dict(payload.get("served_last_good") or {})
-            served.update(
-                available=runtime.league_state is not None,
-                league_state_id=(
+            payload["reconciliation"] = {
+                "status": "running",
+                "target_state_id": target_state_id,
+                "published_state_id": (
                     runtime.league_state.state_id
                     if runtime.league_state is not None
                     else None
                 ),
-                as_of=(
-                    runtime.league_state.as_of.isoformat()
+            }
+            if (
+                runtime.league_state is not None
+                and target_state_id is not None
+                and target_state_id != runtime.league_state.state_id
+            ):
+                served = dict(payload.get("served_last_good") or {})
+                served.update(
+                    available=True,
+                    league_state_id=runtime.league_state.state_id,
+                    as_of=runtime.league_state.as_of.isoformat(),
+                    stale=True,
+                    label=(
+                        "Updating intelligence — serving the prior published generation."
+                    ),
+                )
+                payload["served_last_good"] = served
+        else:
+            payload["reconciliation"] = {
+                "status": "idle",
+                "target_state_id": None,
+                "published_state_id": (
+                    runtime.league_state.state_id
                     if runtime.league_state is not None
                     else None
                 ),
-                stale=True,
-                label="Updating intelligence — serving the prior published generation.",
-            )
-            payload["served_last_good"] = served
+            }
         return payload
 
     def heavy_claim(kind: str, key: str):
@@ -1546,6 +1566,23 @@ def create_app(
                 "coalesced": True,
             }
 
+        def published_generation_fully_current(context) -> bool:
+            evidence = context.forecast_evidence
+            terminal_core = bool(
+                evidence is not None
+                and context.value_evidence is not None
+                and (
+                    context.simulation_analytics is not None
+                    or not evidence.uncertainty_ready
+                )
+            )
+            return bool(
+                context.publication_generation_id
+                and terminal_core
+                and not store.working_generation_active(user_id)
+                and read_capabilities(context).get("overall_status") == "full"
+            )
+
         def require_active_league_identity() -> LeagueState:
             active_context = store.get(user_id)
             active_published = active_context.league_state
@@ -1575,6 +1612,24 @@ def create_app(
                         != active_before_write.league.league_id
                     ):
                         raise IntelligenceJobInterrupted("league_switch")
+                    published_now = store.get(user_id)
+                    materially_unchanged = (
+                        league_material_fingerprint(active_before_write)
+                        == league_material_fingerprint(synced_state)
+                    )
+                    if (
+                        materially_unchanged
+                        and published_generation_fully_current(published_now)
+                    ):
+                        progress(
+                            IntelligenceJobPhase.ATTACHING_RESULTS,
+                            "Canonical Sleeper State and all required product intelligence "
+                            "are already current; no rebuild is required.",
+                        )
+                        return (
+                            "Canonical Sleeper State and all required product intelligence "
+                            "were verified current; no rebuild was required."
+                        )
                     store.begin_working_generation(
                         user_id,
                         league_state=synced_state,
@@ -1607,6 +1662,17 @@ def create_app(
             else:
                 with store.lifecycle_operation(user_id):
                     require_active_league_identity()
+                    published_now = store.get(user_id)
+                    if published_generation_fully_current(published_now):
+                        progress(
+                            IntelligenceJobPhase.ATTACHING_RESULTS,
+                            "Published State and all required product intelligence "
+                            "are already current; no reconciliation is required.",
+                        )
+                        return (
+                            "Published State and all required product intelligence "
+                            "were verified current; no rebuild was required."
+                        )
                     store.begin_working_generation(
                         user_id,
                         league_state=starting_state,

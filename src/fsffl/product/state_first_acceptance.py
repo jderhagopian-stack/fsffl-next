@@ -372,9 +372,14 @@ def run_state_first_restored_refresh_acceptance(
             f"restored refresh Simulation foreground probe failed: {surface_error[0]}"
         )
 
-    if observed_surface.get("readiness_status") != "rebuilding":
+    if (
+        observed_surface.get("reconciliation_status") != "running"
+        or observed_surface.get("working_generation_active") is not True
+        or observed_surface.get("readiness_status") != "full"
+    ):
         raise StateFirstAcceptanceError(
-            f"restored refresh did not expose rebuilding readiness during Simulation: {observed_surface}"
+            "restored refresh did not preserve full published readiness while "
+            f"reporting working-generation progress: {observed_surface}"
         )
     if observed_surface.get("state_id") != before.get("state_id"):
         raise StateFirstAcceptanceError(
@@ -775,10 +780,14 @@ def run_state_first_production_acceptance(
             cold_surface = probe_surface("cold_surfaces_during_initial_reconciliation")
             if (
                 cold_surface is not None
-                and cold_surface.get("readiness_status") != "rebuilding"
+                and (
+                    cold_surface.get("reconciliation_status") != "running"
+                    or cold_surface.get("working_generation_active") is not True
+                )
             ):
                 raise StateFirstAcceptanceError(
-                    "clean first-run did not expose visible intelligence progress: "
+                    "clean first-run did not expose working-generation progress "
+                    "independently of published readiness: "
                     f"{cold_surface}"
                 )
             if history_probe is not None:
@@ -1096,10 +1105,17 @@ def run_state_first_production_acceptance(
 
     active_surface = probe_surface("reload_during_active_reconciliation")
     if working_seen and active_surface is not None:
-        if active_surface.get("readiness_status") != "rebuilding":
+        expected_published_readiness = (
+            before_auto.get("capability_readiness") or {}
+        ).get("overall_status")
+        if (
+            active_surface.get("reconciliation_status") != "running"
+            or active_surface.get("working_generation_active") is not True
+            or active_surface.get("readiness_status") != expected_published_readiness
+        ):
             raise StateFirstAcceptanceError(
-                "active reconciliation did not report published-generation rebuilding: "
-                f"{active_surface}"
+                "active reconciliation did not preserve published readiness while "
+                f"reporting replacement progress: {active_surface}"
             )
         before_generation = before_auto.get("publication_generation_id")
         active_generation = active_surface.get("publication_generation_id")
@@ -1389,45 +1405,16 @@ def run_state_first_production_acceptance(
         }
     )
 
-    # Explicit same-State publication isolation: non-sync reconciliation must keep
-    # every foreground surface on the prior generation until one terminal swap.
+    # A fully current same-State reconciliation is verification only. It must
+    # not create a working generation, rebuild governed capabilities, or mint a new
+    # presentation generation.
     before_same_state = _snapshot(store, user_id, capability_reader)
     same_started = start_reconciliation(user_id)
     same_job_id = str(same_started.get("job_id") or "")
     if not same_job_id:
         raise StateFirstAcceptanceError(
-            "same-State publication acceptance did not start reconciliation"
+            "same-State verification acceptance did not start a bounded job"
         )
-    same_deadline = monotonic() + min(30.0, timeout_seconds / 4)
-    while (
-        not store.working_generation_active(user_id)
-        and monotonic() < same_deadline
-    ):
-        current_job = jobs.current(user_id)
-        if (
-            current_job is not None
-            and current_job.job_id == same_job_id
-            and current_job.status in {
-                IntelligenceJobStatus.COMPLETED,
-                IntelligenceJobStatus.FAILED,
-                IntelligenceJobStatus.INTERRUPTED,
-            }
-        ):
-            break
-        sleep(0.1)
-    same_active = probe_surface("same_state_during_active_reconciliation")
-    if store.working_generation_active(user_id) and same_active is not None:
-        if same_active.get("readiness_status") != "rebuilding":
-            raise StateFirstAcceptanceError(
-                "same-State working generation was not reported as rebuilding"
-            )
-        if (
-            same_active.get("publication_generation_id")
-            != before_same_state.get("publication_generation_id")
-        ):
-            raise StateFirstAcceptanceError(
-                "same-State reconciliation changed publication before terminal promotion"
-            )
     same_terminal = _wait_for_job(
         jobs=jobs,
         user_id=user_id,
@@ -1435,41 +1422,48 @@ def run_state_first_production_acceptance(
         timeout_seconds=timeout_seconds,
         poll_seconds=poll_seconds,
     )
+    if store.working_generation_active(user_id):
+        raise StateFirstAcceptanceError(
+            "fully current same-State verification created a working generation"
+        )
+    if "no rebuild was required" not in str(same_terminal.get("message") or "").lower():
+        raise StateFirstAcceptanceError(
+            f"same-State verification did not report no-op reuse: {same_terminal}"
+        )
     after_same_state = _snapshot(store, user_id, capability_reader)
     _require_full_fsffl(after_same_state)
     if (
-        before_same_state.get("publication_generation_id")
-        and after_same_state.get("publication_generation_id")
-        == before_same_state.get("publication_generation_id")
+        after_same_state.get("publication_generation_id")
+        != before_same_state.get("publication_generation_id")
     ):
         raise StateFirstAcceptanceError(
-            "same-State terminal reconciliation did not publish a new generation"
+            "same-State verification changed the published generation"
         )
-    same_promoted = probe_surface("same_state_post_atomic_publication")
+    same_verified = probe_surface("same_state_post_noop_verification")
     if (
-        same_promoted is not None
-        and same_promoted.get("publication_generation_id")
-        != after_same_state.get("publication_generation_id")
+        same_verified is not None
+        and same_verified.get("publication_generation_id")
+        != before_same_state.get("publication_generation_id")
     ):
         raise StateFirstAcceptanceError(
-            "same-State surfaces do not match the terminal published generation"
+            "same-State verification changed the served surface generation"
         )
     if after_same_state.get("selected_team_id") != alternate_team_id:
         raise StateFirstAcceptanceError(
-            "same-State publication did not preserve managed-team selection"
+            "same-State verification did not preserve managed-team selection"
         )
     if (
-        same_promoted is not None
-        and same_promoted.get("franchise_team_id") != alternate_team_id
+        same_verified is not None
+        and same_verified.get("franchise_team_id") != alternate_team_id
     ):
         raise StateFirstAcceptanceError(
-            "same-State promoted Franchise response does not match managed-team selection"
+            "same-State verified Franchise response does not match managed-team selection"
         )
     steps.append(
         {
-            "label": "fsffl_same_state_atomic_publication",
+            "label": "fsffl_same_state_noop_verification",
             "before": before_same_state,
-            "active_surface": same_active,
+            "verified_surface": same_verified,
             "job": same_terminal,
             "after": after_same_state,
         }

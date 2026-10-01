@@ -854,6 +854,8 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
             f"{publication_generations}"
         )
     readiness = app.state.capability_readiness_reader(context)
+    publication = dict(readiness.get("publication") or {})
+    reconciliation = dict(readiness.get("reconciliation") or {})
     runtime_generation_id = readiness.get("publication_generation_id")
     if generation_ids and runtime_generation_id not in generation_ids:
         raise RuntimeError(
@@ -871,6 +873,12 @@ def _acceptance_surface_probe(label: str, context) -> dict[str, object]:
         **metrics,
         "readiness_status": readiness.get("overall_status"),
         "readiness_as_of": readiness.get("as_of"),
+        "working_generation_active": publication.get("working_generation_active"),
+        "publication_status": publication.get("status"),
+        "publication_target_state_id": publication.get("target_state_id"),
+        "reconciliation_status": reconciliation.get("status"),
+        "reconciliation_target_state_id": reconciliation.get("target_state_id"),
+        "reconciliation_published_state_id": reconciliation.get("published_state_id"),
         "presentation_freshness": freshness,
         "presentation_modes": continuity_modes,
         "publication_generations": publication_generations,

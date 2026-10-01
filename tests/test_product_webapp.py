@@ -719,7 +719,7 @@ def test_manual_refresh_reuses_exact_state_bundle_on_repeated_no_change_sync(mon
     assert second.status_code == 200
     reused = _wait_completed(client)
     assert reused["status"] == "completed"
-    assert "reused and atomically published" in reused["message"]
+    assert "verified current; no rebuild was required" in reused["message"]
     assert calls == {"state": 2, "forecast": 1, "simulation": 1, "value": 1}
 
 

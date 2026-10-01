@@ -185,10 +185,8 @@ def test_readiness_has_one_server_capability_authority_without_legacy_boolean_fa
 
     assert "const serverFull=capabilities?.overall_status==='full';" in shell
     assert "!capabilities?.overall_status&&Boolean" not in shell
-    assert (
-        "context?.capability_readiness?.overall_status==='full'"
-        in refresh
-    )
+    assert "readiness?.overall_status==='full'" in refresh
+    assert "!readiness?.publication?.working_generation_active" in refresh
     ready_fn = refresh.split("function intelligencePipelineReady", 1)[1].split(
         "function ensureIntelligenceRefreshButton", 1
     )[0]
@@ -244,7 +242,8 @@ def test_hosted_acceptance_combines_sync_surfaces_pi_history_and_resource_gate()
     assert "with store._lock:" not in source
     assert "team_interleaving" in source
     assert 'team_surface.get("franchise_team_id")' in source
-    assert 'same_promoted.get("franchise_team_id")' in source
+    assert 'same_verified.get("franchise_team_id")' in source
+    assert "fsffl_same_state_noop_verification" in source
     assert '"selected_team_id": runtime.selected_team_id' in source
     assert "within_memory_budget" in source
     assert "peak_rss_bytes" in source
