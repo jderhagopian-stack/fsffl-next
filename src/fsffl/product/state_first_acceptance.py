@@ -9,7 +9,11 @@ from typing import Callable
 from fsffl.persistence.runtime_cache import FORECAST_MODEL_VERSION
 from fsffl.state.models import LeagueState
 
-from .background_jobs import IntelligenceJobCoordinator, IntelligenceJobStatus
+from .background_jobs import (
+    IntelligenceJobCoordinator,
+    IntelligenceJobPhase,
+    IntelligenceJobStatus,
+)
 from .persistent_runtime import PersistentPrivateBetaRuntimeStore
 from .scenario_cache import _forecast_fingerprint
 from .simulation_runtime import simulation_artifact_model_version
@@ -246,6 +250,244 @@ def _require_full_fsffl(snapshot: dict[str, object]) -> None:
         raise StateFirstAcceptanceError(
             f"FSFFL first-party FUMBLES_LOST was not consumed: {snapshot}"
         )
+
+
+def _probe_surface_during_simulation(
+    *,
+    jobs: IntelligenceJobCoordinator,
+    user_id: str,
+    job_id: str,
+    surface_probe: SurfaceProbe,
+    store: PersistentPrivateBetaRuntimeStore,
+    timeout_seconds: float,
+) -> dict[str, object]:
+    deadline = monotonic() + timeout_seconds
+    while monotonic() < deadline:
+        current = jobs.current(user_id)
+        if current is not None and current.job_id != job_id:
+            raise StateFirstAcceptanceError(
+                f"refresh acceptance job identity changed {job_id} -> {current.job_id}"
+            )
+        if (
+            current is not None
+            and current.job_id == job_id
+            and current.status == IntelligenceJobStatus.RUNNING
+            and current.phase == IntelligenceJobPhase.RUNNING_SIMULATION
+        ):
+            return surface_probe(
+                "restored_refresh_during_simulation",
+                store.get(user_id),
+            )
+        if (
+            current is not None
+            and current.job_id == job_id
+            and current.status
+            in {
+                IntelligenceJobStatus.COMPLETED,
+                IntelligenceJobStatus.FAILED,
+                IntelligenceJobStatus.INTERRUPTED,
+            }
+        ):
+            break
+        sleep(0.25)
+    raise StateFirstAcceptanceError(
+        f"refresh acceptance did not expose active Simulation phase for {job_id}"
+    )
+
+
+def run_state_first_restored_refresh_acceptance(
+    *,
+    store: PersistentPrivateBetaRuntimeStore,
+    user_id: str,
+    start_sync_reconciliation: Callable[[str], dict[str, object]],
+    jobs: IntelligenceJobCoordinator,
+    capability_reader: Callable[[object], dict[str, object]],
+    surface_probe: SurfaceProbe,
+    resource_reader: ResourceReader,
+    timeout_seconds: float = 1200.0,
+) -> dict[str, object]:
+    """Restore a production user, then run the normal synchronized refresh path."""
+
+    store.restore_user(user_id)
+    before = _snapshot(store, user_id, capability_reader)
+    if before.get("league_id") != f"sleeper:{FSFFL_ACCEPTANCE_LEAGUE}":
+        raise StateFirstAcceptanceError(
+            f"restored refresh user is not the canonical FSFFL runtime: {before}"
+        )
+    if not before.get("forecast") or not before.get("value"):
+        raise StateFirstAcceptanceError(
+            f"restored refresh did not begin from the expected Forecast/Value partial state: {before}"
+        )
+    if before.get("simulation"):
+        raise StateFirstAcceptanceError(
+            "restored refresh did not reproduce the startup Simulation-unavailable state"
+        )
+
+    initial_resources = resource_reader()
+    started = start_sync_reconciliation(user_id)
+    job_id = str(started.get("job_id") or "")
+    if not job_id:
+        raise StateFirstAcceptanceError(
+            "restored refresh did not schedule the normal synchronized reconciliation"
+        )
+
+    observed_surface: dict[str, object] = {}
+    surface_error: list[BaseException] = []
+
+    def probe_during_simulation() -> None:
+        try:
+            observed_surface.update(
+                _probe_surface_during_simulation(
+                    jobs=jobs,
+                    user_id=user_id,
+                    job_id=job_id,
+                    surface_probe=surface_probe,
+                    store=store,
+                    timeout_seconds=timeout_seconds,
+                )
+            )
+        except BaseException as exc:  # pragma: no cover - hosted propagation
+            surface_error.append(exc)
+
+    surface_thread = Thread(
+        target=probe_during_simulation,
+        name="fsffl-restored-refresh-surface-probe",
+        daemon=True,
+    )
+    surface_thread.start()
+    terminal = _wait_for_job(
+        jobs=jobs,
+        user_id=user_id,
+        job_id=job_id,
+        timeout_seconds=timeout_seconds,
+        poll_seconds=0.5,
+    )
+    surface_thread.join(timeout=timeout_seconds)
+    if surface_thread.is_alive():
+        raise StateFirstAcceptanceError(
+            "restored refresh Simulation foreground probe did not finish"
+        )
+    if surface_error:
+        raise StateFirstAcceptanceError(
+            f"restored refresh Simulation foreground probe failed: {surface_error[0]}"
+        )
+
+    if observed_surface.get("readiness_status") != "rebuilding":
+        raise StateFirstAcceptanceError(
+            f"restored refresh did not expose rebuilding readiness during Simulation: {observed_surface}"
+        )
+    if observed_surface.get("state_id") != before.get("state_id"):
+        raise StateFirstAcceptanceError(
+            "restored refresh changed the served State before atomic publication"
+        )
+
+    after = _snapshot(store, user_id, capability_reader)
+    _require_full_fsffl(after)
+    identities = after.get("artifact_identities") or {}
+    simulation_identity = identities.get("simulation") if isinstance(identities, dict) else None
+    forecast_identity = identities.get("forecast") if isinstance(identities, dict) else None
+    if not isinstance(simulation_identity, dict) or not isinstance(forecast_identity, dict):
+        raise StateFirstAcceptanceError(
+            f"restored refresh did not publish exact Forecast and Simulation identities: {after}"
+        )
+    state_id = after.get("state_id")
+    if (
+        terminal.get("league_state_id") != state_id
+        or forecast_identity.get("state_id") != state_id
+        or simulation_identity.get("state_id") != state_id
+        or identities.get("publication_generation_id")
+        != after.get("publication_generation_id")
+    ):
+        raise StateFirstAcceptanceError(
+            f"restored refresh artifact/publication identities diverged: {after}"
+        )
+    if (
+        simulation_identity.get("simulation_count") != 50_000
+        or simulation_identity.get("rng_protocol") != "numpy-pcg64-batched-gauss-v1"
+        or simulation_identity.get("rng_batch_size") != 500
+        or not str(simulation_identity.get("rng_runtime_version") or "").endswith(
+            "python-3.12.10"
+        )
+    ):
+        raise StateFirstAcceptanceError(
+            f"restored refresh Simulation configuration is not canonical: {simulation_identity}"
+        )
+    if after.get("working_generation_active"):
+        raise StateFirstAcceptanceError(
+            "restored refresh left an unpublished working generation active"
+        )
+    if not after.get("publication_generation_id"):
+        raise StateFirstAcceptanceError(
+            "restored refresh completed without a publication generation identity"
+        )
+    intrinsic = (after.get("capability_readiness") or {}).get("intrinsic") or {}
+    if intrinsic.get("status") != "full":
+        raise StateFirstAcceptanceError(
+            f"restored refresh did not reach full Intrinsic readiness: {intrinsic}"
+        )
+    active_generation = observed_surface.get("publication_generation_id")
+    prior_generation = before.get("publication_generation_id")
+    if prior_generation and active_generation != prior_generation:
+        raise StateFirstAcceptanceError(
+            "Simulation foreground read observed a replacement generation before publication"
+        )
+    active_generations = {
+        str(value)
+        for value in (observed_surface.get("publication_generations") or {}).values()
+        if value is not None and str(value).strip()
+    }
+    if prior_generation and active_generations and active_generations != {str(prior_generation)}:
+        raise StateFirstAcceptanceError(
+            "Simulation foreground surfaces mixed publication generations"
+        )
+
+    final_surface = surface_probe("restored_refresh_after_publication", store.get(user_id))
+    if final_surface.get("publication_generation_id") != after.get("publication_generation_id"):
+        raise StateFirstAcceptanceError(
+            f"post-refresh foreground surfaces do not match publication: {final_surface}"
+        )
+    if int(final_surface.get("stale_surface_count") or 0) != 0:
+        raise StateFirstAcceptanceError(
+            f"post-refresh surfaces include stale publication output: {final_surface}"
+        )
+    final_resources = resource_reader()
+    peak_rss = max(
+        int(initial_resources.get(key) or 0)
+        for key in ("current_rss_bytes", "max_rss_observed_bytes", "peak_rss_bytes")
+    )
+    peak_rss = max(
+        peak_rss,
+        *(
+            int(final_resources.get(key) or 0)
+            for key in ("current_rss_bytes", "max_rss_observed_bytes", "peak_rss_bytes")
+        ),
+    )
+    hard_limit = 536_870_900
+    if peak_rss >= hard_limit:
+        raise StateFirstAcceptanceError(
+            f"restored refresh reached hard RSS gate: peak={peak_rss} limit={hard_limit}"
+        )
+
+    report = {
+        "status": "PASS",
+        "mode": "restored_refresh",
+        "user_id": user_id,
+        "before": before,
+        "job": terminal,
+        "during_simulation_surface": observed_surface,
+        "after": after,
+        "after_surface": final_surface,
+        "initial_resources": initial_resources,
+        "final_resources": final_resources,
+        "peak_rss_bytes": peak_rss,
+        "hard_memory_limit_bytes": hard_limit,
+        "hard_memory_headroom_bytes": hard_limit - peak_rss,
+    }
+    _logger.info(
+        "FSFFL STATE-FIRST ACCEPTANCE RESULT %s",
+        json.dumps(report, sort_keys=True, default=str),
+    )
+    return report
 
 
 def _require_truthful_hodor(snapshot: dict[str, object]) -> None:

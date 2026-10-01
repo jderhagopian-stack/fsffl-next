@@ -284,7 +284,7 @@ def test_hosted_clean_first_run_history_is_state_only_until_terminal_publication
     state_only_branch = surfaces.split("if state_only", 1)[0]
     assert '("home", "/api/home", {})' not in state_only_branch
     assert "FSFFL_RUNTIME_AVAILABILITY_ACCEPTANCE_MODE" in orchestration
-    assert 'acceptance_mode not in {"full", "journey", "restore"}' in orchestration
+    assert 'acceptance_mode not in {"full", "journey", "restore", "restored_refresh"}' in orchestration
     assert 'restore_only=acceptance_mode == "restore"' in orchestration
     assert 'journey_only=acceptance_mode == "journey"' in orchestration
 
