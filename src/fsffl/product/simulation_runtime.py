@@ -30,6 +30,7 @@ from fsffl.team_utility import (
     build_league_relative_position_strengths,
     build_regular_season_simulation_input,
     build_scoring_dispersion_diagnostic,
+    current_season_matchups_from_league_state,
     classify_calculated_competitive_state,
     derive_league_relative_competitive_state_policy,
     optimize_team_lineup,
@@ -41,8 +42,8 @@ from fsffl.team_utility.simulation import (
 )
 from fsffl.team_utility.utility import CalculatedCompetitiveState
 
-LIVE_SIMULATION_MODEL_VERSION = "next10-live-simulation-analytics-v10:league-configured-postseason:sleeper-basic-settings-fallback"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next10-live-simulation-analytics-v10:numpy-pcg64-batched-gauss-v1:league-configured-postseason:sleeper-basic-settings-fallback"
+LIVE_SIMULATION_MODEL_VERSION = "next11-live-simulation-analytics-v11:current-season-factual-baseline:league-configured-postseason:sleeper-basic-settings-fallback"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next11-live-simulation-analytics-v11:numpy-pcg64-batched-gauss-v1:current-season-factual-baseline:league-configured-postseason:sleeper-basic-settings-fallback"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
@@ -228,9 +229,12 @@ def build_live_simulation_analytics(
         if item.source == PROVISIONAL_POSITION_FLOOR_SOURCE
     }
 
-    fantasy_weeks = tuple(sorted({matchup.week for matchup in league_state.matchups}))
+    _completed_matchups, remaining_matchups = current_season_matchups_from_league_state(
+        league_state
+    )
+    fantasy_weeks = tuple(sorted({matchup.week for matchup in remaining_matchups}))
     if not fantasy_weeks:
-        raise ValueError("canonical fantasy regular-season schedule is required")
+        raise ValueError("canonical remaining fantasy regular-season schedule is required")
 
     ordered_teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
     lineups = {}
@@ -285,7 +289,7 @@ def build_live_simulation_analytics(
             weekly_scoring=weekly_scoring,
             simulation_count=simulation_count,
             seed=seed,
-            model_version="next4-live-regular-season-v5:empirical-weekly-volatility:league-configured-postseason",
+            model_version="next4-live-current-season-v6:factual-completed-weeks:empirical-weekly-volatility:league-configured-postseason",
             rng_protocol=rng_protocol,
             rng_batch_size=rng_batch_size,
         )
