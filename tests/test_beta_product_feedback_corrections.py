@@ -9,7 +9,7 @@ def test_beta_product_correction_layer_is_loaded_last_with_fresh_cache_key() -> 
     assert "/static/beta_product_corrections.js?v=" in html
     assert html.rfind("beta_product_corrections.js") > html.rfind("product_shell.js")
     versions = {
-        token.split("?v=")[1].split('"')[0]
+        token.split("?v=")[1].split('"')[0].split("&")[0]
         for token in html.split()
         if "?v=" in token
     }
