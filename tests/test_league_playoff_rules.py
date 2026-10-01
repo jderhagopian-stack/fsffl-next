@@ -290,6 +290,67 @@ def test_two_team_standard_bracket_produces_normal_championship_probability() ->
     assert sum(row.championship_probability or 0.0 for row in result.outcomes) == 1.0
 
 
+def test_two_team_observed_and_settings_derived_brackets_have_equivalent_title_outputs() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    payload.update(
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="seeded_standard_fixed_v1",
+        playoff_team_count=2,
+        playoff_start_week=16,
+        round_count=1,
+        round_weeks=(16,),
+        bye_count=0,
+        bye_seeds=(),
+        matchups=(),
+        championship_round_number=1,
+        championship_week=16,
+        championship_matchup_id="title-game",
+    )
+    derived = LeaguePlayoffRules.model_validate(payload)
+    observed = derived.model_copy(
+        update={
+            "bracket_authority": "provider_observed_exact",
+            "bracket_derivation_policy": None,
+            "matchups": derived.effective_matchups(),
+        }
+    )
+
+    observed_result = simulate_regular_season(_simulation_request(2, rules=observed))
+    derived_result = simulate_regular_season(_simulation_request(2, rules=derived))
+
+    assert [row.championship_probability for row in observed_result.outcomes] == [
+        row.championship_probability for row in derived_result.outcomes
+    ]
+    assert observed_result.championship_probability_provenance == "provider_observed_exact"
+    assert derived_result.championship_probability_provenance == "settings_derived_standard"
+
+
+def test_two_team_custom_multiround_structure_fails_closed_as_ambiguous() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    payload.update(
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="seeded_standard_fixed_v1",
+        playoff_team_count=2,
+        playoff_start_week=15,
+        round_count=2,
+        round_weeks=(15, 17),
+        bye_count=0,
+        bye_seeds=(),
+        matchups=(),
+        championship_round_number=2,
+        championship_week=17,
+        championship_matchup_id="title-game",
+    )
+    rules = LeaguePlayoffRules.model_validate(payload)
+    result = simulate_regular_season(_simulation_request(2, rules=rules))
+
+    assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.championship_probability is None for row in result.outcomes)
+    assert {row.championship_unavailability_reason for row in result.outcomes} == {
+        "playoff_rules_unsupported:bracket_structure"
+    }
+
+
 def test_unrecognized_standard_structure_keeps_qualification_but_withholds_title() -> None:
     payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
     payload.update(
