@@ -281,6 +281,7 @@ def test_simulation_is_presented_without_recomputing_or_inventing_a_power_score(
     assert rows["a"]["expected_finish"] == pytest.approx(1.2)
     assert rows["a"]["median_finish"] == 1
     assert rows["a"]["finish_rank_probabilities"] == [0.80, 0.20]
+    assert rows["b"]["playoff_seed_probabilities"] is None
     assert rows["a"]["competitive_state"] == "contender"
     assert rows["a"]["current_rank"] == 1
     assert rows["a"]["movement_vs_current_rank"] == pytest.approx(-0.2)
