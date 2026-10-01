@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 50386)
-Total output lines: 2002
+Warning: truncated output (original token count: 50799)
+Total output lines: 2010
 
 # FSFFL NEXT — Current State
 
@@ -698,26 +698,7 @@ Observed product failures:
 - later Franchise HTTP 429;
 - malformed mobile last-good/stale banner rendering.
 
-Runtime evidence shows a more serious combined-load failure: after cold wake and automatic refresh, process memory rose to **534.7 MB / 536.9 MB** at 12:46 UTC, then reset to ~3.8 MB and Uvicorn restarted. No explicit OOM kill line was emitted, …20386 tokens truncated…rk must be separable from request latency and schedulable through durable/idempotent jobs;
-- any lifecycle correctness that eventually spans multiple web/worker instances must have distributed/durable coordination rather than depend on one-process locks or sticky sessions;
-- caches remain bounded accelerators with explicit ownership/identity/lifetime and must not grow with all historical users/leagues;
-- workload classes must be independently scalable with backpressure/fairness;
-- security/tenant isolation and non-identifying diagnostics are required;
-- the current ~512 MB private-beta memory gate remains valid for leak/ownership closure, but is not a permanent commercial product requirement.
-
-This does **not** broaden PR #303. Finish the current resource-boundary closure first. Before public launch, run a dedicated production-readiness/scaling review and realistic load test.
-
-
-## 2026-09-29 — Near-term private-beta usability is the controlling acceptance target
-Management clarification: public-scale architecture remains a long-term design constraint, but the **current product requirement is that Jimmy can reliably test and use FSFFL NEXT on the existing free Render deployment**.
-
-Near-term acceptance therefore prioritizes:
-- reliable cold wake / connect / league restore;
-- usable FSFFL -> Hodor -> FSFFL switching at realistic cadence;
-- responsive foreground navigation while background intelligence runs;
-- no hard-memory failure during normal private-beta use;
-- truthful readiness and continuity through restart/restored session;
-- no requirement to support synthetic rapid-switch stress or commercial traffic on the free tier.
+Runtime evidence shows a more serious combined-load failure: after cold wake and automatic refresh, process memory rose to **534.7 MB / 536.9 MB** at 12:46 UTC, then reset to ~3.8 MB and Uvicorn restarted. No explicit OOM kill line was emitted, …20799 tokens truncated…
 
 Do not distort architecture around the free tier, but do not defer private-beta usability behind future public-scale work. If the whole resource boundary is clean and a normal single-user private-beta journey still cannot fit the current free Render envelope, Management should choose the smallest practical beta-specific capacity/staging adjustment rather than continue indefinite leak hunting.
 
@@ -1245,4 +1226,12 @@ Fresh whole-PR review on exact head `b85f62f6d5f3bcbe570cf50ffbb907ee2556f37c` f
 
 Current live service is still untouched on `main` / SHA `878a2a32d5826ff990eed76c4985ae9e8f39bba3`, deploy `dep-dauouj49v7es73adle10`; experimental acceptance and memory instrumentation flags remain off. Render login retry succeeded. Failed live-provider numerical trace workflow #278 (run `36805105244`) is confirmed from its job log as source-health/evidence failure: one independent provider (`razzball`) succeeded where at least two are required. It is not a PIT-history code failure. On candidate `9d9c3e45fba165768ec67faf6b5dcaf953958756`, CI #4082 failed only on the Python 3.11 digest baseline after patch-label normalization; it reported deterministic digest `63660717b6f9d6cd71142fe16dd27c3146a8a24058c2a5c951ea08f32d4a76c2`. Other workflows passed, including the live-provider corrective numerical trace #279. The 3.11 baseline is now updated locally and focused simulation regression is 6 passed; this update must be pushed and CI/review repeated.
 
-Next executable action: push the portable digest correction including the CI-observed 3.11 baseline, wait for exact-head CI and a fresh clean whole-PR P1/P2 review, then immediately run the authorized reversible batch-500 private-beta validation with genuine concurrent Home/My Team/Product Context requests, 50k readiness/publication, exact RSS/high-water evidence, restart restore, and rollback to main. At or above 536,870,900 bytes, stop and return to Management for the capacity decision. Never merge/adopt without Management approval.
+Next executable action: push the portable digest correction including the CI-observed 3.11 baseline and fixed-baseline-only policy for new Python minors, wait for exact-head CI and a fresh whole-PR review, then immediately run the authorized reversible batch-500 private-beta validation with genuine concurrent Home/My Team/Product Context requests, 50k readiness/publication, exact RSS/high-water evidence, restart restore, and rollback to main. At or above 536,870,900 bytes, stop and return to Management for the capacity decision. Never merge/adopt without Management approval.
+
+## 2026-10-01 — Exact-head review reconciliation
+
+Fresh review on `70d75285bf97b56eae584392477b267457836ccb` identified a P1 claiming operational-history truncation and a P2 claiming the unknown-Python fallback weakens the production digest. The P2 is corrected by removing same-run fallback entirely: only the reviewed fixed 3.11/3.12 digests are accepted, after normalizing only the patch-specific runtime label. A newly encountered Python minor requires an explicit reviewed fixed 50k baseline before test validation.
+
+The P1 truncation claim is contradicted by an exact-tree comparison: current `main` base `878a2a32d5826ff990eed76c4985ae9e8f39bba3` has 1,932 lines in `CURRENT_STATE.md` and 835 in `ACTIVE_WORKSTREAMS.md`; the PR tree has 2,002 and 858. `git diff --numstat` shows 70 additions / 0 deletions in `CURRENT_STATE.md` and 24 additions / 1 deletion (one non-history line) in `ACTIVE_WORKSTREAMS.md`. Neither file contains a captured `tokens truncated` splice; the only `truncation` match is this historical note describing prior reviewer feedback. Both documents begin with their canonical title/updated headers and preserve the current-main content, with new handoff sections appended. No restore is appropriate because there is no deleted history relative to current main.
+
+Exact-head CI #4083 and a fresh review are required for the P2 test-oracle correction and this appended reconciliation. Private beta remains untouched on `main` / `878a2a32d5826ff990eed76c4985ae9e8f39bba3`, deploy `dep-dauouj49v7es73adle10`, diagnostic/acceptance flags off. No Render change until CI and review clear.
