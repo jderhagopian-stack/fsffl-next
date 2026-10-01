@@ -859,3 +859,10 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - **Simulation modernization — ACTIVE / PR #311 experimental only.** Fresh whole-PR review on exact head `e5268054f49fd8743bc952a35b528a73d1462b2c` found a P2: newly generated Python artifacts shared a base key across runtime patch versions before publication. The bounded correction qualifies new durable/cache keys by protocol, batch, count, seed, and runtime while retaining read-only compatibility for `legacy-unrecorded` rows; a same-State staged-write/restart regression covers it.
 - The corrective live numerical trace failed its source-health minimum with only Razzball available; this is live evidence failure, not the PIT-history corrective. Local full suite is 1,903 passed / one known Starlette warning; focused restore/cache 70 passed and two direct identity checks passed.
 - Secure Render email/password login succeeded; `fsffl-next-private-beta` remains on main and profiler/acceptance flags off. Next: exact-head CI + fresh P1/P2 review of the Python runtime-key correction, then reversible batch-500 50k hosted journey with true concurrent Home/My Team/Product Context HTTP reads, full readiness/publication, exact RSS/high-water, restart restore, rollback to main. If RSS >536,870,900 bytes, stop at Management capacity gate. No merge/adoption.
+
+## 2026-10-01 — Immediate executable: external hosted concurrency acceptance
+- PR #311 code/review is clean enough for final hosted measurement.
+- Browser policy is no longer a reason to park the workstream.
+- Build/use a short-lived external runner to issue genuine concurrent Home / My Team / Product Context HTTP reads against the actual Render host while batch-500 50k refresh runs.
+- Capture exact RSS/high-water, readiness/publication, restart restore, then roll back to main.
+- PASS -> Management adoption decision immediately. Memory > 536,870,900 bytes -> Management capacity gate. Auth path unavailable -> INPUT GATE with the smallest explicit user action requested.
