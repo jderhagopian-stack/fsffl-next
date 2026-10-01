@@ -893,6 +893,8 @@ def create_app(
             "target_state_id": target_state_id,
             "status": (
                 "serving_last_good_during_update"
+                if working_active and served_visible
+                else "serving_published_during_update"
                 if working_active
                 else "published"
                 if runtime.league_state is not None
@@ -900,28 +902,45 @@ def create_app(
             ),
         }
         if working_active:
-            payload["overall_status"] = "rebuilding"
             target = dict(payload.get("target_state") or {})
             target["league_state_id"] = target_state_id
             target["status"] = "rebuilding"
             payload["target_state"] = target
-            served = dict(payload.get("served_last_good") or {})
-            served.update(
-                available=runtime.league_state is not None,
-                league_state_id=(
+            payload["reconciliation"] = {
+                "status": "running",
+                "target_state_id": target_state_id,
+                "published_state_id": (
                     runtime.league_state.state_id
                     if runtime.league_state is not None
                     else None
                 ),
-                as_of=(
-                    runtime.league_state.as_of.isoformat()
+            }
+            if (
+                runtime.league_state is not None
+                and target_state_id is not None
+                and target_state_id != runtime.league_state.state_id
+            ):
+                served = dict(payload.get("served_last_good") or {})
+                served.update(
+                    available=True,
+                    league_state_id=runtime.league_state.state_id,
+                    as_of=runtime.league_state.as_of.isoformat(),
+                    stale=True,
+                    label=(
+                        "Updating intelligence — serving the prior published generation."
+                    ),
+                )
+                payload["served_last_good"] = served
+        else:
+            payload["reconciliation"] = {
+                "status": "idle",
+                "target_state_id": None,
+                "published_state_id": (
+                    runtime.league_state.state_id
                     if runtime.league_state is not None
                     else None
                 ),
-                stale=True,
-                label="Updating intelligence — serving the prior published generation.",
-            )
-            payload["served_last_good"] = served
+            }
         return payload
 
     def heavy_claim(kind: str, key: str):
@@ -1575,6 +1594,30 @@ def create_app(
                         != active_before_write.league.league_id
                     ):
                         raise IntelligenceJobInterrupted("league_switch")
+                    published_now = store.get(user_id)
+                    published_terminal = bool(
+                        published_now.forecast_evidence is not None
+                        and published_now.value_evidence is not None
+                        and (
+                            published_now.simulation_analytics is not None
+                            or not published_now.forecast_evidence.uncertainty_ready
+                        )
+                    )
+                    published_readiness = read_capabilities(published_now)
+                    if (
+                        active_before_write.state_id == synced_state.state_id
+                        and published_terminal
+                        and published_readiness.get("overall_status") == "full"
+                    ):
+                        progress(
+                            IntelligenceJobPhase.ATTACHING_RESULTS,
+                            "Canonical Sleeper State and all required product intelligence "
+                            "are already current; no rebuild is required.",
+                        )
+                        return (
+                            "Canonical Sleeper State and all required product intelligence "
+                            "were verified current; no rebuild was required."
+                        )
                     store.begin_working_generation(
                         user_id,
                         league_state=synced_state,
