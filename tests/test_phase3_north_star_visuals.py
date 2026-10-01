@@ -64,7 +64,7 @@ def test_north_star_release_cache_generation_is_coherent() -> None:
     assert "/static/session_recovery.js?v=" in source
     assert "/static/mobile_safari_recovery.js?v=" in source
     versions = {
-        token.split("?v=")[1].split('"')[0]
+        token.split("?v=")[1].split('"')[0].split("&")[0]
         for token in source.split()
         if "?v=" in token
     }
