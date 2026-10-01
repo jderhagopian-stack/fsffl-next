@@ -149,6 +149,12 @@ def test_finish_rank_estimates_playoff_odds_without_exact_playoff_rules() -> Non
     assert all(row.playoff_probability is not None for row in result.outcomes)
     assert sum(row.playoff_probability or 0.0 for row in result.outcomes) == 6.0
     assert all(row.playoff_seed_probabilities is not None for row in result.outcomes)
+    assert all(
+        sum(row.playoff_seed_probabilities or ()) == pytest.approx(
+            row.playoff_probability or 0.0
+        )
+        for row in result.outcomes
+    )
     assert all(row.bye_probability is None for row in result.outcomes)
     assert {row.bye_unavailability_reason for row in result.outcomes} == {
         "playoff_start_week_unavailable"
@@ -186,6 +192,12 @@ def test_basic_settings_compile_standard_seeded_championship_bracket(team_count)
     assert result.championship_probability_provenance == "settings_derived_standard"
     assert all(row.playoff_probability is not None for row in result.outcomes)
     assert all(row.playoff_seed_probabilities is not None for row in result.outcomes)
+    assert all(
+        sum(row.playoff_seed_probabilities or ()) == pytest.approx(
+            row.playoff_probability or 0.0
+        )
+        for row in result.outcomes
+    )
     assert all(row.bye_probability is not None for row in result.outcomes)
     expected_byes = rules.bye_count
     assert sum(row.bye_probability or 0.0 for row in result.outcomes) == pytest.approx(
