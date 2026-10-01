@@ -163,7 +163,7 @@ def test_franchise_north_star_is_the_only_primary_franchise_renderer() -> None:
     assert NORTH_STAR.rfind("window.renderFsfflMyTeam=") == NORTH_STAR.rfind(
         "window.renderFsfflMyTeam=loadFranchiseNorthStar;"
     )
-    assert "franchiseNorthStarStaticVersion='20260927-dualstate1'" in SHELL
+    assert "franchiseNorthStarStaticVersion='20261001-continuity2'" in SHELL
     assert "lazyProductScript(\'renderFsfflMyTeam\',\'/static/my_team_dashboard.js\'" in SHELL
     assert "franchiseNorthStarStaticVersion)" in SHELL
 
@@ -255,4 +255,6 @@ def test_franchise_labels_last_good_derived_intelligence_as_stale() -> None:
     )[0]
     assert "view.intelligence_freshness?.stale" in renderer
     assert "State current · last-good intelligence shown" in renderer
-    assert "while replacement intelligence rebuilds" in renderer
+    assert "Derived fields as of " in renderer
+    assert "while replacement intelligence rebuilds" not in renderer
+    assert "Restoring your franchise…" not in NORTH_STAR
