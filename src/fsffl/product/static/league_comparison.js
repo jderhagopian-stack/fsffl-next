@@ -265,7 +265,7 @@ function renderLeagueComparison(){
   if(!views.length||!fsfflLeagueStructureState.atlas){panel.innerHTML='<p class="eyebrow">League Atlas</p><h2>No governed league structure is available yet.</h2><p class="lead">Load current league evidence from Home, then return here.</p>';return}
   panel.classList.add('league-structure-panel','league-atlas-north-star');
   const freshness=fsfflLeagueStructureState.atlas?.intelligence_freshness||{};
-  const staleBanner=freshness.stale?'<aside class="league-last-good-status" role="status"><strong>Last-good intelligence · update in progress</strong><span>Derived fields as of '+laEsc(freshness.served_as_of||'last-good snapshot')+'.</span></aside>':'';
+  const staleBanner=freshness.stale?'<aside class="league-last-good-status" role="status"><strong>State current · last-good intelligence</strong><span>Derived fields as of '+laEsc(freshness.served_as_of||'last-good snapshot')+'.</span></aside>':'';
   panel.innerHTML=staleBanner+laAtlasHeader()+'<main class="league-atlas-content">'+laActiveTab()+laEvidenceDetail()+'</main>'+laRoomDrawer()+laPickDrawer();
   bindLeagueActions();setTimeout(laApplyDeepLinkFocus,0);
 }
