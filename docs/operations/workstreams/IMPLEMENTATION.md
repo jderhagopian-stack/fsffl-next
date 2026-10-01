@@ -1912,3 +1912,26 @@ Probabilistic missed-game sampling remains **deferred**, not silently approximat
 
 Promotion classification: additive State/Simulation authority coordinate with no live provider population yet. Use focused State serialization/material-fingerprint/lineup-substitution tests, full CI and exact-head P1/P2 review. Do not require another #324-style physical proof for an unpopulated source coordinate; any future live provider adapter that begins populating weekly availability must receive its own targeted acceptance.
 
+## 2026-10-01 — #325 ACCEPTED: exact weekly availability + legal substitution
+
+PR #325 was squash-merged as `814ab2f081616370a5aad9f67071877ccacf8469`. Exact head `d9ac7b21d76071189be862ae28af3324bc5113e7` passed full CI (**1,960 passed**, one existing warning), PR164 focused corrective regression, and Live Forecast trace.
+
+Accepted item-2 capability now includes:
+- league-legal weekly lineup optimization including FLEX/SUPERFLEX;
+- taxi/IR exclusion;
+- canonical NFL-bye exclusion;
+- provider-neutral exact `PlayerWeekAvailability` facts;
+- legal bench substitution for either bye or exact unavailability;
+- explicit zero-point unfilled slots when the legal depth chart is exhausted;
+- cached lineup reuse by effective exclusion set;
+- State/material invalidation for populated weekly availability while raw Forecast acquisition remains reusable;
+- backward-compatible State identity when the additive coordinate is empty.
+
+Automated Codex review was unavailable because the code-review quota was exhausted. A bounded manual exact-head P1/P2 review found one lineage-truth defect (availability provenance was initially stamped onto unaffected teams); it was corrected before merge and covered by regression. No remaining P1/P2 issue was found.
+
+No live provider populates `PlayerWeekAvailability` in #325, so no Render deployment or physical feature claim was performed. Any future adapter that begins populating the field requires its own targeted acceptance.
+
+Probabilistic missed-game uncertainty remains explicitly deferred until Forecast/Research provides governed per-week availability/time-to-return authority. Do not infer probabilities from coarse current player status or apply a generic injury haircut.
+
+**Simulation 2.0 roadmap advances to item 3:** reconcile the existing full finish-position distribution, expected finish, first-place/playoff/championship outputs, canonical playoff rules and bye seeds against the remaining finish/seed/postseason output contract. Add only missing governed outputs; do not rebuild #324 current-season mechanics or #321 postseason execution.
+
