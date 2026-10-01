@@ -963,3 +963,21 @@ The temporary dual-runtime CI matrix used only to establish the 3.12 fixed basel
 
 Promotion remains Tier B / risk-proportionate: freeze the exact docs-complete head, require ordinary exact-head CI plus a fresh P1/P2 review of the bounded Simulation/consumer diff, then merge/deploy and run one targeted hosted current-season acceptance. Do not reopen #323 continuity, #321 postseason design, Forecast model design, or unrelated platform layers.
 
+### 2026-10-01 — PR #324 Codex P1 correction: postseason week scoring + zero remaining regular games
+
+Exact-head Codex review of `bbf30a25a60a838b78d42697f1773d1b773e14a3` found two related P1s inside the new current-season Simulation contract. Both are closed as one bounded scoring-boundary correction:
+
+- postseason strength no longer reuses/averages the narrowed unresolved regular-season weekly panel;
+- live Simulation now resolves the governed playoff structure first, builds forward scoring evidence over the union of unresolved regular-season weeks and the actual configured playoff round weeks, and partitions that evidence into `weekly_scoring` versus separate `playoff_weekly_scoring`;
+- championship execution consumes the scoring distribution for each configured playoff matchup's actual week;
+- when the regular season is complete, an empty unresolved regular-season schedule is valid. Actual completed standings/points remain the deterministic baseline and configured postseason Simulation continues from them;
+- the scoring-dispersion diagnostic uses remaining regular-season evidence when available and playoff-week evidence once the regular season is complete;
+- Simulation live/result model identities advance to the playoff-week-scoring contract so persisted pre-correction title odds cannot restore as current authority;
+- the accepted #324 invariant remains unchanged: completed regular-season outcomes are immutable facts, only unresolved regular-season games contribute `expected_remaining_wins`, and completed facts remain shared by future counterfactual worlds.
+
+Deterministic regressions prove (1) a last regular-season week whose team strengths are the opposite of the playoff week does not leak into championship scoring and (2) fully completed regular-season standings with zero remaining games still produce postseason odds from the configured playoff week.
+
+Validation on corrected source/test head `508237237ffd7a50d261d59d26abf9bac9701499`: ordinary CI **1,954 passed**, one existing warning; PR164 focused corrective regression PASS; Live Forecast corrective trace PASS. One stale static-source assertion was updated to assert the stronger separated regular/postseason week contract rather than the old literal `weeks=fantasy_weeks` call shape.
+
+Next gate: freeze the docs-complete exact head, rerun ordinary exact-head workflows, request fresh Codex review, and close any remaining P1/P2 before merge/deploy. Keep promotion risk-proportionate; do not reopen #321 postseason structure, #323 continuity, Forecast model authority, or unrelated platform layers.
+
