@@ -141,7 +141,8 @@ class TeamCompetitiveOutcome(FrozenModel):
     team_id: str
     expected_wins: float
     wins_stddev: Annotated[float, Field(ge=0)]
-    playoff_probability: Annotated[float, Field(ge=0, le=1)]
+    playoff_probability: Annotated[float, Field(ge=0, le=1)] | None = None
+    playoff_unavailability_reason: str | None = None
     first_place_probability: Annotated[float, Field(ge=0, le=1)]
     championship_probability: Annotated[float | None, Field(ge=0, le=1)] = None
     championship_unavailability_reason: str | None = None
@@ -456,11 +457,17 @@ def simulate_regular_season(
     first_count = [0] * team_count
     champion_count = [0] * team_count
     finish_count = [[0] * team_count for _ in range(team_count)]
+    playoff_unavailability_reason = (
+        request.playoff_rules.qualification_unavailability_reason()
+        if request.playoff_rules is not None
+        else "playoff_rules_unavailable"
+    )
     championship_unavailability_reason = (
         request.playoff_rules.simulation_unavailability_reason()
         if request.playoff_rules is not None
         else "playoff_rules_unavailable"
     )
+    playoff_supported = playoff_unavailability_reason is None
     championship_supported = championship_unavailability_reason is None
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
@@ -536,8 +543,9 @@ def simulate_regular_season(
         first_count[standings[0]] += 1
         for rank_index, team_idx in enumerate(standings):
             finish_count[team_idx][rank_index] += 1
-        for index in standings[:request.playoff_team_count]:
-            playoff_count[index] += 1
+        if playoff_supported:
+            for index in standings[:request.playoff_team_count]:
+                playoff_count[index] += 1
         if championship_supported:
             champion = _simulate_configured_champion(
                 standings, request.playoff_rules, playoff_scoring, playoff_gauss
@@ -568,7 +576,8 @@ def simulate_regular_season(
             team_id=team_id,
             expected_wins=expected,
             wins_stddev=sqrt(variance),
-            playoff_probability=playoff_count[index] / n,
+            playoff_probability=(playoff_count[index] / n if playoff_supported else None),
+            playoff_unavailability_reason=playoff_unavailability_reason,
             first_place_probability=first_count[index] / n,
             championship_probability=(champion_count[index] / n if championship_supported else None),
             championship_unavailability_reason=championship_unavailability_reason,

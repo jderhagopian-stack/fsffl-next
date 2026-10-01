@@ -106,9 +106,9 @@ def test_optimized_hot_loop_is_exactly_equivalent_to_reference_rng_and_standings
         assert (
             row.expected_wins,
             row.wins_stddev,
-            row.playoff_probability,
             row.first_place_probability,
-        ) == reference
+        ) == (reference[0], reference[1], reference[3])
+        assert row.playoff_probability is None
 
 
 def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
@@ -123,15 +123,22 @@ def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
         seed=22,
         model_version="zero-variance-v1",
     )
-    assert _reference(request) == {
+    expected = _reference(request)
+    actual = {
         row.team_id: (
             row.expected_wins,
             row.wins_stddev,
-            row.playoff_probability,
             row.first_place_probability,
         )
         for row in simulate_regular_season(request).outcomes
     }
+    assert {
+        team_id: (row[0], row[1], row[3]) for team_id, row in expected.items()
+    } == actual
+    assert all(
+        row.playoff_probability is None
+        for row in simulate_regular_season(request).outcomes
+    )
 
 
 def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
@@ -267,7 +274,7 @@ def test_numpy_matchup_batch_preserves_scalar_addition_order_and_ties() -> None:
     assert actual_points.tolist() == expected_points
 
 
-def test_50000_run_production_output_matches_governed_postseason_v2_baseline() -> None:
+def test_50000_run_output_matches_governed_postseason_fail_closed_baseline() -> None:
     """Guard complete canonical output, including explicit unavailable playoffs."""
     import hashlib
     import json
@@ -283,8 +290,8 @@ def test_50000_run_production_output_matches_governed_postseason_v2_baseline() -
     dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "63660717b6f9d6cd71142fe16dd27c3146a8a24058c2a5c951ea08f32d4a76c2",
-        (3, 12): "c7e9ebe632873c5c7ae4ad2c6335fc6a0a2f0c4f8e5587d59070b139511e378d",
+        (3, 11): "8a0fd81ea815cc7bbecb64872b9a2aa5c579fafcafef62aa5f01021f340fb976",
+        (3, 12): "6f4f7f0894a6c11f4c70aefd53d8a16f79a4674c0d1dcce3a0aa851243a91a88",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (

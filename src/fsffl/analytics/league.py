@@ -49,8 +49,10 @@ class LeagueTeamAnalyticsRow(FrozenModel):
     optimized_expected_points: float | None = None
     expected_wins: float | None = None
     playoff_probability: float | None = None
+    playoff_unavailability_reason: str | None = None
     first_place_probability: float | None = None
     championship_probability: float | None = None
+    championship_unavailability_reason: str | None = None
     calculated_competitive_state: CalculatedCompetitiveState | None = None
     asset_portfolio_mean: float | None = None
     asset_value_scale: ValueScale | None = None
@@ -140,8 +142,14 @@ def _row_from_team(view: TeamAnalyticsView) -> LeagueTeamAnalyticsRow:
         optimized_expected_points=_optimized_regular_season_points(view),
         expected_wins=outcome.expected_wins if outcome is not None else None,
         playoff_probability=outcome.playoff_probability if outcome is not None else None,
+        playoff_unavailability_reason=(
+            outcome.playoff_unavailability_reason if outcome is not None else None
+        ),
         first_place_probability=outcome.first_place_probability if outcome is not None else None,
         championship_probability=outcome.championship_probability if outcome is not None else None,
+        championship_unavailability_reason=(
+            outcome.championship_unavailability_reason if outcome is not None else None
+        ),
         calculated_competitive_state=utility.calculated_competitive_state if utility is not None else None,
         asset_portfolio_mean=portfolio.distribution.mean if portfolio is not None else None,
         asset_value_scale=portfolio.scale if portfolio is not None else None,

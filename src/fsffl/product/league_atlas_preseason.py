@@ -30,8 +30,10 @@ class LeagueAtlasPreseasonTeam(FrozenModel):
     team_id: str
     projected_starter_points: float
     rank: int
-    playoff_probability: float
-    championship_probability: float
+    playoff_probability: float | None = None
+    playoff_unavailability_reason: str | None = None
+    championship_probability: float | None = None
+    championship_unavailability_reason: str | None = None
     first_place_probability: float
     expected_wins: float
     expected_finish: float
@@ -91,7 +93,9 @@ def _team_rows(
                 projected_starter_points=starter_points[team_id],
                 rank=rank_by_team[team_id],
                 playoff_probability=outcome.playoff_probability,
+                playoff_unavailability_reason=outcome.playoff_unavailability_reason,
                 championship_probability=outcome.championship_probability,
+                championship_unavailability_reason=outcome.championship_unavailability_reason,
                 first_place_probability=outcome.first_place_probability,
                 expected_wins=outcome.expected_wins,
                 expected_finish=(

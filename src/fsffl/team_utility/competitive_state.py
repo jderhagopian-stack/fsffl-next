@@ -83,6 +83,8 @@ def derive_league_relative_competitive_state_policy(
         raise ValueError("as_of must be timezone-aware")
     if not outcomes:
         raise ValueError("competitive-state policy requires league simulation outcomes")
+    if any(item.playoff_probability is None for item in outcomes):
+        raise ValueError("competitive-state policy requires governed playoff probabilities")
     playoff = tuple(item.playoff_probability for item in outcomes)
     first_place = tuple(item.first_place_probability for item in outcomes)
     return CompetitiveStatePolicy(
@@ -113,6 +115,8 @@ def classify_calculated_competitive_state(
         raise ValueError("as_of must be timezone-aware")
     if policy.evidence_through > as_of:
         raise ValueError("competitive-state policy cannot use evidence from the future")
+    if outcome.playoff_probability is None:
+        return CalculatedCompetitiveState.UNKNOWN
 
     if (
         outcome.playoff_probability >= policy.contender_playoff_min

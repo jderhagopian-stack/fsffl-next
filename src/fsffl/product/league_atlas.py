@@ -143,8 +143,14 @@ def _simulation_rows(
                 "expected_wins": outcome.expected_wins,
                 "wins_stddev": outcome.wins_stddev,
                 "playoff_probability": outcome.playoff_probability,
+                "playoff_unavailability_reason": getattr(
+                    outcome, "playoff_unavailability_reason", None
+                ),
                 "first_place_probability": outcome.first_place_probability,
                 "championship_probability": outcome.championship_probability,
+                "championship_unavailability_reason": getattr(
+                    outcome, "championship_unavailability_reason", None
+                ),
                 "simulation_count": outcome.simulation_count,
                 "simulation_model_version": outcome.simulation_model_version,
                 "expected_finish": projected_rank,
@@ -158,7 +164,8 @@ def _simulation_rows(
     rows.sort(
         key=lambda row: (
             float(row["expected_finish"]),
-            -float(row["playoff_probability"]),
+            row["playoff_probability"] is None,
+            -float(row["playoff_probability"] or 0.0),
             str(row["team_id"]),
         )
     )

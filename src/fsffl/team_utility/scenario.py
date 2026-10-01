@@ -72,7 +72,10 @@ def compare_team_utility_vectors(
     if baseline.competitive_outcome is not None and scenario.competitive_outcome is not None:
         competitive = CompetitiveOutcomeDelta(
             expected_wins=scenario.competitive_outcome.expected_wins - baseline.competitive_outcome.expected_wins,
-            playoff_probability=scenario.competitive_outcome.playoff_probability - baseline.competitive_outcome.playoff_probability,
+            playoff_probability=_optional_delta(
+                scenario.competitive_outcome.playoff_probability,
+                baseline.competitive_outcome.playoff_probability,
+            ),
             first_place_probability=scenario.competitive_outcome.first_place_probability - baseline.competitive_outcome.first_place_probability,
             championship_probability=_optional_delta(
                 scenario.competitive_outcome.championship_probability,

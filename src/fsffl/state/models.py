@@ -216,12 +216,30 @@ class LeaguePlayoffRules(FrozenModel):
             raise ValueError("championship must be scheduled in the final configured round")
         return self
 
-    def simulation_unavailability_reason(self) -> str | None:
-        """Return why bracket output must fail closed for this known structure."""
+    def qualification_unavailability_reason(self) -> str | None:
+        """Return why league playoff qualification cannot be simulated safely."""
 
         required = {
             "seeding_policy": "overall_standings",
             "standings_tiebreak_policy": "wins_then_points_for_then_team_id_v1",
+        }
+        missing = sorted(name for name in required if getattr(self, name) is None)
+        if missing:
+            return "playoff_rules_incomplete:" + ",".join(missing)
+        unsupported = sorted(
+            name for name, value in required.items() if getattr(self, name) != value
+        )
+        if unsupported:
+            return "playoff_rules_unsupported:" + ",".join(unsupported)
+        return None
+
+    def simulation_unavailability_reason(self) -> str | None:
+        """Return why bracket/title output must fail closed for this structure."""
+
+        qualification_unavailability = self.qualification_unavailability_reason()
+        if qualification_unavailability is not None:
+            return qualification_unavailability
+        required = {
             "reseeding_policy": "fixed_bracket",
             "playoff_scoring_policy": "same_as_league_regular_season",
             "matchup_tiebreak_policy": "higher_original_seed",

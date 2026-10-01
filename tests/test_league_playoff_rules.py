@@ -113,7 +113,11 @@ def test_playoff_rules_retain_league_specific_size_timing_and_byes(rules, expect
     assert rules.simulation_unavailability_reason() is None
 
 
-def test_current_style_sleeper_rule_gap_fails_closed_for_championship_output() -> None:
+def _simulation_request(
+    team_count: int,
+    *,
+    rules: LeaguePlayoffRules | None = None,
+) -> RegularSeasonSimulationInput:
     request = RegularSeasonSimulationInput(
         scoring=tuple(
             TeamScoringDistribution(
@@ -122,22 +126,60 @@ def test_current_style_sleeper_rule_gap_fails_closed_for_championship_output() -
                 stddev_points=0,
                 model_version="playoff-rules-test",
             )
-            for index in range(6)
+            for index in range(team_count)
         ),
         schedule=(ScheduledMatchup(week=1, home_team_id="team-0", away_team_id="team-1"),),
-        playoff_team_count=6,
+        playoff_team_count=team_count,
+        playoff_rules=rules,
         simulation_count=10,
         seed=17,
         model_version="playoff-rules-test",
     )
+    return request
+
+
+def test_current_style_sleeper_rule_gap_fails_closed_for_postseason_outputs() -> None:
+    request = _simulation_request(6)
 
     result = simulate_regular_season(request)
 
-    assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.playoff_probability is None for row in result.outcomes)
     assert all(row.championship_probability is None for row in result.outcomes)
+    assert {
+        row.playoff_unavailability_reason for row in result.outcomes
+    } == {"playoff_rules_unavailable"}
     assert {
         row.championship_unavailability_reason for row in result.outcomes
     } == {"playoff_rules_unavailable"}
+
+
+def test_unsupported_reseeding_keeps_qualification_but_withholds_title() -> None:
+    reseeded = SIX_TEAM_BYE_BRACKET.model_copy(
+        update={"reseeding_policy": "highest_remaining_seed_each_round"}
+    )
+    result = simulate_regular_season(_simulation_request(6, rules=reseeded))
+
+    assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.championship_probability is None for row in result.outcomes)
+    assert {row.playoff_unavailability_reason for row in result.outcomes} == {None}
+    assert {
+        row.championship_unavailability_reason for row in result.outcomes
+    } == {"playoff_rules_unsupported:reseeding_policy"}
+
+
+def test_unsupported_qualification_seeding_withholds_both_playoff_outputs() -> None:
+    division_seeded = FIVE_TEAM_THREE_BYE_BRACKET.model_copy(
+        update={"seeding_policy": "division_winners_then_overall_standings"}
+    )
+    result = simulate_regular_season(
+        _simulation_request(5, rules=division_seeded)
+    )
+
+    assert all(row.playoff_probability is None for row in result.outcomes)
+    assert all(row.championship_probability is None for row in result.outcomes)
+    assert {
+        row.playoff_unavailability_reason for row in result.outcomes
+    } == {"playoff_rules_unsupported:seeding_policy"}
 
 
 def test_nonstandard_five_team_bracket_is_replayed_from_canonical_rules() -> None:

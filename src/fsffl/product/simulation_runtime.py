@@ -39,6 +39,7 @@ from fsffl.team_utility.simulation import (
     NUMPY_PCG64_BATCHED_GAUSS_V1,
     PYTHON_RANDOM_GAUSS_V1,
 )
+from fsffl.team_utility.utility import CalculatedCompetitiveState
 
 LIVE_SIMULATION_MODEL_VERSION = "next9-live-simulation-analytics-v9:league-configured-postseason"
 EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next9-live-simulation-analytics-v9:numpy-pcg64-batched-gauss-v1:league-configured-postseason"
@@ -307,9 +308,13 @@ def build_live_simulation_analytics(
             fallback_player_ids=fallback_ids,
         )
         outcomes = {item.team_id: item for item in simulation.outcomes}
-        competitive_state_policy = derive_league_relative_competitive_state_policy(
-            simulation.outcomes,
-            as_of=league_state.as_of,
+        competitive_state_policy = (
+            derive_league_relative_competitive_state_policy(
+                simulation.outcomes,
+                as_of=league_state.as_of,
+            )
+            if all(item.playoff_probability is not None for item in simulation.outcomes)
+            else None
         )
 
     warnings: list[AnalyticsWarning] = [
@@ -334,17 +339,40 @@ def build_live_simulation_analytics(
             ),
             source_component="forecast",
         ),
-        AnalyticsWarning(
-            kind=AnalyticsWarningKind.PROVISIONAL,
-            code="competitive_state_policy_league_relative",
-            message=(
-                "Calculated competitive state is now classified from the current authoritative Simulation "
-                "distribution using transparent league-relative quartiles. The classification is useful for the "
-                "private beta but remains provisional until historical competitive-state calibration is promoted."
-            ),
-            source_component="team-utility",
-        ),
     ]
+    if competitive_state_policy is not None:
+        warnings.append(
+            AnalyticsWarning(
+                kind=AnalyticsWarningKind.PROVISIONAL,
+                code="competitive_state_policy_league_relative",
+                message=(
+                    "Calculated competitive state is classified from the current authoritative Simulation "
+                    "distribution using transparent league-relative quartiles. This classification remains "
+                    "provisional until historical competitive-state calibration is promoted."
+                ),
+                source_component="team-utility",
+            )
+        )
+    else:
+        reasons = sorted(
+            {
+                item.playoff_unavailability_reason or "playoff_rules_unavailable"
+                for item in simulation.outcomes
+            }
+        )
+        warnings.append(
+            AnalyticsWarning(
+                kind=AnalyticsWarningKind.MISSING_EVIDENCE,
+                code="league_playoff_rules_unavailable",
+                message=(
+                    "Playoff qualification/title outputs and playoff-dependent calculated team state are unavailable "
+                    "because canonical LeagueRules do not establish a supported qualification policy: "
+                    + "; ".join(reasons)
+                    + ". Regular-season wins and finish distributions remain available."
+                ),
+                source_component="state",
+            )
+        )
     if fallback_ids:
         warnings.append(
             AnalyticsWarning(
@@ -413,7 +441,11 @@ def build_live_simulation_analytics(
             ),
             ModelLineageEntry(
                 component="competitive_state_policy",
-                model_version=competitive_state_policy.model_version,
+                model_version=(
+                    competitive_state_policy.model_version
+                    if competitive_state_policy is not None
+                    else "unavailable:league-playoff-rules"
+                ),
             ),
             ModelLineageEntry(component="team_utility", model_version="next4-live-team-utility-v5:resilience-driver-identity"),
         ),
@@ -440,10 +472,14 @@ def build_live_simulation_analytics(
                 team_id=team.team_id,
                 as_of=league_state.as_of,
                 competitive_outcome=outcomes[team.team_id],
-                calculated_competitive_state=classify_calculated_competitive_state(
-                    outcomes[team.team_id],
-                    competitive_state_policy,
-                    as_of=league_state.as_of,
+                calculated_competitive_state=(
+                    classify_calculated_competitive_state(
+                        outcomes[team.team_id],
+                        competitive_state_policy,
+                        as_of=league_state.as_of,
+                    )
+                    if competitive_state_policy is not None
+                    else CalculatedCompetitiveState.UNKNOWN
                 ),
                 model_version="next4-live-team-utility-v5:resilience-driver-identity:resilience_unavailable_incomplete_roster",
             )

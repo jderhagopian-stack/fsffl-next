@@ -40,8 +40,8 @@ def test_regular_season_simulation_is_reproducible_and_orders_stronger_team() ->
     assert left == right
     by_team = {row.team_id: row for row in left.outcomes}
     assert by_team["strong"].expected_wins > by_team["weak"].expected_wins
-    assert by_team["strong"].playoff_probability > 0.95
-    assert by_team["strong"].first_place_probability == by_team["strong"].playoff_probability
+    assert by_team["strong"].playoff_probability is None
+    assert by_team["strong"].first_place_probability > 0.95
 
 
 def test_regular_season_simulation_rejects_duplicate_team_in_week() -> None:
