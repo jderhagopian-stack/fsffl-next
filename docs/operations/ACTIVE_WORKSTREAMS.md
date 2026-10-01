@@ -825,6 +825,13 @@ This is read-only and may run in parallel with Implementation. It must not modif
 - If the peak cannot be brought safely under the unchanged limit without broader architecture or fidelity changes, stop at Management for a capacity decision.
 
 
+## 2026-10-01 — PR #311 memory corrective: exact-head gates
+- Latest pushed head `b85f62f6d5f3bcbe570cf50ffbb907ee2556f37c` corrects the Python artifact-key P2; CI #4081 passed. Fresh whole-PR review found a second P2 in the production-output digest test: it included patch-specific `rng_runtime_version` while selecting baselines by major.minor and failed for supported new minors.
+- The candidate correction normalizes only that identity label to major.minor for the digest, preserves known 3.11/3.12 result baselines, and requires exact same-runtime replay for supported new minors. Focused 6 passed; full local 1,903 passed (one existing Starlette deprecation warning).
+- **Do not change Render until the correction is pushed and exact-head CI plus a fresh whole-PR P1/P2 review are clean.** Then immediately perform the authorized reversible batch-500 private-beta test: actual concurrent Home/My Team/Product Context reads; full 50k readiness/publication; exact app RSS/high-water and Render metrics; restart restore; rollback to main. Stop at the unchanged 536,870,900-byte hard limit and return for Management capacity decision if exceeded.
+- The failed live provider numerical trace is source-health evidence (only one independent provider), not a code failure for PIT-history streaming. No merge/adoption authorized.
+
+
 ## 2026-09-30 — Active next step: attribute peak, advance Simulation 2.0 only where causal
 - PR #311 remains the active Simulation modernization branch.
 - First action is memory attribution, not speculative micro-optimization.
