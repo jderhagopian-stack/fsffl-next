@@ -5,6 +5,7 @@ from random import Random
 import pytest
 
 from fsffl.team_utility import (
+    CompletedMatchup,
     RegularSeasonSimulationInput,
     ScheduledMatchup,
     TeamScoringDistribution,
@@ -186,6 +187,57 @@ def test_rng_equivalence_report_omits_unavailable_metrics_and_checks_availabilit
     available["outcomes"][0]["championship_probability"] = 0.25
     with pytest.raises(ValueError, match="same available Simulation metrics"):
         _equivalence_report([summary, summary], [available, available])
+
+
+def test_completed_results_are_part_of_replay_identity_and_remaining_wins_contract() -> None:
+    base = RegularSeasonSimulationInput(
+        scoring=(
+            TeamScoringDistribution(
+                team_id="a", mean_points=110, stddev_points=0, model_version="v1"
+            ),
+            TeamScoringDistribution(
+                team_id="b", mean_points=100, stddev_points=0, model_version="v1"
+            ),
+        ),
+        completed_matchups=(
+            CompletedMatchup(
+                week=1,
+                home_team_id="a",
+                away_team_id="b",
+                home_points=95.0,
+                away_points=105.0,
+            ),
+        ),
+        schedule=(ScheduledMatchup(week=2, home_team_id="a", away_team_id="b"),),
+        playoff_team_count=1,
+        simulation_count=100,
+        seed=123,
+        model_version="current-season-replay-v1",
+    )
+
+    first = simulate_regular_season(base)
+    changed_fact = simulate_regular_season(
+        base.model_copy(
+            update={
+                "completed_matchups": (
+                    CompletedMatchup(
+                        week=1,
+                        home_team_id="a",
+                        away_team_id="b",
+                        home_points=106.0,
+                        away_points=105.0,
+                    ),
+                )
+            }
+        )
+    )
+
+    by_team = {row.team_id: row for row in first.outcomes}
+    assert by_team["a"].expected_wins == 1.0
+    assert by_team["a"].expected_remaining_wins == 1.0
+    assert by_team["b"].expected_wins == 1.0
+    assert by_team["b"].expected_remaining_wins == 0.0
+    assert first.simulation_input_fingerprint != changed_fact.simulation_input_fingerprint
 
 
 def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
