@@ -4,13 +4,26 @@ import hashlib
 import json
 from enum import StrEnum
 from math import sqrt
+import logging
+import os
 import platform
 from random import Random
+from time import perf_counter, process_time
 from typing import Annotated, Callable, Literal
 
 from pydantic import Field, model_validator
 
 from fsffl.state.models import FrozenModel, LeagueState
+
+_logger = logging.getLogger("uvicorn.error")
+
+
+def _profile_clock() -> tuple[float, float]:
+    return perf_counter(), process_time()
+
+
+def _profile_wall_clock() -> float:
+    return perf_counter()
 
 PYTHON_RANDOM_GAUSS_V1 = "python-random-gauss-v1"
 NUMPY_PCG64_BATCHED_GAUSS_V1 = "numpy-pcg64-batched-gauss-v1"
@@ -296,6 +309,19 @@ def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
         draw_stddevs[2 * index + 1] = row[5]
     deterministic_columns = np.flatnonzero(draw_stddevs == 0.0)
     stochastic_columns = np.flatnonzero(draw_stddevs != 0.0)
+    if os.getenv("FSFFL_SIMULATION_PROFILE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        _logger.info(
+            "FSFFL simulation profile arrays draw_parameters_shapes=(%s,)(%s,) "
+            "score_shape=(%s,%s) dtype=float64 bytes_per_batch=%s "
+            "deterministic_draws=%s stochastic_draws=%s",
+            len(draw_means),
+            len(draw_stddevs),
+            batch_size,
+            len(draw_means),
+            batch_size * len(draw_means) * 8,
+            int(deterministic_columns.size),
+            int(stochastic_columns.size),
+        )
     bit_generator = np.random.PCG64(request.seed)
     generator = np.random.Generator(bit_generator)
 
@@ -335,6 +361,8 @@ def simulate_regular_season(
     distribution for downstream analytics and probabilistic pick-location evidence.
     """
 
+    profile_enabled = os.getenv("FSFFL_SIMULATION_PROFILE", "").strip().lower() in {"1", "true", "yes", "on"}
+    compile_started = _profile_clock() if profile_enabled else None
     by_team = {item.team_id: item for item in request.scoring}
     by_week_team = {(item.week, item.team_id): item for item in request.weekly_scoring}
     team_ids = tuple(sorted(set(by_team) | {item.team_id for item in request.weekly_scoring}))
@@ -357,6 +385,14 @@ def simulate_regular_season(
             home_dist.mean_points, home_dist.stddev_points,
             away_dist.mean_points, away_dist.stddev_points,
         ))
+    if compile_started is not None:
+        ended = _profile_clock()
+        _logger.info(
+            "FSFFL simulation profile phase=schedule_compile wall=%.6f cpu=%.6f "
+            "teams=%s matchups=%s weekly=%s",
+            ended[0] - compile_started[0], ended[1] - compile_started[1],
+            team_count, len(compiled_schedule), weekly,
+        )
 
     rng = Random(request.seed)
     gauss = rng.gauss
@@ -373,6 +409,12 @@ def simulate_regular_season(
     )
     score_batch = None
     score_batch_offset = 0
+    rng_wall_seconds = 0.0
+    rng_cpu_seconds = 0.0
+    matchup_wall_seconds = 0.0
+    aggregation_wall_seconds = 0.0
+    profile_sample_interval = 100
+    profile_sample_count = 0
     wins_sum = [0.0] * team_count
     wins_sq_sum = [0.0] * team_count
     playoff_count = [0] * team_count
@@ -383,7 +425,7 @@ def simulate_regular_season(
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
 
-    for _ in range(request.simulation_count):
+    for trial_index in range(request.simulation_count):
         # Scheduling-only checkpoint. Product orchestration may yield this worker
         # while foreground requests are active; the callback cannot alter the
         # simulation request, RNG stream, iteration count, or accumulated outputs.
@@ -393,12 +435,21 @@ def simulate_regular_season(
         points_for = [0.0] * team_count
         if is_batched:
             if score_batch is None or score_batch_offset >= len(score_batch):
+                rng_started = _profile_clock() if profile_enabled else None
                 score_batch = next(score_batches)
+                if rng_started is not None:
+                    rng_ended = _profile_clock()
+                    rng_wall_seconds += rng_ended[0] - rng_started[0]
+                    rng_cpu_seconds += rng_ended[1] - rng_started[1]
                 score_batch_offset = 0
             trial_scores = score_batch[score_batch_offset]
             score_batch_offset += 1
         else:
             trial_scores = None
+        sample_trial = bool(
+            profile_enabled and trial_index % profile_sample_interval == 0
+        )
+        matchup_started = _profile_wall_clock() if sample_trial else None
         for matchup_index, (home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev) in enumerate(compiled_schedule):
             if trial_scores is None:
                 home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
@@ -417,6 +468,14 @@ def simulate_regular_season(
             else:
                 wins[home_idx] += 0.5
                 wins[away_idx] += 0.5
+        if matchup_started is not None:
+            matchup_ended = _profile_wall_clock()
+            sample_weight = min(
+                profile_sample_interval,
+                request.simulation_count - trial_index,
+            )
+            matchup_wall_seconds += (matchup_ended - matchup_started) * sample_weight
+        aggregation_started = _profile_wall_clock() if sample_trial else None
         standings = sorted(ranking_indexes, key=lambda index: (-wins[index], -points_for[index], team_ids[index]))
         first_count[standings[0]] += 1
         for rank_index, team_idx in enumerate(standings):
@@ -435,7 +494,12 @@ def simulate_regular_season(
         for index, value in enumerate(wins):
             wins_sum[index] += value
             wins_sq_sum[index] += value * value
+        if aggregation_started is not None:
+            aggregation_ended = _profile_wall_clock()
+            aggregation_wall_seconds += (aggregation_ended - aggregation_started) * sample_weight
+            profile_sample_count += 1
 
+    result_started = _profile_clock() if profile_enabled else None
     n = request.simulation_count
     outcomes = []
     finish_distributions = []
@@ -481,7 +545,7 @@ def simulate_regular_season(
         bit_generator_name = "python-random-mt19937"
         draw_layout = "trial-major;compiled-schedule-major;home-away-v1"
         seed_derivation = "python-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
-    return RegularSeasonSimulationResult(
+    result = RegularSeasonSimulationResult(
         outcomes=tuple(outcomes),
         finish_distributions=tuple(finish_distributions),
         simulation_count=n,
@@ -496,6 +560,19 @@ def simulate_regular_season(
         rng_seed_derivation=seed_derivation,
         simulation_input_fingerprint=input_fingerprint,
     )
+    if result_started is not None:
+        result_ended = _profile_clock()
+        _logger.info(
+            "FSFFL simulation profile phase=kernel_summary trials=%s rng_protocol=%s batch=%s "
+            "rng_wall=%.6f rng_cpu=%.6f matchup_wall_estimate=%.6f "
+            "standings_playoff_aggregation_wall_estimate=%.6f sample_interval=%s samples=%s "
+            "result_materialization_wall=%.6f result_materialization_cpu=%.6f",
+            request.simulation_count, request.rng_protocol, batch_size,
+            rng_wall_seconds, rng_cpu_seconds, matchup_wall_seconds,
+            aggregation_wall_seconds, profile_sample_interval, profile_sample_count,
+            result_ended[0] - result_started[0], result_ended[1] - result_started[1],
+        )
+    return result
 
 
 def _sample_points(distribution, rng: Random) -> float:

@@ -417,12 +417,13 @@ class IntelligenceJobCoordinator:
             for timing in job.phase_timings
         )
         _logger.info(
-            "FSFFL intelligence refresh timing job=%s user=%s league_state=%s status=%s total=%.3fs %s",
+            "FSFFL intelligence refresh timing job=%s user=%s league_state=%s status=%s total=%.3fs queue_wait=%.3fs %s",
             job.job_id,
             job.user_id,
             job.league_state_id,
             job.status.value,
             job.total_elapsed_seconds or 0.0,
+            max(0.0, (job.updated_at - job.created_at).total_seconds() - (job.total_elapsed_seconds or 0.0)),
             phase_text,
         )
 

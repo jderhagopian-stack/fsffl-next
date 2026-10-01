@@ -219,6 +219,34 @@ def test_experimental_rng_keeps_player_forecasts_and_persists_distinct_identity(
     assert decode_simulation(experimental_artifact.payload) == experimental
 
 
+def test_numpy_profile_instrumentation_preserves_exact_simulation_output(
+    monkeypatch, caplog
+) -> None:
+    import logging
+
+    state = _state()
+    kwargs = dict(
+        forecasts=_forecasts(),
+        forecast_model_version="next2-test",
+        simulation_count=2_000,
+        seed=2718,
+        rng_protocol=NUMPY_PCG64_BATCHED_GAUSS_V1,
+        rng_batch_size=500,
+        generated_at=AS_OF,
+    )
+    monkeypatch.delenv("FSFFL_SIMULATION_PROFILE", raising=False)
+    baseline = build_live_simulation_analytics(state, **kwargs)
+
+    monkeypatch.setenv("FSFFL_SIMULATION_PROFILE", "1")
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        profiled = build_live_simulation_analytics(state, **kwargs)
+
+    assert profiled == baseline
+    assert "phase=schedule_compile" in caplog.text
+    assert "phase=kernel_summary" in caplog.text
+    assert "standings_playoff_aggregation_wall_estimate=" in caplog.text
+
+
 def test_experimental_50k_runtime_preserves_forecast_and_search_inputs() -> None:
     state = _state()
     forecasts = _forecasts()

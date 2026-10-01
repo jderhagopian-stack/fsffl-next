@@ -15,7 +15,7 @@ import os
 import resource
 import sys
 from threading import Event, Thread
-from time import monotonic
+from time import monotonic, process_time
 from typing import Iterator
 
 _logger = logging.getLogger("uvicorn.error")
@@ -63,6 +63,7 @@ def sample_rss_phase(label: str, *, interval_seconds: float = 0.1) -> Iterator[N
         return
 
     started = monotonic()
+    cpu_started = process_time()
     before_rss = current_rss_bytes()
     before_peak = process_peak_rss_bytes()
     stop = Event()
@@ -88,7 +89,7 @@ def sample_rss_phase(label: str, *, interval_seconds: float = 0.1) -> Iterator[N
         _logger.info(
             "FSFFL memory attribution phase=%s elapsed=%.3f rss_before=%s "
             "rss_sampled_peak=%s rss_after=%s peak_before=%s peak_after=%s "
-            "peak_increment=%s samples=%s",
+            "peak_increment=%s cpu_elapsed=%.3fs samples=%s",
             label,
             monotonic() - started,
             before_rss,
@@ -97,6 +98,7 @@ def sample_rss_phase(label: str, *, interval_seconds: float = 0.1) -> Iterator[N
             before_peak,
             max(sample_state["max_peak"], after_peak),
             max(0, after_peak - before_peak),
+            process_time() - cpu_started,
             sample_state["samples"],
         )
 
