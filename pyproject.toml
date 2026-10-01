@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "fsffl-next"
 version = "0.1.0"
 description = "FSFFL NEXT dynasty decision-intelligence platform"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 dependencies = [
   "numpy>=2.3,<3",
   "pydantic>=2.8,<3",
