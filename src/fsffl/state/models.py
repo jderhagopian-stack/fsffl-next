@@ -178,6 +178,8 @@ class LeaguePlayoffRules(FrozenModel):
                 if matchup.round_number > 1 and participant.seed_number is not None:
                     if participant.seed_number not in self.bye_seeds:
                         raise ValueError("later-round seed entrants must be configured bye seeds")
+                    if matchup.round_number != 2:
+                        raise ValueError("bye seeds must enter in the first playoff round")
                 if participant.winner_of_matchup_id is not None:
                     source = by_id.get(participant.winner_of_matchup_id)
                     if source is None or source.round_number != matchup.round_number - 1:

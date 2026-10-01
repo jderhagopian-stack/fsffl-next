@@ -191,6 +191,18 @@ def test_division_seeding_is_retained_but_fails_closed_until_supported() -> None
     )
 
 
+def test_bye_seed_cannot_skip_an_additional_playoff_round() -> None:
+    payload = FIVE_TEAM_THREE_BYE_BRACKET.model_dump(mode="json")
+    for matchup in payload["matchups"]:
+        if matchup["matchup_id"] == "semi-a":
+            matchup["participant_a"] = {"winner_of_matchup_id": "play-in"}
+        elif matchup["matchup_id"] == "title":
+            matchup["participant_a"] = {"seed_number": 1}
+
+    with pytest.raises(ValueError, match="bye seeds must enter in the first playoff round"):
+        LeaguePlayoffRules.model_validate(payload)
+
+
 def test_playoff_participant_reference_must_be_unambiguous() -> None:
     with pytest.raises(ValueError, match="exactly one seed or prior winner"):
         PlayoffParticipantRef()
