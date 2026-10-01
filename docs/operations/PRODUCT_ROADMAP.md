@@ -224,3 +224,21 @@ Do not let the non-blocking first-navigation loading polish displace the Simulat
 ### Trade-decision effective-date requirement for the week-by-week Simulation engine
 
 Trade/waiver/counterfactual Simulation must be time-aware rather than applying a changed roster retroactively. For a proposal effective after Week N, completed weeks and the standings/points they produced are immutable and identical in baseline and scenario worlds; the changed roster may affect only future eligible fantasy weeks from the transaction's effective coordinate onward. Therefore competitive trade deltas (expected final wins, playoff/title odds, scoring distribution) should naturally shrink or change shape as fewer games remain, without an arbitrary late-season discount multiplier. Long-horizon Market/Intrinsic/future-pick economics remain separate channels and are not mechanically discounted merely because the current-season competitive window is shorter. This is an explicit acceptance criterion for the week-by-week current-season engine and downstream Trade Decision counterfactual bridge.
+
+
+### Frozen preseason expectations and in-season expectation trajectory
+
+When canonical point-in-time historical League State reconstruction is promoted, use the already-captured annual preseason raw-stat projection snapshot as the frozen Week-0 football expectation rather than attempting to recreate preseason beliefs from current information. Replay that frozen league-agnostic projection evidence through the reconstructed league rules/scoring and the exact preseason roster/asset State to recreate preseason player, team and league expectations with PIT provenance.
+
+Required product distinction for players and teams:
+
+- **Frozen preseason expectation** — what the governed preseason snapshot projected before the season began; immutable once captured.
+- **Actual YTD** — realized production through the selected PIT week; fact, not forecast.
+- **Current expected finish** — Actual YTD + the governed ROS Forecast available at that PIT date.
+- **Expectation trajectory** — where archived weekly PIT Forecast snapshots exist, show how the expected final-season outcome changed from preseason through each in-season capture.
+
+For a player this should support comparisons such as preseason projected full-season stats/fantasy points vs actual YTD vs current expected final total, plus a time-series of expected final total as projections change. Keep full-season, YTD and ROS coordinates visually/semantically distinct so a partial-season actual is never compared directly with a full-season forecast without context.
+
+For a team/league, the same historical State + Forecast replay should eventually support frozen preseason projected scoring/standings/playoff/title expectations and a week-by-week "how the outlook changed" history using only evidence that existed at each PIT timestamp. Historical realized outcomes may be overlaid for comparison but may not leak backward into the reconstructed forecast.
+
+This belongs in the accepted Phase 2 historical-intelligence foundation (`historical State reconstruction -> lineage/provenance -> dated Forecast/Simulation snapshots`) and should be implemented before broad historical/storytelling UI. It does not interrupt the currently active Simulation 2.0 sequence.
