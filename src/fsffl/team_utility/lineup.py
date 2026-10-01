@@ -116,6 +116,14 @@ def optimize_team_lineup(
         return tuple(slot_points[position] for position in presentation_positions)
 
     empty_slot_points = tuple(float("-inf") for _ in slots)
+    eligible_slot_positions = {
+        position: tuple(
+            slot_position
+            for slot_position, (slot, _) in enumerate(slots)
+            if position in _STARTER_ELIGIBILITY[slot]
+        )
+        for position in Position
+    }
     states: dict[int, tuple[float, tuple[float, ...], tuple[tuple[int, str], ...]]] = {
         0: (0.0, empty_slot_points, ())
     }
@@ -124,30 +132,44 @@ def optimize_team_lineup(
         points = latest_forecast[player_id].distribution.mean
         next_states = dict(states)
         for mask, (score, slot_points, assignments) in states.items():
-            for slot_position, (slot, _) in enumerate(slots):
+            for slot_position in eligible_slot_positions.get(player.position, ()):
                 bit = 1 << slot_position
-                if mask & bit or player.position not in _STARTER_ELIGIBILITY[slot]:
+                if mask & bit:
                     continue
                 new_mask = mask | bit
+                prior = next_states.get(new_mask)
+                candidate_score = score + points
+                if prior is None or candidate_score > prior[0] + 1e-12:
+                    next_slot_points = list(slot_points)
+                    next_slot_points[slot_position] = points
+                    next_states[new_mask] = (
+                        candidate_score,
+                        tuple(next_slot_points),
+                        assignments + ((slot_position, player_id),),
+                    )
+                    continue
+                if abs(candidate_score - prior[0]) > 1e-12:
+                    continue
                 next_slot_points = list(slot_points)
                 next_slot_points[slot_position] = points
-                candidate = (
-                    score + points,
-                    tuple(next_slot_points),
-                    assignments + ((slot_position, player_id),),
+                candidate_slot_points = tuple(next_slot_points)
+                candidate_secondary = tuple(
+                    candidate_slot_points[position]
+                    for position in presentation_positions
                 )
-                prior = next_states.get(new_mask)
-                if prior is None:
-                    next_states[new_mask] = candidate
-                    continue
-                score_better = candidate[0] > prior[0] + 1e-12
-                score_equal = abs(candidate[0] - prior[0]) <= 1e-12
-                candidate_secondary = secondary_key(candidate[1])
-                prior_secondary = secondary_key(prior[1])
-                secondary_better = candidate_secondary > prior_secondary
-                stable_id_tiebreak = candidate_secondary == prior_secondary and candidate[2] < prior[2]
-                if score_better or (score_equal and (secondary_better or stable_id_tiebreak)):
-                    next_states[new_mask] = candidate
+                prior_secondary = tuple(
+                    prior[1][position] for position in presentation_positions
+                )
+                candidate_assignments = assignments + ((slot_position, player_id),)
+                if candidate_secondary > prior_secondary or (
+                    candidate_secondary == prior_secondary
+                    and candidate_assignments < prior[2]
+                ):
+                    next_states[new_mask] = (
+                        candidate_score,
+                        candidate_slot_points,
+                        candidate_assignments,
+                    )
         states = next_states
 
     full_mask = (1 << len(slots)) - 1
