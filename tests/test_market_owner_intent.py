@@ -1,4 +1,10 @@
+from datetime import UTC, datetime
+from types import SimpleNamespace
+
 from fsffl.product.focused_opportunity_search import candidate_matches_focus
+from fsffl.product.opportunity_posture import calculated_competitive_state
+from fsffl.team_utility.simulation import TeamCompetitiveOutcome
+from fsffl.team_utility.utility import CalculatedCompetitiveState
 
 from pathlib import Path
 
@@ -68,6 +74,41 @@ def test_default_market_focus_resolves_from_calculated_competitive_state() -> No
     assert "CalculatedCompetitiveState.COMPETITIVE: OwnerStrategicPosture.BALANCED" in source
     assert "CalculatedCompetitiveState.DEVELOPING: OwnerStrategicPosture.RETOOL" in source
     assert "CalculatedCompetitiveState.REBUILDING: OwnerStrategicPosture.REBUILD" in source
+
+
+def test_market_competitive_state_stays_unknown_when_playoff_odds_are_unavailable() -> None:
+    now = datetime(2026, 10, 1, tzinfo=UTC)
+    outcomes = (
+        TeamCompetitiveOutcome(
+            team_id="team-a",
+            expected_wins=8.0,
+            wins_stddev=2.0,
+            playoff_probability=None,
+            first_place_probability=0.2,
+            simulation_count=50_000,
+            simulation_model_version="test-v1",
+            playoff_unavailability_reason="playoff_rules_unavailable",
+        ),
+        TeamCompetitiveOutcome(
+            team_id="team-b",
+            expected_wins=6.0,
+            wins_stddev=2.0,
+            playoff_probability=None,
+            first_place_probability=0.1,
+            simulation_count=50_000,
+            simulation_model_version="test-v1",
+            playoff_unavailability_reason="playoff_rules_unavailable",
+        ),
+    )
+    runtime = SimpleNamespace(
+        league_state=SimpleNamespace(as_of=now),
+        simulation_analytics=SimpleNamespace(
+            simulation_result=SimpleNamespace(outcomes=outcomes)
+        ),
+        selected_team_id="team-a",
+    )
+
+    assert calculated_competitive_state(runtime) == CalculatedCompetitiveState.UNKNOWN
 
 
 def test_workspace_publishes_posture_views_over_one_canonical_candidate_collection() -> None:
