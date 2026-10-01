@@ -6,7 +6,7 @@ from math import sqrt
 
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.forecast.weekly_volatility import active_game_distribution
-from fsffl.state.models import LeagueState
+from fsffl.state.models import LeagueState, WeeklyAvailabilityStatus
 
 from .lineup import optimize_team_lineup
 from .models import OptimizedTeamLineup
@@ -162,15 +162,17 @@ def build_bye_aware_weekly_team_scoring_panel(
     baseline_lineups: dict[str, OptimizedTeamLineup] | None = None,
     model_version: str = "next4-weekly-team-scoring-v4",
 ) -> tuple[WeeklyTeamScoringDistribution, ...]:
-    """Build a full league/week scoring panel while reusing identical lineup work.
+    """Build a league/week scoring panel from exact availability and legal lineups.
 
-    The old live runtime rebuilt player/forecast indexes and re-ran the lineup
-    optimizer once for every team-week pair. Most team-weeks have no rostered
-    player on bye, and some bye weeks produce the same exclusion set. This panel
-    resolves canonical bye availability once, caches lineups by
-    ``(team_id, excluded_player_ids)``, and reuses caller-supplied baseline lineups
-    when no owned player is on bye. Output semantics are identical to calling the
-    single-week builder independently for every pair.
+    Canonical NFL byes and exact week-specific unavailable-player facts are merged
+    into one exclusion set. The optimizer then performs the same legal bench
+    substitution/empty-slot behavior for either cause. Availability facts are
+    deterministic State evidence only: absence of a fact is not converted into an
+    injury probability or generic health assumption.
+
+    Lineups are cached by ``(team_id, excluded_player_ids)`` and caller-supplied
+    baseline lineups are reused when the exclusion set is empty, preserving the
+    existing bounded lineup-preparation architecture.
     """
 
     if as_of.tzinfo is None:
@@ -206,6 +208,25 @@ def build_bye_aware_weekly_team_scoring_panel(
             for item in league_state.nfl_team_byes
             if item.season == league_state.league.season and item.week == week
         )
+    availability_fact_player_ids_by_week = {
+        week: frozenset(
+            item.player_id
+            for item in league_state.player_week_availability
+            if item.week == week
+        )
+        for week in weeks
+    }
+    unavailable_player_ids_by_week = {
+        week: frozenset(
+            item.player_id
+            for item in league_state.player_week_availability
+            if (
+                item.week == week
+                and item.status == WeeklyAvailabilityStatus.UNAVAILABLE
+            )
+        )
+        for week in weeks
+    }
 
     cache: dict[tuple[str, frozenset[str]], OptimizedTeamLineup] = {}
     if baseline_lineups:
@@ -218,7 +239,7 @@ def build_bye_aware_weekly_team_scoring_panel(
         roster_ids = roster_ids_by_team[team_id]
         for week in weeks:
             bye_teams = bye_teams_by_week[week]
-            excluded = frozenset(
+            bye_excluded = frozenset(
                 player_id
                 for player_id in roster_ids
                 if (
@@ -227,6 +248,12 @@ def build_bye_aware_weekly_team_scoring_panel(
                     and player.nfl_team.upper() in bye_teams
                 )
             )
+            state_excluded = frozenset(
+                player_id
+                for player_id in roster_ids
+                if player_id in unavailable_player_ids_by_week[week]
+            )
+            excluded = bye_excluded | state_excluded
             key = (team_id, excluded)
             lineup = cache.get(key)
             if lineup is None:
@@ -241,12 +268,19 @@ def build_bye_aware_weekly_team_scoring_panel(
                     model_version="next4-lineup-v3:bye-aware",
                 )
                 cache[key] = lineup
+            team_week_has_availability_fact = bool(
+                roster_ids & availability_fact_player_ids_by_week[week]
+            )
             rows.append(
                 _weekly_distribution_from_lineup(
                     lineup,
                     week=week,
                     latest=latest,
-                    model_version=model_version,
+                    model_version=(
+                        f"{model_version}:state_weekly_availability"
+                        if team_week_has_availability_fact
+                        else model_version
+                    ),
                 )
             )
     return tuple(rows)

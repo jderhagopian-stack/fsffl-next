@@ -1006,3 +1006,29 @@ This is sufficient acceptance for the Tier B #324 capability. Do not redeploy or
 
 **Simulation 2.0 roadmap advances immediately to item 2:** legal lineup optimization, player availability/missed-game uncertainty, bye handling, empty-slot behavior, and legal bench substitution. Reconcile against existing lineup/bye-aware machinery and add only the missing governed capability; do not redo accepted #324 current-season, #321 postseason, or #323 continuity work.
 
+## 2026-10-01 — Simulation 2.0 item 2 ACTIVE: exact weekly availability + legal substitution
+
+#324 current-season Simulation is accepted and must not be reopened absent contradictory evidence. The active roadmap position is item 2: legal weekly lineup optimization, availability/missed-game uncertainty, bye handling, explicit empty slots, and legal bench substitution.
+
+Reconciliation against current main shows that most of item 2 already exists:
+- the lineup optimizer handles league-legal QB/RB/WR/TE/FLEX/SUPERFLEX/K/DST assignment;
+- taxi/IR players are excluded;
+- canonical NFL byes create week-specific exclusions;
+- the optimizer legally substitutes from the bench;
+- if no legal replacement exists, Simulation can retain an explicit zero-point unfilled slot;
+- identical exclusion states reuse cached optimized lineups.
+
+The missing governed production contract is non-bye weekly availability. Research does **not** authorize a generic injury multiplier or fabricated missed-game probability: H1 availability must remain separate from conditional active production, authoritative ROS must not receive a second injury haircut, and absence of direct availability evidence cannot be guessed.
+
+Active bounded implementation on branch `work/sim20-weekly-availability-substitution` therefore adds a provider-neutral exact State coordinate only:
+- `PlayerWeekAvailability(player_id, week, status, provenance)`, with exact `available` / `unavailable` facts;
+- no row means exact availability is unknown, not assumed available or unavailable;
+- exact unavailable facts merge with canonical bye exclusions and feed the existing legal substitution/empty-slot optimizer;
+- an exact available fact cannot override an NFL bye;
+- populated availability is material State evidence and invalidates downstream Simulation, while raw provider Forecast acquisition remains reusable;
+- empty availability remains serialization/State-ID compatible with durable snapshots written before this additive coordinate existed.
+
+Probabilistic missed-game sampling remains **deferred**, not silently approximated, until Forecast/Research supplies a governed probability/time-to-return authority. This first slice establishes the correct Simulation consumer contract without inventing medical/availability math.
+
+Promotion classification: additive State/Simulation authority coordinate with no live provider population yet. Use focused State serialization/material-fingerprint/lineup-substitution tests, full CI and exact-head P1/P2 review. Do not require another #324-style physical proof for an unpopulated source coordinate; any future live provider adapter that begins populating weekly availability must receive its own targeted acceptance.
+

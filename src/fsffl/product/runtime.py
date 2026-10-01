@@ -98,6 +98,17 @@ def league_material_fingerprint(league_state: LeagueState) -> str:
                 key=lambda item: (item.season, item.nfl_team),
             )
         ],
+        "player_week_availability": [
+            {
+                "week": item.week,
+                "player_id": item.player_id,
+                "status": item.status.value,
+            }
+            for item in sorted(
+                league_state.player_week_availability,
+                key=lambda item: (item.week, item.player_id),
+            )
+        ],
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
