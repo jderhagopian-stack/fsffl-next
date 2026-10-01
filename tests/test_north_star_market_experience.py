@@ -197,7 +197,7 @@ def test_market_release_is_eager_and_single_generation() -> None:
     source = _source(INDEX)
     assert 'north_star_market.css?v=20260929-physical-connect1' in source
     assert 'north_star_market.js?v=20260929-physical-connect1' in source
-    versions = {token.split("?v=")[1].split('"')[0] for token in source.split() if "?v=" in token}
+    versions = {token.split("?v=")[1].split('"')[0].split("&")[0] for token in source.split() if "?v=" in token}
     assert versions == {"20260929-physical-connect1"}
 
 
