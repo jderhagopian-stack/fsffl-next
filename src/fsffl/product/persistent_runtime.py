@@ -239,6 +239,7 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                     forecast_evidence=context.forecast_evidence,
                     simulation_analytics=context.simulation_analytics,
                     value_evidence=context.value_evidence,
+                    publication_generation_id=context.publication_generation_id,
                 )
             except Exception as exc:  # persistence must not break authoritative runtime
                 durable = False
