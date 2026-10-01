@@ -2,6 +2,8 @@ from collections import defaultdict
 from math import sqrt
 from random import Random
 
+import pytest
+
 from fsffl.team_utility import (
     RegularSeasonSimulationInput,
     ScheduledMatchup,
@@ -153,6 +155,37 @@ def test_performance_benchmark_reference_respects_unavailable_playoff_rules() ->
     actual = simulate_regular_season(request).outcomes
     assert all(row.playoff_probability is None for row in reference)
     assert _regular_outcome_signature(reference) == _regular_outcome_signature(actual)
+
+
+def test_rng_equivalence_report_omits_unavailable_metrics_and_checks_availability_parity() -> None:
+    from scripts.run_simulation_rng_equivalence_study import _equivalence_report
+
+    histogram = [0] * 256
+    histogram[0] = 100
+    summary = {
+        "simulation_count": 100,
+        "outcomes": [
+            {"team_id": team, "expected_wins": wins, "wins_stddev": 1.0,
+             "playoff_probability": None, "first_place_probability": 0.5,
+             "championship_probability": None}
+            for team, wins in (("a", 4.0), ("b", 3.0))
+        ],
+        "finish_distributions": [
+            {"team_id": team, "expected_finish": rank,
+             "rank_probabilities": probs}
+            for team, rank, probs in (("a", 1.5, (0.5, 0.5)), ("b", 1.5, (0.5, 0.5)))
+        ],
+        "team_score_histogram_range": {"a": [0.0, 100.0, 256], "b": [0.0, 100.0, 256]},
+        "team_score_histograms": {"a": histogram, "b": histogram},
+    }
+    report = _equivalence_report([summary, summary], [summary, summary])
+    assert "a.playoff_probability" not in report["team_metrics"]
+    assert "a.championship_probability" not in report["team_metrics"]
+
+    available = {**summary, "outcomes": [dict(row) for row in summary["outcomes"]]}
+    available["outcomes"][0]["championship_probability"] = 0.25
+    with pytest.raises(ValueError, match="same available Simulation metrics"):
+        _equivalence_report([summary, summary], [available, available])
 
 
 def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
