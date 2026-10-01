@@ -1823,3 +1823,26 @@ completion. No simulation or resource-boundary change is made. Endpoint timing
 now records status, Atlas, team-view, and value-lens stages for hosted
 verification. Full suite: 1,888 passed. Deployment and hosted acceptance are
 pending.
+
+## 2026-10-01 — PR #324 ACTIVE: current-season factual baseline / future-only Simulation
+
+PR #324, **Simulation 2.0: seed current season from completed results**, is the first implementation slice of the canonical week-by-week current-season engine after #323 physical acceptance. Branch `work/sim20-current-season-weekly-engine` is based on current canonical main `42f05da2ad30abb16bb84ff0444ef5b2cc14af68`.
+
+Authority/semantics:
+- `LeagueState.completed_through_week` is the factual boundary. Completed fantasy matchup scores are immutable Simulation inputs; rows after that boundary remain unresolved even if a provider emitted numeric placeholders.
+- Monte Carlo worlds now begin from actual completed wins and points-for and sample only unresolved future regular-season matchups. Final standings/finish distributions/postseason execution therefore combine factual past + simulated future instead of redrawing completed weeks.
+- Existing `expected_wins` remains expected **final** regular-season wins. New `expected_remaining_wins` exposes the forward component and is carried through League Analytics and competitive scenario-delta contracts.
+- Completed factual results participate in Simulation input fingerprint/replay identity. Simulation/result model identities advance so pre-#324 full-schedule-resimulation artifacts cannot restore as current-season authority.
+- Live weekly scoring panels are materialized only for unresolved fantasy weeks. The existing governed season-mean + bye-aware empirical weekly-volatility bridge remains the future-week scoring evidence for this slice; ROS/WEEK uncertainty is still explicitly not promoted to Simulation authority.
+- The newly recorded trade/waiver effective-date invariant is preserved by this primitive: completed weeks are common immutable facts; downstream alternate-State scenarios may affect only future eligible weeks. No arbitrary late-season discount multiplier belongs in Simulation.
+- Frozen preseason expectation / in-season expectation history remains Phase 2 historical intelligence after Simulation 2.0 stabilization and does not interrupt this workstream.
+
+Validation on the current source/test tree:
+- ordinary Python 3.11 full suite: **1,952 passed**, one existing warning;
+- explicit Python 3.12 full-suite replay validation: **1,952 passed**, one existing warning;
+- fixed 50,000-world replay digests are now reviewed for both supported runtimes: Python 3.11 `f551968d5a00a6668cd236f90179f3b45480972f955f801c3ee8fe117dd09527`; Python 3.12 `c6a85f92a0938ec4db2caa7db89ca48c5a93d17f62c9f85e6a8277f68fedd5ea`;
+- focused PR164 corrective and Live Forecast trace lanes passed on the proven source tree.
+The temporary dual-runtime CI matrix used only to establish the 3.12 fixed baseline was removed; repository CI policy is unchanged.
+
+Promotion remains Tier B / risk-proportionate: freeze the exact docs-complete head, require ordinary exact-head CI plus a fresh P1/P2 review of the bounded Simulation/consumer diff, then merge/deploy and run one targeted hosted current-season acceptance. Do not reopen #323 continuity, #321 postseason design, Forecast model design, or unrelated platform layers.
+
