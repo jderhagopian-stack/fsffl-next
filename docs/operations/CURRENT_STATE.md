@@ -2169,3 +2169,10 @@ A remaining UX observation is **first-navigation loading presentation**, not a c
 Treat this as non-blocking presentation/perceived-latency polish unless measured load duration becomes materially excessive. Preferred future improvement: prefetch likely next-surface payloads after Home becomes interactive and/or render layout-shaped skeletons/last-rendered cached content rather than a blank viewport. Do not reopen #323 continuity architecture for this alone.
 
 **Status: #323 targeted physical continuity/compact-presentation acceptance PASS.** Resume the canonical Simulation 2.0 roadmap immediately. Keep first-navigation loading UX as a bounded follow-up/optimization item, not a roadmap blocker.
+
+
+### 2026-10-01 — Management planning clarification: frozen preseason expectations + evolving in-season forecast history
+
+Management wants the future PIT historical-State program to recover not only roster/league facts but the **belief state at the time**. FSFFL already preserves annual preseason raw-stat projection snapshots. Once exact historical League State reconstruction is available, replay those frozen preseason projections through the reconstructed league scoring/rules and preseason rosters to recreate Week-0 player/team/league expectations. During the season, preserve Actual YTD separately from PIT ROS forecasts and expose `Actual YTD + PIT ROS` as the expected final outcome at each archived date. This enables player views of preseason expectation vs actual progress vs current expected finish, and team/league views of how projected standings/playoff/title outlook evolved week by week. No hindsight leakage.
+
+This is a Phase 2 historical-intelligence requirement after Simulation 2.0 stabilization, not a reason to interrupt the active Simulation roadmap.
