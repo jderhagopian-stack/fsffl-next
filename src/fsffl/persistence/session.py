@@ -12,6 +12,11 @@ from fsffl.forecast.fumbles_lost_materiality import (
 )
 from fsffl.forecast.supplemental_coordinate import league_consumes_fumbles_lost
 from fsffl.state.models import LeagueState
+from fsffl.team_utility.simulation import PYTHON_RANDOM_GAUSS_V1
+from fsffl.product.simulation_runtime import (
+    configured_simulation_rng,
+    simulation_model_version_for_rng_protocol,
+)
 
 from .contracts import (
     ArtifactKey,
@@ -39,6 +44,7 @@ from .runtime_cache import (
     decode_value_result,
     forecast_artifact,
     simulation_artifact,
+    simulation_matches_configured_rng,
     value_artifact,
 )
 
@@ -98,6 +104,11 @@ def _published_generation_record(
         "forecast_input_fingerprint": forecast_record.key.input_fingerprint,
         "simulation_input_fingerprint": (
             simulation_record.key.input_fingerprint
+            if simulation_record is not None
+            else None
+        ),
+        "simulation_model_version": (
+            simulation_record.key.model_version
             if simulation_record is not None
             else None
         ),
@@ -659,6 +670,13 @@ def restore_published_state_bound_intelligence(
     forecast_fp = str(payload.get("forecast_input_fingerprint") or "").strip()
     value_fp = str(payload.get("value_input_fingerprint") or "").strip()
     simulation_fp = str(payload.get("simulation_input_fingerprint") or "").strip()
+    # Before the versioned-RNG experiment, all published Simulation records used
+    # the legacy artifact model version. Keep that legacy manifest upgrade path;
+    # new manifests always name the exact protocol/runtime artifact identity.
+    simulation_model_version = (
+        str(payload.get("simulation_model_version") or "").strip()
+        or simulation_model_version_for_rng_protocol(PYTHON_RANDOM_GAUSS_V1)
+    )
     if not forecast_fp or not value_fp:
         return None, None, None, None
 
@@ -695,7 +713,7 @@ def restore_published_state_bound_intelligence(
                 scope_kind=LEAGUE_SCOPE_KIND,
                 scope_id=league_state.state_id,
                 input_fingerprint=simulation_fp,
-                model_version=SIMULATION_MODEL_VERSION,
+                model_version=simulation_model_version,
             )
         )
         if simulation_record is not None:
@@ -706,6 +724,15 @@ def restore_published_state_bound_intelligence(
                 if (
                     candidate_simulation.league_view.context.league_state_id
                     == league_state.state_id
+                    and simulation_matches_configured_rng(
+                        candidate_simulation.simulation_result
+                    )
+                    and simulation_artifact(
+                        league_state_id=league_state.state_id,
+                        forecast_fingerprint=forecast_record.key.input_fingerprint,
+                        result=candidate_simulation,
+                    ).key
+                    == simulation_record.key
                     and all(
                         view.view_model_version == CURRENT_TEAM_ANALYTICS_VIEW_VERSION
                         for view in candidate_simulation.team_views
@@ -766,15 +793,36 @@ def restore_state_bound_intelligence(
             league_state.state_id,
             current_forecast_record.key.input_fingerprint,
         )
-        simulation_record = store.get_reusable_artifact(
-            ArtifactKey(
-                artifact_kind=SIMULATION_ARTIFACT_KIND,
-                scope_kind=LEAGUE_SCOPE_KIND,
-                scope_id=league_state.state_id,
-                input_fingerprint=expected_simulation_input_fingerprint,
-                model_version=SIMULATION_MODEL_VERSION,
-            )
+        simulation_key = ArtifactKey(
+            artifact_kind=SIMULATION_ARTIFACT_KIND,
+            scope_kind=LEAGUE_SCOPE_KIND,
+            scope_id=league_state.state_id,
+            input_fingerprint=expected_simulation_input_fingerprint,
+            model_version=SIMULATION_MODEL_VERSION,
         )
+        simulation_record = store.get_reusable_artifact(simulation_key)
+        if (
+            simulation_record is None
+            and configured_simulation_rng()[0] == PYTHON_RANDOM_GAUSS_V1
+            and (
+                simulation_key.model_version
+                != simulation_model_version_for_rng_protocol(PYTHON_RANDOM_GAUSS_V1)
+            )
+        ):
+            # Pre-identity legacy Python artifacts used the base model version.
+            # Keep that read-only compatibility path, but never write new replay
+            # identities back under the shared legacy key.
+            simulation_record = store.get_reusable_artifact(
+                ArtifactKey(
+                    artifact_kind=SIMULATION_ARTIFACT_KIND,
+                    scope_kind=LEAGUE_SCOPE_KIND,
+                    scope_id=league_state.state_id,
+                    input_fingerprint=expected_simulation_input_fingerprint,
+                    model_version=simulation_model_version_for_rng_protocol(
+                        PYTHON_RANDOM_GAUSS_V1
+                    ),
+                )
+            )
         if simulation_record is not None:
             try:
                 candidate = decode_simulation(dict(simulation_record.payload))
@@ -785,6 +833,15 @@ def restore_state_bound_intelligence(
                 if (
                     candidate.league_view.context.league_state_id
                     == league_state.state_id
+                    and simulation_matches_configured_rng(
+                        candidate.simulation_result
+                    )
+                    and simulation_artifact(
+                        league_state_id=league_state.state_id,
+                        forecast_fingerprint=current_forecast_record.key.input_fingerprint,
+                        result=candidate,
+                    ).key
+                    == simulation_record.key
                     and has_current_team_views
                 ):
                     simulation = candidate
@@ -1063,4 +1120,3 @@ def restore_runtime_snapshot(store: PersistenceStore, *, user_id: str) -> Durabl
         served_publication_generation_id=served_publication_generation_id,
         restored_from_last_good=restored_from_last_good,
     )
-

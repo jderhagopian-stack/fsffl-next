@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from enum import StrEnum
 from math import sqrt
+import platform
 from random import Random
-from typing import Annotated, Callable
+from typing import Annotated, Callable, Literal
 
 from pydantic import Field, model_validator
 
 from fsffl.state.models import FrozenModel, LeagueState
+
+PYTHON_RANDOM_GAUSS_V1 = "python-random-gauss-v1"
+NUMPY_PCG64_BATCHED_GAUSS_V1 = "numpy-pcg64-batched-gauss-v1"
+SIMULATION_RNG_PROTOCOLS = (PYTHON_RANDOM_GAUSS_V1, NUMPY_PCG64_BATCHED_GAUSS_V1)
+NUMPY_BATCH_SIZE_DEFAULT = 500
 
 
 class ScoringDistributionKind(StrEnum):
@@ -69,11 +77,17 @@ class RegularSeasonSimulationInput(FrozenModel):
     simulation_count: Annotated[int, Field(ge=1)] = 50_000
     seed: int = 20260905
     model_version: str
+    rng_protocol: Literal[
+        "python-random-gauss-v1", "numpy-pcg64-batched-gauss-v1"
+    ] = PYTHON_RANDOM_GAUSS_V1
+    rng_batch_size: Annotated[int, Field(ge=1, le=50_000)] | None = None
 
     @model_validator(mode="after")
     def validate_input(self) -> "RegularSeasonSimulationInput":
         if not self.model_version.strip():
             raise ValueError("simulation model_version cannot be blank")
+        if self.rng_protocol == PYTHON_RANDOM_GAUSS_V1 and self.rng_batch_size is not None:
+            raise ValueError("Python RNG protocol does not accept a batch size")
         ids = [item.team_id for item in self.scoring]
         if len(ids) != len(set(ids)):
             raise ValueError("team scoring distributions must have unique team ids")
@@ -151,6 +165,16 @@ class RegularSeasonSimulationResult(FrozenModel):
     simulation_count: Annotated[int, Field(ge=1)]
     seed: int
     model_version: str
+    rng_protocol: Literal[
+        "python-random-gauss-v1", "numpy-pcg64-batched-gauss-v1"
+    ] = PYTHON_RANDOM_GAUSS_V1
+    rng_runtime_version: str = "legacy-unrecorded"
+    rng_bit_generator: str = "legacy-unrecorded"
+    rng_batch_size: Annotated[int, Field(ge=1, le=50_000)] | None = None
+    rng_draw_dtype: str = "legacy-unrecorded"
+    rng_draw_layout: str = "legacy-unrecorded"
+    rng_seed_derivation: str = "legacy-python-seed-v1"
+    simulation_input_fingerprint: str = "legacy-unfingerprinted"
 
 
 def scheduled_matchups_from_league_state(league_state: LeagueState) -> tuple[ScheduledMatchup, ...]:
@@ -182,6 +206,10 @@ def build_regular_season_simulation_input(
     simulation_count: int = 50_000,
     seed: int = 20260905,
     model_version: str = "next4-live-season-plus-playoffs-v2",
+    rng_protocol: Literal[
+        "python-random-gauss-v1", "numpy-pcg64-batched-gauss-v1"
+    ] = PYTHON_RANDOM_GAUSS_V1,
+    rng_batch_size: int | None = None,
 ) -> RegularSeasonSimulationInput:
     playoff_team_count = league_state.league.rules.playoff_team_count
     if playoff_team_count is None:
@@ -194,6 +222,8 @@ def build_regular_season_simulation_input(
         simulation_count=simulation_count,
         seed=seed,
         model_version=model_version,
+        rng_protocol=rng_protocol,
+        rng_batch_size=rng_batch_size,
     )
 
 
@@ -253,10 +283,48 @@ def _simulate_standard_champion(standings, playoff_team_count, playoff_scoring, 
     return None
 
 
+def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
+    """Yield bounded trial-by-draw arrays under the experimental RNG protocol."""
+    import numpy as np
+
+    draw_means = np.empty(len(compiled_schedule) * 2, dtype=np.float64)
+    draw_stddevs = np.empty(len(compiled_schedule) * 2, dtype=np.float64)
+    for index, row in enumerate(compiled_schedule):
+        draw_means[2 * index] = row[2]
+        draw_stddevs[2 * index] = row[3]
+        draw_means[2 * index + 1] = row[4]
+        draw_stddevs[2 * index + 1] = row[5]
+    deterministic_columns = np.flatnonzero(draw_stddevs == 0.0)
+    stochastic_columns = np.flatnonzero(draw_stddevs != 0.0)
+    bit_generator = np.random.PCG64(request.seed)
+    generator = np.random.Generator(bit_generator)
+
+    remaining = request.simulation_count
+    while remaining:
+        count = min(batch_size, remaining)
+        scores = np.empty((count, len(draw_means)), dtype=np.float64)
+        if deterministic_columns.size:
+            scores[:, deterministic_columns] = draw_means[deterministic_columns]
+        if stochastic_columns.size:
+            scores[:, stochastic_columns] = generator.normal(
+                loc=draw_means[stochastic_columns],
+                scale=draw_stddevs[stochastic_columns],
+                size=(count, stochastic_columns.size),
+            )
+        # fmax retains Python max(0.0, value)'s floor behavior for NaN inputs.
+        np.fmax(scores, 0.0, out=scores)
+        yield scores
+        remaining -= count
+
+
 def simulate_regular_season(
     request: RegularSeasonSimulationInput,
     *,
     cooperative_yield: Callable[[], object] | None = None,
+    trial_observer: Callable[
+        [tuple[float, ...], tuple[float, ...], tuple[int, ...], int | None], object
+    ]
+    | None = None,
 ) -> RegularSeasonSimulationResult:
     """Simulate canonical regular season and, when supported, a standard seeded title bracket.
 
@@ -294,6 +362,17 @@ def simulate_regular_season(
     gauss = rng.gauss
     playoff_rng = Random(request.seed ^ 0x5F3759DF)
     playoff_gauss = playoff_rng.gauss
+    is_batched = request.rng_protocol == NUMPY_PCG64_BATCHED_GAUSS_V1
+    batch_size = (
+        request.rng_batch_size or NUMPY_BATCH_SIZE_DEFAULT if is_batched else None
+    )
+    score_batches = (
+        iter(_numpy_regular_season_score_batches(request, compiled_schedule, batch_size))
+        if is_batched
+        else None
+    )
+    score_batch = None
+    score_batch_offset = 0
     wins_sum = [0.0] * team_count
     wins_sq_sum = [0.0] * team_count
     playoff_count = [0] * team_count
@@ -302,6 +381,7 @@ def simulate_regular_season(
     finish_count = [[0] * team_count for _ in range(team_count)]
     championship_supported = request.playoff_team_count in {2, 4, 6, 8}
     ranking_indexes = tuple(range(team_count))
+    floor_at_zero = max
 
     for _ in range(request.simulation_count):
         # Scheduling-only checkpoint. Product orchestration may yield this worker
@@ -311,11 +391,23 @@ def simulate_regular_season(
             cooperative_yield()
         wins = [0.0] * team_count
         points_for = [0.0] * team_count
-        for home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev in compiled_schedule:
-            home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
-            away = away_mean if away_stddev == 0 else gauss(away_mean, away_stddev)
-            home = max(0.0, home)
-            away = max(0.0, away)
+        if is_batched:
+            if score_batch is None or score_batch_offset >= len(score_batch):
+                score_batch = next(score_batches)
+                score_batch_offset = 0
+            trial_scores = score_batch[score_batch_offset]
+            score_batch_offset += 1
+        else:
+            trial_scores = None
+        for matchup_index, (home_idx, away_idx, home_mean, home_stddev, away_mean, away_stddev) in enumerate(compiled_schedule):
+            if trial_scores is None:
+                home = home_mean if home_stddev == 0 else gauss(home_mean, home_stddev)
+                away = away_mean if away_stddev == 0 else gauss(away_mean, away_stddev)
+                home = floor_at_zero(0.0, home)
+                away = floor_at_zero(0.0, away)
+            else:
+                home = float(trial_scores[2 * matchup_index])
+                away = float(trial_scores[2 * matchup_index + 1])
             points_for[home_idx] += home
             points_for[away_idx] += away
             if home > away:
@@ -334,6 +426,12 @@ def simulate_regular_season(
         if championship_supported:
             champion = _simulate_standard_champion(standings, request.playoff_team_count, playoff_scoring, playoff_gauss)
             champion_count[champion] += 1
+        else:
+            champion = None
+        if trial_observer is not None:
+            trial_observer(
+                tuple(wins), tuple(points_for), tuple(standings), champion
+            )
         for index, value in enumerate(wins):
             wins_sum[index] += value
             wins_sq_sum[index] += value * value
@@ -365,12 +463,38 @@ def simulate_regular_season(
                 simulation_model_version=request.model_version,
             )
         )
+    identity_payload = request.model_dump(mode="json")
+    identity_payload["rng_batch_size"] = batch_size
+    identity_payload["effective_rng_batch_size"] = batch_size
+    input_fingerprint = hashlib.sha256(
+        json.dumps(identity_payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    if is_batched:
+        import numpy as np
+
+        runtime_version = f"numpy-{np.__version__};python-{platform.python_version()}"
+        bit_generator_name = "PCG64"
+        draw_layout = "batch-major;trial-major;compiled-schedule-major;home-away-v1"
+        seed_derivation = "pcg64-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
+    else:
+        runtime_version = f"python-{platform.python_version()}"
+        bit_generator_name = "python-random-mt19937"
+        draw_layout = "trial-major;compiled-schedule-major;home-away-v1"
+        seed_derivation = "python-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
     return RegularSeasonSimulationResult(
         outcomes=tuple(outcomes),
         finish_distributions=tuple(finish_distributions),
         simulation_count=n,
         seed=request.seed,
         model_version=request.model_version,
+        rng_protocol=request.rng_protocol,
+        rng_runtime_version=runtime_version,
+        rng_bit_generator=bit_generator_name,
+        rng_batch_size=batch_size,
+        rng_draw_dtype="float64",
+        rng_draw_layout=draw_layout,
+        rng_seed_derivation=seed_derivation,
+        simulation_input_fingerprint=input_fingerprint,
     )
 
 

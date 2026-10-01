@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from datetime import datetime
 from typing import Protocol
 
@@ -19,6 +19,14 @@ class StateSnapshotStore(Protocol):
         *,
         limit: int = 32,
     ) -> tuple[LeagueState, ...]: ...
+
+    def iter_recent_at_or_before(
+        self,
+        league_id: str,
+        as_of: datetime,
+        *,
+        limit: int = 32,
+    ) -> Iterator[LeagueState]: ...
 
 
 class StateMaterializer(Protocol):
@@ -64,6 +72,15 @@ class InMemorySnapshotStore:
         ]
         indexed.sort(key=lambda item: (item[1].as_of, item[0]), reverse=True)
         return tuple(state for _index, state in indexed[:limit])
+
+    def iter_recent_at_or_before(
+        self,
+        league_id: str,
+        as_of: datetime,
+        *,
+        limit: int = 32,
+    ) -> Iterator[LeagueState]:
+        yield from self.recent_at_or_before(league_id, as_of, limit=limit)
 
     def latest_at_or_before(self, league_id: str, as_of: datetime) -> LeagueState | None:
         recent = self.recent_at_or_before(league_id, as_of, limit=1)

@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from fsffl.product.scenario_cache import (
+    _durable_key,
     clear_scenario_cache,
     run_cached_scenario_simulation,
     scenario_cache_status,
@@ -105,3 +106,17 @@ def test_cache_is_bounded_and_is_performance_only() -> None:
     source = scenario_cache_status()
     assert source["max_entries"] == 64
     assert source["authority"] == "performance-only exact-result reuse"
+
+
+def test_durable_scenario_key_separates_explicit_rng_model_versions() -> None:
+    def loader(state, evidence):
+        return _result(state.state_id)
+
+    loader.__fsffl_simulation_model_version__ = "sim-python-replay-v1"
+    python_key = _durable_key(_State("state-a"), _Evidence(), loader)
+    loader.__fsffl_simulation_model_version__ = "sim-numpy-pcg64-v1"
+    numpy_key = _durable_key(_State("state-a"), _Evidence(), loader)
+
+    assert python_key.model_version == "sim-python-replay-v1"
+    assert numpy_key.model_version == "sim-numpy-pcg64-v1"
+    assert python_key.input_fingerprint == numpy_key.input_fingerprint

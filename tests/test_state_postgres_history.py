@@ -16,6 +16,7 @@ class FakeDatabase:
     def __init__(self) -> None:
         self.rows: dict[tuple[str, str], dict[str, object]] = {}
         self.sequence = 0
+        self.history_payload_reads = 0
 
     def connect(self):
         return FakeConnection(self)
@@ -66,7 +67,28 @@ class FakeCursor:
         if normalized.startswith("select state_hash, payload from fsffl.state_snapshot_history where league_id=%s and state_hash=%s"):
             row = self.database.rows.get((params[0], params[1]))
             if row is not None:
+                self.database.history_payload_reads += 1
                 self.result = {"state_hash": row["state_hash"], "payload": row["payload"]}
+            return
+        if normalized.startswith("select state_hash from fsffl.state_snapshot_history where league_id=%s and as_of <= %s"):
+            league_id, cutoff, limit = params
+            candidates = [
+                row
+                for row in self.database.rows.values()
+                if row["league_id"] == league_id and row["as_of"] <= cutoff
+            ]
+            candidates.sort(
+                key=lambda item: (
+                    item["as_of"],
+                    item["recorded_at"],
+                    item["state_hash"],
+                ),
+                reverse=True,
+            )
+            self.result = [
+                {"state_hash": row["state_hash"]}
+                for row in candidates[: int(limit)]
+            ]
             return
         if normalized.startswith("select state_hash, payload from fsffl.state_snapshot_history where league_id=%s and as_of <= %s"):
             league_id, cutoff, *rest = params
@@ -157,6 +179,28 @@ def test_postgres_state_history_preserves_equal_as_of_recorded_order() -> None:
     recent = store.recent_at_or_before("sleeper:history", NOW, limit=2)
     assert recent == (second, first)
     assert store.latest_at_or_before("sleeper:history", NOW) == second
+
+
+def test_postgres_state_history_streams_payloads_one_candidate_at_a_time() -> None:
+    database = FakeDatabase()
+    store = PostgresStateSnapshotStore(
+        "postgresql://test",
+        connect_factory=database.connect,
+    )
+    older = _state(as_of=NOW)
+    newer = _state(as_of=NOW + timedelta(hours=1))
+    store.save(older)
+    store.save(newer)
+    initial_reads = database.history_payload_reads
+
+    candidates = store.iter_recent_at_or_before(
+        "sleeper:history", NOW + timedelta(hours=2), limit=2
+    )
+    assert database.history_payload_reads == initial_reads
+    assert next(candidates) == newer
+    assert database.history_payload_reads == initial_reads + 1
+    assert next(candidates) == older
+    assert database.history_payload_reads == initial_reads + 2
 
 
 def test_runtime_checkpoint_retains_canonical_state_history_off_request_path(monkeypatch) -> None:

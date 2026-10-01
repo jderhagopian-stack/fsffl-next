@@ -12,7 +12,13 @@ from fsffl.forecast.preseason_baseline import (
     PreseasonForecastBaseline,
 )
 from fsffl.product.runtime import LiveForecastEvidence
-from fsffl.product.simulation_runtime import LiveSimulationAnalyticsResult
+from fsffl.product.simulation_runtime import (
+    configured_simulation_model_version,
+    LiveSimulationAnalyticsResult,
+    simulation_matches_configured_rng,
+    simulation_artifact_model_version,
+    simulation_model_version_for_rng_protocol,
+)
 from fsffl.value.current_runtime import CurrentMarketValueRuntimeResult
 
 from .contracts import ArtifactKey, ReusableArtifactRecord, canonical_fingerprint, utc_now
@@ -25,7 +31,7 @@ LEAGUE_SCOPE_KIND = "league_state"
 LEAGUE_SEASON_SCOPE_KIND = "league_season"
 
 FORECAST_MODEL_VERSION = "next8-live-forecast-evidence-v7:rolling-fumbles-lost-materiality"
-SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:resilience-driver-identity"
+SIMULATION_MODEL_VERSION = configured_simulation_model_version()
 VALUE_MODEL_VERSION = "next3-current-market-runtime-v7:market-total-fail-closed"
 
 _forecast_adapter = TypeAdapter(LiveForecastEvidence)
@@ -107,7 +113,10 @@ def encode_simulation(result: LiveSimulationAnalyticsResult) -> dict[str, object
 
 def decode_simulation(payload: dict[str, object]) -> LiveSimulationAnalyticsResult:
     result = LiveSimulationAnalyticsResult.model_validate(payload)
-    if result.model_version != SIMULATION_MODEL_VERSION:
+    expected_model_version = simulation_model_version_for_rng_protocol(
+        result.simulation_result.rng_protocol
+    )
+    if result.model_version != expected_model_version:
         raise ValueError("stored simulation model version is stale")
     return result
 
@@ -169,13 +178,18 @@ def simulation_artifact(
     result: LiveSimulationAnalyticsResult,
 ) -> ReusableArtifactRecord:
     payload = encode_simulation(result)
+    # Model version carries the explicit RNG/runtime/count/seed replay identity for
+    # newly generated outputs, leaving the dependency fingerprint directly
+    # queryable from State + exact Forecast as it is for legacy restore.
+    model_version = simulation_artifact_model_version(result.simulation_result)
+    input_fingerprint = canonical_fingerprint(league_state_id, forecast_fingerprint)
     return ReusableArtifactRecord(
         key=ArtifactKey(
             artifact_kind=SIMULATION_ARTIFACT_KIND,
             scope_kind=LEAGUE_SCOPE_KIND,
             scope_id=league_state_id,
-            input_fingerprint=canonical_fingerprint(league_state_id, forecast_fingerprint),
-            model_version=SIMULATION_MODEL_VERSION,
+            input_fingerprint=input_fingerprint,
+            model_version=model_version,
         ),
         payload=payload,
         computed_at=utc_now(),

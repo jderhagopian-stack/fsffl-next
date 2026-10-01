@@ -8,13 +8,19 @@ from threading import RLock
 from time import monotonic
 from typing import Callable
 
-from fsffl.persistence.contracts import ArtifactKey, PersistenceStore, canonical_fingerprint
+from fsffl.persistence.contracts import (
+    ArtifactKey,
+    PersistenceStore,
+    ReusableArtifactRecord,
+    canonical_fingerprint,
+    utc_now,
+)
 from fsffl.persistence.runtime_cache import (
     LEAGUE_SCOPE_KIND,
     SIMULATION_ARTIFACT_KIND,
     SIMULATION_MODEL_VERSION,
     decode_simulation,
-    simulation_artifact,
+    encode_simulation,
 )
 from fsffl.state.models import LeagueState
 
@@ -81,7 +87,9 @@ def _loader_identity(loader: SimulationLoader) -> str:
 
     module = getattr(loader, "__module__", type(loader).__module__)
     qualname = getattr(loader, "__qualname__", type(loader).__qualname__)
-    return f"{module}:{qualname}:{id(loader)}"
+    explicit = getattr(loader, "__fsffl_cache_identity__", None)
+    model_version = getattr(loader, "__fsffl_simulation_model_version__", "")
+    return f"{module}:{qualname}:{explicit or ''}:{model_version}:{id(loader)}"
 
 
 def _durable_loader_identity(loader: SimulationLoader) -> str:
@@ -89,7 +97,11 @@ def _durable_loader_identity(loader: SimulationLoader) -> str:
 
     explicit = getattr(loader, "__fsffl_cache_identity__", None)
     if explicit is not None:
-        return canonical_fingerprint("explicit", str(explicit))
+        return canonical_fingerprint(
+            "explicit",
+            str(explicit),
+            str(getattr(loader, "__fsffl_simulation_model_version__", "")),
+        )
 
     module = getattr(loader, "__module__", type(loader).__module__)
     qualname = getattr(loader, "__qualname__", type(loader).__qualname__)
@@ -139,12 +151,15 @@ def _durable_key(
     simulation_loader: SimulationLoader,
 ) -> ArtifactKey:
     durable_fingerprint = _durable_forecast_fingerprint(evidence, simulation_loader)
+    model_version = getattr(simulation_loader, "__fsffl_simulation_model_version__", None)
+    if model_version is None:
+        model_version = SIMULATION_MODEL_VERSION
     return ArtifactKey(
         artifact_kind=SIMULATION_ARTIFACT_KIND,
         scope_kind=LEAGUE_SCOPE_KIND,
         scope_id=league_state.state_id,
         input_fingerprint=canonical_fingerprint(league_state.state_id, durable_fingerprint),
-        model_version=SIMULATION_MODEL_VERSION,
+        model_version=str(model_version),
     )
 
 
@@ -186,12 +201,10 @@ def _persist_durable(
         return
     try:
         store.put_artifact(
-            simulation_artifact(
-                league_state_id=league_state.state_id,
-                forecast_fingerprint=_durable_forecast_fingerprint(
-                    evidence, simulation_loader
-                ),
-                result=result,
+            ReusableArtifactRecord(
+                key=_durable_key(league_state, evidence, simulation_loader),
+                payload=encode_simulation(result),
+                computed_at=utc_now(),
             )
         )
     except Exception as exc:  # authoritative output is already complete

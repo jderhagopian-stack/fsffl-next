@@ -9,6 +9,10 @@ from fsffl.team_utility import (
     WeeklyTeamScoringDistribution,
     simulate_regular_season,
 )
+from fsffl.team_utility.simulation import (
+    NUMPY_PCG64_BATCHED_GAUSS_V1,
+    PYTHON_RANDOM_GAUSS_V1,
+)
 
 
 def _reference(request: RegularSeasonSimulationInput):
@@ -154,3 +158,94 @@ def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
     paced = simulate_regular_season(request, cooperative_yield=checkpoint)
     assert paced == baseline
     assert calls == request.simulation_count
+
+
+def test_batched_rng_replay_identity_is_deterministic_and_batch_scoped() -> None:
+    base = RegularSeasonSimulationInput(
+        scoring=(
+            TeamScoringDistribution(team_id="a", mean_points=125, stddev_points=15, model_version="v1"),
+            TeamScoringDistribution(team_id="b", mean_points=115, stddev_points=12, model_version="v1"),
+        ),
+        schedule=tuple(
+            ScheduledMatchup(week=week, home_team_id="a", away_team_id="b")
+            for week in range(1, 5)
+        ),
+        playoff_team_count=1,
+        simulation_count=2_000,
+        seed=12345,
+        model_version="replay-v1",
+    )
+    request = base.model_copy(
+        update={"rng_protocol": NUMPY_PCG64_BATCHED_GAUSS_V1, "rng_batch_size": 333}
+    )
+    first = simulate_regular_season(request)
+    replay = simulate_regular_season(request)
+    other_batch = simulate_regular_season(request.model_copy(update={"rng_batch_size": 500}))
+    implicit_default_batch = simulate_regular_season(
+        base.model_copy(update={"rng_protocol": NUMPY_PCG64_BATCHED_GAUSS_V1})
+    )
+    legacy = simulate_regular_season(base)
+
+    assert first == replay
+    assert first.rng_protocol == NUMPY_PCG64_BATCHED_GAUSS_V1
+    assert first.rng_runtime_version.startswith("numpy-")
+    assert first.rng_bit_generator == "PCG64"
+    assert first.rng_batch_size == 333
+    assert first.rng_draw_dtype == "float64"
+    assert first.rng_draw_layout == "batch-major;trial-major;compiled-schedule-major;home-away-v1"
+    assert first.rng_seed_derivation.startswith("pcg64-regular-root-seed-v1;")
+    assert first.simulation_input_fingerprint != other_batch.simulation_input_fingerprint
+    assert first.outcomes == other_batch.outcomes
+    assert first.finish_distributions == other_batch.finish_distributions
+    assert implicit_default_batch.rng_batch_size == 500
+    assert implicit_default_batch.simulation_input_fingerprint == other_batch.simulation_input_fingerprint
+    assert legacy.rng_protocol == PYTHON_RANDOM_GAUSS_V1
+    assert first.outcomes != legacy.outcomes
+
+
+def test_numpy_rng_preserves_zero_variance_and_floor_semantics() -> None:
+    base = RegularSeasonSimulationInput(
+        scoring=(
+            TeamScoringDistribution(team_id="a", mean_points=0, stddev_points=0, model_version="v1"),
+            TeamScoringDistribution(team_id="b", mean_points=-1, stddev_points=0, model_version="v1"),
+        ),
+        schedule=(ScheduledMatchup(week=1, home_team_id="a", away_team_id="b"),),
+        playoff_team_count=1,
+        simulation_count=100,
+        seed=9,
+        model_version="zero-v1",
+    )
+    legacy = simulate_regular_season(base)
+    numpy_result = simulate_regular_season(
+        base.model_copy(update={"rng_protocol": NUMPY_PCG64_BATCHED_GAUSS_V1})
+    )
+    assert [row.expected_wins for row in legacy.outcomes] == [row.expected_wins for row in numpy_result.outcomes]
+    assert [row.playoff_probability for row in legacy.outcomes] == [row.playoff_probability for row in numpy_result.outcomes]
+
+
+def test_50000_run_production_output_remains_bit_identical() -> None:
+    """Guard the complete canonical 50k output while allowing exact Tier A tuning."""
+    import hashlib
+    import json
+    import sys
+
+    from scripts.benchmark_simulation_performance import _request
+
+    result = simulate_regular_season(_request())
+    # The durable replay identity intentionally includes the Python patch
+    # version. Normalize only that identity field here; the result rows and
+    # every RNG/output field remain part of the digest.
+    dumped = result.model_dump(mode="json")
+    dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
+    payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
+    expected_by_python_minor = {
+        (3, 11): "63660717b6f9d6cd71142fe16dd27c3146a8a24058c2a5c951ea08f32d4a76c2",
+        (3, 12): "27fb34b4ae076a70e9767f148656c3c2e5c5251c8bfb12759c43f9fcbd7cbd68",
+    }
+    expected = expected_by_python_minor.get(sys.version_info[:2])
+    assert expected is not None, (
+        "add a reviewed fixed 50k replay digest for Python "
+        f"{sys.version_info.major}.{sys.version_info.minor} before validating this runtime"
+    )
+    digest = hashlib.sha256(payload.encode()).hexdigest()
+    assert digest == expected

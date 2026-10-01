@@ -23,6 +23,7 @@ from fsffl.persistence.session import (
     restore_state_bound_intelligence,
     restore_state_bound_raw_forecast_evidence,
 )
+from fsffl.memory_attribution import log_object_graph, sample_rss_phase
 from fsffl.state.history import StateSnapshotStore
 
 from .runtime import (
@@ -1033,8 +1034,30 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 return first_incompatible
             return None, None, None, discovery_rejections
 
+        recent_iterator = getattr(
+            self._state_history, "iter_recent_at_or_before", None
+        )
         recent_reader = getattr(self._state_history, "recent_at_or_before", None)
-        if callable(recent_reader):
+        if callable(recent_iterator):
+            try:
+                candidates = recent_iterator(
+                    target_state.league.league_id,
+                    target_state.as_of,
+                    limit=32,
+                )
+            except Exception as exc:
+                _logger.warning(
+                    "FSFFL raw Forecast history discovery failed user=%s league=%s target_state=%s error=%s",
+                    user_id,
+                    target_state.league.league_id,
+                    target_state.state_id,
+                    exc,
+                )
+                discovery_rejections.append("state_history_lookup_failed")
+                if first_incompatible is not None:
+                    return first_incompatible
+                return None, None, None, discovery_rejections
+        elif callable(recent_reader):
             try:
                 candidates = recent_reader(
                     target_state.league.league_id,
@@ -1079,19 +1102,38 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
                 candidates.append(candidate)
                 cutoff = candidate.as_of - timedelta(microseconds=1)
 
-        for candidate in candidates:
-            if candidate.state_id in seen_state_ids:
-                continue
-            seen_state_ids.add(candidate.state_id)
-            candidate_raw = restore_state_bound_raw_forecast_evidence(
-                self._persistence,
-                league_state=candidate,
+        try:
+            for candidate in candidates:
+                if candidate.state_id in seen_state_ids:
+                    del candidate
+                    continue
+                seen_state_ids.add(candidate.state_id)
+                candidate_raw = restore_state_bound_raw_forecast_evidence(
+                    self._persistence,
+                    league_state=candidate,
+                )
+                if candidate_raw is None:
+                    del candidate
+                    continue
+                accepted = consider(candidate, candidate_raw, "state_history")
+                if accepted is not None:
+                    return accepted
+                # Incompatible fallback is retained deliberately by consider().
+                # Release the scan-local decoded State before requesting the next
+                # historical payload.
+                del candidate
+        except Exception as exc:
+            _logger.warning(
+                "FSFFL raw Forecast history discovery failed user=%s league=%s target_state=%s error=%s",
+                user_id,
+                target_state.league.league_id,
+                target_state.state_id,
+                exc,
             )
-            if candidate_raw is None:
-                continue
-            accepted = consider(candidate, candidate_raw, "state_history")
-            if accepted is not None:
-                return accepted
+            discovery_rejections.append("state_history_lookup_failed")
+            if first_incompatible is not None:
+                return first_incompatible
+            return None, None, None, discovery_rejections
 
         discovery_rejections.append("state_history_compatible_raw_forecast_unavailable")
         if first_incompatible is not None:
@@ -1116,10 +1158,11 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return current
         target_state = current.league_state
 
-        forecast, simulation, values = restore_state_bound_intelligence(
-            self._persistence,
-            league_state=target_state,
-        )
+        with sample_rss_phase("forecast.restore_exact_state_artifacts"):
+            forecast, simulation, values = restore_state_bound_intelligence(
+                self._persistence,
+                league_state=target_state,
+            )
         if forecast is not None:
             restored = super().set_intelligence_bundle(
                 user_id,
@@ -1153,15 +1196,16 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
             return reused
 
-        (
-            prior_state,
-            prior_forecast,
-            prior_state_identity_source,
-            discovery_rejections,
-        ) = self._discover_prior_raw_forecast(
-            user_id,
-            target_state=target_state,
-        )
+        with sample_rss_phase("forecast.raw_replay_history_discovery"):
+            (
+                prior_state,
+                prior_forecast,
+                prior_state_identity_source,
+                discovery_rejections,
+            ) = self._discover_prior_raw_forecast(
+                user_id,
+                target_state=target_state,
+            )
         if prior_state is None or prior_forecast is None:
             self._record_forecast_replay_decision(
                 user_id,
@@ -1186,11 +1230,19 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
             return current
 
-        rejection_components = list(
-            raw_forecast_compatibility_reasons(prior_state, target_state)
+        log_object_graph(
+            "forecast.raw_replay.prior_materializations",
+            prior_state=prior_state,
+            prior_forecast=prior_forecast,
+            combined=(prior_state, prior_forecast),
         )
-        prior_raw_fingerprint = raw_forecast_input_fingerprint(prior_state)
-        target_raw_fingerprint = raw_forecast_input_fingerprint(target_state)
+
+        with sample_rss_phase("forecast.raw_replay_compatibility"):
+            rejection_components = list(
+                raw_forecast_compatibility_reasons(prior_state, target_state)
+            )
+            prior_raw_fingerprint = raw_forecast_input_fingerprint(prior_state)
+            target_raw_fingerprint = raw_forecast_input_fingerprint(target_state)
         if rejection_components or prior_raw_fingerprint != target_raw_fingerprint:
             if not rejection_components:
                 rejection_components = ["raw_forecast_material_inputs_changed"]
@@ -1225,9 +1277,17 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             return current
 
         try:
-            replayed = replay_live_forecast_evidence_for_state(
-                target_state,
-                prior_forecast,
+            with sample_rss_phase("forecast.raw_replay_scoring_and_supplement"):
+                replayed = replay_live_forecast_evidence_for_state(
+                    target_state,
+                    prior_forecast,
+                )
+            log_object_graph(
+                "forecast.raw_replay.completed_materializations",
+                prior_state=prior_state,
+                prior_forecast=prior_forecast,
+                replayed=replayed,
+                combined=(prior_state, prior_forecast, replayed),
             )
         except Exception as exc:
             self._record_forecast_replay_decision(
@@ -1260,12 +1320,13 @@ class PersistentPrivateBetaRuntimeStore(PrivateBetaRuntimeStore):
             )
             return current
 
-        restored = super().set_forecast_evidence(
-            user_id,
-            replayed,
-            refreshed_league_state=target_state,
-            require_working_generation=require_working_generation,
-        )
+        with sample_rss_phase("forecast.raw_replay_attach_to_working_generation"):
+            restored = super().set_forecast_evidence(
+                user_id,
+                replayed,
+                refreshed_league_state=target_state,
+                require_working_generation=require_working_generation,
+            )
         reused = replace(restored, intelligence_reused=True)
         self._store_mutation_context(user_id, reused)
         if not self.working_generation_active(user_id):

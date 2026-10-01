@@ -724,7 +724,6 @@ If instrumentation proves the peak is independent of Simulation 2.0 (for example
 
 After the smallest evidence-backed correction, rerun exact-head CI/review and the reversible batch-500 hosted journey with true concurrent foreground reads, full readiness/publication, restart restore, exact high-water evidence, and rollback to main. If the unchanged free-tier hard limit still cannot be met without broad architecture/fidelity changes, return to Management for a capacity decision.
 
-
 ## 2026-10-01 — PR #311 hosted concurrency gate: use an external acceptance runner, not Work browser
 Management accepts the exact-head PR #311 code/review state as ready for the final hosted measurement. The remaining blocker is Work Mode browser URL policy, not a product defect.
 

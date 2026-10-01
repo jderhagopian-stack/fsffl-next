@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Callable
+import importlib.metadata
+import os
+import platform
+from typing import Callable, Literal
 
 from fsffl.analytics.league import LeagueAnalyticsView, build_league_analytics_view
 from fsffl.analytics.models import (
@@ -16,6 +19,7 @@ from fsffl.forecast import (
     attach_provisional_position_floor_forecasts,
 )
 from fsffl.forecast.models import ForecastHorizon, ForecastObservation
+from fsffl.memory_attribution import log_object_graph, sample_rss_phase
 from fsffl.state.models import FrozenModel, LeagueState
 from fsffl.team_utility import (
     LeagueScoringDispersionDiagnostic,
@@ -31,6 +35,134 @@ from fsffl.team_utility import (
     optimize_team_lineup,
     simulate_regular_season,
 )
+from fsffl.team_utility.simulation import (
+    NUMPY_PCG64_BATCHED_GAUSS_V1,
+    PYTHON_RANDOM_GAUSS_V1,
+)
+
+LIVE_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:resilience-driver-identity"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:numpy-pcg64-batched-gauss-v1"
+
+
+def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
+    protocol = environment.get("FSFFL_SIMULATION_RNG_PROTOCOL", PYTHON_RANDOM_GAUSS_V1).strip()
+    if protocol == PYTHON_RANDOM_GAUSS_V1:
+        raw_batch_size = environment.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "").strip()
+        if raw_batch_size:
+            raise ValueError("FSFFL_SIMULATION_RNG_BATCH_SIZE requires the NumPy protocol")
+        return protocol, None
+    if protocol == NUMPY_PCG64_BATCHED_GAUSS_V1:
+        raw_batch_size = environment.get("FSFFL_SIMULATION_RNG_BATCH_SIZE", "500").strip()
+        try:
+            batch_size = int(raw_batch_size)
+        except ValueError as exc:
+            raise ValueError("FSFFL_SIMULATION_RNG_BATCH_SIZE must be an integer") from exc
+        if not 1 <= batch_size <= 50_000:
+            raise ValueError("FSFFL_SIMULATION_RNG_BATCH_SIZE must be between 1 and 50000")
+        return protocol, batch_size
+    raise ValueError(f"unsupported FSFFL_SIMULATION_RNG_PROTOCOL: {protocol}")
+
+
+_CONFIGURED_SIMULATION_RNG = _simulation_rng_from_environment(dict(os.environ))
+
+
+def configured_simulation_rng() -> tuple[str, int | None]:
+    """Return the process-start RNG protocol; deployment changes require a restart."""
+
+    return _CONFIGURED_SIMULATION_RNG
+
+
+def configured_simulation_model_version() -> str:
+    protocol, _ = configured_simulation_rng()
+    model_version = simulation_model_version_for_rng_protocol(protocol)
+    return f"{model_version}:{configured_simulation_cache_identity()}"
+
+
+def simulation_artifact_model_version(result: object) -> str:
+    protocol = getattr(result, "rng_protocol", None)
+    model_version = simulation_model_version_for_rng_protocol(protocol)
+    if protocol == PYTHON_RANDOM_GAUSS_V1:
+        runtime = str(getattr(result, "rng_runtime_version", ""))
+        if runtime == "legacy-unrecorded":
+            # Preserve lookup compatibility for pre-identity Python artifacts.
+            return model_version
+        if not runtime.startswith("python-"):
+            return f"{model_version}:invalid-runtime-identity"
+        return (
+            f"{model_version}:{protocol};batch=None;"
+            f"count={getattr(result, 'simulation_count', None)};"
+            f"seed={getattr(result, 'seed', None)};runtime={runtime}"
+        )
+    runtime = str(getattr(result, "rng_runtime_version", ""))
+    numpy_runtime, separator, python_runtime = runtime.partition(";")
+    if not separator or not numpy_runtime.startswith("numpy-") or not python_runtime.startswith("python-"):
+        return f"{model_version}:invalid-runtime-identity"
+    identity = (
+        f"{protocol};batch={getattr(result, 'rng_batch_size', None)};"
+        f"count={getattr(result, 'simulation_count', None)};seed={getattr(result, 'seed', None)};"
+        f"runtime={python_runtime};{numpy_runtime}"
+    )
+    return f"{model_version}:{identity}"
+
+
+def simulation_matches_configured_rng(result: object) -> bool:
+    """Reject durable Simulation created for another process RNG/runtime config."""
+
+    protocol, batch_size = configured_simulation_rng()
+    if getattr(result, "rng_protocol", None) != protocol:
+        return False
+
+    if protocol == PYTHON_RANDOM_GAUSS_V1:
+        if getattr(result, "rng_batch_size", None) is not None:
+            return False
+        runtime_version = f"python-{platform.python_version()}"
+        bit_generator = "python-random-mt19937"
+        draw_layout = "trial-major;compiled-schedule-major;home-away-v1"
+        seed_derivation = "python-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
+    else:
+        if (
+            getattr(result, "simulation_count", None) != 50_000
+            or getattr(result, "seed", None) != 20260905
+            or getattr(result, "rng_batch_size", None) != batch_size
+        ):
+            return False
+        runtime_version = (
+            f"numpy-{importlib.metadata.version('numpy')};python-{platform.python_version()}"
+        )
+        bit_generator = "PCG64"
+        draw_layout = "batch-major;trial-major;compiled-schedule-major;home-away-v1"
+        seed_derivation = "pcg64-regular-root-seed-v1;python-playoff-xor-0x5F3759DF-v1"
+
+    # Pre-protocol legacy artifacts did not record a replay identity. Continue to
+    # accept those only on the legacy path; experimental results must be explicit.
+    if protocol == PYTHON_RANDOM_GAUSS_V1 and getattr(result, "rng_runtime_version", None) == "legacy-unrecorded":
+        return True
+    return bool(
+        getattr(result, "rng_runtime_version", None) == runtime_version
+        and getattr(result, "rng_bit_generator", None) == bit_generator
+        and getattr(result, "rng_draw_dtype", None) == "float64"
+        and getattr(result, "rng_draw_layout", None) == draw_layout
+        and getattr(result, "rng_seed_derivation", None) == seed_derivation
+    )
+
+
+def configured_simulation_cache_identity() -> str:
+    protocol, batch_size = configured_simulation_rng()
+    runtime = f"python-{platform.python_version()}"
+    if protocol == NUMPY_PCG64_BATCHED_GAUSS_V1:
+        runtime += f";numpy-{importlib.metadata.version('numpy')}"
+    return (
+        f"{protocol};batch={batch_size};count=50000;seed=20260905;"
+        f"runtime={runtime}"
+    )
+
+
+def simulation_model_version_for_rng_protocol(rng_protocol: str) -> str:
+    if rng_protocol == PYTHON_RANDOM_GAUSS_V1:
+        return LIVE_SIMULATION_MODEL_VERSION
+    if rng_protocol == NUMPY_PCG64_BATCHED_GAUSS_V1:
+        return EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION
+    raise ValueError(f"unsupported Simulation RNG protocol: {rng_protocol}")
 
 
 class LiveSimulationAnalyticsResult(FrozenModel):
@@ -40,7 +172,7 @@ class LiveSimulationAnalyticsResult(FrozenModel):
     team_views: tuple[TeamAnalyticsView, ...]
     simulation_result: RegularSeasonSimulationResult
     scoring_dispersion_diagnostic: LeagueScoringDispersionDiagnostic
-    model_version: str = "next8-live-simulation-analytics-v8:resilience-driver-identity"
+    model_version: str = LIVE_SIMULATION_MODEL_VERSION
 
 
 def build_live_simulation_analytics(
@@ -50,6 +182,10 @@ def build_live_simulation_analytics(
     forecast_model_version: str,
     simulation_count: int = 50_000,
     seed: int = 20260905,
+    rng_protocol: Literal[
+        "python-random-gauss-v1", "numpy-pcg64-batched-gauss-v1"
+    ] = PYTHON_RANDOM_GAUSS_V1,
+    rng_batch_size: int | None = None,
     generated_at: datetime | None = None,
     cooperative_yield: Callable[[], object] | None = None,
 ) -> LiveSimulationAnalyticsResult:
@@ -78,12 +214,13 @@ def build_live_simulation_analytics(
         raise ValueError("generated_at must be timezone-aware")
     generated = max(generated, league_state.as_of)
 
-    effective_forecasts = attach_provisional_position_floor_forecasts(
-        league_state,
-        forecasts,
-        as_of=league_state.as_of,
-        horizon=ForecastHorizon.SEASON,
-    )
+    with sample_rss_phase("simulation.forecast_attachment"):
+        effective_forecasts = attach_provisional_position_floor_forecasts(
+            league_state,
+            forecasts,
+            as_of=league_state.as_of,
+            horizon=ForecastHorizon.SEASON,
+        )
     fallback_ids = {
         item.player_id
         for item in effective_forecasts
@@ -97,21 +234,22 @@ def build_live_simulation_analytics(
     ordered_teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
     lineups = {}
     incomplete_team_names: list[str] = []
-    for team in ordered_teams:
-        lineup = optimize_team_lineup(
-            league_state,
-            effective_forecasts,
-            team_id=team.team_id,
-            as_of=league_state.as_of,
-            horizon=ForecastHorizon.SEASON,
-            allow_unfilled_slots=True,
-        )
-        lineups[team.team_id] = lineup
-        if lineup.unfilled_slots:
-            slots = ", ".join(
-                f"{item.slot.value}{item.slot_index}" for item in lineup.unfilled_slots
+    with sample_rss_phase("simulation.lineup_compilation"):
+        for team in ordered_teams:
+            lineup = optimize_team_lineup(
+                league_state,
+                effective_forecasts,
+                team_id=team.team_id,
+                as_of=league_state.as_of,
+                horizon=ForecastHorizon.SEASON,
+                allow_unfilled_slots=True,
             )
-            incomplete_team_names.append(f"{team.display_name} ({slots})")
+            lineups[team.team_id] = lineup
+            if lineup.unfilled_slots:
+                slots = ", ".join(
+                    f"{item.slot.value}{item.slot_index}" for item in lineup.unfilled_slots
+                )
+                incomplete_team_names.append(f"{team.display_name} ({slots})")
 
     position_strength_rows = build_league_relative_position_strengths(
         tuple(lineups[team.team_id] for team in ordered_teams)
@@ -123,14 +261,15 @@ def build_live_simulation_analytics(
         for team in ordered_teams
     }
 
-    weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
-        league_state,
-        effective_forecasts,
-        team_ids=tuple(team.team_id for team in ordered_teams),
-        weeks=fantasy_weeks,
-        as_of=league_state.as_of,
-        baseline_lineups=lineups,
-    )
+    with sample_rss_phase("simulation.weekly_scoring_panel"):
+        weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
+            league_state,
+            effective_forecasts,
+            team_ids=tuple(team.team_id for team in ordered_teams),
+            weeks=fantasy_weeks,
+            as_of=league_state.as_of,
+            baseline_lineups=lineups,
+        )
     team_names = {team.team_id: team.display_name for team in ordered_teams}
     bye_week_unfilled = [
         f"{team_names[row.team_id]} W{row.week}"
@@ -145,8 +284,20 @@ def build_live_simulation_analytics(
         simulation_count=simulation_count,
         seed=seed,
         model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
+        rng_protocol=rng_protocol,
+        rng_batch_size=rng_batch_size,
     )
-    simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
+    log_object_graph(
+        "simulation.forecast_boundary",
+        raw_forecasts=forecasts,
+        effective_forecasts=effective_forecasts,
+        lineups=lineups,
+        weekly_scoring=weekly_scoring,
+        request=request,
+        all_inputs=(forecasts, effective_forecasts, lineups, weekly_scoring, request),
+    )
+    with sample_rss_phase("simulation.kernel_and_result_aggregation"):
+        simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
     scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
         weekly_scoring,
         simulation,
@@ -312,4 +463,5 @@ def build_live_simulation_analytics(
         team_views=views,
         simulation_result=simulation,
         scoring_dispersion_diagnostic=scoring_dispersion_diagnostic,
+        model_version=simulation_model_version_for_rng_protocol(rng_protocol),
     )
