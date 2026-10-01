@@ -6,7 +6,7 @@ from math import sqrt
 
 from fsffl.forecast.models import ForecastHorizon, ForecastMetric, ForecastObservation
 from fsffl.forecast.weekly_volatility import active_game_distribution
-from fsffl.state.models import LeagueState
+from fsffl.state.models import LeagueState, WeeklyAvailabilityStatus
 
 from .lineup import optimize_team_lineup
 from .models import OptimizedTeamLineup
@@ -206,6 +206,22 @@ def build_bye_aware_weekly_team_scoring_panel(
             for item in league_state.nfl_team_byes
             if item.season == league_state.league.season and item.week == week
         )
+    requested_weeks = set(weeks)
+    unavailable_player_ids_by_week = {
+        week: frozenset(
+            item.player_id
+            for item in league_state.player_week_availability
+            if (
+                item.week == week
+                and item.status == WeeklyAvailabilityStatus.UNAVAILABLE
+            )
+        )
+        for week in weeks
+    }
+    state_availability_present = any(
+        item.week in requested_weeks
+        for item in league_state.player_week_availability
+    )
 
     cache: dict[tuple[str, frozenset[str]], OptimizedTeamLineup] = {}
     if baseline_lineups:
@@ -218,7 +234,7 @@ def build_bye_aware_weekly_team_scoring_panel(
         roster_ids = roster_ids_by_team[team_id]
         for week in weeks:
             bye_teams = bye_teams_by_week[week]
-            excluded = frozenset(
+            bye_excluded = frozenset(
                 player_id
                 for player_id in roster_ids
                 if (
@@ -227,6 +243,12 @@ def build_bye_aware_weekly_team_scoring_panel(
                     and player.nfl_team.upper() in bye_teams
                 )
             )
+            state_excluded = frozenset(
+                player_id
+                for player_id in roster_ids
+                if player_id in unavailable_player_ids_by_week[week]
+            )
+            excluded = bye_excluded | state_excluded
             key = (team_id, excluded)
             lineup = cache.get(key)
             if lineup is None:
@@ -246,7 +268,11 @@ def build_bye_aware_weekly_team_scoring_panel(
                     lineup,
                     week=week,
                     latest=latest,
-                    model_version=model_version,
+                    model_version=(
+                        f"{model_version}:state_weekly_availability"
+                        if state_availability_present
+                        else model_version
+                    ),
                 )
             )
     return tuple(rows)
