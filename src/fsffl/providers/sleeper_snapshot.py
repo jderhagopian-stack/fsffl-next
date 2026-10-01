@@ -231,7 +231,10 @@ def _attach_fantasy_regular_season_horizon(
     if not 1 <= end_week <= 18:
         return state
     rules = state.league.rules.model_copy(
-        update={"fantasy_regular_season_end_week": end_week}
+        update={
+            "fantasy_regular_season_end_week": end_week,
+            "playoff_start_week": playoff_week_start,
+        }
     )
     return state.model_copy(
         update={"league": state.league.model_copy(update={"rules": rules})}

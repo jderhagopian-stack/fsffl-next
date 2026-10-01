@@ -13,7 +13,7 @@ from typing import Annotated, Callable, Literal
 
 from pydantic import Field, model_validator
 
-from fsffl.state.models import FrozenModel, LeagueState
+from fsffl.state.models import FrozenModel, LeaguePlayoffRules, LeagueState
 
 _logger = logging.getLogger("uvicorn.error")
 
@@ -87,6 +87,7 @@ class RegularSeasonSimulationInput(FrozenModel):
     weekly_scoring: tuple[WeeklyTeamScoringDistribution, ...] = ()
     schedule: tuple[ScheduledMatchup, ...]
     playoff_team_count: Annotated[int, Field(ge=1)]
+    playoff_rules: LeaguePlayoffRules | None = None
     simulation_count: Annotated[int, Field(ge=1)] = 50_000
     seed: int = 20260905
     model_version: str
@@ -112,6 +113,11 @@ class RegularSeasonSimulationInput(FrozenModel):
             raise ValueError("simulation requires at least one team")
         if self.playoff_team_count > len(known):
             raise ValueError("playoff_team_count cannot exceed team count")
+        if (
+            self.playoff_rules is not None
+            and self.playoff_rules.playoff_team_count != self.playoff_team_count
+        ):
+            raise ValueError("playoff_rules team count must match playoff_team_count")
         for matchup in self.schedule:
             if matchup.home_team_id not in known or matchup.away_team_id not in known:
                 raise ValueError("schedule references unknown team")
@@ -138,6 +144,7 @@ class TeamCompetitiveOutcome(FrozenModel):
     playoff_probability: Annotated[float, Field(ge=0, le=1)]
     first_place_probability: Annotated[float, Field(ge=0, le=1)]
     championship_probability: Annotated[float | None, Field(ge=0, le=1)] = None
+    championship_unavailability_reason: str | None = None
     simulation_count: Annotated[int, Field(ge=1)]
     simulation_model_version: str
 
@@ -232,6 +239,7 @@ def build_regular_season_simulation_input(
         weekly_scoring=weekly_scoring,
         schedule=scheduled_matchups_from_league_state(league_state),
         playoff_team_count=playoff_team_count,
+        playoff_rules=league_state.league.rules.playoff_rules,
         simulation_count=simulation_count,
         seed=seed,
         model_version=model_version,
@@ -271,29 +279,30 @@ def _playoff_game(left, right, playoff_scoring, gauss):
     return left if left_seed < right_seed else right
 
 
-def _simulate_standard_champion(standings, playoff_team_count, playoff_scoring, gauss):
-    seeded = [(standings[seed - 1], seed) for seed in range(1, playoff_team_count + 1)]
-    if playoff_team_count == 2:
-        return _playoff_game(seeded[0], seeded[1], playoff_scoring, gauss)[0]
-    if playoff_team_count == 4:
-        semi_a = _playoff_game(seeded[0], seeded[3], playoff_scoring, gauss)
-        semi_b = _playoff_game(seeded[1], seeded[2], playoff_scoring, gauss)
-        return _playoff_game(semi_a, semi_b, playoff_scoring, gauss)[0]
-    if playoff_team_count == 6:
-        round1_a = _playoff_game(seeded[2], seeded[5], playoff_scoring, gauss)
-        round1_b = _playoff_game(seeded[3], seeded[4], playoff_scoring, gauss)
-        semi_a = _playoff_game(seeded[0], round1_a, playoff_scoring, gauss)
-        semi_b = _playoff_game(seeded[1], round1_b, playoff_scoring, gauss)
-        return _playoff_game(semi_a, semi_b, playoff_scoring, gauss)[0]
-    if playoff_team_count == 8:
-        q1 = _playoff_game(seeded[0], seeded[7], playoff_scoring, gauss)
-        q2 = _playoff_game(seeded[3], seeded[4], playoff_scoring, gauss)
-        q3 = _playoff_game(seeded[1], seeded[6], playoff_scoring, gauss)
-        q4 = _playoff_game(seeded[2], seeded[5], playoff_scoring, gauss)
-        semi_a = _playoff_game(q1, q2, playoff_scoring, gauss)
-        semi_b = _playoff_game(q3, q4, playoff_scoring, gauss)
-        return _playoff_game(semi_a, semi_b, playoff_scoring, gauss)[0]
-    return None
+def _simulate_configured_champion(standings, playoff_rules, playoff_scoring, gauss):
+    if playoff_rules is None or playoff_rules.simulation_unavailability_reason() is not None:
+        return None
+    seeds = {
+        seed: (standings[seed - 1], seed)
+        for seed in range(1, playoff_rules.playoff_team_count + 1)
+    }
+    winners = {}
+    for matchup in sorted(
+        playoff_rules.matchups,
+        key=lambda item: (item.round_number, item.week, item.matchup_id),
+    ):
+        left = (
+            seeds[matchup.participant_a.seed_number]
+            if matchup.participant_a.seed_number is not None
+            else winners[matchup.participant_a.winner_of_matchup_id]
+        )
+        right = (
+            seeds[matchup.participant_b.seed_number]
+            if matchup.participant_b.seed_number is not None
+            else winners[matchup.participant_b.winner_of_matchup_id]
+        )
+        winners[matchup.matchup_id] = _playoff_game(left, right, playoff_scoring, gauss)
+    return winners[playoff_rules.championship_matchup_id][0]
 
 
 def _numpy_regular_season_score_batches(request, compiled_schedule, batch_size):
@@ -447,7 +456,12 @@ def simulate_regular_season(
     first_count = [0] * team_count
     champion_count = [0] * team_count
     finish_count = [[0] * team_count for _ in range(team_count)]
-    championship_supported = request.playoff_team_count in {2, 4, 6, 8}
+    championship_unavailability_reason = (
+        request.playoff_rules.simulation_unavailability_reason()
+        if request.playoff_rules is not None
+        else "playoff_rules_unavailable"
+    )
+    championship_supported = championship_unavailability_reason is None
     ranking_indexes = tuple(range(team_count))
     floor_at_zero = max
 
@@ -525,7 +539,9 @@ def simulate_regular_season(
         for index in standings[:request.playoff_team_count]:
             playoff_count[index] += 1
         if championship_supported:
-            champion = _simulate_standard_champion(standings, request.playoff_team_count, playoff_scoring, playoff_gauss)
+            champion = _simulate_configured_champion(
+                standings, request.playoff_rules, playoff_scoring, playoff_gauss
+            )
             champion_count[champion] += 1
         else:
             champion = None
@@ -555,6 +571,7 @@ def simulate_regular_season(
             playoff_probability=playoff_count[index] / n,
             first_place_probability=first_count[index] / n,
             championship_probability=(champion_count[index] / n if championship_supported else None),
+            championship_unavailability_reason=championship_unavailability_reason,
             simulation_count=n,
             simulation_model_version=request.model_version,
         ))

@@ -267,8 +267,8 @@ def test_numpy_matchup_batch_preserves_scalar_addition_order_and_ties() -> None:
     assert actual_points.tolist() == expected_points
 
 
-def test_50000_run_production_output_remains_bit_identical() -> None:
-    """Guard the complete canonical 50k output while allowing exact Tier A tuning."""
+def test_50000_run_production_output_matches_governed_postseason_v2_baseline() -> None:
+    """Guard complete canonical output, including explicit unavailable playoffs."""
     import hashlib
     import json
     import sys
@@ -284,7 +284,7 @@ def test_50000_run_production_output_remains_bit_identical() -> None:
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
         (3, 11): "63660717b6f9d6cd71142fe16dd27c3146a8a24058c2a5c951ea08f32d4a76c2",
-        (3, 12): "27fb34b4ae076a70e9767f148656c3c2e5c5251c8bfb12759c43f9fcbd7cbd68",
+        (3, 12): "c7e9ebe632873c5c7ae4ad2c6335fc6a0a2f0c4f8e5587d59070b139511e378d",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (

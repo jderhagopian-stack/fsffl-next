@@ -87,6 +87,8 @@ def test_sleeper_schedule_normalizes_to_canonical_team_ids_and_points() -> None:
 
     state = SleeperNormalizer().normalize(bundle, as_of=NOW)
     assert state.league.rules.playoff_team_count == 2
+    assert state.league.rules.playoff_start_week == 15
+    assert state.league.rules.fantasy_regular_season_end_week == 14
     assert len(state.matchups) == 2
     first = state.matchups[0]
     assert first.week == 1

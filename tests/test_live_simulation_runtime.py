@@ -196,7 +196,8 @@ def test_experimental_rng_keeps_player_forecasts_and_persists_distinct_identity(
 
     assert player_projection(legacy) == player_projection(experimental)
     assert legacy.model_version != experimental.model_version
-    assert experimental.model_version.endswith("numpy-pcg64-batched-gauss-v1")
+    assert "numpy-pcg64-batched-gauss-v1" in experimental.model_version
+    assert "league-configured-postseason" in experimental.model_version
     legacy_artifact = simulation_artifact(
         league_state_id=state.state_id,
         forecast_fingerprint="forecast-fixture",

@@ -40,8 +40,8 @@ from fsffl.team_utility.simulation import (
     PYTHON_RANDOM_GAUSS_V1,
 )
 
-LIVE_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:resilience-driver-identity"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next8-live-simulation-analytics-v8:numpy-pcg64-batched-gauss-v1"
+LIVE_SIMULATION_MODEL_VERSION = "next9-live-simulation-analytics-v9:league-configured-postseason"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next9-live-simulation-analytics-v9:numpy-pcg64-batched-gauss-v1:league-configured-postseason"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
@@ -284,7 +284,7 @@ def build_live_simulation_analytics(
             weekly_scoring=weekly_scoring,
             simulation_count=simulation_count,
             seed=seed,
-            model_version="next4-live-regular-season-v4:empirical-weekly-volatility",
+            model_version="next4-live-regular-season-v5:empirical-weekly-volatility:league-configured-postseason",
             rng_protocol=rng_protocol,
             rng_batch_size=rng_batch_size,
         )
