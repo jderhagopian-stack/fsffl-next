@@ -1226,3 +1226,157 @@ def test_browser_manual_refresh_joins_auto_refresh_and_reaches_usable_core_layer
     resource = app.state.heavy_work_coordinator.snapshot()
     assert resource.memory_limit_bytes == DEFAULT_MEMORY_LIMIT_BYTES
     assert max(resource.current_rss_bytes, resource.peak_rss_bytes) < DEFAULT_MEMORY_LIMIT_BYTES
+
+
+def test_published_full_readiness_stays_full_during_working_reconciliation(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _state("served-ready")
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", state)
+    store.select_team("local-beta-user", state.teams[0].team_id)
+
+    app = create_app(
+        runtime_store=store,
+        capability_readiness_reader=lambda _runtime: {
+            "overall_status": "full",
+            "served_last_good": {"available": False},
+            "forecast": {"status": "full"},
+            "simulation": {"status": "full"},
+            "current_value": {"status": "full"},
+            "intrinsic": {"status": "full"},
+        },
+    )
+
+    store.begin_working_generation("local-beta-user", league_state=state)
+    published = store.get("local-beta-user")
+    readiness = app.state.capability_readiness_reader(published)
+
+    assert readiness["overall_status"] == "full"
+    assert readiness["publication"]["working_generation_active"] is True
+    assert readiness["publication"]["status"] == "serving_published_during_update"
+    assert readiness["reconciliation"]["status"] == "running"
+    assert readiness["reconciliation"]["published_state_id"] == state.state_id
+    assert readiness["reconciliation"]["target_state_id"] == state.state_id
+    assert readiness["served_last_good"].get("stale") is not True
+
+
+def test_same_state_full_refresh_verifies_without_rebuilding_current_layers(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FSFFL_BETA_AUTH", "0")
+    state = _state("same-state-noop")
+    store = PrivateBetaRuntimeStore()
+    store.set_league_state("local-beta-user", state)
+    store.select_team("local-beta-user", state.teams[0].team_id)
+
+    observation = SimpleNamespace(as_of=state.as_of, player_id="fixture-player")
+    forecast = SimpleNamespace(
+        raw_forecasts=(observation,),
+        league_scored_forecasts=(observation,),
+        successful_source_ids=("fixture-source",),
+        failed_sources=(),
+        uncertainty_ready=True,
+        evidence_basis="fixture-governed",
+        runtime_result=SimpleNamespace(
+            simulation_authority_blockers=(),
+            partial_fantasy_point_forecasts=(),
+            simulation_material_partial_player_ids=(),
+            fumbles_lost_non_material_partial_player_ids=(),
+            fumbles_lost_material_partial_player_ids=(),
+            family_coverage=(),
+            evaluation_as_of=state.as_of,
+        ),
+    )
+    simulation = SimpleNamespace(
+        league_view=SimpleNamespace(
+            context=SimpleNamespace(league_state_id=state.state_id)
+        ),
+        simulation_result=SimpleNamespace(simulation_count=50_000),
+    )
+    values = SimpleNamespace(
+        league_state_id=state.state_id,
+        estimates=(SimpleNamespace(as_of=state.as_of),),
+        fsffl_cardinal_values=(),
+        pick_variant_market_values=(),
+        successful_source_ids=("fixture-value-source",),
+        coverage=1.0,
+        cardinal_player_coverage=1.0,
+    )
+    store.set_forecast_evidence("local-beta-user", forecast)
+    store.set_simulation_analytics("local-beta-user", simulation)
+    store.set_value_evidence("local-beta-user", values)
+    store.bind_publication_generation_id("local-beta-user", "published-generation-1")
+
+    calls = {"state": 0, "forecast": 0, "simulation": 0, "value": 0, "intrinsic": 0}
+
+    def state_loader(_external_id: str) -> LeagueState:
+        calls["state"] += 1
+        return state
+
+    def should_not_forecast(_state: LeagueState):
+        calls["forecast"] += 1
+        raise AssertionError("current Forecast must not rebuild for unchanged full State")
+
+    def should_not_simulate(_state: LeagueState, _forecast):
+        calls["simulation"] += 1
+        raise AssertionError("current Simulation must not rebuild for unchanged full State")
+
+    def should_not_value(_state: LeagueState):
+        calls["value"] += 1
+        raise AssertionError("current Value must not rebuild for unchanged full State")
+
+    def should_not_intrinsic(_runtime):
+        calls["intrinsic"] += 1
+        raise AssertionError("current Intrinsic must not reconcile for unchanged full State")
+
+    app = create_app(
+        runtime_store=store,
+        state_loader=state_loader,
+        forecast_loader=should_not_forecast,
+        simulation_loader=should_not_simulate,
+        value_loader=should_not_value,
+        product_capability_reconciler=should_not_intrinsic,
+        capability_readiness_reader=lambda _runtime: {
+            "overall_status": "full",
+            "served_last_good": {"available": False},
+            "forecast": {"status": "full"},
+            "simulation": {"status": "full"},
+            "current_value": {"status": "full"},
+            "intrinsic": {"status": "full"},
+        },
+    )
+    client = TestClient(app)
+
+    response = client.post("/api/intelligence/jobs")
+    assert response.status_code == 200
+
+    deadline = __import__("time").monotonic() + 3.0
+    job = None
+    while __import__("time").monotonic() < deadline:
+        job = app.state.intelligence_jobs.current("local-beta-user")
+        if job is not None and job.status in {
+            IntelligenceJobStatus.COMPLETED,
+            IntelligenceJobStatus.FAILED,
+            IntelligenceJobStatus.INTERRUPTED,
+        }:
+            break
+        sleep(0.01)
+
+    assert job is not None
+    assert job.status == IntelligenceJobStatus.COMPLETED
+    assert "no rebuild was required" in job.message.lower()
+    assert calls == {
+        "state": 1,
+        "forecast": 0,
+        "simulation": 0,
+        "value": 0,
+        "intrinsic": 0,
+    }
+    assert store.working_generation_active("local-beta-user") is False
+    published = store.get("local-beta-user")
+    assert published.publication_generation_id == "published-generation-1"
+    assert published.forecast_evidence is forecast
+    assert published.simulation_analytics is simulation
+    assert published.value_evidence is values
