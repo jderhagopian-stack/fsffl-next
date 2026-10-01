@@ -113,6 +113,18 @@ Classify each change before implementation/promotion:
 
 Once a boundary has been directly validated and deterministic regressions protect it, those tests are the standing proof of that boundary. Do not manually re-prove unrelated accepted layers for every downstream change. Escalate a change to a heavier tier only when its actual dependencies, runtime behavior, or contradictory evidence justify it.
 
+### Module-internal versus contract-changing work
+A change that remains inside an authoritative module and preserves the module's published input/output contract should be validated primarily inside that module. For example, Simulation may change its internal algorithm, batching, bracket execution, sampling implementation, or performance characteristics without requiring Value, Decision, Analytics, Presentation, cross-league lifecycle, or browser acceptance to be re-proven **so long as downstream consumers receive the same contract and semantics they already depend on**.
+
+Broader testing becomes required when the change alters what another module can observe or depend on, including:
+- output fields, nullability, units, meaning, timing, or availability;
+- model/artifact identity in a way that changes restore/cache/publication compatibility;
+- ordering, determinism, replay guarantees, or error behavior exposed across the boundary;
+- authority ownership or provenance that downstream modules consume;
+- performance/resource behavior that can materially affect shared runtime availability.
+
+The question is therefore not merely "did Simulation change?" but **"did Simulation's contract with the rest of NEXT change?"** If no, keep validation bounded to Simulation plus standing boundary regressions. If yes, test the affected consumers and only those broader layers whose contracts actually changed.
+
 The default posture is **fast by default, heavy when warranted**: small reviewable changes should remain small, useful estimates should expose uncertainty rather than disappear solely because evidence is imperfect, and incident-response safeguards must not become permanent whole-platform ceremony for unrelated work.
 
 ## Private-beta availability discipline
