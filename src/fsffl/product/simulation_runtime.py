@@ -34,6 +34,7 @@ from fsffl.team_utility import (
     classify_calculated_competitive_state,
     derive_league_relative_competitive_state_policy,
     optimize_team_lineup,
+    resolved_playoff_rules_from_league_state,
     simulate_regular_season,
 )
 from fsffl.team_utility.simulation import (
@@ -42,8 +43,8 @@ from fsffl.team_utility.simulation import (
 )
 from fsffl.team_utility.utility import CalculatedCompetitiveState
 
-LIVE_SIMULATION_MODEL_VERSION = "next11-live-simulation-analytics-v11:current-season-factual-baseline:league-configured-postseason:sleeper-basic-settings-fallback"
-EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next11-live-simulation-analytics-v11:numpy-pcg64-batched-gauss-v1:current-season-factual-baseline:league-configured-postseason:sleeper-basic-settings-fallback"
+LIVE_SIMULATION_MODEL_VERSION = "next12-live-simulation-analytics-v12:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
+EXPERIMENTAL_NUMPY_SIMULATION_MODEL_VERSION = "next12-live-simulation-analytics-v12:numpy-pcg64-batched-gauss-v1:current-season-factual-baseline:playoff-week-scoring:league-configured-postseason:sleeper-basic-settings-fallback"
 
 
 def _simulation_rng_from_environment(environment: dict[str, str]) -> tuple[str, int | None]:
@@ -233,8 +234,20 @@ def build_live_simulation_analytics(
         league_state
     )
     fantasy_weeks = tuple(sorted({matchup.week for matchup in remaining_matchups}))
-    if not fantasy_weeks:
-        raise ValueError("canonical remaining fantasy regular-season schedule is required")
+    playoff_rules = resolved_playoff_rules_from_league_state(league_state)
+    playoff_weeks = (
+        playoff_rules.round_weeks
+        if (
+            playoff_rules is not None
+            and playoff_rules.simulation_unavailability_reason() is None
+        )
+        else ()
+    )
+    scoring_panel_weeks = tuple(sorted(set(fantasy_weeks) | set(playoff_weeks)))
+    if not scoring_panel_weeks:
+        raise ValueError(
+            "canonical forward fantasy scoring weeks are required for live simulation"
+        )
 
     ordered_teams = tuple(sorted(league_state.teams, key=lambda item: item.team_id))
     lineups = {}
@@ -267,18 +280,26 @@ def build_live_simulation_analytics(
     }
 
     with sample_rss_phase("simulation.weekly_scoring_panel"):
-        weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
+        forward_weekly_scoring = build_bye_aware_weekly_team_scoring_panel(
             league_state,
             effective_forecasts,
             team_ids=tuple(team.team_id for team in ordered_teams),
-            weeks=fantasy_weeks,
+            weeks=scoring_panel_weeks,
             as_of=league_state.as_of,
             baseline_lineups=lineups,
         )
+    regular_week_set = set(fantasy_weeks)
+    playoff_week_set = set(playoff_weeks)
+    weekly_scoring = tuple(
+        row for row in forward_weekly_scoring if row.week in regular_week_set
+    )
+    playoff_weekly_scoring = tuple(
+        row for row in forward_weekly_scoring if row.week in playoff_week_set
+    )
     team_names = {team.team_id: team.display_name for team in ordered_teams}
     bye_week_unfilled = [
         f"{team_names[row.team_id]} W{row.week}"
-        for row in weekly_scoring
+        for row in forward_weekly_scoring
         if "explicit_unfilled_zero" in row.model_version
         and not lineups[row.team_id].unfilled_slots
     ]
@@ -287,9 +308,10 @@ def build_live_simulation_analytics(
         request = build_regular_season_simulation_input(
             league_state,
             weekly_scoring=weekly_scoring,
+            playoff_weekly_scoring=playoff_weekly_scoring,
             simulation_count=simulation_count,
             seed=seed,
-            model_version="next4-live-current-season-v6:factual-completed-weeks:empirical-weekly-volatility:league-configured-postseason",
+            model_version="next4-live-current-season-v7:factual-completed-weeks:playoff-week-scoring:empirical-weekly-volatility:league-configured-postseason",
             rng_protocol=rng_protocol,
             rng_batch_size=rng_batch_size,
         )
@@ -299,14 +321,22 @@ def build_live_simulation_analytics(
         effective_forecasts=effective_forecasts,
         lineups=lineups,
         weekly_scoring=weekly_scoring,
+        playoff_weekly_scoring=playoff_weekly_scoring,
         request=request,
-        all_inputs=(forecasts, effective_forecasts, lineups, weekly_scoring, request),
+        all_inputs=(
+            forecasts,
+            effective_forecasts,
+            lineups,
+            weekly_scoring,
+            playoff_weekly_scoring,
+            request,
+        ),
     )
     with sample_rss_phase("simulation.kernel_and_result_aggregation"):
         simulation = simulate_regular_season(request, cooperative_yield=cooperative_yield)
     with sample_rss_phase("simulation.post_kernel_analytics_aggregation"):
         scoring_dispersion_diagnostic = build_scoring_dispersion_diagnostic(
-            weekly_scoring,
+            weekly_scoring or playoff_weekly_scoring,
             simulation,
             baseline_lineups=lineups,
             fallback_player_ids=fallback_ids,
