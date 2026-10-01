@@ -278,6 +278,207 @@ class RegularSeasonSimulationResult(FrozenModel):
     rng_draw_layout: str = "legacy-unrecorded"
     rng_seed_derivation: str = "legacy-python-seed-v1"
     simulation_input_fingerprint: str = "legacy-unfingerprinted"
+    # Topology-only coordinates used to prove when two alternate-State runs consume
+    # the same ordered random-number stream. Means/standard deviations are omitted
+    # intentionally so changed football strength can vary while the Monte Carlo
+    # worlds remain paired.
+    common_world_regular_season_coordinate: str = "legacy-unrecorded"
+    common_world_postseason_coordinate: str | None = None
+    common_world_postseason_unavailability_reason: str | None = "legacy-unrecorded"
+
+
+class CounterfactualCompetitiveOutcomeDelta(FrozenModel):
+    """Simulation-owned before/after competitive delta with pairing provenance."""
+
+    team_id: str
+    expected_wins: float
+    expected_remaining_wins: float | None = None
+    playoff_probability: float | None = None
+    bye_probability: float | None = None
+    first_place_probability: float
+    championship_probability: float | None = None
+    simulation_count: Annotated[int, Field(ge=1)]
+    seed: int
+    rng_protocol: str
+    comparison_method: Literal["common_random_numbers", "aggregate_difference"]
+    championship_comparison_method: Literal[
+        "common_random_numbers", "aggregate_difference", "unavailable"
+    ]
+    regular_season_common_worlds: bool
+    postseason_common_worlds: bool
+    regular_season_unavailability_reason: str | None = None
+    postseason_unavailability_reason: str | None = None
+    common_world_metrics: tuple[str, ...] = ()
+    baseline_simulation_input_fingerprint: str
+    scenario_simulation_input_fingerprint: str
+    model_version: str = "next4-counterfactual-competitive-delta-v1"
+
+    @model_validator(mode="after")
+    def validate_counterfactual_delta(self) -> "CounterfactualCompetitiveOutcomeDelta":
+        if not self.team_id.strip() or not self.model_version.strip():
+            raise ValueError("counterfactual delta identifiers cannot be blank")
+        if self.regular_season_common_worlds and self.regular_season_unavailability_reason is not None:
+            raise ValueError("common regular-season worlds cannot carry an unavailability reason")
+        if self.postseason_common_worlds and self.postseason_unavailability_reason is not None:
+            raise ValueError("common postseason worlds cannot carry an unavailability reason")
+        return self
+
+
+def _optional_probability_delta(after: float | None, before: float | None) -> float | None:
+    return None if after is None or before is None else after - before
+
+
+def _common_world_replay_mismatch(
+    baseline: RegularSeasonSimulationResult,
+    scenario: RegularSeasonSimulationResult,
+) -> str | None:
+    if baseline.model_version != scenario.model_version:
+        return "simulation_model_mismatch"
+    if baseline.simulation_count != scenario.simulation_count:
+        return "simulation_count_mismatch"
+    if baseline.seed != scenario.seed:
+        return "seed_mismatch"
+    replay_fields = (
+        "rng_protocol",
+        "rng_runtime_version",
+        "rng_bit_generator",
+        "rng_batch_size",
+        "rng_draw_dtype",
+        "rng_draw_layout",
+        "rng_seed_derivation",
+    )
+    if any(getattr(baseline, field) != getattr(scenario, field) for field in replay_fields):
+        return "rng_replay_identity_mismatch"
+    return None
+
+
+def compare_counterfactual_simulation_results(
+    baseline: RegularSeasonSimulationResult,
+    scenario: RegularSeasonSimulationResult,
+    *,
+    team_id: str,
+    model_version: str = "next4-counterfactual-competitive-delta-v1",
+) -> CounterfactualCompetitiveOutcomeDelta:
+    """Return competitive deltas and prove common-world coupling where valid.
+
+    Aggregate subtraction is always mathematically valid when both authoritative
+    outputs exist. It is labeled common-random-number comparison only when the two
+    simulations share the exact replay identity and topology-only draw coordinate.
+    """
+
+    baseline_by_team = {item.team_id: item for item in baseline.outcomes}
+    scenario_by_team = {item.team_id: item for item in scenario.outcomes}
+    if team_id not in baseline_by_team or team_id not in scenario_by_team:
+        raise ValueError("counterfactual comparison requires the team in both simulations")
+    if not model_version.strip():
+        raise ValueError("counterfactual comparison model_version cannot be blank")
+
+    before = baseline_by_team[team_id]
+    after = scenario_by_team[team_id]
+    replay_reason = _common_world_replay_mismatch(baseline, scenario)
+    regular_reason = replay_reason
+    if regular_reason is None:
+        if (
+            baseline.common_world_regular_season_coordinate == "legacy-unrecorded"
+            or scenario.common_world_regular_season_coordinate == "legacy-unrecorded"
+        ):
+            regular_reason = "common_world_coordinate_unavailable"
+        elif (
+            baseline.common_world_regular_season_coordinate
+            != scenario.common_world_regular_season_coordinate
+        ):
+            regular_reason = "regular_season_draw_topology_mismatch"
+    regular_common = regular_reason is None
+
+    postseason_reason = replay_reason
+    if postseason_reason is None and not regular_common:
+        postseason_reason = "regular_season_common_worlds_unavailable"
+    if postseason_reason is None:
+        if baseline.common_world_postseason_coordinate is None:
+            postseason_reason = (
+                baseline.common_world_postseason_unavailability_reason
+                or "baseline_postseason_common_world_coordinate_unavailable"
+            )
+        elif scenario.common_world_postseason_coordinate is None:
+            postseason_reason = (
+                scenario.common_world_postseason_unavailability_reason
+                or "scenario_postseason_common_world_coordinate_unavailable"
+            )
+        elif (
+            baseline.common_world_postseason_coordinate
+            != scenario.common_world_postseason_coordinate
+        ):
+            postseason_reason = "postseason_draw_topology_mismatch"
+    postseason_common = postseason_reason is None
+
+    regular_metrics = [
+        "expected_wins",
+        "first_place_probability",
+    ]
+    if before.expected_remaining_wins is not None and after.expected_remaining_wins is not None:
+        regular_metrics.append("expected_remaining_wins")
+    if before.playoff_probability is not None and after.playoff_probability is not None:
+        regular_metrics.append("playoff_probability")
+    if before.bye_probability is not None and after.bye_probability is not None:
+        regular_metrics.append("bye_probability")
+    common_metrics = tuple(regular_metrics if regular_common else ())
+    if (
+        postseason_common
+        and before.championship_probability is not None
+        and after.championship_probability is not None
+    ):
+        common_metrics += ("championship_probability",)
+
+    championship_delta = _optional_probability_delta(
+        after.championship_probability,
+        before.championship_probability,
+    )
+    championship_method: Literal[
+        "common_random_numbers", "aggregate_difference", "unavailable"
+    ]
+    if championship_delta is None:
+        championship_method = "unavailable"
+    elif postseason_common:
+        championship_method = "common_random_numbers"
+    else:
+        championship_method = "aggregate_difference"
+
+    return CounterfactualCompetitiveOutcomeDelta(
+        team_id=team_id,
+        expected_wins=after.expected_wins - before.expected_wins,
+        expected_remaining_wins=(
+            None
+            if after.expected_remaining_wins is None or before.expected_remaining_wins is None
+            else after.expected_remaining_wins - before.expected_remaining_wins
+        ),
+        playoff_probability=_optional_probability_delta(
+            after.playoff_probability,
+            before.playoff_probability,
+        ),
+        bye_probability=_optional_probability_delta(
+            after.bye_probability,
+            before.bye_probability,
+        ),
+        first_place_probability=(
+            after.first_place_probability - before.first_place_probability
+        ),
+        championship_probability=championship_delta,
+        simulation_count=baseline.simulation_count,
+        seed=baseline.seed,
+        rng_protocol=baseline.rng_protocol,
+        comparison_method=(
+            "common_random_numbers" if regular_common else "aggregate_difference"
+        ),
+        championship_comparison_method=championship_method,
+        regular_season_common_worlds=regular_common,
+        postseason_common_worlds=postseason_common,
+        regular_season_unavailability_reason=regular_reason,
+        postseason_unavailability_reason=postseason_reason,
+        common_world_metrics=common_metrics,
+        baseline_simulation_input_fingerprint=baseline.simulation_input_fingerprint,
+        scenario_simulation_input_fingerprint=scenario.simulation_input_fingerprint,
+        model_version=model_version,
+    )
 
 
 def current_season_matchups_from_league_state(
