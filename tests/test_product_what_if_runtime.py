@@ -17,9 +17,13 @@ def test_player_unavailable_what_if_reuses_state_and_simulation_authority() -> N
     assert '"slot": RosterSlot.IR' in source
     assert "run_cached_scenario_simulation(" in source
     assert "simulation_loader=simulation_loader" in source
+    assert "compare_counterfactual_simulation_results" in source
+    assert "competitive_override=simulation_delta" in source
+    assert '"simulation_counterfactual_delta"' in source
     assert "compare_team_utility_vectors" in source
     assert '"competitive_outcomes": "NEXT-4 Simulation"' in source
-    assert '"scenario_delta": "NEXT-4 Team Utility"' in source
+    assert '"competitive_delta": "NEXT-4 Simulation common-world comparison when replay/topology coordinates match"' in source
+    assert '"scenario_delta": "NEXT-4 Team Utility consumes Simulation competitive delta and adds resilience"' in source
     assert '"scenario_cache": "performance-only exact-result reuse"' in source
 
 
