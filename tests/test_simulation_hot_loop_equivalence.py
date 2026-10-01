@@ -110,7 +110,7 @@ def test_optimized_hot_loop_is_exactly_equivalent_to_reference_rng_and_standings
             row.wins_stddev,
             row.first_place_probability,
         ) == (reference[0], reference[1], reference[3])
-        assert row.playoff_probability is None
+        assert row.playoff_probability == reference[2]
 
 
 def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
@@ -143,7 +143,7 @@ def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
     )
 
 
-def test_performance_benchmark_reference_respects_unavailable_playoff_rules() -> None:
+def test_performance_benchmark_reference_matches_finish_rank_playoff_estimates() -> None:
     from scripts.benchmark_simulation_performance import (
         _regular_outcome_signature,
         _reference as benchmark_reference,
@@ -153,7 +153,7 @@ def test_performance_benchmark_reference_respects_unavailable_playoff_rules() ->
     request = _request(simulation_count=100)
     reference = benchmark_reference(request)
     actual = simulate_regular_season(request).outcomes
-    assert all(row.playoff_probability is None for row in reference)
+    assert all(row.playoff_probability is not None for row in reference)
     assert _regular_outcome_signature(reference) == _regular_outcome_signature(actual)
 
 
@@ -321,8 +321,8 @@ def test_numpy_matchup_batch_preserves_scalar_addition_order_and_ties() -> None:
     assert actual_points.tolist() == expected_points
 
 
-def test_50000_run_output_matches_governed_postseason_fail_closed_baseline() -> None:
-    """Guard complete canonical output, including explicit unavailable playoffs."""
+def test_50000_run_output_matches_governed_settings_derived_postseason_baseline() -> None:
+    """Guard complete canonical output, including finish-rank postseason estimates."""
     import hashlib
     import json
     import sys
@@ -337,8 +337,8 @@ def test_50000_run_output_matches_governed_postseason_fail_closed_baseline() -> 
     dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "c69d6fae4ccbe2e8f7e160659d190f62ed78069cb92b76be53622f1e95af3897",
-        (3, 12): "5a891eb957e1758d136251dc5cd4f74badece6c91e43ffcf04b3660cb5434c16",
+        (3, 11): "e505938396df5997495ae4e0191b8ac8c6ee7b126e8ad20679806dea5beda1de",
+        (3, 12): "ad34468376222d6f25b2e5ea56714a103e011f11d5f51f10ddbb8281be415c9c",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (

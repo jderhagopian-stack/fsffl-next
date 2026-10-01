@@ -67,8 +67,12 @@ def _reference(request: RegularSeasonSimulationInput):
     playoff_count = defaultdict(int)
     first_count = defaultdict(int)
     playoff_supported = (
-        request.playoff_rules is not None
-        and request.playoff_rules.qualification_unavailability_reason() is None
+        request.playoff_team_count is not None
+        and 2 <= request.playoff_team_count <= len(team_ids)
+        and (
+            request.playoff_rules is None
+            or request.playoff_rules.qualification_unavailability_reason() is None
+        )
     )
 
     for _ in range(request.simulation_count):

@@ -132,7 +132,7 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     assert rows["a"].first_place_probability is not None
     assert rows["a"].optimized_expected_points == 400.0
     assert rows["a"].expected_wins > rows["b"].expected_wins
-    assert rows["a"].playoff_unavailability_reason == "playoff_rules_unavailable"
+    assert rows["a"].playoff_unavailability_reason == "playoff_settings_unavailable"
     assert "empirical-weekly-volatility" in result.simulation_result.model_version
     assert any(warning.code == "weekly_mean_decomposition_provisional" for warning in result.league_view.context.warnings)
     assert any(warning.code == "league_playoff_rules_unavailable" for warning in result.league_view.context.warnings)
@@ -146,6 +146,43 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     states = {row.team_id: row.utility.calculated_competitive_state for row in result.team_views}
     assert states["a"].value == "unknown"
     assert states["b"].value == "unknown"
+
+
+def test_sleeper_basic_postseason_settings_restore_odds_and_calculated_state() -> None:
+    state = _state()
+    league = state.league.model_copy(
+        update={
+            "rules": state.league.rules.model_copy(
+                update={
+                    "playoff_team_count": 2,
+                    "playoff_start_week": 15,
+                    "fantasy_regular_season_end_week": 14,
+                }
+            )
+        }
+    )
+    configured_state = state.model_copy(update={"league": league})
+
+    result = build_live_simulation_analytics(
+        configured_state,
+        forecasts=_forecasts(),
+        forecast_model_version="next2-test",
+        simulation_count=2_000,
+        seed=7,
+        generated_at=AS_OF,
+    )
+
+    assert all(row.playoff_probability is not None for row in result.league_view.teams)
+    assert all(row.championship_probability is not None for row in result.league_view.teams)
+    assert result.simulation_result.championship_probability_provenance == "settings_derived_standard"
+    assert any(
+        warning.code == "competitive_state_policy_league_relative"
+        for warning in result.league_view.context.warnings
+    )
+    assert all(
+        team.utility.calculated_competitive_state.value != "unknown"
+        for team in result.team_views
+    )
 
 
 def test_default_hosted_simulation_loader_resolves_foreground_pressure_callback() -> None:

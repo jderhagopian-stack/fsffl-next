@@ -61,7 +61,7 @@ def test_stronger_scoring_mean_improves_competitive_outcomes() -> None:
 
     assert improved.expected_wins > baseline.expected_wins
     assert improved.playoff_probability is None
-    assert improved.playoff_unavailability_reason == "playoff_rules_unavailable"
+    assert improved.playoff_unavailability_reason == "playoff_settings_unavailable"
     assert improved.first_place_probability > baseline.first_place_probability
 
 

@@ -167,7 +167,12 @@ class SleeperNormalizer:
         team_count = int(settings.get("num_teams") or len(bundle.rosters) or 2)
         faab_budget = int(settings.get("waiver_budget") or 0)
         raw_playoff_teams = settings.get("playoff_teams")
-        playoff_team_count = int(raw_playoff_teams) if raw_playoff_teams else None
+        try:
+            playoff_team_count = int(raw_playoff_teams) if raw_playoff_teams not in (None, "", 0) else None
+        except (TypeError, ValueError):
+            playoff_team_count = None
+        if playoff_team_count is not None and not 1 <= playoff_team_count <= team_count:
+            playoff_team_count = None
         raw_playoff_start = settings.get("playoff_week_start")
         try:
             playoff_start_week = int(raw_playoff_start) if raw_playoff_start not in (None, "", 0) else None
