@@ -723,3 +723,15 @@ This remains a bounded tranche, not authorization to rewrite the entire engine. 
 If instrumentation proves the peak is independent of Simulation 2.0 (for example a Forecast- or player-history-only allocation with no cross-boundary duplication), fix that owner narrowly instead.
 
 After the smallest evidence-backed correction, rerun exact-head CI/review and the reversible batch-500 hosted journey with true concurrent foreground reads, full readiness/publication, restart restore, exact high-water evidence, and rollback to main. If the unchanged free-tier hard limit still cannot be met without broad architecture/fidelity changes, return to Management for a capacity decision.
+
+
+## 2026-10-01 — PR #311 hosted concurrency gate: use an external acceptance runner, not Work browser
+Management accepts the exact-head PR #311 code/review state as ready for the final hosted measurement. The remaining blocker is Work Mode browser URL policy, not a product defect.
+
+Decision:
+1. Do not wait on or weaken the required concurrent foreground-read gate.
+2. Execute the final reversible batch-500 Render validation using a platform-approved **external acceptance runner** (prefer a short-lived GitHub Actions job or equivalent repo-owned client) that can issue real concurrent HTTP requests to the public private-beta host during refresh.
+3. The runner must exercise Home, My Team and Product Context concurrently against the actual deployed Render service, not substitute in-process route calls or sequential probes.
+4. Use only existing secure authentication/session mechanisms; do not place credentials/tokens in repo content or logs. If no supported noninteractive authenticated path exists, stop at INPUT GATE and request the smallest user action needed.
+5. Preserve all existing hosted gates: 50,000 trials, batch 500, exact process high-water RSS, full readiness/publication, restart restoration, and rollback to main.
+6. If memory exceeds 536,870,900 bytes, return to Management for capacity. If the hosted run passes, return immediately for the production-adoption decision; do not add another generic validation cycle.
