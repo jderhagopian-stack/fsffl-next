@@ -2217,3 +2217,12 @@ Validation on corrected source/test head `508237237ffd7a50d261d59d26abf9bac97014
 
 Next gate: freeze the docs-complete exact head, rerun ordinary exact-head workflows, request fresh Codex review, and close any remaining P1/P2 before merge/deploy. Keep promotion risk-proportionate; do not reopen #321 postseason structure, #323 continuity, Forecast model authority, or unrelated platform layers.
 
+
+
+### 2026-10-01 — #324 hosted acceptance reached current, then acceptance execution restarted it
+
+Live #324 did successfully publish the new current-season Simulation generation at ~22:27:31Z. Physical Safari then showed the current-generation result for `jimmygoodjob` (2-1, Contender, 9.2 projected final wins, 91% playoffs, 12% championship), demonstrating that the completed-results current-season path can reach a usable published state.
+
+Immediately after publication, another intelligence job started; Safari stale-while-revalidate also issued `POST /api/connect/sleeper/background/refresh` at ~22:28:44Z. More importantly, Render received yet another API-triggered deployment of the **same merged #324 commit** at ~22:29:28Z, after several earlier same-commit acceptance deployments. That redeployment replaces/restarts the instance and prevents a clean stable-settle observation.
+
+Treat this as an acceptance-execution problem unless new evidence shows a product defect. Do not keep redeploying identical #324 code merely to observe it. Hosted acceptance should use one stable deployment, allow the replacement intelligence generation to finish, verify current-season values and continuity, then stop. A same-material background verification may run, but it must not force a new deployment or make usable published intelligence disappear.
