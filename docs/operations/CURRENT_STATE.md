@@ -1,4 +1,4 @@
-Warning: truncated output (original token count: 50285)
+Warning: truncated output (original token count: 50386)
 Total output lines: 2002
 
 # FSFFL NEXT — Current State
@@ -698,11 +698,7 @@ Observed product failures:
 - later Franchise HTTP 429;
 - malformed mobile last-good/stale banner rendering.
 
-Runtime evidence shows a more serious combined-load failure: after cold wake and automatic refresh, process memory rose to **534.7 MB / 536.9 MB** at 12:46 UTC, then reset to ~3.8 MB and Uvicorn restarted. No explicit OOM kill line was emitted, …20285 tokens truncated…s primarily a **capacity and operations scaling problem**, not a rewrite of application authority/lifecycle plumbing. The current small/free Render instance is a useful stress constraint, not the architectural target.
-
-Implications:
-- foreground web/API must remain horizontally scalable and not own authoritative user/model state only in process memory;
-- heavy Forecast/Simulation/Intrinsic/Market work must be separable from request latency and schedulable through durable/idempotent jobs;
+Runtime evidence shows a more serious combined-load failure: after cold wake and automatic refresh, process memory rose to **534.7 MB / 536.9 MB** at 12:46 UTC, then reset to ~3.8 MB and Uvicorn restarted. No explicit OOM kill line was emitted, …20386 tokens truncated…rk must be separable from request latency and schedulable through durable/idempotent jobs;
 - any lifecycle correctness that eventually spans multiple web/worker instances must have distributed/durable coordination rather than depend on one-process locks or sticky sessions;
 - caches remain bounded accelerators with explicit ownership/identity/lifetime and must not grow with all historical users/leagues;
 - workload classes must be independently scalable with backpressure/fairness;
@@ -1247,6 +1243,6 @@ Next executable action: push the P2 correction and this canonical handoff onto P
 
 Fresh whole-PR review on exact head `b85f62f6d5f3bcbe570cf50ffbb907ee2556f37c` found one P2 in the 50,000-run output regression: the digest included the full Python patch string, while expected values were selected only by Python minor version, and supported future minors had no entry. The test now normalizes only `rng_runtime_version` to major.minor before hashing; all numeric outputs, distributions, and the remaining replay metadata are covered. Known 3.11/3.12 numerical digests remain guarded; another supported Python minor must replay exactly within that runtime. Focused test: **6 passed**. Full local suite: **1,903 passed**, one existing Starlette deprecation warning. This correction must be pushed, with exact-head CI and fresh whole-PR P1/P2 review, before changing Render.
 
-Current live service is still untouched on `main` / SHA `878a2a32d5826ff990eed76c4985ae9e8f39bba3`, deploy `dep-dauouj49v7es73adle10`; experimental acceptance and memory instrumentation flags remain off. Render login retry succeeded. Failed live-provider numerical trace workflow #278 (run `36805105244`) is confirmed from its job log as source-health/evidence failure: one independent provider (`razzball`) succeeded where at least two are required. It is not a PIT-history code failure. Exact-head CI for b85 (`36805105204`) passed; latest review correction is not yet pushed/reviewed.
+Current live service is still untouched on `main` / SHA `878a2a32d5826ff990eed76c4985ae9e8f39bba3`, deploy `dep-dauouj49v7es73adle10`; experimental acceptance and memory instrumentation flags remain off. Render login retry succeeded. Failed live-provider numerical trace workflow #278 (run `36805105244`) is confirmed from its job log as source-health/evidence failure: one independent provider (`razzball`) succeeded where at least two are required. It is not a PIT-history code failure. On candidate `9d9c3e45fba165768ec67faf6b5dcaf953958756`, CI #4082 failed only on the Python 3.11 digest baseline after patch-label normalization; it reported deterministic digest `63660717b6f9d6cd71142fe16dd27c3146a8a24058c2a5c951ea08f32d4a76c2`. Other workflows passed, including the live-provider corrective numerical trace #279. The 3.11 baseline is now updated locally and focused simulation regression is 6 passed; this update must be pushed and CI/review repeated.
 
-Next executable action: append this digest-test correction to PR #311, wait for exact-head CI and a fresh clean whole-PR P1/P2 review, then immediately run the authorized reversible batch-500 private-beta validation with genuine concurrent Home/My Team/Product Context requests, 50k readiness/publication, exact RSS/high-water evidence, restart restore, and rollback to main. At or above 536,870,900 bytes, stop and return to Management for the capacity decision. Never merge/adopt without Management approval.
+Next executable action: push the portable digest correction including the CI-observed 3.11 baseline, wait for exact-head CI and a fresh clean whole-PR P1/P2 review, then immediately run the authorized reversible batch-500 private-beta validation with genuine concurrent Home/My Team/Product Context requests, 50k readiness/publication, exact RSS/high-water evidence, restart restore, and rollback to main. At or above 536,870,900 bytes, stop and return to Management for the capacity decision. Never merge/adopt without Management approval.

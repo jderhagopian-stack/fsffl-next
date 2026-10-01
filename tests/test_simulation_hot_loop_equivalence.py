@@ -239,7 +239,7 @@ def test_50000_run_production_output_remains_bit_identical() -> None:
     dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "6c2e4ad6549790291623e292b221e9ed61603093c0672e0db349cea297b22d00",
+        (3, 11): "63660717b6f9d6cd71142fe16dd27c3146a8a24058c2a5c951ea08f32d4a76c2",
         (3, 12): "27fb34b4ae076a70e9767f148656c3c2e5c5251c8bfb12759c43f9fcbd7cbd68",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
