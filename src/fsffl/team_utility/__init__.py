@@ -15,7 +15,7 @@ from .position_strength import (
 from .resilience import build_roster_resilience
 from .scenario import AssetPortfolioDelta, CompetitiveOutcomeDelta, RosterResilienceDelta, TeamScenarioDelta, compare_team_utility_vectors
 from .scoring import TeamUncertaintyMethod, WeeklyScoringDecomposition, build_bye_aware_weekly_team_scoring_distribution, build_bye_aware_weekly_team_scoring_panel, build_team_scoring_distribution, build_weekly_team_scoring_distribution
-from .simulation import CompletedMatchup, RegularSeasonSimulationInput, RegularSeasonSimulationResult, ScheduledMatchup, ScoringDistributionKind, TeamCompetitiveOutcome, TeamScoringDistribution, WeeklyTeamScoringDistribution, build_regular_season_simulation_input, current_season_matchups_from_league_state, regular_season_game_counts, scheduled_matchups_from_league_state, simulate_regular_season
+from .simulation import CompletedMatchup, RegularSeasonSimulationInput, RegularSeasonSimulationResult, ScheduledMatchup, ScoringDistributionKind, TeamCompetitiveOutcome, TeamScoringDistribution, WeeklyTeamScoringDistribution, build_regular_season_simulation_input, current_season_matchups_from_league_state, regular_season_game_counts, resolved_playoff_rules_from_league_state, scheduled_matchups_from_league_state, simulate_regular_season
 from .utility import CalculatedCompetitiveState, FranchiseAssetPortfolio, OwnerStrategicPosture, RosterResilience, StrategicTeamView, TeamUtilityVector
 
 __all__ = [
@@ -30,6 +30,6 @@ __all__ = [
     "build_league_relative_position_strengths", "build_regular_season_simulation_input", "build_roster_resilience", "build_team_scoring_distribution", "current_season_matchups_from_league_state",
     "build_weekly_team_scoring_distribution", "classify_calculated_competitive_state", "compare_position_strengths",
     "compare_team_utility_vectors", "derive_league_relative_competitive_state_policy", "marginal_lineup_impact",
-    "optimize_team_lineup", "regular_season_game_counts", "scheduled_matchups_from_league_state",
+    "optimize_team_lineup", "regular_season_game_counts", "resolved_playoff_rules_from_league_state", "scheduled_matchups_from_league_state",
     "simulate_regular_season", "summarize_lineup_by_position",
 ]
