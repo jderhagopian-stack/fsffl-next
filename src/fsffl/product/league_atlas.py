@@ -143,8 +143,15 @@ def _simulation_rows(
                 "expected_wins": outcome.expected_wins,
                 "wins_stddev": outcome.wins_stddev,
                 "playoff_probability": outcome.playoff_probability,
-                "playoff_seed_probabilities": list(
-                    getattr(outcome, "playoff_seed_probabilities", ()) or ()
+                "playoff_seed_probabilities": (
+                    list(seed_probabilities)
+                    if (
+                        seed_probabilities := getattr(
+                            outcome, "playoff_seed_probabilities", None
+                        )
+                    )
+                    is not None
+                    else None
                 ),
                 "playoff_unavailability_reason": getattr(
                     outcome, "playoff_unavailability_reason", None
@@ -166,8 +173,18 @@ def _simulation_rows(
                     if finish is not None
                     else None
                 ),
-                "finish_rank_probabilities": list(
-                    getattr(finish, "rank_probabilities", ()) or ()
+                "finish_rank_probabilities": (
+                    list(rank_probabilities)
+                    if (
+                        finish is not None
+                        and (
+                            rank_probabilities := getattr(
+                                finish, "rank_probabilities", None
+                            )
+                        )
+                        is not None
+                    )
+                    else None
                 ),
                 "current_rank": current,
                 "movement_vs_current_rank": (
