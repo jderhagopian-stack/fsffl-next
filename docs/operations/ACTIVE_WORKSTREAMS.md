@@ -1079,3 +1079,37 @@ No division probability is invented because current canonical LeagueRules do not
 
 This slice advances Simulation output identity because the persisted authoritative result contract changes. Preserve the accepted #324 current-season facts/future-only mechanics, #324 playoff-week scoring, #325 availability/substitution, 50,000-world authority, and deterministic RNG protocol.
 
+## 2026-10-01 — #326 ACCEPTED: finish / seed / bye output contract
+
+PR #326 was squash-merged as `199c11550cf6d2ca7668a41e6dc7e2a318b09777`. It completes the bounded Simulation 2.0 item-3 output slice without reopening accepted #324 current-season execution or #325 weekly availability/substitution.
+
+Accepted capability:
+- discrete median regular-season finish;
+- full finish-rank distribution retained and exposed through the ordinary League Atlas payload;
+- explicit playoff-seed probability vectors when qualification seeding is governed;
+- bye probability when canonical playoff rules identify bye seeds;
+- bye authority remains independent from later championship execution, so a known opening bye can remain available even if a later reseeding rule is unsupported;
+- unsupported qualification/seeding/bracket structures fail closed independently rather than fabricating seed/bye output;
+- League Analytics and scenario-delta transport carry the new governed outputs;
+- no division probability is fabricated because canonical State still lacks a governed division-membership/seeding contract.
+
+Validation:
+- exact-head full CI: **1,961 passed**, one existing warning;
+- League Atlas North Star focused validation: PASS, including real-league composition sanity and live-provider authority audit;
+- PR164 focused corrective regression: PASS;
+- Live Forecast trace: PASS;
+- fixed 50,000-world replay baselines were explicitly re-established on Python 3.11 and Python 3.12, then the temporary dual-runtime workflow change was removed;
+- automated Codex review was unavailable because the repository/account review quota was exhausted; bounded manual exact-head P1/P2 review found and corrected one presentation-truth issue (unavailable seed distributions must remain `null`, not `[]`) and found no remaining P1/P2.
+
+Single targeted hosted acceptance used Render deploy `dep-davecnjbc2fs73ciml40` only:
+- exact merged commit `199c1155...` became live at **23:03:30Z**; no same-commit redeploy was triggered;
+- startup correctly rejected the pre-#326 persisted Simulation artifact because model/output identity changed: State `68eac82b...` restored with `forecast=True simulation=False value=True complete=False`;
+- Forecast, Value and full Intrinsic remained reusable, proving output-identity invalidation stayed localized to Simulation rather than blanking unrelated accepted layers;
+- resource readiness at startup was ~271 MB RSS / ~276 MB peak against the ~429 MB soft engineering budget and 512 MiB service limit; steady memory settled around **247–250 MB** with idle CPU;
+- no 5xx, OOM/recycle, repeated reconciliation loop, replacement deployment, or broad continuity regression appeared during the stable hosted window;
+- the free instance later shut down normally from inactivity at 23:18:30Z. No product request occurred during that window, so no unnecessary canonical recomputation was forced merely for acceptance.
+
+This is sufficient Tier-B hosted acceptance because the new field semantics/presentation were already proven on the exact head, while the hosted-only contract change was persisted Simulation identity invalidation and localized restore behavior. Do not redeploy or broadly retest #326 absent contradictory evidence.
+
+**Simulation 2.0 roadmap advances immediately to item 4:** governed counterfactual competitive-outcome deltas using common Monte Carlo worlds where mathematically valid. Simulation returns deltas only; Decision/Trade/Market retain transaction economics, owner preference and acceptance authority.
+
