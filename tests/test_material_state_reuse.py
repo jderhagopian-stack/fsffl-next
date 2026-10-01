@@ -19,6 +19,7 @@ from fsffl.state.models import (
     Player,
     PlayerState,
     PlayerStatus,
+    PlayerWeekAvailability,
     Position,
     Provenance,
     RosterEntry,
@@ -26,6 +27,7 @@ from fsffl.state.models import (
     ScoringRule,
     Team,
     TeamState,
+    WeeklyAvailabilityStatus,
 )
 
 
@@ -218,6 +220,26 @@ def test_material_fingerprint_changes_when_matchup_completion_boundary_changes()
     first = _state(as_of=BASE).model_copy(update={"completed_through_week": 1})
     later = _state(as_of=BASE + timedelta(minutes=5)).model_copy(
         update={"completed_through_week": 2}
+    )
+
+    assert league_material_fingerprint(first) != league_material_fingerprint(later)
+    assert forecast_input_fingerprint(first) == forecast_input_fingerprint(later)
+
+
+def test_exact_weekly_availability_changes_material_state_but_not_raw_forecast_input() -> None:
+    first = _state(as_of=BASE)
+    provenance = first.provenance[0]
+    later = _state(as_of=BASE + timedelta(minutes=5)).model_copy(
+        update={
+            "player_week_availability": (
+                PlayerWeekAvailability(
+                    player_id="p1",
+                    week=2,
+                    status=WeeklyAvailabilityStatus.UNAVAILABLE,
+                    provenance=provenance,
+                ),
+            )
+        }
     )
 
     assert league_material_fingerprint(first) != league_material_fingerprint(later)
