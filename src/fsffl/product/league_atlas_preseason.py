@@ -23,7 +23,7 @@ from .simulation_runtime import LiveSimulationAnalyticsResult
 
 
 LEAGUE_ATLAS_PRESEASON_ARTIFACT_KIND = "league_atlas_preseason_baseline"
-LEAGUE_ATLAS_PRESEASON_MODEL_VERSION = "phase3-league-atlas-preseason-v1"
+LEAGUE_ATLAS_PRESEASON_MODEL_VERSION = "phase3-league-atlas-preseason-v2:governed-postseason"
 
 
 class LeagueAtlasPreseasonTeam(FrozenModel):

@@ -221,6 +221,7 @@ def test_settings_derived_standard_bracket_returns_normal_championship_probabili
         bracket_authority="settings_derived_standard",
         bracket_derivation_policy="seeded_standard_fixed_v1",
         matchups=(),
+        bye_seeds=(2, 1),
     )
     derived = LeaguePlayoffRules.model_validate(payload)
     assert derived.effective_matchups() == SIX_TEAM_BYE_BRACKET.effective_matchups()

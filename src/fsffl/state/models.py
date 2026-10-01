@@ -149,7 +149,7 @@ class LeaguePlayoffRules(FrozenModel):
         # Standard fixed seeded conventions. League size, weeks and bye seeds remain governed inputs.
         if self.playoff_team_count == 4 and not self.bye_seeds and self.round_count == 2:
             return (game("semi-a", 1, seed(1), seed(4)), game("semi-b", 1, seed(2), seed(3)), game(self.championship_matchup_id, 2, winner("semi-a"), winner("semi-b")))
-        if self.playoff_team_count == 6 and self.bye_seeds == (1, 2) and self.round_count == 3:
+        if self.playoff_team_count == 6 and set(self.bye_seeds) == {1, 2} and self.round_count == 3:
             return (game("qf-a", 1, seed(3), seed(6)), game("qf-b", 1, seed(4), seed(5)), game("sf-a", 2, seed(1), winner("qf-b")), game("sf-b", 2, seed(2), winner("qf-a")), game(self.championship_matchup_id, 3, winner("sf-a"), winner("sf-b")))
         if self.playoff_team_count == 8 and not self.bye_seeds and self.round_count == 3:
             return (game("qf-a", 1, seed(1), seed(8)), game("qf-b", 1, seed(4), seed(5)), game("qf-c", 1, seed(2), seed(7)), game("qf-d", 1, seed(3), seed(6)), game("sf-a", 2, winner("qf-a"), winner("qf-b")), game("sf-b", 2, winner("qf-c"), winner("qf-d")), game(self.championship_matchup_id, 3, winner("sf-a"), winner("sf-b")))

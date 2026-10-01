@@ -9,7 +9,14 @@ import pytest
 
 from fsffl.product.league_atlas import (
     LEAGUE_ATLAS_CONTRACT_VERSION,
+    _frozen_preseason_rows,
     build_league_atlas_payload,
+)
+from fsffl.product.league_atlas_preseason import (
+    LEAGUE_ATLAS_PRESEASON_MODEL_VERSION,
+    LeagueAtlasPreseasonBaseline,
+    LeagueAtlasPreseasonTeam,
+    load_preseason_baseline,
 )
 from fsffl.product.runtime import UserRuntimeContext
 from fsffl.state.models import (
@@ -415,3 +422,55 @@ def test_real_league_sanity_consumes_canonical_completed_week_without_hardcoding
     assert 'state.completed_through_week != 2' not in source
     assert "live provider evidence proves Week 2 complete" not in source
     assert "governed completed-week boundary is Week {state.completed_through_week}" in source
+
+
+def test_frozen_preseason_rows_preserve_postseason_unavailability_reasons() -> None:
+    state = _state()
+    baseline = LeagueAtlasPreseasonBaseline(
+        league_id="league",
+        season=2026,
+        state_id=state.state_id,
+        state_as_of=NOW,
+        forecast_evaluation_as_of=NOW,
+        forecast_model_version="forecast-v1",
+        simulation_model_version="simulation-v1",
+        simulation_count=50_000,
+        opener_date="2026-09-10",
+        opener_coordinate_source="fixture",
+        teams=(
+            LeagueAtlasPreseasonTeam(
+                team_id="a",
+                projected_starter_points=100.0,
+                rank=1,
+                playoff_probability=None,
+                playoff_unavailability_reason="playoff_rules_unavailable",
+                championship_probability=None,
+                championship_unavailability_reason="playoff_rules_unavailable",
+                first_place_probability=0.5,
+                expected_wins=7.0,
+                expected_finish=1.5,
+            ),
+        ),
+    )
+
+    row = _frozen_preseason_rows(state, baseline)[0]
+
+    assert row["playoff_probability"] is None
+    assert row["playoff_unavailability_reason"] == "playoff_rules_unavailable"
+    assert row["championship_probability"] is None
+    assert row["championship_unavailability_reason"] == "playoff_rules_unavailable"
+
+
+def test_preseason_baseline_loader_requests_new_governed_postseason_version() -> None:
+    class Store:
+        request: dict[str, object] | None = None
+
+        def get_latest_reusable_artifact(self, **kwargs):
+            self.request = kwargs
+            return None
+
+    store = Store()
+    assert load_preseason_baseline(store, state=_state()) is None
+    assert store.request is not None
+    assert store.request["model_version"] == LEAGUE_ATLAS_PRESEASON_MODEL_VERSION
+    assert LEAGUE_ATLAS_PRESEASON_MODEL_VERSION != "phase3-league-atlas-preseason-v1"
