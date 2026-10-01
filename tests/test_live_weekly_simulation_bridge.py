@@ -25,7 +25,9 @@ from fsffl.state.models import (
     TeamState,
 )
 from fsffl.team_utility import (
+    CompletedMatchup,
     TeamScoringDistribution,
+    WeeklyTeamScoringDistribution,
     build_regular_season_simulation_input,
     build_weekly_team_scoring_distribution,
     regular_season_game_counts,
