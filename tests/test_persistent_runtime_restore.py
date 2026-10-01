@@ -39,7 +39,7 @@ from fsffl.product.presentation_continuity import (
     PresentationContinuityStore,
     REQUIRED_PRESENTATION_SURFACES,
 )
-from fsffl.product.runtime import LiveForecastEvidence, UserRuntimeContext
+from fsffl.product.runtime import LiveForecastEvidence, UserRuntimeContext, league_material_fingerprint
 from fsffl.product import simulation_runtime
 from fsffl.product.simulation_runtime import build_live_simulation_analytics
 from fsffl.state.history import InMemorySnapshotStore
@@ -2418,8 +2418,23 @@ def test_restart_then_material_revalidation_pins_all_surfaces_until_replacement_
     # replacement generation is atomically promoted.
     target_state = _league_state(
         as_of=datetime(2026, 9, 8, 12, 10, tzinfo=UTC)
+    ).model_copy(
+        update={
+            "teams": (
+                Team(
+                    team_id="t1",
+                    league_id=published_state.league.league_id,
+                    display_name="One Updated",
+                ),
+                published_state.teams[1],
+            )
+        }
     )
     assert target_state.state_id != published_state.state_id
+    assert (
+        league_material_fingerprint(target_state)
+        != league_material_fingerprint(published_state)
+    )
     transitional = restarted.set_league_state(user_id, target_state)
     assert transitional.league_state is not None
     assert transitional.league_state.state_id == target_state.state_id
