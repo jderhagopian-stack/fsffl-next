@@ -215,6 +215,73 @@ def test_nonstandard_five_team_bracket_is_replayed_from_canonical_rules() -> Non
     assert all(row.championship_unavailability_reason is None for row in first.outcomes)
 
 
+def test_settings_derived_standard_bracket_returns_normal_championship_probability() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    payload.update(
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="seeded_standard_fixed_v1",
+        matchups=(),
+    )
+    derived = LeaguePlayoffRules.model_validate(payload)
+    assert derived.effective_matchups() == SIX_TEAM_BYE_BRACKET.effective_matchups()
+
+    observed_result = simulate_regular_season(_simulation_request(6, rules=SIX_TEAM_BYE_BRACKET))
+    derived_result = simulate_regular_season(_simulation_request(6, rules=derived))
+    observed = {row.team_id: row for row in observed_result.outcomes}
+    compiled = {row.team_id: row for row in derived_result.outcomes}
+    assert {key: row.championship_probability for key, row in observed.items()} == {
+        key: row.championship_probability for key, row in compiled.items()
+    }
+    assert all(row.championship_probability is not None for row in compiled.values())
+    assert {row.championship_probability_provenance for row in observed.values()} == {
+        "provider_observed_exact"
+    }
+    assert {row.championship_probability_provenance for row in compiled.values()} == {
+        "settings_derived_standard"
+    }
+
+
+def test_unrecognized_standard_structure_keeps_qualification_but_withholds_title() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    payload.update(
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="seeded_standard_fixed_v1",
+        playoff_team_count=5,
+        bye_count=1,
+        bye_seeds=(1,),
+        round_count=3,
+        round_weeks=(15, 16, 17),
+        championship_round_number=3,
+        championship_week=17,
+        championship_matchup_id="title",
+        matchups=(),
+    )
+    rules = LeaguePlayoffRules.model_validate(payload)
+    result = simulate_regular_season(_simulation_request(5, rules=rules))
+    assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.championship_probability is None for row in result.outcomes)
+    assert all(row.championship_probability_provenance is None for row in result.outcomes)
+    assert {row.championship_unavailability_reason for row in result.outcomes} == {
+        "playoff_rules_unsupported:bracket_structure"
+    }
+
+
+def test_custom_bracket_policy_is_retained_and_fails_closed_without_losing_qualification() -> None:
+    payload = SIX_TEAM_BYE_BRACKET.model_dump(mode="python")
+    payload.update(
+        bracket_authority="settings_derived_standard",
+        bracket_derivation_policy="league_custom_reseeded_v2",
+        matchups=(),
+    )
+    custom = LeaguePlayoffRules.model_validate(payload)
+    result = simulate_regular_season(_simulation_request(6, rules=custom))
+    assert all(row.playoff_probability is not None for row in result.outcomes)
+    assert all(row.championship_probability is None for row in result.outcomes)
+    assert {row.championship_unavailability_reason for row in result.outcomes} == {
+        "playoff_rules_unsupported:bracket_structure"
+    }
+
+
 def test_reseeding_policy_is_retained_but_not_silently_treated_as_fixed_bracket() -> None:
     reseeded = FIVE_TEAM_THREE_BYE_BRACKET.model_copy(
         update={"reseeding_policy": "highest_remaining_seed_each_round"}
@@ -248,3 +315,18 @@ def test_bye_seed_cannot_skip_an_additional_playoff_round() -> None:
 def test_playoff_participant_reference_must_be_unambiguous() -> None:
     with pytest.raises(ValueError, match="exactly one seed or prior winner"):
         PlayoffParticipantRef()
+
+
+def test_nested_playoff_start_must_follow_regular_season_even_without_duplicate_field() -> None:
+    from fsffl.state.models import LeagueRules
+
+    with pytest.raises(ValueError, match="must follow the regular-season end"):
+        LeagueRules(
+            team_count=6,
+            roster_size=18,
+            playoff_team_count=6,
+            fantasy_regular_season_end_week=15,
+            playoff_rules=SIX_TEAM_BYE_BRACKET,
+            lineup=(),
+            scoring=(),
+        )

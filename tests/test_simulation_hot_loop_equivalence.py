@@ -290,8 +290,8 @@ def test_50000_run_output_matches_governed_postseason_fail_closed_baseline() -> 
     dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "8a0fd81ea815cc7bbecb64872b9a2aa5c579fafcafef62aa5f01021f340fb976",
-        (3, 12): "6f4f7f0894a6c11f4c70aefd53d8a16f79a4674c0d1dcce3a0aa851243a91a88",
+        (3, 11): "79a4837d4bb27e96e5485b429afa05cec40c017575d32b5e4019fab814798412",
+        (3, 12): "8127cd8c4e12a52e33eef43c4b8822bc83bb1ed149cb9514d11e1bc598b28247",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (

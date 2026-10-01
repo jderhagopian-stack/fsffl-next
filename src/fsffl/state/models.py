@@ -123,15 +123,45 @@ class LeaguePlayoffRules(FrozenModel):
     seeding_policy: str | None = None
     standings_tiebreak_policy: str | None = None
     reseeding_policy: str | None = None
-    matchups: tuple[PlayoffMatchupRule, ...]
+    bracket_authority: Literal["provider_observed_exact", "settings_derived_standard"] = "provider_observed_exact"
+    bracket_derivation_policy: str | None = None
+    matchups: tuple[PlayoffMatchupRule, ...] = ()
     championship_round_number: Annotated[int, Field(ge=1)]
     championship_week: Annotated[int, Field(ge=1, le=22)]
     championship_matchup_id: str
     playoff_scoring_policy: str | None = None
     matchup_tiebreak_policy: str | None = None
 
+    def effective_matchups(self) -> tuple[PlayoffMatchupRule, ...]:
+        """Return the observed graph or compile an explicitly governed standard."""
+        if self.matchups:
+            return self.matchups
+        if self.bracket_authority != "settings_derived_standard" or self.bracket_derivation_policy != "seeded_standard_fixed_v1":
+            return ()
+        def seed(n: int) -> PlayoffParticipantRef:
+            return PlayoffParticipantRef(seed_number=n)
+        def winner(key: str) -> PlayoffParticipantRef:
+            return PlayoffParticipantRef(winner_of_matchup_id=key)
+        def game(key: str, rnd: int, a: PlayoffParticipantRef, b: PlayoffParticipantRef) -> PlayoffMatchupRule:
+            return PlayoffMatchupRule(matchup_id=key, round_number=rnd, week=self.round_weeks[rnd - 1], participant_a=a, participant_b=b)
+        # Standard fixed seeded conventions. League size, weeks and bye seeds remain governed inputs.
+        if self.playoff_team_count == 4 and not self.bye_seeds and self.round_count == 2:
+            return (game("semi-a", 1, seed(1), seed(4)), game("semi-b", 1, seed(2), seed(3)), game(self.championship_matchup_id, 2, winner("semi-a"), winner("semi-b")))
+        if self.playoff_team_count == 6 and self.bye_seeds == (1, 2) and self.round_count == 3:
+            return (game("qf-a", 1, seed(3), seed(6)), game("qf-b", 1, seed(4), seed(5)), game("sf-a", 2, seed(1), winner("qf-b")), game("sf-b", 2, seed(2), winner("qf-a")), game(self.championship_matchup_id, 3, winner("sf-a"), winner("sf-b")))
+        if self.playoff_team_count == 8 and not self.bye_seeds and self.round_count == 3:
+            return (game("qf-a", 1, seed(1), seed(8)), game("qf-b", 1, seed(4), seed(5)), game("qf-c", 1, seed(2), seed(7)), game("qf-d", 1, seed(3), seed(6)), game("sf-a", 2, winner("qf-a"), winner("qf-b")), game("sf-b", 2, winner("qf-c"), winner("qf-d")), game(self.championship_matchup_id, 3, winner("sf-a"), winner("sf-b")))
+        return ()
+
     @model_validator(mode="after")
     def validate_structure(self) -> "LeaguePlayoffRules":
+        if self.bracket_authority == "provider_observed_exact" and self.bracket_derivation_policy is not None:
+            raise ValueError("observed brackets cannot declare a derived bracket policy")
+        if self.bracket_authority == "settings_derived_standard" and (self.matchups or self.bracket_derivation_policy is None):
+            raise ValueError("settings-derived brackets require a derivation policy and no observed matchup graph")
+        matchups = self.effective_matchups()
+        if not matchups:
+            return self
         if len(self.round_weeks) != self.round_count:
             raise ValueError("round_weeks must map every configured playoff round")
         if tuple(sorted(set(self.round_weeks))) != self.round_weeks:
@@ -144,17 +174,17 @@ class LeaguePlayoffRules(FrozenModel):
             raise ValueError("bye_seeds must be unique")
         if any(seed > self.playoff_team_count for seed in self.bye_seeds):
             raise ValueError("bye seed exceeds playoff_team_count")
-        matchup_ids = [row.matchup_id for row in self.matchups]
+        matchup_ids = [row.matchup_id for row in matchups]
         if len(set(matchup_ids)) != len(matchup_ids):
             raise ValueError("playoff matchup ids must be unique")
         if any(not value.strip() for value in matchup_ids):
             raise ValueError("playoff matchup ids cannot be blank")
-        by_id = {row.matchup_id: row for row in self.matchups}
-        if sum(row.round_number == self.round_count for row in self.matchups) != 1:
+        by_id = {row.matchup_id: row for row in matchups}
+        if sum(row.round_number == self.round_count for row in matchups) != 1:
             raise ValueError("final playoff round must contain exactly one championship matchup")
         opening_seeds = [
             participant.seed_number
-            for row in self.matchups
+            for row in matchups
             if row.round_number == 1
             for participant in (row.participant_a, row.participant_b)
             if participant.seed_number is not None
@@ -167,7 +197,7 @@ class LeaguePlayoffRules(FrozenModel):
             range(1, self.playoff_team_count + 1)
         ):
             raise ValueError("opening matchups and bye_seeds must cover every playoff seed")
-        for matchup in self.matchups:
+        for matchup in matchups:
             if matchup.round_number > self.round_count:
                 raise ValueError("playoff matchup round exceeds round_count")
             if matchup.week != self.round_weeks[matchup.round_number - 1]:
@@ -185,10 +215,10 @@ class LeaguePlayoffRules(FrozenModel):
                     if source is None or source.round_number != matchup.round_number - 1:
                         raise ValueError("bracket winner reference must name the immediately prior round")
         for round_number in range(1, self.round_count):
-            sources = [row for row in self.matchups if row.round_number == round_number]
+            sources = [row for row in matchups if row.round_number == round_number]
             consumers = [
                 participant.winner_of_matchup_id
-                for row in self.matchups
+                for row in matchups
                 if row.round_number == round_number + 1
                 for participant in (row.participant_a, row.participant_b)
                 if participant.winner_of_matchup_id is not None
@@ -198,7 +228,7 @@ class LeaguePlayoffRules(FrozenModel):
                 raise ValueError("every non-final matchup winner must advance exactly once")
         bye_consumers = [
             participant.seed_number
-            for row in self.matchups
+            for row in matchups
             if row.round_number > 1
             for participant in (row.participant_a, row.participant_b)
             if participant.seed_number is not None
@@ -239,6 +269,8 @@ class LeaguePlayoffRules(FrozenModel):
         qualification_unavailability = self.qualification_unavailability_reason()
         if qualification_unavailability is not None:
             return qualification_unavailability
+        if not self.effective_matchups():
+            return "playoff_rules_unsupported:bracket_structure"
         required = {
             "reseeding_policy": "fixed_bracket",
             "playoff_scoring_policy": "same_as_league_regular_season",
@@ -253,6 +285,9 @@ class LeaguePlayoffRules(FrozenModel):
         if unsupported:
             return "playoff_rules_unsupported:" + ",".join(unsupported)
         return None
+
+    def championship_probability_provenance(self) -> str | None:
+        return None if self.simulation_unavailability_reason() is not None else self.bracket_authority
 
 
 class LeagueRules(FrozenModel):
@@ -289,12 +324,18 @@ class LeagueRules(FrozenModel):
             and self.playoff_rules.playoff_team_count != self.playoff_team_count
         ):
             raise ValueError("playoff rules team count conflicts with LeagueRules")
-        if (
-            self.playoff_rules is not None
-            and self.playoff_start_week is not None
-            and self.playoff_rules.playoff_start_week != self.playoff_start_week
-        ):
-            raise ValueError("playoff rules start week conflicts with LeagueRules")
+        if self.playoff_rules is not None:
+            if (
+                self.playoff_start_week is not None
+                and self.playoff_rules.playoff_start_week != self.playoff_start_week
+            ):
+                raise ValueError("playoff rules start week conflicts with LeagueRules")
+            if (
+                self.fantasy_regular_season_end_week is not None
+                and self.playoff_rules.playoff_start_week
+                != self.fantasy_regular_season_end_week + 1
+            ):
+                raise ValueError("playoff rules start week must follow the regular-season end")
         if self.playoff_rules is not None and self.playoff_team_count is None:
             raise ValueError("playoff_team_count is required when playoff rules are configured")
         return self

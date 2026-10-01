@@ -137,7 +137,12 @@ def _run(request: RegularSeasonSimulationInput, protocol: str, *, observe: bool)
             if abs(float(wins[:, team_index].mean()) - outcome_by_team[team_id].expected_wins) > 1e-10:
                 raise AssertionError("per-trial wins trace disagrees with published expected wins")
             observed_champion_rate = float(np.mean(champions == team_index))
-            if abs(observed_champion_rate - outcome_by_team[team_id].championship_probability) > 1e-10:
+            published_champion_rate = outcome_by_team[team_id].championship_probability
+            if published_champion_rate is None:
+                if np.any(champions >= 0):
+                    raise AssertionError("per-trial trace published a champion while championship probability is unavailable")
+                continue
+            if abs(observed_champion_rate - published_champion_rate) > 1e-10:
                 raise AssertionError("per-trial champion trace disagrees with published championship probability")
         summary["traced_rank_probabilities"] = traced_ranks
         summary["team_score_quantiles"] = {
@@ -193,8 +198,9 @@ def _scalar_metrics(summary):
         for field in PROBABILITY_METRICS:
             probability = row[field]
             values[f"{team}.{field}_mcse"] = (
-                probability * (1 - probability) / simulation_count
-            ) ** 0.5
+                (probability * (1 - probability) / simulation_count) ** 0.5
+                if probability is not None else None
+            )
     for row in summary["finish_distributions"]:
         team = row["team_id"]
         values[f"{team}.expected_finish"] = row["expected_finish"]

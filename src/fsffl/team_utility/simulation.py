@@ -145,6 +145,8 @@ class TeamCompetitiveOutcome(FrozenModel):
     playoff_unavailability_reason: str | None = None
     first_place_probability: Annotated[float, Field(ge=0, le=1)]
     championship_probability: Annotated[float | None, Field(ge=0, le=1)] = None
+    # Authority metadata; presentation continues to expose only the normal probability.
+    championship_probability_provenance: Literal["provider_observed_exact", "settings_derived_standard"] | None = None
     championship_unavailability_reason: str | None = None
     simulation_count: Annotated[int, Field(ge=1)]
     simulation_model_version: str
@@ -289,7 +291,7 @@ def _simulate_configured_champion(standings, playoff_rules, playoff_scoring, gau
     }
     winners = {}
     for matchup in sorted(
-        playoff_rules.matchups,
+        playoff_rules.effective_matchups(),
         key=lambda item: (item.round_number, item.week, item.matchup_id),
     ):
         left = (
@@ -580,6 +582,10 @@ def simulate_regular_season(
             playoff_unavailability_reason=playoff_unavailability_reason,
             first_place_probability=first_count[index] / n,
             championship_probability=(champion_count[index] / n if championship_supported else None),
+            championship_probability_provenance=(
+                request.playoff_rules.championship_probability_provenance()
+                if championship_supported and request.playoff_rules is not None else None
+            ),
             championship_unavailability_reason=championship_unavailability_reason,
             simulation_count=n,
             simulation_model_version=request.model_version,
