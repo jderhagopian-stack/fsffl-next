@@ -25,7 +25,10 @@ from fsffl.state.models import (
     TeamState,
 )
 from fsffl.team_utility import (
+    CompletedMatchup,
+    ScheduledMatchup,
     TeamScoringDistribution,
+    WeeklyTeamScoringDistribution,
     build_regular_season_simulation_input,
     build_weekly_team_scoring_distribution,
     regular_season_game_counts,
@@ -133,6 +136,97 @@ def test_simulation_input_uses_canonical_playoff_size_and_50k_default() -> None:
     assert request.playoff_team_count == 1
     assert request.simulation_count == 50_000
     assert len(request.schedule) == 2
+
+
+def test_current_season_simulation_preserves_completed_results_and_simulates_only_future() -> None:
+    league_state = state()
+    completed_state = league_state.model_copy(
+        update={
+            "completed_through_week": 1,
+            "matchups": (
+                LeagueMatchup(
+                    week=1,
+                    team_a_id="team:a",
+                    team_b_id="team:b",
+                    team_a_points=101.0,
+                    team_b_points=99.0,
+                    provenance=PROVENANCE,
+                ),
+                LeagueMatchup(
+                    week=2,
+                    team_a_id="team:a",
+                    team_b_id="team:b",
+                    provenance=PROVENANCE,
+                ),
+            ),
+        }
+    )
+    weekly = (
+        WeeklyTeamScoringDistribution(
+            week=2,
+            team_id="team:a",
+            mean_points=0.0,
+            stddev_points=0.0,
+            model_version="future-week-test",
+        ),
+        WeeklyTeamScoringDistribution(
+            week=2,
+            team_id="team:b",
+            mean_points=10.0,
+            stddev_points=0.0,
+            model_version="future-week-test",
+        ),
+    )
+
+    request = build_regular_season_simulation_input(
+        completed_state,
+        weekly_scoring=weekly,
+        simulation_count=100,
+        seed=7,
+        model_version="current-season-test",
+    )
+
+    assert request.completed_matchups == (
+        CompletedMatchup(
+            week=1,
+            home_team_id="team:a",
+            away_team_id="team:b",
+            home_points=101.0,
+            away_points=99.0,
+        ),
+    )
+    assert request.schedule == (
+        ScheduledMatchup(week=2, home_team_id="team:a", away_team_id="team:b"),
+    )
+
+    result = simulate_regular_season(request)
+    outcomes = {row.team_id: row for row in result.outcomes}
+    finishes = {row.team_id: row for row in result.finish_distributions}
+
+    # Week 1 is factual: A's actual win cannot be redrawn. Week 2 is the only
+    # simulated game, so B earns the only remaining win.
+    assert outcomes["team:a"].expected_wins == pytest.approx(1.0)
+    assert outcomes["team:a"].expected_remaining_wins == pytest.approx(0.0)
+    assert outcomes["team:b"].expected_wins == pytest.approx(1.0)
+    assert outcomes["team:b"].expected_remaining_wins == pytest.approx(1.0)
+
+    # Final wins tie 1-1. Actual week-1 points are carried into the standings
+    # tiebreak, so B's 99 actual + 10 future points beats A's 101 + 0.
+    assert finishes["team:b"].rank_probabilities == (1.0, 0.0)
+    assert finishes["team:a"].rank_probabilities == (0.0, 1.0)
+
+
+def test_completed_boundary_fails_closed_when_factual_points_are_missing() -> None:
+    incomplete = state().model_copy(update={"completed_through_week": 1})
+
+    with pytest.raises(ValueError, match="completed regular-season matchup lacks factual points"):
+        build_regular_season_simulation_input(
+            incomplete,
+            weekly_scoring=(),
+            simulation_count=20,
+            seed=7,
+            model_version="current-season-test",
+        )
 
 
 def test_simulation_bridge_preserves_regular_season_when_playoff_count_is_missing() -> None:

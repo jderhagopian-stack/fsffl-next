@@ -2,6 +2,8 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from fsffl.forecast.models import (
     ForecastDistribution,
     ForecastHorizon,
@@ -38,7 +40,11 @@ from fsffl.state.models import (
 from fsffl.team_utility.simulation import NUMPY_PCG64_BATCHED_GAUSS_V1
 from fsffl.value.cardinal_authority import FSFFLCardinalValueScore
 from fsffl.value.models import ValueAssetKind
-from fsffl.team_utility import compare_team_utility_vectors
+from fsffl.team_utility import (
+    WeeklyTeamScoringDistribution,
+    build_bye_aware_weekly_team_scoring_panel,
+    compare_team_utility_vectors,
+)
 from fsffl.trade_decision import (
     BilateralTradeProposal,
     Direction,
@@ -146,6 +152,165 @@ def test_live_simulation_runtime_populates_next7_competitive_metrics() -> None:
     states = {row.team_id: row.utility.calculated_competitive_state for row in result.team_views}
     assert states["a"].value == "unknown"
     assert states["b"].value == "unknown"
+
+
+def test_live_runtime_builds_future_week_panel_and_keeps_actual_results_fixed() -> None:
+    base = _state()
+    current = base.model_copy(
+        update={
+            "completed_through_week": 2,
+            "matchups": tuple(
+                matchup.model_copy(
+                    update=(
+                        {"team_a_points": 120.0, "team_b_points": 100.0}
+                        if matchup.week == 1
+                        else {"team_a_points": 90.0, "team_b_points": 110.0}
+                        if matchup.week == 2
+                        else {}
+                    )
+                )
+                for matchup in base.matchups
+            ),
+        }
+    )
+
+    with patch(
+        "fsffl.product.simulation_runtime.build_bye_aware_weekly_team_scoring_panel",
+        wraps=build_bye_aware_weekly_team_scoring_panel,
+    ) as panel:
+        result = build_live_simulation_analytics(
+            current,
+            forecasts=_forecasts(),
+            forecast_model_version="next2-test",
+            simulation_count=250,
+            seed=17,
+            generated_at=AS_OF,
+        )
+
+    assert panel.call_args.kwargs["weeks"] == (3, 4)
+    rows = {row.team_id: row for row in result.simulation_result.outcomes}
+    assert rows["a"].expected_remaining_wins is not None
+    assert rows["b"].expected_remaining_wins is not None
+    assert rows["a"].expected_wins == pytest.approx(1.0 + rows["a"].expected_remaining_wins)
+    assert rows["b"].expected_wins == pytest.approx(1.0 + rows["b"].expected_remaining_wins)
+    assert "current-season" in result.simulation_result.model_version
+    assert "current-season-factual-baseline" in result.model_version
+
+
+def _configured_current_season_state(*, completed_through_week: int) -> LeagueState:
+    base = _state()
+    league = base.league.model_copy(
+        update={
+            "rules": base.league.rules.model_copy(
+                update={
+                    "playoff_team_count": 2,
+                    "playoff_start_week": 5,
+                    "fantasy_regular_season_end_week": 4,
+                }
+            )
+        }
+    )
+    matchups = tuple(
+        matchup.model_copy(
+            update=(
+                {"team_a_points": 100.0 + matchup.week, "team_b_points": 80.0}
+                if matchup.week <= completed_through_week
+                else {}
+            )
+        )
+        for matchup in base.matchups
+    )
+    return base.model_copy(
+        update={
+            "league": league,
+            "completed_through_week": completed_through_week,
+            "matchups": matchups,
+        }
+    )
+
+
+def _deterministic_regular_and_playoff_panel(
+    league_state,
+    forecasts,
+    *,
+    team_ids,
+    weeks,
+    as_of,
+    baseline_lineups=None,
+    model_version="test-forward-panel",
+):
+    del league_state, forecasts, as_of, baseline_lineups
+    rows = []
+    for week in weeks:
+        for team_id in team_ids:
+            if week == 4:
+                mean = 100.0 if team_id == "a" else 0.0
+            elif week == 5:
+                mean = 0.0 if team_id == "a" else 100.0
+            else:
+                raise AssertionError(f"unexpected forward scoring week {week}")
+            rows.append(
+                WeeklyTeamScoringDistribution(
+                    week=week,
+                    team_id=team_id,
+                    mean_points=mean,
+                    stddev_points=0.0,
+                    model_version=model_version,
+                )
+            )
+    return tuple(rows)
+
+
+def test_live_runtime_uses_actual_playoff_week_scoring_not_last_regular_week() -> None:
+    current = _configured_current_season_state(completed_through_week=3)
+
+    with patch(
+        "fsffl.product.simulation_runtime.build_bye_aware_weekly_team_scoring_panel",
+        side_effect=_deterministic_regular_and_playoff_panel,
+    ) as panel:
+        result = build_live_simulation_analytics(
+            current,
+            forecasts=_forecasts(),
+            forecast_model_version="next2-test",
+            simulation_count=100,
+            seed=17,
+            generated_at=AS_OF,
+        )
+
+    assert panel.call_args.kwargs["weeks"] == (4, 5)
+    rows = {row.team_id: row for row in result.simulation_result.outcomes}
+    assert rows["a"].expected_remaining_wins == pytest.approx(1.0)
+    assert rows["b"].expected_remaining_wins == pytest.approx(0.0)
+    # Week 4 makes A stronger, but the configured championship is Week 5,
+    # where the deterministic scoring evidence makes B the champion.
+    assert rows["a"].championship_probability == pytest.approx(0.0)
+    assert rows["b"].championship_probability == pytest.approx(1.0)
+    assert "playoff-week-scoring" in result.simulation_result.model_version
+
+
+def test_live_runtime_allows_empty_remaining_regular_schedule_and_runs_postseason() -> None:
+    current = _configured_current_season_state(completed_through_week=4)
+
+    with patch(
+        "fsffl.product.simulation_runtime.build_bye_aware_weekly_team_scoring_panel",
+        side_effect=_deterministic_regular_and_playoff_panel,
+    ) as panel:
+        result = build_live_simulation_analytics(
+            current,
+            forecasts=_forecasts(),
+            forecast_model_version="next2-test",
+            simulation_count=100,
+            seed=17,
+            generated_at=AS_OF,
+        )
+
+    assert panel.call_args.kwargs["weeks"] == (5,)
+    rows = {row.team_id: row for row in result.simulation_result.outcomes}
+    assert rows["a"].expected_remaining_wins == pytest.approx(0.0)
+    assert rows["b"].expected_remaining_wins == pytest.approx(0.0)
+    assert rows["a"].expected_wins == pytest.approx(4.0)
+    assert rows["b"].expected_wins == pytest.approx(0.0)
+    assert rows["b"].championship_probability == pytest.approx(1.0)
 
 
 def test_sleeper_basic_postseason_settings_restore_odds_and_calculated_state() -> None:

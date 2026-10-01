@@ -940,3 +940,44 @@ PR #320 must emit the ordinary `championship_probability` if either an exact pro
 - Management UI requirement: remove the large Franchise/League last-good/rebuilding hero cards. When published last-good intelligence is usable, recovery status must be compact/non-blocking (thin status strip or small inline annotation) and normal product content must remain primary. Do not make a usable surface look unavailable merely because replacement intelligence is building.
 
 - #323 physical continuity/compact-presentation acceptance now passes. First-entry Franchise/League can still show a brief loading placeholder/blank skeleton before successful payload arrival; treat that as non-blocking UX/perceived-latency polish (candidate prefetch/layout skeleton), not a continuity blocker. Resume the Simulation 2.0 roadmap now.
+
+## 2026-10-01 — PR #324 ACTIVE: current-season factual baseline / future-only Simulation
+
+PR #324, **Simulation 2.0: seed current season from completed results**, is the first implementation slice of the canonical week-by-week current-season engine after #323 physical acceptance. Branch `work/sim20-current-season-weekly-engine` is based on current canonical main `42f05da2ad30abb16bb84ff0444ef5b2cc14af68`.
+
+Authority/semantics:
+- `LeagueState.completed_through_week` is the factual boundary. Completed fantasy matchup scores are immutable Simulation inputs; rows after that boundary remain unresolved even if a provider emitted numeric placeholders.
+- Monte Carlo worlds now begin from actual completed wins and points-for and sample only unresolved future regular-season matchups. Final standings/finish distributions/postseason execution therefore combine factual past + simulated future instead of redrawing completed weeks.
+- Existing `expected_wins` remains expected **final** regular-season wins. New `expected_remaining_wins` exposes the forward component and is carried through League Analytics and competitive scenario-delta contracts.
+- Completed factual results participate in Simulation input fingerprint/replay identity. Simulation/result model identities advance so pre-#324 full-schedule-resimulation artifacts cannot restore as current-season authority.
+- Live weekly scoring panels are materialized only for unresolved fantasy weeks. The existing governed season-mean + bye-aware empirical weekly-volatility bridge remains the future-week scoring evidence for this slice; ROS/WEEK uncertainty is still explicitly not promoted to Simulation authority.
+- The newly recorded trade/waiver effective-date invariant is preserved by this primitive: completed weeks are common immutable facts; downstream alternate-State scenarios may affect only future eligible weeks. No arbitrary late-season discount multiplier belongs in Simulation.
+- Frozen preseason expectation / in-season expectation history remains Phase 2 historical intelligence after Simulation 2.0 stabilization and does not interrupt this workstream.
+
+Validation on the current source/test tree:
+- ordinary Python 3.11 full suite: **1,952 passed**, one existing warning;
+- explicit Python 3.12 full-suite replay validation: **1,952 passed**, one existing warning;
+- fixed 50,000-world replay digests are now reviewed for both supported runtimes: Python 3.11 `f551968d5a00a6668cd236f90179f3b45480972f955f801c3ee8fe117dd09527`; Python 3.12 `c6a85f92a0938ec4db2caa7db89ca48c5a93d17f62c9f85e6a8277f68fedd5ea`;
+- focused PR164 corrective and Live Forecast trace lanes passed on the proven source tree.
+The temporary dual-runtime CI matrix used only to establish the 3.12 fixed baseline was removed; repository CI policy is unchanged.
+
+Promotion remains Tier B / risk-proportionate: freeze the exact docs-complete head, require ordinary exact-head CI plus a fresh P1/P2 review of the bounded Simulation/consumer diff, then merge/deploy and run one targeted hosted current-season acceptance. Do not reopen #323 continuity, #321 postseason design, Forecast model design, or unrelated platform layers.
+
+### 2026-10-01 — PR #324 Codex P1 correction: postseason week scoring + zero remaining regular games
+
+Exact-head Codex review of `bbf30a25a60a838b78d42697f1773d1b773e14a3` found two related P1s inside the new current-season Simulation contract. Both are closed as one bounded scoring-boundary correction:
+
+- postseason strength no longer reuses/averages the narrowed unresolved regular-season weekly panel;
+- live Simulation now resolves the governed playoff structure first, builds forward scoring evidence over the union of unresolved regular-season weeks and the actual configured playoff round weeks, and partitions that evidence into `weekly_scoring` versus separate `playoff_weekly_scoring`;
+- championship execution consumes the scoring distribution for each configured playoff matchup's actual week;
+- when the regular season is complete, an empty unresolved regular-season schedule is valid. Actual completed standings/points remain the deterministic baseline and configured postseason Simulation continues from them;
+- the scoring-dispersion diagnostic uses remaining regular-season evidence when available and playoff-week evidence once the regular season is complete;
+- Simulation live/result model identities advance to the playoff-week-scoring contract so persisted pre-correction title odds cannot restore as current authority;
+- the accepted #324 invariant remains unchanged: completed regular-season outcomes are immutable facts, only unresolved regular-season games contribute `expected_remaining_wins`, and completed facts remain shared by future counterfactual worlds.
+
+Deterministic regressions prove (1) a last regular-season week whose team strengths are the opposite of the playoff week does not leak into championship scoring and (2) fully completed regular-season standings with zero remaining games still produce postseason odds from the configured playoff week.
+
+Validation on corrected source/test head `508237237ffd7a50d261d59d26abf9bac9701499`: ordinary CI **1,954 passed**, one existing warning; PR164 focused corrective regression PASS; Live Forecast corrective trace PASS. One stale static-source assertion was updated to assert the stronger separated regular/postseason week contract rather than the old literal `weeks=fantasy_weeks` call shape.
+
+Next gate: freeze the docs-complete exact head, rerun ordinary exact-head workflows, request fresh Codex review, and close any remaining P1/P2 before merge/deploy. Keep promotion risk-proportionate; do not reopen #321 postseason structure, #323 continuity, Forecast model authority, or unrelated platform layers.
+

@@ -52,7 +52,11 @@ def test_player_display_uses_explicit_full_nfl_season_contract_without_changing_
     assert "item.horizon==='fantasy_regular_season'" not in shell
     assert "NFL season projection" in shell
 
-    assert "weeks=fantasy_weeks" in simulation
+    assert "fantasy_weeks = tuple(sorted({matchup.week for matchup in remaining_matchups}))" in simulation
+    assert "playoff_weeks = (" in simulation
+    assert "scoring_panel_weeks = tuple(sorted(set(fantasy_weeks) | set(playoff_weeks)))" in simulation
+    assert "weeks=scoring_panel_weeks" in simulation
+    assert "ForecastHorizon.SEASON" in simulation
     assert "build_regular_season_simulation_input" in simulation
 
 

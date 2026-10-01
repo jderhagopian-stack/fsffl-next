@@ -5,6 +5,7 @@ from random import Random
 import pytest
 
 from fsffl.team_utility import (
+    CompletedMatchup,
     RegularSeasonSimulationInput,
     ScheduledMatchup,
     TeamScoringDistribution,
@@ -188,6 +189,57 @@ def test_rng_equivalence_report_omits_unavailable_metrics_and_checks_availabilit
         _equivalence_report([summary, summary], [available, available])
 
 
+def test_completed_results_are_part_of_replay_identity_and_remaining_wins_contract() -> None:
+    base = RegularSeasonSimulationInput(
+        scoring=(
+            TeamScoringDistribution(
+                team_id="a", mean_points=110, stddev_points=0, model_version="v1"
+            ),
+            TeamScoringDistribution(
+                team_id="b", mean_points=100, stddev_points=0, model_version="v1"
+            ),
+        ),
+        completed_matchups=(
+            CompletedMatchup(
+                week=1,
+                home_team_id="a",
+                away_team_id="b",
+                home_points=95.0,
+                away_points=105.0,
+            ),
+        ),
+        schedule=(ScheduledMatchup(week=2, home_team_id="a", away_team_id="b"),),
+        playoff_team_count=1,
+        simulation_count=100,
+        seed=123,
+        model_version="current-season-replay-v1",
+    )
+
+    first = simulate_regular_season(base)
+    changed_fact = simulate_regular_season(
+        base.model_copy(
+            update={
+                "completed_matchups": (
+                    CompletedMatchup(
+                        week=1,
+                        home_team_id="a",
+                        away_team_id="b",
+                        home_points=106.0,
+                        away_points=105.0,
+                    ),
+                )
+            }
+        )
+    )
+
+    by_team = {row.team_id: row for row in first.outcomes}
+    assert by_team["a"].expected_wins == 1.0
+    assert by_team["a"].expected_remaining_wins == 1.0
+    assert by_team["b"].expected_wins == 1.0
+    assert by_team["b"].expected_remaining_wins == 0.0
+    assert first.simulation_input_fingerprint != changed_fact.simulation_input_fingerprint
+
+
 def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
     request = RegularSeasonSimulationInput(
         scoring=(
@@ -337,8 +389,8 @@ def test_50000_run_output_matches_governed_settings_derived_postseason_baseline(
     dumped["rng_runtime_version"] = f"python-{sys.version_info.major}.{sys.version_info.minor}"
     payload = json.dumps(dumped, sort_keys=True, separators=(",", ":"))
     expected_by_python_minor = {
-        (3, 11): "e505938396df5997495ae4e0191b8ac8c6ee7b126e8ad20679806dea5beda1de",
-        (3, 12): "ad34468376222d6f25b2e5ea56714a103e011f11d5f51f10ddbb8281be415c9c",
+        (3, 11): "f551968d5a00a6668cd236f90179f3b45480972f955f801c3ee8fe117dd09527",
+        (3, 12): "c6a85f92a0938ec4db2caa7db89ca48c5a93d17f62c9f85e6a8277f68fedd5ea",
     }
     expected = expected_by_python_minor.get(sys.version_info[:2])
     assert expected is not None, (

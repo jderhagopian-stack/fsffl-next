@@ -48,6 +48,7 @@ class LeagueTeamAnalyticsRow(FrozenModel):
     draft_pick_count: int
     optimized_expected_points: float | None = None
     expected_wins: float | None = None
+    expected_remaining_wins: float | None = None
     playoff_probability: float | None = None
     playoff_unavailability_reason: str | None = None
     first_place_probability: float | None = None
@@ -141,6 +142,9 @@ def _row_from_team(view: TeamAnalyticsView) -> LeagueTeamAnalyticsRow:
         draft_pick_count=len(view.draft_picks),
         optimized_expected_points=_optimized_regular_season_points(view),
         expected_wins=outcome.expected_wins if outcome is not None else None,
+        expected_remaining_wins=(
+            outcome.expected_remaining_wins if outcome is not None else None
+        ),
         playoff_probability=outcome.playoff_probability if outcome is not None else None,
         playoff_unavailability_reason=(
             outcome.playoff_unavailability_reason if outcome is not None else None
