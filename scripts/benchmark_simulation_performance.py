@@ -66,6 +66,10 @@ def _reference(request: RegularSeasonSimulationInput):
     wins_sq_sum = defaultdict(float)
     playoff_count = defaultdict(int)
     first_count = defaultdict(int)
+    playoff_supported = (
+        request.playoff_rules is not None
+        and request.playoff_rules.qualification_unavailability_reason() is None
+    )
 
     for _ in range(request.simulation_count):
         wins = {team_id: 0.0 for team_id in team_ids}
@@ -89,7 +93,9 @@ def _reference(request: RegularSeasonSimulationInput):
                 wins[matchup.home_team_id] += 0.5
                 wins[matchup.away_team_id] += 0.5
         standings = sorted(team_ids, key=lambda team_id: (-wins[team_id], -points_for[team_id], team_id))
-        playoff_teams = set(standings[: request.playoff_team_count])
+        playoff_teams = (
+            set(standings[: request.playoff_team_count]) if playoff_supported else set()
+        )
         first_count[standings[0]] += 1
         for team_id in team_ids:
             value = wins[team_id]
@@ -108,7 +114,9 @@ def _reference(request: RegularSeasonSimulationInput):
                 team_id=team_id,
                 expected_wins=expected,
                 wins_stddev=sqrt(variance),
-                playoff_probability=playoff_count[team_id] / n,
+                playoff_probability=(
+                    playoff_count[team_id] / n if playoff_supported else None
+                ),
                 first_place_probability=first_count[team_id] / n,
                 simulation_count=n,
                 simulation_model_version=request.model_version,

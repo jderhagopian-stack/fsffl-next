@@ -141,6 +141,20 @@ def test_optimized_hot_loop_preserves_zero_variance_rng_behavior() -> None:
     )
 
 
+def test_performance_benchmark_reference_respects_unavailable_playoff_rules() -> None:
+    from scripts.benchmark_simulation_performance import (
+        _regular_outcome_signature,
+        _reference as benchmark_reference,
+        _request,
+    )
+
+    request = _request(simulation_count=100)
+    reference = benchmark_reference(request)
+    actual = simulate_regular_season(request).outcomes
+    assert all(row.playoff_probability is None for row in reference)
+    assert _regular_outcome_signature(reference) == _regular_outcome_signature(actual)
+
+
 def test_cooperative_checkpoint_preserves_exact_simulation_output() -> None:
     request = RegularSeasonSimulationInput(
         scoring=(
