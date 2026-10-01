@@ -405,7 +405,14 @@ class PresentationContinuityStore:
         runtime: UserRuntimeContext,
         surface: str,
     ) -> dict[str, object] | None:
-        """Load the exact published surface generation or changed-State last-good."""
+        """Load a proven current publication, else the proven same-league last-good.
+
+        A non-null runtime publication id is not sufficient presentation proof by
+        itself. During restart/revalidation, durable runtime/core identity can become
+        visible before the exact presentation manifest is available in this process.
+        In that transition, ordinary reads must remain pinned to the prior proven
+        served generation instead of falling through to incomplete live composition.
+        """
 
         if (
             self._persistence is None
@@ -413,60 +420,53 @@ class PresentationContinuityStore:
             or getattr(self._local, "promoting", False)
         ):
             return None
+
         current = runtime.league_state
         publication_id = str(
             getattr(runtime, "publication_generation_id", None) or ""
         ).strip()
+        served = runtime.served_intelligence
+        served_publication_id = str(
+            getattr(served, "publication_generation_id", None) or ""
+        ).strip()
 
+        candidates: list[tuple[str, str, str, datetime, str]] = []
         if publication_id:
-            served_league_id = current.league.league_id
-            served_state_id = current.state_id
-            served_as_of = current.as_of
-            mode = "published"
-        else:
-            served = runtime.served_intelligence
-            served_publication_id = str(
-                getattr(served, "publication_generation_id", None) or ""
-            ).strip()
-            if (
-                served is None
-                or served.league_id != current.league.league_id
-                or served.league_state_id == current.state_id
-                or not served_publication_id
-            ):
-                return None
-            served_league_id = served.league_id
-            served_state_id = served.league_state_id
-            served_as_of = served.as_of
-            mode = "stale_last_good"
-
-        manifest = self._persistence.get_reusable_artifact(
-            _manifest_key(
-                user_id=user_id,
-                league_id=served_league_id,
-                league_state_id=served_state_id,
+            candidates.append(
+                (
+                    "published",
+                    current.league.league_id,
+                    current.state_id,
+                    current.as_of,
+                    publication_id,
+                )
             )
-        )
-        if manifest is None:
+        if (
+            served is not None
+            and served.league_id == current.league.league_id
+            and served.league_state_id != current.state_id
+            and served_publication_id
+        ):
+            candidates.append(
+                (
+                    "stale_last_good",
+                    served.league_id,
+                    served.league_state_id,
+                    served.as_of,
+                    served_publication_id,
+                )
+            )
+        if not candidates:
             return None
-        known_key = self._snapshot_key(
-            user_id,
-            served_league_id,
-            served_state_id,
-            runtime.selected_team_id,
-        )
-        with self._validation_lock:
-            known_manifest_fingerprint = self._validated_snapshots.get(known_key)
-        manifest_fingerprint = canonical_fingerprint(manifest.payload)
-        if known_manifest_fingerprint != manifest_fingerprint:
-            if not self.has_snapshot(
-                user_id=user_id,
-                league_id=served_league_id,
-                league_state_id=served_state_id,
-                selected_team_id=runtime.selected_team_id,
-            ):
-                return None
-            # Strict cold validation may have re-read a replacement manifest.
+
+        def load_candidate(
+            *,
+            mode: str,
+            served_league_id: str,
+            served_state_id: str,
+            served_as_of: datetime,
+            expected_generation_id: str,
+        ) -> dict[str, object] | None:
             manifest = self._persistence.get_reusable_artifact(
                 _manifest_key(
                     user_id=user_id,
@@ -476,77 +476,122 @@ class PresentationContinuityStore:
             )
             if manifest is None:
                 return None
-        promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
-        if (
-            not promotion_id
-            or manifest.payload.get("selected_team_id") != runtime.selected_team_id
-            or (publication_id and promotion_id != publication_id)
-            or (
-                not publication_id
-                and mode == "stale_last_good"
-                and promotion_id != served_publication_id
+            known_key = self._snapshot_key(
+                user_id,
+                served_league_id,
+                served_state_id,
+                runtime.selected_team_id,
             )
-        ):
-            # A newer same-State manifest may already be durable while the previous
-            # runtime generation is still published. Falling back to live composition
-            # remains safe because ordinary reads are pinned to that immutable
-            # published runtime rather than the working generation.
-            return None
+            with self._validation_lock:
+                known_manifest_fingerprint = self._validated_snapshots.get(known_key)
+            manifest_fingerprint = canonical_fingerprint(manifest.payload)
+            if known_manifest_fingerprint != manifest_fingerprint:
+                if not self.has_snapshot(
+                    user_id=user_id,
+                    league_id=served_league_id,
+                    league_state_id=served_state_id,
+                    selected_team_id=runtime.selected_team_id,
+                ):
+                    return None
+                # Strict cold validation may have re-read a replacement manifest.
+                manifest = self._persistence.get_reusable_artifact(
+                    _manifest_key(
+                        user_id=user_id,
+                        league_id=served_league_id,
+                        league_state_id=served_state_id,
+                    )
+                )
+                if manifest is None:
+                    return None
 
-        record = self._persistence.get_reusable_artifact(
-            _surface_key(
-                user_id=user_id,
-                league_id=served_league_id,
-                promotion_id=promotion_id,
-                surface=surface,
+            promotion_id = str(manifest.payload.get("promotion_id") or "").strip()
+            if (
+                not promotion_id
+                or promotion_id != expected_generation_id
+                or manifest.payload.get("selected_team_id")
+                != runtime.selected_team_id
+            ):
+                return None
+
+            record = self._persistence.get_reusable_artifact(
+                _surface_key(
+                    user_id=user_id,
+                    league_id=served_league_id,
+                    promotion_id=promotion_id,
+                    surface=surface,
+                )
             )
-        )
-        if record is None:
-            return None
-        wrapper = dict(record.payload)
-        if (
-            wrapper.get("league_id") != served_league_id
-            or wrapper.get("league_state_id") != served_state_id
-            or wrapper.get("promotion_id") != promotion_id
-            or wrapper.get("surface") != surface
-            or wrapper.get("selected_team_id") != runtime.selected_team_id
-        ):
-            return None
-        raw = wrapper.get("payload")
-        expected = next(
-            (
-                item
-                for item in (manifest.payload.get("surface_hashes") or ())
-                if isinstance(item, Mapping) and item.get("surface") == surface
-            ),
-            None,
-        )
-        if not isinstance(raw, Mapping):
-            return None
-        if (
-            expected is None
-            or wrapper.get("payload_hash") != expected.get("payload_hash")
-            or int(wrapper.get("payload_size_bytes") or -1)
-            != int(expected.get("payload_size_bytes") or -2)
-            or canonical_fingerprint(_json_round_trip(raw))
-            != expected.get("payload_hash")
-        ):
-            return None
-        payload = _json_round_trip(raw)
-        payload["publication_generation_id"] = promotion_id
-        if mode == "published":
+            if record is None:
+                return None
+            wrapper = dict(record.payload)
+            if (
+                wrapper.get("league_id") != served_league_id
+                or wrapper.get("league_state_id") != served_state_id
+                or wrapper.get("promotion_id") != promotion_id
+                or wrapper.get("surface") != surface
+                or wrapper.get("selected_team_id") != runtime.selected_team_id
+            ):
+                return None
+            raw = wrapper.get("payload")
+            expected = next(
+                (
+                    item
+                    for item in (manifest.payload.get("surface_hashes") or ())
+                    if isinstance(item, Mapping) and item.get("surface") == surface
+                ),
+                None,
+            )
+            if not isinstance(raw, Mapping):
+                return None
+            if (
+                expected is None
+                or wrapper.get("payload_hash") != expected.get("payload_hash")
+                or int(wrapper.get("payload_size_bytes") or -1)
+                != int(expected.get("payload_size_bytes") or -2)
+                or canonical_fingerprint(_json_round_trip(raw))
+                != expected.get("payload_hash")
+            ):
+                return None
+
+            payload = _json_round_trip(raw)
+            payload["publication_generation_id"] = promotion_id
+            if mode == "published":
+                payload["intelligence_freshness"] = {
+                    "status": "current",
+                    "stale": False,
+                    "target_state_id": current.state_id,
+                    "target_as_of": current.as_of.isoformat(),
+                    "served_state_id": served_state_id,
+                    "served_as_of": served_as_of.isoformat(),
+                    "publication_generation_id": promotion_id,
+                    "presentation_contract": PRESENTATION_MODEL_VERSION,
+                }
+                payload["presentation_continuity"] = {
+                    "mode": "published",
+                    "target_league_state_id": current.state_id,
+                    "served_league_state_id": served_state_id,
+                    "served_as_of": served_as_of.isoformat(),
+                    "promotion_id": promotion_id,
+                    "publication_generation_id": promotion_id,
+                }
+                return payload
+
             payload["intelligence_freshness"] = {
-                "status": "current",
-                "stale": False,
+                "status": "stale_last_good",
+                "stale": True,
                 "target_state_id": current.state_id,
                 "target_as_of": current.as_of.isoformat(),
                 "served_state_id": served_state_id,
                 "served_as_of": served_as_of.isoformat(),
                 "publication_generation_id": promotion_id,
+                "message": (
+                    "Canonical State is current. This view remains available from the "
+                    "last-good governed presentation while exact-State intelligence rebuilds."
+                ),
                 "presentation_contract": PRESENTATION_MODEL_VERSION,
             }
             payload["presentation_continuity"] = {
-                "mode": "published",
+                "mode": "stale_last_good",
                 "target_league_state_id": current.state_id,
                 "served_league_state_id": served_state_id,
                 "served_as_of": served_as_of.isoformat(),
@@ -555,26 +600,24 @@ class PresentationContinuityStore:
             }
             return payload
 
-        payload["intelligence_freshness"] = {
-            "status": "stale_last_good",
-            "stale": True,
-            "target_state_id": current.state_id,
-            "target_as_of": current.as_of.isoformat(),
-            "served_state_id": served_state_id,
-            "served_as_of": served_as_of.isoformat(),
-            "publication_generation_id": promotion_id,
-            "message": (
-                "Canonical State is current. This view remains available from the "
-                "last-good governed presentation while exact-State intelligence rebuilds."
-            ),
-            "presentation_contract": PRESENTATION_MODEL_VERSION,
-        }
-        payload["presentation_continuity"] = {
-            "mode": "stale_last_good",
-            "target_league_state_id": current.state_id,
-            "served_league_state_id": served_state_id,
-            "served_as_of": served_as_of.isoformat(),
-            "promotion_id": promotion_id,
-            "publication_generation_id": promotion_id,
-        }
-        return payload
+        # Prefer an exact proven current publication. If its manifest/surface cannot
+        # be proven, keep every eligible surface on the same proven served generation.
+        # Never use an invalid current presentation identity as permission to compose
+        # derived fields from an incomplete replacement runtime.
+        for (
+            mode,
+            served_league_id,
+            served_state_id,
+            served_as_of,
+            expected_generation_id,
+        ) in candidates:
+            payload = load_candidate(
+                mode=mode,
+                served_league_id=served_league_id,
+                served_state_id=served_state_id,
+                served_as_of=served_as_of,
+                expected_generation_id=expected_generation_id,
+            )
+            if payload is not None:
+                return payload
+        return None
